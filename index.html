@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROJECT STAR MAP</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- background visuals (scanlines, vignette) -->
+        <div class="crt-overlay"></div>
+        <div class="vignette"></div>
+
+        <!-- Header: Ship Status -->
+        <header class="status-bar" id="ui-header">
+            <div class="ship-info">
+                <span class="vessel-name">VESSEL: EXODUS-1</span>
+                <span class="date" id="game-date">DATE: 2342.05.12</span>
+            </div>
+            <div class="resource-cluster">
+                <div class="res-item"><label>ENERGY</label><span id="res-energy">100%</span></div>
+                <div class="res-item"><label>O2</label><span id="res-oxygen">100%</span></div>
+                <div class="res-item"><label>METALS</label><span id="res-metals">0</span></div>
+                <div class="res-item"><label>PROBE</label><span id="res-probe">100%</span></div>
+                <div class="res-item"><label>CREW</label><span id="res-crew">5/5</span></div>
+            </div>
+        </header>
+
+        <!-- Main Content Area (Star Map or Planet View) -->
+        <main class="main-viewport" id="main-view">
+            <!-- Dynamic Content Injected Here -->
+            <div class="loading-state">INITIALIZING NAV SYSTEMS...</div>
+        </main>
+
+        <!-- Right Panel: Tactical/Immersive Data -->
+        <aside class="right-panel" id="right-panel">
+            <div class="panel-header">/// TACTICAL DATA</div>
+            <div class="panel-content" id="tactical-display">
+                <div class="placeholder-grid">NO TARGET SELECTED</div>
+            </div>
+        </aside>
+
+        <!-- Bottom: Mission Log -->
+        <footer class="console-log" id="mission-log">
+            <div class="log-header">/// MISSION LOG ///</div>
+            <div class="log-container" id="log-entries">
+                <!-- Log entries go here -->
+            </div>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <!-- Scripts -->
+    <script src="src/bundle.js"></script>
+</body>
+
+</html>
