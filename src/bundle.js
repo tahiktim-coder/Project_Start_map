@@ -28,80 +28,7 @@ const PLANET_DATA = {
     VITAL: { scanCost: 2, hazardChance: 0.1, desc: "Rare biosphere. Detecting life signs." }
 };
 
-const ITEMS = {
-    // Biological
-    RADIOTROPHIC_FUNGUS: {
-        id: 'fungus', name: 'Radiotrophic Fungus', type: 'CONSUMABLE', value: 15,
-        desc: 'Converts radiation to chemical energy.',
-        onUse: (state) => { state.energy = Math.min(100, state.energy + 15); return "Energy restored by 15."; }
-    },
-    AMBER_SPECIMEN: { id: 'amber', name: 'Amber Specimen', type: 'ARTIFACT', value: 50, desc: 'Preserved biological sample from ancient era.' },
-    // Rocky/Barren
-    GEODE_SAMPLE: { id: 'geode', name: 'Geode Sample', type: 'RESOURCE', value: 40, desc: 'Crystalline formation rich in rare earth metals.' },
-    OBSIDIAN_MONOLITH: { id: 'monolith', name: 'Obsidian Monolith', type: 'ARTIFACT', value: 75, desc: 'Strange geometric stone carving.' },
-    // Ruins/Tech
-    SCRAP_PLATING: {
-        id: 'scrap', name: 'Scrap Plating', type: 'RESOURCE', value: 10,
-        desc: 'Salvageable alloy plating.',
-        onUse: (state) => { state.probeIntegrity = Math.min(100, state.probeIntegrity + 20); return "Probe repaired (+20%)."; }
-    },
-    TECH_FRAGMENT: { id: 'tech_frag', name: 'Tech Fragment', type: 'LORE', value: 100, desc: 'Data storage device from a lost civilization.' },
 
-    // Condensed Resources (Found via Probe 5%)
-    CONDENSED_METALS: {
-        id: 'condensed_metals', name: 'Condensed Metals', type: 'RESOURCE_PACK', value: 50,
-        desc: 'Highly compressed refined ores.',
-        onUse: (state) => { state.metals += 50; return "Processed +50 Metals."; }
-    },
-    IONIZED_BATTERY: {
-        id: 'ion_battery', name: 'Ionized Battery', type: 'RESOURCE_PACK', value: 30,
-        desc: 'Unstable high-capacity energy cell.',
-        onUse: (state) => { state.energy = Math.min(100, state.energy + 30); return "Drained +30 Energy."; }
-    }
-};
-
-const EVENTS = [
-    {
-        id: 'DERELICT',
-        trigger: (planet) => planet.tags && (planet.tags.includes('ANCIENT_RUINS') || planet.tags.includes('ALIEN_SIGNALS')),
-        title: "DERELICT SIGNAL",
-        desc: "The EVA team has located the source of the signal: A crashed vessel of unknown origin. Hull breach imminent.",
-        choices: [
-            { text: "Salvage Exterior (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Breach Hull (Risky)", riskMod: 30, reward: { type: 'ITEM', tags: ['TECH'] } }
-        ]
-    },
-    {
-        id: 'BIO_HORROR',
-        trigger: (planet) => planet.type === 'VITAL' || (planet.tags && planet.tags.includes('VITAL_FLORA')),
-        title: "BIOLOGICAL ANOMALY",
-        desc: "The detected lifeform is immense... and it's moving towards the landing team.",
-        choices: [
-            { text: "Defensive Sample (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Capture Specimen (Very Risky)", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO'] } }
-        ]
-    },
-    {
-        id: 'MINERAL_VEIN',
-        trigger: (planet) => ['ROCKY', 'DESERT', 'VOLCANIC'].includes(planet.type),
-        title: "RICH VEIN DETECTED",
-        desc: "Sensors indicate a high-density mineral pocket in a precarious canyon ridge.",
-        choices: [
-            { text: "Surface Extraction (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Deep Core Drill (Risky)", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }
-        ]
-    },
-    {
-        id: 'DISTRESS_BEACON', // Fallback
-        trigger: () => true,
-        title: "DISTRESS BEACON",
-        desc: "A faint repeating signal is coming from a debris field.",
-        choices: [
-            { text: "Scan & Leave (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Investigate Debris (Risky)", riskMod: 20, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
-        ]
-    }
-];
 
 const SUFFIXES = ['Prime', 'Major', 'Minor', 'IV', 'X', 'Alpha', 'Proxima', 'Secundus'];
 const NAMES = ['Helios', 'Kryos', 'Titan', 'Aea', 'Zephyr', 'Chronos', 'Nyx', 'Erebus', 'Tartarus', 'Atlas', 'Hyperion', 'Phoebe'];
@@ -415,269 +342,9 @@ class NavView {
     }
 }
 
-class OrbitView {
-    constructor(state) {
-        this.element = document.createElement('div');
-        this.element.className = 'orbit-view-container';
-        this.state = state;
-    }
 
-    render() {
-        const planet = this.state.currentSystem;
-        if (!planet) return `<div class="error">dERR: NO SYSTEM LOCK</div>`;
 
-        const isDeepScanned = planet.scanned;
-        const showStat = (key) => isDeepScanned || (planet.revealedStats && planet.revealedStats.includes(key));
 
-        // Use pre-calculated metrics if available (legacy support if not)
-        const metrics = planet.metrics || { gravity: 1, temp: 0, hasLife: false, hasTech: false };
-        const hasLife = metrics.hasLife;
-        const hasTech = metrics.hasTech;
-
-        this.element.innerHTML = `
-            <div style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
-                <h2 style="color: var(--color-primary); border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; margin-bottom: 20px; max-width: 40%;">
-                    /// ORBIT ESTABLISHED: ${planet.name}
-                </h2>
-
-                <div style="flex: 1; display: flex; flex-direction: row; align-items: stretch; gap: 20px;">
-                    
-                    <!-- LEFT: Data readout -->
-                    <div style="width: 280px; display: flex; flex-direction: column; gap: 15px; border-right: 1px dashed var(--color-primary-dim); padding-right: 20px; overflow-y: auto;">
-                        <div style="color: var(--color-accent); border-bottom: 1px solid var(--color-primary-dim); margin-bottom: 5px;">ENVIRONMENTAL READINGS</div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div style="color: var(--color-text-dim);">GRAVITY</div>
-                            <div style="color: var(--color-primary); text-align: right;">${showStat('gravity') ? planet.gravity : '<span style="color:var(--color-accent)">UNKNOWN</span>'}</div>
-                            
-                            <div style="color: var(--color-text-dim);">ATMOSPHERE</div>
-                            <div style="color: var(--color-primary); text-align: right;">${showStat('atmosphere') ? planet.atmosphere : '<span style="color:var(--color-accent)">UNKNOWN</span>'}</div>
-                            
-                            <div style="color: var(--color-text-dim);">TEMP</div>
-                            <div style="color: var(--color-primary); text-align: right;">${showStat('temperature') ? planet.temperature : '<span style="color:var(--color-accent)">UNKNOWN</span>'}</div>
-                        </div>
-
-                        <!-- Scan Results Section -->
-                        <div style="margin-top: 20px; color: var(--color-accent); border-bottom: 1px solid var(--color-primary-dim); margin-bottom: 5px;">
-                            SURFACE ANALYSIS
-                        </div>
-                         ${planet.scanned
-                ? `<div style="display: flex; flex-direction: column; gap: 8px;">
-                                 <div><span style="color:var(--color-text-dim)">METALS:</span> <span style="color:var(--color-primary)">${planet.resources.metals > 50 ? 'RICH' : 'SCARCE'}</span></div>
-                                 <div><span style="color:var(--color-text-dim)">ENERGY:</span> <span style="color:var(--color-primary)">${planet.resources.energy > 50 ? 'ABUNDANT' : 'LOW'}</span></div>
-                                 
-                                 <div style="margin-top: 10px; border-top: 1px dashed var(--color-primary-dim); padding-top: 5px;">
-                                    <div><span style="color:var(--color-text-dim)">BIOSIGNATURES:</span> <span style="color:${hasLife ? 'var(--color-primary)' : 'var(--color-text-dim)'}">${hasLife ? 'DETECTED' : 'NEGATIVE'}</span></div>
-                                    <div><span style="color:var(--color-text-dim)">TECHNOSIGNATURES:</span> <span style="color:${hasTech ? 'var(--color-accent)' : 'var(--color-text-dim)'}">${hasTech ? 'DETECTED' : 'NEGATIVE'}</span></div>
-                                 </div>
-
-                                 <div style="margin-top: 5px;">
-                                    <div style="color:var(--color-text-dim); margin-bottom:4px">ANOMALIES:</div>
-                                    ${planet.tags && planet.tags.length
-                    ? planet.tags.map(t => `<span style="background:var(--color-primary-dim); color:#000; padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px;">${t}</span>`).join('')
-                    : '<span style="color:var(--color-text-dim); font-style:italic;">NONE DETECTED</span>'}
-                                 </div>
-                               </div>`
-                : `<div style="color: var(--color-text-dim); font-style: italic; opacity: 0.5; margin-top: 20px;">
-                                ... SENSORS OFFLINE ...
-                               </div>`
-            }
-                    </div>
-
-                    <!-- RIGHT: Visual -->
-                    <div class="orbit-visual" style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
-                        <div style="
-                            width: 300px; height: 300px; 
-                            border-radius: 50%; 
-                            border: 2px solid var(--color-primary); 
-                            box-shadow: 0 0 50px var(--color-primary-dim), inset 0 0 50px #000;
-                            background: radial-gradient(circle at 30% 30%, ${this.getPlanetColor(planet.type)}, #000);
-                            position: relative;
-                        ">
-                            <div style="position:absolute; top:-10px; left:-10px; right:-10px; bottom:-10px; border-radius:50%; box-shadow: 0 0 20px ${this.getPlanetColor(planet.type)}; opacity: 0.3;"></div>
-                        </div>
-                        <div class="ship-orbit-icon" style="
-                            position: absolute; top: 50%; left: 50%; width: 400px; height: 400px; transform: translate(-50%, -50%);
-                            border: 1px dashed var(--color-primary-dim); border-radius: 50%; animation: spin 20s linear infinite;
-                        ">
-                            <div style="width: 20px; height: 20px; background: var(--color-accent); border-radius: 50%; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px var(--color-accent);"></div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-        `;
-        this.updateCommandDeck(planet);
-        return this.element;
-    }
-
-    getPlanetColor(type) {
-        switch (type) {
-            case 'ROCKY': return '#8B4513';
-            case 'GAS_GIANT': return '#DEB887';
-            case 'ICE_WORLD': return '#00FFFF';
-            case 'OCEANIC': return '#0000FF';
-            case 'DESERT': return '#FFA500';
-            case 'VOLCANIC': return '#FF4500';
-            case 'TOXIC': return '#32CD32';
-            case 'VITAL': return '#228B22';
-            default: return '#555';
-        }
-    }
-
-    updateCommandDeck(planet) {
-        const rightPanel = document.getElementById('tactical-display');
-        if (!rightPanel) return;
-
-        rightPanel.innerHTML = `
-             <div class="command-deck" style="display: flex; flex-direction: column; gap: 15px; height: 100%;">
-                <div style="border-bottom: 2px solid var(--color-accent); padding-bottom: 5px; color: var(--color-accent);">COMMAND DECK</div>
-                <button class="cmd-btn" id="btn-scan" ${this.state.energy < 2 || planet.scanned ? 'disabled' : ''}>
-                    <div>${planet.scanned ? 'SYSTEM SCANNED' : 'DEEP SCAN'}</div>
-                    <div class="cost">${planet.scanned ? 'ANALYSIS COMPLETE' : '-2 ENERGY'}</div>
-                </button>
-                
-                ${this.state.probeIntegrity > 0
-                ? `<button class="cmd-btn" id="btn-probe" ${this.state.probeIntegrity <= 0 ? 'disabled' : ''}>
-                         <div>LAUNCH PROBE</div><div class="cost">Integrity: ${this.state.probeIntegrity.toFixed(0)}%</div>
-                       </button>`
-                : `<button class="cmd-btn danger" id="btn-probe" ${this.state.metals < 50 ? 'disabled' : ''}>
-                         <div>FABRICATE PROBE</div><div class="cost">-50 METALS</div>
-                       </button>`
-            }
-
-                 <button class="cmd-btn" id="btn-eva" ${this.state.energy < 5 || planet.hasEva ? 'disabled' : ''}>
-                    <div>${planet.hasEva ? 'MISSION COMPLETE' : 'DEPLOY EVA TEAM'}</div>
-                    <div class="cost">${planet.hasEva ? 'LOGS ARCHIVED' : '-5 ENERGY / RISK'}</div>
-                </button>
-
-                <div style="margin-top: 20px; border-top: 1px dashed var(--color-primary-dim); padding-top: 20px;">
-                    <button class="cmd-btn" id="btn-colony" style="border-color: #00ff00; color: #00ff00;">
-                        <div>ESTABLISH COLONY</div><div class="cost">INITIATE STASIS</div>
-                    </button>
-                </div>
-
-                <button class="cmd-btn danger" id="btn-leave" style="margin-top: auto;">
-                    <div>BREAK ORBIT</div><div class="cost">RETURN TO MAP</div>
-                </button>
-             </div>
-        `;
-
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .cmd-btn { background: transparent; border: 1px solid var(--color-primary); color: var(--color-primary); padding: 15px; text-align: left; cursor: pointer; font-family: var(--font-display); transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; }
-            .cmd-btn:hover:not([disabled]) { background: var(--color-primary); color: #000; }
-            .cmd-btn:disabled { border-color: #333; color: #333; cursor: not-allowed; }
-            .cmd-btn.danger { border-color: var(--color-accent); color: var(--color-accent); }
-            .cmd-btn.danger:hover { background: var(--color-accent); color: #000; }
-            .cost { font-size: 0.7em; opacity: 0.7; }
-            @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
-        `;
-        rightPanel.appendChild(style);
-
-        rightPanel.querySelector('#btn-scan').addEventListener('click', () => this.handleScan());
-        rightPanel.querySelector('#btn-probe').addEventListener('click', () => this.handleProbe());
-        const btnEva = rightPanel.querySelector('#btn-eva');
-        if (btnEva) btnEva.addEventListener('click', () => this.handleEVA());
-
-        const btnColony = rightPanel.querySelector('#btn-colony');
-        if (btnColony) btnColony.addEventListener('click', () => this.handleColonyAction());
-
-        const btnLeave = rightPanel.querySelector('#btn-leave');
-        if (btnLeave) btnLeave.addEventListener('click', () => {
-            this.state.addLog("Leaving orbit...");
-            this.renderNav();
-        });
-    }
-
-    handleScan() { window.dispatchEvent(new CustomEvent('req-action-scan')); }
-    handleProbe() { window.dispatchEvent(new CustomEvent('req-action-probe')); }
-    handleEVA() { window.dispatchEvent(new CustomEvent('req-action-eva')); }
-
-    handleColonyAction() {
-        // Generate Outcome based on Planet Metrics
-        const planet = this.state.currentSystem;
-        const outcome = this.getColonyOutcome(planet);
-
-        // Color code valid vs failed colonies
-        const color = outcome.success ? '#00ff00' : '#ff4444';
-
-        const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100vw';
-        overlay.style.height = '100vh';
-        overlay.style.background = '#000';
-        overlay.style.color = color;
-        overlay.style.zIndex = '10000';
-        overlay.style.display = 'flex';
-        overlay.style.flexDirection = 'column';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
-        overlay.style.textAlign = 'center';
-
-        overlay.innerHTML = `
-            <h1 style="font-size: 3em; border-bottom: 2px solid ${color}; padding-bottom: 20px; margin-bottom: 40px;">/// SIMULATION CONCLUDED ///</h1>
-            
-            <div style="font-size: 1.2em; max-width: 800px; line-height: 1.6; text-align: left; background: rgba(20,20,20,0.8); padding: 40px; border: 1px solid ${color};">
-                <div style="margin-bottom: 20px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 10px;">
-                    TARGET: ${planet.name} <br>
-                    TYPE: ${planet.type}
-                </div>
-                
-                <p>${outcome.text}</p>
-                
-                <div style="margin-top: 30px; font-style: italic; color: #fff; font-weight: bold;">
-                    RESULT: ${outcome.title}
-                </div>
-            </div>
-
-            <button onclick="location.reload()" style="margin-top: 60px; padding: 20px 40px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1.2em; cursor: pointer; font-family: 'Courier New', monospace;">
-                REBOOT SIMULATION
-            </button>
-        `;
-
-        document.body.appendChild(overlay);
-    }
-
-    getColonyOutcome(planet) {
-        // Default Logic Placeholders
-        let success = false;
-        let title = "COLONY LOST";
-        let text = "";
-
-        // Raw Logic based on Type
-        if (planet.type === 'VITAL') {
-            success = true;
-            title = "NEW EDEN";
-            text = "The Colony flourished. The atmosphere was perfectly compatible with human physiology. Within three generations, the population swelled to millions. The EXODUS-1 became a museum in the center of the capital city.";
-        } else if (planet.type === 'TOXIC' || planet.type === 'VOLCANIC') {
-            success = false;
-            title = "TOTAL EXTINCTION";
-            text = "The atmospheric processors failed within 6 months due to corrosive storms. The colony domes were breached shortly after. The distress beacon was picked up by Earth 50 years later, but only ruins remained.";
-        } else if (planet.type === 'GAS_GIANT') {
-            success = false;
-            title = "GRAVITATIONAL CRUSH";
-            text = "The floating platform concept was sound in theory, but the storms of ${planet.name} were relentless. The colony station was eventually sheared apart by wind shear and plummeted into the crushing depths.";
-        } else if (planet.type === 'OCEANIC') {
-            success = true;
-            title = "AQUATIC EVOLUTION";
-            text = "Land was scarce, so we built beneath the waves. Technologies adapted from the ship allowed us to harvest the geothermal vents. Over centuries, the colonists adapted using gene-mods. We are no longer Earth-human, but we are alive.";
-        } else if (planet.type === 'ICE_WORLD') {
-            success = true;
-            title = "THE LONG SLEEP";
-            text = "Just barely surviving. The colony lives entirely underground, harnessing the planet's core for heat. Life is hard, bleak, and mostly spent in virtual reality simulations to escape the frozen reality above.";
-        } else {
-            // Generic Fail
-            success = false;
-            title = "SLOW DECLINE";
-            text = "The resources were there, but the biosphere was incompatible. Strange bacteria plagued the crops. The colony survived for 80 years before the last generator failed. We simply faded away.";
-        }
-
-        return { success, title, text };
-    }
-}
 
 // --- 4. MAIN APP ---
 
@@ -702,11 +369,14 @@ class App {
 
         window.addEventListener('req-warp', (e) => this.handleWarp(e.detail));
         window.addEventListener('req-sector-jump', () => this.handleSectorJump());
-        window.addEventListener('req-break-orbit', () => this.renderNav());
-
         window.addEventListener('req-action-scan', () => this.handleScanAction());
         window.addEventListener('req-action-probe', () => this.handleProbeAction());
         window.addEventListener('req-action-eva', () => this.handleEvaAction());
+        window.addEventListener('req-action-colony', () => this.handleColonyAction());
+        window.addEventListener('req-break-orbit', () => {
+            this.state.addLog("Breaking orbit. Systems disengaged.");
+            this.renderNav();
+        });
         window.addEventListener('req-remote-scan', (e) => this.handleRemoteScan(e.detail));
 
         this.state.init();
@@ -772,7 +442,11 @@ class App {
             this.state.addLog("Deep Scan initiated...");
             this.state.currentSystem.scanned = true;
             this.state.addLog("Detailed surface analysis complete. Resource data available.");
-            this.renderOrbit();
+            this.orbitView.updateCommandDeck(this.state.currentSystem);
+            // Also update the left panel data if possible, but for now just command deck prevents reset
+            this.renderOrbit(); // ACTUALLY: We need to re-render to show the new "Environment Readings" on the left.
+            // To fix the animation reset, we would need to separate the Planet Visual into its own component that doesn't re-render.
+            // For now, let's fix the BUTTON functionality first. 
         }
     }
 
@@ -784,7 +458,8 @@ class App {
                 this.state.probeIntegrity = 100;
                 this.state.addLog("Probe Fabricated. Systems Operational.");
                 this.state.emitUpdates();
-                this.renderOrbit(); // Refresh UI to show Launch button
+                // this.renderOrbit(); // CAUSES RESET
+                this.orbitView.updateCommandDeck(this.state.currentSystem);
             } else {
                 this.state.addLog("Insufficient Metals to fabricate Probe.");
             }
@@ -846,7 +521,7 @@ class App {
         }
 
         this.state.emitUpdates();
-        this.renderOrbit();
+        this.orbitView.updateCommandDeck(planet);
     }
 
     getProbeItem(planet) {
@@ -893,7 +568,8 @@ class App {
 
             this.showEventModal(selectedEvent, planet);
             planet.hasEva = true; // Mark as done
-            this.renderOrbit(); // Refresh to disable button
+            // this.renderOrbit(); // Removed to prevent reset
+            this.orbitView.updateCommandDeck(planet); // Update buttons only
         }
     }
 
@@ -1040,11 +716,23 @@ class App {
             cluster.appendChild(div);
             cargoEl = div.querySelector('#res-cargo');
         }
+
+        // ALWAYS update the text content
         cargoEl.textContent = `${this.state.cargo.length}`;
-        // Ensure event listener is attached (idempotent)
-        cargoEl.parentElement.onclick = () => this.showCargoInventory();
-        cargoEl.parentElement.style.cursor = 'pointer';
-        document.getElementById('res-crew').parentElement.style.cursor = 'pointer';
+        // Helper to make entire resource item clickable
+        const cargoContainer = cargoEl.parentElement;
+        cargoContainer.style.cursor = 'pointer';
+        cargoContainer.style.border = '1px solid transparent';
+        cargoContainer.onmouseover = () => { cargoContainer.style.borderBottom = '1px solid var(--color-primary)'; };
+        cargoContainer.onmouseout = () => { cargoContainer.style.borderBottom = '1px solid transparent'; };
+        cargoContainer.onclick = () => this.showCargoInventory();
+
+        const crewContainer = document.getElementById('res-crew').parentElement;
+        crewContainer.style.cursor = 'pointer';
+        crewContainer.style.border = '1px solid transparent';
+        crewContainer.onmouseover = () => { crewContainer.style.borderBottom = '1px solid var(--color-primary)'; };
+        crewContainer.onmouseout = () => { crewContainer.style.borderBottom = '1px solid transparent'; };
+        crewContainer.onclick = () => this.showCrewManifest();
     }
 
     showCrewManifest() {
@@ -1121,6 +809,54 @@ class App {
             this.state.addLog(`Used ${item.name}: ${msg}`);
             this.state.emitUpdates();
         }
+    }
+
+
+    handleColonyAction() {
+        // Generate Outcome based on Planet Metrics
+        const planet = this.state.currentSystem;
+        const outcome = EndingSystem.getColonyOutcome(planet);
+
+        // Color code valid vs failed colonies
+        const color = outcome.success ? '#00ff00' : '#ff4444';
+
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.background = '#000';
+        overlay.style.color = color;
+        overlay.style.zIndex = '10000';
+        overlay.style.display = 'flex';
+        overlay.style.flexDirection = 'column';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.textAlign = 'center';
+
+        overlay.innerHTML = `
+            <h1 style="font-size: 3em; border-bottom: 2px solid ${color}; padding-bottom: 20px; margin-bottom: 40px;">/// SIMULATION CONCLUDED ///</h1>
+            
+            <div style="font-size: 1.2em; max-width: 800px; line-height: 1.6; text-align: left; background: rgba(20,20,20,0.8); padding: 40px; border: 1px solid ${color};">
+                <div style="margin-bottom: 20px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 10px;">
+                    TARGET: ${planet.name} <br>
+                    TYPE: ${planet.type}
+                </div>
+                
+                <p>${outcome.text}</p>
+                
+                <div style="margin-top: 30px; font-style: italic; color: #fff; font-weight: bold;">
+                    RESULT: ${outcome.title}
+                </div>
+            </div>
+
+            <button onclick="location.reload()" style="margin-top: 60px; padding: 20px 40px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1.2em; cursor: pointer; font-family: 'Courier New', monospace;">
+                REBOOT SIMULATION
+            </button>
+        `;
+
+        document.body.appendChild(overlay);
     }
 
     renderNav() {
