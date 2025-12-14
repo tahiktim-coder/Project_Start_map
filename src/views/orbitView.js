@@ -46,8 +46,8 @@ class OrbitView {
                         </div>
                          ${planet.scanned
                 ? `<div style="display: flex; flex-direction: column; gap: 8px;">
-                                 <div><span style="color:var(--color-text-dim)">METALS:</span> <span style="color:var(--color-primary)">${planet.resources.metals > 50 ? 'RICH' : 'SCARCE'}</span></div>
-                                 <div><span style="color:var(--color-text-dim)">ENERGY:</span> <span style="color:var(--color-primary)">${planet.resources.energy > 50 ? 'ABUNDANT' : 'LOW'}</span></div>
+                                 <div><span style="color:var(--color-text-dim)">METALS:</span> <span style="color:var(--color-primary)">${planet.resources.metals > 70 ? 'RICH' : (planet.resources.metals > 30 ? 'MODERATE' : 'SCARCE')}</span></div>
+                                 <div><span style="color:var(--color-text-dim)">ENERGY:</span> <span style="color:var(--color-primary)">${planet.resources.energy > 70 ? 'ABUNDANT' : (planet.resources.energy > 30 ? 'MODERATE' : 'LOW')}</span></div>
                                  
                                  <div style="margin-top: 10px; border-top: 1px dashed var(--color-primary-dim); padding-top: 5px;">
                                     <div><span style="color:var(--color-text-dim)">BIOSIGNATURES:</span> <span style="color:${hasLife ? 'var(--color-primary)' : 'var(--color-text-dim)'}">${hasLife ? 'DETECTED' : 'NEGATIVE'}</span></div>
@@ -125,8 +125,8 @@ class OrbitView {
                          <div>LAUNCH PROBE</div><div class="cost">Integrity: ${this.state.probeIntegrity.toFixed(0)}%</div>
                        </button>`
                 : `<button class="cmd-btn danger" id="btn-probe" ${this.state.metals < 50 ? 'disabled' : ''}>
-                         <div>${this.state.metals < 50 ? 'FABRICATE (NEED 50 METALS)' : 'FABRICATE PROBE'}</div>
-                         <div class="cost">${this.state.metals < 50 ? 'INSUFFICIENT RESOURCES' : '-50 METALS'}</div>
+                         <div>FABRICATE PROBE</div>
+                         <div class="cost">${this.state.metals < 50 ? 'NEED 50 METALS' : '-50 METALS'}</div>
                        </button>`
             }
 

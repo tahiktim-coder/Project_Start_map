@@ -13,7 +13,7 @@ const ITEMS = {
     SCRAP_PLATING: {
         id: 'scrap', name: 'Scrap Plating', type: 'RESOURCE', value: 10,
         desc: 'Salvageable alloy plating.',
-        onUse: (state) => { state.probeIntegrity = Math.min(100, state.probeIntegrity + 20); return "Probe repaired (+20%)."; }
+        onUse: (state) => { state.metals += 15; return "Salvaged +15 Metals."; }
     },
     TECH_FRAGMENT: { id: 'tech_frag', name: 'Tech Fragment', type: 'LORE', value: 100, desc: 'Data storage device from a lost civilization.' },
 

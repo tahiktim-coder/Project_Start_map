@@ -52,11 +52,15 @@ class ProbeSystem {
                 const amount = Math.floor(selected.min + Math.random() * (selected.max - selected.min));
                 if (selected.val === 'METALS') {
                     reward = { type: 'RESOURCE', resource: 'metals', amount: amount };
-                    finalMessage = `Extracted ${amount} Metals.`;
+                    finalMessage = selected.log || `Extracted ${amount} Metals.`;
                 } else {
                     reward = { type: 'RESOURCE', resource: 'energy', amount: amount };
-                    finalMessage = `Siphoned ${amount} Energy units.`;
+                    finalMessage = selected.log || `Siphoned ${amount} Energy units.`;
                 }
+            } else if (selected.type === 'LORE') {
+                // LORE FOUND
+                reward = { type: 'DATA', text: selected.text };
+                finalMessage = `DATA LOG: ${selected.text}`;
             }
         }
 
