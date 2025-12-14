@@ -60,6 +60,66 @@ const EVENTS = [
         ]
     },
     {
+        id: 'TIME_DILATION',
+        trigger: (planet) => planet.metrics && planet.metrics.gravity > 1.5,
+        title: "TEMPORAL ANOMALY",
+        desc: "The landing team reports chronometer desync. 1 hour on surface equals 1 day in orbit.",
+        choices: [
+            { text: "Abort Mission (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Collect 'Aged' Samples (Risky)", riskMod: 35, reward: { type: 'ITEM', tags: ['GEO', 'LORE'] } }
+        ]
+    },
+    {
+        id: 'MIRAGE_VISION',
+        trigger: (planet) => ['DESERT', 'OCEANIC'].includes(planet.type),
+        title: "THE MIRAGE",
+        desc: "Crew reports seeing massive Earth-like cities on the horizon. Sensors show nothing.",
+        choices: [
+            { text: "Trust Sensors (Safe)", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Send Walk Team (Psych Risk)", riskMod: 45, reward: { type: 'ITEM', tags: ['LORE'] } }
+        ]
+    },
+    {
+        id: 'TECTONIC_SHIFT',
+        trigger: (planet) => ['VOLCANIC', 'ROCKY'].includes(planet.type) && planet.dangerLevel > 1,
+        title: "PLANETARY QUAKE",
+        desc: "The ground beneath the landing zone is splitting apart!",
+        choices: [
+            { text: "Emergency Takeoff (Lose Fuel)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Stabilize & Mine (Very Risky)", riskMod: 50, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+        ]
+    },
+    {
+        id: 'HIVE_MIND',
+        trigger: (planet) => planet.metrics && planet.metrics.hasLife && planet.type === 'VITAL',
+        title: "CHORUS OF SONGS",
+        desc: "The plants are... singing in unison. It is overwhelming the comms channels.",
+        choices: [
+            { text: "Burn & Harvest (Hostile)", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Attempt Communication (Diplomatic)", riskMod: 40, reward: { type: 'ITEM', tags: ['BIO'] } }
+        ]
+    },
+    {
+        id: 'CRYOSLEEP_POD',
+        trigger: (planet) => planet.type === 'ICE_WORLD' && planet.metrics.hasTech,
+        title: "ANCIENT POD",
+        desc: "A functioning cryosleep pod found in the ice. Occupant status: UNKNOWN.",
+        choices: [
+            { text: "Salvage Parts (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Thaw Occupant (Extreme Risk)", riskMod: 60, reward: { type: 'ITEM', tags: ['LORE', 'TECH'] } }
+        ]
+    },
+    {
+        id: 'ROGUE_AI',
+        trigger: (planet) => planet.tags && planet.tags.includes('ALIEN_SIGNALS'),
+        title: "ROGUE SATELLITE",
+        desc: "An orbiting defense platform has locked onto the shuttle.",
+        choices: [
+            { text: "Evasive Maneuvers (Mod Risk)", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Hack Signal (Tech Risk)", riskMod: 40, reward: { type: 'ITEM', tags: ['TECH'] } }
+        ]
+    },
+    {
         id: 'DISTRESS_BEACON', // Fallback NEEDS TO BE LAST
         trigger: () => true,
         title: "DISTRESS BEACON",

@@ -121,11 +121,12 @@ class OrbitView {
                 </button>
                 
                 ${this.state.probeIntegrity > 0
-                ? `<button class="cmd-btn" id="btn-probe" ${this.state.probeIntegrity <= 0 ? 'disabled' : ''}>
+                ? `<button class="cmd-btn" id="btn-probe">
                          <div>LAUNCH PROBE</div><div class="cost">Integrity: ${this.state.probeIntegrity.toFixed(0)}%</div>
                        </button>`
                 : `<button class="cmd-btn danger" id="btn-probe" ${this.state.metals < 50 ? 'disabled' : ''}>
-                         <div>FABRICATE PROBE</div><div class="cost">-50 METALS</div>
+                         <div>${this.state.metals < 50 ? 'FABRICATE (NEED 50 METALS)' : 'FABRICATE PROBE'}</div>
+                         <div class="cost">${this.state.metals < 50 ? 'INSUFFICIENT RESOURCES' : '-50 METALS'}</div>
                        </button>`
             }
 
