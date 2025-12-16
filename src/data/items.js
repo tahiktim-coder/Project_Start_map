@@ -27,5 +27,16 @@ const ITEMS = {
         id: 'ion_battery', name: 'Ionized Battery', type: 'RESOURCE_PACK', value: 30,
         desc: 'Unstable high-capacity energy cell.',
         onUse: (state) => { state.energy = Math.min(100, state.energy + 30); return "Drained +30 Energy."; }
+    },
+    // Dark Artifacts
+    XENO_MYCELIUM: {
+        id: 'xeno_mycelium', name: 'Xeno-Mycelium Spores', type: 'REVIVAL_BIO', value: 200,
+        desc: 'Pulsing fungal matter that reacts to necrotic tissue. [Use on corpse]',
+        onUse: null // Special handling in App
+    },
+    NEURAL_LINK: {
+        id: 'neural_link', name: 'Ancient Neural Link', type: 'REVIVAL_TECH', value: 250,
+        desc: 'Spider-like mesh that overrides nervous system decay. [Use on corpse]',
+        onUse: null // Special handling
     }
 };

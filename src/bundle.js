@@ -6,6 +6,61 @@
 
 // --- 1. DATA & GENERATORS ---
 
+class CrewGenerator {
+    static FIRST_NAMES = [
+        "Jace", "Lyra", "Kael", "Mira", "Oren", "Zara", "Thorn", "Elara", "Jax", "Nia",
+        "Rian", "Cora", "Vane", "Sola", "Kian", "Eris", "Dax", "Luna", "Torin", "Vega"
+    ];
+
+    static LAST_NAMES = [
+        "Vance", "Ryder", "Stark", "Chen", "Novak", "Price", "Vega", "Solos", "Thorne", "Cross",
+        "Moon", "Strider", "Frey", "Wong", "Sato", "Khan", "Webb", "Mercer", "Cole", "Reid"
+    ];
+
+
+    static ROLES = [
+        { name: "Cmdr.", tag: "LEADER" },
+        { name: "Eng.", tag: "ENGINEER" },
+        { name: "Dr.", tag: "MEDIC" },
+        { name: "Spc.", tag: "SECURITY" },
+        { name: "Tech", tag: "SPECIALIST" }
+    ];
+
+    static generateCrew(count = 5) {
+        let crew = [];
+        // Ensure one Commander
+        crew.push(this.createmember('Cmdr.', 'LEADER'));
+        // Fill rest
+        for (let i = 1; i < count; i++) {
+            const role = this.ROLES[Math.floor(Math.random() * (this.ROLES.length - 1)) + 1];
+            crew.push(this.createmember(role.name, role.tag));
+        }
+        return crew;
+    }
+
+    static createmember(prefix, tag) {
+        const first = this.FIRST_NAMES[Math.floor(Math.random() * this.FIRST_NAMES.length)];
+        const last = this.LAST_NAMES[Math.floor(Math.random() * this.LAST_NAMES.length)];
+        const gender = Math.random() > 0.5 ? 'M' : 'F';
+        // Random Age 25-50
+        const age = Math.floor(Math.random() * 25) + 25;
+
+        return {
+            id: Date.now() + Math.random(),
+            name: `${prefix} ${last}`,
+            realName: `${first} ${last}`,
+            gender: gender,
+            age: age,
+            // 1-5 for each gender. User needs M_1.png ... M_5.png and F_1.png ... F_5.png
+            portraitId: `${gender}_${Math.floor(Math.random() * 5) + 1}`,
+            status: 'HEALTHY',
+            tags: [tag]
+        };
+    }
+}
+
+
+
 
 
 // --- 2. GAME STATE ---
@@ -32,21 +87,17 @@ class GameState {
         this.fuel = 100;
         this.oxygen = 100;
         this.energy = 100;
-        this.metals = 0;
+        this.metals = 50; // Start with minimal for 1 probe
+        this.maxMetals = 300; // Cap at 300 (User Request)
         this.probeIntegrity = 100;
         this.cargo = []; // Added Cargo
+        this.upgrades = []; // INSTALLED MODULES
 
         this.currentSector = 1;
         this.currentSystem = null;
         this.lastVisitedSystem = null; // Added for 0-cost return logic
 
-        this.crew = [
-            { id: 1, name: 'Cmdr. Shepard', gender: 'M', status: 'HEALTHY', tags: ['LEADER'] },
-            { id: 2, name: 'Eng. Isaac', gender: 'M', status: 'HEALTHY', tags: ['ENGINEER'] },
-            { id: 3, name: 'Dr. Ripley', gender: 'F', status: 'HEALTHY', tags: ['MEDIC'] },
-            { id: 4, name: 'Spc. Vance', gender: 'M', status: 'HEALTHY', tags: ['SECURITY'] },
-            { id: 5, name: 'Bot TARS', gender: 'AI', status: 'HEALTHY', tags: ['AI'] }
-        ];
+        this.crew = CrewGenerator.generateCrew(5);
 
         this.emitUpdates();
     }
@@ -97,12 +148,28 @@ class App {
     init() {
         console.log("Exodus-1 Systems Initializing...");
 
+        if (window.AudioSystem) window.AudioSystem.init();
+
         window.addEventListener('log-updated', (e) => this.handleLogUpdate(e));
 
         window.addEventListener('hud-updated', () => this.updateHud());
 
+        // Audio Toggle
+        const btnAudio = document.getElementById('btn-audio');
+        if (btnAudio) {
+            btnAudio.onclick = () => {
+                if (window.AudioSystem) {
+                    const isMuted = window.AudioSystem.toggleMute();
+                    btnAudio.textContent = isMuted ? "AUDIO: OFF" : "AUDIO: ON";
+                    btnAudio.style.opacity = isMuted ? "0.5" : "1";
+                }
+            };
+        }
+
         // Header Interactions
         document.getElementById('res-crew').parentElement.onclick = () => this.showCrewManifest();
+        const fabBtn = document.getElementById('btn-fab');
+        if (fabBtn) fabBtn.onclick = () => this.showFabricator();
 
         window.addEventListener('req-warp', (e) => this.handleWarp(e.detail));
         window.addEventListener('req-sector-jump', () => this.handleSectorJump());
@@ -135,6 +202,26 @@ class App {
             this.state.addLog(`Warping to ${planet.name}...`);
             this.state.currentSystem = planet;
             this.state.lastVisitedSystem = planet; // Track last visited
+
+            // UPGRADE: Autodoc Medbay
+            if (this.state.upgrades.includes('autodoc')) {
+                let healed = false;
+                this.state.crew.forEach(c => {
+                    if (c.status === 'INJURED' || c.status.indexOf('(-') > -1) {
+                        c.status = 'HEALTHY';
+                        healed = true;
+                    }
+                });
+                if (healed) this.state.addLog("Autodoc: Crew injuries stabilized during transit.");
+            }
+
+            // UPGRADE: Fuel Scoop
+            if (this.state.upgrades.includes('fuel_scoop') && (planet.type === 'GAS_GIANT' || planet.type === 'NEBULA')) {
+                const scoop = Math.floor(Math.random() * 5) + 5;
+                this.state.fuel = Math.min(100, this.state.fuel + scoop);
+                this.state.addLog(`Bussard Scoop: Harvested ${scoop} Fuel from atmosphere.`);
+            }
+
             setTimeout(() => {
                 this.state.addLog(`Orbit established. Systems Green.`);
                 this.renderOrbit();
@@ -149,11 +236,17 @@ class App {
                 data.remoteScanned = true;
 
                 // Randomly reveal 1-2 stats if not already done
+                // Randomly reveal 1-2 stats if not already done
                 if (!data.revealedStats || data.revealedStats.length === 0) {
-                    const count = Math.random() > 0.7 ? 2 : 1;
-                    const options = ['gravity', 'temperature', 'atmosphere'];
-                    const shuffled = options.sort(() => 0.5 - Math.random());
-                    data.revealedStats = shuffled.slice(0, count);
+                    if (this.state.upgrades.includes('sensor_v2')) {
+                        data.revealedStats = ['gravity', 'temperature', 'atmosphere', 'dangerLevel'];
+                        this.state.addLog("Sensor Array: Detailed scan analysis complete.");
+                    } else {
+                        const count = Math.random() > 0.7 ? 2 : 1;
+                        const options = ['gravity', 'temperature', 'atmosphere'];
+                        const shuffled = options.sort(() => 0.5 - Math.random());
+                        data.revealedStats = shuffled.slice(0, count);
+                    }
                 }
 
                 this.state.addLog(`Long-range sensors locked on ${planet.name}. Partial data retrieved.`);
@@ -218,7 +311,13 @@ class App {
                 const item = { ...result.reward.data, acquiredAt: planet.name };
                 this.state.cargo.push(item);
             } else if (result.reward.type === 'RESOURCE') {
-                if (result.reward.resource === 'metals') this.state.metals += result.reward.amount;
+                if (result.reward.resource === 'metals') {
+                    const old = this.state.metals;
+                    this.state.metals = Math.min(this.state.maxMetals, this.state.metals + result.reward.amount);
+                    if (this.state.metals === this.state.maxMetals && old < this.state.maxMetals) {
+                        this.state.addLog("STORAGE WARNING: Metal capacity reached!");
+                    }
+                }
                 if (result.reward.resource === 'energy') this.state.energy = Math.min(100, this.state.energy + result.reward.amount);
             }
         }
@@ -369,8 +468,12 @@ class App {
             else amount = 30 + Math.floor(Math.random() * 20); // Energy
 
             if (choice.reward.val.includes('METALS')) {
-                this.state.metals += amount;
+                const old = this.state.metals;
+                this.state.metals = Math.min(this.state.maxMetals, this.state.metals + amount);
                 logMsg += `Recovered ${amount} Metals.`;
+                if (this.state.metals === this.state.maxMetals && old < this.state.maxMetals) {
+                    logMsg += " (Storage Cap Reached)";
+                }
             } else {
                 this.state.energy = Math.min(100, this.state.energy + amount);
                 logMsg += `Siphoned ${amount} Energy.`;
@@ -392,7 +495,7 @@ class App {
         const msg = e.detail?.message || "Log Updated";
         const entry = document.createElement('div');
         entry.className = 'log-entry new';
-        entry.textContent = msg;
+        entry.innerHTML = msg; // Enable HTML for colors
         logContainer.appendChild(entry);
 
         // Auto scroll force
@@ -404,7 +507,15 @@ class App {
     updateHud() {
         document.getElementById('res-energy').textContent = `${this.state.energy}%`;
         document.getElementById('res-oxygen').textContent = `${this.state.oxygen}%`;
-        document.getElementById('res-metals').textContent = `${this.state.metals}`;
+
+        // Show Cap
+        const m = this.state.metals;
+        const max = this.state.maxMetals;
+        const el = document.getElementById('res-metals');
+        el.textContent = `${m}/${max}`;
+        if (m >= max) el.style.color = '#ffaa00';
+        else el.style.color = 'var(--color-primary)';
+
         document.getElementById('res-probe').textContent = `${this.state.probeIntegrity.toFixed(0)}%`;
         const crewCount = this.state.crew.filter(c => c.status !== 'DEAD').length;
         document.getElementById('res-crew').textContent = `${crewCount}/${this.state.crew.length}`;
@@ -446,16 +557,24 @@ class App {
             <div class="modal-content">
                 <div class="modal-header">/// CREW MANIFEST /// <span class="close-modal">[X]</span></div>
                 <div class="crew-list">
-                    ${this.state.crew.map(c => `
-                        <div class="crew-card ${c.status === 'DEAD' ? 'status-dead' : ''}">
-                            <div class="crew-icon">${c.gender === 'AI' ? '🤖' : '👤'}</div>
+                    ${this.state.crew.map(c => {
+            const color = c.status === 'DEAD' ? '#ff4444' : (c.status.includes('INJURED') ? '#ffaa00' : 'var(--color-primary)');
+            const borderColor = c.status === 'DEAD' ? '#ff4444' : 'var(--color-primary-dim)';
+            return `
+                        <div class="crew-card" style="border: 1px solid ${borderColor}; color: ${color};">
+                            <div class="crew-icon" style="overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; filter: drop-shadow(0 0 5px ${color});">
+                                <img src="assets/crew/${c.portraitId || 1}.png" 
+                                     style="width: 100%; height: 100%; object-fit: cover;"
+                                     onerror="this.style.display='none'; this.parentNode.innerHTML='${c.gender === 'AI' ? '🤖' : '👤'}';">
+                            </div>
                             <div class="crew-details">
-                                <div class="crew-name">${c.name}</div>
-                                <div class="crew-meta">GENDER: ${c.gender} | STATUS: ${c.status}</div>
+                                <div class="crew-name">${c.realName || c.name} <span style="font-size:0.7em; opacity:0.7;">(${c.name})</span></div>
+                                <div class="crew-meta" style="color: ${color}; opacity: 0.8;">AGE: ${c.age || 'N/A'} | STATUS: ${c.status}</div>
                                 <div class="crew-tags">${c.tags.join(' ')}</div>
                             </div>
                         </div>
-                    `).join('')}
+                    `;
+        }).join('')}
                 </div>
             </div>
         `;
@@ -478,7 +597,7 @@ class App {
                                 <div class="item-name" style="font-weight: bold;">${item.name}</div>
                                 <div class="item-desc" style="font-size: 0.7em; color: #888; font-style: italic;">${item.desc}</div>
                                 <div style="margin-top: auto; display: flex; gap: 5px;">
-                                    ${item.onUse ? `<button class="action-btn" data-idx="${idx}" style="font-size: 0.7em; padding: 2px 5px; cursor: pointer; background: var(--color-primary); border: none; font-weight: bold;">USE</button>` : ''}
+                                    ${(item.onUse || (item.type && item.type.startsWith('REVIVAL_'))) ? `<button class="action-btn" data-idx="${idx}" style="font-size: 0.7em; padding: 2px 5px; cursor: pointer; background: var(--color-primary); border: none; font-weight: bold;">USE</button>` : ''}
                                     <div class="item-type" style="font-size: 0.7em; opacity: 0.5; margin-left: auto;">${item.type}</div>
                                 </div>
                             </div>
@@ -507,6 +626,14 @@ class App {
 
     handleItemUse(index) {
         const item = this.state.cargo[index];
+
+        // SPECIAL HANDLERS
+        if (item.type && item.type.startsWith('REVIVAL_')) {
+            this.handleRevivalAction(item, index);
+            return;
+        }
+
+        // STANDARD HANDLERS
         if (item && item.onUse) {
             const msg = item.onUse(this.state);
             this.state.cargo.splice(index, 1); // Remove from inventory
@@ -515,14 +642,89 @@ class App {
         }
     }
 
+    handleRevivalAction(item, itemIndex) {
+        const deadCrew = this.state.crew.filter(c => c.status === 'DEAD');
+        if (deadCrew.length === 0) {
+            this.showEventModal({
+                title: "INVALID TARGET",
+                desc: "No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (deceased).",
+                choices: [{ text: "CANCEL", riskMod: 0, reward: { type: 'NONE' } }]
+            }, this.state.currentSystem);
+            return;
+        }
+
+        // Show Selection Modal
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="border-color: #ff00ff;">
+                <div class="modal-header" style="color: #ff00ff;">/// REANIMATION PROTOCOL /// <span class="close-modal">[X]</span></div>
+                <div style="padding: 20px; text-align: center;">
+                    <p>Select subject for integration with ${item.name}.</p>
+                    <p style="color: #ff0000; font-size: 0.8em; margin-top: 10px;">
+                        WARNING: PROCESS IS IRREVERSIBLE.<br>
+                        Neural patterns will be reconstructed but altered. The entity returned may retain skills but lose self-identity.
+                    </p>
+                </div>
+                <div class="crew-list">
+                    ${deadCrew.map((c, idx) => `
+                        <div class="crew-card status-dead clickable-revive" data-id="${c.id}" style="cursor: pointer; border: 1px solid #ff00ff;">
+                            <div class="crew-icon">💀</div>
+                            <div class="crew-details">
+                                <div class="crew-name">${c.realName}</div>
+                                <div class="crew-meta">ID: ${c.id}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelectorAll('.clickable-revive').forEach(card => {
+            card.onclick = () => {
+                const id = parseFloat(card.dataset.id);
+                const target = this.state.crew.find(c => c.id === id);
+
+                // Apply Revival
+                if (item.type === 'REVIVAL_BIO') {
+                    target.status = 'SYMBIOTE';
+                    target.tags.push('HIVE_MIND');
+                    this.state.addLog(`SUBJECT ${target.name} REANIMATED (BIOLOGICAL INTEGRATION).`);
+                } else {
+                    target.status = 'CYBORG_HUSK';
+                    target.tags.push('MACHINE_LINK');
+                    this.state.addLog(`SUBJECT ${target.name} REANIMATED (NEURAL OVERRIDE).`);
+                }
+
+                // Consume Item
+                this.state.cargo.splice(itemIndex, 1);
+
+                modal.remove();
+                this.state.emitUpdates();
+
+                // Check for generic "cargo window" to close or refresh?
+                // For now, simpler to just emit updates.
+            };
+        });
+
+        modal.querySelector('.close-modal').onclick = () => modal.remove();
+    }
+
 
     handleColonyAction() {
         // Generate Outcome based on Planet Metrics
         const planet = this.state.currentSystem;
         const outcome = EndingSystem.getColonyOutcome(planet);
 
+        if (outcome.success && window.AudioSystem) {
+            window.AudioSystem.sfxVictory();
+        }
+
         // Color code valid vs failed colonies
         const color = outcome.success ? '#00ff00' : '#ff4444';
+        const survivors = this.state.crew.filter(c => c.status !== 'DEAD').length;
+        const totalCrew = 5;
 
         const overlay = document.createElement('div');
         overlay.style.position = 'fixed';
@@ -537,25 +739,34 @@ class App {
         overlay.style.flexDirection = 'column';
         overlay.style.alignItems = 'center';
         overlay.style.justifyContent = 'center';
-        overlay.style.textAlign = 'center';
+        overlay.style.fontFamily = "'Share Tech Mono', monospace";
 
         overlay.innerHTML = `
-            <h1 style="font-size: 3em; border-bottom: 2px solid ${color}; padding-bottom: 20px; margin-bottom: 40px;">/// SIMULATION CONCLUDED ///</h1>
-            
-            <div style="font-size: 1.2em; max-width: 800px; line-height: 1.6; text-align: left; background: rgba(20,20,20,0.8); padding: 40px; border: 1px solid ${color};">
-                <div style="margin-bottom: 20px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 10px;">
-                    TARGET: ${planet.name} <br>
-                    TYPE: ${planet.type}
+            <div style="width: 800px; max-width: 90vw; border: 2px solid ${color}; padding: 2px;">
+                <div style="background: ${color}; color: #000; padding: 5px 10px; font-weight: bold; display: flex; justify-content: space-between;">
+                    <span>/// FLIGHT RECORDER: EXODUS-1</span>
+                    <span>STATUS: TERMINATED</span>
                 </div>
                 
-                <p>${outcome.text}</p>
-                
-                <div style="margin-top: 30px; font-style: italic; color: #fff; font-weight: bold;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 20px; border-bottom: 1px solid ${color}; opacity: 0.8; font-size: 0.9em;">
+                    <div>TARGET: ${planet.name}</div>
+                    <div>TYPE: ${planet.type}</div>
+                    <div>DATE: 2342.05.${Math.floor(this.state.fuel)}</div> <!-- Fake Date progression -->
+                    <div>SURVIVORS: ${survivors}/${totalCrew}</div>
+                    <div>METALS: ${this.state.metals}</div>
+                    <div>UPGRADES: ${this.state.upgrades.length}</div>
+                </div>
+
+                <div style="padding: 40px; font-size: 1.1em; line-height: 1.6; height: 300px; overflow-y: auto;">
+                    ${outcome.text}
+                </div>
+
+                <div style="border-top: 1px solid ${color}; padding: 20px; text-align: center; font-size: 1.5em; font-weight: bold; letter-spacing: 2px;">
                     RESULT: ${outcome.title}
                 </div>
             </div>
 
-            <button onclick="location.reload()" style="margin-top: 60px; padding: 20px 40px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1.2em; cursor: pointer; font-family: 'Courier New', monospace;">
+            <button onclick="location.reload()" style="margin-top: 30px; padding: 15px 30px; background: transparent; border: 1px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; hover: { background: ${color}; color: #000; }">
                 REBOOT SIMULATION
             </button>
         `;
@@ -575,6 +786,60 @@ class App {
         const mainView = document.getElementById('main-view');
         mainView.innerHTML = '';
         mainView.appendChild(this.orbitView.render());
+    }
+
+    showFabricator() {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content" style="border-color: var(--color-accent);">
+                <div class="modal-header" style="color: var(--color-accent);">/// FABRICATOR MODULE /// <span class="close-modal">[X]</span></div>
+                <div class="inventory-grid">
+                    ${Object.values(UPGRADES).map(upg => {
+            const installed = this.state.upgrades.includes(upg.id);
+            const canAfford = this.state.metals >= upg.cost;
+            const btnText = installed ? "INSTALLED" : (canAfford ? `BUY (${upg.cost})` : `MISSING METALS (${upg.cost})`);
+            const btnStyle = installed ? 'background: #333; cursor: default;' : (canAfford ? 'background: var(--color-accent); color: #000;' : 'opacity: 0.5; cursor: not-allowed;');
+
+            return `
+                        <div class="inv-item" style="border-color: var(--color-accent);">
+                            <div class="item-name">${upg.name}</div>
+                            <div class="item-desc" style="color:#aaa;">${upg.desc}</div>
+                            <div style="font-size: 0.8em; color: #fff; margin: 5px 0;">EFFECT: ${upg.effect}</div>
+                            <button class="fab-buy-btn" data-id="${upg.id}" style="width: 100%; margin-top: auto; padding: 5px; font-weight: bold; border: none; ${btnStyle}" ${(!canAfford || installed) ? 'disabled' : ''}>
+                                ${btnText}
+                            </button>
+                        </div>
+                    `}).join('')}
+                </div>
+                <div style="margin-top: 20px; text-align: right; color: var(--color-primary);">AVAILABLE METALS: ${this.state.metals}</div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelectorAll('.fab-buy-btn').forEach(btn => {
+            btn.onclick = () => {
+                if (!btn.disabled) this.buyUpgrade(btn.dataset.id, modal);
+            };
+        });
+
+        modal.querySelector('.close-modal').onclick = () => modal.remove();
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+    }
+
+    buyUpgrade(id, modal) {
+        const upg = Object.values(UPGRADES).find(u => u.id === id);
+        if (upg && this.state.metals >= upg.cost) {
+            this.state.metals -= upg.cost;
+            this.state.upgrades.push(id);
+            this.state.addLog(`FABRICATION COMPLETE: ${upg.name} installed.`);
+            if (window.AudioSystem) window.AudioSystem.sfxInteract(); // Re-use interact sfx
+
+            // Refresh
+            modal.remove();
+            this.showFabricator();
+            this.state.emitUpdates();
+        }
     }
 }
 

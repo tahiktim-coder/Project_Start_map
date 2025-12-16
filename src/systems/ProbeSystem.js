@@ -6,21 +6,37 @@ class ProbeSystem {
      */
     static performProbe(planet, currentIntegrity) {
         // 1. Calculate Risk & Damage
-        let damage = Math.floor(Math.random() * 10) + 5;
-        let riskMsg = "Normal atmospheric stress.";
+        // Increased base damage to prevent "infinite probing". Max life ~8 launches.
+        let damage = Math.floor(Math.random() * 10) + 10;
+        let riskMsg = "Normal atmospheric stress";
 
         // Hazard Logic
+        // Gravity Scaling: heavy Planets crush probes
+        const gravity = planet.gravity || 1.0;
+        if (gravity > 1.2) {
+            const gDamage = Math.floor((gravity - 1.0) * 8); // e.g. 5G = +32 damage
+            damage += gDamage;
+            if (gDamage > 10) riskMsg = `High Gravity Detected (${gravity}G)`;
+        }
+
         const dangerLevel = planet.dangerLevel || 0;
         if (dangerLevel > 1) {
             damage += 10;
-            riskMsg = "High turbulence encountered.";
+            riskMsg = "High turbulence encountered";
         }
         if (planet.type === 'GAS_GIANT' || planet.type === 'VOLCANIC') {
             damage += 15;
-            riskMsg = "Extreme pressure/heat detected.";
+            riskMsg = "Extreme pressure/heat detected";
         } else if (planet.atmosphere === 'CORROSIVE') {
             damage += 10;
-            riskMsg = "Hull corrosion warnings.";
+            riskMsg = "Hull corrosion warnings";
+        }
+
+        // UPGRADE CHECK: NANOFIBER HULL
+        const hasNano = window.app && window.app.state && window.app.state.upgrades.includes('nano_hull');
+        if (hasNano) {
+            damage = Math.floor(damage * 0.5);
+            riskMsg += " [Plating Mitigated]";
         }
 
         // Critical Failure Check (if integrity gets too low)
@@ -28,7 +44,7 @@ class ProbeSystem {
             return {
                 success: false,
                 integrityLoss: currentIntegrity, // Destroys it
-                message: "CRITICAL FAILURE: Probe telemetry lost. Hull integrity critical.",
+                message: `<span style="color:var(--color-danger)">CRITICAL FAILURE: Probe crushed by environmental stress. Telemetry lost.</span>`,
                 reward: null
             };
         }
@@ -46,21 +62,21 @@ class ProbeSystem {
             if (selected.item) {
                 // ITEM FOUND
                 reward = { type: 'ITEM', data: selected.item };
-                finalMessage = `Artifact retrieved: ${selected.item.name}.`;
+                finalMessage = `Artifact retrieved: <span style="color:var(--color-accent)">${selected.item.name}</span>.`;
             } else if (selected.type === 'RESOURCE') {
                 // RESOURCE FOUND
                 const amount = Math.floor(selected.min + Math.random() * (selected.max - selected.min));
                 if (selected.val === 'METALS') {
                     reward = { type: 'RESOURCE', resource: 'metals', amount: amount };
-                    finalMessage = selected.log || `Extracted ${amount} Metals.`;
+                    finalMessage = selected.log || `Extracted <span style="color:var(--color-primary)">${amount} Metals</span>.`;
                 } else {
                     reward = { type: 'RESOURCE', resource: 'energy', amount: amount };
-                    finalMessage = selected.log || `Siphoned ${amount} Energy units.`;
+                    finalMessage = selected.log || `Siphoned <span style="color:var(--color-primary)">${amount} Energy</span> units.`;
                 }
             } else if (selected.type === 'LORE') {
                 // LORE FOUND
                 reward = { type: 'DATA', text: selected.text };
-                finalMessage = `DATA LOG: ${selected.text}`;
+                finalMessage = `DATA LOG: <span style="font-style:italic; color:#fff">${selected.text}</span>`;
             }
         }
 
@@ -71,7 +87,7 @@ class ProbeSystem {
         return {
             success: true,
             integrityLoss: damage,
-            message: `Probe returned (${riskMsg}). ${finalMessage}`,
+            message: `Probe returned (${riskMsg}). ${finalMessage} <span style="color:var(--color-danger); font-size:0.8em; margin-left:10px;">[-${damage}% HULL]</span>`,
             reward: reward
         };
     }

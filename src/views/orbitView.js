@@ -69,15 +69,13 @@ class OrbitView {
 
                     <!-- RIGHT: Visual -->
                     <div class="orbit-visual" style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
-                        <div style="
+                        <div class="planet-visual type-${planet.type}" style="
                             width: 300px; height: 300px; 
                             border-radius: 50%; 
-                            border: 2px solid var(--color-primary); 
-                            box-shadow: 0 0 50px var(--color-primary-dim), inset 0 0 50px #000;
-                            background: radial-gradient(circle at 30% 30%, ${this.getPlanetColor(planet.type)}, #000);
                             position: relative;
                         ">
-                            <div style="position:absolute; top:-10px; left:-10px; right:-10px; bottom:-10px; border-radius:50%; box-shadow: 0 0 20px ${this.getPlanetColor(planet.type)}; opacity: 0.3;"></div>
+                            <!-- Atmosphere/Glow Layer -->
+                            <div style="position:absolute; top:-10px; left:-10px; right:-10px; bottom:-10px; border-radius:50%; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); pointer-events:none;"></div>
                         </div>
                         <div class="ship-orbit-icon" style="
                             position: absolute; top: 50%; left: 50%; width: 400px; height: 400px; transform: translate(-50%, -50%);

@@ -1,85 +1,115 @@
 class EndingSystem {
 
     static generateOutcome(planet, state) {
-        // 1. Initial State & Difficulty Check
+        // 1. Analyze State
         const type = planet.type;
         const gravity = planet.metrics?.gravity || 1.0;
         const temp = planet.metrics?.temp || 20;
         const hasLife = planet.hasLife;
         const hasTech = planet.hasTech;
 
-        let success = true; // Optimistic default, failures are specific
+        // Crew Analysis
+        const livingCrew = state.crew.filter(c => c.status !== 'DEAD');
+        const commander = livingCrew.find(c => c.tags.includes('LEADER'));
+        const hasMedic = livingCrew.find(c => c.tags.includes('MEDIC'));
+        const hasEng = livingCrew.find(c => c.tags.includes('ENGINEER'));
+
+        const symbiotes = livingCrew.filter(c => c.tags && c.tags.includes('HIVE_MIND')).length;
+        const cyborgs = livingCrew.filter(c => c.tags && c.tags.includes('MACHINE_LINK')).length;
+        const hasUpgrades = (id) => state.upgrades && state.upgrades.includes(id);
+
+        let success = true;
         let title = "UNKNOWN";
         let acts = [];
 
-        // --- ACT 1: ARRIVAL (The first 50 years) ---
-        // Determines if the colony survives the initial filter
+        // --- ACT 1: SURVIVAL (The Landing) ---
         if (type === 'TOXIC' || type === 'VOLCANIC') {
-            if (hasTech) {
-                acts.push("The precursor shields we found in the ruins were the only thing that saved us from the acid rain. We built our city inside the ancient domes.");
+            if (hasUpgrades('nano_hull')) {
+                acts.push("The Nanofiber Hull held against the corrosive atmosphere. We landed in a caldera, shielding the ship from the acid winds.");
+            } else if (hasTech) {
+                acts.push("The precursor shields we found in the ruins were the only thing that saved us. We built our city inside the ancient, humming domes.");
             } else {
                 success = false;
                 title = "ATMOSPHERIC FAILURE";
-                acts.push("The atmospheric processors clogged within months. The corrosive air dissolved the seals of the hab-modules. We sent a distress signal, but we know no one is coming.");
+                acts.push("The atmospheric processors clogged within months. The corrosive air dissolved the seals. We sent a distress signal into the void.");
             }
         } else if (type === 'GAS_GIANT') {
-            if (gravity > 2.0) {
+            if (hasUpgrades('fuel_scoop')) {
+                acts.push("Using the Bussard Scoop as an anchor, we stabilized our orbital platform. We harvest not just hydrogen, but the static electricity of the storms.");
+            } else if (gravity > 2.0) {
                 success = false;
                 title = "ROCHE LIMIT DISASTER";
-                acts.push("The orbital platform drifted too low. The gravity shear tore the station apart before we could stabilize the thrusters.");
+                acts.push("The orbital platform drifted too low. The gravity shear tore the station apart before we could stabilize.");
             } else {
-                acts.push("Life in the clouds is precarious. We harvest hydrogen and live in suspended cities, forever fearful of the storms below.");
+                acts.push("Life in the clouds is precarious. We live in suspended cities, drifting on the jetstreams, forever looking down at the abyss.");
             }
-        } else if (temp < -100) {
-            acts.push("The surface was uninhabitable. We drilled deep into the crust, tapping geothermal vents for warmth. The sun is just a memory now.");
-        } else if (temp > 150) {
-            acts.push("We live by night. The day-side temperature forces us into hibernation/stasis bunkers until sunset. Our culture has become nocturnal.");
+        } else if (type === 'DESERT' && temp > 100) {
+            acts.push("The sun is a tyrant. We buried the modules under the dunes, creating a subterranean network of cool, tiled tunnels.");
+        } else if (type === 'ICE' && temp < -100) {
+            acts.push("The surface is a mirror of ice. We drilled deep into the crust, finding a warm, dark ocean beneath the shell.");
         } else {
-            acts.push("The landing was rough, but the prefab modules held. We established a perimeter and began the long work of terraforming.");
+            // Standard Landing Variance
+            const variants = [
+                "The landing was rough, but the prefab modules held. We established a perimeter near a river delta.",
+                "We touched down in a high valley, defensible and rich in minerals. The view of the twin moons is spectacular.",
+                "The ship took damage on reentry, becoming a permanent monument. We built our town around its hull."
+            ];
+            acts.push(variants[Math.floor(Math.random() * variants.length)]);
         }
 
-        // --- ACT 2: ADAPTATION (Years 50-300) ---
-        // How biology and culture shift
+        // --- ACT 2: SOCIETY (The People) ---
         if (success) {
-            if (hasLife) {
-                if (type === 'VITAL') {
-                    acts.push("The local fauna was hostile, but delicious. We became apex predators, hunting the mega-beasts for protein. Our society respects strength above all.");
-                } else if (hasTech) {
-                    acts.push("We integrated the native spores with the ancient machines. The result is a bio-mechanical symbiosis that keeps us alive, though we are no longer purely human.");
+            // Dark Revival Influence overrides everything
+            if (symbiotes >= 2) {
+                acts.push("The revival process changed us. The Mycelium Network connects our minds. We no longer speak; we *know*. We are the planet.");
+                title = "CHORUS OF THE FLESH";
+            } else if (cyborgs >= 2) {
+                acts.push("Flesh is weak. With the Neural Links active, we replaced our failing organs with circuitry. The colony is efficient, cold, and eternal.");
+                title = "SILICON IMMORTALITY";
+            } else if (hasLife) {
+                if (hasMedic) {
+                    acts.push(`Under Cmdr. ${commander ? commander.realName.split(' ')[1] : 'Unknown'}'s guidance, our med-teams synthesized a vaccine. We walk the surface without suits now.`);
                 } else {
-                    acts.push("The microbial life infected our crops. Famine nearly broke us, until we adapted our own digestive systems using gene-editing.");
+                    acts.push("The microbial life was aggressive. We were forced to genetically modify our children to digest the local flora.");
                 }
             } else {
-                // Sterile world adaptation
-                if (gravity > 1.5) {
-                    acts.push("High gravity reshaped us. We are shorter, stronger, and our bones are dense as steel. Earth-born humans would be crushed here.");
-                } else if (gravity < 0.5) {
-                    acts.push("In the low gravity, we grew tall and spindly. We glide between towers on winged suits. The concept of 'walking' is archaic.");
+                // Sterile/Empty World Variance based on Roles
+                if (hasEng && state.metals > 100) {
+                    acts.push("With ample metal and skilled engineers, we didn't just survive; we built. Massive automata tend the hydroponics while we focus on research.");
+                } else if (commander) {
+                    acts.push(`Commander ${commander.realName.split(' ')[1]} enforced strict discipline. Our society is martial, organized, and resilient. Chaos is the enemy.`);
                 } else {
-                    acts.push("Without alien life to study, we turned inward. Philosophy and art flourished in the sterile domes.");
+                    acts.push("Without alien life to study, we turned inward. Philosophy, art, and virtual realities flourished in the safety of the domes.");
                 }
             }
         }
 
-        // --- ACT 3: LEGACY (Year 500+) ---
-        // The ultimate fate
+        // --- ACT 3: LEGACY (The Future) ---
         if (success) {
-            if (hasTech) {
-                title = "STELLAR ASCENDANCY";
-                acts.push("With the Precursor data, we unlocked FTL travel without the warp-gates. We have become the Guardians of this sector.");
-            } else if (type === 'VITAL') {
-                title = "NEW EDEN";
-                acts.push("We forgot Earth. This is our home now. We live in harmony with the planet, a utopia of green and blue.");
-            } else if (state.metals > 200) {
-                title = "INDUSTRIAL EMPIRE";
+            if (symbiotes >= 2) {
+                acts.push("We have abandoned the stars. Why leave, when the soil sings to us?");
+            } else if (cyborgs >= 2) {
+                acts.push("We calculate that the Exodus-1 is no longer needed. We have uploaded our consciousness to the planetary grid.");
+            } else if (hasTech || hasUpgrades('sensor_v2')) {
+                acts.push("With the advanced sensor data and precursor relics, we unlocked FTL travel. We are the Guardians of this sector.");
+                if (title === "UNKNOWN") title = "STELLAR ASCENDANCY";
+            } else if (state.metals > 250) {
                 acts.push("The mountains were rich in ore. We built a fleet of conquerors and set out to reclaim the stars.");
+                if (title === "UNKNOWN") title = "INDUSTRIAL EMPIRE";
             } else {
-                title = "THE QUIET REMNANT";
-                acts.push("We survive. We are small, isolated, but we are free. The EXODUS-1 hangs in the sky as a monument to our journey.");
+                // Variance for Standard "Quiet Remnant"
+                const endings = [
+                    { t: "THE QUIET REMNANT", m: "We survive. We are small, isolated, but we are free. The EXODUS-1 hangs in the sky as a monument to our journey." },
+                    { t: "THE ARCHIVISTS", m: "We dedicated ourselves to preserving the history of Earth. We are the library of the lost." },
+                    { t: "THE EXPANSION", m: "Generations passed. We filled the valley, then the continent. We are no longer colonists; we are natives." }
+                ];
+                const choice = endings[Math.floor(Math.random() * endings.length)];
+                if (title === "UNKNOWN") title = choice.t;
+                acts.push(choice.m);
             }
         }
 
-        // Fallback for logic gaps
+        // Fallback
         if (acts.length === 0) acts.push("Data Corrupted.");
 
         return {
@@ -89,12 +119,8 @@ class EndingSystem {
         };
     }
 
-    // Helper for main bundle to call
     static getColonyOutcome(planet) {
-        // We need 'state' for some checks (like metals/resources), but planet is main driver.
-        // Assuming we can access the singleton or pass it. 
-        // For now, let's grab the global state if available, or mock it.
-        const mockState = window.app ? window.app.state : { metals: 0 };
+        const mockState = window.app ? window.app.state : { metals: 0, crew: [], upgrades: [] };
         return this.generateOutcome(planet, mockState);
     }
 }
