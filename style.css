@@ -501,15 +501,23 @@ body {
     filter: blur(1px);
 }
 
-/* 4. TOXIC: Swirling Clouds */
+/* 4. TOXIC: Acidic Atmosphere */
 .planet-visual.type-TOXIC {
     background:
-        repeating-conic-gradient(from 0deg, #7fff00 0deg, #32cd32 10deg, #4b0082 20deg, #7fff00 30deg),
-        radial-gradient(circle, #000 0%, #000 100%);
-    background-blend-mode: hard-light;
+        radial-gradient(circle at 30% 30%, rgba(200, 255, 100, 0.8) 0%, transparent 40%),
+        /* Acid highlight */
+        radial-gradient(circle at 70% 70%, #4b0082 0%, transparent 50%),
+        /* Poison gas shadow */
+        repeating-linear-gradient(45deg, rgba(50, 205, 50, 0.5) 0px, rgba(50, 205, 50, 0.1) 20px, transparent 40px),
+        /* Banding */
+        linear-gradient(to bottom, #2e8b57, #556b2f);
+    /* Base slime green */
+    background-blend-mode: soft-light;
     border: none;
-    box-shadow: 0 0 50px rgba(127, 255, 0, 0.25);
-    filter: contrast(1.2);
+    box-shadow: 0 0 50px rgba(127, 255, 0, 0.4), inset 0 0 60px rgba(0, 0, 0, 0.8);
+    filter: contrast(1.1) saturate(1.2);
+    /* Animated haze */
+    animation: planet-float 20s ease-in-out infinite;
 }
 
 /* 5. VITAL: Continents and Oceans */
