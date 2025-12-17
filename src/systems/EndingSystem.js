@@ -47,6 +47,44 @@ class EndingSystem {
             acts.push("The sun is a tyrant. We buried the modules under the dunes, creating a subterranean network of cool, tiled tunnels.");
         } else if (type === 'ICE' && temp < -100) {
             acts.push("The surface is a mirror of ice. We drilled deep into the crust, finding a warm, dark ocean beneath the shell.");
+        } else if (type === 'BIO_MASS') {
+            if (hasMedic) {
+                acts.push("The planet's immune system attacked, but our Medic isolated the pheromone key. We now live in symbiosis, the forest growing houses for us overnight.");
+                title = "SYMBIOTIC HARMONY";
+            } else if (state.crew.some(c => c.tags.includes('HIVE_MIND'))) {
+                acts.push("The connection was instantaneous. The Hive Mind spoke to the World Soul. We are no longer individuals. We are the Planet.");
+                title = "THE GREAT INTEGRATION";
+            } else {
+                success = false;
+                title = "CONSUMED BY THE GREEN";
+                acts.push("The spores were too fast. One by one, the crew fell, their bodies blooming into beautiful, deadly flowers. The ship is now just a mound of moss.");
+            }
+        } else if (type === 'MECHA') {
+            if (hasEng || state.crew.some(c => c.tags.includes('CYBORG'))) {
+                acts.push("We woke the ancient factories. With our engineer's code, the war machines recognized us as their new commanders. We have an army of iron.");
+                title = "THE IRON DYNASTY";
+            } else {
+                acts.push("The machines are restless. We scavenge what we can from the outskirts, hiding from the Hunter-Killer patrols.");
+                title = "SCRAP MERCHANTS";
+            }
+        } else if (type === 'SHATTERED') {
+            if (hasUpgrades('stabilizer_core') || hasEng) {
+                acts.push("It was insane, but we did it. We anchored the ship to the core fragment and used the engines to stabilize the drift. Living on the edge of oblivion.");
+                title = "CORE STABILIZED";
+            } else {
+                success = false;
+                title = "VOID DRIFT";
+                acts.push("The ground beneath us crumbled. The module drifted into the void. We are separated, floating in the dark, waiting for air to run out.");
+            }
+        } else if (type === 'TERRAFORMED') {
+            acts.push("It is perfect. Too perfect. The weather runs on a schedule. The fruit has no seeds. We are comfortable, but we feel like pets in a cage.");
+            title = "THE GILDED CAGE";
+        } else if (type === 'CRYSTALLINE') {
+            acts.push("The crystals sing. We learned to shape them with sound. Our cities are cathedrals of light and song.");
+            title = "THE RESONANCE";
+        } else if (type === 'ROGUE') {
+            acts.push("In the eternal dark, we found warmth deep below. We built a bioluminescent society in the caverns. The surface is death, but the deep is life.");
+            title = "CHILDREN OF THE DARK";
         } else {
             // Standard Landing Variance
             const variants = [

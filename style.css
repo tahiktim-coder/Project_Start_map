@@ -401,71 +401,294 @@ body {
 
 /* --- PLANET VISUAL TYPES --- */
 /* Base Planet Visual needs to support gradients and transitions */
+/* --- PREMIUM PLANET VISUALS --- */
+/* Base Planet: The sphere container */
 .planet-visual {
-    transition: box-shadow 1s ease, background 1s ease;
-}
-
-/* 1. Volcanic: Angry Red/Orange */
-.planet-visual.type-VOLCANIC {
-    background: radial-gradient(circle at 30% 30%, #ff4d4d, #330000);
-    box-shadow: 0 0 50px rgba(255, 50, 0, 0.4), inset 0 0 20px rgba(0, 0, 0, 0.8);
-    border: 1px solid #ff3300;
-}
-
-/* 2. Ice World: Cold Cyan/White */
-.planet-visual.type-ICE_WORLD {
-    background: radial-gradient(circle at 30% 30%, #e0ffff, #008b8b);
-    box-shadow: 0 0 40px rgba(0, 255, 255, 0.3);
-    border: 1px solid #00ffff;
-}
-
-/* 3. Gas Giant: Banded, Tilted, Jupiter-like */
-.planet-visual.type-GAS_GIANT {
-    background: repeating-linear-gradient(155deg,
-            #d2691e,
-            #cc7a30 12%,
-            #8b4513 18%,
-            #65330a 25%,
-            #d2691e 35%);
+    transition: all 1s ease;
+    position: relative;
     border-radius: 50%;
-    box-shadow: 0 0 60px rgba(210, 105, 30, 0.2), inset -20px -20px 50px rgba(0, 0, 0, 0.5);
-    border: 1px solid #d2691e;
+    /* Subtle rotate animation for surface details */
+    animation: planet-float 20s ease-in-out infinite;
 }
 
-/* 4. Toxic: Sickly Green/Purple */
+/* Common Atmosphere Glow (Pseudo-element) */
+.planet-visual::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8),
+        /* Inner Shadow / Terminator */
+        0 0 20px rgba(255, 255, 255, 0.1);
+    /* Outer atmospheric haze base */
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* 1. VOLCANIC: Cracking magma crust */
+.planet-visual.type-VOLCANIC {
+    /* Complex layered background: Base dark rock + bright lava cracks */
+    background:
+        radial-gradient(circle at 30% 30%, rgba(255, 100, 0, 0) 0%, rgba(0, 0, 0, 0.8) 100%),
+        /* Shadow overlay */
+        repeating-linear-gradient(45deg, #330000 0px, #330000 10px, #ff4500 11px, #330000 12px),
+        /* Base Cracks */
+        radial-gradient(circle at 70% 70%, #5a0000, #1a0000);
+    /* Core color */
+    background-size: 100% 100%, 200% 200%, 100% 100%;
+    border: none;
+    box-shadow: 0 0 60px rgba(255, 69, 0, 0.4);
+    /* Glow */
+}
+
+.planet-visual.type-VOLCANIC::after {
+    box-shadow: inset 10px 10px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(255, 50, 0, 0.2);
+}
+
+/* 2. ICE WORLD: Subsurface scattering */
+.planet-visual.type-ICE_WORLD {
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 20%),
+        /* Specular highlight */
+        repeating-radial-gradient(circle at 50% 50%, transparent 0, rgba(255, 255, 255, 0.1) 2px, transparent 4px),
+        /* Cracks */
+        radial-gradient(circle at 50% 50%, #aeeeee, #008b8b);
+    /* Base Ice */
+    border: none;
+    box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
+}
+
+/* 3. GAS GIANT: Turbulent Bands */
+.planet-visual.type-GAS_GIANT {
+    /* Soft, blended bands */
+    background:
+        radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0) 50%, rgba(0, 0, 0, 0.5) 100%),
+        /* Sphere curve */
+        linear-gradient(25deg,
+            #d2691e 0%,
+            #f4a460 20%,
+            #8b4513 40%,
+            #cd853f 60%,
+            #8b4513 80%,
+            #d2691e 100%);
+    background-size: 200% 200%;
+    /* Allows animation of bands if we wanted */
+    border: none;
+    box-shadow: 0 0 40px rgba(210, 105, 30, 0.3);
+    /* Rotate the background for effect */
+    transform: rotate(-20deg);
+}
+
+.planet-visual.type-GAS_GIANT::before {
+    /* The Ring System (Pseudo-element trick) */
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 160%;
+    height: 40%;
+    /* Ellipse */
+    border-radius: 50%;
+    border: 15px solid rgba(205, 133, 63, 0.2);
+    border-top-color: rgba(205, 133, 63, 0.6);
+    border-bottom-color: rgba(205, 133, 63, 0.1);
+    transform: translate(-50%, -50%) rotate(0deg);
+    /* Relative to tilted planet */
+    z-index: -1;
+    filter: blur(1px);
+}
+
+/* 4. TOXIC: Swirling Clouds */
 .planet-visual.type-TOXIC {
-    background: radial-gradient(circle at 50% 50%, #7fff00, #4b0082);
-    box-shadow: 0 0 40px rgba(127, 255, 0, 0.2);
-    border: 1px solid #7fff00;
+    background:
+        repeating-conic-gradient(from 0deg, #7fff00 0deg, #32cd32 10deg, #4b0082 20deg, #7fff00 30deg),
+        radial-gradient(circle, #000 0%, #000 100%);
+    background-blend-mode: hard-light;
+    border: none;
+    box-shadow: 0 0 50px rgba(127, 255, 0, 0.25);
+    filter: contrast(1.2);
 }
 
-/* 5. Vital: Earth-like Blue/Green */
+/* 5. VITAL: Continents and Oceans */
 .planet-visual.type-VITAL {
-    background: radial-gradient(circle at 40% 40%, #00bfff, #228b22);
-    box-shadow: 0 0 40px rgba(0, 191, 255, 0.3);
-    border: 1px solid #00bfff;
+    background:
+        radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 10%),
+        /* Clouds/Reflection */
+        /* Simulated Continents using noise-like gradients (approximated) */
+        radial-gradient(circle at 70% 20%, #228b22 0%, transparent 20%),
+        radial-gradient(circle at 20% 80%, #228b22 0%, transparent 25%),
+        radial-gradient(circle at 80% 80%, #228b22 0%, transparent 20%),
+        radial-gradient(circle at 50% 50%, #00bfff, #000080);
+    /* Deep Ocean */
+    background-blend-mode: normal;
+    border: none;
+    box-shadow: 0 0 60px rgba(0, 191, 255, 0.4);
 }
 
-/* 6. Desert: Yellow/Sand */
+.planet-visual.type-VITAL::after {
+    /* Atmosphere Halo */
+    box-shadow: inset 10px 10px 50px rgba(0, 0, 0, 0.8), 0 0 15px rgba(135, 206, 235, 0.5);
+}
+
+/* 6. DESERT: Dunes */
 .planet-visual.type-DESERT {
-    background: radial-gradient(circle at 30% 30%, #f4a460, #8b4500);
-    box-shadow: 0 0 30px rgba(244, 164, 96, 0.3);
-    border: 1px solid #f4a460;
+    background:
+        repeating-linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1) 2px, transparent 4px),
+        /* Vertical wind streaks */
+        linear-gradient(135deg, #ffdea0, #daa520, #8b4513);
+    border: none;
+    box-shadow: 0 0 40px rgba(218, 165, 32, 0.3);
 }
 
-/* 7. Oceanic: Deep Blue */
+/* 7. OCEANIC: Deep sheen */
 .planet-visual.type-OCEANIC {
-    background: radial-gradient(circle at 30% 30%, #1e90ff, #000080);
-    box-shadow: 0 0 40px rgba(30, 144, 255, 0.3);
-    border: 1px solid #1e90ff;
+    background:
+        radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.1) 0%, transparent 30%),
+        /* Sun glint */
+        linear-gradient(to bottom, #1e90ff, #000080);
+    border: none;
+    box-shadow: 0 0 50px rgba(30, 144, 255, 0.4);
 }
 
-/* 8. Rocky: Default Grey/Brown */
+/* 8. ROCKY: Barren cratered */
 .planet-visual.type-ROCKY {
-    background: radial-gradient(circle at 30% 30%, #a9a9a9, #2f4f4f);
-    box-shadow: 0 0 20px rgba(169, 169, 169, 0.2);
-    border: 1px solid #808080;
+    background:
+        radial-gradient(circle at 60% 40%, rgba(0, 0, 0, 0.3) 5%, transparent 6%),
+        /* Craters */
+        radial-gradient(circle at 30% 70%, rgba(0, 0, 0, 0.3) 8%, transparent 9%),
+        radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.3) 4%, transparent 5%),
+        radial-gradient(circle at 30% 30%, #a9a9a9, #505050, #2f4f4f);
+    border: none;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
 }
+
+
+/* 9. BIO-MASS: Pulsing Flesh */
+.planet-visual.type-BIO_MASS {
+    background:
+        repeating-radial-gradient(circle at 50% 50%, #8b008b 0px, #4b0082 10px, #8b008b 20px),
+        /* Veins */
+        radial-gradient(circle, #ff00ff, #4b0082);
+    background-blend-mode: overlay;
+    border: none;
+    box-shadow: 0 0 50px rgba(255, 0, 255, 0.3);
+    animation: planet-pulse 4s ease-in-out infinite;
+}
+
+/* 10. MECHA: Death Star like */
+.planet-visual.type-MECHA {
+    background:
+        linear-gradient(90deg, transparent 49%, #000 50%, transparent 51%),
+        /* Equatorial Trench */
+        repeating-linear-gradient(0deg, transparent 0px, transparent 4px, rgba(0, 0, 0, 0.5) 5px),
+        /* Panels */
+        radial-gradient(circle at 30% 30%, #d3d3d3, #696969);
+    border: none;
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
+}
+
+.planet-visual.type-MECHA::before {
+    /* The "Eye" or Dish */
+    content: '';
+    position: absolute;
+    top: 25%;
+    left: 25%;
+    width: 20%;
+    height: 20%;
+    border-radius: 50%;
+    box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+/* 11. SHATTERED: Broken Core */
+.planet-visual.type-SHATTERED {
+    background:
+        conic-gradient(from 0deg, transparent 0deg, transparent 60deg, #000 80deg, transparent 100deg),
+        /* Missing chunks */
+        radial-gradient(circle, #8b0000, #330000);
+    box-shadow: 0 0 40px rgba(255, 0, 0, 0.3);
+    clip-path: polygon(10% 0, 100% 0, 100% 100%, 0% 100%, 0% 40%, 20% 30%);
+    /* Jagged Clip */
+}
+
+/* 12. TERRAFORMED: Hexagonal Shield? Or just Garden */
+.planet-visual.type-TERRAFORMED {
+    background:
+        radial-gradient(circle at 50% 50%, transparent 0%, transparent 90%, rgba(0, 255, 204, 0.5) 100%),
+        /* Dome edge */
+        radial-gradient(circle at 30% 70%, #2e8b57 0%, #2e8b57 20%, transparent 25%),
+        /* Greenery */
+        linear-gradient(to bottom, #87ceeb, #2e8b57);
+    box-shadow: 0 0 60px rgba(0, 255, 204, 0.2), inset 0 0 20px rgba(0, 255, 204, 0.4);
+}
+
+/* 13. CRYSTALLINE: Sharp facets */
+/* 13. CRYSTALLINE: Faceted Jewel Sphere */
+.planet-visual.type-CRYSTALLINE {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, transparent 40%),
+        /* Top-Left shine */
+        linear-gradient(225deg, rgba(255, 255, 255, 0.4) 0%, transparent 40%),
+        /* Top-Right shine */
+        repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.1) 0px, rgba(255, 255, 255, 0.1) 1px, transparent 1px, transparent 20px),
+        /* Facet lines */
+        repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.1) 0px, rgba(255, 255, 255, 0.1) 1px, transparent 1px, transparent 20px),
+        /* Facet lines */
+        radial-gradient(circle at 50% 50%, #e0ffff, #00ced1, #008b8b);
+    /* Deep Cyan Core */
+    /* Remove clip-path to keep it a sphere (or maybe a soft polygon if desired, but user hated the hex) */
+    /* clip-path: polygon(...) REMOVED */
+    box-shadow: 0 0 60px rgba(0, 255, 255, 0.6), inset 0 0 40px rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* 14. ROGUE: Void with eyes */
+.planet-visual.type-ROGUE {
+    background: #000;
+    box-shadow: 0 0 100px rgba(75, 0, 130, 0.5);
+    /* Deep purple glow */
+}
+
+.planet-visual.type-ROGUE::before {
+    content: '●';
+    color: #4b0082;
+    font-size: 150px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.5;
+    text-shadow: 0 0 20px #ff00ff;
+}
+
+/* --- ANIMATIONS --- */
+@keyframes planet-float {
+
+    0%,
+    100% {
+        transform: translateY(0) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-5px) rotate(1deg);
+    }
+}
+
+@keyframes planet-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
 /* --- Sector Map Visuals --- */
 .sector-map-bg {
     background-color: #000502;
@@ -487,14 +710,21 @@ body {
         left: 0%;
         opacity: 0;
     }
+
     10% {
         opacity: 1;
     }
+
     90% {
         opacity: 1;
     }
+
     100% {
         left: 100%;
         opacity: 0;
     }
+}
+
+.nav-miniature {
+    box-shadow: 0 0 10px currentColor !important;
 }

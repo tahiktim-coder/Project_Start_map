@@ -1,5 +1,5 @@
 // Planet Types & Data Definitions
-const PLANET_TYPES = ['ROCKY', 'GAS_GIANT', 'ICE_WORLD', 'OCEANIC', 'DESERT', 'VOLCANIC', 'TOXIC', 'VITAL'];
+const PLANET_TYPES = ['ROCKY', 'GAS_GIANT', 'ICE_WORLD', 'OCEANIC', 'DESERT', 'VOLCANIC', 'TOXIC', 'VITAL', 'BIO_MASS', 'MECHA', 'SHATTERED', 'TERRAFORMED', 'CRYSTALLINE', 'ROGUE'];
 
 const ATMOSPHERES = {
     BREATHABLE: { type: 'BREATHABLE', chance: 0.1 },
@@ -18,7 +18,13 @@ const PLANET_DATA = {
     DESERT: { scanCost: 2, hazardChance: 0.6, desc: "Scorched surface. Extreme heat alerts." },
     VOLCANIC: { scanCost: 3, hazardChance: 0.9, desc: "Active tectonic activity. Magma flows detected." },
     TOXIC: { scanCost: 3, hazardChance: 0.7, desc: "Atmosphere composed of lethal compounds." },
-    VITAL: { scanCost: 2, hazardChance: 0.1, desc: "Rare biosphere. Detecting life signs." }
+    VITAL: { scanCost: 2, hazardChance: 0.1, desc: "Rare biosphere. Detecting life signs." },
+    BIO_MASS: { scanCost: 4, hazardChance: 0.9, desc: "The entire planet is a single living organism. High biological signal." },
+    MECHA: { scanCost: 3, hazardChance: 0.7, desc: "Ancient battlefield covered in dormant war machines." },
+    SHATTERED: { scanCost: 5, hazardChance: 0.95, desc: "Planetary core exposed. Extreme gravitational anomalies." },
+    TERRAFORMED: { scanCost: 1, hazardChance: 0.0, desc: "Artificially perfect conditions. No natural weather patterns detected." },
+    CRYSTALLINE: { scanCost: 3, hazardChance: 0.4, desc: "Surface covered in massive resonating crystal structures." },
+    ROGUE: { scanCost: 4, hazardChance: 0.6, desc: "A dark world drifting without a star. Deep freeze readings." }
 };
 
 const SUFFIXES = ['Prime', 'Major', 'Minor', 'IV', 'X', 'Alpha', 'Proxima', 'Secundus'];
@@ -74,6 +80,30 @@ class PlanetGenerator {
                 gravityBase = 0.9 + Math.random() * 0.3; // Earth-like
                 tempMin = 15; tempMax = 35; // Perfect habitable zone
                 break;
+            case 'BIO_MASS':
+                gravityBase = 1.0 + Math.random() * 0.5;
+                tempMin = 30; tempMax = 60; // Hot/Humid
+                break;
+            case 'MECHA':
+                gravityBase = 1.2 + Math.random() * 0.5; // Heavy with metal
+                tempMin = -20; tempMax = 20; // Cold steel
+                break;
+            case 'SHATTERED':
+                gravityBase = 0.5 + Math.random() * 2.0; // Chaotic gravity
+                tempMin = -100; tempMax = 500; // Extreme variance (exposed core)
+                break;
+            case 'TERRAFORMED':
+                gravityBase = 1.0; // Perfect
+                tempMin = 22; tempMax = 24; // Artificial thermostat
+                break;
+            case 'CRYSTALLINE':
+                gravityBase = 0.8;
+                tempMin = -50; tempMax = 10;
+                break;
+            case 'ROGUE':
+                gravityBase = 1.5; // Dense core
+                tempMin = -250; tempMax = -200; // Absolute zero proximity
+                break;
             default: // ROCKY
                 gravityBase = 0.5 + Math.random() * 1.0;
                 tempMin = -100; tempMax = 50;
@@ -120,9 +150,12 @@ class PlanetGenerator {
 
     static generateConditions(type, level) {
         let atmosphere = 'UNKNOWN';
-        if (['GAS_GIANT', 'TOXIC'].includes(type)) atmosphere = 'TOXIC';
+        if (['GAS_GIANT', 'TOXIC', 'MECHA'].includes(type)) atmosphere = 'TOXIC';
         else if (type === 'ROCKY') atmosphere = Math.random() > 0.5 ? 'THIN' : 'NONE';
-        else if (type === 'VITAL') atmosphere = 'BREATHABLE';
+        else if (['VITAL', 'TERRAFORMED'].includes(type)) atmosphere = 'BREATHABLE';
+        else if (type === 'BIO_MASS') atmosphere = 'HIGH_PRESSURE';
+        else if (type === 'SHATTERED') atmosphere = 'NONE';
+        else if (type === 'ROGUE') atmosphere = 'THIN';
         else atmosphere = Object.keys(ATMOSPHERES)[Math.floor(Math.random() * 6)];
 
         const tags = [];
@@ -138,15 +171,15 @@ class PlanetGenerator {
         let energyBase = Math.floor(Math.random() * 40) + 10; // 10-50 Base
 
         // Type Modifiers (Consistency Check)
-        if (['ROCKY', 'VOLCANIC', 'DESERT'].includes(type)) {
+        if (['ROCKY', 'VOLCANIC', 'DESERT', 'MECHA', 'SHATTERED'].includes(type)) {
             metalBase += 40; // Auto-Rich (50-90)
-        } else if (['GAS_GIANT', 'ICE_WORLD', 'OCEANIC'].includes(type)) {
+        } else if (['GAS_GIANT', 'ICE_WORLD', 'OCEANIC', 'BIO_MASS'].includes(type)) {
             metalBase -= 10; // Auto-Poor (0-40)
         }
 
-        if (['GAS_GIANT', 'VOLCANIC', 'TOXIC'].includes(type)) {
+        if (['GAS_GIANT', 'VOLCANIC', 'TOXIC', 'SHATTERED', 'CRYSTALLINE'].includes(type)) {
             energyBase += 40; // Auto-Rich (50-90)
-        } else if (['ROCKY', 'VITAL'].includes(type)) {
+        } else if (['ROCKY', 'VITAL', 'MECHA'].includes(type)) {
             energyBase -= 10; // Auto-Poor (0-40)
         }
 

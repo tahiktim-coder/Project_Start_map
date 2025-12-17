@@ -18,31 +18,30 @@ class NavView {
             const x = planet.mapData ? planet.mapData.x : Math.floor(Math.random() * 80) + 10;
             const y = planet.mapData ? planet.mapData.y : Math.floor(Math.random() * 80) + 10;
 
-            // Type Colors
-            let color = '#aaaaaa'; // Default Grey
+            // Use the same classes as OrbitView but scaled down via CSS or inline style override?
+            // BETTER: Use a specific class 'nav-planet' that reuses the background/box-shadow but forces size.
+            // We will add 'planet-visual' class but also 'nav-node-visual' to override size.
 
-            // Standard Types
-            if (planet.type === 'ROCKY') color = '#b0b0b0';    // Light Grey
-            if (planet.type === 'GAS_GIANT') color = '#ffcc00';// Orange/Gold
-            if (planet.type === 'ICE_WORLD') color = '#00ffff';// Cyan
-            if (planet.type === 'OCEANIC') color = '#0066ff';  // Deep Blue
-            if (planet.type === 'DESERT') color = '#ff9933';   // Sandy Orange
-            if (planet.type === 'VOLCANIC') color = '#ff3300'; // Bright Red
-            if (planet.type === 'TOXIC') color = '#99cc33';    // Sickly Green
-            if (planet.type === 'VITAL') color = '#33ff33';    // Bright Green (Life)
+            // NOTE: We need to set the color var for the text/border interaction or rely on CSS.
+            // For now, let's keep the border color logic for hover states, but use the class for the visual.
+            const color = this.getPlanetColor(planet.type);
 
             return `
             <div class="nav-node" data-id="${planet.id}" 
                  style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%);
-                        width: 20px; height: 20px; background: #000; border: 2px solid ${color}; 
-                        border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center;
-                        z-index: 10; box-shadow: 0 0 5px ${color}; transition: all 0.3s ease;">
+                        width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+                        z-index: 10; transition: all 0.3s ease;">
                 
-                <div style="width: 6px; height: 6px; background: ${color}; border-radius: 50%;"></div>
+                <!-- The Miniature Planet Visual -->
+                <!-- We reuse 'planet-visual' to get the gradients, and 'type-${planet.type}' -->
+                <!-- We override the size and animation locally or via a helper class -->
+                <div class="planet-visual type-${planet.type} nav-miniature" 
+                     style="width: 100%; height: 100%; animation-duration: 10s;"> <!-- Faster spin for small feels cute? or slower? -->
+                </div>
                 
                 <!-- Label -->
-                <div style="position: absolute; top: 25px; white-space: nowrap; color: ${color}; 
-                            font-size: 10px; font-family: var(--font-mono); text-shadow: 0 0 5px #000; pointer-events: none;">
+                <div class="nav-label" style="position: absolute; top: 45px; white-space: nowrap; color: ${color}; 
+                            font-size: 10px; font-family: var(--font-mono); text-shadow: 0 0 5px #000; pointer-events: none; opacity: 0.8;">
                     ${planet.name}
                 </div>
             </div>`;
@@ -81,20 +80,28 @@ class NavView {
             const id = node.getAttribute('data-id');
             const data = systems.find(p => p.id === id);
 
+            // Logic for visual feedback on hover
+            const label = node.querySelector('.nav-label');
+
             node.addEventListener('mouseenter', () => {
-                node.style.boxShadow = '0 0 15px var(--color-primary)';
-                node.style.borderColor = '#fff';
                 node.style.zIndex = '20';
+                node.style.transform = node.style.transform.replace('scale(1)', '') + ' scale(1.5)'; // Pop effect
+                if (label) {
+                    label.style.opacity = '1';
+                    label.style.fontWeight = 'bold';
+                    label.style.textShadow = '0 0 8px var(--color-primary)';
+                    label.style.zIndex = '30';
+                }
             });
             node.addEventListener('mouseleave', () => {
-                node.style.boxShadow = `0 0 5px ${node.style.borderColor}`; // Revert visual logic (simplified)
-                // Actually need to reset to original color. 
-                // Since inline style is modified, best is to just remove the overrides or let the original render handle it.
-                // For simplicity here, we'll re-render or just clear the specific overrides:
-                const color = this.getPlanetColor(data.type);
-                node.style.borderColor = color;
-                node.style.boxShadow = `0 0 5px ${color}`;
                 node.style.zIndex = '10';
+                node.style.transform = node.style.transform.replace(' scale(1.5)', ''); // Revert pop
+                if (label) {
+                    label.style.opacity = '0.8';
+                    label.style.fontWeight = 'normal';
+                    label.style.textShadow = '0 0 5px #000';
+                    label.style.zIndex = 'auto';
+                }
             });
 
             node.addEventListener('click', () => {
@@ -112,6 +119,15 @@ class NavView {
         if (type === 'VOLCANIC') return '#ff3300';
         if (type === 'TOXIC') return '#99cc33';
         if (type === 'VITAL') return '#33ff33';
+
+        // Unique Types
+        if (type === 'BIO_MASS') return '#ff00ff';     // Magenta
+        if (type === 'MECHA') return '#c0c0c0';        // Silver
+        if (type === 'SHATTERED') return '#cc0000';    // Deep Red
+        if (type === 'TERRAFORMED') return '#00ffcc';  // Teal
+        if (type === 'CRYSTALLINE') return '#e0ffff';  // Light Cyan (Ice/Crystal)
+        if (type === 'ROGUE') return '#330066';        // Dark Indigo
+
         return '#aaaaaa';
     }
 
@@ -135,9 +151,9 @@ class NavView {
 
         panel.innerHTML = `
             <div class="tactical-card" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-                <div style="border: 1px solid var(--color-primary); height: 150px; display: flex; align-items: center; justify-content: center; background: rgba(0,255,0,0.05); margin-bottom: 20px; position: relative; overflow: hidden;">
-                    <div style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--color-primary); box-shadow: 0 0 20px var(--color-primary-dim); background: radial-gradient(circle at 30% 30%, var(--color-primary-dim), #000);"></div>
-                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; pointer-events: none;"></div>
+                <div style="border: 1px solid var(--color-primary); height: 150px; display: flex; align-items: center; justify-content: center; background: rgba(0,255,0,0.05); margin-bottom: 20px; position: relative; overflow: visible;">
+                    <div class="planet-visual type-${planet.type}" style="width: 100px; height: 100px;"></div>
+                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; pointer-events: none; opacity: 0.3;"></div>
                 </div>
                 <h3 style="color: var(--color-primary); border-bottom: 1px solid var(--color-primary-dim); padding-bottom: 5px;">${planet.name}</h3>
                 <div style="margin-top: 15px; font-size: 0.9em; flex: 1; display: flex; flex-direction: column; gap: 8px;">
@@ -194,5 +210,3 @@ class NavView {
         }
     }
 }
-
-

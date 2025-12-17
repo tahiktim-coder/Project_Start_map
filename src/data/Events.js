@@ -128,5 +128,45 @@ const EVENTS = [
             { text: "Scan & Leave (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
             { text: "Investigate Debris (Risky)", riskMod: 20, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
         ]
+    },
+    {
+        id: 'MECHA_SALVAGE',
+        trigger: (planet) => planet.type === 'MECHA',
+        title: "ANCIENT FACTORY",
+        desc: "A massive automated factory is still running on standby power. The security grid is active.",
+        choices: [
+            { text: "Scavenge Perimeter (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Hack Core (Tech Risk)", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'WEAPON'] } }
+        ]
+    },
+    {
+        id: 'BIO_SAMPLES',
+        trigger: (planet) => planet.type === 'BIO_MASS',
+        title: "SPORE STORM",
+        desc: "The air is filling with glowing, semi-sentient spores. They seem attracted to heat.",
+        choices: [
+            { text: "Purge Vents (Energy Cost)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Harvest Spores (Bio Risk)", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO', 'CURE'] } }
+        ]
+    },
+    {
+        id: 'VOID_WHISPERS',
+        trigger: (planet) => ['SHATTERED', 'ROGUE'].includes(planet.type),
+        title: "VOID WHISPERS",
+        desc: "The silence here is unnatural. Crew members report hearing their own names spoken in the static.",
+        choices: [
+            { text: "Enforce Rest (Morale Loss)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Analyze Static (Psych Risk)", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }
+        ]
+    },
+    {
+        id: 'PRISM_SONG',
+        trigger: (planet) => planet.type === 'CRYSTALLINE',
+        title: "CRYSTAL RESONANCE",
+        desc: "The crystals are vibrating at a frequency that can shatter glass... and bone.",
+        choices: [
+            { text: "Dampen Hull (Energy Cost)", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Record Song (Risky)", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }
+        ]
     }
 ];
