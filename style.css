@@ -48,14 +48,17 @@ body {
 .app-container {
     display: grid;
     grid-template-areas:
-        "header header"
-        "main right"
-        "log log";
-    grid-template-columns: 1fr var(--panel-width);
+        "header header header"
+        "left main right"
+        "left log log";
+    grid-template-columns: 280px 1fr var(--panel-width);
+    /* Left Panel | Main | Right Panel */
     grid-template-rows: var(--header-height) 1fr var(--log-height);
     height: 100vh;
     width: 100vw;
     position: relative;
+    z-index: 10;
+    column-gap: 10px;
     z-index: 10;
 }
 
@@ -146,6 +149,17 @@ body {
     animation: blink 1s infinite;
 }
 
+/* --- Left Panel (Ship Schematic) --- */
+.left-panel {
+    grid-area: left;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--color-primary-dim);
+    background: rgba(0, 20, 10, 0.4);
+    overflow: hidden;
+    position: relative;
+}
+
 /* --- Right Panel --- */
 .right-panel {
     grid-area: right;
@@ -157,6 +171,100 @@ body {
     /* Prevent grid expansion */
     min-height: 0;
     /* Important for grid 1fr */
+}
+
+/* Ship Schematic Visuals */
+.ship-hull {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    gap: 10px;
+    padding: 20px 10px;
+    justify-content: space-between;
+}
+
+.ship-deck {
+    flex: 1;
+    border: 1px solid var(--color-primary-dim);
+    border-radius: 8px;
+    /* Default soft round */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.2s ease;
+    cursor: default;
+    background: rgba(0, 20, 0, 0.2);
+    box-shadow: inset 0 0 10px rgba(0, 255, 65, 0.05);
+}
+
+.ship-deck:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+}
+
+/* Specific Shapes */
+.deck-bridge {
+    /* Nose Cone Shape */
+    border-top-left-radius: 50% 100%;
+    border-top-right-radius: 50% 100%;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    margin-bottom: 5px;
+    flex: 0.8 !important;
+    /* Slightly smaller height */
+}
+
+.deck-engineering {
+    /* Engine Block Shape */
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+    border-bottom: 2px solid var(--color-primary);
+    /* Heavier bottom */
+    flex: 1.2 !important;
+    /* Larger base */
+    box-shadow: 0 5px 20px rgba(255, 176, 0, 0.1);
+    /* Engine glow hint */
+}
+
+.deck-cargo {
+    /* Hazard Stripes Background */
+    background: repeating-linear-gradient(45deg,
+            rgba(0, 0, 0, 0.5),
+            rgba(0, 0, 0, 0.5) 10px,
+            rgba(20, 40, 20, 0.5) 10px,
+            rgba(20, 40, 20, 0.5) 20px);
+    border-color: #3a5c40;
+    /* Dimmer border for storage */
+}
+
+/* Labels */
+.deck-label {
+    font-family: var(--font-display);
+    font-weight: bold;
+    font-size: 1.1em;
+    color: var(--color-primary);
+    text-shadow: 0 0 5px rgba(0, 255, 65, 0.5);
+    letter-spacing: 2px;
+}
+
+.deck-sub {
+    font-family: var(--font-mono);
+    font-size: 0.7em;
+    color: var(--color-accent);
+    opacity: 0.8;
+    margin-top: 2px;
+}
+
+/* Header Resize Override */
+.nav-view-container h2 {
+    font-size: 1.2em !important;
+    letter-spacing: 1px;
+    opacity: 0.8;
 }
 
 /* ... existing code ... */

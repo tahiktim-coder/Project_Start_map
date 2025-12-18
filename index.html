@@ -57,6 +57,44 @@
             ">AUDIO: OFF</button>
         </header>
 
+        <!-- Left Panel: Ship Schematic -->
+        <aside class="left-panel" id="left-panel">
+            <div class="panel-header">/// SHIP SCHEMATIC</div>
+            <div class="panel-content" id="ship-schematic">
+                <div class="ship-hull">
+                    <!-- Deck 1: Bridge (Navigation) -->
+                    <div class="ship-deck deck-bridge" data-room="bridge">
+                        <div class="deck-label">BRIDGE</div>
+                        <div class="deck-sub">NAV / COMMS</div>
+                    </div>
+
+                    <!-- Deck 2: Lab (Science) -->
+                    <div class="ship-deck deck-lab" data-room="lab">
+                        <div class="deck-label">LABORATORY</div>
+                        <div class="deck-sub">SCAN / BIO</div>
+                    </div>
+
+                    <!-- Deck 4: Quarters (Rest) -->
+                    <div class="ship-deck deck-quarters" data-room="quarters">
+                        <div class="deck-label">CREW QUARTERS</div>
+                        <div class="deck-sub">REST / HEAL</div>
+                    </div>
+
+                    <!-- Deck 5: Cargo / Morgue (Storage) -->
+                    <div class="ship-deck deck-cargo" data-room="cargo">
+                        <div class="deck-label">CARGO HOLD</div>
+                        <div class="deck-sub">STORAGE / MORGUE</div>
+                    </div>
+
+                    <!-- Deck 6: Engineering (Hardware) -->
+                    <div class="ship-deck deck-engineering" data-room="engineering">
+                        <div class="deck-label">ENGINEERING</div>
+                        <div class="deck-sub">PROBES / FUEL</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
         <!-- Main Content Area (Star Map or Planet View) -->
         <main class="main-viewport" id="main-view">
             <!-- Dynamic Content Injected Here -->
