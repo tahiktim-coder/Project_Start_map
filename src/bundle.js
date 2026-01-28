@@ -3338,50 +3338,114 @@ You are home.`
 
         // Color code valid vs failed colonies
         const color = outcome.success ? '#00ff00' : '#ff4444';
-        const survivors = this.state.crew.filter(c => c.status !== 'DEAD').length;
-        const totalCrew = 5;
+        const survivors = this.state.crew.filter(c => c.status !== 'DEAD');
+        const totalCrew = this.state.crew.length;
+        const avgStress = survivors.length > 0 ? (survivors.reduce((a, c) => a + (c.stress || 0), 0) / survivors.length).toFixed(1) : 0;
+
+        // Calculate colony rating
+        const symbiotes = survivors.filter(c => c.tags?.includes('HIVE_MIND')).length;
+        const cyborgs = survivors.filter(c => c.tags?.includes('MACHINE_LINK')).length;
+        const wrongPlace = survivors.filter(c => c.tags?.includes('WRONG_PLACE_SURVIVOR')).length;
+        const techLevel = this.state.upgrades?.length || 0;
+        const colonyKnowledge = this.state._colonyKnowledge || 0;
+
+        // Rating calculation
+        let rating = 'C';
+        let ratingColor = '#ffaa00';
+        const score = (survivors.length * 20) + (techLevel * 10) + (colonyKnowledge * 5) - (avgStress * 10);
+        if (outcome.success) {
+            if (score >= 120) { rating = 'S'; ratingColor = '#ffcc00'; }
+            else if (score >= 90) { rating = 'A'; ratingColor = '#00ff00'; }
+            else if (score >= 60) { rating = 'B'; ratingColor = '#88ff88'; }
+            else { rating = 'C'; ratingColor = '#ffaa00'; }
+        } else {
+            rating = 'F'; ratingColor = '#ff4444';
+        }
 
         const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = '0';
-        overlay.style.left = '0';
-        overlay.style.width = '100vw';
-        overlay.style.height = '100vh';
-        overlay.style.background = '#000';
-        overlay.style.color = color;
-        overlay.style.zIndex = '10000';
-        overlay.style.display = 'flex';
-        overlay.style.flexDirection = 'column';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
-        overlay.style.fontFamily = "'Share Tech Mono', monospace";
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:#000;color:' + color + ';z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Share Tech Mono",monospace;overflow-y:auto;padding:20px;';
 
         overlay.innerHTML = `
-            <div style="width: 800px; max-width: 90vw; border: 2px solid ${color}; padding: 2px;">
-                <div style="background: ${color}; color: #000; padding: 5px 10px; font-weight: bold; display: flex; justify-content: space-between;">
+            <div style="width: 900px; max-width: 95vw; border: 2px solid ${color}; margin: auto;">
+                <div style="background: ${color}; color: #000; padding: 8px 15px; font-weight: bold; display: flex; justify-content: space-between; font-size: 1.1em;">
                     <span>/// FLIGHT RECORDER: EXODUS-9</span>
-                    <span>STATUS: TERMINATED</span>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; padding: 20px; border-bottom: 1px solid ${color}; opacity: 0.8; font-size: 0.9em;">
-                    <div>TARGET: ${planet.name}</div>
-                    <div>TYPE: ${planet.type}</div>
-                    <div>DATE: 2342.${String(5 + Math.floor(this.state.actionsTaken / 10)).padStart(2, '0')}.${String(12 + (this.state.actionsTaken % 30)).padStart(2, '0')}</div>
-                    <div>SURVIVORS: ${survivors}/${totalCrew}</div>
-                    <div>SALVAGE: ${this.state.salvage}</div>
-                    <div>UPGRADES: ${this.state.upgrades.length}</div>
+                    <span>STATUS: ${outcome.success ? 'COLONY ESTABLISHED' : 'MISSION FAILED'}</span>
                 </div>
 
-                <div style="padding: 40px; font-size: 1.1em; line-height: 1.6; height: 300px; overflow-y: auto;">
+                <!-- Stats Grid -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: ${color}33; padding: 1px;">
+                    <div style="background: #000; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">SURVIVORS</div>
+                        <div style="font-size: 1.8em; font-weight: bold;">${survivors.length}<span style="font-size: 0.5em; opacity: 0.6;">/${totalCrew}</span></div>
+                    </div>
+                    <div style="background: #000; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">AVG STRESS</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: ${avgStress <= 1 ? '#88ff88' : avgStress <= 2 ? '#ffaa00' : '#ff4444'};">${avgStress}</div>
+                    </div>
+                    <div style="background: #000; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">TECH LEVEL</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: #00ccff;">${techLevel}</div>
+                    </div>
+                    <div style="background: #000; padding: 12px; text-align: center;">
+                        <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">COLONY RATING</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: ${ratingColor};">${rating}</div>
+                    </div>
+                </div>
+
+                <!-- Planet & Crew Info -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; border-bottom: 1px solid ${color}44;">
+                    <div>
+                        <div style="font-size: 0.75em; color: ${color}88; margin-bottom: 8px;">DESTINATION</div>
+                        <div style="font-size: 1.1em;">${planet.name}</div>
+                        <div style="font-size: 0.85em; opacity: 0.7;">Type: ${planet.type} | Sector ${this.state.currentSector}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.75em; color: ${color}88; margin-bottom: 8px;">CREW MODIFICATIONS</div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; font-size: 0.85em;">
+                            ${symbiotes > 0 ? `<span style="color: #ff88ff;">Symbiotes: ${symbiotes}</span>` : ''}
+                            ${cyborgs > 0 ? `<span style="color: #88ffff;">Cyborgs: ${cyborgs}</span>` : ''}
+                            ${wrongPlace > 0 ? `<span style="color: #ff8844;">Touched: ${wrongPlace}</span>` : ''}
+                            ${symbiotes === 0 && cyborgs === 0 && wrongPlace === 0 ? '<span style="opacity: 0.5;">None</span>' : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Outcome Title -->
+                <div style="background: linear-gradient(90deg, ${color}22, transparent); padding: 15px 20px; border-bottom: 1px solid ${color}44;">
+                    <div style="font-size: 0.75em; color: ${color}88; margin-bottom: 5px;">COLONY DESIGNATION</div>
+                    <div style="font-size: 1.6em; font-weight: bold; letter-spacing: 2px;">${outcome.title}</div>
+                </div>
+
+                <!-- Narrative Text -->
+                <div style="padding: 25px; font-size: 1em; line-height: 1.8; max-height: 280px; overflow-y: auto; background: #0a0a0a;">
                     ${outcome.text}
                 </div>
 
-                <div style="border-top: 1px solid ${color}; padding: 20px; text-align: center; font-size: 1.5em; font-weight: bold; letter-spacing: 2px;">
-                    RESULT: ${outcome.title}
+                <!-- Survivor List -->
+                <div style="border-top: 1px solid ${color}44; padding: 15px; background: #050505;">
+                    <div style="font-size: 0.75em; color: ${color}88; margin-bottom: 10px;">FINAL CREW ROSTER</div>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; font-size: 0.85em;">
+                        ${this.state.crew.map(c => {
+                            const isDead = c.status === 'DEAD';
+                            const crewColor = isDead ? '#444' : color;
+                            const tags = [];
+                            if (c.tags?.includes('HIVE_MIND')) tags.push('SYM');
+                            if (c.tags?.includes('MACHINE_LINK')) tags.push('CYB');
+                            if (c.tags?.includes('WRONG_PLACE_SURVIVOR')) tags.push('WP');
+                            return `<div style="color: ${crewColor}; ${isDead ? 'text-decoration: line-through;' : ''}">
+                                ${c.name}${tags.length ? ' [' + tags.join(',') + ']' : ''}${isDead ? ' †' : ''}
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div style="background: ${color}; color: #000; padding: 10px 15px; text-align: center; font-weight: bold; font-size: 1.1em;">
+                    EXODUS PROGRAM RECORD #${Math.floor(Math.random() * 90000) + 10000}
                 </div>
             </div>
 
-            <button onclick="location.reload()" style="margin-top: 30px; padding: 15px 30px; background: transparent; border: 1px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; hover: { background: ${color}; color: #000; }">
+            <button onclick="location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
                 REBOOT SIMULATION
             </button>
         `;
