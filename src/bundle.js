@@ -2514,7 +2514,7 @@ You are home.`
             const disabledReason = paranoidBlocked ? 'VANCE REFUSES' : (recklessBlocked ? 'MIRA OVERRIDES' : '');
 
             return `
-                            <button class="choice-btn" data-idx="${idx}" style="
+                            <button class="choice-btn" data-idx="${idx}" data-risk-color="${riskColor}" style="
                                 padding: 15px;
                                 border: 1px solid ${isDisabled ? '#555' : 'var(--color-primary)'};
                                 background: ${isDisabled ? 'rgba(30,0,0,0.8)' : 'rgba(0,0,0,0.8)'};
@@ -2545,10 +2545,20 @@ You are home.`
             });
         });
 
-        // Hover effects
+        // Hover effects - also change risk text color
         modal.querySelectorAll('.choice-btn').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'var(--color-primary)'; btn.style.color = '#000'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(0,0,0,0.8)'; btn.style.color = 'var(--color-primary)'; };
+            btn.onmouseenter = () => {
+                btn.style.background = 'var(--color-primary)';
+                btn.style.color = '#000';
+                const riskDiv = btn.querySelector('div:nth-child(2)');
+                if (riskDiv) riskDiv.style.color = '#000';
+            };
+            btn.onmouseleave = () => {
+                btn.style.background = 'rgba(0,0,0,0.8)';
+                btn.style.color = 'var(--color-primary)';
+                const riskDiv = btn.querySelector('div:nth-child(2)');
+                if (riskDiv) riskDiv.style.color = btn.dataset.riskColor || 'var(--color-text-dim)';
+            };
         });
     }
 

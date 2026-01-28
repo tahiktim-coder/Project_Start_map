@@ -98,22 +98,27 @@ class NavView {
 
             node.addEventListener('mouseenter', () => {
                 node.style.zIndex = '20';
-                node.style.transform = node.style.transform.replace('scale(1)', '') + ' scale(1.5)'; // Pop effect
+                node.style.transform = 'translate(-50%, -50%) scale(1.5)'; // Pop effect
                 if (label) {
                     label.style.opacity = '1';
                     label.style.fontWeight = 'bold';
-                    label.style.textShadow = '0 0 8px var(--color-primary)';
+                    label.style.textShadow = '0 0 10px var(--color-primary), 0 0 20px var(--color-primary)';
                     label.style.zIndex = '30';
+                    label.style.background = 'rgba(0, 0, 0, 0.9)';
+                    label.style.padding = '2px 6px';
+                    label.style.borderRadius = '2px';
                 }
             });
             node.addEventListener('mouseleave', () => {
                 node.style.zIndex = '10';
-                node.style.transform = node.style.transform.replace(' scale(1.5)', ''); // Revert pop
+                node.style.transform = 'translate(-50%, -50%)'; // Revert pop
                 if (label) {
                     label.style.opacity = '0.8';
                     label.style.fontWeight = 'normal';
                     label.style.textShadow = '0 0 5px #000';
                     label.style.zIndex = 'auto';
+                    label.style.background = 'transparent';
+                    label.style.padding = '0';
                 }
             });
 
