@@ -84,7 +84,7 @@ const SECTOR_CONFIG = {
         exodusWreckChance: 0.20,
         failedColonyChance: 0.20,
         derelictChance: 0.20,  // Mixed wreckage, some alien
-        anomalyChance: 0.05,   // First glimpses of weirdness
+        anomalyChance: 0.15,   // First glimpses of weirdness (increased from 0.05)
         colonyWarning: false,
         sectorColor: '#004488',
         ambientDesc: 'A rhythmic tapping on all frequencies. Something is broadcasting.',
@@ -158,7 +158,7 @@ const SECTOR_CONFIG = {
         exodusWreckChance: 0.10,
         failedColonyChance: 0.40,
         derelictChance: 0.15,   // Some generation ships that almost made it
-        anomalyChance: 0.20,    // Reality getting weird
+        anomalyChance: 0.35,    // Reality getting weird (increased from 0.20)
         colonyWarning: false,
         sectorColor: '#006600',
         ambientDesc: 'It looks like home. That\'s what makes it dangerous.',
@@ -201,7 +201,7 @@ const SECTOR_CONFIG = {
         exodusWreckChance: 0.10,
         failedColonyChance: 0.0,
         derelictChance: 0.10,   // Alien craft more common here
-        anomalyChance: 0.35,    // Reality breaking down
+        anomalyChance: 0.50,    // Reality breaking down (increased from 0.35)
         colonyWarning: false,
         sectorColor: '#440044',
         ambientDesc: 'The laws of physics are suggestions here. Your instruments scream.',

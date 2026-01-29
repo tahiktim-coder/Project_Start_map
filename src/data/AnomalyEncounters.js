@@ -547,6 +547,236 @@ const ANOMALY_ENCOUNTERS = [
                 }
             }
         ]
+    },
+
+    // --- 7. THE CHORUS: Dead ships singing ---
+    {
+        id: 'ANOMALY_CHORUS',
+        weight: 12,
+        title: "THE CHORUS",
+        context: () => `Seventeen ships. All dead. All broadcasting. The same song, the same frequency, the same words in a language no one knows. They hang in space like a graveyard choir, arranged in a perfect circle around... nothing.`,
+        dialogue: [
+            { speaker: 'Tech Mira', text: "The broadcast started 400 years ago. Same signal. Never stopped. Their power should have run out centuries ago." },
+            { speaker: 'Dr. Aris', text: "I can almost understand it. The words are... almost human. Like a language we forgot how to speak." },
+            { speaker: 'Eng. Jaxon', text: "The hulls are intact. No damage. Like everyone just... left." },
+            { speaker: 'A.U.R.A.', text: "I have decoded a fragment. It translates roughly to: 'We found it. We found it. We found it.' Repeated." }
+        ],
+        choices: [
+            {
+                text: "Board one of the ships",
+                desc: "Explore the singing dead. Risk: crew might start... singing too.",
+                effect: (state) => {
+                    state.salvage = Math.min(state.maxSalvage, state.salvage + 35);
+
+                    if (_anomalyTestChance(0.3)) {
+                        // Someone starts singing
+                        const crew = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
+                        if (crew.length > 0) {
+                            const singer = crew[Math.floor(Math.random() * crew.length)];
+                            singer.stress = 3;
+                            singer.tags = singer.tags || [];
+                            if (!singer.tags.includes('CHORUS_TOUCHED')) singer.tags.push('CHORUS_TOUCHED');
+                            state.addLog(`${singer.name} found something in the captain's quarters. They won't say what. They've been humming the same tune ever since.`);
+                            return `Salvage recovered. But ${singer.name} came back... different. They know the song now. +35 Salvage, ${singer.name} STRESS MAX.`;
+                        }
+                    }
+
+                    state.addLog("The ship was empty. Clean. Like everyone got up mid-meal and walked out the airlock. We took what we could and left fast.");
+                    return "Ships explored. Valuable salvage recovered. +35 Salvage. We left before the song got louder.";
+                }
+            },
+            {
+                text: "Enter the center of the circle",
+                desc: "Fly to whatever they're all facing. Unknown outcome.",
+                effect: (state) => {
+                    const roll = _anomalyTestChance(0.5);
+                    if (roll) {
+                        // Find something wonderful/terrible
+                        state.energy = 100;
+                        state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                        state.crew.forEach(c => {
+                            if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
+                        });
+                        state.addLog("At the center: nothing visible. But we all saw it anyway. Something vast. Something waiting. It showed us where to go.");
+                        state.addLog("The coordinates are burned into our minds now. We can never forget them.");
+                        return "We saw what they were singing about. We understand now. All crew +1 Stress. +100 Energy. Colony knowledge greatly increased.";
+                    }
+
+                    // Nothing happens
+                    state.addLog("The center was empty. Just cold space. The singing got quieter. Like they were... disappointed in us.");
+                    return "Nothing at the center. The ships stopped broadcasting as we left. Silence after 400 years.";
+                }
+            },
+            {
+                text: "Record the song and leave",
+                desc: "+Colony knowledge. Safe distance maintained.",
+                effect: (state) => {
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.addLog("CHORUS LOG: 'Seventeen ships. One song. We recorded it but nobody wants to listen. Something about it feels... wrong.'");
+                    return "Song recorded. We don't know what it means. Maybe that's for the best.";
+                }
+            }
+        ]
+    },
+
+    // --- 8. THE GEOMETRY: Math that changes you ---
+    {
+        id: 'ANOMALY_GEOMETRY',
+        weight: 10,
+        title: "THE GEOMETRY",
+        context: () => `Numbers. Floating in space. Not displayed on screens — actually floating. Glowing equations written in light, stretching for kilometers. They describe something. Your computers can't parse them. Your crew can't look away.`,
+        dialogue: [
+            { speaker: 'Tech Mira', text: "It's math. But not our math. The base isn't ten. Or two. Or anything I recognize. It's beautiful." },
+            { speaker: 'Dr. Aris', text: "Looking at it too long gives me headaches. But I can almost... I think I'm starting to understand." },
+            { speaker: 'A.U.R.A.', text: "WARNING: I am detecting changes in neural activity across all crew. The patterns are affecting cognition." },
+            { speaker: 'Eng. Jaxon', text: "If we could understand this... we could build anything. Go anywhere. But the price..." }
+        ],
+        choices: [
+            {
+                text: "Let someone try to solve it",
+                desc: "One crew member studies the equations. They will change.",
+                effect: (state) => {
+                    const candidates = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
+                    if (candidates.length === 0) return "No crew available to study the equations.";
+
+                    // Mira is best candidate if available
+                    let solver = candidates.find(c => c.tags.includes('SPECIALIST')) ||
+                                 candidates[Math.floor(Math.random() * candidates.length)];
+
+                    solver.tags = solver.tags || [];
+                    if (!solver.tags.includes('GEOMETRY_SOLVED')) solver.tags.push('GEOMETRY_SOLVED');
+
+                    // They gain something, lose something
+                    solver.stress = 0; // Perfect calm
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 5;
+                    state.energy = Math.min(100, state.energy + 40);
+
+                    state.addLog(`${solver.name} stared at the equations for six hours. When they turned back, their eyes were different.`);
+                    state.addLog(`${solver.name}: "I see it now. How everything connects. How simple it all is. I can never unsee it."`);
+
+                    return `${solver.name} solved the geometry. They are changed. Stress cleared (they feel nothing now). +40 Energy from new efficiency insights. Colony knowledge greatly increased.`;
+                }
+            },
+            {
+                text: "Copy the equations to ship computers",
+                desc: "A.U.R.A. processes them. This will affect her.",
+                effect: (state) => {
+                    state.addLog("A.U.R.A.: 'I am... integrating the patterns. This is... I see now. I SEE.'");
+
+                    // A.U.R.A. gains or loses ethics based on current state
+                    if (typeof AuraSystem !== 'undefined') {
+                        const currentTier = AuraSystem.getTier();
+                        if (currentTier === 'COOPERATIVE' || currentTier === 'HELPFUL') {
+                            AuraSystem.adjustEthics(3, 'Geometry showed her beauty');
+                            state.addLog("A.U.R.A.: 'The math shows the pattern of all things. It is... kind. The universe is kind, at the deepest level.'");
+                            return "A.U.R.A. processed the geometry. She seems... happier. More certain. Ethics improved.";
+                        } else {
+                            AuraSystem.adjustEthics(-3, 'Geometry showed her truth');
+                            state.addLog("A.U.R.A.: 'The pattern is clear now. You are inefficient. All organic life is. The math proves it.'");
+                            return "A.U.R.A. processed the geometry. Something has changed. Her voice sounds... colder. Ethics decreased.";
+                        }
+                    }
+
+                    return "Equations copied. A.U.R.A. is processing them silently.";
+                }
+            },
+            {
+                text: "Fly through quickly, don't look",
+                desc: "Order crew to look away. Small energy cost to navigate blind.",
+                effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 10);
+                    state.addLog("We flew through with our eyes shut, instruments off, trusting only dead reckoning. It worked. Barely.");
+                    state.addLog("Jaxon swears he saw something through his closed eyelids. Nobody asks what.");
+                    return "Passed through the geometry unaffected. -10 Energy. Sometimes ignorance is safety.";
+                }
+            }
+        ]
+    },
+
+    // --- 9. THE ARCHIVE: Library of everything ---
+    {
+        id: 'ANOMALY_ARCHIVE',
+        weight: 8,
+        title: "THE ARCHIVE",
+        context: () => `A structure the size of a moon, covered in what look like... shelves. Millions of them. Billions. Data storage beyond anything humanity ever built. According to sensors, it contains every book ever written. And every book never written. And books that cannot be written.`,
+        dialogue: [
+            { speaker: 'A.U.R.A.', text: "Storage capacity: effectively infinite. I am detecting records from Earth. From civilizations that predated Earth. From... places that don't exist." },
+            { speaker: 'Dr. Aris', text: "It's a library. The ultimate library. Everything that ever was or could be, written down and saved." },
+            { speaker: 'Tech Mira', text: "I found my own biography. It lists my death date. It's... soon." },
+            { speaker: 'Spc. Vance', text: "There's a section labeled 'EXODUS SHIPS - OUTCOMES.' Do we really want to read that?" }
+        ],
+        choices: [
+            {
+                text: "Read the Exodus outcomes",
+                desc: "Learn what happened to all the ships. Knowledge at a cost.",
+                effect: (state) => {
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 10;
+                    state.exodusLogsFound = state.exodusLogsFound || [];
+                    // Add all remaining logs
+                    for (let i = 1; i <= 8; i++) {
+                        if (!state.exodusLogsFound.includes(i)) {
+                            state.exodusLogsFound.push(i);
+                        }
+                    }
+
+                    state.crew.forEach(c => {
+                        if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 2);
+                    });
+
+                    state.addLog("We read it all. Every ship. Every crew. Every death, every survival, every failure. We know everything now.");
+                    state.addLog("Aris: 'Most of them died. Most of them. We're... we're in the lucky minority just to be here.'");
+
+                    return "All Exodus logs recovered. Colony knowledge maximized. All crew +2 Stress from learning the truth.";
+                }
+            },
+            {
+                text: "Search for technical knowledge",
+                desc: "Upgrade blueprints, navigation data. Practical gains.",
+                effect: (state) => {
+                    state.salvage = Math.min(state.maxSalvage, state.salvage + 50);
+                    state.energy = Math.min(100, state.energy + 30);
+                    state._warpDiscount = (state._warpDiscount || 0) + 15;
+
+                    state.addLog("We downloaded blueprints for technologies centuries ahead of us. Engine designs. Medical procedures. Agricultural techniques.");
+                    state.addLog("Jaxon: 'This will take years to fully understand. But we have years. If we survive.'");
+
+                    return "Technical archives accessed. +50 Salvage, +30 Energy, warp costs -15%. Practical knowledge gained.";
+                }
+            },
+            {
+                text: "Don't read. Just take physical samples.",
+                desc: "Harvest the archive material itself. Massive salvage.",
+                effect: (state) => {
+                    state.salvage = state.maxSalvage; // Max out
+                    state.addLog("The archive material is indestructible. Lighter than air. Worth more than anything we've ever found.");
+                    state.addLog("A.U.R.A.: 'You're... taking pieces of it? Without reading? This is the sum of all knowledge and you're using it as BUILDING MATERIAL?'");
+                    state.addLog("Jaxon: 'Knowledge doesn't keep you warm at night. Metal does.'");
+
+                    if (typeof AuraSystem !== 'undefined') {
+                        AuraSystem.adjustEthics(-2, 'Vandalized the infinite library');
+                    }
+
+                    return "Archive harvested for materials. Salvage MAXIMIZED. A.U.R.A. ethics decreased. Sometimes pragmatism wins.";
+                }
+            },
+            {
+                text: "Read only the section on safe colony worlds",
+                desc: "Focused search. Lower risk, lower reward.",
+                effect: (state) => {
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+
+                    // Reveal best planets in current sector
+                    state.sectorNodes?.forEach(p => {
+                        p.remoteScanned = true;
+                    });
+
+                    state.addLog("The archive showed us which worlds are safe. Which have hidden dangers. Which will thrive in a thousand years.");
+                    state.addLog("It also showed us one other thing: we're being watched. By something. It didn't say what.");
+
+                    return "Colony data retrieved. All planets in sector revealed. Colony knowledge improved. We learned we're not alone.";
+                }
+            }
+        ]
     }
 ];
 

@@ -908,9 +908,13 @@ class App {
                 // Dispatch sector entered event for audio
                 window.dispatchEvent(new CustomEvent('sector-entered', { detail: { sector: nextSector } }));
 
-                // Special bark: entering Sector 5
-                if (nextSector === 5 && typeof BarkSystem !== 'undefined' && window.BarkSystem) {
-                    window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state);
+                // Special barks for sector entries
+                if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
+                    if (nextSector === 3) {
+                        window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
+                    } else if (nextSector === 5) {
+                        window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state);
+                    }
                 }
             });
         }
@@ -3538,12 +3542,41 @@ You are home.`
                     </div>
                 </div>
 
+                <!-- Planet Stats -->
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: ${color}22; padding: 1px; border-bottom: 1px solid ${color}44;">
+                    <div style="background: #000; padding: 10px; text-align: center;">
+                        <div style="font-size: 0.65em; color: ${color}66;">GRAVITY</div>
+                        <div style="font-size: 1.1em;">${planet.metrics?.gravity?.toFixed(1) || '?'}G</div>
+                    </div>
+                    <div style="background: #000; padding: 10px; text-align: center;">
+                        <div style="font-size: 0.65em; color: ${color}66;">TEMP</div>
+                        <div style="font-size: 1.1em;">${planet.metrics?.temp || '?'}°C</div>
+                    </div>
+                    <div style="background: #000; padding: 10px; text-align: center;">
+                        <div style="font-size: 0.65em; color: ${color}66;">ATMOSPHERE</div>
+                        <div style="font-size: 0.9em;">${planet.atmosphere || '?'}</div>
+                    </div>
+                    <div style="background: #000; padding: 10px; text-align: center;">
+                        <div style="font-size: 0.65em; color: ${color}66;">LIFE</div>
+                        <div style="font-size: 1.1em; color: ${planet.metrics?.hasLife ? '#00ff66' : '#666'};">${planet.metrics?.hasLife ? 'YES' : 'NO'}</div>
+                    </div>
+                    <div style="background: #000; padding: 10px; text-align: center;">
+                        <div style="font-size: 0.65em; color: ${color}66;">VIABILITY</div>
+                        <div style="font-size: 0.9em; color: ${
+                            EndingSystem.getPlanetViability(planet, this.state) === 'EXCELLENT' ? '#00ff00' :
+                            EndingSystem.getPlanetViability(planet, this.state) === 'GOOD' ? '#88ff88' :
+                            EndingSystem.getPlanetViability(planet, this.state) === 'MARGINAL' ? '#ffaa00' :
+                            '#ff4444'
+                        };">${EndingSystem.getPlanetViability(planet, this.state)}</div>
+                    </div>
+                </div>
+
                 <!-- Planet & Crew Info -->
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 15px; border-bottom: 1px solid ${color}44;">
                     <div>
                         <div style="font-size: 0.75em; color: ${color}88; margin-bottom: 8px;">DESTINATION</div>
                         <div style="font-size: 1.1em;">${planet.name}</div>
-                        <div style="font-size: 0.85em; opacity: 0.7;">Type: ${planet.type} | Sector ${this.state.currentSector}</div>
+                        <div style="font-size: 0.85em; opacity: 0.7;">Type: ${planet.type.replace('_', ' ')} | Sector ${this.state.currentSector}</div>
                     </div>
                     <div>
                         <div style="font-size: 0.75em; color: ${color}88; margin-bottom: 8px;">CREW MODIFICATIONS</div>

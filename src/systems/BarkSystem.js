@@ -304,6 +304,66 @@ const BARK_DATA = {
     },
 
     // ═══════════════════════════════════════════════════════════════
+    // SECTOR_3_ENTRY — Entering Sector 3, first hints of weirdness
+    // ═══════════════════════════════════════════════════════════════
+    SECTOR_3_ENTRY: {
+        PESSIMIST: {
+            0: ["Sector 3. Something's different about this place.", "The instruments are acting up. Great."],
+            1: ["I don't trust these readings. Nothing should be broadcasting out here.", "Strange signals on all frequencies. This can't be good."],
+            2: ["The stars look wrong. No, that's crazy. I'm just tired.", "I keep seeing movement where there shouldn't be any."],
+            3: ["Something is watching us. I know how that sounds."]
+        },
+        HUMANIST: {
+            0: ["The crew is reporting strange dreams. All the same dream.", "I'm seeing odd neural patterns in the whole crew. Stress, probably."],
+            1: ["Something about this sector feels... different. Heavy.", "Crew members say they hear humming at night. I hear it too."],
+            2: ["I dreamed about a door. A huge door. Waiting.", "The further we go, the stranger things get."],
+            3: ["Whatever is out here... it knows we're coming."]
+        },
+        SURVIVOR: {
+            0: ["Threat assessment: unknown. I don't like unknown.", "Something's pinging our sensors. Can't identify the source."],
+            1: ["Movement at the edge of visual range. Gone when I look directly.", "Weapons ready. I don't know what for, but they're ready."],
+            2: ["My instincts are screaming. Danger. Everywhere.", "We're not alone out here. I can feel it."],
+            3: ["Whatever's waiting, it's been waiting a long time."]
+        },
+        CURIOUS: {
+            0: ["Fascinating! The readings here defy normal physics.", "I'm detecting energy signatures that shouldn't exist."],
+            1: ["The math doesn't work. These phenomena break known laws.", "I need more data. But I'm almost afraid to get it."],
+            2: ["The anomalies are increasing. Something is changing out here.", "My models are useless. Nothing behaves as expected."],
+            3: ["I used to want to understand. Now I just want to survive."]
+        }
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // ANOMALY_FOUND — Encountering an anomaly (any type)
+    // ═══════════════════════════════════════════════════════════════
+    ANOMALY_FOUND: {
+        PESSIMIST: {
+            0: ["Anomaly detected. As if this trip wasn't bad enough.", "Great. Reality is breaking. Normal Tuesday."],
+            1: ["I told you. I TOLD you something was wrong.", "The instruments are going crazy. This isn't natural."],
+            2: ["Whatever this is, it shouldn't exist. Neither should we.", "We've found something that doesn't want to be found."],
+            3: ["The void is looking back at us now."]
+        },
+        HUMANIST: {
+            0: ["Something strange ahead. Everyone stay calm.", "I'm seeing unusual readings. Let's approach carefully."],
+            1: ["This doesn't feel right. My heart is racing.", "The crew can sense it too. They're scared."],
+            2: ["God help us. I don't think we're alone out here.", "Whatever this is... it's beautiful and terrible."],
+            3: ["I've seen things now that I can never unsee."]
+        },
+        SURVIVOR: {
+            0: ["Contact. Unknown type. Weapons hot.", "Something's out there. Not ship. Not planet. Something else."],
+            1: ["Fight or flight. And I don't think we can fight this.", "Every instinct says run. But where?"],
+            2: ["We've entered something's territory. It knows.", "This is what killed the other ships. I'm sure of it now."],
+            3: ["We were never the predators out here."]
+        },
+        CURIOUS: {
+            0: ["Remarkable! The readings are completely unprecedented.", "This is... this is beyond anything I've studied."],
+            1: ["I want to understand it. But part of me is terrified to.", "The data makes no sense. But it's BEAUTIFUL."],
+            2: ["Everything I knew about physics is wrong.", "The universe is stranger than we imagined. Much stranger."],
+            3: ["I've glimpsed something vast. I can never go back to not knowing."]
+        }
+    },
+
+    // ═══════════════════════════════════════════════════════════════
     // SECTOR_5_ENTRY — Entering the final sector (one-time)
     // ═══════════════════════════════════════════════════════════════
     SECTOR_5_ENTRY: {
@@ -430,8 +490,10 @@ const BARK_DATA = {
 const SPECIAL_BARKS = {
     FIRST_VITAL: true,      // First VITAL planet discovered
     SINGING_PLANET: true,    // First SINGING planet encountered
+    SECTOR_3_ENTRY: true,    // Entering Sector 3 (anomaly hints)
     SECTOR_5_ENTRY: true,    // Entering Sector 5
-    FIRST_CREW_DEATH: true   // First crew member death
+    FIRST_CREW_DEATH: true,  // First crew member death
+    ANOMALY_FOUND: true      // First anomaly encountered
 };
 
 class BarkSystem {
