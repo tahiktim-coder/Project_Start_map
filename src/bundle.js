@@ -750,6 +750,14 @@ class App {
                 warpConfig.hazard.onWarp(this.state);
             }
 
+            // Ship malfunction check during warp
+            if (typeof rollShipMalfunction !== 'undefined') {
+                const malfunction = rollShipMalfunction(this.state, 'warp');
+                if (malfunction) {
+                    this.showShipMalfunctionModal(malfunction);
+                }
+            }
+
             // Process sedated/confined crew recovery
             this.state.crew.forEach(c => {
                 if (c.tags && c.tags.includes('SEDATED') && c._sedatedUntilWarp !== undefined) {
@@ -874,6 +882,14 @@ class App {
                     }
                 });
                 this.state.addLog("Crew Quarters: Rest cycle complete. Stress levels reduced.");
+            }
+
+            // Ship malfunction check during sector jump (higher chance)
+            if (typeof rollShipMalfunction !== 'undefined') {
+                const malfunction = rollShipMalfunction(this.state, 'sector_jump');
+                if (malfunction) {
+                    this.showShipMalfunctionModal(malfunction);
+                }
             }
 
             // Bark: crew reacts to sector jump
@@ -4034,6 +4050,74 @@ You are home.`
             this.showFabricator();
             this.state.emitUpdates();
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // SHIP MALFUNCTION MODAL
+    // ═══════════════════════════════════════════════════════════════
+    showShipMalfunctionModal(event) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '2800';
+
+        // Build dialogue HTML
+        const dialogueHtml = event.dialogue.map(d => {
+            const colors = {
+                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            };
+            const color = colors[d.speaker] || '#ffffff';
+            return `<div style="margin-bottom: 10px;">
+                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
+                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
+            </div>`;
+        }).join('');
+
+        modal.innerHTML = `
+            <div class="modal-content" style="border-color: #ff6600; max-width: 550px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #331100, #552200); color: #ff6600; display: flex; justify-content: space-between;">
+                    <span>⚠ SHIP ALERT: ${event.title.toUpperCase()} ⚠</span>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #ff6600; padding-left: 12px;">
+                        ${event.context}
+                    </div>
+                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
+                        ${dialogueHtml}
+                    </div>
+                    <button class="malfunction-acknowledge" style="
+                        width: 100%; padding: 12px;
+                        background: #ff6600; color: #000;
+                        border: none; cursor: pointer;
+                        font-family: var(--font-mono); font-weight: bold; font-size: 1em;
+                    ">ACKNOWLEDGE</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Apply effect and close on acknowledge
+        modal.querySelector('.malfunction-acknowledge').onclick = () => {
+            const result = event.effect(this.state);
+            if (result) {
+                this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
+            }
+            this.state.emitUpdates();
+            modal.remove();
+        };
+
+        // Also close on background click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                const result = event.effect(this.state);
+                if (result) {
+                    this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
+                }
+                this.state.emitUpdates();
+                modal.remove();
+            }
+        };
     }
 
     // ═══════════════════════════════════════════════════════════════
