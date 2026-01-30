@@ -31,7 +31,7 @@ const DERELICT_ENCOUNTERS = [
             const num = Math.floor(Math.random() * 900) + 100;
             return `${prefixes[Math.floor(Math.random() * prefixes.length)]}-${suffixes[Math.floor(Math.random() * suffixes.length)]}-${num}`;
         },
-        context: (name) => `The ${name} is a hulking industrial vessel, its drill arrays frozen mid-extraction. The cargo bays are partially full — they were mid-haul when something stopped them. Emergency lights still pulse in the ore processing deck.`,
+        context: (name) => `The ${name} is a hulking industrial vessel, drill arrays frozen mid-extraction. Cargo bays partially full. They were mid-haul when something stopped them. Emergency lights still pulse in the ore processing deck.`,
         dialogue: [
             { speaker: 'Eng. Jaxon', text: "Industrial grade. These rigs carry serious tonnage. If the cargo's intact..." },
             { speaker: 'Tech Mira', text: "I'm reading residual radiation from the processing core. They were refining something hot." }
@@ -95,7 +95,7 @@ const DERELICT_ENCOUNTERS = [
             const types = ['TRANSIT', 'CARGO', 'SUPPLY', 'FREIGHT'];
             return `${corps[Math.floor(Math.random() * corps.length)]}-${types[Math.floor(Math.random() * types.length)]}-${Math.floor(Math.random() * 99) + 1}`;
         },
-        context: (name) => `The ${name} bears corporate livery now faded by cosmic radiation. Its manifest terminal still flickers — this was a supply run to a colony that no longer exists. The hold is sealed with biometric locks, but the security systems are long dead.`,
+        context: (name) => `The ${name} bears faded corporate livery. Manifest terminal still flickers. A supply run to a colony that no longer exists. Biometric locks on the hold, but security is long dead.`,
         dialogue: [
             { speaker: 'Spc. Vance', text: "Corporate vessel. These things carried everything — medicine, weapons, colonist supplies." },
             { speaker: 'Dr. Aris', text: "The medical bay might still have viable pharmaceuticals. These corps spared no expense." }

@@ -244,6 +244,28 @@ class GameState {
         }));
     }
 
+    /**
+     * Add colony knowledge (data from failed colonies).
+     * Shows A.U.R.A. comment when thresholds are reached.
+     */
+    addColonyKnowledge(amount, silent = false) {
+        const prev = this._colonyKnowledge || 0;
+        this._colonyKnowledge = prev + amount;
+
+        if (!silent) {
+            // A.U.R.A. comments at key thresholds
+            if (prev < 1 && this._colonyKnowledge >= 1) {
+                this.addLog("A.U.R.A.: Colony data archived. This information may prove useful for future settlement.");
+            } else if (prev < 3 && this._colonyKnowledge >= 3) {
+                this.addLog("A.U.R.A.: Substantial colony data accumulated. Settlement survival probability significantly improved.");
+            } else if (prev < 5 && this._colonyKnowledge >= 5) {
+                this.addLog("A.U.R.A.: Colony database reaching optimal levels. We have learned much from those who came before.");
+            }
+        }
+
+        this.emitUpdates();
+    }
+
     consumeEnergy(amount) {
         // TEST MODE: No energy consumption
         if (window.TEST_MODE) {
@@ -414,6 +436,9 @@ class GameState {
         const [key, deck] = operational[Math.floor(Math.random() * operational.length)];
         deck.status = 'DAMAGED';
         this.addLog(`HULL BREACH: ${deck.label} has taken damage! Systems offline.`);
+
+        // Visual feedback: screen shake on hull breach
+        window.dispatchEvent(new CustomEvent('deck-damaged', { detail: { deckKey: key } }));
 
         // Tutorial: first deck damage
         if (!this._tutorialDeckSeen) {
@@ -817,6 +842,12 @@ class App {
         // Game Over handler
         window.addEventListener('game-over', (e) => this.showGameOver(e.detail));
 
+        // Crew death - heavy screen shake
+        window.addEventListener('crew-death', () => this.screenShake('heavy'));
+
+        // Deck damage - light screen shake
+        window.addEventListener('deck-damaged', () => this.screenShake('light'));
+
         // Mutiny handler (Vance stress 3 breakdown)
         window.addEventListener('crew-mutiny', (e) => this.showMutinyEvent(e.detail));
 
@@ -829,6 +860,66 @@ class App {
 
         // A.U.R.A.'s opening briefing (in-universe tutorial)
         this.showOpeningBriefing();
+    }
+
+    // === VISUAL FEEDBACK SYSTEM ===
+
+    /**
+     * Shake the screen for dramatic moments
+     * @param {string} intensity - 'light' or 'heavy'
+     */
+    screenShake(intensity = 'light') {
+        const container = document.querySelector('.app-container');
+        if (!container) return;
+
+        container.classList.remove('shake', 'shake-heavy');
+        // Force reflow to restart animation
+        void container.offsetWidth;
+        container.classList.add(intensity === 'heavy' ? 'shake-heavy' : 'shake');
+
+        setTimeout(() => {
+            container.classList.remove('shake', 'shake-heavy');
+        }, 700);
+    }
+
+    /**
+     * Flash a resource element when it changes
+     * @param {string} resourceId - 'energy', 'salvage', or 'rations'
+     * @param {string} type - 'gain', 'loss', or 'special'
+     */
+    flashResource(resourceId, type = 'gain') {
+        const el = document.getElementById(`res-${resourceId}`);
+        if (!el) return;
+
+        el.classList.remove('flash-gain', 'flash-loss', 'flash-special');
+        void el.offsetWidth;
+        el.classList.add(`flash-${type}`);
+
+        setTimeout(() => {
+            el.classList.remove('flash-gain', 'flash-loss', 'flash-special');
+        }, 800);
+    }
+
+    /**
+     * Mark a deck as visually damaged (pulsing red)
+     * @param {string} deckKey - The deck identifier
+     */
+    showDeckDamage(deckKey) {
+        const deckEl = document.querySelector(`.deck-${deckKey}`);
+        if (deckEl) {
+            deckEl.classList.add('deck-damaged');
+        }
+    }
+
+    /**
+     * Remove damaged visual from deck
+     * @param {string} deckKey - The deck identifier
+     */
+    clearDeckDamage(deckKey) {
+        const deckEl = document.querySelector(`.deck-${deckKey}`);
+        if (deckEl) {
+            deckEl.classList.remove('deck-damaged');
+        }
     }
 
     showOpeningBriefing() {
@@ -1694,8 +1785,9 @@ class App {
                 window.AuraSystem.tryComment('SECTOR_JUMP', this.state);
             }
 
-            // Show campfire event before generating new sector
-            this.showCampfireEvent(() => {
+            // Show warp animation with crew dialogue, then campfire event
+            this.showWarpAnimation(() => {
+                this.showCampfireEvent(() => {
                 const nextSector = this.state.currentSector + 1;
                 this.state.sectorNodes = PlanetGenerator.generateSector(nextSector);
                 this.state.currentSector = nextSector;
@@ -1724,8 +1816,180 @@ class App {
                         window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state);
                     }
                 }
+                });
             });
         }
+    }
+
+    /**
+     * Show warp animation with crew dialogue during sector jump
+     */
+    showWarpAnimation(onComplete) {
+        // Clear the main viewport immediately - don't show old planets during warp
+        const mainView = document.getElementById('main-view');
+        if (mainView) {
+            mainView.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#446688;font-size:1.2em;">WARP IN PROGRESS...</div>';
+        }
+
+        // Get living crew for dialogue
+        const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
+        const nextSector = this.state.currentSector + 1;
+
+        // Warp dialogue options based on sector and crew state
+        const warpDialogue = this.getWarpDialogue(nextSector, livingCrew);
+
+        // Create warp overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'warp-overlay';
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000; z-index: 5000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-family: 'Share Tech Mono', monospace;
+        `;
+
+        // Star streaks container
+        overlay.innerHTML = `
+            <div class="warp-stars" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden;">
+                ${Array(60).fill().map(() => {
+                    const y = Math.random() * 100;
+                    const delay = Math.random() * 2;
+                    const duration = 0.5 + Math.random() * 0.5;
+                    return `<div style="
+                        position: absolute;
+                        left: -10%;
+                        top: ${y}%;
+                        width: ${20 + Math.random() * 80}px;
+                        height: 2px;
+                        background: linear-gradient(90deg, transparent, rgba(150, 200, 255, 0.8), white);
+                        animation: warpStreak ${duration}s linear ${delay}s infinite;
+                    "></div>`;
+                }).join('')}
+            </div>
+            <div class="warp-content" style="
+                position: relative; z-index: 10; text-align: center;
+                padding: 40px; max-width: 600px;
+            ">
+                <div style="color: #4488ff; font-size: 0.9em; letter-spacing: 4px; margin-bottom: 20px;">
+                    SECTOR TRANSITION
+                </div>
+                <div id="warp-dialogue" style="
+                    color: #cccccc; font-size: 1.1em; line-height: 1.8;
+                    min-height: 100px; margin-bottom: 30px;
+                "></div>
+                <div style="color: #446688; font-size: 0.8em;">
+                    ENTERING SECTOR ${nextSector}
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        // Add warp streak animation to CSS if not exists
+        if (!document.getElementById('warp-keyframes')) {
+            const style = document.createElement('style');
+            style.id = 'warp-keyframes';
+            style.textContent = `
+                @keyframes warpStreak {
+                    0% { left: -10%; opacity: 0; }
+                    10% { opacity: 1; }
+                    90% { opacity: 1; }
+                    100% { left: 110%; opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Type out dialogue
+        const dialogueEl = overlay.querySelector('#warp-dialogue');
+        let currentLine = 0;
+
+        const showNextLine = () => {
+            if (currentLine >= warpDialogue.length) {
+                // All dialogue shown, wait then complete
+                setTimeout(() => {
+                    overlay.style.transition = 'opacity 0.8s';
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.remove();
+                        onComplete();
+                    }, 800);
+                }, 1500);
+                return;
+            }
+
+            const line = warpDialogue[currentLine];
+            const colors = {
+                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff',
+                'Spc. Vance': '#ff5050', 'Tech Mira': '#d070ff',
+                'A.U.R.A.': '#00ff88', 'Commander': '#ffffff'
+            };
+            const color = colors[line.speaker] || '#ffffff';
+
+            dialogueEl.innerHTML += `
+                <div style="margin-bottom: 12px; opacity: 0; animation: fadeInGentle 0.5s forwards;">
+                    <span style="color: ${color};">${line.speaker}:</span>
+                    <span style="color: #aaaaaa; font-style: italic;"> "${line.text}"</span>
+                </div>
+            `;
+
+            currentLine++;
+            setTimeout(showNextLine, 2000 + line.text.length * 20);
+        };
+
+        // Start dialogue after brief warp effect
+        setTimeout(showNextLine, 1000);
+    }
+
+    /**
+     * Get contextual warp dialogue based on game state
+     */
+    getWarpDialogue(nextSector, livingCrew) {
+        const dialogue = [];
+        const hasCrew = (name) => livingCrew.some(c => c.name.includes(name));
+
+        // Sector-specific dialogue
+        if (nextSector === 2) {
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp drive engaged. Transition to Sector 2 in progress.' });
+            if (hasCrew('Jaxon')) {
+                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Drive holding steady. So far.' });
+            }
+        } else if (nextSector === 3) {
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warning: Sector 3 readings are anomalous. Proceed with caution.' });
+            if (hasCrew('Mira')) {
+                dialogue.push({ speaker: 'Tech Mira', text: 'The sensors are picking up... something. I can\'t explain it yet.' });
+            }
+        } else if (nextSector === 4) {
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Entering Sector 4. Biological signatures detected ahead.' });
+            if (hasCrew('Aris')) {
+                dialogue.push({ speaker: 'Dr. Aris', text: 'Life signs? Real ones? After all this death...' });
+            }
+        } else if (nextSector === 5) {
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Sector 5. The edge of known space. Beyond this... nothing is mapped.' });
+            if (hasCrew('Vance')) {
+                dialogue.push({ speaker: 'Spc. Vance', text: 'We\'ve come this far. No turning back now.' });
+            }
+        } else {
+            dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems nominal.` });
+        }
+
+        // Add stress-based dialogue
+        const stressedCrew = livingCrew.filter(c => c.stress >= 2);
+        if (stressedCrew.length > 0 && Math.random() > 0.5) {
+            const stressed = stressedCrew[Math.floor(Math.random() * stressedCrew.length)];
+            const stressLines = [
+                'How much longer can we keep this up?',
+                'Every jump takes us further from everything we knew.',
+                'I hope this one\'s different.',
+                'Just keep moving. Don\'t think about it.'
+            ];
+            dialogue.push({
+                speaker: stressed.name,
+                text: stressLines[Math.floor(Math.random() * stressLines.length)]
+            });
+        }
+
+        return dialogue;
     }
 
     showCampfireEvent(onComplete) {
@@ -2904,7 +3168,7 @@ You are home.`
 
         if (vance) warnings.push({ speaker: 'Spc. Vance', text: specific?.vance || "Commander, this sector is a graveyard. Colonizing here is suicide. We need to go deeper." });
         if (aris) warnings.push({ speaker: 'Dr. Aris', text: specific?.aris || "The environmental data doesn't support long-term survival. Please, we can do better." });
-        if (jaxon) warnings.push({ speaker: 'Eng. Jaxon', text: specific?.jaxon || "The soil composition, the radiation levels — nothing here can sustain agriculture. This isn't the place." });
+        if (jaxon) warnings.push({ speaker: 'Eng. Jaxon', text: specific?.jaxon || "Soil's wrong. Radiation's wrong. Nothing will grow here. This isn't the place." });
         if (mira) warnings.push({ speaker: 'Tech Mira', text: specific?.mira || "My models show colony failure within 18 months at these readings. The deeper sectors have better candidates." });
 
         const viability = pType === 'VITAL' || pType === 'EDEN' || pType === 'TERRAFORMED' ? Math.floor(Math.random() * 20 + 40) : Math.floor(Math.random() * 8 + 2);
@@ -3060,7 +3324,7 @@ You are home.`
                 this.state.addLog("Composition: [NULL - MATERIAL UNKNOWN]");
                 this.state.addLog("Age: [ERROR - NEGATIVE VALUE DETECTED]");
                 this.state.addLog("Energy readings: [∞]");
-                this.state.addLog("A.U.R.A.: \"Commander, the scan returns impossible values. It's not that we can't read it — it's that the readings don't correspond to anything in physics.\"");
+                this.state.addLog("A.U.R.A.: \"Commander, the scan returns impossible values. The readings don't match any known physics.\"");
                 this.state.addLog("The probe sent a burst of static before going silent. Its signal traces to a location that doesn't exist.");
 
                 // Probe takes damage from scanning THE STRUCTURE
@@ -4051,8 +4315,17 @@ You are home.`
     }
 
     updateHud() {
+        // Track previous values for flash effects
+        const prevEnergy = this._prevEnergy || this.state.energy;
+        const prevSalvage = this._prevSalvage || this.state.salvage;
+        const prevRations = this._prevRations || this.state.rations;
+
         // Energy
         document.getElementById('res-energy').textContent = `${this.state.energy}%`;
+        if (this.state.energy !== prevEnergy) {
+            this.flashResource('energy', this.state.energy > prevEnergy ? 'gain' : 'loss');
+        }
+        this._prevEnergy = this.state.energy;
 
         // Salvage (with cap)
         const s = this.state.salvage;
@@ -4062,6 +4335,10 @@ You are home.`
             salvageEl.textContent = `${s}/${sMax}`;
             salvageEl.style.color = (s >= sMax) ? '#ffaa00' : 'var(--color-primary)';
         }
+        if (s !== prevSalvage) {
+            this.flashResource('salvage', s > prevSalvage ? 'gain' : 'loss');
+        }
+        this._prevSalvage = s;
 
         // Rations (color-coded warnings)
         const rEl = document.getElementById('res-rations');
@@ -4071,6 +4348,26 @@ You are home.`
             else if (this.state.rations <= 5) rEl.style.color = '#ffaa00';
             else rEl.style.color = 'var(--color-primary)';
         }
+        if (this.state.rations !== prevRations) {
+            this.flashResource('rations', this.state.rations > prevRations ? 'gain' : 'loss');
+        }
+        this._prevRations = this.state.rations;
+
+        // Colony Knowledge (DATA)
+        const knowledge = this.state._colonyKnowledge || 0;
+        const prevKnowledge = this._prevKnowledge || 0;
+        const knowledgeEl = document.getElementById('res-knowledge');
+        if (knowledgeEl) {
+            knowledgeEl.textContent = knowledge;
+            // Color code based on thresholds that matter for endings
+            if (knowledge >= 3) knowledgeEl.style.color = '#00ff88'; // Good - unlocks best ending text
+            else if (knowledge >= 1) knowledgeEl.style.color = '#88ccff'; // Some benefit
+            else knowledgeEl.style.color = 'var(--color-text-dim)';
+        }
+        if (knowledge !== prevKnowledge && knowledge > prevKnowledge) {
+            this.flashResource('knowledge', 'special');
+        }
+        this._prevKnowledge = knowledge;
 
         // Crew status display on Quarters deck (visual dots)
         this.updateCrewStatusDisplay();

@@ -189,7 +189,6 @@ body {
     flex: 1;
     border: 1px solid var(--color-primary-dim);
     border-radius: 8px;
-    /* Default soft round */
     position: relative;
     display: flex;
     flex-direction: column;
@@ -1746,4 +1745,79 @@ body {
 @keyframes fadeInGentle {
     from { opacity: 0; }
     to { opacity: 1; }
+}
+
+/* === VISUAL FEEDBACK EFFECTS === */
+
+/* Screen shake for critical events (crew death, ship damage) */
+@keyframes screenShake {
+    0%, 100% { transform: translateX(0); }
+    10% { transform: translateX(-4px) translateY(2px); }
+    20% { transform: translateX(4px) translateY(-2px); }
+    30% { transform: translateX(-3px) translateY(1px); }
+    40% { transform: translateX(3px) translateY(-1px); }
+    50% { transform: translateX(-2px); }
+    60% { transform: translateX(2px); }
+    70% { transform: translateX(-1px); }
+    80% { transform: translateX(1px); }
+    90% { transform: translateX(0); }
+}
+
+.shake {
+    animation: screenShake 0.5s ease-out;
+}
+
+.shake-heavy {
+    animation: screenShake 0.7s ease-out;
+}
+
+/* Resource change flash effects */
+@keyframes flashGreen {
+    0% { color: inherit; text-shadow: none; }
+    20% { color: #00ff66; text-shadow: 0 0 10px #00ff66; }
+    100% { color: inherit; text-shadow: none; }
+}
+
+@keyframes flashRed {
+    0% { color: inherit; text-shadow: none; }
+    20% { color: #ff4444; text-shadow: 0 0 10px #ff4444; }
+    100% { color: inherit; text-shadow: none; }
+}
+
+@keyframes flashGold {
+    0% { color: inherit; text-shadow: none; }
+    20% { color: #ffcc00; text-shadow: 0 0 10px #ffcc00; }
+    100% { color: inherit; text-shadow: none; }
+}
+
+.flash-gain {
+    animation: flashGreen 0.8s ease-out;
+}
+
+.flash-loss {
+    animation: flashRed 0.8s ease-out;
+}
+
+.flash-special {
+    animation: flashGold 0.8s ease-out;
+}
+
+/* Pulse for warnings */
+@keyframes warningPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.warning-pulse {
+    animation: warningPulse 1s infinite;
+}
+
+/* Damage flash on ship deck */
+@keyframes deckDamageFlash {
+    0%, 100% { box-shadow: inset 0 0 0 rgba(255, 0, 0, 0); }
+    50% { box-shadow: inset 0 0 20px rgba(255, 0, 0, 0.5); }
+}
+
+.deck-damaged {
+    animation: deckDamageFlash 2s infinite;
 }

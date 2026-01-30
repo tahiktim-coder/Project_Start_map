@@ -18,7 +18,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         id: 'ASTEROID_RICH',
         weight: 20,
         title: "RICH MINERAL DEPOSIT",
-        context: (name) => `${name} contains dense pockets of refined metals. Scans show high concentrations of processed alloys — probably debris from a destroyed refinery. The field is stable enough for careful extraction.`,
+        context: (name) => `${name} contains dense pockets of refined metals. High concentrations of processed alloys. Probably debris from a destroyed refinery. Stable enough for careful extraction.`,
         dialogue: [
             { speaker: 'Eng. Jaxon', text: "Good density here. We can extract a lot if we're patient." },
             { speaker: 'Tech Mira', text: "Spectral analysis shows rare earth elements. This is a good find." },
