@@ -324,8 +324,9 @@ const EXODUS_ENCOUNTERS = [
             {
                 text: "Decrypt the full log (-10 Energy)",
                 desc: "+15 Salvage (encryption hardware). Colony knowledge gained. Extended lore.",
+                requires: (state) => state.energy >= 10,
+                requiresLabel: "Need 10 Energy",
                 effect: (state) => {
-                    if (state.energy < 10) return "Insufficient energy for full decryption.";
                     state.energy -= 10;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
@@ -385,8 +386,9 @@ const EXODUS_ENCOUNTERS = [
             {
                 text: "Thorough salvage operation (-10 Energy)",
                 desc: "+50 Salvage, +1 Food Pack, +1 Music Holotape.",
+                requires: (state) => state.energy >= 10,
+                requiresLabel: "Need 10 Energy",
                 effect: (state) => {
-                    if (state.energy < 10) return "Insufficient energy for full salvage operation.";
                     state.energy -= 10;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 50);
                     if (typeof ITEMS !== 'undefined') {
@@ -411,8 +413,9 @@ const EXODUS_ENCOUNTERS = [
             {
                 text: "Search for tech upgrades (-5 Energy)",
                 desc: "Chance for ship upgrade component. Riskier but high value.",
+                requires: (state) => state.energy >= 5,
+                requiresLabel: "Need 5 Energy",
                 effect: (state) => {
-                    if (state.energy < 5) return "Insufficient energy for tech search.";
                     state.energy -= 5;
                     // 40% chance to find useful tech
                     if (Math.random() < 0.4) {

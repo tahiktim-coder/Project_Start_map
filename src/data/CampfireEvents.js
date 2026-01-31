@@ -349,17 +349,17 @@ const CAMPFIRE_EVENTS = [
             {
                 text: "Field repair (-20 Salvage, fix 1 deck)",
                 desc: "Cheapest damaged deck restored.",
+                requires: (state) => state.salvage >= 20,
+                requiresLabel: "Need 20 Salvage",
                 effect: (state) => {
-                    if (state.salvage >= 20) {
-                        state.salvage -= 20;
-                        const damaged = Object.entries(state.shipDecks).filter(([k, v]) => v.status === 'DAMAGED');
-                        if (damaged.length > 0) {
-                            damaged.sort((a, b) => a[1].repairCost - b[1].repairCost);
-                            damaged[0][1].status = 'OPERATIONAL';
-                            return `Field repair complete: ${damaged[0][1].label} restored. (-20 Salvage)`;
-                        }
+                    state.salvage -= 20;
+                    const damaged = Object.entries(state.shipDecks).filter(([k, v]) => v.status === 'DAMAGED');
+                    if (damaged.length > 0) {
+                        damaged.sort((a, b) => a[1].repairCost - b[1].repairCost);
+                        damaged[0][1].status = 'OPERATIONAL';
+                        return `Field repair complete: ${damaged[0][1].label} restored. (-20 Salvage)`;
                     }
-                    return "Repair failed — insufficient resources.";
+                    return "No damaged decks to repair.";
                 }
             },
             {

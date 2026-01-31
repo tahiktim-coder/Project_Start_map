@@ -5552,16 +5552,29 @@ You are home.`
         if (energy >= cheapestCost) return;
 
         // Check if player has any way to gain energy:
-        // 1. Items in cargo that give energy
-        const hasEnergyItem = (this.state.cargo || []).some(item =>
-            item.onUse && (item.desc?.includes('Energy') || item.name?.includes('Battery') || item.name?.includes('Power'))
-        );
+        // 1. Items in cargo that could give energy (check onUse function source for energy gains)
+        const hasEnergyItem = (this.state.cargo || []).some(item => {
+            if (!item.onUse) return false;
+            // Check if onUse function contains energy-related code
+            const fnSource = item.onUse.toString();
+            if (fnSource.includes('energy') || fnSource.includes('Energy')) return true;
+            // Also check item description and name for energy hints
+            if (item.desc?.toLowerCase().includes('energy')) return true;
+            if (item.name?.includes('Battery') || item.name?.includes('Power')) return true;
+            return false;
+        });
         if (hasEnergyItem) return;
 
-        // 2. Probe can scan for energy (if functional)
-        // Actually probe needs to be launched at a planet which costs energy, so no help
+        // 2. If probe is functional AND there are unscanned planets, player could potentially probe for energy
+        const probeIntegrity = this.state.probeIntegrity || 0;
+        const hasUnscannnedPlanets = nodes.some(p => !p.ghost && !p.scanned && !p.remoteScanned);
+        if (probeIntegrity > 0 && hasUnscannnedPlanets) return;
 
-        // Player is stranded
+        // 3. If player has ANY usable items at all, give them a chance (they might figure something out)
+        const hasAnyUsableItem = (this.state.cargo || []).some(item => item.onUse);
+        if (hasAnyUsableItem) return;
+
+        // Player is truly stranded - no energy, no energy items, no probe, no usable items
         this.state.gameOver = true;
         window.dispatchEvent(new CustomEvent('game-over', {
             detail: {

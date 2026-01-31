@@ -67,7 +67,7 @@ The Lighthouse has been here for a very long time. Longer than humanity has exis
                 text: "Study the signal origin",
                 desc: "Tech Mira gains crucial insight. Reveals hidden lore.",
                 effect: (state) => {
-                    const mira = state.crew.find(c => c.tags?.includes('TECH'));
+                    const mira = state.crew.find(c => c.tags?.includes('SPECIALIST'));
                     if (mira && mira.status !== 'DEAD') {
                         mira.stress = Math.max(0, (mira.stress || 0) - 1);
                         mira._lighthouseKnowledge = true;

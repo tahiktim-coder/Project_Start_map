@@ -128,7 +128,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
             },
             {
                 text: "Use probe to scout safe path",
-                desc: "If probe intact: +25 Salvage safely. Probe takes 20% damage.",
+                desc: "Requires probe. +25 Salvage safely. Probe takes 20% damage.",
                 effect: (state) => {
                     if (state.probeIntegrity <= 0) {
                         state.addLog("No probe available. Cannot scout the field.");

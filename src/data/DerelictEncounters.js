@@ -49,8 +49,9 @@ const DERELICT_ENCOUNTERS = [
             {
                 text: "Extract from the reactor (-10 Energy)",
                 desc: "Risk: 20% crew injury. Reward: +50-70 Energy.",
+                requires: (state) => state.energy >= 10,
+                requiresLabel: "Need 10 Energy",
                 effect: (state) => {
-                    if (state.energy < 10) return "Insufficient energy for extraction operation.";
                     state.energy -= 10;
                     if (Math.random() < 0.2) {
                         const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
@@ -165,11 +166,10 @@ const DERELICT_ENCOUNTERS = [
             {
                 text: "Breach the armory (Vance required)",
                 desc: "+25 Salvage, +Tech Fragment. Requires security specialist.",
+                requires: (state) => state.crew.some(c => c.tags.includes('SECURITY') && c.status !== 'DEAD'),
+                requiresLabel: "Requires Vance",
                 effect: (state) => {
                     const vance = state.crew.find(c => c.tags.includes('SECURITY') && c.status !== 'DEAD');
-                    if (!vance) {
-                        return "No security specialist available. Armory breach too risky.";
-                    }
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
                     if (typeof ITEMS !== 'undefined' && ITEMS.TECH_FRAGMENT) {
                         state.cargo.push({ ...ITEMS.TECH_FRAGMENT, acquiredAt: 'Military Frigate' });

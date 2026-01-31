@@ -46,7 +46,7 @@ const FAILED_COLONY_ENCOUNTERS = [
             },
             {
                 text: "Check the cryopods",
-                desc: "Risky. May find survivors or empty beds.",
+                desc: "30% chance: find survivor (-3 Rations, crew -1 Stress). Otherwise: empty pods, Aris +1 Stress.",
                 effect: function(state) {
                     if (Math.random() < 0.30) {
                         // Found something alive
@@ -123,7 +123,7 @@ const FAILED_COLONY_ENCOUNTERS = [
             },
             {
                 text: "Check the cryopods",
-                desc: "The central building may hold emergency stasis units.",
+                desc: "Emergency stasis units — power readings are dead. +15 Salvage, Aris +1 Stress.",
                 effect: function(state) {
                     state.addLog('Spc. Vance: "The central building is a medical facility. Emergency cryo ward. Six pods."');
                     state.addLog('Dr. Aris: "They\'re all occupied. Adults. They put themselves under hoping someone would find a cure."');
