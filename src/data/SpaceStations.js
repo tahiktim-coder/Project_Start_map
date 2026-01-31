@@ -90,7 +90,7 @@ const SPACE_STATION_ENCOUNTERS = [
         choices: [
             {
                 text: "Access the research database",
-                desc: "+Tech Fragment or special item. Safe but takes time.",
+                desc: "+Tech Fragment or special item. Safe extraction.",
                 effect: (state) => {
                     if (typeof ITEMS !== 'undefined') {
                         const possibleItems = [ITEMS.TECH_FRAGMENT, ITEMS.ANCIENT_DATABASE, ITEMS.SIGNAL_DECODER];
@@ -303,7 +303,7 @@ const SPACE_STATION_ENCOUNTERS = [
         choices: [
             {
                 text: "Search the deep storage vaults",
-                desc: "Random valuable item. Takes time to crack the locks.",
+                desc: "Random valuable item. Requires security bypass.",
                 effect: (state) => {
                     if (typeof ITEMS !== 'undefined') {
                         const valuables = [

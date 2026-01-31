@@ -76,7 +76,7 @@ const EXODUS_ENCOUNTERS = [
         choices: [
             {
                 text: "Full burial, take only logs",
-                desc: "-1 Ration (ceremony), all crew -1 Stress. Lore recovered.",
+                desc: "-1 Ration (ceremony), all crew -1 Stress. Ship logs preserved.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.crew.forEach(c => {
@@ -136,7 +136,7 @@ const EXODUS_ENCOUNTERS = [
         choices: [
             {
                 text: "Download their logs, leave them sleeping",
-                desc: "+15 Salvage (data crystals). Lore recovered. Crew respects the decision.",
+                desc: "+15 Salvage (data crystals). +Colony Knowledge. Crew respects the decision.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state.crew.forEach(c => {
@@ -384,7 +384,7 @@ const EXODUS_ENCOUNTERS = [
         choices: [
             {
                 text: "Thorough salvage operation (-10 Energy)",
-                desc: "+50 Salvage, +1 Food Pack, +1 Music Holotape. Takes time.",
+                desc: "+50 Salvage, +1 Food Pack, +1 Music Holotape.",
                 effect: (state) => {
                     if (state.energy < 10) return "Insufficient energy for full salvage operation.";
                     state.energy -= 10;

@@ -64,15 +64,14 @@ const CAMPFIRE_EVENTS = [
             {
                 text: "Reinforce the drives (-30 Salvage)",
                 desc: "Jaxon -1 Stress, next sector warp costs -20%",
+                requires: (state) => state.salvage >= 30,
+                requiresLabel: "Need 30 Salvage",
                 effect: (state) => {
-                    if (state.salvage >= 30) {
-                        state.salvage -= 30;
-                        const jaxon = state.crew.find(c => c.tags.includes('ENGINEER'));
-                        if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
-                        state._driveReinforced = true;
-                        return "Drives reinforced. Jaxon seems relieved. (-30 Salvage)";
-                    }
-                    return "Insufficient salvage. Jaxon shakes his head.";
+                    state.salvage -= 30;
+                    const jaxon = state.crew.find(c => c.tags.includes('ENGINEER'));
+                    if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
+                    state._driveReinforced = true;
+                    return "Drives reinforced. Jaxon seems relieved. (-30 Salvage)";
                 }
             },
             {

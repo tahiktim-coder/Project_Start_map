@@ -2140,15 +2140,15 @@ class App {
 
         const showNextLine = () => {
             if (currentLine >= warpDialogue.length) {
-                // All dialogue shown, wait then complete
+                // All dialogue shown, wait then complete (faster: 1000ms -> 600ms fade)
                 setTimeout(() => {
-                    overlay.style.transition = 'opacity 0.8s';
+                    overlay.style.transition = 'opacity 0.6s';
                     overlay.style.opacity = '0';
                     setTimeout(() => {
                         overlay.remove();
                         onComplete();
-                    }, 800);
-                }, 1500);
+                    }, 600);
+                }, 800);
                 return;
             }
 
@@ -2161,18 +2161,19 @@ class App {
             const color = colors[line.speaker] || '#ffffff';
 
             dialogueEl.innerHTML += `
-                <div style="margin-bottom: 12px; opacity: 0; animation: fadeInGentle 0.5s forwards;">
+                <div style="margin-bottom: 12px; opacity: 0; animation: fadeInGentle 0.4s forwards;">
                     <span style="color: ${color};">${line.speaker}:</span>
                     <span style="color: #aaaaaa; font-style: italic;"> "${line.text}"</span>
                 </div>
             `;
 
             currentLine++;
-            setTimeout(showNextLine, 2000 + line.text.length * 20);
+            // Faster dialogue: 1400ms base + 14ms per character (was 2000 + 20)
+            setTimeout(showNextLine, 1400 + line.text.length * 14);
         };
 
-        // Start dialogue after brief warp effect
-        setTimeout(showNextLine, 1000);
+        // Start dialogue after brief warp effect (faster: 700ms instead of 1000ms)
+        setTimeout(showNextLine, 700);
     }
 
     /**
@@ -2341,17 +2342,22 @@ class App {
                         }).join('')}
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${event.choices.map((choice, idx) => `
-                            <button class="campfire-choice" data-idx="${idx}" style="
+                        ${event.choices.map((choice, idx) => {
+                            const meetsReq = !choice.requires || choice.requires(this.state);
+                            const disabledStyle = meetsReq ? '' : 'opacity: 0.5; cursor: not-allowed; border-color: #444;';
+                            const reqLabel = (!meetsReq && choice.requiresLabel) ? `<div style="font-size: 0.75em; color: #ff4444; margin-top: 2px;">[${choice.requiresLabel}]</div>` : '';
+                            return `
+                            <button class="campfire-choice" data-idx="${idx}" ${meetsReq ? '' : 'disabled'} style="
                                 padding: 12px 15px; text-align: left;
                                 border: 1px solid #4488ff; background: rgba(0,20,60,0.8);
                                 color: #4488ff; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
+                                transition: all 0.2s; ${disabledStyle}
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
                                 <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
+                                ${reqLabel}
                             </button>
-                        `).join('')}
+                        `;}).join('')}
                     </div>
                 </div>
             </div>
@@ -5507,11 +5513,65 @@ You are home.`
     }
 
     renderNav() {
+        // Check for stranded state (no energy to reach any planet)
+        this.checkStranded();
+
         const mainView = document.getElementById('main-view');
         mainView.innerHTML = '';
         mainView.appendChild(this.navView.render(this.state.sectorNodes));
         const rightPanel = document.getElementById('tactical-display');
         if (rightPanel) rightPanel.innerHTML = '<div class="placeholder-grid">NO TARGET SELECTED</div>';
+    }
+
+    /**
+     * Check if player is stranded (cannot reach any planet with current energy)
+     * Triggers game over if no options remain
+     */
+    checkStranded() {
+        // Skip if game is already over
+        if (this.state.gameOver) return;
+
+        // Skip if currently in orbit (player has options there)
+        if (this.state.currentSystem) return;
+
+        const energy = this.state.energy;
+        const nodes = this.state.sectorNodes || [];
+
+        // Find cheapest warp cost (accounting for bridge damage)
+        let cheapestCost = Infinity;
+        nodes.forEach(planet => {
+            if (planet.ghost) return; // Skip ghost planets
+            let cost = planet.fuelCost || 10;
+            if (!this.state.isDeckOperational('bridge')) {
+                cost = Math.floor(cost * 1.5);
+            }
+            if (cost < cheapestCost) cheapestCost = cost;
+        });
+
+        // If player can afford at least one warp, they're not stranded
+        if (energy >= cheapestCost) return;
+
+        // Check if player has any way to gain energy:
+        // 1. Items in cargo that give energy
+        const hasEnergyItem = (this.state.cargo || []).some(item =>
+            item.onUse && (item.desc?.includes('Energy') || item.name?.includes('Battery') || item.name?.includes('Power'))
+        );
+        if (hasEnergyItem) return;
+
+        // 2. Probe can scan for energy (if functional)
+        // Actually probe needs to be launched at a planet which costs energy, so no help
+
+        // Player is stranded
+        this.state.gameOver = true;
+        window.dispatchEvent(new CustomEvent('game-over', {
+            detail: {
+                title: 'STRANDED',
+                message: `The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach.<br><br>
+                The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days.<br><br>
+                On the twelfth day, the ship goes quiet.<br><br>
+                <em>The void claims another Exodus.</em>`
+            }
+        }));
     }
 
     renderOrbit() {

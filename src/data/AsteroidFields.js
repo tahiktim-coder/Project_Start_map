@@ -27,7 +27,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         choices: [
             {
                 text: "Full extraction (slow, safe)",
-                desc: "+40-60 Salvage. Takes time but minimal risk.",
+                desc: "+40-60 Salvage. Low risk, thorough extraction.",
                 effect: (state) => {
                     const salvage = Math.floor(Math.random() * 21) + 40;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
@@ -119,7 +119,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
             },
             {
                 text: "Wait for field to stabilize",
-                desc: "Takes time. +15 Salvage, no risk.",
+                desc: "+15 Salvage, no risk. Conservative approach.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state.addLog("Waited for debris field to settle. Safe extraction complete.");
