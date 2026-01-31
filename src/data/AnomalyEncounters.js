@@ -159,10 +159,11 @@ const ANOMALY_ENCOUNTERS = [
         choices: [
             {
                 text: "Let someone listen",
-                desc: "One crew member communes with the Whisper. Random outcome.",
+                desc: "One non-leader crew communes. 30% madness (Stress 3), 40% visions (+2 Knowledge, +1 Stress), 30% healing (Stress 0).",
+                requires: (state) => state.crew.some(c => c.status !== 'DEAD' && !c.tags.includes('LEADER')),
+                requiresLabel: "Requires available crew",
                 effect: (state) => {
                     const candidates = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
-                    if (candidates.length === 0) return "No crew available to listen.";
 
                     const listener = candidates[Math.floor(Math.random() * candidates.length)];
                     // In test mode, force interesting outcomes

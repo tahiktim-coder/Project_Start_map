@@ -54,7 +54,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
             },
             {
                 text: "Scan for valuable deposits only",
-                desc: "+25 Salvage guaranteed. May find rare materials.",
+                desc: "+25 Salvage guaranteed. 30% chance: +Rare Item.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
 
@@ -129,6 +129,8 @@ const ASTEROID_FIELD_ENCOUNTERS = [
             {
                 text: "Use probe to scout safe path",
                 desc: "Requires probe. +25 Salvage safely. Probe takes 20% damage.",
+                requires: (state) => state.probeIntegrity > 0,
+                requiresLabel: "Requires Probe",
                 effect: (state) => {
                     if (state.probeIntegrity <= 0) {
                         state.addLog("No probe available. Cannot scout the field.");

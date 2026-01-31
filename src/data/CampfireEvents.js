@@ -110,7 +110,7 @@ const CAMPFIRE_EVENTS = [
             },
             {
                 text: "Ignore it. Keep moving.",
-                desc: "No effect. Play it safe.",
+                desc: "No mechanical effect. Signal ignored.",
                 effect: (state) => {
                     return "The signal fades behind you. Or does it?";
                 }

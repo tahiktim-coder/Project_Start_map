@@ -455,6 +455,18 @@ class GameState {
             }
         }
 
+        // Symbiotic Culture: every 5 actions, save 1 ration (rations don't decrease)
+        const hasSymbiotic = this.cargo.some(item => item.id === 'symbiotic_culture');
+        if (hasSymbiotic && !cargoDamaged) {
+            this.symbioticActionCounter = (this.symbioticActionCounter || 0) + 1;
+            if (this.symbioticActionCounter >= 5) {
+                this.symbioticActionCounter = 0;
+                // Restore the ration that was just consumed
+                this.rations = Math.min(this.maxRations, this.rations + 1);
+                this.addLog("Symbiotic Culture: Metabolic efficiency bonus. Ration consumption reduced.");
+            }
+        }
+
         // Passive injury healing: INJURED crew recover after 3 actions if quarters operational
         // CATATONIC crew cannot heal passively
         if (this.shipDecks.quarters.status === 'OPERATIONAL') {

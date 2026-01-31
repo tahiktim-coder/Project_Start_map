@@ -50,7 +50,7 @@ const ITEMS = {
     SCRAP_PLATING: {
         id: 'scrap', name: 'Scrap Plating', type: 'RESOURCE', value: 10,
         desc: 'Salvageable alloy plating.',
-        onUse: (state) => { state.metals += 15; return "Salvaged +15 Salvage."; }
+        onUse: (state) => { state.salvage += 15; return "Salvaged +15 Salvage."; }
     },
     TECH_FRAGMENT: {
         id: 'tech_frag', name: 'Tech Fragment', type: 'LORE', value: 100,
@@ -67,7 +67,7 @@ const ITEMS = {
                 return `A.U.R.A.: "Interesting data recovered. Adjusting baseline parameters." Ethics improved.`;
             }
             // Fallback if no AuraSystem - just give some salvage
-            state.metals += 20;
+            state.salvage += 20;
             return "Extracted useful schematics from the fragment. +20 Salvage.";
         }
     },
@@ -76,7 +76,7 @@ const ITEMS = {
     CONDENSED_SALVAGE: {
         id: 'condensed_salvage', name: 'Condensed Salvage', type: 'RESOURCE_PACK', value: 50,
         desc: 'Highly compressed refined ores.',
-        onUse: (state) => { state.metals += 50; return "Processed +50 Salvage."; }
+        onUse: (state) => { state.salvage += 50; return "Processed +50 Salvage."; }
     },
     IONIZED_BATTERY: {
         id: 'ion_battery', name: 'Ionized Battery', type: 'RESOURCE_PACK', value: 30,

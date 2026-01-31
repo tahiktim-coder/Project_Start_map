@@ -35,7 +35,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
             },
             {
                 text: "Download the beacon's log",
-                desc: "+Colony knowledge. May contain useful navigation data.",
+                desc: "+1 Colony Knowledge. 30% chance: reveals a planet location.",
                 effect: (state) => {
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
 
@@ -83,9 +83,11 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
         choices: [
             {
                 text: "Attempt full signal reconstruction",
-                desc: "Tech Mira works on the data. May learn something important.",
+                desc: "Tech Mira analyzes the data. +1-3 Colony Knowledge, Mira +0-2 Stress.",
+                requires: (state) => state.crew.some(c => c.tags?.includes('SPECIALIST') && c.status !== 'DEAD'),
+                requiresLabel: "Requires Tech Mira",
                 effect: (state) => {
-                    const mira = state.crew.find(c => c.name.includes('Mira') && c.status !== 'DEAD');
+                    const mira = state.crew.find(c => c.tags?.includes('SPECIALIST') && c.status !== 'DEAD');
 
                     const outcomes = [
                         {

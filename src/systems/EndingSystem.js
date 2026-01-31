@@ -560,7 +560,7 @@ class EndingSystem {
                 }
             } else {
                 // Sterile/Empty World Variance based on Roles
-                if (hasEng && state.metals > 100) {
+                if (hasEng && state.salvage > 100) {
                     acts.push("With ample metal and skilled engineers, we didn't just survive; we built. Massive automata tend the hydroponics while we focus on research.");
                 } else if (hasEng && hasTech_crew) {
                     acts.push("Jaxon built the machines. Mira programmed their dreams. Together they created something unprecedented: a robotic ecosystem that mimics the life this world never had. We are not alone — we built our companions.");
@@ -638,10 +638,10 @@ class EndingSystem {
                 } else if (hasTech || hasUpgrades('sensor_v2')) {
                     acts.push("With the advanced sensor data and precursor relics, we unlocked FTL travel. We are the Guardians of this sector — watching for new refugees from dying worlds, guiding them to safety.");
                     if (title === "UNKNOWN") title = "STELLAR ASCENDANCY";
-                } else if (state.metals > 250 && hasEng) {
+                } else if (state.salvage > 250 && hasEng) {
                     acts.push("The mountains were rich in ore. Jaxon built shipyards that dwarfed the Exodus-9. Our descendants launched a thousand ships, carrying humanity to every habitable world in the sector. We are no longer refugees. We are the flood.");
                     if (title === "UNKNOWN") title = "INDUSTRIAL EMPIRE";
-                } else if (state.metals > 250) {
+                } else if (state.salvage > 250) {
                     acts.push("The ore was endless. We strip-mined a continent to build our fleet. Somewhere along the way, we stopped being survivors and became conquerors. The stars await, and we have the metal to claim them.");
                     if (title === "UNKNOWN") title = "THE IRON TIDE";
                 } else if (livingCrew.length === 1 && commander) {
