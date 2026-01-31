@@ -233,6 +233,158 @@ class GameState {
         this.emitUpdates();
     }
 
+    // === SAVE/LOAD SYSTEM ===
+
+    /**
+     * Save current game state to localStorage
+     */
+    saveGame() {
+        const saveData = {
+            version: 1,
+            timestamp: Date.now(),
+            // Resources
+            energy: this.energy,
+            salvage: this.salvage,
+            maxSalvage: this.maxSalvage,
+            rations: this.rations,
+            maxRations: this.maxRations,
+            // Probe
+            probeIntegrity: this.probeIntegrity,
+            // Cargo & Upgrades
+            cargo: this.cargo,
+            upgrades: this.upgrades,
+            // Navigation
+            currentSector: this.currentSector,
+            currentSystem: this.currentSystem,
+            sectorNodes: this.sectorNodes,
+            // Ship
+            shipDecks: this.shipDecks,
+            // Crew
+            crew: this.crew,
+            // Progress
+            actionsTaken: this.actionsTaken,
+            exodusLogsFound: this.exodusLogsFound,
+            _colonyKnowledge: this._colonyKnowledge,
+            fungusActionCounter: this.fungusActionCounter,
+            // Special states
+            _inWrongPlace: this._inWrongPlace,
+            _previousSectorNodes: this._previousSectorNodes,
+            _previousSector: this._previousSector,
+            // Event tracking
+            _jaxonPhotoSeen: this._jaxonPhotoSeen,
+            _jaxonRepairSeen: this._jaxonRepairSeen,
+            _arisPatientSeen: this._arisPatientSeen,
+            _arisGardenSeen: this._arisGardenSeen,
+            _vanceScarSeen: this._vanceScarSeen,
+            _vanceWatchSeen: this._vanceWatchSeen,
+            _miraWonderSeen: this._miraWonderSeen,
+            _miraAuraSeen: this._miraAuraSeen,
+            _commanderDoubtSeen: this._commanderDoubtSeen,
+            // Logs (last 20 only to save space)
+            logs: this.logs.slice(-20)
+        };
+
+        try {
+            localStorage.setItem('silentExodus_save', JSON.stringify(saveData));
+            return true;
+        } catch (e) {
+            console.error('Failed to save game:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Load game state from localStorage
+     */
+    loadGame() {
+        try {
+            const saveStr = localStorage.getItem('silentExodus_save');
+            if (!saveStr) return false;
+
+            const saveData = JSON.parse(saveStr);
+
+            // Resources
+            this.energy = saveData.energy;
+            this.salvage = saveData.salvage;
+            this.maxSalvage = saveData.maxSalvage;
+            this.rations = saveData.rations;
+            this.maxRations = saveData.maxRations;
+            // Probe
+            this.probeIntegrity = saveData.probeIntegrity;
+            // Cargo & Upgrades
+            this.cargo = saveData.cargo || [];
+            this.upgrades = saveData.upgrades || [];
+            // Navigation
+            this.currentSector = saveData.currentSector;
+            this.currentSystem = saveData.currentSystem;
+            this.sectorNodes = saveData.sectorNodes || [];
+            // Ship
+            this.shipDecks = saveData.shipDecks;
+            // Crew
+            this.crew = saveData.crew;
+            // Progress
+            this.actionsTaken = saveData.actionsTaken;
+            this.exodusLogsFound = saveData.exodusLogsFound || [];
+            this._colonyKnowledge = saveData._colonyKnowledge || 0;
+            this.fungusActionCounter = saveData.fungusActionCounter || 0;
+            // Special states
+            this._inWrongPlace = saveData._inWrongPlace || false;
+            this._previousSectorNodes = saveData._previousSectorNodes;
+            this._previousSector = saveData._previousSector;
+            // Event tracking
+            this._jaxonPhotoSeen = saveData._jaxonPhotoSeen || false;
+            this._jaxonRepairSeen = saveData._jaxonRepairSeen || false;
+            this._arisPatientSeen = saveData._arisPatientSeen || false;
+            this._arisGardenSeen = saveData._arisGardenSeen || false;
+            this._vanceScarSeen = saveData._vanceScarSeen || false;
+            this._vanceWatchSeen = saveData._vanceWatchSeen || false;
+            this._miraWonderSeen = saveData._miraWonderSeen || false;
+            this._miraAuraSeen = saveData._miraAuraSeen || false;
+            this._commanderDoubtSeen = saveData._commanderDoubtSeen || false;
+            // Logs
+            this.logs = saveData.logs || [];
+
+            this.gameOver = false;
+            this.emitUpdates();
+            return true;
+        } catch (e) {
+            console.error('Failed to load game:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Check if a save exists
+     */
+    hasSave() {
+        return localStorage.getItem('silentExodus_save') !== null;
+    }
+
+    /**
+     * Delete save
+     */
+    deleteSave() {
+        localStorage.removeItem('silentExodus_save');
+    }
+
+    /**
+     * Get save info without loading
+     */
+    getSaveInfo() {
+        try {
+            const saveStr = localStorage.getItem('silentExodus_save');
+            if (!saveStr) return null;
+            const data = JSON.parse(saveStr);
+            return {
+                sector: data.currentSector,
+                crew: data.crew.filter(c => c.status !== 'DEAD').length,
+                timestamp: data.timestamp
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
     addLog(message) {
         this.logs.push(message);
         if (this.logs.length > this.maxLogs) {
@@ -661,6 +813,10 @@ class App {
         // Check current audio state for display
         const audioIsOn = window.AudioSystem ? !window.AudioSystem.muted : true;
 
+        // Check for existing save
+        const saveInfo = this.state.getSaveInfo();
+        const hasSave = saveInfo !== null;
+
         const overlay = document.createElement('div');
         overlay.id = 'start-menu';
         overlay.style.cssText = `
@@ -696,16 +852,32 @@ class App {
                     </div>
                 </div>
 
-                <!-- Start button -->
-                <button id="btn-start-game" style="
-                    margin-top: 60px; padding: 18px 60px;
-                    background: transparent; border: 2px solid #4488ff;
-                    color: #4488ff; font-size: 1.2em; font-family: inherit;
-                    cursor: pointer; letter-spacing: 4px;
-                    transition: all 0.3s; position: relative;
-                ">
-                    INITIALIZE EXODUS
-                </button>
+                <!-- Buttons -->
+                <div style="margin-top: 50px; display: flex; flex-direction: column; gap: 15px; align-items: center;">
+                    ${hasSave ? `
+                    <button id="btn-continue-game" style="
+                        padding: 18px 60px;
+                        background: rgba(68, 136, 255, 0.15); border: 2px solid #4488ff;
+                        color: #4488ff; font-size: 1.2em; font-family: inherit;
+                        cursor: pointer; letter-spacing: 4px;
+                        transition: all 0.3s;
+                    ">
+                        CONTINUE
+                    </button>
+                    <div style="font-size: 0.75em; color: #556677; margin-bottom: 10px;">
+                        Sector ${saveInfo.sector} • ${saveInfo.crew} crew alive
+                    </div>
+                    ` : ''}
+                    <button id="btn-start-game" style="
+                        padding: ${hasSave ? '12px 45px' : '18px 60px'};
+                        background: transparent; border: 2px solid ${hasSave ? '#668899' : '#4488ff'};
+                        color: ${hasSave ? '#668899' : '#4488ff'}; font-size: ${hasSave ? '1em' : '1.2em'}; font-family: inherit;
+                        cursor: pointer; letter-spacing: 4px;
+                        transition: all 0.3s;
+                    ">
+                        NEW GAME
+                    </button>
+                </div>
 
                 <!-- Audio indicator -->
                 <div style="margin-top: 30px; font-size: 0.75em; color: #445566;">
@@ -728,30 +900,55 @@ class App {
 
         document.body.appendChild(overlay);
 
-        // Button hover effects
-        const startBtn = overlay.querySelector('#btn-start-game');
-        startBtn.onmouseenter = () => {
-            startBtn.style.background = 'rgba(68, 136, 255, 0.2)';
-            startBtn.style.borderColor = '#66aaff';
-            startBtn.style.color = '#88ccff';
-            startBtn.style.transform = 'scale(1.05)';
-        };
-        startBtn.onmouseleave = () => {
-            startBtn.style.background = 'transparent';
-            startBtn.style.borderColor = '#4488ff';
-            startBtn.style.color = '#4488ff';
-            startBtn.style.transform = 'scale(1)';
+        // Button hover effects helper
+        const addHoverEffect = (btn, baseColor = '#4488ff') => {
+            if (!btn) return;
+            btn.onmouseenter = () => {
+                btn.style.background = 'rgba(68, 136, 255, 0.2)';
+                btn.style.borderColor = '#66aaff';
+                btn.style.color = '#88ccff';
+                btn.style.transform = 'scale(1.05)';
+            };
+            btn.onmouseleave = () => {
+                btn.style.background = hasSave && btn.id === 'btn-start-game' ? 'transparent' : 'rgba(68, 136, 255, 0.15)';
+                btn.style.borderColor = baseColor;
+                btn.style.color = baseColor;
+                btn.style.transform = 'scale(1)';
+            };
         };
 
-        // Start game
+        const startBtn = overlay.querySelector('#btn-start-game');
+        const continueBtn = overlay.querySelector('#btn-continue-game');
+
+        addHoverEffect(startBtn, hasSave ? '#668899' : '#4488ff');
+        addHoverEffect(continueBtn, '#4488ff');
+
+        // New Game button
         startBtn.onclick = () => {
+            // If save exists, confirm new game will overwrite
+            if (hasSave) {
+                if (!confirm('Start a new game? This will overwrite your current save.')) return;
+                this.state.deleteSave();
+            }
             overlay.style.transition = 'opacity 1s';
             overlay.style.opacity = '0';
             setTimeout(() => {
                 overlay.remove();
-                this.init();
+                this.init(false); // false = new game
             }, 1000);
         };
+
+        // Continue button (if exists)
+        if (continueBtn) {
+            continueBtn.onclick = () => {
+                overlay.style.transition = 'opacity 1s';
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.remove();
+                    this.init(true); // true = load save
+                }, 1000);
+            };
+        }
 
         // Audio toggle - sync with actual AudioSystem state
         const audioBtn = overlay.querySelector('#btn-toggle-audio');
@@ -769,7 +966,7 @@ class App {
         };
     }
 
-    init() {
+    init(loadSave = false) {
         console.log("Exodus-9 Systems Initializing...");
 
         window.addEventListener('log-updated', (e) => this.handleLogUpdate(e));
@@ -854,12 +1051,43 @@ class App {
         // Anomaly teleportation handler (visual effect + view refresh)
         window.addEventListener('anomaly-teleport', (e) => this.handleAnomalyTeleport(e.detail));
 
-        this.state.init();
-        this.state.sectorNodes = PlanetGenerator.generateSector(1);
-        this.renderNav();
+        // Either load save or start new game
+        if (loadSave && this.state.loadGame()) {
+            this.state.addLog("=== SAVE LOADED ===");
+            this.state.addLog(`Resuming mission in Sector ${this.state.currentSector}.`);
+            this.renderNav();
+        } else {
+            // New game
+            this.state.init();
+            this.state.sectorNodes = PlanetGenerator.generateSector(1);
+            this.renderNav();
+            // A.U.R.A.'s opening briefing (in-universe tutorial)
+            this.showOpeningBriefing();
+        }
+    }
 
-        // A.U.R.A.'s opening briefing (in-universe tutorial)
-        this.showOpeningBriefing();
+    /**
+     * Auto-save the game (called after significant actions)
+     */
+    autoSave() {
+        if (this.state.saveGame()) {
+            // Subtle save indicator
+            const indicator = document.createElement('div');
+            indicator.style.cssText = `
+                position: fixed; top: 10px; right: 10px; padding: 5px 12px;
+                background: rgba(0, 100, 50, 0.8); color: #00ff88;
+                font-size: 0.75em; font-family: 'Share Tech Mono', monospace;
+                border-radius: 3px; z-index: 9999;
+                animation: fadeInGentle 0.3s forwards;
+            `;
+            indicator.textContent = 'SAVED';
+            document.body.appendChild(indicator);
+            setTimeout(() => {
+                indicator.style.opacity = '0';
+                indicator.style.transition = 'opacity 0.5s';
+                setTimeout(() => indicator.remove(), 500);
+            }, 1500);
+        }
     }
 
     // === VISUAL FEEDBACK SYSTEM ===
@@ -1156,6 +1384,9 @@ class App {
                     this.state.addLog(`Orbit established. Systems Green.`);
                 }
                 this.renderOrbit();
+
+                // Auto-save after arriving at planet
+                this.autoSave();
 
                 // Check for distress signals after warp (small chance) - use queue to prevent stacking
                 if (typeof rollDistressSignal !== 'undefined') {
@@ -1800,6 +2031,9 @@ class App {
                 }
 
                 this.renderNav();
+
+                // Auto-save after sector jump
+                this.autoSave();
 
                 // Sector name from config
                 const sectorName = enterConfig ? enterConfig.name : '';
@@ -2854,11 +3088,36 @@ You are home.`
     }
 
     showEndingScreen(result) {
+        // Delete save file - journey is complete
+        this.state.deleteSave();
+
         // This is the GAME ENDING screen
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '4000';
         modal.style.background = 'rgba(0,0,0,0.98)';
+
+        // Gather journey stats
+        const deadCrew = this.state.crew.filter(c => c.status === 'DEAD');
+        const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
+        const exodusLogsFound = this.state.exodusLogsFound?.length || 0;
+        const colonyKnowledge = this.state._colonyKnowledge || 0;
+
+        // Build survivor roster
+        let survivorRoster = livingCrew.map(c => {
+            const tags = c.tags?.filter(t => !['LEADER', 'ENGINEER', 'MEDIC', 'SECURITY', 'SPECIALIST'].includes(t)) || [];
+            const specialTag = tags.length > 0 ? ` [${tags[0]}]` : '';
+            return `<span style="color: #88cc88;">${c.realName || c.name}${specialTag}</span>`;
+        }).join(' | ');
+
+        // Build memorial for fallen
+        let memorial = '';
+        if (deadCrew.length > 0) {
+            memorial = `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                <div style="color: #666; font-size: 0.75em; margin-bottom: 8px;">/// THOSE WHO DID NOT MAKE IT ///</div>
+                ${deadCrew.map(c => `<span style="color: #886666;">${c.realName || c.name}</span>`).join(' | ')}
+            </div>`;
+        }
 
         // Clean up the text - handle both pre-formatted and regular text
         let cleanText = result.text || '';
@@ -2905,6 +3164,29 @@ You are home.`
                 ">
                     ${cleanText}
                 </div>
+
+                <!-- Journey Statistics -->
+                <div style="margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.5); border: 1px solid #333;">
+                    <div style="text-align: center; color: #6644aa; font-size: 0.85em; margin-bottom: 15px; letter-spacing: 2px;">
+                        /// JOURNEY STATISTICS ///
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85em; color: #888;">
+                        <div>FINAL SECTOR: <span style="color: #aaaaff;">${this.state.currentSector}</span></div>
+                        <div>CREW SURVIVORS: <span style="color: #88cc88;">${livingCrew.length} / 5</span></div>
+                        <div>EXODUS LOGS: <span style="color: #aaaaff;">${exodusLogsFound} / 8</span></div>
+                        <div>COLONY DATA: <span style="color: #aaaaff;">${colonyKnowledge}</span></div>
+                        <div>SALVAGE: <span style="color: #aaaaff;">${this.state.salvage}</span></div>
+                        <div>ENERGY: <span style="color: #aaaaff;">${this.state.energy}%</span></div>
+                    </div>
+                    ${livingCrew.length > 0 ? `
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                        <div style="color: #666; font-size: 0.75em; margin-bottom: 8px;">/// COLONY FOUNDERS ///</div>
+                        ${survivorRoster}
+                    </div>
+                    ` : ''}
+                    ${memorial}
+                </div>
+
                 <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #333;">
                     <div style="color: #8866cc; font-size: 0.95em; margin-bottom: 20px; letter-spacing: 3px;">
                         ENDING: ${result.ending || 'UNKNOWN'}
@@ -4065,6 +4347,9 @@ You are home.`
 
         this.state.addLog(logMsg);
         this.state.emitUpdates();
+
+        // Auto-save after EVA completes
+        this.autoSave();
     }
 
     /**
@@ -5080,6 +5365,28 @@ You are home.`
     }
 
     showGameOver(detail) {
+        // Delete save file - game is over
+        this.state.deleteSave();
+
+        // Gather stats for the run
+        const deadCrew = this.state.crew.filter(c => c.status === 'DEAD');
+        const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
+        const planetsVisited = this.state.sectorNodes?.filter(p => p.scanned || p.hasEva).length || 0;
+        const exodusLogsFound = this.state.exodusLogsFound?.length || 0;
+
+        // Build crew death memorial
+        let crewMemorial = '';
+        if (deadCrew.length > 0) {
+            crewMemorial = deadCrew.map(c => {
+                const cause = c._deathCause || 'unknown causes';
+                const planet = c._deathPlanet || 'deep space';
+                return `<div style="margin: 5px 0; font-size: 0.85em;">
+                    <span style="color: #ff6666;">${c.realName || c.name}</span>
+                    <span style="color: #884444;"> - ${cause} at ${planet}</span>
+                </div>`;
+            }).join('');
+        }
+
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
@@ -5093,20 +5400,34 @@ You are home.`
                     <span>/// MISSION FAILED</span>
                     <span>${detail.title}</span>
                 </div>
-                <div style="padding: 40px; font-size: 1.1em; line-height: 1.8; text-align: center;">
+                <div style="padding: 30px; font-size: 1.1em; line-height: 1.8; text-align: center;">
                     ${detail.message}
                 </div>
-                <div style="border-top: 1px solid #ff4444; padding: 15px; text-align: center; font-size: 0.8em; color: #ff444488;">
-                    SECTOR: ${this.state.currentSector} | ACTIONS: ${this.state.actionsTaken} | SALVAGE: ${this.state.salvage}
+                ${crewMemorial ? `
+                <div style="border-top: 1px solid #ff4444; padding: 15px; text-align: center;">
+                    <div style="color: #ff444488; font-size: 0.75em; margin-bottom: 10px;">/// IN MEMORIAM ///</div>
+                    ${crewMemorial}
+                </div>
+                ` : ''}
+                <div style="border-top: 1px solid #ff4444; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.8em; color: #ff444488;">
+                    <div>SECTOR REACHED: <span style="color: #ff6666;">${this.state.currentSector}</span></div>
+                    <div>PLANETS EXPLORED: <span style="color: #ff6666;">${planetsVisited}</span></div>
+                    <div>CREW LOST: <span style="color: #ff6666;">${deadCrew.length} / 5</span></div>
+                    <div>SALVAGE COLLECTED: <span style="color: #ff6666;">${this.state.salvage}</span></div>
+                    <div>EXODUS LOGS: <span style="color: #ff6666;">${exodusLogsFound} / 8</span></div>
+                    <div>RATIONS REMAINING: <span style="color: #ff6666;">${this.state.rations}</span></div>
                 </div>
             </div>
-            <button onclick="location.reload()" style="
+            <button id="btn-restart" style="
                 margin-top: 30px; padding: 15px 30px; background: transparent;
                 border: 1px solid #ff4444; color: #ff4444; font-size: 1em;
                 cursor: pointer; font-family: inherit;
             ">REBOOT SIMULATION</button>
         `;
         document.body.appendChild(overlay);
+
+        // Button handler
+        overlay.querySelector('#btn-restart').onclick = () => location.reload();
     }
 
     showMutinyEvent(detail) {
