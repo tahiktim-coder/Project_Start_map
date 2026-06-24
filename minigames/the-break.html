@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXODUS-9 · THE BREAK (prototype v4 — cockpit)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050a07;--bg2:#0a140f;--green:#00ff41;--dim:#008f11;--gdk:#063a14;--amber:#ffb000;--blood:#ff2b3d;--bloodd:#5a0a12;--text:#cfeed8;--textdim:#4a7a5f;--mono:'Share Tech Mono',monospace;--disp:'Orbitron',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;-webkit-font-smoothing:none}
+.crt{position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.4;background:linear-gradient(rgba(18,16,16,0) 50%,rgba(0,0,0,.25) 50%);background-size:100% 3px}
+.vig{position:fixed;inset:0;pointer-events:none;z-index:90;background:radial-gradient(circle,transparent 58%,rgba(0,0,0,.85) 100%);transition:background .4s}
+.wrap{width:820px;max-width:100%;position:relative;z-index:20}
+.back{color:var(--textdim);font-size:11px;text-decoration:none;letter-spacing:1px}.back:hover{color:var(--green)}
+.panel{border:1px solid var(--dim);background:var(--bg2);margin-top:8px;transition:border-color .4s}
+.panel.crisis{border-color:var(--blood)}
+.hdr{font-family:var(--disp);font-weight:700;letter-spacing:1px;padding:7px 14px;display:flex;justify-content:space-between;align-items:center;background:var(--dim);color:#000;transition:background .4s}
+.crisis .hdr{background:var(--bloodd);color:var(--text)}
+.hdr small{font-family:var(--mono);font-weight:400}
+.body{padding:14px}
+/* calm */
+.calm .body{text-align:center;padding:28px 20px}
+.orbit{font-family:var(--disp);font-size:17px;letter-spacing:2px;color:var(--green);margin-bottom:8px}
+.calm .sub{color:var(--textdim);font-size:12px;line-height:1.7;max-width:520px;margin:0 auto 22px}
+button{font-family:var(--mono);background:#000;color:var(--green);border:1px solid var(--dim);cursor:pointer;letter-spacing:.5px;transition:all .12s}
+button:hover:not(:disabled){border-color:var(--green);box-shadow:0 0 10px rgba(0,255,65,.2)}
+button:disabled{opacity:.28;cursor:not-allowed}
+.calm button{padding:12px 22px;text-transform:uppercase;border-color:var(--blood);color:var(--blood)}
+/* cockpit grid */
+.cockpit{display:grid;grid-template-columns:120px 1fr 200px;gap:10px}
+.col{display:flex;flex-direction:column;gap:8px}
+.box{border:1px solid var(--gdk);background:rgba(0,0,0,.3);padding:8px}
+.box .t{font-size:9px;color:var(--textdim);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--gdk);padding-bottom:4px;margin-bottom:6px}
+/* ship decks */
+.deck{font-size:10px;letter-spacing:1px;color:var(--textdim);padding:5px 4px;border:1px solid var(--gdk);margin-bottom:4px;text-align:center;transition:all .3s}
+.deck.lit{color:var(--text);border-color:var(--dim)}
+.deck.dark{opacity:.35;border-style:dashed;color:var(--blood)}
+/* radar */
+.radarbox{display:flex;flex-direction:column;align-items:center;justify-content:center}
+canvas{display:block}
+.range{font-family:var(--disp);font-size:20px;letter-spacing:1px;margin-top:6px;transition:color .3s}
+.objective{font-size:10px;color:var(--textdim);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+/* tactical readout */
+.kv{display:flex;justify-content:space-between;font-size:11px;padding:3px 0;border-bottom:1px dashed var(--gdk)}
+.kv b{color:var(--amber)}
+.kv b.bad{color:var(--blood)}
+.sig{display:flex;gap:3px;margin-top:2px}
+.sig i{flex:1;height:8px;background:#1a0a00;border:1px solid #3a2400}
+.sig i.on{background:var(--amber);box-shadow:0 0 5px var(--amber)}
+.sig i.hot{background:var(--blood);box-shadow:0 0 5px var(--blood)}
+/* orders */
+.orders{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.ord{text-align:left;padding:10px 12px;border:1px solid var(--dim)}
+.ord b{display:block;color:var(--text);font-size:13px;margin-bottom:2px}
+.ord small{color:var(--textdim);font-size:10px}
+.ord.loud{border-color:#7a4a00}.ord.loud b{color:var(--amber)}
+.ord.gamble{border-color:var(--bloodd)}.ord.gamble b{color:var(--blood)}
+/* log */
+.log{margin-top:10px;border:1px solid var(--gdk);background:#000;height:74px;overflow:hidden;padding:6px 10px;display:flex;flex-direction:column-reverse}
+.le{font-size:11px;line-height:1.5;color:var(--text);margin-bottom:2px}
+.le::before{content:'> ';color:var(--textdim)}
+.le.a{color:var(--amber)}.le.d{color:var(--blood)}.le.s{color:var(--textdim);font-style:italic}
+.le.a::before{content:'» ';color:var(--amber)}
+.skiprow{margin-top:8px;text-align:right}
+.skiprow button{border-color:#3a0a12;color:var(--textdim);font-size:11px;padding:6px 12px}
+.result{margin-top:12px;border:1px solid var(--blood);padding:14px;background:rgba(0,0,0,.5);display:none}
+.result.show{display:block}
+.result h3{font-family:var(--disp);letter-spacing:1px;margin-bottom:6px}
+.result .ln{margin-top:6px;line-height:1.5}.result .a{color:var(--amber)}
+.result button{margin-top:12px;padding:9px 16px;border-color:var(--blood);color:var(--blood);text-transform:uppercase}
+.shake{animation:shk .5s}@keyframes shk{0%,100%{transform:translate(0)}25%{transform:translate(-5px,3px)}50%{transform:translate(5px,-3px)}75%{transform:translate(-3px,2px)}}
+.cut{position:fixed;inset:0;z-index:150;background:var(--blood);clip-path:polygon(0 0,0 0,0 100%,0 100%);pointer-events:none}
+.cut.go{animation:cw .7s ease-in-out forwards}
+@keyframes cw{0%{clip-path:polygon(0 0,0 0,-20% 100%,-20% 100%)}45%{clip-path:polygon(0 0,120% 0,100% 100%,-20% 100%)}100%{clip-path:polygon(120% 0,120% 0,100% 100%,100% 100%)}}
+.stamp{position:fixed;inset:0;z-index:160;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0}
+.stamp.go{animation:st 1.3s ease-out forwards}.stamp b{font-family:var(--disp);font-size:56px;letter-spacing:8px;color:var(--text);text-shadow:0 0 30px var(--blood)}
+@keyframes st{0%{opacity:0;transform:scale(1.4)}15%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+</style>
+</head>
+<body>
+<div class="vig" id="vig"></div><div class="crt"></div>
+<div class="cut" id="cut"></div><div class="stamp" id="stamp"><b>THE BREAK</b></div>
+
+<div class="wrap" id="wrap">
+<a class="back" href="index.html">← INSTRUMENT LAB</a>
+
+<div class="panel calm" id="calm">
+  <div class="hdr"><span>/// ORBIT :: DERELICT REACTOR</span><small>EXODUS-9</small></div>
+  <div class="body">
+    <div class="orbit">SOMETHING IS DRIFTING IN THE WRECK</div>
+    <div class="sub">A dead Exodus reactor, cold for decades — then a pulse on the sensors that shouldn't be there. You give the order to take EXODUS-9 in. You are the captain.</div>
+    <button id="trigger">▸ Take us in</button>
+  </div>
+</div>
+
+<div class="panel crisis" id="brk" style="display:none">
+  <div class="hdr"><span>⚠ THE BREAK — BREAK CONTACT OR DIE</span><small id="profName">CONTACT</small></div>
+  <div class="body">
+    <div class="cockpit">
+      <div class="col">
+        <div class="box"><div class="t">EXODUS-9</div>
+          <div class="deck lit" data-d="bridge">BRIDGE</div>
+          <div class="deck lit" data-d="lab">LAB</div>
+          <div class="deck lit" data-d="quarters">QUARTERS</div>
+          <div class="deck lit" data-d="cargo">CARGO</div>
+          <div class="deck lit" data-d="engineering">ENGINE</div>
+        </div>
+      </div>
+      <div class="col radarbox box">
+        <div class="t" style="align-self:stretch">SENSORS — CONTACT</div>
+        <canvas id="radar" width="240" height="220"></canvas>
+        <div class="range" id="range">—</div>
+        <div class="objective">push it past the SENSOR EDGE to break contact</div>
+      </div>
+      <div class="col">
+        <div class="box"><div class="t">Tactical Readout</div>
+          <div class="kv"><span>Range</span><b id="tRange">—</b></div>
+          <div class="kv"><span>Locked on</span><b id="tLock" class="bad">—</b></div>
+          <div class="kv" style="border:0"><span>Our signature</span><span></span></div>
+          <div class="sig" id="sig"></div>
+          <div class="kv" style="border:0;margin-top:6px"><span>Behaviour</span></div>
+          <div style="font-size:10px;color:var(--textdim);line-height:1.4" id="tBehav">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="orders" id="orders"></div>
+    <div class="log" id="log"></div>
+    <div class="skiprow"><button id="skip">Sound the retreat (auto-resolve)</button></div>
+    <div class="result" id="result"></div>
+  </div>
+</div>
+</div>
+
+<script>
+const $=i=>document.getElementById(i);
+const cv=$('radar'),cx=cv.getContext('2d'),CW=cv.width,CH=cv.height,CXc=CW/2,CYc=CH/2,MAXR=96;
+let S, sweep=0, raf;
+const PROFILES={
+  EMISSION:{name:'IT HUNTS OUR SIGNATURE',lock:'ENGINE EMISSIONS',behav:'Closes FASTER the louder we run. Go dark to lose its lock.',k:0.30,base:5,
+    seed:"Exodus-6 logged something that 'found them by their own engines' — right before the end."},
+  HUNGER:{name:'IT FEEDS ON POWER',lock:'REACTOR OUTPUT',behav:'Every hard burn WAKES it — its pursuit speed rises. Run quiet.',k:0.16,base:6,wakes:true,
+    seed:"Exodus-4 logged a 'hunger in the dark' that grew stronger each time they pushed the drive."},
+};
+function start(){
+  const ks=Object.keys(PROFILES),pk=ks[Math.floor(Math.random()*ks.length)];
+  S={p:PROFILES[pk],pk,gap:42,sig:30,base:PROFILES[pk].base,haul:3,turn:1,max:7,done:false,
+     decks:{bridge:'lit',lab:'lit',quarters:'lit',cargo:'lit',engineering:'lit'},log:[]};
+  $('profName').textContent=S.p.name;
+  $('result').classList.remove('show');
+  logLine('a',"A.U.R.A.: Contact out of the wreck — and it's accelerating toward us, Captain.");
+  logLine('s',S.p.seed);
+  render(); if(!raf)loop();
+}
+function logLine(cls,t){ S.log.unshift({cls,t}); if(S.log.length>6)S.log.pop();
+  $('log').innerHTML=S.log.map(l=>'<div class="le '+l.cls+'">'+l.t+'</div>').join(''); }
+function drawRadar(){
+  cx.clearRect(0,0,CW,CH);
+  // rings
+  for(let i=1;i<=4;i++){cx.strokeStyle=i===4?'rgba(255,176,0,0.45)':'rgba(0,255,65,0.12)';cx.lineWidth=1;cx.beginPath();cx.arc(CXc,CYc,MAXR*i/4,0,7);cx.stroke();}
+  cx.strokeStyle='rgba(0,255,65,0.1)';cx.beginPath();cx.moveTo(CXc-MAXR,CYc);cx.lineTo(CXc+MAXR,CYc);cx.moveTo(CXc,CYc-MAXR);cx.lineTo(CXc,CYc+MAXR);cx.stroke();
+  // sweep
+  const sa=sweep;
+  const g=cx.createLinearGradient(CXc,CYc,CXc+Math.cos(sa)*MAXR,CYc+Math.sin(sa)*MAXR);
+  g.addColorStop(0,'rgba(0,255,65,0.35)');g.addColorStop(1,'rgba(0,255,65,0)');
+  cx.strokeStyle=g;cx.lineWidth=2;cx.beginPath();cx.moveTo(CXc,CYc);cx.lineTo(CXc+Math.cos(sa)*MAXR,CYc+Math.sin(sa)*MAXR);cx.stroke();
+  // our ship (center)
+  cx.fillStyle='#00ff41';cx.beginPath();cx.moveTo(CXc,CYc-6);cx.lineTo(CXc+5,CYc+5);cx.lineTo(CXc-5,CYc+5);cx.closePath();cx.fill();
+  // threat blip: radius = gap (far=safe edge, 0=on us)
+  if(S){const r=Math.max(4,Math.min(MAXR,S.gap/100*MAXR));const ang=-Math.PI/2+0.35;
+    const bx=CXc+Math.cos(ang)*r,by=CYc+Math.sin(ang)*r;
+    const close=1-S.gap/100; const pr=4+close*6+Math.sin(sweep*3)*close*3;
+    cx.fillStyle='#ff2b3d';cx.shadowBlur=12;cx.shadowColor='#ff2b3d';cx.beginPath();cx.arc(bx,by,pr,0,7);cx.fill();cx.shadowBlur=0;
+  }
+}
+function loop(){ sweep+=0.04; drawRadar(); raf=requestAnimationFrame(loop); }
+function render(){
+  // ship
+  document.querySelectorAll('.deck').forEach(el=>el.className='deck '+(S.decks[el.dataset.d]==='dark'?'dark':'lit'));
+  // range readout (diegetic distance)
+  const m=Math.round(S.gap*14)+200;
+  $('range').textContent=m+' m'; $('range').style.color=S.gap<30?'var(--blood)':S.gap<55?'var(--amber)':'var(--green)';
+  $('tRange').textContent=m+' m';
+  $('tLock').textContent=S.p.lock; $('tBehav').textContent=S.p.behav;
+  // signature pips
+  const pips=Math.round(S.sig/100*6); let s='';
+  for(let i=0;i<6;i++)s+='<i class="'+(i<pips?(i>=4?'hot':'on'):'')+'"></i>'; $('sig').innerHTML=s;
+  // vignette redness from closeness
+  const c=(100-Math.max(0,Math.min(100,S.gap)))/100;
+  $('vig').style.background='radial-gradient(circle,transparent '+(58-c*26)+'%,rgba('+Math.round(40+c*120)+',0,8,'+(0.55+c*0.4)+') 100%)';
+  // orders (all real tradeoffs — info already visible above, no "research" non-choice)
+  const o=$('orders'); o.innerHTML='';
+  const ORD=[
+    {k:'BURN',cls:'loud',b:'⚙ Burn the engines',s:'Big distance — but spikes our signature',dead:S.decks.engineering==='dark'},
+    {k:'SILENT',cls:'',b:'○ Run silent',s:'Cut power: little distance, drops our signature'},
+    {k:'JETTISON',cls:'',b:'▣ Jettison cargo',s:S.haul>0?('Good distance · lose haul (x'+S.haul+')'):'nothing left to dump',dead:S.haul<=0},
+    {k:'EVASIVE',cls:'gamble',b:'↯ Evasive maneuver',s:'Gamble: try to break its lock entirely'},
+  ];
+  ORD.forEach(d=>{const b=document.createElement('button');b.className='ord '+d.cls;
+    b.innerHTML='<b>'+d.b+'</b><small>'+d.s+'</small>';
+    if(!d.dead&&!S.done)b.onclick=()=>order(d.k);else b.disabled=true;o.appendChild(b);});
+}
+function order(k){
+  if(S.done)return; let quiet=false;
+  switch(k){
+    case 'BURN':{S.gap+=22;S.sig=Math.min(100,S.sig+40);S.decks.engineering='dark';
+      if(S.p.wakes)S.base+=4;
+      logLine('a',"A.U.R.A.: Engines maxed — we surged ahead"+(S.p.wakes?", and it WOKE. It's faster now.":", but we just lit up the dark.")); break;}
+    case 'SILENT':{quiet=true;S.gap+=6;S.sig=Math.max(0,S.sig-35);
+      logLine('s',"All systems to minimum. The ship goes dark and quiet.");
+      logLine('a',"A.U.R.A.: Signature dropping. It's... losing our trail."); break;}
+    case 'JETTISON':{S.gap+=16;S.sig=Math.min(100,S.sig+5);S.haul--;
+      logLine('',"Vance: Cargo's away, Captain. Everything we scavenged."); break;}
+    case 'EVASIVE':{ if(Math.random()<0.55){S.gap+=24;S.sig=Math.max(0,S.sig-10);S.base=Math.max(4,S.base-2);
+        logLine('a',"A.U.R.A.: Hard burn to port — we slipped its lock! It's hunting blind for a moment."); }
+      else {S.gap-=6;logLine('d',"Mira: The maneuver stalled — it read us and cut the angle!");} break;}
+  }
+  // threat closes — based on visible behaviour (info was on the readout, so this is fair)
+  S.sig=Math.max(0,S.sig-(quiet?0:8));
+  let close=S.base+S.sig*S.p.k; if(quiet)close*=0.4;
+  S.gap=Math.max(0,Math.min(120,S.gap-close));
+  S.turn++;
+  if(S.gap>=100)return finish('escape');
+  if(S.gap<=0)return finish('caught');
+  if(S.turn>S.max)return finish(S.gap>=68?'partial':S.gap>=34?'limp':'caught');
+  if(S.gap<34)logLine('d',"A.U.R.A.: It's closing, Captain — fast.");
+  render();
+}
+$('skip').onclick=()=>{ if(!S.done)finish('skip'); };
+function finish(kind){
+  S.done=true; const burned=S.decks.engineering==='dark',lost=3-S.haul;
+  let t,col,lines,score=Math.max(0,Math.min(1,S.gap/100));
+  if(kind==='skip'){score=.25;t='WE RAN BLIND';col='var(--blood)';lines=[['','Jaxon','Broke contact on autopilot — tore the engines apart doing it. We\'re adrift.']];}
+  else if(kind==='escape'){t='CLEAN BREAK';col='var(--green)';lines=[['a','A.U.R.A.','Contact lost, Captain. It\'s gone. Well commanded.']];}
+  else if(kind==='partial'){t='BROKE CONTACT — SCARRED';col='var(--amber)';lines=[['','Aris','We\'re alive. Hurt, but alive. Find us somewhere to mend.']];}
+  else if(kind==='limp'){t='BARELY';col='var(--amber)';lines=[['','Mira','I felt it brush the hull. I won\'t forget that sound.']];}
+  else{t='IT CAUGHT US';col='var(--blood)';lines=[['a','A.U.R.A.',S.pk==='HUNGER'?'You kept feeding it — it never let go. The Exodus-9 joins the others now.':'Too loud — it locked on and ran us down. I\'m sorry, Captain.']];}
+  let cons=[]; if(burned)cons.push('engines crippled'); if(lost)cons.push(lost+' cargo dumped');
+  let h='<h3 style="color:'+col+'">'+t+'</h3>';
+  lines.forEach(l=>h+='<div class="ln '+l[0]+'"><b>'+l[1]+':</b> '+l[2]+'</div>');
+  h+='<div class="ln" style="color:var(--textdim);margin-top:8px">Aftermath: '+(cons.length?cons.join(' · '):'ship and crew intact')+'.</div>';
+  h+='<div class="ln" style="color:var(--textdim);font-size:11px;margin-top:6px">→ Run it again — the OTHER hunter flips which order is right. And imagine it finding you AGAIN, sectors later, having learned how you run.</div>';
+  h+='<button onclick="location.reload()">↻ Run it again</button>';
+  $('result').innerHTML=h; $('result').classList.add('show');
+}
+$('trigger').onclick=()=>{ $('cut').classList.add('go'); $('wrap').classList.add('shake');
+  setTimeout(()=>$('stamp').classList.add('go'),250);
+  setTimeout(()=>{$('calm').style.display='none';$('brk').style.display='block';start();},700); };
+</script>
+</body>
+</html>

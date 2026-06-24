@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXODUS-9 · SIGNAL TUNING (prototype)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050a07; --bg2:#0a140f; --green:#00ff41; --dim:#008f11; --amber:#ffb000;
+  --danger:#ff3333; --text:#e0ffee; --textdim:#4a7a5f; --mono:'Share Tech Mono',monospace;
+  --disp:'Orbitron',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;
+  display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;
+  -webkit-font-smoothing:none;overflow-x:hidden}
+.crt{position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.5;
+  background:linear-gradient(rgba(18,16,16,0) 50%,rgba(0,0,0,.25) 50%),
+  linear-gradient(90deg,rgba(255,0,0,.06),rgba(0,255,0,.02),rgba(0,0,255,.06));
+  background-size:100% 3px,3px 100%}
+.vig{position:fixed;inset:0;pointer-events:none;z-index:90;
+  background:radial-gradient(circle,transparent 55%,rgba(0,0,0,.85) 100%)}
+.panel{width:760px;max-width:100%;border:1px solid var(--dim);background:rgba(0,20,10,.4);
+  position:relative;z-index:20;box-shadow:0 0 40px rgba(0,255,65,.06)}
+.hdr{background:var(--dim);color:#000;font-family:var(--disp);font-weight:700;
+  letter-spacing:1px;padding:8px 14px;display:flex;justify-content:space-between;align-items:center}
+.hdr small{font-family:var(--mono);font-weight:400}
+.body{padding:18px}
+.sub{color:var(--textdim);font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+canvas{display:block;width:100%;height:240px;background:#000502;border:1px solid var(--dim);
+  image-rendering:pixelated}
+.meters{display:flex;gap:14px;margin-top:14px}
+.meter{flex:1}
+.meter .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--textdim);margin-bottom:4px;text-transform:uppercase;letter-spacing:1px}
+.bar{height:14px;border:1px solid var(--dim);background:#000;position:relative;overflow:hidden}
+.bar>i{position:absolute;inset:0 100% 0 0;background:var(--green);box-shadow:0 0 8px var(--green);transition:right .08s linear}
+#lockBar>i{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.controls{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ctl{border:1px solid var(--dim);padding:10px 12px;background:rgba(0,0,0,.3)}
+.ctl.sel{border-color:var(--green);box-shadow:0 0 12px rgba(0,255,65,.15)}
+.ctl .name{font-family:var(--disp);font-size:13px;color:var(--green);letter-spacing:1px}
+.ctl .val{float:right;color:var(--amber)}
+input[type=range]{width:100%;margin-top:8px;accent-color:var(--green);background:transparent}
+.btns{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap}
+button{font-family:var(--mono);background:#000;color:var(--green);border:1px solid var(--dim);
+  padding:9px 16px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-size:12px;transition:all .12s}
+button:hover{border-color:var(--green);box-shadow:0 0 12px rgba(0,255,65,.2);background:rgba(0,255,65,.05)}
+button.primary{border-color:var(--amber);color:var(--amber)}
+button.primary:hover{box-shadow:0 0 12px rgba(255,176,0,.25);background:rgba(255,176,0,.05)}
+button.ghost{color:var(--textdim);border-color:#1c3a2a}
+.hint{margin-top:10px;font-size:11px;color:var(--textdim);line-height:1.6}
+.result{margin-top:14px;border:1px solid var(--dim);padding:14px;background:rgba(0,0,0,.4);display:none}
+.result.show{display:block;animation:fade .4s ease}
+.result h3{font-family:var(--disp);letter-spacing:1px;margin-bottom:6px}
+.result .bark{color:var(--amber);margin-top:8px}
+.result .aura{color:#38d6e0;margin-top:4px}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sectorpick{display:flex;gap:6px;align-items:center;font-size:11px;color:var(--textdim)}
+.sectorpick button{padding:4px 9px;font-size:11px}
+.sectorpick button.on{border-color:var(--amber);color:var(--amber)}
+.note{max-width:760px;margin:14px auto 0;color:var(--textdim);font-size:11px;text-align:center;line-height:1.6;position:relative;z-index:20}
+.flash{animation:flash .5s}
+@keyframes flash{0%{background:rgba(0,255,65,.25)}100%{background:rgba(0,20,10,.4)}}
+</style>
+</head>
+<body>
+<div class="crt"></div><div class="vig"></div>
+<div style="width:760px;max-width:100%">
+<div class="panel" id="panel">
+  <div class="hdr"><span>/// SENSOR ARRAY :: MANUAL TUNE</span><small id="target">TARGET: ROCKY-7</small></div>
+  <div class="body">
+    <div class="sub">Overlay your trace (bright) onto the incoming carrier (dim). The signal drifts — keep it locked.</div>
+    <canvas id="scope" width="720" height="240"></canvas>
+
+    <div class="meters">
+      <div class="meter">
+        <div class="lbl"><span>Alignment</span><span id="alignTxt">0%</span></div>
+        <div class="bar" id="alignBar"><i></i></div>
+      </div>
+      <div class="meter">
+        <div class="lbl"><span>Signal Lock</span><span id="lockTxt">0%</span></div>
+        <div class="bar" id="lockBar"><i></i></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="ctl sel" id="ctlFreq">
+        <div class="name">FREQ <span class="val" id="freqVal">0.50</span></div>
+        <input type="range" id="freq" min="0" max="1" step="0.001" value="0.5">
+      </div>
+      <div class="ctl" id="ctlPhase">
+        <div class="name">PHASE <span class="val" id="phaseVal">0.50</span></div>
+        <input type="range" id="phase" min="0" max="1" step="0.001" value="0.5">
+      </div>
+    </div>
+
+    <div class="btns">
+      <button class="primary" id="acquire">▸ Acquire</button>
+      <button class="ghost" id="auto">Auto-resolve (skip)</button>
+      <button class="ghost" id="replay">Replay</button>
+      <span style="flex:1"></span>
+      <span class="sectorpick">SECTOR:
+        <button data-s="1" class="on">1</button>
+        <button data-s="3">3</button>
+        <button data-s="5">5</button>
+      </span>
+    </div>
+
+    <div class="hint">Drag sliders or use <b>← →</b> (and <b>Tab</b> to switch). <b>Enter</b> = Acquire.
+      Hold alignment above 85% to charge Signal Lock to 100% for a clean read — or Acquire early for a partial.
+      Sector 3 injects a <span style="color:var(--danger)">decoy</span> carrier; lock the wrong one and the read is falsified.</div>
+
+    <div class="result" id="result"></div>
+  </div>
+</div>
+<div class="note">PROTOTYPE — standalone, outside the game repo. Demonstrates the <b>InstrumentPanel</b> feel:
+one interaction → a 0–1 score → mapped to the existing scan reward (and always skippable). Nothing here touches the working game.</div>
+</div>
+
+<script>
+const C = document.getElementById('scope');
+const ctx = C.getContext('2d');
+const W = C.width, H = C.height, mid = H/2;
+const $ = id => document.getElementById(id);
+
+let sector = 1;
+let t = 0;                       // animation time
+let elapsed = 0;                 // seconds tuning (purity decay)
+let running = true;
+let lock = 0;                    // 0..100 signal-lock charge
+let peakAlign = 0;
+let decoyHit = false;
+
+// target params (0..1), drift over time
+let f0, p0, df0, dp0, decoyF;
+function newTarget(){
+  f0 = 0.2 + Math.random()*0.6;
+  p0 = Math.random();
+  decoyF = (f0 + 0.35 + Math.random()*0.2) % 1;     // a wrong nearby carrier
+  // drift strength by sector
+  const drift = sector===1?0.018 : sector===3?0.045 : 0.075;
+  df0 = drift; dp0 = drift*0.9;
+}
+function freqHz(v){ return 2 + v*10; }               // map slider → cycles across canvas
+
+function reset(){
+  running = true; t = 0; elapsed = 0; lock = 0; peakAlign = 0; decoyHit = false;
+  newTarget();
+  $('freq').value = 0.5; $('phase').value = 0.5;
+  $('result').classList.remove('show');
+  $('target').textContent = 'TARGET: ' + (['ROCKY-7','VITAL-3','SHATTERED-9','TOMB WORLD','GHOST-0'][Math.floor(Math.random()*5)]);
+  loop();
+}
+
+let last = performance.now();
+function loop(now){
+  if(!running) return;
+  now = now||performance.now();
+  const dt = Math.min(0.05,(now-last)/1000); last = now; t += dt; elapsed += dt;
+
+  // drift the target
+  f0 = clamp(f0 + Math.sin(t*0.7)*df0*dt, 0.12, 0.92);
+  p0 = (p0 + dp0*dt*Math.sin(t*1.3)) % 1; if(p0<0) p0+=1;
+
+  const pf = parseFloat($('freq').value), pp = parseFloat($('phase').value);
+  // alignment vs real target
+  const fErr = Math.abs(pf - f0);
+  const pErr = Math.min(Math.abs(pp-p0), 1-Math.abs(pp-p0));   // phase wraps
+  let align = clamp(100*(1 - (fErr*2.2 + pErr*1.6)),0,100);
+
+  // decoy check (sector 3): are we closer to the decoy?
+  const fErrDecoy = Math.abs(pf - decoyF);
+  const nearDecoy = sector===3 && fErrDecoy < fErr - 0.02;
+  if(nearDecoy && align>55){ decoyHit = true; } else if(align>70){ decoyHit = false; }
+
+  peakAlign = Math.max(peakAlign, align);
+  // charge / drain lock
+  if(align>=85) lock = clamp(lock + 55*dt,0,100);
+  else if(align<60) lock = clamp(lock - 40*dt,0,100);
+
+  // UI meters
+  $('alignTxt').textContent = Math.round(align)+'%';
+  $('lockTxt').textContent = Math.round(lock)+'%';
+  $('alignBar').firstElementChild.style.right = (100-align)+'%';
+  $('lockBar').firstElementChild.style.right = (100-lock)+'%';
+
+  draw(pf,pp,align);
+
+  if(lock>=100){ finish(true); return; }
+  requestAnimationFrame(loop);
+}
+
+function draw(pf,pp,align){
+  ctx.clearRect(0,0,W,H);
+  // grid
+  ctx.strokeStyle='rgba(0,255,65,0.07)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  ctx.strokeStyle='rgba(0,255,65,0.18)';ctx.beginPath();ctx.moveTo(0,mid);ctx.lineTo(W,mid);ctx.stroke();
+
+  // decoy carrier (sector 3) — faint red
+  if(sector===3){ wave(decoyF, p0+0.13, 50, 'rgba(255,60,60,0.35)', 1); }
+  // real carrier (dim ghost)
+  wave(f0, p0, 70, 'rgba(0,255,65,0.30)', 1.5);
+  // player trace (bright, glows with alignment)
+  ctx.shadowBlur = 6 + align*0.12; ctx.shadowColor = '#00ff41';
+  wave(pf, pp, 70, 'rgba(120,255,160,0.95)', 2);
+  ctx.shadowBlur = 0;
+}
+function wave(fv,ph,amp,color,lw){
+  const f = freqHz(fv);
+  ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.beginPath();
+  for(let x=0;x<=W;x++){
+    const y = mid - Math.sin((x/W)*Math.PI*2*f + ph*Math.PI*2)*amp;
+    x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+function finish(full){
+  running=false;
+  // score: full lock = 1.0 ; else scaled by peak alignment, minus a small dawdle penalty
+  let score = full ? 1.0 : clamp(peakAlign/100 - 0.02*Math.max(0,elapsed-6), 0, 0.95);
+  if(decoyHit){ score = Math.min(score, 0.4); }   // locked the wrong carrier
+  showResult(score, full, decoyHit);
+}
+function showResult(score, full, decoy){
+  const r=$('result'); r.classList.add('show'); $('panel').classList.add('flash');
+  setTimeout(()=>$('panel').classList.remove('flash'),500);
+  let tier, msg, bark, aura, col;
+  if(decoy){ tier='FALSIFIED READING'; col='var(--danger)';
+    msg='You locked a phantom carrier. The surface data is wrong — and you won\'t know which parts.';
+    bark='MIRA: "...that doesn\'t match the spectral class. Something\'s off."';
+    aura='A.U.R.A.: "Reading accepted. I\'m sure it\'s fine."'; }
+  else if(score>=0.85){ tier='FULL SURFACE ANALYSIS'; col='var(--green)';
+    msg='Clean lock. Resources, signals, hazards, and tags all resolved.';
+    bark='VANCE: "Crisp read. We know exactly what we\'re walking into."';
+    aura='A.U.R.A.: "Optimal tune. Noted."'; }
+  else if(score>=0.5){ tier='PARTIAL SCAN'; col='var(--amber)';
+    msg='Resource levels resolved; some tags and signals stayed buried in the noise.';
+    bark='ARIS: "Good enough. We\'ll find the rest the hard way."';
+    aura='A.U.R.A.: "Adequate. Marginally."'; }
+  else{ tier='WEAK RETURN'; col='var(--danger)';
+    msg='Mostly static. You got a rough resource estimate and little else.';
+    bark='JAXON: "We\'re flying half-blind down there."';
+    aura='A.U.R.A.: "I\'ve seen better. From corpses."'; }
+  r.innerHTML = `<h3 style="color:${col}">${tier}</h3>
+    <div>SCORE: <b style="color:${col}">${score.toFixed(2)}</b> &nbsp;·&nbsp; ${full?'FULL LOCK':'manual acquire'} &nbsp;·&nbsp; ${elapsed.toFixed(1)}s</div>
+    <div style="margin-top:6px;color:var(--textdim)">${msg}</div>
+    <div class="bark">${bark}</div><div class="aura">${aura}</div>
+    <div style="margin-top:10px;font-size:11px;color:var(--textdim)">→ In-game, this 0–1 score would pick which loot/scan tier you unlock. Press <b>Replay</b> to try again.</div>`;
+}
+
+// ---- controls ----
+let selected='freq';
+function selCtl(which){ selected=which;
+  $('ctlFreq').classList.toggle('sel',which==='freq');
+  $('ctlPhase').classList.toggle('sel',which==='phase'); }
+$('freq').addEventListener('input',e=>{ $('freqVal').textContent=(+e.target.value).toFixed(2); selCtl('freq'); });
+$('phase').addEventListener('input',e=>{ $('phaseVal').textContent=(+e.target.value).toFixed(2); selCtl('phase'); });
+$('ctlFreq').addEventListener('mousedown',()=>selCtl('freq'));
+$('ctlPhase').addEventListener('mousedown',()=>selCtl('phase'));
+$('acquire').addEventListener('click',()=>{ if(running) finish(false); });
+$('auto').addEventListener('click',()=>{ if(running){ running=false; showResult(0.62,false,false); } }); // expected value
+$('replay').addEventListener('click',reset);
+document.querySelectorAll('.sectorpick button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.sectorpick button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); sector=+b.dataset.s; reset();
+}));
+document.addEventListener('keydown',e=>{
+  if(e.key==='Tab'){ e.preventDefault(); selCtl(selected==='freq'?'phase':'freq'); return; }
+  if(e.key==='Enter'){ if(running) finish(false); return; }
+  const inp=$(selected); if(!inp) return;
+  if(e.key==='ArrowLeft'){ inp.value=Math.max(0,+inp.value-0.01); inp.dispatchEvent(new Event('input')); }
+  if(e.key==='ArrowRight'){ inp.value=Math.min(1,+inp.value+0.01); inp.dispatchEvent(new Event('input')); }
+});
+
+reset();
+</script>
+</body>
+</html>

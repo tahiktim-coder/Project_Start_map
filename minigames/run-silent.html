@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXODUS-9 · RUN SILENT (prototype v3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050a07;--bg2:#0a140f;--green:#00ff41;--dim:#008f11;--gdk:#063a14;--amber:#ffb000;--blood:#ff2b3d;--bloodd:#5a0a12;--text:#cfeed8;--textdim:#6fa888;--cyan:#5ad1ff;--mono:'Share Tech Mono',monospace;--disp:'Orbitron',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:13px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;-webkit-font-smoothing:none}
+.crt{position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.35;background:linear-gradient(rgba(18,16,16,0) 50%,rgba(0,0,0,.22) 50%);background-size:100% 3px}
+.vig{position:fixed;inset:0;pointer-events:none;z-index:90;background:radial-gradient(circle,transparent 58%,rgba(0,0,0,.85) 100%);transition:background .25s}
+.edge{position:fixed;inset:0;pointer-events:none;z-index:91;box-shadow:inset 0 0 0 0 var(--blood);transition:box-shadow .15s}
+.flash{position:fixed;inset:0;pointer-events:none;z-index:120;background:var(--blood);opacity:0}
+.flash.go{animation:fl .4s}@keyframes fl{0%{opacity:.25}100%{opacity:0}}
+.wrap{width:820px;max-width:100%;position:relative;z-index:20}
+.back{color:var(--textdim);font-size:11px;text-decoration:none;letter-spacing:1px}.back:hover{color:var(--green)}
+.panel{border:1px solid var(--dim);background:var(--bg2);margin-top:8px;transition:border-color .2s}
+.panel.alarm{border-color:var(--blood)}
+.hdr{font-family:var(--disp);font-weight:700;letter-spacing:1px;padding:7px 14px;display:flex;justify-content:space-between;align-items:center;background:var(--dim);color:#000;transition:background .2s}
+.alarm .hdr{background:var(--bloodd);color:var(--text)}
+.hdr .right{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:400}
+.pips i{color:var(--blood);font-size:14px;margin-left:2px}.pips i.dim{color:#3a0a12}
+.body{padding:14px}
+.calm .body{text-align:center;padding:26px 20px}
+.orbit{font-family:var(--disp);font-size:17px;letter-spacing:2px;color:var(--green);margin-bottom:8px}
+.calm .sub{color:var(--text);font-size:12px;line-height:1.7;max-width:560px;margin:0 auto 14px;text-align:left;opacity:.9}
+.ctrlgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-width:480px;margin:0 auto 16px;text-align:left}
+.ctrlgrid div{border:1px solid var(--gdk);padding:6px 9px;font-size:11px}
+.ctrlgrid b{color:var(--amber)}
+.comfort{font-size:11px;color:var(--textdim);margin-bottom:14px}
+button{font-family:var(--mono);background:#000;color:var(--green);border:1px solid var(--dim);cursor:pointer;letter-spacing:.5px;transition:all .1s}
+button:hover:not(:disabled){border-color:var(--green);box-shadow:0 0 10px rgba(0,255,65,.2)}
+button:disabled{opacity:.35;cursor:not-allowed}
+.calm button.primary{padding:12px 22px;text-transform:uppercase;border-color:var(--blood);color:var(--blood)}
+.top{display:grid;grid-template-columns:200px 1fr;gap:12px}
+.box{border:1px solid var(--gdk);background:rgba(0,0,0,.3);padding:8px}
+.box .t{font-size:9px;color:var(--textdim);text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--gdk);padding-bottom:4px;margin-bottom:6px}
+canvas{display:block;margin:0 auto;transition:filter .3s}
+.sweepstat{text-align:center;font-family:var(--disp);font-size:12px;letter-spacing:1px;margin-top:6px;min-height:16px}
+.coach{text-align:center;font-size:11px;color:var(--amber);min-height:14px;margin-top:2px}
+.gauge{margin-bottom:9px}
+.gauge .l{display:flex;justify-content:space-between;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--textdim);margin-bottom:3px}
+.bar{height:18px;border:1px solid var(--gdk);background:#000;position:relative;overflow:hidden}
+.bar>i{position:absolute;inset:0 100% 0 0;transition:right .12s,background .2s}
+#thr{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--blood);box-shadow:0 0 6px var(--blood);transition:left .12s}
+#distBar>i{background:var(--green);box-shadow:0 0 6px var(--green)}
+#detBar>i{background:var(--blood);box-shadow:0 0 6px var(--blood)}
+#o2Bar>i{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+#o2Bar.low>i{background:var(--blood);box-shadow:0 0 8px var(--blood)}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.sw{border:1px solid var(--gdk);background:#000;padding:10px 8px;text-align:center;cursor:pointer;transition:all .1s}
+.sw .nm{font-family:var(--disp);font-size:12px;letter-spacing:1px}
+.sw .st{font-size:15px;font-weight:700;margin:5px 0}
+.sw .cost{font-size:9px;color:var(--textdim)}
+.sw.on{border-color:var(--amber)}.sw.on .nm,.sw.on .st{color:var(--amber)}
+.sw.off{border-color:var(--dim)}.sw.off .st{color:var(--green)}
+.sw .warn{font-size:9px;min-height:11px;margin-top:2px;color:var(--textdim)}
+.actions{display:flex;gap:8px;margin-top:10px;align-items:stretch}
+#decoy{flex:1;padding:11px;border-color:var(--amber);color:var(--amber)}
+#decoy .pip{letter-spacing:2px}
+#abandon{flex:0 0 auto;border-color:#243; color:#3f6b52;font-size:10px;padding:6px 10px}
+.log{margin-top:10px;border:1px solid var(--gdk);background:#000;height:54px;overflow:hidden;padding:5px 9px;display:flex;flex-direction:column-reverse}
+.le{font-size:11px;line-height:1.5}.le.a{color:var(--cyan)}.le.d{color:var(--blood)}.le.s{color:var(--textdim);font-style:italic}
+.le.a::before{content:'A.U.R.A.: ';opacity:.7}
+.result{margin-top:12px;border:1px solid var(--blood);padding:14px;background:rgba(0,0,0,.55);display:none}
+.result.show{display:block}.result h3{font-family:var(--disp);letter-spacing:1px;margin-bottom:6px}
+.result button{margin-top:12px;padding:9px 16px;border-color:var(--blood);color:var(--blood);text-transform:uppercase}
+.shake{animation:shk .45s}@keyframes shk{0%,100%{transform:translate(0)}20%{transform:translate(-6px,4px)}40%{transform:translate(6px,-4px)}60%{transform:translate(-4px,2px)}80%{transform:translate(4px,-2px)}}
+.flick{animation:flk 1.4s infinite}@keyframes flk{0%,100%{opacity:1}50%{opacity:.9}}
+.cut{position:fixed;inset:0;z-index:150;background:var(--blood);clip-path:polygon(0 0,0 0,0 100%,0 100%);pointer-events:none}
+.cut.go{animation:cw .7s ease-in-out forwards}
+@keyframes cw{0%{clip-path:polygon(0 0,0 0,-20% 100%,-20% 100%)}45%{clip-path:polygon(0 0,120% 0,100% 100%,-20% 100%)}100%{clip-path:polygon(120% 0,120% 0,100% 100%,100% 100%)}}
+.sufftext{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:121;color:var(--blood);font-family:var(--disp);letter-spacing:2px;opacity:0;text-shadow:0 0 10px var(--blood)}
+.sufftext.go{opacity:1}
+body.rm .shake,body.rm .flick,body.rm .flash.go,body.rm .cut.go{animation:none!important}
+body.rm .flash.go{opacity:0}
+@media (prefers-reduced-motion: reduce){.shake,.flick,.flash.go,.cut.go{animation:none!important}.flash.go{opacity:0}}
+</style>
+</head>
+<body>
+<div class="vig" id="vig"></div><div class="edge" id="edge"></div><div class="crt"></div><div class="cut" id="cut"></div><div class="flash" id="flash"></div>
+<div class="sufftext" id="sufftext">⚠ OXYGEN CRITICAL — CREW DOWN IN <span id="suffc">4</span></div>
+<div class="wrap" id="wrap">
+<a class="back" href="index.html">← INSTRUMENT LAB</a>
+
+<div class="panel calm" id="calm">
+  <div class="hdr"><span>/// PROXIMITY ALERT</span><small>EXODUS-9</small></div>
+  <div class="body">
+    <div class="orbit">SOMETHING IS HUNTING US</div>
+    <div class="sub">It hunts by <b>sound</b>. Keep the ship's noise (<b>SIGNATURE</b>) under the red line — easy when it's far, deadly when it <b>sweeps</b> close. Run loud between sweeps to build <b>distance</b>; go silent during them. The survivors all ran quiet and kept cargo to throw.</div>
+    <div class="ctrlgrid">
+      <div><b>ENGINES</b> — loudest; builds your escape distance</div>
+      <div><b>SENSORS</b> — early warning + react faster; off = blind</div>
+      <div><b>LIFE SUPPORT</b> — keeps crew alive; off = O₂ drains</div>
+    </div>
+    <div class="comfort"><label><input type="checkbox" id="rmtoggle"> Reduce flashing &amp; shake (comfort mode)</label></div>
+    <button class="primary" id="trigger">▸ Go dark — they're coming</button>
+  </div>
+</div>
+
+<div class="panel" id="brk" style="display:none">
+  <div class="hdr"><span>⚠ RUN SILENT</span><div class="right"><span id="anomDesc">contact</span><span class="pips" id="pips"></span></div></div>
+  <div class="body">
+    <div class="top">
+      <div class="box" style="display:flex;flex-direction:column;align-items:center">
+        <div class="t" style="align-self:stretch">Hydrophone</div>
+        <canvas id="radar" width="180" height="160"></canvas>
+        <div class="sweepstat" id="sweepstat">LISTENING…</div>
+        <div class="coach" id="coach"></div>
+      </div>
+      <div class="box">
+        <div class="t">Readouts</div>
+        <div class="gauge"><div class="l"><span>Signature vs line</span><span id="sigTxt">—</span></div><div class="bar" id="sigBar"><i></i><div id="thr"></div></div></div>
+        <div class="gauge"><div class="l"><span>Distance to break away</span><span id="distTxt">0%</span></div><div class="bar" id="distBar"><i></i></div></div>
+        <div class="gauge"><div class="l"><span>It hears us (detection)</span><span id="detTxt">0%</span></div><div class="bar" id="detBar"><i></i></div></div>
+        <div class="gauge"><div class="l"><span>Crew oxygen</span><span id="o2Txt">100%</span></div><div class="bar" id="o2Bar"><i></i></div></div>
+      </div>
+    </div>
+    <div class="board" id="board"></div>
+    <div class="actions">
+      <button id="decoy">▣ Launch Decoy <span class="pip" id="decoyPips">◆◆◆</span><br><small style="color:var(--textdim);font-size:9px">use DURING a sweep — it chases the cargo</small></button>
+      <button id="abandon">abandon run</button>
+    </div>
+    <div class="log" id="log"></div>
+    <div class="result" id="result"></div>
+  </div>
+</div>
+</div>
+
+<script>
+const $=i=>document.getElementById(i);
+const cv=$('radar'),cx=cv.getContext('2d'),CW=cv.width,CH=cv.height,CXc=CW/2,CYc=CH/2,MAXR=64;
+const SYS=[
+  {id:'engines',nm:'ENGINES',noise:45},
+  {id:'sensors',nm:'SENSORS',noise:22},
+  {id:'life',nm:'LIFE SUPPORT',noise:16},
+];
+const THR_FAR=80;
+let AC,master;
+function audio(){try{if(AC){if(AC.state==='suspended')AC.resume();return;}
+  AC=new(window.AudioContext||window.webkitAudioContext)();
+  master=AC.createGain();master.gain.value=0.8;
+  const lp=AC.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2600;
+  const dl=AC.createDelay();dl.delayTime.value=0.19;const fbg=AC.createGain();fbg.gain.value=0.3;const wet=AC.createGain();wet.gain.value=0.22;
+  master.connect(lp);lp.connect(AC.destination);lp.connect(dl);dl.connect(fbg);fbg.connect(dl);dl.connect(wet);wet.connect(AC.destination);
+}catch(e){}}
+function _env(src,t0,dur,peak){const g=AC.createGain();g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(peak,t0+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);src.connect(g);g.connect(master);}
+function osc(type,f,dur,peak,slide,delay){if(!AC)return;const t0=AC.currentTime+(delay||0);const o=AC.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t0);if(slide)o.frequency.exponentialRampToValueAtTime(slide,t0+dur);_env(o,t0,dur,peak);o.start(t0);o.stop(t0+dur+0.05);}
+function noise(dur,peak,cut,delay){if(!AC)return;const t0=AC.currentTime+(delay||0);const len=Math.max(1,Math.floor(AC.sampleRate*dur));const b=AC.createBuffer(1,len,AC.sampleRate);const d=b.getChannelData(0);let last=0;for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+0.02*w)/1.02;d[i]=last*3.5;}const s=AC.createBufferSource();s.buffer=b;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=cut||600;s.connect(f);_env(f,t0,dur,peak);s.start(t0);}
+function tone(f,d,t,v,s){osc(t||'sine',f,d,v||.18,s);}
+function heartbeat(){osc('sine',62,0.22,0.5,40);noise(0.10,0.12,180);osc('sine',50,0.26,0.4,32,0.17);}
+function alarm(){osc('sine',720,0.5,0.14,690);osc('sine',540,0.5,0.10,520,0.06);}
+function groan(){noise(2.4,0.34,260);osc('sine',74,2.4,0.32,28);osc('sawtooth',110,2.0,0.08,40);}
+let S,last,raf,hb=0;
+const R=(a,b)=>a+Math.random()*(b-a);
+function start(){
+  const SP=R(10,16), nearStart=Math.round(R(22,30)), detFill=R(18,26);
+  S={on:{engines:true,sensors:true,life:true,lights:true},sig:0,dist:0,det:0,o2:100,
+     t:0,SP,nearStart,detFill,sweepIx:0,wasNear:false,near:false,prox:0,
+     haul:3,decoyT:0,launch:0,strikes:0,suff:0,done:false,grace:0,coachT:6,log:[]};
+  $('result').classList.remove('show'); buildBoard(); paintPips();
+  const speed=SP<12?"It's moving fast — short sweeps.":SP>14?"It lingers — long, slow sweeps.":"Steady sweeps.";
+  $('anomDesc').textContent=speed;
+  logLine('a',"It's quartering the wreck. Keep us quiet — and watch the line.");
+  last=performance.now(); if(!raf)raf=requestAnimationFrame(loop);
+}
+function nearBase(){return Math.max(9,S.nearStart-S.sweepIx*3);}
+function threshold(prox){return THR_FAR-(THR_FAR-nearBase())*Math.max(0,Math.min(1,(prox-0.40)/0.45));}
+function buildBoard(){const b=$('board');b.innerHTML='';SYS.forEach(s=>{const el=document.createElement('div');el.id='sw-'+s.id;el.onclick=()=>toggle(s.id);
+  el.innerHTML='<div class="nm">'+s.nm+'</div><div class="st"></div><div class="cost">+'+s.noise+' noise</div><div class="warn"></div>';b.appendChild(el);});paintBoard();}
+function paintBoard(){SYS.forEach(s=>{const el=$('sw-'+s.id);if(!el)return;const on=S.on[s.id];el.className='sw '+(on?'on':'off');
+  el.querySelector('.st').textContent=on?'ONLINE':'OFFLINE';let w='';
+  if(s.id==='sensors')w=on?'warning + react faster':'BLIND · hears us faster';
+  if(s.id==='life')w=on?'crew safe':'O₂ '+Math.round(S.o2)+'%';
+  if(s.id==='engines')w=on?'building distance':'drifting';
+  if(s.id==='lights')w=on?'':'dark';
+  const wn=el.querySelector('.warn');wn.textContent=w;wn.style.color=(!on&&(s.id==='life'||s.id==='sensors'))?'var(--blood)':'var(--textdim)';});}
+function paintPips(){let h='';for(let i=0;i<3;i++)h+='<i class="'+(i<S.strikes?'dim':'')+'">◆</i>';$('pips').innerHTML=h;}
+function logLine(c,t){S.log.unshift({c,t});if(S.log.length>5)S.log.pop();$('log').innerHTML=S.log.map(l=>'<div class="le '+l.c+'">'+l.t+'</div>').join('');}
+function toggle(id){if(S.done)return;S.on[id]=!S.on[id];tone(420,.05,'square',.07);if(id==='sensors'&&!S.on.sensors)logLine('s',"Sensors dark. Listening blind.");paintBoard();}
+function loop(now){const dt=Math.min(.05,(now-last)/1000);last=now;if(S&&!S.done)tick(dt);drawRadar();raf=requestAnimationFrame(loop);}
+function tick(dt){
+  S.t+=dt; S.coachT-=dt;
+  // calm start: prox begins at trough, first sweep ~SP/2 in
+  S.prox=(Math.sin(S.t*2*Math.PI/S.SP - Math.PI/2)+1)/2;
+  const near=S.prox>0.62; S.near=near;
+  if(S.wasNear&&!near){S.sweepIx++;} S.wasNear=near;
+  const firstCycle=S.t<S.SP; // non-lethal first sweep
+  // warning (needs sensors)
+  if(S.on.sensors&&near&&!S._warned){S._warned=true;alarm();logLine('d',"It's turning toward us — go quiet.");}
+  if(!near)S._warned=false;
+  // signature
+  S.sig=SYS.reduce((a,s)=>a+(S.on[s.id]?s.noise:0),0)+(S.launch>0?30:0);
+  if(S.launch>0)S.launch-=dt;
+  const thr=threshold(S.prox);
+  // distance (engines)
+  if(S.on.engines)S.dist=Math.min(100,S.dist+(near?1:4.5)*dt);
+  // O2 (life support kept — health bar)
+  if(!S.on.life){S.o2=Math.max(0,S.o2-18*dt);if(S.o2<=0){S.suff+=dt;if(S.suff>4)return finish('suffocated');}}
+  else{S.o2=Math.min(100,S.o2+22*dt);S.suff=0;}
+  if(S.decoyT>0)S.decoyT-=dt;
+  if(S.grace>0)S.grace-=dt;
+  // detection
+  const safe=S.decoyT>0||S.grace>0;
+  const over=S.sig-thr;
+  if(over>0&&!safe){let f=S.detFill*Math.max(0.3,Math.min(1.6,over/25))*(S.on.sensors?0.7:1)*(firstCycle?0.5:1);S.det=Math.min(100,S.det+f*dt);}
+  else S.det=Math.max(0,S.det-14*dt);
+  if(S.det>=100){S.strikes++;S.det=0;S.grace=1.5;S.dist=Math.max(0,S.dist-15);paintPips();hit();logLine('d',"IT FOUND US — re-acquiring! Hard about!");if(S.strikes>=3)return finish('caught');}
+  if(S.dist>=100)return finish('escape');
+  if(S.o2<45){hb-=dt;const rate=0.5+(45-S.o2)/45*1.2;if(hb<=0){heartbeat();hb=1/rate;}}
+  render(thr,near,over>0&&!safe,firstCycle);
+}
+function hit(){if(document.body.classList.contains('rm'))return;$('wrap').classList.remove('shake');void $('wrap').offsetWidth;$('wrap').classList.add('shake');$('flash').classList.remove('go');void $('flash').offsetWidth;$('flash').classList.add('go');}
+function render(thr,near,heard,firstCycle){
+  const head=Math.round(thr-S.sig);
+  $('sigTxt').textContent='SIG '+Math.round(S.sig)+' / LINE '+Math.round(thr)+(head>=0?(' — '+head+' UNDER'):(' — '+(-head)+' OVER'));
+  $('distTxt').textContent=Math.round(S.dist)+'%';$('detTxt').textContent=Math.round(S.det)+'%';$('o2Txt').textContent=Math.round(S.o2)+'%';
+  $('sigBar').firstElementChild.style.right=(100-S.sig)+'%';
+  // signature colored by MARGIN to line: green safe, amber close, red over
+  const sigCol=head>12?'var(--green)':head>=0?'var(--amber)':'var(--blood)';
+  $('sigBar').firstElementChild.style.background=sigCol;$('sigBar').firstElementChild.style.boxShadow='0 0 8px '+sigCol;
+  $('thr').style.left=thr+'%';
+  $('distBar').firstElementChild.style.right=(100-S.dist)+'%';
+  $('detBar').firstElementChild.style.right=(100-S.det)+'%';
+  $('o2Bar').firstElementChild.style.right=(100-S.o2)+'%';$('o2Bar').classList.toggle('low',S.o2<40);
+  paintBoard();
+  $('brk').classList.toggle('alarm',near);
+  if(!document.body.classList.contains('rm'))$('brk').classList.toggle('flick',near&&S.on.lights);
+  $('sweepstat').textContent=near?'⚠ SWEEPING — GET UNDER THE LINE':(S._warned?"IT'S TURNING…":'LISTENING…');
+  $('sweepstat').style.color=near?'var(--blood)':'var(--textdim)';
+  $('coach').textContent=firstCycle?(near?'Cut systems until SIGNATURE is under the line!':'(first pass is a freebie — learn the rhythm)'):'';
+  // detection edge-pulse (the "homing in" feel)
+  $('edge').style.boxShadow='inset 0 0 '+(S.det*0.6)+'px '+(S.det*0.25)+'px var(--blood)';
+  // O2 terror — full-screen darken + blur as the crew suffocate (the effect you liked)
+  const ox=Math.max(0,(55-S.o2)/55);
+  $('wrap').style.filter=ox>0?('blur('+(ox*2.6).toFixed(2)+'px) brightness('+(1-ox*0.45).toFixed(2)+')'):'';
+  $('sufftext').classList.toggle('go',S.o2<25);if(S.o2<=0)$('suffc').textContent=Math.max(0,Math.ceil(4-S.suff));
+  const c=Math.max(near?0.45:0.1,ox*0.7);
+  $('vig').style.background='radial-gradient(circle,transparent '+(58-c*30)+'%,rgba('+Math.round(40+c*160)+',0,8,'+(0.5+c*0.42)+') 100%)';
+}
+function drawRadar(){
+  cx.clearRect(0,0,CW,CH);
+  for(let i=1;i<=3;i++){cx.strokeStyle='rgba(0,255,65,0.12)';cx.beginPath();cx.arc(CXc,CYc,MAXR*i/3,0,7);cx.stroke();}
+  cx.fillStyle='#00ff41';cx.beginPath();cx.arc(CXc,CYc,4,0,7);cx.fill();
+  if(!S)return;
+  if(!S.on.sensors){cx.fillStyle='rgba(255,43,61,0.06)';cx.fillRect(0,0,CW,CH);cx.fillStyle='#5a0a12';cx.font='11px monospace';cx.textAlign='center';cx.fillText('— SENSORS OFFLINE —',CXc,CYc-2);cx.fillText('listening blind',CXc,CYc+12);cx.textAlign='left';return;}
+  const r=MAXR*(0.32+(1-S.prox)*0.62),ang=-Math.PI/2,bx=CXc+Math.cos(ang)*r,by=CYc+Math.sin(ang)*r,pr=4+S.prox*5;
+  cx.fillStyle=S.near?'#ff2b3d':'#ff7a55';cx.shadowBlur=10;cx.shadowColor='#ff2b3d';cx.beginPath();cx.arc(bx,by,pr,0,7);cx.fill();cx.shadowBlur=0;
+  if(S.prox>0.5){cx.strokeStyle='rgba(255,43,61,'+(S.prox*0.4)+')';cx.lineWidth=2;cx.beginPath();cx.moveTo(CXc,CYc);cx.lineTo(bx,by);cx.stroke();}
+}
+$('decoy').onclick=()=>{if(S.done||S.haul<=0)return;S.haul--;S.decoyT=2.5;S.launch=0.5;
+  $('decoyPips').textContent='◆◆◆'.slice(0,S.haul)+'◇◇◇'.slice(0,3-S.haul);
+  tone(300,.4,'sawtooth',.18,120);
+  logLine(S.near?'a':'s',S.near?"Decoy away — it's chasing the cargo! Move!":"Decoy launched into empty space — wasted, and loud.");
+  if(S.haul<=0)$('decoy').disabled=true;};
+$('abandon').onclick=()=>{if(!S.done&&confirm('Abandon the run? You break off in a panic — the ship takes damage and you lose the haul.'))finish('abandon');};
+function finish(kind){S.done=true;$('wrap').style.filter='';$('sufftext').classList.remove('go');$('edge').style.boxShadow='none';
+  let t,col,line,score=Math.max(0,Math.min(1,S.dist/100));
+  if(kind==='abandon'){score=Math.min(.4,score);t='WE BROKE OFF';col='var(--blood)';line="Jaxon: We ran for it blind — tore the hull, dumped everything. We're alive, barely.";groan();}
+  else if(kind==='escape'){t="WE'RE CLEAR";col='var(--green)';line="Contact fading, Captain. We slipped it. The silence holds.";tone(523,.5,'sine',.2);setTimeout(()=>tone(784,.6,'sine',.2),200);}
+  else if(kind==='suffocated'){t='THE CREW SUFFOCATED';col='var(--blood)';line="We stayed dark too long. We hid... and we died hiding.";groan();}
+  else{t='IT CAUGHT US';col='var(--blood)';line="It heard us one time too many. The Exodus-9 joins the others now.";groan();hit();}
+  $('result').innerHTML='<h3 style="color:'+col+'">'+t+'</h3><div style="margin-top:4px;color:var(--cyan)">'+line+'</div>'+
+   '<div style="margin-top:8px;color:var(--textdim);font-size:11px">Distance '+Math.round(S.dist)+'% · survived '+S.sweepIx+' sweeps · '+S.strikes+' detections · '+(3-S.haul)+' cargo thrown.</div>'+
+   '<div style="margin-top:6px;color:var(--textdim);font-size:11px">→ Each run rolls a different hunter (speed, hearing). Try one with sensors OFF — quieter, but you fly blind.</div>'+
+   '<button onclick="location.reload()">↻ Run it again</button>';
+  $('result').classList.add('show');
+}
+$('rmtoggle').onchange=e=>document.body.classList.toggle('rm',e.target.checked);
+$('trigger').onclick=()=>{audio();const rm=$('rmtoggle').checked;document.body.classList.toggle('rm',rm);
+  if(!rm)$('cut').classList.add('go');setTimeout(()=>{$('calm').style.display='none';$('brk').style.display='block';start();},rm?60:700);};
+</script>
+</body>
+</html>

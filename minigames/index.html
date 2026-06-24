@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXODUS-9 · INSTRUMENT LAB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050a07;--green:#00ff41;--dim:#008f11;--amber:#ffb000;--text:#e0ffee;--textdim:#4a7a5f;--mono:'Share Tech Mono',monospace;--disp:'Orbitron',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;-webkit-font-smoothing:none}
+.crt{position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.4;background:linear-gradient(rgba(18,16,16,0) 50%,rgba(0,0,0,.25) 50%);background-size:100% 3px}
+.vig{position:fixed;inset:0;pointer-events:none;z-index:90;background:radial-gradient(circle,transparent 55%,rgba(0,0,0,.85) 100%)}
+.wrap{width:760px;max-width:100%;position:relative;z-index:20}
+h1{font-family:var(--disp);font-weight:700;letter-spacing:3px;font-size:26px;color:var(--green);text-shadow:0 0 12px rgba(0,255,65,.4)}
+.tag{color:var(--textdim);font-size:12px;letter-spacing:1px;margin:8px 0 22px;line-height:1.6}
+.grid{display:grid;gap:14px}
+.card{display:block;text-decoration:none;color:var(--text);border:1px solid var(--dim);background:rgba(0,20,10,.4);padding:16px 18px;transition:all .15s}
+.card:hover{border-color:var(--green);box-shadow:0 0 16px rgba(0,255,65,.12);transform:translateX(4px)}
+.card .t{font-family:var(--disp);font-size:15px;color:var(--green);letter-spacing:1px}
+.card .feel{float:right;color:var(--amber);font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.card .d{color:var(--textdim);font-size:13px;margin-top:6px;line-height:1.6}
+.card .verb{margin-top:8px;font-size:11px;color:var(--textdim)}
+.card .verb b{color:var(--text)}
+.foot{margin-top:22px;color:var(--textdim);font-size:11px;line-height:1.7;border-top:1px solid #143524;padding-top:14px}
+</style>
+</head>
+<body>
+<div class="crt"></div><div class="vig"></div>
+<div class="wrap">
+  <h1>EXODUS-9 // INSTRUMENT LAB</h1>
+  <div class="tag">Mini-game prototypes for PROJECT STAR MAP. Each one turns a button-and-dice action into something you actually <i>operate</i>. All standalone — none of this touches the real game or GitHub.</div>
+  <div class="grid">
+    <a class="card" href="run-silent.html"><span class="feel">★ tactile power board</span><div class="t">RUN SILENT</div>
+      <div class="d">The hunter listens. Flip ship systems offline to drop your signature under the line as it sweeps — go blind, hold your breath, throw a decoy. Captain working the dashboard.</div>
+      <div class="verb">Triggers on → <b>BEING HUNTED</b></div></a>
+    <a class="card" href="the-break.html"><span class="feel">★ escape set-piece</span><div class="t">THE BREAK</div>
+      <div class="d">The calm screen slams to red — something's closing in, and you spend decks (burn engineering, jettison cargo) to escape. Top-down triage, no twitch. Winner of the deep-dive.</div>
+      <div class="verb">Triggers on → <b>DRAMATIC ENCOUNTERS</b></div></a>
+    <a class="card" href="signal-tuning.html"><span class="feel">tracking</span><div class="t">SIGNAL TUNING</div>
+      <div class="d">Coax a clean reading out of static — overlay your wave onto a drifting carrier and hold the lock.</div>
+      <div class="verb">Replaces → <b>DEEP SCAN</b></div></a>
+    <a class="card" href="probe-descent.html"><span class="feel">press-your-luck</span><div class="t">PROBE DIVE</div>
+      <div class="d">Dive for treasure — every sample makes the probe heavier and the climb home costlier. Now with chance + an operator skill-check. Greed vs getting back.</div>
+      <div class="verb">Replaces → <b>LAUNCH PROBE</b></div></a>
+  </div>
+  <div class="foot">All three share one design contract: a single interaction → a <b>0–1 score</b> → mapped to the rewards the game already has, and every one is <b>skippable</b> (Auto-resolve = today's RNG). Next on the list: <b>"THE LISTENING"</b> — the signature hook that fuses tuning + decryption into the game's memorable centerpiece.</div>
+</div>
+</body>
+</html>

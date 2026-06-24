@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXODUS-9 · PROBE DIVE (prototype v3)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050a07;--green:#00ff41;--dim:#008f11;--amber:#ffb000;--danger:#ff3333;--cyan:#38d6e0;--text:#e0ffee;--textdim:#4a7a5f;--mono:'Share Tech Mono',monospace;--disp:'Orbitron',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:18px;-webkit-font-smoothing:none}
+.crt{position:fixed;inset:0;pointer-events:none;z-index:99;opacity:.45;background:linear-gradient(rgba(18,16,16,0) 50%,rgba(0,0,0,.25) 50%);background-size:100% 3px}
+.vig{position:fixed;inset:0;pointer-events:none;z-index:90;background:radial-gradient(circle,transparent 55%,rgba(0,0,0,.85) 100%)}
+.wrap{width:740px;max-width:100%;position:relative;z-index:20}
+.back{color:var(--textdim);font-size:11px;text-decoration:none;letter-spacing:1px}.back:hover{color:var(--green)}
+.panel{border:1px solid var(--dim);background:rgba(0,20,10,.4);margin-top:8px}
+.hdr{background:var(--dim);color:#000;font-family:var(--disp);font-weight:700;letter-spacing:1px;padding:8px 14px;display:flex;justify-content:space-between}
+.hdr small{font-family:var(--mono);font-weight:400}
+.body{padding:14px;display:grid;grid-template-columns:1fr 260px;gap:14px}
+.shaft{border:1px solid var(--dim);background:#02050a;padding:6px;height:320px;overflow:hidden;display:flex;flex-direction:column}
+.layer{display:flex;align-items:center;gap:8px;padding:4px 6px;border-bottom:1px dashed #102a1c;font-size:12px;min-height:28px}
+.layer.cur{background:rgba(0,255,65,.10);border-left:3px solid var(--green)}
+.layer .dz{color:var(--textdim);width:54px;flex-shrink:0}.layer .ic{width:16px;text-align:center}
+.layer .info{flex:1;color:var(--textdim)}.layer.cur .info{color:var(--text)}
+.loot{color:var(--amber)}.haz{color:var(--danger)}.taken{color:#1f4631;text-decoration:line-through}.probe{color:var(--green);font-weight:700}
+.side{display:flex;flex-direction:column;gap:9px}
+.gauge .lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--textdim);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.bar{height:14px;border:1px solid var(--dim);background:#000;position:relative;overflow:hidden}
+.bar>i{position:absolute;inset:0 100% 0 0;transition:right .25s}
+#powBar>i{background:var(--green);box-shadow:0 0 8px var(--green)}#powBar.low>i{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+#intBar>i{background:var(--cyan);box-shadow:0 0 8px var(--cyan)}#intBar.low>i{background:var(--danger);box-shadow:0 0 8px var(--danger)}
+.stat{display:flex;justify-content:space-between;font-size:12px;border-bottom:1px dashed #102a1c;padding:4px 0}.stat b{color:var(--amber)}
+.ret{font-size:11px;padding:6px 8px;border:1px solid var(--dim);background:rgba(0,0,0,.3)}.ret.danger{border-color:var(--danger);color:var(--danger)}
+.acts{display:flex;flex-direction:column;gap:6px;margin-top:2px}
+button{font-family:var(--mono);background:#000;color:var(--green);border:1px solid var(--dim);padding:9px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;font-size:11px;width:100%}
+button:hover:not(:disabled){border-color:var(--green);box-shadow:0 0 8px rgba(0,255,65,.2)}button:disabled{opacity:.3;cursor:not-allowed}
+button .od{float:right;color:var(--textdim)}
+button.grab{border-color:var(--amber);color:var(--amber)}button.asc{border-color:var(--cyan);color:var(--cyan)}button.hard{border-color:#c98}
+.evt{grid-column:1/3;min-height:18px;font-size:12px;color:var(--textdim)}
+.hint{grid-column:1/3;font-size:11px;color:var(--textdim);line-height:1.5}
+.foot{padding:0 14px 12px;display:flex;gap:8px;align-items:center}
+.foot .ghost{color:var(--textdim);border-color:#1c3a2a;width:auto;padding:7px 11px;font-size:11px}
+.sec{margin-left:auto;font-size:11px;color:var(--textdim);display:flex;gap:6px;align-items:center}
+.sec button{width:auto;padding:4px 8px;font-size:11px}.sec button.on{border-color:var(--amber);color:var(--amber)}
+.result{margin:0 14px 14px;border:1px solid var(--dim);padding:13px;background:rgba(0,0,0,.4);display:none}.result.show{display:block}
+.result h3{font-family:var(--disp);letter-spacing:1px;margin-bottom:5px}.bark{color:var(--amber);margin-top:7px}.aura{color:var(--cyan);margin-top:3px}
+/* brace overlay */
+.brace{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.8);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.brace.show{display:flex}
+.brace h2{font-family:var(--disp);color:var(--danger);letter-spacing:2px;animation:pulse .5s infinite alternate}
+@keyframes pulse{to{opacity:.5}}
+.bracebar{width:420px;max-width:90vw;height:42px;border:2px solid var(--danger);background:#000;position:relative;overflow:hidden}
+.zone{position:absolute;top:0;bottom:0;background:rgba(0,255,65,.18);border-left:1px solid var(--green);border-right:1px solid var(--green)}
+.mk{position:absolute;top:0;bottom:0;width:4px;background:#fff;box-shadow:0 0 10px #fff}
+.brace p{color:var(--textdim);font-size:12px}
+</style>
+</head>
+<body>
+<div class="crt"></div><div class="vig"></div>
+<div class="wrap">
+<a class="back" href="index.html">← INSTRUMENT LAB</a>
+<div class="panel">
+  <div class="hdr"><span>/// PROBE BAY :: DEEP DIVE</span><small id="tier">SURFACE</small></div>
+  <div class="body">
+    <div class="shaft" id="shaft"></div>
+    <div class="side">
+      <div class="gauge"><div class="lbl"><span>Power (trip budget)</span><span id="powTxt">100</span></div><div class="bar" id="powBar"><i></i></div></div>
+      <div class="gauge"><div class="lbl"><span>Hull Integrity</span><span id="intTxt">100</span></div><div class="bar" id="intBar"><i></i></div></div>
+      <div class="stat"><span>Depth</span><b id="depth">0</b></div>
+      <div class="stat"><span>Cargo · weight</span><b><span id="cval">0</span> · <span id="cwt">0</span></b></div>
+      <div class="ret" id="ret">Return cost: 0</div>
+      <div class="acts">
+        <button class="grab" id="quick" disabled>◆ Quick sample</button>
+        <button class="grab" id="full" disabled>◆◆ Full extraction</button>
+        <button id="dive">▼ Dive — cautious <span class="od" id="odC">90%</span></button>
+        <button class="hard" id="diveH">▼▼ Dive — hard <span class="od" id="odH">70%</span></button>
+        <button class="asc" id="asc" disabled>▲ Ascend</button>
+      </div>
+    </div>
+    <div class="evt" id="evt"></div>
+    <div class="hint">Each move costs <b>4 + cargo weight</b> power. Descents are a gamble — read the <b>Stability %</b> and pick cautious vs hard. When a hazard hits, you'll <b>BRACE</b> (stop the marker in the green) to soften it. The climb home is safe but costs power — bank it before you run dry.</div>
+  </div>
+  <div class="foot">
+    <button class="ghost" id="auto">Auto-resolve</button>
+    <button class="ghost" id="replay">New dive</button>
+    <span class="sec">PRESSURE:
+      <button data-s="1" class="on">S1</button><button data-s="3">S3</button><button data-s="5">S5</button></span>
+  </div>
+  <div class="result" id="result"></div>
+</div>
+</div>
+<div class="brace" id="brace"><h2>⚠ BRACE</h2><div class="bracebar" id="bb"><div class="zone" id="zone"></div><div class="mk" id="mk"></div></div><p>Click or press SPACE to lock the dampers</p></div>
+<script>
+const $=i=>document.getElementById(i);
+const PRESS={1:{pow:100,rich:1.0,sp:0},3:{pow:92,rich:1.3,sp:.10},5:{pow:84,rich:1.7,sp:.20}};
+let strata,depth,power,maxPow,integrity,cargo,running,sector,deepest;
+function rnd(a,b){return a+Math.random()*(b-a);}
+function genLayer(d){const P=PRESS[sector];const r=Math.random();
+  if(d===0)return{type:'surface'};
+  if(r<0.18)return{type:'empty'};
+  const value=Math.round(d*rnd(6,14)*P.rich);const weight=Math.random()<0.4?Math.ceil(rnd(2,3)):1;
+  return{type:'loot',value,weight,taken:false};}
+function weight(){return cargo.reduce((s,c)=>s+c.weight,0);}
+function moveCost(){return 4+weight();}
+function returnCost(){return depth*moveCost();}
+function stability(hard){const P=PRESS[sector];let s=0.92-depth*0.06-P.sp;if(hard)s-=0.12;else s+=0.10;return Math.max(0.2,Math.min(0.96,s));}
+function reset(){sector=+document.querySelector('.sec button.on').dataset.s;maxPow=PRESS[sector].pow;power=maxPow;integrity=100;depth=0;deepest=0;cargo=[];running=true;strata={0:{type:'surface'}};$('result').classList.remove('show');evt('Probe at the surface. Read the odds and dive.');render();}
+function evt(t){$('evt').textContent=t;}
+function render(){
+  const sh=$('shaft');sh.innerHTML='';
+  for(let d=Math.max(0,depth-3);d<=depth+2;d++){
+    if(strata[d]===undefined&&d<=deepest)continue;const L=strata[d];
+    const row=document.createElement('div');row.className='layer'+(d===depth?' cur':'');
+    let ic='·',info='—';
+    if(!L){ic='?';info='<span style="color:#1f4631">unscanned</span>';}
+    else if(L.type==='surface'){ic='▲';info='SURFACE — extraction point';}
+    else if(L.type==='empty'){ic='·';info='barren stratum';}
+    else if(L.type==='loot'){ic='<span class="loot">◆</span>';info=L.taken?'<span class="taken">sampled</span>':'<span class="loot">deposit · '+L.value+' value · '+L.weight+' wt</span>';}
+    row.innerHTML='<span class="dz">'+(d===0?'SURF':'-'+d+'00m')+'</span><span class="ic">'+ic+'</span><span class="info">'+info+'</span>'+(d===depth?'<span class="probe">◄</span>':'');
+    sh.appendChild(row);
+  }
+  $('powTxt').textContent=Math.max(0,Math.round(power));$('intTxt').textContent=Math.max(0,Math.round(integrity));$('depth').textContent=depth;
+  $('cval').textContent=cargo.reduce((s,c)=>s+c.value,0);$('cwt').textContent=weight();
+  $('powBar').firstElementChild.style.right=(100-power/maxPow*100)+'%';$('powBar').classList.toggle('low',power<=returnCost());
+  $('intBar').firstElementChild.style.right=(100-integrity)+'%';$('intBar').classList.toggle('low',integrity<=30);
+  const rc=returnCost();$('ret').textContent='Return cost from here: '+rc+' power';$('ret').classList.toggle('danger',rc>power);
+  $('tier').textContent=depth===0?'SURFACE':depth<3?'CRUST':depth<6?'MANTLE':'DEEP CORE';
+  $('odC').textContent=Math.round(stability(false)*100)+'%';$('odH').textContent=Math.round(stability(true)*100)+'%';
+  const L=strata[depth];const lootHere=running&&L&&L.type==='loot'&&!L.taken;
+  $('quick').disabled=!lootHere;$('full').disabled=!lootHere;
+  $('dive').disabled=!running;$('diveH').disabled=!running;$('asc').disabled=!(running&&depth>0);
+  $('asc').textContent=depth===1?'▲ Surface & Extract':'▲ Ascend';
+}
+function spend(c){power-=c;if(power<=0&&depth>0){render();end(false,'stranded — power ran dry mid-shaft');return false;}return true;}
+function hazard(dmg,then){ // operator BRACE skill-check
+  const ov=$('brace');ov.classList.add('show');
+  const zoneW=0.16+Math.random()*0.04, zoneL=0.18+Math.random()*0.64-zoneW/2;
+  $('zone').style.left=(zoneL*100)+'%';$('zone').style.width=(zoneW*100)+'%';
+  let t=0,raf,done=false;
+  const tick=()=>{t+=0.022;const pos=0.5+0.5*Math.sin(t*3.4);$('mk').style.left=(pos*100)+'%';if(!done)raf=requestAnimationFrame(tick);};
+  raf=requestAnimationFrame(tick);
+  const finish=(braced)=>{if(done)return;done=true;cancelAnimationFrame(raf);ov.classList.remove('show');
+    document.removeEventListener('keydown',key);ov.removeEventListener('click',hit);
+    const real=braced?Math.round(dmg*0.25):dmg;integrity-=real;
+    evt(braced?('Dampers locked — hull held. (−'+real+' integrity)'):('Hull strain — took −'+real+' integrity.'));
+    if(integrity<=0){render();end(false,'hull crushed at -'+depth+'00m');return;}
+    render(); if(then)then();};
+  const hit=()=>{const pos=parseFloat($('mk').style.left)/100;const braced=pos>=zoneL&&pos<=zoneL+zoneW;finish(braced);};
+  const key=(e)=>{if(e.code==='Space'){e.preventDefault();hit();}};
+  ov.addEventListener('click',hit);document.addEventListener('keydown',key);
+  setTimeout(()=>{if(!done)finish(false);},3500);
+}
+function dive(hard){
+  if(!running)return;const nd=depth+1;if(!strata[nd])strata[nd]=genLayer(nd);
+  const cost=hard?Math.max(2,moveCost()-2):moveCost()+3;
+  depth=nd;deepest=Math.max(deepest,depth);
+  if(!spend(cost))return;
+  if(Math.random()<stability(hard)){evt('Clean descent to -'+depth+'00m.');render();}
+  else{const dmg=Math.round(rnd(12,22)+depth);evt('Instability at -'+depth+'00m!');render();hazard(dmg);}
+}
+function sample(full){const L=strata[depth];if(!L||L.type!=='loot'||L.taken)return;L.taken=true;
+  if(full){cargo.push({value:L.value,weight:L.weight});evt('Full extraction — '+L.value+' value, +'+L.weight+' weight.');
+    if(Math.random()<0.30+PRESS[sector].sp){evt('Full extraction destabilised the site!');render();hazard(Math.round(rnd(10,18)));return;}}
+  else{const v=Math.round(L.value*0.45);cargo.push({value:v,weight:1});evt('Quick sample — '+v+' value, +1 weight. Safe.');}
+  render();
+}
+function ascend(){if(!running||depth<=0)return;depth-=1;if(!spend(moveCost()))return;
+  if(depth===0){render();end(true);return;}evt('Rising… now at -'+depth+'00m.');render();}
+function end(won,reason){running=false;const val=cargo.reduce((s,c)=>s+c.value,0);
+  const score=won?Math.min(1,val/240):0;const r=$('result');r.classList.add('show');let t,m,bk,au,col;
+  if(!won){t='PROBE LOST';col='var(--danger)';m='The probe was '+reason+'. '+val+' value of cargo gone with it — 50 salvage to rebuild.';bk='JAXON: "It has to come back UP. How many times."';au='A.U.R.A.: "Probe terminated. Catalogued beside the others.";';}
+  else if(score>=0.8){t='RICH HAUL';col='var(--green)';m='Deep, greedy, and you still made the climb — and braced the bad layers clean. '+val+' value banked.';bk='VANCE: "Now THAT is flying a probe.";';au='A.U.R.A.: "Optimal. Mildly impressive.";';}
+  else if(score>=0.4){t='SOLID HAUL';col='var(--amber)';m='Sensible run — '+val+' value, hull and probe intact. Richer strata still waiting below.';bk='ARIS: "Smart. We dive again tomorrow.";';au='A.U.R.A.: "Conservative. The deeps keep.";';}
+  else{t='THIN HAUL';col='var(--danger)';m='Barely committed — '+val+' value. Came home almost empty.';bk='JAXON: "We powered it up for THAT?";';au='A.U.R.A.: "Caution costs too, Commander.";';}
+  r.innerHTML='<h3 style="color:'+col+'">'+t+'</h3><div>SCORE <b style="color:'+col+'">'+score.toFixed(2)+'</b> · banked '+val+' · deepest -'+deepest+'00m · hull '+Math.max(0,Math.round(integrity))+'</div><div style="margin-top:6px;color:var(--textdim)">'+m+'</div><div class="bark">'+bk+'</div><div class="aura">'+au+'</div><div style="margin-top:8px;font-size:11px;color:var(--textdim)">→ Luck sets the layers; reading the odds, picking cautious/hard, and bracing well is the operator skill that beats them.</div>';
+}
+$('quick').onclick=()=>sample(false);$('full').onclick=()=>sample(true);
+$('dive').onclick=()=>dive(false);$('diveH').onclick=()=>dive(true);$('asc').onclick=ascend;$('replay').onclick=reset;
+$('auto').onclick=()=>{if(!running)return;running=false;const r=$('result');r.classList.add('show');r.innerHTML='<h3 style="color:var(--amber)">AUTO-RESOLVE</h3><div>SCORE <b style="color:var(--amber)">0.55</b> · expected-value dive</div><div style="margin-top:6px;color:var(--textdim)">The old RNG outcome — skipped the manual dive.</div>';};
+document.querySelectorAll('.sec button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.sec button').forEach(x=>x.classList.remove('on'));b.classList.add('on');reset();});
+reset();
+</script>
+</body>
+</html>
