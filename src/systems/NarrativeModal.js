@@ -16,14 +16,14 @@ class NarrativeModal {
 
         // Character portrait data - includes image paths for crew
         this.portraits = {
-            'AURA': { color: '#00ffff', icon: 'AI', title: 'A.U.R.A.', image: null },
+            'AURA': { color: '#9bf0bd', icon: 'AI', title: 'A.U.R.A.', image: null },
             'COMMANDER': { color: '#ffd700', icon: '★', title: 'Cmdr. Reyes', image: 'assets/crew/F_1.png' },
             'JAXON': { color: '#ff8844', icon: '⚙', title: 'Eng. Jaxon', image: 'assets/crew/M_2.png' },
-            'ARIS': { color: '#44ff88', icon: '✚', title: 'Dr. Aris', image: 'assets/crew/F_3.png' },
-            'VANCE': { color: '#ff4444', icon: '◆', title: 'Spc. Vance', image: 'assets/crew/M_4.png' },
+            'ARIS': { color: '#74d99a', icon: '✚', title: 'Dr. Aris', image: 'assets/crew/F_3.png' },
+            'VANCE': { color: '#d85a4e', icon: '◆', title: 'Spc. Vance', image: 'assets/crew/M_4.png' },
             'MIRA': { color: '#aa88ff', icon: '✧', title: 'Tech Mira', image: 'assets/crew/F_5.png' },
             'UNKNOWN': { color: '#888888', icon: '?', title: '???', image: null },
-            'SYSTEM': { color: '#ffcc00', icon: '⚠', title: 'SYSTEM', image: null },
+            'SYSTEM': { color: '#d9a24a', icon: '⚠', title: 'SYSTEM', image: null },
             'NARRATOR': { color: '#cccccc', icon: '◈', title: '', image: null }
         };
 
@@ -140,7 +140,7 @@ class NarrativeModal {
             }
 
             .narrative-text .highlight {
-                color: #00ffff;
+                color: #9bf0bd;
                 font-weight: bold;
             }
 
@@ -199,7 +199,7 @@ class NarrativeModal {
 
             .narrative-choice:hover {
                 background: linear-gradient(90deg, rgba(0,100,130,0.6) 0%, rgba(40,60,80,0.6) 100%);
-                border-left-color: #00ccff;
+                border-left-color: #9bf0bd;
                 color: #fff;
                 transform: translateX(5px);
             }
@@ -233,7 +233,7 @@ class NarrativeModal {
             .narrative-text::after {
                 content: '▋';
                 animation: blink 0.7s infinite;
-                color: #00ffff;
+                color: #9bf0bd;
             }
 
             .narrative-text.complete::after {

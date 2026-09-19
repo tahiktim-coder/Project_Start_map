@@ -1004,8 +1004,8 @@ class App {
                 window.TEST_MODE = !window.TEST_MODE;
                 btnTesting.textContent = window.TEST_MODE ? "TEST MODE: ON" : "TEST MODE: OFF";
                 btnTesting.style.opacity = window.TEST_MODE ? "1" : "0.7";
-                btnTesting.style.borderColor = window.TEST_MODE ? "#ff0000" : "#ff6600";
-                btnTesting.style.color = window.TEST_MODE ? "#ff0000" : "#ff6600";
+                btnTesting.style.borderColor = window.TEST_MODE ? "#d85a4e" : "#ff6600";
+                btnTesting.style.color = window.TEST_MODE ? "#d85a4e" : "#ff6600";
                 this.state.addLog(window.TEST_MODE
                     ? "/// TESTING MODE ENABLED /// Rare outcomes favoured. Energy is free. Salvage, rations and probe topped up so everything can be built and tried."
                     : "/// TESTING MODE DISABLED /// Normal probabilities restored.");
@@ -1113,7 +1113,7 @@ class App {
             const indicator = document.createElement('div');
             indicator.style.cssText = `
                 position: fixed; top: 10px; right: 10px; padding: 5px 12px;
-                background: rgba(0, 100, 50, 0.8); color: #00ff88;
+                background: rgba(0, 100, 50, 0.8); color: #74d99a;
                 font-size: 0.75em; font-family: 'Share Tech Mono', monospace;
                 border-radius: 3px; z-index: 9999;
                 animation: fadeInGentle 0.3s forwards;
@@ -1195,18 +1195,18 @@ class App {
         modal.style.background = 'rgba(0, 5, 15, 0.98)';
 
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 650px; border-color: #00ff88; background: linear-gradient(135deg, #0a0a15, #0a1510);">
-                <div class="modal-header" style="background: linear-gradient(90deg, #003322, #005544); color: #00ff88;">
+            <div class="modal-content" style="max-width: 650px; border-color: #74d99a; background: linear-gradient(135deg, #0a0a15, #0a1510);">
+                <div class="modal-header" style="background: linear-gradient(90deg, #003322, #005544); color: #74d99a;">
                     <span>/// A.U.R.A. SYSTEM BRIEFING ///</span>
                 </div>
                 <div style="padding: 20px;">
                     <!-- A.U.R.A. Portrait -->
                     <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                        <div style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #00ff88;
+                        <div style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #74d99a;
                             background: #001a0a; display: flex; align-items: center; justify-content: center;
-                            font-size: 1.5em; color: #00ff88; flex-shrink: 0;">AI</div>
+                            font-size: 1.5em; color: #74d99a; flex-shrink: 0;">AI</div>
                         <div>
-                            <div style="color: #00ff88; font-weight: bold; margin-bottom: 5px;">A.U.R.A.</div>
+                            <div style="color: #74d99a; font-weight: bold; margin-bottom: 5px;">A.U.R.A.</div>
                             <div style="color: #88ffaa; font-style: italic; font-size: 0.9em;">
                                 "Good morning, Commander. Cryo-sleep cycle complete. All vital signs nominal."
                             </div>
@@ -1214,20 +1214,20 @@ class App {
                     </div>
 
                     <!-- Briefing content -->
-                    <div style="border-left: 2px solid #00ff88; padding-left: 15px; margin-bottom: 20px; color: #aaffcc; font-size: 0.9em; line-height: 1.7;">
+                    <div style="border-left: 2px solid #74d99a; padding-left: 15px; margin-bottom: 20px; color: #9bf0bd; font-size: 0.9em; line-height: 1.7;">
                         <p style="margin: 0 0 12px 0;">"I've maintained ship systems during your rest. Here is our status:"</p>
-                        <p style="margin: 0 0 8px 0; color: #66ffaa;">▸ <strong>Energy:</strong> 100 units. Required for warping between planets.</p>
-                        <p style="margin: 0 0 8px 0; color: #66ffaa;">▸ <strong>Rations:</strong> 20 cycles. Major actions consume supplies.</p>
-                        <p style="margin: 0 0 8px 0; color: #66ffaa;">▸ <strong>Crew:</strong> 5 souls aboard. Their wellbeing is my priority.</p>
-                        <p style="margin: 0 0 12px 0; color: #66ffaa;">▸ <strong>Mission:</strong> Find a habitable world. Establish humanity's new home.</p>
-                        <p style="margin: 0; color: #88ffcc;">"I recommend selecting a planet on the navigation map. I will provide analysis once we are in orbit."</p>
+                        <p style="margin: 0 0 8px 0; color: #9bf0bd;">▸ <strong>Energy:</strong> 100 units. Required for warping between planets.</p>
+                        <p style="margin: 0 0 8px 0; color: #9bf0bd;">▸ <strong>Rations:</strong> 20 cycles. Major actions consume supplies.</p>
+                        <p style="margin: 0 0 8px 0; color: #9bf0bd;">▸ <strong>Crew:</strong> 5 souls aboard. Their wellbeing is my priority.</p>
+                        <p style="margin: 0 0 12px 0; color: #9bf0bd;">▸ <strong>Mission:</strong> Find a habitable world. Establish humanity's new home.</p>
+                        <p style="margin: 0; color: #9bf0bd;">"I recommend selecting a planet on the navigation map. I will provide analysis once we are in orbit."</p>
                     </div>
 
                     <!-- Continue button -->
                     <div style="text-align: center;">
                         <button id="btn-begin" style="
                             padding: 12px 40px; background: transparent;
-                            border: 2px solid #00ff88; color: #00ff88;
+                            border: 2px solid #74d99a; color: #74d99a;
                             font-family: var(--font-mono); font-size: 1em;
                             cursor: pointer; transition: all 0.3s;
                         ">UNDERSTOOD</button>
@@ -1241,11 +1241,11 @@ class App {
         const btn = modal.querySelector('#btn-begin');
         btn.onmouseenter = () => {
             btn.style.background = 'rgba(0, 255, 136, 0.2)';
-            btn.style.color = '#aaffcc';
+            btn.style.color = '#9bf0bd';
         };
         btn.onmouseleave = () => {
             btn.style.background = 'transparent';
-            btn.style.color = '#00ff88';
+            btn.style.color = '#74d99a';
         };
         btn.onclick = () => {
             modal.remove();
@@ -1517,7 +1517,7 @@ class App {
         const dialogueHtml = selected.dialogue.map(d => {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
             };
             const color = colors[d.speaker] || '#ffffff';
             return `<div style="margin-bottom: 10px;">
@@ -1527,15 +1527,15 @@ class App {
         }).join('');
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #00aaff; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #00aaff;">
+            <div class="modal-content" style="border-color: #9bf0bd; max-width: 600px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #9bf0bd;">
                     /// STATION: ${selected.title.toUpperCase()} ///
                 </div>
                 <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #00aaff; margin-bottom: 10px;">
+                    <div style="font-size: 0.8em; color: #9bf0bd; margin-bottom: 10px;">
                         LOCATION: ${stationName}
                     </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #00aaff; padding-left: 12px;">
+                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #9bf0bd; padding-left: 12px;">
                         ${selected.context(stationName)}
                     </div>
                     <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
@@ -1545,8 +1545,8 @@ class App {
                         ${selected.choices.map((choice, idx) => `
                             <button class="station-choice" data-idx="${idx}" style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #00aaff; background: rgba(0,30,60,0.8);
-                                color: #00ccff; cursor: pointer; font-family: var(--font-mono);
+                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
+                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s;
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
@@ -1563,7 +1563,7 @@ class App {
         // Hover effects
         modal.querySelectorAll('.station-choice').forEach(btn => {
             btn.onmouseenter = () => { btn.style.background = 'rgba(0,60,120,0.8)'; btn.style.borderColor = '#00ddff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(0,30,60,0.8)'; btn.style.borderColor = '#00aaff'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
             btn.onclick = () => {
                 const idx = parseInt(btn.dataset.idx);
                 const choice = selected.choices[idx];
@@ -1669,7 +1669,7 @@ class App {
         const dialogueHtml = selected.dialogue.map(d => {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
             };
             const color = colors[d.speaker] || '#ffffff';
             return `<div style="margin-bottom: 10px;">
@@ -1747,7 +1747,7 @@ class App {
         const dialogueHtml = encounter.dialogue.map(d => {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
             };
             const color = colors[d.speaker] || '#ffffff';
             return `<div style="margin-bottom: 10px;">
@@ -1757,15 +1757,15 @@ class App {
         }).join('');
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff6666; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #1a0000, #330000); color: #ff6666;">
+            <div class="modal-content" style="border-color: #e07a70; max-width: 600px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #1a0000, #330000); color: #e07a70;">
                     /// DISTRESS SIGNAL: ${encounter.title.toUpperCase()} ///
                 </div>
                 <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #ff6666; margin-bottom: 10px;">
+                    <div style="font-size: 0.8em; color: #e07a70; margin-bottom: 10px;">
                         SIGNAL AGE: ${signalAge === 'UNKNOWN' ? 'UNKNOWN' : signalAge + ' YEARS'}
                     </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #ff6666; padding-left: 12px;">
+                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #e07a70; padding-left: 12px;">
                         ${encounter.context(signalAge)}
                     </div>
                     <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
@@ -1775,7 +1775,7 @@ class App {
                         ${encounter.choices.map((choice, idx) => `
                             <button class="distress-choice" data-idx="${idx}" style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #ff6666; background: rgba(50,10,10,0.8);
+                                border: 1px solid #e07a70; background: rgba(50,10,10,0.8);
                                 color: #ff9999; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s;
                             ">
@@ -1793,7 +1793,7 @@ class App {
         // Hover effects
         modal.querySelectorAll('.distress-choice').forEach(btn => {
             btn.onmouseenter = () => { btn.style.background = 'rgba(100,20,20,0.8)'; btn.style.borderColor = '#ff9999'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(50,10,10,0.8)'; btn.style.borderColor = '#ff6666'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(50,10,10,0.8)'; btn.style.borderColor = '#e07a70'; };
             btn.onclick = () => {
                 const idx = parseInt(btn.dataset.idx);
                 const choice = encounter.choices[idx];
@@ -1873,13 +1873,13 @@ class App {
         const dialogueHtml = event.dialogue.map(d => {
             const speakerColors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88', 'Commander': '#ffffff'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a', 'Commander': '#ffffff'
             };
             const sColor = speakerColors[d.speaker] || '#ffffff';
             const pId = portraits[d.speaker];
             const portraitHtml = pId
                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${sColor};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                 <div>
@@ -2233,7 +2233,7 @@ class App {
                 position: relative; z-index: 10; text-align: center;
                 padding: 40px; max-width: 600px;
             ">
-                <div style="color: #4488ff; font-size: 0.9em; letter-spacing: 4px; margin-bottom: 20px;">
+                <div style="color: #9bf0bd; font-size: 0.9em; letter-spacing: 4px; margin-bottom: 20px;">
                     SECTOR TRANSITION
                 </div>
                 <div id="warp-dialogue" style="
@@ -2310,7 +2310,7 @@ class App {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff',
                 'Spc. Vance': '#ff5050', 'Tech Mira': '#d070ff',
-                'A.U.R.A.': '#00ff88', 'Commander': '#ffffff'
+                'A.U.R.A.': '#74d99a', 'Commander': '#ffffff'
             };
             // Handle commander name dynamically
             let speakerColor = colors[line.speaker];
@@ -2330,9 +2330,9 @@ class App {
             } else if (line.speaker === 'A.U.R.A.') {
                 // A.U.R.A. gets a special icon - fixed size, not stretched
                 portraitHtml = `<div style="width: 36px; height: 36px; min-width: 36px; min-height: 36px;
-                    border-radius: 50%; border: 2px solid #00ff88; margin-right: 10px;
+                    border-radius: 50%; border: 2px solid #74d99a; margin-right: 10px;
                     display: flex; align-items: center; justify-content: center;
-                    background: rgba(0,255,136,0.1); font-size: 16px; color: #00ff88;">◈</div>`;
+                    background: rgba(0,255,136,0.1); font-size: 16px; color: #74d99a;">◈</div>`;
             }
 
             dialogueEl.innerHTML += `
@@ -2503,13 +2503,13 @@ class App {
         modal.style.zIndex = '2500';
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #4488ff; max-width: 650px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #002266); color: #4488ff; display: flex; justify-content: space-between;">
+            <div class="modal-content" style="border-color: #9bf0bd; max-width: 650px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #002266); color: #9bf0bd; display: flex; justify-content: space-between;">
                     <span>/// INTER-SECTOR DRIFT ///</span>
                     <span style="opacity: 0.7;">S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}</span>
                 </div>
                 <div style="padding: 25px;">
-                    <div style="font-size: 1.1em; font-weight: bold; color: #4488ff; margin-bottom: 15px;">${event.title}</div>
+                    <div style="font-size: 1.1em; font-weight: bold; color: #9bf0bd; margin-bottom: 15px;">${event.title}</div>
                     <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 20px; line-height: 1.6; font-style: italic;">
                         ${event.context}
                     </div>
@@ -2534,7 +2534,7 @@ class App {
                         }).map(d => {
                             const colors = {
                                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
                             };
                             const portraits = {
                                 'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
@@ -2549,7 +2549,7 @@ class App {
                             const speakerColor = isCmdr ? '#ffffff' : color;
                             const portraitHtml = pId
                                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${speakerColor};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
                             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                                 <div>
@@ -2563,12 +2563,12 @@ class App {
                         ${event.choices.map((choice, idx) => {
                             const meetsReq = !choice.requires || choice.requires(this.state);
                             const disabledStyle = meetsReq ? '' : 'opacity: 0.5; cursor: not-allowed; border-color: #444;';
-                            const reqLabel = (!meetsReq && choice.requiresLabel) ? `<div style="font-size: 0.75em; color: #ff4444; margin-top: 2px;">[${choice.requiresLabel}]</div>` : '';
+                            const reqLabel = (!meetsReq && choice.requiresLabel) ? `<div style="font-size: 0.75em; color: #d85a4e; margin-top: 2px;">[${choice.requiresLabel}]</div>` : '';
                             return `
                             <button class="campfire-choice" data-idx="${idx}" ${meetsReq ? '' : 'disabled'} style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #4488ff; background: rgba(0,20,60,0.8);
-                                color: #4488ff; cursor: pointer; font-family: var(--font-mono);
+                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
+                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s; ${disabledStyle}
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
@@ -2585,8 +2585,8 @@ class App {
 
         // Hover effects
         modal.querySelectorAll('.campfire-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(0,40,120,0.8)'; btn.style.borderColor = '#66aaff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(0,20,60,0.8)'; btn.style.borderColor = '#4488ff'; };
+            btn.onmouseenter = () => { btn.style.background = 'rgba(116,217,154,0.18)'; btn.style.borderColor = '#9bf0bd'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
             btn.onclick = () => {
                 const choice = event.choices[parseInt(btn.dataset.idx)];
                 const resultMsg = choice.effect(this.state);
@@ -2690,12 +2690,12 @@ class App {
         };
         const colors = {
             'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff8800; max-width: 680px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #331a00, #663300); color: #ff8800; display: flex; justify-content: space-between;">
+            <div class="modal-content" style="border-color: #d9a24a; max-width: 680px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #331a00, #663300); color: #d9a24a; display: flex; justify-content: space-between;">
                     <span>/// EXODUS WRECK: ${encounter.title} ///</span>
                     <span style="opacity: 0.7;">${shipName}</span>
                 </div>
@@ -2721,7 +2721,7 @@ class App {
                             const pId = portraits[d.speaker];
                             const portraitHtml = pId
                                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
                             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                                 <div>
@@ -2735,8 +2735,8 @@ class App {
                         ${encounter.choices.map((choice, idx) => `
                             <button class="exodus-choice" data-idx="${idx}" style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #ff8800; background: rgba(40,20,0,0.8);
-                                color: #ff8800; cursor: pointer; font-family: var(--font-mono);
+                                border: 1px solid #d9a24a; background: rgba(40,20,0,0.8);
+                                color: #d9a24a; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s;
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
@@ -2753,7 +2753,7 @@ class App {
         // Hover effects and click handlers
         modal.querySelectorAll('.exodus-choice').forEach(btn => {
             btn.onmouseenter = () => { btn.style.background = 'rgba(80,40,0,0.8)'; btn.style.borderColor = '#ffaa33'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(40,20,0,0.8)'; btn.style.borderColor = '#ff8800'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(40,20,0,0.8)'; btn.style.borderColor = '#d9a24a'; };
             btn.onclick = () => {
                 const choice = encounter.choices[parseInt(btn.dataset.idx)];
                 const resultMsg = choice.effect(this.state);
@@ -2842,12 +2842,12 @@ class App {
         };
         const colors = {
             'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #44aaff; max-width: 680px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #44aaff; display: flex; justify-content: space-between;">
+            <div class="modal-content" style="border-color: #9bf0bd; max-width: 680px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #9bf0bd; display: flex; justify-content: space-between;">
                     <span>/// COLONY RUINS: ${encounter.title} ///</span>
                     <span style="opacity: 0.7;">${planet.name}</span>
                 </div>
@@ -2873,7 +2873,7 @@ class App {
                             const pId = portraits[d.speaker];
                             const portraitHtml = pId
                                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
                             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                                 <div>
@@ -2887,8 +2887,8 @@ class App {
                         ${encounter.choices.map((choice, idx) => `
                             <button class="colony-site-choice" data-idx="${idx}" style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #44aaff; background: rgba(0,20,60,0.8);
-                                color: #44aaff; cursor: pointer; font-family: var(--font-mono);
+                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
+                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s;
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
@@ -2903,8 +2903,8 @@ class App {
         document.body.appendChild(modal);
 
         modal.querySelectorAll('.colony-site-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(0,40,120,0.8)'; btn.style.borderColor = '#66ccff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(0,20,60,0.8)'; btn.style.borderColor = '#44aaff'; };
+            btn.onmouseenter = () => { btn.style.background = 'rgba(116,217,154,0.18)'; btn.style.borderColor = '#66ccff'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
             btn.onclick = () => {
                 const choice = encounter.choices[parseInt(btn.dataset.idx)];
                 const resultMsg = choice.effect(this.state);
@@ -3224,7 +3224,7 @@ You are home.`
         };
         const colors = {
             'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         // Filter dialogue for living crew
@@ -3395,12 +3395,12 @@ You are home.`
                         /// JOURNEY STATISTICS ///
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85em; color: #888;">
-                        <div>FINAL SECTOR: <span style="color: #aaaaff;">${this.state.currentSector}</span></div>
+                        <div>FINAL SECTOR: <span style="color: #c4d0c4;">${this.state.currentSector}</span></div>
                         <div>CREW SURVIVORS: <span style="color: #88cc88;">${livingCrew.length} / 5</span></div>
-                        <div>EXODUS LOGS: <span style="color: #aaaaff;">${exodusLogsFound} / 8</span></div>
-                        <div>COLONY DATA: <span style="color: #aaaaff;">${colonyKnowledge}</span></div>
-                        <div>SALVAGE: <span style="color: #aaaaff;">${this.state.salvage}</span></div>
-                        <div>ENERGY: <span style="color: #aaaaff;">${this.state.energy}%</span></div>
+                        <div>EXODUS LOGS: <span style="color: #c4d0c4;">${exodusLogsFound} / 8</span></div>
+                        <div>COLONY DATA: <span style="color: #c4d0c4;">${colonyKnowledge}</span></div>
+                        <div>SALVAGE: <span style="color: #c4d0c4;">${this.state.salvage}</span></div>
+                        <div>ENERGY: <span style="color: #c4d0c4;">${this.state.energy}%</span></div>
                     </div>
                     ${livingCrew.length > 0 ? `
                     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
@@ -3417,9 +3417,9 @@ You are home.`
                     </div>
                     <button id="btn-new-game" style="
                         padding: 15px 40px;
-                        border: 2px solid #4488ff;
-                        background: rgba(0,40,100,0.5);
-                        color: #4488ff;
+                        border: 2px solid #9bf0bd;
+                        background: rgba(116,217,154,0.14);
+                        color: #9bf0bd;
                         font-family: var(--font-mono);
                         font-size: 1.1em;
                         cursor: pointer;
@@ -3443,11 +3443,11 @@ You are home.`
         const newGameBtn = modal.querySelector('#btn-new-game');
         newGameBtn.onmouseenter = () => {
             newGameBtn.style.background = 'rgba(0,80,200,0.5)';
-            newGameBtn.style.borderColor = '#66aaff';
+            newGameBtn.style.borderColor = '#9bf0bd';
         };
         newGameBtn.onmouseleave = () => {
-            newGameBtn.style.background = 'rgba(0,40,100,0.5)';
-            newGameBtn.style.borderColor = '#4488ff';
+            newGameBtn.style.background = 'rgba(116,217,154,0.14)';
+            newGameBtn.style.borderColor = '#9bf0bd';
         };
         newGameBtn.onclick = () => {
             modal.remove();
@@ -3604,7 +3604,7 @@ You are home.`
         };
         const colors = {
             'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         // Crew warning lines based on who's alive AND planet type
@@ -3686,13 +3686,13 @@ You are home.`
         warnings.push({ speaker: 'A.U.R.A.', text: `Colony viability assessment for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff4444; max-width: 650px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #ff4444; display: flex; justify-content: space-between;">
+            <div class="modal-content" style="border-color: #d85a4e; max-width: 650px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #d85a4e; display: flex; justify-content: space-between;">
                     <span>/// COLONY WARNING ///</span>
                     <span style="opacity: 0.7;">CREW ADVISORY</span>
                 </div>
                 <div style="padding: 25px;">
-                    <div style="font-size: 0.95em; color: #ff6666; margin-bottom: 20px; line-height: 1.6; font-weight: bold;">
+                    <div style="font-size: 0.95em; color: #e07a70; margin-bottom: 20px; line-height: 1.6; font-weight: bold;">
                         ⚠ Your crew is strongly advising against colonization in this sector.
                     </div>
                     <div style="border-left: 2px solid #660000; padding-left: 15px; margin-bottom: 20px;">
@@ -3701,7 +3701,7 @@ You are home.`
                             const pId = portraits[d.speaker];
                             const portraitHtml = pId
                                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
                             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                                 <div>
@@ -3718,8 +3718,8 @@ You are home.`
                             cursor: pointer; font-family: var(--font-mono); font-weight: bold;
                         ">ABORT — Keep Moving</button>
                         <button class="colony-warn-proceed" style="
-                            padding: 12px 25px; border: 1px solid #ff4444;
-                            background: rgba(60,0,0,0.8); color: #ff4444;
+                            padding: 12px 25px; border: 1px solid #d85a4e;
+                            background: rgba(60,0,0,0.8); color: #d85a4e;
                             cursor: pointer; font-family: var(--font-mono); font-weight: bold;
                         ">PROCEED DESPITE WARNINGS</button>
                     </div>
@@ -3762,24 +3762,24 @@ You are home.`
 
         // Determine consequences based on escalation
         let consequenceText = '1 crew member injured by oxygen deprivation';
-        let consequenceColor = '#ff4444';
+        let consequenceColor = '#d85a4e';
         if (ventCount === 2) {
             consequenceText = '1 crew member KILLED by prolonged oxygen deprivation';
-            consequenceColor = '#ff0000';
+            consequenceColor = '#d85a4e';
         } else if (ventCount >= 3) {
             consequenceText = 'LETHAL — A.U.R.A. will vent all atmosphere. Total crew loss.';
-            consequenceColor = '#ff0000';
+            consequenceColor = '#d85a4e';
         }
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff4444; max-width: 550px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #ff4444;">
+            <div class="modal-content" style="border-color: #d85a4e; max-width: 550px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #d85a4e;">
                     /// ATMOSPHERE ALERT ${ventCount > 1 ? `(INCIDENT ${ventCount})` : ''} ///
                 </div>
                 <div style="padding: 25px;">
-                    <div style="font-size: 0.95em; color: #ff6666; margin-bottom: 20px; line-height: 1.6;">
+                    <div style="font-size: 0.95em; color: #e07a70; margin-bottom: 20px; line-height: 1.6;">
                         A.U.R.A. is venting atmosphere from crew quarters. Respond immediately!
-                        ${ventCount >= 2 ? `<br><br><span style="color: #ff0000;">This is escalating. A.U.R.A. is no longer issuing warnings.</span>` : ''}
+                        ${ventCount >= 2 ? `<br><br><span style="color: #d85a4e;">This is escalating. A.U.R.A. is no longer issuing warnings.</span>` : ''}
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         ${jaxonAlive ? `
@@ -4311,37 +4311,37 @@ You are home.`
         // BIOLOGICAL signals reduce risk (life = stable environment)
         if (planet.metrics && planet.metrics.hasLife) {
             riskBase -= 5;
-            signalModifiers.push({ type: 'BIOLOGICAL', mod: -5, color: '#00ff66' });
+            signalModifiers.push({ type: 'BIOLOGICAL', mod: -5, color: '#74d99a' });
         }
 
         // ALIEN SIGNALS increase risk (unknown = danger)
         if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) {
             riskBase += 10;
-            signalModifiers.push({ type: 'ALIEN SIGNAL', mod: +10, color: '#ff00ff' });
+            signalModifiers.push({ type: 'ALIEN SIGNAL', mod: +10, color: '#d9a24a' });
         }
 
         // ANCIENT RUINS slightly reduce risk (stable structures)
         if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) {
             riskBase -= 3;
-            signalModifiers.push({ type: 'ANCIENT RUINS', mod: -3, color: '#ffcc00' });
+            signalModifiers.push({ type: 'ANCIENT RUINS', mod: -3, color: '#d9a24a' });
         }
 
         // TECHNOLOGICAL signals reduce risk (machine-stable)
         if (planet.metrics && planet.metrics.hasTech && !planet.tags?.includes('ALIEN_SIGNALS')) {
             riskBase -= 5;
-            signalModifiers.push({ type: 'TECHNOLOGICAL', mod: -5, color: '#00ccff' });
+            signalModifiers.push({ type: 'TECHNOLOGICAL', mod: -5, color: '#9bf0bd' });
         }
 
         // DERELICT ships increase risk slightly (structural instability)
         if (planet.tags && planet.tags.includes('DERELICT')) {
             riskBase += 5;
-            signalModifiers.push({ type: 'DERELICT', mod: +5, color: '#cc8800' });
+            signalModifiers.push({ type: 'DERELICT', mod: +5, color: '#d9a24a' });
         }
 
         // PREDATORY massively increases risk
         if (planet.tags && planet.tags.includes('PREDATORY')) {
             riskBase += 15;
-            signalModifiers.push({ type: 'PREDATORY', mod: +15, color: '#ff0000' });
+            signalModifiers.push({ type: 'PREDATORY', mod: +15, color: '#d85a4e' });
         }
 
         // Clamp risk base to reasonable range
@@ -4369,8 +4369,8 @@ You are home.`
                     ${signalModDisplay ? `<div style="font-size: 0.75em; margin-bottom: 15px; padding: 8px; border: 1px dashed var(--color-primary-dim); background: rgba(0,0,0,0.5);">
                         <span style="color: var(--color-text-dim);">WHAT OUR SCAN SAYS:</span> ${signalModDisplay}
                     </div>` : ''}
-                    ${isParanoid ? '<p style="font-size: 0.8em; color: #ff6666; margin-bottom: 10px;">Vance: "I\'m not risking anyone on something that dangerous."</p>' : ''}
-                    ${recklessBlocksSafe ? '<p style="font-size: 0.8em; color: #ffaa00; margin-bottom: 10px;">Mira: "The safe option gets us nothing. I\'m going in."</p>' : ''}
+                    ${isParanoid ? '<p style="font-size: 0.8em; color: #e07a70; margin-bottom: 10px;">Vance: "I\'m not risking anyone on something that dangerous."</p>' : ''}
+                    ${recklessBlocksSafe ? '<p style="font-size: 0.8em; color: #d9a24a; margin-bottom: 10px;">Mira: "The safe option gets us nothing. I\'m going in."</p>' : ''}
 
                     <div style="display: flex; gap: 20px; justify-content: center;">
                         ${event.choices.map((choice, idx) => {
@@ -4379,9 +4379,9 @@ You are home.`
             let riskColor = "var(--color-text-dim)";
 
             if (totalRisk < 10) { riskLabel = "NEGLIGIBLE"; riskColor = "var(--color-primary)"; }
-            else if (totalRisk < 30) { riskLabel = "MODERATE"; riskColor = "#FFFF00"; }
-            else if (totalRisk < 60) { riskLabel = "HIGH"; riskColor = "#FFA500"; }
-            else { riskLabel = "EXTREME"; riskColor = "#FF0000"; }
+            else if (totalRisk < 30) { riskLabel = "MODERATE"; riskColor = "#d9a24a"; }
+            else if (totalRisk < 60) { riskLabel = "HIGH"; riskColor = "#d9a24a"; }
+            else { riskLabel = "EXTREME"; riskColor = "#d85a4e"; }
 
             // PARANOID: disable high-risk choices (riskMod >= 30)
             const paranoidBlocked = isParanoid && choice.riskMod >= 30;
@@ -4404,7 +4404,7 @@ You are home.`
                             " ${isDisabled ? 'disabled' : ''}>
                                 <div>${choice.text}</div>
                                 <div style="font-size: 0.8em; margin-top: 5px; color: ${riskColor}">CHANCE SOMEONE GETS HURT: ${Math.max(0, Math.min(100, Math.round(totalRisk)))}% (${riskLabel})</div>
-                                ${isDisabled ? `<div style="font-size: 0.7em; margin-top: 5px; color: #ff4444;">[${disabledReason}]</div>` : ''}
+                                ${isDisabled ? `<div style="font-size: 0.7em; margin-top: 5px; color: #d85a4e;">[${disabledReason}]</div>` : ''}
                             </button>
                         `}).join('')}
                     </div>
@@ -4640,12 +4640,12 @@ You are home.`
         modal.style.zIndex = '2000';
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #44ff88; max-width: 700px;">
+            <div class="modal-content" style="border-color: #74d99a; max-width: 700px;">
                 <div class="modal-header" style="background: linear-gradient(90deg, #225533, #338844); color: #ffffff;">
                     /// EVA MISSION: PARADISE FOUND ///
                 </div>
                 <div style="padding: 25px;">
-                    <p style="font-style: italic; color: #aaffcc; margin-bottom: 20px; line-height: 1.7; border-left: 3px solid #44ff88; padding-left: 15px;">
+                    <p style="font-style: italic; color: #9bf0bd; margin-bottom: 20px; line-height: 1.7; border-left: 3px solid #74d99a; padding-left: 15px;">
                         ${evaTeam[0].name} and ${evaTeam[1].name} step onto the surface.
                         <br><br>
                         The air is... breathable. Clean. Sweet, even. The ground is soft with grass that has never known boots.
@@ -4660,44 +4660,44 @@ You are home.`
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         <button class="eden-choice" data-action="rest" style="
                             padding: 14px; text-align: left;
-                            border: 1px solid #44ff88; background: rgba(30,80,50,0.7);
+                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
                             color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                         ">
-                            <div style="font-weight: bold; color: #88ffcc;">Rest and recover</div>
-                            <div style="font-size: 0.85em; color: #aaffcc;">All crew stress cleared. Heal all injuries. This is what you needed.</div>
+                            <div style="font-weight: bold; color: #9bf0bd;">Rest and recover</div>
+                            <div style="font-size: 0.85em; color: #9bf0bd;">All crew stress cleared. Heal all injuries. This is what you needed.</div>
                         </button>
                         <button class="eden-choice" data-action="gather" style="
                             padding: 14px; text-align: left;
-                            border: 1px solid #44ff88; background: rgba(30,80,50,0.7);
+                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
                             color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                         ">
-                            <div style="font-weight: bold; color: #88ffcc;">Gather fruit and fresh water</div>
-                            <div style="font-size: 0.85em; color: #aaffcc;">+10 Rations. The land provides.</div>
+                            <div style="font-weight: bold; color: #9bf0bd;">Gather fruit and fresh water</div>
+                            <div style="font-size: 0.85em; color: #9bf0bd;">+10 Rations. The land provides.</div>
                         </button>
                         <button class="eden-choice" data-action="explore" style="
                             padding: 14px; text-align: left;
-                            border: 1px solid #44ff88; background: rgba(30,80,50,0.7);
+                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
                             color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                         ">
-                            <div style="font-weight: bold; color: #88ffcc;">Explore the valley</div>
-                            <div style="font-size: 0.85em; color: #aaffcc;">+50 Salvage (natural materials). Mark colony site.</div>
+                            <div style="font-weight: bold; color: #9bf0bd;">Explore the valley</div>
+                            <div style="font-size: 0.85em; color: #9bf0bd;">+50 Salvage (natural materials). Mark colony site.</div>
                         </button>
                         <button class="eden-choice" data-action="remember" style="
                             padding: 14px; text-align: left;
-                            border: 1px solid #44ff88; background: rgba(30,80,50,0.7);
+                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
                             color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                         ">
-                            <div style="font-weight: bold; color: #88ffcc;">Remember what you're fighting for</div>
-                            <div style="font-size: 0.85em; color: #aaffcc;">+20 Energy (renewed purpose). All crew -1 stress.</div>
+                            <div style="font-weight: bold; color: #9bf0bd;">Remember what you're fighting for</div>
+                            <div style="font-size: 0.85em; color: #9bf0bd;">+20 Energy (renewed purpose). All crew -1 stress.</div>
                         </button>
-                        <div style="border-top: 1px dashed #44ff88; margin: 15px 0; padding-top: 15px;">
+                        <div style="border-top: 1px dashed #74d99a; margin: 15px 0; padding-top: 15px;">
                             <button class="eden-choice eden-settle" data-action="settle" style="
                                 padding: 14px; text-align: left; width: 100%;
-                                border: 2px solid #ffcc00; background: linear-gradient(90deg, rgba(80,60,20,0.8), rgba(40,80,30,0.8));
+                                border: 2px solid #d9a24a; background: linear-gradient(90deg, rgba(80,60,20,0.8), rgba(40,80,30,0.8));
                                 color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                             ">
-                                <div style="font-weight: bold; color: #ffcc00; font-size: 1.1em;">⬡ END THE JOURNEY — Settle Here</div>
-                                <div style="font-size: 0.85em; color: #aaffcc; margin-top: 5px;">This is what you came for. This is home now. <span style="color: #ffcc00;">[ENDS GAME]</span></div>
+                                <div style="font-weight: bold; color: #d9a24a; font-size: 1.1em;">⬡ END THE JOURNEY — Settle Here</div>
+                                <div style="font-size: 0.85em; color: #9bf0bd; margin-top: 5px;">This is what you came for. This is home now. <span style="color: #d9a24a;">[ENDS GAME]</span></div>
                             </button>
                         </div>
                     </div>
@@ -4710,11 +4710,11 @@ You are home.`
         modal.querySelectorAll('.eden-choice').forEach(btn => {
             btn.onmouseenter = () => {
                 btn.style.background = 'rgba(40,100,60,0.9)';
-                btn.style.borderColor = '#88ffcc';
+                btn.style.borderColor = '#9bf0bd';
             };
             btn.onmouseleave = () => {
                 btn.style.background = 'rgba(30,80,50,0.7)';
-                btn.style.borderColor = '#44ff88';
+                btn.style.borderColor = '#74d99a';
             };
             btn.onclick = () => {
                 const action = btn.dataset.action;
@@ -4788,7 +4788,7 @@ You are home.`
             'Dr. Aris': '#40c8ff', 'Aris': '#40c8ff',
             'Spc. Vance': '#ff5050', 'Vance': '#ff5050',
             'Tech Mira': '#d070ff', 'Mira': '#d070ff',
-            'A.U.R.A.': '#00ff88'
+            'A.U.R.A.': '#74d99a'
         };
 
         let styled = false;
@@ -4816,22 +4816,22 @@ You are home.`
         // Style warnings and critical messages
         if (!styled) {
             if (msg.startsWith('CRITICAL:') || msg.startsWith('CATASTROPHE:')) {
-                entry.innerHTML = `<span style="color:#ff4444;font-weight:bold;text-shadow: 0 0 5px #ff0000;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#d85a4e;font-weight:bold;text-shadow: 0 0 5px #d85a4e;">${msg}</span>`;
                 entry.classList.add('log-critical');
                 styled = true;
             } else if (msg.startsWith('WARNING:') || msg.startsWith('ALERT:') || msg.includes('⚠')) {
-                entry.innerHTML = `<span style="color:#ffaa00;font-weight:bold;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#d9a24a;font-weight:bold;">${msg}</span>`;
                 entry.classList.add('log-warning');
                 styled = true;
             } else if (msg.startsWith('HULL BREACH:')) {
-                entry.innerHTML = `<span style="color:#ff4444;font-weight:bold;text-shadow: 0 0 5px #ff0000;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#d85a4e;font-weight:bold;text-shadow: 0 0 5px #d85a4e;">${msg}</span>`;
                 entry.classList.add('log-critical');
                 styled = true;
             } else if (msg.startsWith('REPAIR COMPLETE:') || msg.includes('recovered') || msg.includes('restored')) {
-                entry.innerHTML = `<span style="color:#44ff88;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#74d99a;">${msg}</span>`;
                 styled = true;
             } else if (msg.startsWith('Sector ') && msg.includes('Generated')) {
-                entry.innerHTML = `<span style="color:#44aaff;font-weight:bold;border-bottom:1px solid #44aaff;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#9bf0bd;font-weight:bold;border-bottom:1px solid #9bf0bd;">${msg}</span>`;
                 entry.classList.add('log-sector');
                 styled = true;
             } else if (msg.startsWith('ANOMALY CONTACT:') || msg.includes('ANOMALY:')) {
@@ -4839,27 +4839,27 @@ You are home.`
                 entry.classList.add('log-anomaly');
                 styled = true;
             } else if (msg.startsWith('Colony') && (msg.includes('Established') || msg.includes('Success'))) {
-                entry.innerHTML = `<span style="color:#44ff88;font-weight:bold;font-size:1.1em;text-shadow: 0 0 10px #44ff88;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#74d99a;font-weight:bold;font-size:1.1em;text-shadow: 0 0 10px #74d99a;">${msg}</span>`;
                 entry.classList.add('log-victory');
                 styled = true;
             } else if (msg.includes('EVA team deployed') || msg.includes('Probe launched')) {
-                entry.innerHTML = `<span style="color:#88ccff;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#9bf0bd;">${msg}</span>`;
                 styled = true;
             } else if (msg.includes('Warping to')) {
-                entry.innerHTML = `<span style="color:#aaaaff;font-style:italic;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#c4d0c4;font-style:italic;">${msg}</span>`;
                 styled = true;
             } else if (msg.includes('KIA') || msg.includes('has died') || msg.includes('DEAD')) {
-                entry.innerHTML = `<span style="color:#ff4444;font-weight:bold;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#d85a4e;font-weight:bold;">${msg}</span>`;
                 entry.classList.add('log-death');
                 styled = true;
             } else if (msg.includes('stressed') || msg.includes('morale') || msg.includes('breakdown')) {
                 entry.innerHTML = `<span style="color:#ff8844;">${msg}</span>`;
                 styled = true;
             } else if (msg.includes('+') && (msg.includes('Salvage') || msg.includes('Energy') || msg.includes('Ration'))) {
-                entry.innerHTML = `<span style="color:#88ff88;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#9bf0bd;">${msg}</span>`;
                 styled = true;
             } else if (msg.includes('-') && (msg.includes('Salvage') || msg.includes('Energy'))) {
-                entry.innerHTML = `<span style="color:#ff8888;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#e07a70;">${msg}</span>`;
                 styled = true;
             }
         }
@@ -4895,7 +4895,7 @@ You are home.`
         const salvageEl = document.getElementById('res-salvage');
         if (salvageEl) {
             salvageEl.textContent = `${s}/${sMax}`;
-            salvageEl.style.color = (s >= sMax) ? '#ffaa00' : 'var(--color-primary)';
+            salvageEl.style.color = (s >= sMax) ? '#d9a24a' : 'var(--color-primary)';
         }
         if (s !== prevSalvage) {
             this.flashResource('salvage', s > prevSalvage ? 'gain' : 'loss');
@@ -4906,8 +4906,8 @@ You are home.`
         const rEl = document.getElementById('res-rations');
         if (rEl) {
             rEl.textContent = `${this.state.rations}/${this.state.maxRations}`;
-            if (this.state.rations <= 2) rEl.style.color = '#ff4444';
-            else if (this.state.rations <= 5) rEl.style.color = '#ffaa00';
+            if (this.state.rations <= 2) rEl.style.color = '#d85a4e';
+            else if (this.state.rations <= 5) rEl.style.color = '#d9a24a';
             else rEl.style.color = 'var(--color-primary)';
         }
         if (this.state.rations !== prevRations) {
@@ -4922,8 +4922,8 @@ You are home.`
         if (knowledgeEl) {
             knowledgeEl.textContent = knowledge;
             // Color code based on thresholds that matter for endings
-            if (knowledge >= 3) knowledgeEl.style.color = '#00ff88'; // Good - unlocks best ending text
-            else if (knowledge >= 1) knowledgeEl.style.color = '#88ccff'; // Some benefit
+            if (knowledge >= 3) knowledgeEl.style.color = '#74d99a'; // Good - unlocks best ending text
+            else if (knowledge >= 1) knowledgeEl.style.color = '#9bf0bd'; // Some benefit
             else knowledgeEl.style.color = 'var(--color-text-dim)';
         }
         if (knowledge !== prevKnowledge && knowledge > prevKnowledge) {
@@ -5007,7 +5007,7 @@ You are home.`
 
     getStressBar(stress) {
         const s = stress || 0;
-        const colors = ['#00ff41', '#ffff00', '#ffa500', '#ff4444']; // 0=green, 1=yellow, 2=orange, 3=red
+        const colors = ['#74d99a', '#d9a24a', '#d9a24a', '#d85a4e']; // 0=green, 1=yellow, 2=orange, 3=red
         const barColor = colors[Math.min(s, 3)];
         let bar = '[';
         for (let i = 0; i < 3; i++) {
@@ -5031,8 +5031,8 @@ You are home.`
                     ${this.state.crew.map((c, idx) => {
             const isSedated = c.tags && c.tags.includes('SEDATED');
             const isConfined = c.tags && c.tags.includes('CONFINED');
-            const color = c.status === 'DEAD' ? '#ff4444' : isSedated ? '#8888ff' : isConfined ? '#ff8888' : (c.status === 'INJURED' ? '#ffaa00' : 'var(--color-primary)');
-            const borderColor = c.status === 'DEAD' ? '#ff4444' : isSedated ? '#8888ff' : isConfined ? '#ff8888' : 'var(--color-primary-dim)';
+            const color = c.status === 'DEAD' ? '#d85a4e' : isSedated ? '#c4d0c4' : isConfined ? '#e07a70' : (c.status === 'INJURED' ? '#d9a24a' : 'var(--color-primary)');
+            const borderColor = c.status === 'DEAD' ? '#d85a4e' : isSedated ? '#c4d0c4' : isConfined ? '#e07a70' : 'var(--color-primary-dim)';
             const statusText = isSedated ? 'SEDATED' : isConfined ? 'CONFINED' : c.status;
             const showRest = c.status !== 'DEAD' && !isSedated && !isConfined && (c.stress || 0) > 0 && quartersOk;
             const restDisabled = !canRest;
@@ -5041,16 +5041,16 @@ You are home.`
             const stressFilter = stressLevel >= 3 ? 'saturate(0.5) contrast(1.2) brightness(0.8)' :
                                  stressLevel === 2 ? 'saturate(0.7) sepia(0.2)' :
                                  stressLevel === 1 ? 'saturate(0.85)' : '';
-            const stressGlow = stressLevel >= 3 ? '0 0 15px #ff0000, inset 0 0 20px rgba(255,0,0,0.3)' :
+            const stressGlow = stressLevel >= 3 ? '0 0 15px #d85a4e, inset 0 0 20px rgba(255,0,0,0.3)' :
                                stressLevel === 2 ? '0 0 10px #ff6600' :
-                               stressLevel === 1 ? '0 0 5px #ffaa00' : '';
+                               stressLevel === 1 ? '0 0 5px #d9a24a' : '';
             const stressOverlay = stressLevel >= 3 ? '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,transparent 60%,rgba(255,0,0,0.3));pointer-events:none;"></div><div style="position:absolute;top:0;left:0;right:0;bottom:0;animation:stress-pulse 1s infinite;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 20px rgba(255,0,0,0.5);"></div>' :
                                   stressLevel === 2 ? '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,transparent 70%,rgba(255,100,0,0.2));pointer-events:none;"></div>' :
                                   stressLevel === 1 ? '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,transparent 80%,rgba(255,170,0,0.1));pointer-events:none;"></div>' : '';
 
             return `
                         <div class="crew-card" style="border: 1px solid ${borderColor}; color: ${color}; ${isSedated || isConfined ? 'opacity: 0.7;' : ''}">
-                            <div class="crew-icon" style="position:relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; filter: drop-shadow(0 0 5px ${color}); box-shadow: ${stressGlow}; ${isSedated ? 'filter: grayscale(50%) drop-shadow(0 0 5px #8888ff);' : ''}">
+                            <div class="crew-icon" style="position:relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; filter: drop-shadow(0 0 5px ${color}); box-shadow: ${stressGlow}; ${isSedated ? 'filter: grayscale(50%) drop-shadow(0 0 5px #c4d0c4);' : ''}">
                                 <img src="assets/crew/${c.portraitId || 1}.png"
                                      style="width: 100%; height: 100%; object-fit: cover; filter: ${stressFilter}; ${isSedated ? 'filter: grayscale(50%);' : ''}"
                                      onerror="this.style.display='none'; this.parentNode.innerHTML='${c.gender === 'AI' ? '🤖' : '👤'}';">
@@ -5059,14 +5059,14 @@ You are home.`
                             <div class="crew-details">
                                 <div class="crew-name">${c.realName || c.name} <span style="font-size:0.7em; opacity:0.7;">(${c.name})</span></div>
                                 <div class="crew-meta" style="color: ${color}; opacity: 0.8;">AGE: ${c.age || 'N/A'} | STATUS: ${statusText} | STRESS: ${this.getStressBar(c.stress)}</div>
-                                <div class="crew-tags">${c.tags.filter(t => t !== 'SEDATED' && t !== 'CONFINED').join(' ')}${c.trait ? ` <span style="color:#ff4444;">[${c.trait}]</span>` : ''}
-                                    ${isSedated ? `<span style="color:#8888ff; font-weight:bold; margin-left:5px;">[SEDATED - ${c._sedatedUntilWarp || '?'} warps]</span>` : ''}
-                                    ${isConfined ? `<span style="color:#ff8888; font-weight:bold; margin-left:5px;">[CONFINED TO QUARTERS]</span>` : ''}
+                                <div class="crew-tags">${c.tags.filter(t => t !== 'SEDATED' && t !== 'CONFINED').join(' ')}${c.trait ? ` <span style="color:#d85a4e;">[${c.trait}]</span>` : ''}
+                                    ${isSedated ? `<span style="color:#c4d0c4; font-weight:bold; margin-left:5px;">[SEDATED - ${c._sedatedUntilWarp || '?'} warps]</span>` : ''}
+                                    ${isConfined ? `<span style="color:#e07a70; font-weight:bold; margin-left:5px;">[CONFINED TO QUARTERS]</span>` : ''}
                                     ${showRest ? `<button class="rest-btn" data-idx="${idx}" style="
                                         margin-left: 10px; padding: 2px 8px; font-size: 0.8em;
                                         background: ${restDisabled ? '#333' : 'rgba(0,100,50,0.8)'};
-                                        color: ${restDisabled ? '#666' : '#00ff88'};
-                                        border: 1px solid ${restDisabled ? '#555' : '#00ff88'};
+                                        color: ${restDisabled ? '#666' : '#74d99a'};
+                                        border: 1px solid ${restDisabled ? '#555' : '#74d99a'};
                                         cursor: ${restDisabled ? 'not-allowed' : 'pointer'};
                                         font-family: var(--font-mono);
                                     " ${restDisabled ? 'disabled' : ''}>REST (-1 RATION, -1 STRESS)</button>` : ''}
@@ -5076,7 +5076,7 @@ You are home.`
                     `;
         }).join('')}
                 </div>
-                ${!quartersOk ? '<div style="color:#ff4444;font-size:0.8em;text-align:center;padding:10px;">CREW QUARTERS OFFLINE — Rest unavailable</div>' : ''}
+                ${!quartersOk ? '<div style="color:#d85a4e;font-size:0.8em;text-align:center;padding:10px;">CREW QUARTERS OFFLINE — Rest unavailable</div>' : ''}
             </div>
         `;
         document.body.appendChild(modal);
@@ -5175,18 +5175,18 @@ You are home.`
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff00ff;">
-                <div class="modal-header" style="color: #ff00ff;">/// REANIMATION PROTOCOL /// <span class="close-modal">[X]</span></div>
+            <div class="modal-content" style="border-color: #d9a24a;">
+                <div class="modal-header" style="color: #d9a24a;">/// REANIMATION PROTOCOL /// <span class="close-modal">[X]</span></div>
                 <div style="padding: 20px; text-align: center;">
                     <p>Select subject for integration with ${item.name}.</p>
-                    <p style="color: #ff0000; font-size: 0.8em; margin-top: 10px;">
+                    <p style="color: #d85a4e; font-size: 0.8em; margin-top: 10px;">
                         WARNING: PROCESS IS IRREVERSIBLE.<br>
                         Neural patterns will be reconstructed but altered. The entity returned may retain skills but lose self-identity.
                     </p>
                 </div>
                 <div class="crew-list">
                     ${deadCrew.map((c, idx) => `
-                        <div class="crew-card status-dead clickable-revive" data-id="${c.id}" style="cursor: pointer; border: 1px solid #ff00ff;">
+                        <div class="crew-card status-dead clickable-revive" data-id="${c.id}" style="cursor: pointer; border: 1px solid #d9a24a;">
                             <div class="crew-icon">💀</div>
                             <div class="crew-details">
                                 <div class="crew-name">${c.realName}</div>
@@ -5269,7 +5269,7 @@ You are home.`
         }
 
         // Color code valid vs failed colonies
-        const color = outcome.success ? '#00ff00' : '#ff4444';
+        const color = outcome.success ? '#00ff00' : '#d85a4e';
         const survivors = this.state.crew.filter(c => c.status !== 'DEAD');
         const totalCrew = this.state.crew.length;
         const avgStress = survivors.length > 0 ? (survivors.reduce((a, c) => a + (c.stress || 0), 0) / survivors.length).toFixed(1) : 0;
@@ -5284,15 +5284,15 @@ You are home.`
         // Rating calculation - knowledge matters more!
         // Survivors are crucial, but knowledge from exploring determines long-term survival
         let rating = 'C';
-        let ratingColor = '#ffaa00';
+        let ratingColor = '#d9a24a';
         const score = (survivors.length * 15) + (colonyKnowledge * 8) + (techLevel * 5) - (avgStress * 10);
         if (outcome.success) {
-            if (score >= 120) { rating = 'S'; ratingColor = '#ffcc00'; }
+            if (score >= 120) { rating = 'S'; ratingColor = '#d9a24a'; }
             else if (score >= 90) { rating = 'A'; ratingColor = '#00ff00'; }
-            else if (score >= 60) { rating = 'B'; ratingColor = '#88ff88'; }
-            else { rating = 'C'; ratingColor = '#ffaa00'; }
+            else if (score >= 60) { rating = 'B'; ratingColor = '#9bf0bd'; }
+            else { rating = 'C'; ratingColor = '#d9a24a'; }
         } else {
-            rating = 'F'; ratingColor = '#ff4444';
+            rating = 'F'; ratingColor = '#d85a4e';
         }
 
         const overlay = document.createElement('div');
@@ -5313,11 +5313,11 @@ You are home.`
                     </div>
                     <div style="background: #000; padding: 12px; text-align: center;">
                         <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">AVG STRESS</div>
-                        <div style="font-size: 1.8em; font-weight: bold; color: ${avgStress <= 1 ? '#88ff88' : avgStress <= 2 ? '#ffaa00' : '#ff4444'};">${avgStress}</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: ${avgStress <= 1 ? '#9bf0bd' : avgStress <= 2 ? '#d9a24a' : '#d85a4e'};">${avgStress}</div>
                     </div>
                     <div style="background: #000; padding: 12px; text-align: center;">
                         <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">KNOWLEDGE</div>
-                        <div style="font-size: 1.8em; font-weight: bold; color: ${colonyKnowledge >= 5 ? '#00ffcc' : colonyKnowledge >= 2 ? '#88ccff' : '#cccccc'};">${colonyKnowledge}</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: ${colonyKnowledge >= 5 ? '#00ffcc' : colonyKnowledge >= 2 ? '#9bf0bd' : '#cccccc'};">${colonyKnowledge}</div>
                     </div>
                     <div style="background: #000; padding: 12px; text-align: center;">
                         <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">COLONY RATING</div>
@@ -5341,15 +5341,15 @@ You are home.`
                     </div>
                     <div style="background: #000; padding: 10px; text-align: center;">
                         <div style="font-size: 0.65em; color: ${color}66;">LIFE</div>
-                        <div style="font-size: 1.1em; color: ${planet.metrics?.hasLife ? '#00ff66' : '#666'};">${planet.metrics?.hasLife ? 'YES' : 'NO'}</div>
+                        <div style="font-size: 1.1em; color: ${planet.metrics?.hasLife ? '#74d99a' : '#666'};">${planet.metrics?.hasLife ? 'YES' : 'NO'}</div>
                     </div>
                     <div style="background: #000; padding: 10px; text-align: center;">
                         <div style="font-size: 0.65em; color: ${color}66;">VIABILITY</div>
                         <div style="font-size: 0.9em; color: ${
                             EndingSystem.getPlanetViability(planet, this.state) === 'EXCELLENT' ? '#00ff00' :
-                            EndingSystem.getPlanetViability(planet, this.state) === 'GOOD' ? '#88ff88' :
-                            EndingSystem.getPlanetViability(planet, this.state) === 'MARGINAL' ? '#ffaa00' :
-                            '#ff4444'
+                            EndingSystem.getPlanetViability(planet, this.state) === 'GOOD' ? '#9bf0bd' :
+                            EndingSystem.getPlanetViability(planet, this.state) === 'MARGINAL' ? '#d9a24a' :
+                            '#d85a4e'
                         };">${EndingSystem.getPlanetViability(planet, this.state)}</div>
                     </div>
                 </div>
@@ -5447,7 +5447,7 @@ You are home.`
             repairCost = Math.floor(repairCost * 1.5);
         }
 
-        const statusColor = deck.status === 'OPERATIONAL' ? 'var(--color-primary)' : '#ff4444';
+        const statusColor = deck.status === 'OPERATIONAL' ? 'var(--color-primary)' : '#d85a4e';
         const canRepair = deck.status === 'DAMAGED' && this.state.salvage >= repairCost;
 
         const modal = document.createElement('div');
@@ -5619,7 +5619,7 @@ You are home.`
                 // Update sector display for wrong place
                 if (sectorNameEl) {
                     sectorNameEl.textContent = '/// SECTOR ???: THE WRONG PLACE';
-                    sectorNameEl.style.color = '#ff4444';
+                    sectorNameEl.style.color = '#d85a4e';
                     sectorNameEl.style.animation = 'pulse 1s infinite';
                 }
             } else if (type === 'FOLD_SUCCESS') {
@@ -5630,7 +5630,7 @@ You are home.`
                         4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD'
                     };
                     sectorNameEl.textContent = `/// SECTOR ${this.state.currentSector}: ${SECTOR_NAMES[this.state.currentSector] || 'UNKNOWN'}`;
-                    sectorNameEl.style.color = '#00ffff';
+                    sectorNameEl.style.color = '#9bf0bd';
                     sectorNameEl.style.animation = 'none';
                     // Flash cyan then return to normal
                     setTimeout(() => {
@@ -5664,7 +5664,7 @@ You are home.`
                 const cause = c._deathCause || 'unknown causes';
                 const planet = c._deathPlanet || 'deep space';
                 return `<div style="margin: 5px 0; font-size: 0.85em;">
-                    <span style="color: #ff6666;">${c.realName || c.name}</span>
+                    <span style="color: #e07a70;">${c.realName || c.name}</span>
                     <span style="color: #884444;"> - ${cause} at ${planet}</span>
                 </div>`;
             }).join('');
@@ -5673,13 +5673,13 @@ You are home.`
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000; color: #ff4444; z-index: 10000;
+            background: #000; color: #d85a4e; z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             font-family: 'Share Tech Mono', monospace;
         `;
         overlay.innerHTML = `
-            <div style="width: 700px; max-width: 90vw; border: 2px solid #ff4444; padding: 2px;">
-                <div style="background: #ff4444; color: #000; padding: 5px 10px; font-weight: bold; display: flex; justify-content: space-between;">
+            <div style="width: 700px; max-width: 90vw; border: 2px solid #d85a4e; padding: 2px;">
+                <div style="background: #d85a4e; color: #000; padding: 5px 10px; font-weight: bold; display: flex; justify-content: space-between;">
                     <span>/// MISSION FAILED</span>
                     <span>${detail.title}</span>
                 </div>
@@ -5687,23 +5687,23 @@ You are home.`
                     ${detail.message}
                 </div>
                 ${crewMemorial ? `
-                <div style="border-top: 1px solid #ff4444; padding: 15px; text-align: center;">
+                <div style="border-top: 1px solid #d85a4e; padding: 15px; text-align: center;">
                     <div style="color: #ff444488; font-size: 0.75em; margin-bottom: 10px;">/// IN MEMORIAM ///</div>
                     ${crewMemorial}
                 </div>
                 ` : ''}
-                <div style="border-top: 1px solid #ff4444; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.8em; color: #ff444488;">
-                    <div>SECTOR REACHED: <span style="color: #ff6666;">${this.state.currentSector}</span></div>
-                    <div>PLANETS EXPLORED: <span style="color: #ff6666;">${planetsVisited}</span></div>
-                    <div>CREW LOST: <span style="color: #ff6666;">${deadCrew.length} / 5</span></div>
-                    <div>SALVAGE COLLECTED: <span style="color: #ff6666;">${this.state.salvage}</span></div>
-                    <div>EXODUS LOGS: <span style="color: #ff6666;">${exodusLogsFound} / 8</span></div>
-                    <div>RATIONS REMAINING: <span style="color: #ff6666;">${this.state.rations}</span></div>
+                <div style="border-top: 1px solid #d85a4e; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.8em; color: #ff444488;">
+                    <div>SECTOR REACHED: <span style="color: #e07a70;">${this.state.currentSector}</span></div>
+                    <div>PLANETS EXPLORED: <span style="color: #e07a70;">${planetsVisited}</span></div>
+                    <div>CREW LOST: <span style="color: #e07a70;">${deadCrew.length} / 5</span></div>
+                    <div>SALVAGE COLLECTED: <span style="color: #e07a70;">${this.state.salvage}</span></div>
+                    <div>EXODUS LOGS: <span style="color: #e07a70;">${exodusLogsFound} / 8</span></div>
+                    <div>RATIONS REMAINING: <span style="color: #e07a70;">${this.state.rations}</span></div>
                 </div>
             </div>
             <button id="btn-restart" style="
                 margin-top: 30px; padding: 15px 30px; background: transparent;
-                border: 1px solid #ff4444; color: #ff4444; font-size: 1em;
+                border: 1px solid #d85a4e; color: #d85a4e; font-size: 1em;
                 cursor: pointer; font-family: inherit;
             ">REBOOT SIMULATION</button>
         `;
@@ -5722,10 +5722,10 @@ You are home.`
         modal.className = 'modal-overlay';
         modal.style.zIndex = '3000';
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff4444; max-width: 550px;">
-                <div class="modal-header" style="background: #ff4444; color: #000;">/// MUTINY ///</div>
+            <div class="modal-content" style="border-color: #d85a4e; max-width: 550px;">
+                <div class="modal-header" style="background: #d85a4e; color: #000;">/// MUTINY ///</div>
                 <div style="padding: 20px; text-align: center;">
-                    <p style="margin-bottom: 15px; color: #ff6666; font-style: italic;">
+                    <p style="margin-bottom: 15px; color: #e07a70; font-style: italic;">
                         "${vance.name} has drawn his sidearm. He demands ${commander.name} step down."
                     </p>
                     <p style="margin-bottom: 20px; font-size: 0.9em; color: var(--color-text-dim);">
@@ -5741,8 +5741,8 @@ You are home.`
                             <div style="font-size: 0.7em; margin-top: 5px; color: var(--color-text-dim);">Vance will be restrained</div>
                         </button>
                         <button class="mutiny-choice" data-choice="side" style="
-                            flex: 1; padding: 15px; border: 1px solid #ff4444;
-                            background: rgba(40,0,0,0.8); color: #ff4444;
+                            flex: 1; padding: 15px; border: 1px solid #d85a4e;
+                            background: rgba(40,0,0,0.8); color: #d85a4e;
                             cursor: pointer; font-family: var(--font-mono);
                         ">
                             <div>SIDE WITH VANCE</div>
@@ -5950,7 +5950,7 @@ You are home.`
         const dialogueHtml = dialogue.map(d => {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
             };
             const color = colors[d.speaker] || '#ffffff';
             return `<div style="margin-bottom: 10px;">

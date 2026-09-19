@@ -177,7 +177,7 @@ class NavView {
                     if (rightPanel) {
                         rightPanel.innerHTML = `
                             <div style="display:flex; align-items:center; justify-content:center; height:100%; flex-direction:column; opacity:0.5;">
-                                <div style="font-size:1.2em; color:#ff4444; margin-bottom:10px;">⚠ SIGNAL INTERFERENCE</div>
+                                <div style="font-size:1.2em; color:#d85a4e; margin-bottom:10px;">⚠ SIGNAL INTERFERENCE</div>
                                 <div style="color:var(--color-text-dim); font-size:0.85em;">Phantom reading dissolved. Sensor recalibrating...</div>
                             </div>
                         `;
@@ -192,8 +192,8 @@ class NavView {
 
     getPlanetColor(type) {
         if (type === 'ROCKY') return '#b0b0b0';
-        if (type === 'GAS_GIANT') return '#ffcc00';
-        if (type === 'ICE_WORLD') return '#00ffff';
+        if (type === 'GAS_GIANT') return '#d9a24a';
+        if (type === 'ICE_WORLD') return '#9bf0bd';
         if (type === 'OCEANIC') return '#0066ff';
         if (type === 'DESERT') return '#ff9933';
         if (type === 'VOLCANIC') return '#ff3300';
@@ -201,7 +201,7 @@ class NavView {
         if (type === 'VITAL') return '#33ff33';
 
         // Unique Types
-        if (type === 'BIO_MASS') return '#ff00ff';     // Magenta
+        if (type === 'BIO_MASS') return '#d9a24a';     // Magenta
         if (type === 'MECHA') return '#c0c0c0';        // Silver
         if (type === 'SHATTERED') return '#cc0000';    // Deep Red
         if (type === 'TERRAFORMED') return '#00ffcc';  // Teal
@@ -209,17 +209,17 @@ class NavView {
         if (type === 'ROGUE') return '#330066';        // Dark Indigo
         if (type === 'TIDALLY_LOCKED') return '#ff8844'; // Fire/Ice blend
         if (type === 'HOLLOW') return '#ffcc33';         // Inner sun gold
-        if (type === 'SYMBIOTE_WORLD') return '#00ff66'; // Bioluminescent green
+        if (type === 'SYMBIOTE_WORLD') return '#74d99a'; // Bioluminescent green
         if (type === 'MIRROR') return '#e0e0e0';         // Chrome silver
         if (type === 'GRAVEYARD') return '#888888';       // Dead metal grey
         if (type === 'SINGING') return '#6699ff';         // Harmonic blue
 
         // New planet types
-        if (type === 'STORM_WORLD') return '#6688aa';     // Stormy blue-grey
+        if (type === 'STORM_WORLD') return '#c4d0c4';     // Stormy blue-grey
         if (type === 'FUNGAL') return '#88cc88';          // Bioluminescent green
         if (type === 'TOMB_WORLD') return '#886644';      // Dead brown
         if (type === 'EDEN') return '#44ff44';            // Bright paradise green
-        if (type === 'MACHINE_WORLD') return '#6688aa';   // Industrial blue
+        if (type === 'MACHINE_WORLD') return '#c4d0c4';   // Industrial blue
         if (type === 'FROZEN_OCEAN') return '#aaddff';    // Ice blue
         if (type === 'SULFUR') return '#cccc44';          // Yellow sulfur
         if (type === 'CARBON') return '#444444';          // Dark graphite
@@ -435,23 +435,23 @@ class NavView {
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #440088; padding: 4px 0;">
                         <span style="color: #8844ff;">TYPE</span>
-                        <span style="color: #ff4444;">UNKNOWN</span>
+                        <span style="color: #d85a4e;">UNKNOWN</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #440088; padding: 4px 0;">
                         <span style="color: #8844ff;">ORIGIN</span>
-                        <span style="color: #ff4444;">UNKNOWN</span>
+                        <span style="color: #d85a4e;">UNKNOWN</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #440088; padding: 4px 0;">
                         <span style="color: #8844ff;">AGE</span>
-                        <span style="color: #ff4444;">BEFORE TIME</span>
+                        <span style="color: #d85a4e;">BEFORE TIME</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #440088; padding: 4px 0;">
                         <span style="color: #8844ff;">THREAT LEVEL</span>
                         <span style="color: #ffffff; font-weight: bold; animation: pulse 1.5s infinite;">???</span>
                     </div>
-                    <div style="margin-top: 10px; padding: 10px; border: 1px solid #ff4444; background: rgba(255,0,0,0.1);">
-                        <div style="color: #ff4444; font-weight: bold; font-size: 0.8em;">⚠ A.U.R.A. ADVISORY</div>
-                        <div style="color: #ff6666; font-size: 0.75em; margin-top: 5px;">
+                    <div style="margin-top: 10px; padding: 10px; border: 1px solid #d85a4e; background: rgba(255,0,0,0.1);">
+                        <div style="color: #d85a4e; font-weight: bold; font-size: 0.8em;">⚠ A.U.R.A. ADVISORY</div>
+                        <div style="color: #e07a70; font-size: 0.75em; margin-top: 5px;">
                             "Commander, I cannot model what will happen if we approach. All predictive algorithms return null. Proceed with... I do not know."
                         </div>
                     </div>

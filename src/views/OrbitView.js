@@ -202,22 +202,22 @@ class OrbitView {
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
                             <div style="color: var(--color-text-dim);">MASS</div>
-                            <div style="color: #ff4444; text-align: right;">ERROR: OVERFLOW</div>
+                            <div style="color: #d85a4e; text-align: right;">ERROR: OVERFLOW</div>
 
                             <div style="color: var(--color-text-dim);">DIMENSIONS</div>
-                            <div style="color: #ff4444; text-align: right;">NON-EUCLIDEAN</div>
+                            <div style="color: #d85a4e; text-align: right;">NON-EUCLIDEAN</div>
 
                             <div style="color: var(--color-text-dim);">TEMPERATURE</div>
-                            <div style="color: #ff4444; text-align: right;">UNDEFINED</div>
+                            <div style="color: #d85a4e; text-align: right;">UNDEFINED</div>
 
                             <div style="color: var(--color-text-dim);">ENERGY OUTPUT</div>
-                            <div style="color: #ff4444; text-align: right;">∞</div>
+                            <div style="color: #d85a4e; text-align: right;">∞</div>
 
                             <div style="color: var(--color-text-dim);">ORIGIN</div>
-                            <div style="color: #ff4444; text-align: right;">UNKNOWN</div>
+                            <div style="color: #d85a4e; text-align: right;">UNKNOWN</div>
 
                             <div style="color: var(--color-text-dim);">AGE</div>
-                            <div style="color: #ff4444; text-align: right;">BEFORE TIME</div>
+                            <div style="color: #d85a4e; text-align: right;">BEFORE TIME</div>
                         </div>
 
                         <div style="margin-top: 20px; padding: 15px; border: 1px solid #440088; background: rgba(68,0,136,0.2);">
@@ -226,9 +226,9 @@ class OrbitView {
                             </div>
                         </div>
 
-                        <div style="margin-top: auto; padding: 15px; border: 2px solid #ff4444; background: rgba(255,0,0,0.1);">
-                            <div style="color: #ff4444; font-weight: bold; font-size: 0.85em;">⚠ A.U.R.A. WARNING</div>
-                            <div style="color: #ff6666; opacity: 0.9; font-size: 0.8em; margin-top: 5px;">
+                        <div style="margin-top: auto; padding: 15px; border: 2px solid #d85a4e; background: rgba(255,0,0,0.1);">
+                            <div style="color: #d85a4e; font-weight: bold; font-size: 0.85em;">⚠ A.U.R.A. WARNING</div>
+                            <div style="color: #e07a70; opacity: 0.9; font-size: 0.8em; margin-top: 5px;">
                                 "I cannot predict what will happen if we approach. My models break down. The decision must be yours, Commander."
                             </div>
                         </div>
@@ -402,13 +402,13 @@ class OrbitView {
         switch (type) {
             case 'ROCKY': return '#8B4513';
             case 'GAS_GIANT': return '#DEB887';
-            case 'ICE_WORLD': return '#00FFFF';
+            case 'ICE_WORLD': return '#9bf0bd';
             case 'OCEANIC': return '#0000FF';
-            case 'DESERT': return '#FFA500';
+            case 'DESERT': return '#d9a24a';
             case 'VOLCANIC': return '#FF4500';
             case 'TOXIC': return '#32CD32';
             case 'VITAL': return '#228B22';
-            case 'BIO_MASS': return '#FF00FF';
+            case 'BIO_MASS': return '#d9a24a';
             case 'MECHA': return '#C0C0C0';
             case 'SHATTERED': return '#CC0000';
             case 'TERRAFORMED': return '#00FFCC';
@@ -416,16 +416,16 @@ class OrbitView {
             case 'ROGUE': return '#330066';
             case 'TIDALLY_LOCKED': return '#FF8844';
             case 'HOLLOW': return '#FFCC33';
-            case 'SYMBIOTE_WORLD': return '#00FF66';
+            case 'SYMBIOTE_WORLD': return '#74d99a';
             case 'MIRROR': return '#E0E0E0';
             case 'GRAVEYARD': return '#888888';
             case 'SINGING': return '#6699FF';
             // New planet types
-            case 'STORM_WORLD': return '#6688AA';
+            case 'STORM_WORLD': return '#c4d0c4';
             case 'FUNGAL': return '#88CC88';
             case 'TOMB_WORLD': return '#886644';
             case 'EDEN': return '#44FF44';
-            case 'MACHINE_WORLD': return '#6688AA';
+            case 'MACHINE_WORLD': return '#c4d0c4';
             case 'FROZEN_OCEAN': return '#AADDFF';
             case 'SULFUR': return '#CCCC44';
             case 'CARBON': return '#444444';
@@ -595,15 +595,15 @@ class OrbitView {
                 }
 
                 ${planet._isWrongPlace
-                    ? `<div style="margin-top: 20px; border-top: 1px dashed #ff4444; padding-top: 15px;">
-                        <div style="color: #ff4444; font-size: 0.9em; margin-bottom: 10px; text-align: center;">
+                    ? `<div style="margin-top: 20px; border-top: 1px dashed #d85a4e; padding-top: 15px;">
+                        <div style="color: #d85a4e; font-size: 0.9em; margin-bottom: 10px; text-align: center;">
                             /// THE WRONG PLACE ///
                         </div>
-                        <button class="cmd-btn" id="btn-wrong-escape" style="border-color: #ffaa00; color: #ffaa00; margin-bottom: 8px;">
+                        <button class="cmd-btn" id="btn-wrong-escape" style="border-color: #d9a24a; color: #d9a24a; margin-bottom: 8px;">
                             <div>FIGHT TO ESCAPE</div>
                             <div class="cost">TEAR THROUGH REALITY</div>
                         </button>
-                        <button class="cmd-btn" id="btn-wrong-accept" style="border-color: #ff4444; color: #ff4444;">
+                        <button class="cmd-btn" id="btn-wrong-accept" style="border-color: #d85a4e; color: #d85a4e;">
                             <div>ACCEPT YOUR FATE</div>
                             <div class="cost">BECOME PART OF THIS PLACE</div>
                         </button>
