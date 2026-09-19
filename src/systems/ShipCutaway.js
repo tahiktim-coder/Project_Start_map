@@ -56,6 +56,7 @@
             w, h, rooms, rowRoom, cx: w / 2, maxHalf: w / 2 - 5, img: ctx.createImageData(w, h),
             gray: new Float32Array(w * h), acc: new Float32Array(w * h), mask: new Uint8Array(w * h),
         };
+        paint(performance.now()); // draw at once: the shared clock is rAF-driven and sleeps in a background tab
     }
 
     // half-width of the hull at row y: rounded nose over the bridge, slight taper at the stern
@@ -271,8 +272,17 @@
         ctx.putImageData(v.img, 0, 0);
     }
 
+    // Re-measure whenever the hull's box changes (first layout can report 0×0, e.g. in an embedded or hidden tab)
     let resizeTimer = 0;
-    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(measure, 150); });
+    const remeasureSoon = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(measure, 150); };
+    window.addEventListener('resize', remeasureSoon);
+    if (window.ResizeObserver) new ResizeObserver(remeasureSoon).observe(hull);
+    // Safety net for environments where neither fires (background tabs pause rendering callbacks)
+    const SIZE_CHECK_MS = 1000;
+    setInterval(() => {
+        const w = Math.floor(hull.clientWidth / PX), h = Math.floor(hull.clientHeight / PX);
+        if (!view || view.w !== w || view.h !== h) measure();
+    }, SIZE_CHECK_MS);
     if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) setInterval(() => paint(0), 1000);
     else Core.onTick(paint);
     requestAnimationFrame(measure); // after first layout, so deck offsets are real

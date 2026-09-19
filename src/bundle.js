@@ -241,6 +241,8 @@ class GameState {
             cargo: this.cargo,
             upgrades: this.upgrades,
             // A.U.R.A. (lives in its own singleton, so it has to be copied in by hand)
+            stopsLeft: this.stopsLeft,
+            stopsSector: this._stopsSector,
             aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
             // Navigation
             currentSector: this.currentSector,
@@ -303,6 +305,8 @@ class GameState {
             // Cargo & Upgrades
             this.cargo = saveData.cargo || [];
             this.upgrades = saveData.upgrades || [];
+            this.stopsLeft = saveData.stopsLeft;
+            this._stopsSector = saveData.stopsSector;
             if (saveData.aura && window.AuraSystem) {
                 window.AuraSystem.ethicsScore = saveData.aura.ethicsScore || 0;
                 window.AuraSystem.warningCount = saveData.aura.warningCount || 0;
@@ -649,6 +653,19 @@ class GameState {
     /**
      * Check if a specific deck is operational.
      */
+    /**
+     * Stops left in this sector. The jump window only stays open for a few warps, always fewer than
+     * there are places to see, so choosing one stop means giving up another. Resets on a new sector.
+     */
+    getStopsLeft() {
+        if (this._stopsSector !== this.currentSector || this.stopsLeft == null) {
+            const places = (this.sectorNodes || []).filter(n => !n.ghost).length;
+            this.stopsLeft = Math.max(MIN_STOPS_PER_SECTOR, Math.min(MAX_STOPS_PER_SECTOR, places - 1));
+            this._stopsSector = this.currentSector;
+        }
+        return this.stopsLeft;
+    }
+
     isDeckOperational(deckKey) {
         const deck = this.shipDecks[deckKey];
         return !!deck && deck.status === 'OPERATIONAL' && !deck._auraLocked; // a deck A.U.R.A. has locked is as useless as a broken one
@@ -810,6 +827,7 @@ const SECTOR_ARRIVAL_LINES = {
     5: 'The first crews made it this far. Three hundred years ago.',
     6: 'Nothing human is older than what is waiting here.',
 };
+const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getStopsLeft
 const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
 const FINAL_SECTOR = 6; // THE THRESHOLD — holds THE STRUCTURE; SECTOR_CONFIG defines nothing beyond it
 
@@ -1265,6 +1283,12 @@ class App {
             this.state.addLog("Orbit re-entry trajectory calculated. Energy cost negligible.");
         }
 
+        // Out of stops: the window has closed on everything except where you already are
+        if (cost > 0 && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
+            this.state.addLog("A.U.R.A.: \"The jump window is closing. We have no time for another stop in this sector.\"");
+            return;
+        }
+
         // Course plot: the player flies the burn, then we re-enter here with the result.
         // Skipped for free re-entries, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
         if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost) {
@@ -1283,6 +1307,7 @@ class App {
 
         if (this.state.consumeEnergy(cost)) {
             this._isInTransit = true;
+            if (cost > 0 && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
             this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 

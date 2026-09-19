@@ -78,6 +78,12 @@ class NavView {
             <div style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
                 <div style="display: flex; justify-content: space-between; align-items: end; border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; margin-bottom: 20px;">
                     <h2 style="color: var(--color-primary); margin:0;">/// SECTOR NAVIGATION MAP</h2>
+                    <div class="stops-left" title="The jump window only stays open for a few stops. You cannot see everything.">
+                        <span>STOPS LEFT</span>${(() => {
+                            const left = this.state && this.state.getStopsLeft ? this.state.getStopsLeft() : 0;
+                            return Array.from({ length: 3 }, (_, i) => `<i class="${i < left ? 'is-on' : ''}"></i>`).join('');
+                        })()}
+                    </div>
                     <button id="jump-sector-btn" ${isFinalSector ? 'disabled' : ''} style="${isFinalSector ? 'opacity: 0.45; cursor: not-allowed; ' : ''}background: rgba(116,217,154,0.08); border: 1px solid var(--green); color: var(--green-br); padding: 6px 16px; cursor: pointer; font-family: var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.85em; text-shadow: var(--glow);">
                         ${isFinalSector ? 'END OF THE CORRIDOR' : `>> JUMP SECTOR (-${jumpCost} ENERGY)${jumpCostNote}`}
                     </button>
@@ -394,9 +400,13 @@ class NavView {
                             🛰️ LAUNCH PROBE (REMOTE)
                         </button>
                     ` : ''}
+                    ${(actualCost > 0 && !window.TEST_MODE && this.state.getStopsLeft && this.state.getStopsLeft() <= 0) ? `
+                    <button class="warp-btn" disabled style="width: 100%; padding: 12px; background: transparent; color: var(--dim); border: 1px dashed var(--line2); font-weight: bold; font-family: var(--font-display); cursor: not-allowed; text-transform: uppercase; font-size: 0.85em;">
+                        OUT OF REACH — NO STOPS LEFT
+                    </button>` : `
                     <button class="warp-btn" style="width: 100%; padding: 12px; background: var(--color-primary); color: #000; border: none; font-weight: bold; font-family: var(--font-display); cursor: pointer; text-transform: uppercase; font-size: 0.9em;">
-                        ${planet.id === this.state.currentSystem?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG)`}
-                    </button>
+                        ${planet.id === this.state.currentSystem?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
+                    </button>`}
                 </div>
             </div>
         `;
