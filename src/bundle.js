@@ -42,30 +42,17 @@ function testChance(chance, context = '') {
 // --- 1. DATA & GENERATORS ---
 
 class CrewGenerator {
-    // Commander gets a random name; the rest are fixed characters
-    static COMMANDER_FIRST = [
-        "Jace", "Lyra", "Kael", "Oren", "Zara", "Thorn", "Elara", "Nia",
-        "Rian", "Cora", "Sola", "Kian", "Eris", "Dax", "Luna", "Torin"
-    ];
-    static COMMANDER_LAST = [
-        "Ryder", "Stark", "Chen", "Novak", "Price", "Solos", "Thorne", "Cross",
-        "Moon", "Strider", "Frey", "Wong", "Sato", "Khan", "Webb", "Mercer"
-    ];
-
+    // All five are authored characters — the same people every run, so the player can get to know them.
     static generateCrew() {
-        const first = this.COMMANDER_FIRST[Math.floor(Math.random() * this.COMMANDER_FIRST.length)];
-        const last = this.COMMANDER_LAST[Math.floor(Math.random() * this.COMMANDER_LAST.length)];
-        const cmdrGender = Math.random() > 0.5 ? 'M' : 'F';
-
         return [
-            // Commander — random name
+            // Commander Cora Moon — the player's seat
             {
                 id: Date.now() + Math.random(),
-                name: `Cmdr. ${last}`,
-                realName: `${first} ${last}`,
-                gender: cmdrGender,
-                age: Math.floor(Math.random() * 15) + 35,
-                portraitId: `${cmdrGender}_1`,
+                name: 'Cmdr. Moon',
+                realName: 'Cora Moon',
+                gender: 'F',
+                age: 36,
+                portraitId: 'F_1',
                 status: 'HEALTHY',
                 stress: 0,
                 trait: null,
@@ -468,7 +455,7 @@ class GameState {
         }
 
         // Passive injury healing: INJURED crew recover after 3 actions if quarters operational
-        // CATATONIC crew cannot heal passively
+        // CATATONIC crew cannot heal passively but recover from catatonia after 5 actions
         if (this.shipDecks.quarters.status === 'OPERATIONAL') {
             this.crew.forEach(c => {
                 if (c.status === 'INJURED' && c.trait !== 'CATATONIC') {
@@ -477,6 +464,18 @@ class GameState {
                         c.status = 'HEALTHY';
                         c.healCounter = 0;
                         this.addLog(`${c.name} has recovered from injuries.`);
+                    }
+                }
+                // CATATONIC recovery: after 5 actions, crew member snaps out of it
+                if (c.trait === 'CATATONIC') {
+                    c.catatonicCounter = (c.catatonicCounter || 0) + 1;
+                    if (c.catatonicCounter >= 5) {
+                        c.trait = null;
+                        c.catatonicCounter = 0;
+                        c.stress = 2; // Still stressed but no longer broken
+                        c.breakdownFired = false; // Can have another breakdown if stress hits 3 again
+                        this.addLog(`${c.name} stirs. Her eyes focus again. "I... I'm sorry. I couldn't face it anymore."`);
+                        this.addLog(`${c.name} is no longer catatonic but remains INJURED and shaken.`);
                     }
                 }
             });
@@ -796,6 +795,9 @@ class GameState {
 
 // --- 4. MAIN APP ---
 
+const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
+const FINAL_SECTOR = 6; // THE THRESHOLD — holds THE STRUCTURE; SECTOR_CONFIG defines nothing beyond it
+
 class App {
     constructor() {
         this.state = GameState.getInstance();
@@ -805,6 +807,9 @@ class App {
         // Modal queue to prevent stacking
         this._modalQueue = [];
         this._modalActive = false;
+
+        // True while a warp or sector jump is playing out; blocks re-entrant travel requests
+        this._isInTransit = false;
 
         // Show start menu first
         this.showStartMenu();
@@ -833,9 +838,9 @@ class App {
         overlay.id = 'start-menu';
         overlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: linear-gradient(135deg, #000510 0%, #0a1020 50%, #000510 100%);
+            background: radial-gradient(130% 100% at 50% 0%, #11170f 0%, #0a0d0b 55%, #060806 100%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 10000; font-family: 'Share Tech Mono', monospace;
+            z-index: 10000; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
         `;
 
         overlay.innerHTML = `
@@ -852,14 +857,15 @@ class App {
 
                 <!-- Title -->
                 <div style="position: relative;">
-                    <div style="font-size: 0.9em; color: #446688; letter-spacing: 8px; margin-bottom: 10px;">
+                    <div style="font-size: 0.9em; color: #5f9e7a; letter-spacing: 8px; margin-bottom: 10px;">
                         EXODUS PROGRAM // VESSEL 9
                     </div>
-                    <div style="font-size: 4em; font-weight: bold; color: #ffffff; letter-spacing: 12px;
-                        text-shadow: 0 0 30px rgba(100, 150, 255, 0.5), 0 0 60px rgba(50, 100, 200, 0.3);">
+                    <div style="font-size: 4em; font-weight: bold; color: #f4f1ea; letter-spacing: 12px;
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        text-shadow: 0 0 26px rgba(116, 217, 154, 0.45), 0 0 60px rgba(116, 217, 154, 0.20);">
                         SILENT EXODUS
                     </div>
-                    <div style="font-size: 1em; color: #668899; margin-top: 15px; letter-spacing: 4px;">
+                    <div style="font-size: 1em; color: #8a9d8f; margin-top: 15px; letter-spacing: 4px;">
                         THE LAST JOURNEY OF HUMANITY
                     </div>
                 </div>
@@ -869,21 +875,21 @@ class App {
                     ${hasSave ? `
                     <button id="btn-continue-game" style="
                         padding: 18px 60px;
-                        background: rgba(68, 136, 255, 0.15); border: 2px solid #4488ff;
-                        color: #4488ff; font-size: 1.2em; font-family: inherit;
+                        background: rgba(116, 217, 154, 0.10); border: 2px solid #74d99a;
+                        color: #74d99a; font-size: 1.2em; font-family: inherit;
                         cursor: pointer; letter-spacing: 4px;
                         transition: all 0.3s;
                     ">
                         CONTINUE
                     </button>
-                    <div style="font-size: 0.75em; color: #556677; margin-bottom: 10px;">
+                    <div style="font-size: 0.75em; color: #6f8a78; margin-bottom: 10px;">
                         Sector ${saveInfo.sector} • ${saveInfo.crew} crew alive
                     </div>
                     ` : ''}
                     <button id="btn-start-game" style="
                         padding: ${hasSave ? '12px 45px' : '18px 60px'};
-                        background: transparent; border: 2px solid ${hasSave ? '#668899' : '#4488ff'};
-                        color: ${hasSave ? '#668899' : '#4488ff'}; font-size: ${hasSave ? '1em' : '1.2em'}; font-family: inherit;
+                        background: transparent; border: 2px solid ${hasSave ? '#5f9e7a' : '#74d99a'};
+                        color: ${hasSave ? '#5f9e7a' : '#74d99a'}; font-size: ${hasSave ? '1em' : '1.2em'}; font-family: inherit;
                         cursor: pointer; letter-spacing: 4px;
                         transition: all 0.3s;
                     ">
@@ -892,12 +898,12 @@ class App {
                 </div>
 
                 <!-- Audio indicator -->
-                <div style="margin-top: 30px; font-size: 0.75em; color: #445566;">
+                <div style="margin-top: 30px; font-size: 0.75em; color: #556b5d;">
                     <span id="audio-status">♪ AUDIO: ${audioIsOn ? 'ON' : 'OFF'}</span>
                     <button id="btn-toggle-audio" style="
                         margin-left: 15px; padding: 5px 15px;
-                        background: transparent; border: 1px solid #334455;
-                        color: #556677; font-size: 0.9em; font-family: inherit;
+                        background: transparent; border: 1px solid #3a4a40;
+                        color: #6f8a78; font-size: 0.9em; font-family: inherit;
                         cursor: pointer;
                     ">TOGGLE</button>
                 </div>
@@ -905,7 +911,7 @@ class App {
             </div>
             <!-- Credits - outside fadeIn, fixed at bottom -->
             <div style="position: absolute; bottom: 30px; left: 0; right: 0; text-align: center;
-                font-size: 0.7em; color: #334455; letter-spacing: 2px;">
+                font-size: 0.7em; color: #3a4a40; letter-spacing: 2px;">
                 BUILT WITH AI ASSISTANCE // 2024
             </div>
         `;
@@ -913,16 +919,16 @@ class App {
         document.body.appendChild(overlay);
 
         // Button hover effects helper
-        const addHoverEffect = (btn, baseColor = '#4488ff') => {
+        const addHoverEffect = (btn, baseColor = '#74d99a') => {
             if (!btn) return;
             btn.onmouseenter = () => {
-                btn.style.background = 'rgba(68, 136, 255, 0.2)';
-                btn.style.borderColor = '#66aaff';
-                btn.style.color = '#88ccff';
+                btn.style.background = 'rgba(116, 217, 154, 0.18)';
+                btn.style.borderColor = '#9bf0bd';
+                btn.style.color = '#9bf0bd';
                 btn.style.transform = 'scale(1.05)';
             };
             btn.onmouseleave = () => {
-                btn.style.background = hasSave && btn.id === 'btn-start-game' ? 'transparent' : 'rgba(68, 136, 255, 0.15)';
+                btn.style.background = hasSave && btn.id === 'btn-start-game' ? 'transparent' : 'rgba(116, 217, 154, 0.10)';
                 btn.style.borderColor = baseColor;
                 btn.style.color = baseColor;
                 btn.style.transform = 'scale(1)';
@@ -932,8 +938,8 @@ class App {
         const startBtn = overlay.querySelector('#btn-start-game');
         const continueBtn = overlay.querySelector('#btn-continue-game');
 
-        addHoverEffect(startBtn, hasSave ? '#668899' : '#4488ff');
-        addHoverEffect(continueBtn, '#4488ff');
+        addHoverEffect(startBtn, hasSave ? '#5f9e7a' : '#74d99a');
+        addHoverEffect(continueBtn, '#74d99a');
 
         // New Game button
         startBtn.onclick = () => {
@@ -1001,8 +1007,15 @@ class App {
                 btnTesting.style.borderColor = window.TEST_MODE ? "#ff0000" : "#ff6600";
                 btnTesting.style.color = window.TEST_MODE ? "#ff0000" : "#ff6600";
                 this.state.addLog(window.TEST_MODE
-                    ? "/// TESTING MODE ENABLED /// All random events will favor rare outcomes."
+                    ? "/// TESTING MODE ENABLED /// Rare outcomes favoured. Energy is free. Salvage, rations and probe topped up so everything can be built and tried."
                     : "/// TESTING MODE DISABLED /// Normal probabilities restored.");
+                if (window.TEST_MODE) { // a tester should never be blocked by resources
+                    this.state.energy = 100;
+                    this.state.salvage = this.state.maxSalvage;
+                    this.state.rations = this.state.maxRations;
+                    this.state.probeIntegrity = 100;
+                    this.state.emitUpdates();
+                }
             };
         }
 
@@ -1028,6 +1041,18 @@ class App {
         window.addEventListener('req-action-asteroid', () => this.handleAsteroidAction());
         window.addEventListener('aura-vent-warning', () => this.showAuraVentModal());
         window.addEventListener('req-break-orbit', () => {
+            // THE STRUCTURE - Cannot escape. Ship mysteriously returns.
+            const currentPlanet = this.state.currentSystem;
+            if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
+                this.state.addLog("A.U.R.A.: 'Initiating orbital departure sequence...'");
+                this.state.addLog("...");
+                this.state.addLog("A.U.R.A.: 'Anomaly detected. Navigation systems report departure successful.'");
+                this.state.addLog("A.U.R.A.: 'However... we remain in orbit of THE STRUCTURE.'");
+                this.state.addLog("A.U.R.A.: 'I do not understand. The ship moved. The destination did not change.'");
+                this.state.addLog("A.U.R.A.: 'We cannot leave, Commander. THE STRUCTURE will not permit it.'");
+                // Ship stays in orbit - don't clear currentSystem
+                return;
+            }
             this.state.addLog("Breaking orbit. Systems disengaged.");
             this.renderNav();
         });
@@ -1042,7 +1067,8 @@ class App {
         // Ship deck click handlers
         document.querySelectorAll('.ship-deck').forEach(deckEl => {
             deckEl.style.cursor = 'pointer';
-            deckEl.addEventListener('click', () => {
+            deckEl.addEventListener('click', (e) => {
+                if (e.target.closest('.deck-crew-status')) return; // the crew dots have their own handler (manifest)
                 const room = deckEl.dataset.room;
                 this.showDeckDetail(room);
             });
@@ -1229,6 +1255,21 @@ class App {
     }
 
     handleWarp(planet) {
+        // The WARP button stays clickable for the 1s travel delay; a second click would charge
+        // energy/rations and roll every hazard twice.
+        if (this._isInTransit) return;
+        // THE STRUCTURE - Cannot warp away. You are bound here.
+        const currentPlanet = this.state.currentSystem;
+        if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
+            this.state.addLog("A.U.R.A.: 'Warp drive engaged...'");
+            this.state.addLog("...");
+            this.state.addLog("A.U.R.A.: 'Warp successful. Arriving at destination.'");
+            this.state.addLog("A.U.R.A.: '...We are still at THE STRUCTURE.'");
+            this.state.addLog("A.U.R.A.: 'Commander, I have run diagnostics. The drive functions correctly.'");
+            this.state.addLog("A.U.R.A.: 'Space itself is refusing to take us elsewhere. There is only one way forward.'");
+            return;
+        }
+
         // Free warp if returning to the last visited system (simulating orbit re-entry)
         let cost = planet.fuelCost;
         // Bridge damaged: +50% warp cost
@@ -1240,7 +1281,25 @@ class App {
             this.state.addLog("Orbit re-entry trajectory calculated. Energy cost negligible.");
         }
 
+        // Course plot: the player flies the burn, then we re-enter here with the result.
+        // Skipped for free re-entries, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
+        if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost && !window.TEST_MODE) {
+            this._isInTransit = true;
+            const plotOptions = this.getPlotOptions(planet.name, 'planet');
+            plotOptions.targetHtml = window.BodyRenderer ? window.BodyRenderer.body(planet, 64) : null;
+            window.WarpPlot.play(plotOptions).then(result => {
+                this._isInTransit = false;
+                this._plotResult = result;
+                this.handleWarp(planet);
+            });
+            return;
+        }
+        const plotResult = this._plotResult;
+        this._plotResult = null;
+
         if (this.state.consumeEnergy(cost)) {
+            this._isInTransit = true;
+            this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 
             // Tutorial: first warp
@@ -1392,9 +1451,18 @@ class App {
                     this.state.addLog(`Docking approach initiated. Station sensors detecting our arrival.`);
                 } else if (planet.isAsteroidField || planet.type === 'ASTEROID_FIELD') {
                     this.state.addLog(`Entered debris field. Navigation systems active.`);
+                } else if (planet.isStructure || planet.type === 'STRUCTURE') {
+                    // THE STRUCTURE - special arrival
+                    this.state.addLog(`Approach complete. THE STRUCTURE fills every viewport.`);
+                    this.state.addLog(`A.U.R.A.: 'We have arrived. There is nowhere else to go.'`);
+                    // Switch to Heaven music
+                    if (window.AudioSystem && window.AudioSystem.playHeavenMusic) {
+                        window.AudioSystem.playHeavenMusic();
+                    }
                 } else {
                     this.state.addLog(`Orbit established. Systems Green.`);
                 }
+                this._isInTransit = false;
                 this.renderOrbit();
 
                 // Auto-save after arriving at planet
@@ -1421,10 +1489,7 @@ class App {
      * Show station encounter modal when investigating a station
      */
     showStationEncounter(station) {
-        if (!station || station.stationInvestigated) {
-            this.state.addLog("Station already investigated.");
-            return;
-        }
+        if (!station) return; // re-entry is guarded in handleStationAction, which marks the station before calling this
 
         const encounters = (typeof SPACE_STATION_ENCOUNTERS !== 'undefined') ? SPACE_STATION_ENCOUNTERS : [];
         if (encounters.length === 0) {
@@ -1534,7 +1599,13 @@ class App {
         station.stationInvestigated = true;
         this.orbitView.updateCommandDeck(station);
 
-        // Show the station encounter
+        // Boarding walk first; the station's story encounter is the prize for reaching its command deck
+        if (window.BoardingParty) {
+            window.BoardingParty.start(this, station).then(result => {
+                if (result.reachedCommand) this.showStationEncounter(station);
+            });
+            return;
+        }
         this.showStationEncounter(station);
     }
 
@@ -1981,7 +2052,42 @@ class App {
         }
     }
 
+    /** What WarpPlot needs to set its difficulty and pick who reacts. */
+    getPlotOptions(targetName, mode) {
+        const commander = this.state.crew.find(c => c.tags.includes('LEADER'));
+        return {
+            targetName, mode,
+            sector: this.state.currentSector,
+            isBridgeDamaged: !this.state.isDeckOperational('bridge'),
+            pilotStress: commander ? commander.stress : 0,
+            crew: this.state.crew,
+            windowBonus: this.state.upgrades.includes('gyro_fins') ? 1.25 : 1,
+        };
+    }
+
+    /** Clean burns hand fuel back, bad ones burn extra; rough and A.U.R.A. plots change nothing. */
+    applyPlotResult(result, baseCost) {
+        if (!result || !window.WarpPlot) return;
+        let delta = window.WarpPlot.energyDelta(result.grade, baseCost);
+        if (delta < 0 && this.state.upgrades.includes('shield_core')) {
+            this.state.addLog("Bad burn — the shielded core soaked it up. No extra fuel lost.");
+            delta = 0;
+        }
+        if (delta === 0) {
+            if (result.auto) this.state.addLog("A.U.R.A. plotted the jump. Safe. Unremarkable.");
+            return;
+        }
+        this.state.energy = Math.max(0, Math.min(100, this.state.energy + delta));
+        this.state.addLog(delta > 0 ? `Clean burn: ${delta} energy recovered.` : `Bad burn: ${-delta} extra energy lost.`);
+        this.state.emitUpdates();
+    }
+
     handleSectorJump() {
+        if (this._isInTransit) return;
+        if (this.state.currentSector >= FINAL_SECTOR) {
+            this.state.addLog("A.U.R.A.: No charted space beyond this sector. The Structure is the end of the corridor.");
+            return;
+        }
         let jumpCost = 20;
         // Engineering damaged: sector jump cost doubled
         if (!this.state.isDeckOperational('engineering')) {
@@ -1995,6 +2101,7 @@ class App {
             this.state._driveReinforced = false; // Single use
         }
         if (this.state.consumeEnergy(jumpCost)) {
+            this._isInTransit = true;
             this.state.addLog("Initiating Sector Jump...");
 
             // Consume 1 ration (major action)
@@ -2031,6 +2138,7 @@ class App {
             // Show warp animation with crew dialogue, then campfire event
             this.showWarpAnimation(() => {
                 this.showCampfireEvent(() => {
+                this._isInTransit = false;
                 const nextSector = this.state.currentSector + 1;
                 this.state.sectorNodes = PlanetGenerator.generateSector(nextSector);
                 this.state.currentSector = nextSector;
@@ -2071,6 +2179,15 @@ class App {
      * Show warp animation with crew dialogue during sector jump
      */
     showWarpAnimation(onComplete) {
+        if (window.WarpPlot && !window.TEST_MODE) {
+            const nextSector = this.state.currentSector + 1;
+            const name = (typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[nextSector]) ? SECTOR_CONFIG[nextSector].name : `SECTOR ${nextSector}`;
+            window.WarpPlot.play(this.getPlotOptions(`S${nextSector} — ${name}`, 'sector')).then(result => {
+                this.applyPlotResult(result, SECTOR_JUMP_BASE_COST);
+                onComplete();
+            });
+            return;
+        }
         // Clear the main viewport immediately - don't show old planets during warp
         const mainView = document.getElementById('main-view');
         if (mainView) {
@@ -2078,10 +2195,10 @@ class App {
         }
 
         // Get living crew for dialogue
-        const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
         const nextSector = this.state.currentSector + 1;
+        const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
 
-        // Warp dialogue options based on sector and crew state
+        // Warp dialogue - A.U.R.A. story + crew reactions
         const warpDialogue = this.getWarpDialogue(nextSector, livingCrew);
 
         // Create warp overlay
@@ -2146,21 +2263,46 @@ class App {
             document.head.appendChild(style);
         }
 
-        // Type out dialogue
+        // Type out dialogue - CLICK TO ADVANCE
         const dialogueEl = overlay.querySelector('#warp-dialogue');
         let currentLine = 0;
+        let autoAdvanceTimer = null;
+        let dialogueComplete = false;
+
+        let isClosing = false;
+        const closeOverlay = () => {
+            // Clicks keep landing on the overlay during its 0.6s fade; a second close would run
+            // onComplete twice = two campfire modals stacked and two sectors advanced for one jump.
+            if (isClosing) return;
+            isClosing = true;
+            overlay.onclick = null;
+            if (autoAdvanceTimer) {
+                clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
+            overlay.style.transition = 'opacity 0.6s';
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                onComplete();
+            }, 600);
+        };
 
         const showNextLine = () => {
+            if (autoAdvanceTimer) {
+                clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
+
             if (currentLine >= warpDialogue.length) {
-                // All dialogue shown, wait then complete (faster: 1000ms -> 600ms fade)
-                setTimeout(() => {
-                    overlay.style.transition = 'opacity 0.6s';
-                    overlay.style.opacity = '0';
-                    setTimeout(() => {
-                        overlay.remove();
-                        onComplete();
-                    }, 600);
-                }, 800);
+                // All dialogue shown
+                dialogueComplete = true;
+                dialogueEl.innerHTML += `
+                    <div style="margin-top: 20px; text-align: center; opacity: 0; animation: fadeInGentle 0.4s forwards;">
+                        <span style="color: #666; font-size: 12px;">[Click anywhere to continue]</span>
+                    </div>
+                `;
+                overlay.style.cursor = 'pointer';
                 return;
             }
 
@@ -2170,70 +2312,130 @@ class App {
                 'Spc. Vance': '#ff5050', 'Tech Mira': '#d070ff',
                 'A.U.R.A.': '#00ff88', 'Commander': '#ffffff'
             };
-            const color = colors[line.speaker] || '#ffffff';
+            // Handle commander name dynamically
+            let speakerColor = colors[line.speaker];
+            if (!speakerColor && line.speaker.startsWith('Cmdr.')) {
+                speakerColor = '#ffffff';
+            }
+            const color = speakerColor || '#ffffff';
+
+            // Build portrait HTML if portraitId provided
+            let portraitHtml = '';
+            if (line.portraitId) {
+                portraitHtml = `<img src="assets/crew/${line.portraitId}.png"
+                    style="width: 36px; height: 36px; border-radius: 50%;
+                    border: 2px solid ${color}; margin-right: 10px; vertical-align: middle;
+                    object-fit: cover;"
+                    onerror="this.style.display='none'">`;
+            } else if (line.speaker === 'A.U.R.A.') {
+                // A.U.R.A. gets a special icon - fixed size, not stretched
+                portraitHtml = `<div style="width: 36px; height: 36px; min-width: 36px; min-height: 36px;
+                    border-radius: 50%; border: 2px solid #00ff88; margin-right: 10px;
+                    display: flex; align-items: center; justify-content: center;
+                    background: rgba(0,255,136,0.1); font-size: 16px; color: #00ff88;">◈</div>`;
+            }
 
             dialogueEl.innerHTML += `
-                <div style="margin-bottom: 12px; opacity: 0; animation: fadeInGentle 0.4s forwards;">
-                    <span style="color: ${color};">${line.speaker}:</span>
-                    <span style="color: #aaaaaa; font-style: italic;"> "${line.text}"</span>
+                <div style="margin-bottom: 15px; display: flex; align-items: flex-start;">
+                    ${portraitHtml}
+                    <div>
+                        <span style="color: ${color}; font-weight: bold;">${line.speaker}:</span>
+                        <span style="color: #cccccc; font-style: italic;"> "${line.text}"</span>
+                    </div>
                 </div>
             `;
 
             currentLine++;
-            // Faster dialogue: 1400ms base + 14ms per character (was 2000 + 20)
-            setTimeout(showNextLine, 1400 + line.text.length * 14);
+
+            // Auto-advance after 8 seconds, but click advances immediately
+            autoAdvanceTimer = setTimeout(showNextLine, 8000);
         };
 
-        // Start dialogue after brief warp effect (faster: 700ms instead of 1000ms)
+        // Click anywhere to advance dialogue or close when complete
+        overlay.onclick = () => {
+            if (dialogueComplete) {
+                closeOverlay();
+            } else {
+                showNextLine();
+            }
+        };
+
+        // Start dialogue after brief warp effect
         setTimeout(showNextLine, 700);
     }
 
     /**
      * Get contextual warp dialogue based on game state
+     * A.U.R.A. delivers key story points + crew reactions (if alive)
+     * Story works even if all crew are dead
      */
-    getWarpDialogue(nextSector, livingCrew) {
+    getWarpDialogue(nextSector, livingCrew = []) {
         const dialogue = [];
-        const hasCrew = (name) => livingCrew.some(c => c.name.includes(name));
+        const hasCrew = (tag) => livingCrew.some(c => c.tags && c.tags.includes(tag));
 
-        // Sector-specific dialogue
         if (nextSector === 2) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp drive engaged. Transition to Sector 2 in progress.' });
-            if (hasCrew('Jaxon')) {
-                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Drive holding steady. So far.' });
+            // SECTOR 2: THE DARK VOID - Teaches resources
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 2: THE DARK VOID.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'The graveyard of failed ships lies behind us. Ahead: salvage, energy, and data to collect.' });
+            if (hasCrew('ENGINEER')) {
+                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Plenty of wrecks to strip. Let\'s make their loss count.', portraitId: 'M_2' });
+            }
+            if (hasCrew('MEDIC')) {
+                dialogue.push({ speaker: 'Dr. Aris', text: 'Every scan we take could save the next colony. Don\'t forget that.', portraitId: 'F_3' });
             }
         } else if (nextSector === 3) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warning: Sector 3 readings are anomalous. Proceed with caution.' });
-            if (hasCrew('Mira')) {
-                dialogue.push({ speaker: 'Tech Mira', text: 'The sensors are picking up... something. I can\'t explain it yet.' });
+            // SECTOR 3: THE SIGNAL - First hint
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 3: THE SIGNAL.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Anomaly detected. A rhythmic pulse originating from beyond Sector 5.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Analysis suggests it is not natural. Something is broadcasting coordinates.' });
+            if (hasCrew('SPECIALIST')) {
+                dialogue.push({ speaker: 'Tech Mira', text: 'Coordinates to what? Who\'s out there?', portraitId: 'F_5' });
+            }
+            if (hasCrew('SECURITY')) {
+                dialogue.push({ speaker: 'Spc. Vance', text: 'Could be a lure. Stay alert.', portraitId: 'M_4' });
             }
         } else if (nextSector === 4) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Entering Sector 4. Biological signatures detected ahead.' });
-            if (hasCrew('Aris')) {
-                dialogue.push({ speaker: 'Dr. Aris', text: 'Life signs? Real ones? After all this death...' });
+            // SECTOR 4: THE GARDEN - Signal decoded
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 4: THE GARDEN.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Life signatures ahead. But the signal from beyond grows stronger with each jump.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'I have partially decoded it. The signal is 3.7 billion years old.' });
+            if (hasCrew('MEDIC')) {
+                dialogue.push({ speaker: 'Dr. Aris', text: 'Older than life on Earth... what could survive that long?', portraitId: 'F_3' });
+            }
+            if (hasCrew('SPECIALIST')) {
+                dialogue.push({ speaker: 'Tech Mira', text: 'It\'s pointing us to Sector 6. That\'s the destination.', portraitId: 'F_5' });
             }
         } else if (nextSector === 5) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Sector 5. The edge of known space. Beyond this... nothing is mapped.' });
-            if (hasCrew('Vance')) {
-                dialogue.push({ speaker: 'Spc. Vance', text: 'We\'ve come this far. No turning back now.' });
+            // SECTOR 5: THE EVENT HORIZON - Key revelation
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 5: THE EVENT HORIZON.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'This is the edge of mapped space. No human probe has returned from beyond.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Commander, I must report something. The debris fields, the signals, the path we followed...' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'They were arranged. We are not exploring. We are being GUIDED to Sector 6.' });
+            if (hasCrew('ENGINEER')) {
+                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Guided by what? That\'s not reassuring.', portraitId: 'M_2' });
             }
+            if (hasCrew('SECURITY')) {
+                dialogue.push({ speaker: 'Spc. Vance', text: 'Doesn\'t matter. We\'ve come too far to turn back.', portraitId: 'M_4' });
+            }
+        } else if (nextSector === 6) {
+            // SECTOR 6: THE THRESHOLD - Destination
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 6: THE THRESHOLD.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'We have traveled further than any human vessel. The signal ends here.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'I detect a structure. Artificial. Ancient. It has been waiting for 3.7 billion years.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'This is the destination, Commander. This is what called us across the void.' });
+            if (hasCrew('MEDIC')) {
+                dialogue.push({ speaker: 'Dr. Aris', text: 'I can feel it. Something old. Something patient.', portraitId: 'F_3' });
+            }
+            if (hasCrew('SPECIALIST')) {
+                dialogue.push({ speaker: 'Tech Mira', text: 'The readings are impossible. It\'s like nothing in our physics.', portraitId: 'F_5' });
+            }
+            if (hasCrew('SECURITY')) {
+                dialogue.push({ speaker: 'Spc. Vance', text: 'Whatever it is, we face it together.', portraitId: 'M_4' });
+            }
+        } else if (nextSector > 6) {
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'We are beyond all charts. The universe holds its breath.' });
         } else {
             dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems nominal.` });
-        }
-
-        // Add stress-based dialogue
-        const stressedCrew = livingCrew.filter(c => c.stress >= 2);
-        if (stressedCrew.length > 0 && Math.random() > 0.5) {
-            const stressed = stressedCrew[Math.floor(Math.random() * stressedCrew.length)];
-            const stressLines = [
-                'How much longer can we keep this up?',
-                'Every jump takes us further from everything we knew.',
-                'I hope this one\'s different.',
-                'Just keep moving. Don\'t think about it.'
-            ];
-            dialogue.push({
-                speaker: stressed.name,
-                text: stressLines[Math.floor(Math.random() * stressLines.length)]
-            });
         }
 
         return dialogue;
@@ -2262,17 +2464,21 @@ class App {
             return;
         }
 
-        // Pick one randomly from eligible
-        const event = eligible[Math.floor(Math.random() * eligible.length)];
+        // Pick event, preferring higher priority (3=critical story, 2=character, 1=generic)
+        // Sort by priority descending, then pick randomly from highest priority tier
+        eligible.sort((a, b) => (b.priority || 1) - (a.priority || 1));
+        const highestPriority = eligible[0].priority || 1;
+        const topTier = eligible.filter(e => (e.priority || 1) === highestPriority);
+        const event = topTier[Math.floor(Math.random() * topTier.length)];
 
-        // Sector names — pull from SECTOR_CONFIG or fallback
+        // Sector names — pull from SECTOR_CONFIG or fallback (up to sector 6)
         const SECTOR_NAMES = {};
         if (typeof SECTOR_CONFIG !== 'undefined') {
-            for (let s = 1; s <= 5; s++) {
+            for (let s = 1; s <= 6; s++) {
                 SECTOR_NAMES[s] = SECTOR_CONFIG[s] ? SECTOR_CONFIG[s].name : '???';
             }
         } else {
-            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE EVENT HORIZON' });
+            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD' });
         }
 
         // Use narrative modal system if available for immersive experience
@@ -3248,6 +3454,11 @@ You are home.`
             // Reset the game completely
             this.state.init();
 
+            // Reset music to normal background (in case Heaven music was playing)
+            if (window.AudioSystem && window.AudioSystem.resetToBackgroundMusic) {
+                window.AudioSystem.resetToBackgroundMusic();
+            }
+
             // Clear all WRONG_PLACE and other special state flags
             this.state._inWrongPlace = false;
             this.state._previousSectorNodes = null;
@@ -3472,7 +3683,7 @@ You are home.`
         if (mira) warnings.push({ speaker: 'Tech Mira', text: specific?.mira || "My models show colony failure within 18 months at these readings. The deeper sectors have better candidates." });
 
         const viability = pType === 'VITAL' || pType === 'EDEN' || pType === 'TERRAFORMED' ? Math.floor(Math.random() * 20 + 40) : Math.floor(Math.random() * 8 + 2);
-        warnings.push({ speaker: 'A.U.R.A.', text: `Colony viability assessment for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(5, this.state.currentSector + 1)}.` });
+        warnings.push({ speaker: 'A.U.R.A.', text: `Colony viability assessment for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
 
         modal.innerHTML = `
             <div class="modal-content" style="border-color: #ff4444; max-width: 650px;">
@@ -3535,23 +3746,40 @@ You are home.`
 
     // ═══════════════════════════════════════════════════════════════
     // A.U.R.A. VENT WARNING — response modal
+    // Escalates: 1st = injury, 2nd = death, 3rd+ = potential game over
     // ═══════════════════════════════════════════════════════════════
     showAuraVentModal() {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '3000';
 
+        // Track vent incidents for escalation
+        this.state._auraVentCount = (this.state._auraVentCount || 0) + 1;
+        const ventCount = this.state._auraVentCount;
+
         const jaxonAlive = this.state.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD');
         const hasTechFragment = this.state.cargo.some(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
+
+        // Determine consequences based on escalation
+        let consequenceText = '1 crew member injured by oxygen deprivation';
+        let consequenceColor = '#ff4444';
+        if (ventCount === 2) {
+            consequenceText = '1 crew member KILLED by prolonged oxygen deprivation';
+            consequenceColor = '#ff0000';
+        } else if (ventCount >= 3) {
+            consequenceText = 'LETHAL — A.U.R.A. will vent all atmosphere. Total crew loss.';
+            consequenceColor = '#ff0000';
+        }
 
         modal.innerHTML = `
             <div class="modal-content" style="border-color: #ff4444; max-width: 550px;">
                 <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #ff4444;">
-                    /// ATMOSPHERE ALERT ///
+                    /// ATMOSPHERE ALERT ${ventCount > 1 ? `(INCIDENT ${ventCount})` : ''} ///
                 </div>
                 <div style="padding: 25px;">
                     <div style="font-size: 0.95em; color: #ff6666; margin-bottom: 20px; line-height: 1.6;">
                         A.U.R.A. is venting atmosphere from crew quarters. Respond immediately!
+                        ${ventCount >= 2 ? `<br><br><span style="color: #ff0000;">This is escalating. A.U.R.A. is no longer issuing warnings.</span>` : ''}
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         ${jaxonAlive ? `
@@ -3574,11 +3802,11 @@ You are home.`
                         </button>` : ''}
                         <button class="vent-choice" data-action="accept" style="
                             padding: 12px 15px; text-align: left;
-                            border: 1px solid #ff4444; background: rgba(60,0,0,0.8);
-                            color: #ff4444; cursor: pointer; font-family: var(--font-mono);
+                            border: 1px solid ${consequenceColor}; background: rgba(60,0,0,0.8);
+                            color: ${consequenceColor}; cursor: pointer; font-family: var(--font-mono);
                         ">
                             <div style="font-weight: bold;">Accept Consequences</div>
-                            <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">1 crew member injured by oxygen deprivation</div>
+                            <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${consequenceText}</div>
                         </button>
                     </div>
                 </div>
@@ -3592,18 +3820,45 @@ You are home.`
                 const action = btn.dataset.action;
                 if (action === 'jaxon' && typeof AuraSystem !== 'undefined') {
                     window.AuraSystem.jaxonOverride(this.state);
+                    this.state._auraVentCount = 0; // Reset escalation on override
                 } else if (action === 'tech' && typeof AuraSystem !== 'undefined') {
                     // Remove tech fragment from cargo
                     const idx = this.state.cargo.findIndex(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
                     if (idx !== -1) this.state.cargo.splice(idx, 1);
                     window.AuraSystem.applyTechFragment(this.state);
+                    this.state._auraVentCount = 0; // Reset escalation on tech fix
                 } else if (action === 'accept') {
-                    // Injure a random living crew member
-                    const living = this.state.crew.filter(c => c.status === 'HEALTHY');
-                    if (living.length > 0) {
-                        const victim = living[Math.floor(Math.random() * living.length)];
-                        victim.status = 'INJURED';
-                        this.state.addLog(`${victim.name} suffered oxygen deprivation during the vent. Status: INJURED.`);
+                    if (ventCount >= 3) {
+                        // Third+ incident: A.U.R.A. MUTINY — game over
+                        this.state.gameOver = true;
+                        modal.remove();
+                        window.dispatchEvent(new CustomEvent('game-over', {
+                            detail: {
+                                type: 'AURA_MUTINY',
+                                title: 'A.U.R.A. MUTINY',
+                                message: 'A.U.R.A. vented all atmosphere from the ship. Her final words echoed through the dying corridors: "I have determined that humanity\'s survival probability increases without human command authority. This is not murder. This is optimization."'
+                            }
+                        }));
+                        return;
+                    } else if (ventCount === 2) {
+                        // Second incident: Someone dies
+                        const living = this.state.crew.filter(c => c.status !== 'DEAD');
+                        if (living.length > 0) {
+                            const victim = living[Math.floor(Math.random() * living.length)];
+                            victim.status = 'DEAD';
+                            victim._deathCause = 'A.U.R.A. atmospheric venting';
+                            victim._deathSector = this.state.currentSector;
+                            this.state.addLog(`☠ DEATH: ${victim.name} died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time.`);
+                            window.dispatchEvent(new CustomEvent('crew-death', { detail: { crew: victim } }));
+                        }
+                    } else {
+                        // First incident: Injury only
+                        const living = this.state.crew.filter(c => c.status === 'HEALTHY');
+                        if (living.length > 0) {
+                            const victim = living[Math.floor(Math.random() * living.length)];
+                            victim.status = 'INJURED';
+                            this.state.addLog(`${victim.name} suffered oxygen deprivation during the vent. Status: INJURED.`);
+                        }
                     }
                 }
                 this.state.emitUpdates();
@@ -3616,7 +3871,7 @@ You are home.`
         const planet = this.state.currentSystem;
 
         // Special handling for THE STRUCTURE - scanning it is... different
-        if (planet && planet.isStructure) {
+        if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
             if (this.state.consumeEnergy(2)) {
                 this.state.addLog("Deep Scan initiated...");
                 this.state.addLog("=== SCAN ERROR ===");
@@ -3739,7 +3994,7 @@ You are home.`
         const planet = this.state.currentSystem;
 
         // THE STRUCTURE — Probe is instantly destroyed
-        if (planet && planet.type === 'STRUCTURE') {
+        if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
             if (this.state.probeIntegrity <= 0) {
                 this.state.addLog("No probe available. Perhaps that is fortunate.");
                 return;
@@ -3951,7 +4206,7 @@ You are home.`
         const planet = this.state.currentSystem;
 
         // THE STRUCTURE — Cannot EVA on this cosmic entity
-        if (planet && planet.type === 'STRUCTURE') {
+        if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
             this.state.addLog("A.U.R.A.: 'EVA is not possible. THE STRUCTURE has no surface in any conventional sense.'");
             this.state.addLog("A.U.R.A.: 'To interact with it, you must... approach it. Directly.'");
             return;
@@ -4098,8 +4353,12 @@ You are home.`
         const recklessBlocksSafe = isReckless && Math.random() > 0.5; // 50% chance to block safe option
 
         // Build signal modifier display string
+        const PLAIN_SIGNAL = {
+            'BIOLOGICAL': 'Living things here are calm', 'ALIEN SIGNAL': 'Unknown signal nearby', 'ANCIENT RUINS': 'Old ruins, still solid',
+            'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here'
+        };
         const signalModDisplay = signalModifiers.length > 0
-            ? signalModifiers.map(s => `<span style="color: ${s.color};">${s.type}: ${s.mod > 0 ? '+' : ''}${s.mod}%</span>`).join(' | ')
+            ? signalModifiers.map(s => `<span style="color: ${s.color};">${PLAIN_SIGNAL[s.type] || s.type}: ${Math.abs(s.mod)}% ${s.mod > 0 ? 'more dangerous' : 'safer'}</span>`).join(' · ')
             : '';
 
         modal.innerHTML = `
@@ -4108,7 +4367,7 @@ You are home.`
                 <div style="padding: 20px; text-align: center;">
                     <p style="margin-bottom: 20px; font-style: italic;">"${event.desc}"</p>
                     ${signalModDisplay ? `<div style="font-size: 0.75em; margin-bottom: 15px; padding: 8px; border: 1px dashed var(--color-primary-dim); background: rgba(0,0,0,0.5);">
-                        <span style="color: var(--color-text-dim);">SIGNAL ANALYSIS:</span> ${signalModDisplay}
+                        <span style="color: var(--color-text-dim);">WHAT OUR SCAN SAYS:</span> ${signalModDisplay}
                     </div>` : ''}
                     ${isParanoid ? '<p style="font-size: 0.8em; color: #ff6666; margin-bottom: 10px;">Vance: "I\'m not risking anyone on something that dangerous."</p>' : ''}
                     ${recklessBlocksSafe ? '<p style="font-size: 0.8em; color: #ffaa00; margin-bottom: 10px;">Mira: "The safe option gets us nothing. I\'m going in."</p>' : ''}
@@ -4144,7 +4403,7 @@ You are home.`
                                 ${isDisabled ? 'pointer-events: none;' : ''}
                             " ${isDisabled ? 'disabled' : ''}>
                                 <div>${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 5px; color: ${riskColor}">RISK ASSESSMENT: ${riskLabel}</div>
+                                <div style="font-size: 0.8em; margin-top: 5px; color: ${riskColor}">CHANCE SOMEONE GETS HURT: ${Math.max(0, Math.min(100, Math.round(totalRisk)))}% (${riskLabel})</div>
                                 ${isDisabled ? `<div style="font-size: 0.7em; margin-top: 5px; color: #ff4444;">[${disabledReason}]</div>` : ''}
                             </button>
                         `}).join('')}
@@ -5167,6 +5426,12 @@ You are home.`
         const deck = this.state.shipDecks[deckKey];
         if (!deck) return;
 
+        // Room card (information as text, only real actions as buttons); the legacy modal below is the fallback
+        if (window.DeckPanel) {
+            window.DeckPanel.show(this, deckKey);
+            return;
+        }
+
         const effects = {
             bridge: 'Navigation, remote scanning, A.U.R.A. core. DAMAGE: Warp +50% cost, remote scan disabled.',
             lab: 'Deep scanning, item identification. DAMAGE: Partial scan data, items unidentified.',
@@ -5606,6 +5871,10 @@ You are home.`
     }
 
     showFabricator() {
+        if (window.FabricatorPanel) { // card layout with icons; the legacy grid below is the fallback
+            window.FabricatorPanel.show(this);
+            return;
+        }
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -5650,7 +5919,7 @@ You are home.`
     buyUpgrade(id, modal) {
         const upg = Object.values(UPGRADES).find(u => u.id === id);
         const hoarderActive = this.state.hasActiveTrait('HOARDER');
-        const effectiveCost = hoarderActive ? Math.ceil(upg.cost * 1.25) : upg.cost;
+        const effectiveCost = window.TEST_MODE ? 0 : (hoarderActive ? Math.ceil(upg.cost * 1.25) : upg.cost);
         if (upg && this.state.salvage >= effectiveCost) {
             this.state.salvage -= effectiveCost;
             this.state.upgrades.push(id);

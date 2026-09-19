@@ -1,0 +1,21 @@
+/* Dither art mode — only active when DitherCore sets <html data-art="dither">.
+   The UI keeps its phosphor palette; only the imagery (bodies, backdrop, portraits) changes. */
+
+:root[data-art="dither"] body {
+    background: #06070a;
+}
+
+/* scanlines over an ordered dither produce moiré */
+:root[data-art="dither"] .crt-overlay {
+    opacity: 0.25;
+}
+
+#dither-backdrop {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+    pointer-events: none;
+    image-rendering: pixelated;
+}

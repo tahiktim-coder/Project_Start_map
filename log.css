@@ -1,0 +1,114 @@
+/* Mission log helpers (MissionLog.js): filters, stop dividers, fresh-burst marker, resource deltas */
+
+.console-log .log-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.log-controls {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    padding-right: 12px;
+}
+
+.log-filter,
+.log-expand {
+    padding: 2px 9px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: var(--dim);
+    font: 600 0.68em var(--font-display);
+    letter-spacing: 0.14em;
+    cursor: pointer;
+    transition: color 150ms, border-color 150ms, background 150ms;
+}
+
+.log-filter:hover,
+.log-expand:hover,
+.log-filter:focus-visible,
+.log-expand:focus-visible {
+    color: var(--bone);
+    border-color: var(--line2);
+}
+
+.log-filter[aria-pressed="true"],
+.log-expand[aria-pressed="true"] {
+    color: #04140b;
+    background: var(--green);
+    border-color: var(--green);
+}
+
+.log-expand {
+    margin-left: 10px;
+    border-color: var(--line2);
+}
+
+/* filters hide by category; dividers always stay so the grouping survives filtering */
+#log-entries[data-filter="crew"] .log-entry:not([data-cat="crew"]),
+#log-entries[data-filter="ship"] .log-entry:not([data-cat="ship"]),
+#log-entries[data-filter="aura"] .log-entry:not([data-cat="aura"]),
+#log-entries[data-filter="event"] .log-entry:not([data-cat="event"]) {
+    display: none;
+}
+
+.log-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 4px;
+    font: 600 0.68em var(--font-display);
+    letter-spacing: 0.22em;
+    color: var(--amber);
+}
+
+.log-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line2);
+}
+
+/* everything from the latest burst carries a bright bar until the next burst arrives */
+.log-entry {
+    border-left: 2px solid transparent;
+    padding-left: 8px;
+    transition: border-color 600ms, background 600ms;
+}
+
+.log-entry.is-fresh {
+    border-left-color: var(--green-br);
+    background: rgba(116, 217, 154, 0.07);
+}
+
+/* "+12" floating off a header resource */
+.res-item {
+    position: relative;
+}
+
+.res-delta {
+    position: absolute;
+    right: 4px;
+    top: 100%;
+    font: 700 0.95em var(--font-mono);
+    pointer-events: none;
+    text-shadow: 0 0 6px #000;
+    animation: res-delta-float 1600ms ease-out forwards;
+    z-index: 200;
+}
+
+.res-delta.is-gain { color: var(--green-br); }
+.res-delta.is-loss { color: var(--red); }
+
+@keyframes res-delta-float {
+    0% { opacity: 0; transform: translateY(-6px); }
+    15% { opacity: 1; transform: translateY(2px); }
+    70% { opacity: 1; transform: translateY(8px); }
+    100% { opacity: 0; transform: translateY(16px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .res-delta { animation-duration: 2400ms; animation-timing-function: step-end; }
+}

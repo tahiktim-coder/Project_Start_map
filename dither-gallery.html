@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" data-art="dither">
+<!-- Dev page: every dither-mode body at the three sizes the game uses (orbit 240 / target 72 / map 36). -->
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dither gallery</title>
+    <link rel="stylesheet" href="dither.css">
+    <style>
+        body { margin: 0; padding: 24px; background: #06070a; color: #c4d0c4; font: 12px ui-monospace, Consolas, monospace; }
+        main { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 8px 24px; }
+        figure { margin: 0; display: flex; align-items: center; gap: 8px; }
+        figcaption { letter-spacing: 0.12em; color: #74d99a; }
+    </style>
+</head>
+
+<body>
+    <main id="grid"></main>
+    <script src="src/systems/BodyRenderer.js"></script>
+    <script>history.replaceState(null, '', '?art=dither');</script>
+    <script src="src/systems/dither/DitherCore.js"></script>
+    <script src="src/systems/dither/DitherRecipes.js"></script>
+    <script src="src/systems/dither/DitherBodies.js"></script>
+    <script src="src/systems/dither/DitherScene.js"></script>
+    <script>
+        const kinds = Object.keys(DitherRecipes.TYPES).map(type => ({ id: 'gallery-' + type, type }))
+            .concat([{ id: 'gallery-st', type: 'STATION' }, { id: 'gallery-as', type: 'ASTEROID_FIELD' }]);
+        document.getElementById('grid').innerHTML = kinds.map(p =>
+            `<figure>${BodyRenderer.body(p, 160)}${BodyRenderer.body(p, 72, { sel: true })}${BodyRenderer.body(p, 36)}<figcaption>${p.type}</figcaption></figure>`
+        ).join('');
+    </script>
+</body>
+
+</html>

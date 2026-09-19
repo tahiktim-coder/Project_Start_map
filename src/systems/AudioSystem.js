@@ -107,6 +107,98 @@ class AudioSystem {
         }
     }
 
+    /**
+     * Reset to normal background music (for new game after Heaven music)
+     */
+    resetToBackgroundMusic() {
+        try {
+            // Fade out current music (likely Heaven)
+            if (this.bgMusic) {
+                const oldMusic = this.bgMusic;
+                const fadeInterval = setInterval(() => {
+                    if (oldMusic.volume > 0.01) {
+                        oldMusic.volume = Math.max(0, oldMusic.volume - 0.02);
+                    } else {
+                        oldMusic.pause();
+                        clearInterval(fadeInterval);
+                    }
+                }, 30);
+            }
+
+            // Create and start normal background music
+            const normalMusic = new Audio('Music/Space_Project_Background.mp3');
+            normalMusic.loop = true;
+            normalMusic.volume = 0;
+
+            this.bgMusic = normalMusic;
+            const playPromise = normalMusic.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // Fade in
+                    const fadeInInterval = setInterval(() => {
+                        if (normalMusic.volume < (this.muted ? 0 : this.musicVolume)) {
+                            normalMusic.volume = Math.min(this.musicVolume, normalMusic.volume + 0.02);
+                        } else {
+                            clearInterval(fadeInInterval);
+                        }
+                    }, 30);
+                    console.log('Background music reset');
+                }).catch(e => {
+                    console.warn('Music reset autoplay blocked:', e);
+                });
+            }
+        } catch (e) {
+            console.warn('Could not reset background music:', e);
+        }
+    }
+
+    /**
+     * Switch to Heaven music (THE STRUCTURE theme)
+     * Crossfades from current music to the ethereal Heaven track
+     */
+    playHeavenMusic() {
+        try {
+            // Create new audio element for Heaven track
+            const heavenMusic = new Audio('Music/Heaven.mp3');
+            heavenMusic.loop = true;
+            heavenMusic.volume = 0; // Start silent for crossfade
+
+            // Crossfade: fade out current music, fade in Heaven
+            if (this.bgMusic) {
+                const oldMusic = this.bgMusic;
+                const fadeInterval = setInterval(() => {
+                    if (oldMusic.volume > 0.01) {
+                        oldMusic.volume = Math.max(0, oldMusic.volume - 0.01);
+                    } else {
+                        oldMusic.pause();
+                        clearInterval(fadeInterval);
+                    }
+                }, 50); // 50ms intervals = ~0.75s fade
+            }
+
+            // Start Heaven music
+            this.bgMusic = heavenMusic;
+            const playPromise = heavenMusic.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // Fade in
+                    const fadeInInterval = setInterval(() => {
+                        if (heavenMusic.volume < (this.muted ? 0 : this.musicVolume)) {
+                            heavenMusic.volume = Math.min(this.musicVolume, heavenMusic.volume + 0.01);
+                        } else {
+                            clearInterval(fadeInInterval);
+                        }
+                    }, 50);
+                    console.log('Heaven music started');
+                }).catch(e => {
+                    console.warn('Heaven music autoplay blocked:', e);
+                });
+            }
+        } catch (e) {
+            console.warn('Could not load Heaven music:', e);
+        }
+    }
+
     // ... (init remains same) ...
 
     sfxVictory() {

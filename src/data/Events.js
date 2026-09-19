@@ -258,7 +258,7 @@ const EVENTS = [
         desc: "Thousands of burial markers. Not human. Not any species we know. The dates are from the future.",
         choices: [
             { text: "Record and Leave (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Exhume One (Disturbing)", riskMod: 35, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
+            { text: "Dig One Up (Disturbing)", riskMod: 35, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
         ]
     },
     {

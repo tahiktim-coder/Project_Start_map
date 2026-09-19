@@ -11,7 +11,8 @@ const SECTOR_CONFIG = {
     1: {
         name: 'THE GRAVEYARD',
         planetCount: [3, 5],
-        allowedTypes: ['ROCKY', 'DESERT', 'ICE_WORLD', 'GAS_GIANT'],
+        // 6 types for up to 5 planets, so the opening map never has to repeat a world
+        allowedTypes: ['ROCKY', 'DESERT', 'ICE_WORLD', 'GAS_GIANT', 'CARBON', 'SULFUR'],
         guaranteedTypes: [],
         typeBias: null,
         wreckageChance: 0.50,

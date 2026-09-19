@@ -1,0 +1,356 @@
+/* Course-plot warp overlay (WarpPlot.js) */
+
+.warp-plot {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: grid;
+    place-items: center;
+    background: rgba(4, 6, 8, 0.94);
+    animation: warp-plot-in 250ms ease-out;
+    transition: opacity 350ms;
+}
+
+.warp-plot.is-leaving {
+    opacity: 0;
+}
+
+@keyframes warp-plot-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.warp-plot-frame {
+    width: min(760px, 92vw);
+    padding: 22px 26px 24px;
+    border: 1px solid var(--line2);
+    border-top: 2px solid var(--green);
+    background: linear-gradient(180deg, #0d1411, #080b0a);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+}
+
+.warp-plot-kicker {
+    margin: 0;
+    font: 600 0.72em var(--font-display);
+    letter-spacing: 0.3em;
+    color: var(--dim);
+}
+
+.warp-plot-target {
+    margin: 4px 0 14px;
+    font: 600 1.7em var(--font-display);
+    letter-spacing: 0.12em;
+    color: var(--green-br);
+}
+
+.warp-plot-canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+    border: 1px solid var(--line);
+}
+
+.warp-plot-stage {
+    position: relative;
+}
+
+/* the destination: the actual planet, sitting at the end of the trajectory arc */
+.warp-plot-body {
+    position: absolute;
+    right: 4%;
+    top: 35%;
+    transform: translateY(-50%);
+    transition: transform 1400ms cubic-bezier(0.5, 0, 0.9, 0.4), opacity 900ms;
+    pointer-events: none;
+}
+
+.is-flying .warp-plot-body {
+    transform: translateY(-50%) scale(2.4);
+    opacity: 0;
+}
+
+.warp-plot-hint {
+    margin: 12px 0 14px;
+    font-size: 0.84em;
+    color: var(--dim);
+}
+
+.warp-plot-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.warp-plot-buttons button {
+    padding: 12px 18px;
+    border-radius: 3px;
+    font: 600 0.9em var(--font-display);
+    letter-spacing: 0.14em;
+    cursor: pointer;
+    transition: background 150ms, transform 150ms;
+}
+
+.warp-plot-engage {
+    flex: 1;
+    background: var(--green);
+    border: 1px solid var(--green);
+    color: #04140b;
+}
+
+.warp-plot-engage:hover:not([disabled]),
+.warp-plot-engage:focus-visible {
+    background: var(--green-br);
+    transform: translateY(-1px);
+}
+
+.warp-plot-engage kbd {
+    margin-left: 8px;
+    padding: 1px 6px;
+    border: 1px solid rgba(4, 20, 11, 0.5);
+    border-radius: 2px;
+    font: 400 0.8em var(--font-mono);
+}
+
+.warp-plot-auto {
+    background: transparent;
+    border: 1px solid var(--line2);
+    color: var(--dim);
+}
+
+.warp-plot-auto:hover:not([disabled]),
+.warp-plot-auto:focus-visible {
+    border-color: var(--green-d);
+    color: var(--bone);
+}
+
+.warp-plot-buttons button[disabled] {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.warp-plot-result {
+    min-height: 74px;
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 12px;
+    align-items: baseline;
+}
+
+.warp-plot-result strong {
+    font: 600 1.05em var(--font-display);
+    letter-spacing: 0.16em;
+}
+
+.warp-plot-result span {
+    font-size: 0.84em;
+    color: var(--dim);
+}
+
+.warp-plot-result blockquote {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 0;
+    font-size: 0.92em;
+    color: var(--bone);
+    animation: warp-plot-in 400ms ease-out;
+}
+
+.warp-plot-result blockquote img,
+.warp-plot-result blockquote i {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    object-fit: cover;
+    border: 1px solid var(--line2);
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    font-style: normal;
+    color: var(--green);
+}
+
+.warp-plot-result blockquote b {
+    color: var(--green-br);
+    font-weight: 600;
+}
+
+/* ── three-burn feedback ── */
+.warp-plot-pips {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    list-style: none;
+    margin: 10px 0 0;
+    padding: 0;
+}
+
+.warp-plot-pips li {
+    padding: 6px 0;
+    border: 1px solid var(--line);
+    border-bottom-width: 3px;
+    text-align: center;
+    font: 600 0.72em var(--font-display);
+    letter-spacing: 0.2em;
+    color: var(--dim);
+    transition: background 200ms, border-color 200ms, color 200ms;
+}
+
+.warp-plot-pips li.is-current {
+    border-color: var(--bone);
+    color: var(--bone);
+    animation: warp-pip-pulse 700ms ease-in-out infinite alternate;
+}
+
+.warp-plot-pips li.is-clean { border-color: var(--green); color: #04140b; background: var(--green); }
+.warp-plot-pips li.is-rough { border-color: var(--amber); color: #1c1203; background: var(--amber); }
+.warp-plot-pips li.is-bad { border-color: var(--red); color: #1d0705; background: var(--red); }
+
+@keyframes warp-pip-pulse {
+    from { opacity: 0.55; }
+    to { opacity: 1; }
+}
+
+/* the word that jumps off the gauge on every lock */
+.warp-plot-callout {
+    position: absolute;
+    left: 50%;
+    top: 46%;
+    transform: translate(-50%, 0);
+    font: 700 1.5em var(--font-display);
+    letter-spacing: 0.22em;
+    white-space: nowrap;
+    text-shadow: 0 0 12px currentColor, 0 2px 0 #000;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.warp-plot-callout.is-showing {
+    animation: warp-callout 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes warp-callout {
+    0% { opacity: 0; transform: translate(-50%, 14px) scale(0.8); }
+    25% { opacity: 1; transform: translate(-50%, 0) scale(1.08); }
+    70% { opacity: 1; transform: translate(-50%, -4px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -16px) scale(1); }
+}
+
+/* a perfect plot washes the frame in light for a moment */
+.warp-plot.is-perfect .warp-plot-frame {
+    animation: warp-perfect 900ms ease-out;
+}
+
+@keyframes warp-perfect {
+    0% { box-shadow: 0 0 0 0 rgba(214, 255, 228, 0.9), 0 30px 80px rgba(0, 0, 0, 0.7); border-color: #d6ffe4; }
+    100% { box-shadow: 0 0 0 40px rgba(214, 255, 228, 0), 0 30px 80px rgba(0, 0, 0, 0.7); }
+}
+
+.warp-plot.is-bad .warp-plot-frame {
+    border-top-color: var(--red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .warp-plot-pips li.is-current, .warp-plot-callout.is-showing, .warp-plot.is-perfect .warp-plot-frame { animation: none; }
+    .warp-plot-callout.is-showing { opacity: 1; }
+}
+
+/* ── Boarding party (BoardingParty.js) — shares the warp-plot frame ── */
+.boarding-subhead {
+    margin: 4px 0 8px;
+    font: 600 0.7em var(--font-display);
+    letter-spacing: 0.22em;
+    color: var(--dim);
+}
+
+.boarding-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.boarding-pick {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 2px 10px;
+    align-items: center;
+    padding: 9px 10px;
+    text-align: left;
+    background: rgba(116, 217, 154, 0.05);
+    border: 1px solid var(--line2);
+    border-left: 3px solid var(--bone);
+    border-radius: 3px;
+    color: var(--bone);
+    font-family: var(--font-mono);
+    cursor: pointer;
+    transition: background 150ms, transform 150ms;
+}
+
+.boarding-pick:hover,
+.boarding-pick:focus-visible {
+    background: rgba(116, 217, 154, 0.16);
+    transform: translateY(-2px);
+}
+
+.boarding-pick img {
+    grid-row: span 2;
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 3px;
+}
+
+.boarding-pick b {
+    font: 600 0.9em var(--font-display);
+    letter-spacing: 0.1em;
+    color: var(--green-br);
+}
+
+.boarding-pick span {
+    font-size: 0.76em;
+    line-height: 1.35;
+    color: var(--dim);
+}
+
+.boarding-status {
+    min-height: 2.9em;
+    margin: 12px 0;
+    font-size: 0.95em;
+    line-height: 1.45;
+    color: var(--bone);
+}
+
+.boarding-status.is-bad {
+    color: var(--red);
+}
+
+.boarding-actions .boarding-search {
+    background: transparent;
+    color: var(--green-br);
+}
+
+.boarding-actions .boarding-search:hover:not([disabled]) {
+    background: rgba(116, 217, 154, 0.18);
+}
+
+.boarding-actions .is-urgent {
+    border-color: var(--amber);
+    color: var(--amber);
+    animation: warp-pip-pulse 600ms ease-in-out infinite alternate;
+}
+
+.boarding-carried {
+    margin: 12px 0 0;
+    font-size: 0.8em;
+    letter-spacing: 0.06em;
+    color: var(--amber);
+}
+
+.warp-plot-hint b {
+    color: var(--green-br);
+    font-weight: 600;
+}

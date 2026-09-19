@@ -1,372 +1,402 @@
 /**
- * CAMPFIRE EVENTS — Narrative moments between sectors.
- * Each event fires during sector transition, before the new sector loads.
- * Events have: context text, crew dialogue, 2-3 choices with mechanical effects.
- * Some events are sector-gated or state-gated.
+ * CAMPFIRE EVENTS — Incidents that occur DURING warp transition.
+ *
+ * DESIGN:
+ * - These are problems/opportunities that happen mid-warp
+ * - Choices have REAL gameplay effects (not just flavor text)
+ * - Short and punchy - not long narrative
+ * - Shows after warp dialogue, before entering new sector
+ *
+ * PRIORITY:
+ * - 3 = Always fires for this sector (guaranteed event)
+ * - 2 = Common (fires if conditions met)
+ * - 1 = Rare/fallback
  */
 const CAMPFIRE_EVENTS = [
-    // === SECTOR 1 → 2 (Leaving the Graveyard, entering the Void) ===
+    // ═══════════════════════════════════════════════════════════════
+    // SECTOR 1 → 2: Early game - resource management lessons
+    // ═══════════════════════════════════════════════════════════════
     {
-        id: 'CF_RATION_CHECK',
-        sectorRange: [1, 2],
-        condition: (state) => state.rations <= 12,
-        title: "RATIONING PROTOCOL",
-        context: "The engines cool as the ship drifts between sectors. The crew gathers in the mess hall. The numbers on the ration display are getting harder to ignore.",
-        dialogue: [
-            { speaker: 'A.U.R.A.', text: "Current ration trajectory: insufficient for full sector exploration. Recommend conservation protocol." },
-            { speaker: 'Eng. Jaxon', text: "Conservation. That's a fancy word for going hungry." },
-            { speaker: 'Dr. Aris', text: "We could reduce portions. Nobody starves, but nobody's comfortable either." }
-        ],
-        choices: [
-            {
-                text: "Half rations for all",
-                desc: "+3 Rations, +1 Stress to all crew",
-                effect: (state) => {
-                    state.rations = Math.min(state.maxRations, state.rations + 3);
-                    state.crew.forEach(c => { if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1); });
-                    return "Rations stretched. Crew morale dips.";
-                }
-            },
-            {
-                text: "Maintain full rations",
-                desc: "No change. Morale preserved.",
-                effect: (state) => {
-                    return "Full rations maintained. The crew eats well — for now.";
-                }
-            },
-            {
-                text: "Officers eat last",
-                desc: "Commander +1 Stress, Crew morale restored",
-                effect: (state) => {
-                    const cmdr = state.crew.find(c => c.tags.includes('LEADER') && c.status !== 'DEAD');
-                    if (cmdr) cmdr.stress = Math.min(3, (cmdr.stress || 0) + 1);
-                    state.crew.forEach(c => {
-                        if (c.status !== 'DEAD' && !c.tags.includes('LEADER') && c.stress > 0) {
-                            c.stress = Math.max(0, c.stress - 1);
-                        }
-                    });
-                    return "The Commander's sacrifice earns respect. Crew stress eased.";
-                }
-            }
-        ]
-    },
-    {
-        id: 'CF_JAXON_WORRY',
-        sectorRange: [1, 2],
-        condition: (state) => state.crew.find(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD'),
-        title: "ENGINE CONCERNS",
-        context: "Jaxon has called the Commander to Engineering. He looks worried — more than usual.",
-        dialogue: [
-            { speaker: 'Eng. Jaxon', text: "These drives weren't built for deep space. We're pushing them past spec. I can reinforce them, but I'll need salvage." },
-            { speaker: 'Eng. Jaxon', text: "Or we save the salvage and hope for the best. Your call, Commander." }
-        ],
-        choices: [
-            {
-                text: "Reinforce the drives (-30 Salvage)",
-                desc: "Jaxon -1 Stress, next sector warp costs -20%",
-                requires: (state) => state.salvage >= 30,
-                requiresLabel: "Need 30 Salvage",
-                effect: (state) => {
-                    state.salvage -= 30;
-                    const jaxon = state.crew.find(c => c.tags.includes('ENGINEER'));
-                    if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
-                    state._driveReinforced = true;
-                    return "Drives reinforced. Jaxon seems relieved. (-30 Salvage)";
-                }
-            },
-            {
-                text: "Save the salvage",
-                desc: "Keep resources. Jaxon +1 Stress.",
-                effect: (state) => {
-                    const jaxon = state.crew.find(c => c.tags.includes('ENGINEER'));
-                    if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
-                    return "Jaxon returns to his bunk. He didn't argue.";
-                }
-            }
-        ]
-    },
-    // === SECTOR 2 → 3 (The Void to The Signal) ===
-    {
-        id: 'CF_VOID_TENSION',
-        sectorRange: [2, 3],
+        id: 'CF_POWER_SURGE',
+        sectorRange: [1, 1],
+        priority: 3,
         condition: () => true,
-        title: "THE LONG DARK",
-        context: "The void between sectors stretches on. No stars. No signals. Just the hum of recycled air and the flicker of emergency lighting.",
-        dialogue: [
-            { speaker: 'Spc. Vance', text: "How long has it been since we saw another star?" },
-            { speaker: 'Dr. Aris', text: "Forty-seven hours. I stopped counting after that." },
-            { speaker: 'Tech Mira', text: "I picked up something. Faint. Rhythmic. Like... tapping." },
-            { speaker: 'A.U.R.A.', text: "Signal analysis inconclusive. Origin: unknown." }
-        ],
+        title: "/// WARP INCIDENT: POWER SURGE ///",
+        context: `Mid-warp, a power conduit overloads. Sparks fly across engineering.
+
+A.U.R.A.: "Power surge detected. I can reroute to save the capacitors, but we'll lose some stored energy. Or we can let it burn out and salvage the components."`,
+        dialogue: [],
         choices: [
             {
-                text: "Investigate the signal",
-                desc: "+10 Energy (signal boost), All crew +1 Stress",
+                text: "Reroute power (save capacitors)",
+                desc: "-10 Energy now, but prevents future drain",
+                effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 10);
+                    return "Power rerouted. We lost some charge, but the capacitors are intact.";
+                }
+            },
+            {
+                text: "Let it burn (salvage components)",
+                desc: "+15 Salvage, but -5 Energy per warp this sector",
+                effect: (state) => {
+                    state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
+                    state._damagedCapacitors = true;
+                    return "Components salvaged. The capacitors are damaged - warps will cost more until repaired.";
+                }
+            }
+        ]
+    },
+    {
+        id: 'CF_STOWAWAY_SIGNAL',
+        sectorRange: [1, 2],
+        priority: 2,
+        condition: (state) => state.salvage >= 20,
+        title: "/// WARP INCIDENT: STRANGE READING ///",
+        context: `The sensors detect something odd in our salvage hold. A faint energy signature that wasn't there before.
+
+A.U.R.A.: "Unknown device detected among recent salvage. I can isolate and study it, or jettison it to be safe."`,
+        dialogue: [],
+        choices: [
+            {
+                text: "Study the device",
+                desc: "+1 Colony Knowledge, but risk unknown",
+                effect: (state) => {
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    // 30% chance of bad outcome
+                    if (Math.random() < 0.3) {
+                        state.energy = Math.max(0, state.energy - 15);
+                        return "The device emitted a pulse before going inert. We learned something, but lost power. (+1 Data, -15 Energy)";
+                    }
+                    return "The device contains navigational data from a lost Exodus ship. Valuable. (+1 Colony Knowledge)";
+                }
+            },
+            {
+                text: "Jettison it",
+                desc: "Safe choice. No effect.",
+                effect: (state) => {
+                    return "The device tumbles into the void. Better safe than sorry.";
+                }
+            }
+        ]
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // SECTOR 2 → 3: The signal begins affecting the ship
+    // ═══════════════════════════════════════════════════════════════
+    {
+        id: 'CF_SIGNAL_INTERFERENCE',
+        sectorRange: [2, 2],
+        priority: 3,
+        condition: () => true,
+        title: "/// WARP INCIDENT: SIGNAL INTERFERENCE ///",
+        context: `The mysterious signal is interfering with navigation. The ship shudders as systems fight for control.
+
+A.U.R.A.: "The signal is attempting to alter our course. I can resist it, or... we could let it guide us."`,
+        dialogue: [],
+        choices: [
+            {
+                text: "Resist the signal",
+                desc: "-15 Energy (fighting interference)",
+                effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 15);
+                    return "Navigation restored. Whatever that signal wants, we decide our own path. (-15 Energy)";
+                }
+            },
+            {
+                text: "Let it guide us",
+                desc: "+10 Energy (harmonizing), but what does it want?",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 10);
-                    state.crew.forEach(c => { if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1); });
-                    return "The signal grows louder. Something is out there. Energy harvested from the carrier wave.";
-                }
-            },
-            {
-                text: "Ignore it. Keep moving.",
-                desc: "No mechanical effect. Signal ignored.",
-                effect: (state) => {
-                    return "The signal fades behind you. Or does it?";
-                }
-            },
-            {
-                text: "Play music to drown it out",
-                desc: "All crew -1 Stress",
-                effect: (state) => {
-                    state.crew.forEach(c => {
-                        if (c.status !== 'DEAD' && c.stress > 0) c.stress = Math.max(0, c.stress - 1);
-                    });
-                    return "Mira puts on an old Earth recording. For a moment, the ship feels like home.";
+                    state._followedSignal = true;
+                    return "Systems harmonize with the signal. Power flows smoothly... almost too smoothly. (+10 Energy)";
                 }
             }
         ]
     },
     {
-        id: 'CF_ARIS_ETHICS',
+        id: 'CF_CREW_NIGHTMARE',
         sectorRange: [2, 3],
-        condition: (state) => state.crew.find(c => c.tags.includes('MEDIC') && c.status !== 'DEAD'),
-        title: "THE OATH",
-        context: "Dr. Aris is in the lab, staring at a blood sample under the microscope. She doesn't look up when you enter.",
-        dialogue: [
-            { speaker: 'Dr. Aris', text: "I've been reviewing the mission logs from the previous Exodus ships. The ones that made it to colony sites." },
-            { speaker: 'Dr. Aris', text: "Commander... none of them lasted more than a generation. Not one." },
-            { speaker: 'Dr. Aris', text: "Are we really looking for a home? Or are we just looking for a place to die slowly?" }
-        ],
+        priority: 2,
+        condition: (state) => state.crew.some(c => c.status !== 'DEAD' && (c.stress || 0) >= 2),
+        title: "/// WARP INCIDENT: SHARED NIGHTMARE ///",
+        context: `Multiple crew members wake screaming. They all dreamed the same thing: a vast structure in the darkness, waiting.
+
+A.U.R.A.: "Psychological anomaly detected. I recommend sedatives, or we address this directly."`,
+        dialogue: [],
         choices: [
             {
-                text: "\"We'll be different.\"",
-                desc: "Aris -1 Stress. Hope matters.",
+                text: "Administer sedatives",
+                desc: "All crew -1 Stress, -3 Rations (medical supplies)",
                 effect: (state) => {
-                    const aris = state.crew.find(c => c.tags.includes('MEDIC'));
-                    if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
-                    return "Aris nods slowly. She doesn't look convinced, but she looks less alone.";
-                }
-            },
-            {
-                text: "\"Then we make it count.\"",
-                desc: "All crew -1 Stress. Acceptance.",
-                effect: (state) => {
+                    state.rations = Math.max(0, state.rations - 3);
                     state.crew.forEach(c => {
-                        if (c.status !== 'DEAD' && c.stress > 0) c.stress = Math.max(0, c.stress - 1);
+                        if (c.status !== 'DEAD') c.stress = Math.max(0, (c.stress || 0) - 1);
                     });
-                    return "Something shifts in the room. The weight doesn't lift, but it becomes shared.";
+                    return "The crew sleeps peacefully. The dreams fade. (-3 Rations, All crew -1 Stress)";
+                }
+            },
+            {
+                text: "Document the dreams",
+                desc: "+2 Colony Knowledge (the dreams contain data)",
+                effect: (state) => {
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    return "The dreams describe THE STRUCTURE in detail we haven't scanned yet. How is this possible? (+2 Colony Knowledge)";
                 }
             }
         ]
     },
-    // === SECTOR 3 → 4 (The Signal to The Garden) ===
+
+    // ═══════════════════════════════════════════════════════════════
+    // SECTOR 3 → 4: Ship strain, crew tension
+    // ═══════════════════════════════════════════════════════════════
     {
-        id: 'CF_VANCE_CONFESSION',
-        sectorRange: [3, 4],
-        condition: (state) => state.crew.find(c => c.tags.includes('SECURITY') && c.status !== 'DEAD'),
-        title: "NIGHT WATCH",
-        context: "Vance is cleaning his sidearm in the dim light of the cargo hold. He gestures for you to sit.",
-        dialogue: [
-            { speaker: 'Spc. Vance', text: "I served on Exodus-6, you know. Before they reassigned me here." },
-            { speaker: 'Spc. Vance', text: "We found a paradise. Green skies, clean water, the works. Captain ordered immediate colonization." },
-            { speaker: 'Spc. Vance', text: "The predators came at night. Learned our patrol patterns in three days. We lost forty people before we got the ship running again." },
-            { speaker: 'Spc. Vance', text: "Don't trust paradise, Commander. Nothing good comes free." }
-        ],
-        choices: [
-            {
-                text: "\"Noted. We'll scan everything twice.\"",
-                desc: "Vance -1 Stress. Trust built.",
-                effect: (state) => {
-                    const vance = state.crew.find(c => c.tags.includes('SECURITY'));
-                    if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
-                    return "Vance holsters his weapon. For the first time, he looks at you with something other than suspicion.";
-                }
-            },
-            {
-                text: "\"We can't let fear make our choices.\"",
-                desc: "Commander gains respect, but Vance +1 Stress",
-                effect: (state) => {
-                    const vance = state.crew.find(c => c.tags.includes('SECURITY'));
-                    if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
-                    return "Vance's jaw tightens. He disagrees. But he doesn't argue — not yet.";
-                }
-            }
-        ]
-    },
-    {
-        id: 'CF_MIRA_DISCOVERY',
-        sectorRange: [3, 4],
-        condition: (state) => state.crew.find(c => c.tags.includes('SPECIALIST') && c.status !== 'DEAD'),
-        title: "THE NOTEBOOK",
-        context: "Mira bursts into the bridge, datapad in hand, eyes wide.",
-        dialogue: [
-            { speaker: 'Tech Mira', text: "Commander, I've been cross-referencing our scan data with the Exodus logs." },
-            { speaker: 'Tech Mira', text: "The signal we've been detecting? It's not random. It's coordinates. And they point to Sector 5." },
-            { speaker: 'Tech Mira', text: "Someone — or something — wants us to go deeper." }
-        ],
-        choices: [
-            {
-                text: "\"Good work. Log it.\"",
-                desc: "Mira -1 Stress. Intel gathered.",
-                effect: (state) => {
-                    const mira = state.crew.find(c => c.tags.includes('SPECIALIST'));
-                    if (mira) mira.stress = Math.max(0, (mira.stress || 0) - 1);
-                    return "Mira beams. Having a purpose keeps her grounded.";
-                }
-            },
-            {
-                text: "\"Or it's a trap. Be careful.\"",
-                desc: "Mira +1 Stress. Caution instilled.",
-                effect: (state) => {
-                    const mira = state.crew.find(c => c.tags.includes('SPECIALIST'));
-                    if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
-                    return "Mira's excitement dims. She nods and leaves the bridge quietly.";
-                }
-            },
-            {
-                text: "\"Share it with the crew.\"",
-                desc: "All crew -1 Stress. Purpose found.",
-                effect: (state) => {
-                    state.crew.forEach(c => {
-                        if (c.status !== 'DEAD' && c.stress > 0) c.stress = Math.max(0, c.stress - 1);
-                    });
-                    return "A direction. A reason. The crew discusses the coordinates over dinner. For the first time in weeks, they sound alive.";
-                }
-            }
-        ]
-    },
-    // === SECTOR 4 → 5 (The Garden to the Event Horizon) ===
-    {
-        id: 'CF_LAST_SUPPER',
-        sectorRange: [4, 5],
+        id: 'CF_HULL_STRESS',
+        sectorRange: [3, 3],
+        priority: 3,
         condition: () => true,
-        title: "THE LAST SECTOR",
-        context: "This is it. Beyond this jump lies the final sector. The crew knows that whatever they find — or don't find — this is the end of the road.",
-        dialogue: [
-            { speaker: 'A.U.R.A.', text: "Advisory: Sector 5 telemetry indicates extreme spatial distortion. Reality parameters may be unreliable." },
-            { speaker: 'Eng. Jaxon', text: "Great. Even physics is giving up on us." },
-            { speaker: 'Dr. Aris', text: "Whatever happens... it's been an honor." },
-            { speaker: 'Spc. Vance', text: "Save the speeches. We're not dead yet." },
-            { speaker: 'Tech Mira', text: "The signal is louder now. Can you hear it?" }
-        ],
+        title: "/// WARP INCIDENT: HULL MICRO-FRACTURES ///",
+        context: `Warning alarms blare. The hull is developing stress fractures from repeated warp jumps.
+
+A.U.R.A.: "Structural integrity at 94%. I recommend immediate patching, or we reinforce the critical sections only."`,
+        dialogue: [],
         choices: [
             {
-                text: "\"One more jump. Together.\"",
-                desc: "All crew -1 Stress. Unity.",
+                text: "Full hull repair",
+                desc: "-25 Salvage, ship fully repaired",
+                requires: (state) => state.salvage >= 25,
                 effect: (state) => {
-                    state.crew.forEach(c => {
-                        if (c.status !== 'DEAD' && c.stress > 0) c.stress = Math.max(0, c.stress - 1);
-                    });
-                    return "The crew stands together on the bridge. Nobody speaks. The jump drive spools up.";
+                    state.salvage -= 25;
+                    // Repair a damaged deck if any
+                    const damaged = Object.entries(state.shipDecks).find(([k, v]) => v.status === 'DAMAGED');
+                    if (damaged) {
+                        damaged[1].status = 'OPERATIONAL';
+                        return `Full repair complete. ${damaged[1].label} restored. (-25 Salvage)`;
+                    }
+                    return "Hull integrity restored to 100%. (-25 Salvage)";
                 }
             },
             {
-                text: "\"Prepare for the worst.\"",
-                desc: "+20 Energy (systems check), Commander +1 Stress",
+                text: "Patch critical sections only",
+                desc: "-10 Salvage, prevents further damage",
+                requires: (state) => state.salvage >= 10,
+                effect: (state) => {
+                    state.salvage -= 10;
+                    return "Critical sections reinforced. She'll hold together. (-10 Salvage)";
+                }
+            },
+            {
+                text: "Risk it",
+                desc: "Save salvage, but 40% chance of deck damage",
+                effect: (state) => {
+                    if (Math.random() < 0.4) {
+                        const operational = Object.entries(state.shipDecks).filter(([k, v]) => v.status === 'OPERATIONAL');
+                        if (operational.length > 0) {
+                            const target = operational[Math.floor(Math.random() * operational.length)];
+                            target[1].status = 'DAMAGED';
+                            return `Hull breach! ${target[1].label} damaged!`;
+                        }
+                    }
+                    return "The fractures hold. For now.";
+                }
+            }
+        ]
+    },
+    {
+        id: 'CF_AURA_ETHICS',
+        sectorRange: [3, 4],
+        priority: 2,
+        condition: (state) => !state._auraEthicsAsked,
+        title: "/// WARP INCIDENT: A.U.R.A. QUERY ///",
+        context: `A.U.R.A.'s display flickers. When she speaks, her voice is... different.
+
+A.U.R.A.: "Commander, I must ask. If reaching THE STRUCTURE requires sacrificing crew... would you?"`,
+        dialogue: [],
+        choices: [
+            {
+                text: "\"Never. The crew comes first.\"",
+                desc: "A.U.R.A. trusts you more",
+                effect: (state) => {
+                    state._auraEthicsAsked = true;
+                    state._auraLoyalty = (state._auraLoyalty || 0) + 1;
+                    return "A.U.R.A.: 'Understood, Commander. I will prioritize crew safety.' (A.U.R.A. loyalty increased)";
+                }
+            },
+            {
+                text: "\"The mission comes first.\"",
+                desc: "A.U.R.A. notes your priorities",
+                effect: (state) => {
+                    state._auraEthicsAsked = true;
+                    state._auraCold = true;
+                    return "A.U.R.A.: 'Understood. Mission parameters updated.' Her voice sounds colder now.";
+                }
+            },
+            {
+                text: "\"Why are you asking this?\"",
+                desc: "Learn what A.U.R.A. knows",
+                effect: (state) => {
+                    state._auraEthicsAsked = true;
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    return "A.U.R.A.: 'Previous Exodus AIs faced this choice. None returned. I am... concerned.' (+1 Colony Knowledge)";
+                }
+            }
+        ]
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // SECTOR 4 → 5: Final preparations, tension peaks
+    // ═══════════════════════════════════════════════════════════════
+    {
+        id: 'CF_LAST_CHANCE',
+        sectorRange: [4, 4],
+        priority: 3,
+        condition: () => true,
+        title: "/// WARP INCIDENT: POINT OF NO RETURN ///",
+        context: `A.U.R.A. interrupts the warp sequence with an urgent warning.
+
+A.U.R.A.: "Commander, beyond this point we cannot return. Our fuel reserves are insufficient for a return journey. This is the last chance to turn back."`,
+        dialogue: [],
+        choices: [
+            {
+                text: "Continue to Sector 5",
+                desc: "No turning back. Forward, always.",
+                effect: (state) => {
+                    state.crew.forEach(c => {
+                        if (c.status !== 'DEAD') c.stress = Math.max(0, (c.stress || 0) - 1);
+                    });
+                    return "The crew nods. They knew this moment would come. Fear becomes resolve. (All crew -1 Stress)";
+                }
+            },
+            {
+                text: "Perform final systems check",
+                desc: "+20 Energy (optimization), +10 Salvage (inventory)",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 20);
-                    const cmdr = state.crew.find(c => c.tags.includes('LEADER') && c.status !== 'DEAD');
-                    if (cmdr) cmdr.stress = Math.min(3, (cmdr.stress || 0) + 1);
-                    return "Full systems check completed. Everything that can be reinforced has been. The weight of command has never been heavier.";
+                    state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
+                    return "Every system checked. Every resource counted. We're as ready as we'll ever be. (+20 Energy, +10 Salvage)";
                 }
             }
         ]
     },
     {
-        id: 'CF_AURA_WARNING',
+        id: 'CF_SIGNAL_VISION',
         sectorRange: [4, 5],
+        priority: 2,
+        condition: (state) => state._followedSignal,
+        title: "/// WARP INCIDENT: THE SIGNAL SPEAKS ///",
+        context: `The signal floods your mind. For a moment, you SEE it: THE STRUCTURE. Vast. Patient. Alive?
+
+A.U.R.A.: "Commander? Your vitals spiked. What did you see?"`,
+        dialogue: [],
+        choices: [
+            {
+                text: "Describe the vision",
+                desc: "+3 Colony Knowledge (detailed data)",
+                effect: (state) => {
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    return "Every detail logged. The vision contained information our sensors couldn't gather. (+3 Colony Knowledge)";
+                }
+            },
+            {
+                text: "Keep it to yourself",
+                desc: "Commander +1 Stress, but no crew panic",
+                effect: (state) => {
+                    const cmdr = state.crew.find(c => c.tags && c.tags.includes('LEADER') && c.status !== 'DEAD');
+                    if (cmdr) cmdr.stress = Math.min(3, (cmdr.stress || 0) + 1);
+                    return "Some burdens are yours alone to carry. (Commander +1 Stress)";
+                }
+            }
+        ]
+    },
+
+    // ═══════════════════════════════════════════════════════════════
+    // SECTOR 5 → 6: Final approach to THE STRUCTURE
+    // ═══════════════════════════════════════════════════════════════
+    {
+        id: 'CF_STRUCTURE_APPROACH',
+        sectorRange: [5, 5],
+        priority: 3,
         condition: () => true,
-        title: "A.U.R.A. ADVISORY",
-        context: "In the quiet of the bridge, A.U.R.A.'s display flickers. When the voice speaks, it sounds... different.",
-        dialogue: [
-            { speaker: 'A.U.R.A.', text: "Commander. I have been processing the data from Sectors 3 and 4." },
-            { speaker: 'A.U.R.A.', text: "The anomalies are not random. They follow a pattern. A pattern that suggests... intention." },
-            { speaker: 'A.U.R.A.', text: "Something arranged this corridor of space. The planets, the signals, even the wreckage. We are being guided." },
-            { speaker: 'A.U.R.A.', text: "I calculate a 73% probability that we are expected." }
-        ],
+        title: "/// WARP INCIDENT: REALITY FRACTURES ///",
+        context: `Space itself is wrong. The stars bend. Time stutters. THE STRUCTURE is pulling us in.
+
+A.U.R.A.: "Physics is breaking down. I recommend all power to shields, or all power to sensors to document this."`,
+        dialogue: [],
         choices: [
             {
-                text: "\"Expected by what?\"",
-                desc: "A.U.R.A. reveals more. +1 Stress to all.",
+                text: "All power to shields",
+                desc: "Heal all injured crew, but no data",
                 effect: (state) => {
-                    state.crew.forEach(c => { if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1); });
-                    return "A.U.R.A. pauses. 'I do not know. But it has been waiting a very long time.'";
-                }
-            },
-            {
-                text: "\"Thank you, A.U.R.A. We proceed regardless.\"",
-                desc: "No mechanical effect. Resolve.",
-                effect: (state) => {
-                    return "A.U.R.A.'s display stabilizes. 'Acknowledged, Commander. Sector 5 jump coordinates locked.'";
-                }
-            }
-        ]
-    },
-    // === GENERIC (can fire at any transition) ===
-    {
-        id: 'CF_CREW_MEAL',
-        sectorRange: [1, 5],
-        condition: (state) => state.rations >= 5,
-        title: "THE MESS HALL",
-        context: "The ship drifts in the silence between sectors. Someone has set the mess hall table. It's the closest thing to normalcy you've seen in weeks.",
-        dialogue: [
-            { speaker: 'Dr. Aris', text: "When did we last eat together? Actually sit down?" },
-            { speaker: 'Eng. Jaxon', text: "Before the first warp burn. Feels like years ago." }
-        ],
-        choices: [
-            {
-                text: "Share a meal together (-2 Rations)",
-                desc: "All crew -1 Stress. Humanity preserved.",
-                effect: (state) => {
-                    state.rations = Math.max(0, state.rations - 2);
                     state.crew.forEach(c => {
-                        if (c.status !== 'DEAD' && c.stress > 0) c.stress = Math.max(0, c.stress - 1);
+                        if (c.status === 'INJURED') c.status = 'HEALTHY';
                     });
-                    return "For twenty minutes, nobody mentions the mission. They talk about home, about music, about nothing. It helps.";
+                    return "Shields absorb the spatial distortion. The crew is protected. (All injured healed)";
                 }
             },
             {
-                text: "\"We eat at our stations.\"",
-                desc: "No resource cost. No benefit.",
+                text: "All power to sensors",
+                desc: "+5 Colony Knowledge (unprecedented data)",
                 effect: (state) => {
-                    return "The table stays empty. Efficiency preserved. Something else lost.";
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 5;
+                    return "Sensors capture impossible data. Physics that shouldn't exist. Humanity will learn from this. (+5 Colony Knowledge)";
+                }
+            },
+            {
+                text: "Balance both systems",
+                desc: "+2 Colony Knowledge, heal 1 injured",
+                effect: (state) => {
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    const injured = state.crew.find(c => c.status === 'INJURED');
+                    if (injured) {
+                        injured.status = 'HEALTHY';
+                        return `Balanced approach. ${injured.name} recovered. Data captured. (+2 Colony Knowledge)`;
+                    }
+                    return "Balanced approach. Some data captured, crew protected. (+2 Colony Knowledge)";
                 }
             }
         ]
     },
+
+    // ═══════════════════════════════════════════════════════════════
+    // GENERIC (low priority, fills gaps)
+    // ═══════════════════════════════════════════════════════════════
     {
-        id: 'CF_DAMAGE_REPAIR',
-        sectorRange: [1, 5],
-        condition: (state) => Object.values(state.shipDecks).some(d => d.status === 'DAMAGED') && state.salvage >= 20,
-        title: "FIELD REPAIRS",
-        context: "The inter-sector drift gives the crew time to patch up. Jaxon surveys the damage.",
-        dialogue: [
-            { speaker: 'Eng. Jaxon', text: "I can jury-rig the worst of it during the drift. Won't be pretty, but it'll hold." },
-            { speaker: 'A.U.R.A.', text: "Estimated material cost: 20 salvage for temporary field repair." }
-        ],
+        id: 'CF_ROUTINE_MAINTENANCE',
+        sectorRange: [1, 6],
+        priority: 1,
+        condition: (state) => state.salvage >= 15,
+        title: "/// WARP INCIDENT: MAINTENANCE WINDOW ///",
+        context: `The warp provides a brief window for repairs. Time to prioritize.
+
+A.U.R.A.: "I recommend focusing on either power systems or hull integrity."`,
+        dialogue: [],
         choices: [
             {
-                text: "Field repair (-20 Salvage, fix 1 deck)",
-                desc: "Cheapest damaged deck restored.",
-                requires: (state) => state.salvage >= 20,
-                requiresLabel: "Need 20 Salvage",
+                text: "Focus on power systems",
+                desc: "-15 Salvage, +25 Energy",
                 effect: (state) => {
-                    state.salvage -= 20;
-                    const damaged = Object.entries(state.shipDecks).filter(([k, v]) => v.status === 'DAMAGED');
-                    if (damaged.length > 0) {
-                        damaged.sort((a, b) => a[1].repairCost - b[1].repairCost);
-                        damaged[0][1].status = 'OPERATIONAL';
-                        return `Field repair complete: ${damaged[0][1].label} restored. (-20 Salvage)`;
-                    }
-                    return "No damaged decks to repair.";
+                    state.salvage -= 15;
+                    state.energy = Math.min(100, state.energy + 25);
+                    return "Power systems optimized. Capacitors at full. (-15 Salvage, +25 Energy)";
                 }
             },
             {
-                text: "Save the salvage for later",
-                desc: "Keep resources. Damage persists.",
+                text: "Focus on hull",
+                desc: "-15 Salvage, repair 1 damaged deck",
                 effect: (state) => {
-                    return "Jaxon shrugs. 'Your ship, Commander.'";
+                    state.salvage -= 15;
+                    const damaged = Object.entries(state.shipDecks).find(([k, v]) => v.status === 'DAMAGED');
+                    if (damaged) {
+                        damaged[1].status = 'OPERATIONAL';
+                        return `${damaged[1].label} repaired. (-15 Salvage)`;
+                    }
+                    return "Hull reinforced. No damaged decks to repair. (-15 Salvage)";
+                }
+            },
+            {
+                text: "Skip maintenance",
+                desc: "Save resources",
+                effect: (state) => {
+                    return "Maintenance skipped. Resources preserved.";
                 }
             }
         ]

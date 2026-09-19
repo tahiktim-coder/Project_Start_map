@@ -263,8 +263,11 @@ class NarrativeModal {
         document.head.appendChild(style);
         document.body.appendChild(modal);
 
-        // Click to skip typewriter
-        modal.querySelector('.narrative-text-container').addEventListener('click', () => {
+        // Click anywhere on modal to skip typewriter
+        modal.addEventListener('click', (e) => {
+            // Don't skip if clicking on a choice button
+            if (e.target.closest('.narrative-choice')) return;
+
             if (this.isTyping) {
                 this.skipRequested = true;
             }
@@ -340,6 +343,9 @@ class NarrativeModal {
         this.isTyping = true;
         this.skipRequested = false;
         let index = 0;
+        // Each run gets a token; a newer show() bumps it, so a superseded run stops typing
+        // and never fires its onComplete (which used to append a second set of choices).
+        const runId = this._typewriterRun = (this._typewriterRun || 0) + 1;
 
         // Process text for markup: [highlight]text[/highlight], [warning]text[/warning], [whisper]text[/whisper]
         const processedText = text
@@ -353,6 +359,7 @@ class NarrativeModal {
         const plainText = tempDiv.textContent;
 
         const type = () => {
+            if (runId !== this._typewriterRun) return;
             if (this.skipRequested) {
                 // Skip to end
                 element.innerHTML = processedText;
@@ -411,6 +418,7 @@ class NarrativeModal {
     }
 
     renderChoices(container, choices, modal) {
+        container.innerHTML = '';
         choices.forEach((choice, index) => {
             const btn = document.createElement('button');
             btn.className = 'narrative-choice';
@@ -468,7 +476,7 @@ class NarrativeModal {
                     speaker: part.speaker,
                     text: part.text,
                     choices: isLast ? finalChoices : [{
-                        text: '→',
+                        text: '▶ Continue',
                         effect: showNext
                     }]
                 });
@@ -476,6 +484,33 @@ class NarrativeModal {
         };
 
         showNext();
+    }
+
+    /**
+     * Show all dialogue with click-to-advance between each line
+     * Used for campfire events to let player pace themselves
+     */
+    showDialogueSequence(context, contextSpeaker, dialogueLines, finalChoices, speakerMap) {
+        const sequence = [];
+
+        // Add context as first item
+        if (context) {
+            sequence.push({
+                speaker: contextSpeaker || 'NARRATOR',
+                text: context
+            });
+        }
+
+        // Add each dialogue line as a separate sequence item
+        dialogueLines.forEach(d => {
+            const speaker = speakerMap[d.speaker] || 'UNKNOWN';
+            sequence.push({
+                speaker: speaker,
+                text: `"${d.text}"`
+            });
+        });
+
+        this.showSequence(sequence, finalChoices);
     }
 }
 

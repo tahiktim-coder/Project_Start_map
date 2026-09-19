@@ -53,10 +53,11 @@ class EndingSystem {
     }
 
     /**
-     * Calculate colony success chance based on viability and sector
+     * Calculate colony success chance based on viability, sector, and colony knowledge
      * Early sectors with poor planets = very likely failure
+     * Colony knowledge from failed colonies improves chances
      */
-    static getSuccessChance(viability, sector) {
+    static getSuccessChance(viability, sector, colonyKnowledge = 0) {
         const baseChances = {
             'EXCELLENT': 0.95,
             'GOOD': 0.80,
@@ -74,6 +75,13 @@ class EndingSystem {
         } else if (sector >= 4) {
             // Late sectors - you've made it far, slight bonus
             chance = Math.min(0.95, chance + 0.10);
+        }
+
+        // Colony knowledge bonus: +5% per point (max +25% at 5 knowledge)
+        // Learning from failed colonies improves your odds
+        if (colonyKnowledge > 0) {
+            const knowledgeBonus = Math.min(colonyKnowledge, 5) * 0.05;
+            chance = Math.min(0.95, chance + knowledgeBonus);
         }
 
         return chance;
@@ -117,7 +125,8 @@ class EndingSystem {
         // === NEW: VIABILITY CHECK ===
         // Check if this planet is even viable for colonization
         const viability = this.getPlanetViability(planet, state);
-        const successChance = this.getSuccessChance(viability, state.currentSector || 1);
+        const colonyKnowledge = state._colonyKnowledge || 0;
+        const successChance = this.getSuccessChance(viability, state.currentSector || 1, colonyKnowledge);
 
         // Roll for viability-based failure (before other checks)
         if (viability === 'IMPOSSIBLE') {

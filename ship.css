@@ -1,0 +1,404 @@
+/* Ship cutaway — styles that apply once ShipCutaway.js has put its canvas behind the deck elements.
+   The .ship-deck boxes stop being drawn boxes and become labelled hit areas over the rooms. */
+
+.ship-hull.has-cutaway {
+    position: relative;
+}
+
+.ship-cutaway {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.has-cutaway .ship-deck,
+.has-cutaway .ship-deck.deck-damaged,
+.has-cutaway .deck-upgrades,
+.has-cutaway .deck-cargo {
+    z-index: 1;
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none;
+    border-radius: 4px;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 6px 0 0 22px;
+    animation: none;
+}
+
+/* the bridge sits in the nose cone: centre its label so it stays inside the hull */
+.has-cutaway .deck-bridge {
+    align-items: center;
+    padding: 10px 0 0;
+}
+
+.has-cutaway .ship-deck:hover {
+    border-color: var(--green-d) !important;
+    background: rgba(116, 217, 154, 0.06) !important;
+}
+
+.has-cutaway .ship-deck.deck-damaged:hover {
+    border-color: var(--red) !important;
+    background: rgba(216, 90, 78, 0.08) !important;
+}
+
+.has-cutaway .deck-label {
+    font-size: 0.68em;
+    letter-spacing: 0.2em;
+    color: var(--green-br);
+    text-shadow: 0 0 4px #000, 0 0 2px #000;
+}
+
+.has-cutaway .deck-upgrades .deck-label {
+    color: var(--amber);
+}
+
+.has-cutaway .deck-damaged .deck-label::after {
+    content: ' — DAMAGED';
+    color: var(--red);
+}
+
+.has-cutaway .deck-sub {
+    font-size: 0.62em;
+    opacity: 0;
+    transition: opacity var(--duration-fast, 150ms);
+    text-shadow: 0 0 4px #000;
+}
+
+.has-cutaway .ship-deck:hover .deck-sub {
+    opacity: 1;
+}
+
+.has-cutaway .deck-crew-status {
+    position: absolute;
+    right: 22px;
+    top: 6px;
+}
+
+/* ── Room card (DeckPanel.js): text is text, only actions are buttons ── */
+.deck-panel {
+    max-width: 460px;
+    padding: 0 0 18px;
+    border: 1px solid var(--line2);
+    border-top: 2px solid var(--green);
+    background: linear-gradient(180deg, #0f1613, #0a0e0c);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+.deck-panel.is-damaged {
+    border-top-color: var(--red);
+}
+
+.deck-panel-head {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 16px 20px 12px;
+}
+
+.deck-panel-head h3 {
+    margin: 0;
+    font: 600 1.25em var(--font-display);
+    letter-spacing: 0.16em;
+    color: var(--green-br);
+}
+
+.deck-panel-status {
+    font-size: 0.72em;
+    letter-spacing: 0.14em;
+    color: var(--green);
+}
+
+.deck-panel-status::before {
+    content: '●';
+    margin-right: 6px;
+}
+
+.is-damaged .deck-panel-status,
+.is-damaged .deck-panel-head h3 {
+    color: var(--red);
+}
+
+.deck-panel-close {
+    margin-left: auto;
+    background: none;
+    border: 0;
+    color: var(--dim);
+    font-size: 1em;
+    cursor: pointer;
+    padding: 4px 6px;
+}
+
+.deck-panel-close:hover,
+.deck-panel-close:focus-visible {
+    color: var(--bone);
+}
+
+.deck-panel-facts {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 6px 12px;
+    margin: 0;
+    padding: 4px 20px 14px;
+    font-size: 0.86em;
+    line-height: 1.5;
+}
+
+.deck-panel-facts dt {
+    color: var(--dim);
+    font-size: 0.82em;
+    letter-spacing: 0.12em;
+    padding-top: 2px;
+}
+
+.deck-panel-facts dd {
+    margin: 0;
+    color: var(--bone);
+}
+
+.deck-panel-facts dd.is-bad {
+    color: var(--red);
+}
+
+.deck-panel-facts em {
+    color: var(--dim);
+}
+
+.deck-panel h4 {
+    margin: 0;
+    padding: 12px 20px 8px;
+    border-top: 1px solid var(--line);
+    font: 600 0.7em var(--font-display);
+    letter-spacing: 0.22em;
+    color: var(--dim);
+}
+
+.deck-panel-crew {
+    list-style: none;
+    margin: 0;
+    padding: 0 20px 10px;
+}
+
+.deck-panel-crew li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 0.88em;
+}
+
+.deck-panel-face {
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
+    border: 1px solid;
+    border-radius: 3px;
+}
+
+.deck-panel-swatch {
+    width: 8px;
+    height: 14px;
+}
+
+.deck-panel-name {
+    color: var(--bone);
+}
+
+.deck-panel-mood {
+    margin-left: auto;
+    font-size: 0.78em;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+}
+
+.deck-panel-empty {
+    margin: 0;
+    padding: 0 20px 10px;
+    font-size: 0.86em;
+    color: var(--dim);
+}
+
+.deck-panel-actions {
+    display: grid;
+    gap: 8px;
+    padding: 0 20px;
+}
+
+.deck-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    background: rgba(116, 217, 154, 0.1);
+    border: 1px solid var(--green);
+    border-radius: 3px;
+    color: var(--green-br);
+    font: 600 0.86em var(--font-display);
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    transition: background 150ms, transform 150ms;
+}
+
+.deck-action span::after {
+    content: '  ›';
+}
+
+.deck-action small {
+    font: 400 0.82em var(--font-mono);
+    letter-spacing: 0;
+    color: var(--dim);
+    text-align: right;
+}
+
+.deck-action:hover:not([disabled]),
+.deck-action:focus-visible {
+    background: rgba(116, 217, 154, 0.22);
+    transform: translateX(2px);
+}
+
+.deck-action:active:not([disabled]) {
+    transform: translateX(0);
+}
+
+.deck-action-repair {
+    background: rgba(217, 162, 74, 0.14);
+    border-color: var(--amber);
+    color: var(--amber);
+}
+
+.deck-action-repair:hover:not([disabled]) {
+    background: rgba(217, 162, 74, 0.26);
+}
+
+.deck-action[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-style: dashed;
+}
+
+/* ── command deck: a finished action is a ticked line, not a dead button ── */
+.cmd-btn.cmd-done,
+.cmd-btn.cmd-done[disabled] {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-color: transparent !important;
+    border-left: 2px solid var(--green-d) !important;
+    background: transparent !important;
+    color: var(--dim) !important;
+    cursor: default;
+    opacity: 0.8;
+}
+
+.cmd-btn.cmd-done > div:first-child::before {
+    content: '✓ ';
+    color: var(--green);
+}
+
+.cmd-btn.cmd-done .cost {
+    color: var(--dim) !important;
+}
+
+/* ── Fabricator (FabricatorPanel.js) ── */
+.fab-panel {
+    max-width: 880px;
+    width: min(880px, 94vw);
+    height: auto;
+    max-height: 92vh;
+    overflow-y: auto; /* only kicks in on narrow windows; at desktop width the six cards fit in two rows */
+}
+
+.fab-panel-salvage {
+    font-size: 0.8em;
+    color: var(--amber);
+    letter-spacing: 0.08em;
+}
+
+.fab-panel-note {
+    margin: 0;
+    padding: 0 20px 14px;
+    font-size: 0.84em;
+    color: var(--dim);
+}
+
+.fab-panel-note b {
+    color: var(--amber);
+    font-weight: 600;
+}
+
+.fab-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+}
+
+.fab-card {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    grid-template-rows: 1fr auto;
+    gap: 10px 12px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: rgba(116, 217, 154, 0.03);
+    transition: border-color 150ms, transform 150ms;
+}
+
+.fab-card:hover {
+    border-color: var(--line2);
+    transform: translateY(-2px);
+}
+
+.fab-card.is-installed {
+    border-color: var(--green-d);
+    background: rgba(116, 217, 154, 0.08);
+}
+
+.fab-card-icon {
+    width: 48px;
+    height: 48px;
+    image-rendering: pixelated;
+}
+
+.fab-card-text h4 {
+    padding: 0;
+    border: 0;
+    font-size: 0.82em;
+    letter-spacing: 0.12em;
+    color: var(--green-br);
+}
+
+.fab-card-effect {
+    margin: 5px 0 4px;
+    font-size: 0.88em;
+    line-height: 1.4;
+    color: var(--bone);
+}
+
+.fab-card-desc {
+    margin: 0;
+    font-size: 0.76em;
+    line-height: 1.4;
+    color: var(--dim);
+}
+
+.fab-card .fab-buy,
+.fab-card-installed {
+    grid-column: 1 / -1;
+}
+
+.fab-card-installed {
+    margin: 0;
+    padding: 9px 0 2px;
+    border-top: 1px solid var(--line);
+    font: 600 0.8em var(--font-display);
+    letter-spacing: 0.16em;
+    color: var(--green);
+}

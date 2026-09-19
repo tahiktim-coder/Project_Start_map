@@ -13,6 +13,15 @@ class NavView {
             return this.element;
         }
 
+        // Map nodes scale with the map panel: a fixed 40px node is a speck on a fullscreen map,
+        // while window-based sizing overlaps nodes when the centre column is narrow.
+        const NODE_MIN = 40, NODE_MAX = 88, NODE_MAP_SHARE = 0.075;
+        const mainView = document.getElementById('main-view');
+        const mapWidth = mainView ? mainView.clientWidth : window.innerWidth * 0.5;
+        const nodeSize = Math.round(Math.max(NODE_MIN, Math.min(NODE_MAX, mapWidth * NODE_MAP_SHARE)));
+        const bodySize = Math.round(nodeSize * 0.9);
+        const labelSize = nodeSize >= 64 ? 12 : 10;
+
         const nodesHtml = systems.map(planet => {
             // Safety fallback if mapData missing
             const x = planet.mapData ? planet.mapData.x : Math.floor(Math.random() * 80) + 10;
@@ -21,25 +30,28 @@ class NavView {
             const color = this.getPlanetColor(planet.type);
             const isGhost = planet.ghost === true;
 
-            return `
-            <div class="nav-node ${isGhost ? 'nav-ghost' : ''}" data-id="${planet.id}"
-                 style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%);
-                        width: 40px; height: 40px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-                        z-index: 10; transition: all 0.3s ease;
-                        ${isGhost ? 'opacity: 0.35; animation: ghost-shimmer 3s ease-in-out infinite;' : ''}">
-
-                <div class="planet-visual type-${planet.type} nav-miniature"
+            const miniatureHtml = (window.BodyRenderer && BodyRenderer.body(planet, bodySize))
+                || `<div class="planet-visual type-${planet.type} nav-miniature"
                      style="width: 100%; height: 100%; animation-duration: 10s;
                             --seed-hue: ${(planet.id.charCodeAt(0) * 17) % 360}deg;
                             --seed-offset-x: ${((planet.id.charCodeAt(1) || 50) % 40) + 20}%;
                             --seed-offset-y: ${((planet.id.charCodeAt(2) || 60) % 40) + 30}%;
                             --seed-scale: ${0.8 + ((planet.id.charCodeAt(3) || 70) % 40) / 100};
                             --seed-rotation: ${(planet.id.charCodeAt(0) * 7) % 360}deg;">
-                </div>
+                </div>`;
+
+            return `
+            <div class="nav-node ${isGhost ? 'nav-ghost' : ''}" data-id="${planet.id}"
+                 style="position: absolute; left: ${x}%; top: ${y}%; transform: translate(-50%, -50%);
+                        width: ${nodeSize}px; height: ${nodeSize}px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+                        z-index: 10; transition: all 0.3s ease;
+                        ${isGhost ? 'opacity: 0.35; animation: ghost-shimmer 3s ease-in-out infinite;' : ''}">
+
+                ${miniatureHtml}
 
                 <!-- Label -->
-                <div class="nav-label" style="position: absolute; top: 45px; white-space: nowrap; color: ${color};
-                            font-size: 10px; font-family: var(--font-mono); text-shadow: 0 0 5px #000; pointer-events: none; opacity: 0.8;
+                <div class="nav-label" style="position: absolute; top: ${Math.round(nodeSize * 1.2)}px; white-space: nowrap; color: ${color};
+                            font-size: ${labelSize}px; font-family: var(--font-mono); text-shadow: 0 0 5px #000; pointer-events: none; opacity: 0.8;
                             ${isGhost ? 'font-style: italic;' : ''}">
                     ${planet.name}
                 </div>
@@ -59,12 +71,15 @@ class NavView {
             jumpCostNote = ` [DRIVES REINFORCED: -${discount}]`;
         }
 
+        // Sector 6 holds THE STRUCTURE; there is nothing charted past it (App enforces the same cap)
+        const isFinalSector = !!this.state && this.state.currentSector >= 6;
+
         this.element.innerHTML = `
             <div style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
                 <div style="display: flex; justify-content: space-between; align-items: end; border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; margin-bottom: 20px;">
                     <h2 style="color: var(--color-primary); margin:0;">/// SECTOR NAVIGATION MAP</h2>
-                    <button id="jump-sector-btn" style="background: transparent; border: 1px solid var(--color-accent); color: var(--color-accent); padding: 5px 15px; cursor: pointer; font-family: var(--font-mono);">
-                        >> JUMP SECTOR (-${jumpCost} ENERGY)${jumpCostNote}
+                    <button id="jump-sector-btn" ${isFinalSector ? 'disabled' : ''} style="${isFinalSector ? 'opacity: 0.45; cursor: not-allowed; ' : ''}background: rgba(116,217,154,0.08); border: 1px solid var(--green); color: var(--green-br); padding: 6px 16px; cursor: pointer; font-family: var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.85em; text-shadow: var(--glow);">
+                        ${isFinalSector ? 'END OF THE CORRIDOR' : `>> JUMP SECTOR (-${jumpCost} ENERGY)${jumpCostNote}`}
                     </button>
                 </div>
                 
@@ -232,10 +247,10 @@ class NavView {
 
         // Resource level calculation (based on planet.resources)
         const getResourceLevel = (value) => {
-            if (value >= 70) return { text: 'HIGH', color: '#00ff00' };
-            if (value >= 40) return { text: 'MODERATE', color: '#ffff00' };
-            if (value >= 20) return { text: 'LOW', color: '#ff8800' };
-            return { text: 'TRACE', color: '#ff4444' };
+            if (value >= 70) return { text: 'HIGH', color: '#9bf0bd' };
+            if (value >= 40) return { text: 'MODERATE', color: '#74d99a' };
+            if (value >= 20) return { text: 'LOW', color: '#d9a24a' };
+            return { text: 'TRACE', color: '#d85a4e' };
         };
 
         // Signal detection based on planet properties
@@ -243,28 +258,28 @@ class NavView {
         const detectSignals = (p) => {
             const signals = [];
             if (p.metrics?.hasLife || ['VITAL', 'BIO_MASS', 'SYMBIOTE_WORLD', 'SINGING'].includes(p.type)) {
-                signals.push({ type: 'BIOLOGICAL', color: '#00ff66', effect: '-5% EVA risk, Bio loot' });
+                signals.push({ type: 'BIOLOGICAL', color: '#74d99a', effect: '-5% EVA risk, Bio loot' });
             }
             if (p.metrics?.hasTech || ['MECHA', 'TERRAFORMED', 'MIRROR'].includes(p.type)) {
-                signals.push({ type: 'TECHNOLOGICAL', color: '#00ccff', effect: '-5% EVA risk, Tech loot' });
+                signals.push({ type: 'TECHNOLOGICAL', color: '#74d99a', effect: '-5% EVA risk, Tech loot' });
             }
             if (p.tags?.includes('WRECKAGE') || p.tags?.includes('EXODUS_WRECK')) {
-                signals.push({ type: 'WRECKAGE', color: '#ff8800', effect: 'Extra salvage' });
+                signals.push({ type: 'WRECKAGE', color: '#c4d0c4', effect: 'Extra salvage' });
             }
             if (p.tags?.includes('FAILED_COLONY')) {
-                signals.push({ type: 'COLONY RUINS', color: '#8888ff', effect: 'Story encounter' });
+                signals.push({ type: 'COLONY RUINS', color: '#c4d0c4', effect: 'Story encounter' });
             }
             if (p.tags?.includes('ANCIENT_RUINS')) {
-                signals.push({ type: 'ANCIENT RUINS', color: '#ffcc00', effect: '-3% EVA risk, Artifacts' });
+                signals.push({ type: 'ANCIENT RUINS', color: '#74d99a', effect: '-3% EVA risk, Artifacts' });
             }
             if (p.tags?.includes('ALIEN_SIGNALS')) {
-                signals.push({ type: 'ALIEN SIGNAL', color: '#ff00ff', effect: '+10% EVA risk, Rare loot' });
+                signals.push({ type: 'ALIEN SIGNAL', color: '#d9a24a', effect: '+10% EVA risk, Rare loot' });
             }
             if (p.tags?.includes('DERELICT')) {
-                signals.push({ type: 'DERELICT SHIP', color: '#cc8800', effect: '+5% EVA risk, Ship salvage' });
+                signals.push({ type: 'DERELICT SHIP', color: '#c4d0c4', effect: '+5% EVA risk, Ship salvage' });
             }
             if (p.tags?.includes('ANOMALY')) {
-                signals.push({ type: 'ANOMALY', color: '#ff00ff', effect: 'Unknown effects' });
+                signals.push({ type: 'ANOMALY', color: '#d9a24a', effect: 'Unknown effects' });
             }
             return signals;
         };
@@ -272,10 +287,10 @@ class NavView {
         // Tags display (only on deep scan)
         const tagsHtml = isDeepScanned && planet.tags && planet.tags.length > 0
             ? planet.tags.map(t => {
-                if (t === 'EXODUS_WRECK') return `<span style="background: #ff8800; color: #000; padding: 2px 4px; border-radius: 2px; font-size: 0.8em; margin-right: 5px; font-weight: bold;">EXODUS TRANSPONDER</span>`;
-                if (t === 'PREDATORY') return `<span style="background: #ff0000; color: #fff; padding: 2px 4px; border-radius: 2px; font-size: 0.8em; margin-right: 5px; font-weight: bold; animation: blink 1s infinite;">PREDATORY</span>`;
-                if (t === 'FAILED_COLONY') return `<span style="background: #4444ff; color: #fff; padding: 2px 4px; border-radius: 2px; font-size: 0.8em; margin-right: 5px;">FAILED COLONY</span>`;
-                return `<span style="background: var(--color-primary-dim); color: #000; padding: 2px 4px; border-radius: 2px; font-size: 0.8em; margin-right: 5px;">${t}</span>`;
+                if (t === 'EXODUS_WRECK') return `<span style="background: rgba(116,217,154,0.12); color: var(--green-br); border: 1px solid var(--green-d); padding: 2px 5px; font-size: 0.8em; margin-right: 5px; letter-spacing: 0.05em;">EXODUS TRANSPONDER</span>`;
+                if (t === 'PREDATORY') return `<span style="background: rgba(216,90,78,0.15); color: var(--red); border: 1px solid var(--red); padding: 2px 5px; font-size: 0.8em; margin-right: 5px; letter-spacing: 0.05em; animation: blink 1s infinite;">PREDATORY</span>`;
+                if (t === 'FAILED_COLONY') return `<span style="background: rgba(120,160,130,0.06); color: var(--bone); border: 1px solid var(--line2); padding: 2px 5px; font-size: 0.8em; margin-right: 5px; letter-spacing: 0.05em;">FAILED COLONY</span>`;
+                return `<span style="background: rgba(120,160,130,0.06); color: var(--dim); border: 1px solid var(--line); padding: 2px 5px; font-size: 0.8em; margin-right: 5px;">${t}</span>`;
             }).join('')
             : (isDeepScanned ? '<span style="color: var(--color-text-dim);">NO ANOMALIES</span>' : '');
 
@@ -338,8 +353,9 @@ class NavView {
 
         panel.innerHTML = `
             <div class="tactical-card" style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-                <div style="border: 1px solid var(--color-primary); height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,255,0,0.05); margin-bottom: 15px; position: relative; overflow: visible;">
-                    <div class="planet-visual type-${planet.type}" style="width: 80px; height: 80px;"></div>
+                <div style="border: 1px solid var(--line2); height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(116,217,154,0.05); margin-bottom: 15px; position: relative; overflow: visible;">
+                    ${(window.BodyRenderer && BodyRenderer.body(planet, 72, { sel: true }))
+                        || `<div class="planet-visual type-${planet.type}" style="width: 80px; height: 80px;"></div>`}
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%); background-size: 100% 4px; pointer-events: none; opacity: 0.3;"></div>
                 </div>
                 <h3 style="color: var(--color-primary); border-bottom: 1px solid var(--color-primary-dim); padding-bottom: 5px; font-size: 1em;">${planet.name}</h3>
@@ -372,7 +388,7 @@ class NavView {
                 </div>
                 <div class="actions-container" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
                     ${(isRemoteScanned || isDeepScanned) && planet.id !== this.state.currentSystem?.id ? `
-                        <button class="probe-btn" style="width: 100%; padding: 8px; background: transparent; border: 1px solid #ff8800; color: #ff8800; font-family: var(--font-mono); cursor: pointer; font-size: 0.8em;">
+                        <button class="probe-btn" style="width: 100%; padding: 8px; background: transparent; border: 1px solid var(--amber); color: var(--amber); font-family: var(--font-mono); cursor: pointer; font-size: 0.8em;">
                             🛰️ LAUNCH PROBE (REMOTE)
                         </button>
                     ` : ''}
