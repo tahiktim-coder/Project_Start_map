@@ -586,9 +586,13 @@ class OrbitView {
                        </button>`
                 }
 
-                ${!planet.isStructure && !planet._isWrongPlace && !planet.isStation && !planet.isAsteroidField ? `<button class="cmd-btn" id="btn-colony" style="border-color: var(--green); color: var(--green); margin-top: auto;">
-                    <div>ESTABLISH COLONY</div><div class="cost">END JOURNEY</div>
-                </button>` : ''}
+                ${!planet.isStructure && !planet._isWrongPlace && !planet.isStation && !planet.isAsteroidField ? (planet.scanned || window.TEST_MODE
+                    ? `<button class="cmd-btn" id="btn-colony" style="border-color: var(--green); color: var(--green); margin-top: auto;">
+                    <div>SETTLE HERE</div><div class="cost">ENDS THE JOURNEY</div>
+                </button>`
+                    : `<button class="cmd-btn" disabled style="margin-top: auto;">
+                    <div>SETTLE HERE</div><div class="cost">DEEP SCAN FIRST</div>
+                </button>`) : ''}
              </div>
         `;
 

@@ -827,6 +827,7 @@ const SECTOR_ARRIVAL_LINES = {
     5: 'The first crews made it this far. Three hundred years ago.',
     6: 'Nothing human is older than what is waiting here.',
 };
+const WARP_REFUND_SCALE = 0.75; // arrival refunds used to hand back ~half of every warp; 1 = old behaviour, lower = energy matters more
 const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getStopsLeft
 const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
 const FINAL_SECTOR = 6; // THE THRESHOLD — holds THE STRUCTURE; SECTOR_CONFIG defines nothing beyond it
@@ -1361,7 +1362,7 @@ class App {
                 const variance = (Math.random() * 0.2) - 0.1;
                 returnPercent = Math.max(0.25, Math.min(0.80, returnPercent + variance));
 
-                const energyReturn = Math.floor(cost * returnPercent);
+                const energyReturn = Math.floor(cost * returnPercent * WARP_REFUND_SCALE);
                 if (energyReturn > 0) {
                     this.state.energy = Math.min(100, this.state.energy + energyReturn);
                     this.state.addLog(`Collectors absorbed ${energyReturn} energy from ${returnReason}.`);
@@ -3451,6 +3452,11 @@ You are home.`
             </div>
         `;
 
+        if (window.EndScreens) { // shared card; the inline markup above is only the fallback
+            modal.className = 'end-screen is-win';
+            modal.removeAttribute('style');
+            modal.innerHTML = window.EndScreens.endingHtml(this.state, result, cleanText);
+        }
         document.body.appendChild(modal);
 
         // Add ending log
@@ -3461,14 +3467,6 @@ You are home.`
 
         // New game button
         const newGameBtn = modal.querySelector('#btn-new-game');
-        newGameBtn.onmouseenter = () => {
-            newGameBtn.style.background = 'rgba(0,80,200,0.5)';
-            newGameBtn.style.borderColor = '#9bf0bd';
-        };
-        newGameBtn.onmouseleave = () => {
-            newGameBtn.style.background = 'rgba(116,217,154,0.14)';
-            newGameBtn.style.borderColor = '#9bf0bd';
-        };
         newGameBtn.onclick = () => {
             modal.remove();
             // Reset the game completely
@@ -5265,6 +5263,10 @@ You are home.`
     }
 
     _executeColony(planet) {
+        if (!planet.scanned && !window.TEST_MODE) { // nobody lands five people on a world they have not looked at
+            this.state.addLog("A.U.R.A.: \"I will not commit the crew to a world we have not scanned. Run a deep scan first.\"");
+            return;
+        }
         // Generate Outcome based on Planet Metrics
         const outcome = EndingSystem.getColonyOutcome(planet);
 
@@ -5297,6 +5299,11 @@ You are home.`
             else { rating = 'C'; ratingColor = '#d9a24a'; }
         } else {
             rating = 'F'; ratingColor = '#d85a4e';
+        }
+
+        if (window.EndScreens) { // shared card; the flight-recorder table below is only the fallback
+            window.EndScreens.colony(this, planet, outcome, { rating, survivors: survivors.length, avgStress, colonyKnowledge });
+            return;
         }
 
         const overlay = document.createElement('div');

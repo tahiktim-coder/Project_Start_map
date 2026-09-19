@@ -414,3 +414,80 @@
     border-color: var(--amber);
     box-shadow: 0 0 8px rgba(217, 162, 74, 0.5);
 }
+
+/* ── endings that are not a loss ── */
+.end-screen.is-win {
+    background: radial-gradient(120% 90% at 50% 0%, #0d1a14 0%, #06070a 60%);
+}
+
+.end-card.is-ending {
+    border-top-color: var(--green);
+}
+
+.end-card.is-ending .end-kicker {
+    color: var(--green);
+}
+
+.end-card {
+    align-self: start;
+    margin: 4vh 0;
+}
+
+.end-world {
+    float: right;
+    margin: -14px -14px 6px 18px;
+}
+
+.end-story {
+    margin: 0 0 22px;
+    font-size: 1em;
+    line-height: 1.75;
+    color: var(--bone);
+}
+
+.end-story p {
+    margin: 0 0 1em;
+}
+
+.end-roster {
+    list-style: none;
+    margin: 0 0 20px;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+}
+
+.end-roster li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.end-roster img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border: 1px solid var(--line2);
+    border-radius: 3px;
+}
+
+.end-roster b {
+    display: block;
+    font-weight: 600;
+    color: var(--bone);
+}
+
+.end-roster span {
+    font-size: 0.8em;
+    color: var(--green);
+}
+
+.end-roster .is-dead img {
+    filter: grayscale(1) brightness(0.6);
+}
+
+.end-roster .is-dead b,
+.end-roster .is-dead span {
+    color: var(--dim);
+}

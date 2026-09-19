@@ -112,3 +112,53 @@
 @media (prefers-reduced-motion: reduce) {
     .res-delta { animation-duration: 2400ms; animation-timing-function: step-end; }
 }
+
+/* ── Coach.js: one line that says what to do next (Sector 1 only) ── */
+.coach {
+    position: fixed;
+    /* centred over the middle column only, so it never covers the ship or the command deck */
+    left: calc(280px + (100vw - 280px - var(--panel-width)) / 2);
+    bottom: calc(var(--log-height) + 14px);
+    transform: translateX(-50%);
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: max-content;
+    max-width: calc(100vw - 280px - var(--panel-width) - 60px);
+    padding: 9px 14px;
+    border: 1px solid var(--amber);
+    border-left-width: 3px;
+    background: rgba(12, 10, 6, 0.94);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    font-size: 0.88em;
+    line-height: 1.4;
+    color: var(--bone);
+}
+
+.coach[hidden] {
+    display: none;
+}
+
+.coach b {
+    font: 600 0.74em var(--font-display);
+    letter-spacing: 0.22em;
+    color: var(--amber);
+}
+
+.coach-hide {
+    flex: none;
+    padding: 2px 8px;
+    background: transparent;
+    border: 1px solid var(--line2);
+    border-radius: 2px;
+    color: var(--dim);
+    font: 0.8em var(--font-mono);
+    cursor: pointer;
+}
+
+.coach-hide:hover,
+.coach-hide:focus-visible {
+    color: var(--bone);
+    border-color: var(--bone);
+}

@@ -43,8 +43,77 @@
         document.body.appendChild(overlay);
         const again = overlay.querySelector('.end-again');
         again.addEventListener('click', () => location.reload());
-        again.focus();
+        again.focus({ preventScroll: true }); // keep the title in view, not the button
     }
 
-    window.EndScreens = { gameOver };
+    // ── shared pieces for the endings that are not a loss ──
+    function rosterHtml(crew, survivorNote) {
+        return `<ul class="end-roster">${crew.map(c => {
+            const isDead = c.status === 'DEAD', marks = [];
+            if ((c.tags || []).includes('HIVE_MIND')) marks.push('symbiote');
+            if ((c.tags || []).includes('MACHINE_LINK')) marks.push('machine-linked');
+            if ((c.tags || []).includes('WRONG_PLACE_SURVIVOR')) marks.push('touched');
+            return `<li class="${isDead ? 'is-dead' : ''}">
+                ${c.portraitId ? `<img src="assets/crew/${esc(c.portraitId)}.png" alt="">` : ''}
+                <div><b>${esc(c.realName || c.name)}</b><span>${isDead ? 'did not make it' : (marks.join(', ') || survivorNote || 'made it')}</span></div>
+            </li>`;
+        }).join('')}</ul>`;
+    }
+
+    const statRow = pairs => `<dl class="end-stats">${pairs.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+
+    /** Card markup for the Structure / Wrong Place endings. bundle.js wires the #btn-new-game button. */
+    function endingHtml(state, result, textHtml) {
+        const living = state.crew.filter(c => c.status !== 'DEAD');
+        return `
+            <section class="end-card is-ending" role="dialog" aria-label="Ending">
+                <p class="end-kicker">THE JOURNEY ENDS · ${esc(result.ending || '')}</p>
+                <h2 class="end-title">${esc(result.title || '')}</h2>
+                <div class="end-story">${textHtml}</div>
+                <h4>THE CREW</h4>
+                ${rosterHtml(state.crew)}
+                ${statRow([['SECTOR', `${state.currentSector} of 6`], ['SURVIVORS', `${living.length} of ${state.crew.length}`],
+                    ['EXODUS LOGS', `${(state.exodusLogsFound || []).length} of 8`], ['DATA', state._colonyKnowledge || 0],
+                    ['SALVAGE', state.salvage], ['ENERGY', state.energy + '%']])}
+                <button class="deck-action end-again" id="btn-new-game"><span>BEGIN AGAIN</span><small>a new crew, the same road</small></button>
+            </section>`;
+    }
+
+    /** Full-screen colony result: the world you chose, what became of it, who was there. */
+    function colony(app, planet, outcome, facts) {
+        const state = app.state, isWin = !!outcome.success;
+        const hasEndings = typeof EndingSystem !== 'undefined'; // a class declaration, so it is not on window
+        const viability = hasEndings ? EndingSystem.getPlanetViability(planet, state) : '';
+        const epilogue = isWin && hasEndings ? EndingSystem.generateEpilogue(planet, state, outcome.title) : '';
+        const metrics = planet.metrics || {};
+        const overlay = document.createElement('div');
+        overlay.className = 'end-screen ' + (isWin ? 'is-win' : 'is-loss');
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-label', 'Colony result');
+        overlay.innerHTML = `
+            <section class="end-card ${isWin ? 'is-ending' : ''}">
+                <div class="end-world">${window.BodyRenderer ? (BodyRenderer.body(planet, 150) || '') : ''}</div>
+                <p class="end-kicker">${isWin ? 'COLONY FOUNDED' : 'THE COLONY FAILED'} · ${esc(planet.name)}</p>
+                <h2 class="end-title">${esc(outcome.title || '')}</h2>
+                <div class="end-story">${outcome.text || ''}${epilogue}</div>
+                <h4>THE WORLD YOU CHOSE</h4>
+                ${statRow([['TYPE', String(planet.type || '').replace(/_/g, ' ')], ['HOW LIVEABLE', viability], ['AIR', planet.atmosphere || '?'],
+                    ['GRAVITY', (metrics.gravity != null ? metrics.gravity.toFixed(1) : '?') + ' G'],
+                    ['TEMPERATURE', (metrics.temp != null ? metrics.temp : '?') + ' °C'], ['LIFE', metrics.hasLife ? 'yes' : 'none']])}
+                <h4>THE CREW</h4>
+                ${rosterHtml(state.crew, isWin ? 'a founder' : 'lost with the colony')}
+                ${statRow([['COLONY RATING', facts.rating], ['SURVIVORS', `${facts.survivors} of ${state.crew.length}`], ['AVERAGE STRESS', facts.avgStress],
+                    ['DATA GATHERED', facts.colonyKnowledge], ['UPGRADES BUILT', (state.upgrades || []).length], ['SECTOR', `${state.currentSector} of 6`]])}
+                <button class="deck-action end-again"><span>BEGIN AGAIN</span><small>a new crew, the same road</small></button>
+            </section>`;
+        document.body.appendChild(overlay);
+        const again = overlay.querySelector('.end-again');
+        again.addEventListener('click', () => {
+            try { localStorage.removeItem('silentExodus_save'); } catch (e) { /* storage blocked: the reload still restarts */ }
+            location.reload();
+        });
+        again.focus({ preventScroll: true }); // keep the title in view, not the button
+    }
+
+    window.EndScreens = { gameOver, endingHtml, colony };
 })();
