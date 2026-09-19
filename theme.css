@@ -491,3 +491,27 @@
 .end-roster .is-dead span {
     color: var(--dim);
 }
+
+/* ── layout breathes with the window: side panels shrink before the middle column does ──
+   (an itch.io embed is often ~960-1280px wide; fixed 280px + 350px panels left the map ~300px) */
+:root {
+    --ship-width: clamp(190px, 17vw, 280px);
+    --panel-width: clamp(250px, 24vw, 350px);
+}
+
+.app-container {
+    grid-template-columns: var(--ship-width) 1fr var(--panel-width);
+}
+
+@media (max-width: 1100px) {
+    body { font-size: 12.5px; }
+    .status-bar { padding: 0 12px; }
+    .ship-info .date { display: none; }
+    .cmd-btn { padding: 10px 12px; }
+}
+
+/* the readout only scrolls when the window is genuinely too short; keep the bar out of the way */
+.orbit-readout {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line2) transparent;
+}

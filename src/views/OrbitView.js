@@ -37,14 +37,14 @@ class OrbitView {
         const heroSize = OrbitView.heroSize();
         this.element.innerHTML = `
             <div style="padding: 20px; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
-                <h2 style="color: var(--color-primary); border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; margin-bottom: 20px; max-width: 40%;">
-                    /// ORBIT ESTABLISHED: ${planet.name}
+                <h2 style="color: var(--color-primary); border-bottom: 2px solid var(--color-primary); padding-bottom: 8px; margin-bottom: 14px; font-size: clamp(1em, 0.8em + 0.6vw, 1.5em);">
+                    /// IN ORBIT: ${planet.name}
                 </h2>
 
                 <div style="flex: 1; display: flex; flex-direction: row; gap: 20px; min-height: 0;">
 
                     <!-- LEFT: Data readout -->
-                    <div style="width: 280px; display: flex; flex-direction: column; gap: 15px; border-right: 1px dashed var(--color-primary-dim); padding-right: 20px; overflow-y: auto; min-height: 0;">
+                    <div class="orbit-readout" style="width: min(280px, 45%); flex: none; display: flex; flex-direction: column; gap: 8px; border-right: 1px dashed var(--color-primary-dim); padding-right: 20px; overflow-y: auto; min-height: 0; font-size: 0.93em;">
                         <div style="color: var(--color-accent); border-bottom: 1px solid var(--color-primary-dim); margin-bottom: 5px;">ENVIRONMENTAL READINGS</div>
                         
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -406,7 +406,8 @@ class OrbitView {
     /** Planet size that fits the space left of the readout column, so it never sits on top of the text. */
     static heroSize() {
         const main = document.getElementById('main-view');
-        const free = (main ? main.clientWidth : 900) - 280 - 100; // readout column + paddings
+        const width = main ? main.clientWidth : 900;
+        const free = width - Math.min(280, width * 0.45) - 100; // readout column (see .orbit-readout width) + paddings
         return Math.round(Math.max(110, Math.min(300, free * 0.6)));
     }
 

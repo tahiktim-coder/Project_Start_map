@@ -117,7 +117,7 @@
 .coach {
     position: fixed;
     /* centred over the middle column only, so it never covers the ship or the command deck */
-    left: calc(280px + (100vw - 280px - var(--panel-width)) / 2);
+    left: calc(var(--ship-width, 280px) + (100vw - var(--ship-width, 280px) - var(--panel-width)) / 2);
     bottom: calc(var(--log-height) + 14px);
     transform: translateX(-50%);
     z-index: 60;
@@ -125,7 +125,7 @@
     align-items: center;
     gap: 12px;
     width: max-content;
-    max-width: calc(100vw - 280px - var(--panel-width) - 60px);
+    max-width: calc(100vw - var(--ship-width, 280px) - var(--panel-width) - 60px);
     padding: 9px 14px;
     border: 1px solid var(--amber);
     border-left-width: 3px;
