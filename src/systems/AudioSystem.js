@@ -2,8 +2,16 @@ class AudioSystem {
     constructor() {
         this.ctx = new (window.AudioContext || window.webkitAudioContext)();
         this.masterGain = this.ctx.createGain();
-        this.muted = false; // Default ON
-        this.masterGain.gain.value = 0.3; // Start with audio
+        // `?mute=1` starts the game silent (and remembers it) — for testing in a background tab. `?mute=0` clears it.
+        const muteParam = new URLSearchParams(location.search).get('mute');
+        try {
+            if (muteParam === '1') localStorage.setItem('psm-muted', '1');
+            if (muteParam === '0') localStorage.removeItem('psm-muted');
+            this.muted = localStorage.getItem('psm-muted') === '1';
+        } catch (e) {
+            this.muted = muteParam === '1'; // storage blocked: the URL still works for this load
+        }
+        this.masterGain.gain.value = this.muted ? 0 : 0.3;
         this.masterGain.connect(this.ctx.destination);
         this.initialized = false;
 

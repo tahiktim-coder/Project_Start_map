@@ -859,6 +859,7 @@ class App {
         `;
 
         overlay.innerHTML = `
+            <div class="title-hero" aria-hidden="true">${window.BodyRenderer ? window.BodyRenderer.globe({ type: 'GAS_GIANT', size: Math.round(Math.max(320, Math.min(620, (window.innerHeight || 800) * 0.8))), seed: 9 }) : ''}</div>
             <!-- Stars background - ALWAYS visible, no animation delay -->
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none;">
                 ${starData.map(star => `
@@ -868,7 +869,7 @@ class App {
                         animation: twinkle ${star.duration}s infinite;"></div>
                 `).join('')}
             </div>
-            <div style="text-align: center; animation: fadeInGentle 1.5s ease-in;">
+            <div class="title-block" style="animation: fadeInGentle 1.5s ease-in;">
 
                 <!-- Title -->
                 <div style="position: relative;">
@@ -881,12 +882,12 @@ class App {
                         SILENT EXODUS
                     </div>
                     <div style="font-size: 1em; color: #8a9d8f; margin-top: 15px; letter-spacing: 4px;">
-                        THE LAST JOURNEY OF HUMANITY
+                        EVERY SHIP WAS TOLD IT WAS THE FIRST
                     </div>
                 </div>
 
                 <!-- Buttons -->
-                <div style="margin-top: 50px; display: flex; flex-direction: column; gap: 15px; align-items: center;">
+                <div class="title-buttons" style="margin-top: 50px; display: flex; flex-direction: column; gap: 15px;">
                     ${hasSave ? `
                     <button id="btn-continue-game" style="
                         padding: 18px 60px;
@@ -5628,6 +5629,10 @@ You are home.`
     showGameOver(detail) {
         // Delete save file - game is over
         this.state.deleteSave();
+        if (window.EndScreens) { // shared card layout; the legacy red box below is the fallback
+            window.EndScreens.gameOver(this, detail);
+            return;
+        }
 
         // Gather stats for the run
         const deadCrew = this.state.crew.filter(c => c.status === 'DEAD');

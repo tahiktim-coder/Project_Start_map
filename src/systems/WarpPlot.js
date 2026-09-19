@@ -33,6 +33,8 @@
         bad: [['ENGINEER', "That's going to cost us. Coils are screaming."], ['MEDIC', 'Is everyone all right? That was ugly.'], ['SECURITY', 'Warn me next time you do that.']],
         auto: [['AURA', 'Plotting complete. You may rest, Commander. I have us.'], ['AURA', 'I will take it from here. I always can.']],
     };
+    const sfx = (name, ...args) => { const audio = window.AudioSystem; if (audio && typeof audio[name] === 'function') audio[name](...args); }; // silent when muted
+    const LOCK_TONE = { clean: [880, 'sine', 0.14], rough: [440, 'triangle', 0.14], bad: [150, 'sawtooth', 0.22] };
     const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
     function baseDifficulty(opts) {
@@ -191,6 +193,7 @@
                 pips[index].className = 'is-' + result;
                 pips[index].querySelector('span').textContent = LOCK[result].word;
                 showCallout(`BURN ${index + 1} · ${LOCK[result].word}`, LOCK[result].color);
+                sfx('playTone', ...LOCK_TONE[result]);
                 if (s.locks.length === STAGES.length) { setTimeout(() => fly(finalGrade(s.locks), false), LOCK_PAUSE_MS); return; }
                 setTimeout(() => { // next burn: new window, faster sweep
                     s.diff = stageDifficulty(base, s.locks.length);
@@ -205,6 +208,7 @@
                 s.flightStart = performance.now();
                 engage.disabled = true; auto.disabled = true;
                 overlay.classList.add('is-flying', 'is-' + grade);
+                sfx(grade === 'perfect' ? 'sfxDiscovery' : grade === 'bad' ? 'sfxWarn' : 'sfxWarp');
                 const info = GRADES[grade], line = pickLine(isAuto ? 'auto' : grade, opts.crew || []);
                 resultEl.innerHTML = `<strong style="color:${info.color}">${isAuto ? 'A.U.R.A. PLOT' : info.label}</strong><span>${info.effect}</span>`
                     + (line ? `<blockquote>${line.face ? `<img src="assets/crew/${esc(line.face)}.png" alt="">` : '<i>◈</i>'}<b>${esc(line.name)}</b> “${esc(line.text)}”</blockquote>` : '');

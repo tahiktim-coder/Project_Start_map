@@ -22,6 +22,7 @@
         fair: { label: 'FAIR LOCK', effect: 'a normal scan', color: GREEN },
         weak: { label: 'WEAK LOCK', effect: 'the scan has to run twice — 1 extra energy', color: AMBER },
     };
+    const sfx = (name, ...args) => { const audio = window.AudioSystem; if (audio && typeof audio[name] === 'function') audio[name](...args); }; // silent when muted
     const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
     const gradeOf = match => (match >= SHARP_AT ? 'sharp' : match < WEAK_BELOW ? 'weak' : 'fair');
@@ -99,6 +100,7 @@
                 s.isDone = true;
                 cancelAnimationFrame(raf);
                 const grade = isAuto ? 'fair' : gradeOf(match), info = GRADES[grade];
+                sfx(grade === 'sharp' ? 'sfxDiscovery' : grade === 'weak' ? 'sfxError' : 'sfxScan');
                 [pitchEl, strengthEl, lockBtn, autoBtn].forEach(el => { el.disabled = true; });
                 resultEl.innerHTML = `<strong style="color:${info.color}">${isAuto ? 'A.U.R.A. TUNED IT' : info.label}</strong><span>${info.effect}</span>`;
                 setTimeout(() => {

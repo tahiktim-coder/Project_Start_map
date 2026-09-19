@@ -52,7 +52,7 @@
         }
         if (T.ring) {
             const ry = dx * Math.sin(RING_TILT) + dy * Math.cos(RING_TILT);
-            if (ry < -R * 0.15 && ry > -R * 0.42 && (dx * L[0] + dy * L[1]) < 0) g *= 0.15;
+            if (ry < -R * 0.18 && ry > -R * 0.3 && (dx * L[0] + dy * L[1]) < 0) g *= 0.6; // soft ring shadow; a hard one reads as a black bar at title-screen size
         }
         if (T.nightLights && lam < 0.12 && surf.land && !(surf.cloud > 0.2) && vnoise(u * 90, v * 90) > 0.72) { g = 0.9; a = 1; }
         s.gray[i] = g; s.acc[i] = a; s.mask[i] = 1;

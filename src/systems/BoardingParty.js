@@ -37,6 +37,7 @@
         [260, ['"The ship keeps steering us. Nobody set this course."', '"It is not a planet we are looking for. I am sure of that now."']],
         [9999, ['"We stopped chasing it. We are going to build something it cannot miss."', '"If you are reading this, you were faster than us. Good. Keep going, or don\'t."']],
     ];
+    const sfx = (name, ...args) => { const audio = window.AudioSystem; if (audio && typeof audio[name] === 'function') audio[name](...args); }; // silent when muted
     const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
     function seeded(id) {
@@ -205,10 +206,11 @@
         function act(kind) {
             if (isOver) return;
             if (kind === 'leave') { finish(true); return; }
-            if (kind === 'deeper') { b.oxygen -= MOVE_COST; b.pos += 1; refresh(); return; }
+            if (kind === 'deeper') { b.oxygen -= MOVE_COST; b.pos += 1; sfx('sfxTick'); refresh(); return; }
             b.oxygen -= SEARCH_COST;
             b.rooms[b.pos].isSearched = true;
             const found = searchRoom(b), trouble = rollHazard(b);
+            sfx(trouble ? 'sfxWarn' : 'sfxInteract');
             refresh(trouble ? `${found} ${trouble}` : found);
         }
 
@@ -217,6 +219,7 @@
             isOver = true;
             cancelAnimationFrame(raf);
             applyResult(app, station, b, isSafe);
+            sfx(isSafe ? 'sfxDiscovery' : 'sfxCritical');
             Object.values(buttons).forEach(btn => { btn.disabled = true; });
             statusEl.textContent = isSafe ? `${member.name} is back aboard.` : `Out of air. ${member.name} is dragged back through the airlock — hurt, and half the haul is gone.`;
             statusEl.classList.toggle('is-bad', !isSafe);
