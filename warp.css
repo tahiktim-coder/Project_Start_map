@@ -354,3 +354,133 @@
     color: var(--green-br);
     font-weight: 600;
 }
+
+/* ── sector arrival card ── */
+.warp-arrival {
+    text-align: center;
+    padding: 46px 40px 36px;
+    animation: warp-plot-in 500ms ease-out;
+}
+
+.warp-arrival-title {
+    margin: 10px 0 14px;
+    font: 600 clamp(2em, 1.2em + 3vw, 3.6em) var(--font-display);
+    letter-spacing: 0.2em;
+    color: var(--green-br);
+    text-shadow: 0 0 24px rgba(116, 217, 154, 0.35);
+}
+
+.warp-arrival-line {
+    max-width: 34em;
+    margin: 0 auto 26px;
+    font-size: 1.02em;
+    line-height: 1.6;
+    color: var(--bone);
+}
+
+.warp-arrival-crew {
+    display: grid;
+    gap: 10px;
+    max-width: 38em;
+    margin: 0 auto 26px;
+    text-align: left;
+}
+
+.warp-arrival-crew blockquote {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 10px 12px;
+    border-left: 2px solid var(--line2);
+    background: rgba(116, 217, 154, 0.04);
+}
+
+.warp-arrival-crew img,
+.warp-arrival-crew i {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border: 1px solid var(--line2);
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    font-style: normal;
+    color: var(--green);
+}
+
+.warp-arrival-crew b {
+    display: block;
+    font: 600 0.78em var(--font-display);
+    letter-spacing: 0.14em;
+    color: var(--green-br);
+}
+
+.warp-arrival-crew span {
+    font-size: 0.92em;
+    line-height: 1.45;
+    color: var(--bone);
+}
+
+.warp-arrival .warp-plot-buttons {
+    justify-content: center;
+}
+
+.warp-arrival .warp-arrival-go {
+    flex: none;
+    min-width: 220px;
+}
+
+/* ── signal tuning (SignalTune.js) ── */
+.tune-readout {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+    font: 600 0.72em var(--font-display);
+    letter-spacing: 0.2em;
+    color: var(--dim);
+}
+
+.tune-match {
+    min-width: 3.2em;
+    font: 700 1.9em var(--font-mono);
+    letter-spacing: 0;
+    transition: color 150ms;
+}
+
+.tune-timer {
+    flex: 1;
+    height: 4px;
+    background: var(--line);
+}
+
+.tune-timer i {
+    display: block;
+    height: 100%;
+    background: var(--amber);
+    transform-origin: left;
+}
+
+.tune-dials {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.tune-dials label {
+    display: grid;
+    gap: 6px;
+    font: 600 0.7em var(--font-display);
+    letter-spacing: 0.2em;
+    color: var(--dim);
+}
+
+.tune-dials input[type="range"] {
+    width: 100%;
+    height: 26px;
+    accent-color: var(--green);
+    cursor: ew-resize;
+}

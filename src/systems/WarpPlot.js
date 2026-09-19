@@ -209,7 +209,23 @@
                 resultEl.innerHTML = `<strong style="color:${info.color}">${isAuto ? 'A.U.R.A. PLOT' : info.label}</strong><span>${info.effect}</span>`
                     + (line ? `<blockquote>${line.face ? `<img src="assets/crew/${esc(line.face)}.png" alt="">` : '<i>◈</i>'}<b>${esc(line.name)}</b> “${esc(line.text)}”</blockquote>` : '');
                 if (grade === 'bad' && window.app && window.app.screenShake) window.app.screenShake('light');
-                setTimeout(() => finish(isAuto), Math.max(FLIGHT_MS, RESULT_HOLD_MS));
+                setTimeout(() => (opts.arrival ? arrive(isAuto) : finish(isAuto)), Math.max(FLIGHT_MS, RESULT_HOLD_MS));
+            }
+
+            // Sector jumps end on a title card: where you are, how old the wrecks are, what the crew makes of it.
+            function arrive(isAuto) {
+                const a = opts.arrival, frame = overlay.querySelector('.warp-plot-frame');
+                cancelAnimationFrame(raf);
+                frame.classList.add('warp-arrival');
+                frame.innerHTML = `
+                    <p class="warp-plot-kicker">${esc(a.kicker)}</p>
+                    <h2 class="warp-arrival-title">${esc(a.title)}</h2>
+                    <p class="warp-arrival-line">${esc(a.line)}</p>
+                    <div class="warp-arrival-crew">${(a.voices || []).map(v => `<blockquote>${v.face ? `<img src="assets/crew/${esc(v.face)}.png" alt="">` : '<i>◈</i>'}<div><b>${esc(v.name)}</b><span>“${esc(v.text)}”</span></div></blockquote>`).join('')}</div>
+                    <div class="warp-plot-buttons"><button class="warp-plot-engage warp-arrival-go">CONTINUE</button></div>`;
+                const go = frame.querySelector('.warp-arrival-go');
+                go.addEventListener('click', () => finish(isAuto), { once: true });
+                go.focus();
             }
 
             function finish(isAuto) {

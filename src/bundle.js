@@ -802,6 +802,14 @@ class GameState {
 
 // --- 4. MAIN APP ---
 
+// One line on each arrival card: the further out, the older the wrecks (the wait calculation, shown not told)
+const SECTOR_ARRIVAL_LINES = {
+    2: 'The wrecks out here are a hundred years old. Older than anyone aboard.',
+    3: 'Two hundred years of silence. The instruments have started to disagree with each other.',
+    4: 'Somebody stopped here, and lived.',
+    5: 'The first crews made it this far. Three hundred years ago.',
+    6: 'Nothing human is older than what is waiting here.',
+};
 const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
 const FINAL_SECTOR = 6; // THE THRESHOLD — holds THE STRUCTURE; SECTOR_CONFIG defines nothing beyond it
 
@@ -1202,66 +1210,31 @@ class App {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '3500';
-        modal.style.background = 'rgba(0, 5, 15, 0.98)';
-
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 650px; border-color: #74d99a; background: linear-gradient(135deg, #0a0a15, #0a1510);">
-                <div class="modal-header" style="background: linear-gradient(90deg, #003322, #005544); color: #74d99a;">
-                    <span>/// A.U.R.A. SYSTEM BRIEFING ///</span>
-                </div>
-                <div style="padding: 20px;">
-                    <!-- A.U.R.A. Portrait -->
-                    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                        <div style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #74d99a;
-                            background: #001a0a; display: flex; align-items: center; justify-content: center;
-                            font-size: 1.5em; color: #74d99a; flex-shrink: 0;">AI</div>
-                        <div>
-                            <div style="color: #74d99a; font-weight: bold; margin-bottom: 5px;">A.U.R.A.</div>
-                            <div style="color: #88ffaa; font-style: italic; font-size: 0.9em;">
-                                "Good morning, Commander. Cryo-sleep cycle complete. All vital signs nominal."
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Briefing content -->
-                    <div style="border-left: 2px solid #74d99a; padding-left: 15px; margin-bottom: 20px; color: #9bf0bd; font-size: 0.9em; line-height: 1.7;">
-                        <p style="margin: 0 0 12px 0;">"I've maintained ship systems during your rest. Here is our status:"</p>
-                        <p style="margin: 0 0 8px 0; color: #9bf0bd;">▸ <strong>Energy:</strong> 100 units. Required for warping between planets.</p>
-                        <p style="margin: 0 0 8px 0; color: #9bf0bd;">▸ <strong>Rations:</strong> 20 cycles. Major actions consume supplies.</p>
-                        <p style="margin: 0 0 8px 0; color: #9bf0bd;">▸ <strong>Crew:</strong> 5 souls aboard. Their wellbeing is my priority.</p>
-                        <p style="margin: 0 0 12px 0; color: #9bf0bd;">▸ <strong>Mission:</strong> Find a habitable world. Establish humanity's new home.</p>
-                        <p style="margin: 0; color: #9bf0bd;">"I recommend selecting a planet on the navigation map. I will provide analysis once we are in orbit."</p>
-                    </div>
-
-                    <!-- Continue button -->
-                    <div style="text-align: center;">
-                        <button id="btn-begin" style="
-                            padding: 12px 40px; background: transparent;
-                            border: 2px solid #74d99a; color: #74d99a;
-                            font-family: var(--font-mono); font-size: 1em;
-                            cursor: pointer; transition: all 0.3s;
-                        ">UNDERSTOOD</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
+            <section class="modal-content deck-panel briefing" role="dialog" aria-label="A.U.R.A. briefing">
+                <header class="deck-panel-head">
+                    <h3>GOOD MORNING, COMMANDER</h3>
+                    <span class="deck-panel-status">A.U.R.A. ONLINE</span>
+                </header>
+                <p class="briefing-voice"><i>◈</i><span>“Everyone woke up. The ship is in one piece. Here is where we stand.”</span></p>
+                <dl class="deck-panel-facts">
+                    <dt>ENERGY</dt><dd>Moves the ship. Every warp and scan spends it.</dd>
+                    <dt>RATIONS</dt><dd>Every landing, boarding or jump eats one. When they run out, people start to die.</dd>
+                    <dt>SALVAGE</dt><dd>Repairs rooms and builds upgrades.</dd>
+                    <dt>CREW</dt><dd>Five people. Click any room of the ship to see who is in it.</dd>
+                    <dt>MISSION</dt><dd>Find a world we can live on. Found a colony.</dd>
+                </dl>
+                <p class="briefing-voice"><i>◈</i><span>“Pick a planet on the map. I will tell you what I see once we are in orbit.”</span></p>
+                <div class="deck-panel-actions"><button class="deck-action" id="btn-begin"><span>TAKE THE CHAIR</span><small>begin</small></button></div>
+            </section>`;
         document.body.appendChild(modal);
-
         const btn = modal.querySelector('#btn-begin');
-        btn.onmouseenter = () => {
-            btn.style.background = 'rgba(0, 255, 136, 0.2)';
-            btn.style.color = '#9bf0bd';
-        };
-        btn.onmouseleave = () => {
-            btn.style.background = 'transparent';
-            btn.style.color = '#74d99a';
-        };
         btn.onclick = () => {
             modal.remove();
             this.state.addLog("A.U.R.A.: Systems online. Awaiting your command, Commander.");
             this.state.addLog("Select a planet to view details. Warp to enter orbit.");
         };
+        btn.focus();
     }
 
     handleWarp(planet) {
@@ -1293,7 +1266,7 @@ class App {
 
         // Course plot: the player flies the burn, then we re-enter here with the result.
         // Skipped for free re-entries, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
-        if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost && !window.TEST_MODE) {
+        if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost) {
             this._isInTransit = true;
             const plotOptions = this.getPlotOptions(planet.name, 'planet');
             plotOptions.targetHtml = window.BodyRenderer ? window.BodyRenderer.body(planet, 64) : null;
@@ -2189,10 +2162,19 @@ class App {
      * Show warp animation with crew dialogue during sector jump
      */
     showWarpAnimation(onComplete) {
-        if (window.WarpPlot && !window.TEST_MODE) {
+        if (window.WarpPlot) {
             const nextSector = this.state.currentSector + 1;
             const name = (typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[nextSector]) ? SECTOR_CONFIG[nextSector].name : `SECTOR ${nextSector}`;
-            window.WarpPlot.play(this.getPlotOptions(`S${nextSector} — ${name}`, 'sector')).then(result => {
+            const plotOptions = this.getPlotOptions(`S${nextSector} — ${name}`, 'sector');
+            const living = this.state.crew.filter(c => c.status !== 'DEAD');
+            plotOptions.arrival = {
+                kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`,
+                title: name,
+                line: SECTOR_ARRIVAL_LINES[nextSector] || '',
+                voices: this.getWarpDialogue(nextSector, living).filter(d => d.speaker !== 'A.U.R.A.').slice(0, 2)
+                    .map(d => ({ name: d.speaker, text: d.text, face: d.portraitId || null })),
+            };
+            window.WarpPlot.play(plotOptions).then(result => {
                 this.applyPlotResult(result, SECTOR_JUMP_BASE_COST);
                 onComplete();
             });
@@ -3911,8 +3893,28 @@ You are home.`
             return;
         }
 
+        // Tune the signal first; we re-enter here with the result (same pattern as the warp plot)
+        if (window.SignalTune && !this._tuneResult && planet && !planet.scanned && this.state.energy >= 2) {
+            window.SignalTune.play({ targetName: planet.name, sector: this.state.currentSector }).then(result => {
+                this._tuneResult = result;
+                this.handleScanAction();
+            });
+            return;
+        }
+        const tune = this._tuneResult;
+        this._tuneResult = null;
+
         if (this.state.consumeEnergy(2)) {
             this.state.addLog("Deep Scan initiated...");
+            if (tune && tune.grade === 'sharp') {
+                this.state.addColonyKnowledge(1, true);
+                this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
+            } else if (tune && tune.grade === 'weak') {
+                this.state.energy = Math.max(0, this.state.energy - 1);
+                this.state.addLog("Weak lock: the scan had to run twice. 1 extra energy spent.");
+            } else if (tune && tune.auto) {
+                this.state.addLog("A.U.R.A. tuned the scan. Adequate.");
+            }
             planet.scanned = true;
 
             // S3+ deep scan hook — corrects corrupted data, reveals hidden tags
@@ -4373,55 +4375,33 @@ You are home.`
             ? signalModifiers.map(s => `<span style="color: ${s.color};">${PLAIN_SIGNAL[s.type] || s.type}: ${Math.abs(s.mod)}% ${s.mod > 0 ? 'more dangerous' : 'safer'}</span>`).join(' · ')
             : '';
 
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: var(--color-accent);">
-                <div class="modal-header" style="color: var(--color-accent);">/// EVA MISSION: ${event.title} ///</div>
-                <div style="padding: 20px; text-align: center;">
-                    <p style="margin-bottom: 20px; font-style: italic;">"${event.desc}"</p>
-                    ${signalModDisplay ? `<div style="font-size: 0.75em; margin-bottom: 15px; padding: 8px; border: 1px dashed var(--color-primary-dim); background: rgba(0,0,0,0.5);">
-                        <span style="color: var(--color-text-dim);">WHAT OUR SCAN SAYS:</span> ${signalModDisplay}
-                    </div>` : ''}
-                    ${isParanoid ? '<p style="font-size: 0.8em; color: #e07a70; margin-bottom: 10px;">Vance: "I\'m not risking anyone on something that dangerous."</p>' : ''}
-                    ${recklessBlocksSafe ? '<p style="font-size: 0.8em; color: #d9a24a; margin-bottom: 10px;">Mira: "The safe option gets us nothing. I\'m going in."</p>' : ''}
-
-                    <div style="display: flex; gap: 20px; justify-content: center;">
-                        ${event.choices.map((choice, idx) => {
-            const totalRisk = riskBase + choice.riskMod;
-            let riskLabel = "UNKNOWN";
-            let riskColor = "var(--color-text-dim)";
-
-            if (totalRisk < 10) { riskLabel = "NEGLIGIBLE"; riskColor = "var(--color-primary)"; }
-            else if (totalRisk < 30) { riskLabel = "MODERATE"; riskColor = "#d9a24a"; }
-            else if (totalRisk < 60) { riskLabel = "HIGH"; riskColor = "#d9a24a"; }
-            else { riskLabel = "EXTREME"; riskColor = "#d85a4e"; }
-
-            // PARANOID: disable high-risk choices (riskMod >= 30)
-            const paranoidBlocked = isParanoid && choice.riskMod >= 30;
-            // RECKLESS: disable safe choices (riskMod === 0) 50% of the time
-            const recklessBlocked = recklessBlocksSafe && choice.riskMod === 0;
+        // Card layout: what the team found, what the scan says, then one button per option with its real odds
+        const evaChoice = (choice, idx) => {
+            const totalRisk = Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
+            const riskColor = totalRisk < 10 ? 'var(--green)' : totalRisk < 30 ? 'var(--amber)' : 'var(--red)';
+            const paranoidBlocked = isParanoid && choice.riskMod >= 30;        // PARANOID: Vance refuses high-risk options
+            const recklessBlocked = recklessBlocksSafe && choice.riskMod === 0; // RECKLESS: Mira overrides the safe option
             const isDisabled = paranoidBlocked || recklessBlocked;
-            const disabledReason = paranoidBlocked ? 'VANCE REFUSES' : (recklessBlocked ? 'MIRA OVERRIDES' : '');
+            const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : `${totalRisk}% chance someone gets hurt`);
+            return `<button class="deck-action choice-btn eva-choice" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
+                        <span>${choice.text}</span>
+                        <small style="color:${isDisabled ? 'var(--red)' : riskColor}">${note}<i class="eva-risk"><b style="width:${totalRisk}%; background:${riskColor}"></b></i></small>
+                    </button>`;
+        };
 
-            return `
-                            <button class="choice-btn" data-idx="${idx}" data-risk-color="${riskColor}" style="
-                                padding: 15px;
-                                border: 1px solid ${isDisabled ? '#555' : 'var(--color-primary)'};
-                                background: ${isDisabled ? 'rgba(30,0,0,0.8)' : 'rgba(0,0,0,0.8)'};
-                                color: ${isDisabled ? '#666' : 'var(--color-primary)'};
-                                cursor: ${isDisabled ? 'not-allowed' : 'pointer'};
-                                flex: 1;
-                                font-family: var(--font-mono);
-                                transition: all 0.2s;
-                                ${isDisabled ? 'pointer-events: none;' : ''}
-                            " ${isDisabled ? 'disabled' : ''}>
-                                <div>${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 5px; color: ${riskColor}">CHANCE SOMEONE GETS HURT: ${Math.max(0, Math.min(100, Math.round(totalRisk)))}% (${riskLabel})</div>
-                                ${isDisabled ? `<div style="font-size: 0.7em; margin-top: 5px; color: #d85a4e;">[${disabledReason}]</div>` : ''}
-                            </button>
-                        `}).join('')}
-                    </div>
-                </div>
-            </div>
+        modal.innerHTML = `
+            <section class="modal-content deck-panel eva-panel" role="dialog" aria-label="Team on the ground">
+                <header class="deck-panel-head">
+                    <h3>${event.title}</h3>
+                    <span class="deck-panel-status">TEAM ON THE GROUND</span>
+                </header>
+                <p class="eva-found">“${event.desc}”</p>
+                ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>SCAN SAYS</dt><dd>${signalModDisplay}</dd></dl>` : ''}
+                ${isParanoid ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
+                ${recklessBlocksSafe ? '<p class="eva-voice" style="color:#d070ff">Mira: “The safe option gets us nothing. I am going in.”</p>' : ''}
+                <h4>WHAT DO THEY DO?</h4>
+                <div class="deck-panel-actions">${event.choices.map(evaChoice).join('')}</div>
+            </section>
         `;
 
         document.body.appendChild(modal);
@@ -4434,21 +4414,7 @@ You are home.`
             });
         });
 
-        // Hover effects - also change risk text color
-        modal.querySelectorAll('.choice-btn').forEach(btn => {
-            btn.onmouseenter = () => {
-                btn.style.background = 'var(--color-primary)';
-                btn.style.color = '#000';
-                const riskDiv = btn.querySelector('div:nth-child(2)');
-                if (riskDiv) riskDiv.style.color = '#000';
-            };
-            btn.onmouseleave = () => {
-                btn.style.background = 'rgba(0,0,0,0.8)';
-                btn.style.color = 'var(--color-primary)';
-                const riskDiv = btn.querySelector('div:nth-child(2)');
-                if (riskDiv) riskDiv.style.color = btn.dataset.riskColor || 'var(--color-text-dim)';
-            };
-        });
+        // hover/focus states come from .deck-action in ship.css
     }
 
     resolveEvaOutcome(choice, baseRisk) {

@@ -176,3 +176,63 @@
     flex: none;
     white-space: nowrap;
 }
+
+/* ── left panel: the ship speaks for itself, no "SHIP SCHEMATIC" caption; and it sits higher ── */
+#left-panel > .panel-header {
+    display: none;
+}
+
+#left-panel .ship-hull {
+    padding-top: 22px; /* room for the sensor dish above the nose */
+}
+
+/* ── opening briefing ── */
+.briefing {
+    max-width: 560px;
+}
+
+.briefing-voice {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 4px 20px 14px;
+    color: var(--green-br);
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+.briefing-voice i {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--green-d);
+    border-radius: 3px;
+    font-style: normal;
+    color: var(--green);
+}
+
+/* ── header text: sector and date used to run into each other ── */
+.ship-info {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    white-space: nowrap;
+}
+
+.ship-info .date {
+    color: var(--dim);
+    font-size: 0.78em;
+    letter-spacing: 0.08em;
+}
+
+/* ── mission log: quotes in upright text; the slanted monospace was hard to read ── */
+.log-entry span[style*="italic"] {
+    font-style: normal !important;
+}
+
+.log-entry {
+    line-height: 1.5;
+}
