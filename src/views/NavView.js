@@ -243,7 +243,9 @@ class NavView {
 
         const isDeepScanned = planet.scanned;
         const isRemoteScanned = planet.remoteScanned;
-        const actualCost = (this.state.lastVisitedSystem && this.state.lastVisitedSystem.id === planet.id) ? 0 : planet.fuelCost;
+        // Must mirror App.handleWarp: a damaged (or A.U.R.A.-locked) bridge makes every warp cost half again as much
+        const bridgeFactor = this.state.isDeckOperational('bridge') ? 1 : 1.5;
+        const actualCost = (this.state.lastVisitedSystem && this.state.lastVisitedSystem.id === planet.id) ? 0 : Math.floor(planet.fuelCost * bridgeFactor);
 
         // Resource level calculation (based on planet.resources)
         const getResourceLevel = (value) => {

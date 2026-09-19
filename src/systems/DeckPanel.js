@@ -61,7 +61,7 @@
     function show(app, deckKey) {
         const state = app.state, deck = state.shipDecks[deckKey], info = ROOM_INFO[deckKey];
         if (!deck || !info) return;
-        const isDamaged = deck.status === 'DAMAGED', quote = repairQuote(state, deckKey);
+        const isLocked = !!deck._auraLocked, isDamaged = deck.status === 'DAMAGED' || isLocked, quote = repairQuote(state, deckKey);
 
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -69,7 +69,7 @@
             <section class="modal-content deck-panel ${isDamaged ? 'is-damaged' : ''}" role="dialog" aria-label="${esc(deck.label)}">
                 <header class="deck-panel-head">
                     <h3>${esc(deck.label)}</h3>
-                    <span class="deck-panel-status">${isDamaged ? 'DAMAGED' : 'OPERATIONAL'}</span>
+                    <span class="deck-panel-status">${isLocked ? 'LOCKED BY A.U.R.A.' : (isDamaged ? 'DAMAGED' : 'OPERATIONAL')}</span>
                     <button class="deck-panel-close close-modal" aria-label="Close">✕</button>
                 </header>
                 <dl class="deck-panel-facts">

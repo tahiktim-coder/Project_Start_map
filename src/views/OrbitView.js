@@ -34,6 +34,7 @@ class OrbitView {
         const hasLife = metrics.hasLife;
         const hasTech = metrics.hasTech;
 
+        const heroSize = OrbitView.heroSize();
         this.element.innerHTML = `
             <div style="padding: 20px; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
                 <h2 style="color: var(--color-primary); border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; margin-bottom: 20px; max-width: 40%;">
@@ -58,7 +59,7 @@ class OrbitView {
                         </div>
 
                         <!-- Scan Results Section -->
-                        <div style="margin-top: 20px; color: var(--color-accent); border-bottom: 1px solid var(--color-primary-dim); margin-bottom: 5px;">
+                        <div style="margin-top: 8px; color: var(--color-accent); border-bottom: 1px solid var(--color-primary-dim);">
                             SURFACE ANALYSIS
                         </div>
                          ${planet.scanned
@@ -72,67 +73,9 @@ class OrbitView {
                                  </div>
 
                                  <div style="margin-top: 5px;">
-                                    <div style="color:var(--color-text-dim); margin-bottom:4px">ANOMALIES:</div>
-                                    ${planet.tags && planet.tags.length
-                    ? planet.tags.map(t => {
-                        if (t === 'EXODUS_WRECK') return `<span style="background:rgba(116,217,154,0.10); color:var(--green-br); border:1px solid var(--green-d); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em;">EXODUS TRANSPONDER</span>`;
-                        if (t === 'PREDATORY') return `<span style="background:rgba(216,90,78,0.15); color:var(--red); border:1px solid var(--red); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em; animation: predatory-blink 1s infinite;">⚠ PREDATORY ECOSYSTEM</span>`;
-                        if (t === 'WRECKAGE') return `<span style="background:rgba(120,160,130,0.06); color:var(--bone); border:1px solid var(--line2); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em;">DEBRIS FIELD</span>`;
-                        if (t === 'FAILED_COLONY') return `<span style="background:rgba(120,160,130,0.06); color:var(--bone); border:1px solid var(--line2); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em;">COLONY RUINS</span>`;
-                        if (t === 'DERELICT') return `<span style="background:rgba(120,160,130,0.06); color:var(--bone); border:1px solid var(--line2); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em;">DERELICT SHIP</span>`;
-                        if (t === 'ANOMALY') return `<span style="background:rgba(217,162,74,0.12); color:var(--amber); border:1px solid var(--amber); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em; animation: predatory-blink 1.5s infinite;">⚡ ANOMALY</span>`;
-                        if (t === 'LIGHTHOUSE') return `<span style="background:rgba(116,217,154,0.10); color:var(--green-br); border:1px solid var(--green-d); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em;">🗼 LIGHTHOUSE BEACON</span>`;
-                        if (t === 'GARDEN') return `<span style="background:rgba(116,217,154,0.10); color:var(--green-br); border:1px solid var(--green-d); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em;">🌿 GARDEN DOME</span>`;
-                        if (t === 'GRAVE') return `<span style="background:rgba(120,160,130,0.06); color:var(--dim); border:1px solid var(--line); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px; letter-spacing:0.05em;">⚰ THE GRAVE</span>`;
-                        return `<span style="background:rgba(120,160,130,0.06); color:var(--dim); border:1px solid var(--line); padding:2px 5px; font-size:0.8em; margin-right:5px; display:inline-block; margin-bottom:5px;">${t}</span>`;
-                    }).join('')
-                    : '<span style="color:var(--color-text-dim); font-style:italic;">NONE DETECTED</span>'}
+                                    <div style="color:var(--color-text-dim); margin-bottom:4px">WHAT'S HERE:</div>
+                                    ${OrbitView.findingsHtml(planet.tags)}
                                  </div>
-                                 ${planet.tags && planet.tags.includes('EXODUS_WRECK') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--green-d); background: rgba(116,217,154,0.07);">
-                                    <div style="color:var(--green-br); font-weight:bold; font-size:0.85em;">EXODUS WRECK DETECTED</div>
-                                    <div style="color:var(--dim); font-size:0.75em; margin-top:3px;">Human vessel transponder signal. Investigate from Command Deck.</div>
-                                 </div>` : ''}
-                                 ${planet.tags && planet.tags.includes('PREDATORY') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--red); background: rgba(216,90,78,0.12); animation: predatory-blink 1.5s infinite;">
-                                    <div style="color:var(--red); font-weight:bold; font-size:0.85em;">⚠ PREDATORY ECOSYSTEM WARNING</div>
-                                    <div style="color:var(--red); opacity:0.8; font-size:0.75em; margin-top:3px;">Surface organisms exhibit coordinated hunting behavior. EVA teams at extreme risk.</div>
-                                 </div>` : ''}
-                                 ${planet.tags && planet.tags.includes('WRECKAGE') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--line2); background: rgba(120,160,130,0.05);">
-                                    <div style="color:var(--bone); font-weight:bold; font-size:0.85em;">DEBRIS FIELD</div>
-                                    <div style="color:var(--dim); font-size:0.75em; margin-top:3px;">Ship wreckage detected in orbital path. Salvage potential confirmed.</div>
-                                 </div>` : ''}
-                                 ${planet.tags && planet.tags.includes('FAILED_COLONY') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--line2); background: rgba(120,160,130,0.05);">
-                                    <div style="color:var(--bone); font-weight:bold; font-size:0.85em;">COLONY RUINS DETECTED</div>
-                                    <div style="color:var(--dim); font-size:0.75em; margin-top:3px;">Abandoned settlement structures on surface. Investigate from Command Deck.</div>
-                                 </div>` : ''}
-                                 ${planet.tags && planet.tags.includes('DERELICT') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--line2); background: rgba(120,160,130,0.05);">
-                                    <div style="color:var(--bone); font-weight:bold; font-size:0.85em;">DERELICT SHIP DETECTED</div>
-                                    <div style="color:var(--dim); font-size:0.75em; margin-top:3px;">Non-Exodus vessel wreckage. Salvage potential confirmed. Investigate from Command Deck.</div>
-                                 </div>` : ''}
-                                 ${planet.tags && planet.tags.includes('ANOMALY') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--amber); background: rgba(217,162,74,0.10); animation: predatory-blink 2s infinite;">
-                                    <div style="color:var(--amber); font-weight:bold; font-size:0.85em;">⚡ SPATIAL ANOMALY DETECTED</div>
-                                    <div style="color:var(--amber); opacity:0.8; font-size:0.75em; margin-top:3px;">Reality distortion field. Approach with extreme caution. Unknown risks.</div>
-                                 </div>` : ''}
-                                 ${planet.tags && planet.tags.includes('LIGHTHOUSE') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--green-d); background: rgba(116,217,154,0.07);">
-                                    <div style="color:var(--green-br); font-weight:bold; font-size:0.85em;">🗼 THE LIGHTHOUSE</div>
-                                    <div style="color:var(--dim); font-size:0.75em; margin-top:3px;">Ancient navigation beacon. Broadcasting on all frequencies. This structure is older than humanity.</div>
-                                 </div>` : ''}
-                                 ${planet.tags && planet.tags.includes('GARDEN') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--green-d); background: rgba(116,217,154,0.07);">
-                                    <div style="color:var(--green-br); font-weight:bold; font-size:0.85em;">🌿 THE GARDEN</div>
-                                    <div style="color:var(--dim); font-size:0.75em; margin-top:3px;">Terraformed biodome. Living ecosystem detected on dead world. Someone built this sanctuary.</div>
-                                 </div>` : ''}
-                                 ${planet.tags && planet.tags.includes('GRAVE') ? `
-                                 <div style="margin-top: 8px; padding: 8px; border: 1px solid var(--line2); background: rgba(120,160,130,0.05);">
-                                    <div style="color:var(--bone); font-weight:bold; font-size:0.85em;">⚰ THE GRAVE</div>
-                                    <div style="color:var(--dim); font-size:0.75em; margin-top:3px;">Infinite cemetery moon. Names in every language. Some of the dates are from the future.</div>
-                                 </div>` : ''}
                                  ${(() => {
                                     const dl = planet.dangerLevel || 0;
                                     const hazTypes = ['BIO_MASS','VOLCANIC','SHATTERED','MECHA','GRAVEYARD','HOLLOW','TIDALLY_LOCKED'];
@@ -157,8 +100,8 @@ class OrbitView {
                     </div>
 
                     <!-- RIGHT: Visual -->
-                    <div class="orbit-visual" style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; margin-top: -40px;">
-                        ${(window.BodyRenderer && BodyRenderer.body(planet, 240))
+                    <div class="orbit-visual" style="flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; position: relative; margin-top: -40px; overflow: hidden;">
+                        ${(window.BodyRenderer && BodyRenderer.body(planet, heroSize))
                             || `<div class="planet-visual type-${planet.type}" style="
                             width: 260px; height: 260px;
                             border-radius: 50%;
@@ -172,10 +115,10 @@ class OrbitView {
                             <div style="position:absolute; top:-10px; left:-10px; right:-10px; bottom:-10px; border-radius:50%; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); pointer-events:none;"></div>
                         </div>`}
                         <div class="ship-orbit-icon" style="
-                            position: absolute; top: 50%; left: 50%; width: 350px; height: 350px; transform: translate(-50%, -50%);
+                            position: absolute; top: 50%; left: 50%; width: ${Math.round(heroSize * 1.46)}px; height: ${Math.round(heroSize * 1.46)}px; transform: translate(-50%, -50%);
                             border: 1px dashed var(--color-primary-dim); border-radius: 50%; animation: spin 20s linear infinite;
                         ">
-                            <div style="width: 20px; height: 20px; background: var(--color-accent); border-radius: 50%; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px var(--color-accent);"></div>
+                            <div style="width: 12px; height: 12px; background: var(--color-accent); border-radius: 50%; position: absolute; top: -6px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px var(--color-accent);"></div>
                         </div>
                     </div>
 
@@ -437,6 +380,36 @@ class OrbitView {
         }
     }
 
+    /** One short plain line per thing the scan found. tone: good (green) / warn (amber) / bad (red) / plain. */
+    static FINDINGS = {
+        EXODUS_WRECK: ['Human ship wreck', 'one of ours — board it from the command deck', 'good'],
+        PREDATORY: ['Hunting animals', 'a team on the ground is in real danger', 'bad'],
+        WRECKAGE: ['Debris field', 'loose salvage in orbit', 'plain'],
+        FAILED_COLONY: ['Colony ruins', 'people tried to live here — find out why they stopped', 'plain'],
+        DERELICT: ['Unknown derelict', 'not one of ours; salvage, some risk', 'plain'],
+        ANOMALY: ['Space anomaly', 'nobody knows what it does — high risk', 'warn'],
+        LIGHTHOUSE: ['The Lighthouse', 'a beacon older than humanity', 'good'],
+        GARDEN: ['The Garden', 'a living dome on a dead world', 'good'],
+        GRAVE: ['The Grave', 'a cemetery moon; some dates are in the future', 'plain'],
+    };
+
+    static findingsHtml(tags) {
+        if (!tags || tags.length === 0) return '<div style="color:var(--color-text-dim); font-style:italic;">Nothing unusual.</div>';
+        const TONE = { good: 'var(--green-br)', warn: 'var(--amber)', bad: 'var(--red)', plain: 'var(--bone)' };
+        return tags.map(tag => {
+            const [label, note, tone] = OrbitView.FINDINGS[tag] || [tag.replace(/_/g, ' ').toLowerCase(), '', 'plain'];
+            return `<div style="margin-bottom:5px; padding-left:8px; border-left:2px solid ${TONE[tone]}; line-height:1.35;">
+                <span style="color:${TONE[tone]}; font-weight:bold;">${label}</span>${note ? `<span style="color:var(--dim); font-size:0.85em;"> — ${note}</span>` : ''}</div>`;
+        }).join('');
+    }
+
+    /** Planet size that fits the space left of the readout column, so it never sits on top of the text. */
+    static heroSize() {
+        const main = document.getElementById('main-view');
+        const free = (main ? main.clientWidth : 900) - 280 - 100; // readout column + paddings
+        return Math.round(Math.max(110, Math.min(300, free * 0.6)));
+    }
+
     updateCommandDeck(planet) {
         const rightPanel = document.getElementById('tactical-display');
         if (!rightPanel) return;
@@ -487,7 +460,7 @@ class OrbitView {
 
                  <button class="cmd-btn ${planet.hasEva ? 'cmd-done' : ''}" id="btn-eva" ${this.state.energy < 5 || planet.hasEva ? 'disabled' : ''}>
                     <div>${planet.hasEva ? 'SEND TEAM OUT' : 'SEND TEAM OUT (EVA)'}</div>
-                    <div class="cost">${planet.hasEva ? 'DONE — ONE TRIP PER STOP' : '-5 ENERGY · CREW AT RISK'}</div>
+                    <div class="cost">${planet.hasEva ? 'DONE — ONE TRIP PER STOP' : (this.state.hasActiveTrait && this.state.hasActiveTrait('OBSESSED') ? '-10 ENERGY · -2 RATIONS · OBSESSED CREW' : '-5 ENERGY · CREW AT RISK')}</div>
                 </button>
 
                 ${planet.scanned && planet.tags && planet.tags.includes('EXODUS_WRECK') && !planet.exodusInvestigated

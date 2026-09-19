@@ -559,10 +559,10 @@ class AuraSystem {
         switch (action) {
             case 'LOCK_DECK': {
                 // Lock a random non-bridge deck
-                const lockableDecks = ['cargo', 'engineering', 'quarters', 'medical', 'labs'];
+                const lockableDecks = ['cargo', 'engineering', 'quarters', 'lab']; // real shipDecks keys (was listing two that do not exist)
                 const deck = lockableDecks[Math.floor(Math.random() * lockableDecks.length)];
 
-                if (state.shipDecks && state.shipDecks[deck] && state.shipDecks[deck].operational !== false) {
+                if (state.shipDecks && state.shipDecks[deck] && !state.shipDecks[deck]._auraLocked) {
                     state.shipDecks[deck].operational = false;
                     state.shipDecks[deck]._auraLocked = true;
                     setTimeout(() => {

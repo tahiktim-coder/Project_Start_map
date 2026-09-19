@@ -240,6 +240,8 @@ class GameState {
             // Cargo & Upgrades
             cargo: this.cargo,
             upgrades: this.upgrades,
+            // A.U.R.A. (lives in its own singleton, so it has to be copied in by hand)
+            aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
             // Navigation
             currentSector: this.currentSector,
             currentSystem: this.currentSystem,
@@ -301,6 +303,10 @@ class GameState {
             // Cargo & Upgrades
             this.cargo = saveData.cargo || [];
             this.upgrades = saveData.upgrades || [];
+            if (saveData.aura && window.AuraSystem) {
+                window.AuraSystem.ethicsScore = saveData.aura.ethicsScore || 0;
+                window.AuraSystem.warningCount = saveData.aura.warningCount || 0;
+            }
             // Navigation
             this.currentSector = saveData.currentSector;
             this.currentSystem = saveData.currentSystem;
@@ -644,7 +650,8 @@ class GameState {
      * Check if a specific deck is operational.
      */
     isDeckOperational(deckKey) {
-        return this.shipDecks[deckKey]?.status === 'OPERATIONAL';
+        const deck = this.shipDecks[deckKey];
+        return !!deck && deck.status === 'OPERATIONAL' && !deck._auraLocked; // a deck A.U.R.A. has locked is as useless as a broken one
     }
 
     /**
@@ -944,10 +951,13 @@ class App {
         // New Game button
         startBtn.onclick = () => {
             // If save exists, confirm new game will overwrite
-            if (hasSave) {
-                if (!confirm('Start a new game? This will overwrite your current save.')) return;
-                this.state.deleteSave();
+            if (hasSave && startBtn.dataset.armed !== '1') { // first click arms, second click confirms
+                startBtn.dataset.armed = '1';
+                startBtn.textContent = 'ERASE SAVE AND START OVER?';
+                setTimeout(() => { startBtn.dataset.armed = ''; startBtn.textContent = 'NEW GAME'; }, 4000);
+                return;
             }
+            if (hasSave) this.state.deleteSave();
             overlay.style.transition = 'opacity 1s';
             overlay.style.opacity = '0';
             setTimeout(() => {
@@ -2992,6 +3002,7 @@ class App {
             this.state.addLog("ERROR: Anomaly encounter data unavailable.");
             return;
         }
+        this.state.consumeRation(); // every investigation costs a ration, same as wrecks and stations
 
         // Select by weight
         const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
@@ -3167,6 +3178,7 @@ You are home.`
         }
 
         this.state.addLog(`Approaching ${poi.name}...`);
+        this.state.consumeRation(); // every investigation costs a ration, same as wrecks and stations
 
         // Mark as investigated immediately to prevent re-clicking
         planet[investigatedKey] = true;
@@ -5408,7 +5420,7 @@ You are home.`
                 </div>
             </div>
 
-            <button onclick="location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
+            <button onclick="localStorage.removeItem('silentExodus_save'); location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
                 REBOOT SIMULATION
             </button>
         `;
