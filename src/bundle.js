@@ -303,7 +303,12 @@ class GameState {
             // Probe
             this.probeIntegrity = saveData.probeIntegrity;
             // Cargo & Upgrades
-            this.cargo = saveData.cargo || [];
+            // JSON drops functions, so saved items lose their onUse(); give each one back its behaviour from ITEMS
+            const itemDefs = (typeof ITEMS !== 'undefined') ? Object.values(ITEMS) : [];
+            this.cargo = (saveData.cargo || []).map(saved => {
+                const def = itemDefs.find(d => d.id === saved.id);
+                return def ? { ...def, ...saved, onUse: def.onUse } : saved;
+            });
             this.upgrades = saveData.upgrades || [];
             this.stopsLeft = saveData.stopsLeft;
             this._stopsSector = saveData.stopsSector;
@@ -5020,6 +5025,7 @@ You are home.`
     }
 
     showCrewManifest() {
+        if (window.RosterPanel) { window.RosterPanel.crew(this); return; } // card layout; legacy list below is the fallback
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
@@ -5104,6 +5110,7 @@ You are home.`
     }
 
     showCargoInventory() {
+        if (window.RosterPanel) { window.RosterPanel.cargo(this); return; } // card layout; legacy grid below is the fallback
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
