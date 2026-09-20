@@ -959,7 +959,7 @@ class App {
                         SILENT EXODUS
                     </div>
                     <div style="font-size: 1em; color: #8a9d8f; margin-top: 15px; letter-spacing: 4px;">
-                        EVERY SHIP WAS TOLD IT WAS THE FIRST
+                        EVERY SHIP WAS TOLD IT WAS THE NINTH
                     </div>
                 </div>
 
@@ -1296,19 +1296,20 @@ class App {
             this.renderNav();
         };
         if (!window.EncounterCard) { begin(); return; }
-        window.EncounterCard.open(this, {
+        const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('program') : Promise.resolve(); // what the crew was told, as a picture
+        reel.then(() => window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3500, kicker: 'EXODUS-9 · 61 YEARS OUT FROM EARTH', title: 'Good morning, Commander',
             context: 'Cold air, and a light you have not seen in sixty-one years. The ship has woken all five of you, and it has not said why.',
             dialogue: [
                 { speaker: 'A.U.R.A.', text: 'Everyone woke up. The ship is in one piece. Your orders have not changed: find a world people can live on, and settle it.' },
-                { speaker: 'A.U.R.A.', text: 'Exodus one through eight were empty test ships. You are the first crew anyone has ever sent. Nobody has been out here before you.' },
-                { speaker: 'Eng. Jaxon', text: 'First in line for the good planets, then. Wake me when there is grass.' },
-                { speaker: 'Spc. Vance', text: 'If we are the first, what is that on the long-range scope? It is on our frequency.' },
-                { speaker: 'A.U.R.A.', text: 'An old transponder. A test ship, drifting. I am sure it is nothing. I have marked it on your map.' },
+                { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction, thousands of them. Eight went this way before you. You are the ninth on this heading.' },
+                { speaker: 'Eng. Jaxon', text: 'Eight ahead of us. Let us hope they left the good planets alone. Wake me when there is grass.' },
+                { speaker: 'Spc. Vance', text: 'Eight ships ahead of us, and not one of them ever called home?' },
+                { speaker: 'A.U.R.A.', text: 'Space is large, Specialist. There is an old transponder on the scope. One of the eight, I expect. I have marked it on your map.' },
             ],
             choices: [{ text: 'Take the chair', desc: 'Six sectors lie ahead. In each one you get a few stops, then you must jump on. Energy moves the ship. Rations feed the crew.' }],
             onPick: begin
-        });
+        }));
     }
 
     /** Sector 1 always holds one wreck whose transponder shows on the map from the start: the first thing to go and look at. */
@@ -2025,6 +2026,7 @@ class App {
                 // Special barks for sector entries
                 if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
                     if (nextSector === 3) {
+                        if (window.StoryReel && !window.TEST_MODE) window.StoryReel.play('corridor');
                         window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
                     } else if (nextSector === FINAL_SECTOR) {
                         window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state); // key kept for saves; the lines are about the LAST sector
@@ -2377,11 +2379,12 @@ class App {
 
     /**
      * The strange rule of this story: the further out you go, the HIGHER the hull number and the OLDER the wreck.
-     * Sectors 1–2 hold ships launched before EXODUS-9 (numbers below 9). From sector 3 on, every wreck was launched
-     * after you, and has been dead for centuries.
+     * Sectors 1–2 hold the eight ships the crew was told about. From sector 3 on the numbers run into the hundreds,
+     * then the tens of thousands: every ship Earth ever built was sent down this one heading, and the later ones
+     * were thrown further back in time, so they have been dead for centuries.
      */
     getWreckName() {
-        const HULL_RANGE = [[3, 8], [3, 8], [3, 8], [11, 19], [20, 29], [30, 44], [45, 60]]; // index = sector
+        const HULL_RANGE = [[1, 8], [1, 8], [1, 8], [212, 980], [1400, 6000], [9000, 22000], [30000, 41000]]; // index = sector
         const CALLSIGNS = ['PIONEER', 'COVENANT', 'SOJOURN', 'REQUIEM', 'LAZARUS', 'ICARUS', 'MERIDIAN', 'ORPHEUS', 'HALCYON', 'VESPER', 'TANTALUS', 'EMBER'];
         const [lo, hi] = HULL_RANGE[Math.max(1, Math.min(FINAL_SECTOR, this.state.currentSector || 1))];
         const hull = lo + Math.floor(Math.random() * (hi - lo + 1));

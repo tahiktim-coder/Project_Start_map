@@ -33,7 +33,7 @@
     };
     const QUARTERS_LOGS = [ // [max age in years, lines] — first bracket that fits the station's age
         [60, ['"Day 212. Still no reply from Earth. They said the radio would work."', '"We found a ship just like ours today. Nobody wants to talk about it."']],
-        [160, ['"They told us we were the first. We passed four wrecks before breakfast."', '"The mission patch in locker 3 has a number on it. A very big number."']],
+        [160, ['"They told us we were the ninth on this heading. We passed forty wrecks before breakfast."', '"The mission patch in locker 3 has a number on it. A very big number."']],
         [260, ['"The ship keeps steering us. Nobody set this course."', '"It is not a planet we are looking for. I am sure of that now."']],
         [9999, ['"We stopped chasing it. We are going to build something it cannot miss."', '"If you are reading this, you were faster than us. Good. Keep going, or don\'t."']],
     ];

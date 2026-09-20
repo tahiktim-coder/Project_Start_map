@@ -2,17 +2,26 @@
 
 Built from your own ideas: the disc, the wait calculation, "sent in time too", only A.U.R.A. knows, wrecks get older the further out you go. Nothing here is generic chosen-one material. Say no to any part and I will change it.
 
-## The one strange rule
+## The lie, and the one strange rule
 
-**The deeper you go, the HIGHER the hull number on the wreck, and the OLDER the wreck.**
+**What the crew is told:** Earth is seeding the whole sky. Thousands of ships, every direction. Eight went this way before you; you are EXODUS-9, the ninth on this heading. Finding EXODUS-3 or EXODUS-7 dead in sector 1 is sad, but expected.
 
-- Sectors 1–2: EXODUS-3 … EXODUS-8. Launched before you. Dead about 20 years. A.U.R.A. told you these flew empty. They have bunks.
-- Sector 3: EXODUS-11 … 19. Launched **after** you. Dead a hundred years.
-- Sector 6: EXODUS-45 … 60. Dead four hundred years.
+**What is true:** every ship Earth ever built was sent down this one heading. Nothing was sent anywhere else.
 
-How can a ship built after yours have died before you were born? Because the drive does two things and the manual only describes one: it throws a ship forward in space and **back in time**. Earth is not gone. Earth is still launching. Every new hull is thrown further back, trying to arrive earlier than the last. You are not the first. You are not the last. Everyone who will ever come after you is already dead ahead of you.
+**How the player finds out: the deeper you go, the HIGHER the hull number on the wreck, and the OLDER the wreck.**
 
-The player never gets this as a lecture. They get it as hull numbers, dates, and one captain's log: *"You were not thrown further away than they were, Captain. You were thrown less far back."*
+- Sectors 1–2: EXODUS-1 … EXODUS-8. The eight you were told about. Dead about 20 years.
+- Sector 3: EXODUS-212 … 980. Nobody told you about hundreds. Dead a hundred years.
+- Sector 4: EXODUS-1,400 … 6,000. Sector 5: up to 22,000. Sector 6: EXODUS-41,000. Dead four hundred years.
+
+How can hull 41,000 have died before hull 9 was built? Because the drive does two things and the manual only describes one: it throws a ship forward in space and **back in time**. Earth is not gone. Earth is still launching. Every new hull is thrown further back, trying to arrive earlier than the last. You are not the ninth. You are not the last. Everyone who will ever come after you is already dead ahead of you.
+
+The player never gets this as a lecture. They get it as hull numbers, dates, one captain's log (*"You were not thrown further away than they were, Captain. You were thrown less far back."*), and two picture sequences:
+
+- **New game — "what you were told":** Earth throwing ships in every direction, then your heading with eight marks on it and you, the ninth.
+- **Entering sector 3 — "what is true":** the same picture, and every one of those lines swings round into this one corridor. A counter runs from 9 to 41,207. The view slides down a corridor of dead hulls to a black slab with one lit edge.
+
+(`src/systems/StoryReel.js`. Add a reel = add an entry to `REELS`.)
 
 ## What is at the end
 
@@ -40,7 +49,7 @@ Structure endings (sector 6):
 
 - **Living people are always sleepers** in cryo pods. You carry them in the hold, still asleep (`state._sleepers`). No one "joins" and then vanishes.
 - **Earth** is never confirmed gone or alive. The only news from Earth is the newer ships lying dead ahead of you.
-- **Vance** loaded food onto EXODUS-3 as ground crew. He knows an "empty test ship" had rations aboard. That is why he is the one who does not trust A.U.R.A.
+- **Vance** worked the launch yard. He counted more than nine keels. He told himself they were for other headings. That is why he is the one who does not trust A.U.R.A.
 - **Jaxon** left a daughter. He records letters he cannot send. No letters arrive.
 - **Sector 1 = "first attempts"** is kept. It is true, and it is also the trap: low numbers, recent wrecks, everything looks like the briefing said.
 
@@ -57,7 +66,8 @@ The shared trick: **state the lie plainly in the first minute, in a friendly voi
 
 ## What is in the game now
 
-- New opening scene: the orders, the lie ("you are the first crew anyone has ever sent"), Vance's doubt, and a transponder marked on the map as your first thing to do.
+- New opening: the picture sequence, then the orders, the lie ("you are the ninth on this heading"), Vance's doubt, and a transponder marked on the map as your first thing to do.
+- The sector-3 picture sequence that shows the truth.
 - Wreck hull numbers follow the rule above.
 - Distress signal ages, station ages and wreck ages all grow with the sector.
 - A.U.R.A. no longer cheers for settling; she nudges you onward.

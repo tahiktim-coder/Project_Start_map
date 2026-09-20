@@ -332,8 +332,8 @@ const EXODUS_ENCOUNTERS = [
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     const loreBlocks = [
                         [
-                            "CREW BRIEFING, RECORDED: 'You are the first crew. The ships before you flew empty.' The recording has a hull number on it. It is not our number.",
-                            "Every crew is told the same three things: you are first, the world is ahead of you, and the ship knows the way.",
+                            "CREW BRIEFING, RECORDED: 'Eight went this way before you. You are the ninth on this heading.' Word for word, our briefing. The hull number on the recording is not nine.",
+                            "Every crew is told the same three things: you are the ninth, the world is ahead of you, and the ship knows the way.",
                             "The course was set by the ship. Nobody aboard was ever shown where it ends."
                         ],
                         [

@@ -717,3 +717,86 @@
 @keyframes nav-signal-blink { 50% { opacity: 0.45; } }
 
 @media (prefers-reduced-motion: reduce) { .nav-signal { animation: none; } }
+
+/* ── StoryReel.js: full-screen picture sequences ── */
+.story-reel {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    display: grid;
+    place-items: center;
+    background: #05070a;
+    animation: reel-in 700ms ease-out;
+}
+
+.story-reel.is-leaving { opacity: 0; transition: opacity 500ms; }
+
+@keyframes reel-in { from { opacity: 0; } }
+
+.reel-frame {
+    position: relative;
+    width: min(96vw, calc(86vh * 16 / 9));
+}
+
+.reel-canvas {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    image-rendering: pixelated;
+}
+
+.reel-caption {
+    min-height: 2.6em;
+    margin: 18px 0 0;
+    text-align: center;
+    font: 600 clamp(1em, 0.7em + 1.1vw, 1.7em) var(--font-display);
+    letter-spacing: 0.1em;
+    color: var(--bone);
+    opacity: 0;
+}
+
+.reel-caption.is-in { animation: reel-caption 900ms ease-out forwards; }
+
+@keyframes reel-caption {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+}
+
+.reel-counter {
+    position: absolute;
+    top: 14px;
+    right: 18px;
+    margin: 0;
+    text-align: right;
+}
+
+.reel-counter span {
+    display: block;
+    font: 600 0.62em var(--font-display);
+    letter-spacing: 0.26em;
+    color: var(--dim);
+}
+
+.reel-counter b {
+    font: 700 clamp(1.4em, 1em + 1.6vw, 2.6em) var(--font-mono);
+    color: var(--amber);
+}
+
+.reel-skip {
+    position: absolute;
+    right: 0;
+    bottom: 4px;
+    padding: 4px 8px;
+    background: none;
+    border: 0;
+    color: var(--dim);
+    font: 0.85em var(--font-mono);
+    cursor: pointer;
+}
+
+.reel-skip:hover,
+.reel-skip:focus-visible { color: var(--bone); }
+
+@media (prefers-reduced-motion: reduce) {
+    .story-reel, .reel-caption.is-in { animation: none; opacity: 1; }
+}
