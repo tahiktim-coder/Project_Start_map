@@ -163,7 +163,7 @@ const EXODUS_ENCOUNTERS = [
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
                     state.addLog("Dr. Aris: \"You're killing them. You know that.\"");
-                    state.addLog("Cmdr. Kael: \"They were already dead. They just didn't know it yet.\"");
+                    state.addLog("You do not answer her. They were already dead. They just did not know it yet.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-2, 'Killed sleepers for power');
                     return "Cryo batteries extracted. +70 Energy. The green lights turn red, then dark.";
                 }

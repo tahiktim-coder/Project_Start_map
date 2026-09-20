@@ -131,7 +131,7 @@ const LOOT_POOLS = {
         { type: 'RESOURCE', val: 'METALS', min: 20, max: 40, weight: 25, log: "Advanced components stripped from automated systems." }
     ],
 
-    // DERELICT SHIP — ship salvage focus
+    // DEAD SHIP — ship salvage focus
     DERELICT_LOOT: [
         { type: 'RESOURCE', val: 'METALS', min: 25, max: 50, weight: 35, log: "Hull plating and structural components recovered." },
         { item: ITEMS.SCRAP_PLATING, weight: 25 },

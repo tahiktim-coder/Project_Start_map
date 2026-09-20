@@ -12,7 +12,9 @@
 
     const { vnoise, ramp, quantize } = Core;
     const PX = 2;
-    const REACTOR_BEAT_MS = 1800;
+    // The background track has a bass swell on an exact 4 s grid (first one 1.69 s in; measured from the file with
+    // scratchpad/beat4.js). The reactor beats on that grid: a strong beat on each swell, a softer one halfway between.
+    const MUSIC_BEAT = { file: 'Space_Project_Background', barMs: 4000, firstHitMs: 1690, softBeat: 0.55, decay: 3.4 };
     const ROOMS = ['bridge', 'lab', 'quarters', 'cargo', 'engineering', 'upgrades'];
     const HULL_RAMP = ramp('#06070a', '#0d1a15', '#1b3329', '#2f5a48', '#74d99a', '#d6ffe4');
     const LAMP_ACCENT = [232, 170, 84];
@@ -69,6 +71,23 @@
         return v.maxHalf;
     }
 
+    /**
+     * Where the reactor is in its beat. Follows the music's own clock while the background track plays (even at
+     * volume 0), so it never drifts; falls back to the wall clock with the same rhythm otherwise.
+     * phase 0 = the hit, glow = fast flash that fades, strength = 1 on the bass swell, softer on the off-beat.
+     */
+    let beatMemo = { t: -1, value: null };
+    function reactorBeat(t) {
+        if (beatMemo.t === t) return beatMemo.value;
+        const music = window.AudioSystem && window.AudioSystem.bgMusic;
+        const isLocked = !!music && !music.paused && String(music.src).includes(MUSIC_BEAT.file);
+        const clock = isLocked ? music.currentTime * 1000 - MUSIC_BEAT.firstHitMs : t;
+        const half = MUSIC_BEAT.barMs / 2, inBar = ((clock % MUSIC_BEAT.barMs) + MUSIC_BEAT.barMs) % MUSIC_BEAT.barMs;
+        const phase = (inBar % half) / half, strength = inBar < half ? 1 : MUSIC_BEAT.softBeat;
+        beatMemo = { t, value: { phase, strength, glow: strength * Math.exp(-phase * MUSIC_BEAT.decay) } };
+        return beatMemo.value;
+    }
+
     // ── room furniture: returns { g, a } for a pixel, or null to fall through to bare lit wall ──
     const PROPS = {
         bridge(lx, ly, rw, rh, dx, hw, t, x, y) { // a viewport onto the stars, a console under it
@@ -99,10 +118,10 @@
         engineering(lx, ly, rw, rh, dx, hw, t) { // the reactor
             // a slow heartbeat: the core swells and brightens, a ring of light rolls off it, power runs out along the conduits
             const r = Math.min(rw, rh) * 0.24, d = Math.sqrt(Math.pow(lx - rw / 2, 2) + Math.pow(ly - rh * 0.48, 2));
-            const phase = (t % REACTOR_BEAT_MS) / REACTOR_BEAT_MS, beat = Math.pow(Math.sin(phase * Math.PI), 2);
-            if (d < r * (0.72 + 0.28 * beat)) return { g: 0.4 + 0.6 * beat, a: 1 };
+            const { phase, glow, strength } = reactorBeat(t);
+            if (d < r * (0.7 + 0.3 * glow)) return { g: 0.32 + 0.68 * glow, a: 1 };
             if (d < r + 2) return { g: d < r ? 0.16 : 0.5, a: 0 };
-            if (Math.abs(d - (r + 3 + phase * r * 1.3)) < 1) return { g: 0.75 * (1 - phase), a: 1 };
+            if (Math.abs(d - (r + 3 + phase * r * 1.5)) < 1) return { g: 0.8 * strength * (1 - phase), a: 1 };
             if (Math.abs(ly - Math.round(rh * 0.48)) < 1) {
                 const isCharge = ((dx - t / 70) % 9 + 9) % 9 < 2;
                 return { g: isCharge ? 0.9 : 0.4, a: isCharge ? 1 : 0 };

@@ -19,6 +19,7 @@
     const RESULT_HOLD_MS = 1700, MAX_STEP = 0.033;
     const GRACE_MS = 3000; // the lander hangs under the ship until you touch a control (or this long), so nobody crashes while reading
     const INK = '#06070a', BONE = '#c4d0c4', AMBER = '#d9a24a', RED = '#d85a4e', GREEN = '#74d99a', DIM = '#2f5a48';
+    const LOW_FUEL = 25, LOW_FUEL_BEEP_MS = 900, THRUST_SOUND_MS = 120;
     const GRADES = {
         soft: { label: 'SOFT LANDING', effect: 'the team steps out fresh — the trip is safer', color: GREEN, riskMod: -8 },
         rough: { label: 'ROUGH LANDING', effect: 'down in one piece', color: AMBER, riskMod: 0 },
@@ -252,7 +253,7 @@
             const el = name => overlay.querySelector(name);
             const fuelBar = el('.lander-fuel b'), downEl = el('.lander-down'), sideEl = el('.lander-side'), altEl = el('.lander-alt'), resultEl = el('.warp-plot-result');
             const startedAt = performance.now();
-            let last = startedAt, isClosed = false, lastBeep = 0;
+            let last = startedAt, isClosed = false, lastBeep = 0, lastFuelWarn = 0;
 
             const KEYMAP = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
             function onKey(e) {
@@ -279,7 +280,7 @@
                 const info = GRADES[grade];
                 overlay.querySelectorAll('button').forEach(b => { b.disabled = true; });
                 resultEl.innerHTML = `<strong style="color:${info.color}">${info.label}</strong><span>${info.effect}</span>`;
-                sfx(grade === 'soft' ? 'sfxDiscovery' : grade === 'crash' ? 'sfxCritical' : 'sfxInteract');
+                sfx('sfxTouchdown', grade);
                 if (grade === 'crash' && app.screenShake) app.screenShake('heavy');
                 setTimeout(() => close({ grade, auto: false }), RESULT_HOLD_MS);
             }
@@ -298,16 +299,17 @@
                 if (isClosed) return;
                 const dt = Math.min(MAX_STEP, (now - last) / 1000); last = now;
                 const isHolding = !s.isReleased && !s.keys.left && !s.keys.right && now - startedAt < GRACE_MS;
-                if (!isHolding) s.isReleased = true;
+                if (!isHolding && !s.isReleased) { s.isReleased = true; sfx('sfxUndock'); }
                 if (isHolding !== s.wasHolding) { s.wasHolding = isHolding; resultEl.textContent = isHolding ? 'Docked under the ship. Touch a control to let go.' : ''; }
                 if (!s.grade && !isHolding) {
                     const landed = step(s, g, gravity, dt);
                     const isSafeDown = s.vy <= SOFT.down, isSafeSide = Math.abs(s.vx) <= SOFT.side;
-                    fuelBar.style.transform = `scaleX(${s.fuel / FUEL_FULL})`; fuelBar.style.background = s.fuel < 25 ? RED : AMBER;
+                    fuelBar.style.transform = `scaleX(${s.fuel / FUEL_FULL})`; fuelBar.style.background = s.fuel < LOW_FUEL ? RED : AMBER;
                     downEl.textContent = Math.max(0, Math.round(s.vy)); downEl.style.color = isSafeDown ? GREEN : s.vy <= ROUGH.down ? AMBER : RED;
                     sideEl.textContent = Math.abs(Math.round(s.vx)); sideEl.style.color = isSafeSide ? GREEN : Math.abs(s.vx) <= ROUGH.side ? AMBER : RED;
                     altEl.textContent = Math.max(0, Math.round(s.altitude));
-                    if ((s.keys.left || s.keys.right) && s.fuel > 0 && now - lastBeep > 140) { lastBeep = now; sfx('playTone', 90, 'sawtooth', 0.08, 0.03); }
+                    if ((s.keys.left || s.keys.right) && s.fuel > 0 && now - lastBeep > THRUST_SOUND_MS) { lastBeep = now; sfx('sfxThruster', s.keys.left && s.keys.right); }
+                    if (s.fuel > 0 && s.fuel < LOW_FUEL && now - lastFuelWarn > LOW_FUEL_BEEP_MS) { lastFuelWarn = now; sfx('sfxLowFuel'); }
                     if (landed) end(landed);
                 }
                 draw(ctx, s, g, colors, look, now);

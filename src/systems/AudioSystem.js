@@ -556,6 +556,90 @@ class AudioSystem {
     }
 
     // Helper: play tone at specific time
+    /**
+     * A burst of filtered noise: the raw material for thrusters, hisses, thuds and crashes.
+     * filterType 'lowpass' = rumble, 'highpass' = hiss, 'bandpass' = scrape.
+     */
+    playNoise(duration, vol = 0.1, filterFreq = 800, filterType = 'lowpass', delay = 0) {
+        if (!this.initialized) return;
+        const start = this.ctx.currentTime + delay;
+        const length = Math.max(1, Math.floor(this.ctx.sampleRate * duration));
+        const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+        const source = this.ctx.createBufferSource();
+        const filter = this.ctx.createBiquadFilter();
+        const gain = this.ctx.createGain();
+        source.buffer = buffer;
+        filter.type = filterType;
+        filter.frequency.setValueAtTime(filterFreq, start);
+        gain.gain.setValueAtTime(vol, start);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        source.start(start);
+    }
+
+    // ── lander ──
+    /** One puff of engine rumble; called repeatedly while a thruster is held. Both thrusters = deeper and louder. */
+    sfxThruster(isBoth = false) {
+        this.playNoise(0.16, isBoth ? 0.11 : 0.07, isBoth ? 260 : 380, 'lowpass');
+        this.playTone(isBoth ? 48 : 62, 'sawtooth', 0.14, 0.025);
+    }
+
+    sfxLowFuel() {
+        this.playTone(1180, 'square', 0.06, 0.035);
+        this.playToneAt(1180, 'square', 0.06, 0.035, this.ctx ? this.ctx.currentTime + 0.11 : 0);
+    }
+
+    /** grade: 'soft' | 'rough' | 'crash' */
+    sfxTouchdown(grade) {
+        if (!this.initialized) return;
+        const now = this.ctx.currentTime;
+        if (grade === 'crash') {
+            this.playNoise(0.9, 0.3, 900, 'lowpass');
+            this.playNoise(0.5, 0.12, 2400, 'bandpass', 0.05);
+            this.playTone(90, 'sawtooth', 0.7, 0.12);
+            return;
+        }
+        this.playTone(grade === 'soft' ? 70 : 55, 'sine', 0.3, grade === 'soft' ? 0.18 : 0.26); // legs meet ground
+        this.playNoise(grade === 'soft' ? 0.25 : 0.45, grade === 'soft' ? 0.05 : 0.12, 500, 'lowpass');
+        if (grade === 'soft') { this.playToneAt(523, 'triangle', 0.18, 0.06, now + 0.25); this.playToneAt(784, 'triangle', 0.3, 0.06, now + 0.4); }
+    }
+
+    sfxUndock() {
+        this.playTone(140, 'square', 0.08, 0.06);
+        this.playNoise(0.35, 0.06, 3000, 'highpass', 0.05);
+    }
+
+    // ── boarding ──
+    sfxAirlock() {
+        this.playNoise(0.7, 0.09, 2600, 'highpass');
+        this.playTone(80, 'sine', 0.35, 0.12);
+    }
+
+    sfxFootsteps() {
+        [0, 0.16, 0.32].forEach(delay => this.playNoise(0.07, 0.07, 300, 'lowpass', delay));
+    }
+
+    sfxSearch() {
+        [0, 0.12, 0.27, 0.36].forEach((delay, i) => this.playNoise(0.06, 0.05, 1200 + i * 400, 'bandpass', delay));
+    }
+
+    sfxSeamSplit() {
+        this.playNoise(0.8, 0.2, 3400, 'highpass');
+        this.playTone(220, 'sawtooth', 0.25, 0.06);
+    }
+
+    /** Two heart thumps: air is nearly gone. */
+    sfxLowAir() {
+        if (!this.initialized) return;
+        const now = this.ctx.currentTime;
+        this.playToneAt(58, 'sine', 0.16, 0.22, now);
+        this.playToneAt(50, 'sine', 0.2, 0.18, now + 0.22);
+    }
+
     playToneAt(freq, type, duration, vol, time) {
         if (!this.initialized) return;
         const osc = this.ctx.createOscillator();

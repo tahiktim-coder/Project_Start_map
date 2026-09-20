@@ -31,7 +31,7 @@
         const stress = Math.max(0, Math.min(3, member.stress || 0));
         const color = cut ? `rgb(${cut.colorOf(member).join(',')})` : 'var(--bone)';
         const where = isDead ? 'Stasis pod, cargo hold' : (cut ? ROOM[cut.stationOf(member)] : '');
-        const state = isDead ? 'dead' : held || (member.status === 'HEALTHY' ? 'healthy' : member.status.toLowerCase());
+        const state = window.PlainWords ? window.PlainWords.status(member) : (isDead ? 'dead' : held || member.status.toLowerCase());
         const pips = [0, 1, 2].map(i => `<i class="${i < stress ? 'is-on' : ''}"></i>`).join('');
         const rest = (!isDead && !held && stress > 0)
             ? `<button class="deck-action roster-rest" data-idx="${index}" ${canRest ? '' : 'disabled'}><span>REST</span><small>${canRest ? '1 ration · stress −1' : 'not possible right now'}</small></button>` : '';
