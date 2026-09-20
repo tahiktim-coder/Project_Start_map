@@ -2391,6 +2391,16 @@ class App {
         return `EXODUS-${hull} "${CALLSIGNS[hull % CALLSIGNS.length]}"`;
     }
 
+    /** The marked transponder from the opening pays off: whatever you chose to do in that wreck, this page was in its logbook. */
+    findDiscDrawing(shipName) {
+        const DISC_REVEAL_DELAY_MS = 900;
+        if (typeof ITEMS === 'undefined' || !ITEMS.DISC_DRAWING || this.state.cargo.some(i => i.id === ITEMS.DISC_DRAWING.id)) return;
+        this.state.cargo.push({ ...ITEMS.DISC_DRAWING, acquiredAt: shipName });
+        this.state.addLog(`In the logbook of ${shipName}: a folded page. A drawing of a gold disc. It is in your cargo now.`);
+        this.state.emitUpdates();
+        setTimeout(() => { if (window.DiscDocument) window.DiscDocument.open(this); }, DISC_REVEAL_DELAY_MS);
+    }
+
     handleExodusAction() {
         const planet = this.state.currentSystem;
         if (!planet || !planet.tags || !planet.tags.includes('EXODUS_WRECK')) {
@@ -2463,6 +2473,7 @@ class App {
                 choices: selected.choices,
                 onChoiceMade: () => {
                     this.orbitView.updateCommandDeck(planet);
+                    if (planet.isFirstSignal) this.findDiscDrawing(shipName);
                 }
             });
             return;
@@ -4542,8 +4553,8 @@ You are home.`
         // STANDARD HANDLERS
         if (item && item.onUse) {
             const msg = item.onUse(this.state);
-            this.state.cargo.splice(index, 1); // Remove from inventory
-            this.state.addLog(`Used ${item.name}: ${msg}`);
+            if (!item.isKept) this.state.cargo.splice(index, 1); // documents stay; everything else is used up
+            this.state.addLog(item.isKept ? msg : `Used ${item.name}: ${msg}`);
             this.state.emitUpdates();
         }
     }

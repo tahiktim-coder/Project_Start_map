@@ -800,3 +800,85 @@
 @media (prefers-reduced-motion: reduce) {
     .story-reel, .reel-caption.is-in { animation: none; opacity: 1; }
 }
+
+/* ── OrbitVista.js layers round the planet ── */
+.orbit-visual > .vista-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
+.orbit-visual > .vista-back { z-index: 0; }
+.orbit-visual > .vista-front { z-index: 2; }
+.orbit-visual > :not(.vista-layer) { position: relative; z-index: 1; }
+
+/* ── DiscDocument.js ── */
+.disc-doc-card {
+    width: min(720px, calc(100vw - 32px));
+    max-width: 720px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    border-top-color: var(--amber);
+}
+
+.disc-doc-body {
+    display: grid;
+    grid-template-columns: minmax(200px, 320px) 1fr;
+    gap: 22px;
+    align-items: start;
+    padding: 8px 24px 0;
+}
+
+.disc-doc-canvas {
+    width: 100%;
+    aspect-ratio: 1;
+    image-rendering: pixelated;
+}
+
+.disc-doc-notes { display: grid; gap: 7px; align-content: start; }
+
+.disc-doc-note {
+    padding: 8px 12px;
+    text-align: left;
+    background: transparent;
+    border: 1px solid var(--line2);
+    border-left: 3px solid var(--amber);
+    border-radius: 3px;
+    color: var(--bone);
+    font: 600 0.74em var(--font-display);
+    letter-spacing: 0.16em;
+    cursor: pointer;
+    transition: background 150ms, transform 150ms;
+}
+
+.disc-doc-note:hover,
+.disc-doc-note:focus-visible,
+.disc-doc-note[aria-pressed="true"] { background: rgba(217, 162, 74, 0.14); transform: translateX(2px); outline: none; }
+
+.disc-doc-text {
+    min-height: 6.4em;
+    margin: 8px 0 0;
+    font-size: 0.98em;
+    line-height: 1.6;
+    color: var(--bone);
+}
+
+.disc-doc-aura {
+    margin: 14px 24px 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-size: 0.9em;
+    color: var(--dim);
+}
+
+.disc-doc-aura b {
+    margin-right: 10px;
+    font: 600 0.72em var(--font-display);
+    letter-spacing: 0.18em;
+    color: var(--green);
+}
+
+@media (max-width: 620px) { .disc-doc-body { grid-template-columns: 1fr; } }

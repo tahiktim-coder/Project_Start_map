@@ -90,6 +90,11 @@ const ITEMS = {
         onUse: null // Passive effect handled by GameState.consumeRation()
     },
     // Food Pack (ration recovery)
+    DISC_DRAWING: {
+        id: 'disc_drawing', name: 'Drawing of the Disc', type: 'DOCUMENT', value: 0, isKept: true,
+        desc: 'A page folded into a dead ship\'s logbook: a gold disc, a star map, two figures. Someone wrote in the margin.',
+        onUse: (state) => { if (window.DiscDocument) window.DiscDocument.open(window.app); return "You unfold the page."; }
+    },
     MEDKIT: {
         id: 'medkit', name: 'Field Medkit', type: 'CONSUMABLE', value: 25,
         desc: 'A sealed trauma kit. Heals one injured crew member.',
