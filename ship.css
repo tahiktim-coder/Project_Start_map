@@ -601,78 +601,98 @@
     padding: 7px 12px;
 }
 
-/* ── EncounterCard.js: one card for signals, stations, rocks, crew moments, ship alerts ── */
+/* ── EncounterCard.js: one scene at a time. Little text on screen, one accent colour, big readable speech ── */
 .enc-card {
-    width: min(560px, calc(100vw - 32px));
-    max-width: 560px;
+    width: min(540px, calc(100vw - 32px));
+    max-width: 540px;
     max-height: calc(100vh - 48px);
     overflow-y: auto;
+    padding-bottom: 20px;
     border-top-color: var(--enc);
 }
 
 .enc-head {
-    padding: 18px 22px 10px;
+    padding: 20px 24px 6px;
 }
 
 .enc-kicker {
-    margin: 0 0 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin: 0 0 6px;
     font: 600 0.68em var(--font-display);
     letter-spacing: 0.26em;
     color: var(--enc);
 }
 
+.enc-kicker span {
+    color: var(--dim);
+    letter-spacing: 0.16em;
+}
+
 .enc-head h3 {
     margin: 0;
-    font: 600 1.45em var(--font-display);
-    letter-spacing: 0.08em;
+    font: 600 1.5em var(--font-display);
+    letter-spacing: 0.06em;
     line-height: 1.2;
     color: var(--bone);
 }
 
 .enc-signal {
     display: block;
-    width: calc(100% - 44px);
+    width: calc(100% - 48px);
     height: 36px;
-    margin: 0 22px 10px;
+    margin: 8px 24px 0;
     border-block: 1px solid var(--line);
     image-rendering: pixelated;
     opacity: 0.85;
 }
 
-.enc-card .deck-panel-facts {
-    padding: 0 22px 10px;
-    grid-template-columns: 64px 1fr;
+.enc-stage {
+    min-height: 9.5em;
+    padding: 12px 24px 0;
+    cursor: pointer;
 }
 
 .enc-context {
-    margin: 0;
-    padding: 0 22px 16px;
-    font-size: 0.95em;
-    line-height: 1.65;
-    color: var(--bone);
+    max-width: 58ch;
+    margin: 0 0 16px;
+    font-size: 0.92em;
+    line-height: 1.6;
+    color: var(--dim);
 }
 
-.enc-talk {
-    list-style: none;
-    margin: 0;
-    padding: 12px 22px 6px;
-    border-top: 1px solid var(--line);
-    display: grid;
-    gap: 10px;
+.enc-more {
+    padding: 0;
+    background: none;
+    border: 0;
+    border-bottom: 1px dotted var(--dim);
+    color: var(--dim);
+    font: inherit;
+    cursor: pointer;
 }
 
-.enc-talk li {
+.enc-more:hover,
+.enc-more:focus-visible { color: var(--bone); border-bottom-color: var(--bone); }
+
+.enc-line {
     display: grid;
-    grid-template-columns: 38px 1fr;
-    gap: 12px;
+    grid-template-columns: 56px 1fr;
+    gap: 16px;
     align-items: start;
 }
 
+.enc-line.is-in { animation: enc-line-in 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+@keyframes enc-line-in {
+    from { opacity: 0; transform: translateY(6px); }
+}
+
 .enc-face {
-    width: 38px;
-    height: 38px;
+    width: 56px;
+    height: 56px;
     object-fit: cover;
-    border: 1px solid;
+    border: 1px solid var(--line2);
     border-radius: 3px;
     background: #0a0e0c;
 }
@@ -680,69 +700,118 @@
 .enc-face-aura {
     display: grid;
     place-items: center;
-    font: 600 0.7em var(--font-display);
+    font: 600 0.8em var(--font-display);
     letter-spacing: 0.1em;
     color: var(--green);
 }
 
-.enc-talk p {
+.enc-line p {
     margin: 0;
-    font-size: 0.9em;
+    font-size: 1.04em;
     line-height: 1.55;
     color: var(--bone);
 }
 
-.enc-talk b {
+.enc-line b {
     display: block;
-    font: 600 0.72em var(--font-display);
-    letter-spacing: 0.16em;
-    margin-bottom: 1px;
+    margin-bottom: 3px;
+    font: 600 0.66em var(--font-display);
+    letter-spacing: 0.18em;
 }
 
-.enc-card h4 {
-    margin-top: 10px;
+.enc-flow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 24px 0;
 }
 
-.enc-choices {
-    display: grid;
-    gap: 8px;
-    padding: 0 22px 4px;
+.enc-flow[hidden],
+.enc-decide[hidden] { display: none; }
+
+.enc-pips { display: flex; gap: 5px; margin-right: auto; }
+.enc-pips i { width: 14px; height: 3px; background: var(--line2); }
+.enc-pips i.is-on { background: var(--enc); }
+
+.enc-skip {
+    padding: 4px 2px;
+    background: none;
+    border: 0;
+    color: var(--dim);
+    font: 0.8em var(--font-mono);
+    cursor: pointer;
 }
 
-.enc-choice {
-    display: grid;
-    gap: 4px;
-    padding: 12px 14px;
-    text-align: left;
-    background: color-mix(in srgb, var(--enc) 9%, transparent);
-    border: 1px solid color-mix(in srgb, var(--enc) 60%, transparent);
-    border-left: 3px solid var(--enc);
+.enc-skip:hover,
+.enc-skip:focus-visible { color: var(--bone); }
+
+.enc-next {
+    padding: 9px 18px;
+    background: color-mix(in srgb, var(--enc) 14%, transparent);
+    border: 1px solid var(--enc);
     border-radius: 3px;
     color: var(--bone);
-    font: 600 0.9em var(--font-display);
-    letter-spacing: 0.08em;
+    font: 600 0.82em var(--font-display);
+    letter-spacing: 0.14em;
     cursor: pointer;
     transition: background 150ms, transform 150ms;
 }
 
-.enc-choice span::after {
-    content: '  ›';
-    color: var(--enc);
+.enc-next:hover,
+.enc-next:focus-visible { background: color-mix(in srgb, var(--enc) 30%, transparent); transform: translateX(2px); outline: none; }
+
+.enc-decide {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+    animation: enc-line-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.enc-choice small {
-    font: 400 0.86em/1.5 var(--font-mono);
+.enc-choices {
+    display: grid;
+    gap: 7px;
+    padding: 0 24px;
+}
+
+.enc-choice {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px 12px;
+    padding: 11px 14px;
+    text-align: left;
+    background: transparent;
+    border: 1px solid var(--line2);
+    border-left: 3px solid var(--enc);
+    border-radius: 3px;
+    color: var(--bone);
+    font: 600 0.9em var(--font-display);
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 150ms, border-color 150ms, transform 150ms;
+}
+
+.enc-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+
+.enc-chips i {
+    padding: 2px 7px;
+    border: 1px solid var(--line2);
+    border-radius: 2px;
+    font: 400 0.8em var(--font-mono);
+    font-style: normal;
     letter-spacing: 0;
     color: var(--dim);
+    white-space: nowrap;
 }
 
-.enc-choice small b { font-weight: 700; }
-.enc-choice small .is-gain { color: var(--green-br); }
-.enc-choice small .is-loss { color: var(--red); }
+.enc-chips .is-gain { color: var(--green-br); border-color: color-mix(in srgb, var(--green) 45%, transparent); }
+.enc-chips .is-loss { color: var(--red); border-color: color-mix(in srgb, var(--red) 45%, transparent); }
 
 .enc-choice:hover:not([disabled]),
 .enc-choice:focus-visible {
-    background: color-mix(in srgb, var(--enc) 22%, transparent);
+    background: color-mix(in srgb, var(--enc) 14%, transparent);
+    border-color: var(--enc);
     transform: translateX(2px);
     outline: none;
 }
@@ -753,4 +822,20 @@
     opacity: 0.45;
     cursor: not-allowed;
     border-style: dashed;
+}
+
+.enc-detail {
+    min-height: 3.2em;
+    margin: 10px 0 0;
+    padding: 0 24px;
+    font-size: 0.84em;
+    line-height: 1.55;
+    color: var(--dim);
+}
+
+.enc-detail .is-gain { color: var(--green-br); }
+.enc-detail .is-loss { color: var(--red); }
+
+@media (prefers-reduced-motion: reduce) {
+    .enc-line.is-in, .enc-decide { animation: none; }
 }

@@ -190,8 +190,8 @@ And somewhere in this infinite field, there are five stones with familiar names.
 
         dialogue: [
             { speaker: 'Dr. Aris', text: "These graves... some of the dates are from the past. Some from the future. Some from years that haven't been invented yet." },
-            { speaker: 'Eng. Jaxon', text: "I found my own grave. Jaxon Mercer. 2343-2398. 'He kept them flying.'" },
-            { speaker: 'Spc. Vance', text: "Mine says 2341-2344. That's... that's two years from now." },
+            { speaker: 'Eng. Jaxon', text: "I found my own grave. Jaxon Mercer. It says I die in 2398. 'He kept them flying.'" },
+            { speaker: 'Spc. Vance', text: "Mine says I die in 2344. That's... that's two years from now." },
             { speaker: 'Tech Mira', text: "Don't read them. Please. We don't want to know how this ends." },
             { speaker: 'A.U.R.A.', text: "The graves are quantum-superposed. The dates are possibilities, not certainties. Your choices still matter." }
         ],

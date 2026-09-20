@@ -24,8 +24,12 @@ class NavView {
 
         const nodesHtml = systems.map(planet => {
             // Safety fallback if mapData missing
-            const x = planet.mapData ? planet.mapData.x : Math.floor(Math.random() * 80) + 10;
-            const y = planet.mapData ? planet.mapData.y : Math.floor(Math.random() * 80) + 10;
+            // Keep every node, and the name under it, inside the map: the label hangs below the body, so the bottom margin is the big one.
+            // Done here (not in the generator) so saved games are fixed too.
+            const MAP_EDGE = { left: 8, right: 92, top: 12, bottom: 76 };
+            const clampTo = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
+            const x = clampTo(planet.mapData ? planet.mapData.x : Math.floor(Math.random() * 80) + 10, MAP_EDGE.left, MAP_EDGE.right);
+            const y = clampTo(planet.mapData ? planet.mapData.y : Math.floor(Math.random() * 80) + 10, MAP_EDGE.top, MAP_EDGE.bottom);
 
             const color = this.getPlanetColor(planet.type);
             const isGhost = planet.ghost === true;
@@ -48,6 +52,7 @@ class NavView {
                         ${isGhost ? 'opacity: 0.35; animation: ghost-shimmer 3s ease-in-out infinite;' : ''}">
 
                 ${miniatureHtml}
+                ${planet.isFirstSignal && !planet.exodusInvestigated ? '<span class="nav-signal">OLD TRANSPONDER</span>' : ''}
 
                 <!-- Label -->
                 <div class="nav-label" style="position: absolute; top: ${Math.round(nodeSize * 1.2)}px; white-space: nowrap; color: ${color};
@@ -104,6 +109,7 @@ class NavView {
         `;
 
         this.attachEvents(systems);
+        if (window.NavVista) window.NavVista.mount(this.element.querySelector('.sector-map-container'), this.state); // the living backdrop
         return this.element;
     }
 
@@ -251,7 +257,7 @@ class NavView {
         const isRemoteScanned = planet.remoteScanned;
         // Must mirror App.handleWarp: a damaged (or A.U.R.A.-locked) bridge makes every warp cost half again as much
         const bridgeFactor = this.state.isDeckOperational('bridge') ? 1 : 1.5;
-        const actualCost = (this.state.lastVisitedSystem && this.state.lastVisitedSystem.id === planet.id) ? 0 : Math.floor(planet.fuelCost * bridgeFactor);
+        const actualCost = this.state.getWarpCost ? this.state.getWarpCost(planet) : Math.floor(planet.fuelCost * bridgeFactor);
 
         // Resource level calculation (based on planet.resources)
         const getResourceLevel = (value) => {

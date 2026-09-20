@@ -83,17 +83,12 @@ class OrbitView {
                         ">
                             <div style="position:absolute; top:-10px; left:-10px; right:-10px; bottom:-10px; border-radius:50%; box-shadow: inset 0 0 20px rgba(0,0,0,0.5); pointer-events:none;"></div>
                         </div>`}
-                        <div class="ship-orbit-icon" style="
-                            position: absolute; top: 50%; left: 50%; width: ${Math.round(heroSize * 1.46)}px; height: ${Math.round(heroSize * 1.46)}px; transform: translate(-50%, -50%);
-                            border: 1px dashed var(--color-primary-dim); border-radius: 50%; animation: spin 20s linear infinite;
-                        ">
-                            <div style="width: 12px; height: 12px; background: var(--color-accent); border-radius: 50%; position: absolute; top: -6px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 10px var(--color-accent);"></div>
-                        </div>
                     </div>
 
                 </div>
             </div>
         `;
+        if (window.OrbitVista) window.OrbitVista.mount(this.element.querySelector('.orbit-visual'), planet, heroSize); // star, air, dust, and the ship going round
         this.updateCommandDeck(planet);
         return this.element;
     }
@@ -319,10 +314,12 @@ class OrbitView {
 
     /** Planet size that fits the space left of the readout column, so it never sits on top of the text. */
     static heroSize() {
+        const HERO_MAX = 460;
         const main = document.getElementById('main-view');
         const width = main ? main.clientWidth : 900;
-        const free = width - Math.min(280, width * 0.45) - 100; // readout column (see .orbit-readout width) + paddings
-        return Math.round(Math.max(110, Math.min(300, free * 0.6)));
+        const free = width - Math.min(300, width * 0.45) - 100; // readout column (see .site-readout width) + paddings
+        const tall = (main ? main.clientHeight : 600) - 120;   // heading + breathing room: the planet should fill the view, not float in it
+        return Math.round(Math.max(110, Math.min(HERO_MAX, free * 0.62, tall * 0.74)));
     }
 
     updateCommandDeck(planet) {

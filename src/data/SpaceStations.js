@@ -61,7 +61,7 @@ const SPACE_STATION_ENCOUNTERS = [
                     if (Math.random() < 0.25) {
                         const crew = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
                         if (crew.length > 0) {
-                            const victim = crew[Math.floor(Math.random() * crew.length)];
+                            const victim = (state._boarder && state._boarder.status !== 'DEAD') ? state._boarder : crew[Math.floor(Math.random() * crew.length)]; // whoever boarded is the one in the room
                             victim.status = 'INJURED';
                             state.addLog(`${victim.name} exposed to reactor radiation. INJURED.`);
                             return `Reactor stripped. +40 Energy. ${victim.name} suffered radiation burns.`;
@@ -116,7 +116,7 @@ const SPACE_STATION_ENCOUNTERS = [
                         // Bad outcome - contamination
                         const crew = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
                         if (crew.length > 0) {
-                            const victim = crew[Math.floor(Math.random() * crew.length)];
+                            const victim = (state._boarder && state._boarder.status !== 'DEAD') ? state._boarder : crew[Math.floor(Math.random() * crew.length)]; // whoever boarded is the one in the room
                             victim.status = 'INJURED';
                             victim.stress = Math.min(3, (victim.stress || 0) + 1);
                             state.addLog(`Something in the lab attacked ${victim.name}. The wounds don't look natural.`);
@@ -254,7 +254,7 @@ const SPACE_STATION_ENCOUNTERS = [
                         // Defenses activate
                         const crew = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
                         if (crew.length > 0) {
-                            const victim = crew[Math.floor(Math.random() * crew.length)];
+                            const victim = (state._boarder && state._boarder.status !== 'DEAD') ? state._boarder : crew[Math.floor(Math.random() * crew.length)]; // whoever boarded is the one in the room
                             victim.status = 'INJURED';
                             state.addLog(`Automated turret activated! ${victim.name} hit before it could be disabled.`);
                             state.salvage = Math.min(state.maxSalvage, state.salvage + 40);

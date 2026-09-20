@@ -31,6 +31,8 @@
         if (isOverlayOpen) return '';
         if (!here) {
             if (state.getStopsLeft && state.getStopsLeft() <= 0) return 'No stops left in this sector. Press JUMP SECTOR to move on — whatever you skipped is gone for good.';
+            const signal = (state.sectorNodes || []).find(p => p.isFirstSignal && !p.exodusInvestigated);
+            if (signal && !document.querySelector('.warp-btn')) return `Vance saw an old transponder on the scope. It is marked on the map at ${signal.name}: click it, warp there, deep scan, then search the wreck.`;
             if (!document.querySelector('.warp-btn')) return 'Click a planet on the map to look at it. You only get a few STOPS per sector, so you cannot visit them all.';
             return 'LONG RANGE SCAN shows what is there for 2 energy. INITIATE WARP flies there and uses one STOP.';
         }

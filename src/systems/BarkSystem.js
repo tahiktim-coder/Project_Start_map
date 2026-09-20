@@ -368,28 +368,28 @@ const BARK_DATA = {
     // ═══════════════════════════════════════════════════════════════
     SECTOR_5_ENTRY: {
         PESSIMIST: {
-            0: ["Sector 5. The Event Horizon. This is where stories end.", "The final sector. I'd say we made it, but 'made it' implies surviving."],
-            1: ["We actually reached Sector 5. I genuinely didn't think we would.", "End of the line. One way or another."],
-            2: ["Sector 5. The last place anyone ever reached. Now I know why.", "So this is it. The edge of everything."],
+            0: ["Sector 6. The Threshold. This is where stories end.", "The final sector. I'd say we made it, but 'made it' implies surviving."],
+            1: ["We actually reached Sector 6. I genuinely didn't think we would.", "End of the line. One way or another."],
+            2: ["Sector 6. The last place anyone ever reached. Now I know why.", "So this is it. The edge of everything."],
             3: ["The last sector. The last stop. The last of us."]
         },
         HUMANIST: {
-            0: ["We made it to Sector 5. Everyone who got us here... thank you.", "The final sector. I want to believe it means something."],
+            0: ["We made it to Sector 6. Everyone who got us here... thank you.", "The final sector. I want to believe it means something."],
             1: ["All those people on the other ships died trying to reach this point.", "We're here. They'd want us to finish this."],
-            2: ["Sector 5. I promised the crew we'd find a home. I have to keep that promise.", "We've come so far. Lost so much. It has to be worth something."],
+            2: ["Sector 6. I promised the crew we'd find a home. I have to keep that promise.", "We've come so far. Lost so much. It has to be worth something."],
             3: ["The final sector. I don't have any hope left. Just duty."]
         },
         SURVIVOR: {
-            0: ["Sector 5. Maximum readiness. This is the endgame.", "Final sector. Whatever's been testing us — this is the last exam."],
+            0: ["Sector 6. Maximum readiness. This is the endgame.", "Final sector. Whatever's been testing us — this is the last exam."],
             1: ["The Exodus-8 logs mentioned this place. They didn't survive it.", "Every instinct says to turn back. There's nowhere to turn back to."],
-            2: ["The end. Good. I'm tired of the journey.", "Sector 5. The place that killed everyone before us. Let's see about us."],
+            2: ["The end. Good. I'm tired of the journey.", "Sector 6. The place that killed everyone before us. Let's see about us."],
             3: ["Last sector. Last stand. Fitting."]
         },
         CURIOUS: {
-            0: ["Sector 5 — the Event Horizon! The readings here are unlike anything documented.", "This is it! The source of every anomaly, every signal, every mystery."],
+            0: ["Sector 6 — the Threshold! The readings here are unlike anything documented.", "This is it! The source of every anomaly, every signal, every mystery."],
             1: ["The instrument readings are... impossible. All of them. Every single one.", "The stellar formations here follow no known physical model."],
             2: ["Everything I thought I knew about astrophysics is wrong. This sector proves it.", "The data is singing. I don't know how else to describe it."],
-            3: ["Sector 5. The answer to everything. I'm too empty to care."]
+            3: ["Sector 6. The answer to everything. I'm too empty to care."]
         }
     },
 

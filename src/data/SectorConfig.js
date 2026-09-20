@@ -61,7 +61,7 @@ const SECTOR_CONFIG = {
             description: 'The void between stars',
             onWarp: function(state) {
                 // +1 stress to random living crew on each warp
-                const living = state.crew.filter(c => c.status !== 'DEAD');
+                const living = state.crew.filter(c => c.status !== 'DEAD' && !(c.tags || []).includes('LEADER')); // the commander is the player, and does not get lines
                 if (living.length > 0) {
                     const target = living[Math.floor(Math.random() * living.length)];
                     target.stress = Math.min(3, (target.stress || 0) + 1);
@@ -352,7 +352,7 @@ const SECTOR_CONFIG = {
                     state.addLog('===================================');
                     state.addLog('SECTOR 6: THE THRESHOLD');
                     state.addLog('===================================');
-                    state.addLog('You have traveled further than any human vessel.');
+                    state.addLog('Every ship before you stopped somewhere behind you.');
                     state.addLog('');
                     state.addLog('And then you see it.');
                     state.addLog('');

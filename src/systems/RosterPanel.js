@@ -77,9 +77,10 @@
         const canUse = !!item.onUse || (item.type && String(item.type).startsWith('REVIVAL_'));
         return `
             <li class="cargo-item">
+                ${window.ItemIcons ? window.ItemIcons.iconHtml(item) : ''}
                 <h4>${esc(item.name)}</h4>
                 <p>${esc(item.desc || '')}</p>
-                <small>${esc(ITEM_KIND[item.type] || String(item.type || '').replace(/_/g, ' ').toLowerCase())}${item.acquiredAt ? ' · from ' + esc(item.acquiredAt) : ''}</small>
+                <small>${esc(ITEM_KIND[item.type] || String(item.type || '').replace(/_/g, ' ').toLowerCase())}${item.acquiredAt ? ' · from ' + esc(item.acquiredAt) : ''}${item.foundIn ? ' · found in ' + esc(item.foundIn) : ''}</small>
                 ${canUse ? `<button class="deck-action cargo-use" data-idx="${index}"><span>USE</span></button>` : ''}
             </li>`;
     }
@@ -93,6 +94,7 @@
                 <button class="deck-panel-close close-modal" aria-label="Close">✕</button></header>
             ${count === 0 ? '<p class="roster-note">Empty. Probes, away teams and boarding parties bring things back here.</p>'
                 : `<ul class="cargo-grid">${state.cargo.map(itemCard).join('')}</ul>`}`);
+        if (window.ItemIcons) window.ItemIcons.hydrate(modal);
         modal.querySelectorAll('.cargo-use').forEach(btn => btn.addEventListener('click', () => {
             modal.remove();
             app.handleItemUse(+btn.dataset.idx);

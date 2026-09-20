@@ -174,3 +174,106 @@
 .log-controls:has([aria-pressed="true"]:not([data-filter="all"])) {
     opacity: 1;
 }
+
+/* ── the journal look (MissionLog.js): stop cards, radio chatter, tags instead of sentences ── */
+.log-entry.is-rich {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    line-height: 1.45;
+    color: var(--bone);
+}
+
+.log-entry.is-rich::before { content: none; }
+
+.log-glyph {
+    flex: none;
+    width: 14px;
+    text-align: center;
+    font-weight: 700;
+    color: var(--dim);
+}
+
+.log-body { flex: 1; min-width: 0; }
+
+.log-body b {
+    margin-right: 8px;
+    font: 600 0.72em var(--font-display);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.log-face {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    object-fit: cover;
+    border: 1px solid var(--line2);
+    border-radius: 2px;
+    background: #0a0e0c;
+}
+
+.log-face-aura {
+    display: grid;
+    place-items: center;
+    font: 600 0.55em var(--font-display);
+    color: var(--green);
+}
+
+.log-tags,
+.log-stop-sum {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.log-tags { flex: none; justify-content: flex-end; max-width: 45%; }
+
+.log-tags i,
+.log-stop-sum i {
+    padding: 0 6px;
+    border: 1px solid var(--line2);
+    border-radius: 2px;
+    font: 400 0.84em var(--font-mono);
+    font-style: normal;
+    white-space: nowrap;
+}
+
+.log-tags .is-gain, .log-stop-sum .is-gain { color: var(--green-br); border-color: rgba(116, 217, 154, 0.4); }
+.log-tags .is-loss, .log-stop-sum .is-loss { color: var(--red); border-color: rgba(216, 90, 78, 0.45); }
+
+.log-entry.is-gain .log-glyph { color: var(--green); }
+
+.log-entry.is-warn { border-left-color: var(--amber); }
+.log-entry.is-warn .log-glyph, .log-entry.is-warn .log-body { color: var(--amber); }
+
+.log-entry.is-bad { border-left-color: var(--red); background: rgba(216, 90, 78, 0.07); }
+.log-entry.is-bad .log-glyph, .log-entry.is-bad .log-body { color: var(--red); font-weight: 700; }
+
+/* machine chatter: out of the way until the log is opened up */
+.log-entry.is-noise { font-size: 0.86em; color: var(--dim); }
+.log-entry.is-noise .log-body { color: var(--dim); }
+#mission-log:not(.is-expanded) .log-entry.is-noise { display: none; }
+
+.log-stop {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin: 10px 0 4px;
+    padding: 5px 10px;
+    border: 1px solid var(--line2);
+    border-left: 3px solid var(--amber);
+    background: rgba(217, 162, 74, 0.06);
+}
+
+.log-stop b {
+    font: 600 0.72em var(--font-display);
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--amber);
+}
+
+.log-stop-sum { margin-left: auto; }

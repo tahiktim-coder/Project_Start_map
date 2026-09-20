@@ -51,7 +51,7 @@
 
     /** Height map (y of the ground at each x), pad position and hazards — fixed per planet, shaped by its type. */
     function buildGround(planet) {
-        const kind = GROUND[GROUND_OF[planet.type] || 'rock'], rand = seeded(planet.id);
+        const kindName = GROUND_OF[planet.type] || 'rock', kind = GROUND[kindName], rand = seeded(planet.id);
         const phases = [rand() * 6.28, rand() * 6.28, rand() * 6.28], heights = new Float32Array(W), hot = new Uint8Array(W);
         for (let x = 0; x < W; x++) {
             let y = 150 - kind.amp * (0.5 + 0.5 * Math.sin(x * 0.021 + phases[0])) - kind.amp * 0.4 * Math.sin(x * 0.057 + phases[1]);
@@ -65,7 +65,7 @@
             const level = kind.sea ? 138 : 146;
             for (let x = 0; x < W; x++) if (heights[x] > level && (x < padX || x >= padX + PAD_WIDTH)) { heights[x] = level; hot[x] = 1; }
         }
-        return { kind, heights, hot, padX, padY, wind: (rand() < 0.5 ? -1 : 1) * kind.wind };
+        return { kind, kindName, heights, hot, padX, padY, wind: (rand() < 0.5 ? -1 : 1) * kind.wind };
     }
 
     function palette(planet) {
@@ -180,7 +180,8 @@
         }
     }
 
-    function draw(ctx, s, g, colors, look, now) {
+    /** Plain fallback backdrop, used only if LanderScene.js is missing. */
+    function drawPlainGround(ctx, g, look, now) {
         ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = DIM;
         for (let k = 0; k < 46; k++) ctx.fillRect((k * k * 37 + k * 101) % W, (k * k * 17 + k * 59) % 112, 1, 1);
@@ -197,8 +198,15 @@
         ctx.fillStyle = Math.floor(now / 350) % 2 ? AMBER : '#5a4520';
         ctx.fillRect(g.padX - 1, g.padY - 3, 2, 3); ctx.fillRect(g.padX + PAD_WIDTH - 1, g.padY - 3, 2, 3);
         if (g.wind) { ctx.fillStyle = DIM; for (let k = 0; k < 5; k++) ctx.fillRect(((now / 1000 * g.wind * 6 + k * 70) % W + W) % W, 20 + k * 22, 6, 1); } // wind streaks
+    }
+
+    function draw(ctx, s, g, colors, look, now, scene) {
         const x = Math.round(s.x), y = Math.round(s.y);
-        if (!s.isReleased) drawDock(ctx, x, y);
+        const isLit = !s.grade && s.fuel > 0, nozzles = [];                                                  // pushing left fires the RIGHT thruster, and the other way round
+        if (isLit && s.keys.right) nozzles.push([x - LANDER_HALF + NOZZLE_LEFT, y + NOZZLE_ROW]);
+        if (isLit && s.keys.left) nozzles.push([x - LANDER_HALF + NOZZLE_RIGHT, y + NOZZLE_ROW]);
+        if (scene) window.LanderScene.drawLive(ctx, scene, g, s, now, nozzles);
+        else { drawPlainGround(ctx, g, look, now); if (!s.isReleased) drawDock(ctx, x, y); }
         if (s.grade === 'crash') drawWreck(ctx, x, y, now - s.endedAt);
         else {
             const isLeftBurn = s.keys.right && s.fuel > 0, isRightBurn = s.keys.left && s.fuel > 0; // pushing left fires the RIGHT thruster, and the other way round
@@ -245,6 +253,7 @@
             document.body.appendChild(overlay);
 
             const ctx = overlay.querySelector('canvas').getContext('2d'), g = buildGround(planet), look = palette(planet);
+            const scene = window.LanderScene ? window.LanderScene.build(g, planet) : null;
             const gravityG = Math.max(0.4, Math.min(2.2, (planet.metrics && planet.metrics.gravity) || 1));
             const gravity = BASE_GRAVITY * Math.pow(gravityG, GRAVITY_CURVE);
             const startsLeft = g.padX + PAD_WIDTH / 2 > W / 2; // start on the far side from the pad
@@ -312,7 +321,7 @@
                     if (s.fuel > 0 && s.fuel < LOW_FUEL && now - lastFuelWarn > LOW_FUEL_BEEP_MS) { lastFuelWarn = now; sfx('sfxLowFuel'); }
                     if (landed) end(landed);
                 }
-                draw(ctx, s, g, colors, look, now);
+                draw(ctx, s, g, colors, look, now, scene);
                 nextFrame(frame);
             })(last);
             el('.lander-hold').focus();
