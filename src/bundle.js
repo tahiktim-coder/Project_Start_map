@@ -2960,100 +2960,37 @@ You are home.`
     // ═══════════════════════════════════════════════════════════════
     // NARRATIVE ENCOUNTER — Uses new NarrativeModal for cinematic experience
     // ═══════════════════════════════════════════════════════════════
+    /**
+     * Story encounters (wrecks, colony ruins, anomalies, campfires). Older event text carries [highlight]Title[/highlight]
+     * and [whisper]sub-line[/whisper] markers: those become the card's title and kicker instead of more body text.
+     * config: { title, context, dialogue[], choices[], onChoiceMade, kicker?, tone? }
+     */
     showNarrativeEncounter(config) {
-        // config: { title, context, dialogue[], choices[], onChoiceMade, speaker? }
-        if (!window.NarrativeModal) {
-            console.warn('[NarrativeModal] Not loaded, falling back to alert');
-            alert(config.context);
-            return;
-        }
-
-        // Speaker map for NarrativeModal
-        const speakerMap = {
-            'Eng. Jaxon': 'JAXON',
-            'Dr. Aris': 'ARIS',
-            'Spc. Vance': 'VANCE',
-            'Tech Mira': 'MIRA',
-            'A.U.R.A.': 'AURA',
-            'Cmdr. Reyes': 'COMMANDER'
-        };
-
-        // Build the narrative sequence
-        const sequence = [];
-
-        // Add context as narrator
-        if (config.context) {
-            sequence.push({
-                speaker: config.speaker || 'NARRATOR',
-                text: config.context
-            });
-        }
-
-        // Add dialogue from living crew only
-        if (config.dialogue && config.dialogue.length > 0) {
-            const filteredDialogue = config.dialogue.filter(d => {
-                if (d.speaker === 'A.U.R.A.') return true;
-                const tagMap = {
-                    'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC',
-                    'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST'
-                };
-                const tag = tagMap[d.speaker];
-                if (tag) {
-                    const member = this.state.crew.find(c => c.tags.includes(tag));
-                    return member && member.status !== 'DEAD';
-                }
-                return true;
-            });
-
-            filteredDialogue.forEach(d => {
-                sequence.push({
-                    speaker: speakerMap[d.speaker] || 'UNKNOWN',
-                    text: `"${d.text}"`
-                });
-            });
-        }
-
-        // Build choices for NarrativeModal with dynamic disabling
-        const narrativeChoices = config.choices.map((choice, idx) => {
-            // Check if choice requires probe and probe is broken
-            const textLower = (choice.text || '').toLowerCase();
-            const descLower = (choice.desc || '').toLowerCase();
-            const requiresProbe = textLower.includes('probe') || descLower.includes('probe');
-            const probeDisabled = requiresProbe && this.state.probeIntegrity <= 0;
-
-            // Check if crew member is sedated and this involves them
-            let sedatedDisabled = false;
-            const sedatedCrew = this.state.crew.filter(c => c.tags && c.tags.includes('SEDATED'));
-            // Note: Sedated crew can't be sent on missions
-
-            return {
-                text: choice.text,
-                cost: probeDisabled ? '[PROBE DESTROYED] ' + choice.desc : choice.desc,
-                disabled: choice.disabled || probeDisabled || sedatedDisabled,
-                effect: () => {
-                    const resultMsg = choice.effect(this.state);
-                    this.state.addLog(resultMsg);
-                    if (config.onChoiceMade) config.onChoiceMade(idx, resultMsg);
-                    this.state.emitUpdates();
-                }
-            };
+        const HIGHLIGHT = /\[(?:highlight|warning)\]([\s\S]*?)\[\/(?:highlight|warning)\]/i, WHISPER = /\[whisper\]([\s\S]*?)\[\/whisper\]/i;
+        const raw = String(config.context || '');
+        const headline = (raw.match(HIGHLIGHT) || [])[1], subline = (raw.match(WHISPER) || [])[1];
+        const isProbeBroken = this.state.probeIntegrity <= 0;
+        const choices = config.choices.map(choice => {
+            const needsProbe = /probe/i.test(`${choice.text} ${choice.desc}`);
+            return Object.assign({}, choice, needsProbe && isProbeBroken ? { disabled: true, requiresLabel: 'Probe destroyed' } : {});
         });
 
-        // Show the sequence
-        if (sequence.length > 1) {
-            window.NarrativeModal.showSequence(sequence, narrativeChoices);
-        } else if (sequence.length === 1) {
-            window.NarrativeModal.show({
-                speaker: sequence[0].speaker,
-                text: sequence[0].text,
-                choices: narrativeChoices
-            });
-        }
+        window.EncounterCard.open(this, {
+            tone: config.tone || 'story', zIndex: 2600,
+            // a headline that repeats the title ("COLONY RUINS: <title>") gives its extra words to the kicker instead
+            kicker: config.kicker || subline || (headline && headline.includes(config.title) ? headline.replace(config.title, '').replace(/[:\s—-]+$/, '') : ''),
+            title: headline && !headline.includes(config.title) ? `${config.title} — ${headline}` : config.title,
+            context: raw.replace(HIGHLIGHT, '').replace(WHISPER, ''),
+            dialogue: config.dialogue, choices,
+            onPick: (idx) => {
+                const resultMsg = config.choices[idx].effect(this.state);
+                if (resultMsg) this.state.addLog(resultMsg);
+                if (config.onChoiceMade) config.onChoiceMade(idx, resultMsg);
+                this.state.emitUpdates();
+            }
+        });
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // COLONY WARNING — S1/S2 warning before establishing colony
-    // ═══════════════════════════════════════════════════════════════
     showColonyWarningModal(planet, onProceed) {
         const config = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
         if (!config || !config.colonyWarning || planet._colonyWarningShown) {
