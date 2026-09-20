@@ -417,12 +417,10 @@ const CREW_PERSONAL_EVENTS = [
         trigger: (state, crew) => crew.tags?.includes('LEADER') && state.currentSector >= 3 && !state._commanderDoubtSeen,
         weight: 15,
         title: "THE WEIGHT OF COMMAND",
-        context: "Late night. The commander is reviewing crew files and mission logs alone.",
+        context: "Late night. You are alone on the bridge with the crew files open. You have read each one twice.",
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "Commander. You have been awake for 19 hours. Sleep deprivation degrades decision-making." },
-            { speaker: 'Commander', text: "Every decision I make could kill them. Every decision I don't make could kill them too." },
-            { speaker: 'A.U.R.A.', text: "You have lost fewer crew members than statistical projections anticipated. By a significant margin." },
-            { speaker: 'Commander', text: "That doesn't make it easier. It just raises the stakes." }
+            { speaker: 'A.U.R.A.', text: "Commander. You have been awake for 19 hours. Tired people choose badly." },
+            { speaker: 'A.U.R.A.', text: "You have lost fewer people than I expected by now. Far fewer. I thought you should hear that." }
         ],
         choices: [
             {
@@ -448,7 +446,7 @@ const CREW_PERSONAL_EVENTS = [
                 text: "Log off, A.U.R.A. I need to think.",
                 effect: (state, crew) => {
                     state._commanderDoubtSeen = true;
-                    state.addLog("Silence. The commander stares at the stars alone.");
+                    state.addLog("Silence. You sit with the stars for a while.");
                     return "Solitary reflection.";
                 }
             }

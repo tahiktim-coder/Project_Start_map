@@ -29,7 +29,7 @@
     function crewRow(member, note) {
         const cut = window.ShipCutaway, color = cut ? RGB(cut.colorOf(member)) : 'var(--bone)';
         const face = member.portraitId ? `<img class="deck-panel-face" src="assets/crew/${esc(member.portraitId)}.png" alt="" style="border-color:${color}">` : '';
-        const mood = member.status !== 'HEALTHY' ? member.status : (member.stress >= 2 ? 'STRESSED' : 'ON DUTY');
+        const mood = member.status !== 'HEALTHY' ? (window.PlainWords ? window.PlainWords.status(member).toUpperCase() : member.status) : (member.stress >= 2 ? 'STRESSED' : 'ON DUTY');
         return `<li>${face}<span class="deck-panel-swatch" style="background:${color}"></span>`
             + `<span class="deck-panel-name">${esc(member.name)}</span><span class="deck-panel-mood">${esc(note || mood)}</span></li>`;
     }

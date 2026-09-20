@@ -1,7 +1,7 @@
 /**
  * DERELICT ENCOUNTERS
  *
- * Non-Exodus derelict ships found drifting in space or crashed on planets.
+ * Non-Exodus dead ships found drifting in space or crashed on planets.
  * These are alien vessels, ancient human probes, corporate mining ships, etc.
  * Different from Exodus wrecks - less narrative weight, more varied loot.
  *

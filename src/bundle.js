@@ -498,7 +498,7 @@ class GameState {
                         c.stress = 2; // Still stressed but no longer broken
                         c.breakdownFired = false; // Can have another breakdown if stress hits 3 again
                         this.addLog(`${c.name} stirs. Her eyes focus again. "I... I'm sorry. I couldn't face it anymore."`);
-                        this.addLog(`${c.name} is no longer catatonic but remains INJURED and shaken.`);
+                        this.addLog(`${c.name} is responding again, but is still hurt and shaken.`);
                     }
                 }
             });
@@ -790,7 +790,7 @@ class GameState {
             case 'HUMANIST': // Aris — Goes catatonic
                 c.status = 'INJURED';
                 c.trait = 'CATATONIC';
-                this.addLog(`Dr. Aris has gone catatonic. She stares at the wall, unresponsive. Medical services unavailable.`);
+                this.addLog(`Dr. Aris has shut down. She stares at the wall and does not answer. Nobody can treat the wounded now.`);
                 // Stress stays high — she's catatonic, not recovering
                 break;
 
@@ -1461,7 +1461,7 @@ class App {
                         delete c._sedatedUntilWarp;
                         this.state.addLog(`${c.name} has recovered from sedation. Cleared for duty.`);
                     } else {
-                        this.state.addLog(`${c.name} remains sedated. ${c._sedatedUntilWarp} warps until recovery.`);
+                        this.state.addLog(`${c.name} is still kept asleep. ${c._sedatedUntilWarp} more jumps until he wakes.`);
                     }
                 }
             });
@@ -1578,7 +1578,7 @@ class App {
             return;
         }
         if (station.stationInvestigated) {
-            this.state.addLog("Station already investigated.");
+            this.state.addLog("We already searched this station.");
             return;
         }
 
@@ -2331,105 +2331,7 @@ class App {
             return;
         }
 
-        // Fallback to old modal system
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2500';
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #9bf0bd; max-width: 650px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #002266); color: #9bf0bd; display: flex; justify-content: space-between;">
-                    <span>/// INTER-SECTOR DRIFT ///</span>
-                    <span style="opacity: 0.7;">S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}</span>
-                </div>
-                <div style="padding: 25px;">
-                    <div style="font-size: 1.1em; font-weight: bold; color: #9bf0bd; margin-bottom: 15px;">${event.title}</div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 20px; line-height: 1.6; font-style: italic;">
-                        ${event.context}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${event.dialogue.filter(d => {
-                            // Filter out dead crew members from dialogue
-                            if (d.speaker === 'A.U.R.A.') return true;
-                            const speakerMap = {
-                                'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC',
-                                'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST'
-                            };
-                            const tag = speakerMap[d.speaker];
-                            if (tag) {
-                                const member = this.state.crew.find(c => c.tags.includes(tag));
-                                return member && member.status !== 'DEAD';
-                            }
-                            if (d.speaker.startsWith('Cmdr.')) {
-                                const cmdr = this.state.crew.find(c => c.tags.includes('LEADER'));
-                                return cmdr && cmdr.status !== 'DEAD';
-                            }
-                            return true;
-                        }).map(d => {
-                            const colors = {
-                                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-                            };
-                            const portraits = {
-                                'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
-                                'Tech Mira': 'F_5', 'A.U.R.A.': null
-                            };
-                            const color = colors[d.speaker] || '#ffffff';
-                            const portraitId = portraits[d.speaker];
-                            // Commander: find their portrait dynamically
-                            const cmdr = this.state.crew.find(c => c.tags.includes('LEADER'));
-                            const isCmdr = d.speaker.startsWith('Cmdr.');
-                            const pId = isCmdr ? (cmdr ? cmdr.portraitId : null) : portraitId;
-                            const speakerColor = isCmdr ? '#ffffff' : color;
-                            const portraitHtml = pId
-                                ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${speakerColor};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
-                            return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
-                                <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
-                                <div>
-                                    <span style="color:${speakerColor}; font-weight: bold;">${d.speaker}:</span>
-                                    <span style="color:${speakerColor}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-                                </div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${event.choices.map((choice, idx) => {
-                            const meetsReq = !choice.requires || choice.requires(this.state);
-                            const disabledStyle = meetsReq ? '' : 'opacity: 0.5; cursor: not-allowed; border-color: #444;';
-                            const reqLabel = (!meetsReq && choice.requiresLabel) ? `<div style="font-size: 0.75em; color: #d85a4e; margin-top: 2px;">[${choice.requiresLabel}]</div>` : '';
-                            return `
-                            <button class="campfire-choice" data-idx="${idx}" ${meetsReq ? '' : 'disabled'} style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
-                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s; ${disabledStyle}
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                                ${reqLabel}
-                            </button>
-                        `;}).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects
-        modal.querySelectorAll('.campfire-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(116,217,154,0.18)'; btn.style.borderColor = '#9bf0bd'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
-            btn.onclick = () => {
-                const choice = event.choices[parseInt(btn.dataset.idx)];
-                const resultMsg = choice.effect(this.state);
-                this.state.addLog(resultMsg);
-                this.state.emitUpdates();
-                modal.remove();
-                onComplete();
-            };
-        });
+        onComplete(); // NarrativeModal is always loaded; nothing else to show
     }
 
     handleExodusAction() {
@@ -2439,7 +2341,7 @@ class App {
             return;
         }
         if (planet.exodusInvestigated) {
-            this.state.addLog("Exodus wreck already investigated.");
+            this.state.addLog("We already searched this wreck.");
             return;
         }
 
@@ -2509,105 +2411,8 @@ class App {
             return;
         }
 
-        // Fallback to old modal system
-        this.showExodusModal(selected, shipName, planet);
     }
 
-    showExodusModal(encounter, shipName, planet) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2500';
-
-        const portraits = {
-            'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
-            'Tech Mira': 'F_5', 'A.U.R.A.': null
-        };
-        const colors = {
-            'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-        };
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #d9a24a; max-width: 680px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #331a00, #663300); color: #d9a24a; display: flex; justify-content: space-between;">
-                    <span>/// EXODUS WRECK: ${encounter.title} ///</span>
-                    <span style="opacity: 0.7;">${shipName}</span>
-                </div>
-                <div style="padding: 25px;">
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 20px; line-height: 1.6; font-style: italic;">
-                        ${encounter.context(shipName)}
-                    </div>
-                    <div style="border-left: 2px solid #663300; padding-left: 15px; margin-bottom: 20px;">
-                        ${encounter.dialogue.filter(d => {
-                            if (d.speaker === 'A.U.R.A.') return true;
-                            const speakerMap = {
-                                'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC',
-                                'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST'
-                            };
-                            const tag = speakerMap[d.speaker];
-                            if (tag) {
-                                const member = this.state.crew.find(c => c.tags.includes(tag));
-                                return member && member.status !== 'DEAD';
-                            }
-                            return true;
-                        }).map(d => {
-                            const color = colors[d.speaker] || '#ffffff';
-                            const pId = portraits[d.speaker];
-                            const portraitHtml = pId
-                                ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
-                            return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
-                                <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
-                                <div>
-                                    <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                                    <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-                                </div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${encounter.choices.map((choice, idx) => `
-                            <button class="exodus-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #d9a24a; background: rgba(40,20,0,0.8);
-                                color: #d9a24a; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects and click handlers
-        modal.querySelectorAll('.exodus-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(80,40,0,0.8)'; btn.style.borderColor = '#ffaa33'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(40,20,0,0.8)'; btn.style.borderColor = '#d9a24a'; };
-            btn.onclick = () => {
-                const choice = encounter.choices[parseInt(btn.dataset.idx)];
-                const resultMsg = choice.effect(this.state);
-                this.state.addLog(resultMsg);
-
-                // Mark as investigated
-                planet.exodusInvestigated = true;
-
-                this.state.emitUpdates();
-                modal.remove();
-
-                // Refresh command deck to show investigated state
-                this.orbitView.updateCommandDeck(planet);
-            };
-        });
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // FAILED COLONY ENCOUNTER — investigate FAILED_COLONY tag
-    // ═══════════════════════════════════════════════════════════════
     handleFailedColonyAction() {
         const planet = this.state.currentSystem;
         if (!planet || !planet.tags || !planet.tags.includes('FAILED_COLONY')) {
@@ -2661,110 +2466,16 @@ class App {
             return;
         }
 
-        // Fallback to old modal system
-        this.showColonySiteModal(selected, planet);
     }
 
-    showColonySiteModal(encounter, planet) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2500';
-
-        const portraits = {
-            'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
-            'Tech Mira': 'F_5', 'A.U.R.A.': null
-        };
-        const colors = {
-            'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-        };
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #9bf0bd; max-width: 680px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #9bf0bd; display: flex; justify-content: space-between;">
-                    <span>/// COLONY RUINS: ${encounter.title} ///</span>
-                    <span style="opacity: 0.7;">${planet.name}</span>
-                </div>
-                <div style="padding: 25px;">
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 20px; line-height: 1.6; font-style: italic;">
-                        ${encounter.context(planet.name)}
-                    </div>
-                    <div style="border-left: 2px solid #003366; padding-left: 15px; margin-bottom: 20px;">
-                        ${encounter.dialogue.filter(d => {
-                            if (d.speaker === 'A.U.R.A.') return true;
-                            const speakerMap = {
-                                'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC',
-                                'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST'
-                            };
-                            const tag = speakerMap[d.speaker];
-                            if (tag) {
-                                const member = this.state.crew.find(c => c.tags.includes(tag));
-                                return member && member.status !== 'DEAD';
-                            }
-                            return true;
-                        }).map(d => {
-                            const color = colors[d.speaker] || '#ffffff';
-                            const pId = portraits[d.speaker];
-                            const portraitHtml = pId
-                                ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
-                            return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
-                                <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
-                                <div>
-                                    <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                                    <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-                                </div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${encounter.choices.map((choice, idx) => `
-                            <button class="colony-site-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
-                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        modal.querySelectorAll('.colony-site-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(116,217,154,0.18)'; btn.style.borderColor = '#66ccff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
-            btn.onclick = () => {
-                const choice = encounter.choices[parseInt(btn.dataset.idx)];
-                const resultMsg = choice.effect(this.state);
-                this.state.addLog(resultMsg);
-
-                planet.colonyInvestigated = true;
-
-                this.state.emitUpdates();
-                modal.remove();
-
-                this.orbitView.updateCommandDeck(planet);
-            };
-        });
-    }
-
-    // ═══════════════════════════════════════════════════════════════
-    // DERELICT ENCOUNTER — Non-Exodus ships (mining, military, alien)
-    // ═══════════════════════════════════════════════════════════════
     handleDerelictAction() {
         const planet = this.state.currentSystem;
         if (!planet || !planet.tags || !planet.tags.includes('DERELICT')) {
-            this.state.addLog("No derelict signal detected at this location.");
+            this.state.addLog("There is no wreck here.");
             return;
         }
         if (planet.derelictInvestigated) {
-            this.state.addLog("Derelict already investigated.");
+            this.state.addLog("We already searched this wreck.");
             return;
         }
 
@@ -2785,7 +2496,7 @@ class App {
 
         const shipName = selected.getName();
 
-        this.state.addLog(`Derelict signal locked: ${shipName}. Deploying investigation team...`);
+        this.state.addLog(`Wreck found: ${shipName}. Deploying investigation team...`);
         this.state.consumeRation();
 
         // Mark as investigated immediately to prevent re-clicking
@@ -2813,11 +2524,11 @@ class App {
     handleAnomalyAction() {
         const planet = this.state.currentSystem;
         if (!planet || !planet.tags || !planet.tags.includes('ANOMALY')) {
-            this.state.addLog("No anomaly detected at this location.");
+            this.state.addLog("There is nothing strange here.");
             return;
         }
         if (planet.anomalyInvestigated) {
-            this.state.addLog("Anomaly already investigated.");
+            this.state.addLog("We have already been there.");
             return;
         }
 
@@ -2847,7 +2558,7 @@ class App {
             window.AuraSystem.tryComment('ANOMALY_FOUND', this.state);
         }
 
-        this.state.addLog(`ANOMALY CONTACT: ${selected.title}. Approach with caution...`);
+        this.state.addLog(`SOMETHING STRANGE: ${selected.title}. Approach with caution...`);
 
         // Mark as investigated immediately to prevent re-clicking
         planet.anomalyInvestigated = true;
@@ -3050,100 +2761,24 @@ You are home.`
     }
 
     showStructureModal(encounter, planet) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '3000'; // Higher than other modals
-
-        const portraits = {
-            'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
-            'Tech Mira': 'F_5', 'A.U.R.A.': null
+        const SPEAKER_ROLE = { 'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC', 'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST' };
+        const MAX_LINES = 3;
+        const isAlive = (speaker) => {
+            const role = SPEAKER_ROLE[speaker];
+            if (!role) return true;
+            const member = this.state.crew.find(c => c.tags.includes(role));
+            return !!member && member.status !== 'DEAD';
         };
-        const colors = {
-            'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-        };
-
-        // Filter dialogue for living crew
-        const filteredDialogue = encounter.approach.dialogue.filter(d => {
-            if (d.speaker === 'A.U.R.A.') return true;
-            const speakerMap = {
-                'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC',
-                'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST'
-            };
-            const tag = speakerMap[d.speaker];
-            if (tag) {
-                const member = this.state.crew.find(c => c.tags.includes(tag));
-                return member && member.status !== 'DEAD';
-            }
-            return true;
-        });
-
-        // Compact context - remove extra newlines
-        const contextText = encounter.approach.context().trim().replace(/\n\n+/g, ' ').replace(/\n/g, ' ');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ffffff; max-width: 600px; max-height: 85vh; overflow-y: auto; background: linear-gradient(135deg, #0a0a15, #1a0a2a);">
-                <div class="modal-header" style="background: linear-gradient(90deg, #220044, #440088); color: #ffffff; display: flex; justify-content: space-between; font-size: 0.95em; padding: 8px 12px;">
-                    <span>/// THE STRUCTURE ///</span>
-                </div>
-                <div style="padding: 15px;">
-                    <div style="font-size: 0.85em; color: #ccccff; margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #8844ff; padding-left: 10px; max-height: 80px; overflow-y: auto;">
-                        ${contextText}
-                    </div>
-                    <div style="border-left: 2px solid #440088; padding-left: 10px; margin-bottom: 15px; max-height: 120px; overflow-y: auto;">
-                        ${filteredDialogue.slice(0, 3).map(d => {
-                            const color = colors[d.speaker] || '#ffffff';
-                            return `<div style="margin-bottom: 8px; font-size: 0.8em;">
-                                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                                <span style="color:${color}; opacity: 0.85;"> "${d.text}"</span>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                    <div style="padding-top: 10px; border-top: 1px solid #440088;">
-                        <div style="color: #8844ff; margin-bottom: 10px; font-weight: bold; font-size: 0.9em;">WHAT DO YOU DO?</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                            ${encounter.choices.map((choice, idx) => `
-                                <button class="structure-choice" data-idx="${idx}" style="
-                                    padding: 8px 10px; text-align: left;
-                                    border: 1px solid #8844ff; background: rgba(30,10,50,0.9);
-                                    color: #ffffff; cursor: pointer; font-family: var(--font-mono);
-                                    transition: all 0.3s; border-radius: 3px; font-size: 0.8em;
-                                ">
-                                    <div style="font-weight: bold; color: #ccaaff;">${choice.text}</div>
-                                </button>
-                            `).join('')}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects and click handlers
-        modal.querySelectorAll('.structure-choice').forEach(btn => {
-            btn.onmouseenter = () => {
-                btn.style.background = 'rgba(60,20,100,0.9)';
-                btn.style.borderColor = '#aa66ff';
-                btn.style.transform = 'scale(1.02)';
-            };
-            btn.onmouseleave = () => {
-                btn.style.background = 'rgba(30,10,50,0.9)';
-                btn.style.borderColor = '#8844ff';
-                btn.style.transform = 'scale(1)';
-            };
-            btn.onclick = () => {
-                const choice = encounter.choices[parseInt(btn.dataset.idx)];
-                const result = choice.effect(this.state);
-
-                // Mark structure as approached
+        window.EncounterCard.open(this, {
+            color: '#a97bff', kicker: 'THE END OF THE CORRIDOR', title: 'The Structure', zIndex: 3000,
+            context: encounter.approach.context().trim().replace(/\n+/g, ' '),
+            dialogue: encounter.approach.dialogue.filter(d => isAlive(d.speaker)).slice(0, MAX_LINES),
+            choices: encounter.choices.map(c => ({ text: c.text, desc: c.desc })),
+            onPick: (idx) => {
+                const result = encounter.choices[idx].effect(this.state);
                 planet.structureApproached = true;
-
-                modal.remove();
-
-                // Show the ending
                 this.showEndingScreen(result);
-            };
+            }
         });
     }
 
@@ -3485,7 +3120,7 @@ You are home.`
                 vance: "The planet is literally falling apart. There's nothing stable to build on.",
                 aris: "Radiation from the exposed core is lethal. No one survives that.",
                 jaxon: "The hull strength is zero. Fragments could crush us at any moment.",
-                mira: "Gravitational anomalies make orbit unstable. This world is dying."
+                mira: "Gravity pulls oddly here and the orbit is unstable. This world is dying."
             },
             ROCKY: {
                 vance: "Barren rock with no atmosphere. One dome breach and everyone suffocates.",
@@ -3582,10 +3217,6 @@ You are home.`
     // Escalates: 1st = injury, 2nd = death, 3rd+ = potential game over
     // ═══════════════════════════════════════════════════════════════
     showAuraVentModal() {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '3000';
-
         // Track vent incidents for escalation
         this.state._auraVentCount = (this.state._auraVentCount || 0) + 1;
         const ventCount = this.state._auraVentCount;
@@ -3593,64 +3224,22 @@ You are home.`
         const jaxonAlive = this.state.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD');
         const hasTechFragment = this.state.cargo.some(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
 
-        // Determine consequences based on escalation
-        let consequenceText = '1 crew member injured by oxygen deprivation';
-        let consequenceColor = '#d85a4e';
-        if (ventCount === 2) {
-            consequenceText = '1 crew member KILLED by prolonged oxygen deprivation';
-            consequenceColor = '#d85a4e';
-        } else if (ventCount >= 3) {
-            consequenceText = 'LETHAL — A.U.R.A. will vent all atmosphere. Total crew loss.';
-            consequenceColor = '#d85a4e';
-        }
+        const cost = ventCount >= 3 ? 'She will empty the whole ship. Everyone dies.'
+            : ventCount === 2 ? 'One of the crew will die before the air comes back.'
+            : 'One of the crew will be hurt before the air comes back.';
+        const options = [
+            jaxonAlive && { key: 'jaxon', text: 'Jaxon: "I can shut her out!"', desc: 'He cuts her off from the air system. A.U.R.A. goes back to neutral.' },
+            hasTechFragment && { key: 'tech', text: 'Plug in the Tech Fragment', desc: 'Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment.' },
+            { key: 'accept', text: 'Do nothing and wait', desc: cost },
+        ].filter(Boolean);
 
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #d85a4e; max-width: 550px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #d85a4e;">
-                    /// ATMOSPHERE ALERT ${ventCount > 1 ? `(INCIDENT ${ventCount})` : ''} ///
-                </div>
-                <div style="padding: 25px;">
-                    <div style="font-size: 0.95em; color: #e07a70; margin-bottom: 20px; line-height: 1.6;">
-                        A.U.R.A. is venting atmosphere from crew quarters. Respond immediately!
-                        ${ventCount >= 2 ? `<br><br><span style="color: #d85a4e;">This is escalating. A.U.R.A. is no longer issuing warnings.</span>` : ''}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${jaxonAlive ? `
-                        <button class="vent-choice" data-action="jaxon" style="
-                            padding: 12px 15px; text-align: left;
-                            border: 1px solid #f0a030; background: rgba(40,20,0,0.8);
-                            color: #f0a030; cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div style="font-weight: bold;">Jaxon: "I can override her!"</div>
-                            <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">Engineer override — resets A.U.R.A. to neutral</div>
-                        </button>` : ''}
-                        ${hasTechFragment ? `
-                        <button class="vent-choice" data-action="tech" style="
-                            padding: 12px 15px; text-align: left;
-                            border: 1px solid #d070ff; background: rgba(40,0,40,0.8);
-                            color: #d070ff; cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div style="font-weight: bold;">Use Tech Fragment</div>
-                            <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">Foreign code shifts A.U.R.A.'s ethics (+3)</div>
-                        </button>` : ''}
-                        <button class="vent-choice" data-action="accept" style="
-                            padding: 12px 15px; text-align: left;
-                            border: 1px solid ${consequenceColor}; background: rgba(60,0,0,0.8);
-                            color: ${consequenceColor}; cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div style="font-weight: bold;">Accept Consequences</div>
-                            <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${consequenceText}</div>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        modal.querySelectorAll('.vent-choice').forEach(btn => {
-            btn.onclick = () => {
-                const action = btn.dataset.action;
+        window.EncounterCard.open(this, {
+            tone: 'distress', kicker: ventCount > 1 ? `AIR ALERT — TIME NUMBER ${ventCount}` : 'AIR ALERT', title: 'A.U.R.A. is letting the air out', zIndex: 3000,
+            context: 'The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself.'
+                + (ventCount >= 2 ? ' She is not giving warnings any more.' : ''),
+            choices: options,
+            onPick: (idx) => {
+                const action = options[idx].key;
                 if (action === 'jaxon' && typeof AuraSystem !== 'undefined') {
                     window.AuraSystem.jaxonOverride(this.state);
                     this.state._auraVentCount = 0; // Reset escalation on override
@@ -3664,7 +3253,6 @@ You are home.`
                     if (ventCount >= 3) {
                         // Third+ incident: A.U.R.A. MUTINY — game over
                         this.state.gameOver = true;
-                        modal.remove();
                         window.dispatchEvent(new CustomEvent('game-over', {
                             detail: {
                                 type: 'AURA_MUTINY',
@@ -3695,8 +3283,7 @@ You are home.`
                     }
                 }
                 this.state.emitUpdates();
-                modal.remove();
-            };
+            }
         });
     }
 
@@ -4029,7 +3616,7 @@ You are home.`
         }
 
         // Fallback if no specific pool match or pool empty
-        // Exclude Exodus-exclusive items (human supplies only found in derelict wrecks)
+        // Exclude Exodus-exclusive items (human supplies only found in old wrecks)
         const exodusOnly = ['food_pack', 'chocolate', 'holotape'];
         if (pool.length === 0) pool = Object.values(ITEMS).filter(i => !exodusOnly.includes(i.id));
 
@@ -4500,89 +4087,22 @@ You are home.`
      */
     showEdenEvaModal(planet) {
         const evaTeam = this.currentEvaTeam;
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
+        const options = [
+            { key: 'rest', text: 'Rest and recover', desc: 'Everyone sleeps properly for once. All stress gone, all injuries healed.' },
+            { key: 'gather', text: 'Gather fruit and fresh water', desc: '+10 Rations. The land gives freely.' },
+            { key: 'explore', text: 'Explore the valley', desc: '+50 Salvage from natural materials. Marks a colony site.' },
+            { key: 'remember', text: 'Remember what you are fighting for', desc: '+20 Energy. All crew -1 Stress.' },
+            { key: 'settle', text: 'END THE JOURNEY — settle here', desc: 'This is what you came for. This is home now. ENDS THE GAME.' },
+        ];
 
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #74d99a; max-width: 700px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #225533, #338844); color: #ffffff;">
-                    /// EVA MISSION: PARADISE FOUND ///
-                </div>
-                <div style="padding: 25px;">
-                    <p style="font-style: italic; color: #9bf0bd; margin-bottom: 20px; line-height: 1.7; border-left: 3px solid #74d99a; padding-left: 15px;">
-                        ${evaTeam[0].name} and ${evaTeam[1].name} step onto the surface.
-                        <br><br>
-                        The air is... breathable. Clean. Sweet, even. The ground is soft with grass that has never known boots.
-                        <br><br>
-                        Birds call in the distance — or something like birds. The sky is blue. A stream runs nearby, clear and cold.
-                        <br><br>
-                        For the first time since leaving Earth, the universe feels kind.
-                    </p>
-                    <div style="color: #88ffaa; margin-bottom: 20px; text-align: center;">
-                        This world is perfect. There is no danger here. Only choices.
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <button class="eden-choice" data-action="rest" style="
-                            padding: 14px; text-align: left;
-                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
-                            color: #ffffff; cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div style="font-weight: bold; color: #9bf0bd;">Rest and recover</div>
-                            <div style="font-size: 0.85em; color: #9bf0bd;">All crew stress cleared. Heal all injuries. This is what you needed.</div>
-                        </button>
-                        <button class="eden-choice" data-action="gather" style="
-                            padding: 14px; text-align: left;
-                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
-                            color: #ffffff; cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div style="font-weight: bold; color: #9bf0bd;">Gather fruit and fresh water</div>
-                            <div style="font-size: 0.85em; color: #9bf0bd;">+10 Rations. The land provides.</div>
-                        </button>
-                        <button class="eden-choice" data-action="explore" style="
-                            padding: 14px; text-align: left;
-                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
-                            color: #ffffff; cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div style="font-weight: bold; color: #9bf0bd;">Explore the valley</div>
-                            <div style="font-size: 0.85em; color: #9bf0bd;">+50 Salvage (natural materials). Mark colony site.</div>
-                        </button>
-                        <button class="eden-choice" data-action="remember" style="
-                            padding: 14px; text-align: left;
-                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
-                            color: #ffffff; cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div style="font-weight: bold; color: #9bf0bd;">Remember what you're fighting for</div>
-                            <div style="font-size: 0.85em; color: #9bf0bd;">+20 Energy (renewed purpose). All crew -1 stress.</div>
-                        </button>
-                        <div style="border-top: 1px dashed #74d99a; margin: 15px 0; padding-top: 15px;">
-                            <button class="eden-choice eden-settle" data-action="settle" style="
-                                padding: 14px; text-align: left; width: 100%;
-                                border: 2px solid #d9a24a; background: linear-gradient(90deg, rgba(80,60,20,0.8), rgba(40,80,30,0.8));
-                                color: #ffffff; cursor: pointer; font-family: var(--font-mono);
-                            ">
-                                <div style="font-weight: bold; color: #d9a24a; font-size: 1.1em;">⬡ END THE JOURNEY — Settle Here</div>
-                                <div style="font-size: 0.85em; color: #9bf0bd; margin-top: 5px;">This is what you came for. This is home now. <span style="color: #d9a24a;">[ENDS GAME]</span></div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        modal.querySelectorAll('.eden-choice').forEach(btn => {
-            btn.onmouseenter = () => {
-                btn.style.background = 'rgba(40,100,60,0.9)';
-                btn.style.borderColor = '#9bf0bd';
-            };
-            btn.onmouseleave = () => {
-                btn.style.background = 'rgba(30,80,50,0.7)';
-                btn.style.borderColor = '#74d99a';
-            };
-            btn.onclick = () => {
-                const action = btn.dataset.action;
+        window.EncounterCard.open(this, {
+            tone: 'station', kicker: 'ON THE SURFACE', title: 'Paradise found',
+            context: `${evaTeam[0].name} and ${evaTeam[1].name} step out. The air is clean. Sweet, even. The grass has never known boots. `
+                + 'Something like birds calls far away, and a cold, clear stream runs close by. For the first time since Earth, the universe feels kind.'
+                + '<br><br>Nothing here will hurt you. You only have to choose.',
+            choices: options,
+            onPick: (idx) => {
+                const action = options[idx].key;
 
                 switch (action) {
                     case 'rest':
@@ -4617,7 +4137,6 @@ You are home.`
                         break;
                     case 'settle':
                         // End the journey - trigger colony ending immediately
-                        modal.remove();
                         // Clear all stress and heal for the paradise ending
                         this.state.crew.forEach(c => {
                             if (c.status !== 'DEAD') {
@@ -4626,7 +4145,7 @@ You are home.`
                             }
                         });
                         this.state.addLog(`${evaTeam[0].name}: "Commander... we're staying, aren't we?"`);
-                        this.state.addLog("Cmdr. Kael: \"Yes. The journey ends here. We're home.\"");
+                        this.state.addLog("You nod. The journey ends here. You are home.");
                         // Trigger the colony ending
                         this._executeColony(planet);
                         return; // Don't continue to normal exit
@@ -4635,8 +4154,7 @@ You are home.`
                 planet.hasEva = true;
                 this.orbitView.updateCommandDeck(planet);
                 this.state.emitUpdates();
-                modal.remove();
-            };
+            }
         });
     }
 
@@ -4699,7 +4217,7 @@ You are home.`
                 entry.innerHTML = `<span style="color:#9bf0bd;font-weight:bold;border-bottom:1px solid #9bf0bd;">${msg}</span>`;
                 entry.classList.add('log-sector');
                 styled = true;
-            } else if (msg.startsWith('ANOMALY CONTACT:') || msg.includes('ANOMALY:')) {
+            } else if (msg.startsWith('SOMETHING STRANGE:') || msg.includes('ANOMALY:')) {
                 entry.innerHTML = `<span style="color:#d070ff;font-weight:bold;">${msg}</span>`;
                 entry.classList.add('log-anomaly');
                 styled = true;
@@ -5598,74 +5116,43 @@ You are home.`
         const commander = this.state.crew.find(c => c.tags.includes('LEADER') && c.status !== 'DEAD');
         if (!commander) return; // Commander already dead, mutiny is moot
 
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '3000';
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #d85a4e; max-width: 550px;">
-                <div class="modal-header" style="background: #d85a4e; color: #000;">/// MUTINY ///</div>
-                <div style="padding: 20px; text-align: center;">
-                    <p style="margin-bottom: 15px; color: #e07a70; font-style: italic;">
-                        "${vance.name} has drawn his sidearm. He demands ${commander.name} step down."
-                    </p>
-                    <p style="margin-bottom: 20px; font-size: 0.9em; color: var(--color-text-dim);">
-                        "You've led us into hell. Every decision, every death — on your head. Stand down, or I will put you down."
-                    </p>
-                    <div style="display: flex; gap: 15px; justify-content: center;">
-                        <button class="mutiny-choice" data-choice="support" style="
-                            flex: 1; padding: 15px; border: 1px solid var(--color-primary);
-                            background: rgba(0,0,0,0.8); color: var(--color-primary);
-                            cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div>SUPPORT COMMANDER</div>
-                            <div style="font-size: 0.7em; margin-top: 5px; color: var(--color-text-dim);">Vance will be restrained</div>
-                        </button>
-                        <button class="mutiny-choice" data-choice="side" style="
-                            flex: 1; padding: 15px; border: 1px solid #d85a4e;
-                            background: rgba(40,0,0,0.8); color: #d85a4e;
-                            cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div>SIDE WITH VANCE</div>
-                            <div style="font-size: 0.7em; margin-top: 5px; color: var(--color-text-dim);">Commander will be confined</div>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
+        const standGround = () => {
+            // Vance is restrained and sedated - cannot take part in away missions
+            vance.status = 'INJURED';
+            vance.stress = 1;
+            vance.trait = null;
+            vance.breakdownFired = false;
+            vance.tags = vance.tags || [];
+            if (!vance.tags.includes('SEDATED')) vance.tags.push('SEDATED');
+            vance._sedatedUntilWarp = 2;
+            this.state.addLog(`You did not move. The crew took ${vance.name} down. He is locked up and kept asleep.`);
+            this.state.addLog(`${vance.name} cannot join away teams until he wakes.`);
+            commander.stress = Math.min(3, (commander.stress || 0) + 1);
+        };
+        const stepDown = () => {
+            commander.status = 'INJURED';
+            commander.stress = Math.min(3, (commander.stress || 0) + 1);
+            commander.tags = commander.tags || [];
+            if (!commander.tags.includes('CONFINED')) commander.tags.push('CONFINED');
+            this.state.addLog(`You handed over the ship. You are locked in your quarters.`);
+            this.state.addLog(`${vance.name} gives the orders now.`);
+            vance.stress = 1;
+            vance.trait = null;
+            vance.breakdownFired = false;
+        };
 
-        modal.querySelectorAll('.mutiny-choice').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const choice = btn.dataset.choice;
-                if (choice === 'support') {
-                    // Vance is restrained and sedated - cannot participate in actions
-                    vance.status = 'INJURED';
-                    vance.stress = 1;
-                    vance.trait = null;
-                    vance.breakdownFired = false;
-                    vance.tags = vance.tags || [];
-                    if (!vance.tags.includes('SEDATED')) vance.tags.push('SEDATED');
-                    vance._sedatedUntilWarp = 2; // Sedated for 2 warps
-                    this.state.addLog(`Mutiny suppressed. ${vance.name} has been restrained and sedated.`);
-                    this.state.addLog(`${vance.name} will remain sedated and unable to participate in away missions.`);
-                    // Commander gains +1 stress from the confrontation
-                    commander.stress = Math.min(3, (commander.stress || 0) + 1);
-                } else {
-                    // Commander is confined: remove LEADER tag effectively, set to INJURED
-                    commander.status = 'INJURED';
-                    commander.stress = Math.min(3, (commander.stress || 0) + 1);
-                    commander.tags = commander.tags || [];
-                    if (!commander.tags.includes('CONFINED')) commander.tags.push('CONFINED');
-                    this.state.addLog(`${commander.name} has been relieved of command and confined to quarters.`);
-                    this.state.addLog(`${vance.name} assumes tactical control.`);
-                    // Vance calms down
-                    vance.stress = 1;
-                    vance.trait = null;
-                    vance.breakdownFired = false;
-                }
+        window.EncounterCard.open(this, {
+            tone: 'distress', kicker: 'MUTINY', title: `${vance.name} has a gun on you`, zIndex: 3000,
+            context: 'He is standing in the bridge doorway with his sidearm out, pointed at your chest. The others have stopped moving. Nobody is looking at you.',
+            dialogue: [{ speaker: vance.name, text: 'You led us into hell. Every choice, every death, that is on you. Step down, Commander. Or I will make you.' }],
+            choices: [
+                { text: 'Stand your ground', desc: `You stay in command. The crew takes him down: ${vance.name} is locked up and kept asleep for 2 jumps. +1 Stress for you.` },
+                { text: 'Hand him the ship', desc: `You are locked in your quarters, hurt. ${vance.name} gives the orders and calms down. +1 Stress for you.` },
+            ],
+            onPick: (idx) => {
+                if (idx === 0) standGround(); else stepDown();
                 this.state.emitUpdates();
-                modal.remove();
-            });
+            }
         });
     }
 
@@ -5843,38 +5330,20 @@ You are home.`
         modal.style.zIndex = '3000';
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: var(--color-primary); max-width: 350px; text-align: center;">
-                <div class="modal-header" style="display: flex; justify-content: space-between;">
-                    <span>/// AUDIO SETTINGS ///</span>
-                    <span class="close-modal" style="cursor: pointer;">[X]</span>
+            <section class="modal-content deck-panel audio-panel" role="dialog" aria-label="Sound">
+                <header class="deck-panel-head">
+                    <h3>SOUND</h3>
+                    <button class="deck-panel-close close-modal" aria-label="Close">✕</button>
+                </header>
+                <div class="deck-panel-actions">
+                    <button id="audio-toggle-btn" class="deck-action" aria-pressed="${isOn}"><span>${isOn ? 'SOUND IS ON' : 'SOUND IS OFF'}</span><small>click to switch</small></button>
                 </div>
-                <div style="padding: 30px;">
-                    <div style="margin-bottom: 25px;">
-                        <button id="audio-toggle-btn" style="
-                            padding: 15px 40px;
-                            font-size: 1.2em;
-                            font-family: var(--font-mono);
-                            background: ${isOn ? 'var(--color-primary)' : '#333'};
-                            color: ${isOn ? '#000' : '#666'};
-                            border: 2px solid var(--color-primary);
-                            cursor: pointer;
-                            transition: all 0.2s;
-                        ">${isOn ? 'AUDIO: ON' : 'AUDIO: OFF'}</button>
-                    </div>
-                    <div style="margin-bottom: 15px; color: var(--color-text-dim); font-size: 0.9em;">VOLUME</div>
-                    <div style="display: flex; align-items: center; gap: 15px; justify-content: center;">
-                        <span style="color: var(--color-text-dim);">🔈</span>
-                        <input type="range" id="modal-volume-slider" min="0" max="100" value="${currentVol}" style="
-                            width: 180px;
-                            height: 8px;
-                            cursor: pointer;
-                            accent-color: var(--color-primary);
-                        ">
-                        <span style="color: var(--color-text-dim);">🔊</span>
-                    </div>
-                    <div id="volume-display" style="margin-top: 10px; color: var(--color-primary); font-size: 1.1em;">${currentVol}%</div>
+                <h4>VOLUME</h4>
+                <div class="audio-volume">
+                    <input type="range" id="modal-volume-slider" min="0" max="100" value="${currentVol}" aria-label="Volume">
+                    <output id="volume-display">${currentVol}%</output>
                 </div>
-            </div>
+            </section>
         `;
 
         document.body.appendChild(modal);
@@ -5887,9 +5356,8 @@ You are home.`
         toggleBtn.onclick = () => {
             if (window.AudioSystem) {
                 const isMuted = window.AudioSystem.toggleMute();
-                toggleBtn.textContent = isMuted ? 'AUDIO: OFF' : 'AUDIO: ON';
-                toggleBtn.style.background = isMuted ? '#333' : 'var(--color-primary)';
-                toggleBtn.style.color = isMuted ? '#666' : '#000';
+                toggleBtn.querySelector('span').textContent = isMuted ? 'SOUND IS OFF' : 'SOUND IS ON';
+                toggleBtn.setAttribute('aria-pressed', String(!isMuted));
                 // Update header button
                 if (headerBtn) {
                     headerBtn.textContent = isMuted ? "AUDIO: OFF" : "AUDIO: ON";

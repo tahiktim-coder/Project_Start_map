@@ -79,8 +79,8 @@
             ctx.fillStyle = GREEN_DIM; ctx.fillRect(x, GROUND_Y + ridge, 1, 1);
         }
         const drop = Math.min(1, progress / 0.55), landerY = 8 + (GROUND_Y - 22) * (1 - Math.pow(1 - drop, 2));
-        ctx.fillStyle = BONE; ctx.fillRect(152, landerY, 16, 9); ctx.fillRect(150, landerY + 9, 3, 4); ctx.fillRect(167, landerY + 9, 3, 4);
-        if (drop < 1) { ctx.fillStyle = AMBER; ctx.fillRect(157, landerY + 10, 6, 4 + Math.round(Math.random() * 5)); }
+        if (window.LanderGame && window.LanderGame.drawLander) window.LanderGame.drawLander(ctx, 160, Math.round(landerY) + 4, drop < 1);
+        else { ctx.fillStyle = BONE; ctx.fillRect(152, landerY, 16, 9); ctx.fillRect(150, landerY + 9, 3, 4); ctx.fillRect(167, landerY + 9, 3, 4); }
         const walk = Math.max(0, (progress - 0.6) / 0.4);                                                   // two figures walk out
         team.forEach((m, i) => {
             if (walk <= 0) return;

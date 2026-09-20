@@ -1,4 +1,7 @@
 class OrbitView {
+    static UNKNOWN = '<em>not known yet</em>';
+    static DANGER_WORDS = ['LOW', 'MEDIUM', 'HIGH', 'EXTREME'];
+
     constructor(state) {
         this.element = document.createElement('div');
         this.element.className = 'orbit-view-container';
@@ -43,60 +46,26 @@ class OrbitView {
 
                 <div style="flex: 1; display: flex; flex-direction: row; gap: 20px; min-height: 0;">
 
-                    <!-- LEFT: Data readout -->
-                    <div class="orbit-readout" style="width: min(280px, 45%); flex: none; display: flex; flex-direction: column; gap: 8px; border-right: 1px dashed var(--color-primary-dim); padding-right: 20px; overflow-y: auto; min-height: 0; font-size: 0.93em;">
-                        <div style="color: var(--color-accent); border-bottom: 1px solid var(--color-primary-dim); margin-bottom: 5px;">CONDITIONS</div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div style="color: var(--color-text-dim);">GRAVITY</div>
-                            <div style="color: var(--color-primary); text-align: right;">${showStat('gravity') ? planet.gravity : '<span style="color:var(--color-accent)">UNKNOWN</span>'}</div>
-                            
-                            <div style="color: var(--color-text-dim);">ATMOSPHERE</div>
-                            <div style="color: var(--color-primary); text-align: right;">${showStat('atmosphere') ? planet.atmosphere : '<span style="color:var(--color-accent)">UNKNOWN</span>'}</div>
-                            
-                            <div style="color: var(--color-text-dim);">TEMP</div>
-                            <div style="color: var(--color-primary); text-align: right;">${showStat('temperature') ? planet.temperature : '<span style="color:var(--color-accent)">UNKNOWN</span>'}</div>
-                        </div>
-
-                        <!-- Scan Results Section -->
-                        <div style="margin-top: 8px; color: var(--color-accent); border-bottom: 1px solid var(--color-primary-dim);">
-                            ON THE SURFACE
-                        </div>
-                         ${planet.scanned
-                ? `<div style="display: flex; flex-direction: column; gap: 8px;">
-                                 <div><span style="color:var(--color-text-dim)">SALVAGE:</span> <span style="color:var(--color-primary)">${planet.resources.metals > 70 ? 'RICH' : (planet.resources.metals > 30 ? 'MODERATE' : 'SCARCE')}</span></div>
-                                 <div><span style="color:var(--color-text-dim)">ENERGY:</span> <span style="color:var(--color-primary)">${planet.resources.energy > 70 ? 'ABUNDANT' : (planet.resources.energy > 30 ? 'MODERATE' : 'LOW')}</span></div>
-                                 
-                                 <div style="margin-top: 10px; border-top: 1px dashed var(--color-primary-dim); padding-top: 5px;">
-                                    <div><span style="color:var(--color-text-dim)">SIGNS OF LIFE:</span> <span style="color:${hasLife ? 'var(--color-primary)' : 'var(--color-text-dim)'}">${hasLife ? 'DETECTED' : 'NEGATIVE'}</span></div>
-                                    <div><span style="color:var(--color-text-dim)">SIGNS OF MACHINES:</span> <span style="color:${hasTech ? 'var(--color-accent)' : 'var(--color-text-dim)'}">${hasTech ? 'DETECTED' : 'NEGATIVE'}</span></div>
-                                 </div>
-
-                                 <div style="margin-top: 5px;">
-                                    <div style="color:var(--color-text-dim); margin-bottom:4px">WHAT'S HERE:</div>
-                                    ${OrbitView.findingsHtml(planet.tags)}
-                                 </div>
-                                 ${(() => {
-                                    const dl = planet.dangerLevel || 0;
-                                    const hazTypes = ['BIO_MASS','VOLCANIC','SHATTERED','MECHA','GRAVEYARD','HOLLOW','TIDALLY_LOCKED'];
-                                    const hostileTypes = ['BIO_MASS','MECHA']; // SYMBIOTE_WORLD is welcoming, not hostile
-                                    const isHostile = hostileTypes.includes(planet.type);
-                                    // Safe planet types should never show CRITICAL
-                                    const safeTypes = ['EDEN', 'SYMBIOTE_WORLD', 'SINGING', 'VITAL', 'TERRAFORMED'];
-                                    const isSafe = safeTypes.includes(planet.type);
-                                    const threatLevel = isSafe ? (dl >= 2 ? 'MODERATE' : 'LOW') : (dl >= 3 ? 'CRITICAL' : (dl >= 2 || hazTypes.includes(planet.type)) ? 'HIGH' : (dl >= 1 || hasLife) ? 'MODERATE' : 'LOW');
-                                    const threatColor = threatLevel === 'CRITICAL' ? '#d85a4e' : threatLevel === 'HIGH' ? '#d9a24a' : threatLevel === 'MODERATE' ? '#cba869' : 'var(--green)';
-                                    const threatDesc = isHostile && hasLife ? 'DANGEROUS ANIMALS' : (hasLife ? 'SOMETHING ALIVE — CANNOT TELL MORE' : (hazTypes.includes(planet.type) ? 'THE PLANET ITSELF IS DANGEROUS' : 'NORMAL'));
-                                    return `<div style="margin-top: 10px; border-top: 1px dashed var(--color-primary-dim); padding-top: 8px;">
-                                        <div><span style="color:var(--color-text-dim)">THREAT LEVEL:</span> <span style="color:${threatColor}; font-weight: bold;">${threatLevel}</span></div>
-                                        <div style="font-size:0.8em; color:${threatColor}; opacity:0.8; margin-top:3px;">${threatDesc}</div>
-                                    </div>`;
-                                 })()}
-                               </div>`
-                : `<div style="color: var(--color-text-dim); font-style: italic; opacity: 0.5; margin-top: 20px;">
-                                Run a deep scan to see what is down there.
-                               </div>`
-            }
+                    <!-- LEFT: what we know, in plain words -->
+                    <div class="orbit-readout site-readout">
+                        <h4 class="site-sub">CONDITIONS</h4>
+                        <dl class="site-facts">
+                            <dt>GRAVITY</dt><dd>${showStat('gravity') ? planet.gravity : OrbitView.UNKNOWN}</dd>
+                            <dt>AIR</dt><dd>${showStat('atmosphere') ? planet.atmosphere : OrbitView.UNKNOWN}</dd>
+                            <dt>HEAT</dt><dd>${showStat('temperature') ? planet.temperature : OrbitView.UNKNOWN}</dd>
+                        </dl>
+                        <h4 class="site-sub">ON THE SURFACE</h4>
+                        ${planet.scanned ? `
+                        <dl class="site-facts">
+                            <dt>SALVAGE</dt><dd>${planet.resources.metals > 70 ? 'A lot' : (planet.resources.metals > 30 ? 'Some' : 'Very little')}</dd>
+                            <dt>ENERGY</dt><dd>${planet.resources.energy > 70 ? 'A lot' : (planet.resources.energy > 30 ? 'Some' : 'Very little')}</dd>
+                            <dt>LIFE</dt><dd class="${hasLife ? 'is-warn' : ''}">${hasLife ? 'Yes, something lives here' : 'None found'}</dd>
+                            <dt>MACHINES</dt><dd class="${hasTech ? 'is-warn' : ''}">${hasTech ? 'Yes, something was built here' : 'None found'}</dd>
+                        </dl>
+                        <h4 class="site-sub">WHAT IS HERE</h4>
+                        ${OrbitView.findingsHtml(planet.tags)}
+                        ${OrbitView.dangerHtml(planet, hasLife)}`
+                        : `<p class="site-note">We cannot see the ground from here. Run a deep scan to find out what is down there.</p>`}
                     </div>
 
                     <!-- RIGHT: Visual -->
@@ -127,6 +96,22 @@ class OrbitView {
         `;
         this.updateCommandDeck(planet);
         return this.element;
+    }
+
+    /** How risky it is to send people down, as one plain line. */
+    static dangerHtml(planet, hasLife) {
+        const level = planet.dangerLevel || 0;
+        const harshTypes = ['BIO_MASS', 'VOLCANIC', 'SHATTERED', 'MECHA', 'GRAVEYARD', 'HOLLOW', 'TIDALLY_LOCKED'];
+        const hostileTypes = ['BIO_MASS', 'MECHA']; // SYMBIOTE_WORLD is welcoming, not hostile
+        const gentleTypes = ['EDEN', 'SYMBIOTE_WORLD', 'SINGING', 'VITAL', 'TERRAFORMED']; // never shown as extreme
+        const isHarsh = harshTypes.includes(planet.type);
+        const rank = gentleTypes.includes(planet.type) ? (level >= 2 ? 1 : 0)
+            : level >= 3 ? 3 : (level >= 2 || isHarsh) ? 2 : (level >= 1 || hasLife) ? 1 : 0;
+        const tone = ['ok', 'warn', 'warn', 'bad'][rank];
+        const why = hostileTypes.includes(planet.type) && hasLife ? 'Dangerous animals down there.'
+            : hasLife ? 'Something is alive down there. We cannot tell more.'
+            : isHarsh ? 'The planet itself is dangerous.' : 'Nothing unusual.';
+        return `<div class="site-tip is-${tone}"><b>DANGER: ${OrbitView.DANGER_WORDS[rank]}</b><p>${why}</p></div>`;
     }
 
     renderStructure(planet) {
@@ -315,8 +300,8 @@ class OrbitView {
         PREDATORY: ['Hunting animals', 'a team on the ground is in real danger', 'bad'],
         WRECKAGE: ['Debris field', 'loose salvage in orbit', 'plain'],
         FAILED_COLONY: ['Colony ruins', 'people tried to live here — find out why they stopped', 'plain'],
-        DERELICT: ['Unknown derelict', 'not one of ours; salvage, some risk', 'plain'],
-        ANOMALY: ['Space anomaly', 'nobody knows what it does — high risk', 'warn'],
+        DERELICT: ['Unknown wreck', 'not one of ours; salvage, some risk', 'plain'],
+        ANOMALY: ['Something strange in space', 'nobody knows what it does — high risk', 'warn'],
         LIGHTHOUSE: ['The Lighthouse', 'a beacon older than humanity', 'good'],
         GARDEN: ['The Garden', 'a living dome on a dead world', 'good'],
         GRAVE: ['The Grave', 'a cemetery moon; some dates are in the future', 'plain'],
@@ -422,12 +407,12 @@ class OrbitView {
 
                 ${planet.scanned && planet.tags && planet.tags.includes('DERELICT') && !planet.derelictInvestigated
                     ? `<button class="cmd-btn" id="btn-derelict" style="border-color: #74d99a; color: #74d99a;">
-                        <div>INVESTIGATE DERELICT</div>
+                        <div>SEARCH THE WRECK</div>
                         <div class="cost" style="color: #74d99a;">SHIP WRECKAGE DETECTED</div>
                        </button>`
                     : (planet.derelictInvestigated
                         ? `<button class="cmd-btn" id="btn-derelict" disabled style="border-color: #555; color: #555;">
-                            <div>DERELICT INVESTIGATED</div>
+                            <div>WRECK SEARCHED</div>
                             <div class="cost">WRECK SALVAGED</div>
                            </button>`
                         : '')
@@ -435,12 +420,12 @@ class OrbitView {
 
                 ${planet.scanned && planet.tags && planet.tags.includes('ANOMALY') && !planet.anomalyInvestigated
                     ? `<button class="cmd-btn" id="btn-anomaly" style="border-color: #d9a24a; color: #d9a24a; animation: anomaly-pulse 2s infinite;">
-                        <div>APPROACH ANOMALY</div>
+                        <div>GO CLOSER</div>
                         <div class="cost" style="color: #d9a24a;">⚠ REALITY DISTORTION</div>
                        </button>`
                     : (planet.anomalyInvestigated
                         ? `<button class="cmd-btn" id="btn-anomaly" disabled style="border-color: #555; color: #555;">
-                            <div>ANOMALY INVESTIGATED</div>
+                            <div>ALREADY VISITED</div>
                             <div class="cost">PHENOMENON DOCUMENTED</div>
                            </button>`
                         : '')

@@ -226,6 +226,7 @@
         };
         if (station.scanned) b.rooms.forEach(r => { r.isKnown = true; });
         frame.innerHTML = walkHtml(b);
+        sfx('sfxAirlock');
         const ctx = frame.querySelector('canvas').getContext('2d'), statusEl = frame.querySelector('.boarding-status');
         const nameEl = frame.querySelector('.boarding-room-name'), carriedEl = frame.querySelector('.boarding-carried');
         const airEl = frame.querySelector('.boarding-air'), roomsEl = frame.querySelector('.boarding-rooms');
@@ -254,17 +255,18 @@
             buttons.search.classList.toggle('is-stranding', strandsSearch && !buttons.search.disabled);
             buttons.leave.innerHTML = b.pos === 0 ? 'STEP BACK OUT' : `HEAD BACK <kbd>−${walkBackCost(b)} AIR</kbd>`;
             buttons.leave.classList.toggle('is-urgent', isLowAir(b));
+            if (isLowAir(b) && !isOver) sfx('sfxLowAir');
             if (b.oxygen < b.pos * MOVE_COST || (b.oxygen === 0 && b.pos > 0)) finish(false);
         }
 
         function act(kind) {
             if (isOver) return;
             if (kind === 'leave') { finish(true); return; }
-            if (kind === 'deeper') { b.oxygen -= MOVE_COST; b.pos += 1; sfx('sfxTick'); refresh(); return; }
+            if (kind === 'deeper') { b.oxygen -= MOVE_COST; b.pos += 1; sfx('sfxFootsteps'); refresh(); return; }
             b.oxygen -= SEARCH_COST;
             b.rooms[b.pos].isSearched = true;
             const found = searchRoom(b), trouble = rollHazard(b);
-            sfx(trouble ? 'sfxWarn' : 'sfxInteract');
+            sfx(trouble && /seam/i.test(trouble) ? 'sfxSeamSplit' : trouble ? 'sfxWarn' : 'sfxSearch');
             refresh(trouble ? `${found} ${trouble}` : found);
         }
 

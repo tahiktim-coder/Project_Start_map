@@ -667,3 +667,31 @@
     justify-content: center;
     overflow: hidden;
 }
+
+/* ── planet orbit column + sound card ── */
+.site-sub {
+    margin: 4px 0 -4px;
+    font: 600 0.68em var(--font-display);
+    letter-spacing: 0.24em;
+    color: var(--green);
+}
+
+.site-facts em { font-style: normal; color: var(--dim); }
+
+.site-tip.is-ok { border-left-color: var(--green); background: rgba(116, 217, 154, 0.06); }
+.site-tip.is-ok b { color: var(--green); }
+.site-tip.is-bad { border-left-color: var(--red); background: rgba(216, 90, 78, 0.08); }
+.site-tip.is-bad b { color: var(--red); }
+
+.audio-panel { width: min(360px, calc(100vw - 32px)); }
+.audio-panel [aria-pressed="false"] { background: transparent; border-color: var(--line2); color: var(--dim); }
+
+.audio-volume {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 20px;
+}
+
+.audio-volume input { flex: 1; accent-color: var(--green); cursor: pointer; }
+.audio-volume output { min-width: 3.2em; text-align: right; font: 700 1.1em var(--font-mono); color: var(--green-br); }
