@@ -32,9 +32,9 @@
     const SPEECH = new RegExp(`^(${Object.keys(SPEAKERS).map(n => n.replace(/\./g, '\\.')).join('|')}):\\s*([\\s\\S]+)$`);
     const REWARD = /,?\s*(?:and\s+)?([+\-−]\d+(?:-\d+)?%?\s+(?:Colony Knowledge|Salvage|Energy|Rations?|Data|Stress|Probe Integrity))\b/gi;
     const NOISE = /^(?:Starting|Deep Scan started|Scanning|Launching|Deploying|Exodus transponder|Colony ruins detected|Docking|Approaching|APPROACHING|\[TEST MODE\]|={3,})|\.{3}$/;
-    const BAD = /^(?:CRITICAL|CATASTROPHE|HULL BREACH|☠)|DEATH|has died|\bKIA\b|did not come back/;
+    const BAD = /^(?:CRITICAL|CATASTROPHE|FATAL|KIA|HULL BREACH|☠)|DEATH|has died|is dead|did not survive|did not come back/;
     const WARN = /^(?:WARNING|ALERT)|⚠|INJURED|is hurt|ran out of air/;
-    const SHOUT = /^(?:WARNING|ALERT|CRITICAL|CATASTROPHE|HULL BREACH|☠\s*DEATH):\s*/;
+    const SHOUT = /^(?:WARNING|ALERT|CRITICAL|CATASTROPHE|FATAL|KIA|HULL BREACH|☠\s*DEATH):\s*/;
     const GLYPH = { bad: '✕', warn: '!', gain: '+', noise: '·', plain: '›' };
     const HURT_WORDS = { INJURED: 'hurt', CATATONIC: 'not responding', DEAD: 'dead' };
 

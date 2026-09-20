@@ -3909,7 +3909,7 @@ You are home.`
             'MECHA': ['security drone', 'automated defense', 'power surge', 'mechanical trap'],
             'ROGUE': ['extreme cold exposure', 'equipment malfunction', 'isolation psychosis', 'radiation burst'],
             'TERRAFORMED': ['terraformer malfunction', 'environmental collapse', 'system failure', 'containment breach'],
-            '_DEFAULT': ['accident', 'equipment failure', 'environmental hazard', 'unforeseen complication']
+            '_DEFAULT': ['a bad fall', 'a suit breach', 'equipment failure', 'a collapse underfoot']
         };
 
         const getHazard = () => {
@@ -3957,10 +3957,11 @@ You are home.`
                     targetCrew._deathCause = hazardDesc;
                     targetCrew._deathPlanet = planet?.name || planet?.type || 'unknown world';
                     // Planet-type specific death messages
+                    // The dead come home: their pod is racked in the cargo hold (ShipCutaway), so no line may say the body was lost
                     const deathMsgs = [
-                        `CATASTROPHE: ${targetCrew.name} lost to ${hazardDesc}. No recovery possible.`,
-                        `FATAL: ${targetCrew.name} killed by ${hazardDesc}. Body unrecoverable.`,
-                        `KIA: ${hazardDesc} claimed ${targetCrew.name}. Mission abort.`
+                        `CATASTROPHE: ${targetCrew.name} is dead. Cause: ${hazardDesc}. The other one carried them back to the lander.`,
+                        `FATAL: ${targetCrew.name} did not survive (${hazardDesc}). They are coming home in a stasis pod.`,
+                        `KIA: ${targetCrew.name}, ${hazardDesc}. The trip is over. There is a pod to rack in the hold.`
                     ];
                     logMsg = deathMsgs[Math.floor(Math.random() * deathMsgs.length)] + ' ';
                 }

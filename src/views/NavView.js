@@ -439,11 +439,14 @@ class NavView {
 
     handleStructureSelect(structure, panel) {
         const actualCost = structure.fuelCost || 30;
+        // Same renderer as the map node and the orbit screen: one Structure everywhere (the old CSS orb looked like a different object)
+        const STRUCTURE_PREVIEW_SIZE = 112, STRUCTURE_PREVIEW_FRAME = 172;
 
         panel.innerHTML = `
             <div class="tactical-card" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: linear-gradient(135deg, #0a0a15, #1a0a2a);">
-                <div style="border: 2px solid #8844ff; height: 140px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(136,68,255,0.2), transparent); margin-bottom: 15px; position: relative; overflow: visible;">
-                    <div class="planet-visual type-STRUCTURE" style="width: 100px; height: 100px;"></div>
+                <div style="border: 2px solid #8844ff; height: ${STRUCTURE_PREVIEW_FRAME}px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(136,68,255,0.2), transparent); margin-bottom: 15px; position: relative; overflow: hidden;">
+                    ${(window.BodyRenderer && BodyRenderer.body(structure, STRUCTURE_PREVIEW_SIZE))
+                        || '<div class="planet-visual type-STRUCTURE" style="width: 100px; height: 100px;"></div>'}
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(rgba(136, 68, 255, 0) 50%, rgba(136, 68, 255, 0.1) 50%); background-size: 100% 4px; pointer-events: none; animation: pulse 2s infinite;"></div>
                 </div>
                 <h3 style="color: #ffffff; border-bottom: 2px solid #8844ff; padding-bottom: 8px; font-size: 1.2em; text-shadow: 0 0 10px rgba(136,68,255,0.5);">${structure.name}</h3>
