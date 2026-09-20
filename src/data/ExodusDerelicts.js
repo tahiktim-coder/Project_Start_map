@@ -332,19 +332,19 @@ const EXODUS_ENCOUNTERS = [
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     const loreBlocks = [
                         [
-                            "EXODUS PROGRAM BRIEFING: Ten ships. Ten chances. Earth's atmosphere was collapsing — not slowly, but in a cascade.",
-                            "The selection process was brutal. Each crew of 30 chosen from millions. Genetic diversity, psychological resilience, technical expertise.",
-                            "The destination coordinates were calculated by an AI called GENESIS. It identified 47 potential colony sites across 5 sectors of deep space."
+                            "CREW BRIEFING, RECORDED: 'You are the first crew. The ships before you flew empty.' The recording has a hull number on it. It is not our number.",
+                            "Every crew is told the same three things: you are first, the world is ahead of you, and the ship knows the way.",
+                            "The course was set by the ship. Nobody aboard was ever shown where it ends."
                         ],
                         [
-                            "CAPTAIN'S LOG: 'We launched knowing the odds. One in ten ships might find a livable world. The rest would die in the dark.'",
-                            "'Earth had six months left. Maybe less. The oceans were boiling in the equatorial zones. The poles were the last refuge, and they were melting.'",
-                            "'They told us we were humanity's hope. They didn't tell us we were also humanity's apology.'"
+                            "CAPTAIN'S LOG: 'We found a wreck today with our mission patch on it. Same colours. A higher number than ours. Older rust.'",
+                            "'I asked the ship how a hull built after us could have died before we were born. It said: you were not thrown further away than they were, Captain. You were thrown less far back.'",
+                            "'They did not send us to find a home. They sent us to get there first.'"
                         ],
                         [
-                            "ENGINEERING REPORT: 'The drives were prototype. Rated for 50 light-years. We needed 200. The math never worked, but nobody wanted to do the math.'",
+                            "ENGINEERING REPORT: 'The drive does two things. The manual only describes one of them.'",
                             "MEDICAL OFFICER'S LOG: 'Cryo failure rate: 12%. That means three of our people won't wake up. I've already decided not to tell them who.'",
-                            "FINAL TRANSMISSION FROM EARTH: '...skies are copper now. The fires have joined into one. This is Mission Control, signing off. Godspeed, Exodus. All of you.'"
+                            "LAST MESSAGE FROM EARTH: '...launch window for the next hull is confirmed. If you can hear this, it is already ahead of you. Keep going. Godspeed, Exodus. All of you.'"
                         ]
                     ];
                     const block = loreBlocks[Math.floor(Math.random() * loreBlocks.length)];

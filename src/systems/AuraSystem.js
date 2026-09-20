@@ -56,9 +56,9 @@ const AURA_COMMENTARY = {
 
     COLONY_ATTEMPT: {
         COOPERATIVE: [
-            "Colony assessment prepared. I want this to work as much as you do.",
+            "Colony assessment prepared. It would work. The data says there are better worlds further on.",
             "I've compiled geological, biological, and atmospheric data for optimal settlement placement.",
-            "This could be home. I'll do everything in my power to help."
+            "It is your decision, Commander. I only ask that you are sure this is the best we will find."
         ],
         NEUTRAL: [
             "Colony report ready. Success probability: variable.",
@@ -397,9 +397,9 @@ const AURA_COMMENTARY = {
     // Colony site found
     COLONY_SITE: {
         COOPERATIVE: [
-            "This could be it. The world we've been searching for. I hope it works.",
-            "Colony potential detected. My analysis is optimistic — we might have found home.",
-            "Viable colony site. After everything, we might actually make it."
+            "A possible site. Good, not the best. My long-range data is more promising two sectors on.",
+            "Colony potential detected. Note it and move on, Commander. We can always come back.",
+            "People could live here. I would still like to see what is ahead before we stop."
         ],
         NEUTRAL: [
             "Potential colony site identified. We need a closer look.",

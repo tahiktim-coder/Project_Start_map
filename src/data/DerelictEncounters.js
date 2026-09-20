@@ -360,7 +360,7 @@ const DERELICT_ENCOUNTERS = [
             },
             {
                 text: "Check the cryogenic units",
-                desc: "3% chance: Wake survivors (-5 Rations, all crew -1 Stress). Otherwise: salvage.",
+                desc: "3% chance: sleepers still alive (-5 Rations, all crew -1 Stress). Otherwise: salvage.",
                 effect: (state) => {
                     if (Math.random() < 0.03) {
                         // Survivors!
@@ -368,8 +368,9 @@ const DERELICT_ENCOUNTERS = [
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD' && c.stress > 0) c.stress = Math.max(0, c.stress - 1);
                         });
-                        state.addLog("Against all odds, two survivors wake. They speak a dialect we barely understand — their ship launched before ours. They weep when told Earth is gone.");
-                        return "Survivors revived. They join us, bringing hope. -5 Rations. All crew -1 Stress.";
+                        state._sleepers = (state._sleepers || 0) + 2;
+                        state.addLog("Against all odds, two pods are still cold. The name tags use spellings we barely recognise. Their ship is in no record we carry.");
+                        return "Two sleepers moved to our hold, still asleep. -5 Rations to keep them cold. All crew -1 Stress.";
                     }
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                     state.energy = Math.min(100, state.energy + 25);

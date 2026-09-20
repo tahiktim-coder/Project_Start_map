@@ -695,3 +695,25 @@
 
 .audio-volume input { flex: 1; accent-color: var(--green); cursor: pointer; }
 .audio-volume output { min-width: 3.2em; text-align: right; font: 700 1.1em var(--font-mono); color: var(--green-br); }
+
+/* first objective: the transponder Vance spotted in the opening scene */
+.nav-signal {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 4px;
+    padding: 1px 7px;
+    border: 1px solid var(--amber);
+    background: rgba(12, 10, 6, 0.9);
+    color: var(--amber);
+    font: 600 9px var(--font-display);
+    letter-spacing: 0.2em;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: nav-signal-blink 1.6s steps(2) infinite;
+}
+
+@keyframes nav-signal-blink { 50% { opacity: 0.45; } }
+
+@media (prefers-reduced-motion: reduce) { .nav-signal { animation: none; } }

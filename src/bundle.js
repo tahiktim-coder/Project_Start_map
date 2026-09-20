@@ -1284,35 +1284,43 @@ class App {
         }
     }
 
+    /**
+     * The opening scene. In under a minute it has to say who you are, what your orders are (the lie included),
+     * give one reason to be uneasy, and point at a first thing to do. How the ship works is left to the NEXT tips.
+     */
     showOpeningBriefing() {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '3500';
-        modal.innerHTML = `
-            <section class="modal-content deck-panel briefing" role="dialog" aria-label="A.U.R.A. briefing">
-                <header class="deck-panel-head">
-                    <h3>GOOD MORNING, COMMANDER</h3>
-                    <span class="deck-panel-status">A.U.R.A. ONLINE</span>
-                </header>
-                <p class="briefing-voice"><i>◈</i><span>“Everyone woke up. The ship is in one piece. Here is where we stand.”</span></p>
-                <dl class="deck-panel-facts">
-                    <dt>ENERGY</dt><dd>Moves the ship. Every warp and scan spends it.</dd>
-                    <dt>RATIONS</dt><dd>Every landing, boarding or jump eats one. When they run out, people start to die.</dd>
-                    <dt>SALVAGE</dt><dd>Repairs rooms and builds upgrades.</dd>
-                    <dt>CREW</dt><dd>Five people. Click any room of the ship to see who is in it.</dd>
-                    <dt>MISSION</dt><dd>Find a world we can live on. Found a colony.</dd>
-                </dl>
-                <p class="briefing-voice"><i>◈</i><span>“Pick a planet on the map. I will tell you what I see once we are in orbit.”</span></p>
-                <div class="deck-panel-actions"><button class="deck-action" id="btn-begin"><span>TAKE THE CHAIR</span><small>begin</small></button></div>
-            </section>`;
-        document.body.appendChild(modal);
-        const btn = modal.querySelector('#btn-begin');
-        btn.onclick = () => {
-            modal.remove();
+        this.markFirstSignal();
+        const begin = () => {
             this.state.addLog("A.U.R.A.: Systems online. Awaiting your command, Commander.");
-            this.state.addLog("Select a planet to view details. Warp to enter orbit.");
+            this.state.addLog("An old transponder is marked on the map. Click it to take a look.");
+            this.renderNav();
         };
-        btn.focus();
+        if (!window.EncounterCard) { begin(); return; }
+        window.EncounterCard.open(this, {
+            tone: 'station', zIndex: 3500, kicker: 'EXODUS-9 · 61 YEARS OUT FROM EARTH', title: 'Good morning, Commander',
+            context: 'Cold air, and a light you have not seen in sixty-one years. The ship has woken all five of you, and it has not said why.',
+            dialogue: [
+                { speaker: 'A.U.R.A.', text: 'Everyone woke up. The ship is in one piece. Your orders have not changed: find a world people can live on, and settle it.' },
+                { speaker: 'A.U.R.A.', text: 'Exodus one through eight were empty test ships. You are the first crew anyone has ever sent. Nobody has been out here before you.' },
+                { speaker: 'Eng. Jaxon', text: 'First in line for the good planets, then. Wake me when there is grass.' },
+                { speaker: 'Spc. Vance', text: 'If we are the first, what is that on the long-range scope? It is on our frequency.' },
+                { speaker: 'A.U.R.A.', text: 'An old transponder. A test ship, drifting. I am sure it is nothing. I have marked it on your map.' },
+            ],
+            choices: [{ text: 'Take the chair', desc: 'Six sectors lie ahead. In each one you get a few stops, then you must jump on. Energy moves the ship. Rations feed the crew.' }],
+            onPick: begin
+        });
+    }
+
+    /** Sector 1 always holds one wreck whose transponder shows on the map from the start: the first thing to go and look at. */
+    markFirstSignal() {
+        const nodes = this.state.sectorNodes || [];
+        if (this.state.currentSector !== 1 || nodes.some(p => p.isFirstSignal)) return;
+        const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
+        const target = nodes.find(p => isLandable(p) && (p.tags || []).includes('EXODUS_WRECK')) || nodes.find(isLandable);
+        if (!target) return;
+        target.tags = target.tags || [];
+        if (!target.tags.includes('EXODUS_WRECK')) target.tags.push('EXODUS_WRECK');
+        target.isFirstSignal = true;
     }
 
     handleWarp(planet) {
@@ -2367,6 +2375,19 @@ class App {
         onComplete(); // NarrativeModal is always loaded; nothing else to show
     }
 
+    /**
+     * The strange rule of this story: the further out you go, the HIGHER the hull number and the OLDER the wreck.
+     * Sectors 1–2 hold ships launched before EXODUS-9 (numbers below 9). From sector 3 on, every wreck was launched
+     * after you, and has been dead for centuries.
+     */
+    getWreckName() {
+        const HULL_RANGE = [[3, 8], [3, 8], [3, 8], [11, 19], [20, 29], [30, 44], [45, 60]]; // index = sector
+        const CALLSIGNS = ['PIONEER', 'COVENANT', 'SOJOURN', 'REQUIEM', 'LAZARUS', 'ICARUS', 'MERIDIAN', 'ORPHEUS', 'HALCYON', 'VESPER', 'TANTALUS', 'EMBER'];
+        const [lo, hi] = HULL_RANGE[Math.max(1, Math.min(FINAL_SECTOR, this.state.currentSector || 1))];
+        const hull = lo + Math.floor(Math.random() * (hi - lo + 1));
+        return `EXODUS-${hull} "${CALLSIGNS[hull % CALLSIGNS.length]}"`;
+    }
+
     handleExodusAction() {
         const planet = this.state.currentSystem;
         if (!planet || !planet.tags || !planet.tags.includes('EXODUS_WRECK')) {
@@ -2411,10 +2432,10 @@ class App {
 
         // Get unique ship name - avoid using the same ship twice
         this.state._encounteredShipNames = this.state._encounteredShipNames || [];
-        let shipName = selected.getShipName();
+        let shipName = this.getWreckName();
         let attempts = 0;
         while (this.state._encounteredShipNames.includes(shipName) && attempts < 10) {
-            shipName = selected.getShipName();
+            shipName = this.getWreckName();
             attempts++;
         }
         this.state._encounteredShipNames.push(shipName);

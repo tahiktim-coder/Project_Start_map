@@ -51,13 +51,14 @@ const FAILED_COLONY_ENCOUNTERS = [
                     if (Math.random() < 0.30) {
                         // Found something alive
                         state.addLog('Dr. Aris: "There\'s someone in here! Vitals are... faint, but present. A child. Maybe ten years old."');
-                        state.addLog('A.U.R.A.: "Cryostasis integrity at 4%. Revival is possible but will consume 3 rations for recovery nutrition."');
+                        state.addLog('A.U.R.A.: "Her pod is at 4%. We can move it to our hold, but keeping it cold will draw on our supplies."');
+                        state._sleepers = (state._sleepers || 0) + 1;
                         state.rations = Math.max(0, state.rations - 3);
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.max(0, (c.stress || 0) - 1);
                         });
                         if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(2, 'Rescued colony survivor');
-                        return "A child. Alive. We brought her aboard. The crew hasn't smiled like this in weeks. -3 Rations, all crew stress reduced.";
+                        return "A child, alive and still asleep. Her pod is in our hold now. She will wake when there is a world to wake on. -3 Rations, all crew stress reduced.";
                     } else {
                         // Empty or dead
                         state.addLog('Spc. Vance: "Empty. All of them. Either they left, or they never made it to the pods."');
@@ -190,13 +191,13 @@ const FAILED_COLONY_ENCOUNTERS = [
                 effect: function(state) {
                     state.addLog('A.U.R.A.: "Scanning for biosignatures in a 100km radius."');
                     if (Math.random() < 0.20) {
-                        state.addLog('A.U.R.A.: "Contact. 8 kilometers northwest. A group of 11. They\'re waving."');
+                        state.addLog('A.U.R.A.: "Contact. 8 kilometers northwest. A buried shelter. Eleven pods, all still cold."');
                         state.rations = Math.max(0, state.rations - 2);
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.max(0, (c.stress || 0) - 1);
                         });
                         if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(2, 'Found and helped schism survivors');
-                        return "Found 11 survivors camped in the hills. We shared rations and medical supplies. -2 Rations. All crew stress reduced.";
+                        return "Eleven sleepers in a shelter in the hills. We cannot carry them. We fixed their power cell, left food by the door for when they wake, and sealed it again. -2 Rations. All crew stress reduced.";
                     } else {
                         state.addLog('A.U.R.A.: "No biosignatures detected. They\'re gone."');
                         return "No survivors found. Whatever was left of them moved on long ago.";
