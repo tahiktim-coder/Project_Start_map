@@ -80,7 +80,7 @@
                 ${window.ItemIcons ? window.ItemIcons.iconHtml(item) : ''}
                 <h4>${esc(item.name)}</h4>
                 <p>${esc(item.desc || '')}</p>
-                <small>${esc(ITEM_KIND[item.type] || String(item.type || '').replace(/_/g, ' ').toLowerCase())}${item.acquiredAt ? ' · from ' + esc(item.acquiredAt) : ''}</small>
+                <small>${esc(ITEM_KIND[item.type] || String(item.type || '').replace(/_/g, ' ').toLowerCase())}${item.acquiredAt ? ' · from ' + esc(item.acquiredAt) : ''}${item.foundIn ? ' · found in ' + esc(item.foundIn) : ''}</small>
                 ${canUse ? `<button class="deck-action cargo-use" data-idx="${index}"><span>USE</span></button>` : ''}
             </li>`;
     }

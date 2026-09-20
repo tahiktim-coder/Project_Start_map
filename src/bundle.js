@@ -2024,9 +2024,10 @@ class App {
                 window.dispatchEvent(new CustomEvent('sector-entered', { detail: { sector: nextSector } }));
 
                 // Special barks for sector entries
+                // The picture that closes the sector you just left: sector 3 gets the long one (the truth), the rest a five-second shot
+                if (window.StoryReel && !window.TEST_MODE) window.StoryReel.play(nextSector === 3 ? 'corridor' : `jump${nextSector}`);
                 if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
                     if (nextSector === 3) {
-                        if (window.StoryReel && !window.TEST_MODE) window.StoryReel.play('corridor');
                         window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
                     } else if (nextSector === FINAL_SECTOR) {
                         window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state); // key kept for saves; the lines are about the LAST sector
@@ -3607,23 +3608,15 @@ You are home.`
     }
 
     getProbeItem(planet) {
-        let pool = [];
-
-        // Logic for pool selection
-        if (planet.type === 'VITAL' || (planet.tags && planet.tags.includes('VITAL_FLORA'))) {
-            pool.push(ITEMS.RADIOTROPHIC_FUNGUS, ITEMS.AMBER_SPECIMEN);
-        }
-        if (['ROCKY', 'DESERT', 'VOLCANIC'].includes(planet.type)) {
-            pool.push(ITEMS.GEODE_SAMPLE, ITEMS.OBSIDIAN_MONOLITH);
-        }
-        if (planet.tags && (planet.tags.includes('ANCIENT_RUINS') || planet.tags.includes('ALIEN_SIGNALS'))) {
-            pool.push(ITEMS.SCRAP_PLATING, ITEMS.TECH_FRAGMENT);
-        }
-
-        // Fallback if no specific pool match or pool empty
-        // Exclude Exodus-exclusive items (human supplies only found in old wrecks)
-        const exodusOnly = ['food_pack', 'chocolate', 'holotape'];
-        if (pool.length === 0) pool = Object.values(ITEMS).filter(i => !exodusOnly.includes(i.id));
+        // A surface trip can only bring back what a surface can hold: rock from any solid world, living things from living
+        // worlds, built things only where someone built. Human supplies (medkits, food packs, batteries) never come from a planet.
+        const tags = planet.tags || [], metrics = planet.metrics || {};
+        const LIVING_TYPES = ['VITAL', 'EDEN', 'TERRAFORMED', 'FUNGAL', 'BIO_MASS', 'SYMBIOTE_WORLD', 'OCEANIC'];
+        const isLiving = !!metrics.hasLife || LIVING_TYPES.includes(planet.type) || tags.includes('VITAL_FLORA');
+        const isBuiltOn = !!metrics.hasTech || tags.includes('ANCIENT_RUINS') || tags.includes('ALIEN_SIGNALS');
+        const from = (place) => Object.values(ITEMS).filter(item => item.source === place);
+        let pool = [...from('rock'), ...(isLiving ? from('life') : []), ...(isBuiltOn ? from('built') : [])];
+        if (pool.length === 0) pool = [ITEMS.GEODE_SAMPLE];
 
         // Return random item from pool
         const template = pool[Math.floor(Math.random() * pool.length)];

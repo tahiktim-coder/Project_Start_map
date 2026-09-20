@@ -56,7 +56,7 @@ const LOOT_POOLS = {
 
     // 6. High Energy
     HIGH_ENERGY_ITEMS: [
-        { item: ITEMS.IONIZED_BATTERY, weight: 25 }
+        { item: ITEMS.STORM_CRYSTAL, weight: 25 }
     ],
 
     // 8. Exodus Derelict Supplies (ONLY from Exodus wreck encounters — not generic loot)
@@ -118,7 +118,7 @@ const LOOT_POOLS = {
         { item: ITEMS.SYMBIOTIC_CULTURE, weight: 5 },
         { item: ITEMS.RADIOTROPHIC_FUNGUS, weight: 30 },
         { item: ITEMS.FUNGUS_CULTURE, weight: 8 },
-        { item: ITEMS.FOOD_PACK, weight: 20, log: "Edible organisms harvested from biosphere." },
+        { item: ITEMS.WILD_HARVEST, weight: 20, log: "Edible plants gathered and tested." },
         { type: 'LORE', text: "Bio-scan: Life here evolved to survive conditions we can barely imagine.", weight: 12 }
     ],
 

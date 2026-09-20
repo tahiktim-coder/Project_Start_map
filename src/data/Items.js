@@ -75,7 +75,7 @@ const ITEMS = {
     // Condensed Resources (Found via Probe 5%)
     CONDENSED_SALVAGE: {
         id: 'condensed_salvage', name: 'Condensed Salvage', type: 'RESOURCE_PACK', value: 50,
-        desc: 'Highly compressed refined ores.',
+        desc: 'A fist of native metal, pressed dense by the planet itself.',
         onUse: (state) => { state.salvage += 50; return "Processed +50 Salvage."; }
     },
     IONIZED_BATTERY: {
@@ -90,6 +90,16 @@ const ITEMS = {
         onUse: null // Passive effect handled by GameState.consumeRation()
     },
     // Food Pack (ration recovery)
+    WILD_HARVEST: {
+        id: 'wild_harvest', name: 'Wild Harvest', type: 'LIVING', value: 8,
+        desc: 'Roots and fruit Dr. Aris has tested twice. Not tasty. Safe.',
+        onUse: (state) => { state.rations = Math.min(state.maxRations, state.rations + 2); return "Cooked and shared. +2 Rations."; }
+    },
+    STORM_CRYSTAL: {
+        id: 'storm_crystal', name: 'Storm Crystal', type: 'ARTIFACT', value: 25,
+        desc: 'Grown in lightning. It hums in the hand, and the reactor likes it.',
+        onUse: (state) => { state.energy = Math.min(100, state.energy + 20); return "Fed to the reactor. +20 Energy."; }
+    },
     DISC_DRAWING: {
         id: 'disc_drawing', name: 'Drawing of the Disc', type: 'DOCUMENT', value: 0, isKept: true,
         desc: 'A page folded into a dead ship\'s logbook: a gold disc, a star map, two figures. Someone wrote in the margin.',
@@ -287,3 +297,17 @@ const ITEMS = {
         }
     }
 };
+
+
+/* Where a thing can exist. A surface trip (getProbeItem) draws only from rock / life / built; 'human' things come
+   from wrecks, stations and dead colonies, where people once stocked a shelf. Shown on the cargo card as "found in". */
+const ITEM_SOURCES = {
+    rock: ['GEODE_SAMPLE', 'OBSIDIAN_MONOLITH', 'CONDENSED_SALVAGE', 'STORM_CRYSTAL'],
+    life: ['RADIOTROPHIC_FUNGUS', 'AMBER_SPECIMEN', 'FUNGUS_CULTURE', 'XENO_MYCELIUM', 'BIO_SAMPLE_RARE', 'SYMBIOTIC_CULTURE', 'WILD_HARVEST'],
+    built: ['SCRAP_PLATING', 'TECH_FRAGMENT', 'NEURAL_LINK', 'ALIEN_TRANSMITTER', 'XENOTECH_COMPONENT', 'SIGNAL_DECODER', 'STAR_CHART_FRAGMENT', 'CULTURAL_ARTIFACT', 'ANCIENT_DATABASE', 'ALIEN_ARTIFACT'],
+    human: ['MEDKIT', 'FOOD_PACK', 'LUXURY_CHOCOLATE', 'MUSIC_HOLOTAPE', 'IONIZED_BATTERY', 'SALVAGE_BEACON', 'POWER_COUPLER', 'REPAIR_DRONE', 'DISC_DRAWING'],
+};
+const ITEM_SOURCE_WORDS = { rock: 'any solid world', life: 'living worlds', built: 'ruins and alien sites', human: 'human wrecks and stations' };
+Object.keys(ITEM_SOURCES).forEach(place => ITEM_SOURCES[place].forEach(key => {
+    if (ITEMS[key]) { ITEMS[key].source = place; ITEMS[key].foundIn = ITEM_SOURCE_WORDS[place]; }
+}));
