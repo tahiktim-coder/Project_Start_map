@@ -137,13 +137,14 @@
     }
 
     /** A flickering flame, hot at the nozzle and cooling toward the tip, plus dust when it is close to the ground. */
-    function drawFlame(ctx, fx, fy, g, look) {
+    function drawFlame(ctx, fx, fy, g, look) { // g + look are optional: without them there is no ground dust
         const length = 5 + Math.round(Math.random() * 4);
         for (let k = 0; k < length; k++) {
             ctx.fillStyle = FLAME_INKS[Math.min(FLAME_INKS.length - 1, Math.floor(k / length * FLAME_INKS.length))];
             const isTip = k > length - 3;
             ctx.fillRect(fx + (isTip ? Math.round(Math.random()) : 0), fy + k, isTip ? 1 : 2, 1);
         }
+        if (!g) return;
         const groundY = g.heights[Math.max(0, Math.min(W - 1, fx))];
         if (groundY > H || g.hot[fx] || groundY - fy > DUST_HEIGHT) return;
         ctx.fillStyle = look.edge;
@@ -316,5 +317,13 @@
         });
     }
 
-    window.LanderGame = { play, GRADES, internals: { buildGround, step, BASE_GRAVITY, GRAVITY_CURVE, FUEL_FULL, PAD_WIDTH } }; // internals: for headless play-tests
+    /** The same lander for other scenes (AwayTeam.descent): centred on x, top at y, both thrusters lit when isBurning. */
+    function drawLander(ctx, x, y, isBurning) {
+        drawSprite(ctx, x - LANDER_HALF, y, isBurning ? AMBER : GREEN);
+        if (!isBurning) return;
+        drawFlame(ctx, x - LANDER_HALF + NOZZLE_LEFT, y + NOZZLE_ROW);
+        drawFlame(ctx, x - LANDER_HALF + NOZZLE_RIGHT, y + NOZZLE_ROW);
+    }
+
+    window.LanderGame = { play, GRADES, drawLander, LANDER_TALL, internals: { buildGround, step, BASE_GRAVITY, GRAVITY_CURVE, FUEL_FULL, PAD_WIDTH } }; // internals: for headless play-tests
 })();

@@ -5598,74 +5598,43 @@ You are home.`
         const commander = this.state.crew.find(c => c.tags.includes('LEADER') && c.status !== 'DEAD');
         if (!commander) return; // Commander already dead, mutiny is moot
 
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '3000';
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #d85a4e; max-width: 550px;">
-                <div class="modal-header" style="background: #d85a4e; color: #000;">/// MUTINY ///</div>
-                <div style="padding: 20px; text-align: center;">
-                    <p style="margin-bottom: 15px; color: #e07a70; font-style: italic;">
-                        "${vance.name} has drawn his sidearm. He demands ${commander.name} step down."
-                    </p>
-                    <p style="margin-bottom: 20px; font-size: 0.9em; color: var(--color-text-dim);">
-                        "You've led us into hell. Every decision, every death — on your head. Stand down, or I will put you down."
-                    </p>
-                    <div style="display: flex; gap: 15px; justify-content: center;">
-                        <button class="mutiny-choice" data-choice="support" style="
-                            flex: 1; padding: 15px; border: 1px solid var(--color-primary);
-                            background: rgba(0,0,0,0.8); color: var(--color-primary);
-                            cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div>SUPPORT COMMANDER</div>
-                            <div style="font-size: 0.7em; margin-top: 5px; color: var(--color-text-dim);">Vance will be restrained</div>
-                        </button>
-                        <button class="mutiny-choice" data-choice="side" style="
-                            flex: 1; padding: 15px; border: 1px solid #d85a4e;
-                            background: rgba(40,0,0,0.8); color: #d85a4e;
-                            cursor: pointer; font-family: var(--font-mono);
-                        ">
-                            <div>SIDE WITH VANCE</div>
-                            <div style="font-size: 0.7em; margin-top: 5px; color: var(--color-text-dim);">Commander will be confined</div>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
+        const standGround = () => {
+            // Vance is restrained and sedated - cannot take part in away missions
+            vance.status = 'INJURED';
+            vance.stress = 1;
+            vance.trait = null;
+            vance.breakdownFired = false;
+            vance.tags = vance.tags || [];
+            if (!vance.tags.includes('SEDATED')) vance.tags.push('SEDATED');
+            vance._sedatedUntilWarp = 2;
+            this.state.addLog(`You did not move. The crew took ${vance.name} down. He is locked up and sedated.`);
+            this.state.addLog(`${vance.name} cannot join away teams until he wakes.`);
+            commander.stress = Math.min(3, (commander.stress || 0) + 1);
+        };
+        const stepDown = () => {
+            commander.status = 'INJURED';
+            commander.stress = Math.min(3, (commander.stress || 0) + 1);
+            commander.tags = commander.tags || [];
+            if (!commander.tags.includes('CONFINED')) commander.tags.push('CONFINED');
+            this.state.addLog(`You handed over the ship. You are locked in your quarters.`);
+            this.state.addLog(`${vance.name} gives the orders now.`);
+            vance.stress = 1;
+            vance.trait = null;
+            vance.breakdownFired = false;
+        };
 
-        modal.querySelectorAll('.mutiny-choice').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const choice = btn.dataset.choice;
-                if (choice === 'support') {
-                    // Vance is restrained and sedated - cannot participate in actions
-                    vance.status = 'INJURED';
-                    vance.stress = 1;
-                    vance.trait = null;
-                    vance.breakdownFired = false;
-                    vance.tags = vance.tags || [];
-                    if (!vance.tags.includes('SEDATED')) vance.tags.push('SEDATED');
-                    vance._sedatedUntilWarp = 2; // Sedated for 2 warps
-                    this.state.addLog(`Mutiny suppressed. ${vance.name} has been restrained and sedated.`);
-                    this.state.addLog(`${vance.name} will remain sedated and unable to participate in away missions.`);
-                    // Commander gains +1 stress from the confrontation
-                    commander.stress = Math.min(3, (commander.stress || 0) + 1);
-                } else {
-                    // Commander is confined: remove LEADER tag effectively, set to INJURED
-                    commander.status = 'INJURED';
-                    commander.stress = Math.min(3, (commander.stress || 0) + 1);
-                    commander.tags = commander.tags || [];
-                    if (!commander.tags.includes('CONFINED')) commander.tags.push('CONFINED');
-                    this.state.addLog(`${commander.name} has been relieved of command and confined to quarters.`);
-                    this.state.addLog(`${vance.name} assumes tactical control.`);
-                    // Vance calms down
-                    vance.stress = 1;
-                    vance.trait = null;
-                    vance.breakdownFired = false;
-                }
+        window.EncounterCard.open(this, {
+            tone: 'distress', kicker: 'MUTINY', title: `${vance.name} has a gun on you`, zIndex: 3000,
+            context: 'He is standing in the bridge doorway with his sidearm out, pointed at your chest. The others have stopped moving. Nobody is looking at you.',
+            dialogue: [{ speaker: vance.name, text: 'You led us into hell. Every choice, every death, that is on you. Step down, Commander. Or I will make you.' }],
+            choices: [
+                { text: 'Stand your ground', desc: `You stay in command. The crew takes him down: ${vance.name} is locked up and sedated for 2 jumps. +1 Stress for you.` },
+                { text: 'Hand him the ship', desc: `You are locked in your quarters, hurt. ${vance.name} gives the orders and calms down. +1 Stress for you.` },
+            ],
+            onPick: (idx) => {
+                if (idx === 0) standGround(); else stepDown();
                 this.state.emitUpdates();
-                modal.remove();
-            });
+            }
         });
     }
 
