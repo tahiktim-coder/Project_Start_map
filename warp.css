@@ -590,3 +590,52 @@
 .away-after {
     color: var(--amber);
 }
+
+/* ── lander (LanderGame.js) ── */
+.lander-readout {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 14px;
+    margin: 10px 0 0;
+}
+
+.lander-readout dt {
+    font: 600 0.66em var(--font-display);
+    letter-spacing: 0.2em;
+    color: var(--dim);
+}
+
+.lander-readout dd {
+    margin: 3px 0 0;
+    font: 700 1.5em var(--font-mono);
+    color: var(--bone);
+    transition: color 120ms;
+}
+
+.lander-fuel {
+    display: block;
+    height: 12px;
+    margin-top: 8px;
+    background: var(--line);
+}
+
+.lander-fuel b {
+    display: block;
+    height: 100%;
+    background: var(--amber);
+    transform-origin: left;
+}
+
+.lander-buttons .lander-hold {
+    flex: 1;
+    touch-action: none;
+    user-select: none;
+}
+
+.warp-plot-hint kbd {
+    padding: 0 5px;
+    border: 1px solid var(--line2);
+    border-radius: 2px;
+    font: 0.92em var(--font-mono);
+    color: var(--bone);
+}

@@ -4381,8 +4381,10 @@ You are home.`
             // Store EVA team for resolveEvaOutcome
             this.currentEvaTeam = evaTeam;
 
-            // Watch them go down before anything happens to them
-            const afterDescent = window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam) : Promise.resolve();
+            // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
+            const goDown = window.LanderGame ? window.LanderGame.play(this, planet, evaTeam)
+                : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
+            const afterDescent = goDown.then(landing => this.applyLanding(landing, evaTeam));
 
             // Special EDEN EVA — paradise world, unique peaceful encounter
             if (planet.type === 'EDEN') {
@@ -4405,6 +4407,25 @@ You are home.`
             planet.hasEva = true;
             this.orbitView.updateCommandDeck(planet);
             afterDescent.then(() => this.showEventModal(selectedEvent, planet));
+        }
+    }
+
+    /** Consequences of the landing: a soft one makes the trip safer, a crash hurts someone before they step out. */
+    applyLanding(landing, evaTeam) {
+        this._landingRiskMod = 0;
+        if (!landing || !window.LanderGame) return;
+        this.noteReliance(!!landing.auto);
+        this._landingRiskMod = window.LanderGame.GRADES[landing.grade].riskMod;
+        if (landing.grade === 'soft') this.state.addLog("Soft landing. The team steps out steady.");
+        if (landing.grade === 'crash') {
+            const fit = evaTeam.filter(m => m.status === 'HEALTHY');
+            const hurt = fit[Math.floor(Math.random() * fit.length)];
+            if (hurt) {
+                hurt.status = 'INJURED';
+                this.state.addLog(`WARNING: The lander came down hard. ${hurt.name} is INJURED before the hatch even opens.`);
+                window.dispatchEvent(new CustomEvent('crew-injury', { detail: { crew: hurt } }));
+                this.state.emitUpdates();
+            }
         }
     }
 
@@ -4454,6 +4475,13 @@ You are home.`
             signalModifiers.push({ type: 'PREDATORY', mod: +15, color: '#d85a4e' });
         }
 
+        // How the landing went (LanderGame) carries into the trip
+        if (this._landingRiskMod) {
+            riskBase += this._landingRiskMod;
+            signalModifiers.push({ type: this._landingRiskMod < 0 ? 'SOFT LANDING' : 'HARD LANDING', mod: this._landingRiskMod, color: this._landingRiskMod < 0 ? '#74d99a' : '#d85a4e' });
+            this._landingRiskMod = 0;
+        }
+
         // Clamp risk base to reasonable range
         riskBase = Math.max(0, Math.min(50, riskBase));
 
@@ -4465,7 +4493,8 @@ You are home.`
         // Build signal modifier display string
         const PLAIN_SIGNAL = {
             'BIOLOGICAL': 'Living things here are calm', 'ALIEN SIGNAL': 'Unknown signal nearby', 'ANCIENT RUINS': 'Old ruins, still solid',
-            'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here'
+            'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here',
+            'SOFT LANDING': 'You put them down gently', 'HARD LANDING': 'The landing shook them up'
         };
         const signalModDisplay = signalModifiers.length > 0
             ? signalModifiers.map(s => `<span style="color: ${s.color};">${PLAIN_SIGNAL[s.type] || s.type}: ${Math.abs(s.mod)}% ${s.mod > 0 ? 'more dangerous' : 'safer'}</span>`).join(' · ')
@@ -4493,7 +4522,7 @@ You are home.`
                 </header>
                 <ul class="deck-panel-crew eva-team">${(this.currentEvaTeam || []).map(m => `<li><img class="deck-panel-face" src="assets/crew/${m.portraitId}.png" alt=""><span class="deck-panel-name">${m.name}</span><span class="deck-panel-mood">ON THE GROUND</span></li>`).join('')}</ul>
                 <p class="eva-found">“${event.desc}”</p>
-                ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>SCAN SAYS</dt><dd>${signalModDisplay}</dd></dl>` : ''}
+                ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>GOING IN</dt><dd>${signalModDisplay}</dd></dl>` : ''}
                 ${isParanoid ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
                 ${recklessBlocksSafe ? '<p class="eva-voice" style="color:#d070ff">Mira: “The safe option gets us nothing. I am going in.”</p>' : ''}
                 <h4>WHAT DO THEY DO?</h4>
