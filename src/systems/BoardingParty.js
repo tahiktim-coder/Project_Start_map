@@ -279,7 +279,7 @@
             Object.values(buttons).forEach(btn => { btn.disabled = true; });
             statusEl.textContent = isSafe ? `${member.name} is back aboard.` : `Out of air. ${member.name} is dragged back through the airlock — hurt, and half the haul is gone.`;
             statusEl.classList.toggle('is-bad', !isSafe);
-            setTimeout(() => close({ reachedCommand: isSafe && b.reachedCommand }), isSafe ? 1100 : 2600);
+            setTimeout(() => close({ reachedCommand: isSafe && b.reachedCommand, member }), isSafe ? 1100 : 2600);
         }
 
         Object.keys(buttons).forEach(kind => buttons[kind].addEventListener('click', () => act(kind)));

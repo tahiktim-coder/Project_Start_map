@@ -90,6 +90,21 @@ const ITEMS = {
         onUse: null // Passive effect handled by GameState.consumeRation()
     },
     // Food Pack (ration recovery)
+    MEDKIT: {
+        id: 'medkit', name: 'Field Medkit', type: 'CONSUMABLE', value: 25,
+        desc: 'A sealed trauma kit. Heals one injured crew member.',
+        onUse: (state) => {
+            const hurt = state.crew.find(c => c.status === 'INJURED');
+            if (!hurt) return "Nobody is injured. The kit stays sealed.";
+            hurt.status = 'HEALTHY';
+            return `${hurt.name} is patched up and back on duty.`;
+        }
+    },
+    ALIEN_ARTIFACT: {
+        id: 'alien_artifact', name: 'Alien Artifact', type: 'ARTIFACT', value: 80,
+        desc: 'Not made by human hands. It is warm. Studying it teaches you something.',
+        onUse: (state) => { state._colonyKnowledge = (state._colonyKnowledge || 0) + 2; return "Hours of study. +2 Data."; }
+    },
     FOOD_PACK: {
         id: 'food_pack', name: 'Sealed Food Pack', type: 'CONSUMABLE', value: 10,
         desc: 'Vacuum-sealed rations from a previous expedition. Still edible.',

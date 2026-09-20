@@ -29,7 +29,7 @@ A.U.R.A.: "Power surge detected. I can reroute to save the capacitors, but we'll
         choices: [
             {
                 text: "Reroute power (save capacitors)",
-                desc: "-10 Energy now, but prevents future drain",
+                desc: "-10 Energy now. Nothing else is lost.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     return "Power rerouted. We lost some charge, but the capacitors are intact.";
@@ -37,10 +37,10 @@ A.U.R.A.: "Power surge detected. I can reroute to save the capacitors, but we'll
             },
             {
                 text: "Let it burn (salvage components)",
-                desc: "+15 Salvage, but -5 Energy per warp this sector",
+                desc: "+15 Salvage, but every warp costs 5 more Energy until the next sector",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
-                    state._damagedCapacitors = true;
+                    state._damagedCapacitors = state.currentSector; // read by GameState.getWarpCost
                     return "Components salvaged. The capacitors are damaged - warps will cost more until repaired.";
                 }
             }

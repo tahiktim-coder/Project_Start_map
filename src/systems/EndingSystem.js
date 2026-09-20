@@ -92,16 +92,16 @@ class EndingSystem {
         const type = planet.type;
         const gravity = planet.metrics?.gravity || 1.0;
         const temp = planet.metrics?.temp || 20;
-        const hasLife = planet.hasLife;
-        const hasTech = planet.hasTech;
+        const hasLife = !!(planet.metrics && planet.metrics.hasLife);
+        const hasTech = !!(planet.metrics && planet.metrics.hasTech);
 
         // Crew Analysis
         const livingCrew = state.crew.filter(c => c.status !== 'DEAD');
         const commander = livingCrew.find(c => c.tags.includes('LEADER'));
         const hasMedic = livingCrew.find(c => c.tags.includes('MEDIC'));
         const hasEng = livingCrew.find(c => c.tags.includes('ENGINEER'));
-        const hasTech_crew = livingCrew.find(c => c.tags.includes('TECH'));
-        const hasScout = livingCrew.find(c => c.tags.includes('SCOUT'));
+        const hasTech_crew = livingCrew.find(c => c.tags.includes('SPECIALIST'));
+        const hasScout = livingCrew.find(c => c.tags.includes('SECURITY'));
 
         const symbiotes = livingCrew.filter(c => c.tags && c.tags.includes('HIVE_MIND')).length;
         const cyborgs = livingCrew.filter(c => c.tags && c.tags.includes('MACHINE_LINK')).length;
@@ -248,7 +248,7 @@ class EndingSystem {
             }
         } else if (type === 'DESERT' && temp > 100) {
             acts.push("The sun is a tyrant. We buried the modules under the dunes, creating a subterranean network of cool, tiled tunnels.");
-        } else if (type === 'ICE' && temp < -100) {
+        } else if (type === 'ICE_WORLD' && temp < -100) {
             acts.push("The surface is a mirror of ice. We drilled deep into the crust, finding a warm, dark ocean beneath the shell.");
         } else if (type === 'BIO_MASS') {
             if (hasMedic) {

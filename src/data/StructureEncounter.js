@@ -19,7 +19,7 @@ It is geometry that should not exist. Light bends around it wrong. Time feels di
 
 And yet, somehow, you know it has been waiting for you. Specifically for you. Since before you were born.
 
-The Exodus-9 has traveled further than any human vessel. And this is where the journey ends. Or begins.`,
+Every ship before Exodus-9 stopped somewhere behind you. And this is where the journey ends. Or begins.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "I... cannot process what I am seeing. My logic cores are returning errors. This is beyond my design parameters." },
             { speaker: 'Dr. Aris', text: "It's beautiful. Terrifying. Both. Neither. I don't have words. None of us have words for this." },
