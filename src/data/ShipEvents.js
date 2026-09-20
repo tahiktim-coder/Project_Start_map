@@ -94,13 +94,11 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => state.currentSector >= 2, // Only in later sectors
         context: "The ship groans. Metal fatigue is catching up to us.",
         dialogue: (state) => {
-            // Calculate actual integrity based on damaged decks
-            const totalDecks = Object.keys(state.shipDecks || {}).length || 5;
-            const damagedDecks = Object.values(state.shipDecks || {}).filter(d => d.status !== 'OPERATIONAL').length;
-            const integrity = Math.floor(100 - (damagedDecks / totalDecks * 40) - (Math.random() * 10));
+            const damagedCount = Object.values(state.shipDecks || {}).filter(d => d.status !== 'OPERATIONAL').length;
+            const warningLevel = damagedCount >= 2 ? "Critical repairs needed." : "Patching required.";
             return [
-                { speaker: 'Eng. Jaxon', text: "Stress fractures in Section 4. This ship wasn't built for what we're doing." },
-                { speaker: 'A.U.R.A.', text: `Structural integrity at ${integrity}%. I recommend reducing warp frequency.` }
+                { speaker: 'Eng. Jaxon', text: "Stress fractures forming. This ship has been through a lot." },
+                { speaker: 'A.U.R.A.', text: `Hull micro-fractures detected. ${warningLevel}` }
             ];
         },
         effect: (state) => {

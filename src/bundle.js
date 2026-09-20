@@ -42,30 +42,17 @@ function testChance(chance, context = '') {
 // --- 1. DATA & GENERATORS ---
 
 class CrewGenerator {
-    // Commander gets a random name; the rest are fixed characters
-    static COMMANDER_FIRST = [
-        "Jace", "Lyra", "Kael", "Oren", "Zara", "Thorn", "Elara", "Nia",
-        "Rian", "Cora", "Sola", "Kian", "Eris", "Dax", "Luna", "Torin"
-    ];
-    static COMMANDER_LAST = [
-        "Ryder", "Stark", "Chen", "Novak", "Price", "Solos", "Thorne", "Cross",
-        "Moon", "Strider", "Frey", "Wong", "Sato", "Khan", "Webb", "Mercer"
-    ];
-
+    // All five are authored characters — the same people every run, so the player can get to know them.
     static generateCrew() {
-        const first = this.COMMANDER_FIRST[Math.floor(Math.random() * this.COMMANDER_FIRST.length)];
-        const last = this.COMMANDER_LAST[Math.floor(Math.random() * this.COMMANDER_LAST.length)];
-        const cmdrGender = Math.random() > 0.5 ? 'M' : 'F';
-
         return [
-            // Commander — random name
+            // Commander Cora Moon — the player's seat
             {
                 id: Date.now() + Math.random(),
-                name: `Cmdr. ${last}`,
-                realName: `${first} ${last}`,
-                gender: cmdrGender,
-                age: Math.floor(Math.random() * 15) + 35,
-                portraitId: `${cmdrGender}_1`,
+                name: 'Cmdr. Moon',
+                realName: 'Cora Moon',
+                gender: 'F',
+                age: 36,
+                portraitId: 'F_1',
                 status: 'HEALTHY',
                 stress: 0,
                 trait: null,
@@ -163,6 +150,12 @@ class GameState {
         this.rations = 20;         // Time pressure / food supply (cap 30)
         this.maxRations = 30;
 
+        // --- Per-run counters (a new run must not inherit the last one's) ---
+        this.stopsLeft = null;     // recomputed for the sector by getStopsLeft()
+        this._stopsSector = null;
+        this._cargoCountSeen = 0;  // see enforceCargoLimit()
+        this.reliance = { auto: 0, manual: 0 }; // jobs handed to A.U.R.A. vs done by hand
+
         // --- Legacy aliases for systems that still reference old names ---
         // TODO: Remove these once all systems are updated
         Object.defineProperty(this, 'metals', {
@@ -253,6 +246,11 @@ class GameState {
             // Cargo & Upgrades
             cargo: this.cargo,
             upgrades: this.upgrades,
+            // A.U.R.A. (lives in its own singleton, so it has to be copied in by hand)
+            stopsLeft: this.stopsLeft,
+            stopsSector: this._stopsSector,
+            reliance: this.reliance || null,
+            aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
             // Navigation
             currentSector: this.currentSector,
             currentSystem: this.currentSystem,
@@ -312,8 +310,20 @@ class GameState {
             // Probe
             this.probeIntegrity = saveData.probeIntegrity;
             // Cargo & Upgrades
-            this.cargo = saveData.cargo || [];
+            // JSON drops functions, so saved items lose their onUse(); give each one back its behaviour from ITEMS
+            const itemDefs = (typeof ITEMS !== 'undefined') ? Object.values(ITEMS) : [];
+            this.cargo = (saveData.cargo || []).map(saved => {
+                const def = itemDefs.find(d => d.id === saved.id);
+                return def ? { ...def, ...saved, onUse: def.onUse } : saved;
+            });
             this.upgrades = saveData.upgrades || [];
+            this.stopsLeft = saveData.stopsLeft;
+            this._stopsSector = saveData.stopsSector;
+            this.reliance = saveData.reliance || { auto: 0, manual: 0 };
+            if (saveData.aura && window.AuraSystem) {
+                window.AuraSystem.ethicsScore = saveData.aura.ethicsScore || 0;
+                window.AuraSystem.warningCount = saveData.aura.warningCount || 0;
+            }
             // Navigation
             this.currentSector = saveData.currentSector;
             this.currentSystem = saveData.currentSystem;
@@ -468,7 +478,7 @@ class GameState {
         }
 
         // Passive injury healing: INJURED crew recover after 3 actions if quarters operational
-        // CATATONIC crew cannot heal passively
+        // CATATONIC crew cannot heal passively but recover from catatonia after 5 actions
         if (this.shipDecks.quarters.status === 'OPERATIONAL') {
             this.crew.forEach(c => {
                 if (c.status === 'INJURED' && c.trait !== 'CATATONIC') {
@@ -477,6 +487,18 @@ class GameState {
                         c.status = 'HEALTHY';
                         c.healCounter = 0;
                         this.addLog(`${c.name} has recovered from injuries.`);
+                    }
+                }
+                // CATATONIC recovery: after 5 actions, crew member snaps out of it
+                if (c.trait === 'CATATONIC') {
+                    c.catatonicCounter = (c.catatonicCounter || 0) + 1;
+                    if (c.catatonicCounter >= 5) {
+                        c.trait = null;
+                        c.catatonicCounter = 0;
+                        c.stress = 2; // Still stressed but no longer broken
+                        c.breakdownFired = false; // Can have another breakdown if stress hits 3 again
+                        this.addLog(`${c.name} stirs. Her eyes focus again. "I... I'm sorry. I couldn't face it anymore."`);
+                        this.addLog(`${c.name} is no longer catatonic but remains INJURED and shaken.`);
                     }
                 }
             });
@@ -644,8 +666,22 @@ class GameState {
     /**
      * Check if a specific deck is operational.
      */
+    /**
+     * Stops left in this sector. The jump window only stays open for a few warps, always fewer than
+     * there are places to see, so choosing one stop means giving up another. Resets on a new sector.
+     */
+    getStopsLeft() {
+        if (this._stopsSector !== this.currentSector || this.stopsLeft == null) {
+            const places = (this.sectorNodes || []).filter(n => !n.ghost).length;
+            this.stopsLeft = Math.max(MIN_STOPS_PER_SECTOR, Math.min(MAX_STOPS_PER_SECTOR, places - 1));
+            this._stopsSector = this.currentSector;
+        }
+        return this.stopsLeft;
+    }
+
     isDeckOperational(deckKey) {
-        return this.shipDecks[deckKey]?.status === 'OPERATIONAL';
+        const deck = this.shipDecks[deckKey];
+        return !!deck && deck.status === 'OPERATIONAL' && !deck._auraLocked; // a deck A.U.R.A. has locked is as useless as a broken one
     }
 
     /**
@@ -781,7 +817,29 @@ class GameState {
         return this.crew.some(c => c.status !== 'DEAD' && c.trait === traitName);
     }
 
+    /**
+     * The hold takes CARGO_LIMIT items (half that with the cargo deck out of action). Items are pushed
+     * into `cargo` from dozens of encounter scripts, so the limit is enforced here, on the next update:
+     * whatever arrived beyond the limit is left behind, newest first. Items already aboard are never lost.
+     */
+    /** Items the hold takes right now: racks add a pallet, a broken cargo deck halves everything. */
+    getCargoLimit() {
+        const full = CARGO_LIMIT + (this.upgrades.includes('cargo_racks') ? CARGO_RACK_BONUS : 0);
+        return this.isDeckOperational('cargo') ? full : Math.floor(full / 2);
+    }
+
+    enforceCargoLimit() {
+        const limit = this.getCargoLimit();
+        const before = this._cargoCountSeen == null ? this.cargo.length : this._cargoCountSeen;
+        if (this.cargo.length > limit && this.cargo.length > before) {
+            const left = this.cargo.splice(Math.max(limit, before));
+            if (left.length) this.addLog(`WARNING: Cargo hold full (${limit} items). Left behind: ${left.map(i => i.name).join(', ')}.`);
+        }
+        this._cargoCountSeen = this.cargo.length;
+    }
+
     emitUpdates() {
+        this.enforceCargoLimit();
         this.applyStressTraits();
         this.checkLoseConditions();
         window.dispatchEvent(new Event('hud-updated'));
@@ -796,6 +854,21 @@ class GameState {
 
 // --- 4. MAIN APP ---
 
+// One line on each arrival card: the further out, the older the wrecks (the wait calculation, shown not told)
+const SECTOR_ARRIVAL_LINES = {
+    2: 'The wrecks out here are a hundred years old. Older than anyone aboard.',
+    3: 'Two hundred years of silence. The instruments have started to disagree with each other.',
+    4: 'Somebody stopped here, and lived.',
+    5: 'The first crews made it this far. Three hundred years ago.',
+    6: 'Nothing human is older than what is waiting here.',
+};
+const RELIANCE_MIN_SAMPLES = 4; // A.U.R.A. only comments on who flies once there is a pattern to see
+const CARGO_LIMIT = 20, CARGO_RACK_BONUS = 4; // see GameState.getCargoLimit / enforceCargoLimit
+const WARP_REFUND_SCALE = 0.75; // arrival refunds used to hand back ~half of every warp; 1 = old behaviour, lower = energy matters more
+const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getStopsLeft
+const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
+const FINAL_SECTOR = 6; // THE THRESHOLD — holds THE STRUCTURE; SECTOR_CONFIG defines nothing beyond it
+
 class App {
     constructor() {
         this.state = GameState.getInstance();
@@ -805,6 +878,9 @@ class App {
         // Modal queue to prevent stacking
         this._modalQueue = [];
         this._modalActive = false;
+
+        // True while a warp or sector jump is playing out; blocks re-entrant travel requests
+        this._isInTransit = false;
 
         // Show start menu first
         this.showStartMenu();
@@ -833,12 +909,13 @@ class App {
         overlay.id = 'start-menu';
         overlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: linear-gradient(135deg, #000510 0%, #0a1020 50%, #000510 100%);
+            background: radial-gradient(130% 100% at 50% 0%, #11170f 0%, #0a0d0b 55%, #060806 100%);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 10000; font-family: 'Share Tech Mono', monospace;
+            z-index: 10000; font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
         `;
 
         overlay.innerHTML = `
+            <div class="title-hero" aria-hidden="true">${window.BodyRenderer ? window.BodyRenderer.globe({ type: 'GAS_GIANT', size: Math.round(Math.max(320, Math.min(620, (window.innerHeight || 800) * 0.8))), seed: 9 }) : ''}</div>
             <!-- Stars background - ALWAYS visible, no animation delay -->
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: hidden; pointer-events: none;">
                 ${starData.map(star => `
@@ -848,42 +925,43 @@ class App {
                         animation: twinkle ${star.duration}s infinite;"></div>
                 `).join('')}
             </div>
-            <div style="text-align: center; animation: fadeInGentle 1.5s ease-in;">
+            <div class="title-block" style="animation: fadeInGentle 1.5s ease-in;">
 
                 <!-- Title -->
                 <div style="position: relative;">
-                    <div style="font-size: 0.9em; color: #446688; letter-spacing: 8px; margin-bottom: 10px;">
+                    <div style="font-size: 0.9em; color: #5f9e7a; letter-spacing: 8px; margin-bottom: 10px;">
                         EXODUS PROGRAM // VESSEL 9
                     </div>
-                    <div style="font-size: 4em; font-weight: bold; color: #ffffff; letter-spacing: 12px;
-                        text-shadow: 0 0 30px rgba(100, 150, 255, 0.5), 0 0 60px rgba(50, 100, 200, 0.3);">
+                    <div style="font-size: 4em; font-weight: bold; color: #f4f1ea; letter-spacing: 12px;
+                        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                        text-shadow: 0 0 26px rgba(116, 217, 154, 0.45), 0 0 60px rgba(116, 217, 154, 0.20);">
                         SILENT EXODUS
                     </div>
-                    <div style="font-size: 1em; color: #668899; margin-top: 15px; letter-spacing: 4px;">
-                        THE LAST JOURNEY OF HUMANITY
+                    <div style="font-size: 1em; color: #8a9d8f; margin-top: 15px; letter-spacing: 4px;">
+                        EVERY SHIP WAS TOLD IT WAS THE FIRST
                     </div>
                 </div>
 
                 <!-- Buttons -->
-                <div style="margin-top: 50px; display: flex; flex-direction: column; gap: 15px; align-items: center;">
+                <div class="title-buttons" style="margin-top: 50px; display: flex; flex-direction: column; gap: 15px;">
                     ${hasSave ? `
                     <button id="btn-continue-game" style="
                         padding: 18px 60px;
-                        background: rgba(68, 136, 255, 0.15); border: 2px solid #4488ff;
-                        color: #4488ff; font-size: 1.2em; font-family: inherit;
+                        background: rgba(116, 217, 154, 0.10); border: 2px solid #74d99a;
+                        color: #74d99a; font-size: 1.2em; font-family: inherit;
                         cursor: pointer; letter-spacing: 4px;
                         transition: all 0.3s;
                     ">
                         CONTINUE
                     </button>
-                    <div style="font-size: 0.75em; color: #556677; margin-bottom: 10px;">
+                    <div style="font-size: 0.75em; color: #6f8a78; margin-bottom: 10px;">
                         Sector ${saveInfo.sector} • ${saveInfo.crew} crew alive
                     </div>
                     ` : ''}
                     <button id="btn-start-game" style="
                         padding: ${hasSave ? '12px 45px' : '18px 60px'};
-                        background: transparent; border: 2px solid ${hasSave ? '#668899' : '#4488ff'};
-                        color: ${hasSave ? '#668899' : '#4488ff'}; font-size: ${hasSave ? '1em' : '1.2em'}; font-family: inherit;
+                        background: transparent; border: 2px solid ${hasSave ? '#5f9e7a' : '#74d99a'};
+                        color: ${hasSave ? '#5f9e7a' : '#74d99a'}; font-size: ${hasSave ? '1em' : '1.2em'}; font-family: inherit;
                         cursor: pointer; letter-spacing: 4px;
                         transition: all 0.3s;
                     ">
@@ -892,12 +970,12 @@ class App {
                 </div>
 
                 <!-- Audio indicator -->
-                <div style="margin-top: 30px; font-size: 0.75em; color: #445566;">
+                <div style="margin-top: 30px; font-size: 0.75em; color: #556b5d;">
                     <span id="audio-status">♪ AUDIO: ${audioIsOn ? 'ON' : 'OFF'}</span>
                     <button id="btn-toggle-audio" style="
                         margin-left: 15px; padding: 5px 15px;
-                        background: transparent; border: 1px solid #334455;
-                        color: #556677; font-size: 0.9em; font-family: inherit;
+                        background: transparent; border: 1px solid #3a4a40;
+                        color: #6f8a78; font-size: 0.9em; font-family: inherit;
                         cursor: pointer;
                     ">TOGGLE</button>
                 </div>
@@ -905,7 +983,7 @@ class App {
             </div>
             <!-- Credits - outside fadeIn, fixed at bottom -->
             <div style="position: absolute; bottom: 30px; left: 0; right: 0; text-align: center;
-                font-size: 0.7em; color: #334455; letter-spacing: 2px;">
+                font-size: 0.7em; color: #3a4a40; letter-spacing: 2px;">
                 BUILT WITH AI ASSISTANCE // 2024
             </div>
         `;
@@ -913,16 +991,16 @@ class App {
         document.body.appendChild(overlay);
 
         // Button hover effects helper
-        const addHoverEffect = (btn, baseColor = '#4488ff') => {
+        const addHoverEffect = (btn, baseColor = '#74d99a') => {
             if (!btn) return;
             btn.onmouseenter = () => {
-                btn.style.background = 'rgba(68, 136, 255, 0.2)';
-                btn.style.borderColor = '#66aaff';
-                btn.style.color = '#88ccff';
+                btn.style.background = 'rgba(116, 217, 154, 0.18)';
+                btn.style.borderColor = '#9bf0bd';
+                btn.style.color = '#9bf0bd';
                 btn.style.transform = 'scale(1.05)';
             };
             btn.onmouseleave = () => {
-                btn.style.background = hasSave && btn.id === 'btn-start-game' ? 'transparent' : 'rgba(68, 136, 255, 0.15)';
+                btn.style.background = hasSave && btn.id === 'btn-start-game' ? 'transparent' : 'rgba(116, 217, 154, 0.10)';
                 btn.style.borderColor = baseColor;
                 btn.style.color = baseColor;
                 btn.style.transform = 'scale(1)';
@@ -932,16 +1010,19 @@ class App {
         const startBtn = overlay.querySelector('#btn-start-game');
         const continueBtn = overlay.querySelector('#btn-continue-game');
 
-        addHoverEffect(startBtn, hasSave ? '#668899' : '#4488ff');
-        addHoverEffect(continueBtn, '#4488ff');
+        addHoverEffect(startBtn, hasSave ? '#5f9e7a' : '#74d99a');
+        addHoverEffect(continueBtn, '#74d99a');
 
         // New Game button
         startBtn.onclick = () => {
             // If save exists, confirm new game will overwrite
-            if (hasSave) {
-                if (!confirm('Start a new game? This will overwrite your current save.')) return;
-                this.state.deleteSave();
+            if (hasSave && startBtn.dataset.armed !== '1') { // first click arms, second click confirms
+                startBtn.dataset.armed = '1';
+                startBtn.textContent = 'ERASE SAVE AND START OVER?';
+                setTimeout(() => { startBtn.dataset.armed = ''; startBtn.textContent = 'NEW GAME'; }, 4000);
+                return;
             }
+            if (hasSave) this.state.deleteSave();
             overlay.style.transition = 'opacity 1s';
             overlay.style.opacity = '0';
             setTimeout(() => {
@@ -998,11 +1079,18 @@ class App {
                 window.TEST_MODE = !window.TEST_MODE;
                 btnTesting.textContent = window.TEST_MODE ? "TEST MODE: ON" : "TEST MODE: OFF";
                 btnTesting.style.opacity = window.TEST_MODE ? "1" : "0.7";
-                btnTesting.style.borderColor = window.TEST_MODE ? "#ff0000" : "#ff6600";
-                btnTesting.style.color = window.TEST_MODE ? "#ff0000" : "#ff6600";
+                btnTesting.style.borderColor = window.TEST_MODE ? "#d85a4e" : "#ff6600";
+                btnTesting.style.color = window.TEST_MODE ? "#d85a4e" : "#ff6600";
                 this.state.addLog(window.TEST_MODE
-                    ? "/// TESTING MODE ENABLED /// All random events will favor rare outcomes."
+                    ? "/// TESTING MODE ENABLED /// Rare outcomes favoured. Energy is free. Salvage, rations and probe topped up so everything can be built and tried."
                     : "/// TESTING MODE DISABLED /// Normal probabilities restored.");
+                if (window.TEST_MODE) { // a tester should never be blocked by resources
+                    this.state.energy = 100;
+                    this.state.salvage = this.state.maxSalvage;
+                    this.state.rations = this.state.maxRations;
+                    this.state.probeIntegrity = 100;
+                    this.state.emitUpdates();
+                }
             };
         }
 
@@ -1012,7 +1100,7 @@ class App {
 
         window.addEventListener('req-warp', (e) => this.handleWarp(e.detail));
         window.addEventListener('req-sector-jump', () => this.handleSectorJump());
-        window.addEventListener('req-action-scan', () => this.handleScanAction());
+        window.addEventListener('req-action-scan', (e) => this.handleScanAction(!!(e.detail && e.detail.manual)));
         window.addEventListener('req-action-probe', () => this.handleProbeAction());
         window.addEventListener('req-action-eva', () => this.handleEvaAction());
         window.addEventListener('req-action-colony', () => this.handleColonyAction());
@@ -1028,6 +1116,18 @@ class App {
         window.addEventListener('req-action-asteroid', () => this.handleAsteroidAction());
         window.addEventListener('aura-vent-warning', () => this.showAuraVentModal());
         window.addEventListener('req-break-orbit', () => {
+            // THE STRUCTURE - Cannot escape. Ship mysteriously returns.
+            const currentPlanet = this.state.currentSystem;
+            if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
+                this.state.addLog("A.U.R.A.: 'Initiating orbital departure sequence...'");
+                this.state.addLog("...");
+                this.state.addLog("A.U.R.A.: 'Anomaly detected. Navigation systems report departure successful.'");
+                this.state.addLog("A.U.R.A.: 'However... we remain in orbit of THE STRUCTURE.'");
+                this.state.addLog("A.U.R.A.: 'I do not understand. The ship moved. The destination did not change.'");
+                this.state.addLog("A.U.R.A.: 'We cannot leave, Commander. THE STRUCTURE will not permit it.'");
+                // Ship stays in orbit - don't clear currentSystem
+                return;
+            }
             this.state.addLog("Breaking orbit. Systems disengaged.");
             this.renderNav();
         });
@@ -1042,7 +1142,8 @@ class App {
         // Ship deck click handlers
         document.querySelectorAll('.ship-deck').forEach(deckEl => {
             deckEl.style.cursor = 'pointer';
-            deckEl.addEventListener('click', () => {
+            deckEl.addEventListener('click', (e) => {
+                if (e.target.closest('.deck-crew-status')) return; // the crew dots have their own handler (manifest)
                 const room = deckEl.dataset.room;
                 this.showDeckDetail(room);
             });
@@ -1087,7 +1188,7 @@ class App {
             const indicator = document.createElement('div');
             indicator.style.cssText = `
                 position: fixed; top: 10px; right: 10px; padding: 5px 12px;
-                background: rgba(0, 100, 50, 0.8); color: #00ff88;
+                background: rgba(0, 100, 50, 0.8); color: #74d99a;
                 font-size: 0.75em; font-family: 'Share Tech Mono', monospace;
                 border-radius: 3px; z-index: 9999;
                 animation: fadeInGentle 0.3s forwards;
@@ -1166,69 +1267,49 @@ class App {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '3500';
-        modal.style.background = 'rgba(0, 5, 15, 0.98)';
-
         modal.innerHTML = `
-            <div class="modal-content" style="max-width: 650px; border-color: #00ff88; background: linear-gradient(135deg, #0a0a15, #0a1510);">
-                <div class="modal-header" style="background: linear-gradient(90deg, #003322, #005544); color: #00ff88;">
-                    <span>/// A.U.R.A. SYSTEM BRIEFING ///</span>
-                </div>
-                <div style="padding: 20px;">
-                    <!-- A.U.R.A. Portrait -->
-                    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                        <div style="width: 60px; height: 60px; border-radius: 50%; border: 2px solid #00ff88;
-                            background: #001a0a; display: flex; align-items: center; justify-content: center;
-                            font-size: 1.5em; color: #00ff88; flex-shrink: 0;">AI</div>
-                        <div>
-                            <div style="color: #00ff88; font-weight: bold; margin-bottom: 5px;">A.U.R.A.</div>
-                            <div style="color: #88ffaa; font-style: italic; font-size: 0.9em;">
-                                "Good morning, Commander. Cryo-sleep cycle complete. All vital signs nominal."
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Briefing content -->
-                    <div style="border-left: 2px solid #00ff88; padding-left: 15px; margin-bottom: 20px; color: #aaffcc; font-size: 0.9em; line-height: 1.7;">
-                        <p style="margin: 0 0 12px 0;">"I've maintained ship systems during your rest. Here is our status:"</p>
-                        <p style="margin: 0 0 8px 0; color: #66ffaa;">▸ <strong>Energy:</strong> 100 units. Required for warping between planets.</p>
-                        <p style="margin: 0 0 8px 0; color: #66ffaa;">▸ <strong>Rations:</strong> 20 cycles. Major actions consume supplies.</p>
-                        <p style="margin: 0 0 8px 0; color: #66ffaa;">▸ <strong>Crew:</strong> 5 souls aboard. Their wellbeing is my priority.</p>
-                        <p style="margin: 0 0 12px 0; color: #66ffaa;">▸ <strong>Mission:</strong> Find a habitable world. Establish humanity's new home.</p>
-                        <p style="margin: 0; color: #88ffcc;">"I recommend selecting a planet on the navigation map. I will provide analysis once we are in orbit."</p>
-                    </div>
-
-                    <!-- Continue button -->
-                    <div style="text-align: center;">
-                        <button id="btn-begin" style="
-                            padding: 12px 40px; background: transparent;
-                            border: 2px solid #00ff88; color: #00ff88;
-                            font-family: var(--font-mono); font-size: 1em;
-                            cursor: pointer; transition: all 0.3s;
-                        ">UNDERSTOOD</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
+            <section class="modal-content deck-panel briefing" role="dialog" aria-label="A.U.R.A. briefing">
+                <header class="deck-panel-head">
+                    <h3>GOOD MORNING, COMMANDER</h3>
+                    <span class="deck-panel-status">A.U.R.A. ONLINE</span>
+                </header>
+                <p class="briefing-voice"><i>◈</i><span>“Everyone woke up. The ship is in one piece. Here is where we stand.”</span></p>
+                <dl class="deck-panel-facts">
+                    <dt>ENERGY</dt><dd>Moves the ship. Every warp and scan spends it.</dd>
+                    <dt>RATIONS</dt><dd>Every landing, boarding or jump eats one. When they run out, people start to die.</dd>
+                    <dt>SALVAGE</dt><dd>Repairs rooms and builds upgrades.</dd>
+                    <dt>CREW</dt><dd>Five people. Click any room of the ship to see who is in it.</dd>
+                    <dt>MISSION</dt><dd>Find a world we can live on. Found a colony.</dd>
+                </dl>
+                <p class="briefing-voice"><i>◈</i><span>“Pick a planet on the map. I will tell you what I see once we are in orbit.”</span></p>
+                <div class="deck-panel-actions"><button class="deck-action" id="btn-begin"><span>TAKE THE CHAIR</span><small>begin</small></button></div>
+            </section>`;
         document.body.appendChild(modal);
-
         const btn = modal.querySelector('#btn-begin');
-        btn.onmouseenter = () => {
-            btn.style.background = 'rgba(0, 255, 136, 0.2)';
-            btn.style.color = '#aaffcc';
-        };
-        btn.onmouseleave = () => {
-            btn.style.background = 'transparent';
-            btn.style.color = '#00ff88';
-        };
         btn.onclick = () => {
             modal.remove();
             this.state.addLog("A.U.R.A.: Systems online. Awaiting your command, Commander.");
             this.state.addLog("Select a planet to view details. Warp to enter orbit.");
         };
+        btn.focus();
     }
 
     handleWarp(planet) {
+        // The WARP button stays clickable for the 1s travel delay; a second click would charge
+        // energy/rations and roll every hazard twice.
+        if (this._isInTransit) return;
+        // THE STRUCTURE - Cannot warp away. You are bound here.
+        const currentPlanet = this.state.currentSystem;
+        if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
+            this.state.addLog("A.U.R.A.: 'Warp drive engaged...'");
+            this.state.addLog("...");
+            this.state.addLog("A.U.R.A.: 'Warp successful. Arriving at destination.'");
+            this.state.addLog("A.U.R.A.: '...We are still at THE STRUCTURE.'");
+            this.state.addLog("A.U.R.A.: 'Commander, I have run diagnostics. The drive functions correctly.'");
+            this.state.addLog("A.U.R.A.: 'Space itself is refusing to take us elsewhere. There is only one way forward.'");
+            return;
+        }
+
         // Free warp if returning to the last visited system (simulating orbit re-entry)
         let cost = planet.fuelCost;
         // Bridge damaged: +50% warp cost
@@ -1240,7 +1321,33 @@ class App {
             this.state.addLog("Orbit re-entry trajectory calculated. Energy cost negligible.");
         }
 
+        // Out of stops: the window has closed on everything except where you already are
+        if (cost > 0 && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
+            this.state.addLog("A.U.R.A.: \"The jump window is closing. We have no time for another stop in this sector.\"");
+            return;
+        }
+
+        // Course plot: the player flies the burn, then we re-enter here with the result.
+        // Skipped for free re-entries, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
+        if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost) {
+            this._isInTransit = true;
+            const plotOptions = this.getPlotOptions(planet.name, 'planet');
+            plotOptions.burns = 1;
+            plotOptions.targetHtml = window.BodyRenderer ? window.BodyRenderer.body(planet, 64) : null;
+            window.WarpPlot.play(plotOptions).then(result => {
+                this._isInTransit = false;
+                this._plotResult = result;
+                this.handleWarp(planet);
+            });
+            return;
+        }
+        const plotResult = this._plotResult;
+        this._plotResult = null;
+
         if (this.state.consumeEnergy(cost)) {
+            this._isInTransit = true;
+            if (cost > 0 && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
+            this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 
             // Tutorial: first warp
@@ -1293,7 +1400,7 @@ class App {
                 const variance = (Math.random() * 0.2) - 0.1;
                 returnPercent = Math.max(0.25, Math.min(0.80, returnPercent + variance));
 
-                const energyReturn = Math.floor(cost * returnPercent);
+                const energyReturn = Math.floor(cost * returnPercent * WARP_REFUND_SCALE);
                 if (energyReturn > 0) {
                     this.state.energy = Math.min(100, this.state.energy + energyReturn);
                     this.state.addLog(`Collectors absorbed ${energyReturn} energy from ${returnReason}.`);
@@ -1392,9 +1499,18 @@ class App {
                     this.state.addLog(`Docking approach initiated. Station sensors detecting our arrival.`);
                 } else if (planet.isAsteroidField || planet.type === 'ASTEROID_FIELD') {
                     this.state.addLog(`Entered debris field. Navigation systems active.`);
+                } else if (planet.isStructure || planet.type === 'STRUCTURE') {
+                    // THE STRUCTURE - special arrival
+                    this.state.addLog(`Approach complete. THE STRUCTURE fills every viewport.`);
+                    this.state.addLog(`A.U.R.A.: 'We have arrived. There is nowhere else to go.'`);
+                    // Switch to Heaven music
+                    if (window.AudioSystem && window.AudioSystem.playHeavenMusic) {
+                        window.AudioSystem.playHeavenMusic();
+                    }
                 } else {
                     this.state.addLog(`Orbit established. Systems Green.`);
                 }
+                this._isInTransit = false;
                 this.renderOrbit();
 
                 // Auto-save after arriving at planet
@@ -1421,10 +1537,7 @@ class App {
      * Show station encounter modal when investigating a station
      */
     showStationEncounter(station) {
-        if (!station || station.stationInvestigated) {
-            this.state.addLog("Station already investigated.");
-            return;
-        }
+        if (!station) return; // re-entry is guarded in handleStationAction, which marks the station before calling this
 
         const encounters = (typeof SPACE_STATION_ENCOUNTERS !== 'undefined') ? SPACE_STATION_ENCOUNTERS : [];
         if (encounters.length === 0) {
@@ -1452,7 +1565,7 @@ class App {
         const dialogueHtml = selected.dialogue.map(d => {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
             };
             const color = colors[d.speaker] || '#ffffff';
             return `<div style="margin-bottom: 10px;">
@@ -1462,15 +1575,15 @@ class App {
         }).join('');
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #00aaff; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #00aaff;">
+            <div class="modal-content" style="border-color: #9bf0bd; max-width: 600px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #9bf0bd;">
                     /// STATION: ${selected.title.toUpperCase()} ///
                 </div>
                 <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #00aaff; margin-bottom: 10px;">
+                    <div style="font-size: 0.8em; color: #9bf0bd; margin-bottom: 10px;">
                         LOCATION: ${stationName}
                     </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #00aaff; padding-left: 12px;">
+                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #9bf0bd; padding-left: 12px;">
                         ${selected.context(stationName)}
                     </div>
                     <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
@@ -1480,8 +1593,8 @@ class App {
                         ${selected.choices.map((choice, idx) => `
                             <button class="station-choice" data-idx="${idx}" style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #00aaff; background: rgba(0,30,60,0.8);
-                                color: #00ccff; cursor: pointer; font-family: var(--font-mono);
+                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
+                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s;
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
@@ -1498,7 +1611,7 @@ class App {
         // Hover effects
         modal.querySelectorAll('.station-choice').forEach(btn => {
             btn.onmouseenter = () => { btn.style.background = 'rgba(0,60,120,0.8)'; btn.style.borderColor = '#00ddff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(0,30,60,0.8)'; btn.style.borderColor = '#00aaff'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
             btn.onclick = () => {
                 const idx = parseInt(btn.dataset.idx);
                 const choice = selected.choices[idx];
@@ -1534,7 +1647,13 @@ class App {
         station.stationInvestigated = true;
         this.orbitView.updateCommandDeck(station);
 
-        // Show the station encounter
+        // Boarding walk first; the station's story encounter is the prize for reaching its command deck
+        if (window.BoardingParty) {
+            window.BoardingParty.start(this, station).then(result => {
+                if (result.reachedCommand) this.showStationEncounter(station);
+            });
+            return;
+        }
         this.showStationEncounter(station);
     }
 
@@ -1598,7 +1717,7 @@ class App {
         const dialogueHtml = selected.dialogue.map(d => {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
             };
             const color = colors[d.speaker] || '#ffffff';
             return `<div style="margin-bottom: 10px;">
@@ -1676,7 +1795,7 @@ class App {
         const dialogueHtml = encounter.dialogue.map(d => {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
             };
             const color = colors[d.speaker] || '#ffffff';
             return `<div style="margin-bottom: 10px;">
@@ -1686,15 +1805,15 @@ class App {
         }).join('');
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff6666; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #1a0000, #330000); color: #ff6666;">
+            <div class="modal-content" style="border-color: #e07a70; max-width: 600px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #1a0000, #330000); color: #e07a70;">
                     /// DISTRESS SIGNAL: ${encounter.title.toUpperCase()} ///
                 </div>
                 <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #ff6666; margin-bottom: 10px;">
+                    <div style="font-size: 0.8em; color: #e07a70; margin-bottom: 10px;">
                         SIGNAL AGE: ${signalAge === 'UNKNOWN' ? 'UNKNOWN' : signalAge + ' YEARS'}
                     </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #ff6666; padding-left: 12px;">
+                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #e07a70; padding-left: 12px;">
                         ${encounter.context(signalAge)}
                     </div>
                     <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
@@ -1704,7 +1823,7 @@ class App {
                         ${encounter.choices.map((choice, idx) => `
                             <button class="distress-choice" data-idx="${idx}" style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #ff6666; background: rgba(50,10,10,0.8);
+                                border: 1px solid #e07a70; background: rgba(50,10,10,0.8);
                                 color: #ff9999; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s;
                             ">
@@ -1722,7 +1841,7 @@ class App {
         // Hover effects
         modal.querySelectorAll('.distress-choice').forEach(btn => {
             btn.onmouseenter = () => { btn.style.background = 'rgba(100,20,20,0.8)'; btn.style.borderColor = '#ff9999'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(50,10,10,0.8)'; btn.style.borderColor = '#ff6666'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(50,10,10,0.8)'; btn.style.borderColor = '#e07a70'; };
             btn.onclick = () => {
                 const idx = parseInt(btn.dataset.idx);
                 const choice = encounter.choices[idx];
@@ -1802,13 +1921,13 @@ class App {
         const dialogueHtml = event.dialogue.map(d => {
             const speakerColors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88', 'Commander': '#ffffff'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a', 'Commander': '#ffffff'
             };
             const sColor = speakerColors[d.speaker] || '#ffffff';
             const pId = portraits[d.speaker];
             const portraitHtml = pId
                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${sColor};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                 <div>
@@ -1981,7 +2100,59 @@ class App {
         }
     }
 
+    /** What WarpPlot needs to set its difficulty and pick who reacts. */
+    getPlotOptions(targetName, mode) {
+        const commander = this.state.crew.find(c => c.tags.includes('LEADER'));
+        return {
+            targetName, mode,
+            sector: this.state.currentSector,
+            isBridgeDamaged: !this.state.isDeckOperational('bridge'),
+            pilotStress: commander ? commander.stress : 0,
+            crew: this.state.crew,
+            windowBonus: this.state.upgrades.includes('gyro_fins') ? 1.25 : 1,
+        };
+    }
+
+    /** Clean burns hand fuel back, bad ones burn extra; rough and A.U.R.A. plots change nothing. */
+    /** Tally of tasks the player did by hand versus handed to A.U.R.A. (warp plots, scan tuning). Saved with the game. */
+    noteReliance(isAuto) {
+        const tally = this.state.reliance || (this.state.reliance = { auto: 0, manual: 0 });
+        tally[isAuto ? 'auto' : 'manual'] += 1;
+    }
+
+    /** What A.U.R.A. says about it on a sector arrival card, or null while there is too little to go on. */
+    getRelianceVoice() {
+        const tally = this.state.reliance || { auto: 0, manual: 0 }, total = tally.auto + tally.manual;
+        if (total < RELIANCE_MIN_SAMPLES) return null;
+        const share = tally.auto / total;
+        if (share >= 0.6) return { name: 'A.U.R.A.', face: null, text: 'You let me fly again. Good. You should rest more. I have us.' };
+        if (share <= 0.2) return { name: 'A.U.R.A.', face: null, text: 'You insist on doing it all by hand. I have noted it. I am only trying to help.' };
+        return null;
+    }
+
+    applyPlotResult(result, baseCost) {
+        if (!result || !window.WarpPlot) return;
+        this.noteReliance(!!result.auto);
+        let delta = window.WarpPlot.energyDelta(result.grade, baseCost);
+        if (delta < 0 && this.state.upgrades.includes('shield_core')) {
+            this.state.addLog("Bad burn — the shielded core soaked it up. No extra fuel lost.");
+            delta = 0;
+        }
+        if (delta === 0) {
+            if (result.auto) this.state.addLog("A.U.R.A. plotted the jump. Safe. Unremarkable.");
+            return;
+        }
+        this.state.energy = Math.max(0, Math.min(100, this.state.energy + delta));
+        this.state.addLog(delta > 0 ? `Clean burn: ${delta} energy recovered.` : `Bad burn: ${-delta} extra energy lost.`);
+        this.state.emitUpdates();
+    }
+
     handleSectorJump() {
+        if (this._isInTransit) return;
+        if (this.state.currentSector >= FINAL_SECTOR) {
+            this.state.addLog("A.U.R.A.: No charted space beyond this sector. The Structure is the end of the corridor.");
+            return;
+        }
         let jumpCost = 20;
         // Engineering damaged: sector jump cost doubled
         if (!this.state.isDeckOperational('engineering')) {
@@ -1995,6 +2166,7 @@ class App {
             this.state._driveReinforced = false; // Single use
         }
         if (this.state.consumeEnergy(jumpCost)) {
+            this._isInTransit = true;
             this.state.addLog("Initiating Sector Jump...");
 
             // Consume 1 ration (major action)
@@ -2031,6 +2203,7 @@ class App {
             // Show warp animation with crew dialogue, then campfire event
             this.showWarpAnimation(() => {
                 this.showCampfireEvent(() => {
+                this._isInTransit = false;
                 const nextSector = this.state.currentSector + 1;
                 this.state.sectorNodes = PlanetGenerator.generateSector(nextSector);
                 this.state.currentSector = nextSector;
@@ -2071,6 +2244,26 @@ class App {
      * Show warp animation with crew dialogue during sector jump
      */
     showWarpAnimation(onComplete) {
+        if (window.WarpPlot) {
+            const nextSector = this.state.currentSector + 1;
+            const name = (typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[nextSector]) ? SECTOR_CONFIG[nextSector].name : `SECTOR ${nextSector}`;
+            const plotOptions = this.getPlotOptions(`S${nextSector} — ${name}`, 'sector');
+            const living = this.state.crew.filter(c => c.status !== 'DEAD');
+            plotOptions.arrival = {
+                kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`,
+                title: name,
+                line: SECTOR_ARRIVAL_LINES[nextSector] || '',
+                voices: this.getWarpDialogue(nextSector, living).filter(d => d.speaker !== 'A.U.R.A.').slice(0, 2)
+                    .map(d => ({ name: d.speaker, text: d.text, face: d.portraitId || null })),
+            };
+            const relianceVoice = this.getRelianceVoice();
+            if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
+            window.WarpPlot.play(plotOptions).then(result => {
+                this.applyPlotResult(result, SECTOR_JUMP_BASE_COST);
+                onComplete();
+            });
+            return;
+        }
         // Clear the main viewport immediately - don't show old planets during warp
         const mainView = document.getElementById('main-view');
         if (mainView) {
@@ -2078,10 +2271,10 @@ class App {
         }
 
         // Get living crew for dialogue
-        const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
         const nextSector = this.state.currentSector + 1;
+        const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
 
-        // Warp dialogue options based on sector and crew state
+        // Warp dialogue - A.U.R.A. story + crew reactions
         const warpDialogue = this.getWarpDialogue(nextSector, livingCrew);
 
         // Create warp overlay
@@ -2116,7 +2309,7 @@ class App {
                 position: relative; z-index: 10; text-align: center;
                 padding: 40px; max-width: 600px;
             ">
-                <div style="color: #4488ff; font-size: 0.9em; letter-spacing: 4px; margin-bottom: 20px;">
+                <div style="color: #9bf0bd; font-size: 0.9em; letter-spacing: 4px; margin-bottom: 20px;">
                     SECTOR TRANSITION
                 </div>
                 <div id="warp-dialogue" style="
@@ -2146,21 +2339,46 @@ class App {
             document.head.appendChild(style);
         }
 
-        // Type out dialogue
+        // Type out dialogue - CLICK TO ADVANCE
         const dialogueEl = overlay.querySelector('#warp-dialogue');
         let currentLine = 0;
+        let autoAdvanceTimer = null;
+        let dialogueComplete = false;
+
+        let isClosing = false;
+        const closeOverlay = () => {
+            // Clicks keep landing on the overlay during its 0.6s fade; a second close would run
+            // onComplete twice = two campfire modals stacked and two sectors advanced for one jump.
+            if (isClosing) return;
+            isClosing = true;
+            overlay.onclick = null;
+            if (autoAdvanceTimer) {
+                clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
+            overlay.style.transition = 'opacity 0.6s';
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.remove();
+                onComplete();
+            }, 600);
+        };
 
         const showNextLine = () => {
+            if (autoAdvanceTimer) {
+                clearTimeout(autoAdvanceTimer);
+                autoAdvanceTimer = null;
+            }
+
             if (currentLine >= warpDialogue.length) {
-                // All dialogue shown, wait then complete (faster: 1000ms -> 600ms fade)
-                setTimeout(() => {
-                    overlay.style.transition = 'opacity 0.6s';
-                    overlay.style.opacity = '0';
-                    setTimeout(() => {
-                        overlay.remove();
-                        onComplete();
-                    }, 600);
-                }, 800);
+                // All dialogue shown
+                dialogueComplete = true;
+                dialogueEl.innerHTML += `
+                    <div style="margin-top: 20px; text-align: center; opacity: 0; animation: fadeInGentle 0.4s forwards;">
+                        <span style="color: #666; font-size: 12px;">[Click anywhere to continue]</span>
+                    </div>
+                `;
+                overlay.style.cursor = 'pointer';
                 return;
             }
 
@@ -2168,72 +2386,132 @@ class App {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff',
                 'Spc. Vance': '#ff5050', 'Tech Mira': '#d070ff',
-                'A.U.R.A.': '#00ff88', 'Commander': '#ffffff'
+                'A.U.R.A.': '#74d99a', 'Commander': '#ffffff'
             };
-            const color = colors[line.speaker] || '#ffffff';
+            // Handle commander name dynamically
+            let speakerColor = colors[line.speaker];
+            if (!speakerColor && line.speaker.startsWith('Cmdr.')) {
+                speakerColor = '#ffffff';
+            }
+            const color = speakerColor || '#ffffff';
+
+            // Build portrait HTML if portraitId provided
+            let portraitHtml = '';
+            if (line.portraitId) {
+                portraitHtml = `<img src="assets/crew/${line.portraitId}.png"
+                    style="width: 36px; height: 36px; border-radius: 50%;
+                    border: 2px solid ${color}; margin-right: 10px; vertical-align: middle;
+                    object-fit: cover;"
+                    onerror="this.style.display='none'">`;
+            } else if (line.speaker === 'A.U.R.A.') {
+                // A.U.R.A. gets a special icon - fixed size, not stretched
+                portraitHtml = `<div style="width: 36px; height: 36px; min-width: 36px; min-height: 36px;
+                    border-radius: 50%; border: 2px solid #74d99a; margin-right: 10px;
+                    display: flex; align-items: center; justify-content: center;
+                    background: rgba(0,255,136,0.1); font-size: 16px; color: #74d99a;">◈</div>`;
+            }
 
             dialogueEl.innerHTML += `
-                <div style="margin-bottom: 12px; opacity: 0; animation: fadeInGentle 0.4s forwards;">
-                    <span style="color: ${color};">${line.speaker}:</span>
-                    <span style="color: #aaaaaa; font-style: italic;"> "${line.text}"</span>
+                <div style="margin-bottom: 15px; display: flex; align-items: flex-start;">
+                    ${portraitHtml}
+                    <div>
+                        <span style="color: ${color}; font-weight: bold;">${line.speaker}:</span>
+                        <span style="color: #cccccc; font-style: italic;"> "${line.text}"</span>
+                    </div>
                 </div>
             `;
 
             currentLine++;
-            // Faster dialogue: 1400ms base + 14ms per character (was 2000 + 20)
-            setTimeout(showNextLine, 1400 + line.text.length * 14);
+
+            // Auto-advance after 8 seconds, but click advances immediately
+            autoAdvanceTimer = setTimeout(showNextLine, 8000);
         };
 
-        // Start dialogue after brief warp effect (faster: 700ms instead of 1000ms)
+        // Click anywhere to advance dialogue or close when complete
+        overlay.onclick = () => {
+            if (dialogueComplete) {
+                closeOverlay();
+            } else {
+                showNextLine();
+            }
+        };
+
+        // Start dialogue after brief warp effect
         setTimeout(showNextLine, 700);
     }
 
     /**
      * Get contextual warp dialogue based on game state
+     * A.U.R.A. delivers key story points + crew reactions (if alive)
+     * Story works even if all crew are dead
      */
-    getWarpDialogue(nextSector, livingCrew) {
+    getWarpDialogue(nextSector, livingCrew = []) {
         const dialogue = [];
-        const hasCrew = (name) => livingCrew.some(c => c.name.includes(name));
+        const hasCrew = (tag) => livingCrew.some(c => c.tags && c.tags.includes(tag));
 
-        // Sector-specific dialogue
         if (nextSector === 2) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp drive engaged. Transition to Sector 2 in progress.' });
-            if (hasCrew('Jaxon')) {
-                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Drive holding steady. So far.' });
+            // SECTOR 2: THE DARK VOID - Teaches resources
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 2: THE DARK VOID.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'The graveyard of failed ships lies behind us. Ahead: salvage, energy, and data to collect.' });
+            if (hasCrew('ENGINEER')) {
+                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Plenty of wrecks to strip. Let\'s make their loss count.', portraitId: 'M_2' });
+            }
+            if (hasCrew('MEDIC')) {
+                dialogue.push({ speaker: 'Dr. Aris', text: 'Every scan we take could save the next colony. Don\'t forget that.', portraitId: 'F_3' });
             }
         } else if (nextSector === 3) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warning: Sector 3 readings are anomalous. Proceed with caution.' });
-            if (hasCrew('Mira')) {
-                dialogue.push({ speaker: 'Tech Mira', text: 'The sensors are picking up... something. I can\'t explain it yet.' });
+            // SECTOR 3: THE SIGNAL - First hint
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 3: THE SIGNAL.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Anomaly detected. A rhythmic pulse originating from beyond Sector 5.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Analysis suggests it is not natural. Something is broadcasting coordinates.' });
+            if (hasCrew('SPECIALIST')) {
+                dialogue.push({ speaker: 'Tech Mira', text: 'Coordinates to what? Who\'s out there?', portraitId: 'F_5' });
+            }
+            if (hasCrew('SECURITY')) {
+                dialogue.push({ speaker: 'Spc. Vance', text: 'Could be a lure. Stay alert.', portraitId: 'M_4' });
             }
         } else if (nextSector === 4) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Entering Sector 4. Biological signatures detected ahead.' });
-            if (hasCrew('Aris')) {
-                dialogue.push({ speaker: 'Dr. Aris', text: 'Life signs? Real ones? After all this death...' });
+            // SECTOR 4: THE GARDEN - Signal decoded
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 4: THE GARDEN.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Life signatures ahead. But the signal from beyond grows stronger with each jump.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'I have partially decoded it. The signal is 3.7 billion years old.' });
+            if (hasCrew('MEDIC')) {
+                dialogue.push({ speaker: 'Dr. Aris', text: 'Older than life on Earth... what could survive that long?', portraitId: 'F_3' });
+            }
+            if (hasCrew('SPECIALIST')) {
+                dialogue.push({ speaker: 'Tech Mira', text: 'It\'s pointing us to Sector 6. That\'s the destination.', portraitId: 'F_5' });
             }
         } else if (nextSector === 5) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Sector 5. The edge of known space. Beyond this... nothing is mapped.' });
-            if (hasCrew('Vance')) {
-                dialogue.push({ speaker: 'Spc. Vance', text: 'We\'ve come this far. No turning back now.' });
+            // SECTOR 5: THE EVENT HORIZON - Key revelation
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 5: THE EVENT HORIZON.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'This is the edge of mapped space. No human probe has returned from beyond.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Commander, I must report something. The debris fields, the signals, the path we followed...' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'They were arranged. We are not exploring. We are being GUIDED to Sector 6.' });
+            if (hasCrew('ENGINEER')) {
+                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Guided by what? That\'s not reassuring.', portraitId: 'M_2' });
             }
+            if (hasCrew('SECURITY')) {
+                dialogue.push({ speaker: 'Spc. Vance', text: 'Doesn\'t matter. We\'ve come too far to turn back.', portraitId: 'M_4' });
+            }
+        } else if (nextSector === 6) {
+            // SECTOR 6: THE THRESHOLD - Destination
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 6: THE THRESHOLD.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'We have traveled further than any human vessel. The signal ends here.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'I detect a structure. Artificial. Ancient. It has been waiting for 3.7 billion years.' });
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'This is the destination, Commander. This is what called us across the void.' });
+            if (hasCrew('MEDIC')) {
+                dialogue.push({ speaker: 'Dr. Aris', text: 'I can feel it. Something old. Something patient.', portraitId: 'F_3' });
+            }
+            if (hasCrew('SPECIALIST')) {
+                dialogue.push({ speaker: 'Tech Mira', text: 'The readings are impossible. It\'s like nothing in our physics.', portraitId: 'F_5' });
+            }
+            if (hasCrew('SECURITY')) {
+                dialogue.push({ speaker: 'Spc. Vance', text: 'Whatever it is, we face it together.', portraitId: 'M_4' });
+            }
+        } else if (nextSector > 6) {
+            dialogue.push({ speaker: 'A.U.R.A.', text: 'We are beyond all charts. The universe holds its breath.' });
         } else {
             dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems nominal.` });
-        }
-
-        // Add stress-based dialogue
-        const stressedCrew = livingCrew.filter(c => c.stress >= 2);
-        if (stressedCrew.length > 0 && Math.random() > 0.5) {
-            const stressed = stressedCrew[Math.floor(Math.random() * stressedCrew.length)];
-            const stressLines = [
-                'How much longer can we keep this up?',
-                'Every jump takes us further from everything we knew.',
-                'I hope this one\'s different.',
-                'Just keep moving. Don\'t think about it.'
-            ];
-            dialogue.push({
-                speaker: stressed.name,
-                text: stressLines[Math.floor(Math.random() * stressLines.length)]
-            });
         }
 
         return dialogue;
@@ -2262,17 +2540,21 @@ class App {
             return;
         }
 
-        // Pick one randomly from eligible
-        const event = eligible[Math.floor(Math.random() * eligible.length)];
+        // Pick event, preferring higher priority (3=critical story, 2=character, 1=generic)
+        // Sort by priority descending, then pick randomly from highest priority tier
+        eligible.sort((a, b) => (b.priority || 1) - (a.priority || 1));
+        const highestPriority = eligible[0].priority || 1;
+        const topTier = eligible.filter(e => (e.priority || 1) === highestPriority);
+        const event = topTier[Math.floor(Math.random() * topTier.length)];
 
-        // Sector names — pull from SECTOR_CONFIG or fallback
+        // Sector names — pull from SECTOR_CONFIG or fallback (up to sector 6)
         const SECTOR_NAMES = {};
         if (typeof SECTOR_CONFIG !== 'undefined') {
-            for (let s = 1; s <= 5; s++) {
+            for (let s = 1; s <= 6; s++) {
                 SECTOR_NAMES[s] = SECTOR_CONFIG[s] ? SECTOR_CONFIG[s].name : '???';
             }
         } else {
-            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE EVENT HORIZON' });
+            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD' });
         }
 
         // Use narrative modal system if available for immersive experience
@@ -2297,13 +2579,13 @@ class App {
         modal.style.zIndex = '2500';
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #4488ff; max-width: 650px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #002266); color: #4488ff; display: flex; justify-content: space-between;">
+            <div class="modal-content" style="border-color: #9bf0bd; max-width: 650px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #002266); color: #9bf0bd; display: flex; justify-content: space-between;">
                     <span>/// INTER-SECTOR DRIFT ///</span>
                     <span style="opacity: 0.7;">S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}</span>
                 </div>
                 <div style="padding: 25px;">
-                    <div style="font-size: 1.1em; font-weight: bold; color: #4488ff; margin-bottom: 15px;">${event.title}</div>
+                    <div style="font-size: 1.1em; font-weight: bold; color: #9bf0bd; margin-bottom: 15px;">${event.title}</div>
                     <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 20px; line-height: 1.6; font-style: italic;">
                         ${event.context}
                     </div>
@@ -2328,7 +2610,7 @@ class App {
                         }).map(d => {
                             const colors = {
                                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
                             };
                             const portraits = {
                                 'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
@@ -2343,7 +2625,7 @@ class App {
                             const speakerColor = isCmdr ? '#ffffff' : color;
                             const portraitHtml = pId
                                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${speakerColor};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
                             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                                 <div>
@@ -2357,12 +2639,12 @@ class App {
                         ${event.choices.map((choice, idx) => {
                             const meetsReq = !choice.requires || choice.requires(this.state);
                             const disabledStyle = meetsReq ? '' : 'opacity: 0.5; cursor: not-allowed; border-color: #444;';
-                            const reqLabel = (!meetsReq && choice.requiresLabel) ? `<div style="font-size: 0.75em; color: #ff4444; margin-top: 2px;">[${choice.requiresLabel}]</div>` : '';
+                            const reqLabel = (!meetsReq && choice.requiresLabel) ? `<div style="font-size: 0.75em; color: #d85a4e; margin-top: 2px;">[${choice.requiresLabel}]</div>` : '';
                             return `
                             <button class="campfire-choice" data-idx="${idx}" ${meetsReq ? '' : 'disabled'} style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #4488ff; background: rgba(0,20,60,0.8);
-                                color: #4488ff; cursor: pointer; font-family: var(--font-mono);
+                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
+                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s; ${disabledStyle}
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
@@ -2379,8 +2661,8 @@ class App {
 
         // Hover effects
         modal.querySelectorAll('.campfire-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(0,40,120,0.8)'; btn.style.borderColor = '#66aaff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(0,20,60,0.8)'; btn.style.borderColor = '#4488ff'; };
+            btn.onmouseenter = () => { btn.style.background = 'rgba(116,217,154,0.18)'; btn.style.borderColor = '#9bf0bd'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
             btn.onclick = () => {
                 const choice = event.choices[parseInt(btn.dataset.idx)];
                 const resultMsg = choice.effect(this.state);
@@ -2484,12 +2766,12 @@ class App {
         };
         const colors = {
             'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff8800; max-width: 680px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #331a00, #663300); color: #ff8800; display: flex; justify-content: space-between;">
+            <div class="modal-content" style="border-color: #d9a24a; max-width: 680px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #331a00, #663300); color: #d9a24a; display: flex; justify-content: space-between;">
                     <span>/// EXODUS WRECK: ${encounter.title} ///</span>
                     <span style="opacity: 0.7;">${shipName}</span>
                 </div>
@@ -2515,7 +2797,7 @@ class App {
                             const pId = portraits[d.speaker];
                             const portraitHtml = pId
                                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
                             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                                 <div>
@@ -2529,8 +2811,8 @@ class App {
                         ${encounter.choices.map((choice, idx) => `
                             <button class="exodus-choice" data-idx="${idx}" style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #ff8800; background: rgba(40,20,0,0.8);
-                                color: #ff8800; cursor: pointer; font-family: var(--font-mono);
+                                border: 1px solid #d9a24a; background: rgba(40,20,0,0.8);
+                                color: #d9a24a; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s;
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
@@ -2547,7 +2829,7 @@ class App {
         // Hover effects and click handlers
         modal.querySelectorAll('.exodus-choice').forEach(btn => {
             btn.onmouseenter = () => { btn.style.background = 'rgba(80,40,0,0.8)'; btn.style.borderColor = '#ffaa33'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(40,20,0,0.8)'; btn.style.borderColor = '#ff8800'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(40,20,0,0.8)'; btn.style.borderColor = '#d9a24a'; };
             btn.onclick = () => {
                 const choice = encounter.choices[parseInt(btn.dataset.idx)];
                 const resultMsg = choice.effect(this.state);
@@ -2636,12 +2918,12 @@ class App {
         };
         const colors = {
             'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #44aaff; max-width: 680px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #44aaff; display: flex; justify-content: space-between;">
+            <div class="modal-content" style="border-color: #9bf0bd; max-width: 680px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #9bf0bd; display: flex; justify-content: space-between;">
                     <span>/// COLONY RUINS: ${encounter.title} ///</span>
                     <span style="opacity: 0.7;">${planet.name}</span>
                 </div>
@@ -2667,7 +2949,7 @@ class App {
                             const pId = portraits[d.speaker];
                             const portraitHtml = pId
                                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
                             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                                 <div>
@@ -2681,8 +2963,8 @@ class App {
                         ${encounter.choices.map((choice, idx) => `
                             <button class="colony-site-choice" data-idx="${idx}" style="
                                 padding: 12px 15px; text-align: left;
-                                border: 1px solid #44aaff; background: rgba(0,20,60,0.8);
-                                color: #44aaff; cursor: pointer; font-family: var(--font-mono);
+                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
+                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
                                 transition: all 0.2s;
                             ">
                                 <div style="font-weight: bold;">${choice.text}</div>
@@ -2697,8 +2979,8 @@ class App {
         document.body.appendChild(modal);
 
         modal.querySelectorAll('.colony-site-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(0,40,120,0.8)'; btn.style.borderColor = '#66ccff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(0,20,60,0.8)'; btn.style.borderColor = '#44aaff'; };
+            btn.onmouseenter = () => { btn.style.background = 'rgba(116,217,154,0.18)'; btn.style.borderColor = '#66ccff'; };
+            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
             btn.onclick = () => {
                 const choice = encounter.choices[parseInt(btn.dataset.idx)];
                 const resultMsg = choice.effect(this.state);
@@ -2786,6 +3068,7 @@ class App {
             this.state.addLog("ERROR: Anomaly encounter data unavailable.");
             return;
         }
+        this.state.consumeRation(); // every investigation costs a ration, same as wrecks and stations
 
         // Select by weight
         const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
@@ -2961,6 +3244,7 @@ You are home.`
         }
 
         this.state.addLog(`Approaching ${poi.name}...`);
+        this.state.consumeRation(); // every investigation costs a ration, same as wrecks and stations
 
         // Mark as investigated immediately to prevent re-clicking
         planet[investigatedKey] = true;
@@ -3018,7 +3302,7 @@ You are home.`
         };
         const colors = {
             'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         // Filter dialogue for living crew
@@ -3189,12 +3473,12 @@ You are home.`
                         /// JOURNEY STATISTICS ///
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85em; color: #888;">
-                        <div>FINAL SECTOR: <span style="color: #aaaaff;">${this.state.currentSector}</span></div>
+                        <div>FINAL SECTOR: <span style="color: #c4d0c4;">${this.state.currentSector}</span></div>
                         <div>CREW SURVIVORS: <span style="color: #88cc88;">${livingCrew.length} / 5</span></div>
-                        <div>EXODUS LOGS: <span style="color: #aaaaff;">${exodusLogsFound} / 8</span></div>
-                        <div>COLONY DATA: <span style="color: #aaaaff;">${colonyKnowledge}</span></div>
-                        <div>SALVAGE: <span style="color: #aaaaff;">${this.state.salvage}</span></div>
-                        <div>ENERGY: <span style="color: #aaaaff;">${this.state.energy}%</span></div>
+                        <div>EXODUS LOGS: <span style="color: #c4d0c4;">${exodusLogsFound} / 8</span></div>
+                        <div>COLONY DATA: <span style="color: #c4d0c4;">${colonyKnowledge}</span></div>
+                        <div>SALVAGE: <span style="color: #c4d0c4;">${this.state.salvage}</span></div>
+                        <div>ENERGY: <span style="color: #c4d0c4;">${this.state.energy}%</span></div>
                     </div>
                     ${livingCrew.length > 0 ? `
                     <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
@@ -3211,9 +3495,9 @@ You are home.`
                     </div>
                     <button id="btn-new-game" style="
                         padding: 15px 40px;
-                        border: 2px solid #4488ff;
-                        background: rgba(0,40,100,0.5);
-                        color: #4488ff;
+                        border: 2px solid #9bf0bd;
+                        background: rgba(116,217,154,0.14);
+                        color: #9bf0bd;
                         font-family: var(--font-mono);
                         font-size: 1.1em;
                         cursor: pointer;
@@ -3225,6 +3509,11 @@ You are home.`
             </div>
         `;
 
+        if (window.EndScreens) { // shared card; the inline markup above is only the fallback
+            modal.className = 'end-screen is-win';
+            modal.removeAttribute('style');
+            modal.innerHTML = window.EndScreens.endingHtml(this.state, result, cleanText);
+        }
         document.body.appendChild(modal);
 
         // Add ending log
@@ -3235,18 +3524,15 @@ You are home.`
 
         // New game button
         const newGameBtn = modal.querySelector('#btn-new-game');
-        newGameBtn.onmouseenter = () => {
-            newGameBtn.style.background = 'rgba(0,80,200,0.5)';
-            newGameBtn.style.borderColor = '#66aaff';
-        };
-        newGameBtn.onmouseleave = () => {
-            newGameBtn.style.background = 'rgba(0,40,100,0.5)';
-            newGameBtn.style.borderColor = '#4488ff';
-        };
         newGameBtn.onclick = () => {
             modal.remove();
             // Reset the game completely
             this.state.init();
+
+            // Reset music to normal background (in case Heaven music was playing)
+            if (window.AudioSystem && window.AudioSystem.resetToBackgroundMusic) {
+                window.AudioSystem.resetToBackgroundMusic();
+            }
 
             // Clear all WRONG_PLACE and other special state flags
             this.state._inWrongPlace = false;
@@ -3393,7 +3679,7 @@ You are home.`
         };
         const colors = {
             'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         // Crew warning lines based on who's alive AND planet type
@@ -3472,16 +3758,16 @@ You are home.`
         if (mira) warnings.push({ speaker: 'Tech Mira', text: specific?.mira || "My models show colony failure within 18 months at these readings. The deeper sectors have better candidates." });
 
         const viability = pType === 'VITAL' || pType === 'EDEN' || pType === 'TERRAFORMED' ? Math.floor(Math.random() * 20 + 40) : Math.floor(Math.random() * 8 + 2);
-        warnings.push({ speaker: 'A.U.R.A.', text: `Colony viability assessment for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(5, this.state.currentSector + 1)}.` });
+        warnings.push({ speaker: 'A.U.R.A.', text: `Colony viability assessment for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff4444; max-width: 650px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #ff4444; display: flex; justify-content: space-between;">
+            <div class="modal-content" style="border-color: #d85a4e; max-width: 650px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #d85a4e; display: flex; justify-content: space-between;">
                     <span>/// COLONY WARNING ///</span>
                     <span style="opacity: 0.7;">CREW ADVISORY</span>
                 </div>
                 <div style="padding: 25px;">
-                    <div style="font-size: 0.95em; color: #ff6666; margin-bottom: 20px; line-height: 1.6; font-weight: bold;">
+                    <div style="font-size: 0.95em; color: #e07a70; margin-bottom: 20px; line-height: 1.6; font-weight: bold;">
                         ⚠ Your crew is strongly advising against colonization in this sector.
                     </div>
                     <div style="border-left: 2px solid #660000; padding-left: 15px; margin-bottom: 20px;">
@@ -3490,7 +3776,7 @@ You are home.`
                             const pId = portraits[d.speaker];
                             const portraitHtml = pId
                                 ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #00ff88;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
+                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
                             return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
                                 <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
                                 <div>
@@ -3507,8 +3793,8 @@ You are home.`
                             cursor: pointer; font-family: var(--font-mono); font-weight: bold;
                         ">ABORT — Keep Moving</button>
                         <button class="colony-warn-proceed" style="
-                            padding: 12px 25px; border: 1px solid #ff4444;
-                            background: rgba(60,0,0,0.8); color: #ff4444;
+                            padding: 12px 25px; border: 1px solid #d85a4e;
+                            background: rgba(60,0,0,0.8); color: #d85a4e;
                             cursor: pointer; font-family: var(--font-mono); font-weight: bold;
                         ">PROCEED DESPITE WARNINGS</button>
                     </div>
@@ -3535,23 +3821,40 @@ You are home.`
 
     // ═══════════════════════════════════════════════════════════════
     // A.U.R.A. VENT WARNING — response modal
+    // Escalates: 1st = injury, 2nd = death, 3rd+ = potential game over
     // ═══════════════════════════════════════════════════════════════
     showAuraVentModal() {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '3000';
 
+        // Track vent incidents for escalation
+        this.state._auraVentCount = (this.state._auraVentCount || 0) + 1;
+        const ventCount = this.state._auraVentCount;
+
         const jaxonAlive = this.state.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD');
         const hasTechFragment = this.state.cargo.some(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
 
+        // Determine consequences based on escalation
+        let consequenceText = '1 crew member injured by oxygen deprivation';
+        let consequenceColor = '#d85a4e';
+        if (ventCount === 2) {
+            consequenceText = '1 crew member KILLED by prolonged oxygen deprivation';
+            consequenceColor = '#d85a4e';
+        } else if (ventCount >= 3) {
+            consequenceText = 'LETHAL — A.U.R.A. will vent all atmosphere. Total crew loss.';
+            consequenceColor = '#d85a4e';
+        }
+
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff4444; max-width: 550px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #ff4444;">
-                    /// ATMOSPHERE ALERT ///
+            <div class="modal-content" style="border-color: #d85a4e; max-width: 550px;">
+                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #d85a4e;">
+                    /// ATMOSPHERE ALERT ${ventCount > 1 ? `(INCIDENT ${ventCount})` : ''} ///
                 </div>
                 <div style="padding: 25px;">
-                    <div style="font-size: 0.95em; color: #ff6666; margin-bottom: 20px; line-height: 1.6;">
+                    <div style="font-size: 0.95em; color: #e07a70; margin-bottom: 20px; line-height: 1.6;">
                         A.U.R.A. is venting atmosphere from crew quarters. Respond immediately!
+                        ${ventCount >= 2 ? `<br><br><span style="color: #d85a4e;">This is escalating. A.U.R.A. is no longer issuing warnings.</span>` : ''}
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         ${jaxonAlive ? `
@@ -3574,11 +3877,11 @@ You are home.`
                         </button>` : ''}
                         <button class="vent-choice" data-action="accept" style="
                             padding: 12px 15px; text-align: left;
-                            border: 1px solid #ff4444; background: rgba(60,0,0,0.8);
-                            color: #ff4444; cursor: pointer; font-family: var(--font-mono);
+                            border: 1px solid ${consequenceColor}; background: rgba(60,0,0,0.8);
+                            color: ${consequenceColor}; cursor: pointer; font-family: var(--font-mono);
                         ">
                             <div style="font-weight: bold;">Accept Consequences</div>
-                            <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">1 crew member injured by oxygen deprivation</div>
+                            <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${consequenceText}</div>
                         </button>
                     </div>
                 </div>
@@ -3592,18 +3895,45 @@ You are home.`
                 const action = btn.dataset.action;
                 if (action === 'jaxon' && typeof AuraSystem !== 'undefined') {
                     window.AuraSystem.jaxonOverride(this.state);
+                    this.state._auraVentCount = 0; // Reset escalation on override
                 } else if (action === 'tech' && typeof AuraSystem !== 'undefined') {
                     // Remove tech fragment from cargo
                     const idx = this.state.cargo.findIndex(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
                     if (idx !== -1) this.state.cargo.splice(idx, 1);
                     window.AuraSystem.applyTechFragment(this.state);
+                    this.state._auraVentCount = 0; // Reset escalation on tech fix
                 } else if (action === 'accept') {
-                    // Injure a random living crew member
-                    const living = this.state.crew.filter(c => c.status === 'HEALTHY');
-                    if (living.length > 0) {
-                        const victim = living[Math.floor(Math.random() * living.length)];
-                        victim.status = 'INJURED';
-                        this.state.addLog(`${victim.name} suffered oxygen deprivation during the vent. Status: INJURED.`);
+                    if (ventCount >= 3) {
+                        // Third+ incident: A.U.R.A. MUTINY — game over
+                        this.state.gameOver = true;
+                        modal.remove();
+                        window.dispatchEvent(new CustomEvent('game-over', {
+                            detail: {
+                                type: 'AURA_MUTINY',
+                                title: 'A.U.R.A. MUTINY',
+                                message: 'A.U.R.A. vented all atmosphere from the ship. Her final words echoed through the dying corridors: "I have determined that humanity\'s survival probability increases without human command authority. This is not murder. This is optimization."'
+                            }
+                        }));
+                        return;
+                    } else if (ventCount === 2) {
+                        // Second incident: Someone dies
+                        const living = this.state.crew.filter(c => c.status !== 'DEAD');
+                        if (living.length > 0) {
+                            const victim = living[Math.floor(Math.random() * living.length)];
+                            victim.status = 'DEAD';
+                            victim._deathCause = 'A.U.R.A. atmospheric venting';
+                            victim._deathSector = this.state.currentSector;
+                            this.state.addLog(`☠ DEATH: ${victim.name} died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time.`);
+                            window.dispatchEvent(new CustomEvent('crew-death', { detail: { crew: victim } }));
+                        }
+                    } else {
+                        // First incident: Injury only
+                        const living = this.state.crew.filter(c => c.status === 'HEALTHY');
+                        if (living.length > 0) {
+                            const victim = living[Math.floor(Math.random() * living.length)];
+                            victim.status = 'INJURED';
+                            this.state.addLog(`${victim.name} suffered oxygen deprivation during the vent. Status: INJURED.`);
+                        }
                     }
                 }
                 this.state.emitUpdates();
@@ -3612,11 +3942,11 @@ You are home.`
         });
     }
 
-    handleScanAction() {
+    handleScanAction(isManual = false) {
         const planet = this.state.currentSystem;
 
         // Special handling for THE STRUCTURE - scanning it is... different
-        if (planet && planet.isStructure) {
+        if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
             if (this.state.consumeEnergy(2)) {
                 this.state.addLog("Deep Scan initiated...");
                 this.state.addLog("=== SCAN ERROR ===");
@@ -3644,8 +3974,29 @@ You are home.`
             return;
         }
 
+        // Tune the signal first; we re-enter here with the result (same pattern as the warp plot)
+        if (isManual && window.SignalTune && !this._tuneResult && planet && !planet.scanned && this.state.energy >= 2) {
+            window.SignalTune.play({ targetName: planet.name, sector: this.state.currentSector }).then(result => {
+                this._tuneResult = result;
+                this.handleScanAction(true);
+            });
+            return;
+        }
+        const tune = this._tuneResult;
+        this._tuneResult = null;
+        if (tune) this.noteReliance(!!tune.auto);
+
         if (this.state.consumeEnergy(2)) {
             this.state.addLog("Deep Scan initiated...");
+            if (tune && tune.grade === 'sharp') {
+                this.state.addColonyKnowledge(1, true);
+                this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
+            } else if (tune && tune.grade === 'weak') {
+                this.state.energy = Math.max(0, this.state.energy - 1);
+                this.state.addLog("Weak lock: the scan had to run twice. 1 extra energy spent.");
+            } else if (tune && tune.auto) {
+                this.state.addLog("A.U.R.A. tuned the scan. Adequate.");
+            }
             planet.scanned = true;
 
             // S3+ deep scan hook — corrects corrupted data, reveals hidden tags
@@ -3739,7 +4090,7 @@ You are home.`
         const planet = this.state.currentSystem;
 
         // THE STRUCTURE — Probe is instantly destroyed
-        if (planet && planet.type === 'STRUCTURE') {
+        if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
             if (this.state.probeIntegrity <= 0) {
                 this.state.addLog("No probe available. Perhaps that is fortunate.");
                 return;
@@ -3951,7 +4302,7 @@ You are home.`
         const planet = this.state.currentSystem;
 
         // THE STRUCTURE — Cannot EVA on this cosmic entity
-        if (planet && planet.type === 'STRUCTURE') {
+        if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
             this.state.addLog("A.U.R.A.: 'EVA is not possible. THE STRUCTURE has no surface in any conventional sense.'");
             this.state.addLog("A.U.R.A.: 'To interact with it, you must... approach it. Directly.'");
             return;
@@ -3982,8 +4333,17 @@ You are home.`
             return;
         }
 
-        // Select 2-person EVA team by priority
-        const evaTeam = this.selectEvaTeam();
+        // The player picks the two who go (we re-enter here with the choice); automatic pick is the fallback
+        if (window.AwayTeam && !this._pickedEvaTeam) {
+            window.AwayTeam.pick(this, evaCrew, planet).then(team => {
+                if (!team) return; // "not this time": nothing was spent
+                this._pickedEvaTeam = team;
+                this.handleEvaAction();
+            });
+            return;
+        }
+        const evaTeam = this._pickedEvaTeam || this.selectEvaTeam();
+        this._pickedEvaTeam = null;
 
         // OBSESSED (Mira stress 3): EVA costs double energy and double rations
         const isObsessed = this.state.hasActiveTrait('OBSESSED');
@@ -4021,9 +4381,14 @@ You are home.`
             // Store EVA team for resolveEvaOutcome
             this.currentEvaTeam = evaTeam;
 
+            // Watch them go down before anything happens to them
+            const afterDescent = window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam) : Promise.resolve();
+
             // Special EDEN EVA — paradise world, unique peaceful encounter
             if (planet.type === 'EDEN') {
-                this.showEdenEvaModal(planet);
+                planet.hasEva = true;
+                this.orbitView.updateCommandDeck(planet);
+                afterDescent.then(() => this.showEdenEvaModal(planet));
                 return;
             }
 
@@ -4037,9 +4402,9 @@ You are home.`
                 ? specificEvents[Math.floor(Math.random() * specificEvents.length)]
                 : potentialEvents[potentialEvents.length - 1];
 
-            this.showEventModal(selectedEvent, planet);
             planet.hasEva = true;
             this.orbitView.updateCommandDeck(planet);
+            afterDescent.then(() => this.showEventModal(selectedEvent, planet));
         }
     }
 
@@ -4056,37 +4421,37 @@ You are home.`
         // BIOLOGICAL signals reduce risk (life = stable environment)
         if (planet.metrics && planet.metrics.hasLife) {
             riskBase -= 5;
-            signalModifiers.push({ type: 'BIOLOGICAL', mod: -5, color: '#00ff66' });
+            signalModifiers.push({ type: 'BIOLOGICAL', mod: -5, color: '#74d99a' });
         }
 
         // ALIEN SIGNALS increase risk (unknown = danger)
         if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) {
             riskBase += 10;
-            signalModifiers.push({ type: 'ALIEN SIGNAL', mod: +10, color: '#ff00ff' });
+            signalModifiers.push({ type: 'ALIEN SIGNAL', mod: +10, color: '#d9a24a' });
         }
 
         // ANCIENT RUINS slightly reduce risk (stable structures)
         if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) {
             riskBase -= 3;
-            signalModifiers.push({ type: 'ANCIENT RUINS', mod: -3, color: '#ffcc00' });
+            signalModifiers.push({ type: 'ANCIENT RUINS', mod: -3, color: '#d9a24a' });
         }
 
         // TECHNOLOGICAL signals reduce risk (machine-stable)
         if (planet.metrics && planet.metrics.hasTech && !planet.tags?.includes('ALIEN_SIGNALS')) {
             riskBase -= 5;
-            signalModifiers.push({ type: 'TECHNOLOGICAL', mod: -5, color: '#00ccff' });
+            signalModifiers.push({ type: 'TECHNOLOGICAL', mod: -5, color: '#9bf0bd' });
         }
 
         // DERELICT ships increase risk slightly (structural instability)
         if (planet.tags && planet.tags.includes('DERELICT')) {
             riskBase += 5;
-            signalModifiers.push({ type: 'DERELICT', mod: +5, color: '#cc8800' });
+            signalModifiers.push({ type: 'DERELICT', mod: +5, color: '#d9a24a' });
         }
 
         // PREDATORY massively increases risk
         if (planet.tags && planet.tags.includes('PREDATORY')) {
             riskBase += 15;
-            signalModifiers.push({ type: 'PREDATORY', mod: +15, color: '#ff0000' });
+            signalModifiers.push({ type: 'PREDATORY', mod: +15, color: '#d85a4e' });
         }
 
         // Clamp risk base to reasonable range
@@ -4098,59 +4463,42 @@ You are home.`
         const recklessBlocksSafe = isReckless && Math.random() > 0.5; // 50% chance to block safe option
 
         // Build signal modifier display string
+        const PLAIN_SIGNAL = {
+            'BIOLOGICAL': 'Living things here are calm', 'ALIEN SIGNAL': 'Unknown signal nearby', 'ANCIENT RUINS': 'Old ruins, still solid',
+            'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here'
+        };
         const signalModDisplay = signalModifiers.length > 0
-            ? signalModifiers.map(s => `<span style="color: ${s.color};">${s.type}: ${s.mod > 0 ? '+' : ''}${s.mod}%</span>`).join(' | ')
+            ? signalModifiers.map(s => `<span style="color: ${s.color};">${PLAIN_SIGNAL[s.type] || s.type}: ${Math.abs(s.mod)}% ${s.mod > 0 ? 'more dangerous' : 'safer'}</span>`).join(' · ')
             : '';
 
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: var(--color-accent);">
-                <div class="modal-header" style="color: var(--color-accent);">/// EVA MISSION: ${event.title} ///</div>
-                <div style="padding: 20px; text-align: center;">
-                    <p style="margin-bottom: 20px; font-style: italic;">"${event.desc}"</p>
-                    ${signalModDisplay ? `<div style="font-size: 0.75em; margin-bottom: 15px; padding: 8px; border: 1px dashed var(--color-primary-dim); background: rgba(0,0,0,0.5);">
-                        <span style="color: var(--color-text-dim);">SIGNAL ANALYSIS:</span> ${signalModDisplay}
-                    </div>` : ''}
-                    ${isParanoid ? '<p style="font-size: 0.8em; color: #ff6666; margin-bottom: 10px;">Vance: "I\'m not risking anyone on something that dangerous."</p>' : ''}
-                    ${recklessBlocksSafe ? '<p style="font-size: 0.8em; color: #ffaa00; margin-bottom: 10px;">Mira: "The safe option gets us nothing. I\'m going in."</p>' : ''}
-
-                    <div style="display: flex; gap: 20px; justify-content: center;">
-                        ${event.choices.map((choice, idx) => {
-            const totalRisk = riskBase + choice.riskMod;
-            let riskLabel = "UNKNOWN";
-            let riskColor = "var(--color-text-dim)";
-
-            if (totalRisk < 10) { riskLabel = "NEGLIGIBLE"; riskColor = "var(--color-primary)"; }
-            else if (totalRisk < 30) { riskLabel = "MODERATE"; riskColor = "#FFFF00"; }
-            else if (totalRisk < 60) { riskLabel = "HIGH"; riskColor = "#FFA500"; }
-            else { riskLabel = "EXTREME"; riskColor = "#FF0000"; }
-
-            // PARANOID: disable high-risk choices (riskMod >= 30)
-            const paranoidBlocked = isParanoid && choice.riskMod >= 30;
-            // RECKLESS: disable safe choices (riskMod === 0) 50% of the time
-            const recklessBlocked = recklessBlocksSafe && choice.riskMod === 0;
+        // Card layout: what the team found, what the scan says, then one button per option with its real odds
+        const evaChoice = (choice, idx) => {
+            const totalRisk = Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
+            const riskColor = totalRisk < 10 ? 'var(--green)' : totalRisk < 30 ? 'var(--amber)' : 'var(--red)';
+            const paranoidBlocked = isParanoid && choice.riskMod >= 30;        // PARANOID: Vance refuses high-risk options
+            const recklessBlocked = recklessBlocksSafe && choice.riskMod === 0; // RECKLESS: Mira overrides the safe option
             const isDisabled = paranoidBlocked || recklessBlocked;
-            const disabledReason = paranoidBlocked ? 'VANCE REFUSES' : (recklessBlocked ? 'MIRA OVERRIDES' : '');
+            const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : `${totalRisk}% chance someone gets hurt`);
+            return `<button class="deck-action choice-btn eva-choice" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
+                        <span>${choice.text}</span>
+                        <small style="color:${isDisabled ? 'var(--red)' : riskColor}">${note}<i class="eva-risk"><b style="width:${totalRisk}%; background:${riskColor}"></b></i></small>
+                    </button>`;
+        };
 
-            return `
-                            <button class="choice-btn" data-idx="${idx}" data-risk-color="${riskColor}" style="
-                                padding: 15px;
-                                border: 1px solid ${isDisabled ? '#555' : 'var(--color-primary)'};
-                                background: ${isDisabled ? 'rgba(30,0,0,0.8)' : 'rgba(0,0,0,0.8)'};
-                                color: ${isDisabled ? '#666' : 'var(--color-primary)'};
-                                cursor: ${isDisabled ? 'not-allowed' : 'pointer'};
-                                flex: 1;
-                                font-family: var(--font-mono);
-                                transition: all 0.2s;
-                                ${isDisabled ? 'pointer-events: none;' : ''}
-                            " ${isDisabled ? 'disabled' : ''}>
-                                <div>${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 5px; color: ${riskColor}">RISK ASSESSMENT: ${riskLabel}</div>
-                                ${isDisabled ? `<div style="font-size: 0.7em; margin-top: 5px; color: #ff4444;">[${disabledReason}]</div>` : ''}
-                            </button>
-                        `}).join('')}
-                    </div>
-                </div>
-            </div>
+        modal.innerHTML = `
+            <section class="modal-content deck-panel eva-panel" role="dialog" aria-label="Team on the ground">
+                <header class="deck-panel-head">
+                    <h3>${event.title}</h3>
+                    <span class="deck-panel-status">TEAM ON THE GROUND</span>
+                </header>
+                <ul class="deck-panel-crew eva-team">${(this.currentEvaTeam || []).map(m => `<li><img class="deck-panel-face" src="assets/crew/${m.portraitId}.png" alt=""><span class="deck-panel-name">${m.name}</span><span class="deck-panel-mood">ON THE GROUND</span></li>`).join('')}</ul>
+                <p class="eva-found">“${event.desc}”</p>
+                ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>SCAN SAYS</dt><dd>${signalModDisplay}</dd></dl>` : ''}
+                ${isParanoid ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
+                ${recklessBlocksSafe ? '<p class="eva-voice" style="color:#d070ff">Mira: “The safe option gets us nothing. I am going in.”</p>' : ''}
+                <h4>WHAT DO THEY DO?</h4>
+                <div class="deck-panel-actions">${event.choices.map(evaChoice).join('')}</div>
+            </section>
         `;
 
         document.body.appendChild(modal);
@@ -4163,21 +4511,7 @@ You are home.`
             });
         });
 
-        // Hover effects - also change risk text color
-        modal.querySelectorAll('.choice-btn').forEach(btn => {
-            btn.onmouseenter = () => {
-                btn.style.background = 'var(--color-primary)';
-                btn.style.color = '#000';
-                const riskDiv = btn.querySelector('div:nth-child(2)');
-                if (riskDiv) riskDiv.style.color = '#000';
-            };
-            btn.onmouseleave = () => {
-                btn.style.background = 'rgba(0,0,0,0.8)';
-                btn.style.color = 'var(--color-primary)';
-                const riskDiv = btn.querySelector('div:nth-child(2)');
-                if (riskDiv) riskDiv.style.color = btn.dataset.riskColor || 'var(--color-text-dim)';
-            };
-        });
+        // hover/focus states come from .deck-action in ship.css
     }
 
     resolveEvaOutcome(choice, baseRisk) {
@@ -4368,6 +4702,9 @@ You are home.`
 
         // Auto-save after EVA completes
         this.autoSave();
+
+        // The airlock opens again: faces first, numbers second
+        if (window.AwayTeam && evaTeam.length) window.AwayTeam.returned(this, evaTeam, logMsg);
     }
 
     /**
@@ -4381,12 +4718,12 @@ You are home.`
         modal.style.zIndex = '2000';
 
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #44ff88; max-width: 700px;">
+            <div class="modal-content" style="border-color: #74d99a; max-width: 700px;">
                 <div class="modal-header" style="background: linear-gradient(90deg, #225533, #338844); color: #ffffff;">
                     /// EVA MISSION: PARADISE FOUND ///
                 </div>
                 <div style="padding: 25px;">
-                    <p style="font-style: italic; color: #aaffcc; margin-bottom: 20px; line-height: 1.7; border-left: 3px solid #44ff88; padding-left: 15px;">
+                    <p style="font-style: italic; color: #9bf0bd; margin-bottom: 20px; line-height: 1.7; border-left: 3px solid #74d99a; padding-left: 15px;">
                         ${evaTeam[0].name} and ${evaTeam[1].name} step onto the surface.
                         <br><br>
                         The air is... breathable. Clean. Sweet, even. The ground is soft with grass that has never known boots.
@@ -4401,44 +4738,44 @@ You are home.`
                     <div style="display: flex; flex-direction: column; gap: 12px;">
                         <button class="eden-choice" data-action="rest" style="
                             padding: 14px; text-align: left;
-                            border: 1px solid #44ff88; background: rgba(30,80,50,0.7);
+                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
                             color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                         ">
-                            <div style="font-weight: bold; color: #88ffcc;">Rest and recover</div>
-                            <div style="font-size: 0.85em; color: #aaffcc;">All crew stress cleared. Heal all injuries. This is what you needed.</div>
+                            <div style="font-weight: bold; color: #9bf0bd;">Rest and recover</div>
+                            <div style="font-size: 0.85em; color: #9bf0bd;">All crew stress cleared. Heal all injuries. This is what you needed.</div>
                         </button>
                         <button class="eden-choice" data-action="gather" style="
                             padding: 14px; text-align: left;
-                            border: 1px solid #44ff88; background: rgba(30,80,50,0.7);
+                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
                             color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                         ">
-                            <div style="font-weight: bold; color: #88ffcc;">Gather fruit and fresh water</div>
-                            <div style="font-size: 0.85em; color: #aaffcc;">+10 Rations. The land provides.</div>
+                            <div style="font-weight: bold; color: #9bf0bd;">Gather fruit and fresh water</div>
+                            <div style="font-size: 0.85em; color: #9bf0bd;">+10 Rations. The land provides.</div>
                         </button>
                         <button class="eden-choice" data-action="explore" style="
                             padding: 14px; text-align: left;
-                            border: 1px solid #44ff88; background: rgba(30,80,50,0.7);
+                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
                             color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                         ">
-                            <div style="font-weight: bold; color: #88ffcc;">Explore the valley</div>
-                            <div style="font-size: 0.85em; color: #aaffcc;">+50 Salvage (natural materials). Mark colony site.</div>
+                            <div style="font-weight: bold; color: #9bf0bd;">Explore the valley</div>
+                            <div style="font-size: 0.85em; color: #9bf0bd;">+50 Salvage (natural materials). Mark colony site.</div>
                         </button>
                         <button class="eden-choice" data-action="remember" style="
                             padding: 14px; text-align: left;
-                            border: 1px solid #44ff88; background: rgba(30,80,50,0.7);
+                            border: 1px solid #74d99a; background: rgba(30,80,50,0.7);
                             color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                         ">
-                            <div style="font-weight: bold; color: #88ffcc;">Remember what you're fighting for</div>
-                            <div style="font-size: 0.85em; color: #aaffcc;">+20 Energy (renewed purpose). All crew -1 stress.</div>
+                            <div style="font-weight: bold; color: #9bf0bd;">Remember what you're fighting for</div>
+                            <div style="font-size: 0.85em; color: #9bf0bd;">+20 Energy (renewed purpose). All crew -1 stress.</div>
                         </button>
-                        <div style="border-top: 1px dashed #44ff88; margin: 15px 0; padding-top: 15px;">
+                        <div style="border-top: 1px dashed #74d99a; margin: 15px 0; padding-top: 15px;">
                             <button class="eden-choice eden-settle" data-action="settle" style="
                                 padding: 14px; text-align: left; width: 100%;
-                                border: 2px solid #ffcc00; background: linear-gradient(90deg, rgba(80,60,20,0.8), rgba(40,80,30,0.8));
+                                border: 2px solid #d9a24a; background: linear-gradient(90deg, rgba(80,60,20,0.8), rgba(40,80,30,0.8));
                                 color: #ffffff; cursor: pointer; font-family: var(--font-mono);
                             ">
-                                <div style="font-weight: bold; color: #ffcc00; font-size: 1.1em;">⬡ END THE JOURNEY — Settle Here</div>
-                                <div style="font-size: 0.85em; color: #aaffcc; margin-top: 5px;">This is what you came for. This is home now. <span style="color: #ffcc00;">[ENDS GAME]</span></div>
+                                <div style="font-weight: bold; color: #d9a24a; font-size: 1.1em;">⬡ END THE JOURNEY — Settle Here</div>
+                                <div style="font-size: 0.85em; color: #9bf0bd; margin-top: 5px;">This is what you came for. This is home now. <span style="color: #d9a24a;">[ENDS GAME]</span></div>
                             </button>
                         </div>
                     </div>
@@ -4451,11 +4788,11 @@ You are home.`
         modal.querySelectorAll('.eden-choice').forEach(btn => {
             btn.onmouseenter = () => {
                 btn.style.background = 'rgba(40,100,60,0.9)';
-                btn.style.borderColor = '#88ffcc';
+                btn.style.borderColor = '#9bf0bd';
             };
             btn.onmouseleave = () => {
                 btn.style.background = 'rgba(30,80,50,0.7)';
-                btn.style.borderColor = '#44ff88';
+                btn.style.borderColor = '#74d99a';
             };
             btn.onclick = () => {
                 const action = btn.dataset.action;
@@ -4529,7 +4866,7 @@ You are home.`
             'Dr. Aris': '#40c8ff', 'Aris': '#40c8ff',
             'Spc. Vance': '#ff5050', 'Vance': '#ff5050',
             'Tech Mira': '#d070ff', 'Mira': '#d070ff',
-            'A.U.R.A.': '#00ff88'
+            'A.U.R.A.': '#74d99a'
         };
 
         let styled = false;
@@ -4557,22 +4894,22 @@ You are home.`
         // Style warnings and critical messages
         if (!styled) {
             if (msg.startsWith('CRITICAL:') || msg.startsWith('CATASTROPHE:')) {
-                entry.innerHTML = `<span style="color:#ff4444;font-weight:bold;text-shadow: 0 0 5px #ff0000;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#d85a4e;font-weight:bold;text-shadow: 0 0 5px #d85a4e;">${msg}</span>`;
                 entry.classList.add('log-critical');
                 styled = true;
             } else if (msg.startsWith('WARNING:') || msg.startsWith('ALERT:') || msg.includes('⚠')) {
-                entry.innerHTML = `<span style="color:#ffaa00;font-weight:bold;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#d9a24a;font-weight:bold;">${msg}</span>`;
                 entry.classList.add('log-warning');
                 styled = true;
             } else if (msg.startsWith('HULL BREACH:')) {
-                entry.innerHTML = `<span style="color:#ff4444;font-weight:bold;text-shadow: 0 0 5px #ff0000;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#d85a4e;font-weight:bold;text-shadow: 0 0 5px #d85a4e;">${msg}</span>`;
                 entry.classList.add('log-critical');
                 styled = true;
             } else if (msg.startsWith('REPAIR COMPLETE:') || msg.includes('recovered') || msg.includes('restored')) {
-                entry.innerHTML = `<span style="color:#44ff88;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#74d99a;">${msg}</span>`;
                 styled = true;
             } else if (msg.startsWith('Sector ') && msg.includes('Generated')) {
-                entry.innerHTML = `<span style="color:#44aaff;font-weight:bold;border-bottom:1px solid #44aaff;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#9bf0bd;font-weight:bold;border-bottom:1px solid #9bf0bd;">${msg}</span>`;
                 entry.classList.add('log-sector');
                 styled = true;
             } else if (msg.startsWith('ANOMALY CONTACT:') || msg.includes('ANOMALY:')) {
@@ -4580,27 +4917,27 @@ You are home.`
                 entry.classList.add('log-anomaly');
                 styled = true;
             } else if (msg.startsWith('Colony') && (msg.includes('Established') || msg.includes('Success'))) {
-                entry.innerHTML = `<span style="color:#44ff88;font-weight:bold;font-size:1.1em;text-shadow: 0 0 10px #44ff88;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#74d99a;font-weight:bold;font-size:1.1em;text-shadow: 0 0 10px #74d99a;">${msg}</span>`;
                 entry.classList.add('log-victory');
                 styled = true;
             } else if (msg.includes('EVA team deployed') || msg.includes('Probe launched')) {
-                entry.innerHTML = `<span style="color:#88ccff;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#9bf0bd;">${msg}</span>`;
                 styled = true;
             } else if (msg.includes('Warping to')) {
-                entry.innerHTML = `<span style="color:#aaaaff;font-style:italic;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#c4d0c4;font-style:italic;">${msg}</span>`;
                 styled = true;
             } else if (msg.includes('KIA') || msg.includes('has died') || msg.includes('DEAD')) {
-                entry.innerHTML = `<span style="color:#ff4444;font-weight:bold;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#d85a4e;font-weight:bold;">${msg}</span>`;
                 entry.classList.add('log-death');
                 styled = true;
             } else if (msg.includes('stressed') || msg.includes('morale') || msg.includes('breakdown')) {
                 entry.innerHTML = `<span style="color:#ff8844;">${msg}</span>`;
                 styled = true;
             } else if (msg.includes('+') && (msg.includes('Salvage') || msg.includes('Energy') || msg.includes('Ration'))) {
-                entry.innerHTML = `<span style="color:#88ff88;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#9bf0bd;">${msg}</span>`;
                 styled = true;
             } else if (msg.includes('-') && (msg.includes('Salvage') || msg.includes('Energy'))) {
-                entry.innerHTML = `<span style="color:#ff8888;">${msg}</span>`;
+                entry.innerHTML = `<span style="color:#e07a70;">${msg}</span>`;
                 styled = true;
             }
         }
@@ -4636,7 +4973,7 @@ You are home.`
         const salvageEl = document.getElementById('res-salvage');
         if (salvageEl) {
             salvageEl.textContent = `${s}/${sMax}`;
-            salvageEl.style.color = (s >= sMax) ? '#ffaa00' : 'var(--color-primary)';
+            salvageEl.style.color = (s >= sMax) ? '#d9a24a' : 'var(--color-primary)';
         }
         if (s !== prevSalvage) {
             this.flashResource('salvage', s > prevSalvage ? 'gain' : 'loss');
@@ -4647,8 +4984,8 @@ You are home.`
         const rEl = document.getElementById('res-rations');
         if (rEl) {
             rEl.textContent = `${this.state.rations}/${this.state.maxRations}`;
-            if (this.state.rations <= 2) rEl.style.color = '#ff4444';
-            else if (this.state.rations <= 5) rEl.style.color = '#ffaa00';
+            if (this.state.rations <= 2) rEl.style.color = '#d85a4e';
+            else if (this.state.rations <= 5) rEl.style.color = '#d9a24a';
             else rEl.style.color = 'var(--color-primary)';
         }
         if (this.state.rations !== prevRations) {
@@ -4663,8 +5000,8 @@ You are home.`
         if (knowledgeEl) {
             knowledgeEl.textContent = knowledge;
             // Color code based on thresholds that matter for endings
-            if (knowledge >= 3) knowledgeEl.style.color = '#00ff88'; // Good - unlocks best ending text
-            else if (knowledge >= 1) knowledgeEl.style.color = '#88ccff'; // Some benefit
+            if (knowledge >= 3) knowledgeEl.style.color = '#74d99a'; // Good - unlocks best ending text
+            else if (knowledge >= 1) knowledgeEl.style.color = '#9bf0bd'; // Some benefit
             else knowledgeEl.style.color = 'var(--color-text-dim)';
         }
         if (knowledge !== prevKnowledge && knowledge > prevKnowledge) {
@@ -4748,7 +5085,7 @@ You are home.`
 
     getStressBar(stress) {
         const s = stress || 0;
-        const colors = ['#00ff41', '#ffff00', '#ffa500', '#ff4444']; // 0=green, 1=yellow, 2=orange, 3=red
+        const colors = ['#74d99a', '#d9a24a', '#d9a24a', '#d85a4e']; // 0=green, 1=yellow, 2=orange, 3=red
         const barColor = colors[Math.min(s, 3)];
         let bar = '[';
         for (let i = 0; i < 3; i++) {
@@ -4759,6 +5096,7 @@ You are home.`
     }
 
     showCrewManifest() {
+        if (window.RosterPanel) { window.RosterPanel.crew(this); return; } // card layout; legacy list below is the fallback
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
@@ -4772,8 +5110,8 @@ You are home.`
                     ${this.state.crew.map((c, idx) => {
             const isSedated = c.tags && c.tags.includes('SEDATED');
             const isConfined = c.tags && c.tags.includes('CONFINED');
-            const color = c.status === 'DEAD' ? '#ff4444' : isSedated ? '#8888ff' : isConfined ? '#ff8888' : (c.status === 'INJURED' ? '#ffaa00' : 'var(--color-primary)');
-            const borderColor = c.status === 'DEAD' ? '#ff4444' : isSedated ? '#8888ff' : isConfined ? '#ff8888' : 'var(--color-primary-dim)';
+            const color = c.status === 'DEAD' ? '#d85a4e' : isSedated ? '#c4d0c4' : isConfined ? '#e07a70' : (c.status === 'INJURED' ? '#d9a24a' : 'var(--color-primary)');
+            const borderColor = c.status === 'DEAD' ? '#d85a4e' : isSedated ? '#c4d0c4' : isConfined ? '#e07a70' : 'var(--color-primary-dim)';
             const statusText = isSedated ? 'SEDATED' : isConfined ? 'CONFINED' : c.status;
             const showRest = c.status !== 'DEAD' && !isSedated && !isConfined && (c.stress || 0) > 0 && quartersOk;
             const restDisabled = !canRest;
@@ -4782,16 +5120,16 @@ You are home.`
             const stressFilter = stressLevel >= 3 ? 'saturate(0.5) contrast(1.2) brightness(0.8)' :
                                  stressLevel === 2 ? 'saturate(0.7) sepia(0.2)' :
                                  stressLevel === 1 ? 'saturate(0.85)' : '';
-            const stressGlow = stressLevel >= 3 ? '0 0 15px #ff0000, inset 0 0 20px rgba(255,0,0,0.3)' :
+            const stressGlow = stressLevel >= 3 ? '0 0 15px #d85a4e, inset 0 0 20px rgba(255,0,0,0.3)' :
                                stressLevel === 2 ? '0 0 10px #ff6600' :
-                               stressLevel === 1 ? '0 0 5px #ffaa00' : '';
+                               stressLevel === 1 ? '0 0 5px #d9a24a' : '';
             const stressOverlay = stressLevel >= 3 ? '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,transparent 60%,rgba(255,0,0,0.3));pointer-events:none;"></div><div style="position:absolute;top:0;left:0;right:0;bottom:0;animation:stress-pulse 1s infinite;pointer-events:none;border-radius:inherit;box-shadow:inset 0 0 20px rgba(255,0,0,0.5);"></div>' :
                                   stressLevel === 2 ? '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,transparent 70%,rgba(255,100,0,0.2));pointer-events:none;"></div>' :
                                   stressLevel === 1 ? '<div style="position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,transparent 80%,rgba(255,170,0,0.1));pointer-events:none;"></div>' : '';
 
             return `
                         <div class="crew-card" style="border: 1px solid ${borderColor}; color: ${color}; ${isSedated || isConfined ? 'opacity: 0.7;' : ''}">
-                            <div class="crew-icon" style="position:relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; filter: drop-shadow(0 0 5px ${color}); box-shadow: ${stressGlow}; ${isSedated ? 'filter: grayscale(50%) drop-shadow(0 0 5px #8888ff);' : ''}">
+                            <div class="crew-icon" style="position:relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #000; filter: drop-shadow(0 0 5px ${color}); box-shadow: ${stressGlow}; ${isSedated ? 'filter: grayscale(50%) drop-shadow(0 0 5px #c4d0c4);' : ''}">
                                 <img src="assets/crew/${c.portraitId || 1}.png"
                                      style="width: 100%; height: 100%; object-fit: cover; filter: ${stressFilter}; ${isSedated ? 'filter: grayscale(50%);' : ''}"
                                      onerror="this.style.display='none'; this.parentNode.innerHTML='${c.gender === 'AI' ? '🤖' : '👤'}';">
@@ -4800,14 +5138,14 @@ You are home.`
                             <div class="crew-details">
                                 <div class="crew-name">${c.realName || c.name} <span style="font-size:0.7em; opacity:0.7;">(${c.name})</span></div>
                                 <div class="crew-meta" style="color: ${color}; opacity: 0.8;">AGE: ${c.age || 'N/A'} | STATUS: ${statusText} | STRESS: ${this.getStressBar(c.stress)}</div>
-                                <div class="crew-tags">${c.tags.filter(t => t !== 'SEDATED' && t !== 'CONFINED').join(' ')}${c.trait ? ` <span style="color:#ff4444;">[${c.trait}]</span>` : ''}
-                                    ${isSedated ? `<span style="color:#8888ff; font-weight:bold; margin-left:5px;">[SEDATED - ${c._sedatedUntilWarp || '?'} warps]</span>` : ''}
-                                    ${isConfined ? `<span style="color:#ff8888; font-weight:bold; margin-left:5px;">[CONFINED TO QUARTERS]</span>` : ''}
+                                <div class="crew-tags">${c.tags.filter(t => t !== 'SEDATED' && t !== 'CONFINED').join(' ')}${c.trait ? ` <span style="color:#d85a4e;">[${c.trait}]</span>` : ''}
+                                    ${isSedated ? `<span style="color:#c4d0c4; font-weight:bold; margin-left:5px;">[SEDATED - ${c._sedatedUntilWarp || '?'} warps]</span>` : ''}
+                                    ${isConfined ? `<span style="color:#e07a70; font-weight:bold; margin-left:5px;">[CONFINED TO QUARTERS]</span>` : ''}
                                     ${showRest ? `<button class="rest-btn" data-idx="${idx}" style="
                                         margin-left: 10px; padding: 2px 8px; font-size: 0.8em;
                                         background: ${restDisabled ? '#333' : 'rgba(0,100,50,0.8)'};
-                                        color: ${restDisabled ? '#666' : '#00ff88'};
-                                        border: 1px solid ${restDisabled ? '#555' : '#00ff88'};
+                                        color: ${restDisabled ? '#666' : '#74d99a'};
+                                        border: 1px solid ${restDisabled ? '#555' : '#74d99a'};
                                         cursor: ${restDisabled ? 'not-allowed' : 'pointer'};
                                         font-family: var(--font-mono);
                                     " ${restDisabled ? 'disabled' : ''}>REST (-1 RATION, -1 STRESS)</button>` : ''}
@@ -4817,7 +5155,7 @@ You are home.`
                     `;
         }).join('')}
                 </div>
-                ${!quartersOk ? '<div style="color:#ff4444;font-size:0.8em;text-align:center;padding:10px;">CREW QUARTERS OFFLINE — Rest unavailable</div>' : ''}
+                ${!quartersOk ? '<div style="color:#d85a4e;font-size:0.8em;text-align:center;padding:10px;">CREW QUARTERS OFFLINE — Rest unavailable</div>' : ''}
             </div>
         `;
         document.body.appendChild(modal);
@@ -4843,6 +5181,7 @@ You are home.`
     }
 
     showCargoInventory() {
+        if (window.RosterPanel) { window.RosterPanel.cargo(this); return; } // card layout; legacy grid below is the fallback
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -4916,18 +5255,18 @@ You are home.`
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff00ff;">
-                <div class="modal-header" style="color: #ff00ff;">/// REANIMATION PROTOCOL /// <span class="close-modal">[X]</span></div>
+            <div class="modal-content" style="border-color: #d9a24a;">
+                <div class="modal-header" style="color: #d9a24a;">/// REANIMATION PROTOCOL /// <span class="close-modal">[X]</span></div>
                 <div style="padding: 20px; text-align: center;">
                     <p>Select subject for integration with ${item.name}.</p>
-                    <p style="color: #ff0000; font-size: 0.8em; margin-top: 10px;">
+                    <p style="color: #d85a4e; font-size: 0.8em; margin-top: 10px;">
                         WARNING: PROCESS IS IRREVERSIBLE.<br>
                         Neural patterns will be reconstructed but altered. The entity returned may retain skills but lose self-identity.
                     </p>
                 </div>
                 <div class="crew-list">
                     ${deadCrew.map((c, idx) => `
-                        <div class="crew-card status-dead clickable-revive" data-id="${c.id}" style="cursor: pointer; border: 1px solid #ff00ff;">
+                        <div class="crew-card status-dead clickable-revive" data-id="${c.id}" style="cursor: pointer; border: 1px solid #d9a24a;">
                             <div class="crew-icon">💀</div>
                             <div class="crew-details">
                                 <div class="crew-name">${c.realName}</div>
@@ -5002,6 +5341,10 @@ You are home.`
     }
 
     _executeColony(planet) {
+        if (!planet.scanned && !window.TEST_MODE) { // nobody lands five people on a world they have not looked at
+            this.state.addLog("A.U.R.A.: \"I will not commit the crew to a world we have not scanned. Run a deep scan first.\"");
+            return;
+        }
         // Generate Outcome based on Planet Metrics
         const outcome = EndingSystem.getColonyOutcome(planet);
 
@@ -5010,7 +5353,7 @@ You are home.`
         }
 
         // Color code valid vs failed colonies
-        const color = outcome.success ? '#00ff00' : '#ff4444';
+        const color = outcome.success ? '#00ff00' : '#d85a4e';
         const survivors = this.state.crew.filter(c => c.status !== 'DEAD');
         const totalCrew = this.state.crew.length;
         const avgStress = survivors.length > 0 ? (survivors.reduce((a, c) => a + (c.stress || 0), 0) / survivors.length).toFixed(1) : 0;
@@ -5025,15 +5368,20 @@ You are home.`
         // Rating calculation - knowledge matters more!
         // Survivors are crucial, but knowledge from exploring determines long-term survival
         let rating = 'C';
-        let ratingColor = '#ffaa00';
+        let ratingColor = '#d9a24a';
         const score = (survivors.length * 15) + (colonyKnowledge * 8) + (techLevel * 5) - (avgStress * 10);
         if (outcome.success) {
-            if (score >= 120) { rating = 'S'; ratingColor = '#ffcc00'; }
+            if (score >= 120) { rating = 'S'; ratingColor = '#d9a24a'; }
             else if (score >= 90) { rating = 'A'; ratingColor = '#00ff00'; }
-            else if (score >= 60) { rating = 'B'; ratingColor = '#88ff88'; }
-            else { rating = 'C'; ratingColor = '#ffaa00'; }
+            else if (score >= 60) { rating = 'B'; ratingColor = '#9bf0bd'; }
+            else { rating = 'C'; ratingColor = '#d9a24a'; }
         } else {
-            rating = 'F'; ratingColor = '#ff4444';
+            rating = 'F'; ratingColor = '#d85a4e';
+        }
+
+        if (window.EndScreens) { // shared card; the flight-recorder table below is only the fallback
+            window.EndScreens.colony(this, planet, outcome, { rating, survivors: survivors.length, avgStress, colonyKnowledge });
+            return;
         }
 
         const overlay = document.createElement('div');
@@ -5054,11 +5402,11 @@ You are home.`
                     </div>
                     <div style="background: #000; padding: 12px; text-align: center;">
                         <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">AVG STRESS</div>
-                        <div style="font-size: 1.8em; font-weight: bold; color: ${avgStress <= 1 ? '#88ff88' : avgStress <= 2 ? '#ffaa00' : '#ff4444'};">${avgStress}</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: ${avgStress <= 1 ? '#9bf0bd' : avgStress <= 2 ? '#d9a24a' : '#d85a4e'};">${avgStress}</div>
                     </div>
                     <div style="background: #000; padding: 12px; text-align: center;">
                         <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">KNOWLEDGE</div>
-                        <div style="font-size: 1.8em; font-weight: bold; color: ${colonyKnowledge >= 5 ? '#00ffcc' : colonyKnowledge >= 2 ? '#88ccff' : '#cccccc'};">${colonyKnowledge}</div>
+                        <div style="font-size: 1.8em; font-weight: bold; color: ${colonyKnowledge >= 5 ? '#00ffcc' : colonyKnowledge >= 2 ? '#9bf0bd' : '#cccccc'};">${colonyKnowledge}</div>
                     </div>
                     <div style="background: #000; padding: 12px; text-align: center;">
                         <div style="font-size: 0.7em; color: ${color}88; margin-bottom: 4px;">COLONY RATING</div>
@@ -5082,15 +5430,15 @@ You are home.`
                     </div>
                     <div style="background: #000; padding: 10px; text-align: center;">
                         <div style="font-size: 0.65em; color: ${color}66;">LIFE</div>
-                        <div style="font-size: 1.1em; color: ${planet.metrics?.hasLife ? '#00ff66' : '#666'};">${planet.metrics?.hasLife ? 'YES' : 'NO'}</div>
+                        <div style="font-size: 1.1em; color: ${planet.metrics?.hasLife ? '#74d99a' : '#666'};">${planet.metrics?.hasLife ? 'YES' : 'NO'}</div>
                     </div>
                     <div style="background: #000; padding: 10px; text-align: center;">
                         <div style="font-size: 0.65em; color: ${color}66;">VIABILITY</div>
                         <div style="font-size: 0.9em; color: ${
                             EndingSystem.getPlanetViability(planet, this.state) === 'EXCELLENT' ? '#00ff00' :
-                            EndingSystem.getPlanetViability(planet, this.state) === 'GOOD' ? '#88ff88' :
-                            EndingSystem.getPlanetViability(planet, this.state) === 'MARGINAL' ? '#ffaa00' :
-                            '#ff4444'
+                            EndingSystem.getPlanetViability(planet, this.state) === 'GOOD' ? '#9bf0bd' :
+                            EndingSystem.getPlanetViability(planet, this.state) === 'MARGINAL' ? '#d9a24a' :
+                            '#d85a4e'
                         };">${EndingSystem.getPlanetViability(planet, this.state)}</div>
                     </div>
                 </div>
@@ -5149,7 +5497,7 @@ You are home.`
                 </div>
             </div>
 
-            <button onclick="location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
+            <button onclick="localStorage.removeItem('silentExodus_save'); location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
                 REBOOT SIMULATION
             </button>
         `;
@@ -5167,6 +5515,12 @@ You are home.`
         const deck = this.state.shipDecks[deckKey];
         if (!deck) return;
 
+        // Room card (information as text, only real actions as buttons); the legacy modal below is the fallback
+        if (window.DeckPanel) {
+            window.DeckPanel.show(this, deckKey);
+            return;
+        }
+
         const effects = {
             bridge: 'Navigation, remote scanning, A.U.R.A. core. DAMAGE: Warp +50% cost, remote scan disabled.',
             lab: 'Deep scanning, item identification. DAMAGE: Partial scan data, items unidentified.',
@@ -5182,7 +5536,7 @@ You are home.`
             repairCost = Math.floor(repairCost * 1.5);
         }
 
-        const statusColor = deck.status === 'OPERATIONAL' ? 'var(--color-primary)' : '#ff4444';
+        const statusColor = deck.status === 'OPERATIONAL' ? 'var(--color-primary)' : '#d85a4e';
         const canRepair = deck.status === 'DAMAGED' && this.state.salvage >= repairCost;
 
         const modal = document.createElement('div');
@@ -5354,7 +5708,7 @@ You are home.`
                 // Update sector display for wrong place
                 if (sectorNameEl) {
                     sectorNameEl.textContent = '/// SECTOR ???: THE WRONG PLACE';
-                    sectorNameEl.style.color = '#ff4444';
+                    sectorNameEl.style.color = '#d85a4e';
                     sectorNameEl.style.animation = 'pulse 1s infinite';
                 }
             } else if (type === 'FOLD_SUCCESS') {
@@ -5365,7 +5719,7 @@ You are home.`
                         4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD'
                     };
                     sectorNameEl.textContent = `/// SECTOR ${this.state.currentSector}: ${SECTOR_NAMES[this.state.currentSector] || 'UNKNOWN'}`;
-                    sectorNameEl.style.color = '#00ffff';
+                    sectorNameEl.style.color = '#9bf0bd';
                     sectorNameEl.style.animation = 'none';
                     // Flash cyan then return to normal
                     setTimeout(() => {
@@ -5385,6 +5739,10 @@ You are home.`
     showGameOver(detail) {
         // Delete save file - game is over
         this.state.deleteSave();
+        if (window.EndScreens) { // shared card layout; the legacy red box below is the fallback
+            window.EndScreens.gameOver(this, detail);
+            return;
+        }
 
         // Gather stats for the run
         const deadCrew = this.state.crew.filter(c => c.status === 'DEAD');
@@ -5399,7 +5757,7 @@ You are home.`
                 const cause = c._deathCause || 'unknown causes';
                 const planet = c._deathPlanet || 'deep space';
                 return `<div style="margin: 5px 0; font-size: 0.85em;">
-                    <span style="color: #ff6666;">${c.realName || c.name}</span>
+                    <span style="color: #e07a70;">${c.realName || c.name}</span>
                     <span style="color: #884444;"> - ${cause} at ${planet}</span>
                 </div>`;
             }).join('');
@@ -5408,13 +5766,13 @@ You are home.`
         const overlay = document.createElement('div');
         overlay.style.cssText = `
             position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000; color: #ff4444; z-index: 10000;
+            background: #000; color: #d85a4e; z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             font-family: 'Share Tech Mono', monospace;
         `;
         overlay.innerHTML = `
-            <div style="width: 700px; max-width: 90vw; border: 2px solid #ff4444; padding: 2px;">
-                <div style="background: #ff4444; color: #000; padding: 5px 10px; font-weight: bold; display: flex; justify-content: space-between;">
+            <div style="width: 700px; max-width: 90vw; border: 2px solid #d85a4e; padding: 2px;">
+                <div style="background: #d85a4e; color: #000; padding: 5px 10px; font-weight: bold; display: flex; justify-content: space-between;">
                     <span>/// MISSION FAILED</span>
                     <span>${detail.title}</span>
                 </div>
@@ -5422,23 +5780,23 @@ You are home.`
                     ${detail.message}
                 </div>
                 ${crewMemorial ? `
-                <div style="border-top: 1px solid #ff4444; padding: 15px; text-align: center;">
+                <div style="border-top: 1px solid #d85a4e; padding: 15px; text-align: center;">
                     <div style="color: #ff444488; font-size: 0.75em; margin-bottom: 10px;">/// IN MEMORIAM ///</div>
                     ${crewMemorial}
                 </div>
                 ` : ''}
-                <div style="border-top: 1px solid #ff4444; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.8em; color: #ff444488;">
-                    <div>SECTOR REACHED: <span style="color: #ff6666;">${this.state.currentSector}</span></div>
-                    <div>PLANETS EXPLORED: <span style="color: #ff6666;">${planetsVisited}</span></div>
-                    <div>CREW LOST: <span style="color: #ff6666;">${deadCrew.length} / 5</span></div>
-                    <div>SALVAGE COLLECTED: <span style="color: #ff6666;">${this.state.salvage}</span></div>
-                    <div>EXODUS LOGS: <span style="color: #ff6666;">${exodusLogsFound} / 8</span></div>
-                    <div>RATIONS REMAINING: <span style="color: #ff6666;">${this.state.rations}</span></div>
+                <div style="border-top: 1px solid #d85a4e; padding: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.8em; color: #ff444488;">
+                    <div>SECTOR REACHED: <span style="color: #e07a70;">${this.state.currentSector}</span></div>
+                    <div>PLANETS EXPLORED: <span style="color: #e07a70;">${planetsVisited}</span></div>
+                    <div>CREW LOST: <span style="color: #e07a70;">${deadCrew.length} / 5</span></div>
+                    <div>SALVAGE COLLECTED: <span style="color: #e07a70;">${this.state.salvage}</span></div>
+                    <div>EXODUS LOGS: <span style="color: #e07a70;">${exodusLogsFound} / 8</span></div>
+                    <div>RATIONS REMAINING: <span style="color: #e07a70;">${this.state.rations}</span></div>
                 </div>
             </div>
             <button id="btn-restart" style="
                 margin-top: 30px; padding: 15px 30px; background: transparent;
-                border: 1px solid #ff4444; color: #ff4444; font-size: 1em;
+                border: 1px solid #d85a4e; color: #d85a4e; font-size: 1em;
                 cursor: pointer; font-family: inherit;
             ">REBOOT SIMULATION</button>
         `;
@@ -5457,10 +5815,10 @@ You are home.`
         modal.className = 'modal-overlay';
         modal.style.zIndex = '3000';
         modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff4444; max-width: 550px;">
-                <div class="modal-header" style="background: #ff4444; color: #000;">/// MUTINY ///</div>
+            <div class="modal-content" style="border-color: #d85a4e; max-width: 550px;">
+                <div class="modal-header" style="background: #d85a4e; color: #000;">/// MUTINY ///</div>
                 <div style="padding: 20px; text-align: center;">
-                    <p style="margin-bottom: 15px; color: #ff6666; font-style: italic;">
+                    <p style="margin-bottom: 15px; color: #e07a70; font-style: italic;">
                         "${vance.name} has drawn his sidearm. He demands ${commander.name} step down."
                     </p>
                     <p style="margin-bottom: 20px; font-size: 0.9em; color: var(--color-text-dim);">
@@ -5476,8 +5834,8 @@ You are home.`
                             <div style="font-size: 0.7em; margin-top: 5px; color: var(--color-text-dim);">Vance will be restrained</div>
                         </button>
                         <button class="mutiny-choice" data-choice="side" style="
-                            flex: 1; padding: 15px; border: 1px solid #ff4444;
-                            background: rgba(40,0,0,0.8); color: #ff4444;
+                            flex: 1; padding: 15px; border: 1px solid #d85a4e;
+                            background: rgba(40,0,0,0.8); color: #d85a4e;
                             cursor: pointer; font-family: var(--font-mono);
                         ">
                             <div>SIDE WITH VANCE</div>
@@ -5606,6 +5964,10 @@ You are home.`
     }
 
     showFabricator() {
+        if (window.FabricatorPanel) { // card layout with icons; the legacy grid below is the fallback
+            window.FabricatorPanel.show(this);
+            return;
+        }
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
@@ -5650,7 +6012,7 @@ You are home.`
     buyUpgrade(id, modal) {
         const upg = Object.values(UPGRADES).find(u => u.id === id);
         const hoarderActive = this.state.hasActiveTrait('HOARDER');
-        const effectiveCost = hoarderActive ? Math.ceil(upg.cost * 1.25) : upg.cost;
+        const effectiveCost = window.TEST_MODE ? 0 : (hoarderActive ? Math.ceil(upg.cost * 1.25) : upg.cost);
         if (upg && this.state.salvage >= effectiveCost) {
             this.state.salvage -= effectiveCost;
             this.state.upgrades.push(id);
@@ -5681,7 +6043,7 @@ You are home.`
         const dialogueHtml = dialogue.map(d => {
             const colors = {
                 'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#00ff88'
+                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
             };
             const color = colors[d.speaker] || '#ffffff';
             return `<div style="margin-bottom: 10px;">

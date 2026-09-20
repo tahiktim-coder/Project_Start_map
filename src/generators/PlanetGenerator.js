@@ -72,8 +72,14 @@ class PlanetGenerator {
         const sector = [];
 
         // Generate normal planets
+        // Re-roll duplicates: heavy type bias (e.g. S1) used to produce three identical DESERT worlds
+        const MAX_TYPE_REROLLS = 8;
         for (let i = 0; i < count; i++) {
-            sector.push(this.generatePlanet(level, config));
+            let planet = this.generatePlanet(level, config);
+            for (let tries = 0; tries < MAX_TYPE_REROLLS && sector.some(p => p.type === planet.type); tries++) {
+                planet = this.generatePlanet(level, config);
+            }
+            sector.push(planet);
         }
 
         // Guaranteed types: ensure at least one of each exists
