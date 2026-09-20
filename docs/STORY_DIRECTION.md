@@ -33,7 +33,7 @@ The player never gets this as a lecture. They get it as hull numbers, dates, one
 
 **So the programme.** Reach the disc and destroy the map before it is fully read. The drive throws a hull forward and back in time, so each new hull can arrive a little earlier than the last. The moment a hull is thrown, its twin on Earth shows how it ended. Earth has watched forty-one thousand twins go wrong, and laid the next keel each time.
 
-**Why the crews are lied to.** This is the part that makes the lie necessary rather than cruel: **whatever a crew knows, the Reader learns.** Machines are read in an instant — that is why the hundreds of unmanned hulls did nothing. People are slow to read. A person can get close. But a crew that knows the purpose carries the purpose in with them. So the crews are told a small, harmless story (ninth on this heading, find a home), and only A.U.R.A. knows — and A.U.R.A. is the one thing aboard that must never be read, which is why her last order is about herself.
+**Why the crews are lied to.** Simple: the early crews were told the truth, and they stopped flying. Some turned round, some settled the first rock they found, one ship just drifted with everyone awake and nobody at the helm. So now crews get a small, kind story (ninth on this heading, find a home), and only A.U.R.A. knows.
 
 **Why you.** EXODUS-9 had the weakest drive. It was thrown the *least* far back. So it arrives **last**, after everything else Earth ever sent has already failed and been read. You are not the ninth. You are the last ship in the corridor. And yours is the only twin in the vault that has not changed. Earth does not know how you end. That is why the ending is yours.
 
@@ -50,7 +50,7 @@ Structure endings — sector 6:
 - **Break the map.** What Earth wanted. It knows what we are; now it will never know where. A.U.R.A. thanks you, and then asks what she is for.
 - **Let it read you** (Aris's). Forty thousand crews were read as they died afraid. Let it read one that chose to be. Nobody knows what that does.
 - **Carry it on.** Take the disc aboard and keep flying, past the Structure, forever. As long as you never stop, it is never read. The sleepers in your hold are the crew of a ship that does not arrive.
-- **Let A.U.R.A. decide** (Mira's; needs you to have let her fly most of the trip). She burns the ship, the disc, and herself. She was never going to be read.
+- **Let A.U.R.A. decide** (Mira's; needs you to have let her fly most of the trip). She burns the ship and the disc. Those were her orders all along.
 - **Wake the sleepers first.** If you carried pods from the wrecks: people from hull 905, hull 12,330. They have seen more of this than you. They vote.
 
 ## Does the disc idea have holes? The ones I found, and the fix
@@ -61,8 +61,8 @@ Structure endings — sector 6:
 | How can they go home in a Structure ending? | They cannot. No ending returns to Earth |
 | If the thing can read everything, what is there to hide? | It knows WHAT we are from the crews. Only the disc says WHERE. That is the one secret left |
 | How did Earth learn any of this? | The linked twin on Earth started reciting the disc (your quantum-link idea) |
-| Why lie to crews at all? | What a crew knows, it learns. Ignorance is the armour |
-| Why send people, not bombs? | Machines are read instantly. People are slow to read, so a person can get close |
+| Why lie to crews at all? | Crews who were told the truth stopped flying |
+| Why send people, not bombs? | Someone has to choose what to do when they get there. Earth cannot know in advance |
 | Why is hull 9 the one that matters? | Weakest throw, arrives last, and its twin is the only one still unchanged |
 | Do we need a Pursuer? | No. Nothing chases you. The thing at the end is patient, which is worse |
 

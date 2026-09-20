@@ -109,6 +109,7 @@ class NavView {
         `;
 
         this.attachEvents(systems);
+        if (window.NavVista) window.NavVista.mount(this.element.querySelector('.sector-map-container'), this.state); // the living backdrop
         return this.element;
     }
 
