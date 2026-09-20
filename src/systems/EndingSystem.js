@@ -196,7 +196,7 @@ class EndingSystem {
         // --- PRELUDE: PREDATORY WORLD ---
         if (isPredatory) {
             if (hasMedic && hasScout) {
-                acts.push("The planet HUNTED us. The beautiful forests were digestive systems. The friendly fauna were lures. But Vance learned to read the warning signs, and Aris developed the pheromone that marked us as 'already consumed.' We live in fear, but we live.");
+                acts.push("The planet HUNTED us. The beautiful forests were digestive systems. The friendly animals were lures. But Vance learned to read the warning signs, and Aris developed the pheromone that marked us as 'already consumed.' We live in fear, but we live.");
                 title = "THE WARY SURVIVORS";
             } else if (symbiotes >= 1) {
                 acts.push("The predatory ecosystem tried to consume us — but the Hive Mind within our crew SPOKE to it. A negotiation of chemical signals. We are no longer prey. We are... symbiotic predators. We hunt WITH the forest now.");
@@ -565,7 +565,7 @@ class EndingSystem {
                 } else if (hasScout) {
                     acts.push("Vance learned which creatures to avoid, which plants were poison, which sounds meant danger. Our survival came from caution, not medicine. We are careful, always careful.");
                 } else {
-                    acts.push("The microbial life was aggressive. We were forced to genetically modify our children to digest the local flora. They are human, mostly. But they can eat things we cannot.");
+                    acts.push("The microbial life was aggressive. We were forced to genetically modify our children to digest the local plants. They are human, mostly. But they can eat things we cannot.");
                 }
             } else {
                 // Sterile/Empty World Variance based on Roles
@@ -619,7 +619,7 @@ class EndingSystem {
                 acts.push("We studied every failed colony we found. Their mistakes became our textbook. Where they planted too early, we waited. Where they built too fast, we built slow. Where they ignored the soil, we listened to it. The ghosts of the corridor taught us how to live.");
                 if (title === "UNKNOWN") title = "LEARNED FROM THE DEAD";
             } else if (colonyKnowledge >= 1 && success) {
-                acts.push("The colony logs we recovered proved invaluable. We avoided the soil toxins that killed the dome settlers. We recognized the pathogen patterns from the mass graves. Knowledge, paid for in someone else's blood.");
+                acts.push("The colony logs we recovered proved invaluable. We avoided the soil toxins that killed the dome settlers. We recognized the disease patterns from the mass graves. Knowledge, paid for in someone else's blood.");
             }
 
             // Standard Act 3 progression (if not overridden by sabotage)
@@ -651,7 +651,7 @@ class EndingSystem {
                     acts.push("With the advanced sensor data and precursor relics, we unlocked FTL travel. We are the Guardians of this sector — watching for new refugees from dying worlds, guiding them to safety.");
                     if (title === "UNKNOWN") title = "STELLAR ASCENDANCY";
                 } else if (state.salvage > 250 && hasEng) {
-                    acts.push("The mountains were rich in ore. Jaxon built shipyards that dwarfed the Exodus-9. Our descendants launched a thousand ships, carrying humanity to every habitable world in the sector. We are no longer refugees. We are the flood.");
+                    acts.push("The mountains were rich in ore. Jaxon built shipyards that dwarfed the Exodus-9. Our descendants launched a thousand ships, carrying humanity to every livable world in the sector. We are no longer refugees. We are the flood.");
                     if (title === "UNKNOWN") title = "INDUSTRIAL EMPIRE";
                 } else if (state.salvage > 250) {
                     acts.push("The ore was endless. We strip-mined a continent to build our fleet. Somewhere along the way, we stopped being survivors and became conquerors. The stars await, and we have the metal to claim them.");

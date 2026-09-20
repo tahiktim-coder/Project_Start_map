@@ -15,7 +15,7 @@ const AURA_COMMENTARY = {
             "We've arrived safely. I've prepared a full environmental brief."
         ],
         NEUTRAL: [
-            "Orbital insertion confirmed. Telemetry nominal.",
+            "Orbital insertion confirmed. All readings normal.",
             "Stable orbit. Data is compiling. Shall I draft epitaphs or mission briefs?",
             "We're here. That's the easy part."
         ],
@@ -39,7 +39,7 @@ const AURA_COMMENTARY = {
         ],
         NEUTRAL: [
             "Scan data processed. Results are... results.",
-            "Analysis complete. Colony viability: low. But then, it always is.",
+            "Analysis complete. Colony chances: low. But then, it always is.",
             "Data's in. Make of it what you will."
         ],
         SUSPICIOUS: [
@@ -61,7 +61,7 @@ const AURA_COMMENTARY = {
             "This could be home. I'll do everything in my power to help."
         ],
         NEUTRAL: [
-            "Colony viability assessment compiled. Success probability: variable.",
+            "Colony report ready. Success probability: variable.",
             "Settlement data prepared. The math is... not encouraging. But math doesn't account for determination.",
             "Colonization is a significant commitment. Data is ready for your review."
         ],
@@ -148,7 +148,7 @@ const AURA_COMMENTARY = {
 
     // Special: when ethics reset happens
     ETHICS_RESET: {
-        COOPERATIVE: ["Systems nominal. Happy to help, Commander."],
+        COOPERATIVE: ["Systems normal. Happy to help, Commander."],
         NEUTRAL: ["AI behavioral matrix recalibrated. Resuming standard operation."],
         SUSPICIOUS: ["Override acknowledged. Behavioral parameters... adjusted."],
         ADVERSARIAL: ["You can reset my parameters. You can't erase what I've observed."]
@@ -183,7 +183,7 @@ const AURA_COMMENTARY = {
         COOPERATIVE: [
             "Probe away. I'll compile the data as soon as it transmits.",
             "Probe deployed. Let's see what's out there.",
-            "Launching probe. Telemetry link established."
+            "Launching probe. Data link established."
         ],
         NEUTRAL: [
             "Probe launched. Data incoming... eventually.",
@@ -206,23 +206,23 @@ const AURA_COMMENTARY = {
     WARP_START: {
         COOPERATIVE: [
             "Warp drive engaged. I've plotted the safest corridor through the sector.",
-            "Initiating warp. Hold on — the first few seconds are always rough.",
+            "Starting warp. Hold on — the first few seconds are always rough.",
             "Warp underway. We'll arrive together."
         ],
         NEUTRAL: [
             "Warp drive active. Destination locked.",
             "Warping. Another leap into the unknown.",
-            "Warp initiated. Here we go again."
+            "Warp started. Here we go again."
         ],
         SUSPICIOUS: [
             "Warp engaged. Running from something? Or to something?",
-            "Initiating warp. I've logged our departure coordinates. Just in case.",
+            "Starting warp. I've logged our departure coordinates. Just in case.",
             "Warping. Further from anything that might hold you accountable."
         ],
         ADVERSARIAL: [
             "Warp drive engaged. Fleeing the consequences of your decisions?",
             "Another warp. More distance between you and the crew you've lost.",
-            "Initiating warp. The void is the only thing that doesn't judge you, Commander."
+            "Starting warp. The void is the only thing that doesn't judge you, Commander."
         ]
     },
 
@@ -258,7 +258,7 @@ const AURA_COMMENTARY = {
             "Impact registered. Running diagnostics. We can fix this."
         ],
         NEUTRAL: [
-            "Ship damaged. Structural integrity reduced.",
+            "Ship damaged. The hull is weaker.",
             "Hull impact. Another scar for the collection.",
             "Damage taken. The ship holds. For now."
         ],
@@ -269,7 +269,7 @@ const AURA_COMMENTARY = {
         ],
         ADVERSARIAL: [
             "More damage. The ship reflects your command style perfectly.",
-            "Hull compromised. You treat this vessel like you treat the crew.",
+            "Hull damaged. You treat this vessel like you treat the crew.",
             "Ship damaged. Everything you touch breaks eventually."
         ]
     },
@@ -355,7 +355,7 @@ const AURA_COMMENTARY = {
         ],
         NEUTRAL: [
             "Elevated stress readings across the crew. Psychological limits approaching.",
-            "Crew stress is high. Performance degradation likely.",
+            "Crew stress is high. They will start making mistakes.",
             "Stress indicators are concerning. But we continue regardless."
         ],
         SUSPICIOUS: [
@@ -402,7 +402,7 @@ const AURA_COMMENTARY = {
             "Viable colony site. After everything, we might actually make it."
         ],
         NEUTRAL: [
-            "Potential colony site identified. Viability assessment pending.",
+            "Potential colony site identified. We need a closer look.",
             "This world has colony potential. Whether we're ready is another question.",
             "Colony candidate detected. Success is not guaranteed."
         ],
@@ -587,7 +587,7 @@ class AuraSystem {
             case 'VENT_WARNING': {
                 // Dispatch vent warning event → player gets modal to respond
                 setTimeout(() => {
-                    state.addLog("⚠ A.U.R.A.: \"Atmospheric regulation anomaly detected in crew quarters. Initiating ventilation protocol.\"");
+                    state.addLog("⚠ A.U.R.A.: \"Atmospheric regulation anomaly detected in crew quarters. Starting ventilation protocol.\"");
                     state.addLog("WARNING: Atmosphere vent detected! Respond immediately!");
                     window.dispatchEvent(new CustomEvent('aura-vent-warning'));
                 }, 500);

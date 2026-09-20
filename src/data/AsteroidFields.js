@@ -18,7 +18,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         id: 'ASTEROID_RICH',
         weight: 20,
         title: "RICH MINERAL DEPOSIT",
-        context: (name) => `${name} contains dense pockets of refined metals. High concentrations of processed alloys. Probably debris from a destroyed refinery. Stable enough for careful extraction.`,
+        context: (name) => `${name} contains dense pockets of refined metals. High concentrations of processed alloys. Probably debris from a destroyed refinery. Stable enough for careful digging.`,
         dialogue: [
             { speaker: 'Eng. Jaxon', text: "Good density here. We can extract a lot if we're patient." },
             { speaker: 'Tech Mira', text: "Spectral analysis shows rare earth elements. This is a good find." },
@@ -26,8 +26,8 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         ],
         choices: [
             {
-                text: "Full extraction (slow, safe)",
-                desc: "+40-60 Salvage. Low risk, thorough extraction.",
+                text: "Dig it all out (slow, safe)",
+                desc: "+40-60 Salvage. Low risk, careful digging.",
                 effect: (state) => {
                     const salvage = Math.floor(Math.random() * 21) + 40;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
@@ -36,7 +36,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                 }
             },
             {
-                text: "Quick extraction (fast, some risk)",
+                text: "Quick dig (fast, some risk)",
                 desc: "+20-30 Salvage. 15% chance of minor collision.",
                 effect: (state) => {
                     const salvage = Math.floor(Math.random() * 11) + 20;
@@ -44,11 +44,11 @@ const ASTEROID_FIELD_ENCOUNTERS = [
 
                     if (Math.random() < 0.15) {
                         state.energy = Math.max(0, state.energy - 10);
-                        state.addLog(`Minor collision during extraction. -10 Energy for repairs.`);
+                        state.addLog(`Minor collision on the way out. -10 Energy for repairs.`);
                         return `Quick mining done. +${salvage} Salvage. Minor hull damage: -10 Energy.`;
                     }
 
-                    state.addLog(`Quick extraction complete. +${salvage} Salvage.`);
+                    state.addLog(`Quick dig done. +${salvage} Salvage.`);
                     return `Quick mining done. +${salvage} Salvage.`;
                 }
             },
@@ -64,12 +64,12 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                             const item = rareItems[Math.floor(Math.random() * rareItems.length)];
                             state.cargo = state.cargo || [];
                             state.cargo.push({ ...item, acquiredAt: 'Asteroid Field' });
-                            state.addLog(`Targeted extraction found rare deposits. +25 Salvage and ${item.name}.`);
+                            state.addLog(`Targeted digging found rare deposits. +25 Salvage and ${item.name}.`);
                             return `Precision mining successful. +25 Salvage. Found: ${item.name}`;
                         }
                     }
 
-                    state.addLog("Targeted extraction complete. +25 Salvage.");
+                    state.addLog("Targeted digging done. +25 Salvage.");
                     return "Precision mining complete. +25 Salvage.";
                 }
             }
@@ -109,7 +109,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                             }
                         }
 
-                        state.addLog(`Asteroid strike! Hull integrity compromised. -${damage} Energy for repairs.`);
+                        state.addLog(`Asteroid strike! Hull damaged. -${damage} Energy for repairs.`);
                         return `Mining complete. +30 Salvage. Collision damage: -${damage} Energy.`;
                     }
 
@@ -122,7 +122,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                 desc: "+15 Salvage, no risk. Conservative approach.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
-                    state.addLog("Waited for debris field to settle. Safe extraction complete.");
+                    state.addLog("Waited for debris field to settle. Safe digging done.");
                     return "Patience paid off. +15 Salvage, no damage.";
                 }
             },
@@ -139,7 +139,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
 
                     state.probeIntegrity = Math.max(0, state.probeIntegrity - 20);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
-                    state.addLog(`Probe mapped safe extraction route. +25 Salvage. Probe integrity: ${state.probeIntegrity.toFixed(0)}%`);
+                    state.addLog(`Probe mapped safe digging route. +25 Salvage. Probe integrity: ${state.probeIntegrity.toFixed(0)}%`);
                     return `Probe-guided mining complete. +25 Salvage. Probe took minor damage.`;
                 }
             }
@@ -232,17 +232,17 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         context: (name) => `${name} sparkles with crystalline structures. Not ice — something harder, more complex. The crystals emit faint energy signatures. They might be valuable, or they might be dangerous. Hard to tell until we get closer.`,
         dialogue: [
             { speaker: 'Tech Mira', text: "The energy readings are off the charts. These crystals are... alive? No, not alive. Resonating." },
-            { speaker: 'Dr. Aris', text: "Careful with extraction. Crystal structures can be unstable." },
+            { speaker: 'Dr. Aris', text: "Careful with digging. Crystal structures can be unstable." },
             { speaker: 'A.U.R.A.', text: "Analysis suggests piezoelectric properties. High value, high volatility." }
         ],
         choices: [
             {
-                text: "Careful extraction",
+                text: "Careful digging",
                 desc: "+20 Salvage, +15 Energy from crystal resonance.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                     state.energy = Math.min(100, state.energy + 15);
-                    state.addLog("Crystal extraction complete. Energy absorption successful.");
+                    state.addLog("Crystal digging done. Energy absorption successful.");
                     return "Crystals harvested safely. +20 Salvage, +15 Energy.";
                 }
             },
@@ -344,7 +344,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state.addLog("Surface minerals extracted. We left the interior alone.");
-                    return "Safe extraction. +15 Salvage. Interior remains unexplored.";
+                    return "Safe digging. +15 Salvage. Interior remains unexplored.";
                 }
             },
             {
@@ -381,16 +381,16 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         dialogue: [
             { speaker: 'Eng. Jaxon', text: "Ice means water means fuel. Let's get what we need." },
             { speaker: 'Dr. Aris', text: "Be careful. Frozen gases can be volatile." },
-            { speaker: 'A.U.R.A.', text: "Recommend thermal extraction. Minimize impact force." }
+            { speaker: 'A.U.R.A.', text: "Recommend thermal digging. Minimize impact force." }
         ],
         choices: [
             {
-                text: "Thermal extraction (safe)",
+                text: "Thermal digging (safe)",
                 desc: "+25 Energy from ice-to-fuel conversion.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 25);
                     state.addLog("Ice harvested and converted. Ship reserves replenished.");
-                    return "Thermal extraction complete. +25 Energy.";
+                    return "Thermal digging done. +25 Energy.";
                 }
             },
             {

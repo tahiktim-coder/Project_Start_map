@@ -438,7 +438,7 @@ class GameState {
             this.emitUpdates();
             return true;
         }
-        this.addLog("WARNING: Insufficient Energy!");
+        this.addLog("WARNING: Not enough Energy!");
         return false;
     }
 
@@ -659,7 +659,7 @@ class GameState {
             this.emitUpdates();
             return true;
         }
-        this.addLog(`Insufficient Salvage for repair. Need ${cost}, have ${this.salvage}.`);
+        this.addLog(`Not enough Salvage for repair. Need ${cost}, have ${this.salvage}.`);
         return false;
     }
 
@@ -1119,7 +1119,7 @@ class App {
             // THE STRUCTURE - Cannot escape. Ship mysteriously returns.
             const currentPlanet = this.state.currentSystem;
             if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
-                this.state.addLog("A.U.R.A.: 'Initiating orbital departure sequence...'");
+                this.state.addLog("A.U.R.A.: 'Starting orbital departure sequence...'");
                 this.state.addLog("...");
                 this.state.addLog("A.U.R.A.: 'Anomaly detected. Navigation systems report departure successful.'");
                 this.state.addLog("A.U.R.A.: 'However... we remain in orbit of THE STRUCTURE.'");
@@ -1496,7 +1496,7 @@ class App {
             setTimeout(() => {
                 // Check if this is a station - use different message
                 if (planet.isStation || planet.type === 'STATION') {
-                    this.state.addLog(`Docking approach initiated. Station sensors detecting our arrival.`);
+                    this.state.addLog(`Docking approach started. Station sensors detecting our arrival.`);
                 } else if (planet.isAsteroidField || planet.type === 'ASTEROID_FIELD') {
                     this.state.addLog(`Entered debris field. Navigation systems active.`);
                 } else if (planet.isStructure || planet.type === 'STRUCTURE') {
@@ -1582,7 +1582,7 @@ class App {
             return;
         }
 
-        this.state.addLog(`Initiating docking procedure with ${station.name}...`);
+        this.state.addLog(`Starting docking procedure with ${station.name}...`);
         this.state.consumeRation();
 
         // Mark as investigated immediately to prevent re-clicking
@@ -1600,7 +1600,7 @@ class App {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ASTEROID FIELD MINING — Resource extraction from debris fields
+    // ASTEROID FIELD MINING — Resource digging from debris fields
     // ═══════════════════════════════════════════════════════════════
     handleAsteroidAction() {
         const field = this.state.currentSystem;
@@ -1836,7 +1836,7 @@ class App {
                     };
                     data._scanCorrupted = true;
                     this.state._auraFalseScan = false;
-                    this.state.addLog(`A.U.R.A.: "Scan complete. All readings nominal." [READINGS UNRELIABLE]`);
+                    this.state.addLog(`A.U.R.A.: "Scan complete. All readings normal." [READINGS UNRELIABLE]`);
                 }
 
                 // Build signal summary for log
@@ -1925,7 +1925,7 @@ class App {
         }
         if (this.state.consumeEnergy(jumpCost)) {
             this._isInTransit = true;
-            this.state.addLog("Initiating Sector Jump...");
+            this.state.addLog("Starting Sector Jump...");
 
             // Consume 1 ration (major action)
             this.state.consumeRation();
@@ -2269,7 +2269,7 @@ class App {
         } else if (nextSector > 6) {
             dialogue.push({ speaker: 'A.U.R.A.', text: 'We are beyond all charts. The universe holds its breath.' });
         } else {
-            dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems nominal.` });
+            dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems normal.` });
         }
 
         return dialogue;
@@ -3484,14 +3484,14 @@ You are home.`
             SHATTERED: {
                 vance: "The planet is literally falling apart. There's nothing stable to build on.",
                 aris: "Radiation from the exposed core is lethal. No one survives that.",
-                jaxon: "The structural integrity is zero. Fragments could crush us at any moment.",
+                jaxon: "The hull strength is zero. Fragments could crush us at any moment.",
                 mira: "Gravitational anomalies make orbit unstable. This world is dying."
             },
             ROCKY: {
                 vance: "Barren rock with no atmosphere. One dome breach and everyone suffocates.",
                 aris: "No biosphere, no ecosystem — growing food here is nearly impossible.",
                 jaxon: "Radiation exposure without atmosphere will cause long-term health issues.",
-                mira: "Resource extraction is possible, but colonization? Marginal at best."
+                mira: "We could mine here, but colonization? Marginal at best."
             },
             STORM_WORLD: {
                 vance: "800 kilometer per hour winds. Nothing we build will survive.",
@@ -3516,7 +3516,7 @@ You are home.`
         if (mira) warnings.push({ speaker: 'Tech Mira', text: specific?.mira || "My models show colony failure within 18 months at these readings. The deeper sectors have better candidates." });
 
         const viability = pType === 'VITAL' || pType === 'EDEN' || pType === 'TERRAFORMED' ? Math.floor(Math.random() * 20 + 40) : Math.floor(Math.random() * 8 + 2);
-        warnings.push({ speaker: 'A.U.R.A.', text: `Colony viability assessment for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
+        warnings.push({ speaker: 'A.U.R.A.', text: `Colony report for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
 
         modal.innerHTML = `
             <div class="modal-content" style="border-color: #d85a4e; max-width: 650px;">
@@ -3706,7 +3706,7 @@ You are home.`
         // Special handling for THE STRUCTURE - scanning it is... different
         if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
             if (this.state.consumeEnergy(2)) {
-                this.state.addLog("Deep Scan initiated...");
+                this.state.addLog("Deep Scan started...");
                 this.state.addLog("=== SCAN ERROR ===");
                 this.state.addLog("Mass: [OVERFLOW - VALUE EXCEEDS SENSOR RANGE]");
                 this.state.addLog("Composition: [NULL - MATERIAL UNKNOWN]");
@@ -3745,7 +3745,7 @@ You are home.`
         if (tune) this.noteReliance(!!tune.auto);
 
         if (this.state.consumeEnergy(2)) {
-            this.state.addLog("Deep Scan initiated...");
+            this.state.addLog("Deep Scan started...");
             if (tune && tune.grade === 'sharp') {
                 this.state.addColonyKnowledge(1, true);
                 this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
@@ -3856,7 +3856,7 @@ You are home.`
             this.state.probeIntegrity = 0;
             this.state.addLog("Probe launched toward THE STRUCTURE...");
             this.state.addLog("...");
-            this.state.addLog("Signal lost instantly. No telemetry. No wreckage. The probe simply... ceased.");
+            this.state.addLog("Signal lost instantly. No data. No wreckage. The probe simply... ceased.");
             this.state.addLog("A.U.R.A.: 'The probe did not crash. It was... unmade. I advise against further attempts.'");
             this.state.emitUpdates();
             this.orbitView.updateCommandDeck(planet);
@@ -3877,7 +3877,7 @@ You are home.`
                 this.state.emitUpdates();
                 this.orbitView.updateCommandDeck(this.state.currentSystem);
             } else {
-                this.state.addLog("Insufficient Salvage to fabricate Probe.");
+                this.state.addLog("Not enough Salvage to fabricate Probe.");
             }
             return;
         }
@@ -3955,7 +3955,7 @@ You are home.`
                 this.state.probeIntegrity = 100;
                 this.state.addLog("Probe Fabricated. Systems Operational. (-50 Salvage)");
             } else {
-                this.state.addLog("Insufficient Salvage to fabricate Probe. (50 required)");
+                this.state.addLog("Not enough Salvage to fabricate Probe. (50 required)");
                 return;
             }
         }
@@ -3963,7 +3963,7 @@ You are home.`
         // Remote probe costs additional energy (travel cost penalty)
         const remoteCost = Math.floor(targetPlanet.fuelCost * 0.3); // 30% of warp cost
         if (!this.state.consumeEnergy(remoteCost)) {
-            this.state.addLog(`Insufficient energy for remote probe. (${remoteCost} required)`);
+            this.state.addLog(`Not enough energy for remote probe. (${remoteCost} required)`);
             return;
         }
 
@@ -3973,7 +3973,7 @@ You are home.`
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
             const mira = this.state.crew.find(c => c.personality === 'CURIOUS' && c.status !== 'DEAD');
             if (mira) {
-                setTimeout(() => this.state.addLog(`${mira.name}: "Telemetry uplink established. This is exciting — remote sampling!"`), 400);
+                setTimeout(() => this.state.addLog(`${mira.name}: "Data link established. This is exciting — remote sampling!"`), 400);
             }
         }
 
@@ -4314,7 +4314,7 @@ You are home.`
             'TOXIC': ['chemical burn', 'atmospheric leak', 'acid exposure', 'contamination'],
             'DESERT': ['sandstorm', 'heat stroke', 'dust suffocation', 'quicksand'],
             'GAS_GIANT': ['pressure shock', 'atmospheric turbulence', 'lightning strike', 'gravity fluctuation'],
-            'VITAL': ['unknown pathogen', 'hostile flora', 'allergic reaction', 'spore exposure'],
+            'VITAL': ['unknown disease', 'hostile plants', 'allergic reaction', 'spore exposure'],
             'ROCKY': ['rockslide', 'cave-in', 'seismic shift', 'unstable terrain'],
             'OCEANIC': ['riptide', 'pressure breach', 'creature attack', 'storm surge'],
             'GRAVEYARD': ['hull collapse', 'decompression', 'debris impact', 'structural failure'],
@@ -4381,13 +4381,13 @@ You are home.`
             } else {
                 targetCrew.status = 'INJURED';
                 if (predatoryAttack) {
-                    logMsg = `CRITICAL: ${targetCrew.name} mauled by predatory organisms. Emergency extraction! `;
+                    logMsg = `CRITICAL: ${targetCrew.name} mauled by predatory organisms. Emergency rescue! `;
                     this.state.addLog(`Dr. Aris: "The wounds are severe. Whatever attacked them knew where to bite."`);
                 } else {
                     // Planet-type specific injury messages
                     const injuryMsgs = [
                         `INCIDENT: ${targetCrew.name} injured by ${hazardDesc}. Medical attention required.`,
-                        `CRITICAL: ${hazardDesc} wounded ${targetCrew.name}. Emergency extraction!`,
+                        `CRITICAL: ${hazardDesc} wounded ${targetCrew.name}. Emergency rescue!`,
                         `WARNING: ${targetCrew.name} sustained ${hazardDesc} injuries. Aborting EVA.`
                     ];
                     logMsg = injuryMsgs[Math.floor(Math.random() * injuryMsgs.length)] + ' ';
@@ -4422,7 +4422,7 @@ You are home.`
                 'ICE_WORLD': ['Cryo-samples secured. Warming up.', 'Team returned from the cold.', 'Thermal suits performed well.'],
                 'TOXIC': ['Decontamination complete. All clear.', 'Filters held. No exposure.', 'Hazmat protocols successful.'],
                 'DESERT': ['Sand-blasted but intact.', 'Team hydrated and returning.', 'Survived the wastes.'],
-                'GAS_GIANT': ['Atmospheric dive successful.', 'Pressure held. Samples acquired.', 'Returned from the depths.'],
+                'GAS_GIANT': ['Atmospheric dive successful.', 'Pressure held. Samples gained.', 'Returned from the depths.'],
                 'VITAL': ['Specimens secured safely.', 'Life signs stable. Beautiful world.', 'Biological samples obtained.'],
                 'ROCKY': ['Geological survey complete.', 'Core samples extracted.', 'Terrain navigated successfully.'],
                 'OCEANIC': ['Submersible mission success.', 'Water samples secured.', 'Aquatic EVA complete.'],
@@ -4430,7 +4430,7 @@ You are home.`
                 'CRYSTALLINE': ['Crystal formations documented.', 'Resonance samples secured.', 'Harmonic data recorded.'],
                 'SHATTERED': ['Debris field navigated.', 'Fragment samples collected.', 'Micro-gravity EVA success.'],
                 'BIO_MASS': ['Organic samples contained.', 'Avoided the larger masses.', 'Biomatter secured for study.'],
-                'MECHA': ['Avoided active defenses.', 'Tech salvage acquired.', 'Machine world yielded components.'],
+                'MECHA': ['Avoided active defenses.', 'Tech salvage gained.', 'Machine world yielded components.'],
                 'ROGUE': ['Survived the cold darkness.', 'Isolation protocols held.', 'Returned from the void.'],
                 'TERRAFORMED': ['Former colony yielded resources.', 'Reclaimed what was left behind.', 'Terraformer data secured.'],
                 '_DEFAULT': ['Operations complete. Team safe.', 'EVA successful. Returning.', 'Mission accomplished.']
@@ -4838,7 +4838,7 @@ You are home.`
 
             if (c.status === 'DEAD') {
                 statusClass = 'dead';
-                title = `${c.name}: DECEASED`;
+                title = `${c.name}: DEAD`;
             } else if (c.tags && c.tags.includes('SEDATED')) {
                 statusClass = 'sedated';
                 title = `${c.name}: SEDATED`;
@@ -5032,7 +5032,7 @@ You are home.`
         if (deadCrew.length === 0) {
             this.showEventModal({
                 title: "INVALID TARGET",
-                desc: "No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (deceased).",
+                desc: "No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead).",
                 choices: [{ text: "CANCEL", riskMod: 0, reward: { type: 'NONE' } }]
             }, this.state.currentSystem);
             return;
@@ -5048,7 +5048,7 @@ You are home.`
                     <p>Select subject for integration with ${item.name}.</p>
                     <p style="color: #d85a4e; font-size: 0.8em; margin-top: 10px;">
                         WARNING: PROCESS IS IRREVERSIBLE.<br>
-                        Neural patterns will be reconstructed but altered. The entity returned may retain skills but lose self-identity.
+                        Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity.
                     </p>
                 </div>
                 <div class="crew-list">
@@ -5353,12 +5353,12 @@ You are home.`
                                 cursor: ${canRepair ? 'pointer' : 'not-allowed'};
                                 font-family: var(--font-mono); font-weight: bold;
                             " ${canRepair ? '' : 'disabled'}>
-                                ${canRepair ? 'INITIATE REPAIR' : 'INSUFFICIENT SALVAGE'}
+                                ${canRepair ? 'START REPAIR' : 'NOT ENOUGH SALVAGE'}
                             </button>
                         </div>
                     ` : `
                         <div style="color: var(--color-primary); font-size: 0.9em; text-align: center; padding: 10px; border: 1px solid var(--color-primary-dim);">
-                            ALL SYSTEMS NOMINAL
+                            ALL SYSTEMS NORMAL
                         </div>
                     `}
                     ${deckKey === 'cargo' ? `

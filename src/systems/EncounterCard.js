@@ -47,11 +47,15 @@
         });
     }
 
-    function choicesHtml(choices) {
-        return `<div class="enc-choices">${choices.map((c, i) => `
-            <button class="enc-choice" data-idx="${i}" ${c.disabled ? 'disabled' : ''}>
-                <span>${c.text}</span>${c.desc ? `<small>${markRewards(c.desc)}</small>` : ''}
-            </button>`).join('')}</div>`;
+    /** A choice with a `requires(state)` rule that fails is shown locked, with its `requiresLabel` as the reason. */
+    function choicesHtml(app, choices) {
+        return `<div class="enc-choices">${choices.map((c, i) => {
+            const isLocked = !!c.disabled || (typeof c.requires === 'function' && !c.requires(app.state));
+            const note = isLocked && c.requiresLabel ? esc(c.requiresLabel) : markRewards(c.desc);
+            return `<button class="enc-choice" data-idx="${i}" ${isLocked ? 'disabled' : ''}>
+                <span>${c.text}</span>${note ? `<small>${note}</small>` : ''}
+            </button>`;
+        }).join('')}</div>`;
     }
 
     /** A broken carrier wave: steady on the left, falling apart to the right. */
@@ -96,7 +100,7 @@
                 ${cfg.context ? `<p class="enc-context">${cfg.context}</p>` : ''}
                 ${dialogueHtml(app, cfg.dialogue)}
                 <h4>YOUR CALL</h4>
-                ${choicesHtml(cfg.choices)}
+                ${choicesHtml(app, cfg.choices)}
             </section>`;
         document.body.appendChild(modal);
         if (cfg.hasSignal) runSignal(modal.querySelector('.enc-signal'), color);

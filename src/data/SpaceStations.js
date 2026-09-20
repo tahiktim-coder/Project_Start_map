@@ -90,7 +90,7 @@ const SPACE_STATION_ENCOUNTERS = [
         choices: [
             {
                 text: "Access the research database",
-                desc: "+Tech Fragment or special item. Safe extraction.",
+                desc: "+Tech Fragment or special item. Safe digging.",
                 effect: (state) => {
                     if (typeof ITEMS !== 'undefined') {
                         const possibleItems = [ITEMS.TECH_FRAGMENT, ITEMS.ANCIENT_DATABASE, ITEMS.SIGNAL_DECODER];
@@ -145,7 +145,7 @@ const SPACE_STATION_ENCOUNTERS = [
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state.rations = Math.min(state.maxRations, state.rations + 2);
-                    state.addLog("Personal effects and emergency supplies recovered from quarters.");
+                    state.addLog("Personal things and emergency supplies recovered from quarters.");
                     return "Crew quarters searched. +15 Salvage, +2 Rations.";
                 }
             }
@@ -273,16 +273,16 @@ const SPACE_STATION_ENCOUNTERS = [
                 effect: (state) => {
                     state._warpDiscount = (state._warpDiscount || 0) + 10;
                     state.addLog("Military navigation data downloaded. Safer route calculations available.");
-                    return "Tactical data acquired. Warp costs reduced by 10%.";
+                    return "Tactical data gained. Warp costs reduced by 10%.";
                 }
             },
             {
                 text: "Drain the weapon capacitors",
-                desc: "+50 Energy. Safe extraction.",
+                desc: "+50 Energy. Safe digging.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 50);
                     state.addLog("Weapon capacitors drained. Energy transferred to ship reserves.");
-                    return "Power extraction complete. +50 Energy from weapon systems.";
+                    return "Power drained. +50 Energy from weapon systems.";
                 }
             }
         ]

@@ -566,3 +566,104 @@
 .eva-team {
     padding-top: 0 !important;
 }
+
+/* ── station / asteroid orbit screens (OrbitView.siteScreen) ── */
+.site-screen {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.site-heading {
+    margin: 0 0 16px;
+    font: 600 clamp(1.2em, 0.9em + 0.9vw, 1.9em) var(--font-display);
+    letter-spacing: 0.08em;
+    color: var(--bone);
+}
+
+.site-heading small {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.42em;
+    letter-spacing: 0.3em;
+    color: var(--green);
+}
+
+.site-body {
+    flex: 1;
+    display: flex;
+    gap: 24px;
+    min-height: 0;
+}
+
+.site-readout {
+    flex: none;
+    width: min(300px, 45%);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-right: 22px;
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+}
+
+.site-facts {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 9px 16px;
+    margin: 0;
+    font-size: 0.92em;
+    line-height: 1.4;
+}
+
+.site-facts dt {
+    padding-top: 2px;
+    font-size: 0.78em;
+    letter-spacing: 0.14em;
+    color: var(--dim);
+}
+
+.site-facts dd { margin: 0; color: var(--bone); }
+.site-facts dd.is-warn { color: var(--amber); }
+.site-facts dd.is-bad { color: var(--red); }
+
+.site-note {
+    margin: 0;
+    padding-left: 12px;
+    border-left: 2px solid var(--line2);
+    font-size: 0.92em;
+    line-height: 1.55;
+    color: var(--dim);
+}
+
+.site-tip {
+    margin-top: auto;
+    padding: 12px 14px;
+    border: 1px solid var(--line2);
+    border-left: 3px solid var(--amber);
+    background: rgba(217, 162, 74, 0.07);
+}
+
+.site-tip b {
+    font: 600 0.7em var(--font-display);
+    letter-spacing: 0.22em;
+    color: var(--amber);
+}
+
+.site-tip p {
+    margin: 6px 0 0;
+    font-size: 0.86em;
+    line-height: 1.55;
+    color: var(--bone);
+}
+
+.site-visual {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}

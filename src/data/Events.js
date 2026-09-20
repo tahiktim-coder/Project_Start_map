@@ -25,7 +25,7 @@ const EVENTS = [
         title: "RICH VEIN DETECTED",
         desc: "Sensors indicate a high-density mineral pocket in a precarious canyon ridge.",
         choices: [
-            { text: "Surface Extraction (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Surface Digging (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
             { text: "Deep Core Drill (Risky)", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }
         ]
     },
@@ -124,7 +124,7 @@ const EVENTS = [
         id: 'TERMINATOR_WALK',
         trigger: (planet) => planet.type === 'TIDALLY_LOCKED',
         title: "THE THIN LINE",
-        desc: "The habitable band is barely 200km wide. One wrong step — eternal fire or eternal ice.",
+        desc: "The livable band is barely 200km wide. One wrong step — eternal fire or eternal ice.",
         choices: [
             { text: "Survey Twilight Zone (Moderate)", riskMod: 15, reward: { type: 'RESOURCE', val: 'METALS' } },
             { text: "Cross Into The Dark Side (Extreme)", riskMod: 55, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
@@ -237,7 +237,7 @@ const EVENTS = [
         title: "GRAVITY SURGE",
         desc: "Local gravity just tripled. Equipment is being crushed. Crew can barely stand.",
         choices: [
-            { text: "Emergency Extraction (Costly)", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Emergency Rescue (Costly)", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
             { text: "Crawl to Target (Extreme)", riskMod: 45, reward: { type: 'ITEM', tags: ['GEO', 'ARTIFACT'] } }
         ]
     },
