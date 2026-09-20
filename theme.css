@@ -521,3 +521,48 @@
 :root[data-release] #btn-testing {
     display: none;
 }
+
+/* ── less clutter ── */
+#right-panel > .panel-header {
+    display: none; /* the panel explains itself */
+}
+
+#btn-testing,
+#btn-art,
+#btn-audio {
+    font-size: 0.68em !important;
+    padding: 2px 7px !important;
+    opacity: 0.45 !important;
+    transition: opacity 150ms;
+}
+
+#btn-testing:hover,
+#btn-art:hover,
+#btn-audio:hover,
+#btn-testing:focus-visible,
+#btn-art:focus-visible,
+#btn-audio:focus-visible {
+    opacity: 1 !important;
+}
+
+/* a text link under a command-deck button, for the optional version of an action */
+.cmd-link {
+    margin-top: -9px;
+    padding: 0 2px 4px;
+    background: none;
+    border: 0;
+    text-align: left;
+    font: 0.74em var(--font-mono);
+    color: var(--dim);
+    text-decoration: underline dotted;
+    cursor: pointer;
+}
+
+.cmd-link:hover,
+.cmd-link:focus-visible {
+    color: var(--green-br);
+}
+
+.eva-team {
+    padding-top: 0 !important;
+}

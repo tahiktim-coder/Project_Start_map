@@ -77,7 +77,7 @@ class NavView {
         this.element.innerHTML = `
             <div style="padding: 20px; height: 100%; display: flex; flex-direction: column;">
                 <div style="display: flex; justify-content: space-between; align-items: end; border-bottom: 2px solid var(--color-primary); padding-bottom: 10px; margin-bottom: 20px;">
-                    <h2 style="color: var(--color-primary); margin:0;">/// SECTOR NAVIGATION MAP</h2>
+                    <h2 style="color: var(--color-primary); margin:0;">SECTOR MAP</h2>
                     <div class="stops-left" title="The jump window only stays open for a few stops. You cannot see everything.">
                         <span>STOPS LEFT</span>${(() => {
                             const left = this.state && this.state.getStopsLeft ? this.state.getStopsLeft() : 0;

@@ -1100,7 +1100,7 @@ class App {
 
         window.addEventListener('req-warp', (e) => this.handleWarp(e.detail));
         window.addEventListener('req-sector-jump', () => this.handleSectorJump());
-        window.addEventListener('req-action-scan', () => this.handleScanAction());
+        window.addEventListener('req-action-scan', (e) => this.handleScanAction(!!(e.detail && e.detail.manual)));
         window.addEventListener('req-action-probe', () => this.handleProbeAction());
         window.addEventListener('req-action-eva', () => this.handleEvaAction());
         window.addEventListener('req-action-colony', () => this.handleColonyAction());
@@ -1332,6 +1332,7 @@ class App {
         if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost) {
             this._isInTransit = true;
             const plotOptions = this.getPlotOptions(planet.name, 'planet');
+            plotOptions.burns = 1;
             plotOptions.targetHtml = window.BodyRenderer ? window.BodyRenderer.body(planet, 64) : null;
             window.WarpPlot.play(plotOptions).then(result => {
                 this._isInTransit = false;
@@ -3941,7 +3942,7 @@ You are home.`
         });
     }
 
-    handleScanAction() {
+    handleScanAction(isManual = false) {
         const planet = this.state.currentSystem;
 
         // Special handling for THE STRUCTURE - scanning it is... different
@@ -3974,10 +3975,10 @@ You are home.`
         }
 
         // Tune the signal first; we re-enter here with the result (same pattern as the warp plot)
-        if (window.SignalTune && !this._tuneResult && planet && !planet.scanned && this.state.energy >= 2) {
+        if (isManual && window.SignalTune && !this._tuneResult && planet && !planet.scanned && this.state.energy >= 2) {
             window.SignalTune.play({ targetName: planet.name, sector: this.state.currentSector }).then(result => {
                 this._tuneResult = result;
-                this.handleScanAction();
+                this.handleScanAction(true);
             });
             return;
         }
@@ -4332,8 +4333,17 @@ You are home.`
             return;
         }
 
-        // Select 2-person EVA team by priority
-        const evaTeam = this.selectEvaTeam();
+        // The player picks the two who go (we re-enter here with the choice); automatic pick is the fallback
+        if (window.AwayTeam && !this._pickedEvaTeam) {
+            window.AwayTeam.pick(this, evaCrew, planet).then(team => {
+                if (!team) return; // "not this time": nothing was spent
+                this._pickedEvaTeam = team;
+                this.handleEvaAction();
+            });
+            return;
+        }
+        const evaTeam = this._pickedEvaTeam || this.selectEvaTeam();
+        this._pickedEvaTeam = null;
 
         // OBSESSED (Mira stress 3): EVA costs double energy and double rations
         const isObsessed = this.state.hasActiveTrait('OBSESSED');
@@ -4371,9 +4381,14 @@ You are home.`
             // Store EVA team for resolveEvaOutcome
             this.currentEvaTeam = evaTeam;
 
+            // Watch them go down before anything happens to them
+            const afterDescent = window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam) : Promise.resolve();
+
             // Special EDEN EVA — paradise world, unique peaceful encounter
             if (planet.type === 'EDEN') {
-                this.showEdenEvaModal(planet);
+                planet.hasEva = true;
+                this.orbitView.updateCommandDeck(planet);
+                afterDescent.then(() => this.showEdenEvaModal(planet));
                 return;
             }
 
@@ -4387,9 +4402,9 @@ You are home.`
                 ? specificEvents[Math.floor(Math.random() * specificEvents.length)]
                 : potentialEvents[potentialEvents.length - 1];
 
-            this.showEventModal(selectedEvent, planet);
             planet.hasEva = true;
             this.orbitView.updateCommandDeck(planet);
+            afterDescent.then(() => this.showEventModal(selectedEvent, planet));
         }
     }
 
@@ -4476,6 +4491,7 @@ You are home.`
                     <h3>${event.title}</h3>
                     <span class="deck-panel-status">TEAM ON THE GROUND</span>
                 </header>
+                <ul class="deck-panel-crew eva-team">${(this.currentEvaTeam || []).map(m => `<li><img class="deck-panel-face" src="assets/crew/${m.portraitId}.png" alt=""><span class="deck-panel-name">${m.name}</span><span class="deck-panel-mood">ON THE GROUND</span></li>`).join('')}</ul>
                 <p class="eva-found">“${event.desc}”</p>
                 ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>SCAN SAYS</dt><dd>${signalModDisplay}</dd></dl>` : ''}
                 ${isParanoid ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
@@ -4686,6 +4702,9 @@ You are home.`
 
         // Auto-save after EVA completes
         this.autoSave();
+
+        // The airlock opens again: faces first, numbers second
+        if (window.AwayTeam && evaTeam.length) window.AwayTeam.returned(this, evaTeam, logMsg);
     }
 
     /**

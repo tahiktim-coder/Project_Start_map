@@ -484,3 +484,109 @@
     accent-color: var(--green);
     cursor: ew-resize;
 }
+
+/* ── away team (AwayTeam.js) — shares the warp-plot frame ── */
+.away-pick[aria-pressed="true"] {
+    background: rgba(116, 217, 154, 0.2);
+    border-color: var(--green);
+    box-shadow: inset 0 0 0 1px var(--green);
+}
+
+.away-vitals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.away-vitals > div {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.away-vitals img {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border: 1px solid;
+    border-radius: 3px;
+}
+
+.away-vitals b {
+    font: 600 0.78em var(--font-display);
+    letter-spacing: 0.12em;
+}
+
+.away-vitals canvas {
+    flex: 1;
+    height: 22px;
+    image-rendering: pixelated;
+}
+
+.away-radio {
+    min-height: 2.6em;
+    margin: 12px 0;
+    font-size: 0.98em;
+    color: var(--bone);
+}
+
+.away-roll {
+    list-style: none;
+    margin: 0 0 14px;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.away-roll li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--green);
+    background: rgba(116, 217, 154, 0.05);
+}
+
+.away-roll img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border: 1px solid;
+    border-radius: 3px;
+}
+
+.away-roll b {
+    display: block;
+    font: 600 1.05em var(--font-display);
+    letter-spacing: 0.08em;
+    color: var(--bone);
+}
+
+.away-roll span {
+    font-size: 0.9em;
+    color: var(--green);
+}
+
+.away-roll .is-hurt { border-left-color: var(--amber); background: rgba(217, 162, 74, 0.07); }
+.away-roll .is-hurt span { color: var(--amber); }
+.away-roll .is-lost { border-left-color: var(--red); background: rgba(216, 90, 78, 0.08); }
+.away-roll .is-lost img { filter: grayscale(1) brightness(0.5); }
+.away-roll .is-lost b { color: var(--dim); text-decoration: line-through; text-decoration-color: var(--red); }
+.away-roll .is-lost span { color: var(--red); }
+
+.away-return.is-loss .warp-plot-frame { border-top-color: var(--red); }
+.away-return.is-loss .warp-plot-target { color: #f0e6e2; }
+.away-return.is-hurt .warp-plot-frame { border-top-color: var(--amber); }
+
+.away-report,
+.away-after {
+    margin: 0 0 12px;
+    font-size: 0.9em;
+    line-height: 1.5;
+    color: var(--dim);
+}
+
+.away-after {
+    color: var(--amber);
+}

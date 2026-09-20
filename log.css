@@ -162,3 +162,15 @@
     color: var(--bone);
     border-color: var(--bone);
 }
+
+/* filters stay out of the way until the log is being used */
+.log-controls {
+    opacity: 0;
+    transition: opacity 200ms;
+}
+
+#mission-log:hover .log-controls,
+#mission-log:focus-within .log-controls,
+.log-controls:has([aria-pressed="true"]:not([data-filter="all"])) {
+    opacity: 1;
+}

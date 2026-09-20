@@ -422,6 +422,7 @@ class OrbitView {
                     <div>DEEP SCAN</div>
                     <div class="cost">${planet.scanned ? 'DONE' : '-2 ENERGY'}</div>
                 </button>
+                ${!planet.scanned && this.state.energy >= 2 && window.SignalTune ? '<button class="cmd-link" id="btn-scan-tune">or tune it by hand — a sharp lock gives +1 data</button>' : ''}
 
                 ${planet.isStation && !planet.stationInvestigated
                     ? `<button class="cmd-btn" id="btn-station" style="border-color: #74d99a; color: #74d99a;">
@@ -613,6 +614,8 @@ class OrbitView {
         rightPanel.appendChild(style);
 
         rightPanel.querySelector('#btn-scan').addEventListener('click', () => window.dispatchEvent(new CustomEvent('req-action-scan')));
+        const tuneLink = rightPanel.querySelector('#btn-scan-tune');
+        if (tuneLink) tuneLink.addEventListener('click', () => window.dispatchEvent(new CustomEvent('req-action-scan', { detail: { manual: true } })));
         rightPanel.querySelector('#btn-probe').addEventListener('click', () => window.dispatchEvent(new CustomEvent('req-action-probe')));
 
         const btnEva = rightPanel.querySelector('#btn-eva');

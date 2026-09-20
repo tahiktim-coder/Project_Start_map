@@ -62,11 +62,15 @@
     }
 
     function finalGrade(locks) {
+        if (locks.length === 1) return locks[0]; // a single-burn hop: what you locked is what you get
         const points = locks.reduce((sum, g) => sum + LOCK[g].points, 0);
         if (points === STAGES.length * 2) return 'perfect';
         if (points >= 4) return 'clean';
         return points >= 2 ? 'rough' : 'bad';
     }
+
+    /** Planet hops are one burn; sector jumps are the full set. */
+    const burnsOf = opts => Math.max(1, Math.min(STAGES.length, opts.burns || STAGES.length));
 
     function pickLine(kind, crew) {
         const alive = tag => crew.find(c => c.status !== 'DEAD' && (c.tags || []).includes(tag));
@@ -88,8 +92,10 @@
                     ${opts.targetHtml ? `<div class="warp-plot-body">${opts.targetHtml}</div>` : ''}
                     <div class="warp-plot-callout" aria-hidden="true"></div>
                 </div>
-                <ol class="warp-plot-pips" aria-label="Burns">${STAGES.map((_, i) => `<li><span>BURN ${i + 1}</span></li>`).join('')}</ol>
-                <p class="warp-plot-hint">Three burns, each faster. Lock every one inside the bright window — all three clean gives the most fuel back.</p>
+                <ol class="warp-plot-pips" aria-label="Burns" style="grid-template-columns: repeat(${burnsOf(opts)}, 1fr)">${STAGES.slice(0, burnsOf(opts)).map((_, i) => `<li><span>BURN ${i + 1}</span></li>`).join('')}</ol>
+                <p class="warp-plot-hint">${burnsOf(opts) === 1
+                    ? 'One burn. Lock it inside the bright window: clean gives fuel back, a miss costs extra.'
+                    : 'A long jump: three burns, each faster. Lock every one inside the bright window — all three clean gives the most fuel back.'}</p>
                 <div class="warp-plot-buttons">
                     <button class="warp-plot-engage">LOCK BURN <kbd>SPACE</kbd></button>
                     <button class="warp-plot-auto">LET A.U.R.A. PLOT IT</button>
@@ -125,7 +131,7 @@
 
     function drawArc(ctx, s, now) { // each third of the course takes the colour of the burn that flew it
         for (let k = 0; k <= ARC.dots; k++) {
-            const p = k / ARC.dots, third = Math.min(STAGES.length - 1, Math.floor(p * STAGES.length));
+            const p = k / ARC.dots, third = Math.min(s.burns - 1, Math.floor(p * s.burns));
             const x = ARC.x0 + p * (ARC.x1 - ARC.x0), y = ARC.y - Math.sin(p * Math.PI) * ARC.rise;
             const flown = s.locks[third], isCurrent = third === s.locks.length;
             ctx.fillStyle = flown ? LOCK[flown].color : (isCurrent && Math.floor(now / 200 + k) % 3 === 0 ? BONE : GREEN_DIM);
@@ -167,7 +173,7 @@
             const base = baseDifficulty(opts);
             const s = {
                 diff: stageDifficulty(base, 0), pos: 0, locks: [], grade: null, flightStart: 0, lastLockAt: -1e9,
-                stageStart: performance.now(), hasBody: !!opts.targetHtml,
+                stageStart: performance.now(), hasBody: !!opts.targetHtml, burns: burnsOf(opts),
                 stars: Array.from({ length: 70 }, () => ({ x: Math.random() * BUFFER_W, y: Math.random() * 96, z: 0.3 + Math.random() * 0.7 })),
             };
             let raf = 0, isDone = false;
@@ -194,7 +200,7 @@
                 pips[index].querySelector('span').textContent = LOCK[result].word;
                 showCallout(`BURN ${index + 1} · ${LOCK[result].word}`, LOCK[result].color);
                 sfx('playTone', ...LOCK_TONE[result]);
-                if (s.locks.length === STAGES.length) { setTimeout(() => fly(finalGrade(s.locks), false), LOCK_PAUSE_MS); return; }
+                if (s.locks.length === burnsOf(opts)) { setTimeout(() => fly(finalGrade(s.locks), false), LOCK_PAUSE_MS); return; }
                 setTimeout(() => { // next burn: new window, faster sweep
                     s.diff = stageDifficulty(base, s.locks.length);
                     s.stageStart = performance.now();
@@ -241,7 +247,7 @@
             }
 
             function frame(now) {
-                const isSweeping = !s.grade && now - s.lastLockAt >= LOCK_PAUSE_MS && s.locks.length < STAGES.length;
+                const isSweeping = !s.grade && now - s.lastLockAt >= LOCK_PAUSE_MS && s.locks.length < burnsOf(opts);
                 if (isSweeping) { // ping-pong sweep
                     const phase = ((now - s.stageStart) % (s.diff.period * 2)) / s.diff.period;
                     s.pos = phase <= 1 ? phase : 2 - phase;
