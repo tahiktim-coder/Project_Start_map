@@ -9,7 +9,7 @@
         bridge: { does: 'Navigation, long-range scans, A.U.R.A. core.', broken: 'Warp costs +50%. Long-range scan offline.', usedFrom: 'Used from the navigation map.' },
         lab: { does: 'Deep scans and item identification.', broken: 'Scans return partial data. Items stay unidentified.', usedFrom: 'Used from orbit.' },
         quarters: { does: 'Crew heal and shed stress here between jumps.', broken: 'No healing. No stress recovery.' },
-        cargo: { does: 'Holds up to 20 items. Stasis pods for the dead.', broken: 'Capacity halved to 10.' },
+        cargo: { does: 'Holds what you bring back — anything over the limit is left behind. Stasis pods for the dead.', broken: 'Capacity halved.' },
         engineering: { does: 'Drives, probe fabrication, the fabricator.', broken: 'No probes. Sector jump costs double. Repairs +50%.' },
     };
     const RGB = c => `rgb(${c.join(',')})`;
@@ -49,7 +49,7 @@
             out.push(`<button class="deck-action deck-action-repair" data-act="repair" ${quote.canAfford ? '' : 'disabled'}>`
                 + `<span>REPAIR ROOM</span><small>${quote.cost} salvage · you have ${state.salvage}${quote.notes ? ' · ' + quote.notes : ''}</small></button>`);
         }
-        if (deckKey === 'cargo') out.push(`<button class="deck-action" data-act="cargo"><span>OPEN CARGO</span><small>${state.cargo.length} / 20 items</small></button>`);
+        if (deckKey === 'cargo') out.push(`<button class="deck-action" data-act="cargo"><span>OPEN CARGO</span><small>${state.cargo.length} / ${state.getCargoLimit ? state.getCargoLimit() : 20} items</small></button>`);
         if (deckKey === 'quarters') out.push(`<button class="deck-action" data-act="crew"><span>CREW MANIFEST</span><small>health, stress, rest</small></button>`);
         if (deckKey === 'engineering') {
             out.push(`<button class="deck-action" data-act="fab" ${deck.status === 'DAMAGED' ? 'disabled' : ''}>`

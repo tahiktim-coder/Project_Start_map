@@ -25,7 +25,7 @@
 
     const POD_LENGTH = 11; // stasis pod, in buffer pixels
     const CARGO_BAYS = 5, ITEMS_PER_PALLET = 4; // 5 × 4 = the 20-item hold
-    let cargoCount = 0;
+    let cargoCount = 0, hasCargoRacks = false;
 
     const roleOf = member => Object.keys(ROLE_STATION).find(tag => (member.tags || []).includes(tag));
     const colorOf = member => ROLE_COLOR[roleOf(member)] || SKIN;
@@ -86,8 +86,9 @@
             return (bunk && dx > hw * 0.38) ? { g: 0.55, a: 0 } : null;
         },
         cargo(lx, ly, rw, rh) { // one pallet per ITEMS_PER_PALLET carried, filling bays left to right; empty bays are floor marks
-            const bayWidth = rw / CARGO_BAYS, bay = Math.floor(lx / bayWidth), inBay = lx - bay * bayWidth;
-            if (bay < 0 || bay >= CARGO_BAYS || inBay < 2 || inBay > bayWidth - 2) return null;
+            const bays = CARGO_BAYS + (hasCargoRacks ? 1 : 0); // Extra Cargo Racks adds a sixth bay
+            const bayWidth = rw / bays, bay = Math.floor(lx / bayWidth), inBay = lx - bay * bayWidth;
+            if (bay < 0 || bay >= bays || inBay < 2 || inBay > bayWidth - 2) return null;
             const load = Math.max(0, Math.min(ITEMS_PER_PALLET, cargoCount - bay * ITEMS_PER_PALLET)); // items on this pallet
             if (load === 0) return (ly === rh - 3 && Math.floor(inBay) % 3 === 0) ? { g: 0.34, a: 0 } : null;
             const height = 2 + load * 3;
@@ -263,6 +264,7 @@
         const v = view, decks = {};
         Object.keys(state.shipDecks || {}).forEach(key => { decks[key] = state.shipDecks[key].status; });
         cargoCount = (state.cargo || []).length;
+        hasCargoRacks = (state.upgrades || []).includes('cargo_racks');
         v.gray.fill(0); v.acc.fill(0); v.mask.fill(0);
         renderHull(v, decks, now);
         quantize(v.img, v.w, v.h, v.gray, v.acc, v.mask, { ramp: HULL_RAMP, accent: LAMP_ACCENT, contrast: 1.05 });

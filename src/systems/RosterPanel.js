@@ -9,7 +9,7 @@
     const ROOM = { bridge: 'Bridge', lab: 'Laboratory', quarters: 'Crew quarters', cargo: 'Cargo hold', engineering: 'Engineering' };
     const STRESS_WORD = ['calm', 'uneasy', 'strained', 'breaking'];
     const ITEM_KIND = { CONSUMABLE: 'can be used once', ARTIFACT: 'keepsake', RESOURCE: 'raw material', LORE: 'a piece of the story' };
-    const CARGO_LIMIT = 20;
+    const FALLBACK_CARGO_LIMIT = 20;
     const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
     function open(className, label, inner) {
@@ -86,9 +86,10 @@
 
     function cargo(app) {
         const state = app.state, count = state.cargo.length;
+        const limit = state.getCargoLimit ? state.getCargoLimit() : FALLBACK_CARGO_LIMIT;
         const modal = open('cargo-panel', 'Cargo hold', `
             <header class="deck-panel-head"><h3>CARGO HOLD</h3>
-                <span class="deck-panel-status">${count} OF ${CARGO_LIMIT} ITEMS</span>
+                <span class="deck-panel-status">${count} OF ${limit} ITEMS${count >= limit ? ' — FULL' : ''}</span>
                 <button class="deck-panel-close close-modal" aria-label="Close">✕</button></header>
             ${count === 0 ? '<p class="roster-note">Empty. Probes, away teams and boarding parties bring things back here.</p>'
                 : `<ul class="cargo-grid">${state.cargo.map(itemCard).join('')}</ul>`}`);

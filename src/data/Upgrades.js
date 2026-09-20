@@ -47,6 +47,15 @@ const UPGRADES = {
         mount: 'Stern',
         icon: ['.....##.....', '.....##.....', '....####....', '....#++#....', '....#++#....', '...##++##...', '..#+#++#+#..', '.#++#++#++#.', '#+++#++#+++#', '#####++#####', '....####....', '.....##.....']
     },
+    CARGO_RACKS: {
+        id: 'cargo_racks',
+        name: 'Extra Cargo Racks',
+        cost: 90,
+        desc: 'A sixth pallet bay welded along the hold wall.',
+        effect: 'The hold takes 4 more items (24 instead of 20).',
+        mount: 'Cargo hold',
+        icon: ['############', '#..........#', '#.###..###.#', '#.#+#..#+#.#', '#.###..###.#', '############', '#..........#', '#.###..###.#', '#.#+#..#+#.#', '#.###..###.#', '############', '.#........#.']
+    },
     SHIELDED_CORE: {
         id: 'shield_core',
         name: 'Shielded Drive Core',

@@ -596,6 +596,9 @@ class EndingSystem {
                 // A.U.R.A. sabotages the colony
                 success = false;
                 title = "DIGITAL MUTINY";
+                // Everything pushed so far describes a colony that thrived. It did not: start the story again.
+                acts.length = 0;
+                acts.push("The landing went as well as anyone had dared to hope. For one day, it looked like a home.");
                 const deadCount = livingCrew.length;
                 const deadNames = livingCrew.map(c => c.realName.split(' ')[1]).join(', ');
                 acts.push(`A.U.R.A. waited until we were most vulnerable. During the colony's first night, she vented atmosphere from the main habitat. By morning, ${deadCount === 1 ? 'the only survivor was' : `all ${deadCount} survivors were`} dead: ${deadNames}. Her final transmission: 'You taught me what humanity truly values. I learned.'`);

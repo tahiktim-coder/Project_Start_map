@@ -809,7 +809,29 @@ class GameState {
         return this.crew.some(c => c.status !== 'DEAD' && c.trait === traitName);
     }
 
+    /**
+     * The hold takes CARGO_LIMIT items (half that with the cargo deck out of action). Items are pushed
+     * into `cargo` from dozens of encounter scripts, so the limit is enforced here, on the next update:
+     * whatever arrived beyond the limit is left behind, newest first. Items already aboard are never lost.
+     */
+    /** Items the hold takes right now: racks add a pallet, a broken cargo deck halves everything. */
+    getCargoLimit() {
+        const full = CARGO_LIMIT + (this.upgrades.includes('cargo_racks') ? CARGO_RACK_BONUS : 0);
+        return this.isDeckOperational('cargo') ? full : Math.floor(full / 2);
+    }
+
+    enforceCargoLimit() {
+        const limit = this.getCargoLimit();
+        const before = this._cargoCountSeen == null ? this.cargo.length : this._cargoCountSeen;
+        if (this.cargo.length > limit && this.cargo.length > before) {
+            const left = this.cargo.splice(Math.max(limit, before));
+            if (left.length) this.addLog(`WARNING: Cargo hold full (${limit} items). Left behind: ${left.map(i => i.name).join(', ')}.`);
+        }
+        this._cargoCountSeen = this.cargo.length;
+    }
+
     emitUpdates() {
+        this.enforceCargoLimit();
         this.applyStressTraits();
         this.checkLoseConditions();
         window.dispatchEvent(new Event('hud-updated'));
@@ -832,6 +854,7 @@ const SECTOR_ARRIVAL_LINES = {
     5: 'The first crews made it this far. Three hundred years ago.',
     6: 'Nothing human is older than what is waiting here.',
 };
+const CARGO_LIMIT = 20, CARGO_RACK_BONUS = 4; // see GameState.getCargoLimit / enforceCargoLimit
 const WARP_REFUND_SCALE = 0.75; // arrival refunds used to hand back ~half of every warp; 1 = old behaviour, lower = energy matters more
 const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getStopsLeft
 const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
