@@ -25,7 +25,7 @@
     <script src="src/systems/dither/DitherScene.js"></script>
     <script>
         const kinds = Object.keys(DitherRecipes.TYPES).map(type => ({ id: 'gallery-' + type, type }))
-            .concat([{ id: 'gallery-st', type: 'STATION' }, { id: 'gallery-as', type: 'ASTEROID_FIELD' }]);
+            .concat([{ id: 'gallery-st', type: 'STATION' }, { id: 'gallery-as', type: 'ASTEROID_FIELD' }, { id: 'gallery-structure', type: 'STRUCTURE' }, { id: 'gallery-wrong', type: 'WRONG_PLACE' }]);
         document.getElementById('grid').innerHTML = kinds.map(p =>
             `<figure>${BodyRenderer.body(p, 160)}${BodyRenderer.body(p, 72, { sel: true })}${BodyRenderer.body(p, 36)}<figcaption>${p.type}</figcaption></figure>`
         ).join('');

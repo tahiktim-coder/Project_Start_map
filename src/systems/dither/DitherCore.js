@@ -8,6 +8,7 @@
 
     const MODE_KEY = 'psm-art-mode';
     const MODES = ['classic', 'dither'];
+    const DEFAULT_MODE = 'dither'; // the look the game ships with; the ART button still switches to classic
     const INK = [11, 11, 13];
     const PAPER = [233, 230, 217];
     const ACCENT_MIX = 0.85; // how far a fully-accented pixel moves from its ramp colour to the accent
@@ -22,9 +23,9 @@
         }
         try {
             const saved = localStorage.getItem(MODE_KEY);
-            return MODES.includes(saved) ? saved : 'classic';
+            return MODES.includes(saved) ? saved : DEFAULT_MODE;
         } catch (e) {
-            return 'classic';
+            return DEFAULT_MODE;
         }
     }
     const mode = readMode();

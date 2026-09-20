@@ -179,11 +179,11 @@ class OrbitView {
 
                     <!-- RIGHT: The Structure Visual -->
                     <div class="orbit-visual" style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; margin-top: -40px;">
-                        <div class="planet-visual type-STRUCTURE" style="
+                        ${(window.BodyRenderer && BodyRenderer.body(planet, OrbitView.heroSize())) || `<div class="planet-visual type-STRUCTURE" style="
                             width: 300px; height: 300px;
                             position: relative;
                         ">
-                        </div>
+                        </div>`}
                         <div style="
                             position: absolute; top: 50%; left: 50%; width: 400px; height: 400px; transform: translate(-50%, -50%);
                             border: 2px dashed rgba(136,68,255,0.5); border-radius: 0; animation: structure-orbit 30s linear infinite;

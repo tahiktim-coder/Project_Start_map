@@ -150,6 +150,12 @@ class GameState {
         this.rations = 20;         // Time pressure / food supply (cap 30)
         this.maxRations = 30;
 
+        // --- Per-run counters (a new run must not inherit the last one's) ---
+        this.stopsLeft = null;     // recomputed for the sector by getStopsLeft()
+        this._stopsSector = null;
+        this._cargoCountSeen = 0;  // see enforceCargoLimit()
+        this.reliance = { auto: 0, manual: 0 }; // jobs handed to A.U.R.A. vs done by hand
+
         // --- Legacy aliases for systems that still reference old names ---
         // TODO: Remove these once all systems are updated
         Object.defineProperty(this, 'metals', {
@@ -243,6 +249,7 @@ class GameState {
             // A.U.R.A. (lives in its own singleton, so it has to be copied in by hand)
             stopsLeft: this.stopsLeft,
             stopsSector: this._stopsSector,
+            reliance: this.reliance || null,
             aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
             // Navigation
             currentSector: this.currentSector,
@@ -312,6 +319,7 @@ class GameState {
             this.upgrades = saveData.upgrades || [];
             this.stopsLeft = saveData.stopsLeft;
             this._stopsSector = saveData.stopsSector;
+            this.reliance = saveData.reliance || { auto: 0, manual: 0 };
             if (saveData.aura && window.AuraSystem) {
                 window.AuraSystem.ethicsScore = saveData.aura.ethicsScore || 0;
                 window.AuraSystem.warningCount = saveData.aura.warningCount || 0;
@@ -854,6 +862,7 @@ const SECTOR_ARRIVAL_LINES = {
     5: 'The first crews made it this far. Three hundred years ago.',
     6: 'Nothing human is older than what is waiting here.',
 };
+const RELIANCE_MIN_SAMPLES = 4; // A.U.R.A. only comments on who flies once there is a pattern to see
 const CARGO_LIMIT = 20, CARGO_RACK_BONUS = 4; // see GameState.getCargoLimit / enforceCargoLimit
 const WARP_REFUND_SCALE = 0.75; // arrival refunds used to hand back ~half of every warp; 1 = old behaviour, lower = energy matters more
 const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getStopsLeft
@@ -2104,8 +2113,25 @@ class App {
     }
 
     /** Clean burns hand fuel back, bad ones burn extra; rough and A.U.R.A. plots change nothing. */
+    /** Tally of tasks the player did by hand versus handed to A.U.R.A. (warp plots, scan tuning). Saved with the game. */
+    noteReliance(isAuto) {
+        const tally = this.state.reliance || (this.state.reliance = { auto: 0, manual: 0 });
+        tally[isAuto ? 'auto' : 'manual'] += 1;
+    }
+
+    /** What A.U.R.A. says about it on a sector arrival card, or null while there is too little to go on. */
+    getRelianceVoice() {
+        const tally = this.state.reliance || { auto: 0, manual: 0 }, total = tally.auto + tally.manual;
+        if (total < RELIANCE_MIN_SAMPLES) return null;
+        const share = tally.auto / total;
+        if (share >= 0.6) return { name: 'A.U.R.A.', face: null, text: 'You let me fly again. Good. You should rest more. I have us.' };
+        if (share <= 0.2) return { name: 'A.U.R.A.', face: null, text: 'You insist on doing it all by hand. I have noted it. I am only trying to help.' };
+        return null;
+    }
+
     applyPlotResult(result, baseCost) {
         if (!result || !window.WarpPlot) return;
+        this.noteReliance(!!result.auto);
         let delta = window.WarpPlot.energyDelta(result.grade, baseCost);
         if (delta < 0 && this.state.upgrades.includes('shield_core')) {
             this.state.addLog("Bad burn — the shielded core soaked it up. No extra fuel lost.");
@@ -2229,6 +2255,8 @@ class App {
                 voices: this.getWarpDialogue(nextSector, living).filter(d => d.speaker !== 'A.U.R.A.').slice(0, 2)
                     .map(d => ({ name: d.speaker, text: d.text, face: d.portraitId || null })),
             };
+            const relianceVoice = this.getRelianceVoice();
+            if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
             window.WarpPlot.play(plotOptions).then(result => {
                 this.applyPlotResult(result, SECTOR_JUMP_BASE_COST);
                 onComplete();
@@ -3955,6 +3983,7 @@ You are home.`
         }
         const tune = this._tuneResult;
         this._tuneResult = null;
+        if (tune) this.noteReliance(!!tune.auto);
 
         if (this.state.consumeEnergy(2)) {
             this.state.addLog("Deep Scan initiated...");

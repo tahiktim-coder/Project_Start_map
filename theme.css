@@ -400,6 +400,7 @@
 
 .stops-left span {
     margin-right: 4px;
+    white-space: nowrap;
 }
 
 .stops-left i {
@@ -514,4 +515,9 @@
 .orbit-readout {
     scrollbar-width: thin;
     scrollbar-color: var(--line2) transparent;
+}
+
+/* ── release build (tools/package_itch.py marks <html data-release>): no cheat button for players ── */
+:root[data-release] #btn-testing {
+    display: none;
 }

@@ -155,6 +155,46 @@
         }
     }
 
+    // ── THE STRUCTURE: nothing natural is this straight. A black slab, lit along one edge, inside
+    //    thin rings that turn the wrong way round. The only body in the game with no noise in it. ──
+    function renderStructure(s, t) {
+        const R = s.R, halfW = Math.max(3, R * 0.24), halfH = R * 0.92, pulse = 0.5 + 0.5 * Math.sin(t / 1400);
+        for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+            const i = y * s.w + x, dx = x - s.cx, dy = y - s.cy, dist = Math.sqrt(dx * dx + dy * dy * 5.3);
+            const inSlab = Math.abs(dx) < halfW && Math.abs(dy) < halfH;
+            if (inSlab) {
+                const lit = dx < -halfW + Math.max(1.5, halfW * 0.22);       // one lit edge; the face only just separates from space
+                const face = 0.2 + 0.1 * (1 - (dx + halfW) / (2 * halfW)) + (Math.abs(dy) > halfH - 1.5 ? 0.25 : 0);
+                s.gray[i] = lit ? 0.97 : face; s.acc[i] = lit ? 1 : 0; s.mask[i] = 1;
+                continue;
+            }
+            const ring = dist / R, band = Math.abs(((ring * 5 - t / 9000) % 1 + 1) % 1 - 0.5);
+            if (ring > 0.45 && ring < 1.4 && band < 0.035) {                 // rings, behind the slab's column only where dy < 0
+                if (Math.abs(dx) < halfW && dy < 0) continue;
+                s.gray[i] = 0.35 + 0.45 * pulse * (1 - (ring - 0.45)); s.acc[i] = 0.8; s.mask[i] = 1;
+            } else if (Math.abs(dx) < halfW + 6 && Math.abs(dy) < halfH + 6) {
+                s.gray[i] = 0.16 * pulse;                                     // faint halo hugging the slab
+            }
+        }
+    }
+
+    // ── THE WRONG PLACE: a world drawn inside out. The light comes from the middle, the surface spirals
+    //    inward, and it does not hold still between two frames. ──
+    function renderWrongPlace(s, t) {
+        const R = s.R, R2 = R * R, step = Math.floor(t / 125);
+        for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+            const i = y * s.w + x, dx = x - s.cx, dy = y - s.cy, dd = dx * dx + dy * dy;
+            if (dd >= R2) continue;
+            const r = Math.sqrt(dd) / R, ang = Math.atan2(dy, dx);
+            const spiral = 0.5 + 0.5 * Math.sin(ang * 5 + r * 14 - t / 900);
+            const tear = vnoise(x * 0.35 + step * 3.7, y * 0.35) > 0.8 ? 0.5 : 0; // patches that flicker out of place
+            const pupil = r < 0.2 ? 0 : 1;
+            s.gray[i] = pupil * ((1 - r) * 0.85 * spiral + 0.12 + tear);
+            s.acc[i] = pupil * spiral * (1 - r);
+            s.mask[i] = 1;
+        }
+    }
+
     function drawReticle(s, t) {
         const r = s.reticleR, n = Math.floor(Math.PI * r), step = Math.floor(t / 400);
         s.ctx.fillStyle = RETICLE;
@@ -165,7 +205,11 @@
         }
     }
 
-    const RENDERERS = { globe: renderGlobe, station: renderStation, asteroid: renderAsteroid };
+    const RENDERERS = { globe: renderGlobe, station: renderStation, asteroid: renderAsteroid, structure: renderStructure, wrongplace: renderWrongPlace };
+    const SPECIAL_LOOK = {
+        structure: { ramp: Core.ramp('#06070a', '#140a24', '#3a1f66', '#8844ff', '#e6dcff'), accent: [200, 170, 255] },
+        wrongplace: { ramp: Core.ramp('#06070a', '#2a0608', '#7a1414', '#d85a4e', '#ffd0b0'), accent: [255, 120, 60] },
+    };
 
     function paint(s, t) {
         s.gray.fill(0); s.acc.fill(0); s.mask.fill(0);
@@ -187,7 +231,8 @@
             cx: w / 2, cy: h / 2, R: baseR * (recipe && recipe.ring ? RING_SCALE : 1),
             reticleR: Math.min(w / 2 - 1, baseR * (1 + PAD_RATIO * 0.5)),
             flip: seed % 2 ? 1 : -1, sel: d.sel === '1', scanning: d.scan === '1',
-            look: kind === 'station' ? { ramp: STATION_RAMP, accent: STATION_ACCENT }
+            look: SPECIAL_LOOK[kind] ? SPECIAL_LOOK[kind]
+                : kind === 'station' ? { ramp: STATION_RAMP, accent: STATION_ACCENT }
                 : kind === 'asteroid' ? { ramp: ASTEROID_RAMP, accent: null }
                 : { ramp: recipe.ramp, accent: recipe.accent },
             p: { so: (seed % 97) * 1.37, craters: seededCraters(seed) },
@@ -219,8 +264,8 @@
     function body(planet, size, opts) {
         if (!planet) return null;
         const o = opts || {}, seed = Classic.seedFromId(planet.id);
-        if (planet.isStructure || planet.type === 'STRUCTURE') return null;
-        if (planet._isWrongPlace || planet.type === 'WRONG_PLACE') return null;
+        if (planet.isStructure || planet.type === 'STRUCTURE') return canvasHtml('structure', size, { seed, sel: o.sel ? 1 : 0 });
+        if (planet._isWrongPlace || planet.type === 'WRONG_PLACE') return canvasHtml('wrongplace', size, { seed, sel: o.sel ? 1 : 0 });
         if (planet.isStation || planet.type === 'STATION') return station({ size, seed, sel: o.sel });
         if (planet.isAsteroidField || planet.type === 'ASTEROID_FIELD') return asteroid({ size, seed, sel: o.sel });
         return globe({ type: planet.type, size, seed, sel: o.sel, scanning: o.scanning });
