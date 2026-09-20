@@ -600,3 +600,157 @@
     margin-top: auto;
     padding: 7px 12px;
 }
+
+/* ── EncounterCard.js: one card for signals, stations, rocks, crew moments, ship alerts ── */
+.enc-card {
+    width: min(560px, calc(100vw - 32px));
+    max-width: 560px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    border-top-color: var(--enc);
+}
+
+.enc-head {
+    padding: 18px 22px 10px;
+}
+
+.enc-kicker {
+    margin: 0 0 4px;
+    font: 600 0.68em var(--font-display);
+    letter-spacing: 0.26em;
+    color: var(--enc);
+}
+
+.enc-head h3 {
+    margin: 0;
+    font: 600 1.45em var(--font-display);
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    color: var(--bone);
+}
+
+.enc-signal {
+    display: block;
+    width: calc(100% - 44px);
+    height: 36px;
+    margin: 0 22px 10px;
+    border-block: 1px solid var(--line);
+    image-rendering: pixelated;
+    opacity: 0.85;
+}
+
+.enc-card .deck-panel-facts {
+    padding: 0 22px 10px;
+    grid-template-columns: 64px 1fr;
+}
+
+.enc-context {
+    margin: 0;
+    padding: 0 22px 16px;
+    font-size: 0.95em;
+    line-height: 1.65;
+    color: var(--bone);
+}
+
+.enc-talk {
+    list-style: none;
+    margin: 0;
+    padding: 12px 22px 6px;
+    border-top: 1px solid var(--line);
+    display: grid;
+    gap: 10px;
+}
+
+.enc-talk li {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 12px;
+    align-items: start;
+}
+
+.enc-face {
+    width: 38px;
+    height: 38px;
+    object-fit: cover;
+    border: 1px solid;
+    border-radius: 3px;
+    background: #0a0e0c;
+}
+
+.enc-face-aura {
+    display: grid;
+    place-items: center;
+    font: 600 0.7em var(--font-display);
+    letter-spacing: 0.1em;
+    color: var(--green);
+}
+
+.enc-talk p {
+    margin: 0;
+    font-size: 0.9em;
+    line-height: 1.55;
+    color: var(--bone);
+}
+
+.enc-talk b {
+    display: block;
+    font: 600 0.72em var(--font-display);
+    letter-spacing: 0.16em;
+    margin-bottom: 1px;
+}
+
+.enc-card h4 {
+    margin-top: 10px;
+}
+
+.enc-choices {
+    display: grid;
+    gap: 8px;
+    padding: 0 22px 4px;
+}
+
+.enc-choice {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    text-align: left;
+    background: color-mix(in srgb, var(--enc) 9%, transparent);
+    border: 1px solid color-mix(in srgb, var(--enc) 60%, transparent);
+    border-left: 3px solid var(--enc);
+    border-radius: 3px;
+    color: var(--bone);
+    font: 600 0.9em var(--font-display);
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: background 150ms, transform 150ms;
+}
+
+.enc-choice span::after {
+    content: '  ›';
+    color: var(--enc);
+}
+
+.enc-choice small {
+    font: 400 0.86em/1.5 var(--font-mono);
+    letter-spacing: 0;
+    color: var(--dim);
+}
+
+.enc-choice small b { font-weight: 700; }
+.enc-choice small .is-gain { color: var(--green-br); }
+.enc-choice small .is-loss { color: var(--red); }
+
+.enc-choice:hover:not([disabled]),
+.enc-choice:focus-visible {
+    background: color-mix(in srgb, var(--enc) 22%, transparent);
+    transform: translateX(2px);
+    outline: none;
+}
+
+.enc-choice:active:not([disabled]) { transform: translateX(0); }
+
+.enc-choice[disabled] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    border-style: dashed;
+}

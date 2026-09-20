@@ -19,7 +19,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
         context: (age) => `The signal has been broadcasting for ${age} years. Standard emergency beacon — ship lost power but auto-beacon kept running on backup cells. The ship itself is long dead. The crew... probably the same.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "Signal origin: civilian transport. Beacon ID matches the manifest of colony ship 'Hope's Journey.' No rescue recorded." },
-            { speaker: 'Dr. Aris', text: "Forty years. They called for help for forty years and nobody came." },
+            { speaker: 'Dr. Aris', text: "All that time. They kept calling for help and nobody came." },
             { speaker: 'Eng. Jaxon', text: "We can't help them. But we can use the beacon's power cells." }
         ],
         choices: [

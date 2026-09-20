@@ -1556,73 +1556,15 @@ class App {
 
         const stationName = station.name || 'Unknown Station';
 
-        // Build the modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-
-        // Build dialogue HTML
-        const dialogueHtml = selected.dialogue.map(d => {
-            const colors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-            };
-            const color = colors[d.speaker] || '#ffffff';
-            return `<div style="margin-bottom: 10px;">
-                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #9bf0bd; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #9bf0bd;">
-                    /// STATION: ${selected.title.toUpperCase()} ///
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #9bf0bd; margin-bottom: 10px;">
-                        LOCATION: ${stationName}
-                    </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #9bf0bd; padding-left: 12px;">
-                        ${selected.context(stationName)}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${selected.choices.map((choice, idx) => `
-                            <button class="station-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
-                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects
-        modal.querySelectorAll('.station-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(0,60,120,0.8)'; btn.style.borderColor = '#00ddff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const choice = selected.choices[idx];
-                const result = choice.effect(this.state);
-                if (result) {
-                    this.state.addLog(`STATION: ${result}`);
-                }
-                // Already marked as investigated in handleStationAction
-                this.state.emitUpdates();
-                modal.remove();
-            };
+        window.EncounterCard.open(this, {
+            tone: 'station', kicker: 'INSIDE THE STATION', title: selected.title,
+            facts: [['WHERE', stationName]],
+            context: selected.context(stationName), dialogue: selected.dialogue, choices: selected.choices,
+            onPick: (idx) => {
+                const result = selected.choices[idx].effect(this.state);
+                if (result) this.state.addLog(`STATION: ${result}`);
+                this.state.emitUpdates(); // already marked as investigated in handleStationAction
+            }
         });
     }
 
@@ -1708,73 +1650,15 @@ class App {
 
         const fieldName = field.name || 'Unknown Field';
 
-        // Build the modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-
-        // Build dialogue HTML
-        const dialogueHtml = selected.dialogue.map(d => {
-            const colors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-            };
-            const color = colors[d.speaker] || '#ffffff';
-            return `<div style="margin-bottom: 10px;">
-                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #cc8844; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #1a0d00, #332200); color: #cc8844;">
-                    /// ${selected.title.toUpperCase()} ///
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #cc8844; margin-bottom: 10px;">
-                        LOCATION: ${fieldName}
-                    </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #cc8844; padding-left: 12px;">
-                        ${selected.context(fieldName)}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${selected.choices.map((choice, idx) => `
-                            <button class="asteroid-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #cc8844; background: rgba(50,30,10,0.8);
-                                color: #ffaa55; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects
-        modal.querySelectorAll('.asteroid-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(100,60,20,0.8)'; btn.style.borderColor = '#ffaa55'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(50,30,10,0.8)'; btn.style.borderColor = '#cc8844'; };
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const choice = selected.choices[idx];
-                const result = choice.effect(this.state);
-                if (result) {
-                    this.state.addLog(`MINING: ${result}`);
-                }
-                // Already marked as mined in handleAsteroidAction
-                this.state.emitUpdates();
-                modal.remove();
-            };
+        window.EncounterCard.open(this, {
+            tone: 'rock', kicker: 'ASTEROID FIELD', title: selected.title,
+            facts: [['WHERE', fieldName]],
+            context: selected.context(fieldName), dialogue: selected.dialogue, choices: selected.choices,
+            onPick: (idx) => {
+                const result = selected.choices[idx].effect(this.state);
+                if (result) this.state.addLog(`MINING: ${result}`);
+                this.state.emitUpdates(); // already marked as mined in handleAsteroidAction
+            }
         });
     }
 
@@ -1786,74 +1670,17 @@ class App {
 
         const signalAge = encounter.getSignalAge();
 
-        // Build the modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-
-        // Build dialogue HTML
-        const dialogueHtml = encounter.dialogue.map(d => {
-            const colors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-            };
-            const color = colors[d.speaker] || '#ffffff';
-            return `<div style="margin-bottom: 10px;">
-                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #e07a70; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #1a0000, #330000); color: #e07a70;">
-                    /// DISTRESS SIGNAL: ${encounter.title.toUpperCase()} ///
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #e07a70; margin-bottom: 10px;">
-                        SIGNAL AGE: ${signalAge === 'UNKNOWN' ? 'UNKNOWN' : signalAge + ' YEARS'}
-                    </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #e07a70; padding-left: 12px;">
-                        ${encounter.context(signalAge)}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${encounter.choices.map((choice, idx) => `
-                            <button class="distress-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #e07a70; background: rgba(50,10,10,0.8);
-                                color: #ff9999; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects
-        modal.querySelectorAll('.distress-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(100,20,20,0.8)'; btn.style.borderColor = '#ff9999'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(50,10,10,0.8)'; btn.style.borderColor = '#e07a70'; };
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const choice = encounter.choices[idx];
-                const result = choice.effect(this.state);
-                if (result) {
-                    this.state.addLog(`SIGNAL: ${result}`);
-                }
+        window.EncounterCard.open(this, {
+            tone: 'distress', kicker: 'DISTRESS SIGNAL', title: encounter.title, hasSignal: true,
+            facts: [['SENT', signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `${signalAge} years ago`]],
+            context: encounter.context(signalAge), dialogue: encounter.dialogue, choices: encounter.choices,
+            onPick: (idx) => {
+                const result = encounter.choices[idx].effect(this.state);
+                if (result) this.state.addLog(`SIGNAL: ${result}`);
                 this.state.emitUpdates();
-                modal.remove();
                 this._modalActive = false;
                 this._processModalQueue();
-            };
+            }
         });
     }
 
@@ -1908,88 +1735,19 @@ class App {
         };
         const color = colors[event.crewId] || '#ffffff';
 
-        // Build the modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-
-        // Build dialogue HTML with portraits
-        const portraits = {
-            'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
-            'Tech Mira': 'F_5', 'Commander': 'M_1', 'A.U.R.A.': null
-        };
-        const dialogueHtml = event.dialogue.map(d => {
-            const speakerColors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a', 'Commander': '#ffffff'
-            };
-            const sColor = speakerColors[d.speaker] || '#ffffff';
-            const pId = portraits[d.speaker];
-            const portraitHtml = pId
-                ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${sColor};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
-            return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
-                <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
-                <div>
-                    <span style="color:${sColor}; font-weight: bold;">${d.speaker}:</span>
-                    <span style="color:${sColor}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-                </div>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: ${color}; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #0a0a15, #1a1a30); color: ${color};">
-                    /// ${event.title.toUpperCase()} ///
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid ${color}; padding-left: 12px;">
-                        ${event.context}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${event.choices.map((choice, idx) => {
-                            // Generate a hint about what the choice does
-                            const hintFromEffect = this._getCrewChoiceHint(choice);
-                            return `
-                            <button class="crew-event-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid ${color}; background: rgba(30,30,50,0.8);
-                                color: #cccccc; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                ${hintFromEffect ? `<div style="font-size: 0.8em; margin-top: 4px; color: ${color}; opacity: 0.7;">${hintFromEffect}</div>` : ''}
-                            </button>
-                        `}).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects and click handlers
-        modal.querySelectorAll('.crew-event-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(60,60,90,0.9)'; btn.style.borderColor = '#ffffff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(30,30,50,0.8)'; btn.style.borderColor = color; };
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const choice = event.choices[idx];
-                const result = choice.effect(this.state, crew);
-                if (result) {
-                    this.state.addLog(`CREW: ${result}`);
-                }
+        window.EncounterCard.open(this, {
+            tone: 'crew', color, kicker: `A MOMENT WITH ${String(crew.name || '').toUpperCase()}`, title: event.title,
+            context: event.context, dialogue: event.dialogue,
+            choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c) })),
+            onPick: (idx) => {
+                const result = event.choices[idx].effect(this.state, crew);
+                if (result) this.state.addLog(`CREW: ${result}`);
                 this.state.emitUpdates();
-                modal.remove();
                 this._modalActive = false;
                 this._processModalQueue();
-            };
+            }
         });
     }
-
     /**
      * Generate hint text for crew event choice effects
      * Prefers explicit desc if provided, otherwise parses the effect function
@@ -6059,73 +5817,18 @@ You are home.`
     // SHIP MALFUNCTION MODAL
     // ═══════════════════════════════════════════════════════════════
     showShipMalfunctionModal(event) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2800';
-
-        // Get dialogue - can be array or function that returns array
-        const dialogue = typeof event.dialogue === 'function'
-            ? event.dialogue(this.state)
-            : event.dialogue;
-
-        // Build dialogue HTML
-        const dialogueHtml = dialogue.map(d => {
-            const colors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-            };
-            const color = colors[d.speaker] || '#ffffff';
-            return `<div style="margin-bottom: 10px;">
-                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff6600; max-width: 550px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #331100, #552200); color: #ff6600; display: flex; justify-content: space-between;">
-                    <span>⚠ SHIP ALERT: ${event.title.toUpperCase()} ⚠</span>
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #ff6600; padding-left: 12px;">
-                        ${event.context}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <button class="malfunction-acknowledge" style="
-                        width: 100%; padding: 12px;
-                        background: #ff6600; color: #000;
-                        border: none; cursor: pointer;
-                        font-family: var(--font-mono); font-weight: bold; font-size: 1em;
-                    ">ACKNOWLEDGE</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Apply effect and close on acknowledge
-        modal.querySelector('.malfunction-acknowledge').onclick = () => {
-            const result = event.effect(this.state);
-            if (result) {
-                this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
-            }
-            this.state.emitUpdates();
-            modal.remove();
-        };
-
-        // Also close on background click
-        modal.onclick = (e) => {
-            if (e.target === modal) {
+        // dialogue can be an array or a function that returns one
+        const dialogue = typeof event.dialogue === 'function' ? event.dialogue(this.state) : event.dialogue;
+        window.EncounterCard.open(this, {
+            tone: 'alert', kicker: 'SHIP ALERT', title: event.title, zIndex: 2800,
+            context: event.context, dialogue,
+            choices: [{ text: 'DEAL WITH IT' }],
+            onPick: () => {
                 const result = event.effect(this.state);
-                if (result) {
-                    this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
-                }
+                if (result) this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
                 this.state.emitUpdates();
-                modal.remove();
             }
-        };
+        });
     }
 
     // ═══════════════════════════════════════════════════════════════

@@ -103,6 +103,81 @@
         return ground - feet <= 0 ? gradeLanding(s, g) : null;
     }
 
+    // The lander, one character per pixel: o hull edge, b hull, w window, h window shine, l status lamp, n nozzle, f foot
+    const SPRITE = [
+        '....ooooo....',
+        '...owwhwwo...',
+        '..oowwwwwoo..',
+        '.obbbbbbbbbo.',
+        '.obbbblbbbbo.',
+        '.ooooooooooo.',
+        '.onn.....nno.',
+        'o...........o',
+        'ff.........ff'
+    ];
+    const SPRITE_INK = { o: BONE, b: '#8f8a7a', w: '#1d5563', h: '#7fd0de', n: '#5a574e', f: BONE };
+    const NOZZLE_LEFT = 2, NOZZLE_RIGHT = 9, NOZZLE_ROW = 7, DUST_HEIGHT = 30, GUIDE_GAP = 4;
+    const FLAME_INKS = ['#fff4d0', '#ffb84a', '#ff7038', '#a8321c'];
+
+    /** Lamp on the hull: green = safe to touch down at this speed, amber = rough, red = too fast. */
+    function statusColor(s) {
+        const fits = (lim) => s.vy <= lim.down && Math.abs(s.vx) <= lim.side;
+        return fits(SOFT) ? GREEN : fits(ROUGH) ? AMBER : RED;
+    }
+
+    function drawSprite(ctx, left, top, lamp) {
+        SPRITE.forEach((row, ry) => {
+            for (let rx = 0; rx < row.length; rx++) {
+                const ch = row[rx];
+                if (ch === '.') continue;
+                ctx.fillStyle = ch === 'l' ? lamp : SPRITE_INK[ch];
+                ctx.fillRect(left + rx, top + ry, 1, 1);
+            }
+        });
+    }
+
+    /** A flickering flame, hot at the nozzle and cooling toward the tip, plus dust when it is close to the ground. */
+    function drawFlame(ctx, fx, fy, g, look) {
+        const length = 5 + Math.round(Math.random() * 4);
+        for (let k = 0; k < length; k++) {
+            ctx.fillStyle = FLAME_INKS[Math.min(FLAME_INKS.length - 1, Math.floor(k / length * FLAME_INKS.length))];
+            const isTip = k > length - 3;
+            ctx.fillRect(fx + (isTip ? Math.round(Math.random()) : 0), fy + k, isTip ? 1 : 2, 1);
+        }
+        const groundY = g.heights[Math.max(0, Math.min(W - 1, fx))];
+        if (groundY > H || g.hot[fx] || groundY - fy > DUST_HEIGHT) return;
+        ctx.fillStyle = look.edge;
+        for (let k = 0; k < 5; k++) ctx.fillRect(fx + Math.round((Math.random() - 0.5) * 16), Math.round(groundY) - 1 - Math.round(Math.random() * 4), 1, 1);
+    }
+
+    /** Dotted line straight down to where it would touch: makes height and the pad edge easy to judge. */
+    function drawGuide(ctx, s, g, x, y) {
+        const groundY = g.heights[Math.max(0, Math.min(W - 1, x))];
+        if (groundY > H) return;
+        const isOverPad = x - LANDER_HALF >= g.padX && x + LANDER_HALF <= g.padX + PAD_WIDTH;
+        ctx.fillStyle = isOverPad ? GREEN : DIM;
+        for (let gy = y + LANDER_TALL + 3; gy < groundY - 1; gy += GUIDE_GAP) ctx.fillRect(x, gy, 1, 1);
+    }
+
+    /** The clamp it hangs from before it is let go. */
+    function drawDock(ctx, x, y) {
+        ctx.fillStyle = '#2a2d2a'; ctx.fillRect(x - 22, 0, 44, Math.max(1, y - 2));
+        ctx.fillStyle = DIM; ctx.fillRect(x - 22, Math.max(0, y - 3), 44, 1);
+        ctx.fillStyle = AMBER; ctx.fillRect(x - 8, Math.max(0, y - 2), 2, 3); ctx.fillRect(x + 6, Math.max(0, y - 2), 2, 3);
+    }
+
+    /** Hull pieces thrown out and pulled back down, with a short flash. */
+    function drawWreck(ctx, x, y, age) {
+        const t = age / 1000;
+        if (age < 140) { ctx.fillStyle = FLAME_INKS[0]; ctx.fillRect(x - 9, y - 4, 18, 14); }
+        for (let k = 0; k < 16; k++) {
+            const angle = k * 2.4, speed = 18 + (k * 7) % 22;
+            const px = x + Math.cos(angle) * speed * t, py = y + 4 - Math.abs(Math.sin(angle)) * speed * t + 30 * t * t;
+            ctx.fillStyle = k % 3 === 0 ? BONE : FLAME_INKS[1 + (k % 3)];
+            ctx.fillRect(Math.round(px), Math.round(py), k % 4 === 0 ? 2 : 1, k % 4 === 0 ? 2 : 1);
+        }
+    }
+
     function draw(ctx, s, g, colors, look, now) {
         ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = DIM;
@@ -120,15 +195,15 @@
         ctx.fillStyle = Math.floor(now / 350) % 2 ? AMBER : '#5a4520';
         ctx.fillRect(g.padX - 1, g.padY - 3, 2, 3); ctx.fillRect(g.padX + PAD_WIDTH - 1, g.padY - 3, 2, 3);
         if (g.wind) { ctx.fillStyle = DIM; for (let k = 0; k < 5; k++) ctx.fillRect(((now / 1000 * g.wind * 6 + k * 70) % W + W) % W, 20 + k * 22, 6, 1); } // wind streaks
-        const x = Math.round(s.x), y = Math.round(s.y), lean = Math.max(-2, Math.min(2, Math.round(s.vx / 9)));
-        if (s.grade !== 'crash') {
-            ctx.fillStyle = BONE; ctx.fillRect(x - 5 + lean, y, 10, 6); ctx.fillRect(x - 3 + lean, y - 2, 6, 2);
-            ctx.fillRect(x - LANDER_HALF, y + 6, 2, 3); ctx.fillRect(x + LANDER_HALF - 2, y + 6, 2, 3);
-            ctx.fillStyle = AMBER;                                                                          // pushing left fires the RIGHT thruster, and the other way round
-            if (s.keys.left && s.fuel > 0) ctx.fillRect(x + 3, y + 6, 2, 3 + Math.round(Math.random() * 4));
-            if (s.keys.right && s.fuel > 0) ctx.fillRect(x - 5, y + 6, 2, 3 + Math.round(Math.random() * 4));
-        } else {
-            ctx.fillStyle = AMBER; for (let k = 0; k < 14; k++) ctx.fillRect(x + Math.round(Math.cos(k * 2.4) * (now - s.endedAt) / 40), y + 4 + Math.round(Math.sin(k * 2.4) * (now - s.endedAt) / 60), 2, 2);
+        const x = Math.round(s.x), y = Math.round(s.y);
+        if (!s.isReleased) drawDock(ctx, x, y);
+        if (s.grade === 'crash') drawWreck(ctx, x, y, now - s.endedAt);
+        else {
+            const isLeftBurn = s.keys.right && s.fuel > 0, isRightBurn = s.keys.left && s.fuel > 0; // pushing left fires the RIGHT thruster, and the other way round
+            if (!s.grade) drawGuide(ctx, s, g, x, y);
+            drawSprite(ctx, x - LANDER_HALF, y, statusColor(s));
+            if (isLeftBurn) drawFlame(ctx, x - LANDER_HALF + NOZZLE_LEFT, y + NOZZLE_ROW, g, look);
+            if (isRightBurn) drawFlame(ctx, x - LANDER_HALF + NOZZLE_RIGHT, y + NOZZLE_ROW, g, look);
         }
         if (s.grade && s.grade !== 'crash') colors.forEach((c, i) => {                                       // the team steps out
             const out = Math.min(1, (now - s.endedAt) / 900), fx = x + (i ? 1 : -1) * Math.round(8 + out * 12), fy = Math.round(g.heights[Math.max(0, Math.min(W - 1, fx))]) - 9;
