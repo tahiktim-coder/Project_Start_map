@@ -25,7 +25,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     state.addLog('COLONY LOG: "Day 1: We landed! The children are playing in real grass for the first time. Elena cried."');
                     state.addLog('COLONY LOG: "Day 342: The water table is dropping. Joran says the soil chemistry is changing. Something in the root system is pulling minerals we need."');
-                    state.addLog('COLONY LOG: "Day 891: We can\'t grow wheat anymore. The local flora is outcompeting everything. We\'re rationing. Again."');
+                    state.addLog('COLONY LOG: "Day 891: We can\'t grow wheat anymore. The local plants are outcompeting everything. We\'re rationing. Again."');
                     state.addLog('COLONY LOG: "Day 1,204: Last entry. Moving to higher ground. The dome seals failed. If anyone finds this — the soil here is alive. It doesn\'t want us."');
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Read colony logs — preserved their story');
                     return `Colony records recovered. Data drives salvaged. +${salvage} Salvage. Colony knowledge improved.`;
@@ -101,7 +101,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     state.addLog('COLONY LOG: "Month 3: The cough started with the engineers. Dr. Farah says it\'s just dust irritation from the construction."');
-                    state.addLog('COLONY LOG: "Month 5: It\'s not dust. Forty-seven people are bedridden. The pathogen is in the water supply. We can\'t boil it out — it thrives in heat."');
+                    state.addLog('COLONY LOG: "Month 5: It\'s not dust. Forty-seven people are bedridden. The disease is in the water supply. We can\'t boil it out — it thrives in heat."');
                     state.addLog('COLONY LOG: "Month 7: We bury six a day now. Dr. Farah was the first. The children seem immune. We don\'t understand why."');
                     state.addLog('COLONY LOG: "Month 8: Eighteen of us left. All children. The oldest is fourteen. She\'s writing this because I taught her how. My name is Marcus. I was a pilot. I wish I had been a doctor."');
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Read plague colony records');
@@ -127,7 +127,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                 effect: function(state) {
                     state.addLog('Spc. Vance: "The central building is a medical facility. Emergency cryo ward. Six pods."');
                     state.addLog('Dr. Aris: "They\'re all occupied. Adults. They put themselves under hoping someone would find a cure."');
-                    state.addLog('A.U.R.A.: "Cryostasis power depleted 14 months ago. All occupants are deceased."');
+                    state.addLog('A.U.R.A.: "Cryostasis power depleted 14 months ago. All occupants are dead."');
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
@@ -136,12 +136,12 @@ const FAILED_COLONY_ENCOUNTERS = [
             },
             {
                 text: "Assess the failure",
-                desc: "A.U.R.A. studies the pathogen. Colony knowledge gained.",
+                desc: "A.U.R.A. studies the disease. Colony knowledge gained.",
                 effect: function(state) {
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
-                    state.addLog('A.U.R.A.: "Pathogen identified: protein-folding contaminant native to local water table. Undetectable by standard scan protocols."');
+                    state.addLog('A.U.R.A.: "Disease identified: protein-folding contaminant native to local water table. Undetectable by standard scan protocols."');
                     state.addLog('A.U.R.A.: "Recommendation: deep molecular scan of water sources before establishing permanent settlement. Data logged."');
-                    return "Pathogen catalogued. Colony knowledge improved. We won't make the same mistake.";
+                    return "Disease catalogued. Colony knowledge improved. We won't make the same mistake.";
                 }
             }
         ]
@@ -208,7 +208,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                 desc: "Understand the social collapse. Colony knowledge gained.",
                 effect: function(state) {
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
-                    state.addLog('A.U.R.A.: "Root cause: insufficient governance framework combined with resource scarcity. Leadership vacuum after original director died in month 4."');
+                    state.addLog('A.U.R.A.: "Root cause: not enough governance framework combined with resource scarcity. Leadership vacuum after original director died in month 4."');
                     state.addLog('A.U.R.A.: "Recommendation: establish clear resource-sharing protocols before crisis. A single authority must control distribution. Data logged."');
                     return "Social collapse analysis complete. Colony knowledge improved. We'll need strong leadership from day one.";
                 }
@@ -350,12 +350,12 @@ const FAILED_COLONY_ENCOUNTERS = [
             },
             {
                 text: "Assess the failure",
-                desc: "Study the aggressive flora. Colony knowledge gained.",
+                desc: "Study the aggressive plants. Colony knowledge gained.",
                 effect: function(state) {
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
-                    state.addLog('A.U.R.A.: "Flora exhibits directed growth patterns suggesting rudimentary collective intelligence. Not predatory — assimilative. The vegetation does not kill. It incorporates."');
+                    state.addLog('A.U.R.A.: "The plants show directed growth patterns suggesting rudimentary collective intelligence. Not predatory — assimilative. The vegetation does not kill. It incorporates."');
                     state.addLog('A.U.R.A.: "Recommendation: bio-containment protocols mandatory for any world with accelerated growth signatures. Scan for subsurface root networks before landing. Data logged."');
-                    return "Aggressive flora catalogued. Colony knowledge improved. We'll know what to look for.";
+                    return "Aggressive plants catalogued. Colony knowledge improved. We'll know what to look for.";
                 }
             }
         ]

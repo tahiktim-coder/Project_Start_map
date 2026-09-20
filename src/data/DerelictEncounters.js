@@ -31,7 +31,7 @@ const DERELICT_ENCOUNTERS = [
             const num = Math.floor(Math.random() * 900) + 100;
             return `${prefixes[Math.floor(Math.random() * prefixes.length)]}-${suffixes[Math.floor(Math.random() * suffixes.length)]}-${num}`;
         },
-        context: (name) => `The ${name} is a hulking industrial vessel, drill arrays frozen mid-extraction. Cargo bays partially full. They were mid-haul when something stopped them. Emergency lights still pulse in the ore processing deck.`,
+        context: (name) => `The ${name} is a hulking industrial vessel, drill arrays frozen mid-dig. Cargo bays partially full. They were mid-haul when something stopped them. Emergency lights still pulse in the ore processing deck.`,
         dialogue: [
             { speaker: 'Eng. Jaxon', text: "Industrial grade. These rigs carry serious tonnage. If the cargo's intact..." },
             { speaker: 'Tech Mira', text: "I'm reading residual radiation from the processing core. They were refining something hot." }
@@ -58,7 +58,7 @@ const DERELICT_ENCOUNTERS = [
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
-                            state.addLog(`RADIATION EXPOSURE: ${victim.name} received dangerous dose during extraction.`);
+                            state.addLog(`RADIATION EXPOSURE: ${victim.name} received dangerous dose on the way out.`);
                         }
                     }
                     const energyGain = Math.floor(Math.random() * 21) + 50; // 50-70

@@ -23,7 +23,7 @@ const PLANET_DATA = {
     // Standard types
     ROCKY: { scanCost: 2, hazardChance: 0.3, desc: "Barren terrestrial world. Good source of metals." },
     GAS_GIANT: { scanCost: 3, hazardChance: 0.8, desc: "Massive ball of hydrogen/helium. High gravity risk." },
-    ICE_WORLD: { scanCost: 2, hazardChance: 0.5, desc: "Frozen surface. Potential cryo-flora." },
+    ICE_WORLD: { scanCost: 2, hazardChance: 0.5, desc: "Frozen surface. Potential cryo-plants." },
     OCEANIC: { scanCost: 2, hazardChance: 0.4, desc: "Global liquid water ocean. Landing difficult." },
     DESERT: { scanCost: 2, hazardChance: 0.6, desc: "Scorched surface. Extreme heat alerts." },
     VOLCANIC: { scanCost: 3, hazardChance: 0.9, desc: "Active tectonic activity. Magma flows detected." },
@@ -36,7 +36,7 @@ const PLANET_DATA = {
     TERRAFORMED: { scanCost: 1, hazardChance: 0.0, desc: "Artificially perfect conditions. No natural weather patterns detected." },
     CRYSTALLINE: { scanCost: 3, hazardChance: 0.4, desc: "Surface covered in massive resonating crystal structures." },
     ROGUE: { scanCost: 4, hazardChance: 0.6, desc: "A dark world drifting without a star. Deep freeze readings." },
-    TIDALLY_LOCKED: { scanCost: 3, hazardChance: 0.7, desc: "One hemisphere in eternal flame, the other in permanent darkness. Habitable twilight band detected." },
+    TIDALLY_LOCKED: { scanCost: 3, hazardChance: 0.7, desc: "One hemisphere in eternal flame, the other in permanent darkness. Livable twilight band detected." },
     HOLLOW: { scanCost: 5, hazardChance: 0.8, desc: "Mass readings inconsistent. Interior cavity detected. Something is inside." },
     SYMBIOTE_WORLD: { scanCost: 2, hazardChance: 0.1, desc: "The biosphere is responding to our presence. It seems... welcoming." },
     MIRROR: { scanCost: 4, hazardChance: 0.5, desc: "Surface is perfectly reflective. Scans returning our own vessel's signature." },
@@ -266,7 +266,7 @@ class PlanetGenerator {
                 break;
             case 'VITAL':
                 gravityBase = 0.9 + Math.random() * 0.3; // Earth-like
-                tempMin = 15; tempMax = 35; // Perfect habitable zone
+                tempMin = 15; tempMax = 35; // Perfect livable zone
                 break;
             case 'BIO_MASS':
                 gravityBase = 1.0 + Math.random() * 0.5;

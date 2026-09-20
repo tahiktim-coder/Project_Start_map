@@ -19,7 +19,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
         context: (age) => `The signal has been broadcasting for ${age} years. Standard emergency beacon — ship lost power but auto-beacon kept running on backup cells. The ship itself is long dead. The crew... probably the same.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "Signal origin: civilian transport. Beacon ID matches the manifest of colony ship 'Hope's Journey.' No rescue recorded." },
-            { speaker: 'Dr. Aris', text: "Forty years. They called for help for forty years and nobody came." },
+            { speaker: 'Dr. Aris', text: "All that time. They kept calling for help and nobody came." },
             { speaker: 'Eng. Jaxon', text: "We can't help them. But we can use the beacon's power cells." }
         ],
         choices: [
@@ -77,12 +77,12 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
         context: (age) => `The signal is broken. Fragments of words, static bursts, data corruption. Something happened ${age} years ago, and we're only hearing the echoes. Most of the message is lost forever.`,
         dialogue: [
             { speaker: 'Tech Mira', text: "I can recover some of the data... give me a minute." },
-            { speaker: 'A.U.R.A.', text: "Partial reconstruction: '...they're inside the... please... nobody can...' Signal terminates." },
+            { speaker: 'A.U.R.A.', text: "Part of it rebuilt: '...they're inside the... please... nobody can...' Signal ends." },
             { speaker: 'Spc. Vance', text: "I've heard enough. We know how this story ends." }
         ],
         choices: [
             {
-                text: "Attempt full signal reconstruction",
+                text: "Try to rebuild the whole signal",
                 desc: "Tech Mira analyzes the data. +1-3 Colony Knowledge, Mira +0-2 Stress.",
                 requires: (state) => state.crew.some(c => c.tags?.includes('SPECIALIST') && c.status !== 'DEAD'),
                 requiresLabel: "Requires Tech Mira",
@@ -128,7 +128,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         }
                     }
 
-                    return "Signal reconstructed. " + (outcome.reveal ? "Navigation data recovered." : "No useful data found.");
+                    return "Signal rebuilt. " + (outcome.reveal ? "Navigation data recovered." : "No useful data found.");
                 }
             },
             {
@@ -331,7 +331,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 effect: (state) => {
                     if (Math.random() < 0.6) {
                         state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
-                        state.addLog("Signal origin located. Ship wreckage found. Personal effects salvaged.");
+                        state.addLog("Signal origin located. Ship wreckage found. Personal things salvaged.");
                         return "Wreckage found. +30 Salvage from ship remains.";
                     }
 

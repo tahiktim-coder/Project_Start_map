@@ -590,3 +590,145 @@
 .away-after {
     color: var(--amber);
 }
+
+/* ── lander (LanderGame.js) ── */
+.lander-readout {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 14px;
+    margin: 10px 0 0;
+}
+
+.lander-readout dt {
+    font: 600 0.66em var(--font-display);
+    letter-spacing: 0.2em;
+    color: var(--dim);
+}
+
+.lander-readout dd {
+    margin: 3px 0 0;
+    font: 700 1.5em var(--font-mono);
+    color: var(--bone);
+    transition: color 120ms;
+}
+
+.lander-fuel {
+    display: block;
+    height: 12px;
+    margin-top: 8px;
+    background: var(--line);
+}
+
+.lander-fuel b {
+    display: block;
+    height: 100%;
+    background: var(--amber);
+    transform-origin: left;
+}
+
+.lander-buttons .lander-hold {
+    flex: 1;
+    touch-action: none;
+    user-select: none;
+}
+
+.warp-plot-hint kbd {
+    padding: 0 5px;
+    border: 1px solid var(--line2);
+    border-radius: 2px;
+    font: 0.92em var(--font-mono);
+    color: var(--bone);
+}
+
+/* ── boarding: the air gauge, room names, and buttons that warn before they strand you ── */
+.boarding-air {
+    margin: 4px 0 10px;
+}
+
+.boarding-air-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font: 600 0.7em var(--font-display);
+    letter-spacing: 0.26em;
+    color: var(--dim);
+}
+
+.boarding-air-head strong {
+    font: 700 2.1em var(--font-mono);
+    letter-spacing: 0;
+    color: var(--green-br);
+}
+
+.boarding-air-head small {
+    font-size: 0.5em;
+    color: var(--dim);
+}
+
+.boarding-air-pips {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.boarding-air-pips i {
+    flex: 1;
+    height: 14px;
+    border-radius: 1px;
+    transition: background 250ms, transform 250ms;
+}
+
+.boarding-air-pips .is-spare { background: var(--green); }
+.boarding-air-pips .is-home { background: var(--amber); }
+.boarding-air-pips .is-spent { background: var(--line); transform: scaleY(0.35); }
+
+.boarding-air-note {
+    margin: 6px 0 0;
+    font-size: 0.84em;
+    color: var(--amber);
+}
+
+.boarding-air-note b { color: var(--green-br); }
+
+.boarding-air.is-low .boarding-air-head strong,
+.boarding-air.is-low .boarding-air-note { color: var(--red); }
+.boarding-air.is-low .boarding-air-pips .is-home { background: var(--red); animation: boarding-low 800ms steps(2) infinite; }
+
+@keyframes boarding-low { 50% { opacity: 0.45; } }
+
+.boarding-rooms {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    margin: 6px 0 0;
+    padding: 0 4%;
+    list-style: none;
+    font: 600 0.56em var(--font-display);
+    letter-spacing: 0.08em;
+    text-align: center;
+    color: var(--dim);
+}
+
+.boarding-rooms li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.boarding-rooms small { display: block; font: 400 0.95em var(--font-mono); letter-spacing: 0; opacity: 0.8; }
+.boarding-rooms .is-here { color: var(--bone); }
+.boarding-rooms .is-done { color: var(--green-d, var(--dim)); }
+.boarding-rooms .is-far { color: var(--red); opacity: 0.8; }
+
+.boarding-actions button em {
+    display: block;
+    margin-top: 3px;
+    font: 600 0.62em var(--font-display);
+    font-style: normal;
+    letter-spacing: 0.12em;
+}
+
+.boarding-actions .is-stranding {
+    background: rgba(216, 90, 78, 0.16);
+    border-color: var(--red);
+    color: var(--red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .boarding-air.is-low .boarding-air-pips .is-home { animation: none; }
+}

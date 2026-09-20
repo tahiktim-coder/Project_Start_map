@@ -62,7 +62,7 @@ export class GameState {
             this.emitUpdates();
             return true;
         }
-        this.addLog("WARNING: Insufficient Energy!");
+        this.addLog("WARNING: Not enough Energy!");
         return false;
     }
 

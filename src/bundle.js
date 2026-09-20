@@ -438,7 +438,7 @@ class GameState {
             this.emitUpdates();
             return true;
         }
-        this.addLog("WARNING: Insufficient Energy!");
+        this.addLog("WARNING: Not enough Energy!");
         return false;
     }
 
@@ -659,7 +659,7 @@ class GameState {
             this.emitUpdates();
             return true;
         }
-        this.addLog(`Insufficient Salvage for repair. Need ${cost}, have ${this.salvage}.`);
+        this.addLog(`Not enough Salvage for repair. Need ${cost}, have ${this.salvage}.`);
         return false;
     }
 
@@ -1119,7 +1119,7 @@ class App {
             // THE STRUCTURE - Cannot escape. Ship mysteriously returns.
             const currentPlanet = this.state.currentSystem;
             if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
-                this.state.addLog("A.U.R.A.: 'Initiating orbital departure sequence...'");
+                this.state.addLog("A.U.R.A.: 'Starting orbital departure sequence...'");
                 this.state.addLog("...");
                 this.state.addLog("A.U.R.A.: 'Anomaly detected. Navigation systems report departure successful.'");
                 this.state.addLog("A.U.R.A.: 'However... we remain in orbit of THE STRUCTURE.'");
@@ -1496,7 +1496,7 @@ class App {
             setTimeout(() => {
                 // Check if this is a station - use different message
                 if (planet.isStation || planet.type === 'STATION') {
-                    this.state.addLog(`Docking approach initiated. Station sensors detecting our arrival.`);
+                    this.state.addLog(`Docking approach started. Station sensors detecting our arrival.`);
                 } else if (planet.isAsteroidField || planet.type === 'ASTEROID_FIELD') {
                     this.state.addLog(`Entered debris field. Navigation systems active.`);
                 } else if (planet.isStructure || planet.type === 'STRUCTURE') {
@@ -1556,73 +1556,15 @@ class App {
 
         const stationName = station.name || 'Unknown Station';
 
-        // Build the modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-
-        // Build dialogue HTML
-        const dialogueHtml = selected.dialogue.map(d => {
-            const colors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-            };
-            const color = colors[d.speaker] || '#ffffff';
-            return `<div style="margin-bottom: 10px;">
-                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #9bf0bd; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #001133, #003366); color: #9bf0bd;">
-                    /// STATION: ${selected.title.toUpperCase()} ///
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #9bf0bd; margin-bottom: 10px;">
-                        LOCATION: ${stationName}
-                    </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #9bf0bd; padding-left: 12px;">
-                        ${selected.context(stationName)}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${selected.choices.map((choice, idx) => `
-                            <button class="station-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #9bf0bd; background: rgba(116,217,154,0.06);
-                                color: #9bf0bd; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects
-        modal.querySelectorAll('.station-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(0,60,120,0.8)'; btn.style.borderColor = '#00ddff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(116,217,154,0.06)'; btn.style.borderColor = '#9bf0bd'; };
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const choice = selected.choices[idx];
-                const result = choice.effect(this.state);
-                if (result) {
-                    this.state.addLog(`STATION: ${result}`);
-                }
-                // Already marked as investigated in handleStationAction
-                this.state.emitUpdates();
-                modal.remove();
-            };
+        window.EncounterCard.open(this, {
+            tone: 'station', kicker: 'INSIDE THE STATION', title: selected.title,
+            facts: [['WHERE', stationName]],
+            context: selected.context(stationName), dialogue: selected.dialogue, choices: selected.choices,
+            onPick: (idx) => {
+                const result = selected.choices[idx].effect(this.state);
+                if (result) this.state.addLog(`STATION: ${result}`);
+                this.state.emitUpdates(); // already marked as investigated in handleStationAction
+            }
         });
     }
 
@@ -1640,7 +1582,7 @@ class App {
             return;
         }
 
-        this.state.addLog(`Initiating docking procedure with ${station.name}...`);
+        this.state.addLog(`Starting docking procedure with ${station.name}...`);
         this.state.consumeRation();
 
         // Mark as investigated immediately to prevent re-clicking
@@ -1658,7 +1600,7 @@ class App {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // ASTEROID FIELD MINING — Resource extraction from debris fields
+    // ASTEROID FIELD MINING — Resource digging from debris fields
     // ═══════════════════════════════════════════════════════════════
     handleAsteroidAction() {
         const field = this.state.currentSystem;
@@ -1708,73 +1650,15 @@ class App {
 
         const fieldName = field.name || 'Unknown Field';
 
-        // Build the modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-
-        // Build dialogue HTML
-        const dialogueHtml = selected.dialogue.map(d => {
-            const colors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-            };
-            const color = colors[d.speaker] || '#ffffff';
-            return `<div style="margin-bottom: 10px;">
-                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #cc8844; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #1a0d00, #332200); color: #cc8844;">
-                    /// ${selected.title.toUpperCase()} ///
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #cc8844; margin-bottom: 10px;">
-                        LOCATION: ${fieldName}
-                    </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #cc8844; padding-left: 12px;">
-                        ${selected.context(fieldName)}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${selected.choices.map((choice, idx) => `
-                            <button class="asteroid-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #cc8844; background: rgba(50,30,10,0.8);
-                                color: #ffaa55; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects
-        modal.querySelectorAll('.asteroid-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(100,60,20,0.8)'; btn.style.borderColor = '#ffaa55'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(50,30,10,0.8)'; btn.style.borderColor = '#cc8844'; };
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const choice = selected.choices[idx];
-                const result = choice.effect(this.state);
-                if (result) {
-                    this.state.addLog(`MINING: ${result}`);
-                }
-                // Already marked as mined in handleAsteroidAction
-                this.state.emitUpdates();
-                modal.remove();
-            };
+        window.EncounterCard.open(this, {
+            tone: 'rock', kicker: 'ASTEROID FIELD', title: selected.title,
+            facts: [['WHERE', fieldName]],
+            context: selected.context(fieldName), dialogue: selected.dialogue, choices: selected.choices,
+            onPick: (idx) => {
+                const result = selected.choices[idx].effect(this.state);
+                if (result) this.state.addLog(`MINING: ${result}`);
+                this.state.emitUpdates(); // already marked as mined in handleAsteroidAction
+            }
         });
     }
 
@@ -1786,74 +1670,17 @@ class App {
 
         const signalAge = encounter.getSignalAge();
 
-        // Build the modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-
-        // Build dialogue HTML
-        const dialogueHtml = encounter.dialogue.map(d => {
-            const colors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-            };
-            const color = colors[d.speaker] || '#ffffff';
-            return `<div style="margin-bottom: 10px;">
-                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #e07a70; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #1a0000, #330000); color: #e07a70;">
-                    /// DISTRESS SIGNAL: ${encounter.title.toUpperCase()} ///
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.8em; color: #e07a70; margin-bottom: 10px;">
-                        SIGNAL AGE: ${signalAge === 'UNKNOWN' ? 'UNKNOWN' : signalAge + ' YEARS'}
-                    </div>
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #e07a70; padding-left: 12px;">
-                        ${encounter.context(signalAge)}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${encounter.choices.map((choice, idx) => `
-                            <button class="distress-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid #e07a70; background: rgba(50,10,10,0.8);
-                                color: #ff9999; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                <div style="font-size: 0.8em; margin-top: 4px; color: var(--color-text-dim);">${choice.desc}</div>
-                            </button>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects
-        modal.querySelectorAll('.distress-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(100,20,20,0.8)'; btn.style.borderColor = '#ff9999'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(50,10,10,0.8)'; btn.style.borderColor = '#e07a70'; };
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const choice = encounter.choices[idx];
-                const result = choice.effect(this.state);
-                if (result) {
-                    this.state.addLog(`SIGNAL: ${result}`);
-                }
+        window.EncounterCard.open(this, {
+            tone: 'distress', kicker: 'DISTRESS SIGNAL', title: encounter.title, hasSignal: true,
+            facts: [['SENT', signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `${signalAge} years ago`]],
+            context: encounter.context(signalAge), dialogue: encounter.dialogue, choices: encounter.choices,
+            onPick: (idx) => {
+                const result = encounter.choices[idx].effect(this.state);
+                if (result) this.state.addLog(`SIGNAL: ${result}`);
                 this.state.emitUpdates();
-                modal.remove();
                 this._modalActive = false;
                 this._processModalQueue();
-            };
+            }
         });
     }
 
@@ -1908,88 +1735,19 @@ class App {
         };
         const color = colors[event.crewId] || '#ffffff';
 
-        // Build the modal
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-
-        // Build dialogue HTML with portraits
-        const portraits = {
-            'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
-            'Tech Mira': 'F_5', 'Commander': 'M_1', 'A.U.R.A.': null
-        };
-        const dialogueHtml = event.dialogue.map(d => {
-            const speakerColors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a', 'Commander': '#ffffff'
-            };
-            const sColor = speakerColors[d.speaker] || '#ffffff';
-            const pId = portraits[d.speaker];
-            const portraitHtml = pId
-                ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${sColor};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
-            return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
-                <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
-                <div>
-                    <span style="color:${sColor}; font-weight: bold;">${d.speaker}:</span>
-                    <span style="color:${sColor}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-                </div>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: ${color}; max-width: 600px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #0a0a15, #1a1a30); color: ${color};">
-                    /// ${event.title.toUpperCase()} ///
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid ${color}; padding-left: 12px;">
-                        ${event.context}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        ${event.choices.map((choice, idx) => {
-                            // Generate a hint about what the choice does
-                            const hintFromEffect = this._getCrewChoiceHint(choice);
-                            return `
-                            <button class="crew-event-choice" data-idx="${idx}" style="
-                                padding: 12px 15px; text-align: left;
-                                border: 1px solid ${color}; background: rgba(30,30,50,0.8);
-                                color: #cccccc; cursor: pointer; font-family: var(--font-mono);
-                                transition: all 0.2s;
-                            ">
-                                <div style="font-weight: bold;">${choice.text}</div>
-                                ${hintFromEffect ? `<div style="font-size: 0.8em; margin-top: 4px; color: ${color}; opacity: 0.7;">${hintFromEffect}</div>` : ''}
-                            </button>
-                        `}).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Hover effects and click handlers
-        modal.querySelectorAll('.crew-event-choice').forEach(btn => {
-            btn.onmouseenter = () => { btn.style.background = 'rgba(60,60,90,0.9)'; btn.style.borderColor = '#ffffff'; };
-            btn.onmouseleave = () => { btn.style.background = 'rgba(30,30,50,0.8)'; btn.style.borderColor = color; };
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const choice = event.choices[idx];
-                const result = choice.effect(this.state, crew);
-                if (result) {
-                    this.state.addLog(`CREW: ${result}`);
-                }
+        window.EncounterCard.open(this, {
+            tone: 'crew', color, kicker: `A MOMENT WITH ${String(crew.name || '').toUpperCase()}`, title: event.title,
+            context: event.context, dialogue: event.dialogue,
+            choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c) })),
+            onPick: (idx) => {
+                const result = event.choices[idx].effect(this.state, crew);
+                if (result) this.state.addLog(`CREW: ${result}`);
                 this.state.emitUpdates();
-                modal.remove();
                 this._modalActive = false;
                 this._processModalQueue();
-            };
+            }
         });
     }
-
     /**
      * Generate hint text for crew event choice effects
      * Prefers explicit desc if provided, otherwise parses the effect function
@@ -2078,7 +1836,7 @@ class App {
                     };
                     data._scanCorrupted = true;
                     this.state._auraFalseScan = false;
-                    this.state.addLog(`A.U.R.A.: "Scan complete. All readings nominal." [READINGS UNRELIABLE]`);
+                    this.state.addLog(`A.U.R.A.: "Scan complete. All readings normal." [READINGS UNRELIABLE]`);
                 }
 
                 // Build signal summary for log
@@ -2167,7 +1925,7 @@ class App {
         }
         if (this.state.consumeEnergy(jumpCost)) {
             this._isInTransit = true;
-            this.state.addLog("Initiating Sector Jump...");
+            this.state.addLog("Starting Sector Jump...");
 
             // Consume 1 ration (major action)
             this.state.consumeRation();
@@ -2511,7 +2269,7 @@ class App {
         } else if (nextSector > 6) {
             dialogue.push({ speaker: 'A.U.R.A.', text: 'We are beyond all charts. The universe holds its breath.' });
         } else {
-            dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems nominal.` });
+            dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems normal.` });
         }
 
         return dialogue;
@@ -3726,14 +3484,14 @@ You are home.`
             SHATTERED: {
                 vance: "The planet is literally falling apart. There's nothing stable to build on.",
                 aris: "Radiation from the exposed core is lethal. No one survives that.",
-                jaxon: "The structural integrity is zero. Fragments could crush us at any moment.",
+                jaxon: "The hull strength is zero. Fragments could crush us at any moment.",
                 mira: "Gravitational anomalies make orbit unstable. This world is dying."
             },
             ROCKY: {
                 vance: "Barren rock with no atmosphere. One dome breach and everyone suffocates.",
                 aris: "No biosphere, no ecosystem — growing food here is nearly impossible.",
                 jaxon: "Radiation exposure without atmosphere will cause long-term health issues.",
-                mira: "Resource extraction is possible, but colonization? Marginal at best."
+                mira: "We could mine here, but colonization? Marginal at best."
             },
             STORM_WORLD: {
                 vance: "800 kilometer per hour winds. Nothing we build will survive.",
@@ -3758,7 +3516,7 @@ You are home.`
         if (mira) warnings.push({ speaker: 'Tech Mira', text: specific?.mira || "My models show colony failure within 18 months at these readings. The deeper sectors have better candidates." });
 
         const viability = pType === 'VITAL' || pType === 'EDEN' || pType === 'TERRAFORMED' ? Math.floor(Math.random() * 20 + 40) : Math.floor(Math.random() * 8 + 2);
-        warnings.push({ speaker: 'A.U.R.A.', text: `Colony viability assessment for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
+        warnings.push({ speaker: 'A.U.R.A.', text: `Colony report for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
 
         modal.innerHTML = `
             <div class="modal-content" style="border-color: #d85a4e; max-width: 650px;">
@@ -3948,7 +3706,7 @@ You are home.`
         // Special handling for THE STRUCTURE - scanning it is... different
         if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
             if (this.state.consumeEnergy(2)) {
-                this.state.addLog("Deep Scan initiated...");
+                this.state.addLog("Deep Scan started...");
                 this.state.addLog("=== SCAN ERROR ===");
                 this.state.addLog("Mass: [OVERFLOW - VALUE EXCEEDS SENSOR RANGE]");
                 this.state.addLog("Composition: [NULL - MATERIAL UNKNOWN]");
@@ -3987,7 +3745,7 @@ You are home.`
         if (tune) this.noteReliance(!!tune.auto);
 
         if (this.state.consumeEnergy(2)) {
-            this.state.addLog("Deep Scan initiated...");
+            this.state.addLog("Deep Scan started...");
             if (tune && tune.grade === 'sharp') {
                 this.state.addColonyKnowledge(1, true);
                 this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
@@ -4098,7 +3856,7 @@ You are home.`
             this.state.probeIntegrity = 0;
             this.state.addLog("Probe launched toward THE STRUCTURE...");
             this.state.addLog("...");
-            this.state.addLog("Signal lost instantly. No telemetry. No wreckage. The probe simply... ceased.");
+            this.state.addLog("Signal lost instantly. No data. No wreckage. The probe simply... ceased.");
             this.state.addLog("A.U.R.A.: 'The probe did not crash. It was... unmade. I advise against further attempts.'");
             this.state.emitUpdates();
             this.orbitView.updateCommandDeck(planet);
@@ -4119,7 +3877,7 @@ You are home.`
                 this.state.emitUpdates();
                 this.orbitView.updateCommandDeck(this.state.currentSystem);
             } else {
-                this.state.addLog("Insufficient Salvage to fabricate Probe.");
+                this.state.addLog("Not enough Salvage to fabricate Probe.");
             }
             return;
         }
@@ -4197,7 +3955,7 @@ You are home.`
                 this.state.probeIntegrity = 100;
                 this.state.addLog("Probe Fabricated. Systems Operational. (-50 Salvage)");
             } else {
-                this.state.addLog("Insufficient Salvage to fabricate Probe. (50 required)");
+                this.state.addLog("Not enough Salvage to fabricate Probe. (50 required)");
                 return;
             }
         }
@@ -4205,7 +3963,7 @@ You are home.`
         // Remote probe costs additional energy (travel cost penalty)
         const remoteCost = Math.floor(targetPlanet.fuelCost * 0.3); // 30% of warp cost
         if (!this.state.consumeEnergy(remoteCost)) {
-            this.state.addLog(`Insufficient energy for remote probe. (${remoteCost} required)`);
+            this.state.addLog(`Not enough energy for remote probe. (${remoteCost} required)`);
             return;
         }
 
@@ -4215,7 +3973,7 @@ You are home.`
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
             const mira = this.state.crew.find(c => c.personality === 'CURIOUS' && c.status !== 'DEAD');
             if (mira) {
-                setTimeout(() => this.state.addLog(`${mira.name}: "Telemetry uplink established. This is exciting — remote sampling!"`), 400);
+                setTimeout(() => this.state.addLog(`${mira.name}: "Data link established. This is exciting — remote sampling!"`), 400);
             }
         }
 
@@ -4381,8 +4139,10 @@ You are home.`
             // Store EVA team for resolveEvaOutcome
             this.currentEvaTeam = evaTeam;
 
-            // Watch them go down before anything happens to them
-            const afterDescent = window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam) : Promise.resolve();
+            // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
+            const goDown = window.LanderGame ? window.LanderGame.play(this, planet, evaTeam)
+                : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
+            const afterDescent = goDown.then(landing => this.applyLanding(landing, evaTeam));
 
             // Special EDEN EVA — paradise world, unique peaceful encounter
             if (planet.type === 'EDEN') {
@@ -4405,6 +4165,25 @@ You are home.`
             planet.hasEva = true;
             this.orbitView.updateCommandDeck(planet);
             afterDescent.then(() => this.showEventModal(selectedEvent, planet));
+        }
+    }
+
+    /** Consequences of the landing: a soft one makes the trip safer, a crash hurts someone before they step out. */
+    applyLanding(landing, evaTeam) {
+        this._landingRiskMod = 0;
+        if (!landing || !window.LanderGame) return;
+        this.noteReliance(!!landing.auto);
+        this._landingRiskMod = window.LanderGame.GRADES[landing.grade].riskMod;
+        if (landing.grade === 'soft') this.state.addLog("Soft landing. The team steps out steady.");
+        if (landing.grade === 'crash') {
+            const fit = evaTeam.filter(m => m.status === 'HEALTHY');
+            const hurt = fit[Math.floor(Math.random() * fit.length)];
+            if (hurt) {
+                hurt.status = 'INJURED';
+                this.state.addLog(`WARNING: The lander came down hard. ${hurt.name} is INJURED before the hatch even opens.`);
+                window.dispatchEvent(new CustomEvent('crew-injury', { detail: { crew: hurt } }));
+                this.state.emitUpdates();
+            }
         }
     }
 
@@ -4454,6 +4233,13 @@ You are home.`
             signalModifiers.push({ type: 'PREDATORY', mod: +15, color: '#d85a4e' });
         }
 
+        // How the landing went (LanderGame) carries into the trip
+        if (this._landingRiskMod) {
+            riskBase += this._landingRiskMod;
+            signalModifiers.push({ type: this._landingRiskMod < 0 ? 'SOFT LANDING' : 'HARD LANDING', mod: this._landingRiskMod, color: this._landingRiskMod < 0 ? '#74d99a' : '#d85a4e' });
+            this._landingRiskMod = 0;
+        }
+
         // Clamp risk base to reasonable range
         riskBase = Math.max(0, Math.min(50, riskBase));
 
@@ -4465,7 +4251,8 @@ You are home.`
         // Build signal modifier display string
         const PLAIN_SIGNAL = {
             'BIOLOGICAL': 'Living things here are calm', 'ALIEN SIGNAL': 'Unknown signal nearby', 'ANCIENT RUINS': 'Old ruins, still solid',
-            'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here'
+            'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here',
+            'SOFT LANDING': 'You put them down gently', 'HARD LANDING': 'The landing shook them up'
         };
         const signalModDisplay = signalModifiers.length > 0
             ? signalModifiers.map(s => `<span style="color: ${s.color};">${PLAIN_SIGNAL[s.type] || s.type}: ${Math.abs(s.mod)}% ${s.mod > 0 ? 'more dangerous' : 'safer'}</span>`).join(' · ')
@@ -4493,7 +4280,7 @@ You are home.`
                 </header>
                 <ul class="deck-panel-crew eva-team">${(this.currentEvaTeam || []).map(m => `<li><img class="deck-panel-face" src="assets/crew/${m.portraitId}.png" alt=""><span class="deck-panel-name">${m.name}</span><span class="deck-panel-mood">ON THE GROUND</span></li>`).join('')}</ul>
                 <p class="eva-found">“${event.desc}”</p>
-                ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>SCAN SAYS</dt><dd>${signalModDisplay}</dd></dl>` : ''}
+                ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>GOING IN</dt><dd>${signalModDisplay}</dd></dl>` : ''}
                 ${isParanoid ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
                 ${recklessBlocksSafe ? '<p class="eva-voice" style="color:#d070ff">Mira: “The safe option gets us nothing. I am going in.”</p>' : ''}
                 <h4>WHAT DO THEY DO?</h4>
@@ -4527,7 +4314,7 @@ You are home.`
             'TOXIC': ['chemical burn', 'atmospheric leak', 'acid exposure', 'contamination'],
             'DESERT': ['sandstorm', 'heat stroke', 'dust suffocation', 'quicksand'],
             'GAS_GIANT': ['pressure shock', 'atmospheric turbulence', 'lightning strike', 'gravity fluctuation'],
-            'VITAL': ['unknown pathogen', 'hostile flora', 'allergic reaction', 'spore exposure'],
+            'VITAL': ['unknown disease', 'hostile plants', 'allergic reaction', 'spore exposure'],
             'ROCKY': ['rockslide', 'cave-in', 'seismic shift', 'unstable terrain'],
             'OCEANIC': ['riptide', 'pressure breach', 'creature attack', 'storm surge'],
             'GRAVEYARD': ['hull collapse', 'decompression', 'debris impact', 'structural failure'],
@@ -4594,13 +4381,13 @@ You are home.`
             } else {
                 targetCrew.status = 'INJURED';
                 if (predatoryAttack) {
-                    logMsg = `CRITICAL: ${targetCrew.name} mauled by predatory organisms. Emergency extraction! `;
+                    logMsg = `CRITICAL: ${targetCrew.name} mauled by predatory organisms. Emergency rescue! `;
                     this.state.addLog(`Dr. Aris: "The wounds are severe. Whatever attacked them knew where to bite."`);
                 } else {
                     // Planet-type specific injury messages
                     const injuryMsgs = [
                         `INCIDENT: ${targetCrew.name} injured by ${hazardDesc}. Medical attention required.`,
-                        `CRITICAL: ${hazardDesc} wounded ${targetCrew.name}. Emergency extraction!`,
+                        `CRITICAL: ${hazardDesc} wounded ${targetCrew.name}. Emergency rescue!`,
                         `WARNING: ${targetCrew.name} sustained ${hazardDesc} injuries. Aborting EVA.`
                     ];
                     logMsg = injuryMsgs[Math.floor(Math.random() * injuryMsgs.length)] + ' ';
@@ -4635,7 +4422,7 @@ You are home.`
                 'ICE_WORLD': ['Cryo-samples secured. Warming up.', 'Team returned from the cold.', 'Thermal suits performed well.'],
                 'TOXIC': ['Decontamination complete. All clear.', 'Filters held. No exposure.', 'Hazmat protocols successful.'],
                 'DESERT': ['Sand-blasted but intact.', 'Team hydrated and returning.', 'Survived the wastes.'],
-                'GAS_GIANT': ['Atmospheric dive successful.', 'Pressure held. Samples acquired.', 'Returned from the depths.'],
+                'GAS_GIANT': ['Atmospheric dive successful.', 'Pressure held. Samples gained.', 'Returned from the depths.'],
                 'VITAL': ['Specimens secured safely.', 'Life signs stable. Beautiful world.', 'Biological samples obtained.'],
                 'ROCKY': ['Geological survey complete.', 'Core samples extracted.', 'Terrain navigated successfully.'],
                 'OCEANIC': ['Submersible mission success.', 'Water samples secured.', 'Aquatic EVA complete.'],
@@ -4643,7 +4430,7 @@ You are home.`
                 'CRYSTALLINE': ['Crystal formations documented.', 'Resonance samples secured.', 'Harmonic data recorded.'],
                 'SHATTERED': ['Debris field navigated.', 'Fragment samples collected.', 'Micro-gravity EVA success.'],
                 'BIO_MASS': ['Organic samples contained.', 'Avoided the larger masses.', 'Biomatter secured for study.'],
-                'MECHA': ['Avoided active defenses.', 'Tech salvage acquired.', 'Machine world yielded components.'],
+                'MECHA': ['Avoided active defenses.', 'Tech salvage gained.', 'Machine world yielded components.'],
                 'ROGUE': ['Survived the cold darkness.', 'Isolation protocols held.', 'Returned from the void.'],
                 'TERRAFORMED': ['Former colony yielded resources.', 'Reclaimed what was left behind.', 'Terraformer data secured.'],
                 '_DEFAULT': ['Operations complete. Team safe.', 'EVA successful. Returning.', 'Mission accomplished.']
@@ -5051,7 +4838,7 @@ You are home.`
 
             if (c.status === 'DEAD') {
                 statusClass = 'dead';
-                title = `${c.name}: DECEASED`;
+                title = `${c.name}: DEAD`;
             } else if (c.tags && c.tags.includes('SEDATED')) {
                 statusClass = 'sedated';
                 title = `${c.name}: SEDATED`;
@@ -5245,7 +5032,7 @@ You are home.`
         if (deadCrew.length === 0) {
             this.showEventModal({
                 title: "INVALID TARGET",
-                desc: "No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (deceased).",
+                desc: "No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead).",
                 choices: [{ text: "CANCEL", riskMod: 0, reward: { type: 'NONE' } }]
             }, this.state.currentSystem);
             return;
@@ -5261,7 +5048,7 @@ You are home.`
                     <p>Select subject for integration with ${item.name}.</p>
                     <p style="color: #d85a4e; font-size: 0.8em; margin-top: 10px;">
                         WARNING: PROCESS IS IRREVERSIBLE.<br>
-                        Neural patterns will be reconstructed but altered. The entity returned may retain skills but lose self-identity.
+                        Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity.
                     </p>
                 </div>
                 <div class="crew-list">
@@ -5566,12 +5353,12 @@ You are home.`
                                 cursor: ${canRepair ? 'pointer' : 'not-allowed'};
                                 font-family: var(--font-mono); font-weight: bold;
                             " ${canRepair ? '' : 'disabled'}>
-                                ${canRepair ? 'INITIATE REPAIR' : 'INSUFFICIENT SALVAGE'}
+                                ${canRepair ? 'START REPAIR' : 'NOT ENOUGH SALVAGE'}
                             </button>
                         </div>
                     ` : `
                         <div style="color: var(--color-primary); font-size: 0.9em; text-align: center; padding: 10px; border: 1px solid var(--color-primary-dim);">
-                            ALL SYSTEMS NOMINAL
+                            ALL SYSTEMS NORMAL
                         </div>
                     `}
                     ${deckKey === 'cargo' ? `
@@ -6030,73 +5817,18 @@ You are home.`
     // SHIP MALFUNCTION MODAL
     // ═══════════════════════════════════════════════════════════════
     showShipMalfunctionModal(event) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2800';
-
-        // Get dialogue - can be array or function that returns array
-        const dialogue = typeof event.dialogue === 'function'
-            ? event.dialogue(this.state)
-            : event.dialogue;
-
-        // Build dialogue HTML
-        const dialogueHtml = dialogue.map(d => {
-            const colors = {
-                'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-                'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-            };
-            const color = colors[d.speaker] || '#ffffff';
-            return `<div style="margin-bottom: 10px;">
-                <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-            </div>`;
-        }).join('');
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #ff6600; max-width: 550px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #331100, #552200); color: #ff6600; display: flex; justify-content: space-between;">
-                    <span>⚠ SHIP ALERT: ${event.title.toUpperCase()} ⚠</span>
-                </div>
-                <div style="padding: 20px;">
-                    <div style="font-size: 0.9em; color: var(--color-text-dim); margin-bottom: 15px; line-height: 1.6; font-style: italic; border-left: 2px solid #ff6600; padding-left: 12px;">
-                        ${event.context}
-                    </div>
-                    <div style="border-left: 2px solid #333; padding-left: 15px; margin-bottom: 20px;">
-                        ${dialogueHtml}
-                    </div>
-                    <button class="malfunction-acknowledge" style="
-                        width: 100%; padding: 12px;
-                        background: #ff6600; color: #000;
-                        border: none; cursor: pointer;
-                        font-family: var(--font-mono); font-weight: bold; font-size: 1em;
-                    ">ACKNOWLEDGE</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        // Apply effect and close on acknowledge
-        modal.querySelector('.malfunction-acknowledge').onclick = () => {
-            const result = event.effect(this.state);
-            if (result) {
-                this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
-            }
-            this.state.emitUpdates();
-            modal.remove();
-        };
-
-        // Also close on background click
-        modal.onclick = (e) => {
-            if (e.target === modal) {
+        // dialogue can be an array or a function that returns one
+        const dialogue = typeof event.dialogue === 'function' ? event.dialogue(this.state) : event.dialogue;
+        window.EncounterCard.open(this, {
+            tone: 'alert', kicker: 'SHIP ALERT', title: event.title, zIndex: 2800,
+            context: event.context, dialogue,
+            choices: [{ text: 'DEAL WITH IT' }],
+            onPick: () => {
                 const result = event.effect(this.state);
-                if (result) {
-                    this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
-                }
+                if (result) this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
                 this.state.emitUpdates();
-                modal.remove();
             }
-        };
+        });
     }
 
     // ═══════════════════════════════════════════════════════════════

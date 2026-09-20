@@ -54,7 +54,7 @@ A.U.R.A.: "Power surge detected. I can reroute to save the capacitors, but we'll
         title: "/// WARP INCIDENT: STRANGE READING ///",
         context: `The sensors detect something odd in our salvage hold. A faint energy signature that wasn't there before.
 
-A.U.R.A.: "Unknown device detected among recent salvage. I can isolate and study it, or jettison it to be safe."`,
+A.U.R.A.: "Unknown device detected among recent salvage. I can isolate and study it, or dump it to be safe."`,
         dialogue: [],
         choices: [
             {
@@ -71,7 +71,7 @@ A.U.R.A.: "Unknown device detected among recent salvage. I can isolate and study
                 }
             },
             {
-                text: "Jettison it",
+                text: "Dump it",
                 desc: "Safe choice. No effect.",
                 effect: (state) => {
                     return "The device tumbles into the void. Better safe than sorry.";
@@ -157,7 +157,7 @@ A.U.R.A.: "Psychological anomaly detected. I recommend sedatives, or we address 
         title: "/// WARP INCIDENT: HULL MICRO-FRACTURES ///",
         context: `Warning alarms blare. The hull is developing stress fractures from repeated warp jumps.
 
-A.U.R.A.: "Structural integrity at 94%. I recommend immediate patching, or we reinforce the critical sections only."`,
+A.U.R.A.: "Hull strength at 94%. I recommend immediate patching, or we reinforce the critical sections only."`,
         dialogue: [],
         choices: [
             {
@@ -253,7 +253,7 @@ A.U.R.A.: "Commander, I must ask. If reaching THE STRUCTURE requires sacrificing
         title: "/// WARP INCIDENT: POINT OF NO RETURN ///",
         context: `A.U.R.A. interrupts the warp sequence with an urgent warning.
 
-A.U.R.A.: "Commander, beyond this point we cannot return. Our fuel reserves are insufficient for a return journey. This is the last chance to turn back."`,
+A.U.R.A.: "Commander, beyond this point we cannot return. Our fuel reserves are not enough for a return journey. This is the last chance to turn back."`,
         dialogue: [],
         choices: [
             {

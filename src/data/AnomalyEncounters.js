@@ -36,7 +36,7 @@ const ANOMALY_ENCOUNTERS = [
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-                    state.addLog("PROBE TELEMETRY: The probe exists in multiple locations. Its cameras show our ship from outside, inside, and from a place that isn't anywhere. The energy readings are off the charts.");
+                    state.addLog("PROBE DATA: The probe exists in multiple locations. Its cameras show our ship from outside, inside, and from a place that isn't anywhere. The energy readings are off the charts.");
                     state.addLog("The probe signal cuts out. Then returns. Then cuts out. It's still transmitting. From everywhere.");
                     return "Probe entered the fold and fragmented across spacetime. Energy harvested from spatial bleed. +30 Energy. Probe destroyed. All crew +1 Stress.";
                 }
@@ -282,7 +282,7 @@ const ANOMALY_ENCOUNTERS = [
                         state.addLog("They needed power more than materials. Fair trade across reality.");
                         return "Cross-dimensional trade successful. -30 Energy, +20 Salvage.";
                     }
-                    return "Insufficient resources to trade. The other crew looks disappointed.";
+                    return "Not enough resources to trade. The other crew looks disappointed.";
                 }
             },
             {
@@ -334,7 +334,7 @@ const ANOMALY_ENCOUNTERS = [
                 text: "Offer it something",
                 desc: "Sacrifice 30 Salvage to the void. Receive... favor?",
                 effect: (state) => {
-                    if (state.salvage < 30) return "Insufficient salvage to offer. The Hunger notices. It is displeased.";
+                    if (state.salvage < 30) return "Not enough salvage to offer. The Hunger notices. It is displeased.";
                     state.salvage -= 30;
 
                     // The Hunger gives a strange gift
@@ -373,7 +373,7 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "-20 Energy. Safe escape. The Hunger remembers those who run.",
                 effect: (state) => {
                     if (!state.consumeEnergy(20)) {
-                        return "Insufficient energy to flee. The Hunger draws closer.";
+                        return "Not enough energy to flee. The Hunger draws closer.";
                     }
                     state.addLog("Full burn engaged. We put distance between us and the void. It didn't pursue. It didn't need to. It's patient.");
                     state._hungerFled = true;

@@ -44,7 +44,7 @@ class ProbeSystem {
             return {
                 success: false,
                 integrityLoss: currentIntegrity, // Destroys it
-                message: `<span style="color:var(--color-danger)">CRITICAL FAILURE: Probe crushed by environmental stress. Telemetry lost.</span>`,
+                message: `<span style="color:var(--color-danger)">CRITICAL FAILURE: Probe crushed by environmental stress. Data lost.</span>`,
                 reward: null
             };
         }

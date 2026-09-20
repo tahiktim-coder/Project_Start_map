@@ -12,6 +12,7 @@
 
     const { vnoise, ramp, quantize } = Core;
     const PX = 2;
+    const REACTOR_BEAT_MS = 1800;
     const ROOMS = ['bridge', 'lab', 'quarters', 'cargo', 'engineering', 'upgrades'];
     const HULL_RAMP = ramp('#06070a', '#0d1a15', '#1b3329', '#2f5a48', '#74d99a', '#d6ffe4');
     const LAMP_ACCENT = [232, 170, 84];
@@ -96,10 +97,16 @@
             return null;
         },
         engineering(lx, ly, rw, rh, dx, hw, t) { // the reactor
+            // a slow heartbeat: the core swells and brightens, a ring of light rolls off it, power runs out along the conduits
             const r = Math.min(rw, rh) * 0.24, d = Math.sqrt(Math.pow(lx - rw / 2, 2) + Math.pow(ly - rh * 0.48, 2));
-            if (d < r) return { g: 0.72 + 0.28 * Math.sin(t / 400), a: 1 };
-            if (d < r + 2) return { g: 0.5, a: 0 };
-            if (Math.abs(ly - Math.round(rh * 0.48)) < 1) return { g: 0.4, a: 0 };
+            const phase = (t % REACTOR_BEAT_MS) / REACTOR_BEAT_MS, beat = Math.pow(Math.sin(phase * Math.PI), 2);
+            if (d < r * (0.72 + 0.28 * beat)) return { g: 0.4 + 0.6 * beat, a: 1 };
+            if (d < r + 2) return { g: d < r ? 0.16 : 0.5, a: 0 };
+            if (Math.abs(d - (r + 3 + phase * r * 1.3)) < 1) return { g: 0.75 * (1 - phase), a: 1 };
+            if (Math.abs(ly - Math.round(rh * 0.48)) < 1) {
+                const isCharge = ((dx - t / 70) % 9 + 9) % 9 < 2;
+                return { g: isCharge ? 0.9 : 0.4, a: isCharge ? 1 : 0 };
+            }
             return null;
         },
         upgrades(lx, ly, rw, rh, dx, hw, t) { // fabricator arm over a glowing forge

@@ -28,7 +28,7 @@
     };
     const LINES = {
         perfect: [['ENGINEER', "Three for three. I didn't feel a thing."], ['SPECIALIST', 'That was beautiful. Do that every time.'], ['AURA', 'Optimal. I could not have plotted it better. Noted.']],
-        clean: [['ENGINEER', 'Textbook. The drives barely noticed.'], ['SPECIALIST', 'Clean vector. Nice hands, Commander.'], ['AURA', 'Burn nominal. Reserve preserved.']],
+        clean: [['ENGINEER', 'Textbook. The drives barely noticed.'], ['SPECIALIST', 'Clean vector. Nice hands, Commander.'], ['AURA', 'Burn normal. Reserve preserved.']],
         rough: [['SECURITY', "We're in one piece. I'll take it."], ['MEDIC', 'Bit of a lurch. Everyone breathe.'], ['AURA', 'Course achieved. Efficiency: adequate.']],
         bad: [['ENGINEER', "That's going to cost us. Coils are screaming."], ['MEDIC', 'Is everyone all right? That was ugly.'], ['SECURITY', 'Warn me next time you do that.']],
         auto: [['AURA', 'Plotting complete. You may rest, Commander. I have us.'], ['AURA', 'I will take it from here. I always can.']],

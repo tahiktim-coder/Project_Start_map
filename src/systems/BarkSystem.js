@@ -8,7 +8,7 @@ const BARK_DATA = {
     // ═══════════════════════════════════════════════════════════════
     ENTER_ORBIT: {
         PESSIMIST: {
-            0: ["Hull integrity holding. For now.", "Sensors are nominal. Don't get comfortable."],
+            0: ["Hull integrity holding. For now.", "Sensors are normal. Don't get comfortable."],
             1: ["Another rock. Another gamble.", "Readings are... not encouraging.", "I've seen better-looking asteroids."],
             2: ["This bucket won't survive many more of these.", "Every orbit we enter might be our last.", "Tell me again why we're stopping here."],
             3: ["We're a coffin with thrusters.", "Doesn't matter. Nothing here will save us."]
@@ -50,7 +50,7 @@ const BARK_DATA = {
             3: ["Scan complete. Adding it to the list of places that can't help us."]
         },
         SURVIVOR: {
-            0: ["Intel acquired. Planning approach vectors.", "Good. Now we know what we're dealing with."],
+            0: ["Intel gained. Planning approach vectors.", "Good. Now we know what we're dealing with."],
             1: ["Noted. Adjusting threat assessment.", "Terrain's hostile but manageable. Barely.", "I'd want full kit before stepping foot down there."],
             2: ["Threat level: considerable. As usual.", "I've mapped every exit route. We'll need them.", "The scan shows exactly what I expected. Nothing good."],
             3: ["Scanned. Logged. Irrelevant. We're dead either way."]
@@ -266,7 +266,7 @@ const BARK_DATA = {
             3: ["Another dead ship full of dead people. Let me guess: we take their stuff and pretend we're different."]
         },
         CURIOUS: {
-            0: ["The flight recorder! If we can access it, the data would be invaluable.", "This ship's telemetry could fill gaps in our stellar maps."],
+            0: ["The flight recorder! If we can access it, the data would be invaluable.", "This ship's data could fill gaps in our stellar maps."],
             1: ["Their sensor logs might explain the anomalies we've been seeing.", "Every Exodus ship carried different instruments. Different perspectives."],
             2: ["I keep building a picture from these wrecks. The picture isn't comforting.", "Their data confirms what I feared. The corridor has a pattern."],
             3: ["Another data point. Another dead crew. The pattern is death."]
@@ -405,12 +405,12 @@ const BARK_DATA = {
         },
         HUMANIST: {
             0: ["A vital-class planet! This could be it! The readings are—", "Oh my... look at those biosphere readings. This is what we've been searching for."],
-            1: ["Could this really be habitable? After everything?", "Life signs. Atmosphere. Water. I'm afraid to hope."],
+            1: ["Could this really be livable? After everything?", "Life signs. Atmosphere. Water. I'm afraid to hope."],
             2: ["Please. Please let this one be real.", "If this is another dead end, I don't know if the crew can take it."],
             3: ["Green planet. Doesn't matter. Nothing matters."]
         },
         SURVIVOR: {
-            0: ["Vital-class. Run full scans before we commit. Full scans.", "Potentially habitable. Which means potentially hostile."],
+            0: ["Vital-class. Run full scans before we commit. Full scans.", "Potentially livable. Which means potentially hostile."],
             1: ["It looks safe. That's exactly when you should worry.", "Viable worlds attract attention. We might not be the only ones interested."],
             2: ["Paradise planets killed the Icarus crew. Remember that.", "Scan it. Scan it again. Then scan it a third time."],
             3: ["Eden. That's what the Icarus called theirs. We know how that ended."]
@@ -458,14 +458,14 @@ const BARK_DATA = {
     // ═══════════════════════════════════════════════════════════════
     PROBE_DEPLOY: {
         PESSIMIST: {
-            0: ["Probe away. Let's see what it finds before we risk skin.", "Launch confirmed. Telemetry incoming."],
+            0: ["Probe away. Let's see what it finds before we risk skin.", "Launch confirmed. Data incoming."],
             1: ["Probe integrity's not great. Don't expect miracles.", "Sending hardware where we're afraid to go. Smart."],
             2: ["The probe's in better shape than we are.", "Fire it off. At least the probe doesn't feel pain when it crashes."],
             3: ["Probe launched. Wish I could trade places with it."]
         },
         HUMANIST: {
             0: ["Probe launched. Safer than sending people.", "Good call using the probe. No sense risking lives unnecessarily."],
-            1: ["Let the probe take the risk. We've risked enough.", "Probe telemetry coming in. Fingers crossed."],
+            1: ["Let the probe take the risk. We've risked enough.", "Probe data coming in. Fingers crossed."],
             2: ["At least the probe comes back with something. Unlike people.", "Probe away. One more machine doing what we can't."],
             3: ["Launch it. Retrieve it. Repeat until we're dead."]
         },

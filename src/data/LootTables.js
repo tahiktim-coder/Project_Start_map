@@ -170,7 +170,7 @@ const LOOT_RULES = [
         id: 'metals_rich',
         criteria: (p) => p.resources.metals >= 70,
         pool: 'METALS_RICH',
-        msg_context: 'Deep vein extraction'
+        msg_context: 'Deep vein digging'
     },
 
     // --- ENERGY LOGIC ---
@@ -266,7 +266,7 @@ const LOOT_RULES = [
         id: 'technological_signal_bonus',
         criteria: (p) => p.metrics && p.metrics.hasTech,
         pool: 'TECHNOLOGICAL_SIGNAL_LOOT',
-        msg_context: 'Tech-signature extraction'
+        msg_context: 'Dig where the machines are'
     },
     {
         id: 'derelict_ship_bonus',

@@ -119,22 +119,40 @@
         }
     }
 
-    // ── station: tilted habitat ring, modules crawling round it, one red beacon ──
+    // ── station: a dead wheel. Torn habitat ring, solar wings (one snapped), a few windows still lit, scrap drifting off the wound ──
     function renderStation(s, t) {
-        const R = s.R, ax = R * 0.82, ay = R * 0.3, ca = Math.cos(-0.28), sa = Math.sin(-0.28);
+        const R = s.R, ax = R * 0.86, ay = R * 0.34, ca = Math.cos(-0.28), sa = Math.sin(-0.28);
+        const r = rng(s.seed * 31 + 7), tear = r() * 6.28, tearWidth = 0.35 + r() * 0.25, turn = t / 9000;
         for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
             const i = y * s.w + x, dx = x - s.cx, dy = y - s.cy;
             const rx = dx * ca - dy * sa, ry = dx * sa + dy * ca;
             const e = Math.sqrt((rx / ax) * (rx / ax) + (ry / ay) * (ry / ay));
-            const side = 0.55 - 0.4 * (rx / ax);
-            let g = -1;
-            if (e > 0.82 && e < 1.06) g = (Math.sin((Math.atan2(ry / ay, rx / ax) + t / 6000) * 10) > 0.2 ? 0.95 : 0.4) * side + 0.15;
-            else if (e < 0.82 && (Math.abs(rx) < R * 0.035 || Math.abs(ry) < R * 0.03)) g = 0.45;
-            if (dx * dx + dy * dy < R * R * 0.03) g = 0.35 + 0.6 * side;
-            if (g >= 0) { s.gray[i] = g; s.mask[i] = 1; }
+            const around = Math.atan2(ry / ay, rx / ax) + turn, side = 0.6 - 0.4 * (rx / ax);
+            const gap = Math.abs(((around - tear) % 6.283 + 9.425) % 6.283 - 3.1416);      // distance round the ring from the tear
+            let g = -1, a = 0;
+            if (e > 0.8 && e < 1.08 && gap > tearWidth) {                                  // habitat ring, in hull plates
+                const plate = Math.floor(around * 14 / 6.283), seam = (around * 14 / 6.283) % 1;
+                g = (0.35 + 0.5 * side) * (seam < 0.08 ? 0.45 : 1) + (gap < tearWidth + 0.12 ? -0.2 : 0);
+                const hasLight = (plate * 7 + s.seed) % 5 === 0 && e > 0.9 && e < 0.98 && seam > 0.3 && seam < 0.7;
+                if (hasLight && Math.floor(t / 900 + plate) % 7 !== 0) { g = 1; a = 1; }     // the odd window still lit, flickering
+            } else if (e < 0.8 && (Math.abs(rx) < R * 0.03 || Math.abs(ry) < R * 0.025)) g = 0.4;   // spokes
+            const wing = Math.abs(ry) < R * 0.085 && Math.abs(rx) > ax * 1.12 && Math.abs(rx) < ax * (rx > 0 ? 1.28 : 1.5);
+            if (wing) g = ((Math.floor(rx / 3) + Math.floor(ry / 3)) % 2 ? 0.3 : 0.55) * (rx > 0 ? 0.6 : 1); // solar wings; the right one snapped short
+            if (Math.abs(ry) < 1 && Math.abs(rx) >= ax * 1.04 && Math.abs(rx) <= ax * 1.12) g = 0.5;        // wing booms
+            const hub = dx * dx + dy * dy;
+            if (hub < R * R * 0.035) g = 0.3 + 0.65 * side * (1 - hub / (R * R * 0.05));
+            if (Math.abs(dx) < 1.5 && dy < 0 && dy > -R * 0.42) g = 0.55;                   // docking spire
+            if (g >= 0) { s.gray[i] = Math.max(0.05, g); s.acc[i] = a; s.mask[i] = 1; }
         }
-        if (Math.floor(t / 800) % 2 === 0) {
-            const bi = Math.round(s.cy - R * 1.12) * s.w + Math.round(s.cx);
+        for (let k = 0; k < 9; k++) {                                                       // scrap drifting out of the tear
+            const drift = (t / 14000 + r()) % 1, spread = (r() - 0.5) * 0.9, at = tear - turn + spread;
+            const dist = 1.05 + drift * 0.5, rx = Math.cos(at) * ax * dist, ry = Math.sin(at) * ay * dist;
+            const px = Math.round(s.cx + rx * ca + ry * sa), py = Math.round(s.cy - rx * sa + ry * ca);
+            if (px < 0 || py < 0 || px >= s.w || py >= s.h) continue;
+            const i = py * s.w + px; s.gray[i] = 0.75 * (1 - drift); s.mask[i] = 1;
+        }
+        if (Math.floor(t / 800) % 2 === 0) {                                                // the beacon on the spire still blinks
+            const bi = Math.round(s.cy - R * 0.44) * s.w + Math.round(s.cx);
             s.gray[bi] = 1; s.acc[bi] = 3; s.mask[bi] = 1;
         }
     }

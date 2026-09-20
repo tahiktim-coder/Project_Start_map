@@ -106,7 +106,7 @@ const EXODUS_ENCOUNTERS = [
                 }
             },
             {
-                text: "Take supplies, leave personal effects",
+                text: "Take supplies, leave their things",
                 desc: "+20 Salvage, +1 Food Pack. Balanced approach.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
@@ -182,7 +182,7 @@ const EXODUS_ENCOUNTERS = [
                             stressedCount++;
                         }
                     });
-                    state.addLog("Dr. Aris initiates the shutdown sequence. The heartbeats slow, then stop.");
+                    state.addLog("Dr. Aris starts the shutdown sequence. The heartbeats slow, then stop.");
                     state.addLog("Spc. Vance: \"Better than waking up alone in a dead ship. Better than slowly freezing when the power fails.\"");
                     return "The sleepers pass peacefully. Pod components salvaged. +20 Salvage. Some crew are disturbed.";
                 }
@@ -264,7 +264,7 @@ const EXODUS_ENCOUNTERS = [
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
-                            state.addLog(`WARNING: ${victim.name} exposed to spores during extraction. Quarantine initiated.`);
+                            state.addLog(`WARNING: ${victim.name} exposed to spores on the way out. Quarantine started.`);
                         }
                     }
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 35);
@@ -337,7 +337,7 @@ const EXODUS_ENCOUNTERS = [
                             "The destination coordinates were calculated by an AI called GENESIS. It identified 47 potential colony sites across 5 sectors of deep space."
                         ],
                         [
-                            "CAPTAIN'S LOG: 'We launched knowing the odds. One in ten ships might find a habitable world. The rest would die in the dark.'",
+                            "CAPTAIN'S LOG: 'We launched knowing the odds. One in ten ships might find a livable world. The rest would die in the dark.'",
                             "'Earth had six months left. Maybe less. The oceans were boiling in the equatorial zones. The poles were the last refuge, and they were melting.'",
                             "'They told us we were humanity's hope. They didn't tell us we were also humanity's apology.'"
                         ],
@@ -379,7 +379,7 @@ const EXODUS_ENCOUNTERS = [
         context: (shipName) => `The ${shipName} made it down in one piece. The landing gear deployed, the cargo secured. Then the crew tried to colonize. The half-built shelters outside tell the story — they lasted maybe a year. The ship's interior is dusty but functional. Some systems still have power.`,
         dialogue: [
             { speaker: 'Eng. Jaxon', text: "This ship is almost identical to ours. Same class. Same vintage. I could strip parts from this for weeks." },
-            { speaker: 'Dr. Aris', text: "There are personal effects everywhere. Journals. Children's drawings. They tried to make it a home." },
+            { speaker: 'Dr. Aris', text: "Their things are everywhere. Journals. Children's drawings. They tried to make it a home." },
             { speaker: 'Spc. Vance', text: "Focus. What can we use?" }
         ],
         choices: [

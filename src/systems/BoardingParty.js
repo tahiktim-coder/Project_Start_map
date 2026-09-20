@@ -26,7 +26,7 @@
     };
     const PERKS = {
         ENGINEER: { text: 'Knows machines — nothing goes wrong for him in the reactor room.' },
-        MEDIC: { text: 'Steady breathing — starts with 2 extra oxygen.', oxygen: 2 },
+        MEDIC: { text: 'Steady breathing — starts with 2 extra air.', oxygen: 2 },
         SECURITY: { text: 'Armoured suit — the first thing that goes wrong does nothing.' },
         SPECIALIST: { text: 'Reads the floor plan — always sees what the next room is.' },
         LEADER: { text: 'No trick. But the crew notices who goes first: everyone calms down if she makes it back.' },
@@ -85,7 +85,7 @@
         if (Math.random() >= HAZARD_BASE + HAZARD_PER_ROOM * b.pos) return null;
         if (b.role === 'ENGINEER' && room.type === 'REACTOR') return 'A valve starts to blow — he closes it without looking.';
         if (b.role === 'SECURITY' && !b.isArmourSpent) { b.isArmourSpent = true; return 'A panel bursts. The armour takes it. Nothing lost.'; }
-        if (Math.random() < 0.6) { b.oxygen = Math.max(0, b.oxygen - BREACH_LOSS); return `A seam splits! −${BREACH_LOSS} oxygen.`; }
+        if (Math.random() < 0.6) { b.oxygen = Math.max(0, b.oxygen - BREACH_LOSS); return `A seam splits! −${BREACH_LOSS} air.`; }
         b.shaken += 1; return 'Something moves in the dark. Probably a cable. Stress +1.';
     }
 
@@ -117,12 +117,53 @@
         const fx = ROOM_X0 + b.pos * ROOM_W + 18, fy = ROOM_Y + ROOM_H - 2, step = Math.floor(now / 300) % 2; // the boarder
         ctx.fillStyle = BONE; ctx.fillRect(fx, fy - 9, 3, 3);
         ctx.fillStyle = b.color; ctx.fillRect(fx - 1, fy - 6, 5, 4); ctx.fillRect(fx, fy - 2, 1, 2); ctx.fillRect(fx + 2, fy - 2 + step, 1, 2 - step);
-        for (let k = 0; k < b.oxygenMax; k++) {                                                                  // oxygen pips; the ones you need to get home are amber
-            const isFull = k < b.oxygen, isReturnTrip = k < b.pos * MOVE_COST;
-            ctx.fillStyle = isFull ? (isReturnTrip ? AMBER : GREEN) : '#1a1f1d';
-            if (isFull && b.oxygen <= b.pos && Math.floor(now / 250) % 2) ctx.fillStyle = RED;
-            ctx.fillRect(ROOM_X0 + k * 12, 6, 10, 6);
+        const reach = reachOf(b);                                                                                // furthest room they can walk to and still get home
+        b.rooms.forEach((room, i) => {
+            if (i <= reach) return;
+            const x = ROOM_X0 + i * ROOM_W;
+            ctx.fillStyle = 'rgba(6, 7, 10, 0.62)'; ctx.fillRect(x, ROOM_Y, ROOM_W - 2, ROOM_H);
+            ctx.fillStyle = RED; for (let k = 0; k < ROOM_W - 4; k += 6) ctx.fillRect(x + k, ROOM_Y + ROOM_H + 3, 3, 1);
+        });
+        if (reach < b.rooms.length - 1) {                                                                        // the line they must not cross
+            const lx = ROOM_X0 + (reach + 1) * ROOM_W - 2;
+            ctx.fillStyle = RED; for (let y = ROOM_Y - 6; y < ROOM_Y + ROOM_H + 6; y += 4) ctx.fillRect(lx, y, 1, 2);
         }
+        ctx.fillStyle = AMBER;                                                                                   // the walk home, drawn under the rooms they must cross
+        for (let i = 0; i < b.pos; i++) ctx.fillRect(ROOM_X0 + i * ROOM_W + 6, ROOM_Y + ROOM_H + 3, ROOM_W - 14, 1);
+        if (isLowAir(b) && Math.floor(now / 400) % 2) {
+            ctx.fillStyle = RED;
+            ctx.fillRect(0, 0, BUFFER_W, 2); ctx.fillRect(0, BUFFER_H - 2, BUFFER_W, 2); ctx.fillRect(0, 0, 2, BUFFER_H); ctx.fillRect(BUFFER_W - 2, 0, 2, BUFFER_H);
+        }
+    }
+
+    const walkBackCost = b => b.pos * MOVE_COST;
+    const spareAir = b => b.oxygen - walkBackCost(b);
+    const isLowAir = b => spareAir(b) <= 1 && b.pos > 0;
+    /** Furthest room index they can reach from here and still walk all the way out. */
+    const reachOf = b => Math.min(b.rooms.length - 1, Math.floor((b.oxygen + b.pos * MOVE_COST) / (2 * MOVE_COST)));
+
+    /** The air gauge: one block per unit. Amber blocks are already spoken for by the walk home. */
+    function airHtml(b) {
+        const back = walkBackCost(b), spare = spareAir(b);
+        const pips = Array.from({ length: b.oxygenMax }, (_, k) => {
+            const state = k >= b.oxygen ? 'is-spent' : (k < back ? 'is-home' : 'is-spare');
+            return `<i class="${state}"></i>`;
+        }).join('');
+        const note = b.pos === 0 ? `All ${b.oxygen} to spend. Every room in is one more to walk back.`
+            : spare <= 0 ? 'Just enough to get home. Go now.'
+            : `${back} kept for the walk home · <b>${spare} left to spend</b>`;
+        return `<div class="boarding-air-head"><span>AIR</span><strong>${b.oxygen}<small> / ${b.oxygenMax}</small></strong></div>
+            <div class="boarding-air-pips">${pips}</div><p class="boarding-air-note">${note}</p>`;
+    }
+
+    /** Names under the rooms: what each one is, and which are out of reach. */
+    function roomLabelsHtml(b) {
+        const reach = reachOf(b);
+        return b.rooms.map((room, i) => {
+            const label = room.isKnown ? ROOMS[room.type].name.replace('CREW ', '').replace(' ROOM', '').replace(' DECK', '') : '?';
+            const cls = i === b.pos ? 'is-here' : i > reach ? 'is-far' : room.isSearched ? 'is-done' : '';
+            return `<li class="${cls}">${label}${i > reach ? '<small>too far</small>' : room.isSearched && i ? '<small>searched</small>' : ''}</li>`;
+        }).join('');
     }
 
     // ── screens ──
@@ -135,7 +176,7 @@
         }).join('');
         return `<p class="warp-plot-kicker">BOARDING — SILENT FOR ${age} YEARS</p>
             <h2 class="warp-plot-target">${esc(station.name || 'Unknown station')}</h2>
-            <p class="warp-plot-hint">One person goes in, on one tank of air. Going deeper costs 1 oxygen, searching a room costs 2, and every room you enter is a room you must walk back through. The best finds are at the far end.${station.scanned ? ' <b>Your deep scan mapped every room.</b>' : ' A deep scan from orbit would have shown the rooms first.'}</p>
+            <p class="warp-plot-hint">One person goes in, on one tank of air. Going one room deeper costs 1 air. Searching a room costs 2. Walking out costs 1 for every room between you and the airlock, so keep enough to get home. The best finds are at the far end.${station.scanned ? ' <b>Your deep scan mapped every room.</b>' : ' A deep scan from orbit would have shown the rooms first.'}</p>
             <h4 class="boarding-subhead">WHO GOES IN?</h4>
             <div class="boarding-picker">${cards || '<p class="warp-plot-hint">Nobody is fit to go.</p>'}</div>
             <div class="warp-plot-buttons"><button class="warp-plot-auto boarding-cancel">STAY ABOARD — skip the station</button></div>`;
@@ -144,12 +185,14 @@
     function walkHtml(b) {
         return `<p class="warp-plot-kicker">BOARDING — ${esc(b.member.name)} IS INSIDE</p>
             <h2 class="warp-plot-target boarding-room-name"></h2>
+            <div class="boarding-air"></div>
             <canvas class="warp-plot-canvas" width="${BUFFER_W}" height="${BUFFER_H}"></canvas>
+            <ol class="boarding-rooms"></ol>
             <p class="boarding-status" aria-live="polite"></p>
             <div class="warp-plot-buttons boarding-actions">
-                <button class="warp-plot-engage" data-act="deeper">GO DEEPER <kbd>−${MOVE_COST} O₂</kbd></button>
-                <button class="warp-plot-engage boarding-search" data-act="search">SEARCH ROOM <kbd>−${SEARCH_COST} O₂</kbd></button>
-                <button class="warp-plot-auto" data-act="leave">HEAD BACK</button>
+                <button class="warp-plot-engage" data-act="deeper"></button>
+                <button class="warp-plot-engage boarding-search" data-act="search"></button>
+                <button class="warp-plot-auto" data-act="leave"></button>
             </div>
             <p class="boarding-carried"></p>`;
     }
@@ -185,6 +228,9 @@
         frame.innerHTML = walkHtml(b);
         const ctx = frame.querySelector('canvas').getContext('2d'), statusEl = frame.querySelector('.boarding-status');
         const nameEl = frame.querySelector('.boarding-room-name'), carriedEl = frame.querySelector('.boarding-carried');
+        const airEl = frame.querySelector('.boarding-air'), roomsEl = frame.querySelector('.boarding-rooms');
+        /** A move that leaves too little air to walk out is allowed, but the button says so first. */
+        const label = (text, cost, isStranding) => `${text} <kbd>−${cost} AIR</kbd>${isStranding ? '<em>NOT ENOUGH AIR TO GET BACK</em>' : ''}`;
         const buttons = { deeper: frame.querySelector('[data-act="deeper"]'), search: frame.querySelector('[data-act="search"]'), leave: frame.querySelector('[data-act="leave"]') };
         let raf = 0, isOver = false;
 
@@ -196,10 +242,18 @@
             statusEl.textContent = message || info.text;
             const bits = [c.salvage && `${c.salvage} salvage`, c.energy && `${c.energy} energy`, c.data && `${c.data} data`, c.items.length && `${c.items.length} item`, c.notes.length && `${c.notes.length} diary`].filter(Boolean);
             carriedEl.textContent = 'CARRYING: ' + (bits.join(' · ') || 'nothing yet');
+            airEl.innerHTML = airHtml(b);
+            airEl.classList.toggle('is-low', isLowAir(b));
+            roomsEl.innerHTML = roomLabelsHtml(b);
+            const strandsDeeper = b.oxygen - MOVE_COST < (b.pos + 1) * MOVE_COST, strandsSearch = b.oxygen - SEARCH_COST < walkBackCost(b);
             buttons.deeper.disabled = b.pos >= b.rooms.length - 1 || b.oxygen < MOVE_COST;
             buttons.search.disabled = room.isSearched || b.oxygen < SEARCH_COST;
-            buttons.leave.innerHTML = `HEAD BACK <kbd>−${b.pos * MOVE_COST} O₂</kbd>`;
-            buttons.leave.classList.toggle('is-urgent', b.oxygen <= b.pos * MOVE_COST + 1);
+            buttons.deeper.innerHTML = label(b.pos >= b.rooms.length - 1 ? 'END OF THE STATION' : 'GO DEEPER', MOVE_COST, strandsDeeper && !buttons.deeper.disabled);
+            buttons.search.innerHTML = label(room.isSearched ? 'ALREADY SEARCHED' : 'SEARCH ROOM', SEARCH_COST, strandsSearch && !buttons.search.disabled);
+            buttons.deeper.classList.toggle('is-stranding', strandsDeeper && !buttons.deeper.disabled);
+            buttons.search.classList.toggle('is-stranding', strandsSearch && !buttons.search.disabled);
+            buttons.leave.innerHTML = b.pos === 0 ? 'STEP BACK OUT' : `HEAD BACK <kbd>−${walkBackCost(b)} AIR</kbd>`;
+            buttons.leave.classList.toggle('is-urgent', isLowAir(b));
             if (b.oxygen < b.pos * MOVE_COST || (b.oxygen === 0 && b.pos > 0)) finish(false);
         }
 

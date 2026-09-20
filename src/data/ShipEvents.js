@@ -112,7 +112,7 @@ const SHIP_MALFUNCTION_EVENTS = [
                 // Not enough salvage - cargo gets damaged
                 if (state.isDeckOperational('cargo')) {
                     state.shipDecks.cargo.status = 'DAMAGED';
-                    state.addLog("Couldn't patch the breach in time. Cargo hold compromised!");
+                    state.addLog("Couldn't patch the breach in time. Cargo hold breached!");
                     return "Hull breach! Cargo hold DAMAGED due to lack of repair materials.";
                 }
                 state.addLog("Hull groaning but holding. For now.");
@@ -137,7 +137,7 @@ const SHIP_MALFUNCTION_EVENTS = [
             if (Math.random() < 0.5) {
                 state.shipDecks.bridge.status = 'DAMAGED';
                 state.addLog("Sensor array burned out. Bridge systems offline!");
-                return "Sensor failure! Bridge DAMAGED. Navigation compromised.";
+                return "Sensor failure! Bridge DAMAGED. Navigation is down.";
             }
 
             // Otherwise just energy cost to reboot
@@ -185,7 +185,7 @@ const SHIP_MALFUNCTION_EVENTS = [
         context: "During the last maneuver, something in the cargo hold came loose.",
         dialogue: [
             { speaker: 'Eng. Jaxon', text: "Heard a crash from cargo. Better check on our supplies." },
-            { speaker: 'A.U.R.A.', text: "Cargo integrity compromised. Recommend immediate inspection." }
+            { speaker: 'A.U.R.A.', text: "Cargo hold damaged. Someone should go and look." }
         ],
         effect: (state) => {
             // Lose some salvage or rations - guaranteed loss

@@ -128,7 +128,7 @@ THE STRUCTURE seems to understand. Perhaps even approve. It provides data willin
 
 You store it all. Every byte. Every revelation.
 
-There is no going back. There was never going back. But THE STRUCTURE's data shows you something: a habitable world, nearby, that you never would have found alone.
+There is no going back. There was never going back. But THE STRUCTURE's data shows you something: a livable world, nearby, that you never would have found alone.
 
 You settle there. You build. You transmit your findings to anyone who might be listening.
 
