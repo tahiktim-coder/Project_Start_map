@@ -1313,6 +1313,35 @@ class App {
     }
 
     /** Sector 1 always holds one wreck whose transponder shows on the map from the start: the first thing to go and look at. */
+    /** Sector 2 always holds one wreck with the uncut briefing tape in its archive. Unmarked: you find it by searching wrecks. */
+    plantBriefingTape() {
+        const nodes = this.state.sectorNodes || [];
+        if (this.state.currentSector !== 2 || nodes.some(p => p.hasTape) || this.state.cargo.some(i => i.id === 'briefing_tape')) return;
+        const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
+        const target = nodes.find(p => isLandable(p) && (p.tags || []).includes('EXODUS_WRECK')) || nodes.find(isLandable);
+        if (!target) return;
+        target.tags = target.tags || [];
+        if (!target.tags.includes('EXODUS_WRECK')) target.tags.push('EXODUS_WRECK');
+        target.hasTape = true;
+    }
+
+    /** Found in the wreck's archive; it plays at once, and Vance says the thing nobody wants said. */
+    findBriefingTape(shipName) {
+        const TAPE_DELAY_MS = 900;
+        if (typeof ITEMS === 'undefined' || !ITEMS.BRIEFING_TAPE || this.state.cargo.some(i => i.id === ITEMS.BRIEFING_TAPE.id)) return;
+        this.state.cargo.push({ ...ITEMS.BRIEFING_TAPE, acquiredAt: shipName });
+        this.state.addLog(`In the archive of ${shipName}: a tape with our programme's seal. It is in your cargo now.`);
+        this.state.emitUpdates();
+        setTimeout(() => {
+            const played = window.StoryReel ? window.StoryReel.play('uncut') : Promise.resolve();
+            played.then(() => {
+                this.state.addLog('Spc. Vance: "That is not eight."');
+                this.state.addLog('A.U.R.A.: "Old footage degrades, Specialist. I would not read much into it."');
+                this.state.emitUpdates();
+            });
+        }, TAPE_DELAY_MS);
+    }
+
     markFirstSignal() {
         const nodes = this.state.sectorNodes || [];
         if (this.state.currentSector !== 1 || nodes.some(p => p.isFirstSignal)) return;
@@ -2018,6 +2047,7 @@ class App {
                 this.state.sectorNodes = PlanetGenerator.generateSector(nextSector);
                 this.state.currentSector = nextSector;
                 this.state.lastVisitedSystem = null;
+                this.plantBriefingTape();
 
                 // Sector enter hazard (e.g., S3 ghost planets) — pass state for ghost planet logging
                 const enterConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[nextSector] : null;
@@ -2489,6 +2519,7 @@ class App {
                 onChoiceMade: () => {
                     this.orbitView.updateCommandDeck(planet);
                     if (planet.isFirstSignal) this.findDiscDrawing(shipName);
+                    if (planet.hasTape) this.findBriefingTape(shipName);
                 }
             });
             return;

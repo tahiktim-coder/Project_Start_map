@@ -11,6 +11,7 @@
     const EARTH = { x: 104, y: 135, r: 34 }, HEADING_Y = 135;
     const RAY_COUNT = 160, DASH_GAP = 22, DASH_LENGTH = 9, RAY_STEP = 2, CORRIDOR_LENGTH = 1500, STRUCTURE_X = 1560, WRECK_COUNT = 760;
     const HEADING_WEDGE = 0.1;                                                      // radians kept clear round your heading in the briefing film
+    const UNCUT_LEAN = 0.22;                                                        // how far the lines lean toward your heading before the uncut tape runs out
     const HULLS_TOLD = 9, HULLS_TRUE = 41207, LIVING_REACH = 420, DYING_SPAN = 1050;
     const INK = '#05070a', BONE = '#c4d0c4', DIM = '#2f5a48', GREEN = '#74d99a', AMBER = '#d9a24a', RED = '#d85a4e';
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -214,6 +215,14 @@
         };
     }
 
+    /** An old tape: a tracking band rolling down the picture, and now and then a line that tears sideways. */
+    function drawTapeWear(ctx, t) {
+        const band = Math.floor((t / 28) % (H + 40)) - 20;
+        ctx.fillStyle = 'rgba(5, 7, 10, 0.55)'; ctx.fillRect(0, band, W, 6);
+        ctx.fillStyle = 'rgba(214, 255, 228, 0.18)'; ctx.fillRect(0, band + 6, W, 1);
+        if (Math.floor(t / 90) % 23 === 0) { const y = Math.floor((t * 7) % H); ctx.drawImage(ctx.canvas, 0, y, W, 2, 6, y, W, 2); }
+    }
+
     // ── the reels: beats are [start ms, caption]; draw(ctx, world, t) paints the frame at time t ──
     const REELS = {
         program: {
@@ -225,6 +234,18 @@
                 drawStreams(ctx, world, t, 0, 30 + span(t, 3000, 9000) * 460, 0, 1, HEADING_WEDGE);
                 drawEarth(ctx, 0);
                 drawHeading(ctx, span(t, 9000, 12500), t);
+            },
+        },
+        uncut: {
+            length: 17000,
+            source: 'RECOVERED TAPE · EXODUS PROGRAMME MASTER · UNCUT',
+            beats: [[600, 'A tape from a dead ship. Our programme\'s seal on it.'], [3800, 'The same briefing film. Longer.'], [9000, 'Look at your heading. It is not eight ships.'], [13200, 'The tape ends there.']],
+            draw(ctx, world, t) {
+                drawSky(ctx, world, 0);
+                drawStreams(ctx, world, t, span(t, 12500, 16500) * UNCUT_LEAN, 30 + span(t, 3000, 9000) * 460, 0);   // nothing kept clear: the heading is full
+                drawEarth(ctx, 0);
+                drawHeading(ctx, span(t, 9000, 11500), t);
+                drawTapeWear(ctx, t);
             },
         },
         jump2: jumpShot('Sector 2. One of the eight, drifting.', { density: 0.06, hull: ['EXODUS-6', 1200] }),
