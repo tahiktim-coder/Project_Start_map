@@ -11,6 +11,12 @@
     const PIXEL = 2, TICK_MS = 90, STAR_COUNT = 150, CLOUD_COUNT = 6;
     const STREAM_LANES = [0, 3, 5, 9, 14, 20, 28];        // index = sector: how many lanes of ships the heading carries
     const WRECKS_FROM_SECTOR = 3, WRECKS_PER_SECTOR = 14, ATTACH_GRACE_MS = 5000;
+    // Nebulae are a hint of colour, never a wash: the brightest channel of a sector colour is capped before it is darkened,
+    // so a white sector (6) or a grey one (1) cannot turn the map into bright static. Sector 6 is tinted by the Structure itself.
+    const NEBULA_MAX_CHANNEL = 96, NEBULA_DENSITY = 0.6, NEBULA_OVERRIDE = { 6: [96, 52, 176] };
+    // Around the Structure: a pocket where nothing shines ("no signal comes back"), a violet rim, and the lanes ending in it
+    const POCKET_RADIUS = 0.2, POCKET_DARKNESS = 0.92, RIM_WIDTH = 0.035, RIM_PULSE_MS = 2600, LANE_SWALLOW = 0.55;
+    const VIOLET = '#8844ff', VIOLET_DIM = '#3a1f66';
     const INK = [5, 7, 10], BONE = '#c4d0c4', DIM = '#2f5a48', GREEN = '#74d99a', AMBER = '#d9a24a', RED = '#a8453c';
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
@@ -20,9 +26,12 @@
     function seeded(seed) { let s = (seed * 2654435761) >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
     function sectorTint(sector) {
+        if (NEBULA_OVERRIDE[sector]) return NEBULA_OVERRIDE[sector];
         const hex = (typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[sector] && SECTOR_CONFIG[sector].sectorColor) || '#2f5a48';
         const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(hex);
-        return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [47, 90, 72];
+        const rgb = m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [47, 90, 72];
+        const top = Math.max(...rgb);
+        return top > NEBULA_MAX_CHANNEL ? rgb.map(c => c * NEBULA_MAX_CHANNEL / top) : rgb;
     }
 
     /** Everything that does not change while you look at this sector, painted once. */
@@ -35,7 +44,7 @@
             ctx.fillStyle = css(mix(tint, INK, k % 2 ? 0.72 : 0.82));
             for (let y = Math.max(0, Math.floor(cy - r)); y < Math.min(h, cy + r); y++) for (let x = Math.max(0, Math.floor(cx - r)); x < Math.min(w, cx + r); x++) {
                 const d = Math.hypot(x - cx, (y - cy) * 1.6) / r;
-                if (d < 1 && dith(x, y, (1 - d) * 0.75)) ctx.fillRect(x, y, 1, 1);
+                if (d < 1 && dith(x, y, (1 - d) * NEBULA_DENSITY)) ctx.fillRect(x, y, 1, 1);
             }
         }
         return canvas;
@@ -51,24 +60,75 @@
         };
     }
 
-    /** The heading: from the lower left of the map to the upper right, where the next sector is. */
-    const headingPoint = (scene, along, offset) => ({ x: along * scene.w, y: scene.h * (0.82 - along * 0.64) + offset * scene.h });
+    /**
+     * The heading: from the lower left of the map to the upper right, where the next sector is. When the Structure is on
+     * this map the heading runs into it instead, and every lane narrows onto it (offset shrinks to nothing at the end).
+     */
+    function headingPoint(scene, along, offset) {
+        const end = scene.end;
+        if (!end) return { x: along * scene.w, y: scene.h * (0.82 - along * 0.64) + offset * scene.h };
+        const startY = scene.h * 0.86, narrowing = Math.pow(1 - along, 0.8);
+        return { x: along * end.x, y: startY + (end.y - startY) * along + offset * scene.h * narrowing };
+    }
 
     function drawStream(ctx, scene, time) {
         scene.lanes.forEach(lane => {
             for (let step = 0; step < scene.w; step += 2) {
                 const inDash = (((step - time * 0.02 * lane.speed - lane.phase) % 26) + 26) % 26;
                 if (inDash > 8) continue;
-                const p = headingPoint(scene, step / scene.w, lane.offset);
+                const along = step / scene.w, p = headingPoint(scene, along, lane.offset);
+                if (scene.end && isSwallowed(scene, p, step, lane)) continue;
                 ctx.fillStyle = inDash > 6 ? '#d6ffe4' : inDash > 3 ? GREEN : DIM;
                 ctx.fillRect(Math.round(p.x), Math.round(p.y), inDash > 6 ? 2 : 1, 1);
             }
         });
         scene.wrecks.forEach((wreck, i) => {
             const p = headingPoint(scene, (wreck.along + time * 0.000004 * wreck.drift) % 1, wreck.offset), x = Math.round(p.x), y = Math.round(p.y);
+            if (scene.end && Math.hypot(p.x - scene.end.x, p.y - scene.end.y) < scene.end.pocket * 0.7) return;
             ctx.fillStyle = i % 3 ? RED : BONE; ctx.fillRect(x, y, 3, 1); ctx.fillRect(x + 1, y - 1, 1, 1);
             if (i % 5 === 0 && Math.floor(time / 600 + i) % 3 === 0) { ctx.fillStyle = AMBER; ctx.fillRect(x + 1, y - 2, 1, 1); }
         });
+    }
+
+    /** Inside the pocket a dash survives less the closer it gets: the lanes thin out and vanish into the Structure. */
+    function isSwallowed(scene, p, step, lane) {
+        const d = Math.hypot(p.x - scene.end.x, p.y - scene.end.y) / scene.end.pocket;
+        if (d >= 1) return false;
+        const keep = Math.pow(d, 1.6) * (1 - LANE_SWALLOW) + (d > 0.35 ? LANE_SWALLOW * d : 0);
+        return ((step * 13 + Math.round(lane.phase * 7)) % 17) / 17 > keep;
+    }
+
+    /** A pocket where nothing shines, pressed over nebula and stars: the Structure stands in the one place that is truly black. */
+    function drawPocket(ctx, scene) {
+        const { x, y, pocket } = scene.end, ink = `rgb(${INK.join(',')})`;
+        ctx.fillStyle = ink;
+        for (let py = Math.max(0, Math.floor(y - pocket)); py < Math.min(scene.h, y + pocket); py++)
+            for (let px = Math.max(0, Math.floor(x - pocket)); px < Math.min(scene.w, x + pocket); px++) {
+                const d = Math.hypot(px - x, py - y) / pocket;
+                if (d < 1 && dith(px, py, (1 - d * d) * POCKET_DARKNESS * 1.3)) ctx.fillRect(px, py, 1, 1);
+            }
+    }
+
+    /** A thin violet rim round the pocket, breathing slowly; brighter on the side the lanes come in from. */
+    function drawRim(ctx, scene, time) {
+        const { x, y, r } = scene.end, breath = 0.5 + 0.5 * Math.sin(time / RIM_PULSE_MS * Math.PI * 2);
+        const inner = r * 1.35, outer = inner + Math.max(3, scene.w * RIM_WIDTH);
+        for (let py = Math.max(0, Math.floor(y - outer)); py < Math.min(scene.h, y + outer); py++)
+            for (let px = Math.max(0, Math.floor(x - outer)); px < Math.min(scene.w, x + outer); px++) {
+                const d = Math.hypot(px - x, py - y);
+                if (d < inner || d > outer) continue;
+                const edge = 1 - (d - inner) / (outer - inner), facing = 0.55 + 0.45 * ((x - px) / d);   // lit from the lower left, where the lanes arrive
+                if (dith(px, py, edge * edge * facing * (0.55 + 0.35 * breath))) { ctx.fillStyle = edge > 0.7 ? VIOLET : VIOLET_DIM; ctx.fillRect(px, py, 1, 1); }
+            }
+    }
+
+    /** The Structure's node, if it is on this map, measured in canvas pixels. */
+    function structurePoint(map, scene, state) {
+        const structure = (state.sectorNodes || []).find(p => p.isStructure || p.type === 'STRUCTURE');
+        const node = structure && map.querySelector(`.nav-node[data-id="${CSS.escape(String(structure.id))}"]`);
+        if (!node) return null;
+        const at = centreOf(map, node);
+        return Object.assign(at, { pocket: Math.max(at.r * 2.6, scene.w * POCKET_RADIUS) });
     }
 
     function drawStars(ctx, scene, time) {
@@ -130,9 +190,12 @@
             if (w < 20 || h < 20) return;                                     // not laid out yet
             if (!scene || scene.w !== w || scene.h !== h) { scene = buildScene(w, h, state.currentSector || 1); canvas.width = w; canvas.height = h; }
             const time = performance.now() - startedAt;
+            scene.end = structurePoint(map, scene, state);
             ctx.drawImage(scene.backdrop, 0, 0);
             drawStars(ctx, scene, time);
+            if (scene.end) drawPocket(ctx, scene);
             drawStream(ctx, scene, time);
+            if (scene.end) drawRim(ctx, scene, time);
             const ship = shipPoint(map, scene, state), goal = map.querySelector(`.nav-node[data-id="${CSS.escape(String(targetId || pinnedId || ''))}"]`);
             if (goal) drawCourse(ctx, ship, centreOf(map, goal), time);
             if (ship.r) drawPulse(ctx, ship, time);
