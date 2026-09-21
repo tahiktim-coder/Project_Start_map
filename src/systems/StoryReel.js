@@ -10,6 +10,7 @@
     const W = 480, H = 270, TICK_MS = 80;
     const EARTH = { x: 104, y: 135, r: 34 }, HEADING_Y = 135;
     const RAY_COUNT = 160, DASH_GAP = 22, DASH_LENGTH = 9, RAY_STEP = 2, CORRIDOR_LENGTH = 1500, STRUCTURE_X = 1560, WRECK_COUNT = 760;
+    const HEADING_WEDGE = 0.1;                                                      // radians kept clear round your heading in the briefing film
     const HULLS_TOLD = 9, HULLS_TRUE = 41207, LIVING_REACH = 420, DYING_SPAN = 1050;
     const INK = '#05070a', BONE = '#c4d0c4', DIM = '#2f5a48', GREEN = '#74d99a', AMBER = '#d9a24a', RED = '#d85a4e';
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -72,7 +73,7 @@
      * Ships streaming out of Earth as bright moving dashes. `bend` 0 = every heading (the story they were told);
      * 1 = every line swung round into this one corridor (the truth). `reach` = how far the front has travelled.
      */
-    function drawStreams(ctx, world, time, bend, reach, pan, density = 1) {
+    function drawStreams(ctx, world, time, bend, reach, pan, density = 1, clearWedge = 0) {
         if (bend > 0) {                                                        // the corridor itself starts to glow as the lines pile into it
             ctx.fillStyle = '#123026';
             const glowEnd = Math.min(W, Math.round(STRUCTURE_X - pan));
@@ -83,6 +84,7 @@
         }
         world.rays.forEach((ray, index) => {
             if ((index * 37) % RAY_COUNT >= density * RAY_COUNT) return;      // a thinner stream: only some of the lanes
+            if (clearWedge && Math.abs(ray.angle) < clearWedge) return;      // this heading is drawn by hand: eight ships and you, nothing else
             const angle = ray.angle * (1 - bend), lane = ray.lane * bend, cos = Math.cos(angle), sin = Math.sin(angle) * 0.92;
             const flow = time * 0.03 * ray.speed + ray.offset;
             for (let along = 0; along < reach; along += RAY_STEP) {
@@ -192,6 +194,7 @@
     function jumpShot(caption, wrong) {
         return {
             length: 5600,
+            source: 'HULL CAMERA · AFT',
             beats: [[300, caption]],
             draw(ctx, world, t) {
                 const pan = 300 + t * 0.09;
@@ -215,10 +218,11 @@
     const REELS = {
         program: {
             length: 15000,
-            beats: [[600, 'Earth. Sixty-one years ago.'], [3600, 'They are seeding the whole sky. Ships in every direction.'], [9000, 'Eight went this way before you. You are the ninth.']],
+            source: 'EXODUS PROGRAMME · CREW BRIEFING FILM',
+            beats: [[600, 'The film they showed you before launch.'], [3600, 'Thousands of ships. Every one on its own heading.'], [9000, 'On yours, eight went first. You are the ninth.']],
             draw(ctx, world, t) {
                 drawSky(ctx, world, 0);
-                drawStreams(ctx, world, t, 0, 30 + span(t, 3000, 9000) * 460, 0);
+                drawStreams(ctx, world, t, 0, 30 + span(t, 3000, 9000) * 460, 0, 1, HEADING_WEDGE);
                 drawEarth(ctx, 0);
                 drawHeading(ctx, span(t, 9000, 12500), t);
             },
@@ -229,7 +233,8 @@
         jump6: jumpShot('Sector 6. The end of the heading.', { density: 1, wrecks: 1, grid: 1, slab: 1, noStars: true, twin: 600 }),
         corridor: {
             length: 21000,
-            beats: [[600, 'This is what you were told.'], [4200, 'This is what is true.'], [9500, 'Every ship Earth ever built was sent this way.'], [15500, 'All of them. Toward one thing.']],
+            source: 'BRIDGE DISPLAY · THE FILM, WITH EVERY TRANSPONDER WE CAN HEAR',
+            beats: [[600, 'Mira puts the briefing film back up.'], [4200, 'Then she lays the real signals over it.'], [9500, 'They were not sent everywhere. They were all sent this way.'], [15500, 'All of them. Toward one thing.']],
             counter: t => Math.round(HULLS_TOLD + (HULLS_TRUE - HULLS_TOLD) * Math.pow(span(t, 4200, 12500), 2.2)),
             draw(ctx, world, t) {
                 const bend = span(t, 4200, 9000), pan = span(t, 10500, 19000) * (STRUCTURE_X - W + 110);
@@ -245,6 +250,7 @@
     function overlayHtml(reel) {
         return `<div class="reel-frame">
             <canvas class="reel-canvas" width="${W}" height="${H}"></canvas>
+            ${reel.source ? `<p class="reel-source"><i aria-hidden="true"></i>${reel.source}</p>` : ''}
             ${reel.counter ? '<p class="reel-counter"><span>HULLS ON THIS HEADING</span><b>9</b></p>' : ''}
             <p class="reel-caption" aria-live="polite"></p>
             <button class="reel-skip" type="button">skip ›</button>

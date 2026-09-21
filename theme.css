@@ -959,3 +959,31 @@
     background: #06070a;
     min-height: 0;
 }
+
+/* whose screen a reel is: nothing is shown to the player that nobody aboard is looking at */
+.reel-source {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font: 600 0.62em var(--font-display);
+    letter-spacing: 0.24em;
+    color: var(--dim);
+}
+
+.reel-source i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--red);
+    animation: reel-rec 1.4s steps(2) infinite;
+}
+
+.reel-canvas { outline: 1px solid var(--line2); outline-offset: -1px; }
+
+@keyframes reel-rec { 50% { opacity: 0.2; } }
+
+@media (prefers-reduced-motion: reduce) { .reel-source i { animation: none; } }
