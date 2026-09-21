@@ -273,7 +273,7 @@
         function finish(isSafe) {
             if (isOver) return;
             isOver = true;
-            cancelAnimationFrame(raf);
+            (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(raf);
             applyResult(app, station, b, isSafe);
             sfx(isSafe ? 'sfxDiscovery' : 'sfxCritical');
             Object.values(buttons).forEach(btn => { btn.disabled = true; });
@@ -283,7 +283,7 @@
         }
 
         Object.keys(buttons).forEach(kind => buttons[kind].addEventListener('click', () => act(kind)));
-        (function loop(now) { draw(ctx, b, now || 0); if (!isOver) raf = requestAnimationFrame(loop); })();
+        (function loop(now) { draw(ctx, b, now || 0); if (!isOver) raf = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(loop); })();
         refresh();
         buttons.deeper.focus();
     }

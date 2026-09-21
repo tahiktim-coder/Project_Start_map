@@ -225,7 +225,7 @@
             // Sector jumps end on a title card: where you are, how old the wrecks are, what the crew makes of it.
             function arrive(isAuto) {
                 const a = opts.arrival, frame = overlay.querySelector('.warp-plot-frame');
-                cancelAnimationFrame(raf);
+                (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(raf);
                 frame.classList.add('warp-arrival');
                 frame.innerHTML = `
                     <p class="warp-plot-kicker">${esc(a.kicker)}</p>
@@ -241,7 +241,7 @@
             function finish(isAuto) {
                 if (isDone) return;
                 isDone = true;
-                cancelAnimationFrame(raf);
+                (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(raf);
                 overlay.classList.add('is-leaving');
                 setTimeout(() => { overlay.remove(); resolve({ grade: s.grade, auto: isAuto }); }, 350);
             }
@@ -253,12 +253,12 @@
                     s.pos = phase <= 1 ? phase : 2 - phase;
                 }
                 drawScene(ctx, s, now);
-                if (!isDone) raf = requestAnimationFrame(frame);
+                if (!isDone) raf = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(frame);
             }
 
             engage.addEventListener('click', lockBurn);
             auto.addEventListener('click', () => fly('rough', true));
-            raf = requestAnimationFrame(frame);
+            raf = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(frame);
         });
     }
 

@@ -261,6 +261,7 @@
     }
 
     function hydrate(root) {
+        live.forEach((state, canvas) => { if (!canvas.isConnected) live.delete(canvas); });   // the clock may never tick (reduce motion, hidden tab): release the dead here too
         (root || document).querySelectorAll('canvas.dither-body:not([data-live])').forEach(canvas => {
             canvas.dataset.live = '1';
             const state = createState(canvas);

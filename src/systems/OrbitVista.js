@@ -129,7 +129,9 @@
             else if (wasAttached || performance.now() - startedAt > ATTACH_GRACE_MS) { clearInterval(timer); return; }
             else return;
             if (!container.clientWidth) return;                                   // not laid out yet (hidden tab)
-            if (!scene || Math.abs(scene.w - Math.round(container.clientWidth / PIXEL)) > 2) {
+            const panelW = Math.round(container.clientWidth / PIXEL), panelH = Math.round(container.clientHeight / PIXEL);
+            if (!panelH) return;
+            if (!scene || Math.abs(scene.w - panelW) > 2 || Math.abs(scene.h - panelH) > 2) {         // height too: expanding the log only changes the height
                 scene = buildScene(container, planet, bodySize);
                 [back, front].forEach(c => { c.width = scene.w; c.height = scene.h; });
             }

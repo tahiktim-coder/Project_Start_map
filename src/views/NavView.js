@@ -438,7 +438,7 @@ class NavView {
     }
 
     handleStructureSelect(structure, panel) {
-        const actualCost = structure.fuelCost || 30;
+        const actualCost = this.state && this.state.getWarpCost ? this.state.getWarpCost(structure) : (structure.fuelCost || 30); // the price handleWarp will really charge
         // Same renderer as the map node and the orbit screen: one Structure everywhere (the old CSS orb looked like a different object)
         const STRUCTURE_PREVIEW_SIZE = 112, STRUCTURE_PREVIEW_FRAME = 172;
 

@@ -1189,7 +1189,7 @@ class App {
         if (loadSave && this.state.loadGame()) {
             this.state.addLog("=== SAVE LOADED ===");
             this.state.addLog(`Resuming mission in Sector ${this.state.currentSector}.`);
-            this.renderNav();
+            this.resumeWhereSaved();
         } else {
             // New game
             this.state.init();
@@ -1324,6 +1324,18 @@ class App {
         target.isFirstSignal = true;
     }
 
+    /**
+     * After loading a save: a save made in front of the Structure must reopen that screen, because nothing can warp away
+     * from it and the map would be a dead end. The saved currentSystem is a JSON copy, so it is re-linked to its map node first.
+     */
+    resumeWhereSaved() {
+        const saved = this.state.currentSystem;
+        const node = saved && (this.state.sectorNodes || []).find(p => p.id === saved.id);
+        if (node) this.state.currentSystem = node;
+        if (node && (node.isStructure || node.type === 'STRUCTURE')) this.renderOrbit();
+        else this.renderNav();
+    }
+
     handleWarp(planet) {
         // The WARP button stays clickable for the 1s travel delay; a second click would charge
         // energy/rations and roll every hazard twice.
@@ -1331,6 +1343,7 @@ class App {
         // THE STRUCTURE - Cannot warp away. You are bound here.
         const currentPlanet = this.state.currentSystem;
         if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
+            if (planet && planet.id === currentPlanet.id) { this.renderOrbit(); return; }   // "approach" while already there: just show it
             this.state.addLog("A.U.R.A.: 'Warp drive engaged...'");
             this.state.addLog("...");
             this.state.addLog("A.U.R.A.: 'Warp successful. Arriving at destination.'");
@@ -1345,7 +1358,8 @@ class App {
         if (cost === 0) this.state.addLog("Orbit re-entry trajectory calculated. Energy cost negligible.");
 
         // Out of stops: the window has closed on everything except where you already are
-        if (cost > 0 && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
+        const isFinale = !!(planet.isStructure || planet.type === 'STRUCTURE');       // the end of the heading costs no stop and is never out of reach
+        if (cost > 0 && !isFinale && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
             this.state.addLog("A.U.R.A.: \"The jump window is closing. We have no time for another stop in this sector.\"");
             return;
         }
@@ -1369,7 +1383,7 @@ class App {
 
         if (this.state.consumeEnergy(cost)) {
             this._isInTransit = true;
-            if (cost > 0 && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
+            if (cost > 0 && !isFinale && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
             this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 
@@ -3021,8 +3035,9 @@ You are home.`
             this.state.currentSystem = null;
             this.state.lastVisitedSystem = null;
 
-            // Return to navigation view
+            // Back to the map, through the same opening a fresh start gets (it marks the first transponder and re-renders the map)
             this.renderNav();
+            this.showOpeningBriefing();
         };
     }
 

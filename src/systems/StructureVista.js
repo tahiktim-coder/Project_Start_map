@@ -5,9 +5,10 @@
 
 (function () {
     'use strict';
+    const RESIZE_SETTLE_MS = 150;
     const PIXEL = 2, MIN_SIDE = 40, RESIZE_SLACK = 2, FIRST_PAINT_RETRY_MS = 120, FIRST_PAINT_TRIES = 12;
     const Core = window.DitherCore, Art = window.StructureArt;
-    if (!Core || !Art || typeof Art.renderVista !== 'function') return;
+    if (!Core || !Core.isOn || !Art || typeof Art.renderVista !== 'function') return;   // classic art mode keeps its classic Structure everywhere
 
     const HELPERS = { vnoise: Core.vnoise, fbm: Core.fbm, ridge: Core.ridge, rng: Core.rng };
     const LOOK = { ramp: Core.ramp(...Art.look.ramp), accent: Art.look.accent };
@@ -37,6 +38,8 @@
     }
 
     Core.onTick(paint);                                                        // one listener for the life of the page
+    let resizeTimer = 0;                                                       // the clock never runs under "reduce motion": repaint the still after a resize
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => paint(performance.now()), RESIZE_SETTLE_MS); });
 
     function mount(container) {
         if (!container) return;
@@ -50,7 +53,7 @@
         // The shared clock does not run under "reduce motion" (or in a hidden tab), so make sure one still frame always lands
         let tries = 0;
         const first = () => { if (active && active.canvas === canvas && !paint(performance.now()) && ++tries < FIRST_PAINT_TRIES) setTimeout(first, FIRST_PAINT_RETRY_MS); };
-        first();
+        queueMicrotask(first);          // runs after the caller has attached the screen, before the browser paints
     }
 
     window.StructureVista = { mount };
