@@ -18,6 +18,7 @@
     const RETICLE = 'rgb(217,162,74)';
     const STATION_ACCENT = [216, 90, 78];
     const live = new Map();       // canvas → render state
+    const Art = window.StructureArt || null, ART_HELPERS = { vnoise: Core.vnoise, fbm: Core.fbm, ridge: Core.ridge, rng: Core.rng };
 
     // fine grain: below ~100px chunky pixels turn a planet into an unreadable blob
     const pixelSize = size => (size >= 200 ? 2 : 1);
@@ -176,6 +177,7 @@
     // ── THE STRUCTURE: nothing natural is this straight. A black slab, lit along one edge, inside
     //    thin rings that turn the wrong way round. The only body in the game with no noise in it. ──
     function renderStructure(s, t) {
+        if (Art) { Art.render(s, t, ART_HELPERS); return; }                // the real one lives in StructureArt.js; below is the plain fallback
         const R = s.R, halfW = Math.max(3, R * 0.24), halfH = R * 0.92, pulse = 0.5 + 0.5 * Math.sin(t / 1400);
         for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
             const i = y * s.w + x, dx = x - s.cx, dy = y - s.cy, dist = Math.sqrt(dx * dx + dy * dy * 5.3);
@@ -225,7 +227,8 @@
 
     const RENDERERS = { globe: renderGlobe, station: renderStation, asteroid: renderAsteroid, structure: renderStructure, wrongplace: renderWrongPlace };
     const SPECIAL_LOOK = {
-        structure: { ramp: Core.ramp('#06070a', '#140a24', '#3a1f66', '#8844ff', '#e6dcff'), accent: [200, 170, 255] },
+        structure: Art ? { ramp: Core.ramp(...Art.look.ramp), accent: Art.look.accent }
+            : { ramp: Core.ramp('#06070a', '#140a24', '#3a1f66', '#8844ff', '#e6dcff'), accent: [200, 170, 255] },
         wrongplace: { ramp: Core.ramp('#06070a', '#2a0608', '#7a1414', '#d85a4e', '#ffd0b0'), accent: [255, 120, 60] },
     };
 

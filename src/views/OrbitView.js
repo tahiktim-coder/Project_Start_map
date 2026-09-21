@@ -109,77 +109,30 @@ class OrbitView {
         return `<div class="site-tip is-${tone}"><b>DANGER: ${OrbitView.DANGER_WORDS[rank]}</b><p>${why}</p></div>`;
     }
 
+    /**
+     * Parked in front of the Structure. Same plain layout as a station, but the picture fills the whole panel
+     * (StructureVista) instead of sitting in a box; every reading is something the instruments cannot do.
+     */
     renderStructure(planet) {
-        // Special cinematic rendering for THE STRUCTURE
-        this.element.innerHTML = `
-            <div style="padding: 20px; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(135deg, #0a0a15, #1a0a2a);">
-                <h2 style="color: #ffffff; border-bottom: 2px solid #8844ff; padding-bottom: 10px; margin-bottom: 20px; max-width: 60%; text-shadow: 0 0 20px rgba(136,68,255,0.5);">
-                    /// PROXIMITY ALERT: ${planet.name}
-                </h2>
-
-                <div style="flex: 1; display: flex; flex-direction: row; gap: 20px; min-height: 0;">
-
-                    <!-- LEFT: Readings (all unknown/impossible) -->
-                    <div style="width: 280px; display: flex; flex-direction: column; gap: 15px; border-right: 1px dashed #8844ff; padding-right: 20px; overflow-y: auto; min-height: 0;">
-                        <div style="color: #d9a24a; border-bottom: 1px solid #440088; margin-bottom: 5px; animation: pulse 2s infinite;">SENSOR READINGS</div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div style="color: var(--color-text-dim);">MASS</div>
-                            <div style="color: #d85a4e; text-align: right;">ERROR: OVERFLOW</div>
-
-                            <div style="color: var(--color-text-dim);">DIMENSIONS</div>
-                            <div style="color: #d85a4e; text-align: right;">NON-EUCLIDEAN</div>
-
-                            <div style="color: var(--color-text-dim);">TEMPERATURE</div>
-                            <div style="color: #d85a4e; text-align: right;">UNDEFINED</div>
-
-                            <div style="color: var(--color-text-dim);">ENERGY OUTPUT</div>
-                            <div style="color: #d85a4e; text-align: right;">∞</div>
-
-                            <div style="color: var(--color-text-dim);">ORIGIN</div>
-                            <div style="color: #d85a4e; text-align: right;">UNKNOWN</div>
-
-                            <div style="color: var(--color-text-dim);">AGE</div>
-                            <div style="color: #d85a4e; text-align: right;">BEFORE TIME</div>
-                        </div>
-
-                        <div style="margin-top: 20px; padding: 15px; border: 1px solid #440088; background: rgba(68,0,136,0.2);">
-                            <div style="color: #ccaaff; font-size: 0.9em; line-height: 1.6; font-style: italic;">
-                                "${planet.desc || 'It has always been here. Waiting.'}"
-                            </div>
-                        </div>
-
-                        <div style="margin-top: auto; padding: 15px; border: 2px solid #d85a4e; background: rgba(255,0,0,0.1);">
-                            <div style="color: #d85a4e; font-weight: bold; font-size: 0.85em;">⚠ A.U.R.A. WARNING</div>
-                            <div style="color: #e07a70; opacity: 0.9; font-size: 0.8em; margin-top: 5px;">
-                                "I cannot predict what will happen if we approach. My models break down. The decision must be yours, Commander."
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT: The Structure Visual -->
-                    <div class="orbit-visual" style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; margin-top: -40px;">
-                        ${(window.BodyRenderer && BodyRenderer.body(planet, OrbitView.heroSize())) || `<div class="planet-visual type-STRUCTURE" style="
-                            width: 300px; height: 300px;
-                            position: relative;
-                        ">
-                        </div>`}
-                        <div style="
-                            position: absolute; top: 50%; left: 50%; width: 400px; height: 400px; transform: translate(-50%, -50%);
-                            border: 2px dashed rgba(136,68,255,0.5); border-radius: 0; animation: structure-orbit 30s linear infinite;
-                            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-                        ">
-                            <div style="width: 15px; height: 15px; background: #ffffff; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 20px #ffffff, 0 0 40px #8844ff;"></div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-            <style>
-                @keyframes structure-orbit { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
-                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-            </style>
-        `;
+        const isDone = !!planet.structureApproached;
+        this.siteScreen({
+            heading: 'THE END OF THE HEADING', name: planet.name,
+            facts: [
+                ['WHAT IT IS', 'Not a planet. Not a ship.', 'warn'],
+                ['HOW BIG', 'The instruments give up', 'bad'],
+                ['HOW OLD', 'Older than life on Earth', 'bad'],
+                ['OUR SHIPS', 'Every transponder we followed ends here'],
+                ['ANYONE ALIVE', 'Nothing answers'],
+            ],
+            note: planet.desc || 'It has always been here. Waiting.',
+            tip: isDone
+                ? { title: 'IT IS DONE', text: 'There is nothing more to decide here.' }
+                : { title: 'BEFORE YOU APPROACH', text: 'This is the end of the journey. Whatever you choose in front of it is final, for you and for everyone aboard.' },
+            visualHtml: window.StructureVista ? '' : ((window.BodyRenderer && BodyRenderer.body(planet, OrbitView.heroSize()))
+                || '<div class="planet-visual type-STRUCTURE" style="width: 300px; height: 300px; position: relative;"></div>')
+        });
+        this.element.querySelector('.site-screen').classList.add('is-structure');
+        if (window.StructureVista) window.StructureVista.mount(this.element.querySelector('.site-visual'));
         this.updateCommandDeck(planet);
         return this.element;
     }

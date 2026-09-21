@@ -10,7 +10,7 @@
     'use strict';
     const PIXEL = 2, TICK_MS = 90, STAR_COUNT = 150, CLOUD_COUNT = 6;
     const STREAM_LANES = [0, 3, 5, 9, 14, 20, 28];        // index = sector: how many lanes of ships the heading carries
-    const WRECKS_FROM_SECTOR = 3, WRECKS_PER_SECTOR = 14;
+    const WRECKS_FROM_SECTOR = 3, WRECKS_PER_SECTOR = 14, ATTACH_GRACE_MS = 5000;
     const INK = [5, 7, 10], BONE = '#c4d0c4', DIM = '#2f5a48', GREEN = '#74d99a', AMBER = '#d9a24a', RED = '#a8453c';
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
@@ -116,13 +116,16 @@
         canvas.setAttribute('aria-hidden', 'true');
         map.insertBefore(canvas, map.firstChild);
         const ctx = canvas.getContext('2d'), startedAt = performance.now();
-        let scene = null, targetId = null, pinnedId = null;
+        let scene = null, targetId = null, pinnedId = null, wasAttached = false;
         map.addEventListener('mouseover', e => { const node = e.target.closest('.nav-node'); if (node) targetId = node.dataset.id; });
         map.addEventListener('mouseleave', () => { targetId = null; });
         map.addEventListener('click', e => { const node = e.target.closest('.nav-node'); if (node) pinnedId = node.dataset.id; });
 
         function paint() {
-            if (!map.isConnected) { clearInterval(timer); return; }
+            // The view is built first and attached to the page afterwards: only let go once it HAS been attached and is gone again
+            if (map.isConnected) wasAttached = true;
+            else if (wasAttached || performance.now() - startedAt > ATTACH_GRACE_MS) { clearInterval(timer); return; }
+            else return;
             const w = Math.round(map.clientWidth / PIXEL), h = Math.round(map.clientHeight / PIXEL);
             if (w < 20 || h < 20) return;                                     // not laid out yet
             if (!scene || scene.w !== w || scene.h !== h) { scene = buildScene(w, h, state.currentSector || 1); canvas.width = w; canvas.height = h; }

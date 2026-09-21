@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="ship.css?v=9">
     <link rel="stylesheet" href="warp.css?v=9">
     <link rel="stylesheet" href="log.css?v=6">
-    <link rel="stylesheet" href="theme.css?v=19">
+    <link rel="stylesheet" href="theme.css?v=20">
 </head>
 
 <body>
@@ -144,60 +144,62 @@
     <!-- Scripts -->
     <!-- Initialize global test mode flag (used by chance-based systems) -->
     <script>window.TEST_MODE = false;</script>
-    <script src="src/data/Items.js?v=35"></script>
-    <script src="src/data/Upgrades.js?v=35"></script> <!-- New Upgrades -->
-    <script src="src/data/Events.js?v=35"></script>
-    <script src="src/data/CampfireEvents.js?v=35"></script>
-    <script src="src/data/ExodusDerelicts.js?v=35"></script>
-    <script src="src/data/LootTables.js?v=35"></script>
-    <script src="src/data/SectorConfig.js?v=35"></script>
-    <script src="src/data/ExodusLogs.js?v=35"></script>
-    <script src="src/data/FailedColonyEncounters.js?v=35"></script>
-    <script src="src/data/DerelictEncounters.js?v=35"></script>
-    <script src="src/data/AnomalyEncounters.js?v=35"></script>
-    <script src="src/data/LateGamePOIs.js?v=35"></script>
-    <script src="src/data/StructureEncounter.js?v=35"></script>
-    <script src="src/data/ShipEvents.js?v=35"></script>
-    <script src="src/data/SpaceStations.js?v=35"></script>
-    <script src="src/data/AsteroidFields.js?v=35"></script>
-    <script src="src/data/DistressSignals.js?v=35"></script>
-    <script src="src/data/CrewEvents.js?v=35"></script>
+    <script src="src/data/Items.js?v=36"></script>
+    <script src="src/data/Upgrades.js?v=36"></script> <!-- New Upgrades -->
+    <script src="src/data/Events.js?v=36"></script>
+    <script src="src/data/CampfireEvents.js?v=36"></script>
+    <script src="src/data/ExodusDerelicts.js?v=36"></script>
+    <script src="src/data/LootTables.js?v=36"></script>
+    <script src="src/data/SectorConfig.js?v=36"></script>
+    <script src="src/data/ExodusLogs.js?v=36"></script>
+    <script src="src/data/FailedColonyEncounters.js?v=36"></script>
+    <script src="src/data/DerelictEncounters.js?v=36"></script>
+    <script src="src/data/AnomalyEncounters.js?v=36"></script>
+    <script src="src/data/LateGamePOIs.js?v=36"></script>
+    <script src="src/data/StructureEncounter.js?v=36"></script>
+    <script src="src/data/ShipEvents.js?v=36"></script>
+    <script src="src/data/SpaceStations.js?v=36"></script>
+    <script src="src/data/AsteroidFields.js?v=36"></script>
+    <script src="src/data/DistressSignals.js?v=36"></script>
+    <script src="src/data/CrewEvents.js?v=36"></script>
     <script src="src/systems/PlainWords.js?v=1"></script>
-    <script src="src/systems/BodyRenderer.js?v=35"></script>
+    <script src="src/systems/BodyRenderer.js?v=36"></script>
     <!-- Opt-in 1-bit dither art mode (?art=dither or the ART button); inert in classic mode -->
-    <script src="src/systems/dither/DitherCore.js?v=35"></script>
-    <script src="src/systems/dither/DitherRecipes.js?v=35"></script>
-    <script src="src/systems/dither/DitherBodies.js?v=35"></script>
-    <script src="src/systems/dither/DitherScene.js?v=35"></script>
-    <script src="src/systems/ShipCutaway.js?v=35"></script>
-    <script src="src/systems/DeckPanel.js?v=35"></script>
-    <script src="src/systems/FabricatorPanel.js?v=35"></script>
-    <script src="src/systems/BoardingParty.js?v=35"></script>
-    <script src="src/systems/SignalTune.js?v=35"></script>
-    <script src="src/systems/AwayTeam.js?v=35"></script>
+    <script src="src/systems/dither/DitherCore.js?v=36"></script>
+    <script src="src/systems/dither/DitherRecipes.js?v=36"></script>
+    <script src="src/systems/dither/StructureArt.js?v=1"></script>
+    <script src="src/systems/dither/DitherBodies.js?v=36"></script>
+    <script src="src/systems/dither/DitherScene.js?v=36"></script>
+    <script src="src/systems/StructureVista.js?v=2"></script>
+    <script src="src/systems/ShipCutaway.js?v=36"></script>
+    <script src="src/systems/DeckPanel.js?v=36"></script>
+    <script src="src/systems/FabricatorPanel.js?v=36"></script>
+    <script src="src/systems/BoardingParty.js?v=36"></script>
+    <script src="src/systems/SignalTune.js?v=36"></script>
+    <script src="src/systems/AwayTeam.js?v=36"></script>
     <script src="src/systems/LanderScene.js?v=2"></script>
-    <script src="src/systems/LanderGame.js?v=35"></script>
-    <script src="src/systems/NavVista.js?v=1"></script>
+    <script src="src/systems/LanderGame.js?v=36"></script>
+    <script src="src/systems/NavVista.js?v=2"></script>
     <script src="src/systems/ItemIcons.js?v=1"></script>
-    <script src="src/systems/OrbitVista.js?v=2"></script>
+    <script src="src/systems/OrbitVista.js?v=3"></script>
     <script src="src/systems/DiscDocument.js?v=1"></script>
     <script src="src/systems/StoryReel.js?v=7"></script>
-    <script src="src/systems/EncounterCard.js?v=35"></script>
-    <script src="src/systems/EndScreens.js?v=35"></script>
-    <script src="src/systems/RosterPanel.js?v=35"></script>
-    <script src="src/systems/WarpPlot.js?v=35"></script>
-    <script src="src/systems/ProbeSystem.js?v=35"></script>
-    <script src="src/systems/AudioSystem.js?v=35"></script>
-    <script src="src/systems/EndingSystem.js?v=35"></script>
-    <script src="src/systems/BarkSystem.js?v=35"></script>
-    <script src="src/systems/AuraSystem.js?v=35"></script>
-    <script src="src/systems/NarrativeModal.js?v=35"></script>
-    <script src="src/views/OrbitView.js?v=35"></script>
-    <script src="src/generators/PlanetGenerator.js?v=35"></script>
-    <script src="src/views/NavView.js?v=35"></script>
-    <script src="src/bundle.js?v=35"></script>
-    <script src="src/systems/MissionLog.js?v=35"></script>
-    <script src="src/systems/Coach.js?v=35"></script>
+    <script src="src/systems/EncounterCard.js?v=36"></script>
+    <script src="src/systems/EndScreens.js?v=36"></script>
+    <script src="src/systems/RosterPanel.js?v=36"></script>
+    <script src="src/systems/WarpPlot.js?v=36"></script>
+    <script src="src/systems/ProbeSystem.js?v=36"></script>
+    <script src="src/systems/AudioSystem.js?v=36"></script>
+    <script src="src/systems/EndingSystem.js?v=36"></script>
+    <script src="src/systems/BarkSystem.js?v=36"></script>
+    <script src="src/systems/AuraSystem.js?v=36"></script>
+    <script src="src/systems/NarrativeModal.js?v=36"></script>
+    <script src="src/views/OrbitView.js?v=36"></script>
+    <script src="src/generators/PlanetGenerator.js?v=36"></script>
+    <script src="src/views/NavView.js?v=36"></script>
+    <script src="src/bundle.js?v=36"></script>
+    <script src="src/systems/MissionLog.js?v=36"></script>
+    <script src="src/systems/Coach.js?v=36"></script>
 </body>
 
 </html>

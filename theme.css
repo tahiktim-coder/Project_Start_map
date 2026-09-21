@@ -939,3 +939,23 @@
 @keyframes item-toast-in { from { opacity: 0; transform: translateX(24px); } }
 
 @media (prefers-reduced-motion: reduce) { .item-toast { animation: none; } }
+
+/* ── the Structure's orbit screen: the picture is the panel (StructureVista.js) ── */
+.site-screen.is-structure .site-heading small,
+.site-screen.is-structure .site-tip b { color: #b79bff; }
+.site-screen.is-structure .site-tip { border-left-color: #8844ff; background: rgba(136, 68, 255, 0.08); }
+.site-screen.is-structure .site-visual { position: relative; align-self: stretch; }
+
+.structure-vista {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+}
+
+.site-screen.is-structure .site-visual {
+    border: 1px solid rgba(136, 68, 255, 0.35);
+    background: #06070a;
+    min-height: 0;
+}
