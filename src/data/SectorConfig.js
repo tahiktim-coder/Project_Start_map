@@ -191,7 +191,7 @@ const SECTOR_CONFIG = {
     },
 
     5: {
-        name: 'THE EVENT HORIZON',
+        name: 'THE TALLY',
         planetCount: [3, 4],
         allowedTypes: ['SHATTERED', 'CRYSTALLINE', 'ROGUE', 'BIO_MASS', 'SINGING', 'MIRROR'],
         guaranteedTypes: ['TERRAFORMED'],
@@ -203,10 +203,10 @@ const SECTOR_CONFIG = {
         anomalyChance: 0.50,    // Reality breaking down (increased from 0.35)
         colonyWarning: false,
         sectorColor: '#440044',
-        ambientDesc: 'The laws of physics are suggestions here. Your instruments scream.',
+        ambientDesc: 'Hulls in the tens of thousands. The drive threw them unevenly here, and the instruments know it.',
         hazard: {
             id: 'REALITY_BREAKDOWN',
-            description: 'Spacetime itself is unreliable',
+            description: 'The throw was uneven here: distances and dates come back wrong'
             onWarp: function(state) {
                 // 20% chance of random effect per warp
                 if (_testChance(0.20)) {
@@ -269,7 +269,7 @@ const SECTOR_CONFIG = {
     },
 
     6: {
-        name: 'THE THRESHOLD',
+        name: 'THE LIGHT',
         planetCount: [2, 3],
         allowedTypes: ['GHOST_WORLD', 'EDEN', 'HOLLOW', 'MIRROR', 'SINGING'],
         guaranteedTypes: ['EDEN'], // At least one perfect world
@@ -281,11 +281,11 @@ const SECTOR_CONFIG = {
         anomalyChance: 0.50,     // Half of all planets have anomalies
         colonyWarning: false,
         sectorColor: '#ffffff',
-        ambientDesc: 'You have reached the edge of everything. Beyond this, there is only the unknown. THE STRUCTURE awaits.',
+        ambientDesc: 'The oldest wrecks of all. At the end of the heading, a light that looks like a sun.',
         hasStructure: true,      // Special flag for THE STRUCTURE
         hazard: {
             id: 'THRESHOLD_CALL',
-            description: 'The boundary between known and unknown',
+            description: 'Nothing here is random. The light reads what reaches it.'
             onWarp: function(state) {
                 // The Threshold heals and harms in equal measure
                 // In test mode, always trigger something

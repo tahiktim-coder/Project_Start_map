@@ -919,7 +919,7 @@ const CARGO_LIMIT = 20, CARGO_RACK_BONUS = 4; // see GameState.getCargoLimit / e
 const WARP_REFUND_SCALE = 0.75; // arrival refunds used to hand back ~half of every warp; 1 = old behaviour, lower = energy matters more
 const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getStopsLeft
 const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
-const FINAL_SECTOR = 6; // THE THRESHOLD — holds THE STRUCTURE; SECTOR_CONFIG defines nothing beyond it
+const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
 
 class App {
     constructor() {
@@ -2446,7 +2446,7 @@ class App {
                 SECTOR_NAMES[s] = SECTOR_CONFIG[s] ? SECTOR_CONFIG[s].name : '???';
             }
         } else {
-            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD' });
+            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT' });
         }
 
         // Use narrative modal system if available for immersive experience
@@ -2809,7 +2809,7 @@ Then you're through.`,
                 if (sectorNameEl) {
                     const SECTOR_NAMES = {
                         1: 'THE GRAVEYARD', 2: 'THE DEEP', 3: 'THE INTERFERENCE',
-                        4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD'
+                        4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT'
                     };
                     sectorNameEl.textContent = `/// SECTOR ${this.state.currentSector}: ${SECTOR_NAMES[this.state.currentSector] || 'UNKNOWN'}`;
                     sectorNameEl.style.color = 'var(--color-accent)';
@@ -4405,7 +4405,7 @@ Then you're through.`,
         document.getElementById('game-date').textContent = `DATE: 2342.${String(5 + Math.floor(this.state.actionsTaken / 10)).padStart(2, '0')}.${String(12 + (this.state.actionsTaken % 30)).padStart(2, '0')}`;
 
         // Sector name
-        const SECTOR_NAMES = { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD' };
+        const SECTOR_NAMES = { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT' };
         const sectorEl = document.getElementById('sector-name');
         if (sectorEl) {
             sectorEl.textContent = `/// SECTOR ${this.state.currentSector}: ${SECTOR_NAMES[this.state.currentSector] || 'UNKNOWN'}`;
@@ -5105,7 +5105,7 @@ Then you're through.`,
                 if (sectorNameEl) {
                     const SECTOR_NAMES = {
                         1: 'THE GRAVEYARD', 2: 'THE DEEP', 3: 'THE INTERFERENCE',
-                        4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD'
+                        4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT'
                     };
                     sectorNameEl.textContent = `/// SECTOR ${this.state.currentSector}: ${SECTOR_NAMES[this.state.currentSector] || 'UNKNOWN'}`;
                     sectorNameEl.style.color = '#9bf0bd';
