@@ -59,6 +59,7 @@
                 <span class="deck-panel-status">${state.crew.filter(c => c.status !== 'DEAD').length} OF ${state.crew.length} ALIVE</span>
                 <button class="deck-panel-close close-modal" aria-label="Close">✕</button></header>
             ${isQuartersOk ? '' : '<p class="roster-note is-bad">Crew quarters are out of action — nobody can rest until they are repaired.</p>'}
+            ${state._sleepers > 0 ? `<p class="roster-note">${state._sleepers} sleeper${state._sleepers === 1 ? '' : 's'} in the hold, in pods, from older hulls. They stay asleep until you decide otherwise.</p>` : ''}
             <ul class="roster-list">${state.crew.map((m, i) => personRow(m, i, canRest, cut)).join('')}</ul>`);
         modal.querySelectorAll('.roster-rest:not([disabled])').forEach(btn => btn.addEventListener('click', () => {
             const member = state.crew[+btn.dataset.idx];

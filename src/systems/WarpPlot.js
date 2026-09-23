@@ -85,7 +85,7 @@
         el.setAttribute('aria-label', 'Plot course');
         el.innerHTML = `
             <div class="warp-plot-frame">
-                <p class="warp-plot-kicker">${opts.mode === 'sector' ? 'SECTOR JUMP' : 'PLOT COURSE'}</p>
+                <p class="warp-plot-kicker">${opts.mode === 'sector' ? 'SECTOR JUMP' : opts.mode === 'station' ? 'DOCKING APPROACH' : 'PLOT COURSE'}</p>
                 <h2 class="warp-plot-target">${esc(opts.targetName)}</h2>
                 <div class="warp-plot-stage">
                     <canvas class="warp-plot-canvas" width="${BUFFER_W}" height="${BUFFER_H}"></canvas>
@@ -93,7 +93,9 @@
                     <div class="warp-plot-callout" aria-hidden="true"></div>
                 </div>
                 <ol class="warp-plot-pips" aria-label="Burns" style="grid-template-columns: repeat(${burnsOf(opts)}, 1fr)">${STAGES.slice(0, burnsOf(opts)).map((_, i) => `<li><span>BURN ${i + 1}</span></li>`).join('')}</ol>
-                <p class="warp-plot-hint">${burnsOf(opts) === 1
+                <p class="warp-plot-hint">${opts.mode === 'station'
+                    ? 'The port is still turning. Lock the burn as the window lines up: clean docks first time, a miss scrapes the hull and costs extra.'
+                    : burnsOf(opts) === 1
                     ? 'One burn. Lock it inside the bright window: clean gives fuel back, a miss costs extra.'
                     : 'A long jump: three burns, each faster. Lock every one inside the bright window — all three clean gives the most fuel back.'}</p>
                 <div class="warp-plot-buttons">

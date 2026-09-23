@@ -282,6 +282,7 @@ class GameState {
             _boardedHulls: this._boardedHulls || [],
             _standing: this._standing || null,
             _countSceneSeen: !!this._countSceneSeen,
+            _sleepers: this._sleepers || 0,
             _encounteredShipNames: this._encounteredShipNames || [],
             _encounteredExodus: this._encounteredExodus || [],
             _seenCampfires: this._seenCampfires || [],
@@ -352,6 +353,7 @@ class GameState {
             this._boardedHulls = saveData._boardedHulls || [];
             this._standing = saveData._standing || null;
             this._countSceneSeen = !!saveData._countSceneSeen;
+            this._sleepers = saveData._sleepers || 0;
             this._encounteredShipNames = saveData._encounteredShipNames || [];
             this._encounteredExodus = saveData._encounteredExodus || [];
             this._seenCampfires = saveData._seenCampfires || [];
@@ -1486,7 +1488,7 @@ class App {
         // Skipped for free re-entries, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
         if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost) {
             this._isInTransit = true;
-            const plotOptions = this.getPlotOptions(planet.name, 'planet');
+            const plotOptions = this.getPlotOptions(planet.name, planet.isStation || planet.type === 'STATION' ? 'station' : 'planet');
             plotOptions.burns = 1;
             plotOptions.targetHtml = window.BodyRenderer ? window.BodyRenderer.body(planet, 64) : null;
             window.WarpPlot.play(plotOptions).then(result => {
