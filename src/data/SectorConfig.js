@@ -95,15 +95,13 @@ const SECTOR_CONFIG = {
             onWarp: null,
             onScan: function(planet, state) {
                 // 20% chance remote scan gives false/scrambled data
-                if (_testChance(0.20)) {
-                    // Swap revealed stats to wrong values
-                    if (planet.revealedStats && planet.revealedStats.length > 0) {
-                        const fakeAtmos = ['BREATHABLE', 'TOXIC', 'THIN', 'CORROSIVE', 'NONE'];
-                        planet._realAtmosphere = planet.atmosphere;
-                        planet.atmosphere = fakeAtmos[Math.floor(Math.random() * fakeAtmos.length)];
-                        planet._scanCorrupted = true;
-                        state.addLog('A.U.R.A.: "Signal interference detected during scan. Data integrity... uncertain."');
-                    }
+                if (_testChance(0.20) && !planet._scanCorrupted) {
+                    // The air reading comes back wrong; a deep scan from orbit puts it right
+                    const fakeAtmos = ['BREATHABLE', 'TOXIC', 'THIN', 'CORROSIVE', 'NONE'].filter(a => a !== planet.atmosphere);
+                    planet._realAtmosphere = planet.atmosphere;
+                    planet.atmosphere = fakeAtmos[Math.floor(Math.random() * fakeAtmos.length)];
+                    planet._scanCorrupted = true;
+                    state.addLog('A.U.R.A.: "Interference on the scan band, Commander. Hundreds of dead transponders. I would not trust the air reading until we are closer."');
                 }
             },
             onDeepScan: function(planet) {

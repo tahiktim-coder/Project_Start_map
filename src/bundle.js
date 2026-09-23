@@ -469,11 +469,11 @@ class GameState {
         if (!silent) {
             // A.U.R.A. comments at key thresholds
             if (prev < 1 && this._colonyKnowledge >= 1) {
-                this.addLog("A.U.R.A.: Colony data archived. This information may prove useful for future settlement.");
+                this.addLog('A.U.R.A.: "Filed, Commander. Everything we learn here goes toward the world we settle."');
             } else if (prev < 3 && this._colonyKnowledge >= 3) {
-                this.addLog("A.U.R.A.: Substantial colony data accumulated. Settlement survival probability significantly improved.");
+                this.addLog('A.U.R.A.: "We know more than any crew before us did, Commander. I have checked."');
             } else if (prev < 5 && this._colonyKnowledge >= 5) {
-                this.addLog("A.U.R.A.: Colony database reaching optimal levels. We have learned much from those who came before.");
+                this.addLog('A.U.R.A.: "The file is thick now, Commander. Whatever world you choose, we will do it properly."');
             }
         }
 
@@ -562,7 +562,7 @@ class GameState {
 
         // Warning at 5 rations
         if (this.rations === 5) {
-            this.addLog("⚠ A.U.R.A.: Food reserves dropping. Rationing protocol recommended.");
+            this.addLog('⚠ A.U.R.A.: "Rations are low, Commander. Four crew eat a great deal."');
         }
         // Warning at 3-4 rations
         if (this.rations >= 3 && this.rations <= 4) {
@@ -681,7 +681,7 @@ class GameState {
         // Tutorial: first deck damage
         if (!this._tutorialDeckSeen) {
             this._tutorialDeckSeen = true;
-            this.addLog("A.U.R.A.: Hull breach detected. I recommend immediate repairs. Damaged systems impair ship efficiency.");
+            this.addLog('A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage."');
         }
 
         this.emitUpdates(); // emitUpdates() calls checkLoseConditions()
@@ -1466,12 +1466,8 @@ class App {
         const currentPlanet = this.state.currentSystem;
         if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
             if (planet && planet.id === currentPlanet.id) { this.renderOrbit(); return; }   // "approach" while already there: just show it
-            this.state.addLog("A.U.R.A.: 'Warp drive engaged...'");
-            this.state.addLog("...");
-            this.state.addLog("A.U.R.A.: 'Warp successful. Arriving at destination.'");
-            this.state.addLog("A.U.R.A.: '...We are still at THE STRUCTURE.'");
-            this.state.addLog("A.U.R.A.: 'Commander, I have run diagnostics. The drive functions correctly.'");
-            this.state.addLog("A.U.R.A.: 'Space itself is refusing to take us elsewhere. There is only one way forward.'");
+            this.state.addLog('A.U.R.A.: "The drive fires, Commander. We do not move."');
+            this.state.addLog('A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in."');
             return;
         }
 
@@ -1482,7 +1478,7 @@ class App {
         // Out of stops: the window has closed on everything except where you already are
         const isFinale = !!(planet.isStructure || planet.type === 'STRUCTURE');       // the end of the heading costs no stop and is never out of reach
         if (cost > 0 && !isFinale && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
-            this.state.addLog("A.U.R.A.: \"The jump window is closing. We have no time for another stop in this sector.\"");
+            this.state.addLog('A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector."');
             return;
         }
 
@@ -1513,7 +1509,7 @@ class App {
             if (!this.state._tutorialWarpSeen) {
                 this.state._tutorialWarpSeen = true;
                 setTimeout(() => {
-                    this.state.addLog("A.U.R.A.: Orbit achieved. Scanning systems ready. EVA teams on standby.");
+                    this.state.addLog('A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander."');
                 }, 500);
             }
 
@@ -2010,7 +2006,7 @@ class App {
                     };
                     data._scanCorrupted = true;
                     this.state._auraFalseScan = false;
-                    this.state.addLog(`A.U.R.A.: "Scan complete. All readings normal." [READINGS UNRELIABLE]`);
+                    this.state.addLog(`A.U.R.A.: "Scan complete, Commander. All readings normal." [READINGS UNRELIABLE]`);
                 }
 
                 // Build signal summary for log
@@ -2082,7 +2078,7 @@ class App {
     handleSectorJump() {
         if (this._isInTransit) return;
         if (this.state.currentSector >= FINAL_SECTOR) {
-            this.state.addLog("A.U.R.A.: No charted space beyond this sector. The Structure is the end of the corridor.");
+            this.state.addLog('A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light."');
             return;
         }
         let jumpCost = 20;
@@ -2569,7 +2565,7 @@ class App {
         if (encounters.length === 0) {
             // All encountered, reset but still use all
             encounters = allEncounters;
-            this.state.addLog("A.U.R.A.: Similar wreck configuration detected. We've seen this pattern before.");
+            this.state.addLog('A.U.R.A.: "The same class of hull, Commander. They were all built to one drawing."');
         }
 
         const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
@@ -3481,7 +3477,7 @@ Then you're through.`,
             // Check if PREDATORY was just revealed
             if (planet.tags && planet.tags.includes('PREDATORY')) {
                 this.state.addLog("⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior.");
-                this.state.addLog("A.U.R.A.: \"Deep scan reveals aggressive bio-signatures. This paradise has teeth.\"");
+                this.state.addLog('A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part."');
             }
 
             this.state.addLog("Detailed surface analysis complete. Resource data available.");
@@ -3492,7 +3488,7 @@ Then you're through.`,
             // ALIEN SIGNALS: high risk but data valuable
             if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) {
                 this.state.addLog("⚡ ALIEN SIGNAL SOURCE: Unknown transmission origin detected. Approach with caution.");
-                this.state.addLog("A.U.R.A.: \"The signal isn't random. It's a message. For whom, I cannot determine.\"");
+                this.state.addLog('A.U.R.A.: "The signal is one of ours, Commander. An old hail. Nobody is sending it."');
             }
 
             // ANCIENT RUINS: knowledge and reduced EVA risk
@@ -3572,7 +3568,7 @@ Then you're through.`,
             this.state.addLog("Probe launched toward THE STRUCTURE...");
             this.state.addLog("...");
             this.state.addLog("Signal lost instantly. No data. No wreckage. The probe simply... ceased.");
-            this.state.addLog("A.U.R.A.: 'The probe did not crash. It was... unmade. I advise against further attempts.'");
+            this.state.addLog('A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read."');
             this.state.emitUpdates();
             this.orbitView.updateCommandDeck(planet);
             return;
@@ -3768,14 +3764,13 @@ Then you're through.`,
 
         // THE STRUCTURE — Cannot EVA on this cosmic entity
         if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
-            this.state.addLog("A.U.R.A.: 'EVA is not possible. THE STRUCTURE has no surface in any conventional sense.'");
-            this.state.addLog("A.U.R.A.: 'To interact with it, you must... approach it. Directly.'");
+            this.state.addLog('A.U.R.A.: "There is no ground to land on, Commander. There is only the light."');
             return;
         }
 
         // THE WRONG PLACE — EVA is extremely dangerous
         if (planet && planet._isWrongPlace) {
-            this.state.addLog("A.U.R.A.: 'WARNING: EVA in this location is inadvisable. Space itself is... wrong here.'");
+            this.state.addLog('A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished."');
             // Allow but add extra danger warning
         }
 
@@ -3828,7 +3823,7 @@ Then you're through.`,
             // Tutorial: first EVA
             if (!this.state._tutorialEvaSeen) {
                 this.state._tutorialEvaSeen = true;
-                this.state.addLog("A.U.R.A.: EVA team deployed. Surface conditions will determine risk. I will monitor their vitals.");
+                this.state.addLog('A.U.R.A.: "Team away, Commander. I have their vitals."');
             }
 
             // A.U.R.A. commentary on EVA
@@ -4783,7 +4778,7 @@ Then you're through.`,
 
     _executeColony(planet, { isScanWaived = false } = {}) {
         if (!planet.scanned && !isScanWaived && !window.TEST_MODE) { // nobody lands five people on a world they have not looked at
-            this.state.addLog("A.U.R.A.: \"I will not commit the crew to a world we have not scanned. Run a deep scan first.\"");
+            this.state.addLog('A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first."');
             return;
         }
         // Generate Outcome based on Planet Metrics

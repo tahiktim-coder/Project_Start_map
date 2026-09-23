@@ -87,7 +87,19 @@ class EndingSystem {
         return chance;
     }
 
+    /** What the crew learned from the dead colonies: a second chance for a colony that would have failed, 5% per point of DATA up to 25%. */
     static generateOutcome(planet, state) {
+        const KNOWLEDGE_PER_POINT = 0.05, KNOWLEDGE_MAX = 0.25;
+        const result = this.generateOutcomeRaw(planet, state);
+        const knowledge = Math.min(KNOWLEDGE_MAX, (state._colonyKnowledge || 0) * KNOWLEDGE_PER_POINT);
+        if (result.success || result.title === 'IMPOSSIBLE SETTLEMENT' || result.title === 'DIGITAL MUTINY' || Math.random() >= knowledge) return result;
+        return {
+            success: true, title: 'IT HELD',
+            text: `The first year did to you what it did to every crew before you. The difference was that somebody aboard had read their notes.<br><br>${planet.name} is not kind. It does not have to be. The colony held, because the dead had already made every mistake for you, and Aris had written them all down.`,
+        };
+    }
+
+    static generateOutcomeRaw(planet, state) {
         // 1. Analyze State
         const type = planet.type;
         const gravity = planet.metrics?.gravity || 1.0;
