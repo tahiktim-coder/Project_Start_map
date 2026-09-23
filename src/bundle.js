@@ -2380,76 +2380,29 @@ class App {
      * A.U.R.A. delivers key story points + crew reactions (if alive)
      * Story works even if all crew are dead
      */
+    /** What the crew say on arriving in a sector (the card after the jump shows two of them). Canon: docs/CANON.md §2. */
     getWarpDialogue(nextSector, livingCrew = []) {
-        const dialogue = [];
         const hasCrew = (tag) => livingCrew.some(c => c.tags && c.tags.includes(tag));
-
-        if (nextSector === 2) {
-            // SECTOR 2: THE DARK VOID - Teaches resources
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 2: THE DARK VOID.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'The graveyard of failed ships lies behind us. Ahead: salvage, energy, and data to collect.' });
-            if (hasCrew('ENGINEER')) {
-                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Plenty of wrecks to strip. Let\'s make their loss count.', portraitId: 'M_2' });
-            }
-            if (hasCrew('MEDIC')) {
-                dialogue.push({ speaker: 'Dr. Aris', text: 'Every scan we take could save the next colony. Don\'t forget that.', portraitId: 'F_3' });
-            }
-        } else if (nextSector === 3) {
-            // SECTOR 3: THE SIGNAL - First hint
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 3: THE SIGNAL.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Anomaly detected. A rhythmic pulse originating from beyond Sector 5.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Analysis suggests it is not natural. Something is broadcasting coordinates.' });
-            if (hasCrew('SPECIALIST')) {
-                dialogue.push({ speaker: 'Tech Mira', text: 'Coordinates to what? Who\'s out there?', portraitId: 'F_5' });
-            }
-            if (hasCrew('SECURITY')) {
-                dialogue.push({ speaker: 'Spc. Vance', text: 'Could be a lure. Stay alert.', portraitId: 'M_4' });
-            }
-        } else if (nextSector === 4) {
-            // SECTOR 4: THE GARDEN - Signal decoded
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 4: THE GARDEN.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Life signatures ahead. But the signal from beyond grows stronger with each jump.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'I have partially decoded it. The signal is 3.7 billion years old.' });
-            if (hasCrew('MEDIC')) {
-                dialogue.push({ speaker: 'Dr. Aris', text: 'Older than life on Earth... what could survive that long?', portraitId: 'F_3' });
-            }
-            if (hasCrew('SPECIALIST')) {
-                dialogue.push({ speaker: 'Tech Mira', text: 'It\'s pointing us to Sector 6. That\'s the destination.', portraitId: 'F_5' });
-            }
-        } else if (nextSector === 5) {
-            // SECTOR 5: THE EVENT HORIZON - Key revelation
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 5: THE EVENT HORIZON.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'This is the edge of mapped space. No human probe has returned from beyond.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Commander, I must report something. The debris fields, the signals, the path we followed...' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'They were arranged. We are not exploring. We are being GUIDED to Sector 6.' });
-            if (hasCrew('ENGINEER')) {
-                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Guided by what? That\'s not reassuring.', portraitId: 'M_2' });
-            }
-            if (hasCrew('SECURITY')) {
-                dialogue.push({ speaker: 'Spc. Vance', text: 'Doesn\'t matter. We\'ve come too far to turn back.', portraitId: 'M_4' });
-            }
-        } else if (nextSector === 6) {
-            // SECTOR 6: THE THRESHOLD - Destination
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 6: THE THRESHOLD.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Every ship before us stopped somewhere behind us. The signal ends here.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'I detect a structure. Artificial. Ancient. It has been waiting for 3.7 billion years.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'This is the destination, Commander. This is what called us across the void.' });
-            if (hasCrew('MEDIC')) {
-                dialogue.push({ speaker: 'Dr. Aris', text: 'I can feel it. Something old. Something patient.', portraitId: 'F_3' });
-            }
-            if (hasCrew('SPECIALIST')) {
-                dialogue.push({ speaker: 'Tech Mira', text: 'The readings are impossible. It\'s like nothing in our physics.', portraitId: 'F_5' });
-            }
-            if (hasCrew('SECURITY')) {
-                dialogue.push({ speaker: 'Spc. Vance', text: 'Whatever it is, we face it together.', portraitId: 'M_4' });
-            }
-        } else if (nextSector > 6) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'We are beyond all charts. The universe holds its breath.' });
-        } else {
-            dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems normal.` });
-        }
-
-        return dialogue;
+        const say = (speaker, text, portraitId) => ({ speaker, text, portraitId });
+        const LINES = {
+            2: [say('A.U.R.A.', 'Sector 2, Commander. The last of the eight should be out here.'),
+                hasCrew('ENGINEER') && say('Eng. Jaxon', 'Eight ahead of us and not one of them left a note. The next rock is called Note.', 'M_2'),
+                hasCrew('MEDIC') && say('Dr. Aris', 'If we find them, we read their names. All of them.', 'F_3')],
+            3: [say('A.U.R.A.', 'Sector 3, Commander. Transponders on our channel. Hundreds.'),
+                hasCrew('SPECIALIST') && say('Tech Mira', 'And here we see... hull numbers. Two hundred. Six hundred. Nine hundred and twelve.', 'F_5'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'Nine, they said. I make it nine hundred.', 'M_4')],
+            4: [say('A.U.R.A.', 'Sector 4, Commander. Somebody stopped here, two centuries ago.'),
+                hasCrew('MEDIC') && say('Dr. Aris', 'Two hundred years dead, and their hull number is higher than ours.', 'F_3'),
+                hasCrew('ENGINEER') && say('Eng. Jaxon', 'Green down there. Real green. Wake me if it has grass.', 'M_2')],
+            5: [say('A.U.R.A.', 'Sector 5, Commander. Hulls in the tens of thousands. All of them ours.'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'I counted more than nine in the yard. I did not count this many.', 'M_4'),
+                hasCrew('SPECIALIST') && say('Tech Mira', 'And here we see... no. I cannot narrate this one.', 'F_5')],
+            6: [say('A.U.R.A.', 'Sector 6, Commander. The oldest wrecks of all, and a light at the end of the heading.'),
+                hasCrew('MEDIC') && say('Dr. Aris', 'It looks like a sun. Every one of them flew toward it.', 'F_3'),
+                hasCrew('SPECIALIST') && say('Tech Mira', 'It is not warm. A sun would be warm.', 'F_5'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'Thirty thousand hulls between here and there. I am not counting them.', 'M_4')],
+        };
+        return (LINES[nextSector] || [say('A.U.R.A.', `Sector ${nextSector}, Commander. All systems normal.`)]).filter(Boolean);
     }
 
     showCampfireEvent(onComplete) {
