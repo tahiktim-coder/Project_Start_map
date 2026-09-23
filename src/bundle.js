@@ -278,6 +278,17 @@ class GameState {
             _miraWonderSeen: this._miraWonderSeen,
             _miraAuraSeen: this._miraAuraSeen,
             _commanderDoubtSeen: this._commanderDoubtSeen,
+            // The journey (lost on reload before: the one callback the game had, and the lists that stop stories repeating)
+            _boardedHulls: this._boardedHulls || [],
+            _standing: this._standing || null,
+            _countSceneSeen: !!this._countSceneSeen,
+            _encounteredShipNames: this._encounteredShipNames || [],
+            _encounteredExodus: this._encounteredExodus || [],
+            _seenCampfires: this._seenCampfires || [],
+            _followedSignal: !!this._followedSignal,
+            _lighthouseBonus: !!this._lighthouseBonus,
+            _damagedCapacitors: this._damagedCapacitors || null,
+            _driveReinforced: !!this._driveReinforced,
             // Logs (last 20 only to save space)
             logs: this.logs.slice(-20)
         };
@@ -312,7 +323,10 @@ class GameState {
             // Cargo & Upgrades
             // JSON drops functions, so saved items lose their onUse(); give each one back its behaviour from ITEMS
             const itemDefs = (typeof ITEMS !== 'undefined') ? Object.values(ITEMS) : [];
+            const pageDefs = (typeof EXODUS_LOGS !== 'undefined') ? EXODUS_LOGS : [];
             this.cargo = (saveData.cargo || []).map(saved => {
+                const page = pageDefs.find(d => d.id === saved.id);
+                if (page) return window.app ? window.app.pageItem(page, saved.acquiredAt) : { ...page, ...saved };
                 const def = itemDefs.find(d => d.id === saved.id);
                 return def ? { ...def, ...saved, onUse: def.onUse } : saved;
             });
@@ -335,6 +349,16 @@ class GameState {
             // Progress
             this.actionsTaken = saveData.actionsTaken;
             this.exodusLogsFound = saveData.exodusLogsFound || [];
+            this._boardedHulls = saveData._boardedHulls || [];
+            this._standing = saveData._standing || null;
+            this._countSceneSeen = !!saveData._countSceneSeen;
+            this._encounteredShipNames = saveData._encounteredShipNames || [];
+            this._encounteredExodus = saveData._encounteredExodus || [];
+            this._seenCampfires = saveData._seenCampfires || [];
+            this._followedSignal = !!saveData._followedSignal;
+            this._lighthouseBonus = !!saveData._lighthouseBonus;
+            this._damagedCapacitors = saveData._damagedCapacitors || null;
+            this._driveReinforced = !!saveData._driveReinforced;
             this._colonyKnowledge = saveData._colonyKnowledge || 0;
             this.fungusActionCounter = saveData.fungusActionCounter || 0;
             // Special states
@@ -404,6 +428,13 @@ class GameState {
         if (this._lighthouseBonus) cost -= STAR_CHART_SAVING;
         return Math.max(1, cost);
     }
+
+    /** Who you sided with. Two of three moments gives you standing for that person's ending (docs/CANON.md §9). */
+    noteStanding(who, delta) {
+        this._standing = this._standing || { vance: 0, aris: 0, jaxon: 0, mira: 0 };
+        this._standing[who] = (this._standing[who] || 0) + (delta == null ? 1 : delta);
+    }
+    hasStanding(who) { return ((this._standing || {})[who] || 0) >= 2; }
 
     /** The dead do not talk, and the commander is the player: neither gets a spoken line in the log. */
     isSilentSpeaker(message) {
@@ -877,11 +908,11 @@ class GameState {
 
 // One line on each arrival card: the further out, the older the wrecks (the wait calculation, shown not told)
 const SECTOR_ARRIVAL_LINES = {
-    2: 'The wrecks out here are a hundred years old. Older than anyone aboard.',
-    3: 'Two hundred years of silence. The instruments have started to disagree with each other.',
-    4: 'Somebody stopped here, and lived.',
-    5: 'The first crews made it this far. Three hundred years ago.',
-    6: 'Nothing human is older than what is waiting here.',
+    2: 'The last of the eight are out here. Twenty years dead, the newest of them.',
+    3: 'Transponders on our channel. Hundreds. The hull numbers are higher than ours, and the rust is a century old.',
+    4: 'Somebody stopped here. Two hundred years ago.',
+    5: 'Hulls in the tens of thousands. Three centuries dead. Every one of them was told it was the ninth.',
+    6: 'The oldest wrecks of all. And at the end of the heading, a light.',
 };
 const RELIANCE_MIN_SAMPLES = 4; // A.U.R.A. only comments on who flies once there is a pattern to see
 const CARGO_LIMIT = 20, CARGO_RACK_BONUS = 4; // see GameState.getCargoLimit / enforceCargoLimit
@@ -959,7 +990,7 @@ class App {
                         SILENT EXODUS
                     </div>
                     <div style="font-size: 1em; color: #8a9d8f; margin-top: 15px; letter-spacing: 4px;">
-                        EVERY SHIP WAS TOLD IT WAS THE NINTH
+                        EIGHT WENT BEFORE YOU. NONE OF THEM CALLED HOME.
                     </div>
                 </div>
 
@@ -1151,6 +1182,7 @@ class App {
             }
             this.state.addLog("Breaking orbit. Systems disengaged.");
             this.renderNav();
+            if (currentPlanet && currentPlanet.isFirstSignal && currentPlanet.exodusInvestigated && !this.state._countSceneSeen) this.showCountScene();
         });
 
         // THE WRONG PLACE special handlers
@@ -1290,6 +1322,7 @@ class App {
      */
     showOpeningBriefing() {
         this.markFirstSignal();
+        this.plantSectorPage();
         const begin = () => {
             this.state.addLog("A.U.R.A.: Systems online. Awaiting your command, Commander.");
             this.state.addLog("An old transponder is marked on the map. Click it to take a look.");
@@ -1301,7 +1334,7 @@ class App {
             tone: 'station', zIndex: 3500, kicker: 'EXODUS-9 · 61 YEARS OUT FROM EARTH', title: 'Good morning, Commander',
             context: 'Cold air, and a light you have not seen in sixty-one years. The ship has woken all five of you, and it has not said why.',
             dialogue: [
-                { speaker: 'A.U.R.A.', text: 'Everyone woke up. The ship is in one piece. Your orders have not changed: find a world people can live on, and settle it.' },
+                { speaker: 'A.U.R.A.', text: 'All four of you are awake, Commander. The ship is in one piece. Your orders have not changed: find a world people can live on, and settle it.' },
                 { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction, thousands of them. Eight went this way before you. You are the ninth on this heading.' },
                 { speaker: 'Eng. Jaxon', text: 'Eight ahead of us. Let us hope they left the good planets alone. Wake me when there is grass.' },
                 { speaker: 'Spc. Vance', text: 'Eight ships ahead of us, and not one of them ever called home?' },
@@ -1313,6 +1346,71 @@ class App {
     }
 
     /** Sector 1 always holds one wreck whose transponder shows on the map from the start: the first thing to go and look at. */
+    /**
+     * The head count. Vance counts everyone off; A.U.R.A. says four; asked for names she gives all five, warmly, and says four
+     * again without noticing. The one moment in sector 1 the game admits the number is wrong, so it can never read as a bug.
+     */
+    showCountScene() {
+        if (!window.EncounterCard || this.state._countSceneSeen) return;
+        this.state._countSceneSeen = true;
+        const alive = who => this.state.crew.some(c => c.status !== 'DEAD' && c.name.includes(who));
+        const names = [['Jaxon', 'Jaxon Mercer'], ['Aris', 'Aris Novak'], ['Vance', 'Kael Vance'], ['Mira', 'Mira Chen']].filter(([first]) => alive(first)).map(([, full]) => full);
+        window.EncounterCard.open(this, {
+            tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE · AFTER THE WRECK', title: 'Head count',
+            context: 'Vance counts everyone off. He does it every time. This time he does it twice.',
+            dialogue: [
+                { speaker: 'Spc. Vance', text: 'Five. Jaxon, Aris, Mira, me, and you. Five.' },
+                { speaker: 'A.U.R.A.', text: 'Four crew, Commander. All well.' },
+                { speaker: 'Spc. Vance', text: 'Say the names.' },
+                { speaker: 'A.U.R.A.', text: `${names.join('. ')}. And you, Commander. Four crew.` },
+                { speaker: 'Eng. Jaxon', text: 'She rounds down, Kael. Let it go.' },
+            ],
+            choices: [
+                { text: 'Let it go', desc: 'Jaxon is probably right.', chips: [] },
+                { text: 'Ask her again', desc: 'Vance wants it on the record.', chips: [] },
+                { text: 'Check the manifest yourself', desc: 'The printed one, in the drawer under the chair.', chips: [] },
+            ],
+            onPick: (idx) => {
+                if (idx === 0) { this.state.noteStanding('jaxon'); this.state.addLog('A.U.R.A.: "Four crew, Commander. Shall I go on?"'); }
+                if (idx === 1) { this.state.noteStanding('vance'); this.state.addLog('A.U.R.A.: "Four crew, Commander. Would you like the roster again?"'); this.state.addLog('Spc. Vance: "Four. She said four."'); }
+                if (idx === 2) { this.state.noteStanding('vance'); this.state.addLog('The manifest. Four names printed. A fifth line, blank, in the same ink.'); this.state.addLog('Tech Mira: "She is not wrong on purpose. She is never wrong on purpose."'); }
+                this.state.emitUpdates();
+            }
+        });
+    }
+
+    /** A found page as a cargo item: kept, and readable again from the hold. */
+    pageItem(page, acquiredAt) {
+        return { ...page, acquiredAt, onUse: () => { if (window.FoundPage) window.FoundPage.open(this, page, acquiredAt); return 'You read it again.'; } };
+    }
+
+    /** Every sector holds one wreck with that sector's page in it (EXODUS_LOGS). Unmarked: you find it by searching wrecks. */
+    plantSectorPage() {
+        const nodes = this.state.sectorNodes || [], sector = this.state.currentSector;
+        const page = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).find(p => p.sector === sector);
+        if (!page || nodes.some(p => p.hasPage) || (this.state.exodusLogsFound || []).includes(page.id)) return;
+        const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
+        const wrecks = nodes.filter(p => isLandable(p) && (p.tags || []).includes('EXODUS_WRECK') && !p.hasTape && !p.isFirstSignal);
+        const target = wrecks[0] || nodes.find(p => isLandable(p) && !p.hasTape && !p.isFirstSignal) || nodes.find(isLandable);
+        if (!target) return;
+        target.tags = target.tags || [];
+        if (!target.tags.includes('EXODUS_WRECK')) target.tags.push('EXODUS_WRECK');
+        target.hasPage = page.id;
+    }
+
+    /** Found in the wreck: the page opens at once and stays in cargo. */
+    findSectorPage(shipName, pageId) {
+        const PAGE_DELAY_MS = 900;
+        const page = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).find(p => p.id === pageId);
+        if (!page || (this.state.exodusLogsFound || []).includes(page.id)) return;
+        this.state.exodusLogsFound = this.state.exodusLogsFound || [];
+        this.state.exodusLogsFound.push(page.id);
+        this.state.cargo.push(this.pageItem(page, shipName));
+        this.state.addLog(`In ${shipName}: ${page.desc}`);
+        this.state.emitUpdates();
+        setTimeout(() => { if (window.FoundPage) window.FoundPage.open(this, page, shipName); }, PAGE_DELAY_MS);
+    }
+
     /** Sector 2 always holds one wreck with the uncut briefing tape in its archive. Unmarked: you find it by searching wrecks. */
     plantBriefingTape() {
         const nodes = this.state.sectorNodes || [];
@@ -1509,8 +1607,8 @@ class App {
                 warpConfig.hazard.onWarp(this.state);
             }
 
-            // Ship malfunction check during warp
-            if (typeof rollShipMalfunction !== 'undefined') {
+            // Ship malfunction check during warp (never on the approach to the light: the finale is the only thing that happens there)
+            if (typeof rollShipMalfunction !== 'undefined' && !isFinale) {
                 const malfunction = rollShipMalfunction(this.state, 'warp');
                 if (malfunction) {
                     this.showShipMalfunctionModal(malfunction);
@@ -1590,8 +1688,8 @@ class App {
                 // Auto-save after arriving at planet
                 this.autoSave();
 
-                // Check for distress signals after warp (small chance) - use queue to prevent stacking
-                if (typeof rollDistressSignal !== 'undefined') {
+                // Check for distress signals after warp (small chance) - use queue to prevent stacking; never at the light
+                if (typeof rollDistressSignal !== 'undefined' && !isFinale) {
                     const distress = rollDistressSignal(this.state, 'warp');
                     if (distress) {
                         setTimeout(() => {
@@ -1601,8 +1699,8 @@ class App {
                     }
                 }
 
-                // Check for crew personal events - queued to not overlap
-                setTimeout(() => this.checkForCrewEvent(), 2000);
+                // Check for crew personal events - queued to not overlap; never at the light
+                if (!isFinale) setTimeout(() => this.checkForCrewEvent(), 2000);
             }, 1000);
         }
     }
@@ -2048,6 +2146,7 @@ class App {
                 this.state.currentSector = nextSector;
                 this.state.lastVisitedSystem = null;
                 this.plantBriefingTape();
+                this.plantSectorPage();
 
                 // Sector enter hazard (e.g., S3 ghost planets) — pass state for ghost planet logging
                 const enterConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[nextSector] : null;
@@ -2387,10 +2486,10 @@ class App {
         // Weighted by priority (story talks are likelier, not guaranteed), and never the same talk twice in one run
         this.state._seenCampfires = this.state._seenCampfires || [];
         const fresh = eligible.filter(e => !this.state._seenCampfires.includes(e.id));
-        const pool = fresh.length ? fresh : eligible;
-        const weightOf = e => Math.pow(e.priority || 1, 2);
-        let roll = Math.random() * pool.reduce((sum, e) => sum + weightOf(e), 0);
-        const event = pool.find(e => (roll -= weightOf(e)) <= 0) || pool[0];
+        const candidates = fresh.length ? fresh : eligible;
+        const topPriority = Math.max(...candidates.map(e => e.priority || 1));               // a priority-3 talk is the act break: it always fires
+        const pool = candidates.filter(e => (e.priority || 1) === topPriority);
+        const event = pool[Math.floor(Math.random() * pool.length)];
         if (event.id) this.state._seenCampfires.push(event.id);
 
         // Sector names — pull from SECTOR_CONFIG or fallback (up to sector 6)
@@ -2497,6 +2596,8 @@ class App {
             attempts++;
         }
         this.state._encounteredShipNames.push(shipName);
+        this.state._boardedHulls = this.state._boardedHulls || [];
+        this.state._boardedHulls.push(shipName);
         // Bark: crew reacts to Exodus wreck
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
             window.BarkSystem.tryBark('EXODUS_FOUND', this.state, { planet });
@@ -2520,6 +2621,7 @@ class App {
                     this.orbitView.updateCommandDeck(planet);
                     if (planet.isFirstSignal) this.findDiscDrawing(shipName);
                     if (planet.hasTape) this.findBriefingTape(shipName);
+                    if (planet.hasPage) this.findSectorPage(shipName, planet.hasPage);
                 }
             });
             return;
@@ -2982,7 +3084,7 @@ You are home.`
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85em; color: #888;">
                         <div>FINAL SECTOR: <span style="color: #c4d0c4;">${this.state.currentSector}</span></div>
                         <div>CREW SURVIVORS: <span style="color: #88cc88;">${livingCrew.length} / 5</span></div>
-                        <div>EXODUS LOGS: <span style="color: #c4d0c4;">${exodusLogsFound} / 8</span></div>
+                        <div>PAGES FOUND: <span style="color: #c4d0c4;">${exodusLogsFound} / 6</span></div>
                         <div>COLONY DATA: <span style="color: #c4d0c4;">${colonyKnowledge}</span></div>
                         <div>SALVAGE: <span style="color: #c4d0c4;">${this.state.salvage}</span></div>
                         <div>ENERGY: <span style="color: #c4d0c4;">${this.state.energy}%</span></div>
@@ -3890,6 +3992,12 @@ You are home.`
             : '';
 
         // Card layout: what the team found, what the scan says, then one button per option with its real odds
+        const REWARD_WORDS = { METALS: '+40 to 79 salvage', METALS_HIGH: '+60 to 119 salvage', ENERGY: '+30 to 49 energy', NOTHING: 'nothing' };
+        const rewardWords = (choice) => {
+            const r = choice.reward || {};
+            if (r.type === 'ITEM') return `an item${r.tags && r.tags.length ? ' · ' + String(r.tags[0]).toLowerCase() : ''}`;
+            return REWARD_WORDS[r.val] || (r.type === 'RESOURCE' ? REWARD_WORDS.ENERGY : 'nothing');
+        };
         const evaChoice = (choice, idx) => {
             const totalRisk = Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
             const riskColor = totalRisk < 10 ? 'var(--green)' : totalRisk < 30 ? 'var(--amber)' : 'var(--red)';
@@ -3898,7 +4006,7 @@ You are home.`
             const isDisabled = paranoidBlocked || recklessBlocked;
             const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : `${totalRisk}% chance someone gets hurt`);
             return `<button class="deck-action choice-btn eva-choice" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
-                        <span>${choice.text}</span>
+                        <span>${choice.text}<em class="eva-gets">${rewardWords(choice)}</em></span>
                         <small style="color:${isDisabled ? 'var(--red)' : riskColor}">${note}<i class="eva-risk"><b style="width:${totalRisk}%; background:${riskColor}"></b></i></small>
                     </button>`;
         };
@@ -5149,7 +5257,7 @@ You are home.`
                     <div>PLANETS EXPLORED: <span style="color: #e07a70;">${planetsVisited}</span></div>
                     <div>CREW LOST: <span style="color: #e07a70;">${deadCrew.length} / 5</span></div>
                     <div>SALVAGE COLLECTED: <span style="color: #e07a70;">${this.state.salvage}</span></div>
-                    <div>EXODUS LOGS: <span style="color: #e07a70;">${exodusLogsFound} / 8</span></div>
+                    <div>PAGES FOUND: <span style="color: #e07a70;">${exodusLogsFound} / 6</span></div>
                     <div>RATIONS REMAINING: <span style="color: #e07a70;">${this.state.rations}</span></div>
                 </div>
             </div>

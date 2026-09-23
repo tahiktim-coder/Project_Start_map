@@ -96,13 +96,13 @@ In the center of the dead planet, something lives.
 
 A dome — kilometers across, made of material that shouldn't exist. Inside: an ecosystem. Green things growing. Water flowing. Animals that don't match any Earth database, but move with familiar grace.
 
-Someone built this. Someone tended it for millennia. And then they left. But they left the door unlocked.`,
+Nobody built this. It is a copy of somewhere, made by something that had read that somewhere completely. The door is open because a door was in the original.`,
 
         dialogue: [
-            { speaker: 'Dr. Aris', text: "The biodiversity is... impossible. Every niche is filled. It's like someone compressed a million years of evolution into a controlled space." },
-            { speaker: 'Tech Mira', text: "The dome material is generating its own energy. Solar collection efficiency of nearly 100%. We can't build anything like this." },
-            { speaker: 'Spc. Vance', text: "There's something in the center. A structure. Looks like an altar. Or a control panel." },
-            { speaker: 'A.U.R.A.', text: "I'm detecting preserved genetic samples. Seeds. Embryos. Thousands of species from worlds we've never visited." }
+            { speaker: 'Dr. Aris', text: "Every plant here is an Earth plant. Every one is slightly wrong. The grass has no roots." },
+            { speaker: 'Tech Mira', text: "And here we see... a dome that makes its own light. Nobody makes their own light." },
+            { speaker: 'Spc. Vance', text: "Something in the middle. A stone with names on it. I count four." },
+            { speaker: 'A.U.R.A.', text: "Preserved seeds and embryos, Commander. Earth stock. I cannot say how they got here." }
         ],
 
         choices: [
@@ -150,12 +150,12 @@ Someone built this. Someone tended it for millennia. And then they left. But the
             {
                 id: 'STUDY_ALTAR',
                 text: "Investigate the central structure",
-                desc: "Reveals who built this place. Disturbing implications.",
+                desc: "Read the stone in the middle.",
                 effect: (state) => {
-                    state.addLog("The altar is a memorial. The names carved into it are in English. Future English.");
-                    state.addLog("Dates stretch forward: 2847. 3112. 4506. 12,847.");
-                    state.addLog("A.U.R.A.: 'This garden was built by humanity's descendants. They came back through time to seed the corridor with life.'");
-                    state.addLog("A.U.R.A.: 'We are not the first to walk this path. We are fulfilling a loop that was closed before Earth formed.'");
+                    state.addLog("A stone with four names cut into it, and a hull number: EXODUS-3,306. Under the names, a fifth line. Blank.");
+                    state.addLog("Dr. Aris: 'It is a memorial. They made a garden and buried their crew in it.'");
+                    state.addLog("Spc. Vance: 'Four names. Who buried the fourth?'");
+                    state.addLog("A.U.R.A.: 'Four crew per hull, Commander. That is the complement.'");
                     state._gardenTruth = true;
 
                     // Add stress from existential revelation
@@ -182,25 +182,25 @@ Someone built this. Someone tended it for millennia. And then they left. But the
         context: () => `
 The entire moon is a cemetery.
 
-Billions of markers stretch to every horizon. Names in every human language. Names in languages that don't exist yet. The stones are quantum-locked — they cannot be moved, damaged, or destroyed.
+Markers to every horizon, in rows. A hull number on each row. Four names on each stone.
 
-This is where humanity buries its dead. Not the dead of Earth. The dead of everywhere. Everywhen.
+This is where the crews were buried. Somebody did the burying, on every row, and is not buried here.
 
-And somewhere in this infinite field, there are five stones with familiar names.`,
+Thirty thousand rows. The far ones are older.`,
 
         dialogue: [
-            { speaker: 'Dr. Aris', text: "These graves... some of the dates are from the past. Some from the future. Some from years that haven't been invented yet." },
-            { speaker: 'Eng. Jaxon', text: "I found my own grave. Jaxon Mercer. It says I die in 2398. 'He kept them flying.'" },
-            { speaker: 'Spc. Vance', text: "Mine says I die in 2344. That's... that's two years from now." },
-            { speaker: 'Tech Mira', text: "Don't read them. Please. We don't want to know how this ends." },
-            { speaker: 'A.U.R.A.', text: "The graves are quantum-superposed. The dates are possibilities, not certainties. Your choices still matter." }
+            { speaker: 'Dr. Aris', text: "Four names on every stone. Every stone. I am reading them. Somebody should." },
+            { speaker: 'Eng. Jaxon', text: "This row has our patch on it. Hull nine thousand and something." },
+            { speaker: 'Spc. Vance', text: "No commanders. Thirty thousand rows and not one commander." },
+            { speaker: 'Tech Mira', text: "Don't read them. Please." },
+            { speaker: 'A.U.R.A.', text: "Four crew per hull, Commander. The stones agree with the manifest." }
         ],
 
         choices: [
             {
                 id: 'READ_GRAVES',
-                text: "Read your own gravestones",
-                desc: "Gain insight into possible futures. High stress cost.",
+                text: "Walk the rows and read the names",
+                desc: "Aris wants them read. It will take hours, and it will cost the crew.",
                 effect: (state) => {
                     // High stress but valuable info
                     state.crew.forEach(c => {
@@ -209,17 +209,12 @@ And somewhere in this infinite field, there are five stones with familiar names.
                         }
                     });
 
-                    // Insight: Reveal which crew survive longest
-                    const leader = state.crew.find(c => c.tags.includes('LEADER'));
-                    if (leader && leader.status !== 'DEAD') {
-                        state.addLog(`Commander's stone: "${leader.realName}. 'They found the way home.'"`);
-                    }
-
-                    state.addLog("The stones speak of deaths that haven't happened. And lives that extend far beyond your expectations.");
-                    state.addLog("You see your names on stones dated centuries apart. You will live many lives. Or die many deaths.");
+                    state.noteStanding && state.noteStanding('aris');
+                    state.addLog("Aris reads every name on the nearest hundred stones aloud. Four names each. Nobody stops her.");
+                    state.addLog("Dr. Aris: 'Whoever buried them knew their names. It is on every stone in the same hand.'");
                     state._gravesRead = true;
 
-                    return "Futures glimpsed. The weight of possibility is crushing. +2 stress to all crew.";
+                    return "Four hundred names read aloud. +2 stress to all crew.";
                 }
             },
             {

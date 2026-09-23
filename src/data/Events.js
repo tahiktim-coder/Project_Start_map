@@ -1,3 +1,6 @@
+// The strange finds wait until sector 3: sector 1 must look exactly like the briefing said it would.
+const deepEnough = () => ((window.app && window.app.state && window.app.state.currentSector) || 1) >= 3;
+
 const EVENTS = [
     {
         id: 'DERELICT',
@@ -41,8 +44,8 @@ const EVENTS = [
     },
     {
         id: 'GHOST_SHIP',
-        trigger: (planet) => Math.random() < 0.3, // 30% chance anywhere
-        title: "UNKOWN VESSEL",
+        trigger: (planet) => deepEnough() && Math.random() < 0.3,
+        title: "UNKNOWN VESSEL",
         desc: "A ship with no transponder code is drifting in high orbit. No life signs.",
         choices: [
             { text: "Hail & Ignore (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
@@ -253,9 +256,9 @@ const EVENTS = [
     },
     {
         id: 'MASS_BURIAL',
-        trigger: (planet) => planet.type === 'TOMB_WORLD' || Math.random() < 0.15,
+        trigger: (planet) => planet.type === 'TOMB_WORLD' || (deepEnough() && Math.random() < 0.15),
         title: "THE GRAVES",
-        desc: "Thousands of burial markers. Not human. Not any species we know. The dates are from the future.",
+        desc: "Rows of markers. Four names on each. The dates are older than the wreck in orbit above them.",
         choices: [
             { text: "Record and Leave (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
             { text: "Dig One Up (Disturbing)", riskMod: 35, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
@@ -273,7 +276,7 @@ const EVENTS = [
     },
     {
         id: 'MAGNETIC_STORM',
-        trigger: (planet) => ['GAS_GIANT', 'SHATTERED'].includes(planet.type) || Math.random() < 0.2,
+        trigger: (planet) => ['GAS_GIANT', 'SHATTERED'].includes(planet.type) || (deepEnough() && Math.random() < 0.2),
         title: "EM SURGE",
         desc: "Electromagnetic storm is frying electronics. Comms are down. Navigation is dead.",
         choices: [
@@ -323,7 +326,7 @@ const EVENTS = [
     },
     {
         id: 'RADIO_SILENCE',
-        trigger: (planet) => Math.random() < 0.2,
+        trigger: (planet) => deepEnough() && Math.random() < 0.2,
         title: "DEAD AIR",
         desc: "All radio contact with the ship has stopped. The EVA team is alone. Something is jamming signals.",
         choices: [
@@ -333,7 +336,7 @@ const EVENTS = [
     },
     {
         id: 'PERFECT_SPHERE',
-        trigger: (planet) => Math.random() < 0.15,
+        trigger: (planet) => deepEnough() && Math.random() < 0.15,
         title: "THE SPHERE",
         desc: "A perfect sphere of unknown material. 10 meters diameter. It's warm. It's humming. It knows we're here.",
         choices: [
@@ -353,7 +356,7 @@ const EVENTS = [
     },
     {
         id: 'FOOTPRINTS',
-        trigger: (planet) => Math.random() < 0.1,
+        trigger: (planet) => deepEnough() && Math.random() < 0.1,
         title: "WE WEREN'T FIRST",
         desc: "Human footprints in the dust. No ship wreckage. No bodies. The prints just... stop.",
         choices: [

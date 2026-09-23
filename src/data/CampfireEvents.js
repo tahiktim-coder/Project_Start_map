@@ -250,10 +250,10 @@ A.U.R.A.: "Commander, I must ask. If reaching THE STRUCTURE requires sacrificing
         sectorRange: [4, 4],
         priority: 3,
         condition: () => true,
-        title: "/// WARP INCIDENT: POINT OF NO RETURN ///",
-        context: `A.U.R.A. interrupts the warp sequence with an urgent warning.
+        title: "/// WARP INCIDENT: NO RESERVES ///",
+        context: `A.U.R.A. interrupts the warp sequence.
 
-A.U.R.A.: "Commander, beyond this point we cannot return. Our fuel reserves are not enough for a return journey. This is the last chance to turn back."`,
+A.U.R.A.: "Commander, past this point we will not have the reserves to stop anywhere for long. Wherever we settle from here, we settle for good."`,
         dialogue: [],
         choices: [
             {

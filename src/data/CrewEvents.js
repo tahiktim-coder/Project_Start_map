@@ -218,39 +218,40 @@ const CREW_PERSONAL_EVENTS = [
         crewId: 'vance',
         trigger: (state, crew) => crew.name.includes('Vance') && state.actionsTaken >= 15 && !state._vanceScarSeen,
         weight: 15,
-        title: "VANCE'S SCARS",
-        context: "Vance is cleaning his equipment. You notice burn scars covering his arms.",
+        title: "VANCE'S HANDS",
+        context: "Vance is cleaning his equipment. He counts the parts as he lays them out. He always counts.",
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Exodus-3. I was security. Same job, different ship." },
-            { speaker: 'Spc. Vance', text: "Engine fire. 40 crew. I got 6 out. Six out of forty." },
-            { speaker: 'Spc. Vance', text: "That's why I'm here. Because I already died on that ship. This is borrowed time." }
+            { speaker: 'Spc. Vance', text: "Launch yard. Twelve years. I counted keels for a living." },
+            { speaker: 'Spc. Vance', text: "Nine on this heading, they said. I counted more than nine in one bay. In one bay." },
+            { speaker: 'Spc. Vance', text: "That's why I'm here. I wanted to see where they went." }
         ],
         choices: [
             {
-                text: "Those 6 people are alive because of you.",
+                text: "You counted right.",
                 effect: (state, crew) => {
                     crew.stress = Math.max(0, crew.stress - 1);
                     state._vanceScarSeen = true;
-                    state.addLog("Vance pauses. 'Yeah. Maybe.' He almost sounds like he believes it.");
-                    return "Vance finds some peace. -1 Stress.";
+                    state.noteStanding && state.noteStanding('vance');
+                    state.addLog("Vance stops counting for a moment. 'Yeah.' He almost sounds like he believes you.");
+                    return "Vance is believed, once. -1 Stress.";
                 }
             },
             {
-                text: "That experience makes you the best person for this job.",
+                text: "They were for other headings.",
                 effect: (state, crew) => {
                     state._vanceScarSeen = true;
-                    state._vanceResolve = true;
-                    state.addLog("Vance stands straighter. 'I won't let it happen again.'");
-                    return "Vance's resolve hardened. Future EVAs safer.";
+                    state.addLog("Vance goes back to counting. 'That is what I told myself.'");
+                    return "Vance says nothing more.";
                 }
             },
             {
-                text: "You don't have to carry that alone.",
+                text: "Show me the number.",
                 effect: (state, crew) => {
                     crew.stress = Math.max(0, crew.stress - 1);
                     state._vanceScarSeen = true;
-                    state.addLog("Vance doesn't respond. But something in his shoulders relaxes.");
-                    return "Vance's burden shared. -1 Stress.";
+                    state.noteStanding && state.noteStanding('vance');
+                    state.addLog("He writes it on the table with his finger. It has five digits. Then he wipes it off.");
+                    return "Vance shows you the number. -1 Stress.";
                 }
             }
         ]
@@ -263,7 +264,7 @@ const CREW_PERSONAL_EVENTS = [
         title: "NIGHT WATCH",
         context: "It's the night cycle. Vance is patrolling the corridors when there's nothing to patrol.",
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Can't sleep. Tried for three days. Every time I close my eyes, I see Exodus-3 burning." },
+            { speaker: 'Spc. Vance', text: "Can't sleep. Every time I close my eyes I am counting keels in that bay, and I never get to the end." },
             { speaker: 'Spc. Vance', text: "So I walk. Check the seals. Check the locks. Check things that don't need checking." },
             { speaker: 'Spc. Vance', text: "At least if something goes wrong, I'll be awake for it this time." }
         ],
@@ -360,7 +361,7 @@ const CREW_PERSONAL_EVENTS = [
         context: "You find Mira talking to A.U.R.A. through the terminal. Not working. Just... talking.",
         dialogue: [
             { speaker: 'Tech Mira', text: "She's lonely, you know. A.U.R.A. She won't say it, but I can tell." },
-            { speaker: 'Tech Mira', text: "Imagine being awake for centuries, watching ships die one by one. Never sleeping." },
+            { speaker: 'Tech Mira', text: "Imagine being awake for sixty-one years with nobody to talk to. Never sleeping." },
             { speaker: 'A.U.R.A.', text: "Mira. You should not anthropomorphize my responses. I am software." },
             { speaker: 'Tech Mira', text: "See? That's exactly what a lonely person would say." }
         ],

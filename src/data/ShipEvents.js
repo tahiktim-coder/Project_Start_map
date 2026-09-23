@@ -221,8 +221,9 @@ const SHIP_MALFUNCTION_EVENTS = [
             state.shipDecks.lab.status = 'DAMAGED';
 
             // Check if any cargo items should be destroyed
-            if (state.cargo && state.cargo.length > 0) {
-                const destroyed = state.cargo.pop();
+            const loseIdx = (state.cargo || []).map((item, i) => item.isKept ? -1 : i).filter(i => i >= 0).pop();   // papers and tapes survive; a crate does not
+            if (loseIdx !== undefined) {
+                const destroyed = state.cargo.splice(loseIdx, 1)[0];
                 state.addLog(`${destroyed.name} destroyed in the lab accident!`);
                 state.addLog("Laboratory sealed until decontamination complete.");
                 return `Lab accident! ${destroyed.name} lost. Laboratory DAMAGED.`;

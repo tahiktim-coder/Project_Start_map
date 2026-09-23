@@ -359,17 +359,17 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
     {
         id: 'DISTRESS_ALIEN',
         weight: 8,
-        title: "NON-HUMAN SIGNAL",
+        title: "OUR OWN HAIL",
         getSignalAge: () => 'UNKNOWN', // Unknowable age
-        context: (age) => `The signal doesn't match any human transmission protocol. The pattern is too regular to be natural. Too complex to be simple. Something else made this. Something that was here before us. Or... something that followed us.`,
+        context: (age) => `It is our own hail. Our callsign, our handshake, our crew count, sent back to us. One thing is different: it arrived before we sent it.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "This is... this is impossible. This isn't human technology. This isn't human anything." },
-            { speaker: 'A.U.R.A.', text: "I cannot translate the signal. But I can feel it trying to translate me." },
-            { speaker: 'Spc. Vance', text: "We should leave. Right now. Whatever sent this... we don't want to meet it." }
+            { speaker: 'Tech Mira', text: "That is us. That is our exact hail. I recorded it this morning." },
+            { speaker: 'A.U.R.A.', text: "It is our hail, Commander. Returned. I did not send it, and it is older than we are." },
+            { speaker: 'Spc. Vance', text: "Then something out there has already heard us." }
         ],
         choices: [
             {
-                text: "Attempt to decode",
+                text: "Play it back in full",
                 desc: "HIGH RISK. Mira works on the alien signal. Unknown consequences.",
                 effect: (state) => {
                     const roll = Math.random();
@@ -379,21 +379,20 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 2);
                         });
-                        state.addLog("The signal... opened. Something looked back at us through the data. We all felt it.");
-                        state.addLog("A.U.R.A.: 'I have been... noticed. I do not recommend further contact.'");
-                        return "Signal decoded. Something saw us. All crew +2 Stress.";
+                        state.addLog("It says our names back. Jaxon. Aris. Vance. Mira. Then it says: four crew. Then it stops.");
+                        state.addLog("A.U.R.A.: 'That is my voice, Commander. I have never said that.'");
+                        return "It knows our names. All crew +2 Stress.";
                     } else if (roll < 0.6) {
                         // Strange but beneficial
                         state._colonyKnowledge = (state._colonyKnowledge || 0) + 5;
                         state.sectorNodes?.forEach(p => p.remoteScanned = true);
-                        state.addLog("The signal contained star charts. Not from our space. Not from our time. But beautiful.");
-                        return "Alien data decoded. Colony knowledge +5. All planets revealed.";
+                        state.addLog("Behind our hail, every transponder in the sector, read out in order. All of them ours. All of them old.");
+                        return "Every transponder in the sector, read to us. +5 Data. All planets revealed.";
                     } else {
-                        // Gift
-                        state.energy = 100;
-                        state.salvage = Math.min(state.maxSalvage, state.salvage + 50);
-                        state.addLog("The signal was a beacon. When we decoded it, something... arrived. Left us resources. Then vanished.");
-                        return "Something responded. Energy full. +50 Salvage. We don't know why.";
+                        state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                        state.addLog("Our hail, and then one word added on the end, in A.U.R.A.'s voice: home.");
+                        state.addLog("Tech Mira: 'She would never say that. Would you?' A.U.R.A.: 'No, Commander.'");
+                        return "One word added to our hail. +3 Data.";
                     }
                 }
             },

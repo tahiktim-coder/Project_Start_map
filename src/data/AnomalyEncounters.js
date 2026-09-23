@@ -153,7 +153,7 @@ const ANOMALY_ENCOUNTERS = [
         context: () => `There is no visible anomaly. But every crew member can hear it — a sound below hearing, a voice without words. It knows your name. It knows things you've never told anyone. It wants to help.`,
         dialogue: [
             { speaker: 'Dr. Aris', text: "I can hear... my mother. She died before the launch. She's telling me to come closer." },
-            { speaker: 'Spc. Vance', text: "It's not real. It CAN'T be real. But it knows about Kepler-7. It knows what I did there." },
+            { speaker: 'Spc. Vance', text: "It's not real. It CAN'T be real. But it knows the number I counted in the bay. Nobody knows that number." },
             { speaker: 'Tech Mira', text: "The source is... everywhere? And nowhere? The signal has no origin point." }
         ],
         choices: [
@@ -706,7 +706,7 @@ const ANOMALY_ENCOUNTERS = [
         dialogue: [
             { speaker: 'A.U.R.A.', text: "Storage capacity: effectively infinite. I am detecting records from Earth. From civilizations that predated Earth. From... places that don't exist." },
             { speaker: 'Dr. Aris', text: "It's a library. The ultimate library. Everything that ever was or could be, written down and saved." },
-            { speaker: 'Tech Mira', text: "I found my own biography. It lists my death date. It's... soon." },
+            { speaker: 'Tech Mira', text: "I found our file. It's four lines long. Everyone's file is four lines long." },
             { speaker: 'Spc. Vance', text: "There's a section labeled 'EXODUS SHIPS - OUTCOMES.' Do we really want to read that?" }
         ],
         choices: [
@@ -715,13 +715,6 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "Learn what happened to all the ships. Knowledge at a cost.",
                 effect: (state) => {
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 10;
-                    state.exodusLogsFound = state.exodusLogsFound || [];
-                    // Add all remaining logs
-                    for (let i = 1; i <= 8; i++) {
-                        if (!state.exodusLogsFound.includes(i)) {
-                            state.exodusLogsFound.push(i);
-                        }
-                    }
 
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 2);

@@ -88,10 +88,10 @@ const SECTOR_CONFIG = {
         anomalyChance: 0.15,   // First glimpses of weirdness (increased from 0.05)
         colonyWarning: false,
         sectorColor: '#004488',
-        ambientDesc: 'A rhythmic tapping on all frequencies. Something is broadcasting.',
+        ambientDesc: 'Transponders. Hundreds of them, all on our channel, all old.',
         hazard: {
             id: 'INTERFERENCE',
-            description: 'Unknown signal source disrupts instruments',
+            description: 'Hundreds of dead transponders on the scan band scramble readings',
             onWarp: null,
             onScan: function(planet, state) {
                 // 20% chance remote scan gives false/scrambled data
@@ -162,7 +162,7 @@ const SECTOR_CONFIG = {
         anomalyChance: 0.35,    // Reality getting weird (increased from 0.20)
         colonyWarning: false,
         sectorColor: '#006600',
-        ambientDesc: 'It looks like home. That\'s what makes it dangerous.',
+        ambientDesc: 'It looks like home. Somebody thought so too.',
         hazard: {
             id: 'FALSE_PARADISE',
             description: 'Not everything green is safe',

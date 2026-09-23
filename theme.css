@@ -987,3 +987,26 @@
 @keyframes reel-rec { 50% { opacity: 0.2; } }
 
 @media (prefers-reduced-motion: reduce) { .reel-source i { animation: none; } }
+
+/* ── FoundPage.js: the six pages ── */
+.found-page-card { border-top-color: var(--amber); }
+.found-page-text { margin: 0; padding: 0 0 0 1.1em; display: grid; gap: 10px; font-size: 0.98em; line-height: 1.6; color: var(--bone); }
+.found-page-text li { opacity: 0; transform: translateY(4px); transition: opacity 320ms, transform 320ms; }
+.found-page-text li.is-in { opacity: 1; transform: none; }
+.found-page-next { justify-self: start; margin-top: 4px; }
+.found-page-after { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 0.92em; color: var(--bone); }
+.found-page-after b { margin-right: 10px; font: 600 0.72em var(--font-display); letter-spacing: 0.18em; color: var(--amber); }
+.found-plate-names { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; font: 600 0.72em var(--font-display); letter-spacing: 0.16em; color: var(--dim); }
+.found-plate-names li { padding: 4px 8px; border-left: 3px solid var(--line2); }
+.found-plate-names li i { color: var(--amber); font-style: normal; }
+.found-ledger { display: grid; align-content: start; gap: 2px; font: 0.74em var(--font-mono, monospace); color: var(--dim); max-height: 340px; overflow-y: auto; padding-right: 6px; }
+.found-ledger-row { display: grid; grid-template-columns: 1.5fr 0.6fr 0.7fr 1fr 1fr; gap: 6px; padding: 3px 6px; border-bottom: 1px solid var(--line); }
+.found-ledger-head { color: var(--bone); letter-spacing: 0.12em; font-weight: 600; border-bottom: 1px solid var(--line2); }
+.found-ledger-row.is-mine { color: var(--amber); }
+.found-ledger-row.is-you { color: var(--bone); background: rgba(217, 162, 74, 0.10); }
+.found-ledger-row i { color: var(--amber); font-style: normal; }
+.found-ledger-note { grid-column: 1 / -1; margin: 6px 0 0; font-size: 0.9em; color: var(--dim); }
+
+/* EVA choices: what you get, beside what it risks */
+.eva-choice > span { display: flex; flex-direction: column; gap: 3px; }
+.eva-choice .eva-gets { font: 600 0.7em var(--font-display); letter-spacing: 0.14em; color: var(--amber); font-style: normal; }

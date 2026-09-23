@@ -215,19 +215,9 @@ const SPACE_STATION_ENCOUNTERS = [
                 text: "Check the communication array",
                 desc: "Old distress signals. Might learn what happened to other ships.",
                 effect: (state) => {
-                    state.exodusLogsFound = state.exodusLogsFound || [];
-
-                    // Find a log they haven't seen
-                    for (let i = 1; i <= 8; i++) {
-                        if (!state.exodusLogsFound.includes(i)) {
-                            state.exodusLogsFound.push(i);
-                            state.addLog(`Recovered Exodus flight recorder data. New information about the fleet.`);
-                            return "Communication logs recovered. New Exodus data found.";
-                        }
-                    }
-
-                    state.addLog("All channels are static now. The voices stopped years ago.");
-                    return "No new transmissions found. Just echoes of the past.";
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.addLog("Old distress calls, all of them ours. The newest is decades old. +2 Data.");
+                    return "Every call on the array is an Exodus hull. None of them were answered. +2 Data.";
                 }
             }
         ]
