@@ -1,27 +1,45 @@
 /* NavVista — the sector map, alive. Same picture language as the opening sequence, carried into play:
      · dithered nebulae in the sector's colour, stars that twinkle
-     · the heading you were given runs across the map as a stream of moving dashes (thin in sector 1, a river by sector 6)
-     · dead hulls drift in that stream from sector 3 on
+     · the heading you were given runs across the map as a STILL field of dead transponder pips (a few in sector 1,
+       a graveyard by sector 6). Nothing flies here: every ship ahead was thrown at once and has been dead for centuries.
+       A few pips blink, slowly and out of step — dead beacons on backup cells. From sector 3 on, small dark hulls sit in the band.
+     · in sector 6 the band runs into the light at the end of the heading: a warm gold glow round the Structure's node, breathing
      · a pulse on the place you are, and a moving dashed course line to whatever you point at or select
    It draws on one low-resolution canvas behind the planet nodes and reads their positions from the page,
    so it never has to know how NavView lays them out. mount(mapElement, state) — stops itself when the map goes away. */
 
 (function () {
     'use strict';
-    const PIXEL = 2, TICK_MS = 90, STAR_COUNT = 150, CLOUD_COUNT = 6;
-    const STREAM_LANES = [0, 3, 5, 9, 14, 20, 28];        // index = sector: how many lanes of ships the heading carries
-    const WRECKS_FROM_SECTOR = 3, WRECKS_PER_SECTOR = 14, ATTACH_GRACE_MS = 5000;
+    const PIXEL = 2, TICK_MS = 90, STAR_COUNT = 150, CLOUD_COUNT = 6, ATTACH_GRACE_MS = 5000;
+    // The graveyard: how many dead transponders sit in the heading band, and how many hulls are big enough to see (index = sector)
+    const PIP_COUNT = [0, 6, 14, 40, 90, 160, 260], HULL_COUNT = [0, 0, 0, 4, 6, 8, 10];
+    const BAND_SPREAD = 0.26;                       // how far off the heading's centre line a pip may sit, as a share of the map height
+    const BAND_END_KEEP = 0.45;                     // sector 6: the band narrows toward the light but never to a thread — this much width is kept
+    const BAND_END_BIAS = 0.6;                      // sector 6: pips crowd toward the light (along = rand ^ this: <1 pushes them to the far end)
+    const PIP_DRIFT_PX_PER_S = 0.12;                // effectively still: the fastest pip moves a pixel every eight seconds or so
+    const PIP_BLINK_SHARE = 0.08, PIP_BLINK_MIN_MS = 5000, PIP_BLINK_MAX_MS = 12000, PIP_FLASH_MS = 200;
+    const PIP_MID_SHARE = 0.3, PIP_BIG_SHARE = 0.35; // a few pips are a shade brighter, a few are 2 px
+    const HULL_MIN_PX = 3, HULL_MAX_PX = 6;
+    const CORE_CLEAR_X = 1.15;                      // no pip sits on the light's face (in node radii); hulls may, as transits
+    // The light at the end: a warm gold glow round the Structure's node, dithered, breathing slowly
+    const GLOW_RADIUS_X = 2.5, GLOW_BREATH_MS = 4000, GLOW_BREATH_MIN = 0.7, GLOW_FALLOFF = 1.5, GLOW_FRAMES = 16;
+    const GOLD = ['#3e2f10', '#a8781f', '#ffd27a', '#fff3cf'];          // shadow → highlight; index 0 is never painted (nebula shows)
     // Nebulae are a hint of colour, never a wash: the brightest channel of a sector colour is capped before it is darkened,
-    // so a white sector (6) or a grey one (1) cannot turn the map into bright static. Sector 6 is tinted by the Structure itself.
-    const NEBULA_MAX_CHANNEL = 96, NEBULA_DENSITY = 0.6, NEBULA_OVERRIDE = { 6: [96, 52, 176] };
-    // Around the Structure: a pocket where nothing shines ("no signal comes back"), a violet rim, and the lanes ending in it
-    const POCKET_RADIUS = 0.2, POCKET_DARKNESS = 0.92, RIM_WIDTH = 0.035, RIM_PULSE_MS = 2600, LANE_SWALLOW = 0.55;
-    const VIOLET = '#8844ff', VIOLET_DIM = '#3a1f66';
-    const INK = [5, 7, 10], BONE = '#c4d0c4', DIM = '#2f5a48', GREEN = '#74d99a', AMBER = '#d9a24a', RED = '#a8453c';
-    const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-    const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
+    // so a white sector (6) or a grey one (1) cannot turn the map into bright static. Sector 6 is warmed by the light itself.
+    const NEBULA_MAX_CHANNEL = 96, NEBULA_DENSITY = 0.6, NEBULA_OVERRIDE = { 6: [96, 70, 32] };
+    const INK = [5, 7, 10], BONE = '#c4d0c4', DIM = '#2f5a48', GREEN = '#74d99a', AMBER = '#d9a24a';
+    const PIP_DIM = '#3b6a55', PIP_MID = '#7a9686', PIP_FLASH = '#e2ecdf', HULL_EDGE = '#5c7566';
+    // 8x8 Bayer threshold matrix, same recipe as DitherCore
+    const BAYER_N = 8, BAYER = (function bayer(n) {
+        if (n === 1) return [[0]];
+        const s = bayer(n / 2), h = n / 2, m = Array.from({ length: n }, () => new Array(n));
+        for (let y = 0; y < h; y++) for (let x = 0; x < h; x++) { const v = s[y][x] * 4; m[y][x] = v; m[y][x + h] = v + 2; m[y + h][x] = v + 3; m[y + h][x + h] = v + 1; }
+        return m;
+    })(BAYER_N).map(row => row.map(v => (v + 0.5) / (BAYER_N * BAYER_N)));
+    const dith = (x, y, v) => v > BAYER[y & 7][x & 7];
     const css = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
     const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    const sectorIndex = sector => Math.min(6, Math.max(0, sector | 0));
 
     function seeded(seed) { let s = (seed * 2654435761) >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
@@ -50,85 +68,103 @@
         return canvas;
     }
 
-    function buildScene(w, h, sector) {
-        const rand = seeded(sector + 41);
+    /** A place in the heading band, as a share of the way along it and an offset from its centre line. Sector 6 crowds toward the light. */
+    function bandPlace(rand, w, sector) {
         return {
-            w, h, sector, backdrop: buildBackdrop(w, h, sector),
+            along: Math.pow(rand(), sector >= 6 ? BAND_END_BIAS : 1),
+            offset: (rand() - 0.5) * rand() * BAND_SPREAD,
+            drift: (rand() - 0.5) * 2 * PIP_DRIFT_PX_PER_S / w / 1000,     // in "along" per ms
+        };
+    }
+
+    function buildScene(w, h, sector) {
+        const rand = seeded(sector + 41), idx = sectorIndex(sector);
+        return {
+            w, h, sector, backdrop: buildBackdrop(w, h, sector), glow: null,
             stars: Array.from({ length: STAR_COUNT }, () => ({ x: Math.floor(rand() * w), y: Math.floor(rand() * h), beat: rand() * 6.28, bright: rand() < 0.2 })),
-            lanes: Array.from({ length: STREAM_LANES[Math.min(6, sector)] || 3 }, () => ({ offset: (rand() - 0.5) * rand() * 0.22, speed: 0.5 + rand(), phase: rand() * 40 })),
-            wrecks: Array.from({ length: sector >= WRECKS_FROM_SECTOR ? (sector - 2) * WRECKS_PER_SECTOR : 0 }, () => ({ along: rand(), offset: (rand() - 0.5) * rand() * 0.3, drift: 0.2 + rand() * 0.5 })),
+            pips: Array.from({ length: PIP_COUNT[idx] }, () => Object.assign(bandPlace(rand, w, sector), {
+                tone: rand() < PIP_MID_SHARE ? PIP_MID : PIP_DIM, size: rand() < PIP_BIG_SHARE ? 2 : 1,
+                blink: rand() < PIP_BLINK_SHARE, period: PIP_BLINK_MIN_MS + rand() * (PIP_BLINK_MAX_MS - PIP_BLINK_MIN_MS), phase: rand() * PIP_BLINK_MAX_MS,
+            })),
+            hulls: Array.from({ length: HULL_COUNT[idx] }, () => Object.assign(bandPlace(rand, w, sector), { length: HULL_MIN_PX + Math.floor(rand() * (HULL_MAX_PX - HULL_MIN_PX + 1)) })),
         };
     }
 
     /**
      * The heading: from the lower left of the map to the upper right, where the next sector is. When the Structure is on
-     * this map the heading runs into it instead, and every lane narrows onto it (offset shrinks to nothing at the end).
+     * this map the heading runs into it instead, and the band narrows onto it — but keeps some width, so it reads as a
+     * crowd gathered round a light, not a thread.
      */
     function headingPoint(scene, along, offset) {
         const end = scene.end;
         if (!end) return { x: along * scene.w, y: scene.h * (0.82 - along * 0.64) + offset * scene.h };
-        const startY = scene.h * 0.86, narrowing = Math.pow(1 - along, 0.8);
-        return { x: along * end.x, y: startY + (end.y - startY) * along + offset * scene.h * narrowing };
+        const startY = scene.h * 0.86, keep = BAND_END_KEEP + (1 - BAND_END_KEEP) * Math.pow(1 - along, 0.8);
+        return { x: along * end.x, y: startY + (end.y - startY) * along + offset * scene.h * keep };
     }
 
-    function drawStream(ctx, scene, time) {
-        scene.lanes.forEach(lane => {
-            for (let step = 0; step < scene.w; step += 2) {
-                const inDash = (((step - time * 0.02 * lane.speed - lane.phase) % 26) + 26) % 26;
-                if (inDash > 8) continue;
-                const along = step / scene.w, p = headingPoint(scene, along, lane.offset);
-                if (scene.end && isSwallowed(scene, p, step, lane)) continue;
-                ctx.fillStyle = inDash > 6 ? '#d6ffe4' : inDash > 3 ? GREEN : DIM;
-                ctx.fillRect(Math.round(p.x), Math.round(p.y), inDash > 6 ? 2 : 1, 1);
-            }
+    /** Where something in the band is right now: its place plus a drift so slow it is still to the eye. */
+    function bandPoint(scene, item, time) {
+        return headingPoint(scene, (((item.along + time * item.drift) % 1) + 1) % 1, item.offset);
+    }
+
+    /** The dead transponders: still dots in the band. A few flash, slowly and out of step. */
+    function drawPips(ctx, scene, time) {
+        const clear = scene.end ? scene.end.r * CORE_CLEAR_X : 0;
+        let last = null;
+        scene.pips.forEach(pip => {
+            const p = bandPoint(scene, pip, time);
+            if (scene.end && Math.hypot(p.x - scene.end.x, p.y - scene.end.y) < clear) return;
+            const lit = pip.blink && ((time + pip.phase) % pip.period) < PIP_FLASH_MS, colour = lit ? PIP_FLASH : pip.tone, size = lit ? 2 : pip.size;
+            if (colour !== last) { ctx.fillStyle = colour; last = colour; }
+            ctx.fillRect(Math.round(p.x), Math.round(p.y), size, size);
         });
-        scene.wrecks.forEach((wreck, i) => {
-            const p = headingPoint(scene, (wreck.along + time * 0.000004 * wreck.drift) % 1, wreck.offset), x = Math.round(p.x), y = Math.round(p.y);
-            if (scene.end && Math.hypot(p.x - scene.end.x, p.y - scene.end.y) < scene.end.pocket * 0.7) return;
-            ctx.fillStyle = i % 3 ? RED : BONE; ctx.fillRect(x, y, 3, 1); ctx.fillRect(x + 1, y - 1, 1, 1);
-            if (i % 5 === 0 && Math.floor(time / 600 + i) % 3 === 0) { ctx.fillStyle = AMBER; ctx.fillRect(x + 1, y - 2, 1, 1); }
+    }
+
+    /** Small dead hulls: a dark body, blacker than the nebula, with one edge catching what little light there is. In the glow they are transits. */
+    function drawHulls(ctx, scene, time) {
+        scene.hulls.forEach(hull => {
+            const p = bandPoint(scene, hull, time), x = Math.round(p.x), y = Math.round(p.y);
+            ctx.fillStyle = css(INK); ctx.fillRect(x, y, hull.length, 2);
+            ctx.fillStyle = HULL_EDGE; ctx.fillRect(x + 1, y - 1, hull.length - 2, 1);
         });
     }
 
-    /** Inside the pocket a dash survives less the closer it gets: the lanes thin out and vanish into the Structure. */
-    function isSwallowed(scene, p, step, lane) {
-        const d = Math.hypot(p.x - scene.end.x, p.y - scene.end.y) / scene.end.pocket;
-        if (d >= 1) return false;
-        const keep = Math.pow(d, 1.6) * (1 - LANE_SWALLOW) + (d > 0.35 ? LANE_SWALLOW * d : 0);
-        return ((step * 13 + Math.round(lane.phase * 7)) % 17) / 17 > keep;
+    /** The light at the end, painted once per breath phase and cached: a dithered gold glow round the Structure's node. */
+    function buildGlowFrames(r) {
+        const R = r * GLOW_RADIUS_X, size = Math.ceil(R) * 2 + 2, c = size / 2, top = GOLD.length - 1;
+        const tone = new Float32Array(size * size);                         // how lit each pixel is at full breath, computed once
+        for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+            const d = Math.hypot(x + 0.5 - c, y + 0.5 - c) / R;
+            tone[y * size + x] = d < 1 ? Math.pow(1 - d, GLOW_FALLOFF) * top : 0;
+        }
+        return Array.from({ length: GLOW_FRAMES }, (_, i) => {
+            const breath = 0.5 + 0.5 * Math.sin(i / GLOW_FRAMES * Math.PI * 2), bright = GLOW_BREATH_MIN + (1 - GLOW_BREATH_MIN) * breath;
+            const canvas = document.createElement('canvas'); canvas.width = size; canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            let last = 0;
+            for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+                const pos = tone[y * size + x] * bright, base = Math.floor(pos);
+                const level = pos ? Math.min(top, base + (pos - base > BAYER[y & 7][x & 7] ? 1 : 0)) : 0;
+                if (!level) continue;
+                if (level !== last) { ctx.fillStyle = GOLD[level]; last = level; }
+                ctx.fillRect(x, y, 1, 1);
+            }
+            return canvas;
+        });
     }
 
-    /** A pocket where nothing shines, pressed over nebula and stars: the Structure stands in the one place that is truly black. */
-    function drawPocket(ctx, scene) {
-        const { x, y, pocket } = scene.end, ink = `rgb(${INK.join(',')})`;
-        ctx.fillStyle = ink;
-        for (let py = Math.max(0, Math.floor(y - pocket)); py < Math.min(scene.h, y + pocket); py++)
-            for (let px = Math.max(0, Math.floor(x - pocket)); px < Math.min(scene.w, x + pocket); px++) {
-                const d = Math.hypot(px - x, py - y) / pocket;
-                if (d < 1 && dith(px, py, (1 - d * d) * POCKET_DARKNESS * 1.3)) ctx.fillRect(px, py, 1, 1);
-            }
-    }
-
-    /** A thin violet rim round the pocket, breathing slowly; brighter on the side the lanes come in from. */
-    function drawRim(ctx, scene, time) {
-        const { x, y, r } = scene.end, breath = 0.5 + 0.5 * Math.sin(time / RIM_PULSE_MS * Math.PI * 2);
-        const inner = r * 1.35, outer = inner + Math.max(3, scene.w * RIM_WIDTH);
-        for (let py = Math.max(0, Math.floor(y - outer)); py < Math.min(scene.h, y + outer); py++)
-            for (let px = Math.max(0, Math.floor(x - outer)); px < Math.min(scene.w, x + outer); px++) {
-                const d = Math.hypot(px - x, py - y);
-                if (d < inner || d > outer) continue;
-                const edge = 1 - (d - inner) / (outer - inner), facing = 0.55 + 0.45 * ((x - px) / d);   // lit from the lower left, where the lanes arrive
-                if (dith(px, py, edge * edge * facing * (0.55 + 0.35 * breath))) { ctx.fillStyle = edge > 0.7 ? VIOLET : VIOLET_DIM; ctx.fillRect(px, py, 1, 1); }
-            }
+    function drawGlow(ctx, scene, time) {
+        const { x, y, r } = scene.end, key = `${Math.round(x)},${Math.round(y)},${r}`;
+        if (!scene.glow || scene.glow.key !== key) scene.glow = { key, frames: buildGlowFrames(r) };
+        const frame = scene.glow.frames[Math.floor((time % GLOW_BREATH_MS) / GLOW_BREATH_MS * GLOW_FRAMES)];
+        ctx.drawImage(frame, Math.round(x - frame.width / 2), Math.round(y - frame.height / 2));
     }
 
     /** The Structure's node, if it is on this map, measured in canvas pixels. */
     function structurePoint(map, scene, state) {
         const structure = (state.sectorNodes || []).find(p => p.isStructure || p.type === 'STRUCTURE');
         const node = structure && map.querySelector(`.nav-node[data-id="${CSS.escape(String(structure.id))}"]`);
-        if (!node) return null;
-        const at = centreOf(map, node);
-        return Object.assign(at, { pocket: Math.max(at.r * 2.6, scene.w * POCKET_RADIUS) });
+        return node ? centreOf(map, node) : null;
     }
 
     function drawStars(ctx, scene, time) {
@@ -171,6 +207,9 @@
     function mount(map, state) {
         if (!map || !state) return;
         map.querySelectorAll('.nav-vista').forEach(old => old.remove());
+        // NavView still writes the old static background's sweeping ".scanner-bar" (a 2 px, full-height glowing line that slides
+        // left to right every 8 s). Over the living backdrop it reads as a stray vertical line at a random x. The vista replaces it.
+        map.querySelectorAll('.scanner-bar').forEach(bar => bar.remove());
         const canvas = document.createElement('canvas');
         canvas.className = 'nav-vista';
         canvas.setAttribute('aria-hidden', 'true');
@@ -193,9 +232,9 @@
             scene.end = structurePoint(map, scene, state);
             ctx.drawImage(scene.backdrop, 0, 0);
             drawStars(ctx, scene, time);
-            if (scene.end) drawPocket(ctx, scene);
-            drawStream(ctx, scene, time);
-            if (scene.end) drawRim(ctx, scene, time);
+            if (scene.end) drawGlow(ctx, scene, time);
+            drawPips(ctx, scene, time);
+            drawHulls(ctx, scene, time);
             const ship = shipPoint(map, scene, state), goal = map.querySelector(`.nav-node[data-id="${CSS.escape(String(targetId || pinnedId || ''))}"]`);
             if (goal) drawCourse(ctx, ship, centreOf(map, goal), time);
             if (ship.r) drawPulse(ctx, ship, time);

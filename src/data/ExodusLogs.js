@@ -34,7 +34,7 @@ const EXODUS_LOGS = [
     },
     {
         id: 'PAGE_THROW', sector: 3, kind: 'log', type: 'EXODUS_LOG', value: 0, isKept: true,
-        name: 'Captain\'s Log, EXODUS-640',
+        name: 'Captain\'s Log (thrown less far back)',
         desc: 'The last entry in a captain\'s log. The hull number is higher than ours. The rust is older.',
         logTitle: 'LAST ENTRY',
         lines: [
@@ -71,7 +71,7 @@ const EXODUS_LOGS = [
     },
     {
         id: 'PAGE_LIGHT', sector: 6, kind: 'log', type: 'EXODUS_LOG', value: 0, isKept: true,
-        name: 'Captain\'s Log, EXODUS-40,991',
+        name: 'Captain\'s Log (the light)',
         desc: 'A log from a hull four centuries dead, a day\'s flight from the light.',
         logTitle: 'LAST ENTRY',
         lines: [

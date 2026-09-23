@@ -102,8 +102,6 @@ class NavView {
                     return '';
                 })()}">
                     ${nodesHtml}
-                    <!-- Scanner Bar Animation -->
-                    <div class="scanner-bar" style="position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: linear-gradient(to bottom, transparent, var(--color-primary), transparent); opacity: 0.5; box-shadow: 0 0 10px var(--color-primary); animation: scan 8s linear infinite; pointer-events: none; z-index: 5;"></div>
                 </div>
             </div>
         `;

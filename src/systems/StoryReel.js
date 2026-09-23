@@ -223,8 +223,39 @@
         if (Math.floor(t / 90) % 23 === 0) { const y = Math.floor((t * 7) % H); ctx.drawImage(ctx.canvas, 0, y, W, 2, 6, y, W, 2); }
     }
 
+    /** The light, filling the right of the frame: a sun that is not warm. A violet band crosses the picture, reading it. */
+    function drawLight(ctx, t, shown) {
+        const cx = W + 40, cy = H / 2, R = 150 * shown, breath = 1 + 0.03 * Math.sin(t / 640);
+        if (shown <= 0) return;
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+            const d = Math.hypot(x - cx, y - cy) / (R * breath);
+            if (d > 1.9) continue;
+            const tone = d < 0.55 ? 1 : d < 1 ? 0.62 + 0.38 * (1 - (d - 0.55) / 0.45) : Math.pow(1 - (d - 1) / 0.9, 2) * 0.5;
+            if (!dith(x, y, tone)) continue;
+            ctx.fillStyle = d < 0.55 ? '#ffffff' : d < 0.8 ? '#ffe08a' : d < 1 ? '#f0a020' : d < 1.4 ? '#c24a10' : '#3a1206';
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+    function drawReading(ctx, t, from, period) {
+        const x = ((t - from) / period) * (W + 60) - 30;
+        if (t < from) return;
+        for (let px = Math.max(0, Math.floor(x - 14)); px < Math.min(W, x + 14); px++) for (let py = 0; py < H; py++)
+            if (dith(px, py, 0.55 - Math.abs(px - x) / 28)) { ctx.fillStyle = '#8844ff'; ctx.fillRect(px, py, 1, 1); }
+    }
+
     // ── the reels: beats are [start ms, caption]; draw(ctx, world, t) paints the frame at time t ──
     const REELS = {
+        reading: {
+            length: 12500,
+            source: 'HULL CAMERA · FORWARD',
+            beats: [[400, 'It fills every window.'], [3200, 'It is not warm.'], [6200, 'Something moves across the ship, left to right.'], [9600, 'It reads her first.']],
+            draw(ctx, world, t) {
+                ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+                drawLight(ctx, t, span(t, 0, 2600));
+                drawShip(ctx, 150 + Math.round(Math.sin(t / 900) * 2), 118 + Math.round(Math.sin(t / 1300) * 2), t, false);
+                drawReading(ctx, t, 6200, 5200);
+            },
+        },
         program: {
             length: 15000,
             source: 'EXODUS PROGRAMME · CREW BRIEFING FILM',

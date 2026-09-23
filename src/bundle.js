@@ -434,7 +434,7 @@ class GameState {
         this._standing = this._standing || { vance: 0, aris: 0, jaxon: 0, mira: 0 };
         this._standing[who] = (this._standing[who] || 0) + (delta == null ? 1 : delta);
     }
-    hasStanding(who) { return ((this._standing || {})[who] || 0) >= 2; }
+    hasStanding(who, needed) { return ((this._standing || {})[who] || 0) >= (needed == null ? 2 : needed); }
 
     /** The dead do not talk, and the commander is the player: neither gets a spoken line in the log. */
     isSilentSpeaker(message) {
@@ -1171,12 +1171,7 @@ class App {
             // THE STRUCTURE - Cannot escape. Ship mysteriously returns.
             const currentPlanet = this.state.currentSystem;
             if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
-                this.state.addLog("A.U.R.A.: 'Starting orbital departure sequence...'");
-                this.state.addLog("...");
-                this.state.addLog("A.U.R.A.: 'Anomaly detected. Navigation systems report departure successful.'");
-                this.state.addLog("A.U.R.A.: 'However... we remain in orbit of THE STRUCTURE.'");
-                this.state.addLog("A.U.R.A.: 'I do not understand. The ship moved. The destination did not change.'");
-                this.state.addLog("A.U.R.A.: 'We cannot leave, Commander. THE STRUCTURE will not permit it.'");
+                this.state.addLog('A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times."');
                 // Ship stays in orbit - don't clear currentSystem
                 return;
             }
@@ -1673,8 +1668,8 @@ class App {
                     this.state.addLog(`Entered debris field. Navigation systems active.`);
                 } else if (planet.isStructure || planet.type === 'STRUCTURE') {
                     // THE STRUCTURE - special arrival
-                    this.state.addLog(`Approach complete. THE STRUCTURE fills every viewport.`);
-                    this.state.addLog(`A.U.R.A.: 'We have arrived. There is nowhere else to go.'`);
+                    this.state.addLog(`Approach complete. The light fills every window. It is not warm.`);
+                    this.state.addLog(`A.U.R.A.: "Five crew, Commander. All accounted for."`);
                     // Switch to Heaven music
                     if (window.AudioSystem && window.AudioSystem.playHeavenMusic) {
                         window.AudioSystem.playHeavenMusic();
@@ -2137,9 +2132,10 @@ class App {
                 window.AuraSystem.tryComment('SECTOR_JUMP', this.state);
             }
 
-            // Show warp animation with crew dialogue, then campfire event
+            // Show warp animation with crew dialogue, then campfire event. Into sector 3 the burn stalls and the throw plays first.
+            const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
             this.showWarpAnimation(() => {
-                this.showCampfireEvent(() => {
+                (isThrow ? window.TheThrow.play(this) : Promise.resolve()).then(() => this.showCampfireEvent(() => {
                 this._isInTransit = false;
                 const nextSector = this.state.currentSector + 1;
                 this.state.sectorNodes = PlanetGenerator.generateSector(nextSector);
@@ -2168,7 +2164,7 @@ class App {
 
                 // Special barks for sector entries
                 // The picture that closes the sector you just left: sector 3 gets the long one (the truth), the rest a five-second shot
-                if (window.StoryReel && !window.TEST_MODE) window.StoryReel.play(nextSector === 3 ? 'corridor' : `jump${nextSector}`);
+                if (window.StoryReel && !window.TEST_MODE && nextSector !== 3) window.StoryReel.play(`jump${nextSector}`);
                 if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
                     if (nextSector === 3) {
                         window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
@@ -2176,21 +2172,23 @@ class App {
                         window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state); // key kept for saves; the lines are about the LAST sector
                     }
                 }
-                });
-            });
+                }));
+            }, isThrow);
         }
     }
 
     /**
      * Show warp animation with crew dialogue during sector jump
      */
-    showWarpAnimation(onComplete) {
+    showWarpAnimation(onComplete, isStalled) {
         if (window.WarpPlot) {
             const nextSector = this.state.currentSector + 1;
             const name = (typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[nextSector]) ? SECTOR_CONFIG[nextSector].name : `SECTOR ${nextSector}`;
-            const plotOptions = this.getPlotOptions(`S${nextSector} — ${name}`, 'sector');
+            const plotOptions = this.getPlotOptions(`S${nextSector} — ${isStalled ? '' : name}`.trim(), 'sector');
             const living = this.state.crew.filter(c => c.status !== 'DEAD');
-            plotOptions.arrival = {
+            plotOptions.arrival = isStalled ? {                                             // the burn does not finish: no name, no line, nobody speaks
+                kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The third burn did not finish.', voices: [],
+            } : {
                 kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`,
                 title: name,
                 line: SECTOR_ARRIVAL_LINES[nextSector] || '',
@@ -2877,32 +2875,14 @@ Then you're through.`,
         // Accepting your fate in THE WRONG PLACE is a unique ending
         this.showEndingScreen({
             ending: 'WRONG_PLACE_ACCEPTED',
-            title: 'THE WRONG PLACE',
-            text: `You stop fighting.
-
-The engines go quiet. The lights dim. The crew gathers on the bridge and watches the impossible stars.
-
-A.U.R.A. speaks one last time: "I understand now. This place... it's not wrong. It's just different. Perhaps it was always waiting for us."
-
-One by one, you stop seeing the strangeness. The colors that shouldn't exist become beautiful. The geometry that hurts to perceive becomes... home.
-
-The Exodus-9 settles into orbit around a world that exists in no chart, in no dimension, in no time you've ever known.
-
-You step outside.
-
-The air shouldn't be breathable. You breathe it anyway.
-
-The ground shouldn't hold your weight. It holds you anyway.
-
-You build. You live. You forget what "normal" ever meant.
-
-Somewhere, somewhen, the universe continues without you.
-
-You don't miss it.
-
-You are exactly where you were always meant to be.
-
-You are home.`
+            title: 'A COPY OF SOMEWHERE',
+            text: [
+                'You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows.',
+                'It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong.',
+                'You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again.',
+                'Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four.',
+            ],
+            vault: 'Twin 0009 begins, very quietly, to repeat itself.',
         });
     }
 
@@ -2968,9 +2948,7 @@ You are home.`
             return;
         }
 
-        this.state.addLog("===================================");
-        this.state.addLog("APPROACHING THE STRUCTURE...");
-        this.state.addLog("===================================");
+        this.state.addLog("Going into the light.");
 
         // Show the approach modal with cinematic text
         this.showStructureModal(encounter, planet);
@@ -2978,24 +2956,27 @@ You are home.`
 
     showStructureModal(encounter, planet) {
         const SPEAKER_ROLE = { 'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC', 'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST' };
-        const MAX_LINES = 3;
         const isAlive = (speaker) => {
             const role = SPEAKER_ROLE[speaker];
             if (!role) return true;
             const member = this.state.crew.find(c => c.tags.includes(role));
             return !!member && member.status !== 'DEAD';
         };
-        window.EncounterCard.open(this, {
-            color: '#a97bff', kicker: 'THE END OF THE CORRIDOR', title: 'The Structure', zIndex: 3000,
-            context: encounter.approach.context().trim().replace(/\n+/g, ' '),
-            dialogue: encounter.approach.dialogue.filter(d => isAlive(d.speaker)).slice(0, MAX_LINES),
-            choices: encounter.choices.map(c => ({ text: c.text, desc: c.desc })),
+        const a = encounter.approach;
+        // the reading (a picture), then the disc inside the light, then the choice; nothing here is random
+        const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('reading') : Promise.resolve();
+        reel.then(() => (window.DiscDocument ? window.DiscDocument.open(this, {
+            kicker: 'INSIDE THE LIGHT · THE DISC, BEING READ', title: 'The disc', aura: 'Five crew, Commander. All accounted for.', close: 'GO ON', closeNote: 'there is nothing else in here',
+        }) : Promise.resolve())).then(() => window.EncounterCard.open(this, {
+            color: '#ffd27a', kicker: a.kicker, title: a.title, zIndex: 3000, context: a.context,
+            dialogue: a.dialogue.filter(d => isAlive(d.speaker)),
+            choices: encounter.choices.map(c => ({ text: c.text, desc: c.desc, requires: c.requires, requiresLabel: c.requiresLabel })),
             onPick: (idx) => {
                 const result = encounter.choices[idx].effect(this.state);
                 planet.structureApproached = true;
                 this.showEndingScreen(result);
             }
-        });
+        }));
     }
 
     showEndingScreen(result) {
@@ -3030,16 +3011,9 @@ You are home.`
             </div>`;
         }
 
-        // Clean up the text - handle both pre-formatted and regular text
-        let cleanText = result.text || '';
-        // Trim leading/trailing whitespace from each line and the whole text
-        cleanText = cleanText.split('\n').map(line => line.trim()).join('\n').trim();
-        // Convert double newlines to paragraph breaks
-        cleanText = cleanText.replace(/\n\n+/g, '</p><p>');
-        // Convert remaining single newlines to breaks
-        cleanText = cleanText.replace(/\n/g, '<br>');
-        // Wrap in paragraph tags
-        cleanText = '<p>' + cleanText + '</p>';
+        // An ending is a few short paragraphs, then one line about the vault on Earth
+        const paragraphs = Array.isArray(result.text) ? result.text : String(result.text || '').split(/\n\n+/).map(line => line.trim()).filter(Boolean);
+        const cleanText = paragraphs.map(p => `<p>${p}</p>`).join('') + (result.vault ? `<p class="end-vault"><b>IN THE VAULT ON EARTH</b>${result.vault}</p>` : '');
 
         modal.innerHTML = `
             <div style="

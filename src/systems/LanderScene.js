@@ -1,7 +1,9 @@
 /* LanderScene — everything in the landing minigame that is not physics: the place you are landing on.
    build(ground, planet) paints a static backdrop once (dithered sky glow, a lit moon, far ridges or cloud decks,
-   shaded terrain with strata, rocks and per-world dressing, the pad structure). drawLive() adds what moves each frame:
-   lava and water, pad beacons and approach chevrons, wind, fog, exhaust smoke, dust, the lander's shadow, the ship above.
+   shaded terrain with strata, rocks and per-world dressing). drawLive() adds what moves each frame:
+   lava and water, wind, fog, exhaust smoke, dust, the lander's shadow, the ship above.
+   Nobody built anything on these worlds: the level ground you land on is just ground. The one exception is a gas
+   giant, which has no ground at all — there a floating rig with beacons, chevrons and lift pods is the only place to set down.
    Colours come from the planet's own dither ramp, so the ground matches the globe you saw from orbit. */
 
 (function () {
@@ -106,7 +108,9 @@
         }
     }
 
-    const isFreeGround = (g, x) => x > 2 && x < W - 3 && !g.hot[x] && g.heights[x] < H && (x < g.padX - 3 || x > g.padX + PAD_WIDTH + 3);
+    const DRESSING_GAP = 3; // rocks and growth keep this far off a level stretch, so a flat ledge looks like one
+    const isOnLevel = (g, x) => (g.level || []).some(l => x >= l.x0 - DRESSING_GAP && x <= l.x1 + DRESSING_GAP);
+    const isFreeGround = (g, x) => x > 2 && x < W - 3 && !g.hot[x] && g.heights[x] < H && !isOnLevel(g, x);
 
     /** What grows, juts or lies on the surface: this is what makes an ice world not look like a desert. */
     function paintDressing(ctx, g, ramp, rand, kindName) {
@@ -124,15 +128,14 @@
         }
     }
 
-    function paintPad(ctx, g) {
+    /** The gas-giant rig: a floating deck with girders hanging under it, two lift pods, and beacon masts. */
+    function paintPlatform(ctx, g) {
         const x = g.padX, y = g.padY;
         for (let k = 0; k < PAD_WIDTH; k++) put(ctx, x + k, y + 1, Math.floor(k / 4) % 2 ? AMBER_DIM : '#15181a'); // hazard stripes under the deck
         ctx.fillStyle = BONE; ctx.fillRect(x, y, PAD_WIDTH, 1);
         ctx.fillStyle = '#3a3f3c';
-        if (g.kind.platform) { // a floating rig: girders hanging under the deck, two lift pods
-            for (let d = 2; d < 16; d++) for (let k = d; k < PAD_WIDTH - d; k++) if ((k + d) % 4 === 0 || d === 2) put(ctx, x + k, y + d, '#3a3f3c');
-            ctx.fillRect(x - 5, y - 1, 5, 6); ctx.fillRect(x + PAD_WIDTH, y - 1, 5, 6);
-        } else { ctx.fillRect(x + 3, y + 2, 2, 5); ctx.fillRect(x + PAD_WIDTH - 5, y + 2, 2, 5); ctx.fillRect(x + PAD_WIDTH / 2 - 1, y + 2, 2, 4); }
+        for (let d = 2; d < 16; d++) for (let k = d; k < PAD_WIDTH - d; k++) if ((k + d) % 4 === 0 || d === 2) put(ctx, x + k, y + d, '#3a3f3c');
+        ctx.fillRect(x - 5, y - 1, 5, 6); ctx.fillRect(x + PAD_WIDTH, y - 1, 5, 6);
         ctx.fillStyle = '#3a3f3c'; ctx.fillRect(x - 1, y - 4, 1, 4); ctx.fillRect(x + PAD_WIDTH, y - 4, 1, 4); // beacon masts
     }
 
@@ -146,7 +149,7 @@
         if (g.kind.platform) paintCloudDecks(ctx, ramp, rand); else paintFarRidge(ctx, ramp, rand);
         paintTerrain(ctx, g, ramp, kindName);
         paintDressing(ctx, g, ramp, rand, kindName);
-        paintPad(ctx, g);
+        if (g.kind.platform) paintPlatform(ctx, g);
         return { backdrop: canvas, ramp, kindName, particles: [], lastNow: 0, dustColor: css(ramp[3]), fogColor: css(mix(ramp[2], INK, 0.3)) };
     }
 
@@ -164,8 +167,8 @@
         }
     }
 
-    /** Blinking masts and chevrons sliding down toward the deck: "land here". */
-    function drawPadLights(ctx, g, now) {
+    /** The rig's blinking masts and chevrons sliding down toward the deck: "land here". Gas giants only — real ground has no lights. */
+    function drawPlatformLights(ctx, g, now) {
         const isOn = Math.floor(now / 350) % 2 === 0, cx = g.padX + PAD_WIDTH / 2, slide = Math.floor(now / 110) % 12;
         ctx.fillStyle = isOn ? AMBER : AMBER_DIM;
         ctx.fillRect(g.padX - 2, g.padY - 6, 3, 2); ctx.fillRect(g.padX + PAD_WIDTH - 1, g.padY - 6, 3, 2);
@@ -174,7 +177,7 @@
             ctx.fillStyle = fade > 0.5 ? AMBER : AMBER_DIM;
             for (let k = 0; k < 4; k++) { ctx.fillRect(cx - 4 + k, y + k, 1, 1); ctx.fillRect(cx + 3 - k, y + k, 1, 1); }
         }
-        if (g.kind.platform) { ctx.fillStyle = isOn ? '#7fd0de' : '#1d5563'; ctx.fillRect(g.padX - 4, g.padY + 5, 3, 2); ctx.fillRect(g.padX + PAD_WIDTH + 1, g.padY + 5, 3, 2); } // lift pods
+        ctx.fillStyle = isOn ? '#7fd0de' : '#1d5563'; ctx.fillRect(g.padX - 4, g.padY + 5, 3, 2); ctx.fillRect(g.padX + PAD_WIDTH + 1, g.padY + 5, 3, 2); // lift pods
     }
 
     function drawWeather(ctx, g, scene, now) {
@@ -242,7 +245,7 @@
         ctx.drawImage(scene.backdrop, 0, 0);
         drawPools(ctx, g, now);
         drawWeather(ctx, g, scene, now);
-        drawPadLights(ctx, g, now);
+        if (g.kind.platform) drawPlatformLights(ctx, g, now);
         drawShadow(ctx, g, s);
         if (nozzles.length && !s.grade) emit(scene, g, s, nozzles);
         drawParticles(ctx, scene, g, dt);

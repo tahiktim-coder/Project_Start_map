@@ -116,18 +116,18 @@ class OrbitView {
     renderStructure(planet) {
         const isDone = !!planet.structureApproached;
         this.siteScreen({
-            heading: 'THE END OF THE HEADING', name: planet.name,
+            heading: 'THE END OF THE HEADING', name: 'The light',
             facts: [
-                ['WHAT IT IS', 'Not a planet. Not a ship.', 'warn'],
-                ['HOW BIG', 'The instruments give up', 'bad'],
-                ['HOW OLD', 'Older than life on Earth', 'bad'],
-                ['OUR SHIPS', 'Every transponder we followed ends here'],
-                ['ANYONE ALIVE', 'Nothing answers'],
+                ['WHAT IT IS', 'It looks like a sun', 'warn'],
+                ['HOW WARM', 'It is not', 'bad'],
+                ['HOW OLD', 'Older than every wreck behind you', 'bad'],
+                ['OUR SHIPS', 'Every transponder on the heading ends here'],
+                ['ANYONE ALIVE', 'Nothing answers. Something reads.'],
             ],
-            note: planet.desc || 'It has always been here. Waiting.',
+            note: 'Every crew before you flew toward it. It looked like a home star to them too.',
             tip: isDone
                 ? { title: 'IT IS DONE', text: 'There is nothing more to decide here.' }
-                : { title: 'BEFORE YOU APPROACH', text: 'This is the end of the journey. Whatever you choose in front of it is final, for you and for everyone aboard.' },
+                : { title: 'BEFORE YOU GO IN', text: 'This is the end of the heading. What you choose in front of it is final, for you and for everyone aboard.' },
             visualHtml: window.StructureVista ? '' : ((window.BodyRenderer && BodyRenderer.body(planet, OrbitView.heroSize()))
                 || '<div class="planet-visual type-STRUCTURE" style="width: 300px; height: 300px; position: relative;"></div>')
         });
@@ -421,14 +421,14 @@ class OrbitView {
                 }
 
                 ${planet.isStructure && !planet.structureApproached
-                    ? `<button class="cmd-btn" id="btn-structure" style="border-color: #ffffff; color: #ffffff; animation: structure-pulse 3s infinite; background: linear-gradient(135deg, rgba(68,0,136,0.3), rgba(136,68,255,0.2));">
-                        <div style="font-size: 1.1em; font-weight: bold;">APPROACH THE STRUCTURE</div>
-                        <div class="cost" style="color: #ccaaff;">/// THE THRESHOLD AWAITS ///</div>
+                    ? `<button class="cmd-btn" id="btn-structure" style="border-color: #ffd27a; color: #fff3cf; background: linear-gradient(135deg, rgba(168,120,31,0.28), rgba(255,210,122,0.14));">
+                        <div style="font-size: 1.1em; font-weight: bold;">GO INTO THE LIGHT</div>
+                        <div class="cost" style="color: #ffd27a;">IT READS WHATEVER REACHES IT</div>
                        </button>`
                     : (planet.structureApproached
                         ? `<button class="cmd-btn" id="btn-structure" disabled style="border-color: #555; color: #555;">
-                            <div>THRESHOLD CROSSED</div>
-                            <div class="cost">YOUR CHOICE HAS BEEN MADE</div>
+                            <div>IT IS DONE</div>
+                            <div class="cost">THERE IS NOTHING MORE TO DECIDE</div>
                            </button>`
                         : '')
                 }

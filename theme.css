@@ -942,8 +942,10 @@
 
 /* ── the Structure's orbit screen: the picture is the panel (StructureVista.js) ── */
 .site-screen.is-structure .site-heading small,
-.site-screen.is-structure .site-tip b { color: #b79bff; }
-.site-screen.is-structure .site-tip { border-left-color: #8844ff; background: rgba(136, 68, 255, 0.08); }
+.site-screen.is-structure .site-tip b { color: #ffd27a; }
+.site-screen.is-structure .site-tip { border-left-color: #ffd27a; background: rgba(255, 210, 122, 0.08); }
+.end-vault { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--bone); }
+.end-vault b { display: block; margin-bottom: 4px; font: 600 0.68em var(--font-display); letter-spacing: 0.2em; color: var(--amber); }
 .site-screen.is-structure .site-visual { position: relative; align-self: stretch; }
 
 .structure-vista {
@@ -1010,3 +1012,13 @@
 /* EVA choices: what you get, beside what it risks */
 .eva-choice > span { display: flex; flex-direction: column; gap: 3px; }
 .eva-choice .eva-gets { font: 600 0.7em var(--font-display); letter-spacing: 0.14em; color: var(--amber); font-style: normal; }
+
+/* ── TheThrow.js: the jump that does not finish ── */
+.throw-veil { position: fixed; inset: 0; z-index: 5000; background: transparent; transition: background 700ms; }
+.throw-veil.is-black { background: #05070a; }
+.throw-wrong { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; opacity: 0; transition: opacity 600ms; pointer-events: none; }
+.throw-picture { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); opacity: 0; transition: opacity 900ms; }
+.throw-picture.is-showing { opacity: 1; }
+.throw-caption { position: absolute; left: 0; right: 0; bottom: 8vh; text-align: center; }
+.throw-caption b { display: block; margin-bottom: 4px; font: 600 0.62em var(--font-display); letter-spacing: 0.2em; color: var(--amber); }
+body.is-throw .coach { display: none; }
