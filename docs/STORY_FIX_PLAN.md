@@ -1,5 +1,11 @@
 # Why the story feels chaotic, and what to do about it (2026-09-23)
 
+> **Status (2026-09-24):** done, on branch `rehaul-dither-slice`. The canon is `CANON.md`. Built: one story (the
+> rival plots are gone), six found pages one per sector, the head count, the throw between sectors 2 and 3, the
+> light instead of the slab, the finale with six standing-gated endings, the crew bible in every bark and
+> moment, honest choices with reward chips, an objective line every sector, and every promise the game made
+> (DATA, warp discounts, the dish, the lab, the saved flags) now kept. What is left is listed at the end.
+
 Read from the code, not the docs. Playtesters said "this feels like a game" but did not feel
 involved. Both halves of that have the same cause.
 
