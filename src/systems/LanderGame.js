@@ -22,7 +22,7 @@
     const LEVEL_COUNT_MIN = 2, LEVEL_COUNT_MAX = 3, LEVEL_WIDTH_MIN = 26, LEVEL_WIDTH_MAX = 36, LEVEL_BLEND = 8, LEVEL_MARGIN = 28; // natural flat stretches carved into every world, px
     const LAVA_LEVEL = 146, SEA_LEVEL = 138, SHORE_GAP = 2; // low ground floods to here (y grows downward); a shelf always sits SHORE_GAP above the flood line
     // A.U.R.A.'s hand: wanted speeds (px/s) by height, how tightly she holds the drift, and the height she keeps while still sliding over to level ground
-    const AUTO = { cruiseDown: 26, approachDown: 14, settleDown: 8, hoverDown: 2, climbUp: -8, highAlt: 45, lowAlt: 14, glideAlt: 24, climbGap: 8, sideGain: 0.45, sideMax: 20, sideBand: 3, sideBandMin: 1, sideHard: 7, minRoom: 4 };
+    const AUTO = { cruiseDown: 26, approachDown: 14, settleDown: 8, hoverDown: 2, climbUp: -8, highAlt: 45, lowAlt: 14, glideAlt: 24, climbGap: 8, sideGain: 0.45, sideMax: 20, sideBand: 3, sideBandMin: 1, sideHard: 7, minRoom: 4, reach: 3 };
     const RESULT_HOLD_MS = 1700, MAX_STEP = 0.033;
     const GRACE_MS = 3000; // the lander hangs under the ship until you touch a control (or this long), so nobody crashes while reading
     const INK = '#06070a', BONE = '#c4d0c4', AMBER = '#d9a24a', RED = '#d85a4e', GREEN = '#74d99a', DIM = '#2f5a48';
@@ -192,7 +192,8 @@
 
     /** The level stretch A.U.R.A. goes for: the nearest one with room to be a little off-centre (any one at all if none is that wide). */
     function pickLevelTarget(s, g) {
-        if (g.mark) return g.mark;
+        const canReachMark = g.mark && (s.altitude >= AUTO.highAlt || Math.abs(g.mark.cx - s.x) <= Math.max(0, s.altitude) * AUTO.reach); // low and far: land safe off the mark instead
+        if (canReachMark) return g.mark;
         const roomy = g.level.filter(l => l.room >= AUTO.minRoom), pool = roomy.length ? roomy : g.level;
         return pool.reduce((best, l) => (!best || Math.abs(l.cx - s.x) < Math.abs(best.cx - s.x) ? l : best), null);
     }
@@ -273,9 +274,11 @@
         if (!g.mark) return;
         const m = g.mark, y = Math.round(m.y), on = Math.floor(now / MARK_BLINK_MS) % 2 === 0, cx = Math.round(m.cx);
         ctx.fillStyle = on ? GREEN : DIM;
-        [m.x0 + 1, m.x1 - 1].forEach(bx => { ctx.fillRect(Math.round(bx), y - 3, 1, 3); ctx.fillRect(Math.round(bx) - 1, y - 4, 3, 1); });
-        const chevronY = y - 26 - (on ? 0 : 2);
-        for (let k = 0; k < 4; k++) { ctx.fillRect(cx - 3 + k, chevronY + k, 1, 1); ctx.fillRect(cx + 3 - k, chevronY + k, 1, 1); }
+        [m.x0 + 1, m.x1 - 1].forEach(bx => { ctx.fillRect(Math.round(bx), y - 5, 2, 5); ctx.fillRect(Math.round(bx) - 1, y - 6, 4, 2); });   // a beacon at each end
+        ctx.fillRect(Math.round(m.x0 + 1), y, Math.round(m.x1 - m.x0 - 1), 1);                                                          // the stretch itself, lit
+        const chevronY = y - 34 - (on ? 0 : 3);
+        for (let k = 0; k < 6; k++) { ctx.fillRect(cx - 6 + k, chevronY + k, 2, 1); ctx.fillRect(cx + 5 - k, chevronY + k, 2, 1); }   // a big chevron pointing down at it
+        ctx.fillStyle = DIM; for (let by = chevronY + 8; by < y - 7; by += 3) ctx.fillRect(cx, by, 1, 1);                               // and a dotted beam down to the ground
         if (!site) return;
         const sx = m.x1 + 6 < W - 30 ? Math.round(m.x1 + 6) : Math.round(m.x0 - 30), sy = Math.round(g.heights[clampX(sx + 12)]);
         if (site === 'wreck') {                                                // a hull half in the ground, tilted, one lit edge
@@ -361,12 +364,13 @@
             <p class="warp-plot-kicker">LANDING — ${esc(team.map(m => m.name).join(' + '))} ABOARD</p>
             <h2 class="warp-plot-target">${esc(planet.name || 'The surface')}</h2>
             <canvas class="warp-plot-canvas lander-canvas" width="${W}" height="${H}"></canvas>
-            <dl class="lander-readout" style="grid-template-columns: 2fr 1fr 1fr 1fr 1.4fr">
+            <dl class="lander-readout" style="grid-template-columns: 2fr 1fr 1fr 1fr 1.3fr 1.3fr">
                 <div><dt>FUEL</dt><dd><i class="lander-fuel"><b></b></i></dd></div>
                 <div><dt>FALLING</dt><dd class="lander-down">0</dd></div>
                 <div><dt>DRIFT</dt><dd class="lander-side">0</dd></div>
                 <div><dt>HEIGHT</dt><dd class="lander-alt">0</dd></div>
                 <div><dt>GROUND</dt><dd class="lander-ground">—</dd></div>
+                <div><dt>MARK</dt><dd class="lander-mark">—</dd></div>
             </dl>
             <p class="warp-plot-hint">Hold <kbd>←</kbd> / <kbd>→</kbd> (or <kbd>A</kbd> / <kbd>D</kbd>) to push left and right. Hold both to brake. A.U.R.A. has marked a safe spot${site ? ' next to the site' : ''} — the <b>blinking markers</b>. Put it down there, <b>slowly</b>. The line under the lander goes green over flat ground.</p>
             <div class="warp-plot-buttons lander-buttons">
@@ -398,7 +402,7 @@
             s.site = site;
             window.LanderGame.current = { state: s, ground: g }; // read-only handle for automated play-tests
             const el = name => overlay.querySelector(name);
-            const fuelBar = el('.lander-fuel b'), downEl = el('.lander-down'), sideEl = el('.lander-side'), altEl = el('.lander-alt'), groundEl = el('.lander-ground'), resultEl = el('.warp-plot-result');
+            const fuelBar = el('.lander-fuel b'), downEl = el('.lander-down'), sideEl = el('.lander-side'), altEl = el('.lander-alt'), groundEl = el('.lander-ground'), markEl = el('.lander-mark'), resultEl = el('.warp-plot-result');
             const startedAt = performance.now();
             let last = startedAt, isClosed = false, lastBeep = 0, lastFuelWarn = 0;
 
@@ -464,6 +468,11 @@
                     sideEl.textContent = Math.abs(Math.round(s.vx)); sideEl.style.color = isSafeSide ? GREEN : Math.abs(s.vx) <= ROUGH.side ? AMBER : RED;
                     altEl.textContent = Math.max(0, Math.round(s.altitude));
                     groundEl.textContent = reading.word; groundEl.style.color = reading.color;
+                    if (g.mark) {                                                                   // which way to the marked spot, and how far
+                        const off = g.mark.cx - s.x, isOn = isOnMark(g, Math.round(s.x));
+                        markEl.textContent = isOn ? 'ON IT' : `${off < 0 ? '◀' : '▶'} ${Math.round(Math.abs(off))}`;
+                        markEl.style.color = isOn ? GREEN : AMBER;
+                    }
                     if ((s.keys.left || s.keys.right) && s.fuel > 0 && now - lastBeep > THRUST_SOUND_MS) { lastBeep = now; sfx('sfxThruster', s.keys.left && s.keys.right); }
                     if (s.fuel > 0 && s.fuel < LOW_FUEL && now - lastFuelWarn > LOW_FUEL_BEEP_MS) { lastFuelWarn = now; sfx('sfxLowFuel'); }
                     if (landed) end(landed);
