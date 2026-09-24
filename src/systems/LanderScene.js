@@ -4,7 +4,9 @@
    lava and water, wind, fog, exhaust smoke, dust, the lander's shadow, the ship above.
    Nobody built anything on these worlds: the level ground you land on is just ground. The one exception is a gas
    giant, which has no ground at all — there a floating rig with beacons, chevrons and lift pods is the only place to set down.
-   Colours come from the planet's own dither ramp, so the ground matches the globe you saw from orbit. */
+   Colours come from the planet's own dither ramp, so the ground matches the globe you saw from orbit.
+   Strange worlds (crystal, mirror, singing, ghost, tomb, graveyard, hollow, living, machine, shattered, fungal, symbiote,
+   rogue, radiation) get their own look on top of the terrain; the flat strips you land on stay clear. */
 
 (function () {
     'use strict';
@@ -139,18 +141,234 @@
         ctx.fillStyle = '#3a3f3c'; ctx.fillRect(x - 1, y - 4, 1, 4); ctx.fillRect(x + PAD_WIDTH, y - 4, 1, 4); // beacon masts
     }
 
+
+    // ── strange worlds: the places that should not look like anywhere else ──
+    const freeSpots = (g, rand, count, gap) => {                      // x positions on open ground, spread out, off the flat strips
+        const spots = [];
+        for (let tries = 0; spots.length < count && tries < count * 20; tries++) {
+            const x = 6 + Math.floor(rand() * (W - 12));
+            if (isFreeGround(g, x) && spots.every(o => Math.abs(o - x) >= gap)) spots.push(x);
+        }
+        return spots;
+    };
+    const groundAt = (g, x) => Math.round(g.heights[clampX(x)]);
+
+    function paintCrystals(ctx, g, ramp, rand) {                      // tall glassy spires, lit on one edge, a glint at the tip
+        freeSpots(g, rand, 11, 14).forEach(x => {
+            const top = groundAt(g, x), tall = 12 + Math.floor(rand() * 18), half = 2 + Math.floor(rand() * 2), lean = rand() < 0.5 ? -1 : 1;
+            for (let d = 0; d < tall; d++) {
+                const w = Math.max(0, Math.round(half * (1 - d / tall))), cx = x + Math.round(lean * d * 0.18);
+                for (let k = -w; k <= w; k++) put(ctx, clampX(cx + k), top - d, k === -w ? css(ramp[5]) : dith(cx + k, top - d, 0.55) ? css(ramp[4]) : css(ramp[3]));
+            }
+            put(ctx, clampX(x + Math.round(lean * tall * 0.18)), top - tall, '#ffffff');
+        });
+    }
+
+    function paintMirror(ctx, g) {                                     // the ground is a mirror: the sky, the moon and the stars shine back up out of it
+        const img = ctx.getImageData(0, 0, W, H), src = new Uint8ClampedArray(img.data), STRETCH = 2.4;
+        for (let x = 0; x < W; x++) {
+            const top = groundAt(g, x);
+            if (top > H || g.hot[x]) continue;
+            for (let d = 1; top + d < H; d++) {
+                const sy = Math.round(top - d * STRETCH); if (sy < 0) break;
+                const si = (sy * W + x) * 4, di = ((top + d) * W + x) * 4, fade = 0.95 - d / 90;
+                const glint = (x + d * 3) % 23 === 0 ? 40 : 0;                                   // thin bright streaks: it is polished
+                img.data[di] = Math.min(255, src[si] * fade * 1.5 + 18 + glint); img.data[di + 1] = Math.min(255, src[si + 1] * fade * 1.5 + 24 + glint); img.data[di + 2] = Math.min(255, src[si + 2] * fade * 1.5 + 40 + glint);
+            }
+            const edge = (top * W + x) * 4; img.data[edge] = 230; img.data[edge + 1] = 236; img.data[edge + 2] = 240;   // a bright polished rim
+        }
+        ctx.putImageData(img, 0, 0);
+    }
+    function drawReflection(ctx, g, s) {                               // …and so is the lander, upside down, under its own feet
+        const x = Math.round(s.x), ground = groundAt(g, x);
+        if (ground > H || g.hot[clampX(x)]) return;
+        const feet = Math.round(s.y) + 9, gap = ground - feet, top = ground + Math.round(gap / 2.4);
+        if (gap < 0 || top > H - 4) return;
+        ctx.fillStyle = 'rgba(214, 224, 214, 0.55)';
+        ctx.fillRect(x - 5, top + 3, 11, 6); ctx.fillRect(x - 6, top, 2, 3); ctx.fillRect(x + 5, top, 2, 3); ctx.fillRect(x - 2, top + 9, 5, 2);
+    }
+
+    function paintPillars(ctx, g, ramp, rand, scene) {                 // hollow stone columns full of holes; the wind sings through them
+        scene.pillars = freeSpots(g, rand, 9, 22).map(x => {
+            const top = groundAt(g, x), tall = 34 + Math.floor(rand() * 34), half = 3;
+            for (let d = 0; d < tall; d++) for (let k = -half; k <= half; k++) {
+                const isHole = Math.abs(k) <= 1 && d % 8 >= 3 && d % 8 <= 4 && d > 4;
+                put(ctx, clampX(x + k), top - d, isHole ? css(INK) : k === -half ? css(ramp[5]) : k === half ? css(mix(ramp[1], INK, 0.3)) : css(ramp[3]));
+            }
+            return { x, y: top - tall, phase: rand() * 1600 };
+        });
+    }
+    function drawSoundRings(ctx, g, scene, now) {
+        (scene.pillars || []).forEach(p => {
+            for (let ring = 0; ring < 2; ring++) {
+                const t = ((now + p.phase + ring * 800) % 1600) / 1600, r = 4 + t * 34;
+                ctx.fillStyle = css(scene.ramp[5]);
+                for (let a = 0; a < 6.28; a += 0.12) { const px = Math.round(p.x + Math.cos(a) * r), py = Math.round(p.y + 6 + Math.sin(a) * r * 0.4); if (dith(px, py, 1.05 - t)) ctx.fillRect(px, py, 1, 1); }
+            }
+        });
+    }
+
+    function paintGhostRidge(ctx, g, ramp) {                           // a see-through copy of the ground hangs above the real one
+        const body = css(mix(ramp[3], INK, 0.35)), edge = css(ramp[5]);
+        for (let x = 0; x < W; x++) {
+            const y0 = groundAt(g, x - 14) - 34;
+            if (y0 < 30 || y0 > H) continue;
+            put(ctx, x, y0, edge);
+            for (let y = y0 + 1; y < y0 + 26 && y < groundAt(g, x) - 2; y++) if (dith(x, y, 0.32 - (y - y0) * 0.011)) put(ctx, x, y, body);
+        }
+    }
+    function drawGhostFlicker(ctx, g, scene, now) {
+        if (Math.floor(now / 230) % 9 !== 0) return;                   // now and then the copy is brighter than the real ground
+        ctx.fillStyle = css(scene.ramp[5]);
+        for (let x = 0; x < W; x++) { const y = groundAt(g, x - 14) - 34; if (y > 30 && y < H) { ctx.fillRect(x, y, 1, 1); ctx.fillRect(x, y + 1, 1, 1); } }
+    }
+
+    function paintMarkers(ctx, g, ramp, rand) {                        // rows of grave markers, as far as you can see
+        [[0, 0], [3, -3]].forEach(([shift, lift]) => {
+            for (let x = 4 + shift; x < W - 4; x += 7) {
+                if (!isFreeGround(g, x)) continue;
+                const top = groundAt(g, x) + lift;
+                ctx.fillStyle = css(lift ? mix(ramp[3], INK, 0.45) : ramp[4]); ctx.fillRect(x, top - 5, 3, 5);
+                ctx.fillStyle = css(lift ? mix(ramp[4], INK, 0.4) : ramp[5]); ctx.fillRect(x, top - 5, 3, 1);
+            }
+        });
+    }
+
+    function paintHullDebris(ctx, g, ramp, rand) {                     // dead ships, broken and half in the ground, as far as you can see
+        freeSpots(g, rand, 5, 46).forEach((x, i) => {
+            const top = groundAt(g, x), len = 26 + Math.floor(rand() * 22), tall = 7 + Math.floor(rand() * 4), tilt = (rand() - 0.5) * 0.35;
+            for (let k = 0; k < len; k++) {
+                const y = Math.round(top - tall + 3 + tilt * k), isTorn = k > len - 5 && (k + i) % 2;
+                if (isTorn) continue;
+                ctx.fillStyle = '#231a18'; ctx.fillRect(clampX(x + k), y, 1, tall);
+                put(ctx, clampX(x + k), y, k % 6 === 0 ? '#c4d0c4' : '#8a4a3a');                                   // the lit top edge, with rivet lines
+                if (k % 9 === 4) put(ctx, clampX(x + k), y + 3, '#4a3a34');                                          // a window, dark
+            }
+            if (i % 2 === 0) { ctx.fillStyle = '#3a2d28'; ctx.fillRect(clampX(x + len), top - tall - 2, 6, tall + 2); ctx.fillStyle = '#8a4a3a'; ctx.fillRect(clampX(x + len), top - tall - 2, 6, 1); } // a drive bell
+        });
+    }
+
+    function paintHoles(ctx, g, ramp, rand, scene) {                   // round holes into the dark, with a light far down in some
+        scene.holes = freeSpots(g, rand, 6, 26).map(x => {
+            const top = groundAt(g, x) + 3, r = 4 + Math.floor(rand() * 4);
+            for (let y = -r; y <= r; y++) for (let k = -r * 2; k <= r * 2; k++) if ((k * k) / 4 + y * y <= r * r) put(ctx, clampX(x + k), top + y, css(INK));
+            ctx.fillStyle = css(ramp[4]); ctx.fillRect(clampX(x - r * 2), top - r, r * 4, 1);
+            return { x, y: top, lit: rand() < 0.6 };
+        });
+    }
+    function drawHoleLights(ctx, g, scene, now) {
+        (scene.holes || []).forEach((h, i) => { if (h.lit && Math.floor(now / 700 + i) % 4) { ctx.fillStyle = AMBER; ctx.fillRect(h.x, h.y + 1, 1, 1); } });
+    }
+
+    function paintVeins(ctx, g, ramp, rand, scene) {                   // the ground is alive: veins running under the skin
+        scene.veins = [];
+        for (let v = 0; v < 9; v++) {
+            let x = Math.floor(rand() * W), depth = 3 + Math.floor(rand() * 10);
+            for (let k = 0; k < 40; k++) {
+                x += rand() < 0.5 ? -1 : 1; depth += rand() < 0.3 ? (rand() < 0.5 ? -1 : 1) : 0;
+                const gx = clampX(x), y = groundAt(g, gx) + Math.max(2, depth);
+                if (y < H && !g.hot[gx]) { put(ctx, gx, y, css(mix(ramp[4], INK, 0.3))); scene.veins.push([gx, y, k + v * 7]); }
+            }
+        }
+    }
+    function drawPulse(ctx, g, scene, now) {
+        const wave = (now / 60) % 60;
+        ctx.fillStyle = css(scene.ramp[5]);
+        (scene.veins || []).forEach(([x, y, k]) => { if (Math.abs((k % 60) - wave) < 3) ctx.fillRect(x, y, 1, 1); });
+    }
+
+    function paintPlating(ctx, g, ramp, rand, scene) {                 // machine ground: plates, seams, small lights
+        const seam = css(mix(ramp[1], INK, 0.5));
+        for (let x = 0; x < W; x++) {
+            const top = groundAt(g, x);
+            if (top > H || g.hot[x]) continue;
+            for (let y = top + 1; y < H; y++) if (x % 12 === 0 || (y - top) % 9 === 0) put(ctx, x, y, seam);
+        }
+        scene.lamps = freeSpots(g, rand, 10, 16).map(x => ({ x, y: groundAt(g, x) + 4, phase: Math.floor(rand() * 5) }));
+    }
+    function drawPlateLights(ctx, g, scene, now) {
+        (scene.lamps || []).forEach(l => { ctx.fillStyle = (Math.floor(now / 400) + l.phase) % 5 === 0 ? '#7fd0de' : AMBER_DIM; ctx.fillRect(l.x, l.y, 2, 1); });
+    }
+
+    function planFloatingRocks(g, rand, scene) {                       // pieces of the planet hang in the air
+        scene.rocks = Array.from({ length: 7 }, () => ({ x: 20 + rand() * (W - 40), y: 36 + rand() * 60, r: 3 + rand() * 6, phase: rand() * 6.28 }));
+    }
+    function drawFloatingRocks(ctx, g, scene, now) {
+        (scene.rocks || []).forEach(rock => {
+            const cy = Math.round(rock.y + Math.sin(now / 1400 + rock.phase) * 2), r = rock.r;
+            for (let y = -r; y <= r; y++) for (let x = -r * 1.3; x <= r * 1.3; x++) {
+                if ((x * x) / 1.69 + y * y > r * r) continue;
+                const px = Math.round(rock.x + x), py = cy + y;
+                ctx.fillStyle = y < -r * 0.3 ? css(scene.ramp[4]) : dith(px, py, 0.5) ? css(scene.ramp[2]) : css(scene.ramp[1]);
+                ctx.fillRect(px, py, 1, 1);
+            }
+        });
+    }
+
+    function paintSporeTowers(ctx, g, ramp, rand, scene) {             // mushroom towers taller than the lander
+        scene.caps = freeSpots(g, rand, 7, 26).map(x => {
+            const top = groundAt(g, x), tall = 16 + Math.floor(rand() * 22), capR = 4 + Math.floor(rand() * 4);
+            ctx.fillStyle = css(mix(ramp[2], INK, 0.2)); ctx.fillRect(x, top - tall, 2, tall);
+            for (let y = -capR; y <= 0; y++) for (let k = -capR * 2; k <= capR * 2; k++) if ((k * k) / 4 + y * y <= capR * capR) put(ctx, clampX(x + k), top - tall + y, y > -2 ? css(ramp[2]) : css(ramp[4]));
+            return { x, y: top - tall - capR };
+        });
+    }
+    function drawSpores(ctx, g, scene, now) {
+        ctx.fillStyle = css(scene.ramp[5]);
+        (scene.caps || []).forEach((c, i) => { for (let k = 0; k < 3; k++) { const t = ((now / 2600) + k / 3 + i * 0.13) % 1; ctx.fillRect(Math.round(c.x + Math.sin(t * 9 + i) * 4), Math.round(c.y - t * 40), 1, 1); } });
+    }
+
+    function paintTendrils(ctx, g, ramp, rand, scene) {                // soft glowing stalks, leaning toward whoever lands
+        scene.tips = freeSpots(g, rand, 12, 16).map(x => {
+            const top = groundAt(g, x), tall = 8 + Math.floor(rand() * 14), bend = (rand() - 0.5) * 0.6;
+            for (let d = 0; d < tall; d++) put(ctx, clampX(x + Math.round(Math.sin(d * 0.2) * 2 + d * bend)), top - d, css(mix(ramp[3], INK, 0.2)));
+            return { x: clampX(x + Math.round(Math.sin(tall * 0.2) * 2 + tall * bend)), y: top - tall };
+        });
+    }
+    function drawTips(ctx, g, scene, now) {
+        (scene.tips || []).forEach((t, i) => { ctx.fillStyle = Math.floor(now / 500 + i) % 3 ? css(scene.ramp[5]) : css(scene.ramp[3]); ctx.fillRect(t.x - 1, t.y - 1, 2, 2); });
+    }
+
+    function paintStarless(ctx, ramp, rand) {                          // a rogue world has no sun: black sky, a few cold stars
+        ctx.fillStyle = css(INK); ctx.fillRect(0, 0, W, 112);
+        for (let k = 0; k < 40; k++) put(ctx, Math.floor(rand() * W), Math.floor(rand() * 108), rand() < 0.3 ? BONE : '#3a4a40');
+    }
+
+    function drawAurora(ctx, g, scene, now) {                          // radiation lights the sky in moving curtains
+        for (let band = 0; band < 3; band++) {
+            const base = 26 + band * 16, drift = now / (1800 + band * 500);
+            for (let x = 0; x < W; x += 1) {
+                const y = Math.round(base + 6 * Math.sin(x * 0.03 + drift + band));
+                for (let d = 0; d < 10; d++) if (dith(x, y + d, 0.35 - d * 0.03)) { ctx.fillStyle = band % 2 ? '#74d99a' : '#3f8a6a'; ctx.fillRect(x, y + d, 1, 1); }
+            }
+        }
+    }
+
+    // type → [static painter, live painter]
+    const STRANGE = {
+        CRYSTALLINE: [paintCrystals], MIRROR: [(ctx, g) => paintMirror(ctx, g), (ctx, g, scene, now, s) => drawReflection(ctx, g, s)],
+        SINGING: [paintPillars, drawSoundRings], GHOST_WORLD: [paintGhostRidge, drawGhostFlicker], TOMB_WORLD: [paintMarkers],
+        GRAVEYARD: [paintHullDebris], HOLLOW: [paintHoles, drawHoleLights], BIO_MASS: [paintVeins, drawPulse],
+        MECHA: [paintPlating, drawPlateLights], MACHINE_WORLD: [paintPlating, drawPlateLights],
+        SHATTERED: [(ctx, g, ramp, rand, scene) => planFloatingRocks(g, rand, scene), drawFloatingRocks],
+        FUNGAL: [paintSporeTowers, drawSpores], SYMBIOTE_WORLD: [paintTendrils, drawTips], RADIATION_BELT: [null, drawAurora],
+    };
+
     function build(g, planet) {
         const kindName = g.kindName || 'rock';
         const ramp = rampOf(planet), rand = seeded(planet.id + ':scene');
         const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
         paintSky(ctx, ramp, rand, g.kind);
-        paintMoon(ctx, ramp, rand);
+        if (planet.type === 'ROGUE') paintStarless(ctx, ramp, rand); else paintMoon(ctx, ramp, rand);
         if (g.kind.platform) paintCloudDecks(ctx, ramp, rand); else paintFarRidge(ctx, ramp, rand);
         paintTerrain(ctx, g, ramp, kindName);
-        paintDressing(ctx, g, ramp, rand, kindName);
+        const strange = STRANGE[planet.type] || [], scene = { ramp, kindName, type: planet.type, live: strange[1] || null, particles: [], lastNow: 0, dustColor: css(ramp[3]), fogColor: css(mix(ramp[2], INK, 0.3)) };
+        if (!strange.length) paintDressing(ctx, g, ramp, rand, kindName);                // strange worlds get their own dressing instead of rocks and ice
+        if (strange[0]) strange[0](ctx, g, ramp, rand, scene);
         if (g.kind.platform) paintPlatform(ctx, g);
-        return { backdrop: canvas, ramp, kindName, particles: [], lastNow: 0, dustColor: css(ramp[3]), fogColor: css(mix(ramp[2], INK, 0.3)) };
+        scene.backdrop = canvas;
+        return scene;
     }
 
     // ── what moves ──
@@ -245,6 +463,7 @@
         ctx.drawImage(scene.backdrop, 0, 0);
         drawPools(ctx, g, now);
         drawWeather(ctx, g, scene, now);
+        if (scene.live) scene.live(ctx, g, scene, now, s);
         if (g.kind.platform) drawPlatformLights(ctx, g, now);
         drawShadow(ctx, g, s);
         if (nozzles.length && !s.grade) emit(scene, g, s, nozzles);
