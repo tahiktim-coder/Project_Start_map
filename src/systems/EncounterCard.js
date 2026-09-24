@@ -104,6 +104,9 @@
         paint();
     }
 
+    /** A picture for this scene (SceneArt.js), when there is one: the strange places, the graves, the dome. */
+    const hasArt = cfg => !!(cfg.art && window.SceneArt && window.SceneArt.has(cfg.art));
+
     function cardHtml(cfg, color, context, facts, lineCount) {
         return `
             <section class="modal-content deck-panel enc-card" role="dialog" aria-label="${esc(cfg.title)}" style="--enc:${color}">
@@ -112,6 +115,7 @@
                     <h3>${esc(String(cfg.title || '').replace(MARKUP, ''))}</h3>
                 </header>
                 ${cfg.hasSignal ? `<canvas class="enc-signal" width="${SIGNAL_W}" height="${SIGNAL_H}" aria-hidden="true"></canvas>` : ''}
+                ${hasArt(cfg) ? `<canvas class="enc-art" width="${window.SceneArt.W}" height="${window.SceneArt.H}" aria-hidden="true"></canvas>` : ''}
                 <div class="enc-stage">
                     ${context.lead ? `<p class="enc-context">${context.lead}${context.rest ? ` <button class="enc-more" type="button">more</button><span class="enc-rest" hidden> ${context.rest}</span>` : ''}</p>` : ''}
                     <div class="enc-line" aria-live="polite"></div>
@@ -130,7 +134,7 @@
 
     /**
      * @param {object} cfg { tone | color, kicker, title, facts:[[label, value]], context, dialogue:[{speaker, text}],
-     *                       choices:[{text, desc, disabled, requires, requiresLabel}], onPick(idx), hasSignal, zIndex }
+     *                       choices:[{text, desc, disabled, requires, requiresLabel}], onPick(idx), hasSignal, art, zIndex }
      */
     function open(app, cfg) {
         const color = cfg.color || TONES[cfg.tone] || TONES.crew;
@@ -142,6 +146,7 @@
         modal.innerHTML = cardHtml(cfg, color, context, facts, lines.length);
         document.body.appendChild(modal);
         if (cfg.hasSignal) runSignal(modal.querySelector('.enc-signal'), color);
+        if (hasArt(cfg)) window.SceneArt.mount(modal.querySelector('.enc-art'), cfg.art);
 
         const el = (sel) => modal.querySelector(sel);
         const lineEl = el('.enc-line'), nextEl = el('.enc-next'), flowEl = el('.enc-flow'), decideEl = el('.enc-decide'), detailEl = el('.enc-detail');

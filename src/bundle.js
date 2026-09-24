@@ -2619,6 +2619,7 @@ class App {
         // Use narrative modal system if available for immersive experience
         if (window.NarrativeModal) {
             this.showNarrativeEncounter({
+                art: 'EXODUS_WRECK',
                 title: selected.title,
                 speaker: 'NARRATOR',
                 context: `[highlight]${shipName}[/highlight]\n\n${selected.context(shipName)}`,
@@ -2677,6 +2678,7 @@ class App {
         // Use narrative modal system if available for immersive experience
         if (window.NarrativeModal) {
             this.showNarrativeEncounter({
+                art: 'FAILED_COLONY',
                 title: selected.title,
                 speaker: 'NARRATOR',
                 context: `[highlight]COLONY RUINS: ${selected.title}[/highlight]\n\n${selected.context(planet.name)}`,
@@ -2729,6 +2731,7 @@ class App {
         // Use narrative modal system
         if (window.NarrativeModal) {
             this.showNarrativeEncounter({
+                art: 'DERELICT',
                 title: selected.title,
                 speaker: 'NARRATOR',
                 context: `[highlight]${shipName}[/highlight]\n\n${selected.context(shipName)}`,
@@ -2795,6 +2798,7 @@ class App {
         // Use narrative modal system
         if (window.NarrativeModal) {
             this.showNarrativeEncounter({
+                art: selected.id,
                 title: selected.title,
                 speaker: 'NARRATOR',
                 context: `[warning]ANOMALY: ${selected.title}[/warning]\n\n${selected.context()}`,
@@ -2933,6 +2937,7 @@ Then you're through.`,
 
         // Show the POI encounter using narrative modal
         this.showNarrativeEncounter({
+            art: poiType,
             title: poi.title,
             speaker: 'NARRATOR',
             context: poi.context(),
@@ -3190,7 +3195,7 @@ Then you're through.`,
         });
 
         window.EncounterCard.open(this, {
-            tone: config.tone || 'story', zIndex: 2600,
+            tone: config.tone || 'story', zIndex: 2600, art: config.art,
             // a headline that repeats the title ("COLONY RUINS: <title>") gives its extra words to the kicker instead
             kicker: config.kicker || subline || (headline && headline.includes(config.title) ? headline.replace(config.title, '').replace(/[:\s—-]+$/, '') : ''),
             title: headline && !headline.includes(config.title) ? `${config.title} — ${headline}` : config.title,
