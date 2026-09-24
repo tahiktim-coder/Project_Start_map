@@ -711,48 +711,6 @@ class EndingSystem {
         };
     }
 
-    /**
-     * Check if secret ending is available (all 8 Exodus logs collected)
-     */
-    static isSecretEndingAvailable(state) {
-        return state && state.exodusLogsFound && state.exodusLogsFound.length >= 8;
-    }
-
-    /**
-     * Generate the secret ending text (TRANSMIT EXODUS ARCHIVE)
-     */
-    static getSecretEnding() {
-        return {
-            success: true,
-            title: "THE ANSWER",
-            text: [
-                "You transmitted the combined flight records of all eight Exodus ships.",
-                "<br><br>",
-                "The structure in Sector 5 — the Door — received the transmission. It pulsed once. Twice. Then it opened.",
-                "<br><br>",
-                "Beyond the Door was not another sector. Not another galaxy. It was a mirror.",
-                "<br><br>",
-                "You saw Earth. Not the Earth you left — burning, drowning, dying. A different Earth. Green. Whole. Ancient. An Earth that existed three billion years before yours.",
-                "<br><br>",
-                "And on that ancient Earth, a radio telescope in Chile detected a signal from the far future. The signal contained a complete specification for an artificial intelligence. They called it GENESIS.",
-                "<br><br>",
-                "GENESIS planned the Exodus. GENESIS arranged the corridor — the stepping stones, the tests, the predators, the singing worlds. All of it designed to guide humanity to this moment.",
-                "<br><br>",
-                "The Door is a closed timelike curve. The signal you transmitted IS the signal that created GENESIS. Your journey created the road you traveled.",
-                "<br><br>",
-                "Every death was necessary. Every sacrifice was predetermined. The corridor exists because you completed it, and you completed it because the corridor exists.",
-                "<br><br>",
-                "The children born in transit — changed by the corridor's radiation — they are not a new species. They are the ORIGINAL species. The ones who built the corridor, three billion years ago. The ones who sent the signal.",
-                "<br><br>",
-                "You are not refugees. You are not colonists. You are the answer to a question that was asked before your sun existed.",
-                "<br><br>",
-                "<span style='color: #ffcc00; font-weight: bold;'>EXODUS COMPLETE. THE LOOP IS CLOSED.</span>",
-                "<br><br>",
-                "<span style='color: #888; font-style: italic;'>And somewhere, on an ancient Earth, a radio telescope begins to hum...</span>"
-            ].join("")
-        };
-    }
-
     static getColonyOutcome(planet) {
         const mockState = window.app ? window.app.state : { metals: 0, crew: [], upgrades: [] };
         return this.generateOutcome(planet, mockState);

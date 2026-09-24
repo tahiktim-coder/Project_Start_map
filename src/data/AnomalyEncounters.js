@@ -2,9 +2,9 @@
  * ANOMALY ENCOUNTERS
  *
  * Things the light at the end of the heading has read and made again.
- * The copies are slightly wrong: no roots on the grass, four names on every
- * plate, four figures walking, our own hull with our own number on it.
- * Nothing here chases the ship. Nothing here is alien. It is all ours, returned.
+ * Each copy is slightly wrong: the same planet twice, our own ship with four
+ * people in the windows, a back garden where every blade of grass is the same.
+ * Nothing here chases the ship. Nothing here is alien. It is all ours, copied.
  * High risk, high reward, high narrative impact.
  *
  * Found in Sector 4+ with ANOMALY tag, or triggered by the wrong wreck's nav data.
@@ -17,35 +17,35 @@ function _anomalyTestChance(chance) {
 }
 
 const ANOMALY_ENCOUNTERS = [
-    // --- 1. THE FOLD: the same sky twice ---
+    // --- 1. THE FOLD: the same planet twice ---
     {
         id: 'ANOMALY_FOLD',
         weight: 20,
-        title: "THE FOLD",
-        context: () => `The stars ahead repeat. The same six, then the same six again, a hand's width over. A.U.R.A. plots our position in two places. Both check.`,
+        title: "THE SAME PLANET TWICE",
+        context: () => `The same planet appears twice ahead of us, side by side, down to the last crater and shadow. Between the two copies runs a thin line where the stars don't match up.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "And here we see the same rock twice, Commander. Same crater. Same shadow." },
-            { speaker: 'A.U.R.A.', text: "Two positions, Commander. Both correct. I have no third fix to break the tie." },
-            { speaker: 'Spc. Vance', text: "Six stars. Then the same six. I counted them four times." }
+            { speaker: 'Tech Mira', text: "Every crater matches, Commander. Two planets can't be identical. One of them has to be a copy." },
+            { speaker: 'A.U.R.A.', text: "I get two valid positions for our ship, Commander, one beside each planet. Both check out." },
+            { speaker: 'Spc. Vance', text: "Somebody made that copy. I'd like to know who before we go near it." }
         ],
         choices: [
             {
-                text: "Send the probe through the seam",
-                desc: "Probe lost. +30 Energy from the seam. All crew +1 Stress.",
+                text: "Send the probe through the gap",
+                desc: "The probe is lost. +30 Energy. All crew +1 Stress.",
                 effect: (state) => {
                     state.probeIntegrity = 0; // Probe destroyed
                     state.energy = Math.min(100, state.energy + 30);
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-                    state.addLog("PROBE: the far side is this side. Its camera shows our hull. Then our hull again, from the other seam.");
-                    state.addLog("The probe signal stops. Then starts. It is still sending, from both places. The kettle drinks the bleed.");
-                    return "Probe gone into the seam. +30 Energy. All crew +1 Stress.";
+                    state.addLog("PROBE: on the far side of the gap, its camera shows the back of our own ship.");
+                    state.addLog("Then its signal comes from both sides at once, and stops. The gap gives off a burst of energy, and the reactor takes it in.");
+                    return "Probe lost in the gap. +30 Energy. All crew +1 Stress.";
                 }
             },
             {
-                text: "Fly through it",
-                desc: "40% chance: thrown to THE WRONG PLACE, someone gets hurt, all crew +1 Stress. 60% chance: skip 1-2 sectors ahead for 0 Energy.",
+                text: "Fly the ship through the gap",
+                desc: "60% chance: we skip 1 or 2 sectors ahead for free. 40% chance: we come out somewhere off the map, someone gets hurt, all crew +1 Stress.",
                 effect: (state) => {
                     if (_anomalyTestChance(0.4)) {
                         // BAD OUTCOME - thrown to THE WRONG PLACE
@@ -54,7 +54,7 @@ const ANOMALY_ENCOUNTERS = [
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
                             victim.stress = 3;
-                            state.addLog(`${victim.name} was thrown against the bulkhead on the way through. They will not say which side we came out on.`);
+                            state.addLog(`${victim.name} was thrown against a wall on the way through, and is hurt and badly shaken.`);
                         }
 
                         // Create THE WRONG PLACE as its own isolated "sector"
@@ -62,7 +62,7 @@ const ANOMALY_ENCOUNTERS = [
                             id: 'WRONG_PLACE_' + Date.now(),
                             name: 'THE WRONG PLACE',
                             type: 'WRONG_PLACE',
-                            desc: 'This is not where we meant to go. The stars are wrong. Time moves strangely. We need to leave.',
+                            desc: 'This is not on any chart. The stars here match nothing we know. We should leave.',
                             gravity: '???',
                             atmosphere: 'IMPOSSIBLE',
                             temperature: 'NEGATIVE KELVIN',
@@ -84,10 +84,10 @@ const ANOMALY_ENCOUNTERS = [
                         state.lastVisitedSystem = hellPlanet;
                         state._inWrongPlace = true;
 
-                        state.addLog("=== WRONG SIDE OF THE SEAM ===");
-                        state.addLog("We came out somewhere else. The stars match no chart.");
-                        state.addLog("A.U.R.A.: 'I have two positions for us, Commander. Neither is on the chart. I am working on it.'");
-                        state.addLog("There is a wreck here. It has our transponder code.");
+                        state.addLog("=== OFF THE MAP ===");
+                        state.addLog("We came out somewhere that matches no chart we have.");
+                        state.addLog("A.U.R.A.: 'I can't place us on any chart, Commander. I'm working on it.'");
+                        state.addLog("There is a wreck here. It is broadcasting our own ship's ID code.");
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
@@ -95,7 +95,7 @@ const ANOMALY_ENCOUNTERS = [
                         // Trigger visual teleport effect and view refresh
                         window.dispatchEvent(new CustomEvent('anomaly-teleport', { detail: { destination: hellPlanet, type: 'WRONG_PLACE' } }));
 
-                        return "The seam threw us out in THE WRONG PLACE. All crew +1 Stress.";
+                        return "The gap threw us somewhere off the map. All crew +1 Stress.";
                     }
 
                     // GOOD OUTCOME - Jump 1-2 sectors ahead!
@@ -120,19 +120,19 @@ const ANOMALY_ENCOUNTERS = [
                             state.currentSystem = arrival;
                             state.lastVisitedSystem = arrival;
 
-                            state.addLog("=== THROUGH THE SEAM ===");
-                            state.addLog("The six stars closed up behind us. Ahead, a sky we have not seen.");
-                            state.addLog(`Spc. Vance: "${jump === 1 ? 'One sector' : 'Two sectors'}. I counted the jump. Nobody paid for it."`);
+                            state.addLog("=== THROUGH THE GAP ===");
+                            state.addLog("The two planets closed up behind us. Ahead is a sky we haven't seen before.");
+                            state.addLog(`A.U.R.A.: "We've moved ${jump === 1 ? 'one sector' : 'two sectors'} ahead, Commander. The jump used no energy."`);
                             state.addLog(`Now entering: SECTOR ${targetSector}`);
 
                             // Trigger visual teleport effect
                             window.dispatchEvent(new CustomEvent('anomaly-teleport', { detail: { destination: arrival, type: 'FOLD_SUCCESS', sectorJump: jump } }));
 
-                            return `Through the seam. Jumped ${jump} sector${jump > 1 ? 's' : ''} ahead to Sector ${targetSector}. 0 Energy.`;
+                            return `Through the gap. We jumped ${jump} sector${jump > 1 ? 's' : ''} ahead to Sector ${targetSector}, using no energy.`;
                         }
                     }
 
-                    return "The seam closed before we reached it. We are where we were.";
+                    return "The gap closed before we reached it. We're still where we started.";
                 }
             },
             {
@@ -141,8 +141,8 @@ const ANOMALY_ENCOUNTERS = [
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-                    state.addLog("Tech Mira logs both positions. A.U.R.A.: 'Filed, Commander. I have marked one of them as ours. I chose at random.'");
-                    return "Went around the fold. -10 Energy, +2 Data.";
+                    state.addLog("A.U.R.A.: 'Both planets are logged, Commander. I can't tell which one is the original.'");
+                    return "Went around the long way. -10 Energy, +2 Data.";
                 }
             }
         ]
@@ -152,17 +152,17 @@ const ANOMALY_ENCOUNTERS = [
     {
         id: 'ANOMALY_WHISPER',
         weight: 15,
-        title: "THE WHISPER",
-        context: () => `Nothing on the scan. A voice on every channel. It sounds like A.U.R.A. It says Commander. It gets our names right and the count wrong, and it is not her.`,
+        title: "THE OTHER VOICE",
+        context: () => `A voice is calling us on every channel, and it is A.U.R.A.'s voice. But A.U.R.A. is right here with us, so this is something else using it.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "That's her voice. Aura, is that you?" },
-            { speaker: 'A.U.R.A.', text: "No, Commander. I am here. That one is quoting me. It has my crew count exactly." },
-            { speaker: 'Dr. Aris', text: "It's reading names. Names off my list. And names I haven't read yet." }
+            { speaker: 'Tech Mira', text: "That's her voice. A.U.R.A., is that you out there?" },
+            { speaker: 'A.U.R.A.', text: "No, Commander. I'm here. That voice is repeating things I've said before, exactly." },
+            { speaker: 'Dr. Aris', text: "It's reading out the names of dead crews. Some of them are already on my list." }
         ],
         choices: [
             {
-                text: "Let one of us answer it",
-                desc: "30% chance: the listener goes to Stress 3. 40% chance: +2 Data, listener +1 Stress. 30% chance: listener healed, Stress 0.",
+                text: "Let one of us talk to it",
+                desc: "30% chance: they come back at Stress 3. 40% chance: +2 Data, and they get +1 Stress. 30% chance: they come back calm, healed, at Stress 0.",
                 requires: (state) => state.crew.some(c => c.status !== 'DEAD' && !c.tags.includes('LEADER')),
                 requiresLabel: "Requires available crew",
                 effect: (state) => {
@@ -175,26 +175,26 @@ const ANOMALY_ENCOUNTERS = [
                     if (roll < 0.3) {
                         // Bad: it got in
                         listener.stress = 3;
-                        state.addLog(`${listener.name} listened a long time. They say it told them the count. They will not say which number.`);
-                        return `${listener.name} answered the voice and came back wrong. Stress 3.`;
+                        state.addLog(`${listener.name} talked to it for an hour, and won't repeat anything it said.`);
+                        return `${listener.name} talked to the voice and came back badly shaken. Stress 3.`;
                     } else if (roll < 0.7) {
                         // Neutral: Knowledge
                         state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
                         listener.stress = Math.min(3, (listener.stress || 0) + 1);
-                        state.addLog(`${listener.name}: "It read me a list. Hulls, and where they lie. I wrote down what I could."`);
-                        return `${listener.name} took down a list of hulls. +2 Data. ${listener.name} +1 Stress.`;
+                        state.addLog(`${listener.name}: "It read me a list of ships and where each one ended up. I wrote down what I could."`);
+                        return `${listener.name} wrote down a list of ships. +2 Data. ${listener.name} +1 Stress.`;
                     } else {
                         // Good: too calm
                         listener.stress = 0;
                         if (listener.status === 'INJURED') listener.status = 'HEALTHY';
-                        state.addLog(`${listener.name}: "It said my name back. Correctly. That was all. I feel fine. I feel very fine."`);
-                        return `${listener.name} came back calm and whole. Stress 0.`;
+                        state.addLog(`${listener.name}: "It just said my name, nothing else. I feel better than I have in weeks."`);
+                        return `${listener.name} came back calm and unhurt. Stress 0.`;
                     }
                 }
             },
             {
                 text: "Have A.U.R.A. answer it",
-                desc: "-5 Energy. 25% chance: +20 Salvage, +2 Food Pack, all crew +1 Stress. 25% chance: all planets revealed. 25% chance: all crew +1 Stress. Else nothing.",
+                desc: "-5 Energy. Then one of four, 25% chance each: +20 Salvage and +2 Food Pack, but all crew +1 Stress; every planet here revealed; nothing; or all crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     const roll = window.TEST_MODE ? 0.1 : Math.random();
@@ -202,42 +202,42 @@ const ANOMALY_ENCOUNTERS = [
                     if (roll < 0.25) {
                         state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                         if (typeof ITEMS !== 'undefined' && ITEMS.FOOD_PACK) {
-                            state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'The Whisper' });
-                            state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'The Whisper' });
+                            state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'The Other Voice' });
+                            state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'The Other Voice' });
                         }
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
-                        state.addLog("An hour after she answers, a crate drifts up to the lock. Our crate. Our lot numbers. The seals unbroken.");
-                        return "A crate came back. Ours. -5 Energy, +20 Salvage, +2 Food Pack. All crew +1 Stress.";
+                        state.addLog("An hour after she answers, a supply crate drifts up to our airlock. It's one of ours, with our batch numbers, still sealed.");
+                        return "One of our own crates came back. -5 Energy, +20 Salvage, +2 Food Pack. All crew +1 Stress.";
                     } else if (roll < 0.5) {
                         state.sectorNodes?.forEach(p => {
                             p.remoteScanned = true;
                             p._tagsRevealed = true;
                         });
-                        state.addLog("It reads her the sector, body by body, in her own voice. She writes it down. Tech Mira: 'See? She's helping.'");
-                        return "The sector, read to A.U.R.A. -5 Energy. All planets revealed.";
+                        state.addLog("The voice describes every planet in this sector to her. She checks each one. Every description is accurate.");
+                        return "The voice gave A.U.R.A. the whole sector. -5 Energy. All planets revealed.";
                     } else if (roll < 0.75) {
-                        state.addLog("A.U.R.A.: 'It has stopped, Commander. I said hello and gave my crew count. It said them back, and went quiet.'");
-                        return "A.U.R.A. answered. It went quiet. -5 Energy.";
+                        state.addLog("A.U.R.A.: 'I said hello and gave our crew count, Commander. It repeated both back and went quiet.'");
+                        return "A.U.R.A. answered, and the voice went quiet. -5 Energy.";
                     } else {
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
-                        state.addLog("It answers in five voices. Ours. A.U.R.A.: 'That is not my crew count, Commander. I have logged the difference.'");
-                        return "It answered in our voices. -5 Energy. All crew +1 Stress.";
+                        state.addLog("It answers in five voices, and they are ours. A.U.R.A.: 'That doesn't match my crew count, Commander. I've logged it.'");
+                        return "It answered in our own voices. -5 Energy. All crew +1 Stress.";
                     }
                 }
             },
             {
-                text: "Jam every channel and go",
-                desc: "-10 Energy. Nothing heard. Vance -1 Stress.",
+                text: "Jam every channel and leave",
+                desc: "-10 Energy. We hear nothing more. Vance -1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
-                    state.addLog("Static on every channel until it is behind us. Spc. Vance keeps his hand on the switch the whole way.");
-                    return "Channels jammed. The voice is gone. -10 Energy. Vance -1 Stress.";
+                    state.addLog("We fill every channel with static until the voice is out of range.");
+                    return "Channels jammed until the voice was gone. -10 Energy. Vance -1 Stress.";
                 }
             }
         ]
@@ -247,17 +247,17 @@ const ANOMALY_ENCOUNTERS = [
     {
         id: 'ANOMALY_MIRROR',
         weight: 15,
-        title: "THE MIRROR",
-        context: () => `Another hull, close. Our number on it. Our transponder. Through the ports, four figures at four stations, looking back. They wave when we wave.`,
+        title: "OUR OWN SHIP",
+        context: () => `A ship is holding position right beside us, and it is ours: same hull, same number, same scratches. Through its windows, four people sit at our stations and wave back at us.`,
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "It has my callsign, Commander. It answers my handshake before I finish sending it." },
-            { speaker: 'Spc. Vance', text: "Four in the windows. Four. I count five on this side." },
-            { speaker: 'Tech Mira', text: "And here we see us, Commander. Aura's pleased. She says it's a friend." }
+            { speaker: 'A.U.R.A.', text: "It is broadcasting our ship's ID, Commander. It answers my signals before I finish sending them." },
+            { speaker: 'Spc. Vance', text: "Four people in those windows. Which one of us did they leave out?" },
+            { speaker: 'Tech Mira', text: "A.U.R.A. says it's friendly. If she says so, I believe her." }
         ],
         choices: [
             {
-                text: "Hail it",
-                desc: "-5 Energy. +1 Data. One planet revealed. All crew +1 Stress.",
+                text: "Call the other ship",
+                desc: "-5 Energy. +1 Data. The richest planet here revealed. All crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
@@ -271,36 +271,36 @@ const ANOMALY_ENCOUNTERS = [
                     );
                     if (best) {
                         best.remoteScanned = true;
-                        state.addLog(`MIRROR: our hail, in our voices. Then: "Go to ${best.name} last. We went first." Four voices. Not five.`);
+                        state.addLog(`The other ship answers in our own voices: "Go to ${best.name} last. We went there first." Four voices, not five.`);
                     }
-                    state.addLog("Spc. Vance: \"Four voices. Count them.\" Nobody does.");
-                    return "Hailed our own hull. -5 Energy, +1 Data. One planet revealed. All crew +1 Stress.";
+                    state.addLog("Nobody on the bridge says anything for a while.");
+                    return "Called our own ship. -5 Energy, +1 Data. One planet revealed. All crew +1 Stress.";
                 }
             },
             {
-                text: "Pass crates across",
-                desc: "-20 Salvage, +30 Energy. If short on salvage: -30 Energy, +20 Salvage. Vance +1 Stress: the cells are ours.",
+                text: "Trade supplies across",
+                desc: "-20 Salvage for +30 Energy. If we have under 20 Salvage: -30 Energy for +20 Salvage instead. Vance +1 Stress either way.",
                 effect: (state) => {
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (state.salvage >= 20) {
                         state.salvage -= 20;
                         state.energy = Math.min(100, state.energy + 30);
                         if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
-                        state.addLog("Crates across the gap on a line. Cells come back. Our lot numbers, our serials. Vance reads them twice.");
+                        state.addLog("We pass crates across on a line. Power cells come back with our own batch numbers and serials on them.");
                         return "Traded across. -20 Salvage, +30 Energy. Vance +1 Stress.";
                     } else if (state.energy >= 30) {
                         state.energy -= 30;
                         state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                         if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
-                        state.addLog("They wanted power more than plate. The plate they send has our welds on it. Vance counted the rivets.");
+                        state.addLog("They wanted power, not metal. The hull plates they send back have our own welds on them.");
                         return "Traded across. -30 Energy, +20 Salvage. Vance +1 Stress.";
                     }
-                    return "Nothing to trade. The four in the windows stop waving.";
+                    return "We have nothing to trade. The four in the windows stop waving.";
                 }
             },
             {
-                text: "Ram it",
-                desc: "-15 Energy. 50% chance: it isn't solid, +40 Salvage, +2 Data. 50% chance: it is, one deck damaged, someone gets hurt.",
+                text: "Fly straight into it",
+                desc: "-15 Energy. 50% chance: it isn't solid, +40 Salvage, +2 Data. 50% chance: it is solid, a deck is damaged and someone gets hurt.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 15);
                     if (_anomalyTestChance(0.5)) {
@@ -308,106 +308,106 @@ const ANOMALY_ENCOUNTERS = [
                         const deck = decks[Math.floor(Math.random() * decks.length)];
                         if (state.shipDecks && state.shipDecks[deck] && state.shipDecks[deck].status === 'OPERATIONAL') {
                             state.shipDecks[deck].status = 'DAMAGED';
-                            state.addLog(`It was solid. ${state.shipDecks[deck].label} DAMAGED.`);
+                            state.addLog(`It was solid. ${state.shipDecks[deck].label} damaged.`);
                         }
                         const healthy = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
                         if (healthy.length > 0) {
                             const unlucky = healthy[Math.floor(Math.random() * healthy.length)];
                             unlucky.status = 'INJURED';
-                            state.addLog(`${unlucky.name} was not strapped in. INJURED.`);
+                            state.addLog(`${unlucky.name} wasn't strapped in and got hurt.`);
                         }
-                        state.addLog("It was solid. It is behind us now, still waving.");
-                        return "It was solid. -15 Energy. A deck damaged, someone hurt.";
+                        state.addLog("It drifts away behind us, the four figures still waving.");
+                        return "It was solid. -15 Energy. A deck damaged, and someone hurt.";
                     }
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-                    state.addLog("We went through it like fog. Plate comes off it in sheets, warm, with our number on every sheet.");
-                    return "It came apart. -15 Energy, +40 Salvage, +2 Data.";
+                    state.addLog("We pass through it like fog. Hull plates peel off it in sheets, still warm, each one stamped with our number.");
+                    return "It came apart around us. -15 Energy, +40 Salvage, +2 Data.";
                 }
             }
         ]
     },
 
-    // --- 4. THE DARK: a patch of nothing, reading the transponders out ---
+    // --- 4. THE DARK: a patch of nothing, switching the beacons off ---
     {
         id: 'ANOMALY_HUNGER',
         weight: 10,
-        title: "THE DARK",
-        context: () => `A patch of sky with no stars. Not far, not black: nothing. The transponders inside it go quiet one at a time as we listen. Nothing is coming toward us.`,
+        title: "THE DARK PATCH",
+        context: () => `There is a patch of sky ahead with no stars in it at all. Wrecks inside it are still sending distress beacons, and the beacons are switching off one by one.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Nine transponders in there when we arrived. Seven now." },
-            { speaker: 'A.U.R.A.', text: "The sensors return nothing, Commander. Not zero. Nothing. I have logged the difference." },
-            { speaker: 'Tech Mira', text: "And here we see... no. Aura, what am I looking at? She doesn't know either." }
+            { speaker: 'Spc. Vance', text: "There were nine beacons in there when we arrived. Now there are seven." },
+            { speaker: 'A.U.R.A.', text: "The sensors aren't reading zero, Commander. They're returning no reading at all." },
+            { speaker: 'Tech Mira', text: "What am I looking at? Even A.U.R.A. can't tell me, and she always knows." }
         ],
         choices: [
             {
-                text: "Drop a crate in and watch",
+                text: "Push a crate in and watch",
                 desc: "-30 Salvage. +3 Data. Mira +1 Stress.",
                 effect: (state) => {
-                    if (state.salvage < 30) return "Not enough salvage to spare a crate. Nothing goes in.";
+                    if (state.salvage < 30) return "We don't have 30 Salvage to spare. Nothing goes in.";
                     state.salvage -= 30;
                     state._hungerFavor = true;
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
                     const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
-                    state.addLog("The crate goes in. An hour later it comes out the far side, sealed, empty. The label is ours, with one letter wrong.");
-                    return "Crate went in and came back wrong. -30 Salvage, +3 Data. Mira +1 Stress.";
+                    state.addLog("The crate drifts in. An hour later it drifts out the far side, sealed and empty. The label is ours, with one letter wrong.");
+                    return "The crate went in and came back wrong. -30 Salvage, +3 Data. Mira +1 Stress.";
                 }
             },
             {
                 text: "Send the probe to the edge",
-                desc: "Requires probe. 50% chance: probe lost. Else +40 Energy, -50% Probe.",
+                desc: "Needs the probe. 50% chance: the probe is lost. 50% chance: +40 Energy, -50% Probe.",
                 effect: (state) => {
                     if (state.probeIntegrity <= 0) {
-                        return "No probe. Nothing to send.";
+                        return "We have no probe to send.";
                     }
 
                     if (_anomalyTestChance(0.5)) {
                         // Probe lost
                         state.probeIntegrity = 0;
-                        state.addLog("The probe goes in. Its signal does not stop. It goes quiet, the way the transponders did.");
-                        return "Probe lost to the dark. No data.";
+                        state.addLog("The probe goes in. Its signal doesn't cut out. It fades, the same way the beacons did.");
+                        return "Probe lost in the dark patch. No data.";
                     }
 
                     // Success
                     state.energy = Math.min(100, state.energy + 40);
                     state.probeIntegrity = Math.max(0, state.probeIntegrity - 50);
-                    state.addLog("The probe skims the edge and comes back cold, cells full. Its serial number is one digit off.");
-                    return "Probe came back with full cells. +40 Energy. Probe half gone.";
+                    state.addLog("The probe skims the edge and comes back ice cold, its cells full. Its serial number is one digit off.");
+                    return "The probe came back with full cells. +40 Energy. Probe half worn out.";
                 }
             },
             {
-                text: "Full burn away",
-                desc: "-20 Energy. Nothing taken. Vance -1 Stress.",
+                text: "Burn hard away from it",
+                desc: "-20 Energy. Nothing else lost. Vance -1 Stress.",
                 effect: (state) => {
                     if (!state.consumeEnergy(20)) {
-                        return "Not enough energy to burn. We drift at the edge and watch it.";
+                        return "Not enough energy for a full burn. We drift at the edge and watch it.";
                     }
                     state._hungerFled = true;
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
-                    state.addLog("Full burn. Nothing follows. Spc. Vance counts the transponders until they are out of range. Six.");
+                    state.addLog("Full burn. Nothing follows us. By the time we're out of range, six beacons are left.");
                     return "Burned clear. -20 Energy. Vance -1 Stress.";
                 }
             }
         ]
     },
 
-    // --- 5. THE GARDEN: grass with no roots ---
+    // --- 5. THE BACK GARDEN: every blade of grass the same ---
     {
         id: 'ANOMALY_GARDEN',
         weight: 15,
-        title: "THE GARDEN",
-        context: () => `A garden, in vacuum. Grass, a fence, one tree, a bench. No dome, no air. The grass moves as if there were wind. It is growing toward the ship, slowly.`,
+        title: "THE BACK GARDEN",
+        context: () => `A patch of someone's back garden is floating in open space: a lawn, a wooden fence, one tree and a bench. There's no dome and no air, yet the grass sways, and it is slowly growing toward our hull.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "That's grass. Wake me when... no. Not that. Not like that." },
-            { speaker: 'Dr. Aris', text: "I pulled a blade through the lock. No roots. Nothing here grew. It was made." },
-            { speaker: 'Tech Mira', text: "Aura says it's harmless, Commander. She sounds sure. She's usually right." }
+            { speaker: 'Eng. Jaxon', text: "That's a back garden. Fence, bench, the lot. It looks like the one I left." },
+            { speaker: 'Dr. Aris', text: "I brought one blade in through the airlock. Every blade out there is identical to it." },
+            { speaker: 'Tech Mira', text: "A.U.R.A. says it can't hurt us, Commander. That's good enough for me." }
         ],
         choices: [
             {
                 text: "Take a cutting",
-                desc: "-5 Energy. +1 Fungus Culture. 20% chance someone gets hurt.",
+                desc: "-5 Energy. +1 Fungus Culture: the cutting grows food like one. 20% chance someone gets hurt.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     if (_anomalyTestChance(0.2)) {
@@ -418,19 +418,19 @@ const ANOMALY_ENCOUNTERS = [
                             victim.status = 'INJURED';
                             victim.tags = victim.tags || [];
                             if (!victim.tags.includes('HIVE_MIND')) victim.tags.push('HIVE_MIND');
-                            state.addLog(`${victim.name} touched it bare-handed. They say it is warm. They keep saying it is warm.`);
+                            state.addLog(`${victim.name} touched it without gloves. Their hand is burned, and they keep saying it felt warm.`);
                         }
                     }
                     if (typeof ITEMS !== 'undefined' && ITEMS.FUNGUS_CULTURE) {
-                        state.cargo.push({ ...ITEMS.FUNGUS_CULTURE, acquiredAt: 'The Garden' });
-                        return "Cutting sealed in the lab. It keeps growing with no roots. -5 Energy, +1 Fungus Culture.";
+                        state.cargo.push({ ...ITEMS.FUNGUS_CULTURE, acquiredAt: 'The Back Garden' });
+                        return "The cutting keeps growing in a sealed tray in the lab. -5 Energy, +1 Fungus Culture.";
                     }
-                    return "Sample containers failed. Nothing kept. -5 Energy.";
+                    return "The sample jars failed, so nothing was kept. -5 Energy.";
                 }
             },
             {
-                text: "Let it reach the hull",
-                desc: "33% chance: probe repaired, one injury healed. 33% chance: +10 Rations. 33% chance: all crew -1 Stress.",
+                text: "Let it grow onto the hull",
+                desc: "33% chance each: the probe is repaired and one injury healed; +10 Rations; or all crew -1 Stress.",
                 effect: (state) => {
                     const roll = window.TEST_MODE ? 0.1 : Math.random();
                     state.noteStanding && state.noteStanding('mira');
@@ -439,13 +439,13 @@ const ANOMALY_ENCOUNTERS = [
                         state.probeIntegrity = 100;
                         const injured = state.crew.find(c => c.status === 'INJURED');
                         if (injured) injured.status = 'HEALTHY';
-                        state.addLog("It grows over the hull and lets go. Where it touched, the plate is new. The probe is whole. So is whoever was hurt.");
-                        return "The garden mended things. Probe restored. One injury healed.";
+                        state.addLog("It spreads over the hull, then lets go. Where it touched, the metal is new. The probe is whole again, and so is whoever was hurt.");
+                        return "The garden repaired the probe and healed one injury.";
                     } else if (roll < 0.66) {
                         // Food
                         state.rations = Math.min(state.maxRations, state.rations + 10);
-                        state.addLog("It leaves fruit on the lock step. It tastes of nothing. A.U.R.A. tests it twice: 'Nutritious, Commander.'");
-                        return "The garden fed us. +10 Rations.";
+                        state.addLog("It leaves fruit by the airlock. The fruit has no taste. A.U.R.A. tests it twice: 'It's safe to eat, Commander.'");
+                        return "The garden left us food. +10 Rations.";
                     } else {
                         // Changed
                         const affected = state.crew.filter(c => c.status !== 'DEAD');
@@ -454,21 +454,21 @@ const ANOMALY_ENCOUNTERS = [
                             c.tags = c.tags || [];
                             if (!c.tags.includes('GARDEN_TOUCHED')) c.tags.push('GARDEN_TOUCHED');
                         });
-                        state.addLog("It touches the hull and goes still. Everyone aboard sleeps well that night. Nobody says why.");
+                        state.addLog("It touches the hull and goes still. Everyone aboard sleeps well that night, and nobody can say why.");
                         return "The garden touched the hull. All crew -1 Stress.";
                     }
                 }
             },
             {
                 text: "Burn it",
-                desc: "+10 Energy from the burn. Jaxon +1 Stress, Aris +1 Stress.",
+                desc: "+10 Energy from the fire. Jaxon +1 Stress, Aris +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 10);
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    state.addLog("It burns like grass. It does not smell of anything. Eng. Jaxon does not name it. He watches it go.");
+                    state.addLog("It burns like dry grass, but there is no smell at all.");
                     return "Garden burned. +10 Energy. Jaxon +1 Stress, Aris +1 Stress.";
                 }
             }
@@ -480,17 +480,17 @@ const ANOMALY_ENCOUNTERS = [
         id: 'ANOMALY_DOOR',
         weight: 5,
         title: "THE DOOR",
-        context: () => `An airlock, alone. No hull. Ours: the same door, our number, the same scratch by the handle. Shut. Nothing on the other side. The light on it says green.`,
+        context: () => `An airlock door is floating on its own in space, with no ship attached to it. It is an exact copy of our rear airlock, down to the scratch by the handle, and its light shows green.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "It's our aft lock, Commander. Down to the scratch. Aura says it's ours." },
-            { speaker: 'A.U.R.A.', text: "It matches our aft airlock, Commander. Our aft airlock is also here. Both are correct." },
-            { speaker: 'Spc. Vance', text: "A door with nothing behind it. I'm not opening it." },
-            { speaker: 'Dr. Aris', text: "What if whoever made it is on the other side?" }
+            { speaker: 'Tech Mira', text: "Green means it's safe to open. That's what it means on ours." },
+            { speaker: 'A.U.R.A.', text: "It matches our rear airlock in every measurement, Commander. Ours is still attached to us." },
+            { speaker: 'Spc. Vance', text: "It's a door with nothing behind it. I'm not opening it." },
+            { speaker: 'Dr. Aris', text: "Then what's on the other side?" }
         ],
         choices: [
             {
-                text: "Open it",
-                desc: "25% chance: +3 Data, all crew +1 Stress. 25% chance: +40 Energy. 25% chance: one crew member walks through and is lost. Else nothing.",
+                text: "Open the door",
+                desc: "25% chance: +3 Data, all crew +1 Stress. 25% chance: +40 Energy. 25% chance: one crew member walks through and is gone, +3 Data. 25% chance: nothing.",
                 effect: (state) => {
                     // The Door always has consequences
                     state._doorOpened = true;
@@ -502,14 +502,14 @@ const ANOMALY_ENCOUNTERS = [
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
                         state.addLog("THE DOOR OPENS.");
-                        state.addLog("Green ground. A yellow sun. Four figures, walking away from us. The grass under them does not bend.");
-                        state.addLog("It closes. Eng. Jaxon: \"Four.\" That is all he says.");
-                        return "It opened on a made place. +3 Data. All crew +1 Stress.";
+                        state.addLog("Through it: green fields under a yellow sun, and four people walking away from us. The grass doesn't bend under their feet.");
+                        state.addLog("Then it closes again.");
+                        return "The door opened onto a copy of somewhere. +3 Data. All crew +1 Stress.";
                     } else if (roll < 0.5) {
                         state.energy = Math.min(100, state.energy + 40);
                         state.addLog("THE DOOR OPENS.");
-                        state.addLog("Light through it. Our own running lights, from the far side. The kettle fills off the glare.");
-                        return "Light came through. +40 Energy.";
+                        state.addLog("Bright light pours through: our own running lights, seen from outside. The reactor charges from it.");
+                        return "Light came through the door. +40 Energy.";
                     } else if (roll < 0.75) {
                         const victim = state.crew.find(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
                         if (victim) {
@@ -518,24 +518,24 @@ const ANOMALY_ENCOUNTERS = [
                             victim._deathSector = state.currentSector;
                             victim._deathPlanet = 'the door';
                             state.addLog("THE DOOR OPENS.");
-                            state.addLog(`${victim.name} walks through it. They do not run. They do not look back.`);
-                            state.addLog("It closes. Through the glass: four figures, walking. One of them turns and waves.");
+                            state.addLog(`${victim.name} walks through it. They don't run, and they don't look back.`);
+                            state.addLog("The door closes. Through its window, four people are walking away. One of them turns and waves.");
                             state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
-                            return `${victim.name} walked through the door. +3 Data.`;
+                            return `${victim.name} walked through the door and is gone. +3 Data.`;
                         }
                     }
                     // The Door refuses
-                    state.addLog("THE DOOR OPENS. Nothing behind it. Our own aft lock, seen from inside.");
-                    state.addLog("A.U.R.A.: 'Both doors are shut now, Commander.'");
-                    return "It opened on nothing. Nothing taken, nothing lost.";
+                    state.addLog("THE DOOR OPENS. There is nothing behind it but our own rear airlock, seen from the inside.");
+                    state.addLog("A.U.R.A.: 'Both doors are closed now, Commander.'");
+                    return "The door opened onto nothing. Nothing gained, nothing lost.";
                 }
             },
             {
-                text: "Leave something on the step",
-                desc: "Gives up one cargo item. It comes back doubled: +1 Item. All crew +1 Stress.",
+                text: "Leave something at the door",
+                desc: "Give up the last item in the hold. It comes back as two: +1 Item. All crew +1 Stress.",
                 effect: (state) => {
                     if (state.cargo.length === 0) {
-                        return "Nothing in the hold to leave. The green light stays on.";
+                        return "We have nothing in the hold to leave. The green light stays on.";
                     }
                     const offering = state.cargo.pop();
                     state._doorOffering = true;
@@ -544,40 +544,40 @@ const ANOMALY_ENCOUNTERS = [
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-                    state.addLog(`${offering.name} left on the step. An hour later it is back, with another beside it. Same serial number.`);
-                    state.addLog("Spc. Vance: \"Two. Same number. That's not possible.\" He counts them again.");
-                    return `${offering.name} came back twice. +1 Item. All crew +1 Stress.`;
+                    state.addLog(`We leave the ${offering.name} by the door. An hour later it's back, with a second one beside it.`);
+                    state.addLog("A.U.R.A.: 'Both have the same serial number, Commander. That shouldn't be possible.'");
+                    return `The ${offering.name} came back as two. +1 Item. All crew +1 Stress.`;
                 }
             },
             {
-                text: "Measure it and go",
+                text: "Measure it and leave",
                 desc: "-5 Energy. +2 Data.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-                    state.addLog("Tech Mira measures it from the goat. Every dimension ours, to the millimetre. The scratch is in the same place.");
+                    state.addLog("We measure it from the lander. Every dimension matches ours to the millimetre, and the scratch is in the same place.");
                     return "Measured and logged. -5 Energy, +2 Data.";
                 }
             }
         ]
     },
 
-    // --- 7. THE CHORUS: seventeen hulls reciting the briefing ---
+    // --- 7. THE CHORUS: seventeen hulls playing the briefing ---
     {
         id: 'ANOMALY_CHORUS',
         weight: 12,
-        title: "THE CHORUS",
-        context: () => `Seventeen hulls in a ring, nose-in. All dead, all broadcasting, the same words on the same channel. Our briefing. 'Eight went this way before you.' Seventeen voices, none of them ours.`,
+        title: "THE RING OF SHIPS",
+        context: () => `Seventeen dead ships sit in a ring, all pointing inward. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Seventeen hulls. Seventeen numbers. I'll read them. Every one above nine." },
-            { speaker: 'Dr. Aris', text: "They're saying our briefing. Word for word. Even the pauses." },
-            { speaker: 'Eng. Jaxon', text: "No damage on any of them. Everyone just got up and went." },
-            { speaker: 'A.U.R.A.', text: "It is the standard briefing, Commander. I have it on file. They are reciting it correctly." }
+            { speaker: 'Spc. Vance', text: "Seventeen ships, and every one has a higher hull number than ours. We were told eight went before us." },
+            { speaker: 'Dr. Aris', text: "Listen. 'Eight ships went this way before you.' It's our briefing. Even the pauses match." },
+            { speaker: 'Eng. Jaxon', text: "There's no damage on any of them. The crews just left." },
+            { speaker: 'A.U.R.A.', text: "That is the standard briefing, Commander. I have the same file. They're playing it correctly." }
         ],
         choices: [
             {
-                text: "Board one",
-                desc: "+35 Salvage. 30% chance: whoever boards comes back at Stress 3.",
+                text: "Board one of the ships",
+                desc: "+35 Salvage. 30% chance: whoever goes aboard comes back at Stress 3.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 35);
 
@@ -588,18 +588,18 @@ const ANOMALY_ENCOUNTERS = [
                             singer.stress = 3;
                             singer.tags = singer.tags || [];
                             if (!singer.tags.includes('CHORUS_TOUCHED')) singer.tags.push('CHORUS_TOUCHED');
-                            state.addLog(`${singer.name} found the briefing tape in the captain's cabin. They keep saying it. Eight went before. Eight went before.`);
-                            return `+35 Salvage. ${singer.name} came back reciting. Stress 3.`;
+                            state.addLog(`${singer.name} found the briefing recording in the captain's cabin, and now can't stop repeating it under their breath.`);
+                            return `+35 Salvage. ${singer.name} came back badly shaken. Stress 3.`;
                         }
                     }
 
-                    state.addLog("The hull is clean. Plates on the table, four of them. We take what we can and leave before the next verse.");
-                    return "Boarded and stripped. +35 Salvage.";
+                    state.addLog("The ship is empty and tidy. Four name tags lie on the table. We take what we can and leave.");
+                    return "Boarded and stripped one ship. +35 Salvage.";
                 }
             },
             {
-                text: "Fly to the middle of the ring",
-                desc: "-10 Energy. 50% chance: +40 Energy, +3 Data, all crew +1 Stress. Else nothing.",
+                text: "Fly into the middle of the ring",
+                desc: "-10 Energy. 50% chance: +40 Energy, +3 Data, all crew +1 Stress. 50% chance: nothing.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     if (_anomalyTestChance(0.5)) {
@@ -608,26 +608,26 @@ const ANOMALY_ENCOUNTERS = [
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
-                        state.addLog("At the middle: a pinhead of light, very far off. Every hull is nose-on to it.");
-                        state.addLog("A.U.R.A.: 'A star, Commander. It is on no chart. The kettle is charging off its glare.'");
-                        return "We saw what they were facing. -10 Energy, +40 Energy, +3 Data. All crew +1 Stress.";
+                        state.addLog("From the middle we can see what every ship is pointed at: a tiny point of light, very far away.");
+                        state.addLog("A.U.R.A.: 'It looks like a star, Commander, but it isn't on any chart. The reactor is charging from its light.'");
+                        return "We saw what the ships were pointed at. -10 Energy, +40 Energy, +3 Data. All crew +1 Stress.";
                     }
 
-                    state.addLog("The middle is empty. As we leave, the seventeen go quiet, one by one, like someone turning them off.");
-                    return "Nothing at the middle. -10 Energy. The ring went quiet behind us.";
+                    state.addLog("There's nothing in the middle. As we leave, the ships go quiet one by one, as if someone is switching them off.");
+                    return "Nothing in the middle. -10 Energy. The ring went quiet behind us.";
                 }
             },
             {
-                text: "Write the seventeen numbers down and go",
+                text: "Record the hull numbers and leave",
                 desc: "-5 Energy. +1 Data. Vance -1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
-                    state.addLog("Spc. Vance reads seventeen hull numbers into the log, lowest to highest. The lowest is four digits.");
+                    state.addLog("All seventeen hull numbers go into the log, lowest to highest. Even the lowest one has four digits.");
                     state.noteStanding && state.noteStanding('vance');
-                    return "Seventeen numbers on the list. -5 Energy, +1 Data. Vance -1 Stress.";
+                    return "Seventeen hull numbers logged. -5 Energy, +1 Data. Vance -1 Stress.";
                 }
             }
         ]
@@ -637,21 +637,21 @@ const ANOMALY_ENCOUNTERS = [
     {
         id: 'ANOMALY_GEOMETRY',
         weight: 10,
-        title: "THE LEDGER",
-        context: () => `Numbers, in light, across the sky for kilometres. A list. Two columns. The left column climbs past forty thousand. The right column says four, on every line.`,
+        title: "THE LIST IN THE SKY",
+        context: () => `A list is written across the sky in light, kilometres long. It has two columns: hull numbers climbing past forty thousand, and beside every one of them, the number four.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "It's a list, Commander. Just a list. It's beautiful." },
-            { speaker: 'Spc. Vance', text: "Left column is hulls. Right column is crew. Four. Every line. Four." },
-            { speaker: 'A.U.R.A.', text: "I have checked the right-hand column, Commander. It is correct." },
-            { speaker: 'Dr. Aris', text: "Find ours. I want to see if we're on it." }
+            { speaker: 'Tech Mira', text: "It's a list, Commander. Just a list, written in light. It's beautiful." },
+            { speaker: 'Spc. Vance', text: "The left column is ships. The right column is how many crew each one had." },
+            { speaker: 'A.U.R.A.', text: "I've checked the right-hand column against my records, Commander. It's correct." },
+            { speaker: 'Dr. Aris', text: "Find our ship on it. I want to know if we're listed." }
         ],
         choices: [
             {
-                text: "Let Mira read it end to end",
-                desc: "-1 Ration: it takes a day. +4 Data. Mira Stress 0.",
+                text: "Let Mira read the whole list",
+                desc: "-1 Ration: it takes a day. +4 Data. The reader's Stress drops to 0.",
                 effect: (state) => {
                     const candidates = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
-                    if (candidates.length === 0) return "Nobody left to read it.";
+                    if (candidates.length === 0) return "There's nobody left to read it.";
 
                     // Mira is best candidate if available
                     let solver = candidates.find(c => c.tags.includes('SPECIALIST')) ||
@@ -663,35 +663,37 @@ const ANOMALY_ENCOUNTERS = [
                     solver.stress = 0;
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 4;
 
-                    state.addLog(`${solver.name} reads for a day. Then: "We're on it, Commander. Nine. Four crew. She's right. She's always right."`);
+                    state.addLog(`${solver.name} reads for a whole day. Then: "We're on it, Commander. Ship nine, four crew. Just what A.U.R.A. says."`);
                     state.noteStanding && state.noteStanding('mira');
                     return `${solver.name} read the whole list. -1 Ration, +4 Data. ${solver.name} Stress 0.`;
                 }
             },
             {
-                text: "Have A.U.R.A. check our line against her record",
+                text: "Check our line against A.U.R.A.'s records",
                 desc: "-5 Energy. +2 Data. Vance +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
-                    state.addLog("A.U.R.A.: 'Filed, Commander. It agrees with my record. Every line, including ours.'");
-                    state.addLog("Spc. Vance: \"Then your record's wrong.\" A.U.R.A.: 'Four crew, Commander.' He does not ask again.");
-                    if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Checked the ledger against her record');
+                    state.addLog("A.U.R.A.: 'It matches my records, Commander. Every line, including ours.'");
+                    state.addLog(vance
+                        ? "Spc. Vance: \"Then your records are wrong, and I want to know who wrote them.\" A.U.R.A.: 'Four crew, Commander.' He doesn't ask again."
+                        : "A.U.R.A.: 'Four crew on our line, Commander, the same as on every other.'");
+                    if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Checked the list in the sky against her records');
                     state.noteStanding && state.noteStanding('vance');
                     return "Our line checked. -5 Energy, +2 Data. Vance +1 Stress.";
                 }
             },
             {
-                text: "Fly through without reading",
-                desc: "-10 Energy. Nothing read. Mira +1 Stress.",
+                text: "Fly through without reading it",
+                desc: "-10 Energy. Mira +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
-                    state.addLog("Ports shuttered, instruments off, dead reckoning. Eng. Jaxon swears he saw a number through his eyelids. He won't say which.");
-                    return "Through the ledger, unread. -10 Energy. Mira +1 Stress.";
+                    state.addLog("Windows shuttered and instruments off, we fly through on dead reckoning.");
+                    return "Flew through without reading it. -10 Energy. Mira +1 Stress.";
                 }
             }
         ]
@@ -702,25 +704,26 @@ const ANOMALY_ENCOUNTERS = [
         id: 'ANOMALY_ARCHIVE',
         weight: 8,
         title: "THE ARCHIVE",
-        context: () => `A body the size of a moon, shelved. Every shelf is a hull's hold, made again, neat. Our crates are here, with our lot numbers, unopened. Every file is four lines long.`,
+        context: () => `Inside a hollow moon, endless shelves hold copies of the cargo of every ship that came this way, neatly stacked. Our own crates are here too, with our batch numbers, unopened.`,
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "Records from every hull on this heading, Commander. Including ours. I did not send ours." },
-            { speaker: 'Tech Mira', text: "I found our file. Four lines. Everyone's file is four lines." },
-            { speaker: 'Spc. Vance', text: "There's a shelf marked EXODUS, OUTCOMES. Do we want to read that?" },
-            { speaker: 'Dr. Aris', text: "Yes." }
+            { speaker: 'A.U.R.A.', text: "There are records here from every ship on this heading, Commander. Ours too. I never sent ours." },
+            { speaker: 'Tech Mira', text: "Our cargo list is here. It matches A.U.R.A.'s copy item for item." },
+            { speaker: 'Spc. Vance', text: "There's a shelf labelled EXODUS OUTCOMES. Do we want to read that?" },
+            { speaker: 'Dr. Aris', text: "Yes. I do." }
         ],
         choices: [
             {
                 text: "Read the outcomes shelf",
-                desc: "-1 Ration: Aris reads all day. +8 Data. All crew +2 Stress.",
+                desc: "-1 Ration: a full day of reading. +8 Data. All crew +2 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 8;
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 2);
                     });
-                    state.addLog("Dr. Aris reads until she can't. Forty thousand hulls. Every entry ends the same way: stopped.");
-                    state.addLog("Dr. Aris: \"I've got you. All of you. It'll take me the rest of my life to read you out.\"");
+                    state.addLog("We read until we can't go on. Forty thousand ships, and every entry ends with the same word: stopped.");
+                    const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
+                    if (aris) state.addLog("Dr. Aris: \"Every one of these crews goes on my list. It'll take me the rest of my life.\"");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Read the outcomes shelf');
                     state.noteStanding && state.noteStanding('aris');
                     return "Outcomes shelf read. -1 Ration, +8 Data. All crew +2 Stress.";
@@ -728,35 +731,35 @@ const ANOMALY_ENCOUNTERS = [
             },
             {
                 text: "Take the drive manuals",
-                desc: "+30 Salvage, +20 Energy, warp costs -10%. Aris +1 Stress: nothing read.",
+                desc: "+30 Salvage, +20 Energy, and warps cost 10% less from now on. Aris +1 Stress: nothing gets read.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
                     state.energy = Math.min(100, state.energy + 20);
                     state._warpDiscount = (state._warpDiscount || 0) + 10;
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    state.addLog("Drive manuals. Ours, with a second chapter ours doesn't have. Eng. Jaxon reads it and closes it.");
-                    state.addLog("Eng. Jaxon: \"Kettle'll burn cleaner. That's all I'm taking from it.\"");
-                    return "Manuals taken. +30 Salvage, +20 Energy, warp costs -10%. Aris +1 Stress.";
+                    state.addLog("The drive manuals are copies of ours, with one extra chapter that ours doesn't have.");
+                    state.addLog("We use them to tune the reactor. Nobody can make sense of the extra chapter.");
+                    return "Manuals taken. +30 Salvage, +20 Energy, warps cost 10% less. Aris +1 Stress.";
                 }
             },
             {
-                text: "Cut shelving for plate",
-                desc: "+120 Salvage. Aris +2 Stress. A.U.R.A. logs it against us.",
+                text: "Cut up the shelves for metal",
+                desc: "+120 Salvage. Aris +2 Stress. A.U.R.A. will think less of it.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 120);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 2);
-                    state.addLog("A.U.R.A.: 'You are taking the shelves, Commander. Very well. I have logged which sections.'");
-                    state.addLog("Eng. Jaxon: \"Knowledge doesn't keep you warm. Plate does.\" Dr. Aris does not answer him.");
+                    state.addLog("A.U.R.A.: 'You're taking the shelves apart, Commander. I've logged which sections.'");
+                    state.addLog("The shelves come down with every ship's records still on them.");
                     if (typeof AuraSystem !== 'undefined') {
-                        AuraSystem.adjustEthics(-2, 'Cut the archive for plate');
+                        AuraSystem.adjustEthics(-2, 'Cut up the archive for metal');
                     }
-                    return "Shelving cut and stowed. +120 Salvage. Aris +2 Stress.";
+                    return "Shelves cut up and stored. +120 Salvage. Aris +2 Stress.";
                 }
             },
             {
-                text: "Read only the shelf on worlds",
+                text: "Read only the shelf about planets",
                 desc: "-5 Energy. +3 Data. All planets revealed. All crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
@@ -767,8 +770,8 @@ const ANOMALY_ENCOUNTERS = [
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-                    state.addLog("The shelf on worlds lists every body in this sector and what is on it. The list of good ones is one line long. It is not in this sector.");
-                    return "Worlds shelf read. -5 Energy, +3 Data. All planets revealed. All crew +1 Stress.";
+                    state.addLog("The shelf lists every planet in this sector and what's on it. The list of good ones has a single entry, and it isn't in this sector.");
+                    return "Planet shelf read. -5 Energy, +3 Data. All planets revealed. All crew +1 Stress.";
                 }
             }
         ]

@@ -5,9 +5,9 @@
  * These are unique, one-time encounters that provide significant lore,
  * resources, or game-altering effects.
  *
- * THE LIGHTHOUSE - Beacon station with FTL navigation data
- * THE GARDEN - Terraformed biodome with living ecosystem
- * THE GRAVE - Memorial site with disturbing revelations
+ * THE LIGHTHOUSE - a dead ship's navigation beacon, still guiding ships down the heading
+ * THE GARDEN - a copy of an Earth garden under a dome; the grass has no roots
+ * THE GRAVE - a moon of graves: four names on every stone, and no commanders
  */
 
 const LATE_GAME_POIS = {
@@ -20,64 +20,64 @@ const LATE_GAME_POIS = {
         weight: 15, // Rarer than Exodus wrecks
 
         context: () => `
-A structure orbits the planet below — not a ship, not a station. A needle of crystalline material, impossibly tall, broadcasting on every frequency.
+A dead ship is parked in orbit here. Its crew is long gone, but its navigation beacon is still running.
 
-The signal is not language. It's pure mathematics. Navigation data. Star charts for sectors that don't appear on any human map.
+The beacon sends one message, over and over: the safest route onward, for any ship that comes after it.
 
-The Lighthouse has been here for a very long time. Longer than humanity has existed. And it's been waiting for someone to find it.`,
+Every route it gives points the same way. Down our heading.`,
 
         dialogue: [
-            { speaker: 'Tech Mira', text: "This... this is a navigation beacon. The math describes corridors through spacetime. Paths we could never have calculated on our own." },
-            { speaker: 'A.U.R.A.', text: "The signal predates human spaceflight by over 3 billion years. It was placed here deliberately. For us." },
-            { speaker: 'Spc. Vance', text: "Or for something like us. Something that came before." },
-            { speaker: 'Eng. Jaxon', text: "The materials are unlike anything in our databases. But I think... I think I can interface with it." }
+            { speaker: 'Tech Mira', text: "It's a navigation beacon, Commander. It's giving directions to any ship behind it." },
+            { speaker: 'A.U.R.A.', text: "The route it gives is accurate, Commander. It matches our heading exactly." },
+            { speaker: 'Spc. Vance', text: "So every ship that passed here followed it. Where did it lead them?" },
+            { speaker: 'Eng. Jaxon', text: "It still runs off its own reactor. I can plug our charts straight into it." }
         ],
 
         choices: [
             {
                 id: 'DOWNLOAD_CHARTS',
-                text: "Download the star charts",
-                desc: "Reveals better paths. All future warps cost -2 energy.",
+                text: "Download its route",
+                desc: "Warps cost 2 less energy from now on.",
                 effect: (state) => {
                     state._lighthouseBonus = true;
-                    state.addLog("NAVIGATION DATA INTEGRATED: Star charts downloaded. Warp efficiency permanently improved.");
-                    state.addLog("The data shows paths through the sector that aren't... physical. Shortcuts through space itself.");
+                    state.addLog("ROUTE DOWNLOADED: every warp from now on costs 2 less energy.");
+                    state.addLog("The route runs straight down our heading, the same way every ship before us went.");
                     if (typeof AuraSystem !== 'undefined') {
-                        window.AuraSystem.adjustEthics(1, 'Preserved ancient knowledge', state);
+                        window.AuraSystem.adjustEthics(1, 'Kept the beacon running', state);
                     }
-                    return "Star charts integrated. All future warps cost 2 less energy. The paths ahead are clearer now.";
+                    return "Route downloaded. Every warp now costs 2 less energy.";
                 }
             },
             {
                 id: 'SALVAGE_BEACON',
-                text: "Salvage the beacon structure",
-                desc: "+100 Salvage. Destroys the Lighthouse permanently.",
+                text: "Strip the beacon for parts",
+                desc: "+100 Salvage. The beacon goes dark for good.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 100);
-                    state.addLog("The crystalline structure shatters as we extract components. The signal dies.");
-                    state.addLog("Eng. Jaxon: 'There was something beautiful about it. Now there's just... parts.'");
+                    state.addLog("We strip the beacon down to the frame. Its signal stops.");
+                    state.addLog("A.U.R.A.: 'The beacon is off, Commander. Any ship behind us will have to find its own way.'");
                     if (typeof AuraSystem !== 'undefined') {
-                        window.AuraSystem.adjustEthics(-2, 'Destroyed ancient beacon', state);
+                        window.AuraSystem.adjustEthics(-2, 'Destroyed a working beacon', state);
                     }
-                    return "Beacon salvaged. +100 Salvage. The Lighthouse falls silent forever.";
+                    return "Beacon stripped. +100 Salvage. It will never guide anyone again.";
                 }
             },
             {
                 id: 'STUDY_SIGNAL',
-                text: "Study the signal origin",
-                desc: "Tech Mira gains crucial insight. Reveals hidden lore.",
+                text: "Read the beacon's log",
+                desc: "Mira reads the list of every ship it guided. Mira -1 Stress.",
                 effect: (state) => {
                     const mira = state.crew.find(c => c.tags?.includes('SPECIALIST'));
                     if (mira && mira.status !== 'DEAD') {
                         mira.stress = Math.max(0, (mira.stress || 0) - 1);
                         mira._lighthouseKnowledge = true;
-                        state.addLog("Tech Mira: 'The signal... it's a response. To OUR signal. The one GENESIS sent from Earth. They've been waiting for us.'");
-                        state.addLog("Tech Mira: 'This changes everything. The corridor isn't natural. It was BUILT. For humanity.'");
+                        state.addLog("Tech Mira: 'It logged every ship that passed. Thousands of them, all going the same way.'");
+                        state.addLog("Tech Mira: 'And none of them ever came back past it.'");
                     } else {
-                        state.addLog("Without Mira's expertise, the signal analysis is incomplete. But fragments remain...");
-                        state.addLog("The signal is older than Earth. And it knew we were coming.");
+                        state.addLog("Without Mira, we can only read part of the log.");
+                        state.addLog("Thousands of ships passed this beacon, all heading the same way. None of them came back.");
                     }
-                    return "Signal analysis complete. The truth is stranger than we imagined.";
+                    return "Beacon log read. Every ship that passed went one way, and none came back.";
                 }
             }
         ]
@@ -92,36 +92,36 @@ The Lighthouse has been here for a very long time. Longer than humanity has exis
         weight: 15,
 
         context: () => `
-In the center of the dead planet, something lives.
+On this dead planet, under a dome kilometres wide, there is a whole Earth garden: grass, trees, running water, birds. The grass has no roots. It just sits on the soil.
 
-A dome — kilometers across, made of material that shouldn't exist. Inside: an ecosystem. Green things growing. Water flowing. Animals that don't match any Earth database, but move with familiar grace.
+Nobody built it. It is a copy of a real place, and the copy is not quite right.
 
-Nobody built this. It is a copy of somewhere, made by something that had read that somewhere completely. The door is open because a door was in the original.`,
+The door is open, because the real place had an open door.`,
 
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Every plant here is an Earth plant. Every one is slightly wrong. The grass has no roots." },
-            { speaker: 'Tech Mira', text: "And here we see... a dome that makes its own light. Nobody makes their own light." },
-            { speaker: 'Spc. Vance', text: "Something in the middle. A stone with names on it. I count four." },
-            { speaker: 'A.U.R.A.', text: "Preserved seeds and embryos, Commander. Earth stock. I cannot say how they got here." }
+            { speaker: 'Dr. Aris', text: "Every plant here is an Earth plant. Whoever copied them didn't know how plants grow." },
+            { speaker: 'Tech Mira', text: "The dome makes its own daylight. I can't find where it's coming from." },
+            { speaker: 'Spc. Vance', text: "There's a stone in the middle with names cut into it." },
+            { speaker: 'A.U.R.A.', text: "There are seeds and embryos stored here, Commander. Earth stock. I can't say how they got here." }
         ],
 
         choices: [
             {
                 id: 'TAKE_SAMPLES',
-                text: "Collect genetic samples",
-                desc: "+3 Rations worth of seeds. Colony bonus if established here.",
+                text: "Collect seeds and samples",
+                desc: "+3 Rations.",
                 effect: (state) => {
                     state.rations = Math.min(state.maxRations, state.rations + 3);
                     state._gardenSamples = true;
-                    state.addLog("Genetic samples secured. Viable seeds, soil bacteria, pollinator embryos.");
-                    state.addLog("Dr. Aris: 'These aren't Earth species. But they're compatible with us. Someone designed them to be.'");
-                    return "Samples collected. +3 Rations. These will help when we settle.";
+                    state.addLog("We collect seeds, soil and frozen embryos from the store.");
+                    state.addLog("A.U.R.A.: 'The seeds are healthy, Commander. They would grow in real soil.'");
+                    return "Seeds collected. +3 Rations.";
                 }
             },
             {
                 id: 'ENTER_GARDEN',
-                text: "Enter the Garden fully",
-                desc: "Crew heals and destresses. Risk of contamination.",
+                text: "Let everyone walk in the garden",
+                desc: "Heals every injury. All crew -2 Stress. 30% chance one crew member breathes in its pollen and is changed by it.",
                 effect: (state) => {
                     // Heal and destress all crew
                     state.crew.forEach(c => {
@@ -137,25 +137,24 @@ Nobody built this. It is a copy of somewhere, made by something that had read th
                             const affected = living[Math.floor(Math.random() * living.length)];
                             if (!affected.tags.includes('HIVE_MIND')) {
                                 affected.tags.push('HIVE_MIND');
-                                state.addLog(`${affected.name} breathed the spores deeply. Something has changed in their eyes.`);
+                                state.addLog(`${affected.name} breathed in the pollen. Since then they've been quiet, and they keep looking back at the dome.`);
                             }
                         }
                     }
 
-                    state.addLog("The crew walked barefoot through grass for the first time since Earth. Some wept.");
-                    state.addLog("Hours passed like minutes. The Garden is healing — but also watching.");
-                    return "Crew fully healed. All stress reduced. But the Garden's influence lingers...";
+                    state.addLog("The crew walked barefoot on grass for the first time since Earth. Some of them cried.");
+                    state.addLog("Hours went by like minutes.");
+                    return "All injuries healed. All crew -2 Stress.";
                 }
             },
             {
                 id: 'STUDY_ALTAR',
-                text: "Investigate the central structure",
-                desc: "Read the stone in the middle.",
+                text: "Read the stone in the middle",
+                desc: "All crew +1 Stress.",
                 effect: (state) => {
-                    state.addLog("A stone with four names cut into it, and a hull number: EXODUS-3,306. Under the names, a fifth line. Blank.");
-                    state.addLog("Dr. Aris: 'It is a memorial. They made a garden and buried their crew in it.'");
-                    state.addLog("Spc. Vance: 'Four names. Who buried the fourth?'");
-                    state.addLog("A.U.R.A.: 'Four crew per hull, Commander. That is the complement.'");
+                    state.addLog("The stone has four names cut into it, and a hull number: EXODUS-3,306. Below the names is a fifth line, left blank.");
+                    state.addLog("It is a memorial. Someone made this garden and buried their crew in it.");
+                    state.addLog("A.U.R.A.: 'I have no record of a ship numbered 3,306, Commander. We are ship nine.'");
                     state._gardenTruth = true;
 
                     // Add stress from existential revelation
@@ -165,7 +164,7 @@ Nobody built this. It is a copy of somewhere, made by something that had read th
                         }
                     });
 
-                    return "The truth revealed: The Garden was planted by future humanity. We are part of a closed loop.";
+                    return "A memorial for hull 3,306: four names and a blank line. All crew +1 Stress.";
                 }
             }
         ]
@@ -180,27 +179,25 @@ Nobody built this. It is a copy of somewhere, made by something that had read th
         weight: 20, // More common in final sector
 
         context: () => `
-The entire moon is a cemetery.
+This whole moon is a graveyard.
 
-Markers to every horizon, in rows. A hull number on each row. Four names on each stone.
+Rows of stones stretch to every horizon, one row for each ship, with the hull number at the end. Every stone has four names on it.
 
-This is where the crews were buried. Somebody did the burying, on every row, and is not buried here.
-
-Thirty thousand rows. The far ones are older.`,
+The rows farther out are older.`,
 
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Four names on every stone. Every stone. I am reading them. Somebody should." },
-            { speaker: 'Eng. Jaxon', text: "This row has our patch on it. Hull nine thousand and something." },
-            { speaker: 'Spc. Vance', text: "No commanders. Thirty thousand rows and not one commander." },
-            { speaker: 'Tech Mira', text: "Don't read them. Please." },
-            { speaker: 'A.U.R.A.', text: "Four crew per hull, Commander. The stones agree with the manifest." }
+            { speaker: 'Dr. Aris', text: "I'm going to read their names. Somebody should." },
+            { speaker: 'Eng. Jaxon', text: "This row has our mission patch on it. The hull number is over nine thousand." },
+            { speaker: 'Spc. Vance', text: "Thousands of stones, and not one commander." },
+            { speaker: 'Tech Mira', text: "Please don't read them out loud. I don't want to hear them." },
+            { speaker: 'A.U.R.A.', text: "Four crew per ship, Commander. The stones match the crew lists." }
         ],
 
         choices: [
             {
                 id: 'READ_GRAVES',
                 text: "Walk the rows and read the names",
-                desc: "Aris wants them read. It will take hours, and it will cost the crew.",
+                desc: "Aris wants the names read aloud. It takes hours. All crew +2 Stress.",
                 effect: (state) => {
                     // High stress but valuable info
                     state.crew.forEach(c => {
@@ -210,17 +207,20 @@ Thirty thousand rows. The far ones are older.`,
                     });
 
                     state.noteStanding && state.noteStanding('aris');
-                    state.addLog("Aris reads every name on the nearest hundred stones aloud. Four names each. Nobody stops her.");
-                    state.addLog("Dr. Aris: 'Whoever buried them knew their names. It is on every stone in the same hand.'");
+                    state.addLog("The names on the nearest hundred stones are read aloud, four to a stone. Nobody interrupts.");
+                    const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
+                    state.addLog(aris
+                        ? "Dr. Aris: 'Whoever buried them knew every name. It's the same handwriting on every stone.'"
+                        : "Whoever buried them knew every name. It's the same handwriting on every stone.");
                     state._gravesRead = true;
 
-                    return "Four hundred names read aloud. +2 stress to all crew.";
+                    return "Four hundred names read aloud. All crew +2 Stress.";
                 }
             },
             {
                 id: 'LEAVE_TRIBUTE',
-                text: "Leave tributes for the fallen",
-                desc: "Honor the dead. Crew gains peace. -10 Salvage for markers.",
+                text: "Leave something at the graves",
+                desc: "-10 Salvage to make markers. All crew -1 Stress.",
                 effect: (state) => {
                     state.salvage = Math.max(0, state.salvage - 10);
 
@@ -235,24 +235,24 @@ Thirty thousand rows. The far ones are older.`,
                     const dead = state.crew.filter(c => c.status === 'DEAD');
                     if (dead.length > 0) {
                         dead.forEach(d => {
-                            state.addLog(`A stone rises from the ground, already engraved: "${d.realName}. They were not forgotten."`);
+                            state.addLog(`Near the edge there is a new stone that wasn't there when we landed. It reads: ${d.realName}.`);
                         });
                     }
 
-                    state.addLog("You leave personal items at the stones. Photos. Letters. The small things that meant everything.");
-                    state.addLog("A.U.R.A.: 'The graves acknowledge your offering. You have joined the communion of the lost.'");
+                    state.addLog("We leave personal things at the stones: photos, letters, small things that mattered.");
+                    state.addLog("A.U.R.A.: 'I've recorded where we left them, Commander.'");
 
                     if (typeof AuraSystem !== 'undefined') {
                         window.AuraSystem.adjustEthics(2, 'Honored the dead with reverence', state);
                     }
 
-                    return "Tributes left. The dead are remembered. All crew -1 stress. (-10 Salvage)";
+                    return "Left tributes at the graves. -10 Salvage. All crew -1 Stress.";
                 }
             },
             {
                 id: 'SEARCH_ARTIFACTS',
-                text: "Search for grave goods",
-                desc: "Risk angering the dead. Possible rare items.",
+                text: "Search the graves for belongings",
+                desc: "60% chance: +1 rare item. 40% chance someone gets hurt, and A.U.R.A. will think less of it.",
                 effect: (state) => {
                     // Risk/reward
                     if (Math.random() < 0.4) {
@@ -261,33 +261,33 @@ Thirty thousand rows. The far ones are older.`,
                         if (living.length > 0) {
                             const victim = living[Math.floor(Math.random() * living.length)];
                             victim.status = 'INJURED';
-                            state.addLog(`${victim.name} touched something they shouldn't have. A cold pain shoots through their hand.`);
+                            state.addLog(`${victim.name} cut their hand badly on a broken stone.`);
                         }
-                        state.addLog("The graves do not give up their treasures willingly.");
+                        state.addLog("There's nothing buried with them worth taking.");
 
                         if (typeof AuraSystem !== 'undefined') {
-                            window.AuraSystem.adjustEthics(-2, 'Desecrated the eternal graveyard', state);
+                            window.AuraSystem.adjustEthics(-2, 'Dug through the graves', state);
                         }
 
-                        return "The dead do not approve. One crew member injured.";
+                        return "Nothing found. One crew member hurt digging at the graves.";
                     } else {
                         // Good outcome - rare item
                         const item = {
                             id: 'CHRONO_SHARD_' + Date.now(),
-                            name: 'Chrono-Shard',
+                            name: 'Warm Stone',
                             type: 'ARTIFACT',
                             cargoSize: 1,
-                            desc: 'A fragment of crystallized time from the Grave. Allows one crew member to be revived from death.',
+                            desc: 'A small stone from the graves that never cools down. Scratched on it: "For whoever comes next."',
                             effect: {
                                 type: 'REVIVE_CREW',
                                 uses: 1
                             }
                         };
                         state.cargo.push(item);
-                        state.addLog("Among the grave goods: a shard that shouldn't exist. Time solidified into crystal.");
-                        state.addLog("The inscription reads: 'For those who earned a second chance.'");
+                        state.addLog("Among the belongings: a small stone that stays warm in the hand.");
+                        state.addLog("Someone scratched on it: 'For whoever comes next.'");
 
-                        return "Found Chrono-Shard! This artifact can revive one fallen crew member.";
+                        return "Found a Warm Stone in the graves.";
                     }
                 }
             }

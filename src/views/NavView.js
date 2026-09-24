@@ -285,7 +285,7 @@ class NavView {
                 signals.push({ type: 'ANCIENT RUINS', color: '#74d99a', effect: '-3% EVA risk, Artifacts' });
             }
             if (p.tags?.includes('ALIEN_SIGNALS')) {
-                signals.push({ type: 'ALIEN SIGNAL', color: '#d9a24a', effect: '+10% EVA risk, Rare loot' });
+                signals.push({ type: 'OLD SIGNAL', color: '#d9a24a', effect: '+10% landing risk, rare finds' });
             }
             if (p.tags?.includes('DERELICT')) {
                 signals.push({ type: 'DEAD SHIP', color: '#c4d0c4', effect: '+5% EVA risk, Ship salvage' });

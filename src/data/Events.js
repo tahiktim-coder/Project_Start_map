@@ -1,377 +1,380 @@
 // The strange finds wait until sector 3: sector 1 must look exactly like the briefing said it would.
 const deepEnough = () => ((window.app && window.app.state && window.app.state.currentSector) || 1) >= 3;
 
+// Choice text is what the team does. The risk and the reward are shown beside it by the EVA card.
+// A walk-away choice that costs something must keep "(energy cost)" or "(morale loss)" in its text:
+// resolveEvaOutcome in bundle.js reads those words to charge -10 Energy or +1 Stress.
 const EVENTS = [
     {
         id: 'DERELICT',
         trigger: (planet) => planet.tags && (planet.tags.includes('ANCIENT_RUINS') || planet.tags.includes('ALIEN_SIGNALS')),
-        title: "DERELICT SIGNAL",
-        desc: "The EVA team has located the source of the signal: A crashed vessel of unknown origin. Hull breach imminent.",
+        title: "CRASHED SHIP",
+        desc: "The signal is coming from a crashed ship. Its hull is cracked and could give way at any moment.",
         choices: [
-            { text: "Salvage Exterior (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Breach Hull (Risky)", riskMod: 30, reward: { type: 'ITEM', tags: ['TECH'] } }
+            { text: "Cut panels off the outside", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Go inside the hull", riskMod: 30, reward: { type: 'ITEM', tags: ['TECH'] } }
         ]
     },
     {
         id: 'BIO_HORROR',
         trigger: (planet) => planet.type === 'VITAL' || (planet.tags && planet.tags.includes('VITAL_FLORA')),
-        title: "BIOLOGICAL ANOMALY",
-        desc: "The detected lifeform is immense... and it's moving towards the landing team.",
+        title: "SOMETHING HUGE",
+        desc: "The life signal is one enormous animal, and it's moving toward the team.",
         choices: [
-            { text: "Defensive Sample (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Capture Specimen (Very Risky)", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO'] } }
+            { text: "Keep back and take readings", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Get close and take a tissue sample", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO'] } }
         ]
     },
     {
         id: 'MINERAL_VEIN',
         trigger: (planet) => ['ROCKY', 'DESERT', 'VOLCANIC'].includes(planet.type),
-        title: "RICH VEIN DETECTED",
-        desc: "Sensors indicate a high-density mineral pocket in a precarious canyon ridge.",
+        title: "RICH VEIN",
+        desc: "There's a dense pocket of metal ore on the edge of a crumbling canyon.",
         choices: [
-            { text: "Surface Digging (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Deep Core Drill (Risky)", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }
+            { text: "Dig at the surface", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Drill deep into the ridge", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }
         ]
     },
     {
         id: 'SOLAR_FLARE',
         trigger: (planet) => planet.metrics && planet.metrics.temp > 100,
-        title: "SOLAR FLARE IMMINENT",
-        desc: "The star is unstable. Radiation levels are spiking dangerously high.",
+        title: "SOLAR FLARE COMING",
+        desc: "The star is about to flare. Radiation on the surface is rising fast.",
         choices: [
-            { text: "Shielded Harvest (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Expose Collections (Very Risky)", riskMod: 40, reward: { type: 'ITEM', tags: ['ENERGY'] } }
+            { text: "Collect power under the radiation shield", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Leave the collectors out in the open", riskMod: 40, reward: { type: 'ITEM', tags: ['ENERGY'] } }
         ]
     },
     {
         id: 'GHOST_SHIP',
         trigger: (planet) => deepEnough() && Math.random() < 0.3,
-        title: "UNKNOWN VESSEL",
-        desc: "A ship with no transponder code is drifting in high orbit. No life signs.",
+        title: "SILENT SHIP",
+        desc: "A ship is drifting in high orbit. It isn't sending any ID code, and nobody aboard is alive.",
         choices: [
-            { text: "Hail & Ignore (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Boarding Party (Extreme)", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }
+            { text: "Call it once, then leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Send a team aboard", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }
         ]
     },
     {
         id: 'CRYSTAL_SPIRE',
         trigger: (planet) => ['ICE_WORLD', 'ROCKY'].includes(planet.type),
-        title: "CRYSTALLINE SPIRE",
-        desc: "A massive singing crystal formation protrudes from the ice.",
+        title: "RINGING TOWER",
+        desc: "A huge crystal tower sticks up out of the ice. It gives off a low ringing sound.",
         choices: [
-            { text: "Acoustic Scan (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Extract Core (Risky)", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }
+            { text: "Scan it from a distance", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Cut out its core", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }
         ]
     },
     {
         id: 'TIME_DILATION',
         trigger: (planet) => planet.metrics && planet.metrics.gravity > 1.5,
-        title: "TEMPORAL ANOMALY",
-        desc: "The landing team reports chronometer desync. 1 hour on surface equals 1 day in orbit.",
+        title: "SLOW CLOCKS",
+        desc: "The gravity here is so strong it slows time. One hour on the surface is a whole day up on the ship.",
         choices: [
-            { text: "Abort Mission (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Collect 'Aged' Samples (Risky)", riskMod: 35, reward: { type: 'ITEM', tags: ['GEO', 'LORE'] } }
+            { text: "Call the team back now", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Stay longer and collect samples", riskMod: 35, reward: { type: 'ITEM', tags: ['GEO', 'LORE'] } }
         ]
     },
     {
         id: 'MIRAGE_VISION',
         trigger: (planet) => ['DESERT', 'OCEANIC'].includes(planet.type),
-        title: "THE MIRAGE",
-        desc: "Crew reports seeing massive Earth-like cities on the horizon. Sensors show nothing.",
+        title: "CITIES ON THE HORIZON",
+        desc: "The team can see cities like Earth's on the horizon. The sensors say there's nothing there.",
         choices: [
-            { text: "Trust Sensors (Safe)", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Send Walk Team (Psych Risk)", riskMod: 45, reward: { type: 'ITEM', tags: ['LORE'] } }
+            { text: "Trust the sensors and stay put", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Walk out toward the cities", riskMod: 45, reward: { type: 'ITEM', tags: ['LORE'] } }
         ]
     },
     {
         id: 'TECTONIC_SHIFT',
         trigger: (planet) => ['VOLCANIC', 'ROCKY'].includes(planet.type) && planet.dangerLevel > 1,
-        title: "PLANETARY QUAKE",
-        desc: "The ground beneath the landing zone is splitting apart!",
+        title: "EARTHQUAKE",
+        desc: "The ground under the landing site is splitting open.",
         choices: [
-            { text: "Emergency Takeoff (Lose Fuel)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Stabilize & Mine (Very Risky)", riskMod: 50, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+            { text: "Take off right now (energy cost)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Hold steady and keep mining", riskMod: 50, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
         ]
     },
     {
         id: 'HIVE_MIND',
         trigger: (planet) => planet.metrics && planet.metrics.hasLife && planet.type === 'VITAL',
-        title: "CHORUS OF SONGS",
-        desc: "The plants are... singing in unison. It is overwhelming the comms channels.",
+        title: "SINGING PLANTS",
+        desc: "The plants are all making the same sound together, and it's drowning out our radios.",
         choices: [
-            { text: "Burn & Harvest (Hostile)", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Attempt Communication (Diplomatic)", riskMod: 40, reward: { type: 'ITEM', tags: ['BIO'] } }
+            { text: "Burn them back and harvest", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Play their sound back to them", riskMod: 40, reward: { type: 'ITEM', tags: ['BIO'] } }
         ]
     },
     {
         id: 'CRYOSLEEP_POD',
         trigger: (planet) => planet.type === 'ICE_WORLD' && planet.metrics.hasTech,
-        title: "ANCIENT POD",
-        desc: "A functioning cryosleep pod found in the ice. Occupant status: UNKNOWN.",
+        title: "OLD SLEEP POD",
+        desc: "There's a working sleep pod frozen into the ice. We can't tell whether the person inside is alive.",
         choices: [
-            { text: "Salvage Parts (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Thaw Occupant (Extreme Risk)", riskMod: 60, reward: { type: 'ITEM', tags: ['LORE', 'TECH'] } }
+            { text: "Take the parts around the pod", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Thaw the pod and open it", riskMod: 60, reward: { type: 'ITEM', tags: ['LORE', 'TECH'] } }
         ]
     },
     {
         id: 'ROGUE_AI',
         trigger: (planet) => planet.tags && planet.tags.includes('ALIEN_SIGNALS'),
-        title: "ROGUE SATELLITE",
-        desc: "An orbiting defense platform has locked onto the shuttle.",
+        title: "ARMED SATELLITE",
+        desc: "An old defence satellite in orbit has locked on to the lander.",
         choices: [
-            { text: "Evasive Maneuvers (Mod Risk)", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Hack Signal (Tech Risk)", riskMod: 40, reward: { type: 'ITEM', tags: ['TECH'] } }
+            { text: "Dodge it and keep going", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Try to break into its controls", riskMod: 40, reward: { type: 'ITEM', tags: ['TECH'] } }
         ]
     },
     // --- NEW PLANET TYPE EVENTS ---
     {
         id: 'TERMINATOR_WALK',
         trigger: (planet) => planet.type === 'TIDALLY_LOCKED',
-        title: "THE THIN LINE",
-        desc: "The livable band is barely 200km wide. One wrong step — eternal fire or eternal ice.",
+        title: "THE TWILIGHT STRIP",
+        desc: "Only a strip about 200 km wide is safe to walk on. One side burns and the other side freezes.",
         choices: [
-            { text: "Survey Twilight Zone (Moderate)", riskMod: 15, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Cross Into The Dark Side (Extreme)", riskMod: 55, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
+            { text: "Search along the twilight strip", riskMod: 15, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Cross into the frozen dark side", riskMod: 55, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
         ]
     },
     {
         id: 'INNER_WORLD',
         trigger: (planet) => planet.type === 'HOLLOW',
-        title: "THE INTERIOR",
-        desc: "The team has found an entry point. Inside: inverted gravity, a miniature sun, and the ruins of a dead civilization on the inner walls.",
+        title: "INSIDE THE PLANET",
+        desc: "The team found a way in. The planet is hollow, with a small sun in the middle and ruined buildings on the inside walls.",
         choices: [
-            { text: "Photograph From Entrance (Safe)", riskMod: 5, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Descend Into Interior (Extreme)", riskMod: 50, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
+            { text: "Take photos from the entrance", riskMod: 5, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Climb down inside", riskMod: 50, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
         ]
     },
     {
         id: 'SYMBIOTE_EMBRACE',
         trigger: (planet) => planet.type === 'SYMBIOTE_WORLD',
         title: "THE WELCOME",
-        desc: "The biosphere is actively growing pathways for the landing team. Fruit appears at their feet. It smells like home.",
+        desc: "The plants are growing paths for the team to walk on. Fruit appears at their feet, and it smells like home.",
         choices: [
-            { text: "Accept Gifts, Stay Cautious (Safe)", riskMod: 0, reward: { type: 'ITEM', tags: ['BIO'] } },
-            { text: "Let Mira Interface Fully (Psych Risk)", riskMod: 35, reward: { type: 'ITEM', tags: ['BIO', 'LORE'] } }
+            { text: "Take the fruit, but stay careful", riskMod: 0, reward: { type: 'ITEM', tags: ['BIO'] } },
+            { text: "Send one of them deeper in alone", riskMod: 35, reward: { type: 'ITEM', tags: ['BIO', 'LORE'] } }
         ]
     },
     {
         id: 'THE_REFLECTION',
         trigger: (planet) => planet.type === 'MIRROR',
         title: "THE REFLECTION",
-        desc: "On the surface, the team sees themselves. Dead. Decomposed. Arranged in a circle around the landing zone. Sensors insist nothing is there.",
+        desc: "The team finds themselves: bodies in our suits, long dead, laid in a circle around the landing site. The sensors say nothing is there.",
         choices: [
-            { text: "Abort EVA Immediately (Morale Loss)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Investigate The Image (Psych Risk)", riskMod: 40, reward: { type: 'ITEM', tags: ['ARTIFACT', 'TECH'] } }
+            { text: "Leave right now (morale loss)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Go and look at the bodies", riskMod: 40, reward: { type: 'ITEM', tags: ['ARTIFACT', 'TECH'] } }
         ]
     },
     {
         id: 'SHIP_GRAVEYARD',
         trigger: (planet) => planet.type === 'GRAVEYARD',
-        title: "THE BONE HEAP",
-        desc: "Millions of ships, crushed together. The EVA team walks on the compressed hulls of civilizations. The salvage here is extraordinary — and the structure is unstable.",
+        title: "THE SCRAP HEAP",
+        desc: "Thousands of ships are crushed together into one huge heap, and the team is walking on their hulls. The salvage is incredible, but the pile could collapse.",
         choices: [
-            { text: "Strip Surface Hulls (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } },
-            { text: "Breach Deep Core (Extreme)", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }
+            { text: "Strip the hulls on top", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } },
+            { text: "Cut down into the middle", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }
         ]
     },
     {
         id: 'THE_FREQUENCY',
         trigger: (planet) => planet.type === 'SINGING',
-        title: "THE FREQUENCY",
-        desc: "The crew has stopped talking. They're smiling. The planet's harmonic is inducing dopamine production. Mira has closed her eyes.",
+        title: "THE HUM",
+        desc: "The planet gives off a hum that makes people happy. The team has stopped talking and is smiling. One of them has closed their eyes.",
         choices: [
-            { text: "Record & Depart (Safe, Crew Stress -1)", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Stay And Listen Longer (Risky)", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }
+            { text: "Record the hum and leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Stay and listen longer", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }
         ]
     },
     {
         id: 'MECHA_SALVAGE',
         trigger: (planet) => planet.type === 'MECHA',
-        title: "ANCIENT FACTORY",
-        desc: "A massive automated factory is still running on standby power. The security grid is active.",
+        title: "OLD FACTORY",
+        desc: "A huge automatic factory is still running on standby power. Its security system is switched on.",
         choices: [
-            { text: "Scavenge Perimeter (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Hack Core (Tech Risk)", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'WEAPON'] } }
+            { text: "Search around the outside", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Break into the control room", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'WEAPON'] } }
         ]
     },
     {
         id: 'BIO_SAMPLES',
         trigger: (planet) => planet.type === 'BIO_MASS',
         title: "SPORE STORM",
-        desc: "The air is filling with glowing, semi-sentient spores. They seem attracted to heat.",
+        desc: "The air is filling with glowing spores. They drift toward anything warm.",
         choices: [
-            { text: "Purge Vents (Energy Cost)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Harvest Spores (Bio Risk)", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO', 'CURE'] } }
+            { text: "Flush the lander's vents (energy cost)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Collect some spores", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO', 'CURE'] } }
         ]
     },
     {
         id: 'VOID_WHISPERS',
         trigger: (planet) => ['SHATTERED', 'ROGUE'].includes(planet.type),
-        title: "VOID WHISPERS",
-        desc: "The silence here is unnatural. Crew members report hearing their own names spoken in the static.",
+        title: "NAMES IN THE STATIC",
+        desc: "It's very quiet here. The team says they can hear their own names in the radio static.",
         choices: [
-            { text: "Enforce Rest (Morale Loss)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Analyze Static (Psych Risk)", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }
+            { text: "Bring them back to rest (morale loss)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Record the static and study it", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }
         ]
     },
     {
         id: 'PRISM_SONG',
         trigger: (planet) => planet.type === 'CRYSTALLINE',
-        title: "CRYSTAL RESONANCE",
-        desc: "The crystals are vibrating at a frequency that can shatter glass... and bone.",
+        title: "SHAKING CRYSTALS",
+        desc: "The crystals here vibrate hard enough to shatter glass, and maybe bone.",
         choices: [
-            { text: "Dampen Hull (Energy Cost)", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Record Song (Risky)", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }
+            { text: "Pad the lander's hull (energy cost)", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Record the sound up close", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }
         ]
     },
     // --- ADDITIONAL EVA EVENTS ---
     {
         id: 'FUNGAL_BLOOM',
         trigger: (planet) => planet.type === 'FUNGAL' || (planet.metrics && planet.metrics.hasLife && Math.random() < 0.3),
-        title: "FUNGAL BLOOM",
-        desc: "The ground is covered in glowing mushrooms. The spores are psychoactive. The crew is seeing patterns in everything.",
+        title: "GLOWING MUSHROOMS",
+        desc: "The ground is covered in glowing mushrooms. Their spores make people see things that aren't there.",
         choices: [
-            { text: "Retreat to Ship (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Harvest for Study (Risky)", riskMod: 25, reward: { type: 'ITEM', tags: ['BIO', 'RATION'] } }
+            { text: "Go back to the lander", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Harvest some to study", riskMod: 25, reward: { type: 'ITEM', tags: ['BIO', 'RATION'] } }
         ]
     },
     {
         id: 'GRAVITY_WELL',
         trigger: (planet) => planet.metrics && planet.metrics.gravity > 1.2,
-        title: "GRAVITY SURGE",
-        desc: "Local gravity just tripled. Equipment is being crushed. Crew can barely stand.",
+        title: "HEAVY GRAVITY",
+        desc: "Gravity here just tripled. Equipment is being crushed, and the team can barely stand.",
         choices: [
-            { text: "Emergency Rescue (Costly)", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Crawl to Target (Extreme)", riskMod: 45, reward: { type: 'ITEM', tags: ['GEO', 'ARTIFACT'] } }
+            { text: "Pull the team out now", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Crawl to the target anyway", riskMod: 45, reward: { type: 'ITEM', tags: ['GEO', 'ARTIFACT'] } }
         ]
     },
     {
         id: 'DUST_STORM',
         trigger: (planet) => ['DESERT', 'ROCKY', 'TOXIC'].includes(planet.type),
-        title: "SILICA STORM",
-        desc: "A massive dust storm is rolling in. The particles are shredding suit integrity.",
+        title: "DUST STORM",
+        desc: "A huge dust storm is rolling in. The grit is wearing holes in the suits.",
         choices: [
-            { text: "Shelter in Place (Safe)", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Push Through (Very Risky)", riskMod: 40, reward: { type: 'ITEM', tags: ['GEO'] } }
+            { text: "Take shelter and wait", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Push on through the storm", riskMod: 40, reward: { type: 'ITEM', tags: ['GEO'] } }
         ]
     },
     {
         id: 'MASS_BURIAL',
         trigger: (planet) => planet.type === 'TOMB_WORLD' || (deepEnough() && Math.random() < 0.15),
-        title: "THE GRAVES",
-        desc: "Rows of markers. Four names on each. The dates are older than the wreck in orbit above them.",
+        title: "GRAVES BELOW THE WRECK",
+        desc: "There are rows of graves here, and a wrecked ship in orbit above them. The dates on the graves are older than the wreck.",
         choices: [
-            { text: "Record and Leave (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Dig One Up (Disturbing)", riskMod: 35, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
+            { text: "Record the names and leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Dig one of them up", riskMod: 35, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
         ]
     },
     {
         id: 'ACID_RAIN',
         trigger: (planet) => planet.atmosphere === 'TOXIC' || planet.type === 'TOXIC',
-        title: "CORROSIVE DOWNPOUR",
-        desc: "It's raining acid. The lander's exterior is dissolving. Every second costs us.",
+        title: "ACID RAIN",
+        desc: "It's raining acid. The outside of the lander is being eaten away as we stand here.",
         choices: [
-            { text: "Abort Mission (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Quick Grab (Very Risky)", riskMod: 35, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+            { text: "Call off the trip", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Grab what we can, fast", riskMod: 35, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
         ]
     },
     {
         id: 'MAGNETIC_STORM',
         trigger: (planet) => ['GAS_GIANT', 'SHATTERED'].includes(planet.type) || (deepEnough() && Math.random() < 0.2),
-        title: "EM SURGE",
-        desc: "Electromagnetic storm is frying electronics. Comms are down. Navigation is dead.",
+        title: "MAGNETIC STORM",
+        desc: "A magnetic storm is burning out our electronics. The radio and navigation are both down.",
         choices: [
-            { text: "Wait It Out (Slow)", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Navigate Blind (Extreme)", riskMod: 50, reward: { type: 'ITEM', tags: ['TECH'] } }
+            { text: "Wait for it to pass", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Keep going without navigation", riskMod: 50, reward: { type: 'ITEM', tags: ['TECH'] } }
         ]
     },
     {
         id: 'CAVE_SYSTEM',
         trigger: (planet) => ['ROCKY', 'ICE_WORLD', 'HOLLOW'].includes(planet.type),
-        title: "UNDERGROUND NETWORK",
-        desc: "Scans reveal massive cave systems. Something is moving in the darkness.",
+        title: "CAVES",
+        desc: "Scans show huge caves under the surface. Something is moving around down there in the dark.",
         choices: [
-            { text: "Surface Only (Safe)", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Spelunk Deep (Risky)", riskMod: 40, reward: { type: 'ITEM', tags: ['GEO', 'BIO'] } }
+            { text: "Stay on the surface", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Go deep into the caves", riskMod: 40, reward: { type: 'ITEM', tags: ['GEO', 'BIO'] } }
         ]
     },
     {
         id: 'FROZEN_LAKE',
         trigger: (planet) => planet.type === 'ICE_WORLD' || planet.type === 'FROZEN_OCEAN',
-        title: "BENEATH THE ICE",
-        desc: "Something is swimming under the frozen surface. It's circling the landing zone.",
+        title: "UNDER THE ICE",
+        desc: "Something is swimming under the frozen surface, circling the landing site.",
         choices: [
-            { text: "Stay Away From Edge (Safe)", riskMod: 5, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Drop Camera Through Ice (Risky)", riskMod: 30, reward: { type: 'ITEM', tags: ['BIO', 'LORE'] } }
+            { text: "Stay away from the edge", riskMod: 5, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Drop a camera through the ice", riskMod: 30, reward: { type: 'ITEM', tags: ['BIO', 'LORE'] } }
         ]
     },
     {
         id: 'LIVING_METAL',
         trigger: (planet) => planet.type === 'MECHA' || planet.type === 'MACHINE_WORLD',
-        title: "ADAPTIVE METAL",
-        desc: "The ground is metal and it's... rearranging. Building something around the lander.",
+        title: "MOVING METAL",
+        desc: "The ground here is metal, and it's moving. It's building something around the lander.",
         choices: [
-            { text: "Escape Before Trapped (Safe)", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Let It Finish (Unknown)", riskMod: 45, reward: { type: 'ITEM', tags: ['TECH', 'ARTIFACT'] } }
+            { text: "Leave before we're walled in", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Let it finish building", riskMod: 45, reward: { type: 'ITEM', tags: ['TECH', 'ARTIFACT'] } }
         ]
     },
     {
         id: 'OLD_COLONY',
         trigger: (planet) => planet.tags && planet.tags.includes('FAILED_COLONY'),
         title: "THE SETTLEMENT",
-        desc: "Human buildings. Abandoned decades ago. The doors are still locked from the inside.",
+        desc: "Human buildings, abandoned decades ago. The doors are still locked from the inside.",
         choices: [
-            { text: "Salvage Exterior (Safe)", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Break In (Disturbing)", riskMod: 25, reward: { type: 'ITEM', tags: ['LORE', 'RATION'] } }
+            { text: "Strip metal from the outside walls", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
+            { text: "Break down a door", riskMod: 25, reward: { type: 'ITEM', tags: ['LORE', 'RATION'] } }
         ]
     },
     {
         id: 'RADIO_SILENCE',
         trigger: (planet) => deepEnough() && Math.random() < 0.2,
-        title: "DEAD AIR",
-        desc: "All radio contact with the ship has stopped. The EVA team is alone. Something is jamming signals.",
+        title: "NO SIGNAL",
+        desc: "The team has lost all radio contact with the ship. Something down here is blocking the signal.",
         choices: [
-            { text: "Return Immediately (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Find The Source (Very Risky)", riskMod: 50, reward: { type: 'ITEM', tags: ['TECH', 'ARTIFACT'] } }
+            { text: "Head back to the lander right away", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Find what's blocking the signal", riskMod: 50, reward: { type: 'ITEM', tags: ['TECH', 'ARTIFACT'] } }
         ]
     },
     {
         id: 'PERFECT_SPHERE',
         trigger: (planet) => deepEnough() && Math.random() < 0.15,
         title: "THE SPHERE",
-        desc: "A perfect sphere of unknown material. 10 meters diameter. It's warm. It's humming. It knows we're here.",
+        desc: "A perfect sphere, 10 metres across, made of something we can't identify. It's warm, and it hums.",
         choices: [
-            { text: "Document Only (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Touch It (Unknown)", riskMod: 45, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
+            { text: "Photograph it and stay back", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Touch it", riskMod: 45, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
         ]
     },
     {
         id: 'GAS_POCKET',
         trigger: (planet) => planet.type === 'VOLCANIC' || planet.type === 'SULFUR',
-        title: "TOXIC VENTING",
-        desc: "The ground is releasing poisonous gas. Suit filters won't last long.",
+        title: "POISON GAS",
+        desc: "The ground is leaking poisonous gas. The suit filters won't last long.",
         choices: [
-            { text: "Retreat Now (Safe)", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Rush The Objective (Risky)", riskMod: 35, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+            { text: "Pull back now", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Rush in and grab the ore", riskMod: 35, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
         ]
     },
     {
         id: 'FOOTPRINTS',
         trigger: (planet) => deepEnough() && Math.random() < 0.1,
-        title: "WE WEREN'T FIRST",
-        desc: "Human footprints in the dust. No ship wreckage. No bodies. The prints just... stop.",
+        title: "SOMEONE WAS HERE",
+        desc: "There are human footprints in the dust, but no wreck and no bodies. The prints just stop.",
         choices: [
-            { text: "Log and Leave (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Follow The Trail (Psych Risk)", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }
+            { text: "Log them and leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
+            { text: "Follow the footprints", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }
         ]
     },
     {
         id: 'DISTRESS_BEACON', // Fallback — MUST BE LAST
         trigger: () => true,
-        title: "DISTRESS BEACON",
-        desc: "A faint repeating signal is coming from a debris field.",
+        title: "DISTRESS CALL",
+        desc: "A weak distress call keeps repeating from a field of wreckage.",
         choices: [
-            { text: "Scan & Leave (Safe)", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Investigate Debris (Risky)", riskMod: 20, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+            { text: "Scan it from where we are", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Search through the wreckage", riskMod: 20, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
         ]
     }
 ];

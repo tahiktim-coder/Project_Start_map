@@ -8,6 +8,8 @@
  *
  * Found on planets with DERELICT tag or as floating POIs.
  * The `type` keys are kept as they were; only the text changed.
+ *
+ * Writing rules for this file: docs/STYLE.md. Plain sentences, no nicknames, no riddles.
  */
 
 const DERELICT_TYPES = [
@@ -26,16 +28,16 @@ const DERELICT_ENCOUNTERS = [
         id: 'DERELICT_MINING',
         weight: 25,
         type: 'MINING_VESSEL',
-        title: "ORE TENDER",
+        title: "MINING CRAFT",
         getName: () => {
             const prefixes = ['ORE TENDER', 'ROCK BARGE', 'DRILL SLED', 'CUTTER'];
             const num = Math.floor(Math.random() * 90) + 10;
             return `${prefixes[Math.floor(Math.random() * prefixes.length)]} ${num}`;
         },
-        context: (name) => `${name} is a mining tender off a bigger hull. Drill arms frozen mid-cut. Ore bays half full. The mother ship is nowhere on the scan.`,
+        context: (name) => `${name} is a small mining craft from a bigger ship. Its drill arms stopped mid-cut. The ore bays are half full. The main ship is nowhere on our scan.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "A goat like ours, but for rocks. Call it the Mule." },
-            { speaker: 'Tech Mira', text: "And here we see a hot core. They were refining something that bites." }
+            { speaker: 'Eng. Jaxon', text: "It was built to haul rock, not people. They put good engines in these." },
+            { speaker: 'Tech Mira', text: "Its reactor is still running hot. Careful, it could be leaking radiation." }
         ],
         choices: [
             {
@@ -45,12 +47,12 @@ const DERELICT_ENCOUNTERS = [
                     state.energy = Math.max(0, state.energy - 5);
                     const salvage = Math.floor(Math.random() * 11) + 30;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
-                    return `Ore bays cut open. Raw metal and spare drill heads. -5 Energy, +${salvage} Salvage.`;
+                    return `Ore bays open. Raw metal and spare drill heads. -5 Energy, +${salvage} Salvage.`;
                 }
             },
             {
-                text: "Drain the reactor",
-                desc: "-10 Energy to crack it. 20% chance someone gets hurt. +50-70 Energy.",
+                text: "Drain its reactor",
+                desc: "-10 Energy to open it. +50-70 Energy back. 20% chance someone gets hurt.",
                 requires: (state) => state.energy >= 10,
                 requiresLabel: "Need 10 Energy",
                 effect: (state) => {
@@ -60,26 +62,26 @@ const DERELICT_ENCOUNTERS = [
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
-                            state.addLog(`RADIATION: ${victim.name} took a dose on the way out.`);
+                            state.addLog(`RADIATION: ${victim.name} was exposed on the way out.`);
                         }
                     }
                     const energyGain = Math.floor(Math.random() * 21) + 50;
                     state.energy = Math.min(100, state.energy + energyGain);
-                    return `Reactor drained into the kettle. +${energyGain} Energy, net +${energyGain - 10}.`;
+                    return `Its reactor power moved into ours. +${energyGain} Energy, +${energyGain - 10} after the cost.`;
                 }
             },
             {
-                text: "Check the bunks",
+                text: "Check the crew bunks",
                 desc: "+10 Salvage, +1 Data. 40% chance: +1 Food Pack.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
-                    state.addLog("Four bunks. Five lockers. Dr. Aris copies the names off the lockers.");
+                    state.addLog("Personal lockers by the bunks. The crew's names are copied off the doors.");
                     if (Math.random() < 0.4 && typeof ITEMS !== 'undefined' && ITEMS.FOOD_PACK) {
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Mining Tender' });
-                        return "Bunks searched. Names copied. +10 Salvage, +1 Data, +1 Food Pack.";
+                        return "Bunks searched and names copied. +10 Salvage, +1 Data, +1 Food Pack.";
                     }
-                    return "Bunks searched. Names copied. +10 Salvage, +1 Data.";
+                    return "Bunks searched and names copied. +10 Salvage, +1 Data.";
                 }
             }
         ]
@@ -90,15 +92,15 @@ const DERELICT_ENCOUNTERS = [
         id: 'DERELICT_HAULER',
         weight: 20,
         type: 'CORPORATE_HAULER',
-        title: "DROPPED HOLD",
+        title: "DROPPED CARGO",
         getName: () => {
             const kinds = ['CARGO SECTION', 'HOLD MODULE', 'DROP POD'];
             return `${kinds[Math.floor(Math.random() * kinds.length)]} ${Math.floor(Math.random() * 99) + 1}`;
         },
-        context: (name) => `${name} is a hull's cargo section, cut loose and left to drift. Somebody dropped it to make a burn. The seals held. The manifest terminal still flickers.`,
+        context: (name) => `${name} is a cargo section, cut loose from its ship and left to drift. They dropped it to save weight for a burn. The seals held.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Manifest says forty crates. I count forty. Somebody out here could count." },
-            { speaker: 'Dr. Aris', text: "There's a med bay aft. Sealed. It might still be good." }
+            { speaker: 'Spc. Vance', text: "They cut off their own supplies to go faster. What were they in such a hurry to reach?" },
+            { speaker: 'Dr. Aris', text: "There's a sealed medical bay at the back. The supplies might still be good." }
         ],
         choices: [
             {
@@ -111,38 +113,38 @@ const DERELICT_ENCOUNTERS = [
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Dropped Hold' });
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Dropped Hold' });
                     }
-                    return "Hold breached. Colony stores still sealed. -5 Energy, +30 Salvage, +2 Food Pack.";
+                    return "Hold opened. The colony supplies are still sealed. -5 Energy, +30 Salvage, +2 Food Pack.";
                 }
             },
             {
-                text: "Open the med bay",
-                desc: "-5 Energy. Heals one injured crew. If nobody is hurt: +1 Revival Item.",
+                text: "Open the medical bay",
+                desc: "-5 Energy. Heals one injured crew member. If nobody is hurt: +1 Revival Item.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     const injured = state.crew.find(c => c.status === 'INJURED');
                     if (injured) {
                         injured.status = 'HEALTHY';
-                        return `Med bay stores used on ${injured.name}. Back on duty. -5 Energy.`;
+                        return `Medical supplies used on ${injured.name}. They're fit for duty again. -5 Energy.`;
                     }
                     if (typeof ITEMS !== 'undefined') {
                         const revival = Math.random() > 0.5 ? ITEMS.XENO_MYCELIUM : ITEMS.NEURAL_LINK;
                         if (revival) {
                             state.cargo.push({ ...revival, acquiredAt: 'Dropped Hold' });
-                            return `Nobody to treat. Sealed in the aft locker: ${revival.name}. -5 Energy.`;
+                            return `Nobody needs treatment. In the back locker: ${revival.name}. -5 Energy.`;
                         }
                     }
-                    return "Med bay picked clean before it was dropped. -5 Energy.";
+                    return "The medical bay was emptied before it was dropped. -5 Energy.";
                 }
             },
             {
-                text: "Read the manifest",
-                desc: "-5 Energy. +2 Data. It names the hull that dropped it.",
+                text: "Read the cargo list",
+                desc: "-5 Energy. +2 Data. It names the ship that dropped it.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-                    state.addLog("MANIFEST: 'Dropped to lighten for the last burn. We will come back for it.' Nobody came back for it.");
+                    state.addLog("CARGO LIST: 'Dropped to lose weight for the last burn. We will come back for it.' They never did.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Kept the manifest');
-                    return "Manifest copied. The hull number is written on every crate. -5 Energy, +2 Data.";
+                    return "Cargo list copied. The ship's hull number is stamped on every crate. -5 Energy, +2 Data.";
                 }
             }
         ]
@@ -158,10 +160,10 @@ const DERELICT_ENCOUNTERS = [
             const names = ['HALCYON', 'VESPER', 'TANTALUS', 'EMBER', 'REQUIEM'];
             return `DRIVE SECTION "${names[Math.floor(Math.random() * names.length)]}"`;
         },
-        context: (name) => `${name} is the armoured back third of a hull. The drive took the crew deck with it when it went. What's left is the strong part.`,
+        context: (name) => `${name} is the armoured rear section of a ship. When the drive failed, it tore the crew deck away. Only the strongest part is left.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Eight hundred rivets a metre. I know this plating. I set some of it in the yard." },
-            { speaker: 'A.U.R.A.', text: "Careful, Commander. Drive capacitors hold their charge a long time." }
+            { speaker: 'Spc. Vance', text: "I know this armour plating. I watched them fit it at the shipyard before we launched." },
+            { speaker: 'A.U.R.A.', text: "Please be careful, Commander. Drive capacitors can hold a charge for decades." }
         ],
         choices: [
             {
@@ -177,10 +179,10 @@ const DERELICT_ENCOUNTERS = [
                     }
                     if (vance && vance.status === 'HEALTHY' && Math.random() < 0.10) {
                         vance.status = 'INJURED';
-                        state.addLog(`${vance.name} took a discharge off the last capacitor. INJURED.`);
-                        return `${vance.name} opened the vault and paid for it. +25 Salvage, +1 Tech Fragment.`;
+                        state.addLog(`${vance.name} took a shock from the last capacitor. INJURED.`);
+                        return `${vance.name} opened the vault, but got hurt doing it. +25 Salvage, +1 Tech Fragment.`;
                     }
-                    return `${vance.name} counts the bolts off in order. Vault open. +25 Salvage, +1 Tech Fragment.`;
+                    return `${vance.name} opened the vault safely. +25 Salvage, +1 Tech Fragment.`;
                 }
             },
             {
@@ -190,7 +192,7 @@ const DERELICT_ENCOUNTERS = [
                     state.rations = Math.max(0, state.rations - 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 35);
                     state.energy = Math.min(100, state.energy + 20);
-                    return "Shielding cut and stowed over two days. -1 Ration, +35 Salvage, +20 Energy.";
+                    return "Shielding cut and stored over two days. -1 Ration, +35 Salvage, +20 Energy.";
                 }
             },
             {
@@ -203,8 +205,8 @@ const DERELICT_ENCOUNTERS = [
                             p._tagsRevealed = true;
                         });
                     }
-                    state.addLog("DRIVE LOG: every burn, every heading. All of them the same heading. The nav map fills in.");
-                    return "Drive log read. Every planet's tags are on the map. -10 Energy.";
+                    state.addLog("DRIVE LOG: every jump this ship made was on the same heading as ours.");
+                    return "Drive log read. Every planet's tags are now on the map. -10 Energy.";
                 }
             }
         ]
@@ -215,16 +217,16 @@ const DERELICT_ENCOUNTERS = [
         id: 'DERELICT_PROBE',
         weight: 15,
         type: 'SCIENCE_PROBE',
-        title: "HOMEWARD PROBE",
+        title: "MESSAGE PROBE",
         getName: () => {
             const missions = ['MESSENGER', 'PIONEER', 'HORIZON', 'DEEP FIELD', 'HOMEWARD'];
             return `${missions[Math.floor(Math.random() * missions.length)]}-${Math.floor(Math.random() * 50) + 1}`;
         },
-        context: (name) => `${name} is a message probe. A hull fired it back the way we came, toward Earth. It got this far. Its antenna still points home.`,
+        context: (name) => `${name} is a message probe. A ship fired it back toward Earth, but it only got this far. Its antenna still points home.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "And here we see a probe pointed home. Full tank. It never fired its second stage." },
+            { speaker: 'Tech Mira', text: "Look, its fuel tank is still full. The second engine never fired." },
             { speaker: 'A.U.R.A.', text: "Its heading is correct, Commander. Earth is that way. It has not moved in a long time." },
-            { speaker: 'Spc. Vance', text: "Play the message. I want to hear somebody else say it." }
+            { speaker: 'Spc. Vance', text: "Play the message. I want to hear what they wanted Earth to know." }
         ],
         choices: [
             {
@@ -236,15 +238,17 @@ const DERELICT_ENCOUNTERS = [
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-                    state.addLog("PROBE MESSAGE: 'To Earth. There are more than eight. Stop sending them.' Then a hull number, then static.");
-                    state.addLog("Spc. Vance: \"Somebody else counted.\"");
+                    state.addLog("PROBE MESSAGE: 'To Earth. How many ships have you really sent? Tell us the truth.' Then static.");
+                    if (state.crew.some(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD')) {
+                        state.addLog("Spc. Vance: \"They asked the same question I would have.\"");
+                    }
                     state.noteStanding && state.noteStanding('vance');
                     return "Message played to the whole crew. -5 Energy, +2 Data. All crew +1 Stress.";
                 }
             },
             {
                 text: "Take the sample containers",
-                desc: "-5 Energy. +1 Sample Item, whatever they were sending home.",
+                desc: "-5 Energy. +1 Sample Item: whatever they were sending home.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     if (typeof ITEMS !== 'undefined') {
@@ -252,21 +256,21 @@ const DERELICT_ENCOUNTERS = [
                         const item = samples[Math.floor(Math.random() * samples.length)];
                         if (item) {
                             state.cargo.push({ ...item, acquiredAt: 'Homeward Probe' });
-                            return `Sample container intact. Retrieved: ${item.name}. -5 Energy.`;
+                            return `The sample container is intact. Inside: ${item.name}. -5 Energy.`;
                         }
                     }
-                    return "Sample containers breached. Contents lost to vacuum. -5 Energy.";
+                    return "The sample containers are cracked. Everything inside is gone. -5 Energy.";
                 }
             },
             {
                 text: "Salvage the probe",
-                desc: "+20 Salvage, +15 Energy from its tank. Aris +1 Stress: the message is lost.",
+                desc: "+20 Salvage, +15 Energy from its fuel. Aris +1 Stress: the message is never heard.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                     state.energy = Math.min(100, state.energy + 15);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    return "Probe cut up. Tank drained. Whatever it carried home, nobody will hear it. +20 Salvage, +15 Energy.";
+                    return "Probe cut up, fuel drained. Nobody will hear its message now. +20 Salvage, +15 Energy.";
                 }
             }
         ]
@@ -281,11 +285,11 @@ const DERELICT_ENCOUNTERS = [
         getName: () => {
             return `UNMARKED-${String.fromCharCode(65 + Math.floor(Math.random() * 26))}${String.fromCharCode(65 + Math.floor(Math.random() * 26))}-${Math.floor(Math.random() * 999)}`;
         },
-        context: (name) => `${name} is an Exodus hull with no number painted anywhere. The welds are perfect. There are no rivets. Inside: four bunks, four cups. The bread on the table has no crust.`,
+        context: (name) => `${name} is an Exodus ship with no hull number painted on it. The welds are perfect. Inside are four bunks and four cups. The bread on the table has no crust.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "Aura says it matches our plans exactly, Commander. She sounds pleased." },
-            { speaker: 'Spc. Vance', text: "No rivets. You can't build a hull without rivets. I've counted eight hundred a metre." },
-            { speaker: 'Dr. Aris', text: "No bodies. No names. There is nothing here to read." }
+            { speaker: 'Tech Mira', text: "Aura says it matches our ship's blueprints exactly, Commander. Every measurement." },
+            { speaker: 'Spc. Vance', text: "I've watched ships being built. They never come out this perfect. This is a copy." },
+            { speaker: 'Dr. Aris', text: "No bodies and no names. Nobody ever lived here." }
         ],
         choices: [
             {
@@ -296,13 +300,13 @@ const DERELICT_ENCOUNTERS = [
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-                    state.addLog("The plating is warm. It should not be warm in vacuum. It cuts like ours.");
-                    return "Plating stowed. +50 Salvage. All crew +1 Stress.";
+                    state.addLog("The plating is warm, which makes no sense in open space. It cuts just like ours.");
+                    return "Plating stored. +50 Salvage. All crew +1 Stress.";
                 }
             },
             {
                 text: "Copy its course",
-                desc: "-5 Energy. 30% chance someone gets hurt. Else +3 Data: its course, which is ours.",
+                desc: "-5 Energy. 30% chance someone gets hurt (+1 Stress). Otherwise +3 Data: its course.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     if (Math.random() < 0.3) {
@@ -311,26 +315,26 @@ const DERELICT_ENCOUNTERS = [
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
                             victim.stress = Math.min(3, (victim.stress || 0) + 1);
-                            return `The console discharged. ${victim.name} INJURED. -5 Energy.`;
+                            return `The console gave off a shock. ${victim.name} INJURED. -5 Energy.`;
                         }
                     }
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
                     state._alienNavData = true;
-                    state.addLog("NAV: one heading, plotted end to end. Ours. It ends at a light.");
-                    return "Course copied. It is our course. -5 Energy, +3 Data.";
+                    state.addLog("NAV: one heading, plotted from start to finish. It's our heading. It ends at a bright light.");
+                    return "Course copied. It's the same course as ours. -5 Energy, +3 Data.";
                 }
             },
             {
-                text: "Seal it and burn away",
-                desc: "-10 Energy. Vance -1 Stress, Mira +1 Stress. Nothing taken.",
+                text: "Seal it and leave",
+                desc: "-10 Energy. Nothing taken. Vance -1 Stress, Mira +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
-                    state.addLog("We sealed the lock and burned. Tech Mira watched it out of the aft port the whole way.");
-                    return "Wreck sealed. -10 Energy. Vance -1 Stress, Mira +1 Stress.";
+                    if (mira) state.addLog("We sealed the airlock and left. Tech Mira watched it from the rear window the whole way.");
+                    return "Wreck sealed and left behind. -10 Energy. Vance -1 Stress, Mira +1 Stress.";
                 }
             }
         ]
@@ -346,15 +350,15 @@ const DERELICT_ENCOUNTERS = [
             const names = ['"LONG HOME"', '"THIRD SUMMER"', '"STILL GOING"', '"THE RING"', '"FAR SHORE"'];
             return `EXODUS ${names[Math.floor(Math.random() * names.length)]}`;
         },
-        context: (name) => `${name} kept flying for three generations. They built rings, nurseries, a school. It is broken in half now. The forward half is a town, frozen.`,
+        context: (name) => `${name} kept flying for three generations. They built living rings, a nursery and a school. Now it's broken in half. The front half is a frozen town.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Born here, lived here, buried here. The graves are in the ring. I want the names." },
-            { speaker: 'Eng. Jaxon', text: "They never landed, so they made a place anyway. I'd have stayed." },
-            { speaker: 'A.U.R.A.', text: "Cryo bay in the forward section, Commander. Three percent chance any pod is still cold." }
+            { speaker: 'Dr. Aris', text: "People were born here, lived here and were buried here. I want the names from their graves." },
+            { speaker: 'Eng. Jaxon', text: "Three generations, and none of them ever stood on a planet. That's a long wait." },
+            { speaker: 'A.U.R.A.', text: "There is a cryo bay in the front section, Commander. I estimate a three percent chance any pod still works." }
         ],
         choices: [
             {
-                text: "Search the habitation rings",
+                text: "Search the living rings",
                 desc: "-1 Ration: a day inside. +35 Salvage, +3 Food Pack, +1 Music Holotape.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
@@ -369,35 +373,35 @@ const DERELICT_ENCOUNTERS = [
                             state.cargo.push({ ...ITEMS.MUSIC_HOLOTAPE, acquiredAt: 'Long Hull' });
                         }
                     }
-                    state.addLog("RING LOG: 'The children born this cycle have never seen stars. They think the murals are windows.'");
+                    state.addLog("RING LOG: 'The children born this year have never seen the stars. They think the wall paintings are windows.'");
                     return "Rings searched. -1 Ration, +35 Salvage, +3 Food Pack, +1 Music Holotape.";
                 }
             },
             {
                 text: "Check the cryo bay",
-                desc: "3% chance: two pods still cold, -5 Rations, +2 Sleepers. Else +20 Salvage, +25 Energy.",
+                desc: "3% chance: two pods still work, +2 Sleepers, -5 Rations. Otherwise +20 Salvage, +25 Energy.",
                 effect: (state) => {
                     if (Math.random() < 0.03) {
                         state.rations = Math.max(0, state.rations - 5);
                         state._sleepers = (state._sleepers || 0) + 2;
-                        state.addLog("Two pods are still cold. The name tags use spellings we barely recognise. Their hull is in no record we carry.");
+                        state.addLog("Two pods still work. The names on them are spelled in a way we barely recognise. Their ship isn't in any of our records.");
                         return "Two sleepers moved to our hold, still asleep. -5 Rations to keep them cold. +2 Sleepers.";
                     }
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                     state.energy = Math.min(100, state.energy + 25);
-                    return "Every pod dark. Cryo systems stripped for parts. +20 Salvage, +25 Energy.";
+                    return "Every pod is dead. The cryo equipment is stripped for parts. +20 Salvage, +25 Energy.";
                 }
             },
             {
                 text: "Read the graves in the ring",
-                desc: "-1 Ration: Aris reads every marker. +2 Data. Aris +1 Stress.",
+                desc: "-1 Ration: Aris reads every grave marker. +2 Data. Aris +1 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    state.addLog("RING LEDGER: 'Rations shared by deck, not by rank. It held for sixty years. Then it didn't.'");
-                    state.addLog("Dr. Aris reads three hundred names. She is hoarse by the end. She reads the last one twice.");
+                    state.addLog("RING RECORD: 'Food is shared by deck, not by rank. It worked for sixty years. Then it stopped working.'");
+                    if (aris) state.addLog("Dr. Aris reads three hundred names out loud. By the end, she has almost no voice left.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Read the graves of the long hull');
                     state.noteStanding && state.noteStanding('aris');
                     return "Every grave read. -1 Ration, +2 Data. Aris +1 Stress.";

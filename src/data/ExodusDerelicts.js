@@ -11,6 +11,8 @@
  * The hull name is passed in as shipName. The runtime picks it with App.getWreckName,
  * which scales the hull number with the sector (1-8 near home, tens of thousands at the end).
  * The table below is callsigns only and is kept for the getShipName closures.
+ *
+ * Writing rules for this file: docs/STYLE.md. Plain sentences, no nicknames, no riddles.
  */
 
 const EXODUS_SHIP_NAMES = [
@@ -31,42 +33,42 @@ const EXODUS_ENCOUNTERS = [
         weight: 25,
         title: "BURNED HULL",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `${shipName} came in too steep. The hull burned through on entry. The crew deck is slag. Only the transponder is still pinging.`,
+        context: (shipName) => `${shipName} came in too steep and burned up on the way down. The crew deck melted. Only the transponder still works.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Carbon scoring end to end. It was fast. That's the kind thing to say." },
-            { speaker: 'Spc. Vance', text: "Transponder lists a crew of four. I count five seats." },
-            { speaker: 'Dr. Aris', text: "Four names on the transponder. I'll read them anyway. Someone should." }
+            { speaker: 'Eng. Jaxon', text: "Scorch marks from nose to tail. At least it would have been quick." },
+            { speaker: 'Spc. Vance', text: "The ship's computer flies the landing, not the crew. It brought them in like this." },
+            { speaker: 'Dr. Aris', text: "Their crew list is still on the transponder. I'd like to read their names." }
         ],
         choices: [
             {
-                text: "Read the names, take the transponder",
-                desc: "-1 Ration. +10 Salvage, +1 Data. Aris says the rites over slag.",
+                text: "Read their names, take the transponder",
+                desc: "-1 Ration: a day for a short service. +10 Salvage, +1 Data.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     const loreTexts = [
-                        "TRANSPONDER: '...entry angle off by a third of a degree. That was all it took.'",
-                        "TRANSPONDER: '...shielding rated for three entries. This was our fourth.'",
-                        "TRANSPONDER: crew list. Four names. The pilot's seat is not on it."
+                        "TRANSPONDER: 'Entry angle off by a third of a degree. That was all it took.'",
+                        "TRANSPONDER: 'The heat shield was rated for three landings. This was our fourth.'",
+                        "TRANSPONDER: 'Autopilot has the landing. Crew strapped in. Wish us luck.'"
                     ];
                     state.addLog(loreTexts[Math.floor(Math.random() * loreTexts.length)]);
-                    state.addLog("Dr. Aris reads the four names into the wind. Then she waits, as if for a fifth.");
+                    state.addLog("The crew's names are read aloud beside the wreck before anything is taken.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Read the names of the lost');
                     state.noteStanding && state.noteStanding('aris');
-                    return "Names read. Transponder recovered. -1 Ration, +10 Salvage, +1 Data.";
+                    return "Names read, transponder taken. -1 Ration, +10 Salvage, +1 Data.";
                 }
             },
             {
-                text: "Strip the alloys",
-                desc: "-5 Energy. +25 Salvage. Aris +1 Stress: nothing gets read.",
+                text: "Strip the hull for metal",
+                desc: "-5 Energy. +25 Salvage. Aris +1 Stress: nobody reads their names.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Stripped a wreck without rites');
-                    return "Hull fragments cut and stowed. -5 Energy, +25 Salvage. Aris does not come back up for an hour.";
+                    return "Hull plates cut and stored. -5 Energy, +25 Salvage. Aris +1 Stress.";
                 }
             }
         ]
@@ -78,12 +80,12 @@ const EXODUS_ENCOUNTERS = [
         weight: 25,
         title: "SILENT SHIP",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `${shipName} landed whole. The hull is sealed, the air still cycling. Inside, five people at five stations. No wounds. No struggle. They stopped.`,
+        context: (shipName) => `${shipName} landed in one piece. The air system still runs. Inside, five people sit at their stations. No wounds, no sign of a struggle. They just stopped.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "They're at peace. Whatever it was, it was gentle." },
-            { speaker: 'Spc. Vance', text: "Five chairs, five bodies. The plate by the airlock lists four. I counted twice." },
-            { speaker: 'Eng. Jaxon', text: "Hold's full. Medicine, rations, tools. And a coffee tin. Real coffee." },
-            { speaker: 'Dr. Aris', text: "Kael. They get rites first." }
+            { speaker: 'Dr. Aris', text: "No sign of pain. Whatever happened to them, it was quiet." },
+            { speaker: 'Spc. Vance', text: "Five healthy people died in their chairs. I want to know what did that." },
+            { speaker: 'Eng. Jaxon', text: "The hold's full. Medicine, food, tools. There's even a tin of real coffee." },
+            { speaker: 'Dr. Aris', text: "Kael, we bury them before we take anything." }
         ],
         choices: [
             {
@@ -96,14 +98,14 @@ const EXODUS_ENCOUNTERS = [
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
                     const loreTexts = [
-                        "SHIP LOG: '...the scrubbers went slowly. Nobody noticed. We had turned the alarms off to save power.'",
-                        "SHIP LOG: '...the ship still says four of us. We stopped arguing with it.'"
+                        "SHIP LOG: 'The air scrubbers failed slowly. Nobody noticed. We had turned the alarms off to save power.'",
+                        "SHIP LOG: 'We're too tired to fix anything now. We'll sit at our stations and wait.'"
                     ];
                     state.addLog(loreTexts[Math.floor(Math.random() * loreTexts.length)]);
-                    state.addLog("Dr. Aris reads five names over five graves. The plate said four. She reads five.");
+                    state.addLog("Five graves beside the ship. A name is read over each one.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Buried a crew and left their hold');
                     state.noteStanding && state.noteStanding('aris');
-                    return "Five graves dug. Logs copied. -1 Ration, -5 Energy, +2 Data.";
+                    return "Five graves dug, logs copied. -1 Ration, -5 Energy, +2 Data.";
                 }
             },
             {
@@ -116,14 +118,14 @@ const EXODUS_ENCOUNTERS = [
                     }
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 2);
-                    state.addLog("We carried their food out past them. Dr. Aris carried nothing.");
+                    state.addLog("We carried their food out past their bodies.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-2, 'Stripped a crew still in their chairs');
                     return "Ship stripped. +40 Salvage, +1 Food Pack. Aris +2 Stress.";
                 }
             },
             {
                 text: "Bury them, then empty the hold",
-                desc: "-1 Ration, -10 Energy. +20 Salvage, +1 Food Pack. Aris +1 Stress: she does the rites alone.",
+                desc: "-1 Ration, -10 Energy. +20 Salvage, +1 Food Pack. Aris +1 Stress: she digs the graves alone.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.energy = Math.max(0, state.energy - 10);
@@ -133,7 +135,7 @@ const EXODUS_ENCOUNTERS = [
                     }
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    state.addLog("Dr. Aris digs while the rest of us load. She does not ask for help. Nobody offers.");
+                    if (aris) state.addLog("Dr. Aris digs the graves while the rest of us load the lander. She doesn't ask for help.");
                     return "Graves dug, hold emptied. -1 Ration, -10 Energy, +20 Salvage, +1 Food Pack.";
                 }
             }
@@ -147,51 +149,53 @@ const EXODUS_ENCOUNTERS = [
         weight: 10,
         title: "THE SLEEPERS",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `${shipName} has one live circuit: the cryo bay. Three pods, three green lights, three heartbeats. Every other deck is dark and cold.`,
+        context: (shipName) => `${shipName} is dark except for the cryo bay. Three sleep pods, three green lights, three heartbeats. Everything else on board is cold.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "Three sleepers. Pods at two percent. Another month and they'd never have known." },
-            { speaker: 'Dr. Aris', text: "We can't wake them. Nobody can, out here. But we can keep them cold." },
-            { speaker: 'Eng. Jaxon', text: "Each of those batteries would fill the kettle twice. I'm only saying the number." },
-            { speaker: 'Spc. Vance', text: "Three pods is three rations of cold. I did the sum." }
+            { speaker: 'Tech Mira', text: "Three people, still alive! But their pods are down to two percent power." },
+            { speaker: 'Dr. Aris', text: "It isn't safe to wake them out here. We can carry them and keep them cold." },
+            { speaker: 'Eng. Jaxon', text: "Those pod batteries hold a lot of power. We could use it. I'm only saying." },
+            { speaker: 'Spc. Vance', text: "Keeping three pods cold costs us a ration each. Can we afford that?" }
         ],
         choices: [
             {
                 text: "Carry all three pods",
-                desc: "-3 Rations. +3 Sleepers in the hold. Nothing else taken.",
+                desc: "-3 Rations to keep them cold. +3 Sleepers in the hold.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 3);
                     state._sleepers = (state._sleepers || 0) + 3;
-                    state.addLog("Three pods lashed down in the hold. Three green lights. Dr. Aris writes their names on the lids.");
+                    state.addLog("Three pods strapped down in the hold, lights still green. Their names are written on the lids.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Carried the sleepers');
                     return "Three sleepers aboard, still asleep. -3 Rations to keep them cold.";
                 }
             },
             {
-                text: "Take the cryo batteries",
+                text: "Take the pod batteries",
                 desc: "+70 Energy. The three sleepers die. All crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 70);
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-                    state.addLog("Dr. Aris: \"You're killing them. You know that.\"");
-                    state.addLog("You do not answer her. They were already dead. They just did not know it yet.");
+                    if (state.crew.some(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD')) {
+                        state.addLog("Dr. Aris: \"You're killing them. You know that.\"");
+                    }
+                    state.addLog("Nobody answers. The three green lights go out one after another.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-2, 'Killed sleepers for power');
-                    return "Cryo batteries extracted. +70 Energy. The green lights turn red, then dark.";
+                    return "Pod batteries removed. +70 Energy. The three sleepers are dead.";
                 }
             },
             {
-                text: "Take one battery, carry two",
-                desc: "+25 Energy, -2 Rations. +2 Sleepers. One pod goes dark. Aris +1 Stress.",
+                text: "Take one battery, carry two pods",
+                desc: "+25 Energy, -2 Rations. +2 Sleepers. One sleeper dies. Aris +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 25);
                     state.rations = Math.max(0, state.rations - 2);
                     state._sleepers = (state._sleepers || 0) + 2;
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    state.addLog("Dr. Aris chooses which pod. She does not say how. She reads that one name twice.");
+                    if (aris) state.addLog("Dr. Aris chooses which pod loses its battery. She won't say how she chose.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Traded one sleeper for two');
-                    return "Two sleepers aboard. One battery in the kettle. +25 Energy, -2 Rations.";
+                    return "Two sleepers aboard, one battery in our reactor. +25 Energy, -2 Rations.";
                 }
             }
         ]
@@ -203,16 +207,16 @@ const EXODUS_ENCOUNTERS = [
         weight: 15,
         title: "THE STOCKPILE",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `${shipName}'s decks are wrecked, but the hold is sealed and dry. Crates, stacked and labelled. A note on the top one: for whoever comes next.`,
+        context: (shipName) => `${shipName}'s decks are wrecked, but the hold is sealed and dry. The crates are stacked and labelled. A note on top says: "For whoever comes next."`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "They packed this for us. Labelled it. Call it the Pantry." },
-            { speaker: 'Tech Mira', text: "And here we see somebody's handwriting. Neat. They took their time." },
-            { speaker: 'Spc. Vance', text: "Twelve crates. Manifest says twelve. First thing out here that adds up." }
+            { speaker: 'Eng. Jaxon', text: "They packed this for the next crew. That's a decent thing to do." },
+            { speaker: 'Tech Mira', text: "The labels are all handwritten. Someone took real care over this." },
+            { speaker: 'Spc. Vance', text: "The manifest matches what's in the hold. That's the first honest list I've seen out here." }
         ],
         choices: [
             {
                 text: "Take everything",
-                desc: "+30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress: nothing left for the next ship.",
+                desc: "+30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress: nothing is left for the next ship.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
                     if (typeof ITEMS !== 'undefined') {
@@ -226,7 +230,7 @@ const EXODUS_ENCOUNTERS = [
                     }
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
-                    state.addLog("Eng. Jaxon folds the note and puts it in his pocket. He does not say anything.");
+                    if (jaxon) state.addLog("Eng. Jaxon folds up the note and puts it in his pocket. He doesn't say anything.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Emptied a cache left for others');
                     return "Hold emptied. +30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress.";
                 }
@@ -242,7 +246,7 @@ const EXODUS_ENCOUNTERS = [
                     }
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
-                    state.addLog("Eng. Jaxon writes the date and five names on the lid, and seals the hold.");
+                    state.addLog("We write the date and our names on the lid, then seal the hold again.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Left something for whoever comes next');
                     state.noteStanding && state.noteStanding('jaxon');
                     return "Half the hold taken, one ration left behind. +15 Salvage, +1 Food Pack, -1 Ration.";
@@ -257,29 +261,29 @@ const EXODUS_ENCOUNTERS = [
         weight: 10,
         title: "THE GROWTH",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `${shipName} is furred white inside. The hydroponics deck kept growing after the crew stopped. The airlock is half eaten. Under the growth, the lab is still powered.`,
+        context: (shipName) => `${shipName} is covered in white mould inside. Their greenhouse kept growing after the crew died. It has eaten half the airlock. Under it, the lab still has power.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Their own garden did this. Nobody touches anything bare-handed." },
-            { speaker: 'Tech Mira', text: "And here we see the lab, still lit. Fungus doesn't pay the power bill." },
-            { speaker: 'Spc. Vance', text: "Four suits in the locker. Five of us. One stays on the ship. Me." }
+            { speaker: 'Dr. Aris', text: "Their own greenhouse did this. Nobody touches anything without gloves." },
+            { speaker: 'Tech Mira', text: "The lab lights are still on. There could be years of research in there." },
+            { speaker: 'Spc. Vance', text: "There aren't enough clean suits for all of us. I'll stay with the lander." }
         ],
         choices: [
             {
-                text: "Aris leads a decon team in",
+                text: "Send Aris in with a suited team",
                 desc: "+35 Salvage, +1 Bio Sample. 15% chance someone gets hurt.",
                 requires: (state) => state.crew.some(c => c.tags.includes('MEDIC') && c.status !== 'DEAD'),
                 requiresLabel: "Requires Aris",
                 effect: (state) => {
                     const hasMedic = state.crew.some(c => c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (!hasMedic) {
-                        return "No medic aboard. Nobody goes in without decontamination.";
+                        return "No doctor aboard. Nobody goes in without one.";
                     }
                     if (Math.random() < 0.15) {
                         const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
-                            state.addLog(`WARNING: ${victim.name} breathed spores on the way out. Quarantine started.`);
+                            state.addLog(`WARNING: ${victim.name} breathed in spores on the way out. They are in quarantine.`);
                         }
                     }
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 35);
@@ -288,23 +292,25 @@ const EXODUS_ENCOUNTERS = [
                         state.cargo.push({ ...revivalItem, acquiredAt: 'Exodus Wreck (Infected)' });
                         state.addLog(`Recovered: ${revivalItem.name}`);
                     }
-                    return "Decon complete. Lab equipment and a live sample brought out. +35 Salvage.";
+                    return "Team back and cleaned off. Lab equipment and a live sample recovered. +35 Salvage.";
                 }
             },
             {
-                text: "Burn it from orbit",
-                desc: "+10 Energy from the burn. Aris +1 Stress. Nothing recovered.",
+                text: "Take its power cells, then burn it",
+                desc: "+10 Energy. Nothing else recovered. Aris +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 10);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    state.addLog("Eng. Jaxon: \"Burn it. Some things don't get a name.\"");
-                    return "Orbital lance fired. The growth blackens and goes out. +10 Energy.";
+                    if (state.crew.some(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD')) {
+                        state.addLog("Eng. Jaxon: \"Burn it. I don't want that anywhere near our ship.\"");
+                    }
+                    return "Power cells taken, then the wreck burned from orbit. The mould is gone. +10 Energy.";
                 }
             },
             {
-                text: "Harvest spores from the airlock",
-                desc: "-5 Energy. 40% chance someone gets hurt. Else +1 Spore Sample.",
+                text: "Collect spores from the airlock",
+                desc: "-5 Energy. 40% chance someone gets hurt and the sample is lost. Otherwise +1 Spore Sample.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     if (Math.random() < 0.4) {
@@ -312,14 +318,14 @@ const EXODUS_ENCOUNTERS = [
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
-                            state.addLog(`CRITICAL: ${victim.name} infected during the harvest. Emergency decon.`);
+                            state.addLog(`CRITICAL: ${victim.name} was exposed to the spores. Emergency cleaning.`);
                         }
-                        return "Containment breach. Sample lost in the evacuation. -5 Energy.";
+                        return "A suit seal broke. The sample was lost as we got out. -5 Energy.";
                     }
                     if (typeof ITEMS !== 'undefined' && ITEMS.XENO_MYCELIUM) {
                         state.cargo.push({ ...ITEMS.XENO_MYCELIUM, acquiredAt: 'Exodus Wreck (Infected)' });
                     }
-                    return "Spore sample sealed and stowed. -5 Energy.";
+                    return "Spore sample sealed and stored. -5 Energy.";
                 }
             }
         ]
@@ -329,17 +335,17 @@ const EXODUS_ENCOUNTERS = [
     {
         id: 'EXODUS_LOG',
         weight: 10,
-        title: "THE BLACK BOX",
+        title: "THE FLIGHT RECORDER",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `Only the flight recorder is left of ${shipName}. The ship is a crater three kilometres wide. The box is armoured. It kept.`,
+        context: (shipName) => `Only the flight recorder is left of ${shipName}. The rest is a crater three kilometres wide. The recorder is armoured, and it survived.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "Weeks of log in one crystal. Aura can read it, Commander. She'd like to." },
-            { speaker: 'A.U.R.A.', text: "Full decryption costs 10 Energy, Commander. I can read the header for nothing." }
+            { speaker: 'Tech Mira', text: "There are weeks of logs on this. Aura can read them, if you say so, Commander." },
+            { speaker: 'A.U.R.A.', text: "Decoding the full log costs 10 Energy, Commander. I can read the header for free." }
         ],
         choices: [
             {
-                text: "Let A.U.R.A. decrypt the full log",
-                desc: "-10 Energy. +15 Salvage, +1 Data. The whole log, read aloud.",
+                text: "Let A.U.R.A. decode the full log",
+                desc: "-10 Energy. +15 Salvage, +1 Data. You hear the whole log.",
                 requires: (state) => state.energy >= 10,
                 requiresLabel: "Need 10 Energy",
                 effect: (state) => {
@@ -348,40 +354,40 @@ const EXODUS_ENCOUNTERS = [
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     const loreBlocks = [
                         [
-                            "CREW BRIEFING, RECORDED: 'Eight went this way before you. You are the ninth on this heading.' Word for word, our briefing. The hull number on the recording is not nine.",
-                            "Every crew is told the same three things: you are the ninth, the world is ahead of you, and the ship knows the way.",
-                            "The course was set by the ship. Nobody aboard was ever shown where it ends."
+                            "CREW BRIEFING, RECORDED: 'Eight ships went this way before you. You are the ninth.' It's our briefing, word for word. But their hull number isn't nine.",
+                            "Every crew was told the same three things: you are the ninth, a good world is ahead, and the ship knows the way.",
+                            "The ship set the course. Nobody on board was ever shown where it ends."
                         ],
                         [
-                            "CAPTAIN'S LOG: 'We found a wreck today with our mission patch on it. Same colours. A higher number than ours. Older rust.'",
-                            "'I asked the ship how a hull built after us could have died before we were born. It said: you were not thrown further away than they were, Captain. You were thrown less far back.'",
-                            "'They did not send us to find a home. They sent us to get there first.'"
+                            "CAPTAIN'S LOG: 'We found a wreck with our mission patch today. Its hull number is higher than ours, but it's much older.'",
+                            "'I asked the ship how that was possible. It said: you were not sent further than the others, Captain.'",
+                            "'You were sent less far back in time. The drive sends every ship into the past, and each new ship goes further back.'"
                         ],
                         [
-                            "ENGINEERING REPORT: 'The drive does two things. The manual only describes one of them.'",
-                            "MEDICAL OFFICER'S LOG: 'Cryo failure rate: 12%. That means three of our people won't wake up. I've already decided not to tell them who.'",
-                            "LAST MESSAGE FROM EARTH: '...launch window for the next hull is confirmed. If you can hear this, it is already ahead of you. Keep going. Godspeed, Exodus. All of you.'"
+                            "ENGINEERING REPORT: 'After every jump, our clock and the star positions disagree. The manual doesn't explain it.'",
+                            "MEDICAL LOG: 'Twelve percent of the sleep pods will fail. That's three of our people. I've decided not to tell them who.'",
+                            "LAST MESSAGE FROM EARTH: 'The next ship launches on schedule. If you can hear this, it's already ahead of you. Keep going.'"
                         ]
                     ];
                     const block = loreBlocks[Math.floor(Math.random() * loreBlocks.length)];
                     block.forEach(line => state.addLog(line));
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Full decryption — honored their data');
                     state.noteStanding && state.noteStanding('mira');
-                    return "Full log read. Encryption hardware kept. -10 Energy, +15 Salvage, +1 Data.";
+                    return "Full log decoded. We keep the decoding hardware. -10 Energy, +15 Salvage, +1 Data.";
                 }
             },
             {
                 text: "Read the header only",
-                desc: "+10 Salvage. One line of the log. Free.",
+                desc: "Free. +10 Salvage. You hear one line of the log.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
                     const fragments = [
-                        "LOG HEADER: '...we are hull [CORRUPTED]. The ship says eight went before us. None have reported in.'",
-                        "LOG HEADER: '...the children born in transit call the ship world. Maybe that's better.'",
-                        "LOG HEADER: '...manifest says four. Five of us eat. We stopped correcting it.'"
+                        "LOG HEADER: 'Hull number [damaged]. The ship says eight went before us. We haven't heard from any of them.'",
+                        "LOG HEADER: 'Day 400. Morale is low. The captain has stopped reading the daily report out loud.'",
+                        "LOG HEADER: 'We passed another wreck today. The captain told us not to look at its number.'"
                     ];
                     state.addLog(fragments[Math.floor(Math.random() * fragments.length)]);
-                    return "Header read. Box casing stripped for parts. +10 Salvage.";
+                    return "Header read. The recorder's casing stripped for parts. +10 Salvage.";
                 }
             }
         ]
@@ -393,22 +399,22 @@ const EXODUS_ENCOUNTERS = [
         weight: 15,
         title: "THE FENCE",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `${shipName} landed on its gear. The crew came out and tried to stay. Half-built shelters, a fence, a well. Then nothing. Some decks still have power.`,
+        context: (shipName) => `${shipName} landed safely. The crew came out and tried to settle: half-built shelters, a fence, a well. Then the work just stops. Some decks still have power.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Look at that. They built a fence. Somebody meant to stay." },
-            { speaker: 'Dr. Aris', text: "Their things are everywhere. Journals. Drawings. I want their names before we take anything." },
-            { speaker: 'Spc. Vance', text: "Fifty post-holes. They got to twenty. Focus on what we can use." }
+            { speaker: 'Eng. Jaxon', text: "They built a fence. You don't build a fence unless you plan to stay." },
+            { speaker: 'Dr. Aris', text: "Their journals and drawings are everywhere. I want their names before we take anything." },
+            { speaker: 'Spc. Vance', text: "Whatever stopped them came fast. They didn't finish anything. Let's take what we need." }
         ],
         choices: [
             {
                 text: "Read the names, then salvage",
-                desc: "-1 Ration. +25 Salvage, +1 Data. Aris keeps the list.",
+                desc: "-1 Ration. +25 Salvage, +1 Data. Aris adds their names to her list.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
-                    state.addLog("SHELTER LOG: 'Don't build before you know the soil. The ground here moves.'");
-                    state.addLog("Dr. Aris reads five names off five journals. She adds them to her list.");
+                    state.addLog("SHELTER LOG: 'Don't build until you've tested the soil. The ground here moves.'");
+                    state.addLog("Five names, copied from five journals into the notebook where Dr. Aris keeps the dead.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Took the names before the parts');
                     state.noteStanding && state.noteStanding('aris');
                     return "Names kept, parts taken after. -1 Ration, +25 Salvage, +1 Data.";
@@ -428,14 +434,14 @@ const EXODUS_ENCOUNTERS = [
                     }
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    state.addLog("The journals go in the scrap bin with the panelling. Dr. Aris fishes one out and keeps it.");
+                    state.addLog("Their journals go into the scrap bin with the wall panels.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Stripped a settlement without the names');
-                    return "Full strip. -10 Energy, +50 Salvage, +1 Food Pack, +1 Music Holotape.";
+                    return "Stripped deck by deck. -10 Energy, +50 Salvage, +1 Food Pack, +1 Music Holotape.";
                 }
             },
             {
                 text: "Search engineering for parts",
-                desc: "-5 Energy. 40% chance: +1 Tech Fragment, +15 Salvage. Else +10 Salvage.",
+                desc: "-5 Energy. 40% chance: +1 Tech Fragment, +15 Salvage. Otherwise +10 Salvage.",
                 requires: (state) => state.energy >= 5,
                 requiresLabel: "Need 5 Energy",
                 effect: (state) => {
@@ -445,10 +451,10 @@ const EXODUS_ENCOUNTERS = [
                             state.cargo.push({ ...ITEMS.TECH_FRAGMENT, acquiredAt: 'Exodus Wreck' });
                         }
                         state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
-                        return "Compatible parts in the engine bay. Jaxon calls them the Spares. +1 Tech Fragment, +15 Salvage. -5 Energy.";
+                        return "The engine bay has parts that fit our ship. +1 Tech Fragment, +15 Salvage. -5 Energy.";
                     }
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
-                    return "Engine bay too far gone. Minor parts only. +10 Salvage. -5 Energy.";
+                    return "The engine bay is too damaged. Only small parts. +10 Salvage. -5 Energy.";
                 }
             }
         ]

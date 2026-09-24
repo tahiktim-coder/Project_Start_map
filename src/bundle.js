@@ -3521,8 +3521,8 @@ Then you're through.`,
 
             // ALIEN SIGNALS: high risk but data valuable
             if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) {
-                this.state.addLog("⚡ ALIEN SIGNAL SOURCE: Unknown transmission origin detected. Approach with caution.");
-                this.state.addLog('A.U.R.A.: "The signal is one of ours, Commander. An old hail. Nobody is sending it."');
+                this.state.addLog("⚡ OLD SIGNAL: a beacon on our own channel, still transmitting.");
+                this.state.addLog('A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it."');
             }
 
             // ANCIENT RUINS: knowledge and reduced EVA risk
@@ -4321,7 +4321,7 @@ Then you're through.`,
                             }
                         });
                         this.state.addLog(`${evaTeam[0].name}: "Commander... we're staying, aren't we?"`);
-                        this.state.addLog("You nod. The journey ends here. You are home.");
+                        this.state.addLog("You nod. This is where the journey ends.");
                         // Trigger the colony ending
                         this._executeColony(planet, { isScanWaived: true }); // they are standing on it
                         return; // Don't continue to normal exit

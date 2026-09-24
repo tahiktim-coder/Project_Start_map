@@ -6,11 +6,13 @@
  * - Corrupted message fragments
  * - Flight recorders
  * - Nav buoys dropped to mark the heading
- * - One hail that is our own
+ * - One distress call that is our own, arriving before we ever sent it
  *
  * The age passed to context() is scaled by the runtime to the sector (App.getSignalAge):
  * about twenty years in sector 1, about four hundred by sector 6. The getSignalAge
  * closures below are kept for the signature; their numbers are not used.
+ *
+ * Writing rules for this file: docs/STYLE.md. Plain sentences, no nicknames, no riddles.
  */
 
 const DISTRESS_SIGNAL_ENCOUNTERS = [
@@ -20,27 +22,27 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
         weight: 25,
         title: "AUTOMATED DISTRESS BEACON",
         getSignalAge: () => Math.floor(Math.random() * 40) + 5,
-        context: (age) => `A beacon, calling for ${age} years on backup cells. Standard Exodus emergency code. The hull behind it is dark. Nobody ever answered.`,
+        context: (age) => `A distress beacon, calling for ${age} years on backup power. Standard Exodus emergency code. The ship behind it is dark. Nobody ever answered.`,
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "An Exodus hull, Commander. Crew of four on the register. No answer was ever logged." },
-            { speaker: 'Dr. Aris', text: "Then we answer. Names first." },
-            { speaker: 'Eng. Jaxon', text: "The cells are still warm. Call it the Nightlight." }
+            { speaker: 'A.U.R.A.', text: "It's an Exodus ship, Commander. No reply to it was ever logged." },
+            { speaker: 'Dr. Aris', text: "Then we'll be the ones who answer. And I want their names." },
+            { speaker: 'Eng. Jaxon', text: "Those backup cells are still charged. We could use them." }
         ],
         choices: [
             {
-                text: "Take the cells",
+                text: "Take the power cells",
                 desc: "+20 Salvage, +10 Energy. The beacon stops. Aris +1 Stress.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                     state.energy = Math.min(100, state.energy + 10);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    state.addLog("Cells pulled. The beacon stops mid-code. Dr. Aris asks for the register. There isn't time.");
+                    state.addLog("Cells pulled. The beacon cuts off mid-call. Nobody has time to copy the crew's names.");
                     return "Beacon stripped. +20 Salvage, +10 Energy. Aris +1 Stress.";
                 }
             },
             {
-                text: "Copy the log",
+                text: "Copy the beacon's log",
                 desc: "-5 Energy. +1 Data. 30% chance: one planet revealed.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
@@ -49,26 +51,26 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
-                            state.addLog("The beacon kept a fix on the nearest body. One planet on the map.");
+                            state.addLog("The beacon had a fix on the nearest planet. One planet added to the map.");
                         }
                     }
-                    state.addLog("BEACON LOG: 'Four aboard, per the register. Five of us, per the galley.' Then the code, on repeat.");
+                    state.addLog("BEACON LOG: 'Engine failure. Drifting. The computer says help is on the way.' Then the call repeats.");
                     return "Log copied. -5 Energy, +1 Data.";
                 }
             },
             {
                 text: "Answer it, then switch it off",
-                desc: "-1 Ration: a day on station. +1 Data. Aris reads the four names. Aris -1 Stress.",
+                desc: "-1 Ration: a day beside it. +1 Data. Aris -1 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
-                    state.addLog("A.U.R.A. sends the acknowledgement. Dr. Aris reads the four names off the register, then adds a line for the fifth.");
-                    state.addLog("Dr. Aris: \"Heard. All of you. You can stop now.\" The beacon goes quiet.");
+                    state.addLog("A.U.R.A. sends a reply. Their crew's names are read aloud over the channel.");
+                    if (aris) state.addLog("Dr. Aris: \"We heard you. You can rest now.\" The beacon goes quiet.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Answered a beacon nobody answered');
                     state.noteStanding && state.noteStanding('aris');
-                    return "Beacon answered and silenced. -1 Ration, +1 Data. Aris -1 Stress.";
+                    return "Beacon answered and switched off. -1 Ration, +1 Data. Aris -1 Stress.";
                 }
             }
         ]
@@ -78,13 +80,13 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
     {
         id: 'DISTRESS_FRAGMENT',
         weight: 20,
-        title: "CORRUPTED TRANSMISSION",
+        title: "DAMAGED MESSAGE",
         getSignalAge: () => Math.floor(Math.random() * 20) + 2,
-        context: (age) => `A broken signal. Words, static, words. Sent ${age} years ago. Most of it is gone. The part that is left keeps saying a number.`,
+        context: (age) => `A damaged signal: words, static, then more words. Sent ${age} years ago. Most of it is lost. The part that's left keeps repeating one sentence.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "I can rebuild some of it. Aura, help me. She's better at this than I am." },
-            { speaker: 'A.U.R.A.', text: "Part rebuilt, Commander: '...register says four... there are... please...' Then nothing." },
-            { speaker: 'Spc. Vance', text: "I know how that sentence ends." }
+            { speaker: 'Tech Mira', text: "I can rebuild some of it. Aura, will you help? You're better at this than me." },
+            { speaker: 'A.U.R.A.', text: "Partly rebuilt, Commander: '...this is hull... we are not the ninth... please...' Then nothing." },
+            { speaker: 'Spc. Vance', text: "Not the ninth. So they were told the same thing we were." }
         ],
         choices: [
             {
@@ -97,18 +99,18 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                     const mira = state.crew.find(c => c.tags?.includes('SPECIALIST') && c.status !== 'DEAD');
                     const outcomes = [
                         {
-                            log: "Tech Mira: 'It's a wreck report. A hull with a higher number than theirs. That's the whole message, over and over.'",
+                            log: "Tech Mira: 'It's a list of wrecks they passed. Each one they found was older than the last.'",
                             stress: 1,
                             knowledge: 2
                         },
                         {
-                            log: "Tech Mira: 'Coordinates. They were making for a light. Aura, is that a star?' A.U.R.A.: 'It is on no chart, Commander.'",
+                            log: "Tech Mira: 'Coordinates. They were heading for a bright light. Aura, is that a star?' A.U.R.A.: 'It is not on any chart, Mira.'",
                             stress: 0,
                             knowledge: 3,
                             reveal: true
                         },
                         {
-                            log: "Tech Mira: 'It's a count. Somebody counting the crew, out loud. They keep getting five.'",
+                            log: "Tech Mira: 'It's someone saying goodbye to their family. Just their names, over and over.'",
                             stress: 2,
                             knowledge: 1
                         }
@@ -123,32 +125,32 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
-                            state.addLog("Coordinates plotted. One planet on the map.");
+                            state.addLog("Coordinates plotted. One planet added to the map.");
                         }
                     }
                     state.noteStanding && state.noteStanding('mira');
-                    return `Signal rebuilt. -5 Energy, +${outcome.knowledge} Data.` + (outcome.stress ? ` Mira +${outcome.stress} Stress.` : '');
+                    return `Message rebuilt. -5 Energy, +${outcome.knowledge} Data.` + (outcome.stress ? ` Mira +${outcome.stress} Stress.` : '');
                 }
             },
             {
-                text: "Strip the transmitter code only",
-                desc: "+15 Salvage. The words are lost. Mira +1 Stress.",
+                text: "Copy the transmitter code only",
+                desc: "+15 Salvage. The message is lost. Mira +1 Stress.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     const mira = state.crew.find(c => c.tags?.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
-                    state.addLog("Transmitter protocols copied for repairs. Whatever they were saying, they've stopped.");
-                    return "Code stripped. +15 Salvage. Mira +1 Stress.";
+                    state.addLog("Transmitter code copied for our own repairs. Whatever they were saying is gone.");
+                    return "Code copied. +15 Salvage. Mira +1 Stress.";
                 }
             },
             {
-                text: "Log the source and go",
-                desc: "+1 Data. Nobody listens to the rest. Vance -1 Stress.",
+                text: "Log where it came from and go",
+                desc: "+1 Data. Nobody hears the rest. Vance -1 Stress.",
                 effect: (state) => {
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     const vance = state.crew.find(c => c.tags?.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
-                    state.addLog("Source bearing logged. Spc. Vance switches the speaker off himself.");
+                    if (vance) state.addLog("Source direction logged. Spc. Vance switches off the speaker himself.");
                     return "Source logged. +1 Data. Vance -1 Stress.";
                 }
             }
@@ -161,25 +163,25 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
         weight: 15,
         title: "FLIGHT RECORDER FOUND",
         getSignalAge: () => Math.floor(Math.random() * 30) + 1,
-        context: (age) => `A flight recorder, drifting. The hull that carried it is gone. It has been quiet for ${age} years. Everything it kept, it still keeps.`,
+        context: (age) => `A flight recorder, drifting alone. The ship that carried it is gone. It has been silent for ${age} years, but its memory is intact.`,
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "Recorder at seventy-three percent, Commander. The last hours are whole." },
-            { speaker: 'Eng. Jaxon', text: "Somebody should know what happened. Even if it's just us." },
-            { speaker: 'Dr. Aris', text: "It's people's last hours. We do it properly. Names, then the rest." }
+            { speaker: 'A.U.R.A.', text: "The recorder is seventy-three percent intact, Commander. The last hours are complete." },
+            { speaker: 'Eng. Jaxon', text: "If this were us, I'd want someone to listen. So let's listen." },
+            { speaker: 'Dr. Aris', text: "These are people's last hours. We'll do it properly. Names first." }
         ],
         choices: [
             {
                 text: "Play it all the way through",
-                desc: "-5 Energy. +3 Data. 50% chance each crew member +1 Stress.",
+                desc: "-5 Energy. +3 Data. 50% chance for each crew member: +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
                     const fates = [
-                        "Scrubbers failed. Forty-seven days. They wrote the day's number on the wall each morning.",
-                        "They landed. The last entry is singing. Then nothing, for a long time.",
-                        "A ration count that came out wrong. Nobody won the argument.",
-                        "'The ship says four. There are five of us. We stopped arguing with it.'",
-                        "Came in too steep. Eight minutes. The pilot reads the checklist to the end."
+                        "The water recycler broke. They lasted forty-seven days, and marked each one on the wall.",
+                        "They landed. The last recording is people singing. Then silence.",
+                        "An argument about who gets the last of the food. Nobody wins it.",
+                        "'The computer keeps saying we're on schedule. We stopped believing it months ago.'",
+                        "An engine fire. The pilot stays calm and reads the checklist to the very end."
                     ];
                     const fate = fates[Math.floor(Math.random() * fates.length)];
                     state.addLog(`RECORDER: ${fate}`);
@@ -188,14 +190,14 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                             c.stress = Math.min(3, (c.stress || 0) + 1);
                         }
                     });
-                    state.addLog("Dr. Aris reads the names off the crew tab first. Then she lets it play.");
+                    state.addLog("The crew's names are read first. Then the recording plays.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Heard a recorder to the end');
                     state.noteStanding && state.noteStanding('aris');
                     return "Recorder played through. -5 Energy, +3 Data.";
                 }
             },
             {
-                text: "Pull only the nav track",
+                text: "Copy only the navigation track",
                 desc: "-5 Energy. +1 Data. 50% chance: one planet revealed.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
@@ -204,12 +206,12 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
-                            state.addLog("Nav track copied. Same heading as ours, to the degree. One planet on the map.");
-                            return "Nav track copied. -5 Energy, +1 Data. One planet revealed.";
+                            state.addLog("Navigation track copied. Exactly the same heading as ours. One planet added to the map.");
+                            return "Navigation track copied. -5 Energy, +1 Data. One planet revealed.";
                         }
                     }
-                    state.addLog("Nav track copied. Same heading as ours, to the degree.");
-                    return "Nav track copied. -5 Energy, +1 Data.";
+                    state.addLog("Navigation track copied. Exactly the same heading as ours.");
+                    return "Navigation track copied. -5 Energy, +1 Data.";
                 }
             },
             {
@@ -221,7 +223,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
-                    state.addLog("Casing cut for the alloy. The crystal cracked on the way out. Nobody will know now.");
+                    state.addLog("Casing cut off for the metal. The memory chip cracked on the way out. Nobody will ever hear it now.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Broke a recorder for its casing');
                     return "Casing stripped. +25 Salvage. Aris +1 Stress, Jaxon +1 Stress.";
                 }
@@ -233,37 +235,37 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
     {
         id: 'DISTRESS_BUOY',
         weight: 20,
-        title: "MALFUNCTIONING NAV BUOY",
+        title: "BROKEN NAVIGATION BUOY",
         getSignalAge: () => Math.floor(Math.random() * 15) + 1,
-        context: (age) => `A nav buoy, dropped by a hull to mark the way. Broken for ${age} years. It sends a heading, then garbage, then the heading again.`,
+        context: (age) => `A navigation buoy, dropped by an earlier ship to mark the route. Broken for ${age} years. It sends a heading, then garbage, then the heading again.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Standard buoy. Core's tired. I can fix it if we want to bother." },
-            { speaker: 'Tech Mira', text: "And here we see the heading, Commander. Same as ours. Aura checked twice." },
-            { speaker: 'Spc. Vance', text: "Every buoy out here points the same way. I've counted six." }
+            { speaker: 'Eng. Jaxon', text: "Standard buoy. The core's worn out. I can fix it if we want to." },
+            { speaker: 'Tech Mira', text: "Its heading is exactly the same as ours, Commander. Aura checked it twice." },
+            { speaker: 'Spc. Vance', text: "Every buoy we've found points the same way. Nobody went anywhere else." }
         ],
         choices: [
             {
-                text: "Read the garbage",
-                desc: "-5 Energy. 40% chance: all planets revealed. 30% chance: +2 Data, all crew +1 Stress. Else nothing.",
+                text: "Decode the garbage",
+                desc: "-5 Energy. 40% chance: all planets revealed. 30% chance: +2 Data, all crew +1 Stress. Otherwise nothing.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     const roll = Math.random();
                     if (roll < 0.3) {
-                        state.addLog("The garbage is garbage. Tired memory, nothing more.");
-                        return "Just corruption. -5 Energy.";
+                        state.addLog("The garbage is just damaged memory. There's nothing in it.");
+                        return "Nothing but damaged data. -5 Energy.";
                     }
                     if (roll < 0.7) {
                         state.sectorNodes?.forEach(p => p.remoteScanned = true);
-                        state.addLog("Under the garbage, a full sector chart. Every body plotted. All planets on the map.");
-                        return "Sector chart recovered. -5 Energy. All planets revealed.";
+                        state.addLog("Under the garbage is a full map of the sector. All planets added to the map.");
+                        return "Sector map recovered. -5 Energy. All planets revealed.";
                     }
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-                    state.addLog("The garbage is a list. Somebody re-cut the buoy to carry it.");
-                    state.addLog("A.U.R.A.: 'Hull numbers, Commander. In order. It goes up past forty thousand. Ours is not on it.'");
+                    state.addLog("The garbage is a list. Someone reprogrammed the buoy to carry it.");
+                    state.addLog("A.U.R.A.: 'They are hull numbers, Commander. Thousands of them, in order. Ours is not among them.'");
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-                    return "A list of hulls, going up. -5 Energy, +2 Data. All crew +1 Stress.";
+                    return "A list of thousands of ships. -5 Energy, +2 Data. All crew +1 Stress.";
                 }
             },
             {
@@ -274,7 +276,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                     state.salvage = Math.max(0, state.salvage - 10);
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
-                    state.addLog("Eng. Jaxon: \"New core, clean heading. Somebody'll thank us.\" He names it the Lamp Post.");
+                    if (jaxon) state.addLog("Eng. Jaxon: \"New core, clean heading. Somebody will be glad of it.\"");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Repaired a buoy for the next ship');
                     state.noteStanding && state.noteStanding('jaxon');
                     return "Buoy repaired. -10 Salvage, +2 Data. Jaxon -1 Stress.";
@@ -282,13 +284,14 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
             },
             {
                 text: "Strip it",
-                desc: "+18 Salvage, +8 Energy. The heading goes dark. Mira +1 Stress.",
+                desc: "+18 Salvage, +8 Energy. The buoy goes dark. Mira +1 Stress.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 18);
                     state.energy = Math.min(100, state.energy + 8);
                     const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
-                    state.addLog("Buoy stripped. Core drained. Tech Mira: 'Aura says the heading's gone from the channel. She noticed.'");
+                    state.addLog("Buoy stripped, core drained.");
+                    if (mira) state.addLog("Tech Mira: 'The next ship won't have a buoy to follow now.'");
                     return "Buoy stripped. +18 Salvage, +8 Energy. Mira +1 Stress.";
                 }
             }
@@ -299,13 +302,13 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
     {
         id: 'DISTRESS_LOOP',
         weight: 12,
-        title: "REPEATING TRANSMISSION",
+        title: "REPEATING MESSAGE",
         getSignalAge: () => Math.floor(Math.random() * 50) + 10,
-        context: (age) => `One message, on a loop, for ${age} years. Somebody set their last words to repeat and left them running. The voice is calm.`,
+        context: (age) => `One message, playing on a loop for ${age} years. Someone recorded their last words and left them running. The voice is calm.`,
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "'Tell my brother I got further than eight. Tell him—' It loops there, Commander." },
-            { speaker: 'Dr. Aris', text: "We can't tell anybody anything. We're as far out as they were." },
-            { speaker: 'Spc. Vance', text: "Then we write it down. Exactly. Every word." }
+            { speaker: 'A.U.R.A.', text: "'Tell my brother I got further than the eight before us. Tell him—' It repeats from there, Commander." },
+            { speaker: 'Dr. Aris', text: "We can't tell anyone anything. We're as far from home as they were." },
+            { speaker: 'Spc. Vance', text: "Then we write it down. Exactly as they said it." }
         ],
         choices: [
             {
@@ -316,59 +319,59 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
-                    state.addLog("Spc. Vance writes it out by hand and reads it back to the speaker. Twice. It matches.");
+                    if (vance) state.addLog("Spc. Vance writes it out by hand, then checks it against the recording. It matches.");
                     state.noteStanding && state.noteStanding('vance');
-                    return "Message recorded, exactly. -5 Energy, +1 Data. Vance -1 Stress.";
+                    return "Message recorded exactly. -5 Energy, +1 Data. Vance -1 Stress.";
                 }
             },
             {
-                text: "Trace it to the hull",
-                desc: "-10 Energy. 60% chance: +30 Salvage. Aris +1 Stress: personal things.",
+                text: "Trace it to the ship",
+                desc: "-10 Energy. 60% chance: +30 Salvage. Aris +1 Stress: it means opening their lockers.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     if (Math.random() < 0.6) {
                         state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
-                        state.addLog("Source found. A hull, dark. Personal lockers, opened. Dr. Aris takes the name tags before we take the rest.");
-                        return "Hull found and stripped. -10 Energy, +30 Salvage. Aris +1 Stress.";
+                        state.addLog("Source found: a dark ship. We open the personal lockers, but the name tags are set aside first.");
+                        return "Ship found and stripped. -10 Energy, +30 Salvage. Aris +1 Stress.";
                     }
-                    state.addLog("Source is out of range. They died somewhere we can't reach.");
-                    return "Too far. Nothing found. -10 Energy. Aris +1 Stress.";
+                    state.addLog("The source is out of range. They died somewhere we can't reach.");
+                    return "Too far away. Nothing found. -10 Energy. Aris +1 Stress.";
                 }
             },
             {
                 text: "Switch it off",
-                desc: "-1 Ration: a day to reach it. The voice stops. Aris reads the name. Aris -1 Stress.",
+                desc: "-1 Ration: a day to reach it. The voice stops. Aris -1 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
-                    state.addLog("Dr. Aris reads the name off the transmitter plate. \"Heard. You got further than eight. Rest now.\" Then the switch.");
+                    if (aris) state.addLog("Dr. Aris reads the name on the transmitter. \"Your brother would be proud of you.\" Then she switches it off.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Let a voice rest');
                     state.noteStanding && state.noteStanding('aris');
-                    return "Transmission ended. -1 Ration. Aris -1 Stress.";
+                    return "Message switched off. -1 Ration. Aris -1 Stress.";
                 }
             }
         ]
     },
 
-    // --- 6. OUR OWN HAIL ---
+    // --- 6. OUR OWN DISTRESS CALL ---
     {
         id: 'DISTRESS_ALIEN',
         weight: 8,
-        title: "OUR OWN HAIL",
+        title: "OUR OWN DISTRESS CALL",
         getSignalAge: () => 'UNKNOWN',
-        context: (age) => `It is our own hail. Our callsign, our handshake, our crew count, sent back to us. One thing is different: it arrived before we sent it.`,
+        context: (age) => `It's a distress call from our own ship: our name, our call sign, our crew list. It has arrived before we ever sent it.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "That is us. That is our exact hail. I recorded it this morning." },
-            { speaker: 'A.U.R.A.', text: "It is our hail, Commander. Returned. I did not send it, and it is older than we are." },
-            { speaker: 'Spc. Vance', text: "Then something out there has already heard us." }
+            { speaker: 'Tech Mira', text: "That's our call sign. We never sent that." },
+            { speaker: 'A.U.R.A.', text: "It matches our emergency call exactly, Commander. I have not sent one. The signal is very old." },
+            { speaker: 'Spc. Vance', text: "Then someone out there already knows who we are." }
         ],
         choices: [
             {
-                text: "Play it back in full",
-                desc: "-5 Energy. 25% chance: all crew +2 Stress. 35% chance: +5 Data, all planets revealed. Else +3 Data.",
+                text: "Play the whole call",
+                desc: "-5 Energy. 25% chance: all crew +2 Stress. 35% chance: +5 Data, all planets revealed. Otherwise +3 Data.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     const roll = Math.random();
@@ -376,42 +379,43 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 2);
                         });
-                        state.addLog("It says our names back. Jaxon. Aris. Vance. Mira. Then it says: four crew. Then it stops.");
-                        state.addLog("A.U.R.A.: 'That is my voice, Commander. I have never said that.'");
-                        return "It knows our names. -5 Energy. All crew +2 Stress.";
+                        state.addLog("It reads out our crew list: Jaxon, Aris, Vance, Mira. Four crew. The Commander's name isn't on it.");
+                        state.addLog("A.U.R.A.: 'That is my voice, Commander. But I have never recorded this message.'");
+                        return "Our own call, with our names in it. -5 Energy. All crew +2 Stress.";
                     }
                     if (roll < 0.6) {
                         state._colonyKnowledge = (state._colonyKnowledge || 0) + 5;
                         state.sectorNodes?.forEach(p => p.remoteScanned = true);
-                        state.addLog("Behind our hail, every transponder in the sector, read out in order. All of them ours. All of them old.");
-                        return "Every transponder in the sector, read to us. -5 Energy, +5 Data. All planets revealed.";
+                        state.addLog("After our call come the calls of every ship in this sector, one by one. All Exodus ships. All very old.");
+                        return "Every ship's call in the sector, played to us. -5 Energy, +5 Data. All planets revealed.";
                     }
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
-                    state.addLog("Our hail, and then one word added on the end, in A.U.R.A.'s voice: home.");
-                    state.addLog("Tech Mira: 'She would never say that. Would you?' A.U.R.A.: 'No, Commander.'");
-                    return "One word added to our hail. -5 Energy, +3 Data.";
+                    state.addLog("At the end of our call there's one extra word, in A.U.R.A.'s voice: 'home.'");
+                    state.addLog("Tech Mira: 'Aura, did you say that?' A.U.R.A.: 'No, Mira. I have never put that word in a message.'");
+                    return "One extra word at the end of our call. -5 Energy, +3 Data.";
                 }
             },
             {
-                text: "Record it, don't play it",
+                text: "Record it, but don't play it",
                 desc: "+2 Data. Mira +1 Stress: she wants to hear it.",
                 effect: (state) => {
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
                     const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
-                    state.addLog("Recorded, sealed, not played. Tech Mira: 'Aura wants to hear it too. She won't say so.'");
-                    return "Hail recorded, unheard. +2 Data. Mira +1 Stress.";
+                    state.addLog("Recorded and sealed, never played.");
+                    if (mira) state.addLog("Tech Mira: 'I just want to know what it says, Commander.'");
+                    return "Call recorded, not played. +2 Data. Mira +1 Stress.";
                 }
             },
             {
-                text: "Burn away",
-                desc: "-10 Energy. Nothing heard. Vance -1 Stress.",
+                text: "Fly away from it",
+                desc: "-10 Energy. Nobody hears it. Vance -1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
-                    state.addLog("We burned. Spc. Vance watched the signal strength fall off and counted it down to nothing.");
-                    return "Burned away from our own hail. -10 Energy. Vance -1 Stress.";
+                    if (vance) state.addLog("We burned away. Spc. Vance watched the signal fade until it was gone.");
+                    return "We flew away from our own distress call. -10 Energy. Vance -1 Stress.";
                 }
             }
         ]

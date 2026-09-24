@@ -54,8 +54,9 @@
 
     /** First two sentences up front; anything after that waits behind "more". */
     function splitContext(text) {
-        const clean = String(text || '').replace(MARKUP, '').replace(/\s*\n+\s*/g, ' ').trim();
-        const sentences = clean.match(/[^.!?…]+[.!?…]+["')\]]*\s*|[^.!?…]+$/g) || [clean];
+        const AI_NAME = /A\.U\.R\.A\./g, HOLD = '\u0001';                          // her name has dots in it: keep it whole while splitting sentences
+        const clean = String(text || '').replace(MARKUP, '').replace(/\s*\n+\s*/g, ' ').trim().replace(AI_NAME, HOLD);
+        const sentences = (clean.match(/[^.!?…]+[.!?…]+["')\]]*\s*|[^.!?…]+$/g) || [clean]).map(part => part.split(HOLD).join('A.U.R.A.'));
         return { lead: sentences.slice(0, CONTEXT_SENTENCES).join('').trim(), rest: sentences.slice(CONTEXT_SENTENCES).join('').trim() };
     }
 
