@@ -246,7 +246,7 @@ for (let sector = 1; sector <= 6; sector++) {
     const b = [HOW, '', 'Random encounters. Each can happen in any sector unless noted.', ''];
     const POOLS = [['Exodus wrecks (one of our ships)', 'EXODUS_ENCOUNTERS', 'ExodusDerelicts.js', { ctxArg: SAMPLE.ship }], ['Wreckage in orbit', 'DERELICT_ENCOUNTERS', 'DerelictEncounters.js', { ctxArg: 'The wreck' }],
         ['Old stations', 'SPACE_STATION_ENCOUNTERS', 'SpaceStations.js', { ctxArg: SAMPLE.station }], ['Colony ruins', 'FAILED_COLONY_ENCOUNTERS', 'FailedColonyEncounters.js', { ctxArg: 'the planet' }],
-        ['Strange places', 'ANOMALY_ENCOUNTERS', 'AnomalyEncounters.js'], ['Asteroid fields', 'ASTEROID_FIELD_ENCOUNTERS', 'AsteroidFields.js'],
+        ['Strange places', 'ANOMALY_ENCOUNTERS', 'AnomalyEncounters.js'], ['Asteroid fields', 'ASTEROID_FIELD_ENCOUNTERS', 'AsteroidFields.js', { ctxArg: 'The field' }],
         ['Distress calls', 'DISTRESS_SIGNAL_ENCOUNTERS', 'DistressSignals.js', { ctxArg: SAMPLE.age }], ['Ship problems', 'SHIP_MALFUNCTION_EVENTS', 'ShipEvents.js']];
     POOLS.forEach(([title, name, file, opts]) => {
         const pool = G(name) || [];
