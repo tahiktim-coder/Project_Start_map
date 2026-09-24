@@ -84,6 +84,8 @@ ship ends. That is why the ending is yours.
 
 ## 6. The count — and what it points at
 
+> **REJECTED by the designer, 2026-09-25.** The "crew list sealed before a commander was chosen" answer is out: the designer called it suspense without substance. The count stays (A.U.R.A. names five, says four, does not notice), but its answer is being redesigned. Do not build on the reason below.
+
 **What the player sees.** A.U.R.A. says there are four crew. There are five people aboard. The crew panel
 says five, five figures walk the cutaway. When asked, she names all five — and still says four.
 

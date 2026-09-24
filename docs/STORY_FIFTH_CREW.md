@@ -1,5 +1,7 @@
 # The fifth crew member (2026-09-23)
 
+> **REJECTED by the designer, 2026-09-25.** The "crew list sealed before a commander was chosen" answer is out: the designer called it suspense without substance. The count stays (A.U.R.A. names five, says four, does not notice), but its answer is being redesigned. Do not build on the reason below.
+
 The settled hook: **A.U.R.A. says four while five people are aboard.** Asked for names she gives all
 five, correctly and warmly, then says "four crew, Commander" and does not notice. The ship's own
 displays agree with reality — the crew panel reads `5 OF 5 ALIVE`, the cutaway walks five figures.
