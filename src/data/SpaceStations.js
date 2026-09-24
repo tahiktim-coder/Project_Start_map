@@ -1,6 +1,8 @@
 /**
  * SPACE STATIONS - Abandoned orbital structures
  *
+ * Every station on this heading is a ship that stopped: a hull that anchored,
+ * dug in, welded on to another, or stripped itself to feed a beacon.
  * Larger than ship wrecks, multiple rooms to explore.
  * Higher risk, higher reward. No trading - just looting.
  */
@@ -13,288 +15,275 @@ const STATION_NAMES = [
 ];
 
 const SPACE_STATION_ENCOUNTERS = [
-    // --- 1. ABANDONED MINING STATION ---
+    // --- 1. MINING PLATFORM: a hull that anchored to a rock and dug in ---
     {
         id: 'STATION_MINING',
         weight: 20,
         title: "MINING PLATFORM",
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
-        context: (name) => `${name} hangs dead in orbit, its mining arms frozen mid-swing. The cargo bays are sealed. According to the manifest, this station processed rare metals for the colony ships. The lights are off, but the emergency beacon is still pinging.`,
+        context: (name) => `${name} is a hull that anchored to a rock and cut into it to keep living. Mining arms frozen mid-swing. Bays sealed. A beacon still pings.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Ore processing equipment. If any of it still works, we could strip it for salvage." },
-            { speaker: 'Tech Mira', text: "I'm reading residual power in the storage bays. Might be worth checking." },
-            { speaker: 'Spc. Vance', text: "No life signs. But those mining drones might still be active. Watch yourselves." }
+            { speaker: 'Eng. Jaxon', text: "They stopped and dug in. Call it the Burrow. I understand it." },
+            { speaker: 'Tech Mira', text: "Aura is talking to the station's drones, Commander. They still answer her." },
+            { speaker: 'Spc. Vance', text: "No life. Six drones on the roster. I count six on the hull. Watch them." }
         ],
         choices: [
             {
-                text: "Explore the cargo bays",
-                desc: "+30-50 Salvage. Low risk.",
+                text: "Cut open the ore bays",
+                desc: "-5 Energy. +30-50 Salvage.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     const salvage = Math.floor(Math.random() * 21) + 30;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
-                    state.addLog(`Cargo bays contained processed ore and spare parts. +${salvage} Salvage.`);
-                    return `Cargo bays looted successfully. +${salvage} Salvage recovered.`;
+                    state.addLog(`Ore bays held processed metal and spare parts. +${salvage} Salvage.`);
+                    return `Bays cut open. -5 Energy, +${salvage} Salvage.`;
                 }
             },
             {
-                text: "Access the control center",
-                desc: "+Colony knowledge, chance of sector map data.",
+                text: "Let A.U.R.A. run the drones",
+                desc: "-10 Energy. +2 Data. 40% chance: all planets revealed.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 10);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-
-                    // 40% chance to reveal all planets
+                    state.addLog("A.U.R.A.: 'Six drones, Commander. They are surveying. Tech Mira is watching them with me.'");
                     if (Math.random() < 0.4) {
                         state.sectorNodes?.forEach(p => p.remoteScanned = true);
-                        state.addLog("Mining survey data recovered. All sector planets revealed!");
+                        state.addLog("Drone survey complete. Every planet in the sector is on the map.");
                     }
-
-                    state.addLog("Control center logs detail mineral deposits across the sector.");
-                    return "Survey data recovered. Colony knowledge improved.";
+                    state.noteStanding && state.noteStanding('mira');
+                    return "Drones handed to A.U.R.A. -10 Energy, +2 Data.";
                 }
             },
             {
                 text: "Strip the reactor",
-                desc: "+40 Energy. 25% chance of radiation exposure (crew injury).",
+                desc: "+40 Energy. 25% chance someone gets hurt.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 40);
-
                     if (Math.random() < 0.25) {
                         const crew = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
                         if (crew.length > 0) {
                             const victim = (state._boarder && state._boarder.status !== 'DEAD') ? state._boarder : crew[Math.floor(Math.random() * crew.length)]; // whoever boarded is the one in the room
                             victim.status = 'INJURED';
-                            state.addLog(`${victim.name} exposed to reactor radiation. INJURED.`);
-                            return `Reactor stripped. +40 Energy. ${victim.name} suffered radiation burns.`;
+                            state.addLog(`${victim.name} took a dose off the reactor. INJURED.`);
+                            return `Reactor stripped. +40 Energy. ${victim.name} burned.`;
                         }
                     }
-
-                    state.addLog("Reactor fuel cells extracted safely.");
-                    return "Reactor stripped successfully. +40 Energy.";
+                    state.addLog("Reactor cells pulled clean.");
+                    return "Reactor stripped. +40 Energy.";
                 }
             }
         ]
     },
 
-    // --- 2. RESEARCH STATION ---
+    // --- 2. RESEARCH STATION: a hull that stopped to study something ---
     {
         id: 'STATION_RESEARCH',
         weight: 15,
         title: "RESEARCH STATION",
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
-        context: (name) => `${name} was a science outpost. The exterior shows no damage, but all the escape pods are gone. Whatever happened here, the crew left in a hurry. The lab section is still sealed — quarantine protocols active.`,
+        context: (name) => `${name} was a hull that stopped to study something. No damage outside. Every escape pod is gone. The lab is sealed. Quarantine lights still on.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Quarantine seals. They were studying something dangerous. Or something dangerous got out." },
-            { speaker: 'Tech Mira', text: "The research databases might still be intact. Years of study, just waiting to be downloaded." },
-            { speaker: 'A.U.R.A.', text: "I advise caution. The station's last log entry is... incomplete." }
+            { speaker: 'Dr. Aris', text: "Quarantine seals. Either they were studying something, or it got out." },
+            { speaker: 'Tech Mira', text: "And here we see the databases. Years of somebody's work, still on the disks." },
+            { speaker: 'A.U.R.A.', text: "The last log entry is incomplete, Commander. I will read it if you ask." }
         ],
         choices: [
             {
-                text: "Access the research database",
-                desc: "+Tech Fragment or special item. Safe digging.",
+                text: "Copy the research database",
+                desc: "-5 Energy. +1 Tech Item, or +3 Data if the disks are bare.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     if (typeof ITEMS !== 'undefined') {
-                        const possibleItems = [ITEMS.TECH_FRAGMENT, ITEMS.ANCIENT_DATABASE, ITEMS.SIGNAL_DECODER];
+                        const possibleItems = [ITEMS.TECH_FRAGMENT, ITEMS.ANCIENT_DATABASE, ITEMS.SIGNAL_DECODER].filter(i => i);
                         const item = possibleItems[Math.floor(Math.random() * possibleItems.length)];
                         if (item) {
                             state.cargo = state.cargo || [];
                             state.cargo.push({ ...item, acquiredAt: 'Research Station' });
-                            state.addLog(`Downloaded research data. Acquired: ${item.name}`);
-                            return `Research archives accessed. Found: ${item.name}`;
+                            state.addLog(`Research disks copied. Acquired: ${item.name}`);
+                            return `Database copied. -5 Energy. Found: ${item.name}`;
                         }
                     }
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
-                    return "Research data downloaded. Colony knowledge greatly improved.";
+                    return "Disks copied. -5 Energy, +3 Data.";
                 }
             },
             {
                 text: "Break the quarantine seal",
-                desc: "High risk. Could find valuable bio-samples... or something worse.",
+                desc: "30% chance someone gets hurt. 40% chance: +1 Bio Sample. Else nothing.",
                 effect: (state) => {
                     const roll = Math.random();
 
                     if (roll < 0.3) {
-                        // Bad outcome - contamination
                         const crew = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
                         if (crew.length > 0) {
                             const victim = (state._boarder && state._boarder.status !== 'DEAD') ? state._boarder : crew[Math.floor(Math.random() * crew.length)]; // whoever boarded is the one in the room
                             victim.status = 'INJURED';
                             victim.stress = Math.min(3, (victim.stress || 0) + 1);
-                            state.addLog(`Something in the lab attacked ${victim.name}. The wounds don't look natural.`);
-                            return `Quarantine breached. ${victim.name} INJURED by unknown organism.`;
+                            state.addLog(`The lab's own culture had grown over the door. ${victim.name} breathed it.`);
+                            return `Quarantine broken. ${victim.name} INJURED.`;
                         }
                     } else if (roll < 0.7) {
-                        // Good outcome - samples
                         if (typeof ITEMS !== 'undefined' && ITEMS.BIO_SAMPLE_RARE) {
                             state.cargo = state.cargo || [];
                             state.cargo.push({ ...ITEMS.BIO_SAMPLE_RARE, acquiredAt: 'Research Station' });
-                            state.addLog("Bio-containment units still sealed. Valuable samples recovered.");
-                            return "Quarantine safe. Found: Rare Bio-Sample.";
+                            state.addLog("Containment units still sealed. One sample worth carrying.");
+                            return "Quarantine clear. Found: Rare Bio-Sample.";
                         }
                         state.rations = Math.min(state.maxRations, state.rations + 5);
-                        return "Lab contained preserved food samples. +5 Rations.";
+                        return "Lab held preserved food samples. +5 Rations.";
                     }
 
-                    // Neutral - empty
-                    state.addLog("The lab was empty. Whatever they were studying is gone.");
-                    return "Quarantine zone empty. The specimen escaped long ago.";
+                    state.addLog("The lab was empty. Whatever they studied went with the pods.");
+                    return "Quarantine zone empty. Nothing to take.";
                 }
             },
             {
-                text: "Loot the crew quarters only",
-                desc: "+15 Salvage, +2 Rations. Safe option.",
+                text: "Search the crew quarters",
+                desc: "-5 Energy. +15 Salvage, +2 Rations.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state.rations = Math.min(state.maxRations, state.rations + 2);
-                    state.addLog("Personal things and emergency supplies recovered from quarters.");
-                    return "Crew quarters searched. +15 Salvage, +2 Rations.";
+                    state.addLog("Personal lockers and emergency stores. Five lockers, four name tags.");
+                    return "Quarters searched. -5 Energy, +15 Salvage, +2 Rations.";
                 }
             }
         ]
     },
 
-    // --- 3. REFUGEE STATION ---
+    // --- 3. THE JOINED HULLS: three ships that stopped, one after another ---
     {
         id: 'STATION_REFUGEE',
         weight: 12,
-        title: "REFUGEE WAYSTATION",
+        title: "THE JOINED HULLS",
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
-        context: (name) => `${name} was a gathering point for colony ships. Thousands passed through here on their way to the stars. Now it's empty. The walls are covered in messages — names, dates, farewells. Some of the handwriting belongs to children.`,
+        context: (name) => `${name} is three hulls welded into one. Three numbers on the plating, none in order. Inside, the walls are covered in names, dates, goodbyes. Some of the writing is children's.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "So many people. So many hopes. I wonder how many made it." },
-            { speaker: 'Eng. Jaxon', text: "The supply depot might still have something. Refugees couldn't carry everything." },
-            { speaker: 'Spc. Vance', text: "Keep it professional. We take what we need and move on." }
+            { speaker: 'Dr. Aris', text: "So many names. I'll need the whole wall." },
+            { speaker: 'Eng. Jaxon', text: "They all stopped here. One after another. Somebody had to be first." },
+            { speaker: 'Spc. Vance', text: "Three hulls, three plates, twelve names. I count more bunks than that." }
         ],
         choices: [
             {
-                text: "Search the supply depot",
-                desc: "+4-6 Rations, +20 Salvage. Standard loot.",
+                text: "Search the stores",
+                desc: "-5 Energy. +4-6 Rations, +20 Salvage.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     const rations = Math.floor(Math.random() * 3) + 4;
                     state.rations = Math.min(state.maxRations, state.rations + rations);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
-                    state.addLog(`Found abandoned supplies. +${rations} Rations, +20 Salvage.`);
-                    return `Supply depot raided. +${rations} Rations, +20 Salvage.`;
+                    state.addLog(`Stores found behind the third hull's galley. +${rations} Rations, +20 Salvage.`);
+                    return `Stores searched. -5 Energy, +${rations} Rations, +20 Salvage.`;
                 }
             },
             {
-                text: "Read the message wall",
-                desc: "+Colony knowledge. Crew stress varies based on what they find.",
+                text: "Add our names to the wall",
+                desc: "-1 Ration: a day at anchor. +1 Data. Jaxon -1 Stress, Aris -1 Stress.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-
-                    const outcomes = [
-                        {
-                            log: "We found a message from the Exodus-3 crew. They made it to Sector 4. They were alive.",
-                            stress: -1
-                        },
-                        {
-                            log: "Children's drawings. A yellow sun. Green grass. 'Our new home.' Nobody knows if they found it.",
-                            stress: 0
-                        },
-                        {
-                            log: "Final messages. Goodbyes. 'If you find this, we didn't make it. Remember us.'",
-                            stress: 1
-                        }
-                    ];
-
-                    const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
-                    state.addLog(outcome.log);
-
-                    if (outcome.stress !== 0) {
-                        state.crew.forEach(c => {
-                            if (c.status !== 'DEAD') {
-                                c.stress = Math.max(0, Math.min(3, (c.stress || 0) + outcome.stress));
-                            }
-                        });
-                    }
-
-                    return `Messages read. Colony knowledge improved. ${outcome.stress > 0 ? 'Crew affected by what they found.' : outcome.stress < 0 ? 'Crew found hope in the messages.' : ''}`;
+                    state.rations = Math.max(0, state.rations - 1);
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
+                    const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
+                    if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
+                    if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
+                    state.addLog("Five names in Jaxon's hand, under a child's drawing of a yellow sun and green grass.");
+                    state.addLog("Dr. Aris copies the wall into her list. It takes the whole day.");
+                    if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Left our names with theirs');
+                    state.noteStanding && state.noteStanding('jaxon');
+                    return "Our names are on the wall. -1 Ration, +1 Data. Jaxon -1 Stress, Aris -1 Stress.";
                 }
             },
             {
-                text: "Check the communication array",
-                desc: "Old distress signals. Might learn what happened to other ships.",
+                text: "Play the comm array",
+                desc: "+2 Data. All crew +1 Stress. Vance counts the calls.",
                 effect: (state) => {
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-                    state.addLog("Old distress calls, all of them ours. The newest is decades old. +2 Data.");
-                    return "Every call on the array is an Exodus hull. None of them were answered. +2 Data.";
+                    state.crew.forEach(c => {
+                        if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
+                    });
+                    state.addLog("Every call on the array is an Exodus hull. None of them were answered.");
+                    state.addLog("Spc. Vance: \"Forty-one calls. Forty-one numbers. Write them down. All of them.\"");
+                    state.noteStanding && state.noteStanding('vance');
+                    return "Array played through. Forty-one calls, none answered. +2 Data. All crew +1 Stress.";
                 }
             }
         ]
     },
 
-    // --- 4. MILITARY STATION ---
+    // --- 4. THE BEACON: a hull stripped to its frame to shout back the way it came ---
     {
         id: 'STATION_MILITARY',
         weight: 10,
-        title: "DEFENSE PLATFORM",
+        title: "THE BEACON",
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
-        context: (name) => `${name} bristles with weapon emplacements — all powered down now. This was humanity's last line of defense before the exodus. The armory seals are intact. Whatever they were guarding against, they took the fight seriously.`,
+        context: (name) => `${name} is a hull stripped to the frame to feed one thing: a beacon, aimed back the way we came. It has been saying one word for a very long time.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Military hardware. If any of it still works, it could be useful." },
-            { speaker: 'Tech Mira', text: "The targeting systems used advanced computing. Might be compatible with A.U.R.A." },
-            { speaker: 'A.U.R.A.', text: "I detect weapons-grade power cells in the armory. Approach with caution." }
+            { speaker: 'Spc. Vance', text: "Capacitors the size of the goat. They gave it everything they had." },
+            { speaker: 'Tech Mira', text: "And here we see the loudest thing on the heading. Aura can hear it three sectors off." },
+            { speaker: 'A.U.R.A.', text: "It is aimed at Earth, Commander. One word, repeated: back. I have logged it." }
         ],
         choices: [
             {
-                text: "Access the armory",
-                desc: "+40 Salvage (military components). Automated defenses may activate.",
+                text: "Drain the capacitors",
+                desc: "+40 Energy. The beacon goes dark. Aris +1 Stress, Mira +1 Stress.",
                 effect: (state) => {
-                    if (Math.random() < 0.3) {
-                        // Defenses activate
-                        const crew = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
-                        if (crew.length > 0) {
-                            const victim = (state._boarder && state._boarder.status !== 'DEAD') ? state._boarder : crew[Math.floor(Math.random() * crew.length)]; // whoever boarded is the one in the room
-                            victim.status = 'INJURED';
-                            state.addLog(`Automated turret activated! ${victim.name} hit before it could be disabled.`);
-                            state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
-                            return `Armory breached. +40 Salvage. ${victim.name} INJURED by defense system.`;
-                        }
-                    }
-
-                    state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
-                    state.addLog("Armory accessed. Military-grade components recovered.");
-                    return "Armory looted successfully. +40 Salvage (military grade).";
+                    state.energy = Math.min(100, state.energy + 40);
+                    const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
+                    const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
+                    if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
+                    if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
+                    state.addLog("The beacon stops mid-word. Tech Mira: 'She says it's quiet now, Commander. She doesn't like it.'");
+                    if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Silenced the beacon');
+                    return "Capacitors drained into the kettle. +40 Energy. The beacon is dark.";
                 }
             },
             {
-                text: "Download tactical data",
-                desc: "Navigation hazard data. Reduces warp costs this sector.",
+                text: "Copy its aiming data",
+                desc: "-5 Energy. All planets in the sector revealed.",
                 effect: (state) => {
-                    state._warpDiscount = (state._warpDiscount || 0) + 10;
-                    state.addLog("Military navigation data downloaded. Safer route calculations available.");
-                    return "Tactical data gained. Warp costs reduced by 10%.";
+                    state.energy = Math.max(0, state.energy - 5);
+                    state.sectorNodes?.forEach(p => {
+                        if (!p.remoteScanned) p.remoteScanned = true;
+                    });
+                    state.addLog("To aim, it had to map. Every body in the sector, plotted so the beam could miss them.");
+                    return "Aiming data copied. Every planet on the map. -5 Energy.";
                 }
             },
             {
-                text: "Drain the weapon capacitors",
-                desc: "+50 Energy. Safe digging.",
+                text: "Add our hull number to its message",
+                desc: "-10 Energy. +2 Data. Vance +1 Stress.",
                 effect: (state) => {
-                    state.energy = Math.min(100, state.energy + 50);
-                    state.addLog("Weapon capacitors drained. Energy transferred to ship reserves.");
-                    return "Power drained. +50 Energy from weapon systems.";
+                    state.energy = Math.max(0, state.energy - 10);
+                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
+                    if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
+                    state.addLog("Spc. Vance adds one number after the word. Nine. He says it out loud twice, to be sure.");
+                    state.addLog("A.U.R.A.: 'Transmitting, Commander. I will tell you if anyone answers.'");
+                    state.noteStanding && state.noteStanding('vance');
+                    return "The beacon now says: back. Nine. -10 Energy, +2 Data. Vance +1 Stress.";
                 }
             }
         ]
     },
 
-    // --- 5. DERELICT TRADE HUB ---
+    // --- 5. THE STOREHOUSE: a crew that shelved every wreck they passed ---
     {
         id: 'STATION_TRADE',
         weight: 15,
-        title: "TRADE HUB WRECKAGE",
+        title: "THE STOREHOUSE",
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
-        context: (name) => `${name} was once the busiest station in the sector. Merchants, miners, colonists — everyone passed through here. Now the docking bays are empty, the shops are looted, but the deeper storage levels might still hold something.`,
+        context: (name) => `${name} was a hull whose crew collected. Every wreck they passed, sorted and shelved. Aisles of it. A ledger at the door with four columns.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Trade stations had deep storage. The good stuff was always kept hidden." },
-            { speaker: 'Dr. Aris', text: "Medical supplies were always in demand. The clinic might have leftovers." },
-            { speaker: 'Tech Mira', text: "The data brokers kept servers here. Information was currency." }
+            { speaker: 'Eng. Jaxon', text: "Somebody's whole life, shelved. Call it the Attic." },
+            { speaker: 'Dr. Aris', text: "There's a clinic aisle. Labelled by hand." },
+            { speaker: 'Tech Mira', text: "And here we see the ledger. Every wreck by hull number. The numbers go up, Commander." }
         ],
         choices: [
             {
-                text: "Search the deep storage vaults",
-                desc: "Random valuable item. Requires security bypass.",
+                text: "Search the deep shelves",
+                desc: "-5 Energy. +1 Valuable Item, or +35 Salvage if the good shelf is bare.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     if (typeof ITEMS !== 'undefined') {
                         const valuables = [
                             ITEMS.CONDENSED_SALVAGE,
@@ -307,123 +296,120 @@ const SPACE_STATION_ENCOUNTERS = [
                         if (valuables.length > 0) {
                             const item = valuables[Math.floor(Math.random() * valuables.length)];
                             state.cargo = state.cargo || [];
-                            state.cargo.push({ ...item, acquiredAt: 'Trade Hub' });
-                            state.addLog(`Vault cracked! Found: ${item.name}`);
-                            return `Deep storage accessed. Found: ${item.name}`;
+                            state.cargo.push({ ...item, acquiredAt: 'Storehouse' });
+                            state.addLog(`Back shelf, top row, labelled in pencil: ${item.name}`);
+                            return `Deep shelves searched. -5 Energy. Found: ${item.name}`;
                         }
                     }
 
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 35);
-                    return "Vault contained raw materials. +35 Salvage.";
+                    return "Deep shelves held raw stock. -5 Energy, +35 Salvage.";
                 }
             },
             {
-                text: "Raid the medical clinic",
-                desc: "Heal one injured crew member. +Medical supplies.",
+                text: "Open the clinic aisle",
+                desc: "-5 Energy. Heals one injured crew. Else +1 Medkit, or +3 Rations.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     const injured = state.crew.filter(c => c.status === 'INJURED');
                     if (injured.length > 0) {
                         injured[0].status = 'HEALTHY';
-                        state.addLog(`Found working medical equipment. ${injured[0].name} healed.`);
-                        return `Medical clinic raided. ${injured[0].name} restored to HEALTHY.`;
+                        state.addLog(`Working clinic gear on the shelf. ${injured[0].name} treated.`);
+                        return `Clinic aisle used. ${injured[0].name} back to HEALTHY. -5 Energy.`;
                     }
 
                     if (typeof ITEMS !== 'undefined' && ITEMS.MEDKIT) {
                         state.cargo = state.cargo || [];
-                        state.cargo.push({ ...ITEMS.MEDKIT, acquiredAt: 'Trade Hub' });
-                        return "No injuries to treat. Found: Medkit for later use.";
+                        state.cargo.push({ ...ITEMS.MEDKIT, acquiredAt: 'Storehouse' });
+                        return "Nobody to treat. Took a Medkit for later. -5 Energy.";
                     }
 
                     state.rations = Math.min(state.maxRations, state.rations + 3);
-                    return "Clinic picked clean. Found some nutritional supplements. +3 Rations.";
+                    return "Clinic shelf bare. Found supplements. -5 Energy, +3 Rations.";
                 }
             },
             {
-                text: "Access the data broker servers",
-                desc: "+Colony knowledge. Reveals sector information.",
+                text: "Read the ledger",
+                desc: "-1 Ration: a day reading. +3 Data. All planets revealed. Vance +1 Stress.",
                 effect: (state) => {
+                    state.rations = Math.max(0, state.rations - 1);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
                     state.sectorNodes?.forEach(p => {
-                        if (!p.remoteScanned) {
-                            p.remoteScanned = true;
-                        }
+                        if (!p.remoteScanned) p.remoteScanned = true;
                     });
-                    state.addLog("Trade route data recovered. Sector mapping complete.");
-                    return "Data servers accessed. All sector planets revealed. Colony knowledge improved.";
+                    const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
+                    if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
+                    state.addLog("LEDGER: hull, where found, what taken, crew. The crew column says four on every line.");
+                    state.addLog("Spc. Vance reads the numbers down the page. He stops. He starts again from the top.");
+                    return "Ledger read. Every wreck they found, where it lies. -1 Ration, +3 Data. Vance +1 Stress.";
                 }
             }
         ]
     },
 
-    // --- 6. GHOST STATION ---
+    // --- 6. THE SILENT STATION: on no chart, and never used ---
     {
         id: 'STATION_GHOST',
         weight: 8,
         title: "THE SILENT STATION",
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
-        context: (name) => `${name} shouldn't exist. It's not on any chart. The design is... wrong. The corridors curve in ways that make no sense. The lights flicker in patterns that almost seem like messages. Something is here. Waiting.`,
+        context: (name) => `${name} is on no chart. The corridors are the right shape. The doors are a hand too small. Every bunk has four blankets, folded. Nothing has ever been used.`,
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "I cannot identify the station's origin. The architecture predates human spaceflight." },
-            { speaker: 'Spc. Vance', text: "We should leave. Now. Every instinct I have is screaming." },
-            { speaker: 'Tech Mira', text: "But look at the technology. This could change everything we know." }
+            { speaker: 'A.U.R.A.', text: "It matches the standard station plan exactly, Commander. Nobody builds exactly." },
+            { speaker: 'Spc. Vance', text: "Four blankets a bunk. Nobody folds four blankets. We should go." },
+            { speaker: 'Tech Mira', text: "But look at it. It's new. Nothing out here is new." }
         ],
         choices: [
             {
                 text: "Explore deeper",
-                desc: "DANGEROUS. Unknown rewards. Unknown risks.",
+                desc: "25% chance: +40 Salvage, +30 Energy. 25% chance: +2 Stress for whoever went in. Else someone comes back too calm.",
                 effect: (state) => {
                     const roll = Math.random();
+                    const crew = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
+                    const walker = (state._boarder && state._boarder.status !== 'DEAD') ? state._boarder : crew[Math.floor(Math.random() * crew.length)];
 
                     if (roll < 0.25) {
-                        // Bad - something follows you back
-                        state.crew.forEach(c => {
-                            if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 2);
-                        });
-                        state.addLog("You found something. Or it found you. The crew won't talk about what they saw.");
-                        state.addLog("A.U.R.A.: 'I am detecting an additional presence aboard the ship. I cannot locate it.'");
-                        return "You explored too deep. All crew +2 Stress. Something came back with you.";
-                    } else if (roll < 0.5) {
-                        // Great - amazing loot
-                        state.salvage = state.maxSalvage;
-                        state.energy = 100;
-                        state._colonyKnowledge = (state._colonyKnowledge || 0) + 5;
-                        state.addLog("The station... provided. Resources appeared in your cargo hold. You don't remember taking them.");
-                        return "The station gave you gifts. Salvage and Energy MAXIMIZED. Colony knowledge greatly improved.";
-                    } else {
-                        // Strange - crew changed
-                        const crew = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
-                        if (crew.length > 0) {
-                            const changed = crew[Math.floor(Math.random() * crew.length)];
-                            changed.stress = 0;
-                            changed.tags = changed.tags || [];
-                            if (!changed.tags.includes('STATION_TOUCHED')) changed.tags.push('STATION_TOUCHED');
-                            state.addLog(`${changed.name} wandered off alone. They came back... calm. Too calm.`);
-                            state.addLog(`${changed.name}: "It showed me things. Beautiful things. I'm not afraid anymore."`);
+                        if (walker) {
+                            walker.stress = Math.min(3, (walker.stress || 0) + 2);
+                            state.addLog(`${walker.name} found a bunk with their own name on the tag. The blanket had never been slept under.`);
                         }
-                        return "Exploration complete. The station changed someone. They seem peaceful now.";
+                        return `${walker ? walker.name : 'The boarder'} came back fast and will not say why. +2 Stress.`;
+                    } else if (roll < 0.5) {
+                        state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
+                        state.energy = Math.min(100, state.energy + 30);
+                        state.addLog("The stores are our stores. Same labels, same lot numbers. The seals have never been broken.");
+                        return "Shelves full of our own stock, unopened. +40 Salvage, +30 Energy.";
+                    } else {
+                        if (walker) {
+                            walker.stress = 0;
+                            walker.tags = walker.tags || [];
+                            if (!walker.tags.includes('STATION_TOUCHED')) walker.tags.push('STATION_TOUCHED');
+                            state.addLog(`${walker.name} wandered off alone. They came back calm. Too calm.`);
+                            state.addLog(`${walker.name}: "It's fine in there. It's all fine. I'm not afraid any more."`);
+                        }
+                        return "Exploration complete. Somebody came back at peace. Nobody asks how.";
                     }
                 }
             },
             {
-                text: "Take surface readings and leave",
-                desc: "+Colony knowledge. Stay safe.",
+                text: "Measure it from outside",
+                desc: "-5 Energy. +2 Data.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-                    state.addLog("Sensor data collected from a safe distance. The readings make no sense, but they're recorded.");
-                    return "Surface scan complete. Colony knowledge improved. You left before it noticed you.";
+                    state.addLog("Tech Mira: 'And here we see a station with no wear on it, Commander. Not a scratch. Aura says it's correct.'");
+                    return "Measured and logged. Every dimension right, none of them used. -5 Energy, +2 Data.";
                 }
             },
             {
-                text: "Flee immediately",
-                desc: "No reward. All crew -1 Stress from relief.",
+                text: "Leave now",
+                desc: "-10 Energy to burn away. Vance -1 Stress.",
                 effect: (state) => {
-                    state.crew.forEach(c => {
-                        if (c.status !== 'DEAD' && c.stress > 0) {
-                            c.stress = Math.max(0, c.stress - 1);
-                        }
-                    });
-                    state.addLog("You left. Fast. Nobody argues with the decision.");
-                    return "Escaped the ghost station. All crew -1 Stress from relief.";
+                    state.energy = Math.max(0, state.energy - 10);
+                    const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
+                    if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
+                    state.addLog("We left. Fast. Nobody argued.");
+                    return "Burned away from the silent station. -10 Energy. Vance -1 Stress.";
                 }
             }
         ]

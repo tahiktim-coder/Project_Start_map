@@ -2,7 +2,8 @@
  * ASTEROID FIELDS - Dense rock clusters for mining and exploration
  *
  * High salvage potential but risky navigation.
- * Can contain rare minerals, wreckage, or hidden dangers.
+ * Some fields are rock. Some are what is left of a hull that came this way
+ * before us, ground fine. Every plate we pull has a number higher than ours.
  */
 
 const ASTEROID_FIELD_NAMES = [
@@ -13,212 +14,195 @@ const ASTEROID_FIELD_NAMES = [
 ];
 
 const ASTEROID_FIELD_ENCOUNTERS = [
-    // --- 1. RICH MINERAL DEPOSIT ---
+    // --- 1. RICH MINERAL DEPOSIT: worked metal, ground fine ---
     {
         id: 'ASTEROID_RICH',
         weight: 20,
         title: "RICH MINERAL DEPOSIT",
-        context: (name) => `${name} contains dense pockets of refined metals. High concentrations of processed alloys. Probably debris from a destroyed refinery. Stable enough for careful digging.`,
+        context: (name) => `${name} is thick with worked metal. Not ore: plating, struts, frames, milled by rock over a long time. A hull came apart here. The field is stable enough to dig.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Good density here. We can extract a lot if we're patient." },
-            { speaker: 'Tech Mira', text: "Spectral analysis shows rare earth elements. This is a good find." },
-            { speaker: 'A.U.R.A.', text: "Recommend extended mining operation. Risk assessment: low." }
+            { speaker: 'Eng. Jaxon', text: "Good density. Nobody's chasing us. Call it the Quarry and let the kettle cool." },
+            { speaker: 'Tech Mira', text: "And here we see refined alloy, Commander. Somebody's hull. Aura can't read the number." },
+            { speaker: 'Spc. Vance', text: "Three plates so far. Three numbers. All higher than nine." }
         ],
         choices: [
             {
-                text: "Dig it all out (slow, safe)",
-                desc: "+40-60 Salvage. Low risk, careful digging.",
+                text: "Dig it all out, slowly",
+                desc: "-1 Ration: two days in the rock. +40-60 Salvage. Nobody gets hurt.",
                 effect: (state) => {
+                    state.rations = Math.max(0, state.rations - 1);
                     const salvage = Math.floor(Math.random() * 21) + 40;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
-                    state.addLog(`Extended mining operation complete. +${salvage} Salvage.`);
-                    return `Mining complete. +${salvage} Salvage extracted safely.`;
+                    state.addLog("Eng. Jaxon: \"Two days. Wake me when there's grass.\" He sleeps in the goat, between shifts.");
+                    state.noteStanding && state.noteStanding('jaxon');
+                    return `Two days in the Quarry. -1 Ration, +${salvage} Salvage.`;
                 }
             },
             {
-                text: "Quick dig (fast, some risk)",
-                desc: "+20-30 Salvage. 15% chance of minor collision.",
+                text: "Quick dig and go",
+                desc: "+20-30 Salvage. 20% chance someone gets hurt on the way out.",
                 effect: (state) => {
                     const salvage = Math.floor(Math.random() * 11) + 20;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
-
-                    if (Math.random() < 0.15) {
-                        state.energy = Math.max(0, state.energy - 10);
-                        state.addLog(`Minor collision on the way out. -10 Energy for repairs.`);
-                        return `Quick mining done. +${salvage} Salvage. Minor hull damage: -10 Energy.`;
+                    if (Math.random() < 0.20) {
+                        const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
+                        if (team.length > 0) {
+                            const victim = team[Math.floor(Math.random() * team.length)];
+                            victim.status = 'INJURED';
+                            state.addLog(`A strut swung on the way out. ${victim.name} INJURED.`);
+                            return `Quick dig. +${salvage} Salvage. ${victim.name} hurt.`;
+                        }
                     }
-
-                    state.addLog(`Quick dig done. +${salvage} Salvage.`);
-                    return `Quick mining done. +${salvage} Salvage.`;
+                    return `Quick dig, clean exit. +${salvage} Salvage.`;
                 }
             },
             {
-                text: "Scan for valuable deposits only",
-                desc: "+25 Salvage guaranteed. 30% chance: +Rare Item.",
+                text: "Scan for the good pockets only",
+                desc: "-10 Energy on the scan. +25 Salvage. 30% chance: +1 Rare Item.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 10);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
-
                     if (Math.random() < 0.3 && typeof ITEMS !== 'undefined') {
                         const rareItems = [ITEMS.CONDENSED_SALVAGE, ITEMS.XENOTECH_COMPONENT].filter(i => i);
                         if (rareItems.length > 0) {
                             const item = rareItems[Math.floor(Math.random() * rareItems.length)];
                             state.cargo = state.cargo || [];
                             state.cargo.push({ ...item, acquiredAt: 'Asteroid Field' });
-                            state.addLog(`Targeted digging found rare deposits. +25 Salvage and ${item.name}.`);
-                            return `Precision mining successful. +25 Salvage. Found: ${item.name}`;
+                            state.addLog(`Tech Mira: "And here we see the good pocket, Commander." ${item.name}, wrapped in somebody's hull.`);
+                            return `Scan paid off. -10 Energy, +25 Salvage. Found: ${item.name}`;
                         }
                     }
-
-                    state.addLog("Targeted digging done. +25 Salvage.");
-                    return "Precision mining complete. +25 Salvage.";
+                    return "Good pockets cut out. -10 Energy, +25 Salvage.";
                 }
             }
         ]
     },
 
-    // --- 2. UNSTABLE FIELD ---
+    // --- 2. UNSTABLE FIELD: a hull's wake ---
     {
         id: 'ASTEROID_UNSTABLE',
         weight: 15,
         title: "UNSTABLE DEBRIS FIELD",
-        context: (name) => `${name} is moving. The rocks are shifting, colliding, breaking apart. Something disturbed this field recently. Mining is possible but dangerous — one wrong move and we're caught in a cascade.`,
+        context: (name) => `${name} is still moving. Rocks grinding, breaking, drifting apart. A hull went through here at speed and never slowed. This is its wake. One wrong move and we join it.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "This field is alive. Those rocks are moving fast." },
-            { speaker: 'Eng. Jaxon', text: "I can get us through, but it won't be pretty." },
-            { speaker: 'A.U.R.A.', text: "Collision probability: significant. Proceed with caution." }
+            { speaker: 'Spc. Vance', text: "Forty rocks big enough to kill us. I've counted. They're all still moving." },
+            { speaker: 'Eng. Jaxon', text: "I can take the goat through. It won't be pretty." },
+            { speaker: 'A.U.R.A.', text: "Collision risk is high, Commander. I can fly the probe ahead if you let me." }
         ],
         choices: [
             {
-                text: "Navigate carefully and mine",
-                desc: "+30 Salvage. 30% chance of collision damage.",
+                text: "Go in and mine",
+                desc: "+30 Salvage. 30% chance of a strike: -10-25 Energy, maybe a deck damaged.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
-
                     if (Math.random() < 0.30) {
                         const damage = Math.floor(Math.random() * 15) + 10;
                         state.energy = Math.max(0, state.energy - damage);
-
-                        // 20% chance of deck damage
                         if (Math.random() < 0.20) {
                             const decks = ['bridge', 'lab', 'quarters', 'cargo', 'engineering'];
                             const deck = decks[Math.floor(Math.random() * decks.length)];
                             if (state.shipDecks[deck]?.status === 'OPERATIONAL') {
                                 state.shipDecks[deck].status = 'DAMAGED';
-                                state.addLog(`COLLISION! ${state.shipDecks[deck].label} damaged by asteroid impact.`);
-                                return `Mining done. +30 Salvage. ${state.shipDecks[deck].label} DAMAGED. -${damage} Energy.`;
+                                state.addLog(`STRIKE. ${state.shipDecks[deck].label} damaged. -${damage} Energy.`);
+                                return `Mined it. +30 Salvage. ${state.shipDecks[deck].label} DAMAGED, -${damage} Energy.`;
                             }
                         }
-
-                        state.addLog(`Asteroid strike! Hull damaged. -${damage} Energy for repairs.`);
-                        return `Mining complete. +30 Salvage. Collision damage: -${damage} Energy.`;
+                        state.addLog(`Rock strike on the way out. -${damage} Energy for repairs.`);
+                        return `Mined it. +30 Salvage. Struck on the way out: -${damage} Energy.`;
                     }
-
-                    state.addLog("Mining complete. We got lucky with the timing.");
-                    return "Mining done. +30 Salvage. No collisions.";
+                    state.addLog("Eng. Jaxon: \"Told you. Not pretty.\" No strikes.");
+                    return "Mined it. +30 Salvage. No strikes.";
                 }
             },
             {
-                text: "Wait for field to stabilize",
-                desc: "+15 Salvage, no risk. Conservative approach.",
+                text: "Wait for it to settle",
+                desc: "-1 Ration: a day drifting at the edge. +20 Salvage. Nobody gets hurt.",
                 effect: (state) => {
-                    state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
-                    state.addLog("Waited for debris field to settle. Safe digging done.");
-                    return "Patience paid off. +15 Salvage, no damage.";
+                    state.rations = Math.max(0, state.rations - 1);
+                    state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
+                    state.addLog("Spc. Vance counts the rocks down as they slow. Forty. Thirty-one. Twelve.");
+                    return "Waited it out. -1 Ration, +20 Salvage.";
                 }
             },
             {
-                text: "Use probe to scout safe path",
-                desc: "Requires probe. +25 Salvage safely. Probe takes 20% damage.",
+                text: "Let A.U.R.A. fly the probe ahead",
+                desc: "Requires probe. -20% Probe. +25 Salvage. Nobody gets hurt.",
                 requires: (state) => state.probeIntegrity > 0,
                 requiresLabel: "Requires Probe",
                 effect: (state) => {
                     if (state.probeIntegrity <= 0) {
-                        state.addLog("No probe available. Cannot scout the field.");
+                        state.addLog("No probe. Nobody to send ahead.");
                         return "Probe unavailable. Mining aborted.";
                     }
-
                     state.probeIntegrity = Math.max(0, state.probeIntegrity - 20);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
-                    state.addLog(`Probe mapped safe digging route. +25 Salvage. Probe integrity: ${state.probeIntegrity.toFixed(0)}%`);
-                    return `Probe-guided mining complete. +25 Salvage. Probe took minor damage.`;
+                    state.addLog(`Tech Mira: "And here we see Aura threading a needle, Commander." Probe at ${state.probeIntegrity.toFixed(0)}%.`);
+                    state.noteStanding && state.noteStanding('mira');
+                    return "A.U.R.A. flew the probe through. Path held. +25 Salvage. Probe scuffed.";
                 }
             }
         ]
     },
 
-    // --- 3. WRECKAGE FIELD ---
+    // --- 3. WRECKAGE FIELD: a hull, in pieces ---
     {
         id: 'ASTEROID_WRECKAGE',
         weight: 15,
         title: "SHIP GRAVEYARD",
-        context: (name) => `${name} isn't natural. These aren't asteroids — they're ship pieces. Hulls, engines, cargo containers, all crushed together. A battle happened here. Or an accident. Either way, there's salvage mixed with the stones.`,
+        context: (name) => `${name} is not rock. Hull plates, drive bells, crates, ground together. Every plate has a number. None of them is lower than ours. Three cryo bays are still cold.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "So many ships. What happened here?" },
-            { speaker: 'Eng. Jaxon', text: "Don't think about it. Just grab what we can use." },
-            { speaker: 'Tech Mira', text: "Some of these fragments have intact data cores. Black boxes." }
+            { speaker: 'Dr. Aris', text: "Names first. Vance, read me the plates." },
+            { speaker: 'Spc. Vance', text: "Fourteen plates. Fourteen numbers. Every one of them higher than nine." },
+            { speaker: 'Tech Mira', text: "And here we see three cryo bays, Commander. Still cold. Aura is sure." }
         ],
         choices: [
             {
-                text: "Salvage ship components",
-                desc: "+35-50 Salvage from wreckage.",
+                text: "Cut plating out",
+                desc: "+35-50 Salvage. Aris +1 Stress: nothing gets read.",
                 effect: (state) => {
                     const salvage = Math.floor(Math.random() * 16) + 35;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
-                    state.addLog(`Extracted usable components from wreckage. +${salvage} Salvage.`);
-                    return `Ship salvage complete. +${salvage} Salvage.`;
+                    const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
+                    if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
+                    state.addLog("Plates cut, numbers and all. Dr. Aris copies the numbers off the pile before they go in the bin.");
+                    return `Plating stowed. +${salvage} Salvage. Aris +1 Stress.`;
                 }
             },
             {
-                text: "Recover black box data",
-                desc: "+Colony knowledge. Learn what happened.",
+                text: "Read the plates and the recorders",
+                desc: "-5 Energy. +2 Data. All crew +1 Stress. Vance writes the fourteen down.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-
                     const stories = [
-                        "The ships were running from something. The last transmissions are screams.",
-                        "A nav system failure caused a chain collision. 200 people died in seconds.",
-                        "They were fighting each other. Resources ran out. This was the result.",
-                        "One ship's log reads: 'We found something. It's following us.' Then static."
+                        "RECORDER: 'Eight went this way before us. We are the ninth.' Every recorder in the field says it.",
+                        "RECORDER: 'The ship still says four of us. There are five. We stopped correcting it.'",
+                        "RECORDER: 'We found a wreck with a higher number and older rust. We have stopped asking how.'",
+                        "RECORDER: a heading, repeated. Ours. It ends at a light."
                     ];
-
-                    const story = stories[Math.floor(Math.random() * stories.length)];
-                    state.addLog(`Black box recovered. ${story}`);
-
-                    // Stress increase from disturbing content
+                    state.addLog(stories[Math.floor(Math.random() * stories.length)]);
                     state.crew.forEach(c => {
-                        if (c.status !== 'DEAD' && Math.random() < 0.3) {
-                            c.stress = Math.min(3, (c.stress || 0) + 1);
-                        }
+                        if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
-
-                    return `Data recovered. Colony knowledge improved. Some crew disturbed by findings.`;
+                    state.addLog("Spc. Vance: \"Fourteen. Write them down. All of them.\"");
+                    state.noteStanding && state.noteStanding('vance');
+                    return "Fourteen numbers on the list. -5 Energy, +2 Data. All crew +1 Stress.";
                 }
             },
             {
-                text: "Search for survivors (cryo pods)",
-                desc: "Long shot. Might find preserved supplies or equipment.",
+                text: "Check the cold pods",
+                desc: "-5 Energy. 40% chance: pods hold, -2 Rations, +2 Sleepers. Else empty pods, +15 Salvage.",
                 effect: (state) => {
-                    const roll = Math.random();
-
-                    if (roll < 0.6) {
-                        // Nothing
-                        state.addLog("All pods destroyed or long dead. Nothing to recover.");
-                        return "No survivors. No intact cryopods. Just wreckage.";
-                    } else if (roll < 0.9) {
-                        // Supplies
-                        state.rations = Math.min(state.maxRations, state.rations + 4);
-                        state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
-                        state.addLog("Found intact storage containers. +4 Rations, +15 Salvage.");
-                        return "Cryo pods empty but cargo intact. +4 Rations, +15 Salvage.";
-                    } else {
-                        // Something weird
-                        state.crew.forEach(c => {
-                            if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
-                        });
-                        state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
-                        state.addLog("We found a survivor. They were awake. They've been awake for 40 years. They won't stop screaming.");
-                        return "Found something. +20 Salvage. All crew +1 Stress from what they saw.";
+                    state.energy = Math.max(0, state.energy - 5);
+                    if (Math.random() < 0.4) {
+                        state.rations = Math.max(0, state.rations - 2);
+                        state._sleepers = (state._sleepers || 0) + 2;
+                        state.addLog("Two pods still cold. The name tags use a hull number five digits long. Dr. Aris writes both names on the lids.");
+                        return "Two sleepers moved to our hold, still asleep. -5 Energy, -2 Rations, +2 Sleepers.";
                     }
+                    state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
+                    state.addLog("The bays are cold because they are empty. Somebody carried these pods out before us.");
+                    return "Pods empty. Bay stripped. -5 Energy, +15 Salvage.";
                 }
             }
         ]
@@ -229,144 +213,128 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         id: 'ASTEROID_CRYSTAL',
         weight: 12,
         title: "CRYSTAL FORMATION",
-        context: (name) => `${name} sparkles with crystalline structures. Not ice — something harder, more complex. The crystals emit faint energy signatures. They might be valuable, or they might be dangerous. Hard to tell until we get closer.`,
+        context: (name) => `${name} glitters. Not ice: something harder, grown in long straight rods. The rods hold a charge. They ring when the hull gets close. Jaxon has already named it the Chandelier.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "The energy readings are off the charts. These crystals are... alive? No, not alive. Resonating." },
-            { speaker: 'Dr. Aris', text: "Careful with digging. Crystal structures can be unstable." },
-            { speaker: 'A.U.R.A.', text: "Analysis suggests piezoelectric properties. High value, high volatility." }
+            { speaker: 'Tech Mira', text: "And here we see the rods singing to each other. Aura says they're just resonating. Just." },
+            { speaker: 'Dr. Aris', text: "Careful cutting. It rings when we touch it. It might do more than ring." },
+            { speaker: 'A.U.R.A.', text: "Piezoelectric, Commander. High value. High volatility. I can tune it if you let me." }
         ],
         choices: [
             {
-                text: "Careful digging",
-                desc: "+20 Salvage, +15 Energy from crystal resonance.",
+                text: "Cut it carefully",
+                desc: "-1 Ration: a slow day. +20 Salvage, +15 Energy. Nobody gets hurt.",
                 effect: (state) => {
+                    state.rations = Math.max(0, state.rations - 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                     state.energy = Math.min(100, state.energy + 15);
-                    state.addLog("Crystal digging done. Energy absorption successful.");
-                    return "Crystals harvested safely. +20 Salvage, +15 Energy.";
+                    state.addLog("One rod at a time, a day of it. The kettle drinks the charge.");
+                    return "Chandelier cut, slowly. -1 Ration, +20 Salvage, +15 Energy.";
                 }
             },
             {
-                text: "Aggressive harvesting",
-                desc: "+40 Salvage, +30 Energy. 25% chance of crystal detonation.",
+                text: "Blast it loose",
+                desc: "+40 Salvage, +30 Energy. 25% chance it blows: -20 Energy, someone may get hurt.",
                 effect: (state) => {
                     if (Math.random() < 0.25) {
-                        // Detonation
-                        const damage = 20;
-                        state.energy = Math.max(0, state.energy - damage);
-                        state.addLog("Crystal matrix destabilized! Energy feedback surge. -20 Energy.");
-
+                        state.energy = Math.max(0, state.energy - 20);
+                        state.addLog("The rods let go all at once. Feedback through the kettle. -20 Energy.");
                         const crew = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
                         if (crew.length > 0 && Math.random() < 0.5) {
                             const victim = crew[Math.floor(Math.random() * crew.length)];
                             victim.status = 'INJURED';
-                            state.addLog(`${victim.name} caught in the blast. INJURED.`);
-                            return `Crystal detonation! ${victim.name} INJURED. -20 Energy.`;
+                            state.addLog(`${victim.name} was on the outside when it went. INJURED.`);
+                            return `It blew. ${victim.name} INJURED. -20 Energy.`;
                         }
-
-                        return `Crystal detonation! -20 Energy from feedback surge.`;
+                        return "It blew. -20 Energy. Nobody hurt.";
                     }
-
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
                     state.energy = Math.min(100, state.energy + 30);
-                    state.addLog("Aggressive crystal harvesting successful. Major yield.");
-                    return "Full crystal harvest! +40 Salvage, +30 Energy.";
+                    state.addLog("Blasted loose in one go. Eng. Jaxon: \"Chandelier's down.\"");
+                    return "Full haul. +40 Salvage, +30 Energy.";
                 }
             },
             {
-                text: "Study the resonance patterns",
-                desc: "+Colony knowledge. Mira gains insights.",
+                text: "Let A.U.R.A. tune it",
+                desc: "-5 Energy. +2 Data, +10 Energy back. Mira -1 Stress.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-
-                    // Mira special interaction
-                    const mira = state.crew.find(c => c.name.includes('Mira') && c.status !== 'DEAD');
-                    if (mira) {
-                        mira.stress = Math.max(0, (mira.stress || 0) - 1);
-                        state.addLog(`Mira: "These frequencies... it's like music. I think I understand something now."`);
-                        state.addLog("Tech Mira found peace in the crystal harmonics. -1 Stress.");
-                    }
-
+                    const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
+                    if (mira) mira.stress = Math.max(0, (mira.stress || 0) - 1);
                     state.energy = Math.min(100, state.energy + 10);
-                    return "Crystal study complete. +Colony knowledge. +10 Energy from resonance tap.";
+                    state.addLog("A.U.R.A. tunes the rods until they hum in one note. Tech Mira: \"She likes this. Listen to her.\"");
+                    state.noteStanding && state.noteStanding('mira');
+                    return "Rods tuned and tapped. -5 Energy, +2 Data, +10 Energy. Mira -1 Stress.";
                 }
             }
         ]
     },
 
-    // --- 5. HOLLOW ASTEROID ---
+    // --- 5. HOLLOW ASTEROID: a hull that dug in ---
     {
         id: 'ASTEROID_HOLLOW',
         weight: 10,
         title: "HOLLOW ASTEROID",
-        context: (name) => `${name} has an empty core. Not eroded — carved. Someone hollowed out this rock and built inside it. The entrance is barely visible. Whatever's inside has been here a long time.`,
+        context: (name) => `${name} is hollow. Cut, not eroded. A hull bored into the rock and lived inside it. The cut is neat. One airlock, welded from an Exodus hatch. Somebody meant to stay.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Hidden base. Could be pirates. Could be worse." },
-            { speaker: 'Tech Mira', text: "Power signatures inside. Something's still running." },
-            { speaker: 'A.U.R.A.', text: "I cannot identify the interior systems. They are not of human design." }
+            { speaker: 'Eng. Jaxon', text: "They dug in and stopped. Call it the Den. I'd have done the same." },
+            { speaker: 'Spc. Vance', text: "One airlock. I count one. Whatever's in there came in through that." },
+            { speaker: 'A.U.R.A.', text: "There is power inside, Commander. Very little. A cryo circuit, I think." }
         ],
         choices: [
             {
-                text: "Enter and explore",
-                desc: "Unknown rewards. Unknown risks. This is not human-made.",
+                text: "Go in",
+                desc: "-1 Ration: a day inside. 50% chance: +40 Salvage, +20 Energy. 30% chance: +1 Sleeper, -2 Rations. 20% chance: all crew +1 Stress.",
                 effect: (state) => {
+                    state.rations = Math.max(0, state.rations - 1);
                     const roll = Math.random();
-
-                    if (roll < 0.3) {
-                        // Bad
-                        state.crew.forEach(c => {
-                            if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
-                        });
-                        state.addLog("Inside was... wrong. Geometry that hurt to look at. We left quickly.");
-                        return "Exploration disturbing. All crew +1 Stress. Nothing salvageable.";
-                    } else if (roll < 0.7) {
-                        // Good
-                        state.salvage = Math.min(state.maxSalvage, state.salvage + 50);
-                        state.energy = Math.min(100, state.energy + 25);
-                        state.addLog("Found ancient cache of unknown origin. Materials compatible with our systems.");
-                        return "Ancient storage found. +50 Salvage, +25 Energy.";
-                    } else {
-                        // Great but strange
-                        if (typeof ITEMS !== 'undefined' && ITEMS.ALIEN_ARTIFACT) {
-                            state.cargo = state.cargo || [];
-                            state.cargo.push({ ...ITEMS.ALIEN_ARTIFACT, acquiredAt: 'Hollow Asteroid' });
-                            state.addLog("Something was left for us. Deliberately. It wanted to be found.");
-                            return "Found: Alien Artifact. Someone wanted us to have this.";
-                        }
-                        state._colonyKnowledge = (state._colonyKnowledge || 0) + 5;
-                        return "The hollow contained knowledge. We remember it now. +5 Colony knowledge.";
+                    if (roll < 0.5) {
+                        state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
+                        state.energy = Math.min(100, state.energy + 20);
+                        state.addLog("Stores stacked to the ceiling. A kitchen. A bunk with a blanket. They stayed a long time.");
+                        return "The Den, emptied. -1 Ration, +40 Salvage, +20 Energy.";
                     }
+                    if (roll < 0.8) {
+                        state.rations = Math.max(0, state.rations - 2);
+                        state._sleepers = (state._sleepers || 0) + 1;
+                        state.addLog("One pod at the back, still cold. The name on the lid is spelled a way we don't spell it any more.");
+                        return "One sleeper carried to the hold, still asleep. -3 Rations in all, +1 Sleeper.";
+                    }
+                    state.crew.forEach(c => {
+                        if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
+                    });
+                    state.addLog("Four bunks inside. Our bunks. Same lot numbers, same blankets. Never slept in.");
+                    return "Nothing taken. Nobody wanted to touch it. -1 Ration. All crew +1 Stress.";
                 }
             },
             {
-                text: "Scan from outside only",
-                desc: "+15 Salvage from surface. Safe option.",
+                text: "Cut the outside only",
+                desc: "+15 Salvage. The airlock stays shut.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
-                    state.addLog("Surface minerals extracted. We left the interior alone.");
-                    return "Safe digging. +15 Salvage. Interior remains unexplored.";
+                    state.addLog("Surface metal only. Spc. Vance watches the airlock the whole time. It stays shut.");
+                    return "Outside cut. +15 Salvage. Nobody went in.";
                 }
             },
             {
-                text: "Send probe inside",
-                desc: "Probe explores. You stay safe. Probe takes 30% damage.",
+                text: "Send the probe in",
+                desc: "Requires probe. -30% Probe. 50% chance: +30 Salvage. Else +2 Data.",
+                requires: (state) => state.probeIntegrity > 0,
+                requiresLabel: "Requires Probe",
                 effect: (state) => {
                     if (state.probeIntegrity <= 0) {
-                        state.addLog("No probe available for interior scan.");
+                        state.addLog("No probe. Nobody goes in blind.");
                         return "Probe unavailable. Exploration aborted.";
                     }
-
                     state.probeIntegrity = Math.max(0, state.probeIntegrity - 30);
-
                     if (Math.random() < 0.5) {
                         state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
-                        state.addLog(`Probe mapped interior. Found salvageable materials. Probe integrity: ${state.probeIntegrity.toFixed(0)}%`);
-                        return `Probe exploration complete. +30 Salvage. Probe damaged.`;
+                        state.addLog(`Probe found the stores and towed what it could. Probe at ${state.probeIntegrity.toFixed(0)}%.`);
+                        return "Probe run complete. +30 Salvage. Probe scuffed.";
                     }
-
-                    state.addLog(`Probe feed... strange. Footage doesn't make sense. Probe integrity: ${state.probeIntegrity.toFixed(0)}%`);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
-                    return "Probe returned with confusing data. +Colony knowledge from analysis.";
+                    state.addLog(`Probe feed: a ledger on the wall. Hull numbers, dates, and 'four' beside each. Probe at ${state.probeIntegrity.toFixed(0)}%.`);
+                    return "Probe read the ledger on the wall. +2 Data. Probe scuffed.";
                 }
             }
         ]
@@ -377,51 +345,58 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         id: 'ASTEROID_ICE',
         weight: 15,
         title: "ICE ASTEROID FIELD",
-        context: (name) => `${name} is frozen water and gases. Comets that never found a sun. We can crack ice for fuel conversion, but the field is dense and visibility is poor. Dangerous but necessary work.`,
+        context: (name) => `${name} is frozen water and gas. Comets that never found a sun. Ice is water is fuel. The field is dense and the visibility is bad. Cut marks on the big ones: a hull was here first.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Ice means water means fuel. Let's get what we need." },
-            { speaker: 'Dr. Aris', text: "Be careful. Frozen gases can be volatile." },
-            { speaker: 'A.U.R.A.', text: "Recommend thermal digging. Minimize impact force." }
+            { speaker: 'Eng. Jaxon', text: "Ice is water is the kettle. Call this one the Teapot." },
+            { speaker: 'Dr. Aris', text: "Careful. Frozen gas doesn't stay frozen when you cut it." },
+            { speaker: 'Spc. Vance', text: "Somebody cut here before us. Twelve marks. Old ones." }
         ],
         choices: [
             {
-                text: "Thermal digging (safe)",
-                desc: "+25 Energy from ice-to-fuel conversion.",
+                text: "Thermal cut, slowly",
+                desc: "-1 Ration: a slow day. +25 Energy. Nobody gets hurt.",
                 effect: (state) => {
+                    state.rations = Math.max(0, state.rations - 1);
                     state.energy = Math.min(100, state.energy + 25);
-                    state.addLog("Ice harvested and converted. Ship reserves replenished.");
-                    return "Thermal digging done. +25 Energy.";
+                    state.addLog("Ice melted and cracked into the kettle. Slow and warm.");
+                    return "Thermal cut done. -1 Ration, +25 Energy.";
                 }
             },
             {
-                text: "Mass harvesting",
-                desc: "+40 Energy, +15 Salvage (mineral cores). 20% outgassing risk.",
+                text: "Mass harvest",
+                desc: "+40 Energy, +15 Salvage. 20% chance of a gas pocket: -15 Energy, someone gets hurt.",
                 effect: (state) => {
                     if (Math.random() < 0.20) {
                         state.energy = Math.max(0, state.energy - 15);
-                        state.addLog("Gas pocket breach! Emergency venting required. -15 Energy.");
-                        return "Outgassing incident! Mass harvest aborted. -15 Energy from damage.";
+                        const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
+                        if (team.length > 0) {
+                            const victim = team[Math.floor(Math.random() * team.length)];
+                            victim.status = 'INJURED';
+                            state.addLog(`Gas pocket. ${victim.name} was on the cutter. INJURED. -15 Energy venting it.`);
+                            return `Gas pocket. ${victim.name} hurt. Harvest aborted. -15 Energy.`;
+                        }
+                        state.addLog("Gas pocket. Emergency venting. -15 Energy.");
+                        return "Gas pocket. Harvest aborted. -15 Energy.";
                     }
-
                     state.energy = Math.min(100, state.energy + 40);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
-                    state.addLog("Mass ice harvest successful. Fuel and minerals recovered.");
-                    return "Full harvest complete. +40 Energy, +15 Salvage.";
+                    state.addLog("Whole Teapot cut and stowed. Mineral cores in the ice.");
+                    return "Full harvest. +40 Energy, +15 Salvage.";
                 }
             },
             {
-                text: "Check for frozen cargo",
-                desc: "Previous expeditions may have cached supplies here.",
+                text: "Dig for frozen cargo",
+                desc: "-5 Energy. 40% chance: +5 Rations from a cache. Else +10 Energy from the ice.",
                 effect: (state) => {
+                    state.energy = Math.max(0, state.energy - 5);
                     if (Math.random() < 0.4) {
                         state.rations = Math.min(state.maxRations, state.rations + 5);
-                        state.addLog("Found frozen supply cache! Preserved rations recovered. +5 Rations.");
-                        return "Supply cache found! +5 Rations preserved in ice.";
+                        state.addLog("A cache in the ice, sealed. Ration packs with a hull number on them. Not ours. Higher.");
+                        return "Cache found. -5 Energy, +5 Rations.";
                     }
-
-                    state.energy = Math.min(100, state.energy + 15);
-                    state.addLog("No caches found. Basic ice conversion complete. +15 Energy.");
-                    return "No caches. Basic fuel conversion only. +15 Energy.";
+                    state.energy = Math.min(100, state.energy + 10);
+                    state.addLog("No cache. Whoever cut here took theirs with them. Plain ice.");
+                    return "No cache. Plain ice. -5 Energy, +10 Energy.";
                 }
             }
         ]
