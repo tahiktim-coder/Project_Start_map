@@ -284,6 +284,7 @@ class GameState {
             _countSceneSeen: !!this._countSceneSeen,
             _sleepers: this._sleepers || 0,
             _warpDiscount: this._warpDiscount || 0,
+            _seenAnomalies: this._seenAnomalies || [],
             _encounteredShipNames: this._encounteredShipNames || [],
             _encounteredExodus: this._encounteredExodus || [],
             _seenCampfires: this._seenCampfires || [],
@@ -357,6 +358,7 @@ class GameState {
             this._countSceneSeen = !!saveData._countSceneSeen;
             this._sleepers = saveData._sleepers || 0;
             this._warpDiscount = saveData._warpDiscount || 0;
+            this._seenAnomalies = saveData._seenAnomalies || [];
             this._encounteredShipNames = saveData._encounteredShipNames || [];
             this._encounteredExodus = saveData._encounteredExodus || [];
             this._seenCampfires = saveData._seenCampfires || [];
@@ -1392,6 +1394,40 @@ class App {
         });
     }
 
+    /**
+     * The one place a team can go on this planet (a planet has at most one: see tidySites). kind order = which wins.
+     * inSpace: reached by crossing in the lander, no landing. art: what the landing game draws beside the marked spot.
+     */
+    siteOf(planet) {
+        const SITES = [
+            { tag: 'EXODUS_WRECK', done: 'exodusInvestigated', label: 'THE WRECK', note: 'ONE OF OUR SHIPS', art: 'wreck', run: () => this.handleExodusAction() },
+            { tag: 'ANOMALY', done: 'anomalyInvestigated', label: 'THE STRANGE SITE', note: 'SOMETHING HERE IS WRONG', inSpace: true, run: () => this.handleAnomalyAction() },
+            { tag: 'LIGHTHOUSE', done: 'lighthouseInvestigated', label: 'THE BEACON', note: 'A BEACON STILL TRANSMITTING', art: 'beacon', run: () => this.handleLateGamePOI('LIGHTHOUSE') },
+            { tag: 'GARDEN', done: 'gardenInvestigated', label: 'THE DOME', note: 'SOMETHING GREEN UNDER GLASS', art: 'dome', run: () => this.handleLateGamePOI('GARDEN') },
+            { tag: 'GRAVE', done: 'graveInvestigated', label: 'THE GRAVES', note: 'ROWS OF MARKERS', art: 'stones', run: () => this.handleLateGamePOI('GRAVE') },
+            { tag: 'FAILED_COLONY', done: 'colonyInvestigated', label: 'THE COLONY RUINS', note: 'A SETTLEMENT, EMPTY', art: 'ruins', run: () => this.handleFailedColonyAction() },
+            { tag: 'DERELICT', done: 'derelictInvestigated', label: 'THE WRECKAGE', note: 'A SHIP IN PIECES, IN ORBIT', inSpace: true, run: () => this.handleDerelictAction() },
+        ];
+        return (planet && planet.tags && SITES.find(site => planet.tags.includes(site.tag))) || null;
+    }
+
+    /** Every planet keeps one site at most (the story wreck wins), and every sector gets one strange place. */
+    tidySites() {
+        const ORDER = ['EXODUS_WRECK', 'ANOMALY', 'LIGHTHOUSE', 'GARDEN', 'GRAVE', 'FAILED_COLONY', 'DERELICT'];
+        const nodes = this.state.sectorNodes || [];
+        const isStory = p => p.hasPage || p.hasTape || p.isFirstSignal;
+        const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
+        if (!nodes.some(p => (p.tags || []).includes('ANOMALY'))) {
+            const host = nodes.find(p => isLandable(p) && !isStory(p) && !(p.tags || []).includes('EXODUS_WRECK')) || nodes.find(p => isLandable(p) && !isStory(p));
+            if (host) { host.tags = (host.tags || []).concat('ANOMALY'); host.forcedAnomaly = true; }
+        }
+        nodes.forEach(p => {
+            if (!p.tags) return;
+            const keep = isStory(p) ? 'EXODUS_WRECK' : p.forcedAnomaly ? 'ANOMALY' : ORDER.find(t => p.tags.includes(t));
+            p.tags = p.tags.filter(t => !ORDER.includes(t) || t === keep);
+        });
+    }
+
     /** A found page as a cargo item: kept, and readable again from the hold. */
     pageItem(page, acquiredAt) {
         return { ...page, acquiredAt, onUse: () => { if (window.FoundPage) window.FoundPage.open(this, page, acquiredAt); return 'You read it again.'; } };
@@ -1401,7 +1437,7 @@ class App {
     plantSectorPage() {
         const nodes = this.state.sectorNodes || [], sector = this.state.currentSector;
         const page = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).find(p => p.sector === sector);
-        if (!page || nodes.some(p => p.hasPage) || (this.state.exodusLogsFound || []).includes(page.id)) return;
+        if (!page || nodes.some(p => p.hasPage) || (this.state.exodusLogsFound || []).includes(page.id)) { this.tidySites(); return; }
         const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
         const wrecks = nodes.filter(p => isLandable(p) && (p.tags || []).includes('EXODUS_WRECK') && !p.hasTape && !p.isFirstSignal);
         const target = wrecks[0] || nodes.find(p => isLandable(p) && !p.hasTape && !p.isFirstSignal) || nodes.find(isLandable);
@@ -1409,6 +1445,7 @@ class App {
         target.tags = target.tags || [];
         if (!target.tags.includes('EXODUS_WRECK')) target.tags.push('EXODUS_WRECK');
         target.hasPage = page.id;
+        this.tidySites();
     }
 
     /** Found in the wreck: the page opens at once and stays in cargo. */
@@ -2725,14 +2762,19 @@ class App {
         }
         this.state.consumeRation(); // every investigation costs a ration, same as wrecks and stations
 
-        // Select by weight
-        const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
+        // Select by weight: nothing that moves the ship before sector 3, and never the same strange place twice in a run
+        const EARLY_BANNED = ['ANOMALY_FOLD', 'ANOMALY_DOOR'];
+        this.state._seenAnomalies = this.state._seenAnomalies || [];
+        const allowed = encounters.filter(e => (this.state.currentSector >= 3 || !EARLY_BANNED.includes(e.id)) && !this.state._seenAnomalies.includes(e.id));
+        const pool = allowed.length ? allowed : encounters.filter(e => this.state.currentSector >= 3 || !EARLY_BANNED.includes(e.id));
+        const totalWeight = pool.reduce((sum, e) => sum + e.weight, 0);
         let roll = Math.random() * totalWeight;
-        let selected = encounters[0];
-        for (const enc of encounters) {
+        let selected = pool[0];
+        for (const enc of pool) {
             roll -= enc.weight;
             if (roll <= 0) { selected = enc; break; }
         }
+        if (selected && selected.id) this.state._seenAnomalies.push(selected.id);
 
         // Bark: crew reacts to anomaly
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
@@ -3795,6 +3837,7 @@ Then you're through.`,
         // OBSESSED (Mira stress 3): EVA costs double energy and double rations
         const isObsessed = this.state.hasActiveTrait('OBSESSED');
         const evaCost = isObsessed ? 10 : 5;
+        const site = this.siteOf(planet), isSiteTrip = !!(site && !planet[site.done]);
 
         if (this.state.consumeEnergy(evaCost)) {
             const planet = this.state.currentSystem;
@@ -3818,8 +3861,8 @@ Then you're through.`,
                 window.AuraSystem.tryComment('EVA_DEPLOY', this.state);
             }
 
-            // Consume rations (major action — double if obsessed)
-            this.state.consumeRation();
+            // Consume rations (major action — double if obsessed); a site trip's ration is taken by the site itself
+            if (!isSiteTrip) this.state.consumeRation();
             if (isObsessed) {
                 this.state.consumeRation();
                 this.state.addLog("Mira: Extended EVA window. Additional rations consumed.");
@@ -3829,9 +3872,18 @@ Then you're through.`,
             this.currentEvaTeam = evaTeam;
 
             // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
-            const goDown = window.LanderGame ? window.LanderGame.play(this, planet, evaTeam)
+            const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
+            if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
+            const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null })
                 : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
             const afterDescent = goDown.then(landing => this.applyLanding(landing, evaTeam));
+
+            if (isSiteTrip) {                                                           // the team goes where the scan pointed: the site's own story
+                planet.hasEva = true;
+                this.orbitView.updateCommandDeck(planet);
+                afterDescent.then(() => site.run());
+                return;
+            }
 
             // Special EDEN EVA — paradise world, unique peaceful encounter
             if (planet.type === 'EDEN') {
@@ -3863,7 +3915,8 @@ Then you're through.`,
         if (!landing || !window.LanderGame) return;
         this.noteReliance(!!landing.auto);
         this._landingRiskMod = window.LanderGame.GRADES[landing.grade].riskMod;
-        if (landing.grade === 'soft') this.state.addLog("Soft landing. The team steps out steady.");
+        if (landing.grade === 'soft') this.state.addLog("Soft landing on the marked spot. The team steps out steady.");
+        if (landing.offMark) this.state.addLog("Down safely, but well away from the marked spot. It is a long walk.");
         if (landing.grade === 'crash') {
             const fit = evaTeam.filter(m => m.status === 'HEALTHY');
             const hurt = fit[Math.floor(Math.random() * fit.length)];

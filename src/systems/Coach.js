@@ -26,11 +26,11 @@
 
     // What each sector is for, once the page in it has been found and the stops are running out
     const SECTOR_LINE = {
-        2: 'The last of the eight are out here. One wreck holds a tape, another a page. Search the wrecks before the window closes.',
-        3: 'The hull numbers are higher than ours. Somewhere here a captain wrote down why. Search the wrecks.',
-        4: 'Somebody stopped here two hundred years ago. Their orders are in a wreck. Find them.',
-        5: 'Hulls in the tens of thousands. One of them carries the ledger with every keel ever laid. Find it before you jump.',
-        6: 'The heading ends at the light. There is one page left to find, and then there is only the light.',
+        2: 'The last of the eight ships should be out here. Search the wrecks before you jump.',
+        3: 'These ships have higher numbers than ours. One of their captains wrote down why. Search the wrecks.',
+        4: 'Earth wrote orders for commanders only. A copy is in one of these wrecks.',
+        5: 'One wreck here carries a list of every ship Earth ever built. Find it before you jump.',
+        6: 'One last log to find. Then there is only the light.',
     };
 
     /** The single most useful thing to say right now, or '' for nothing. */
@@ -45,13 +45,13 @@
             if (!here) {
                 if (stopsLeft <= 0) return 'No stops left in this sector. Press JUMP SECTOR to move on — whatever you skipped is gone for good.';
                 const signal = (state.sectorNodes || []).find(p => p.isFirstSignal && !p.exodusInvestigated);
-                if (signal && !document.querySelector('.warp-btn')) return `Vance saw an old transponder on the scope. It is marked on the map at ${signal.name}: click it, warp there, deep scan, then search the wreck.`;
+                if (signal && !document.querySelector('.warp-btn')) return `An old ship beacon is marked on the map at ${signal.name}. Click it, warp there, scan, then send the team to the wreck.`;
                 if (!document.querySelector('.warp-btn')) return 'Click a planet on the map to look at it. You only get a few STOPS per sector, so you cannot visit them all.';
                 return 'LONG RANGE SCAN shows what is there for 2 energy. INITIATE WARP flies there and uses one STOP.';
             }
             if (here.isStation) return here.stationInvestigated ? 'Nothing more here. BREAK ORBIT to go back to the map.' : 'BOARD STATION sends one person inside on a tank of air. A DEEP SCAN first shows the rooms.';
             if (!here.scanned) return 'DEEP SCAN first: line your wave up with the planet\'s. A sharp match gives bonus data.';
-            if (!here.hasEva && state.probeIntegrity > 0) return 'LAUNCH PROBE is the safe way to bring things back. SEND TEAM OUT finds more, but people can get hurt.';
+            if (!here.hasEva && state.probeIntegrity > 0) return 'LAUNCH PROBE is the safe way to bring things back. SEND TEAM goes down to whatever the scan found — people can get hurt.';
             return 'Done here? BREAK ORBIT returns to the map. Click any room of the ship on the left to see who is in it.';
         }
         if (here) return '';                                                            // in orbit the command deck says what is possible; the bar stays quiet

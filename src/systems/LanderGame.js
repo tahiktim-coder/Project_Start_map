@@ -27,12 +27,14 @@
     const GRACE_MS = 3000; // the lander hangs under the ship until you touch a control (or this long), so nobody crashes while reading
     const INK = '#06070a', BONE = '#c4d0c4', AMBER = '#d9a24a', RED = '#d85a4e', GREEN = '#74d99a', DIM = '#2f5a48';
     const LOW_FUEL = 25, LOW_FUEL_BEEP_MS = 900, THRUST_SOUND_MS = 120;
-    const DOCKED_TEXT = 'Docked under the ship. Touch a control to let go.', AUTO_TEXT = 'A.U.R.A. has the stick. She is looking for level ground.';
+    const DOCKED_TEXT = 'Docked under the ship. Touch a control to let go.', AUTO_TEXT = 'A.U.R.A. has the stick. She is flying to the marked spot.';
+    const MARK_BLINK_MS = 420, MARK_ROOM = 4;                                                // the marked spot's beacons, and how much room a stretch needs to be marked
     const GRADES = {
         soft: { label: 'SOFT LANDING', effect: 'the team steps out fresh — the trip is safer', color: GREEN, riskMod: -8 },
         rough: { label: 'ROUGH LANDING', effect: 'down in one piece', color: AMBER, riskMod: 0 },
         crash: { label: 'CRASH', effect: 'someone is hurt before the hatch even opens', color: RED, riskMod: 10 },
     };
+    const OFF_MARK = { label: 'OFF THE MARK', effect: 'down safely, but a long walk from the marked spot', color: AMBER };
     // amp = hill height, jag = per-pixel roughness, spikes = sharp ridges, wind = sideways push, pools = lava, platform = no ground
     const GROUND = {
         rock: { amp: 26, jag: 4, spikes: 0, wind: 0 }, ice: { amp: 20, jag: 2, spikes: 1, wind: 2 },
@@ -119,12 +121,23 @@
         }
         g.level = findLevelStretches(g);
         g.wind = (rand() < 0.5 ? -1 : 1) * kind.wind;
+        g.mark = pickMark(g, rand);
         return g;
     }
 
+    /** The spot A.U.R.A. marks: a level stretch with room, chosen away from the middle so the drop needs real steering. */
+    function pickMark(g, rand) {
+        if (g.kind.platform) return null;                                     // on a rig the deck is the mark
+        const roomy = g.level.filter(l => l.room >= MARK_ROOM), pool = roomy.length ? roomy : g.level;
+        if (!pool.length) return null;
+        const edgeFirst = pool.slice().sort((a, b) => Math.abs(b.cx - W / 2) - Math.abs(a.cx - W / 2));
+        return edgeFirst[Math.floor(rand() * Math.min(2, edgeFirst.length))];
+    }
+    const isOnMark = (g, x) => !g.mark || (x >= g.mark.c0 && x <= g.mark.c1);
+
     /** Where the drop starts: the side of the screen with the longer flight to level ground, so there is always some steering to do. */
     function startState(g) {
-        const leftX = 36, rightX = W - 36, nearest = x => g.level.reduce((best, l) => Math.min(best, Math.abs(l.cx - x)), Infinity);
+        const leftX = 36, rightX = W - 36, nearest = x => (g.mark ? [g.mark] : g.level).reduce((best, l) => Math.min(best, Math.abs(l.cx - x)), Infinity);
         const startsLeft = nearest(leftX) >= nearest(rightX);
         return { x: startsLeft ? leftX : rightX, y: 10, vx: startsLeft ? 8 : -8, vy: 0, fuel: FUEL_FULL, altitude: 100, keys: { left: false, right: false }, grade: null, endedAt: 0 };
     }
@@ -179,6 +192,7 @@
 
     /** The level stretch A.U.R.A. goes for: the nearest one with room to be a little off-centre (any one at all if none is that wide). */
     function pickLevelTarget(s, g) {
+        if (g.mark) return g.mark;
         const roomy = g.level.filter(l => l.room >= AUTO.minRoom), pool = roomy.length ? roomy : g.level;
         return pool.reduce((best, l) => (!best || Math.abs(l.cx - s.x) < Math.abs(best.cx - s.x) ? l : best), null);
     }
@@ -254,6 +268,32 @@
         for (let gy = y + LANDER_TALL + 3; gy < groundY - 1; gy += GUIDE_GAP) ctx.fillRect(x, gy, 1, 1);
     }
 
+    /** The marked spot: a blinking beacon at each end, a chevron above, and whatever the team is going to (a wreck, ruins) just past it. */
+    function drawMark(ctx, g, now, site) {
+        if (!g.mark) return;
+        const m = g.mark, y = Math.round(m.y), on = Math.floor(now / MARK_BLINK_MS) % 2 === 0, cx = Math.round(m.cx);
+        ctx.fillStyle = on ? GREEN : DIM;
+        [m.x0 + 1, m.x1 - 1].forEach(bx => { ctx.fillRect(Math.round(bx), y - 3, 1, 3); ctx.fillRect(Math.round(bx) - 1, y - 4, 3, 1); });
+        const chevronY = y - 26 - (on ? 0 : 2);
+        for (let k = 0; k < 4; k++) { ctx.fillRect(cx - 3 + k, chevronY + k, 1, 1); ctx.fillRect(cx + 3 - k, chevronY + k, 1, 1); }
+        if (!site) return;
+        const sx = m.x1 + 6 < W - 30 ? Math.round(m.x1 + 6) : Math.round(m.x0 - 30), sy = Math.round(g.heights[clampX(sx + 12)]);
+        if (site === 'wreck') {                                                // a hull half in the ground, tilted, one lit edge
+            ctx.fillStyle = '#1a1c1e'; ctx.fillRect(sx, sy - 7, 24, 7); ctx.fillRect(sx + 4, sy - 11, 10, 4);
+            ctx.fillStyle = '#5c6058'; ctx.fillRect(sx, sy - 7, 24, 1); ctx.fillRect(sx + 4, sy - 11, 10, 1);
+            ctx.fillStyle = on ? AMBER : '#5a4520'; ctx.fillRect(sx + 20, sy - 9, 1, 2);   // its beacon, still going
+        } else if (site === 'ruins') {                                         // walls with no roofs
+            ctx.fillStyle = '#2a2d2a'; [0, 7, 14, 20].forEach((dx, i) => ctx.fillRect(sx + dx, sy - 5 - (i % 2) * 3, 3, 5 + (i % 2) * 3));
+            ctx.fillStyle = '#5c6058'; [0, 7, 14, 20].forEach((dx, i) => ctx.fillRect(sx + dx, sy - 5 - (i % 2) * 3, 3, 1));
+        } else if (site === 'stones') {                                        // rows of markers
+            ctx.fillStyle = '#8f8a7a'; for (let k = 0; k < 8; k++) ctx.fillRect(sx + k * 3, sy - 4 - (k % 2), 2, 4 + (k % 2));
+        } else if (site === 'dome') {                                          // a glass dome, green inside
+            for (let dx = -10; dx <= 10; dx++) { const h = Math.round(Math.sqrt(100 - dx * dx)); ctx.fillStyle = '#c4d0c4'; ctx.fillRect(sx + 12 + dx, sy - h, 1, 1); ctx.fillStyle = '#2f6a3e'; ctx.fillRect(sx + 12 + dx, sy - Math.max(1, h - 2), 1, Math.max(1, h - 2)); }
+        } else if (site === 'beacon') {                                        // a mast with a light on top
+            ctx.fillStyle = '#5c6058'; ctx.fillRect(sx + 10, sy - 16, 2, 16); ctx.fillStyle = on ? '#ffe6a0' : AMBER; ctx.fillRect(sx + 9, sy - 19, 4, 3);
+        }
+    }
+
     /** The clamp it hangs from before it is let go. */
     function drawDock(ctx, x, y) {
         ctx.fillStyle = '#2a2d2a'; ctx.fillRect(x - 22, 0, 44, Math.max(1, y - 2));
@@ -305,6 +345,7 @@
         else {
             const isLeftBurn = s.keys.right && s.fuel > 0, isRightBurn = s.keys.left && s.fuel > 0; // pushing left fires the RIGHT thruster, and the other way round
             if (!s.grade) drawGuide(ctx, s, g, x, y);
+            drawMark(ctx, g, now, s.site);
             drawSprite(ctx, x - LANDER_HALF, y, statusColor(s, g));
             if (isLeftBurn) drawFlame(ctx, x - LANDER_HALF + NOZZLE_LEFT, y + NOZZLE_ROW, g, look);
             if (isRightBurn) drawFlame(ctx, x - LANDER_HALF + NOZZLE_RIGHT, y + NOZZLE_ROW, g, look);
@@ -315,7 +356,7 @@
         });
     }
 
-    function overlayHtml(planet, team, colors) {
+    function overlayHtml(planet, team, colors, site) {
         return `<div class="warp-plot-frame">
             <p class="warp-plot-kicker">LANDING — ${esc(team.map(m => m.name).join(' + '))} ABOARD</p>
             <h2 class="warp-plot-target">${esc(planet.name || 'The surface')}</h2>
@@ -327,7 +368,7 @@
                 <div><dt>HEIGHT</dt><dd class="lander-alt">0</dd></div>
                 <div><dt>GROUND</dt><dd class="lander-ground">—</dd></div>
             </dl>
-            <p class="warp-plot-hint">Hold <kbd>←</kbd> / <kbd>→</kbd> (or <kbd>A</kbd> / <kbd>D</kbd>) to push left and right. Hold both to brake. Find <b>level</b> ground and put it down <b>slowly</b> — the line under the lander goes green over a flat stretch.</p>
+            <p class="warp-plot-hint">Hold <kbd>←</kbd> / <kbd>→</kbd> (or <kbd>A</kbd> / <kbd>D</kbd>) to push left and right. Hold both to brake. A.U.R.A. has marked a safe spot${site ? ' next to the site' : ''} — the <b>blinking markers</b>. Put it down there, <b>slowly</b>. The line under the lander goes green over flat ground.</p>
             <div class="warp-plot-buttons lander-buttons">
                 <button class="warp-plot-engage lander-hold" data-key="left">◀ PUSH LEFT</button>
                 <button class="warp-plot-engage lander-hold" data-key="right">PUSH RIGHT ▶</button>
@@ -337,14 +378,16 @@
         </div>`;
     }
 
-    function play(app, planet, team) {
+    /** opts.site: what the team is going to ('wreck', 'ruins', 'stones', 'dome', 'beacon'), drawn beside the marked spot. */
+    function play(app, planet, team, opts) {
+        const site = (opts && opts.site) || null;
         return new Promise(resolve => {
             const colors = team.map(m => (window.ShipCutaway ? rgb(window.ShipCutaway.colorOf(m)) : BONE));
             const overlay = document.createElement('div');
             overlay.className = 'warp-plot lander';
             overlay.setAttribute('role', 'dialog');
             overlay.setAttribute('aria-label', 'Land the away team');
-            overlay.innerHTML = overlayHtml(planet, team, colors);
+            overlay.innerHTML = overlayHtml(planet, team, colors, site);
             document.body.appendChild(overlay);
 
             const ctx = overlay.querySelector('canvas').getContext('2d'), g = buildGround(planet), look = palette(planet);
@@ -352,6 +395,7 @@
             const gravityG = Math.max(0.4, Math.min(2.2, (planet.metrics && planet.metrics.gravity) || 1));
             const gravity = BASE_GRAVITY * Math.pow(gravityG, GRAVITY_CURVE);
             const s = startState(g);
+            s.site = site;
             window.LanderGame.current = { state: s, ground: g }; // read-only handle for automated play-tests
             const el = name => overlay.querySelector(name);
             const fuelBar = el('.lander-fuel b'), downEl = el('.lander-down'), sideEl = el('.lander-side'), altEl = el('.lander-alt'), groundEl = el('.lander-ground'), resultEl = el('.warp-plot-result');
@@ -379,14 +423,16 @@
                 setTimeout(() => { overlay.remove(); resolve(result); }, 350);
             }
 
-            function end(grade) {
-                s.grade = grade; s.endedAt = performance.now(); s.keys.left = s.keys.right = false;
-                const info = GRADES[grade];
+            function end(landed) {
+                const isOffMark = landed !== 'crash' && !g.kind.platform && !isOnMark(g, Math.round(s.x));
+                const grade = isOffMark ? 'rough' : landed;
+                s.grade = grade; s.endedAt = performance.now(); s.keys.left = s.keys.right = false; s.isOffMark = isOffMark;
+                const info = isOffMark ? OFF_MARK : GRADES[grade];
                 overlay.querySelectorAll('button').forEach(b => { b.disabled = true; });
                 resultEl.innerHTML = `<strong style="color:${info.color}">${info.label}</strong><span>${info.effect}</span>`;
                 sfx('sfxTouchdown', grade);
                 if (grade === 'crash' && app.screenShake) app.screenShake('heavy');
-                setTimeout(() => close({ grade, auto: !!s.isAuto }), RESULT_HOLD_MS);
+                setTimeout(() => close({ grade, auto: !!s.isAuto, offMark: isOffMark }), RESULT_HOLD_MS);
             }
 
             el('.lander-auto').addEventListener('click', () => { // hand it to A.U.R.A.: she flies the same lander down to level ground while you watch
@@ -439,6 +485,6 @@
 
     window.LanderGame = {
         play, GRADES, drawLander, LANDER_TALL,
-        internals: { buildGround, step, autopilot, startState, gradeLanding, groundReading, tiltAt, BASE_GRAVITY, GRAVITY_CURVE, FUEL_FULL, PAD_WIDTH, LANDER_HALF, LEVEL_TILT, ROUGH_TILT, SOFT, ROUGH, GROUND_OF }, // internals: for headless play-tests
+        internals: { buildGround, step, autopilot, startState, gradeLanding, groundReading, tiltAt, isOnMark, BASE_GRAVITY, GRAVITY_CURVE, FUEL_FULL, PAD_WIDTH, LANDER_HALF, LEVEL_TILT, ROUGH_TILT, SOFT, ROUGH, GROUND_OF }, // internals: for headless play-tests
     };
 })();

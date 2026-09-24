@@ -244,15 +244,15 @@ class OrbitView {
 
     /** One short plain line per thing the scan found. tone: good (green) / warn (amber) / bad (red) / plain. */
     static FINDINGS = {
-        EXODUS_WRECK: ['Human ship wreck', 'one of ours — board it from the command deck', 'good'],
+        EXODUS_WRECK: ['Human ship wreck', 'one of ours — send the team to it', 'good'],
         PREDATORY: ['Hunting animals', 'a team on the ground is in real danger', 'bad'],
         WRECKAGE: ['Debris field', 'loose salvage in orbit', 'plain'],
         FAILED_COLONY: ['Colony ruins', 'people tried to live here — find out why they stopped', 'plain'],
-        DERELICT: ['Unknown wreck', 'not one of ours; salvage, some risk', 'plain'],
-        ANOMALY: ['Something strange in space', 'nobody knows what it does — high risk', 'warn'],
-        LIGHTHOUSE: ['The Lighthouse', 'a beacon older than humanity', 'good'],
-        GARDEN: ['The Garden', 'a living dome on a dead world', 'good'],
-        GRAVE: ['The Grave', 'a cemetery moon; some dates are in the future', 'plain'],
+        DERELICT: ['Wreckage in orbit', 'a ship in pieces; salvage, some risk', 'plain'],
+        ANOMALY: ['Something strange', 'it should not be here — send the team to look', 'warn'],
+        LIGHTHOUSE: ['A beacon', 'still transmitting, after all this time', 'good'],
+        GARDEN: ['A dome', 'something green under glass, on a dead world', 'good'],
+        GRAVE: ['Graves', 'rows of markers, as far as the scan reaches', 'plain'],
     };
 
     static findingsHtml(tags) {
@@ -324,101 +324,15 @@ class OrbitView {
                        </button>`
             }
 
-                 <button class="cmd-btn ${planet.hasEva ? 'cmd-done' : ''}" id="btn-eva" ${this.state.energy < 5 || planet.hasEva ? 'disabled' : ''}>
-                    <div>${planet.hasEva ? 'SEND TEAM OUT' : 'SEND TEAM OUT (EVA)'}</div>
-                    <div class="cost">${planet.hasEva ? 'DONE — ONE TRIP PER STOP' : (this.state.hasActiveTrait && this.state.hasActiveTrait('OBSESSED') ? '-10 ENERGY · -2 RATIONS · OBSESSED CREW' : '-5 ENERGY · CREW AT RISK')}</div>
-                </button>
-
-                ${planet.scanned && planet.tags && planet.tags.includes('EXODUS_WRECK') && !planet.exodusInvestigated
-                    ? `<button class="cmd-btn" id="btn-exodus" style="border-color: #74d99a; color: #74d99a;">
-                        <div>INVESTIGATE EXODUS WRECK</div>
-                        <div class="cost" style="color: #74d99a;">HUMAN TRANSPONDER DETECTED</div>
-                       </button>`
-                    : (planet.exodusInvestigated
-                        ? `<button class="cmd-btn" id="btn-exodus" disabled style="border-color: #555; color: #555;">
-                            <div>EXODUS WRECK INVESTIGATED</div>
-                            <div class="cost">SITE CLEARED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('FAILED_COLONY') && !planet.colonyInvestigated
-                    ? `<button class="cmd-btn" id="btn-colony-site" style="border-color: #74d99a; color: #74d99a;">
-                        <div>INVESTIGATE COLONY SITE</div>
-                        <div class="cost" style="color: #74d99a;">SETTLEMENT RUINS DETECTED</div>
-                       </button>`
-                    : (planet.colonyInvestigated
-                        ? `<button class="cmd-btn" id="btn-colony-site" disabled style="border-color: #555; color: #555;">
-                            <div>COLONY SITE INVESTIGATED</div>
-                            <div class="cost">RUINS CATALOGUED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('DERELICT') && !planet.derelictInvestigated
-                    ? `<button class="cmd-btn" id="btn-derelict" style="border-color: #74d99a; color: #74d99a;">
-                        <div>SEARCH THE WRECK</div>
-                        <div class="cost" style="color: #74d99a;">SHIP WRECKAGE DETECTED</div>
-                       </button>`
-                    : (planet.derelictInvestigated
-                        ? `<button class="cmd-btn" id="btn-derelict" disabled style="border-color: #555; color: #555;">
-                            <div>WRECK SEARCHED</div>
-                            <div class="cost">WRECK SALVAGED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('ANOMALY') && !planet.anomalyInvestigated
-                    ? `<button class="cmd-btn" id="btn-anomaly" style="border-color: #d9a24a; color: #d9a24a; animation: anomaly-pulse 2s infinite;">
-                        <div>GO CLOSER</div>
-                        <div class="cost" style="color: #d9a24a;">⚠ REALITY DISTORTION</div>
-                       </button>`
-                    : (planet.anomalyInvestigated
-                        ? `<button class="cmd-btn" id="btn-anomaly" disabled style="border-color: #555; color: #555;">
-                            <div>ALREADY VISITED</div>
-                            <div class="cost">PHENOMENON DOCUMENTED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('LIGHTHOUSE') && !planet.lighthouseInvestigated
-                    ? `<button class="cmd-btn" id="btn-lighthouse" style="border-color: #74d99a; color: #74d99a;">
-                        <div>🗼 APPROACH THE LIGHTHOUSE</div>
-                        <div class="cost" style="color: #74d99a;">ANCIENT BEACON SIGNAL</div>
-                       </button>`
-                    : (planet.lighthouseInvestigated
-                        ? `<button class="cmd-btn" id="btn-lighthouse" disabled style="border-color: #555; color: #555;">
-                            <div>LIGHTHOUSE INVESTIGATED</div>
-                            <div class="cost">NAVIGATION DATA RECORDED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('GARDEN') && !planet.gardenInvestigated
-                    ? `<button class="cmd-btn" id="btn-garden" style="border-color: #74d99a; color: #74d99a;">
-                        <div>🌿 ENTER THE GARDEN</div>
-                        <div class="cost" style="color: #74d99a;">BIODOME ACCESS DETECTED</div>
-                       </button>`
-                    : (planet.gardenInvestigated
-                        ? `<button class="cmd-btn" id="btn-garden" disabled style="border-color: #555; color: #555;">
-                            <div>GARDEN EXPLORED</div>
-                            <div class="cost">ECOSYSTEM CATALOGUED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('GRAVE') && !planet.graveInvestigated
-                    ? `<button class="cmd-btn" id="btn-grave" style="border-color: #888888; color: #888888;">
-                        <div>⚰ VISIT THE GRAVE</div>
-                        <div class="cost" style="color: #888888;">ETERNAL CEMETERY</div>
-                       </button>`
-                    : (planet.graveInvestigated
-                        ? `<button class="cmd-btn" id="btn-grave" disabled style="border-color: #555; color: #555;">
-                            <div>GRAVE VISITED</div>
-                            <div class="cost">MEMORIALS OBSERVED</div>
-                           </button>`
-                        : '')
-                }
+                ${(() => {                                                          // one button for the team: to the site the scan found, or to the surface
+                    const site = window.app && window.app.siteOf ? window.app.siteOf(planet) : null, isOpen = site && !planet[site.done] && planet.scanned;
+                    const cost = this.state.hasActiveTrait && this.state.hasActiveTrait('OBSESSED') ? '-10 ENERGY · -2 RATIONS' : '-5 ENERGY · -1 RATION';
+                    if (planet.isStructure || planet.isStation || planet.isAsteroidField) return '';
+                    return `<button class="cmd-btn ${planet.hasEva ? 'cmd-done' : isOpen ? 'cmd-site' : ''}" id="btn-eva" ${this.state.energy < 5 || planet.hasEva ? 'disabled' : ''}>
+                        <div>${planet.hasEva ? 'TEAM ALREADY WENT' : isOpen ? `SEND TEAM TO ${site.label}` : 'SEND TEAM DOWN'}</div>
+                        <div class="cost">${planet.hasEva ? 'ONE TRIP PER STOP' : isOpen ? `${site.note} · ${cost}` : `${cost} · SEARCH THE SURFACE`}</div>
+                    </button>`;
+                })()}
 
                 ${planet.isStructure && !planet.structureApproached
                     ? `<button class="cmd-btn" id="btn-structure" style="border-color: #ffd27a; color: #fff3cf; background: linear-gradient(135deg, rgba(168,120,31,0.28), rgba(255,210,122,0.14));">
