@@ -191,23 +191,31 @@
         for (let gy = 12; gy < H; gy += 24) for (let gx = 12; gx < W; gx += 24) if (dith(gx / 24 | 0, gy / 24 | 0, strength) && Math.floor(time / 700 + gx + gy) % 5) ctx.fillRect(gx, gy, 1, 1);
     }
 
-    /** One closing shot. wrong = { density, grid, hull: [label, from ms], twin: from ms, slab: 0..1, noStars } */
+    /** A still field of dead transponders along the heading, thicker the deeper you are. Nothing in it moves; a few still blink. */
+    function drawField(ctx, world, density, pan, time) {
+        world.wrecks.forEach((wreck, i) => {
+            if (((i * 31) % 97) / 97 > density) return;
+            const x = Math.round(wreck.x * 0.6 - pan * 0.5), y = Math.round(wreck.y);
+            if (x < 0 || x >= W) return;
+            const lit = i % 13 === 0 && Math.floor(time / 700 + i) % 9 === 0;
+            ctx.fillStyle = lit ? AMBER : wreck.old > 0.6 ? '#6a2f2a' : DIM;
+            ctx.fillRect(x, y, lit ? 2 : 1, 1);
+        });
+    }
+
+    /** One closing shot. wrong = { density, grid, hull: [label, from ms], twin: from ms, light: 0..1, noStars } */
     function jumpShot(caption, wrong) {
         return {
             length: 5600,
             source: 'HULL CAMERA · AFT',
             beats: [[300, caption]],
             draw(ctx, world, t) {
-                const pan = 300 + t * 0.09;
+                const pan = 300 + t * 0.03;
                 if (wrong.noStars) { ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H); } else drawSky(ctx, world, pan);
                 drawStarGrid(ctx, wrong.grid || 0, t);
-                drawStreams(ctx, world, t, 1, 2400, pan, wrong.density);
-                if (wrong.wrecks) drawWrecks(ctx, world, wrong.wrecks, pan, t);
-                if (wrong.slab) {                                                  // it slides in from the right edge, and nothing gets past it
-                    const slabPan = STRUCTURE_X - (W - 90) + span(t, 0, 5600) * 70;
-                    drawStructure(ctx, slabPan, wrong.slab);
-                    ctx.fillStyle = INK; ctx.fillRect(Math.round(STRUCTURE_X - slabPan) + SLAB_WIDE, 0, W, H);
-                }
+                drawField(ctx, world, wrong.density, pan, t);
+                if (wrong.wrecks) drawWrecks(ctx, world, wrong.wrecks, pan * 0.4 + 100, t);
+                if (wrong.light) drawLight(ctx, t, wrong.light * span(t, 0, 3000));      // the end of the heading, filling the right of the frame
                 if (wrong.hull && t > wrong.hull[1]) drawPassingHull(ctx, Math.round(W - (t - wrong.hull[1]) * 0.2), HULL_Y, wrong.hull[0]);
                 drawShip(ctx, 110 + Math.round(Math.sin(t / 900) * 3), SHIP_Y + Math.round(Math.sin(t / 1300) * 2), t, false);
                 if (wrong.twin && t > wrong.twin && Math.floor(t / 110) % 9 !== 0) drawShip(ctx, 110 + Math.round(Math.sin((t - 260) / 900) * 3), TWIN_Y + Math.round(Math.sin((t - 260) / 1300) * 2), t - 260, true); // same ship, a quarter of a second late
@@ -282,7 +290,7 @@
         jump2: jumpShot('Sector 2. One of the eight, drifting.', { density: 0.06, hull: ['EXODUS-6', 1200] }),
         jump4: jumpShot('Sector 4. Nobody told you about thousands.', { density: 0.5, wrecks: 0.5, grid: 0.35, hull: ['EXODUS-2207', 900] }),
         jump5: jumpShot('Sector 5. It has your number on it.', { density: 0.75, wrecks: 0.8, grid: 0.7, twin: 1500 }),
-        jump6: jumpShot('Sector 6. The end of the heading.', { density: 1, wrecks: 1, grid: 1, slab: 1, noStars: true, twin: 600 }),
+        jump6: jumpShot('Sector 6. The end of the heading. It looks like a sun.', { density: 1, wrecks: 1, grid: 1, light: 1, noStars: true, twin: 600 }),
         corridor: {
             length: 21000,
             source: 'BRIDGE DISPLAY · THE FILM, WITH EVERY TRANSPONDER WE CAN HEAR',
