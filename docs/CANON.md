@@ -82,37 +82,37 @@ and stopped flying.
 **Hull 9's twin is the only one in the vault that has never changed.** Earth does not know how this
 ship ends. That is why the ending is yours.
 
-## 6. The count
+## 6. The count — and what it points at
 
-A.U.R.A. says there are four crew. There are five people aboard. The crew panel says five. Five
-figures walk the cutaway. Five eat.
+**What the player sees.** A.U.R.A. says there are four crew. There are five people aboard. The crew panel
+says five, five figures walk the cutaway. When asked, she names all five — and still says four.
 
-Asked for names, she gives all five, correctly, warmly — and says "four crew, Commander," and does
-not notice.
+**Why.** Her crew count is not something she measures. It comes from the crew list sealed on Earth before
+launch: four specialists, and a blank line for a commander who had not been chosen yet. She can see five
+people, but the count is not hers to change. She is not lying. She is reading out a record — the same
+kind of record that told everyone "eight ships went before you".
 
-Her crew count is not a measurement. It is a field she shares with her twin, sealed at
-commissioning: four specialists assigned, the commanding officer's seat still blank. Everything
-else she knows about the crew she learned aboard. The count was never hers, and she cannot correct
-it, because correcting it would mean writing to her twin.
+**What it points at.** The light at the end reads what was *written down* about the people who reach
+it — every record, every log, every crew list — and then it reads the people themselves. The commander
+was never written down anywhere. **So the light cannot read you. You are the only person aboard who can
+act inside it.** That is why the ending belongs to the player, and why it has to be you who does it.
 
-**She is not lying. She is quoting.** "Eight ships went before you" is the same frozen record, one
-size up. Same error, twice.
+**How it is set up, in order, in plain words:**
 
-The person nobody counts is the commander. Not a secret — Vance says so in sector 1. What is never
-said is *why*: Earth's copy of this ship has no commander in it. Nothing about you was ever
-written, so nothing about you could be read ahead of your body. You are the one blank in the
-programme's paperwork, and the only free variable in the corridor.
+| where | what happens | what someone says |
+|---|---|---|
+| minute 1 | A.U.R.A.: "All four of you are awake." The narration says five. | — |
+| sector 1, after the first wreck | **The head count.** Vance: five people here, she keeps saying four. Asked, she names all five and says "four crew". | Mira: "She named you, but she doesn't count you. You're not on her list." A.U.R.A., if asked why: "The crew list was sealed before launch. It has four names. I can't change it." |
+| sector 1 page | a crew plate from a dead ship: four names and a blank fifth panel | Vance: "Four names and a blank. Same as our list." |
+| sector 5 page | the launch ledger: every ship has four names and an empty commander column — ours too | Vance: "Every ship. Nobody ever wrote the commander down." |
+| sector 5–6 | the graves: four names on every stone | "Thousands of stones and not one commander." |
+| sector 6 page | a dead commander's log: "It has not read me yet. I think it cannot find me." | — |
+| **the light** | it reads the ship. A.U.R.A. is read first and made again: **"Five crew, Commander."** The crew feel it reading them. It does not find you. | Aris: "It's reading us. Not you, Commander. It can't find you." Vance: "You were never on any list. That's why." |
 
-Rules for the count:
-- It is **frozen at four.** It does not track deaths. After one death she is exactly right. After
-  two she is reading a list of the dead.
-- **Every other number she gives is correct.** Warp costs, rations, hull numbers, distances. She is
-  a precise instrument that is wrong about one total. If the player can file her under "buggy AI",
-  the whole game dies.
-- **Never spooky.** No stingers, no glitching text. She is kind, correct, and untroubled.
-- At the light, once the ship has been read: **"Five crew, Commander."** Same warm voice. The only
-  number she has said all game that ever changed — and it changed the instant she was read and
-  made again.
+Rules:
+- The count is **frozen at four.** It does not track deaths.
+- **Every other number A.U.R.A. gives is correct.** She is exact about everything except this one total.
+- **Never spooky.** She is calm and polite about it.
 
 ## 7. The throw (the dream between sectors 2 and 3)
 
@@ -135,17 +135,18 @@ coming. They were all thrown at once and they are all already dead.
 
 ## 8. The crew
 
-Five people. Each has **one want** the ending will answer, and **one habit** you see in action
-before anyone describes it. Character comes through the habit, not through backstory.
+Five people. Each has **one want** the ending answers. Character comes from what they want and how they
+react — **not from a gimmick.** (An earlier draft gave each of them a verbal habit: naming things,
+counting aloud, narrating like a nature film. Players read it as gibberish. It is gone. See `STYLE.md`.)
 
-| | want | habit | the flaw |
-|---|---|---|---|
-| **Cora Moon**, commander (you) | — | never speaks | not on any manifest |
-| **Jaxon Mercer**, engineer, 42 | **to stop**, somewhere good | **names things** — the reactor is "the kettle", the lander is "the goat", every rock gets a name; "wake me when there's grass" | tired; would settle a day too early; the warm one and the selfish one |
-| **Kael Vance**, security, 45 | **to be believed** | **counts, out loud** — steps, rations, rivets, keels. Worked the launch yard. Counted more than nine. "Four. She said four." | cold, rude, and right; the decoy for the fifth |
-| **Aris Novak**, medic, 38 | **to understand** | **reads the names of the dead aloud** and keeps the list; insists on rites; talks to the dead directly | the kindest person aboard, and the one who would let it read her |
-| **Mira Chen**, specialist, 29 | **to be told what to do** | **narrates scans like a nature film** — "and here we see…"; talks to A.U.R.A. as a friend; "she's lonely, you know" | trusts the machine; the machine ends up being the light |
-| **A.U.R.A.** | to keep the crew moving | says **"Commander"** in every sentence — a kind machine addressing an empty field | wrong about one total |
+| | want | who they are |
+|---|---|---|
+| **Cora Moon**, commander (you) | — | never speaks; on no crew list |
+| **Jaxon Mercer**, engineer, 42 | **to stop** somewhere good | tired, warm, practical; left a daughter on Earth |
+| **Kael Vance**, security, 45 | **the truth**, and to be believed | blunt, suspicious of A.U.R.A.; worked at the shipyard and saw more than nine ships being built |
+| **Aris Novak**, doctor, 38 | **to understand** what happened to the dead | the kindest person aboard; keeps a list of every dead crew they find |
+| **Mira Chen**, scientist, 29 | **to be told what to do** | young, curious; trusts A.U.R.A. and talks to her like a friend |
+| **A.U.R.A.** | to keep the crew moving | calm, exact; calls you "Commander"; always says four crew |
 
 Vance has **one** backstory now: the launch yard. Not Exodus-3, not Exodus-6, not Kepler-7.
 Nothing comes back down the corridor, so he cannot have served on an earlier hull.

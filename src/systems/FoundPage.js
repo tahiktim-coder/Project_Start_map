@@ -108,7 +108,8 @@
             if (shown < page.lines.length) { const li = document.createElement('li'); li.textContent = page.lines[shown++]; list.appendChild(li); li.classList.add('is-in'); }
             if (shown >= page.lines.length) {
                 next.hidden = true;
-                if (page.after) { after.hidden = false; after.innerHTML = `<b>${esc(page.after.speaker)}</b>${esc(page.after.text)}`; if (state && state.addLog) state.addLog(`${page.after.speaker}: "${page.after.text}"`); }
+                const speakerIsDead = page.after && state && state.isSilentSpeaker && page.after.speaker !== 'A.U.R.A.' && state.isSilentSpeaker(`${page.after.speaker}: `);
+                if (page.after && !speakerIsDead) { after.hidden = false; after.innerHTML = `<b>${esc(page.after.speaker)}</b>${esc(page.after.text)}`; if (state && state.addLog) state.addLog(`${page.after.speaker}: "${page.after.text}"`); }
             }
         };
         next.addEventListener('click', reveal);

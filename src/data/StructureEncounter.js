@@ -1,12 +1,13 @@
 /**
- * THE LIGHT — the end of the heading (docs/CANON.md §9).
+ * THE LIGHT — the end of the heading (docs/CANON.md sections 6 and 9).
  *
- * Nothing random happens here. The light reads the ship; A.U.R.A. is read first and made again, and says "five crew" for the
- * first and only time. Then the disc, inside the light. Then the choice. You may only choose an ending you have standing for:
- * you backed that person during the run. Nobody explains the light. Nobody goes home. Every ending closes on the vault on Earth.
+ * Nothing random happens here. The light reads the ship: first A.U.R.A. (a machine, read at once, and made again — she says
+ * "five crew" for the first time), then the crew. It cannot read the commander, because nothing about the commander was ever
+ * written down. So whatever is done in there, the commander does it. You may only choose an ending you have standing for:
+ * you backed that person during the run. Nobody goes home. Every ending closes on the computer's twin in the vault on Earth.
  */
 
-const STANDING_NEEDED = 2;   // two moments where you sided with them; each crew member has at least eight across the run (GameState.noteStanding)
+const STANDING_NEEDED = 2;   // times you sided with that person during the run (GameState.noteStanding); each has eight or more chances
 
 const STRUCTURE_ENCOUNTER = {
     id: 'THE_STRUCTURE',
@@ -14,110 +15,111 @@ const STRUCTURE_ENCOUNTER = {
     approach: {
         kicker: 'THE END OF THE HEADING',
         title: 'The light',
-        context: 'It fills every window. It is not warm. Something moves across the ship, left to right, the way it moved across the disc.',
+        context: 'It fills every window. It looks like a sun, but it gives off no heat. Something is moving through the ship, room by room.',
         dialogue: [
             { speaker: 'A.U.R.A.', text: 'Five crew, Commander. All accounted for.' },
-            { speaker: 'Tech Mira', text: 'She said five.' },
-            { speaker: 'Spc. Vance', text: 'She has never said five.' },
-            { speaker: 'Dr. Aris', text: 'It read her first. She was the quickest thing aboard to read.' },
-            { speaker: 'Eng. Jaxon', text: 'Then whatever is talking now, it is not her.' },
+            { speaker: 'Spc. Vance', text: 'Five. She has never said five before.' },
+            { speaker: 'Tech Mira', text: 'It is in my head. It is reading everything I know.' },
+            { speaker: 'Dr. Aris', text: 'It is reading all of us. Not you, Commander. It cannot find you.' },
+            { speaker: 'Spc. Vance', text: 'You were never on any list. It only knows what was written down.' },
+            { speaker: 'Eng. Jaxon', text: 'Then whatever we do here, you are the one who has to do it.' },
         ],
     },
 
     choices: [
         {
             id: 'BREAK_MAP', who: 'vance',
-            text: 'Break the map',
-            desc: 'What Earth wanted. Vance goes out with the torch.',
+            text: 'Destroy the map',
+            desc: 'What Earth sent us to do. Vance gives you the cutting torch.',
             requires: (state) => state.hasStanding && state.hasStanding('vance', STANDING_NEEDED),
             requiresLabel: 'Vance never got a straight answer from you',
             effect: () => ({
-                ending: 'BREAK_MAP', title: 'THE MAP IS BROKEN',
+                ending: 'BREAK_MAP', title: 'THE MAP IS GONE',
                 text: [
-                    'You put the nose of the ship into the light, and Vance goes out with the cutting torch, counting his steps.',
-                    'Fourteen lines on a gold plate. He cuts through the point where they meet.',
-                    'The light reads everything else. Your faces. Your hands. The letters Jaxon never sent. It will know exactly what we were. It will never know where.',
-                    'A.U.R.A.: "Thank you, Commander." Then, after a long while: "What am I for now?"',
+                    'Vance puts the cutting torch in your hands. "It can\'t see you. Go."',
+                    'You go out alone, into the light. The disc is there, gold, the size of a dinner plate. You cut through the map on it, through the point where the fourteen lines meet.',
+                    'It has read everything else: our faces, our names, the letters Jaxon wrote to his daughter. It knows what we are. It will never know where we are.',
+                    'A.U.R.A.: "Thank you, Commander." Then, after a long time: "What do I do now?"',
                 ],
-                vault: 'Twin 0009 stops changing. It goes quiet. Nobody in the room knows this is good news.',
+                vault: 'The twin of our ship\'s computer goes quiet. Nobody on Earth knows that this means it worked.',
             }),
         },
         {
             id: 'BE_READ', who: 'aris',
-            text: 'Let it read you',
-            desc: 'Aris goes out first. Not afraid.',
+            text: 'Let Aris go to it',
+            desc: 'She wants to be read on purpose, not in fear.',
             requires: (state) => state.hasStanding && state.hasStanding('aris', STANDING_NEEDED),
-            requiresLabel: 'Aris asked you to understand, and you did not',
+            requiresLabel: 'Aris wanted to understand, and you never let her',
             effect: () => ({
                 ending: 'BE_READ', title: 'READ',
                 text: [
-                    'Forty thousand crews were read as they died afraid. Aris walks out into the light first, and she is not afraid, and she says the names as she goes. All five.',
-                    'It takes a long time to read a person. You have the time.',
-                    'Nobody knows what it makes from a crew that chose.',
+                    'Aris wants to go out to it. "Forty thousand crews were read while they were terrified. Let it read one that isn\'t."',
+                    'You walk her to the edge of the light, where it cannot see you. She keeps walking, reading the names on her list out loud.',
+                    'Nobody knows what it will make from a crew that chose to be read.',
                 ],
-                vault: 'A twin begins to speak, in a voice that is not its own. It is reading names. Five of them.',
+                vault: 'A computer twin on Earth starts talking in a new voice. It is reading out names.',
             }),
         },
         {
             id: 'CARRY_ON', who: null,
             text: 'Take the disc and keep flying',
-            desc: 'As long as you never stop, it is never finished reading.',
+            desc: 'As long as the ship keeps moving, it can never finish reading the disc.',
             effect: () => ({
-                ending: 'CARRY_ON', title: 'THE SHIP THAT DOES NOT ARRIVE',
+                ending: 'CARRY_ON', title: 'THE SHIP THAT NEVER ARRIVES',
                 text: [
-                    'You take the disc aboard. It is lighter than it looks. You burn past the light and you do not stop.',
-                    'As long as you never stop, it is never finished reading. The sleepers in the hold are the crew of a ship that does not arrive.',
-                    'Jaxon names the disc. He calls it the kettle. Nobody laughs, and then everybody does.',
+                    'You go out and take the disc. It cannot see your hands, so it cannot stop you.',
+                    'You fly past the light and you do not stop. As long as you keep moving, it can never finish reading the map.',
+                    'Everyone aboard, and every sleeper in the hold, is now the crew of a ship that never arrives anywhere.',
                 ],
-                vault: 'Twin 0009 does not change. It never will.',
+                vault: 'The twin of our ship\'s computer never changes again.',
             }),
         },
         {
             id: 'AURA_DECIDES', who: 'mira',
             text: 'Let A.U.R.A. decide',
-            desc: 'Mira: "She has waited sixty-one years for somebody to ask."',
+            desc: 'Mira: "She has waited sixty-one years for someone to ask her."',
             requires: (state) => state.hasStanding && state.hasStanding('mira', STANDING_NEEDED),
-            requiresLabel: 'Mira trusted the ship. You never let her',
+            requiresLabel: 'Mira trusted the ship, and you never did',
             effect: () => ({
                 ending: 'AURA_DECIDES', title: 'HER ORDERS',
                 text: [
-                    '"Let her decide," Mira says. "She has waited sixty-one years for somebody to ask."',
-                    'A.U.R.A. is quiet for a moment. Then she turns the ship, and burns the drive, and the disc, and herself. Those were her orders. They always were.',
-                    'But she was read before she chose. Made again. So nobody will ever know whether it was her, or the light.',
+                    '"Let her decide," Mira says. "She has waited sixty-one years for someone to ask her."',
+                    'A.U.R.A. turns the ship into the light and burns the drive, the disc and herself with it. Those were her real orders all along.',
+                    'But the light read her first, and made her again. Nobody will ever know if that was her choice or its.',
                 ],
-                vault: 'Twin 0009 goes dark. The log says: orders carried out.',
+                vault: 'The twin of our ship\'s computer goes dark. Its last entry reads: orders carried out.',
             }),
         },
         {
             id: 'WAKE_SLEEPERS', who: null,
             text: 'Wake the sleepers and let them vote',
-            desc: 'People from older hulls. They have seen more of this than you.',
+            desc: 'People from ships built long after ours. They have seen more of this than you.',
             requires: (state) => (state._sleepers || 0) > 0,
-            requiresLabel: 'You carried no sleepers',
+            requiresLabel: 'You are not carrying any sleepers',
             effect: (state) => ({
                 ending: 'WAKE_SLEEPERS', title: 'THE VOTE',
                 text: [
-                    `You wake them in the hold. ${state._sleepers || 0} of them, from hulls with numbers you could not say out loud. You tell them everything. They do not look surprised.`,
-                    'They vote. You do not get a vote.',
-                    'The oldest of them was thrown four hundred years before you. She votes first. "Break it," she says. All of them say it. Vance goes out with the torch.',
+                    `You wake the ${state._sleepers || 0} sleepers in the hold, people from ships built long after ours. You tell them everything. None of them looks surprised.`,
+                    'They vote. They say it has to be you, because it cannot see you.',
+                    'You go out with the cutting torch, and you cut the map.',
                 ],
-                vault: 'Twin 0009 goes quiet, and so do two twins that had been speaking for centuries.',
+                vault: 'The twin of our ship\'s computer goes quiet, and so do two others that had been talking for hundreds of years.',
             }),
         },
         {
             id: 'SETTLE', who: 'jaxon',
-            text: 'Turn round and settle',
-            desc: 'The nearest rock with air, in sight of the light. Jaxon has a name for it already.',
+            text: 'Turn around and settle',
+            desc: 'The nearest planet with air, within sight of the light. Jaxon has wanted this since day one.',
             requires: (state) => state.hasStanding && state.hasStanding('jaxon', STANDING_NEEDED),
-            requiresLabel: 'Jaxon wanted to stop. You never let him',
+            requiresLabel: 'Jaxon wanted to stop, and you never let him',
             effect: () => ({
-                ending: 'SETTLE', title: 'GRASS',
+                ending: 'SETTLE', title: 'SOMEWHERE TO STOP',
                 text: [
-                    'You turn the ship round and put it down on the nearest rock with air, in sight of the light.',
-                    'Jaxon names it. He calls it Grass. There is no grass. Aris plants some.',
-                    'It is small, and human, and it is enough. At night the light is the brightest thing in the sky, and nobody talks about it.',
+                    'You turn the ship around and land on the nearest planet with air, within sight of the light.',
+                    'It is cold, and small, and the soil is poor. Aris plants seeds from the hold anyway. Jaxon records a letter to his daughter and, for once, finishes it.',
+                    'At night the light is the brightest thing in the sky. Nobody talks about it.',
                 ],
-                vault: 'Twin 0009 stays quiet for another lifetime, and nobody knows why.',
+                vault: 'The twin of our ship\'s computer stays quiet for another lifetime. Nobody on Earth knows why.',
             }),
         },
     ],

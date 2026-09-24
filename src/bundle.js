@@ -233,7 +233,7 @@ class GameState {
      */
     saveGame() {
         const saveData = {
-            version: 1,
+            version: 2,
             timestamp: Date.now(),
             // Resources
             energy: this.energy,
@@ -350,9 +350,10 @@ class GameState {
             this.crew = saveData.crew;
             // Progress
             this.actionsTaken = saveData.actionsTaken;
-            this.exodusLogsFound = saveData.exodusLogsFound || [];
+            const pageIds = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).map(p => p.id);
+            this.exodusLogsFound = (saveData.exodusLogsFound || []).filter(id => pageIds.includes(id)); // old saves counted eight logs by number
             this._boardedHulls = saveData._boardedHulls || [];
-            this._standing = saveData._standing || null;
+            this._standing = saveData._standing || ((saveData.version || 1) < 2 ? { vance: 2, aris: 2, jaxon: 2, mira: 2 } : null); // a save from before standing existed keeps every ending open
             this._countSceneSeen = !!saveData._countSceneSeen;
             this._sleepers = saveData._sleepers || 0;
             this._warpDiscount = saveData._warpDiscount || 0;
@@ -426,6 +427,7 @@ class GameState {
     /** What warping to this place costs right now: bridge damage, burnt capacitors (this sector only), downloaded star charts. */
     getWarpCost(planet) {
         if (this.lastVisitedSystem && this.lastVisitedSystem.id === planet.id) return 0; // orbit re-entry
+        if (planet.isStructure || planet.type === 'STRUCTURE') return 0;               // the light pulls you in: never out of reach
         const BRIDGE_DAMAGE_FACTOR = 1.5, BURNT_CAPACITOR_COST = 5, STAR_CHART_SAVING = 2;
         let cost = Math.floor((planet.fuelCost || 10) * (this.isDeckOperational('bridge') ? 1 : BRIDGE_DAMAGE_FACTOR));
         if (this._damagedCapacitors === this.currentSector) cost += BURNT_CAPACITOR_COST;
@@ -913,11 +915,11 @@ class GameState {
 
 // One line on each arrival card: the further out, the older the wrecks (the wait calculation, shown not told)
 const SECTOR_ARRIVAL_LINES = {
-    2: 'The last of the eight are out here. Twenty years dead, the newest of them.',
-    3: 'Transponders on our channel. Hundreds. The hull numbers are higher than ours, and the rust is a century old.',
-    4: 'Somebody stopped here. Two hundred years ago.',
-    5: 'Hulls in the tens of thousands. Three centuries dead. Every one of them was told it was the ninth.',
-    6: 'The oldest wrecks of all. And at the end of the heading, a light.',
+    2: 'The last of the eight ships should be out here. They have been dead about twenty years.',
+    3: 'Hundreds of ship beacons, all ours. Their numbers are higher than ours, and they are a hundred years old.',
+    4: 'Ship numbers in the thousands now. These wrecks are two hundred years old.',
+    5: 'Tens of thousands of ships. Three hundred years dead. Every one of them was told it was the ninth.',
+    6: 'The oldest wrecks of all. At the end of the heading, a light.',
 };
 const RELIANCE_MIN_SAMPLES = 4; // A.U.R.A. only comments on who flies once there is a pattern to see
 const CARGO_LIMIT = 20, CARGO_RACK_BONUS = 4; // see GameState.getCargoLimit / enforceCargoLimit
@@ -1183,7 +1185,7 @@ class App {
             this.state.addLog("Breaking orbit. Systems disengaged.");
             this.state.currentSystem = null;                                          // back on the map (lastVisitedSystem keeps the free re-entry)
             this.renderNav();
-            if (currentPlanet && currentPlanet.isFirstSignal && currentPlanet.exodusInvestigated && !this.state._countSceneSeen) this.showCountScene();
+            if (currentPlanet && this.state.currentSector === 1 && !this.state._countSceneSeen) this.showCountScene();
         });
 
         // THE WRONG PLACE special handlers
@@ -1325,31 +1327,32 @@ class App {
         this.markFirstSignal();
         this.plantSectorPage();
         const begin = () => {
-            this.state.addLog("A.U.R.A.: Systems online. Awaiting your command, Commander.");
-            this.state.addLog("An old transponder is marked on the map. Click it to take a look.");
+            this.state.addLog('A.U.R.A.: "Systems online. Waiting for your orders, Commander."');
+            this.state.addLog("An old ship beacon is marked on the map. Click it to take a look.");
             this.renderNav();
         };
         if (!window.EncounterCard) { begin(); return; }
         const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('program') : Promise.resolve(); // what the crew was told, as a picture
         reel.then(() => window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3500, kicker: 'EXODUS-9 · 61 YEARS OUT FROM EARTH', title: 'Good morning, Commander',
-            context: 'Cold air, and a light you have not seen in sixty-one years. The ship has woken all five of you, and it has not said why.',
+            context: 'Cold air and bright lights. After sixty-one years asleep, the ship has woken all five of you.',
             dialogue: [
-                { speaker: 'A.U.R.A.', text: 'All four of you are awake, Commander. The ship is in one piece. Your orders have not changed: find a world people can live on, and settle it.' },
-                { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction, thousands of them. Eight went this way before you. You are the ninth on this heading.' },
-                { speaker: 'Eng. Jaxon', text: 'Eight ahead of us. Let us hope they left the good planets alone. Wake me when there is grass.' },
-                { speaker: 'Spc. Vance', text: 'Eight ships ahead of us, and not one of them ever called home?' },
-                { speaker: 'A.U.R.A.', text: 'Space is large, Specialist. There is an old transponder on the scope. One of the eight, I expect. I have marked it on your map.' },
+                { speaker: 'A.U.R.A.', text: 'Good morning, Commander. All four crew are awake and well. The ship is in one piece.' },
+                { speaker: 'A.U.R.A.', text: 'Your orders have not changed. Find a planet people can live on, and settle it.' },
+                { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction. Eight went this way before us. We are the ninth.' },
+                { speaker: 'Eng. Jaxon', text: 'Eight ships ahead of us. I hope they left us a good planet.' },
+                { speaker: 'Spc. Vance', text: 'Eight ships, and not one of them ever sent a message home?' },
+                { speaker: 'A.U.R.A.', text: 'Space is very large, Specialist. There is an old ship beacon on the scanner. Probably one of the eight. I have marked it on your map.' },
             ],
-            choices: [{ text: 'Take the chair', desc: 'Six sectors lie ahead. In each one you get a few stops, then you must jump on. Energy moves the ship. Rations feed the crew.' }],
+            choices: [{ text: 'Take command', desc: 'Six sectors ahead. A few stops in each, then you must jump on. Energy moves the ship. Rations feed the crew.' }],
             onPick: begin
         }));
     }
 
     /** Sector 1 always holds one wreck whose transponder shows on the map from the start: the first thing to go and look at. */
     /**
-     * The head count. Vance counts everyone off; A.U.R.A. says four; asked for names she gives all five, warmly, and says four
-     * again without noticing. The one moment in sector 1 the game admits the number is wrong, so it can never read as a bug.
+     * The head count (docs/CANON.md section 6). Vance: five of us, she says four. Asked, A.U.R.A. names all five and still says four.
+     * Mira says it plainly: you are not on her list. It fires on the first return to the map in sector 1, so nobody can miss it.
      */
     showCountScene() {
         if (!window.EncounterCard || this.state._countSceneSeen) return;
@@ -1357,24 +1360,33 @@ class App {
         const alive = who => this.state.crew.some(c => c.status !== 'DEAD' && c.name.includes(who));
         const names = [['Jaxon', 'Jaxon Mercer'], ['Aris', 'Aris Novak'], ['Vance', 'Kael Vance'], ['Mira', 'Mira Chen']].filter(([first]) => alive(first)).map(([, full]) => full);
         window.EncounterCard.open(this, {
-            tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE · AFTER THE WRECK', title: 'Head count',
-            context: 'Vance counts everyone off. He does it every time. This time he does it twice.',
+            tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE', title: 'Head count',
+            context: 'Back on the bridge, Vance is frowning at the crew screen.',
             dialogue: [
-                { speaker: 'Spc. Vance', text: 'Five. Jaxon, Aris, Mira, me, and you. Five.' },
+                { speaker: 'Spc. Vance', text: 'There are five of us on this ship. She keeps saying four.' },
                 { speaker: 'A.U.R.A.', text: 'Four crew, Commander. All well.' },
-                { speaker: 'Spc. Vance', text: 'Say the names.' },
+                { speaker: 'Spc. Vance', text: 'Then list them.' },
                 { speaker: 'A.U.R.A.', text: `${names.join('. ')}. And you, Commander. Four crew.` },
-                { speaker: 'Eng. Jaxon', text: 'She rounds down, Kael. Let it go.' },
+                { speaker: 'Tech Mira', text: 'She named you, but she did not count you. You are not on her list.' },
+                { speaker: 'Eng. Jaxon', text: 'It is a glitch. She slept sixty years too. Let it go.' },
             ],
             choices: [
-                { text: 'Let it go', desc: 'Jaxon is probably right.', chips: [] },
-                { text: 'Ask her again', desc: 'Vance wants it on the record.', chips: [] },
-                { text: 'Check the manifest yourself', desc: 'The printed one, in the drawer under the chair.', chips: [] },
+                { text: 'Let it go', desc: 'Jaxon is probably right. It is only a number.' },
+                { text: 'Ask her why', desc: 'Vance wants an answer.' },
+                { text: 'Read the printed crew list', desc: 'There is a paper copy in the bridge locker.' },
             ],
             onPick: (idx) => {
-                if (idx === 0) { this.state.noteStanding('jaxon'); this.state.addLog('A.U.R.A.: "Four crew, Commander. Shall I go on?"'); }
-                if (idx === 1) { this.state.noteStanding('vance'); this.state.addLog('A.U.R.A.: "Four crew, Commander. Would you like the roster again?"'); this.state.addLog('Spc. Vance: "Four. She said four."'); }
-                if (idx === 2) { this.state.noteStanding('vance'); this.state.addLog('The manifest. Four names printed. A fifth line, blank, in the same ink.'); this.state.addLog('Tech Mira: "She is not wrong on purpose. She is never wrong on purpose."'); }
+                if (idx === 0) { this.state.noteStanding('jaxon'); this.state.addLog('A.U.R.A.: "Thank you, Commander."'); }
+                if (idx === 1) {
+                    this.state.noteStanding('vance');
+                    this.state.addLog('A.U.R.A.: "The crew list was sealed on Earth before launch, Commander. It has four names on it. I cannot change it."');
+                    this.state.addLog('Spc. Vance: "Sealed before launch. Before they had picked a commander."');
+                }
+                if (idx === 2) {
+                    this.state.noteStanding('aris');
+                    this.state.addLog('The printed crew list: four names. The line for the commander is blank. Not rubbed out. Never filled in.');
+                    this.state.addLog('Dr. Aris: "Somebody wrote this list before they knew who would be flying the ship."');
+                }
                 this.state.emitUpdates();
             }
         });
@@ -1427,18 +1439,19 @@ class App {
     /** Found in the wreck's archive; it plays at once, and Vance says the thing nobody wants said. */
     findBriefingTape(shipName) {
         const TAPE_DELAY_MS = 900;
-        if (typeof ITEMS === 'undefined' || !ITEMS.BRIEFING_TAPE || this.state.cargo.some(i => i.id === ITEMS.BRIEFING_TAPE.id)) return;
+        if (typeof ITEMS === 'undefined' || !ITEMS.BRIEFING_TAPE || this.state.cargo.some(i => i.id === ITEMS.BRIEFING_TAPE.id)) return Promise.resolve();
         this.state.cargo.push({ ...ITEMS.BRIEFING_TAPE, acquiredAt: shipName });
         this.state.addLog(`In the archive of ${shipName}: a tape with our programme's seal. It is in your cargo now.`);
         this.state.emitUpdates();
-        setTimeout(() => {
+        return new Promise(resolve => setTimeout(() => {
             const played = window.StoryReel ? window.StoryReel.play('uncut') : Promise.resolve();
             played.then(() => {
-                this.state.addLog('Spc. Vance: "That is not eight."');
-                this.state.addLog('A.U.R.A.: "Old footage degrades, Specialist. I would not read much into it."');
+                this.state.addLog('Spc. Vance: "That is not eight ships. That is hundreds."');
+                this.state.addLog('A.U.R.A.: "Old recordings degrade, Specialist. I would not read too much into it."');
                 this.state.emitUpdates();
+                resolve();
             });
-        }, TAPE_DELAY_MS);
+        }, TAPE_DELAY_MS));
     }
 
     markFirstSignal() {
@@ -1479,7 +1492,8 @@ class App {
 
         // Free warp if returning to the last visited system (simulating orbit re-entry)
         const cost = this.state.getWarpCost(planet);
-        if (cost === 0) this.state.addLog("Orbit re-entry trajectory calculated. Energy cost negligible.");
+        if (cost === 0 && (planet.isStructure || planet.type === 'STRUCTURE')) this.state.addLog('A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in."');
+        else if (cost === 0) this.state.addLog("Back into orbit. No energy needed.");
 
         // Out of stops: the window has closed on everything except where you already are
         const isFinale = !!(planet.isStructure || planet.type === 'STRUCTURE');       // the end of the heading costs no stop and is never out of reach
@@ -1601,7 +1615,7 @@ class App {
             // Sector hazards during warp — delegated to SECTOR_CONFIG
             const warpConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
             if (warpConfig && warpConfig.hazard && warpConfig.hazard.onWarp) {
-                warpConfig.hazard.onWarp(this.state);
+                if (!isFinale) warpConfig.hazard.onWarp(this.state);
             }
 
             // Ship malfunction check during warp (never on the approach to the light: the finale is the only thing that happens there)
@@ -1642,10 +1656,10 @@ class App {
                 setTimeout(() => window.BarkSystem.tryBark('ENTER_ORBIT', this.state, { planet }), 50);
             }
 
-            // A.U.R.A. commentary on orbit entry
-            if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+            // A.U.R.A. commentary on orbit entry (not at the light: nothing random happens there)
+            if (typeof AuraSystem !== 'undefined' && window.AuraSystem && !isFinale) {
                 window.AuraSystem.tryComment('ENTER_ORBIT', this.state);
-                window.AuraSystem.checkAdversarialAction(this.state);
+                if (!(planet.isStructure || planet.type === 'STRUCTURE')) window.AuraSystem.checkAdversarialAction(this.state);
 
                 // Trigger any pending premonition effects
                 const premonitionResult = window.AuraSystem.triggerPremonition(this.state);
@@ -2140,7 +2154,7 @@ class App {
             // Show warp animation with crew dialogue, then campfire event. Into sector 3 the burn stalls and the throw plays first.
             const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
             this.showWarpAnimation(() => {
-                (isThrow ? window.TheThrow.play(this) : Promise.resolve()).then(() => this.showCampfireEvent(() => {
+                (isThrow ? window.TheThrow.play(this) : Promise.resolve()).then(() => (isThrow ? (done => done()) : fn => this.showCampfireEvent(fn))(() => {
                 this._isInTransit = false;
                 const nextSector = this.state.currentSector + 1;
                 this.state.sectorNodes = PlanetGenerator.generateSector(nextSector);
@@ -2394,22 +2408,22 @@ class App {
         const hasCrew = (tag) => livingCrew.some(c => c.tags && c.tags.includes(tag));
         const say = (speaker, text, portraitId) => ({ speaker, text, portraitId });
         const LINES = {
-            2: [say('A.U.R.A.', 'Sector 2, Commander. The last of the eight should be out here.'),
-                hasCrew('ENGINEER') && say('Eng. Jaxon', 'Eight ahead of us and not one of them left a note. The next rock is called Note.', 'M_2'),
-                hasCrew('MEDIC') && say('Dr. Aris', 'If we find them, we read their names. All of them.', 'F_3')],
-            3: [say('A.U.R.A.', 'Sector 3, Commander. Transponders on our channel. Hundreds.'),
-                hasCrew('SPECIALIST') && say('Tech Mira', 'And here we see... hull numbers. Two hundred. Six hundred. Nine hundred and twelve.', 'F_5'),
-                hasCrew('SECURITY') && say('Spc. Vance', 'Nine, they said. I make it nine hundred.', 'M_4')],
-            4: [say('A.U.R.A.', 'Sector 4, Commander. Somebody stopped here, two centuries ago.'),
-                hasCrew('MEDIC') && say('Dr. Aris', 'Two hundred years dead, and their hull number is higher than ours.', 'F_3'),
-                hasCrew('ENGINEER') && say('Eng. Jaxon', 'Green down there. Real green. Wake me if it has grass.', 'M_2')],
-            5: [say('A.U.R.A.', 'Sector 5, Commander. Hulls in the tens of thousands. All of them ours.'),
-                hasCrew('SECURITY') && say('Spc. Vance', 'I counted more than nine in the yard. I did not count this many.', 'M_4'),
-                hasCrew('SPECIALIST') && say('Tech Mira', 'And here we see... no. I cannot narrate this one.', 'F_5')],
-            6: [say('A.U.R.A.', 'Sector 6, Commander. The oldest wrecks of all, and a light at the end of the heading.'),
+            2: [say('A.U.R.A.', 'Sector 2, Commander. The last of the eight ships should be out here.'),
+                hasCrew('ENGINEER') && say('Eng. Jaxon', 'Eight ships, and none of them left us so much as a note.', 'M_2'),
+                hasCrew('MEDIC') && say('Dr. Aris', 'If we find their crews, we write their names down. All of them.', 'F_3')],
+            3: [say('A.U.R.A.', 'Sector 3, Commander. Hundreds of ship beacons ahead, all ours.'),
+                hasCrew('SPECIALIST') && say('Tech Mira', 'Look at the ship numbers. Two hundred. Six hundred. Nine hundred.', 'F_5'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'They told us nine ships. That is nine hundred.', 'M_4')],
+            4: [say('A.U.R.A.', 'Sector 4, Commander. These wrecks are about two hundred years old.'),
+                hasCrew('MEDIC') && say('Dr. Aris', 'Two hundred years dead, and their numbers are higher than ours. How?', 'F_3'),
+                hasCrew('ENGINEER') && say('Eng. Jaxon', 'There is real green down there. I would stop here, Commander.', 'M_2')],
+            5: [say('A.U.R.A.', 'Sector 5, Commander. Ship numbers in the tens of thousands. All of them ours.'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'At the shipyard I saw more than nine being built. Never this many.', 'M_4'),
+                hasCrew('SPECIALIST') && say('Tech Mira', 'I have stopped reading the numbers. I cannot keep up.', 'F_5')],
+            6: [say('A.U.R.A.', 'Sector 6, Commander. The oldest wrecks, and a light at the end of the heading.'),
                 hasCrew('MEDIC') && say('Dr. Aris', 'It looks like a sun. Every one of them flew toward it.', 'F_3'),
-                hasCrew('SPECIALIST') && say('Tech Mira', 'It is not warm. A sun would be warm.', 'F_5'),
-                hasCrew('SECURITY') && say('Spc. Vance', 'Thirty thousand hulls between here and there. I am not counting them.', 'M_4')],
+                hasCrew('SPECIALIST') && say('Tech Mira', 'It gives off no heat. A real sun would.', 'F_5'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'Thirty thousand wrecks between us and that light.', 'M_4')],
         };
         return (LINES[nextSector] || [say('A.U.R.A.', `Sector ${nextSector}, Commander. All systems normal.`)]).filter(Boolean);
     }
@@ -2576,8 +2590,8 @@ class App {
                 onChoiceMade: () => {
                     this.orbitView.updateCommandDeck(planet);
                     if (planet.isFirstSignal) this.findDiscDrawing(shipName);
-                    if (planet.hasTape) this.findBriefingTape(shipName);
-                    if (planet.hasPage) this.findSectorPage(shipName, planet.hasPage);
+                    const tapeDone = planet.hasTape ? this.findBriefingTape(shipName) : Promise.resolve();
+                    if (planet.hasPage) tapeDone.then(() => this.findSectorPage(shipName, planet.hasPage));
                 }
             });
             return;
@@ -2805,6 +2819,8 @@ Then you're through.`,
                         }
 
                         state.currentSystem = null;
+                        state.lastVisitedSystem = null;
+                        if (window.app) { window.app.plantBriefingTape(); window.app.plantSectorPage(); }
                         state.addLog("=== REALITY BREACH SUCCESSFUL ===");
                         state.addLog(`Emerged in Sector ${targetSector}. The crew will never forget what they saw.`);
 
@@ -2928,7 +2944,11 @@ Then you're through.`,
         }) : Promise.resolve())).then(() => window.EncounterCard.open(this, {
             color: '#ffd27a', kicker: a.kicker, title: a.title, zIndex: 3000, context: a.context,
             dialogue: a.dialogue.filter(d => isAlive(d.speaker)),
-            choices: encounter.choices.map(c => ({ text: c.text, desc: c.desc, requires: c.requires, requiresLabel: c.requiresLabel })),
+            choices: encounter.choices.map(c => {
+                const had = c.who ? ((this.state._standing || {})[c.who] || 0) : null;
+                const label = c.who && typeof STANDING_NEEDED !== 'undefined' ? `${c.requiresLabel} (you backed them ${Math.min(had, STANDING_NEEDED)} of the ${STANDING_NEEDED} times it takes)` : c.requiresLabel;
+                return { text: c.text, desc: c.desc, requires: c.requires, requiresLabel: label };
+            }),
             onPick: (idx) => {
                 const result = encounter.choices[idx].effect(this.state);
                 planet.structureApproached = true;
@@ -3066,6 +3086,9 @@ Then you're through.`,
         // New game button
         const newGameBtn = modal.querySelector('#btn-new-game');
         newGameBtn.onclick = () => {
+            try { localStorage.removeItem('silentExodus_save'); } catch (e) { /* storage blocked: the reload still starts fresh */ }
+            location.reload();                                                           // like the other end screens: nothing from this run survives
+            return;
             modal.remove();
             // Reset the game completely
             this.state.init();
@@ -5281,11 +5304,14 @@ Then you're through.`,
 
         // Find cheapest warp cost (accounting for bridge damage)
         let cheapestCost = Infinity;
+        const stopsLeft = this.state.getStopsLeft ? this.state.getStopsLeft() : 1;
         nodes.forEach(planet => {
             if (planet.ghost) return; // Skip ghost planets
             const cost = this.state.getWarpCost(planet);
-            if (cost < cheapestCost) cheapestCost = cost;
+            const isLegal = cost === 0 || stopsLeft > 0 || window.TEST_MODE;           // with no stops left, only a free warp is possible
+            if (isLegal && cost < cheapestCost) cheapestCost = cost;
         });
+        if (this.state.currentSector < FINAL_SECTOR && this.state.energy >= SECTOR_JUMP_BASE_COST) return; // the jump itself is always a way out
 
         // If player can afford at least one warp, they're not stranded
         if (energy >= cheapestCost) return;
@@ -5293,7 +5319,7 @@ Then you're through.`,
         // Check if player has any way to gain energy:
         // 1. Items in cargo that could give energy (check onUse function source for energy gains)
         const hasEnergyItem = (this.state.cargo || []).some(item => {
-            if (!item.onUse) return false;
+            if (!item.onUse || item.isKept) return false;
             // Check if onUse function contains energy-related code
             const fnSource = item.onUse.toString();
             if (fnSource.includes('energy') || fnSource.includes('Energy')) return true;
@@ -5310,7 +5336,7 @@ Then you're through.`,
         if (probeIntegrity > 0 && hasUnscannnedPlanets) return;
 
         // 3. If player has ANY usable items at all, give them a chance (they might figure something out)
-        const hasAnyUsableItem = (this.state.cargo || []).some(item => item.onUse);
+        const hasAnyUsableItem = (this.state.cargo || []).some(item => item.onUse && !item.isKept);
         if (hasAnyUsableItem) return;
 
         // Player is truly stranded - no energy, no energy items, no probe, no usable items

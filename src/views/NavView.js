@@ -388,7 +388,7 @@ class NavView {
                         ? `<div style="margin-top: auto; color: var(--color-primary); text-align: center; border: 1px solid var(--color-primary); padding: 4px; font-size: 0.8em;">
                             ${isDeepScanned ? 'FULL ANALYSIS COMPLETE' : 'LONG-RANGE SCAN COMPLETE'}
                            </div>`
-                        : (planet.id === this.state.currentSystem?.id
+                        : (planet.id === (this.state.currentSystem || this.state.lastVisitedSystem)?.id
                             ? `<div style="margin-top: auto; color: var(--color-primary); text-align: center; border: 1px solid var(--color-primary-dim); padding: 8px; opacity: 0.7;">
                                 CURRENT LOCATION
                                </div>`
@@ -399,7 +399,7 @@ class NavView {
                     }
                 </div>
                 <div class="actions-container" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-                    ${(isRemoteScanned || isDeepScanned) && planet.id !== this.state.currentSystem?.id ? `
+                    ${(isRemoteScanned || isDeepScanned) && planet.id !== (this.state.currentSystem || this.state.lastVisitedSystem)?.id ? `
                         <button class="probe-btn" style="width: 100%; padding: 8px; background: transparent; border: 1px solid var(--amber); color: var(--amber); font-family: var(--font-mono); cursor: pointer; font-size: 0.8em;">
                             🛰️ LAUNCH PROBE (REMOTE)
                         </button>
@@ -409,7 +409,7 @@ class NavView {
                         OUT OF REACH — NO STOPS LEFT
                     </button>` : `
                     <button class="warp-btn" style="width: 100%; padding: 12px; background: var(--color-primary); color: #000; border: none; font-weight: bold; font-family: var(--font-display); cursor: pointer; text-transform: uppercase; font-size: 0.9em;">
-                        ${planet.id === this.state.currentSystem?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
+                        ${planet.id === (this.state.currentSystem || this.state.lastVisitedSystem)?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
                     </button>`}
                 </div>
             </div>

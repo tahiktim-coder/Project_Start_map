@@ -25,17 +25,17 @@
     // ── what is said, and when. A speaker of '' is the narration. ──
     const BEATS = [
         [400, '', 'The third burn did not finish.'],
-        [2400, 'Eng. Jaxon', 'Kettle\'s cold.'],
-        [4000, 'Spc. Vance', 'Count off.'],
+        [2400, 'Eng. Jaxon', 'The reactor has gone cold.'],
+        [4000, 'Spc. Vance', 'Everyone, sound off.'],
         [5400, '', 'Nobody answers.'],
-        [7000, 'Tech Mira', 'A.U.R.A.?'],
+        [7000, 'Tech Mira', 'A.U.R.A.? Are you there?'],
         [8400, '', 'Nobody answers.'],
         [9600, '', 'Nobody answers. Nobody answers.'],
         [10800, '', 'Nobody answers. Nobody answers. Nobody answers.'],
-        [13400, '', 'You are not moving. None of them are.'],
-        [16800, '', 'Every one of them was thrown at the same moment.'],
-        [20200, '', 'You are the last, and the slowest.'],
-        [22800, '', 'At the end of it, a light the size of a pinhead.'],
+        [13400, '', 'Ships. Thousands of them, in one long line. None of them are moving.'],
+        [16800, '', 'Every ship Earth ever built. All on the same heading.'],
+        [20200, '', 'Yours is the last one in the line.'],
+        [22800, '', 'At the far end, a light the size of a pinhead.'],
         [25200, '', 'The burn finishes.'],
     ];
 
@@ -111,10 +111,12 @@
             const world = buildCorridor(), startedAt = performance.now();
             const sizeWrong = () => { wrongCanvas.width = Math.ceil(innerWidth / 2); wrongCanvas.height = Math.ceil(innerHeight / 2); };
             sizeWrong();
-            let beatIndex = -1, isDone = false, darkened = 0, musicOut = false, lastHum = 0;
+            let beatIndex = -1, isDone = false, darkened = 0, musicOut = false, lastHum = 0, fade = 0;
+            const isDead = speaker => !!(speaker && state && state.isSilentSpeaker && state.isSilentSpeaker(`${speaker}: `));
             if (state && state.addLog) state.addLog('SECTOR 3 Generated. — no name. no stars.');
 
             function restore() {
+                clearInterval(fade);                                                             // a skip mid-fade must not keep turning the music down
                 document.body.classList.remove('is-throw');
                 if (container) { container.style.transition = ''; container.style.transform = ''; container.style.filter = ''; }
                 decks.forEach(d => { d.style.transition = ''; d.style.opacity = ''; });
@@ -130,7 +132,7 @@
                 const sector = 3, name = (typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[sector]) ? SECTOR_CONFIG[sector].name : 'SECTOR 3';
                 const line = (typeof SECTOR_ARRIVAL_LINES !== 'undefined' && SECTOR_ARRIVAL_LINES[sector]) || '';
                 const mira = state && state.crew.find(c => c.name.includes('Mira') && c.status !== 'DEAD');
-                const voice = mira ? { name: 'Tech Mira', text: 'Commander. There are more than eight.', face: mira.portraitId } : { name: 'Spc. Vance', text: 'More than eight. I said so.', face: null };
+                const voice = mira ? { name: 'Tech Mira', text: 'Commander, there are a lot more than eight ships out here.', face: mira.portraitId } : { name: 'A.U.R.A.', text: 'Burn complete, Commander. There are many more ship beacons ahead than expected.', face: null };
                 overlay.className = 'warp-plot';
                 overlay.innerHTML = `<div class="warp-plot-frame warp-arrival">
                     <p class="warp-plot-kicker">SECTOR ${sector} OF ${typeof FINAL_SECTOR !== 'undefined' ? FINAL_SECTOR : 6} · THE BURN FINISHED</p>
@@ -150,7 +152,7 @@
                 if (t >= CARD_AT_MS) { card(); return; }
                 // the decks go dark, one at a time; then the music
                 while (darkened < decks.length && t > DECK_DARK_FROM_MS + darkened * DECK_DARK_EVERY_MS) { const d = decks[darkened++]; d.style.transition = 'opacity 900ms'; d.style.opacity = '0.12'; tone(52 - darkened * 3, 0.5, 0.06); }
-                if (!musicOut && t > MUSIC_OUT_AT_MS && audio && audio.setMusicVolume && musicBefore != null) { musicOut = true; let step = 0; const fade = setInterval(() => { step++; audio.setMusicVolume(musicBefore * Math.max(0, 1 - step / 12)); if (step >= 12) clearInterval(fade); }, MUSIC_OUT_MS / 12); }
+                if (!musicOut && t > MUSIC_OUT_AT_MS && audio && audio.setMusicVolume && musicBefore != null) { musicOut = true; let step = 0; fade = setInterval(() => { step++; audio.setMusicVolume(musicBefore * Math.max(0, 1 - step / 12)); if (step >= 12) clearInterval(fade); }, MUSIC_OUT_MS / 12); }
                 // the screen goes wrong
                 if (t > WRONG_FROM_MS && t < BLACK_AT_MS && container) {
                     const p = span(t, WRONG_FROM_MS, BLACK_AT_MS), breath = 1 + Math.sin(t / 900) * 0.16 * p;
@@ -167,7 +169,8 @@
                 const next = BEATS.findIndex(([at]) => at > t), current = (next === -1 ? BEATS.length : next) - 1;
                 if (current !== beatIndex && current >= 0) {
                     beatIndex = current;
-                    const [, speaker, text] = BEATS[current];
+                    const [, rawSpeaker, rawText] = BEATS[current];
+                    const speaker = isDead(rawSpeaker) ? '' : rawSpeaker, text = isDead(rawSpeaker) ? 'Nobody answers.' : rawText;
                     captionEl.classList.remove('is-in'); void captionEl.offsetWidth;
                     captionEl.innerHTML = speaker ? `<b>${esc(speaker)}</b>${esc(text)}` : esc(text);
                     captionEl.classList.add('is-in');
