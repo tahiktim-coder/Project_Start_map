@@ -790,3 +790,8 @@ class AuraSystem {
 
 // Self-instantiate singleton
 window.AuraSystem = new AuraSystem();
+// The class name shadows the instance in script scope, so `AuraSystem.adjustEthics(...)` (written in several data files)
+// would hit the class, not the singleton. Forward the calls the data files make so both spellings work.
+['adjustEthics', 'getTier', 'tryComment', 'generatePremonition', 'triggerPremonition'].forEach(name => {
+    if (typeof AuraSystem.prototype[name] === 'function') AuraSystem[name] = (...args) => window.AuraSystem[name](...args);
+});
