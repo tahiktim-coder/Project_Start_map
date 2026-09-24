@@ -1543,7 +1543,7 @@ class App {
         // Skipped for free re-entries, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
         if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost) {
             this._isInTransit = true;
-            const plotOptions = this.getPlotOptions(planet.name, planet.isStation || planet.type === 'STATION' ? 'station' : 'planet');
+            const plotOptions = this.getPlotOptions(planet.name, 'planet');
             plotOptions.burns = 1;
             plotOptions.targetHtml = window.BodyRenderer ? window.BodyRenderer.body(planet, 64) : null;
             window.WarpPlot.play(plotOptions).then(result => {
