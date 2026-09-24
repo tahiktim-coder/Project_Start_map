@@ -67,7 +67,7 @@
         const living = state.crew.filter(c => c.status !== 'DEAD');
         return `
             <section class="end-card is-ending" role="dialog" aria-label="Ending">
-                <p class="end-kicker">THE JOURNEY ENDS · ${esc(result.ending || '')}</p>
+                <p class="end-kicker">THE JOURNEY ENDS</p>
                 <h2 class="end-title">${esc(result.title || '')}</h2>
                 <div class="end-story">${textHtml}</div>
                 <h4>THE CREW</h4>
