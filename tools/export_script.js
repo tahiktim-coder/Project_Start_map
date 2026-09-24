@@ -241,6 +241,45 @@ for (let sector = 1; sector <= 6; sector++) {
     write('07-finale.md', 'The finale — the light', b);
 }
 
+// settling a planet: every colony ending, read straight from EndingSystem.js
+{
+    const FILE = 'EndingSystem.js', lines = read('src/systems/EndingSystem.js').split('\n');
+    const b = [HOW, '', '_What the player reads after choosing to settle. The game stitches several of these together: how the landing went, then lines about the crew, then what the colony became, then "fifty years later". Words in [brackets] are filled in by the game. The italic "when" line shows, in code, when the next lines are used._', ''];
+    const PLACEHOLDERS = [[/planet\.name/, 'planet name'], [/^temp$/, 'temperature'], [/currentSector/, 'sector number'], [/viability/, 'how good the world is'], [/wrongNames/, 'their surnames'], [/commander\./, "commander's surname"], [/deadNames/, 'their surnames'], [/Count|Pop|pop|Math\./, 'a number']];
+    const placeholder = e => { const hit = PLACEHOLDERS.find(([re]) => re.test(e)); return hit ? hit[1] : e.trim().slice(0, 32); };
+    const plain = s => clean(s.replace(/<[^>]+>/g, ' ').replace(/\\(['"`])/g, '$1').replace(/\$\{([^}]*)\}/g, (_, e) => `[${placeholder(e)}]`));
+    const STR = /`((?:\\`|[^`])*)`|"((?:\\"|[^"])*)"|'((?:\\'|[^'])*)'/g;
+    const HEADS = [[/static generateOutcome\(/, 'The second chance (from colony notes)'], [/static generateOutcomeRaw\(/, 'Before anything else: can this world work at all?'], [/static generateEpilogue\(/, 'Fifty years later']];
+    const start = lines.findIndex(l => /static generateOutcome\(/.test(l));
+    // Group lines by the `if` that guards them: each group prints as its title, then when it applies, then its lines.
+    let group = { when: '', titles: [], texts: [] };
+    const flush = () => {
+        if (group.texts.length || group.titles.length) {
+            group.titles.forEach(t => b.push(`### ${t}`));
+            if (group.when) b.push(`_when: ${group.when.replace(/_/g, '\\_')}_`);
+            b.push(...group.texts, '');
+        }
+        group = { when: '', titles: [], texts: [] };
+    };
+    for (let i = start; i < lines.length; i++) {
+        const line = lines[i], at = tag(FILE, `line ${i + 1}`);
+        const head = HEADS.find(([re]) => re.test(line)), section = /\/\/ ---\s*(.+?)\s*---/.exec(line);
+        if (head || section) { flush(); b.push(`## ${head ? head[1] : section[1]}`, ''); continue; }
+        const cond = /^\s*(?:\}\s*else\s+)?if\s*\((.+)\)\s*\{?\s*$/.exec(line);
+        if (cond) { flush(); group.when = cond[1]; continue; }
+        if (/^\s*\}\s*else\s*\{\s*$/.test(line)) { const before = group.when; flush(); group.when = before ? `otherwise (not: ${before})` : 'otherwise'; continue; }
+        if (/^\s*(\/\/|\*|console\.)/.test(line)) continue;
+        const named = /title\s*=\s*["']([^"']+)["']|title:\s*'([^']+)'|\{\s*t:\s*"([^"]+)"/.exec(line);
+        const title = named && (named[1] || named[2] || named[3]);
+        if (title && title !== 'UNKNOWN') { if (named[3]) flush(); group.titles.push(`${title}${at}`); }
+        const key = /^\s*'([A-Z_]+)':/.exec(line);
+        const texts = [...line.matchAll(STR)].map(m => m[1] ?? m[2] ?? m[3]).map(plain).filter(t => t.split(/\s+/).length >= 5 && !/^[\w.]+$/.test(t));
+        texts.forEach(t => group.texts.push(`- ${key ? `**${key[1]}** — ` : ''}${t}${at}`));
+    }
+    flush();
+    write('08-settling.md', 'Settling a planet — every colony ending', b);
+}
+
 // the pools
 {
     const b = [HOW, '', 'Random encounters. Each can happen in any sector unless noted.', ''];

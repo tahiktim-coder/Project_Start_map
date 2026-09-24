@@ -12,6 +12,7 @@ Read in this order:
 - [Sector 5 — THE TALLY](sector-5.md)
 - [Sector 6 — THE LIGHT](sector-6.md)
 - [The finale — the light](07-finale.md)
+- [Settling a planet — every colony ending](08-settling.md)
 - [The random pools](pools.md)
 
 The story these files tell is in [../CANON.md](../CANON.md). How lines should sound is in [../STYLE.md](../STYLE.md).
