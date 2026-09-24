@@ -283,6 +283,7 @@ class GameState {
             _standing: this._standing || null,
             _countSceneSeen: !!this._countSceneSeen,
             _sleepers: this._sleepers || 0,
+            _warpDiscount: this._warpDiscount || 0,
             _encounteredShipNames: this._encounteredShipNames || [],
             _encounteredExodus: this._encounteredExodus || [],
             _seenCampfires: this._seenCampfires || [],
@@ -354,6 +355,7 @@ class GameState {
             this._standing = saveData._standing || null;
             this._countSceneSeen = !!saveData._countSceneSeen;
             this._sleepers = saveData._sleepers || 0;
+            this._warpDiscount = saveData._warpDiscount || 0;
             this._encounteredShipNames = saveData._encounteredShipNames || [];
             this._encounteredExodus = saveData._encounteredExodus || [];
             this._seenCampfires = saveData._seenCampfires || [];
@@ -428,6 +430,7 @@ class GameState {
         let cost = Math.floor((planet.fuelCost || 10) * (this.isDeckOperational('bridge') ? 1 : BRIDGE_DAMAGE_FACTOR));
         if (this._damagedCapacitors === this.currentSector) cost += BURNT_CAPACITOR_COST;
         if (this._lighthouseBonus) cost -= STAR_CHART_SAVING;
+        if (this._warpDiscount) cost -= Math.round(cost * Math.min(50, this._warpDiscount) / 100);   // charts and couplers found on the way, as a percentage off
         return Math.max(1, cost);
     }
 
@@ -1178,6 +1181,7 @@ class App {
                 return;
             }
             this.state.addLog("Breaking orbit. Systems disengaged.");
+            this.state.currentSystem = null;                                          // back on the map (lastVisitedSystem keeps the free re-entry)
             this.renderNav();
             if (currentPlanet && currentPlanet.isFirstSignal && currentPlanet.exodusInvestigated && !this.state._countSceneSeen) this.showCountScene();
         });
@@ -1988,10 +1992,12 @@ class App {
             this.state.addLog("BRIDGE OFFLINE: Remote scanning unavailable.");
             return;
         }
-        if (this.state.consumeEnergy(2)) {
+        const hasBigDish = this.state.upgrades.includes('sensor_v2');                     // Sensor Array V2: scans are free and report air and gravity
+        if (hasBigDish || this.state.consumeEnergy(2)) {
             const data = this.state.sectorNodes.find(p => p.id === planet.id);
             if (data) {
                 data.remoteScanned = true;
+                if (hasBigDish) data.dishRevealed = true;
 
                 // S3 INTERFERENCE hook — may corrupt scan data (can show false resource levels)
                 const scanConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
@@ -2022,7 +2028,8 @@ class App {
                 const metalLevel = data.resources?.metals >= 70 ? 'HIGH' : (data.resources?.metals >= 40 ? 'MODERATE' : 'LOW');
                 const energyLevel = data.resources?.energy >= 70 ? 'HIGH' : (data.resources?.energy >= 40 ? 'MODERATE' : 'LOW');
 
-                this.state.addLog(`Long-range scan: ${planet.name}. Salvage: ${metalLevel}. Energy: ${energyLevel}. Signals: ${signalStr}.`);
+                const dishStr = hasBigDish && data.metrics ? ` Air: ${data.atmosphere || 'unknown'}. Gravity: ${data.metrics.gravity != null ? data.metrics.gravity.toFixed(1) + ' G' : 'unknown'}.` : '';
+                this.state.addLog(`Long-range scan: ${planet.name}. Salvage: ${metalLevel}. Energy: ${energyLevel}. Signals: ${signalStr}.${dishStr}`);
 
                 // Force re-render of right panel
                 this.navView.handlePlanetSelect(data);
@@ -3412,7 +3419,9 @@ Then you're through.`,
 
         if (this.state.consumeEnergy(2)) {
             this.state.addLog("Deep Scan started...");
-            if (tune && tune.grade === 'sharp') {
+            if (tune && tune.grade === 'sharp' && !this.state.isDeckOperational('lab')) {
+                this.state.addLog("Sharp lock, but the laboratory is down: nobody can work the extra detail into data.");
+            } else if (tune && tune.grade === 'sharp') {
                 this.state.addColonyKnowledge(1, true);
                 this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
             } else if (tune && tune.grade === 'weak') {

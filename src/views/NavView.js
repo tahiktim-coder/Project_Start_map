@@ -393,7 +393,7 @@ class NavView {
                                 CURRENT LOCATION
                                </div>`
                             : `<button class="scan-btn" style="margin-top: auto; width:100%; padding:8px; background: transparent; border: 1px solid var(--color-accent); color: var(--color-accent); cursor: pointer; font-family: var(--font-mono); font-size: 0.85em;">
-                                    LONG RANGE SCAN (-2 NRG)
+                                    LONG RANGE SCAN (${this.state && this.state.upgrades && this.state.upgrades.includes('sensor_v2') ? 'FREE' : '-2 NRG'})
                                </button>`
                         )
                     }
