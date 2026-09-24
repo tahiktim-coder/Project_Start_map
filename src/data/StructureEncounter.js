@@ -6,7 +6,7 @@
  * you backed that person during the run. Nobody explains the light. Nobody goes home. Every ending closes on the vault on Earth.
  */
 
-const STANDING_NEEDED = 1;   // raise to 2 once every crew member has three moments to side with them (GameState.noteStanding)
+const STANDING_NEEDED = 2;   // two moments where you sided with them; each crew member has at least eight across the run (GameState.noteStanding)
 
 const STRUCTURE_ENCOUNTER = {
     id: 'THE_STRUCTURE',
