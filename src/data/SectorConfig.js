@@ -206,7 +206,7 @@ const SECTOR_CONFIG = {
         ambientDesc: 'Hulls in the tens of thousands. The drive threw them unevenly here, and the instruments know it.',
         hazard: {
             id: 'REALITY_BREAKDOWN',
-            description: 'The throw was uneven here: distances and dates come back wrong'
+            description: 'The throw was uneven here: distances and dates come back wrong',
             onWarp: function(state) {
                 // 20% chance of random effect per warp
                 if (_testChance(0.20)) {
@@ -285,7 +285,7 @@ const SECTOR_CONFIG = {
         hasStructure: true,      // Special flag for THE STRUCTURE
         hazard: {
             id: 'THRESHOLD_CALL',
-            description: 'Nothing here is random. The light reads what reaches it.'
+            description: 'Nothing here is random. The light reads what reaches it.',
             onWarp: function(state) {
                 // The Threshold heals and harms in equal measure
                 // In test mode, always trigger something
