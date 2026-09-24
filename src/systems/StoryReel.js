@@ -256,7 +256,7 @@
         reading: {
             length: 12500,
             source: 'HULL CAMERA · FORWARD',
-            beats: [[400, 'It fills every window.'], [3200, 'It is not warm.'], [6200, 'Something moves across the ship, left to right.'], [9600, 'It reads her first.']],
+            beats: [[400, 'It fills every window.'], [3200, 'It looks like a sun, but it gives off no heat.'], [6200, 'Something moves through the ship, room by room.'], [9600, 'It reads the ship\'s computer first.']],
             draw(ctx, world, t) {
                 ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
                 drawLight(ctx, t, span(t, 0, 2600));
@@ -288,8 +288,8 @@
             },
         },
         jump2: jumpShot('Sector 2. One of the eight, drifting.', { density: 0.06, hull: ['EXODUS-6', 1200] }),
-        jump4: jumpShot('Sector 4. Nobody told you about thousands.', { density: 0.5, wrecks: 0.5, grid: 0.35, hull: ['EXODUS-2207', 900] }),
-        jump5: jumpShot('Sector 5. It has your number on it.', { density: 0.75, wrecks: 0.8, grid: 0.7, twin: 1500 }),
+        jump4: jumpShot('Sector 4. Ship numbers in the thousands.', { density: 0.5, wrecks: 0.5, grid: 0.35, hull: ['EXODUS-2207', 900] }),
+        jump5: jumpShot('Sector 5. A ship that looks exactly like yours.', { density: 0.75, wrecks: 0.8, grid: 0.7, twin: 1500 }),
         jump6: jumpShot('Sector 6. The end of the heading. It looks like a sun.', { density: 1, wrecks: 1, grid: 1, light: 1, noStars: true, twin: 600 }),
         corridor: {
             length: 21000,
