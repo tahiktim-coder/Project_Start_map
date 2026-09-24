@@ -1,5 +1,5 @@
 /**
- * SHIP EVENTS - Random malfunctions and incidents aboard the Exodus-9
+ * SHIP EVENTS - Random malfunctions and incidents aboard Exodus-9
  *
  * Triggers: On warp, sector jump, or randomly during actions
  * Creates drama and resource pressure
@@ -12,35 +12,35 @@ const SHIP_MALFUNCTION_EVENTS = [
         weight: 15,
         title: "Power Surge",
         condition: (state) => state.energy > 20, // Need some power to surge
-        context: "A power conduit overloads. Sparks fly across the engineering bay.",
+        context: "A power line overloads, and sparks fly across the engine room.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Conduit 7-C just blew! Rerouting power now!" },
-            { speaker: 'A.U.R.A.', text: "Power fluctuation detected. Multiple systems affected." }
+            { speaker: 'Eng. Jaxon', text: "A power line just blew. I'm rerouting around it now." },
+            { speaker: 'A.U.R.A.', text: "Power is dropping on several systems, Commander. Rerouting is under way." }
         ],
         effect: (state) => {
             const energyLoss = Math.floor(Math.random() * 10) + 5; // 5-15 energy
             state.energy = Math.max(0, state.energy - energyLoss);
-            state.addLog(`Power surge! -${energyLoss} Energy lost to damaged conduits.`);
+            state.addLog(`Power surge. -${energyLoss} Energy lost through the damaged line.`);
 
             // 30% chance to damage engineering
             if (Math.random() < 0.3 && state.isDeckOperational('engineering')) {
                 state.shipDecks.engineering.status = 'DAMAGED';
-                state.addLog("CRITICAL: Engineering deck damaged in the surge!");
-                return `Power surge caused ${energyLoss} energy loss. Engineering deck DAMAGED.`;
+                state.addLog("The engineering deck was damaged in the surge.");
+                return `Power surge. -${energyLoss} Energy. Engineering deck damaged.`;
             }
-            return `Power surge contained. Lost ${energyLoss} energy to the overload.`;
+            return `Power surge under control. -${energyLoss} Energy.`;
         }
     },
 
     {
         id: 'LIFE_SUPPORT_HICCUP',
         weight: 10,
-        title: "Life Support Warning",
+        title: "Air System Warning",
         condition: (state) => true,
-        context: "The air recyclers stutter. For one long moment, the ship holds its breath.",
+        context: "The air recyclers stop for a moment. Then they start again.",
         dialogue: [
-            { speaker: 'Dr. Aris', text: "CO2 levels spiking. Everyone stay calm." },
-            { speaker: 'Tech Mira', text: "Backup filters are kicking in. We're okay. For now." }
+            { speaker: 'Dr. Aris', text: "Carbon dioxide is climbing. Everyone breathe slowly and stay calm." },
+            { speaker: 'Tech Mira', text: "The backup filters just switched on. We're fine now." }
         ],
         effect: (state) => {
             // All crew gain +1 stress from the scare
@@ -51,8 +51,8 @@ const SHIP_MALFUNCTION_EVENTS = [
                     affected++;
                 }
             });
-            state.addLog("Life support recovered. The scare left everyone on edge.");
-            return `Life support briefly failed. ${affected} crew members stressed by the incident.`;
+            state.addLog("The air system is working again, but everyone is on edge.");
+            return `The air system failed for a moment. ${affected} crew +1 Stress.`;
         }
     },
 
@@ -60,12 +60,12 @@ const SHIP_MALFUNCTION_EVENTS = [
     {
         id: 'MICRO_METEOR',
         weight: 12,
-        title: "Micrometeorite Impact",
+        title: "Small Impact",
         condition: (state) => true,
-        context: "A sharp crack echoes through the hull. Something small and fast just hit us.",
+        context: "Something small hit the hull at high speed. The crack echoed through the whole ship.",
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Impact! Checking for breaches!" },
-            { speaker: 'Eng. Jaxon', text: "Hull integrity... holding. Barely. That was close." }
+            { speaker: 'Spc. Vance', text: "We've been hit. I'm checking for holes." },
+            { speaker: 'Eng. Jaxon', text: "The hull's holding. That one was close." }
         ],
         effect: (state) => {
             // Pick a random operational deck to damage
@@ -75,30 +75,30 @@ const SHIP_MALFUNCTION_EVENTS = [
             if (operational.length > 0 && Math.random() < 0.4) {
                 const [deckKey, deck] = operational[Math.floor(Math.random() * operational.length)];
                 state.shipDecks[deckKey].status = 'DAMAGED';
-                state.addLog(`Micrometeorite breached ${deck.label}! Deck DAMAGED.`);
-                return `Micrometeorite strike! ${deck.label} damaged. Repairs needed.`;
+                state.addLog(`A small rock punched into ${deck.label}. Deck damaged.`);
+                return `Impact. ${deck.label} damaged and needs repair.`;
             }
 
             // Near miss - just some salvage lost
             const salvageLoss = Math.floor(Math.random() * 10) + 5;
             state.salvage = Math.max(0, state.salvage - salvageLoss);
-            state.addLog(`Impact shook loose external cargo. -${salvageLoss} Salvage.`);
-            return `Glancing hit. Lost ${salvageLoss} salvage to the impact.`;
+            state.addLog(`The impact knocked cargo off the outside racks. -${salvageLoss} Salvage.`);
+            return `Glancing hit. -${salvageLoss} Salvage.`;
         }
     },
 
     {
         id: 'HULL_STRESS',
         weight: 8,
-        title: "Hull Stress Fractures",
+        title: "Hull Cracks",
         condition: (state) => state.currentSector >= 2, // Only in later sectors
-        context: "The ship groans. Metal fatigue is catching up to us.",
+        context: "The ship creaks. The hull is starting to crack from the strain of so many jumps.",
         dialogue: (state) => {
             const damagedCount = Object.values(state.shipDecks || {}).filter(d => d.status !== 'OPERATIONAL').length;
-            const warningLevel = damagedCount >= 2 ? "Critical repairs needed." : "Patching required.";
+            const warningLevel = damagedCount >= 2 ? "Several decks already need repair." : "I recommend patching them now.";
             return [
-                { speaker: 'Eng. Jaxon', text: "Stress fractures forming. This ship has been through a lot." },
-                { speaker: 'A.U.R.A.', text: `Hull micro-fractures detected. ${warningLevel}` }
+                { speaker: 'Eng. Jaxon', text: "Small cracks are forming in the hull. She's been through a lot." },
+                { speaker: 'A.U.R.A.', text: `Hull cracks detected, Commander. ${warningLevel}` }
             ];
         },
         effect: (state) => {
@@ -106,17 +106,17 @@ const SHIP_MALFUNCTION_EVENTS = [
             const repairCost = Math.floor(Math.random() * 15) + 10;
             if (state.salvage >= repairCost) {
                 state.salvage -= repairCost;
-                state.addLog(`Emergency hull patches applied. -${repairCost} Salvage.`);
-                return `Hull cracks patched. Cost ${repairCost} salvage in materials.`;
+                state.addLog(`Hull patched. -${repairCost} Salvage.`);
+                return `Hull cracks patched. -${repairCost} Salvage.`;
             } else {
                 // Not enough salvage - cargo gets damaged
                 if (state.isDeckOperational('cargo')) {
                     state.shipDecks.cargo.status = 'DAMAGED';
-                    state.addLog("Couldn't patch the breach in time. Cargo hold breached!");
-                    return "Hull breach! Cargo hold DAMAGED due to lack of repair materials.";
+                    state.addLog("We couldn't patch the crack in time. The cargo hold is open to space.");
+                    return "Hull breach. Cargo hold damaged. We had no metal to patch it.";
                 }
-                state.addLog("Hull groaning but holding. For now.");
-                return "Structural stress noted. No materials to repair. Ship integrity declining.";
+                state.addLog("The hull is creaking, but it's holding for now.");
+                return "Hull cracks noted. We have no metal to repair them.";
             }
         }
     },
@@ -125,26 +125,26 @@ const SHIP_MALFUNCTION_EVENTS = [
     {
         id: 'SENSOR_GLITCH',
         weight: 10,
-        title: "Sensor Malfunction",
+        title: "Sensor Failure",
         condition: (state) => state.isDeckOperational('bridge'),
-        context: "The navigation displays flicker and die. For a moment, we're blind.",
+        context: "The navigation screens flicker and go dark. For a moment, we can't see anything outside.",
         dialogue: [
-            { speaker: 'Tech Mira', text: "Sensors are down! Running diagnostics..." },
-            { speaker: 'Spc. Vance', text: "I don't like being blind out here. Fix it. Now." }
+            { speaker: 'Tech Mira', text: "Sensors are down. I'm running a check now." },
+            { speaker: 'Spc. Vance', text: "I don't like flying blind out here. Get them back up." }
         ],
         effect: (state) => {
             // 50% chance bridge gets damaged
             if (Math.random() < 0.5) {
                 state.shipDecks.bridge.status = 'DAMAGED';
-                state.addLog("Sensor array burned out. Bridge systems offline!");
-                return "Sensor failure! Bridge DAMAGED. Navigation is down.";
+                state.addLog("The sensor array burned out. The bridge is down.");
+                return "Sensors failed. Bridge damaged.";
             }
 
             // Otherwise just energy cost to reboot
             const energyCost = Math.floor(Math.random() * 8) + 3;
             state.energy = Math.max(0, state.energy - energyCost);
-            state.addLog(`Sensors rebooted. Emergency power drain: -${energyCost} Energy.`);
-            return `Sensor glitch resolved. Cost ${energyCost} energy to restore systems.`;
+            state.addLog(`Sensors restarted. -${energyCost} Energy.`);
+            return `Sensors back online. -${energyCost} Energy.`;
         }
     },
 
@@ -153,10 +153,10 @@ const SHIP_MALFUNCTION_EVENTS = [
         weight: 6,
         title: "Coolant Leak",
         condition: (state) => true,
-        context: "A pipe bursts. Freezing coolant sprays across the corridor.",
+        context: "A pipe bursts and sprays freezing coolant down the corridor.",
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Coolant exposure! Get everyone clear!" },
-            { speaker: 'Eng. Jaxon', text: "Shutting off that section. We're losing cooling capacity." }
+            { speaker: 'Dr. Aris', text: "Coolant leak! Everyone get clear of the corridor!" },
+            { speaker: 'Eng. Jaxon', text: "I'm shutting off that section. We'll lose some cooling." }
         ],
         effect: (state) => {
             // Random crew injury
@@ -164,15 +164,15 @@ const SHIP_MALFUNCTION_EVENTS = [
             if (healthy.length > 0 && Math.random() < 0.4) {
                 const victim = healthy[Math.floor(Math.random() * healthy.length)];
                 victim.status = 'INJURED';
-                state.addLog(`${victim.name} caught in the coolant spray! Frostbite sustained.`);
-                return `Coolant leak! ${victim.name} INJURED by freezing spray.`;
+                state.addLog(`${victim.name} was caught in the spray and has frostbite.`);
+                return `Coolant leak. ${victim.name} injured.`;
             }
 
             // Energy loss from cooling failure
             const energyLoss = Math.floor(Math.random() * 8) + 5;
             state.energy = Math.max(0, state.energy - energyLoss);
-            state.addLog(`Coolant contained. Systems running hot. -${energyLoss} Energy.`);
-            return `Coolant leak sealed. Lost ${energyLoss} energy to overheating systems.`;
+            state.addLog(`Leak sealed. Systems are running hot. -${energyLoss} Energy.`);
+            return `Coolant leak sealed. -${energyLoss} Energy.`;
         }
     },
 
@@ -180,28 +180,28 @@ const SHIP_MALFUNCTION_EVENTS = [
     {
         id: 'CARGO_SHIFT',
         weight: 8,
-        title: "Cargo Shift",
+        title: "Cargo Came Loose",
         condition: (state) => state.salvage > 20,
-        context: "During the last maneuver, something in the cargo hold came loose.",
+        context: "Something in the cargo hold broke loose during the last burn.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Heard a crash from cargo. Better check on our supplies." },
-            { speaker: 'A.U.R.A.', text: "Cargo hold damaged. Someone should go and look." }
+            { speaker: 'Eng. Jaxon', text: "I heard a crash from the hold. We'd better check the supplies." },
+            { speaker: 'A.U.R.A.', text: "There's damage in the cargo hold, Commander. Someone should take a look." }
         ],
         effect: (state) => {
             // Lose some salvage or rations - guaranteed loss
             if (Math.random() < 0.5 && state.salvage > 0) {
                 const salvageLoss = Math.min(state.salvage, Math.floor(Math.random() * 15) + 5);
                 state.salvage = Math.max(0, state.salvage - salvageLoss);
-                state.addLog(`⚠ Salvage containers ruptured! -${salvageLoss} SALVAGE lost.`);
-                return `CARGO DAMAGE: Lost ${salvageLoss} salvage to impact.`;
+                state.addLog(`Salvage crates split open. -${salvageLoss} Salvage.`);
+                return `Cargo damaged. -${salvageLoss} Salvage.`;
             } else if (state.rations > 0) {
                 const rationLoss = Math.min(state.rations, Math.floor(Math.random() * 2) + 1);
                 state.rations = Math.max(0, state.rations - rationLoss);
-                state.addLog(`⚠ Ration containers breached! -${rationLoss} RATIONS spoiled.`);
-                return `CARGO DAMAGE: ${rationLoss} rations destroyed in the accident.`;
+                state.addLog(`Ration crates split open. -${rationLoss} Rations spoiled.`);
+                return `Cargo damaged. -${rationLoss} Rations.`;
             } else {
-                state.addLog("Cargo shift detected. Nothing was damaged - storage was empty.");
-                return "Cargo shift. Fortunately, nothing of value was affected.";
+                state.addLog("The cargo shifted, but the hold was empty, so nothing was lost.");
+                return "Cargo shifted. Nothing was damaged.";
             }
         }
     },
@@ -209,27 +209,28 @@ const SHIP_MALFUNCTION_EVENTS = [
     {
         id: 'LAB_ACCIDENT',
         weight: 5,
-        title: "Laboratory Accident",
+        title: "Lab Accident",
         condition: (state) => state.isDeckOperational('lab'),
-        context: "Something in the laboratory just shattered. A strange smell fills the air.",
+        context: "Something in the lab just shattered, and there's a strange smell in the air.",
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Everyone out! Seal the lab until we know what broke!" },
-            { speaker: 'Tech Mira', text: "Was that the sample containment? Oh no..." }
+            { speaker: 'Dr. Aris', text: "Everybody out. Seal the lab until we know what broke." },
+            { speaker: 'Tech Mira', text: "Was that the sample storage? Oh no." }
         ],
         effect: (state) => {
             // Lab gets damaged
             state.shipDecks.lab.status = 'DAMAGED';
 
             // Check if any cargo items should be destroyed
-            if (state.cargo && state.cargo.length > 0) {
-                const destroyed = state.cargo.pop();
-                state.addLog(`${destroyed.name} destroyed in the lab accident!`);
-                state.addLog("Laboratory sealed until decontamination complete.");
-                return `Lab accident! ${destroyed.name} lost. Laboratory DAMAGED.`;
+            const loseIdx = (state.cargo || []).map((item, i) => item.isKept ? -1 : i).filter(i => i >= 0).pop();   // papers and tapes survive; a crate does not
+            if (loseIdx !== undefined) {
+                const destroyed = state.cargo.splice(loseIdx, 1)[0];
+                state.addLog(`The ${destroyed.name} was destroyed in the accident.`);
+                state.addLog("The lab is sealed until it has been cleaned.");
+                return `Lab accident. ${destroyed.name} lost. Lab damaged.`;
             }
 
-            state.addLog("Laboratory sealed. Unknown contamination risk.");
-            return "Lab accident! Laboratory DAMAGED. Decontamination required.";
+            state.addLog("Lab sealed. We don't know yet what was released.");
+            return "Lab accident. Lab damaged and sealed.";
         }
     },
 
@@ -239,25 +240,25 @@ const SHIP_MALFUNCTION_EVENTS = [
         weight: 3,
         title: "Forgotten Supplies",
         condition: (state) => true,
-        context: "While running routine checks, someone found a sealed compartment we'd forgotten about.",
+        context: "During a routine check, someone found a sealed locker nobody remembered.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Hey, there's a whole maintenance kit in here! And some rations!" },
-            { speaker: 'Dr. Aris', text: "Small victories. We'll take them." }
+            { speaker: 'Eng. Jaxon', text: "There's a full repair kit in here. And food!" },
+            { speaker: 'Dr. Aris', text: "We'll take any good news we can get." }
         ],
         effect: (state) => {
             const bonus = Math.random();
             if (bonus < 0.4) {
                 state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
-                state.addLog("Found forgotten maintenance supplies! +20 Salvage.");
-                return "Lucky find! +20 Salvage from forgotten storage.";
+                state.addLog("Forgotten repair supplies. +20 Salvage.");
+                return "Forgotten supplies found. +20 Salvage.";
             } else if (bonus < 0.7) {
                 state.rations = Math.min(state.maxRations, state.rations + 3);
-                state.addLog("Emergency rations discovered! +3 Rations.");
-                return "Lucky find! +3 Rations from sealed container.";
+                state.addLog("Forgotten food packs. +3 Rations.");
+                return "Forgotten supplies found. +3 Rations.";
             } else {
                 state.energy = Math.min(100, state.energy + 15);
-                state.addLog("Backup power cells found! +15 Energy.");
-                return "Lucky find! +15 Energy from reserve cells.";
+                state.addLog("Forgotten spare power cells. +15 Energy.");
+                return "Forgotten supplies found. +15 Energy.";
             }
         }
     }

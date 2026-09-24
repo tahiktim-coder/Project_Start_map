@@ -63,14 +63,16 @@
         }
     }
 
-    function open(app) {
-        if (document.querySelector('.disc-doc')) return;
+    /** opts (all optional): kicker, title, aura (the line under the drawing), close (the button's words) — the finale shows the real disc, inside the light. */
+    function open(app, opts) {
+        if (document.querySelector('.disc-doc')) return Promise.resolve();
+        const o = Object.assign({ kicker: 'FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK', title: 'The disc', aura: 'An old curiosity, Commander. I would not spend time on it.', close: 'FOLD IT AWAY', closeNote: 'it stays in your cargo' }, opts || {});
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay disc-doc';
         overlay.style.zIndex = '4000';
         overlay.innerHTML = `
             <section class="modal-content deck-panel disc-doc-card" role="dialog" aria-label="Drawing of the disc">
-                <header class="enc-head"><p class="enc-kicker" style="color:var(--amber)">FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK</p><h3>The disc</h3></header>
+                <header class="enc-head"><p class="enc-kicker" style="color:var(--amber)">${o.kicker}</p><h3>${o.title}</h3></header>
                 <div class="disc-doc-body">
                     <canvas class="disc-doc-canvas" width="${SIZE}" height="${SIZE}"></canvas>
                     <div class="disc-doc-notes">
@@ -78,10 +80,11 @@
                         <p class="disc-doc-text" aria-live="polite"></p>
                     </div>
                 </div>
-                <p class="disc-doc-aura"><b>A.U.R.A.</b>An old curiosity, Commander. I would not spend time on it.</p>
-                <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>FOLD IT AWAY</span><small>it stays in your cargo</small></button></div>
+                <p class="disc-doc-aura"><b>A.U.R.A.</b>${o.aura}</p>
+                <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>${o.close}</span><small>${o.closeNote}</small></button></div>
             </section>`;
         document.body.appendChild(overlay);
+        return new Promise(resolve => {
         const ctx = overlay.querySelector('canvas').getContext('2d'), textEl = overlay.querySelector('.disc-doc-text');
         const marks = buildEtching(), startedAt = performance.now();
         let focus = null;
@@ -99,11 +102,12 @@
         show(NOTES[0], overlay.querySelector('.disc-doc-note'));
         const timer = setInterval(() => { if (!overlay.isConnected) { clearInterval(timer); return; } draw(ctx, marks, performance.now() - startedAt, focus); }, TICK_MS);
         draw(ctx, marks, 0, focus);
-        const close = () => overlay.remove();
+        const close = () => { overlay.remove(); resolve(); };
         overlay.querySelector('.disc-doc-close').addEventListener('click', close);
         overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
         overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
         if (app && app.state) app.state._hasSeenDisc = true;
+        });
     }
 
     window.DiscDocument = { open, NOTES };

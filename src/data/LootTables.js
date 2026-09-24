@@ -96,7 +96,7 @@ const LOOT_POOLS = {
         { item: ITEMS.ALIEN_TRANSMITTER, weight: 20 },
         { item: ITEMS.XENOTECH_COMPONENT, weight: 10 },
         { item: ITEMS.SIGNAL_DECODER, weight: 5 },
-        { type: 'RESOURCE', val: 'ENERGY', min: 15, max: 30, weight: 25, log: "Unknown energy signature harvested from alien broadcast." },
+        { type: 'RESOURCE', val: 'ENERGY', min: 15, max: 30, weight: 25, log: "An energy cell pulled from an old ship beacon." },
         { type: 'LORE', text: "Signal Fragment: '...we have been waiting...'", weight: 15 },
         { type: 'LORE', text: "Audio decode: Coordinates to a location that doesn't exist on any chart.", weight: 10 }
     ],
@@ -248,7 +248,7 @@ const LOOT_RULES = [
         id: 'alien_signal_bonus',
         criteria: (p) => p.tags && p.tags.includes('ALIEN_SIGNALS'),
         pool: 'ALIEN_SIGNAL_LOOT',
-        msg_context: 'Alien signal source investigation'
+        msg_context: 'Old signal investigation'
     },
     {
         id: 'ancient_ruins_bonus',

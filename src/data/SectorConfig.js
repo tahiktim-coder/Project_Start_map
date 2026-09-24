@@ -88,22 +88,20 @@ const SECTOR_CONFIG = {
         anomalyChance: 0.15,   // First glimpses of weirdness (increased from 0.05)
         colonyWarning: false,
         sectorColor: '#004488',
-        ambientDesc: 'A rhythmic tapping on all frequencies. Something is broadcasting.',
+        ambientDesc: 'Transponders. Hundreds of them, all on our channel, all old.',
         hazard: {
             id: 'INTERFERENCE',
-            description: 'Unknown signal source disrupts instruments',
+            description: 'Hundreds of dead transponders on the scan band scramble readings',
             onWarp: null,
             onScan: function(planet, state) {
                 // 20% chance remote scan gives false/scrambled data
-                if (_testChance(0.20)) {
-                    // Swap revealed stats to wrong values
-                    if (planet.revealedStats && planet.revealedStats.length > 0) {
-                        const fakeAtmos = ['BREATHABLE', 'TOXIC', 'THIN', 'CORROSIVE', 'NONE'];
-                        planet._realAtmosphere = planet.atmosphere;
-                        planet.atmosphere = fakeAtmos[Math.floor(Math.random() * fakeAtmos.length)];
-                        planet._scanCorrupted = true;
-                        state.addLog('A.U.R.A.: "Signal interference detected during scan. Data integrity... uncertain."');
-                    }
+                if (_testChance(0.20) && !planet._scanCorrupted) {
+                    // The air reading comes back wrong; a deep scan from orbit puts it right
+                    const fakeAtmos = ['BREATHABLE', 'TOXIC', 'THIN', 'CORROSIVE', 'NONE'].filter(a => a !== planet.atmosphere);
+                    planet._realAtmosphere = planet.atmosphere;
+                    planet.atmosphere = fakeAtmos[Math.floor(Math.random() * fakeAtmos.length)];
+                    planet._scanCorrupted = true;
+                    state.addLog('A.U.R.A.: "Interference on the scan band, Commander. Hundreds of dead transponders. I would not trust the air reading until we are closer."');
                 }
             },
             onDeepScan: function(planet) {
@@ -162,7 +160,7 @@ const SECTOR_CONFIG = {
         anomalyChance: 0.35,    // Reality getting weird (increased from 0.20)
         colonyWarning: false,
         sectorColor: '#006600',
-        ambientDesc: 'It looks like home. That\'s what makes it dangerous.',
+        ambientDesc: 'It looks like home. Somebody thought so too.',
         hazard: {
             id: 'FALSE_PARADISE',
             description: 'Not everything green is safe',
@@ -193,7 +191,7 @@ const SECTOR_CONFIG = {
     },
 
     5: {
-        name: 'THE EVENT HORIZON',
+        name: 'THE TALLY',
         planetCount: [3, 4],
         allowedTypes: ['SHATTERED', 'CRYSTALLINE', 'ROGUE', 'BIO_MASS', 'SINGING', 'MIRROR'],
         guaranteedTypes: ['TERRAFORMED'],
@@ -205,10 +203,10 @@ const SECTOR_CONFIG = {
         anomalyChance: 0.50,    // Reality breaking down (increased from 0.35)
         colonyWarning: false,
         sectorColor: '#440044',
-        ambientDesc: 'The laws of physics are suggestions here. Your instruments scream.',
+        ambientDesc: 'Hulls in the tens of thousands. The drive threw them unevenly here, and the instruments know it.',
         hazard: {
             id: 'REALITY_BREAKDOWN',
-            description: 'Spacetime itself is unreliable',
+            description: 'The throw was uneven here: distances and dates come back wrong',
             onWarp: function(state) {
                 // 20% chance of random effect per warp
                 if (_testChance(0.20)) {
@@ -271,7 +269,7 @@ const SECTOR_CONFIG = {
     },
 
     6: {
-        name: 'THE THRESHOLD',
+        name: 'THE LIGHT',
         planetCount: [2, 3],
         allowedTypes: ['GHOST_WORLD', 'EDEN', 'HOLLOW', 'MIRROR', 'SINGING'],
         guaranteedTypes: ['EDEN'], // At least one perfect world
@@ -283,11 +281,11 @@ const SECTOR_CONFIG = {
         anomalyChance: 0.50,     // Half of all planets have anomalies
         colonyWarning: false,
         sectorColor: '#ffffff',
-        ambientDesc: 'You have reached the edge of everything. Beyond this, there is only the unknown. THE STRUCTURE awaits.',
+        ambientDesc: 'The oldest wrecks of all. At the end of the heading, a light that looks like a sun.',
         hasStructure: true,      // Special flag for THE STRUCTURE
         hazard: {
             id: 'THRESHOLD_CALL',
-            description: 'The boundary between known and unknown',
+            description: 'Nothing here is random. The light reads what reaches it.',
             onWarp: function(state) {
                 // The Threshold heals and harms in equal measure
                 // In test mode, always trigger something

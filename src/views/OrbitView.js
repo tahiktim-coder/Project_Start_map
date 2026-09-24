@@ -109,77 +109,30 @@ class OrbitView {
         return `<div class="site-tip is-${tone}"><b>DANGER: ${OrbitView.DANGER_WORDS[rank]}</b><p>${why}</p></div>`;
     }
 
+    /**
+     * Parked in front of the Structure. Same plain layout as a station, but the picture fills the whole panel
+     * (StructureVista) instead of sitting in a box; every reading is something the instruments cannot do.
+     */
     renderStructure(planet) {
-        // Special cinematic rendering for THE STRUCTURE
-        this.element.innerHTML = `
-            <div style="padding: 20px; height: 100%; display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(135deg, #0a0a15, #1a0a2a);">
-                <h2 style="color: #ffffff; border-bottom: 2px solid #8844ff; padding-bottom: 10px; margin-bottom: 20px; max-width: 60%; text-shadow: 0 0 20px rgba(136,68,255,0.5);">
-                    /// PROXIMITY ALERT: ${planet.name}
-                </h2>
-
-                <div style="flex: 1; display: flex; flex-direction: row; gap: 20px; min-height: 0;">
-
-                    <!-- LEFT: Readings (all unknown/impossible) -->
-                    <div style="width: 280px; display: flex; flex-direction: column; gap: 15px; border-right: 1px dashed #8844ff; padding-right: 20px; overflow-y: auto; min-height: 0;">
-                        <div style="color: #d9a24a; border-bottom: 1px solid #440088; margin-bottom: 5px; animation: pulse 2s infinite;">SENSOR READINGS</div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <div style="color: var(--color-text-dim);">MASS</div>
-                            <div style="color: #d85a4e; text-align: right;">ERROR: OVERFLOW</div>
-
-                            <div style="color: var(--color-text-dim);">DIMENSIONS</div>
-                            <div style="color: #d85a4e; text-align: right;">NON-EUCLIDEAN</div>
-
-                            <div style="color: var(--color-text-dim);">TEMPERATURE</div>
-                            <div style="color: #d85a4e; text-align: right;">UNDEFINED</div>
-
-                            <div style="color: var(--color-text-dim);">ENERGY OUTPUT</div>
-                            <div style="color: #d85a4e; text-align: right;">∞</div>
-
-                            <div style="color: var(--color-text-dim);">ORIGIN</div>
-                            <div style="color: #d85a4e; text-align: right;">UNKNOWN</div>
-
-                            <div style="color: var(--color-text-dim);">AGE</div>
-                            <div style="color: #d85a4e; text-align: right;">BEFORE TIME</div>
-                        </div>
-
-                        <div style="margin-top: 20px; padding: 15px; border: 1px solid #440088; background: rgba(68,0,136,0.2);">
-                            <div style="color: #ccaaff; font-size: 0.9em; line-height: 1.6; font-style: italic;">
-                                "${planet.desc || 'It has always been here. Waiting.'}"
-                            </div>
-                        </div>
-
-                        <div style="margin-top: auto; padding: 15px; border: 2px solid #d85a4e; background: rgba(255,0,0,0.1);">
-                            <div style="color: #d85a4e; font-weight: bold; font-size: 0.85em;">⚠ A.U.R.A. WARNING</div>
-                            <div style="color: #e07a70; opacity: 0.9; font-size: 0.8em; margin-top: 5px;">
-                                "I cannot predict what will happen if we approach. My models break down. The decision must be yours, Commander."
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT: The Structure Visual -->
-                    <div class="orbit-visual" style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; margin-top: -40px;">
-                        ${(window.BodyRenderer && BodyRenderer.body(planet, OrbitView.heroSize())) || `<div class="planet-visual type-STRUCTURE" style="
-                            width: 300px; height: 300px;
-                            position: relative;
-                        ">
-                        </div>`}
-                        <div style="
-                            position: absolute; top: 50%; left: 50%; width: 400px; height: 400px; transform: translate(-50%, -50%);
-                            border: 2px dashed rgba(136,68,255,0.5); border-radius: 0; animation: structure-orbit 30s linear infinite;
-                            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-                        ">
-                            <div style="width: 15px; height: 15px; background: #ffffff; position: absolute; top: -7px; left: 50%; transform: translateX(-50%); box-shadow: 0 0 20px #ffffff, 0 0 40px #8844ff;"></div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-            <style>
-                @keyframes structure-orbit { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
-                @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-            </style>
-        `;
+        const isDone = !!planet.structureApproached;
+        this.siteScreen({
+            heading: 'THE END OF THE HEADING', name: 'The light',
+            facts: [
+                ['WHAT IT IS', 'It looks like a sun', 'warn'],
+                ['HOW WARM', 'It is not', 'bad'],
+                ['HOW OLD', 'Older than every wreck behind you', 'bad'],
+                ['OUR SHIPS', 'Every transponder on the heading ends here'],
+                ['ANYONE ALIVE', 'Nothing answers. Something reads.'],
+            ],
+            note: 'Every crew before you flew toward it. It looked like a home star to them too.',
+            tip: isDone
+                ? { title: 'IT IS DONE', text: 'There is nothing more to decide here.' }
+                : { title: 'BEFORE YOU GO IN', text: 'This is the end of the heading. What you choose in front of it is final, for you and for everyone aboard.' },
+            visualHtml: window.StructureVista ? '' : ((window.BodyRenderer && BodyRenderer.body(planet, OrbitView.heroSize()))
+                || '<div class="planet-visual type-STRUCTURE" style="width: 300px; height: 300px; position: relative;"></div>')
+        });
+        this.element.querySelector('.site-screen').classList.add('is-structure');
+        if (window.StructureVista) window.StructureVista.mount(this.element.querySelector('.site-visual'));
         this.updateCommandDeck(planet);
         return this.element;
     }
@@ -291,15 +244,15 @@ class OrbitView {
 
     /** One short plain line per thing the scan found. tone: good (green) / warn (amber) / bad (red) / plain. */
     static FINDINGS = {
-        EXODUS_WRECK: ['Human ship wreck', 'one of ours — board it from the command deck', 'good'],
+        EXODUS_WRECK: ['Human ship wreck', 'one of ours — send the team to it', 'good'],
         PREDATORY: ['Hunting animals', 'a team on the ground is in real danger', 'bad'],
         WRECKAGE: ['Debris field', 'loose salvage in orbit', 'plain'],
         FAILED_COLONY: ['Colony ruins', 'people tried to live here — find out why they stopped', 'plain'],
-        DERELICT: ['Unknown wreck', 'not one of ours; salvage, some risk', 'plain'],
-        ANOMALY: ['Something strange in space', 'nobody knows what it does — high risk', 'warn'],
-        LIGHTHOUSE: ['The Lighthouse', 'a beacon older than humanity', 'good'],
-        GARDEN: ['The Garden', 'a living dome on a dead world', 'good'],
-        GRAVE: ['The Grave', 'a cemetery moon; some dates are in the future', 'plain'],
+        DERELICT: ['Wreckage in orbit', 'a ship in pieces; salvage, some risk', 'plain'],
+        ANOMALY: ['Something strange', 'it should not be here — send the team to look', 'warn'],
+        LIGHTHOUSE: ['A beacon', 'still transmitting, after all this time', 'good'],
+        GARDEN: ['A dome', 'something green under glass, on a dead world', 'good'],
+        GRAVE: ['Graves', 'rows of markers, as far as the scan reaches', 'plain'],
     };
 
     static findingsHtml(tags) {
@@ -371,111 +324,25 @@ class OrbitView {
                        </button>`
             }
 
-                 <button class="cmd-btn ${planet.hasEva ? 'cmd-done' : ''}" id="btn-eva" ${this.state.energy < 5 || planet.hasEva ? 'disabled' : ''}>
-                    <div>${planet.hasEva ? 'SEND TEAM OUT' : 'SEND TEAM OUT (EVA)'}</div>
-                    <div class="cost">${planet.hasEva ? 'DONE — ONE TRIP PER STOP' : (this.state.hasActiveTrait && this.state.hasActiveTrait('OBSESSED') ? '-10 ENERGY · -2 RATIONS · OBSESSED CREW' : '-5 ENERGY · CREW AT RISK')}</div>
-                </button>
-
-                ${planet.scanned && planet.tags && planet.tags.includes('EXODUS_WRECK') && !planet.exodusInvestigated
-                    ? `<button class="cmd-btn" id="btn-exodus" style="border-color: #74d99a; color: #74d99a;">
-                        <div>INVESTIGATE EXODUS WRECK</div>
-                        <div class="cost" style="color: #74d99a;">HUMAN TRANSPONDER DETECTED</div>
-                       </button>`
-                    : (planet.exodusInvestigated
-                        ? `<button class="cmd-btn" id="btn-exodus" disabled style="border-color: #555; color: #555;">
-                            <div>EXODUS WRECK INVESTIGATED</div>
-                            <div class="cost">SITE CLEARED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('FAILED_COLONY') && !planet.colonyInvestigated
-                    ? `<button class="cmd-btn" id="btn-colony-site" style="border-color: #74d99a; color: #74d99a;">
-                        <div>INVESTIGATE COLONY SITE</div>
-                        <div class="cost" style="color: #74d99a;">SETTLEMENT RUINS DETECTED</div>
-                       </button>`
-                    : (planet.colonyInvestigated
-                        ? `<button class="cmd-btn" id="btn-colony-site" disabled style="border-color: #555; color: #555;">
-                            <div>COLONY SITE INVESTIGATED</div>
-                            <div class="cost">RUINS CATALOGUED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('DERELICT') && !planet.derelictInvestigated
-                    ? `<button class="cmd-btn" id="btn-derelict" style="border-color: #74d99a; color: #74d99a;">
-                        <div>SEARCH THE WRECK</div>
-                        <div class="cost" style="color: #74d99a;">SHIP WRECKAGE DETECTED</div>
-                       </button>`
-                    : (planet.derelictInvestigated
-                        ? `<button class="cmd-btn" id="btn-derelict" disabled style="border-color: #555; color: #555;">
-                            <div>WRECK SEARCHED</div>
-                            <div class="cost">WRECK SALVAGED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('ANOMALY') && !planet.anomalyInvestigated
-                    ? `<button class="cmd-btn" id="btn-anomaly" style="border-color: #d9a24a; color: #d9a24a; animation: anomaly-pulse 2s infinite;">
-                        <div>GO CLOSER</div>
-                        <div class="cost" style="color: #d9a24a;">⚠ REALITY DISTORTION</div>
-                       </button>`
-                    : (planet.anomalyInvestigated
-                        ? `<button class="cmd-btn" id="btn-anomaly" disabled style="border-color: #555; color: #555;">
-                            <div>ALREADY VISITED</div>
-                            <div class="cost">PHENOMENON DOCUMENTED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('LIGHTHOUSE') && !planet.lighthouseInvestigated
-                    ? `<button class="cmd-btn" id="btn-lighthouse" style="border-color: #74d99a; color: #74d99a;">
-                        <div>🗼 APPROACH THE LIGHTHOUSE</div>
-                        <div class="cost" style="color: #74d99a;">ANCIENT BEACON SIGNAL</div>
-                       </button>`
-                    : (planet.lighthouseInvestigated
-                        ? `<button class="cmd-btn" id="btn-lighthouse" disabled style="border-color: #555; color: #555;">
-                            <div>LIGHTHOUSE INVESTIGATED</div>
-                            <div class="cost">NAVIGATION DATA RECORDED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('GARDEN') && !planet.gardenInvestigated
-                    ? `<button class="cmd-btn" id="btn-garden" style="border-color: #74d99a; color: #74d99a;">
-                        <div>🌿 ENTER THE GARDEN</div>
-                        <div class="cost" style="color: #74d99a;">BIODOME ACCESS DETECTED</div>
-                       </button>`
-                    : (planet.gardenInvestigated
-                        ? `<button class="cmd-btn" id="btn-garden" disabled style="border-color: #555; color: #555;">
-                            <div>GARDEN EXPLORED</div>
-                            <div class="cost">ECOSYSTEM CATALOGUED</div>
-                           </button>`
-                        : '')
-                }
-
-                ${planet.scanned && planet.tags && planet.tags.includes('GRAVE') && !planet.graveInvestigated
-                    ? `<button class="cmd-btn" id="btn-grave" style="border-color: #888888; color: #888888;">
-                        <div>⚰ VISIT THE GRAVE</div>
-                        <div class="cost" style="color: #888888;">ETERNAL CEMETERY</div>
-                       </button>`
-                    : (planet.graveInvestigated
-                        ? `<button class="cmd-btn" id="btn-grave" disabled style="border-color: #555; color: #555;">
-                            <div>GRAVE VISITED</div>
-                            <div class="cost">MEMORIALS OBSERVED</div>
-                           </button>`
-                        : '')
-                }
+                ${(() => {                                                          // one button for the team: to the site the scan found, or to the surface
+                    const site = window.app && window.app.siteOf ? window.app.siteOf(planet) : null, isOpen = site && !planet[site.done] && planet.scanned;
+                    const cost = this.state.hasActiveTrait && this.state.hasActiveTrait('OBSESSED') ? '-10 ENERGY · -2 RATIONS' : '-5 ENERGY · -1 RATION';
+                    if (planet.isStructure || planet.isStation || planet.isAsteroidField) return '';
+                    return `<button class="cmd-btn ${planet.hasEva ? 'cmd-done' : isOpen ? 'cmd-site' : ''}" id="btn-eva" ${this.state.energy < 5 || planet.hasEva ? 'disabled' : ''}>
+                        <div>${planet.hasEva ? 'TEAM ALREADY WENT' : isOpen ? `SEND TEAM TO ${site.label}` : 'SEND TEAM DOWN'}</div>
+                        <div class="cost">${planet.hasEva ? 'ONE TRIP PER STOP' : isOpen ? `${site.note} · ${cost}` : `${cost} · SEARCH THE SURFACE`}</div>
+                    </button>`;
+                })()}
 
                 ${planet.isStructure && !planet.structureApproached
-                    ? `<button class="cmd-btn" id="btn-structure" style="border-color: #ffffff; color: #ffffff; animation: structure-pulse 3s infinite; background: linear-gradient(135deg, rgba(68,0,136,0.3), rgba(136,68,255,0.2));">
-                        <div style="font-size: 1.1em; font-weight: bold;">APPROACH THE STRUCTURE</div>
-                        <div class="cost" style="color: #ccaaff;">/// THE THRESHOLD AWAITS ///</div>
+                    ? `<button class="cmd-btn" id="btn-structure" style="border-color: #ffd27a; color: #fff3cf; background: linear-gradient(135deg, rgba(168,120,31,0.28), rgba(255,210,122,0.14));">
+                        <div style="font-size: 1.1em; font-weight: bold;">GO INTO THE LIGHT</div>
+                        <div class="cost" style="color: #ffd27a;">IT READS WHATEVER REACHES IT</div>
                        </button>`
                     : (planet.structureApproached
                         ? `<button class="cmd-btn" id="btn-structure" disabled style="border-color: #555; color: #555;">
-                            <div>THRESHOLD CROSSED</div>
-                            <div class="cost">YOUR CHOICE HAS BEEN MADE</div>
+                            <div>IT IS DONE</div>
+                            <div class="cost">THERE IS NOTHING MORE TO DECIDE</div>
                            </button>`
                         : '')
                 }

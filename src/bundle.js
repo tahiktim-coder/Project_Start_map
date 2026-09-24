@@ -233,7 +233,7 @@ class GameState {
      */
     saveGame() {
         const saveData = {
-            version: 1,
+            version: 2,
             timestamp: Date.now(),
             // Resources
             energy: this.energy,
@@ -278,6 +278,20 @@ class GameState {
             _miraWonderSeen: this._miraWonderSeen,
             _miraAuraSeen: this._miraAuraSeen,
             _commanderDoubtSeen: this._commanderDoubtSeen,
+            // The journey (lost on reload before: the one callback the game had, and the lists that stop stories repeating)
+            _boardedHulls: this._boardedHulls || [],
+            _standing: this._standing || null,
+            _countSceneSeen: !!this._countSceneSeen,
+            _sleepers: this._sleepers || 0,
+            _warpDiscount: this._warpDiscount || 0,
+            _seenAnomalies: this._seenAnomalies || [],
+            _encounteredShipNames: this._encounteredShipNames || [],
+            _encounteredExodus: this._encounteredExodus || [],
+            _seenCampfires: this._seenCampfires || [],
+            _followedSignal: !!this._followedSignal,
+            _lighthouseBonus: !!this._lighthouseBonus,
+            _damagedCapacitors: this._damagedCapacitors || null,
+            _driveReinforced: !!this._driveReinforced,
             // Logs (last 20 only to save space)
             logs: this.logs.slice(-20)
         };
@@ -312,7 +326,10 @@ class GameState {
             // Cargo & Upgrades
             // JSON drops functions, so saved items lose their onUse(); give each one back its behaviour from ITEMS
             const itemDefs = (typeof ITEMS !== 'undefined') ? Object.values(ITEMS) : [];
+            const pageDefs = (typeof EXODUS_LOGS !== 'undefined') ? EXODUS_LOGS : [];
             this.cargo = (saveData.cargo || []).map(saved => {
+                const page = pageDefs.find(d => d.id === saved.id);
+                if (page) return window.app ? window.app.pageItem(page, saved.acquiredAt) : { ...page, ...saved };
                 const def = itemDefs.find(d => d.id === saved.id);
                 return def ? { ...def, ...saved, onUse: def.onUse } : saved;
             });
@@ -334,7 +351,21 @@ class GameState {
             this.crew = saveData.crew;
             // Progress
             this.actionsTaken = saveData.actionsTaken;
-            this.exodusLogsFound = saveData.exodusLogsFound || [];
+            const pageIds = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).map(p => p.id);
+            this.exodusLogsFound = (saveData.exodusLogsFound || []).filter(id => pageIds.includes(id)); // old saves counted eight logs by number
+            this._boardedHulls = saveData._boardedHulls || [];
+            this._standing = saveData._standing || ((saveData.version || 1) < 2 ? { vance: 2, aris: 2, jaxon: 2, mira: 2 } : null); // a save from before standing existed keeps every ending open
+            this._countSceneSeen = !!saveData._countSceneSeen;
+            this._sleepers = saveData._sleepers || 0;
+            this._warpDiscount = saveData._warpDiscount || 0;
+            this._seenAnomalies = saveData._seenAnomalies || [];
+            this._encounteredShipNames = saveData._encounteredShipNames || [];
+            this._encounteredExodus = saveData._encounteredExodus || [];
+            this._seenCampfires = saveData._seenCampfires || [];
+            this._followedSignal = !!saveData._followedSignal;
+            this._lighthouseBonus = !!saveData._lighthouseBonus;
+            this._damagedCapacitors = saveData._damagedCapacitors || null;
+            this._driveReinforced = !!saveData._driveReinforced;
             this._colonyKnowledge = saveData._colonyKnowledge || 0;
             this.fungusActionCounter = saveData.fungusActionCounter || 0;
             // Special states
@@ -398,12 +429,21 @@ class GameState {
     /** What warping to this place costs right now: bridge damage, burnt capacitors (this sector only), downloaded star charts. */
     getWarpCost(planet) {
         if (this.lastVisitedSystem && this.lastVisitedSystem.id === planet.id) return 0; // orbit re-entry
+        if (planet.isStructure || planet.type === 'STRUCTURE') return 0;               // the light pulls you in: never out of reach
         const BRIDGE_DAMAGE_FACTOR = 1.5, BURNT_CAPACITOR_COST = 5, STAR_CHART_SAVING = 2;
         let cost = Math.floor((planet.fuelCost || 10) * (this.isDeckOperational('bridge') ? 1 : BRIDGE_DAMAGE_FACTOR));
         if (this._damagedCapacitors === this.currentSector) cost += BURNT_CAPACITOR_COST;
         if (this._lighthouseBonus) cost -= STAR_CHART_SAVING;
+        if (this._warpDiscount) cost -= Math.round(cost * Math.min(50, this._warpDiscount) / 100);   // charts and couplers found on the way, as a percentage off
         return Math.max(1, cost);
     }
+
+    /** Who you sided with. Two of three moments gives you standing for that person's ending (docs/CANON.md §9). */
+    noteStanding(who, delta) {
+        this._standing = this._standing || { vance: 0, aris: 0, jaxon: 0, mira: 0 };
+        this._standing[who] = (this._standing[who] || 0) + (delta == null ? 1 : delta);
+    }
+    hasStanding(who, needed) { return ((this._standing || {})[who] || 0) >= (needed == null ? 2 : needed); }
 
     /** The dead do not talk, and the commander is the player: neither gets a spoken line in the log. */
     isSilentSpeaker(message) {
@@ -438,11 +478,11 @@ class GameState {
         if (!silent) {
             // A.U.R.A. comments at key thresholds
             if (prev < 1 && this._colonyKnowledge >= 1) {
-                this.addLog("A.U.R.A.: Colony data archived. This information may prove useful for future settlement.");
+                this.addLog('A.U.R.A.: "Filed, Commander. Everything we learn here goes toward the world we settle."');
             } else if (prev < 3 && this._colonyKnowledge >= 3) {
-                this.addLog("A.U.R.A.: Substantial colony data accumulated. Settlement survival probability significantly improved.");
+                this.addLog('A.U.R.A.: "We know more than any crew before us did, Commander. I have checked."');
             } else if (prev < 5 && this._colonyKnowledge >= 5) {
-                this.addLog("A.U.R.A.: Colony database reaching optimal levels. We have learned much from those who came before.");
+                this.addLog('A.U.R.A.: "The file is thick now, Commander. Whatever world you choose, we will do it properly."');
             }
         }
 
@@ -531,7 +571,7 @@ class GameState {
 
         // Warning at 5 rations
         if (this.rations === 5) {
-            this.addLog("⚠ A.U.R.A.: Food reserves dropping. Rationing protocol recommended.");
+            this.addLog('⚠ A.U.R.A.: "Rations are low, Commander. Four crew eat a great deal."');
         }
         // Warning at 3-4 rations
         if (this.rations >= 3 && this.rations <= 4) {
@@ -650,7 +690,7 @@ class GameState {
         // Tutorial: first deck damage
         if (!this._tutorialDeckSeen) {
             this._tutorialDeckSeen = true;
-            this.addLog("A.U.R.A.: Hull breach detected. I recommend immediate repairs. Damaged systems impair ship efficiency.");
+            this.addLog('A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage."');
         }
 
         this.emitUpdates(); // emitUpdates() calls checkLoseConditions()
@@ -877,18 +917,18 @@ class GameState {
 
 // One line on each arrival card: the further out, the older the wrecks (the wait calculation, shown not told)
 const SECTOR_ARRIVAL_LINES = {
-    2: 'The wrecks out here are a hundred years old. Older than anyone aboard.',
-    3: 'Two hundred years of silence. The instruments have started to disagree with each other.',
-    4: 'Somebody stopped here, and lived.',
-    5: 'The first crews made it this far. Three hundred years ago.',
-    6: 'Nothing human is older than what is waiting here.',
+    2: 'The last of the eight ships should be out here. They have been dead about twenty years.',
+    3: 'Hundreds of ship beacons, all ours. Their numbers are higher than ours, and they are a hundred years old.',
+    4: 'Ship numbers in the thousands now. These wrecks are two hundred years old.',
+    5: 'Tens of thousands of ships. Three hundred years dead. Every one of them was told it was the ninth.',
+    6: 'The oldest wrecks of all. At the end of the heading, a light.',
 };
 const RELIANCE_MIN_SAMPLES = 4; // A.U.R.A. only comments on who flies once there is a pattern to see
 const CARGO_LIMIT = 20, CARGO_RACK_BONUS = 4; // see GameState.getCargoLimit / enforceCargoLimit
 const WARP_REFUND_SCALE = 0.75; // arrival refunds used to hand back ~half of every warp; 1 = old behaviour, lower = energy matters more
 const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getStopsLeft
 const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
-const FINAL_SECTOR = 6; // THE THRESHOLD — holds THE STRUCTURE; SECTOR_CONFIG defines nothing beyond it
+const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
 
 class App {
     constructor() {
@@ -959,7 +999,7 @@ class App {
                         SILENT EXODUS
                     </div>
                     <div style="font-size: 1em; color: #8a9d8f; margin-top: 15px; letter-spacing: 4px;">
-                        EVERY SHIP WAS TOLD IT WAS THE NINTH
+                        EIGHT WENT BEFORE YOU. NONE OF THEM CALLED HOME.
                     </div>
                 </div>
 
@@ -1140,17 +1180,14 @@ class App {
             // THE STRUCTURE - Cannot escape. Ship mysteriously returns.
             const currentPlanet = this.state.currentSystem;
             if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
-                this.state.addLog("A.U.R.A.: 'Starting orbital departure sequence...'");
-                this.state.addLog("...");
-                this.state.addLog("A.U.R.A.: 'Anomaly detected. Navigation systems report departure successful.'");
-                this.state.addLog("A.U.R.A.: 'However... we remain in orbit of THE STRUCTURE.'");
-                this.state.addLog("A.U.R.A.: 'I do not understand. The ship moved. The destination did not change.'");
-                this.state.addLog("A.U.R.A.: 'We cannot leave, Commander. THE STRUCTURE will not permit it.'");
+                this.state.addLog('A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times."');
                 // Ship stays in orbit - don't clear currentSystem
                 return;
             }
             this.state.addLog("Breaking orbit. Systems disengaged.");
+            this.state.currentSystem = null;                                          // back on the map (lastVisitedSystem keeps the free re-entry)
             this.renderNav();
+            if (currentPlanet && this.state.currentSector === 1 && !this.state._countSceneSeen) this.showCountScene();
         });
 
         // THE WRONG PLACE special handlers
@@ -1189,7 +1226,7 @@ class App {
         if (loadSave && this.state.loadGame()) {
             this.state.addLog("=== SAVE LOADED ===");
             this.state.addLog(`Resuming mission in Sector ${this.state.currentSector}.`);
-            this.renderNav();
+            this.resumeWhereSaved();
         } else {
             // New game
             this.state.init();
@@ -1290,29 +1327,170 @@ class App {
      */
     showOpeningBriefing() {
         this.markFirstSignal();
+        this.plantSectorPage();
         const begin = () => {
-            this.state.addLog("A.U.R.A.: Systems online. Awaiting your command, Commander.");
-            this.state.addLog("An old transponder is marked on the map. Click it to take a look.");
+            this.state.addLog('A.U.R.A.: "Systems online. Waiting for your orders, Commander."');
+            this.state.addLog("An old ship beacon is marked on the map. Click it to take a look.");
             this.renderNav();
         };
         if (!window.EncounterCard) { begin(); return; }
         const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('program') : Promise.resolve(); // what the crew was told, as a picture
         reel.then(() => window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3500, kicker: 'EXODUS-9 · 61 YEARS OUT FROM EARTH', title: 'Good morning, Commander',
-            context: 'Cold air, and a light you have not seen in sixty-one years. The ship has woken all five of you, and it has not said why.',
+            context: 'Cold air and bright lights. After sixty-one years asleep, the ship has woken all five of you.',
             dialogue: [
-                { speaker: 'A.U.R.A.', text: 'Everyone woke up. The ship is in one piece. Your orders have not changed: find a world people can live on, and settle it.' },
-                { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction, thousands of them. Eight went this way before you. You are the ninth on this heading.' },
-                { speaker: 'Eng. Jaxon', text: 'Eight ahead of us. Let us hope they left the good planets alone. Wake me when there is grass.' },
-                { speaker: 'Spc. Vance', text: 'Eight ships ahead of us, and not one of them ever called home?' },
-                { speaker: 'A.U.R.A.', text: 'Space is large, Specialist. There is an old transponder on the scope. One of the eight, I expect. I have marked it on your map.' },
+                { speaker: 'A.U.R.A.', text: 'Good morning, Commander. All four crew are awake and well. The ship is in one piece.' },
+                { speaker: 'A.U.R.A.', text: 'Your orders have not changed. Find a planet people can live on, and settle it.' },
+                { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction. Eight went this way before us. We are the ninth.' },
+                { speaker: 'Eng. Jaxon', text: 'Eight ships ahead of us. I hope they left us a good planet.' },
+                { speaker: 'Spc. Vance', text: 'Eight ships, and not one of them ever sent a message home?' },
+                { speaker: 'A.U.R.A.', text: 'Space is very large, Specialist. There is an old ship beacon on the scanner. Probably one of the eight. I have marked it on your map.' },
             ],
-            choices: [{ text: 'Take the chair', desc: 'Six sectors lie ahead. In each one you get a few stops, then you must jump on. Energy moves the ship. Rations feed the crew.' }],
+            choices: [{ text: 'Take command', desc: 'Six sectors ahead. A few stops in each, then you must jump on. Energy moves the ship. Rations feed the crew.' }],
             onPick: begin
         }));
     }
 
     /** Sector 1 always holds one wreck whose transponder shows on the map from the start: the first thing to go and look at. */
+    /**
+     * The head count (docs/CANON.md section 6). Vance: five of us, she says four. Asked, A.U.R.A. names all five and still says four.
+     * Mira says it plainly: you are not on her list. It fires on the first return to the map in sector 1, so nobody can miss it.
+     */
+    showCountScene() {
+        if (!window.EncounterCard || this.state._countSceneSeen) return;
+        this.state._countSceneSeen = true;
+        const alive = who => this.state.crew.some(c => c.status !== 'DEAD' && c.name.includes(who));
+        const names = [['Jaxon', 'Jaxon Mercer'], ['Aris', 'Aris Novak'], ['Vance', 'Kael Vance'], ['Mira', 'Mira Chen']].filter(([first]) => alive(first)).map(([, full]) => full);
+        window.EncounterCard.open(this, {
+            tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE', title: 'Head count',
+            context: 'Back on the bridge, Vance is frowning at the crew screen.',
+            dialogue: [
+                { speaker: 'Spc. Vance', text: 'There are five of us on this ship. She keeps saying four.' },
+                { speaker: 'A.U.R.A.', text: 'Four crew, Commander. All well.' },
+                { speaker: 'Spc. Vance', text: 'Then list them.' },
+                { speaker: 'A.U.R.A.', text: `${names.join('. ')}. And you, Commander. Four crew.` },
+                { speaker: 'Tech Mira', text: 'She named you, but she did not count you. You are not on her list.' },
+                { speaker: 'Eng. Jaxon', text: 'It is a glitch. She slept sixty years too. Let it go.' },
+            ],
+            choices: [
+                { text: 'Let it go', desc: 'Jaxon is probably right. It is only a number.' },
+                { text: 'Ask her why', desc: 'Vance wants an answer.' },
+                { text: 'Read the printed crew list', desc: 'There is a paper copy in the bridge locker.' },
+            ],
+            onPick: (idx) => {
+                if (idx === 0) { this.state.noteStanding('jaxon'); this.state.addLog('A.U.R.A.: "Thank you, Commander."'); }
+                if (idx === 1) {
+                    this.state.noteStanding('vance');
+                    this.state.addLog('A.U.R.A.: "The crew list was sealed on Earth before launch, Commander. It has four names on it. I cannot change it."');
+                    this.state.addLog('Spc. Vance: "Sealed before launch. Before they had picked a commander."');
+                }
+                if (idx === 2) {
+                    this.state.noteStanding('aris');
+                    this.state.addLog('The printed crew list: four names. The line for the commander is blank. Not rubbed out. Never filled in.');
+                    this.state.addLog('Dr. Aris: "Somebody wrote this list before they knew who would be flying the ship."');
+                }
+                this.state.emitUpdates();
+            }
+        });
+    }
+
+    /**
+     * The one place a team can go on this planet (a planet has at most one: see tidySites). kind order = which wins.
+     * inSpace: reached by crossing in the lander, no landing. art: what the landing game draws beside the marked spot.
+     */
+    siteOf(planet) {
+        const SITES = [
+            { tag: 'EXODUS_WRECK', done: 'exodusInvestigated', label: 'THE WRECK', note: 'ONE OF OUR SHIPS', art: 'wreck', run: () => this.handleExodusAction() },
+            { tag: 'ANOMALY', done: 'anomalyInvestigated', label: 'THE STRANGE SITE', note: 'SOMETHING HERE IS WRONG', inSpace: true, run: () => this.handleAnomalyAction() },
+            { tag: 'LIGHTHOUSE', done: 'lighthouseInvestigated', label: 'THE BEACON', note: 'A BEACON STILL TRANSMITTING', art: 'beacon', run: () => this.handleLateGamePOI('LIGHTHOUSE') },
+            { tag: 'GARDEN', done: 'gardenInvestigated', label: 'THE DOME', note: 'SOMETHING GREEN UNDER GLASS', art: 'dome', run: () => this.handleLateGamePOI('GARDEN') },
+            { tag: 'GRAVE', done: 'graveInvestigated', label: 'THE GRAVES', note: 'ROWS OF MARKERS', art: 'stones', run: () => this.handleLateGamePOI('GRAVE') },
+            { tag: 'FAILED_COLONY', done: 'colonyInvestigated', label: 'THE COLONY RUINS', note: 'A SETTLEMENT, EMPTY', art: 'ruins', run: () => this.handleFailedColonyAction() },
+            { tag: 'DERELICT', done: 'derelictInvestigated', label: 'THE WRECKAGE', note: 'A SHIP IN PIECES, IN ORBIT', inSpace: true, run: () => this.handleDerelictAction() },
+        ];
+        return (planet && planet.tags && SITES.find(site => planet.tags.includes(site.tag))) || null;
+    }
+
+    /** Every planet keeps one site at most (the story wreck wins), and every sector gets one strange place. */
+    tidySites() {
+        const ORDER = ['EXODUS_WRECK', 'ANOMALY', 'LIGHTHOUSE', 'GARDEN', 'GRAVE', 'FAILED_COLONY', 'DERELICT'];
+        const nodes = this.state.sectorNodes || [];
+        const isStory = p => p.hasPage || p.hasTape || p.isFirstSignal;
+        const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
+        if (!nodes.some(p => (p.tags || []).includes('ANOMALY'))) {
+            const host = nodes.find(p => isLandable(p) && !isStory(p) && !(p.tags || []).includes('EXODUS_WRECK')) || nodes.find(p => isLandable(p) && !isStory(p));
+            if (host) { host.tags = (host.tags || []).concat('ANOMALY'); host.forcedAnomaly = true; }
+        }
+        nodes.forEach(p => {
+            if (!p.tags) return;
+            const keep = isStory(p) ? 'EXODUS_WRECK' : p.forcedAnomaly ? 'ANOMALY' : ORDER.find(t => p.tags.includes(t));
+            p.tags = p.tags.filter(t => !ORDER.includes(t) || t === keep);
+        });
+    }
+
+    /** A found page as a cargo item: kept, and readable again from the hold. */
+    pageItem(page, acquiredAt) {
+        return { ...page, acquiredAt, onUse: () => { if (window.FoundPage) window.FoundPage.open(this, page, acquiredAt); return 'You read it again.'; } };
+    }
+
+    /** Every sector holds one wreck with that sector's page in it (EXODUS_LOGS). Unmarked: you find it by searching wrecks. */
+    plantSectorPage() {
+        const nodes = this.state.sectorNodes || [], sector = this.state.currentSector;
+        const page = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).find(p => p.sector === sector);
+        if (!page || nodes.some(p => p.hasPage) || (this.state.exodusLogsFound || []).includes(page.id)) { this.tidySites(); return; }
+        const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
+        const wrecks = nodes.filter(p => isLandable(p) && (p.tags || []).includes('EXODUS_WRECK') && !p.hasTape && !p.isFirstSignal);
+        const target = wrecks[0] || nodes.find(p => isLandable(p) && !p.hasTape && !p.isFirstSignal) || nodes.find(isLandable);
+        if (!target) return;
+        target.tags = target.tags || [];
+        if (!target.tags.includes('EXODUS_WRECK')) target.tags.push('EXODUS_WRECK');
+        target.hasPage = page.id;
+        this.tidySites();
+    }
+
+    /** Found in the wreck: the page opens at once and stays in cargo. */
+    findSectorPage(shipName, pageId) {
+        const PAGE_DELAY_MS = 900;
+        const page = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).find(p => p.id === pageId);
+        if (!page || (this.state.exodusLogsFound || []).includes(page.id)) return;
+        this.state.exodusLogsFound = this.state.exodusLogsFound || [];
+        this.state.exodusLogsFound.push(page.id);
+        this.state.cargo.push(this.pageItem(page, shipName));
+        this.state.addLog(`In ${shipName}: ${page.desc}`);
+        this.state.emitUpdates();
+        setTimeout(() => { if (window.FoundPage) window.FoundPage.open(this, page, shipName); }, PAGE_DELAY_MS);
+    }
+
+    /** Sector 2 always holds one wreck with the uncut briefing tape in its archive. Unmarked: you find it by searching wrecks. */
+    plantBriefingTape() {
+        const nodes = this.state.sectorNodes || [];
+        if (this.state.currentSector !== 2 || nodes.some(p => p.hasTape) || this.state.cargo.some(i => i.id === 'briefing_tape')) return;
+        const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
+        const target = nodes.find(p => isLandable(p) && (p.tags || []).includes('EXODUS_WRECK')) || nodes.find(isLandable);
+        if (!target) return;
+        target.tags = target.tags || [];
+        if (!target.tags.includes('EXODUS_WRECK')) target.tags.push('EXODUS_WRECK');
+        target.hasTape = true;
+    }
+
+    /** Found in the wreck's archive; it plays at once, and Vance says the thing nobody wants said. */
+    findBriefingTape(shipName) {
+        const TAPE_DELAY_MS = 900;
+        if (typeof ITEMS === 'undefined' || !ITEMS.BRIEFING_TAPE || this.state.cargo.some(i => i.id === ITEMS.BRIEFING_TAPE.id)) return Promise.resolve();
+        this.state.cargo.push({ ...ITEMS.BRIEFING_TAPE, acquiredAt: shipName });
+        this.state.addLog(`In the archive of ${shipName}: a tape with our programme's seal. It is in your cargo now.`);
+        this.state.emitUpdates();
+        return new Promise(resolve => setTimeout(() => {
+            const played = window.StoryReel ? window.StoryReel.play('uncut') : Promise.resolve();
+            played.then(() => {
+                this.state.addLog('Spc. Vance: "That is not eight ships. That is hundreds."');
+                this.state.addLog('A.U.R.A.: "Old recordings degrade, Specialist. I would not read too much into it."');
+                this.state.emitUpdates();
+                resolve();
+            });
+        }, TAPE_DELAY_MS));
+    }
+
     markFirstSignal() {
         const nodes = this.state.sectorNodes || [];
         if (this.state.currentSector !== 1 || nodes.some(p => p.isFirstSignal)) return;
@@ -1324,6 +1502,18 @@ class App {
         target.isFirstSignal = true;
     }
 
+    /**
+     * After loading a save: a save made in front of the Structure must reopen that screen, because nothing can warp away
+     * from it and the map would be a dead end. The saved currentSystem is a JSON copy, so it is re-linked to its map node first.
+     */
+    resumeWhereSaved() {
+        const saved = this.state.currentSystem;
+        const node = saved && (this.state.sectorNodes || []).find(p => p.id === saved.id);
+        if (node) this.state.currentSystem = node;
+        if (node && (node.isStructure || node.type === 'STRUCTURE')) this.renderOrbit();
+        else this.renderNav();
+    }
+
     handleWarp(planet) {
         // The WARP button stays clickable for the 1s travel delay; a second click would charge
         // energy/rations and roll every hazard twice.
@@ -1331,22 +1521,21 @@ class App {
         // THE STRUCTURE - Cannot warp away. You are bound here.
         const currentPlanet = this.state.currentSystem;
         if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
-            this.state.addLog("A.U.R.A.: 'Warp drive engaged...'");
-            this.state.addLog("...");
-            this.state.addLog("A.U.R.A.: 'Warp successful. Arriving at destination.'");
-            this.state.addLog("A.U.R.A.: '...We are still at THE STRUCTURE.'");
-            this.state.addLog("A.U.R.A.: 'Commander, I have run diagnostics. The drive functions correctly.'");
-            this.state.addLog("A.U.R.A.: 'Space itself is refusing to take us elsewhere. There is only one way forward.'");
+            if (planet && planet.id === currentPlanet.id) { this.renderOrbit(); return; }   // "approach" while already there: just show it
+            this.state.addLog('A.U.R.A.: "The drive fires, Commander. We do not move."');
+            this.state.addLog('A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in."');
             return;
         }
 
         // Free warp if returning to the last visited system (simulating orbit re-entry)
         const cost = this.state.getWarpCost(planet);
-        if (cost === 0) this.state.addLog("Orbit re-entry trajectory calculated. Energy cost negligible.");
+        if (cost === 0 && (planet.isStructure || planet.type === 'STRUCTURE')) this.state.addLog('A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in."');
+        else if (cost === 0) this.state.addLog("Back into orbit. No energy needed.");
 
         // Out of stops: the window has closed on everything except where you already are
-        if (cost > 0 && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
-            this.state.addLog("A.U.R.A.: \"The jump window is closing. We have no time for another stop in this sector.\"");
+        const isFinale = !!(planet.isStructure || planet.type === 'STRUCTURE');       // the end of the heading costs no stop and is never out of reach
+        if (cost > 0 && !isFinale && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
+            this.state.addLog('A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector."');
             return;
         }
 
@@ -1369,7 +1558,7 @@ class App {
 
         if (this.state.consumeEnergy(cost)) {
             this._isInTransit = true;
-            if (cost > 0 && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
+            if (cost > 0 && !isFinale && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
             this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 
@@ -1377,7 +1566,7 @@ class App {
             if (!this.state._tutorialWarpSeen) {
                 this.state._tutorialWarpSeen = true;
                 setTimeout(() => {
-                    this.state.addLog("A.U.R.A.: Orbit achieved. Scanning systems ready. EVA teams on standby.");
+                    this.state.addLog('A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander."');
                 }, 500);
             }
 
@@ -1463,11 +1652,11 @@ class App {
             // Sector hazards during warp — delegated to SECTOR_CONFIG
             const warpConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
             if (warpConfig && warpConfig.hazard && warpConfig.hazard.onWarp) {
-                warpConfig.hazard.onWarp(this.state);
+                if (!isFinale) warpConfig.hazard.onWarp(this.state);
             }
 
-            // Ship malfunction check during warp
-            if (typeof rollShipMalfunction !== 'undefined') {
+            // Ship malfunction check during warp (never on the approach to the light: the finale is the only thing that happens there)
+            if (typeof rollShipMalfunction !== 'undefined' && !isFinale) {
                 const malfunction = rollShipMalfunction(this.state, 'warp');
                 if (malfunction) {
                     this.showShipMalfunctionModal(malfunction);
@@ -1504,10 +1693,10 @@ class App {
                 setTimeout(() => window.BarkSystem.tryBark('ENTER_ORBIT', this.state, { planet }), 50);
             }
 
-            // A.U.R.A. commentary on orbit entry
-            if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+            // A.U.R.A. commentary on orbit entry (not at the light: nothing random happens there)
+            if (typeof AuraSystem !== 'undefined' && window.AuraSystem && !isFinale) {
                 window.AuraSystem.tryComment('ENTER_ORBIT', this.state);
-                window.AuraSystem.checkAdversarialAction(this.state);
+                if (!(planet.isStructure || planet.type === 'STRUCTURE')) window.AuraSystem.checkAdversarialAction(this.state);
 
                 // Trigger any pending premonition effects
                 const premonitionResult = window.AuraSystem.triggerPremonition(this.state);
@@ -1532,8 +1721,8 @@ class App {
                     this.state.addLog(`Entered debris field. Navigation systems active.`);
                 } else if (planet.isStructure || planet.type === 'STRUCTURE') {
                     // THE STRUCTURE - special arrival
-                    this.state.addLog(`Approach complete. THE STRUCTURE fills every viewport.`);
-                    this.state.addLog(`A.U.R.A.: 'We have arrived. There is nowhere else to go.'`);
+                    this.state.addLog(`Approach complete. The light fills every window. It is not warm.`);
+                    this.state.addLog(`A.U.R.A.: "Five crew, Commander. All accounted for."`);
                     // Switch to Heaven music
                     if (window.AudioSystem && window.AudioSystem.playHeavenMusic) {
                         window.AudioSystem.playHeavenMusic();
@@ -1547,8 +1736,8 @@ class App {
                 // Auto-save after arriving at planet
                 this.autoSave();
 
-                // Check for distress signals after warp (small chance) - use queue to prevent stacking
-                if (typeof rollDistressSignal !== 'undefined') {
+                // Check for distress signals after warp (small chance) - use queue to prevent stacking; never at the light
+                if (typeof rollDistressSignal !== 'undefined' && !isFinale) {
                     const distress = rollDistressSignal(this.state, 'warp');
                     if (distress) {
                         setTimeout(() => {
@@ -1558,8 +1747,8 @@ class App {
                     }
                 }
 
-                // Check for crew personal events - queued to not overlap
-                setTimeout(() => this.checkForCrewEvent(), 2000);
+                // Check for crew personal events - queued to not overlap; never at the light
+                if (!isFinale) setTimeout(() => this.checkForCrewEvent(), 2000);
             }, 1000);
         }
     }
@@ -1854,10 +2043,12 @@ class App {
             this.state.addLog("BRIDGE OFFLINE: Remote scanning unavailable.");
             return;
         }
-        if (this.state.consumeEnergy(2)) {
+        const hasBigDish = this.state.upgrades.includes('sensor_v2');                     // Sensor Array V2: scans are free and report air and gravity
+        if (hasBigDish || this.state.consumeEnergy(2)) {
             const data = this.state.sectorNodes.find(p => p.id === planet.id);
             if (data) {
                 data.remoteScanned = true;
+                if (hasBigDish) data.dishRevealed = true;
 
                 // S3 INTERFERENCE hook — may corrupt scan data (can show false resource levels)
                 const scanConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
@@ -1874,7 +2065,7 @@ class App {
                     };
                     data._scanCorrupted = true;
                     this.state._auraFalseScan = false;
-                    this.state.addLog(`A.U.R.A.: "Scan complete. All readings normal." [READINGS UNRELIABLE]`);
+                    this.state.addLog(`A.U.R.A.: "Scan complete, Commander. All readings normal." [READINGS UNRELIABLE]`);
                 }
 
                 // Build signal summary for log
@@ -1888,7 +2079,8 @@ class App {
                 const metalLevel = data.resources?.metals >= 70 ? 'HIGH' : (data.resources?.metals >= 40 ? 'MODERATE' : 'LOW');
                 const energyLevel = data.resources?.energy >= 70 ? 'HIGH' : (data.resources?.energy >= 40 ? 'MODERATE' : 'LOW');
 
-                this.state.addLog(`Long-range scan: ${planet.name}. Salvage: ${metalLevel}. Energy: ${energyLevel}. Signals: ${signalStr}.`);
+                const dishStr = hasBigDish && data.metrics ? ` Air: ${data.atmosphere || 'unknown'}. Gravity: ${data.metrics.gravity != null ? data.metrics.gravity.toFixed(1) + ' G' : 'unknown'}.` : '';
+                this.state.addLog(`Long-range scan: ${planet.name}. Salvage: ${metalLevel}. Energy: ${energyLevel}. Signals: ${signalStr}.${dishStr}`);
 
                 // Force re-render of right panel
                 this.navView.handlePlanetSelect(data);
@@ -1946,7 +2138,7 @@ class App {
     handleSectorJump() {
         if (this._isInTransit) return;
         if (this.state.currentSector >= FINAL_SECTOR) {
-            this.state.addLog("A.U.R.A.: No charted space beyond this sector. The Structure is the end of the corridor.");
+            this.state.addLog('A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light."');
             return;
         }
         let jumpCost = 20;
@@ -1996,14 +2188,17 @@ class App {
                 window.AuraSystem.tryComment('SECTOR_JUMP', this.state);
             }
 
-            // Show warp animation with crew dialogue, then campfire event
+            // Show warp animation with crew dialogue, then campfire event. Into sector 3 the burn stalls and the throw plays first.
+            const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
             this.showWarpAnimation(() => {
-                this.showCampfireEvent(() => {
+                (isThrow ? window.TheThrow.play(this) : Promise.resolve()).then(() => (isThrow ? (done => done()) : fn => this.showCampfireEvent(fn))(() => {
                 this._isInTransit = false;
                 const nextSector = this.state.currentSector + 1;
                 this.state.sectorNodes = PlanetGenerator.generateSector(nextSector);
                 this.state.currentSector = nextSector;
                 this.state.lastVisitedSystem = null;
+                this.plantBriefingTape();
+                this.plantSectorPage();
 
                 // Sector enter hazard (e.g., S3 ghost planets) — pass state for ghost planet logging
                 const enterConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[nextSector] : null;
@@ -2025,7 +2220,7 @@ class App {
 
                 // Special barks for sector entries
                 // The picture that closes the sector you just left: sector 3 gets the long one (the truth), the rest a five-second shot
-                if (window.StoryReel && !window.TEST_MODE) window.StoryReel.play(nextSector === 3 ? 'corridor' : `jump${nextSector}`);
+                if (window.StoryReel && !window.TEST_MODE && nextSector !== 3) window.StoryReel.play(`jump${nextSector}`);
                 if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
                     if (nextSector === 3) {
                         window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
@@ -2033,21 +2228,23 @@ class App {
                         window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state); // key kept for saves; the lines are about the LAST sector
                     }
                 }
-                });
-            });
+                }));
+            }, isThrow);
         }
     }
 
     /**
      * Show warp animation with crew dialogue during sector jump
      */
-    showWarpAnimation(onComplete) {
+    showWarpAnimation(onComplete, isStalled) {
         if (window.WarpPlot) {
             const nextSector = this.state.currentSector + 1;
             const name = (typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[nextSector]) ? SECTOR_CONFIG[nextSector].name : `SECTOR ${nextSector}`;
-            const plotOptions = this.getPlotOptions(`S${nextSector} — ${name}`, 'sector');
+            const plotOptions = this.getPlotOptions(`S${nextSector} — ${isStalled ? '' : name}`.trim(), 'sector');
             const living = this.state.crew.filter(c => c.status !== 'DEAD');
-            plotOptions.arrival = {
+            plotOptions.arrival = isStalled ? {                                             // the burn does not finish: no name, no line, nobody speaks
+                kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The third burn did not finish.', voices: [],
+            } : {
                 kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`,
                 title: name,
                 line: SECTOR_ARRIVAL_LINES[nextSector] || '',
@@ -2243,76 +2440,29 @@ class App {
      * A.U.R.A. delivers key story points + crew reactions (if alive)
      * Story works even if all crew are dead
      */
+    /** What the crew say on arriving in a sector (the card after the jump shows two of them). Canon: docs/CANON.md §2. */
     getWarpDialogue(nextSector, livingCrew = []) {
-        const dialogue = [];
         const hasCrew = (tag) => livingCrew.some(c => c.tags && c.tags.includes(tag));
-
-        if (nextSector === 2) {
-            // SECTOR 2: THE DARK VOID - Teaches resources
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 2: THE DARK VOID.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'The graveyard of failed ships lies behind us. Ahead: salvage, energy, and data to collect.' });
-            if (hasCrew('ENGINEER')) {
-                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Plenty of wrecks to strip. Let\'s make their loss count.', portraitId: 'M_2' });
-            }
-            if (hasCrew('MEDIC')) {
-                dialogue.push({ speaker: 'Dr. Aris', text: 'Every scan we take could save the next colony. Don\'t forget that.', portraitId: 'F_3' });
-            }
-        } else if (nextSector === 3) {
-            // SECTOR 3: THE SIGNAL - First hint
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 3: THE SIGNAL.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Anomaly detected. A rhythmic pulse originating from beyond Sector 5.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Analysis suggests it is not natural. Something is broadcasting coordinates.' });
-            if (hasCrew('SPECIALIST')) {
-                dialogue.push({ speaker: 'Tech Mira', text: 'Coordinates to what? Who\'s out there?', portraitId: 'F_5' });
-            }
-            if (hasCrew('SECURITY')) {
-                dialogue.push({ speaker: 'Spc. Vance', text: 'Could be a lure. Stay alert.', portraitId: 'M_4' });
-            }
-        } else if (nextSector === 4) {
-            // SECTOR 4: THE GARDEN - Signal decoded
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 4: THE GARDEN.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Life signatures ahead. But the signal from beyond grows stronger with each jump.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'I have partially decoded it. The signal is 3.7 billion years old.' });
-            if (hasCrew('MEDIC')) {
-                dialogue.push({ speaker: 'Dr. Aris', text: 'Older than life on Earth... what could survive that long?', portraitId: 'F_3' });
-            }
-            if (hasCrew('SPECIALIST')) {
-                dialogue.push({ speaker: 'Tech Mira', text: 'It\'s pointing us to Sector 6. That\'s the destination.', portraitId: 'F_5' });
-            }
-        } else if (nextSector === 5) {
-            // SECTOR 5: THE EVENT HORIZON - Key revelation
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 5: THE EVENT HORIZON.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'This is the edge of mapped space. No human probe has returned from beyond.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Commander, I must report something. The debris fields, the signals, the path we followed...' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'They were arranged. We are not exploring. We are being GUIDED to Sector 6.' });
-            if (hasCrew('ENGINEER')) {
-                dialogue.push({ speaker: 'Eng. Jaxon', text: 'Guided by what? That\'s not reassuring.', portraitId: 'M_2' });
-            }
-            if (hasCrew('SECURITY')) {
-                dialogue.push({ speaker: 'Spc. Vance', text: 'Doesn\'t matter. We\'ve come too far to turn back.', portraitId: 'M_4' });
-            }
-        } else if (nextSector === 6) {
-            // SECTOR 6: THE THRESHOLD - Destination
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Warp complete. Entering Sector 6: THE THRESHOLD.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'Every ship before us stopped somewhere behind us. The signal ends here.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'I detect a structure. Artificial. Ancient. It has been waiting for 3.7 billion years.' });
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'This is the destination, Commander. This is what called us across the void.' });
-            if (hasCrew('MEDIC')) {
-                dialogue.push({ speaker: 'Dr. Aris', text: 'I can feel it. Something old. Something patient.', portraitId: 'F_3' });
-            }
-            if (hasCrew('SPECIALIST')) {
-                dialogue.push({ speaker: 'Tech Mira', text: 'The readings are impossible. It\'s like nothing in our physics.', portraitId: 'F_5' });
-            }
-            if (hasCrew('SECURITY')) {
-                dialogue.push({ speaker: 'Spc. Vance', text: 'Whatever it is, we face it together.', portraitId: 'M_4' });
-            }
-        } else if (nextSector > 6) {
-            dialogue.push({ speaker: 'A.U.R.A.', text: 'We are beyond all charts. The universe holds its breath.' });
-        } else {
-            dialogue.push({ speaker: 'A.U.R.A.', text: `Transitioning to Sector ${nextSector}. All systems normal.` });
-        }
-
-        return dialogue;
+        const say = (speaker, text, portraitId) => ({ speaker, text, portraitId });
+        const LINES = {
+            2: [say('A.U.R.A.', 'Sector 2, Commander. The last of the eight ships should be out here.'),
+                hasCrew('ENGINEER') && say('Eng. Jaxon', 'Eight ships, and none of them left us so much as a note.', 'M_2'),
+                hasCrew('MEDIC') && say('Dr. Aris', 'If we find their crews, we write their names down. All of them.', 'F_3')],
+            3: [say('A.U.R.A.', 'Sector 3, Commander. Hundreds of ship beacons ahead, all ours.'),
+                hasCrew('SPECIALIST') && say('Tech Mira', 'Look at the ship numbers. Two hundred. Six hundred. Nine hundred.', 'F_5'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'They told us nine ships. That is nine hundred.', 'M_4')],
+            4: [say('A.U.R.A.', 'Sector 4, Commander. These wrecks are about two hundred years old.'),
+                hasCrew('MEDIC') && say('Dr. Aris', 'Two hundred years dead, and their numbers are higher than ours. How?', 'F_3'),
+                hasCrew('ENGINEER') && say('Eng. Jaxon', 'There is real green down there. I would stop here, Commander.', 'M_2')],
+            5: [say('A.U.R.A.', 'Sector 5, Commander. Ship numbers in the tens of thousands. All of them ours.'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'At the shipyard I saw more than nine being built. Never this many.', 'M_4'),
+                hasCrew('SPECIALIST') && say('Tech Mira', 'I have stopped reading the numbers. I cannot keep up.', 'F_5')],
+            6: [say('A.U.R.A.', 'Sector 6, Commander. The oldest wrecks, and a light at the end of the heading.'),
+                hasCrew('MEDIC') && say('Dr. Aris', 'It looks like a sun. Every one of them flew toward it.', 'F_3'),
+                hasCrew('SPECIALIST') && say('Tech Mira', 'It gives off no heat. A real sun would.', 'F_5'),
+                hasCrew('SECURITY') && say('Spc. Vance', 'Thirty thousand wrecks between us and that light.', 'M_4')],
+        };
+        return (LINES[nextSector] || [say('A.U.R.A.', `Sector ${nextSector}, Commander. All systems normal.`)]).filter(Boolean);
     }
 
     showCampfireEvent(onComplete) {
@@ -2343,10 +2493,10 @@ class App {
         // Weighted by priority (story talks are likelier, not guaranteed), and never the same talk twice in one run
         this.state._seenCampfires = this.state._seenCampfires || [];
         const fresh = eligible.filter(e => !this.state._seenCampfires.includes(e.id));
-        const pool = fresh.length ? fresh : eligible;
-        const weightOf = e => Math.pow(e.priority || 1, 2);
-        let roll = Math.random() * pool.reduce((sum, e) => sum + weightOf(e), 0);
-        const event = pool.find(e => (roll -= weightOf(e)) <= 0) || pool[0];
+        const candidates = fresh.length ? fresh : eligible;
+        const topPriority = Math.max(...candidates.map(e => e.priority || 1));               // a priority-3 talk is the act break: it always fires
+        const pool = candidates.filter(e => (e.priority || 1) === topPriority);
+        const event = pool[Math.floor(Math.random() * pool.length)];
         if (event.id) this.state._seenCampfires.push(event.id);
 
         // Sector names — pull from SECTOR_CONFIG or fallback (up to sector 6)
@@ -2356,7 +2506,7 @@ class App {
                 SECTOR_NAMES[s] = SECTOR_CONFIG[s] ? SECTOR_CONFIG[s].name : '???';
             }
         } else {
-            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD' });
+            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT' });
         }
 
         // Use narrative modal system if available for immersive experience
@@ -2428,7 +2578,7 @@ class App {
         if (encounters.length === 0) {
             // All encountered, reset but still use all
             encounters = allEncounters;
-            this.state.addLog("A.U.R.A.: Similar wreck configuration detected. We've seen this pattern before.");
+            this.state.addLog('A.U.R.A.: "The same class of hull, Commander. They were all built to one drawing."');
         }
 
         const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
@@ -2453,6 +2603,8 @@ class App {
             attempts++;
         }
         this.state._encounteredShipNames.push(shipName);
+        this.state._boardedHulls = this.state._boardedHulls || [];
+        this.state._boardedHulls.push(shipName);
         // Bark: crew reacts to Exodus wreck
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
             window.BarkSystem.tryBark('EXODUS_FOUND', this.state, { planet });
@@ -2467,6 +2619,7 @@ class App {
         // Use narrative modal system if available for immersive experience
         if (window.NarrativeModal) {
             this.showNarrativeEncounter({
+                art: 'EXODUS_WRECK',
                 title: selected.title,
                 speaker: 'NARRATOR',
                 context: `[highlight]${shipName}[/highlight]\n\n${selected.context(shipName)}`,
@@ -2475,6 +2628,8 @@ class App {
                 onChoiceMade: () => {
                     this.orbitView.updateCommandDeck(planet);
                     if (planet.isFirstSignal) this.findDiscDrawing(shipName);
+                    const tapeDone = planet.hasTape ? this.findBriefingTape(shipName) : Promise.resolve();
+                    if (planet.hasPage) tapeDone.then(() => this.findSectorPage(shipName, planet.hasPage));
                 }
             });
             return;
@@ -2523,6 +2678,7 @@ class App {
         // Use narrative modal system if available for immersive experience
         if (window.NarrativeModal) {
             this.showNarrativeEncounter({
+                art: 'FAILED_COLONY',
                 title: selected.title,
                 speaker: 'NARRATOR',
                 context: `[highlight]COLONY RUINS: ${selected.title}[/highlight]\n\n${selected.context(planet.name)}`,
@@ -2575,6 +2731,7 @@ class App {
         // Use narrative modal system
         if (window.NarrativeModal) {
             this.showNarrativeEncounter({
+                art: 'DERELICT',
                 title: selected.title,
                 speaker: 'NARRATOR',
                 context: `[highlight]${shipName}[/highlight]\n\n${selected.context(shipName)}`,
@@ -2608,14 +2765,19 @@ class App {
         }
         this.state.consumeRation(); // every investigation costs a ration, same as wrecks and stations
 
-        // Select by weight
-        const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
+        // Select by weight: nothing that moves the ship before sector 3, and never the same strange place twice in a run
+        const EARLY_BANNED = ['ANOMALY_FOLD', 'ANOMALY_DOOR'];
+        this.state._seenAnomalies = this.state._seenAnomalies || [];
+        const allowed = encounters.filter(e => (this.state.currentSector >= 3 || !EARLY_BANNED.includes(e.id)) && !this.state._seenAnomalies.includes(e.id));
+        const pool = allowed.length ? allowed : encounters.filter(e => this.state.currentSector >= 3 || !EARLY_BANNED.includes(e.id));
+        const totalWeight = pool.reduce((sum, e) => sum + e.weight, 0);
         let roll = Math.random() * totalWeight;
-        let selected = encounters[0];
-        for (const enc of encounters) {
+        let selected = pool[0];
+        for (const enc of pool) {
             roll -= enc.weight;
             if (roll <= 0) { selected = enc; break; }
         }
+        if (selected && selected.id) this.state._seenAnomalies.push(selected.id);
 
         // Bark: crew reacts to anomaly
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
@@ -2636,6 +2798,7 @@ class App {
         // Use narrative modal system
         if (window.NarrativeModal) {
             this.showNarrativeEncounter({
+                art: selected.id,
                 title: selected.title,
                 speaker: 'NARRATOR',
                 context: `[warning]ANOMALY: ${selected.title}[/warning]\n\n${selected.context()}`,
@@ -2702,6 +2865,8 @@ Then you're through.`,
                         }
 
                         state.currentSystem = null;
+                        state.lastVisitedSystem = null;
+                        if (window.app) { window.app.plantBriefingTape(); window.app.plantSectorPage(); }
                         state.addLog("=== REALITY BREACH SUCCESSFUL ===");
                         state.addLog(`Emerged in Sector ${targetSector}. The crew will never forget what they saw.`);
 
@@ -2715,7 +2880,7 @@ Then you're through.`,
                 if (sectorNameEl) {
                     const SECTOR_NAMES = {
                         1: 'THE GRAVEYARD', 2: 'THE DEEP', 3: 'THE INTERFERENCE',
-                        4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD'
+                        4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT'
                     };
                     sectorNameEl.textContent = `/// SECTOR ${this.state.currentSector}: ${SECTOR_NAMES[this.state.currentSector] || 'UNKNOWN'}`;
                     sectorNameEl.style.color = 'var(--color-accent)';
@@ -2730,32 +2895,14 @@ Then you're through.`,
         // Accepting your fate in THE WRONG PLACE is a unique ending
         this.showEndingScreen({
             ending: 'WRONG_PLACE_ACCEPTED',
-            title: 'THE WRONG PLACE',
-            text: `You stop fighting.
-
-The engines go quiet. The lights dim. The crew gathers on the bridge and watches the impossible stars.
-
-A.U.R.A. speaks one last time: "I understand now. This place... it's not wrong. It's just different. Perhaps it was always waiting for us."
-
-One by one, you stop seeing the strangeness. The colors that shouldn't exist become beautiful. The geometry that hurts to perceive becomes... home.
-
-The Exodus-9 settles into orbit around a world that exists in no chart, in no dimension, in no time you've ever known.
-
-You step outside.
-
-The air shouldn't be breathable. You breathe it anyway.
-
-The ground shouldn't hold your weight. It holds you anyway.
-
-You build. You live. You forget what "normal" ever meant.
-
-Somewhere, somewhen, the universe continues without you.
-
-You don't miss it.
-
-You are exactly where you were always meant to be.
-
-You are home.`
+            title: 'A COPY OF SOMEWHERE',
+            text: [
+                'You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows.',
+                'It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong.',
+                'You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again.',
+                'Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four.',
+            ],
+            vault: 'Twin 0009 begins, very quietly, to repeat itself.',
         });
     }
 
@@ -2790,6 +2937,7 @@ You are home.`
 
         // Show the POI encounter using narrative modal
         this.showNarrativeEncounter({
+            art: poiType,
             title: poi.title,
             speaker: 'NARRATOR',
             context: poi.context(),
@@ -2821,9 +2969,7 @@ You are home.`
             return;
         }
 
-        this.state.addLog("===================================");
-        this.state.addLog("APPROACHING THE STRUCTURE...");
-        this.state.addLog("===================================");
+        this.state.addLog("Going into the light.");
 
         // Show the approach modal with cinematic text
         this.showStructureModal(encounter, planet);
@@ -2831,24 +2977,31 @@ You are home.`
 
     showStructureModal(encounter, planet) {
         const SPEAKER_ROLE = { 'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC', 'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST' };
-        const MAX_LINES = 3;
         const isAlive = (speaker) => {
             const role = SPEAKER_ROLE[speaker];
             if (!role) return true;
             const member = this.state.crew.find(c => c.tags.includes(role));
             return !!member && member.status !== 'DEAD';
         };
-        window.EncounterCard.open(this, {
-            color: '#a97bff', kicker: 'THE END OF THE CORRIDOR', title: 'The Structure', zIndex: 3000,
-            context: encounter.approach.context().trim().replace(/\n+/g, ' '),
-            dialogue: encounter.approach.dialogue.filter(d => isAlive(d.speaker)).slice(0, MAX_LINES),
-            choices: encounter.choices.map(c => ({ text: c.text, desc: c.desc })),
+        const a = encounter.approach;
+        // the reading (a picture), then the disc inside the light, then the choice; nothing here is random
+        const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('reading') : Promise.resolve();
+        reel.then(() => (window.DiscDocument ? window.DiscDocument.open(this, {
+            kicker: 'INSIDE THE LIGHT · THE DISC, BEING READ', title: 'The disc', aura: 'Five crew, Commander. All accounted for.', close: 'GO ON', closeNote: 'there is nothing else in here',
+        }) : Promise.resolve())).then(() => window.EncounterCard.open(this, {
+            color: '#ffd27a', kicker: a.kicker, title: a.title, zIndex: 3000, context: a.context,
+            dialogue: a.dialogue.filter(d => isAlive(d.speaker)),
+            choices: encounter.choices.map(c => {
+                const had = c.who ? ((this.state._standing || {})[c.who] || 0) : null;
+                const label = c.who && typeof STANDING_NEEDED !== 'undefined' ? `${c.requiresLabel} (you backed them ${Math.min(had, STANDING_NEEDED)} of the ${STANDING_NEEDED} times it takes)` : c.requiresLabel;
+                return { text: c.text, desc: c.desc, requires: c.requires, requiresLabel: label };
+            }),
             onPick: (idx) => {
                 const result = encounter.choices[idx].effect(this.state);
                 planet.structureApproached = true;
                 this.showEndingScreen(result);
             }
-        });
+        }));
     }
 
     showEndingScreen(result) {
@@ -2883,16 +3036,9 @@ You are home.`
             </div>`;
         }
 
-        // Clean up the text - handle both pre-formatted and regular text
-        let cleanText = result.text || '';
-        // Trim leading/trailing whitespace from each line and the whole text
-        cleanText = cleanText.split('\n').map(line => line.trim()).join('\n').trim();
-        // Convert double newlines to paragraph breaks
-        cleanText = cleanText.replace(/\n\n+/g, '</p><p>');
-        // Convert remaining single newlines to breaks
-        cleanText = cleanText.replace(/\n/g, '<br>');
-        // Wrap in paragraph tags
-        cleanText = '<p>' + cleanText + '</p>';
+        // An ending is a few short paragraphs, then one line about the vault on Earth
+        const paragraphs = Array.isArray(result.text) ? result.text : String(result.text || '').split(/\n\n+/).map(line => line.trim()).filter(Boolean);
+        const cleanText = paragraphs.map(p => `<p>${p}</p>`).join('') + (result.vault ? `<p class="end-vault"><b>IN THE VAULT ON EARTH</b>${result.vault}</p>` : '');
 
         modal.innerHTML = `
             <div style="
@@ -2937,7 +3083,7 @@ You are home.`
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85em; color: #888;">
                         <div>FINAL SECTOR: <span style="color: #c4d0c4;">${this.state.currentSector}</span></div>
                         <div>CREW SURVIVORS: <span style="color: #88cc88;">${livingCrew.length} / 5</span></div>
-                        <div>EXODUS LOGS: <span style="color: #c4d0c4;">${exodusLogsFound} / 8</span></div>
+                        <div>PAGES FOUND: <span style="color: #c4d0c4;">${exodusLogsFound} / 6</span></div>
                         <div>COLONY DATA: <span style="color: #c4d0c4;">${colonyKnowledge}</span></div>
                         <div>SALVAGE: <span style="color: #c4d0c4;">${this.state.salvage}</span></div>
                         <div>ENERGY: <span style="color: #c4d0c4;">${this.state.energy}%</span></div>
@@ -2987,6 +3133,9 @@ You are home.`
         // New game button
         const newGameBtn = modal.querySelector('#btn-new-game');
         newGameBtn.onclick = () => {
+            try { localStorage.removeItem('silentExodus_save'); } catch (e) { /* storage blocked: the reload still starts fresh */ }
+            location.reload();                                                           // like the other end screens: nothing from this run survives
+            return;
             modal.remove();
             // Reset the game completely
             this.state.init();
@@ -3021,8 +3170,9 @@ You are home.`
             this.state.currentSystem = null;
             this.state.lastVisitedSystem = null;
 
-            // Return to navigation view
+            // Back to the map, through the same opening a fresh start gets (it marks the first transponder and re-renders the map)
             this.renderNav();
+            this.showOpeningBriefing();
         };
     }
 
@@ -3045,7 +3195,7 @@ You are home.`
         });
 
         window.EncounterCard.open(this, {
-            tone: config.tone || 'story', zIndex: 2600,
+            tone: config.tone || 'story', zIndex: 2600, art: config.art,
             // a headline that repeats the title ("COLONY RUINS: <title>") gives its extra words to the kicker instead
             kicker: config.kicker || subline || (headline && headline.includes(config.title) ? headline.replace(config.title, '').replace(/[:\s—-]+$/, '') : ''),
             title: headline && !headline.includes(config.title) ? `${config.title} — ${headline}` : config.title,
@@ -3339,7 +3489,9 @@ You are home.`
 
         if (this.state.consumeEnergy(2)) {
             this.state.addLog("Deep Scan started...");
-            if (tune && tune.grade === 'sharp') {
+            if (tune && tune.grade === 'sharp' && !this.state.isDeckOperational('lab')) {
+                this.state.addLog("Sharp lock, but the laboratory is down: nobody can work the extra detail into data.");
+            } else if (tune && tune.grade === 'sharp') {
                 this.state.addColonyKnowledge(1, true);
                 this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
             } else if (tune && tune.grade === 'weak') {
@@ -3359,7 +3511,7 @@ You are home.`
             // Check if PREDATORY was just revealed
             if (planet.tags && planet.tags.includes('PREDATORY')) {
                 this.state.addLog("⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior.");
-                this.state.addLog("A.U.R.A.: \"Deep scan reveals aggressive bio-signatures. This paradise has teeth.\"");
+                this.state.addLog('A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part."');
             }
 
             this.state.addLog("Detailed surface analysis complete. Resource data available.");
@@ -3369,8 +3521,8 @@ You are home.`
 
             // ALIEN SIGNALS: high risk but data valuable
             if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) {
-                this.state.addLog("⚡ ALIEN SIGNAL SOURCE: Unknown transmission origin detected. Approach with caution.");
-                this.state.addLog("A.U.R.A.: \"The signal isn't random. It's a message. For whom, I cannot determine.\"");
+                this.state.addLog("⚡ OLD SIGNAL: a beacon on our own channel, still transmitting.");
+                this.state.addLog('A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it."');
             }
 
             // ANCIENT RUINS: knowledge and reduced EVA risk
@@ -3450,7 +3602,7 @@ You are home.`
             this.state.addLog("Probe launched toward THE STRUCTURE...");
             this.state.addLog("...");
             this.state.addLog("Signal lost instantly. No data. No wreckage. The probe simply... ceased.");
-            this.state.addLog("A.U.R.A.: 'The probe did not crash. It was... unmade. I advise against further attempts.'");
+            this.state.addLog('A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read."');
             this.state.emitUpdates();
             this.orbitView.updateCommandDeck(planet);
             return;
@@ -3646,14 +3798,13 @@ You are home.`
 
         // THE STRUCTURE — Cannot EVA on this cosmic entity
         if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
-            this.state.addLog("A.U.R.A.: 'EVA is not possible. THE STRUCTURE has no surface in any conventional sense.'");
-            this.state.addLog("A.U.R.A.: 'To interact with it, you must... approach it. Directly.'");
+            this.state.addLog('A.U.R.A.: "There is no ground to land on, Commander. There is only the light."');
             return;
         }
 
         // THE WRONG PLACE — EVA is extremely dangerous
         if (planet && planet._isWrongPlace) {
-            this.state.addLog("A.U.R.A.: 'WARNING: EVA in this location is inadvisable. Space itself is... wrong here.'");
+            this.state.addLog('A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished."');
             // Allow but add extra danger warning
         }
 
@@ -3691,6 +3842,7 @@ You are home.`
         // OBSESSED (Mira stress 3): EVA costs double energy and double rations
         const isObsessed = this.state.hasActiveTrait('OBSESSED');
         const evaCost = isObsessed ? 10 : 5;
+        const site = this.siteOf(planet), isSiteTrip = !!(site && !planet[site.done]);
 
         if (this.state.consumeEnergy(evaCost)) {
             const planet = this.state.currentSystem;
@@ -3706,7 +3858,7 @@ You are home.`
             // Tutorial: first EVA
             if (!this.state._tutorialEvaSeen) {
                 this.state._tutorialEvaSeen = true;
-                this.state.addLog("A.U.R.A.: EVA team deployed. Surface conditions will determine risk. I will monitor their vitals.");
+                this.state.addLog('A.U.R.A.: "Team away, Commander. I have their vitals."');
             }
 
             // A.U.R.A. commentary on EVA
@@ -3714,8 +3866,8 @@ You are home.`
                 window.AuraSystem.tryComment('EVA_DEPLOY', this.state);
             }
 
-            // Consume rations (major action — double if obsessed)
-            this.state.consumeRation();
+            // Consume rations (major action — double if obsessed); a site trip's ration is taken by the site itself
+            if (!isSiteTrip) this.state.consumeRation();
             if (isObsessed) {
                 this.state.consumeRation();
                 this.state.addLog("Mira: Extended EVA window. Additional rations consumed.");
@@ -3725,9 +3877,18 @@ You are home.`
             this.currentEvaTeam = evaTeam;
 
             // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
-            const goDown = window.LanderGame ? window.LanderGame.play(this, planet, evaTeam)
+            const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
+            if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
+            const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null })
                 : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
             const afterDescent = goDown.then(landing => this.applyLanding(landing, evaTeam));
+
+            if (isSiteTrip) {                                                           // the team goes where the scan pointed: the site's own story
+                planet.hasEva = true;
+                this.orbitView.updateCommandDeck(planet);
+                afterDescent.then(() => site.run());
+                return;
+            }
 
             // Special EDEN EVA — paradise world, unique peaceful encounter
             if (planet.type === 'EDEN') {
@@ -3759,7 +3920,8 @@ You are home.`
         if (!landing || !window.LanderGame) return;
         this.noteReliance(!!landing.auto);
         this._landingRiskMod = window.LanderGame.GRADES[landing.grade].riskMod;
-        if (landing.grade === 'soft') this.state.addLog("Soft landing. The team steps out steady.");
+        if (landing.grade === 'soft') this.state.addLog("Soft landing on the marked spot. The team steps out steady.");
+        if (landing.offMark) this.state.addLog("Down safely, but well away from the marked spot. It is a long walk.");
         if (landing.grade === 'crash') {
             const fit = evaTeam.filter(m => m.status === 'HEALTHY');
             const hurt = fit[Math.floor(Math.random() * fit.length)];
@@ -3844,6 +4006,12 @@ You are home.`
             : '';
 
         // Card layout: what the team found, what the scan says, then one button per option with its real odds
+        const REWARD_WORDS = { METALS: '+40 to 79 salvage', METALS_HIGH: '+60 to 119 salvage', ENERGY: '+30 to 49 energy', NOTHING: 'nothing' };
+        const rewardWords = (choice) => {
+            const r = choice.reward || {};
+            if (r.type === 'ITEM') return `an item${r.tags && r.tags.length ? ' · ' + String(r.tags[0]).toLowerCase() : ''}`;
+            return REWARD_WORDS[r.val] || (r.type === 'RESOURCE' ? REWARD_WORDS.ENERGY : 'nothing');
+        };
         const evaChoice = (choice, idx) => {
             const totalRisk = Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
             const riskColor = totalRisk < 10 ? 'var(--green)' : totalRisk < 30 ? 'var(--amber)' : 'var(--red)';
@@ -3852,7 +4020,7 @@ You are home.`
             const isDisabled = paranoidBlocked || recklessBlocked;
             const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : `${totalRisk}% chance someone gets hurt`);
             return `<button class="deck-action choice-btn eva-choice" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
-                        <span>${choice.text}</span>
+                        <span>${choice.text}<em class="eva-gets">${rewardWords(choice)}</em></span>
                         <small style="color:${isDisabled ? 'var(--red)' : riskColor}">${note}<i class="eva-risk"><b style="width:${totalRisk}%; background:${riskColor}"></b></i></small>
                     </button>`;
         };
@@ -3909,7 +4077,7 @@ You are home.`
             'MECHA': ['security drone', 'automated defense', 'power surge', 'mechanical trap'],
             'ROGUE': ['extreme cold exposure', 'equipment malfunction', 'isolation psychosis', 'radiation burst'],
             'TERRAFORMED': ['terraformer malfunction', 'environmental collapse', 'system failure', 'containment breach'],
-            '_DEFAULT': ['accident', 'equipment failure', 'environmental hazard', 'unforeseen complication']
+            '_DEFAULT': ['a bad fall', 'a suit breach', 'equipment failure', 'a collapse underfoot']
         };
 
         const getHazard = () => {
@@ -3957,10 +4125,11 @@ You are home.`
                     targetCrew._deathCause = hazardDesc;
                     targetCrew._deathPlanet = planet?.name || planet?.type || 'unknown world';
                     // Planet-type specific death messages
+                    // The dead come home: their pod is racked in the cargo hold (ShipCutaway), so no line may say the body was lost
                     const deathMsgs = [
-                        `CATASTROPHE: ${targetCrew.name} lost to ${hazardDesc}. No recovery possible.`,
-                        `FATAL: ${targetCrew.name} killed by ${hazardDesc}. Body unrecoverable.`,
-                        `KIA: ${hazardDesc} claimed ${targetCrew.name}. Mission abort.`
+                        `CATASTROPHE: ${targetCrew.name} is dead. Cause: ${hazardDesc}. The other one carried them back to the lander.`,
+                        `FATAL: ${targetCrew.name} did not survive (${hazardDesc}). They are coming home in a stasis pod.`,
+                        `KIA: ${targetCrew.name}, ${hazardDesc}. The trip is over. There is a pod to rack in the hold.`
                     ];
                     logMsg = deathMsgs[Math.floor(Math.random() * deathMsgs.length)] + ' ';
                 }
@@ -4152,7 +4321,7 @@ You are home.`
                             }
                         });
                         this.state.addLog(`${evaTeam[0].name}: "Commander... we're staying, aren't we?"`);
-                        this.state.addLog("You nod. The journey ends here. You are home.");
+                        this.state.addLog("You nod. This is where the journey ends.");
                         // Trigger the colony ending
                         this._executeColony(planet, { isScanWaived: true }); // they are standing on it
                         return; // Don't continue to normal exit
@@ -4328,7 +4497,7 @@ You are home.`
         document.getElementById('game-date').textContent = `DATE: 2342.${String(5 + Math.floor(this.state.actionsTaken / 10)).padStart(2, '0')}.${String(12 + (this.state.actionsTaken % 30)).padStart(2, '0')}`;
 
         // Sector name
-        const SECTOR_NAMES = { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD' };
+        const SECTOR_NAMES = { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT' };
         const sectorEl = document.getElementById('sector-name');
         if (sectorEl) {
             sectorEl.textContent = `/// SECTOR ${this.state.currentSector}: ${SECTOR_NAMES[this.state.currentSector] || 'UNKNOWN'}`;
@@ -4654,7 +4823,7 @@ You are home.`
 
     _executeColony(planet, { isScanWaived = false } = {}) {
         if (!planet.scanned && !isScanWaived && !window.TEST_MODE) { // nobody lands five people on a world they have not looked at
-            this.state.addLog("A.U.R.A.: \"I will not commit the crew to a world we have not scanned. Run a deep scan first.\"");
+            this.state.addLog('A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first."');
             return;
         }
         // Generate Outcome based on Planet Metrics
@@ -5028,7 +5197,7 @@ You are home.`
                 if (sectorNameEl) {
                     const SECTOR_NAMES = {
                         1: 'THE GRAVEYARD', 2: 'THE DEEP', 3: 'THE INTERFERENCE',
-                        4: 'THE GARDEN', 5: 'THE EVENT HORIZON', 6: 'THE THRESHOLD'
+                        4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT'
                     };
                     sectorNameEl.textContent = `/// SECTOR ${this.state.currentSector}: ${SECTOR_NAMES[this.state.currentSector] || 'UNKNOWN'}`;
                     sectorNameEl.style.color = '#9bf0bd';
@@ -5102,7 +5271,7 @@ You are home.`
                     <div>PLANETS EXPLORED: <span style="color: #e07a70;">${planetsVisited}</span></div>
                     <div>CREW LOST: <span style="color: #e07a70;">${deadCrew.length} / 5</span></div>
                     <div>SALVAGE COLLECTED: <span style="color: #e07a70;">${this.state.salvage}</span></div>
-                    <div>EXODUS LOGS: <span style="color: #e07a70;">${exodusLogsFound} / 8</span></div>
+                    <div>PAGES FOUND: <span style="color: #e07a70;">${exodusLogsFound} / 6</span></div>
                     <div>RATIONS REMAINING: <span style="color: #e07a70;">${this.state.rations}</span></div>
                 </div>
             </div>
@@ -5193,11 +5362,14 @@ You are home.`
 
         // Find cheapest warp cost (accounting for bridge damage)
         let cheapestCost = Infinity;
+        const stopsLeft = this.state.getStopsLeft ? this.state.getStopsLeft() : 1;
         nodes.forEach(planet => {
             if (planet.ghost) return; // Skip ghost planets
             const cost = this.state.getWarpCost(planet);
-            if (cost < cheapestCost) cheapestCost = cost;
+            const isLegal = cost === 0 || stopsLeft > 0 || window.TEST_MODE;           // with no stops left, only a free warp is possible
+            if (isLegal && cost < cheapestCost) cheapestCost = cost;
         });
+        if (this.state.currentSector < FINAL_SECTOR && this.state.energy >= SECTOR_JUMP_BASE_COST) return; // the jump itself is always a way out
 
         // If player can afford at least one warp, they're not stranded
         if (energy >= cheapestCost) return;
@@ -5205,7 +5377,7 @@ You are home.`
         // Check if player has any way to gain energy:
         // 1. Items in cargo that could give energy (check onUse function source for energy gains)
         const hasEnergyItem = (this.state.cargo || []).some(item => {
-            if (!item.onUse) return false;
+            if (!item.onUse || item.isKept) return false;
             // Check if onUse function contains energy-related code
             const fnSource = item.onUse.toString();
             if (fnSource.includes('energy') || fnSource.includes('Energy')) return true;
@@ -5222,7 +5394,7 @@ You are home.`
         if (probeIntegrity > 0 && hasUnscannnedPlanets) return;
 
         // 3. If player has ANY usable items at all, give them a chance (they might figure something out)
-        const hasAnyUsableItem = (this.state.cargo || []).some(item => item.onUse);
+        const hasAnyUsableItem = (this.state.cargo || []).some(item => item.onUse && !item.isKept);
         if (hasAnyUsableItem) return;
 
         // Player is truly stranded - no energy, no energy items, no probe, no usable items

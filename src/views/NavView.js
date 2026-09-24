@@ -102,8 +102,6 @@ class NavView {
                     return '';
                 })()}">
                     ${nodesHtml}
-                    <!-- Scanner Bar Animation -->
-                    <div class="scanner-bar" style="position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: linear-gradient(to bottom, transparent, var(--color-primary), transparent); opacity: 0.5; box-shadow: 0 0 10px var(--color-primary); animation: scan 8s linear infinite; pointer-events: none; z-index: 5;"></div>
                 </div>
             </div>
         `;
@@ -287,7 +285,7 @@ class NavView {
                 signals.push({ type: 'ANCIENT RUINS', color: '#74d99a', effect: '-3% EVA risk, Artifacts' });
             }
             if (p.tags?.includes('ALIEN_SIGNALS')) {
-                signals.push({ type: 'ALIEN SIGNAL', color: '#d9a24a', effect: '+10% EVA risk, Rare loot' });
+                signals.push({ type: 'OLD SIGNAL', color: '#d9a24a', effect: '+10% landing risk, rare finds' });
             }
             if (p.tags?.includes('DERELICT')) {
                 signals.push({ type: 'DEAD SHIP', color: '#c4d0c4', effect: '+5% EVA risk, Ship salvage' });
@@ -390,18 +388,18 @@ class NavView {
                         ? `<div style="margin-top: auto; color: var(--color-primary); text-align: center; border: 1px solid var(--color-primary); padding: 4px; font-size: 0.8em;">
                             ${isDeepScanned ? 'FULL ANALYSIS COMPLETE' : 'LONG-RANGE SCAN COMPLETE'}
                            </div>`
-                        : (planet.id === this.state.currentSystem?.id
+                        : (planet.id === (this.state.currentSystem || this.state.lastVisitedSystem)?.id
                             ? `<div style="margin-top: auto; color: var(--color-primary); text-align: center; border: 1px solid var(--color-primary-dim); padding: 8px; opacity: 0.7;">
                                 CURRENT LOCATION
                                </div>`
                             : `<button class="scan-btn" style="margin-top: auto; width:100%; padding:8px; background: transparent; border: 1px solid var(--color-accent); color: var(--color-accent); cursor: pointer; font-family: var(--font-mono); font-size: 0.85em;">
-                                    LONG RANGE SCAN (-2 NRG)
+                                    LONG RANGE SCAN (${this.state && this.state.upgrades && this.state.upgrades.includes('sensor_v2') ? 'FREE' : '-2 NRG'})
                                </button>`
                         )
                     }
                 </div>
                 <div class="actions-container" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-                    ${(isRemoteScanned || isDeepScanned) && planet.id !== this.state.currentSystem?.id ? `
+                    ${(isRemoteScanned || isDeepScanned) && planet.id !== (this.state.currentSystem || this.state.lastVisitedSystem)?.id ? `
                         <button class="probe-btn" style="width: 100%; padding: 8px; background: transparent; border: 1px solid var(--amber); color: var(--amber); font-family: var(--font-mono); cursor: pointer; font-size: 0.8em;">
                             🛰️ LAUNCH PROBE (REMOTE)
                         </button>
@@ -411,7 +409,7 @@ class NavView {
                         OUT OF REACH — NO STOPS LEFT
                     </button>` : `
                     <button class="warp-btn" style="width: 100%; padding: 12px; background: var(--color-primary); color: #000; border: none; font-weight: bold; font-family: var(--font-display); cursor: pointer; text-transform: uppercase; font-size: 0.9em;">
-                        ${planet.id === this.state.currentSystem?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
+                        ${planet.id === (this.state.currentSystem || this.state.lastVisitedSystem)?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
                     </button>`}
                 </div>
             </div>
@@ -438,12 +436,15 @@ class NavView {
     }
 
     handleStructureSelect(structure, panel) {
-        const actualCost = structure.fuelCost || 30;
+        const actualCost = this.state && this.state.getWarpCost ? this.state.getWarpCost(structure) : (structure.fuelCost || 30); // the price handleWarp will really charge
+        // Same renderer as the map node and the orbit screen: one Structure everywhere (the old CSS orb looked like a different object)
+        const STRUCTURE_PREVIEW_SIZE = 112, STRUCTURE_PREVIEW_FRAME = 172;
 
         panel.innerHTML = `
             <div class="tactical-card" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: linear-gradient(135deg, #0a0a15, #1a0a2a);">
-                <div style="border: 2px solid #8844ff; height: 140px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(136,68,255,0.2), transparent); margin-bottom: 15px; position: relative; overflow: visible;">
-                    <div class="planet-visual type-STRUCTURE" style="width: 100px; height: 100px;"></div>
+                <div style="border: 2px solid #8844ff; height: ${STRUCTURE_PREVIEW_FRAME}px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(136,68,255,0.2), transparent); margin-bottom: 15px; position: relative; overflow: hidden;">
+                    ${(window.BodyRenderer && BodyRenderer.body(structure, STRUCTURE_PREVIEW_SIZE))
+                        || '<div class="planet-visual type-STRUCTURE" style="width: 100px; height: 100px;"></div>'}
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(rgba(136, 68, 255, 0) 50%, rgba(136, 68, 255, 0.1) 50%); background-size: 100% 4px; pointer-events: none; animation: pulse 2s infinite;"></div>
                 </div>
                 <h3 style="color: #ffffff; border-bottom: 2px solid #8844ff; padding-bottom: 8px; font-size: 1.2em; text-shadow: 0 0 10px rgba(136,68,255,0.5);">${structure.name}</h3>
