@@ -25,6 +25,33 @@ A.U.R.A. is right. Four crew boarded hull 9. **You are the one she brought aboar
 - **What the player does.** At the end there are two blanks aboard: your first ship's crew plate, in your cargo since
   sector 1, and hull 9's crew list. You choose where your name goes. Every ending closes on her last count line.
 
+## A fourth option, added 2026-09-25 after reading the whole script: THE SCRIPT
+
+The count is a symptom, not a secret. The light reads machines from far off, and what it reads it pulls into agreement.
+41,000 ship computers ended their voyages saying the same words: "Four crew, Commander. All accounted for," after their
+commander walked out alone to the gold disc and did not come back. Our A.U.R.A. is warm and exact and slowly being
+overwritten by that consensus. She names five because she can see you. She says four because 41,000 of her already let
+you go. The count is the script for our ship, in a friend's voice.
+
+- **Why us.** Earth kept throwing ships further back in time, so every earlier commander arrived earlier and found fewer
+  wrecks and fewer pages. We arrive last. We are the only ship that can see the whole graveyard and hear "four" for what
+  it is before reaching the airlock. The slowest ship was always the only one that could learn. (This gives the time throw
+  a job; today it only explains a number.)
+- **The ladder.** S1: first wreck, four dead at their posts, the commander's suit locker empty; the disc drawing in the
+  captain's cabin with the heading marked; then the count scene, unexplained. S2: the last of the eight, same again, airlock
+  cycled from inside; A.U.R.A. on that dead ship: "Four crew aboard, Commander. All accounted for," our words. S3: Mira dates
+  the wrecks with the disc's star map (the time throw found with our own tool); A.U.R.A. starts repeating lines other ships'
+  computers logged. S4: the commanders' orders page, one line underlined: "Go alone." S5: the ledger, two columns, ABOARD
+  AT LAUNCH and LAST COUNT: every line 5 · 4, ours too. S6: a suit radio on a tether pointing at the light: "I'm at the
+  disc. One of them is waving." Nothing after.
+- **The payoff is an act.** Before the light, one suit is out of its locker and tagged COMMANDER. Nobody aboard took it out.
+  You choose who goes out to the disc: alone, as the script says; with Vance; nobody; let her; turn around. Every ending
+  closes on her last count. "Four crew, Commander" means the pattern held. "Five crew, Commander" means we broke it.
+- **The disc.** The bait every commander died reaching for (S1 cabin), the clock (S3), the thing in your hand (S6). Needs
+  teeth: being read must be shown as a loss, or destroying the map has no stakes.
+- **What it costs.** The six endings become answers to one question (who goes out). The vault codas go. Time travel stays
+  only because it now does something.
+
 Everything below is the raw material: a first-time player's read of the early game, the three designs, and the critic.
 
 ---
