@@ -38,12 +38,17 @@ Start here. One page: what is built, what is decided, what is waiting on you, an
 | **A.U.R.A. and the twins** | how Earth knows; why crews are lied to | S2 the memo · S4 "your computer knows the truth" · every ending's vault line | a vault coda on every ending | **over-explained, under-felt.** Cut the vault codas from the endings; keep the twins as one memo. |
 | **The crew's wants** (endings) | Jaxon: stop. Vance: the truth. Aris: understand. Mira: be told. Each has three moments; back them twice to unlock their ending | crew moments in pairs of sectors; the talk on each jump | the six endings, gated by standing | **works as a system.** The moments read well. The six endings are six paragraphs; better as answers to one question (who goes out). |
 
+## The 29 September assessment
+
+[ASSESSMENT_2026-09-29.md](ASSESSMENT_2026-09-29.md): the story against the best-written indie games (grade C+ script on an A premise), a played read of the loop (no new systems; cut and fold; ~13 hours of fixes), and an itch.io readiness check (not this week; music licence and AI disclosure first; free with a suggested $3 tip and a downloadable zip).
+
 ## Decisions waiting on you
 
 1. **The count.** Four options in [STORY_COUNT_OPTIONS.md](STORY_COUNT_OPTIONS.md): One More (the editor's pick), The Walk, The Blind Spot, and The Script (added 25 September, my pick). Nothing is built until you choose.
 2. **The time throw:** keep with a job, or cut.
 3. **The colony ending where A.U.R.A. shuts off the air:** cut, soften, or keep.
-4. **Who fixes the text:** you edit `docs/script/` and I copy it back, or I do a pass on the numbers, the offscreen knowledge and the old-style lines first.
+4. **The music licence.** Both tracks are Suno (January and February 2026). Free-plan tracks are non-commercial; a tip button is a grey area. Check which plan the account was on, or the tracks get replaced.
+5. **Who fixes the text:** you edit `docs/script/` and I copy it back, or I do a pass on the numbers, the offscreen knowledge and the old-style lines first.
 
 ## Per sector, or per story line?
 
