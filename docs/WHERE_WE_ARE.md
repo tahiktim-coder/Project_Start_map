@@ -42,6 +42,10 @@ Start here. One page: what is built, what is decided, what is waiting on you, an
 
 [ASSESSMENT_2026-09-29.md](ASSESSMENT_2026-09-29.md): the story against the best-written indie games (grade C+ script on an A premise), a played read of the loop (no new systems; cut and fold; ~13 hours of fixes), and an itch.io readiness check (not this week; music licence and AI disclosure first; free with a suggested $3 tip and a downloadable zip).
 
+## Minigame ideas
+
+[MINIGAME_IDEAS.md](MINIGAME_IDEAS.md): five minigames that are story verbs (roll call, fly the corridor, date it with the disc, dead channels, the walk out), each replacing something that exists. Nothing built.
+
 ## Decisions waiting on you
 
 1. **The count.** Four options in [STORY_COUNT_OPTIONS.md](STORY_COUNT_OPTIONS.md): One More (the editor's pick), The Walk, The Blind Spot, and The Script (added 25 September, my pick). Nothing is built until you choose.
