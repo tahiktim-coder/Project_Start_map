@@ -1,7 +1,7 @@
 # Minigames that serve the story (2026-09-30)
 
 Rule: every minigame is a verb the story already has (count, date, fly, listen, walk). Each one **replaces** something
-that exists today, so the game gets deeper, not bigger. Nothing here is built.
+that exists today, so the game gets deeper, not bigger. Nothing here is in the game. Playable sketches of all five: `prototypes/sim-bay/` (open `http://localhost:8000/prototypes/sim-bay/` with the local server) or https://claude.ai/artifact/FD1WZcRpiDurdeiYrB512o.
 
 | # | minigame | what you do | story line it serves | replaces | size |
 |---|---|---|---|---|---|
