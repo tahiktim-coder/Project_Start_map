@@ -1,23 +1,21 @@
 /* proto-breach.js — Seal the breach.
-   A micrometeorite holes EXODUS-9 somewhere A.U.R.A. cannot see. Loose dust in every deck rides the air: toward the
-   hole, and toward any open ladder hatch that leads to it. Each deck's air shows on a bar at the side. Shut hatches to
-   stop the spread (a deck cut off with the hole then empties faster), mark the hole, and Jaxon climbs there to patch it.
-   Air: the hole vents K·√p per second, so a cut-off deck empties in 2/K s; an open hatch passes G·Δp per second. */
+   A speck of rock holes EXODUS-9. A.U.R.A. can tell which deck is losing air but not where the hole is. Loose dust rides
+   the air toward the hole: mark the spot and Jaxon climbs there to patch it. Shutting the ladder hatches around the deck
+   saves the rest of the ship's air, but shuts in anyone still inside; leaving them open lets them climb out while every
+   deck bleeds. Air: the hole vents K·√p a second, so a cut-off deck empties from full in 2/K s; an open hatch passes G·Δp. */
 
 (function () {
     'use strict';
     const Lab = window.Lab;
     if (!Lab || !Lab.ship) return;
-    const C = Lab.C, W = Lab.W, H = Lab.H, S = Lab.ship;
+    const C = Lab.C, W = Lab.W, H = Lab.H, S = Lab.ship, clamp = Lab.clamp;
 
-    const K_LEAK = 0.04, G_HATCH = 0.1, REFILL = 0.012;   // full to empty in 50 s when cut off; tanks refill after
-    const WALK = 16, CLIMB = 11, CYCLE = 1.6, PATCH = 4;   // px/s (a deck is 25 px, about 2.5 m); seconds
-    const HIT_R = 7, INTRO = 3, AIM_SPEED = 55;            // a mark this close finds the hole
-    const DUST = 20, WANDER = 1.3, PULL = 9;
-    const MARKS = [0.8, 0.6, 0.4, 0.2, 0.1];
-    const RX = 192, BW = 80;                                // the air readout column
-    const CANDIDATES = ['lab', 'quarters', 'cargo', 'engineering', 'upgrades'];
-    const NAME = { bridge: 'Bridge', lab: 'Laboratory', quarters: 'Crew quarters', cargo: 'Cargo hold', engineering: 'Engineering', upgrades: 'Fabrication' };
+    const K_LEAK = 0.045, G_HATCH = 0.2, REFILL = 0.04, AUTO = 0.85; // cut off, a full deck empties in 44 s; A.U.R.A. shuts the hatches herself at 85% ship air, then 75%...
+    const WALK = 16, CLIMB = 11, CYCLE = 1.6, PATCH = 4;             // px/s (a deck is 25 px, about 2.5 m); seconds
+    const GONE = 0.004, HIT_R = 7, INTRO = 2.5, HEAD_START = 7.5, AIM_SPEED = 55;  // a mark this close finds the hole; the crew start for the ladder this long after the hit
+    const DUST = 15, WANDER = 1.2, PULL = 14;                         // specks a deck; the holed deck has more
+    const RX = 192, BW = 80;                                          // the air readout column
+    const ORDER = ['cargo', 'lab', 'upgrades', 'engineering', 'quarters'];   // the first run always has someone in the deck
     const THE = { bridge: 'the bridge', lab: 'the laboratory', quarters: 'the crew quarters', cargo: 'the cargo hold', engineering: 'engineering', upgrades: 'fabrication' };
     const STEP_KEYS = { ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] };
     const PCT = '101001010100101';
@@ -25,96 +23,104 @@
     const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
     const words = n => (n >= 100 ? 'one hundred' : n < 20 ? ONES[n] : TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : ''));
     const cap = s => s[0].toUpperCase() + s.slice(1);
-    const listing = a => (a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]);
 
-    // the night shift, and what each person says if the hole is in their deck
     const PEOPLE = [
-        { id: 'you', home: 'bridge', slot: 0.45 },
-        { id: 'mira', home: 'lab', slot: 0.3, notice: 0.93, warn: ['The leak is in the lab. I can feel it.', 'Close it. I have a mask. Get Jaxon here.'],
-          shut: "Mask on. I'm staying put.", out: "I'm out.", hurtLine: ['Aris', "Mira's hurt. She was in there with no air."] },
-        { id: 'aris', home: 'quarters', lying: true, notice: 0.87, warn: ['The quarters are losing air. It woke me.', 'Shut me in if you have to. I have a mask.'],
-          shut: 'Mask on. Please hurry.', out: "I'm out. I'm all right.", hurtLine: ['Vance', "Aris is down. She's breathing, but she's hurt."] },
-        { id: 'vance', home: 'cargo', slot: 0.35, notice: 0.94, warn: ["Cargo hold's losing air.", "Seal it if you need to. I've got a mask."],
-          shut: 'Fine. Mask on.', out: "I'm clear.", hurtLine: ['Aris', 'Vance is hurt. I need him in the quarters.'] },
-        { id: 'jaxon', home: 'engineering', slot: 0.22, notice: 0.94, warn: ["It's in engineering with me.", 'Shut me in and show me where it is.'],
-          hurtLine: ['Vance', "Jaxon's hurt. Someone else has to patch it."] },
+        { id: 'you', home: 'bridge', slot: 0.45 }, { id: 'mira', home: 'lab', slot: 0.3 }, { id: 'aris', home: 'lab', slot: 0.12 },
+        { id: 'vance', home: 'cargo', slot: 0.35 }, { id: 'jaxon', home: 'engineering', slot: 0.22 },
     ];
-
-    function glyph(ctx, x, y, color) {                    // the font has no '%'
-        ctx.fillStyle = color;
-        for (let i = 0; i < 15; i++) if (PCT[i] === '1') ctx.fillRect(x + (i % 3), y + Math.floor(i / 3), 1, 1);
-    }
+    const DECK = {                                       // who speaks when the hole is in their deck, and what they say
+        lab: { who: 'Mira', warn: "Aris and I have masks. We're coming up the ladder.", out: "We're out. Both of us." },
+        cargo: { who: 'Vance', warn: "I've got a mask. I'm coming up the ladder.", out: "I'm out." },
+        engineering: { who: 'Jaxon', warn: "It's in here with me. Shut me in, I've got a mask." },
+    };
+    const SHUT_IN = "The hatch is shut. I'll wait. Be quick.", HELD = "The mask held. I'm fine.";
+    const HURT = {                                       // who speaks when a deck is lost with people inside
+        'aris,mira': ['Vance', "Aris and Mira are both down. I'm going to them."], aris: ['Mira', "Aris is down. She's breathing, but she's hurt."],
+        mira: ['Aris', "Mira's hurt. She was in there with no air."], vance: ['Aris', 'Vance is hurt. Bring him up to the lab.'], jaxon: ['Vance', "Jaxon's hurt. I'm going to him."],
+    };
 
     function mount(ctx, ui) {
         const L = S.layout(14, 6, 168, 166), R = L.rooms, shaftX = Math.round(L.cx + L.maxHalf * 0.26);
-        const deckY = h => R[h + 1].top;                                   // hatch h joins rooms h and h+1
+        const deckY = h => R[h + 1].top;                                   // hatch h joins decks h and h+1
         const floorY = i => R[i].bottom - 2;
         const roomOfY = y => R.findIndex(r => y >= r.top && y < r.bottom);
         const inside = (x, y) => { const i = roomOfY(y); return i >= 0 && Math.abs(x - L.cx) <= L.halfWidth(y) - 2 ? i : -1; };
-        const floorX = (i, x) => { const hw = L.halfWidth(floorY(i) - 1) - 5; return Lab.clamp(Math.round(x), Math.ceil(L.cx - hw), Math.floor(L.cx + hw)); };
+        const floorX = (i, x) => { const hw = L.halfWidth(floorY(i) - 1) - 5; return clamp(Math.round(x), Math.ceil(L.cx - hw), Math.floor(L.cx + hw)); };
         const figRoom = f => roomOfY(Math.round(f.y) - 4);
         const IS = i => (R[i].key === 'quarters' ? 'are' : 'is');
         const hatchAt = p => [0, 1, 2, 3, 4].find(h => Math.abs(p.x - shaftX) <= 5 && p.y >= deckY(h) - 5 && p.y <= deckY(h) + 3) ?? -1;
+        const around = i => [i - 1, i].filter(h => h >= 0 && h < 5);       // the hatches that close off deck i
+        const hatchWords = i => { const n = around(i).map(h => words(h + 1)); return n.length > 1 ? `hatches ${n[0]} and ${n[1]}` : `hatch ${n[0]}`; };
+        const exitX = f => shaftX - (f.id === 'aris' ? 15 : 8);
 
-        let g = null, crew = [], dust = [], talk = [], talkWait = 0, lastLeak = -1, spokeAt = [];
-        let aim = { x: L.cx, y: R[2].top + 12 }, aimShown = false, hoverHatch = -1, held = null;
+        let g = null, crew = [], dust = [], talk = [], talkWait = 0, run = Math.floor(Math.random() * 2);
+        let aim = { x: L.cx, y: R[2].top + 12 }, aimShown = false, byMouse = false, hoverHatch = -1, lastToggle = { h: -1, t: 0 };
         const crewById = id => crew.find(f => f.id === id);
         const setCrew = (id, patch) => { crew = crew.map(f => (f.id === id ? { ...f, ...patch } : f)); };
+        const isCut = () => around(g.leak).every(h => g.shut[h]);
+        const shipAir = () => g.p.reduce((a, b) => a + b, 0) / R.length;
+        const flag = k => { const was = g.said[k]; g = { ...g, said: { ...g.said, [k]: true } }; return !was; };   // true the first time only
 
-        // ── one line at a time: urgent lines jump the queue, a newer report replaces an unspoken one. A line may be a
-        //    function, read when it is shown, so A.U.R.A.'s numbers always match the bars; `after` runs once it is shown ──
-        function say(who, line, pri = 1, tag = '', after = null) {
-            const item = { who, line, pri, tag, after }, kept = tag ? talk.filter(q => q.tag !== tag) : talk, at = kept.findIndex(q => q.pri < pri);
+        // ── one line at a time. A reaction jumps the queue and cuts the current line short; a line may be a function, read
+        //    when it is shown (so numbers match the bars) and skipped if it returns '' ──
+        function say(who, line, urgent = false, tag = '') {
+            const kept = tag ? talk.filter(q => q.tag !== tag) : talk, at = urgent ? kept.findIndex(q => !q.urgent) : -1;
+            const item = { who, line, urgent, tag };
             talk = at < 0 ? kept.concat(item) : kept.slice(0, at).concat(item, kept.slice(at));
+            if (urgent) talkWait = Math.min(talkWait, 0.7);
         }
         function pumpTalk(dt) {
             talkWait -= dt;
             while (talkWait <= 0 && talk.length) {
-                const [q, ...rest] = talk, text = q.fn ? '' : typeof q.line === 'function' ? q.line() : q.line;
+                const [q, ...rest] = talk;
                 talk = rest;
-                if (q.fn) q.fn();
+                if (q.fn) { q.fn(); continue; }
+                const text = typeof q.line === 'function' ? q.line() : q.line;
                 if (!text) continue;
                 ui.say(q.who, text);
-                talkWait = Lab.clamp(0.8 + text.split(' ').length * 0.17, 1.8, 3.2);
-                if (q.after) q.after();
+                talkWait = clamp(0.8 + text.split(' ').length * 0.17, 1.8, 3.2);
             }
         }
         const live = fn => () => (g.phase === 'leak' && g.patchLeft <= 0 ? fn() : '');
 
         function speck(i, rnd = Math.random) {
             const r = R[i], y = r.top + 3 + rnd() * (r.bottom - r.top - 6), hw = Math.max(2, L.halfWidth(y) - 4);
-            return { x: L.cx - hw + rnd() * hw * 2, y, room: i, a: rnd() * 6.283, b: rnd(), vx: 0, vy: 0 };
+            return { x: L.cx - hw + rnd() * hw * 2, y, room: i, a: rnd() * 6.283, vx: 0, vy: 0 };
         }
-        function placeHole(i, rnd) {                       // low on the deck's back wall, clear of the ladder
-            const y = floorY(i) - 4 - Math.floor(rnd() * 10), hw = L.halfWidth(y) - 10;
+        function placeHole(i, rnd) {                       // low on the back wall, clear of the ladder, the deck's name and anyone in it
+            const y = floorY(i) - 4 - Math.floor(rnd() * 7), hw = L.halfWidth(y) - 10;
+            const crowded = x => Math.abs(x - shaftX) < 28 || (R[i].key === 'engineering' && Math.abs(x - L.cx) < 14)   // not behind the reactor
+                || PEOPLE.some(p => p.home === R[i].key && Math.abs(L.floor(p.home, p.slot).x - x) < 10);
             let x = shaftX;
-            while (Math.abs(x - shaftX) < 16) x = Math.round(L.cx - hw + rnd() * hw * 2);
+            while (crowded(x)) x = Math.round(L.cx - hw + rnd() * hw * 2);
             return { x, y };
         }
 
         function start() {
             const rnd = Lab.rng((Date.now() ^ Math.floor(Math.random() * 1e9)) >>> 0);
-            const pool = CANDIDATES.map(k => R.findIndex(r => r.key === k)).filter(i => i !== lastLeak), leak = pool[Math.floor(rnd() * pool.length)];
-            lastLeak = leak; talk = []; talkWait = 0; held = null; spokeAt = R.map(() => -99);
+            const key = ORDER[run++ % ORDER.length], leak = R.findIndex(r => r.key === key);
+            talk = []; talkWait = 0; lastToggle = { h: -1, t: 0 };
             g = { phase: 'calm', t: 0, leak, hole: placeHole(leak, rnd), p: R.map(() => 1), low: R.map(() => 1), flow: [0, 0, 0, 0, 0], out: 0, vented: 0,
-                shut: [false, false, false, false, false], cycling: [0, 0, 0, 0, 0], target: null, miss: 0, missed: false, sent: 0,
-                patchLeft: 0, patched: false, flash: 0, shake: 0, told: R.map(() => 0), said: {}, damaged: {}, ended: false };
-            crew = PEOPLE.map(p => {
-                const i = R.findIndex(r => r.key === p.home);
-                const pos = p.lying ? { x: Math.round(L.cx - L.maxHalf * 0.62), y: R[i].top + Math.round((R[i].bottom - R[i].top) * 0.78) } : L.floor(p.home, p.slot);
-                return { ...p, ...pos, name: S.CREW[p.id].name, color: S.CREW[p.id].color, path: [], wait: 0, state: 'idle', stepT: 0, moving: false, masked: false, hurt: false };
-            });
-            dust = R.flatMap((r, i) => Array.from({ length: DUST }, () => speck(i, rnd)));
-            ui.say('', 'Sector one. Night shift. Aris is asleep in the crew quarters.');
+                shut: [false, false, false, false, false], cycling: [0, 0, 0, 0, 0], target: null, miss: 0, misses: 0, sent: 0,
+                patchLeft: 0, patched: false, flash: 0, shake: 0, said: {}, damaged: {}, ended: false, autoAt: AUTO };
+            crew = PEOPLE.map(p => ({ ...p, ...L.floor(p.home, p.slot), name: S.CREW[p.id].name, color: S.CREW[p.id].color,
+                path: [], wait: 0, state: 'idle', stepT: 0, moving: false, hurt: false }));
+            dust = R.flatMap((r, i) => Array.from({ length: i === leak ? DUST * 2.5 : DUST }, () => speck(i, rnd)));
+            ui.clear();
+            ui.say('', 'Sector one. A quiet shift.');
             showButtons();
         }
         function hit() {
+            const key = R[g.leak].key, deck = DECK[key];
             g = { ...g, phase: 'leak', flash: 1, shake: 0.7 };
-            ui.say('A.U.R.A.', 'Pressure loss, Commander. I cannot see where.');
-            talkWait = 2.6;
-            say('Jaxon', 'Watch the dust. It drifts toward the hole.', 3);
-            say('A.U.R.A.', live(() => (g.shut.some(Boolean) ? '' : 'The ladder hatches can be shut from the bridge, Commander.')), 2);
-            if (R[g.leak].key !== 'engineering') say('Jaxon', live(() => (g.sent ? '' : "Mark the spot for me and I'll go.")), 2);
+            ui.say('A.U.R.A.', `Pressure loss in ${THE[key]}, Commander. I cannot see the hole.`);
+            talkWait = 2.8;
+            say('Jaxon', live(() => (g.sent ? '' : "Watch the dust. Show me where it goes and I'll patch it.")));
+            say('A.U.R.A.', live(() => (isCut() ? '' : `Shut ${hatchWords(g.leak)} now, Commander.`)));
+            if (deck) say(deck.who, live(() => (isCut() ? '' : deck.warn)));
+            crew = crew.map(f => (f.id === 'you' || f.id === 'jaxon' || figRoom(f) !== g.leak ? f
+                : { ...f, state: 'leaving', wait: HEAD_START + (f.id === 'aris' ? 0.5 : 0), path: route(f, exitX(f), g.leak - 1) }));
+            if (!byMouse) aim = { x: L.cx - 30, y: Math.round((R[g.leak].top + R[g.leak].bottom) / 2) };   // keys aim from the right deck
             showButtons();
         }
 
@@ -129,36 +135,27 @@
             g = { ...g, p: next, low: g.low.map((m, i) => Math.min(m, next[i])), flow, out: dt > 0 ? out / dt : 0, vented: g.vented + out };
         }
         function reports() {
-            R.forEach((r, i) => {
-                const marks = i === g.leak ? MARKS : MARKS.slice(0, 2), due = marks.filter(m => g.p[i] < m).length;
-                if (due <= g.told[i]) return;
-                g = { ...g, told: g.told.map((v, j) => (j === i ? due : v)) };
-                say('A.U.R.A.', live(() => {                                   // at most one report a deck every five seconds
-                    if (g.t - spokeAt[i] < 5) return '';
-                    spokeAt = spokeAt.map((v, j) => (j === i ? g.t : v));
-                    return `${NAME[r.key]} at ${words(Math.round(g.p[i] * 100))} percent, Commander.`;
-                }), 1, 'r' + i);
-            });
-            const i = g.leak, isCut = () => (i === 0 || g.shut[i - 1]) && (i === 5 || g.shut[i]);
-            if (isCut() && !g.said.cut && g.patchLeft <= 0) {
-                const sec = () => Math.max(5, Math.round(2 * Math.sqrt(g.p[i]) / K_LEAK / 5) * 5);
-                g = { ...g, said: { ...g.said, cut: true } };
-                say('A.U.R.A.', live(() => `${cap(THE[R[i].key])} ${IS(i)} cut off, Commander. It reaches zero in about ${words(sec())} seconds.`), 2, 'cut');
+            const i = g.leak, deck = cap(THE[R[i].key]) + ' ' + IS(i), left = () => (2 * (Math.sqrt(g.p[i]) - Math.sqrt(GONE))) / K_LEAK;   // seconds to zero, cut off
+            const secs = () => words(Math.max(5, Math.round(left() / 5) * 5)), trapped = crew.find(f => f.state === 'trapped');
+            if (!isCut() && shipAir() < g.autoAt) {                         // nobody chose, so A.U.R.A. does, whoever is inside
+                g = { ...g, autoAt: g.autoAt - 0.1, shut: g.shut.map((s, h) => s || around(i).includes(h)) };
+                say('A.U.R.A.', `Ship air at ${words(Math.round(shipAir() * 100))} percent. Closing ${hatchWords(i)}, Commander.`, true);
+                showButtons();
             }
-            if (!g.said.spread && g.p.filter((v, j) => j !== i && v < 0.93).length >= 2) {
-                g = { ...g, said: { ...g.said, spread: true } };
-                say('A.U.R.A.', live(() => (isCut() ? '' : 'The other decks are losing air through the open hatches, Commander.')), 1, 'spread');
-            }
+            if (isCut() && g.patchLeft <= 0 && flag('cut')) say('A.U.R.A.', live(() => (isCut() ? `${deck} cut off, Commander. It reaches zero in about ${secs()} seconds.` : '')), true, 'cut');
+            if (!g.sent && g.t > INTRO + 18 && flag('nudge')) say('Jaxon', live(() => (g.sent ? '' : "I'm ready. Give me a spot and I'll go.")));
+            if (isCut() && left() < 15 && g.patchLeft <= 0 && flag('low')) say('A.U.R.A.', live(() => `About ${secs()} seconds of air left in ${THE[R[i].key]}, Commander.`), true);
+            if (trapped && isCut() && left() < 7 && g.patchLeft <= 0 && flag('ears')) say(trapped.name, 'My ears hurt. Please hurry.', true);
         }
 
-        // ── people: walk to the ladder, climb, cycle a shut hatch (Jaxon) or be shut in (anyone else) ──
+        // ── people: walk to the ladder, climb, cycle a shut hatch (Jaxon) or be stopped by it (anyone else) ──
         function route(f, tx, b) {
             const a = figRoom(f), onLadder = Math.abs(f.x - shaftX) < 0.5, path = [];
             if (a === b && onLadder && Math.abs(f.y - floorY(b)) > 0.5) path.push({ x: shaftX, y: floorY(b) });
             if (a !== b && !onLadder) path.push({ x: shaftX, y: f.y });
             for (let i = a, dir = Math.sign(b - a); i !== b; i += dir) {
                 const h = dir > 0 ? i : i - 1;
-                path.push({ x: shaftX, y: dir > 0 ? deckY(h) - 2 : deckY(h) + 10, hatch: h });   // wait here if it is shut
+                path.push({ x: shaftX, y: dir > 0 ? deckY(h) - 2 : deckY(h) + 10, hatch: h });   // stop here if it is shut
             }
             if (a !== b) path.push({ x: shaftX, y: floorY(b) });
             return path.concat({ x: floorX(b, tx), y: floorY(b) });
@@ -173,43 +170,34 @@
             else if (!rest.length) ev.push({ id: f.id, arrived: true });
             return { ...f, x: wp.x, y: wp.y, path: rest, moving: rest.length > 0 };
         }
-        function trap(f) {
-            setCrew(f.id, { state: 'trapped', masked: true, wait: 0, path: route(f, shaftX - 8, figRoom(f)) });
-            if (f.shut) say(f.name, f.shut, 3);
-        }
-        function notice(f) {
-            setCrew(f.id, { state: 'warned', lying: false, y: f.lying ? floorY(figRoom(f)) : f.y });
-            say(f.name, f.warn[0], 3);
-            say(f.name, f.warn[1], 3, '', f.id === 'jaxon' ? null : () => leave(f.id));   // they offer to stay, then start out
-        }
-        function leave(id) {
-            const f = crewById(id), i = figRoom(f), up = i > 0 && !g.shut[i - 1], down = i < 5 && !g.shut[i], to = up ? i - 1 : i + 1;
-            if (f.state !== 'warned' || g.phase !== 'leak') return;
-            if (!up && !down) return trap(f);
-            setCrew(id, { state: 'leaving', wait: 2.5, masked: true, path: route(f, shaftX + (to < i ? 8 : -8), to) });
-        }
         function stepCrew(dt) {
-            const ev = [];
+            const ev = [], deck = DECK[R[g.leak].key];
             crew = crew.map(f => stepFigure(f, dt, ev));
             ev.forEach(e => {
                 const f = crewById(e.id);
-                if (e.hatch == null) {
-                    if (f.id === 'jaxon') jaxonArrived();
-                    else if (f.state === 'leaving') { setCrew(f.id, { state: 'out' }); say(f.name, f.out, 3); }
+                if (e.arrived && f.id === 'jaxon') return jaxonArrived();
+                if (e.arrived) {
+                    if (f.state === 'leaving') setCrew(f.id, { state: 'out' });
+                    if (crew.every(c => c.state !== 'leaving' && c.state !== 'trapped') && flag('out')) say(deck.who, deck.out, true);
                     return;
                 }
-                if (!g.shut[e.hatch]) return;
-                if (f.id !== 'jaxon') return trap(f);
-                setCrew('jaxon', { wait: CYCLE, cyc: e.hatch });
-                g = { ...g, cycling: g.cycling.map((c, j) => (j === e.hatch ? CYCLE : c)) };
+                if (!g.shut[e.hatch] || g.phase !== 'leak') return;
+                if (f.id === 'jaxon') {                                          // he goes through, closing it behind him
+                    setCrew('jaxon', { wait: CYCLE, cyc: e.hatch });
+                    g = { ...g, cycling: g.cycling.map((c, j) => (j === e.hatch ? CYCLE : c)) };
+                    return;
+                }
+                setCrew(f.id, { state: 'trapped', path: route(f, exitX(f) + 1, g.leak) });   // back down to wait by the ladder
+                if (flag('shut')) say(f.name, SHUT_IN, true);
             });
         }
 
         function sendJaxon(pt) {
-            const j = crewById('jaxon'), i = inside(pt.x, pt.y);
+            const j = crewById('jaxon'), i = inside(pt.x, pt.y), t = g.target;
             if (g.phase !== 'leak' || g.patchLeft > 0 || j.hurt || i < 0) return;
-            setCrew('jaxon', { path: route(j, pt.x + (pt.x < shaftX ? 5 : -5), i) });   // he stands beside the spot, not over it
-            if (g.sent < 2) say('Jaxon', g.sent ? 'Got it.' : 'On my way.', 3, 'jaxon');
+            if (t && Math.hypot(t.x - pt.x, t.y - pt.y) < 3) return;                      // the same spot again
+            setCrew('jaxon', { path: route(j, pt.x + (pt.x < shaftX ? 5 : -5), i) });    // he stands beside the spot, not on it
+            if (g.sent < 2) say('Jaxon', g.sent ? 'Got it.' : 'On my way.', true, 'jaxon');
             g = { ...g, target: { x: Math.round(pt.x), y: Math.round(pt.y), room: i }, miss: 0, sent: g.sent + 1 };
         }
         function jaxonArrived() {
@@ -217,80 +205,87 @@
             if (!t || g.phase !== 'leak' || g.patchLeft > 0) return;
             if (t.room === g.leak && Math.hypot(t.x - g.hole.x, t.y - g.hole.y) <= HIT_R) {
                 g = { ...g, patchLeft: PATCH };
-                say('Jaxon', 'Found it. Patching now.', 3, 'jaxon');
+                say('Jaxon', 'Found it. Patching now.', true, 'jaxon');
                 return showButtons();
             }
-            say('Jaxon', g.missed ? 'Not here either. Follow the dust.' : "Nothing here. Where's the dust going?", 3, 'jaxon');
-            g = { ...g, miss: 1.6, missed: true };
+            const line = ["Nothing here. Where's the dust going?", 'Not here either. Follow the dust.'][g.misses];
+            if (line) say('Jaxon', line, true, 'jaxon');
+            g = { ...g, miss: 1.6, misses: g.misses + 1 };
         }
         function toggleHatch(h) {
-            if (!g || g.phase !== 'leak') return;
+            if (!g || g.phase !== 'leak' || g.patchLeft > 0) return;
+            if (lastToggle.h === h && g.t - lastToggle.t < 0.25) return;                // a double click is one click
+            lastToggle = { h, t: g.t };
             g = { ...g, shut: g.shut.map((s, j) => (j === h ? !s : s)) };
+            if (!g.shut[h]) crew.filter(f => f.state === 'trapped').forEach(f => setCrew(f.id, { state: 'leaving', wait: 0.6, path: route(f, exitX(f), g.leak - 1) }));
             showButtons();
         }
 
         // ── endings ──
         function finale() {
             say('', 'It was a speck of rock. Sector one is full of them.');
-            talk = talk.concat({ fn: () => { g = { ...g, ended: true }; showButtons(); }, pri: 0 });
+            talk = talk.concat({ fn: () => { g = { ...g, ended: true }; showButtons(); } });
             showButtons();
         }
         function sealed() {
+            const shutIn = crew.find(f => f.state === 'trapped');
+            const n = Math.round((g.vented / R.length) * 100), spread = g.low.filter((v, i) => i !== g.leak && v < 0.97).length;
+            const where = !spread ? 'all of it from ' + THE[R[g.leak].key] : spread > 3 ? 'from every deck' : `from ${words(spread + 1)} decks`;
             g = { ...g, patchLeft: 0, patched: true, phase: 'won', target: null };
             talk = [];
-            const lost = R.map((r, i) => i).filter(i => g.low[i] < 0.9), names = lost.map(i => THE[R[i].key]);
-            const decks = lost.length === 1 ? `Only ${names[0]} lost air.` : lost.length === R.length ? 'Every deck lost air.'
-                : lost.length > 3 ? `${cap(words(lost.length))} decks lost air.` : cap(listing(names)) + ' lost air.';
-            const n = Math.round((g.vented / R.length) * 100), trapped = crew.find(f => f.state === 'trapped');
             say('Jaxon', "Sealed. That'll hold until I can weld it.");
-            say('A.U.R.A.', 'Breach sealed, Commander. ' + decks);
-            say('A.U.R.A.', `The ship lost ${n < 1 ? 'less than one' : words(n)} percent of its air.`);
-            if (trapped) say(trapped.name, "I'm fine. The mask held.");
+            say('A.U.R.A.', `The ship lost ${n < 1 ? 'less than one' : words(n)} percent of its air, ${where}.`);
+            if (shutIn) say(shutIn.name, HELD);
             say('A.U.R.A.', 'All four crew are safe, Commander.');
             finale();
         }
         function lose() {
-            const key = R[g.leak].key, hurt = crew.filter(f => f.id !== 'you' && figRoom(f) === g.leak);
+            const key = R[g.leak].key, hurt = crew.filter(f => f.id !== 'you' && figRoom(f) === g.leak), ids = hurt.map(f => f.id);
             g = { ...g, phase: 'lost', damaged: { [key]: true }, target: null, patchLeft: 0, out: 0, flow: [0, 0, 0, 0, 0] };
-            crew = crew.map(f => (hurt.some(h => h.id === f.id) ? { ...f, hurt: true, lying: false, moving: false, path: [], y: floorY(g.leak) } : f));
+            crew = crew.map(f => (ids.includes(f.id) ? { ...f, hurt: true, moving: false, path: [], y: floorY(g.leak) } : f));
             talk = [];
             say('A.U.R.A.', `${cap(THE[key])} ${IS(g.leak)} at zero, Commander.`);
-            if (hurt.length) say(...hurt[0].hurtLine);
-            else say('Jaxon', 'We lost that deck. I can patch it from outside later.');
-            say('A.U.R.A.', hurt.length ? `All four crew are alive, Commander. ${hurt.length > 1 ? 'Two are' : 'One is'} injured.` : 'All four crew are safe, Commander.');
+            const line = HURT[ids.slice().sort().join(',')];
+            if (line) say(...line);
+            else if (!ids.length) say('Jaxon', 'We lost that deck. I can patch it from outside later.');
+            say('A.U.R.A.', ids.length ? `All four crew are alive, Commander. ${cap(words(ids.length))} ${ids.length > 1 ? 'are' : 'is'} injured.` : 'All four crew are safe, Commander.');
             finale();
         }
 
-        // ── dust rides the air: pulled to the hole and to any hatch the air leaves by, pushed out of hatches it enters by ──
-        function sinksFor(i) {
-            const list = i === g.leak && g.phase === 'leak' ? [{ x: g.hole.x, y: g.hole.y, s: (PULL * g.out) / K_LEAK }] : [];
-            [i - 1, i].filter(h => h >= 0 && h < 5).forEach(h => {
-                const q = g.flow[h] * (h === i ? 1 : -1);                       // > 0: air leaves room i through hatch h
-                if (Math.abs(q) > 1e-4) list.push({ x: shaftX, y: h === i ? R[i].bottom - 3 : R[i].top + 2, s: (PULL * q) / K_LEAK, to: h === i ? i + 1 : i - 1 });
+        // ── dust rides the air: to the hole, and to any open hatch the air leaves a deck by ──
+        function sinks(i) {
+            const list = i === g.leak && g.phase === 'leak' ? [{ x: g.hole.x, y: g.hole.y, s: g.out / K_LEAK }] : [];
+            around(i).forEach(h => {
+                const q = g.flow[h] * (h === i ? 1 : -1);                       // > 0: air leaves deck i through hatch h
+                if (q > 1e-4) list.push({ x: shaftX, y: h === i ? R[i].bottom - 3 : R[i].top + 2, s: (0.5 * q) / K_LEAK, to: h === i ? i + 1 : i - 1 });
             });
             return list;
         }
         function stepDust(dt) {
-            const sinks = R.map((r, i) => sinksFor(i));
+            const sk = R.map((r, i) => sinks(i)), counts = R.map(() => 0);
             const moved = dust.map(d => {
-                let vx = Math.cos(d.a) * WANDER, vy = Math.sin(d.a) * WANDER * 0.6, jump = null;
-                sinks[d.room].forEach(k => {
-                    const dx = k.x - d.x, dy = k.y - d.y, dist = Math.hypot(dx, dy) || 1;
-                    const m = k.s > 0 ? k.s * (0.35 + 14 / (dist + 4)) : dist < 24 ? (k.s * 10) / (dist + 4) : 0;
+                let vx = Math.cos(d.a) * WANDER, vy = Math.sin(d.a) * WANDER * 0.6, into = null;
+                sk[d.room].forEach(k => {
+                    const dx = k.x - d.x, dy = k.y - d.y, dist = Math.hypot(dx, dy) || 1, m = PULL * k.s * (0.6 + 24 / (dist + 8));
                     vx += (dx / dist) * m; vy += (dy / dist) * m;
-                    if (k.s > 0 && dist < 2.5) jump = k;
+                    if (dist < 3) into = k;
                 });
-                if (jump && jump.to == null) return null;                          // out through the hole
-                if (jump) return { ...d, room: jump.to, x: shaftX + (Math.random() - 0.5) * 4, y: jump.to > d.room ? R[jump.to].top + 3 : R[jump.to].bottom - 4, vx, vy };
-                const r = R[d.room], y = Lab.clamp(d.y + vy * dt, r.top + 2, r.bottom - 3), hw = Math.max(1, L.halfWidth(y) - 3);
-                return { ...d, x: Lab.clamp(d.x + vx * dt, L.cx - hw, L.cx + hw), y, vx, vy, a: d.a + (Math.random() - 0.5) * 2.4 * dt };
+                if (into && into.to == null) {                                      // it jitters at the hole a moment, then is gone
+                    if (Math.random() < dt * 1.6) return null;
+                    counts[d.room] += 1;
+                    return { ...d, x: into.x + Math.round((Math.random() - 0.5) * 4), y: into.y + Math.round((Math.random() - 0.5) * 4), vx, vy };
+                }
+                const room = into ? into.to : d.room, r = R[room];
+                const y = clamp(into ? (room > d.room ? r.top + 3 : r.bottom - 4) : d.y + vy * dt, r.top + 2, r.bottom - 3), hw = Math.max(1, L.halfWidth(y) - 3);
+                counts[room] += 1;
+                return { ...d, room, x: clamp(into ? shaftX : d.x + vx * dt, L.cx - hw, L.cx + hw), y, vx, vy, a: d.a + (Math.random() - 0.5) * 2.4 * dt };
             });
-            const kept = moved.filter(Boolean), counts = R.map((r, i) => kept.filter(d => d.room === i).length);
-            dust = kept.concat(moved.filter(d => !d).map(() => {                     // what went out returns as dust elsewhere
+            dust = moved.map(d => {                                               // what went out is stirred up again elsewhere
+                if (d) return d;
                 const i = counts.indexOf(Math.min(...counts));
                 counts[i] += 1;
                 return speck(i);
-            }));
+            });
         }
 
         // ── drawing ──
@@ -313,12 +308,11 @@
                 Lab.text(ctx, String(h + 1), shaftX + 7, y + 2, hot ? C.greenBr : C.boneD);
             });
         }
-        function drawDust() {
+        function drawDust() {                                 // resting dust stays dim; moving dust brightens and trails
             dust.forEach(d => {
                 const sp = Math.hypot(d.vx, d.vy), x = Math.round(d.x), y = Math.round(d.y);
-                if (sp > 4) Lab.line(ctx, x - d.vx * 0.22, y - d.vy * 0.22, x, y, C.boneD, 0.75);
-                Lab.dot(ctx, x, y, sp > 9 ? C.white : d.b > 0.35 ? C.bone : C.boneD);
-                if (d.b > 0.92) Lab.dot(ctx, x + 1, y, C.boneD);                    // a loose flake
+                if (sp > 4) Lab.line(ctx, x - (d.vx / sp) * Math.min(6, sp * 0.35), y - (d.vy / sp) * Math.min(6, sp * 0.35), x, y, C.boneD, 0.8);
+                Lab.dot(ctx, x, y, sp > 14 ? C.white : sp > 4 ? C.bone : C.boneD);
             });
         }
         function drawHoleAndCrew(t) {
@@ -331,8 +325,8 @@
             crew.forEach(f => {
                 const fx = Math.round(f.x), fy = Math.round(f.y);
                 if (f.hurt) { S.figure(ctx, fx, fy, f.color, false, true); if (Math.floor(t / 400) % 2) Lab.dot(ctx, fx, fy - 5, C.red); return; }
-                S.figure(ctx, fx, fy, f.color, f.moving && Math.floor(f.stepT * 6) % 2 === 1, !!f.lying);
-                if (f.masked && !f.lying) Lab.line(ctx, fx - 1, fy - 8, fx + 1, fy - 8, C.boneD);
+                S.figure(ctx, fx, fy, f.color, f.moving && Math.floor(f.stepT * 6) % 2 === 1);
+                if (g.phase === 'leak' && f.id !== 'you' && figRoom(f) === g.leak) Lab.line(ctx, fx - 1, fy - 8, fx + 1, fy - 8, C.boneD);   // mask
             });
         }
         function drawMarks() {
@@ -350,20 +344,22 @@
                 : j.moving ? (Math.abs(j.x - shaftX) < 0.5 ? 'CLIMBING' : 'WALKING') : g.miss > 0 ? 'NOTHING HERE' : g.sent ? 'WAITING' : 'STANDING BY';
         }
         function drawReadout(t) {
-            const over = g.phase === 'won' || g.phase === 'lost';
             const status = g.phase === 'won' ? ['SEALED', C.green] : g.phase === 'lost' ? ['DECK LOST', C.red] : g.phase === 'leak' && Math.floor(t / 500) % 2 ? ['PRESSURE LOSS', C.red] : null;
+            ctx.fillStyle = C.void;
+            ctx.fillRect(RX - 1, 1, W - RX + 1, 8); ctx.fillRect(RX - 1, H - 10, W - RX + 1, 8);   // keep stars off the words
             Lab.text(ctx, 'AIR', RX, 3, C.boneD);
             if (status) Lab.text(ctx, status[0], W - 6 - Lab.textWidth(status[0]), 3, status[1]);
             R.forEach((r, i) => {
                 const my = i === 0 ? r.bottom - 12 : Math.round((r.top + r.bottom) / 2) - 1, edge = Math.round(L.cx + L.halfWidth(my)) + 2;
                 const v = g.p[i], len = Math.round(v * BW), col = v > 0.6 ? C.green : v > 0.3 ? C.amber : C.red, n = String(Math.round(v * 100));
                 for (let x = edge; x < RX - 2; x += 2) Lab.dot(ctx, x, my + 1, C.line2);   // leader from the deck to its bar
+                ctx.fillStyle = C.void; ctx.fillRect(RX - 1, my - 2, BW + 26, 8);
                 Lab.shade(ctx, RX, my, BW, 3, 0.15, C.line2);
                 if (len > 0) { Lab.shade(ctx, RX, my + 1, len, 2, 0.5, col); Lab.line(ctx, RX, my, RX + len - 1, my, col); }
-                if (g.low[i] < 0.99) Lab.line(ctx, RX + Math.round(g.low[i] * BW), my - 1, RX + Math.round(g.low[i] * BW), my + 3, C.bone);
+                if (g.low[i] < 0.99) Lab.line(ctx, RX + Math.round(g.low[i] * BW), my - 1, RX + Math.round(g.low[i] * BW), my + 3, C.bone);   // lowest it fell
                 Lab.text(ctx, n, RX + BW + 18 - Lab.textWidth(n), my - 1, col);
-                glyph(ctx, RX + BW + 20, my - 1, C.boneD);
-                if (over && g.low[i] < 0.99) glyph(ctx, RX + 2 + Lab.text(ctx, 'LOWEST ' + Math.round(g.low[i] * 100), RX, my + 6, C.boneD), my + 6, C.boneD);
+                ctx.fillStyle = C.boneD;                                                   // the font has no '%'
+                for (let k = 0; k < 15; k++) if (PCT[k] === '1') ctx.fillRect(RX + BW + 20 + (k % 3), my - 1 + Math.floor(k / 3), 1, 1);
             });
             if (g.phase !== 'calm') Lab.text(ctx, jaxonStatus(), RX + 5 + Lab.text(ctx, 'JAXON', RX, H - 8, C.amber), H - 8, C.boneD);
         }
@@ -384,51 +380,47 @@
         }
 
         function showButtons() {
-            held = null;
-            if (g.ended) return ui.buttons([{ label: 'Run it again', primary: true, onClick: start }]);
-            const isLive = g.phase === 'leak';
-            const hatches = g.shut.map((s, h) => ({ label: (s ? 'Open ' : 'Shut ') + (h + 1), primary: s, disabled: !isLive, onClick: () => toggleHatch(h) }));
-            const arrows = [['←', -1, 0], ['↑', 0, -1], ['↓', 0, 1], ['→', 1, 0]].map(([label, ax, ay]) => ({
-                label, hold: true, quiet: true, disabled: !isLive, onDown: () => { nudge(ax, ay); held = { ax, ay }; }, onUp: () => { held = null; },
-            }));
-            ui.buttons(hatches.concat(arrows, [{ label: 'Send Jaxon here', disabled: !isLive || g.patchLeft > 0, onClick: () => { aimShown = true; sendJaxon(aim); } }]));
+            if (g.ended) return ui.buttons([{ label: 'Run it again', primary: true, onClick: () => g.ended && start() }]);
+            const isLive = g.phase === 'leak' && g.patchLeft <= 0;
+            ui.buttons(g.shut.map((s, h) => ({ label: (s ? 'Open hatch ' : 'Shut hatch ') + (h + 1), primary: s, disabled: !isLive, onClick: () => toggleHatch(h) })));
         }
 
         // ── input ──
         function nudge(ax, ay, step = 3) {                // a tap moves the aim a little; holding keeps it moving
-            aim = { x: Lab.clamp(aim.x + ax * step, 8, 186), y: Lab.clamp(aim.y + ay * step, 8, 162) };
-            aimShown = true; hoverHatch = -1;
+            aim = { x: clamp(aim.x + ax * step, 8, 186), y: clamp(aim.y + ay * step, 8, 172) };
+            aimShown = true; byMouse = false; hoverHatch = -1;
         }
         const keyAxis = (plus, minus) => (plus.some(k => Lab.keys.has(k)) ? 1 : 0) - (minus.some(k => Lab.keys.has(k)) ? 1 : 0);
         const cv = ui.canvas;
         cv.onpointermove = e => {
-            aim = ui.toPixel(e); aimShown = true;
+            aim = ui.toPixel(e); aimShown = true; byMouse = true;
             hoverHatch = g.phase === 'leak' ? hatchAt(aim) : -1;
             cv.style.cursor = hoverHatch >= 0 ? 'pointer' : '';
         };
+        cv.onpointerleave = () => { if (byMouse) aimShown = false; hoverHatch = -1; };
         cv.onclick = e => {
             const p = ui.toPixel(e), h = hatchAt(p);
             if (h >= 0) toggleHatch(h); else sendJaxon(p);
         };
         Lab.onKey((k, e) => {
-            const onButton = e && e.target && e.target.tagName === 'BUTTON';    // a focused button handles Space and Enter itself
-            if (g.ended) { if (!onButton && (k === ' ' || k === 'Enter' || k === 'r')) start(); return; }
+            const onButton = e && e.target && e.target.tagName === 'BUTTON';    // a focused button takes Enter itself
+            if (g.ended) { if (k === ' ' || k === 'r' || (k === 'Enter' && !onButton)) start(); return; }
+            if (STEP_KEYS[k]) { if (!(e && e.repeat)) nudge(...STEP_KEYS[k]); return; }
+            if (e && e.repeat) return;
             if (/^[1-5]$/.test(k)) return toggleHatch(Number(k) - 1);
-            if (STEP_KEYS[k] && !(e && e.repeat)) return nudge(...STEP_KEYS[k]);
-            if ((k === ' ' || k === 'Enter') && !onButton) { aimShown = true; sendJaxon(aim); }
+            if (k === ' ' || (k === 'Enter' && !onButton)) { aimShown = true; sendJaxon(aim); }
         });
 
         Lab.loop((dt, now) => {
             g = { ...g, t: g.t + dt, flash: Math.max(0, g.flash - dt * 2.5), shake: Math.max(0, g.shake - dt), miss: Math.max(0, g.miss - dt), cycling: g.cycling.map(c => Math.max(0, c - dt)) };
             if (g.phase === 'calm' && g.t >= INTRO) hit();
-            const ax = keyAxis(['ArrowRight', 'd'], ['ArrowLeft', 'a']) + (held ? held.ax : 0), ay = keyAxis(['ArrowDown', 's'], ['ArrowUp', 'w']) + (held ? held.ay : 0);
+            const ax = keyAxis(['ArrowRight', 'd'], ['ArrowLeft', 'a']), ay = keyAxis(['ArrowDown', 's'], ['ArrowUp', 'w']);
             if (ax || ay) nudge(ax, ay, AIM_SPEED * dt);
             if (g.phase === 'leak' || g.phase === 'won') stepAir(dt);
             if (g.phase === 'leak') {
-                crew.filter(f => f.notice && f.state === 'idle' && !(f.id === 'jaxon' && g.sent) && figRoom(f) === g.leak && g.p[g.leak] < f.notice).forEach(f => notice(f));
                 reports();
                 if (g.patchLeft > 0) { g = { ...g, patchLeft: g.patchLeft - dt }; if (g.patchLeft <= 0) sealed(); }
-                if (g.phase === 'leak' && g.p[g.leak] <= 0.004) lose();
+                if (g.phase === 'leak' && g.p[g.leak] <= GONE) lose();
             }
             stepCrew(dt);
             stepDust(dt);
@@ -438,17 +430,17 @@
 
         start();
         render(performance.now());
-        return () => { cv.style.cursor = ''; talk = []; held = null; };
+        return () => { cv.style.cursor = ''; cv.onpointerleave = null; talk = []; };
     }
 
     Lab.register({
         id: 'breach', badge: 'new',
         name: 'Seal the breach',
         short: 'Find a hole by the dust',
-        verb: 'Watch loose dust drift toward a hole nobody can see, shut ladder hatches to stop the air spreading, and mark the spot for Jaxon to patch.',
+        verb: 'Watch loose dust drift toward a hole nobody can see, mark the spot for Jaxon, and decide when to shut the hatches on whoever is still inside.',
         serves: "The ship as a place, the crew's safety, and sector one's hazard: rock too small to see.",
         replaces: 'The one-line log entry "WARNING: Micrometeorite impact detected! [deck] sustained damage." in sector one.',
-        controls: 'Click a hatch to shut or open it (1–5) · click the hole to send Jaxon · arrows aim, Space sends',
+        controls: 'Click where the dust goes to send Jaxon · click a hatch or press 1–5 to shut it · arrows aim, Space sends',
         mount,
     });
 })();

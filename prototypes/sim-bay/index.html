@@ -66,19 +66,21 @@
         display: block; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; height: auto;
         image-rendering: pixelated; image-rendering: crisp-edges; cursor: crosshair;
     }
+    canvas#view:focus { outline: none; }
+    canvas#view:focus-visible { outline: 1px solid var(--green); outline-offset: -1px; }
     .frame::after { /* scanlines */
         content: ''; position: absolute; inset: 0; pointer-events: none;
         background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
     }
 
     /* the dialogue line: one at a time, like the game's cards */
-    .talk { min-height: 64px; display: grid; grid-template-columns: 96px 1fr; gap: 4px 14px; align-items: start; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); }
+    .talk { min-height: 64px; display: grid; grid-template-columns: 132px 1fr; gap: 4px 14px; align-items: start; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); }
     .talk-who { font: 600 11px/1.9 var(--disp); letter-spacing: 0.18em; text-transform: uppercase; color: var(--amber); }
     .talk-who.is-aura { color: var(--green); }
     .talk-who.is-note { color: var(--dim); }
     .talk-line { font-size: 15px; line-height: 1.55; color: var(--bone); max-width: 68ch; }
     .talk-line.is-note { color: var(--dim); font-style: italic; }
-    .talk-prev { grid-column: 1 / -1; color: var(--faint); font-size: 12px; min-height: 18px; }
+    .talk-prev { grid-column: 1 / -1; color: var(--faint); font-size: 12px; height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     .buttons { display: flex; flex-wrap: wrap; gap: 8px; min-height: 38px; }
     .btn {
@@ -112,7 +114,7 @@
     <header class="bay-head">
         <span class="kicker">Silent Exodus · Sim bay</span>
         <h1>Things the crew could do</h1>
-        <p>Rough, playable sketches. Each one is something the story already has the crew do, and each would replace a part of the game today rather than add to it. Sound is off. Numbers and lines are placeholders. Round two: four new ones, two reworked.</p>
+        <p>Rough, playable sketches. Each one is something the story already has the crew do, and each would replace a part of the game today rather than add to it. Sound is off. Numbers and lines are placeholders. Round two: four new, three reworked, and every one polished after a fresh play-through.</p>
     </header>
 
     <nav aria-label="Prototypes">
@@ -125,7 +127,7 @@
             <h2 id="proto-name">—</h2>
             <span class="controls-hint" id="proto-controls"></span>
         </div>
-        <div class="frame"><canvas id="view" width="320" height="180" aria-label="Prototype view"></canvas></div>
+        <div class="frame"><canvas id="view" width="320" height="180" tabindex="0" aria-label="Prototype view"></canvas></div>
         <div class="talk">
             <div class="talk-prev" id="talk-prev"></div>
             <div class="talk-who" id="talk-who"></div>
@@ -220,6 +222,9 @@
         try { history.replaceState(null, '', '#' + p.id); } catch (e) { /* a sandboxed frame may refuse */ }
         try { localStorage.setItem('simbay-open', p.id); } catch (e) { /* storage blocked */ }
         try { cleanup = p.mount(ctx, ui) || null; } catch (e) { console.error(e); ui.say('', 'This prototype failed to start: ' + e.message); }
+        // keys belong to the sketch now: move focus off the list item so Space and arrows reach the game
+        const active = document.activeElement;
+        if (active && active.classList && active.classList.contains('pick')) { try { canvas.focus({ preventScroll: true }); } catch (e) { canvas.focus(); } }
     }
 
     // ── the list ──
@@ -240,8 +245,11 @@
     // ── keys go to the open prototype; arrows and space do not scroll the page while it listens ──
     const GAME_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' '];
     window.addEventListener('keydown', e => {
-        if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-        if (GAME_KEYS.includes(e.key) && !(e.target && e.target.classList && e.target.classList.contains('pick'))) e.preventDefault();
+        const t = e.target;
+        if (t && /INPUT|TEXTAREA|SELECT/.test(t.tagName)) return;
+        const onPick = !!(t && t.classList && t.classList.contains('pick'));
+        const onOwnButton = !!(t && t.tagName === 'BUTTON' && !onPick);   // a sketch's own button keeps Space and Enter
+        if (GAME_KEYS.includes(e.key) && !onOwnButton) e.preventDefault(); // never scroll the page or re-open the list item
         Lab._key(e, true);
     });
     window.addEventListener('keyup', e => Lab._key(e, false));

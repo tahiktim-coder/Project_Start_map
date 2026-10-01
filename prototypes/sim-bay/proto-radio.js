@@ -1,5 +1,5 @@
-/* proto-radio.js — "Dead channels". Tune an old long-range radio across a band of static.
-   Every voice on the band is a copy the light made of something it read, and the last one is our own ship.
+/* proto-radio.js — "Dead channels". Sweep the long-range radio through static, listening for the eight ships ahead.
+   Every voice on the band comes from ahead, where the light is: even Earth, and at the top of the band, our own ship.
    Would replace the long-range scan. Draws at 320×180 through Lab; dialogue goes through ui.say. */
 (function () {
     'use strict';
@@ -10,37 +10,41 @@
     const DIAL_Y = 94, BASE_Y = 112;          // the dial glass and its tick baseline
     const WINDOW_PX = 10, LOCK_C = 0.82;      // words start coming through within 10 px; locked within about 2 px
     const FAINT_C = 0.12, HOLD_S = 0.7;       // below FAINT_C it is only static; hold a lock this long to play it
-    const KHZ_LO = 500, KHZ_HI = 1700;
-    const INTRO = 'Long-range radio is on, Commander. It is mostly static on this heading.';
-    const HINT = 'Something very faint has come up at the top of the band.';
-    const CLOSING = 'Every voice on this band came from the same direction. Ahead, where the light is.';
+    const MHZ_LO = 8400, MHZ_HI = 8460;       // the deep-space band
+    const REVEAL_WAIT_S = 12;                 // with one station left unheard, the far one still comes up after this long
+    const INTRO = ['Jaxon', "Radio's on. Eight ships went ahead of us. If anyone's alive, we'll hear them."];
+    const HINT = ['A.U.R.A.', 'A new signal at the top of the band, Commander. Very faint.'];
+    const CLOSING = ['', 'Every voice on the band came from ahead, where the light is.'];
 
     // Each line: [speaker, words, isTransmission]. A transmission needs the needle held on it; crew lines do not.
     const STATIONS = [
-        { f: 0.14, vis: 0.34, id: 'EARTH', mod: 'steady', lines: [
-            ['Earth', 'This is the Exodus programme. Nine ships on your heading. You are the ninth.', true]] },
-        { f: 0.37, vis: 0.28, id: 'EXODUS-6', mod: 'loop', lines: [
-            ['EXODUS-6', 'EXODUS-6. Four crew. We have stopped. Please respond.', true],
-            ['EXODUS-6', 'EXODUS-6. Four crew. We have stopped. Please respond.', true]] },
-        { f: 0.56, vis: 0.2, id: 'NO ID', mod: 'clock', lines: [
-            ['', 'A carrier with no voice on it. Only a clock tone, once a second.', false]] },
-        { f: 0.75, vis: 0.17, id: 'HULL 38114', mod: 'flicker', lines: [
-            ['A.U.R.A.', 'Four crew, Commander. All accounted for.', true],
-            ['A.U.R.A.', 'That is hull 38,114, Commander. That ship has been dead about four hundred years.', false],
-            ['Vance', "That's your voice, A.U.R.A. Word for word.", false]] },
-        { f: 0.95, vis: 0.15, id: 'EXODUS-9', mod: 'steady', lines: [
-            ['A.U.R.A.', 'Good morning, Commander. All four crew are awake and well.', true],
-            ['Mira', "A.U.R.A., that's what you said to us when we woke up.", false],
+        { f: 0.14, vis: 0.42, id: 'EARTH', mod: 'steady', lines: [
+            ['Earth', 'Exodus Control to EXODUS-9. We will keep this channel open. Good luck.', true],
+            ['Mira', 'That came from ahead of us. Earth is behind us.', false]] },
+        { f: 0.37, vis: 0.4, id: 'EXODUS-6', mod: 'loop', lines: [
+            ['EXODUS-6', 'This is EXODUS-6, Captain Ruth Harlan. We have stopped. Please respond.', true],
+            ['A.U.R.A.', 'That message is on a loop, Commander. EXODUS-6 has been dead about twenty years.', false]] },
+        { f: 0.56, vis: 0.42, id: 'HULL 212', mod: 'pulse', lines: [
+            ['A.U.R.A.', "Hull 212's transponder, Commander. That ship has been dead about a century.", false]] },
+        { f: 0.75, vis: 0.36, id: 'EXODUS-30,211', mod: 'flicker', lines: [
+            ['30,211', 'This is EXODUS-30,211. We can see the light now. It gives off no heat.', true],
+            ['A.U.R.A.', 'That ship has been dead 396 years, Commander. It has no power.', false],
+            ['Vance', "Then who's talking?", false]] },
+        { f: 0.95, vis: 0.24, id: 'EXODUS-9', mod: 'steady', lines: [
+            ['EXODUS-9', 'Good morning, Commander. All four crew are awake and well.', true],
+            ['Mira', "That's A.U.R.A.'s voice. It's what she said when we woke up.", false],
             ['A.U.R.A.', 'That signal is ours, Commander. It is coming from ahead of us.', false]] },
     ].map(st => ({ ...st, x: Math.round(BX + st.f * (BW - 1)) }));
-    const LAST = STATIONS.length - 1;          // the far station only comes up once the others are heard
+    const LAST = STATIONS.length - 1;          // our own station: it comes up once the others are heard (see REVEAL_WAIT_S)
 
     const rgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
     const PAL = { void: rgb(C.void), d: rgb(C.greenD), g: rgb(C.green), b: rgb(C.greenBr), gold: rgb(C.gold), amber: rgb(C.amber) };
     const px = f => BX + f * (BW - 1);
-    const khzOf = f => Math.round(KHZ_LO + f * (KHZ_HI - KHZ_LO));
+    const mhzOf = f => Math.round(MHZ_LO + f * (MHZ_HI - MHZ_LO));
     const lineTime = words => 1.3 + 0.24 * words.split(' ').length;
+    const cyc = (t, period) => ((t % period) + period) % period;                       // safe for the negative times of the first fill
     const burst = t => Math.abs(Math.sin(t * 0.011) * Math.sin(t * 0.0043 + 1.3));   // a speech-like envelope
+    const keyOf = line => (line ? line.join('|') : '');
 
     function mount(ctx, ui) {
         const wf = new Float32Array(WF_H * BW);
@@ -50,7 +54,8 @@
         const live = i => i < LAST || s.reveal > 0;
         const clarity = i => Lab.clamp(1 - Math.abs(px(s.f) - STATIONS[i].x) / WINDOW_PX, 0, 1);
         const tune = df => { if (s.mode !== 'end') s.f = Lab.clamp(s.f + df, 0, 1); };
-        const transmitting = () => s.mode === 'play' && STATIONS[s.st].lines[s.li][2] && clarity(s.st) >= LOCK_C;
+        const playing = () => STATIONS[s.st].lines[s.li];
+        const transmitting = () => s.mode === 'play' && playing()[2] && clarity(s.st) >= LOCK_C;
 
         function nearest() {
             let i = -1, c = 0;
@@ -64,57 +69,61 @@
             words.split(' ').forEach(w => { if (r() < k) out.push(w); else if (out[out.length - 1] !== '…') out.push('…'); });
             return out.join(' ');
         }
-        /** One dialogue line. A faint (broken) line replaces the last one instead of pushing it into the history. */
-        function say(who, words, faint) {
-            if (faint || s.faint) ui.clear();
-            ui.say(who, words);
-            s.faint = !!faint; s.said = who + '|' + words;
+
+        // ── the dialogue: story lines stay put; a broken voice shows only while the needle is near it ──
+        function show(faint, replacesLast) {
+            const log = s.log, n = log.length;
+            const prev = faint ? log[n - (replacesLast ? 2 : 1)] : log[n - 2], cur = faint || log[n - 1];
+            ui.clear();
+            if (prev) ui.say(prev[0], prev[1]);
+            if (cur) ui.say(cur[0], cur[1]);
+            s.faintKey = keyOf(faint);
         }
+        const say = line => { s.log = [...s.log, line]; show(null); };
+        const hear = (faint, replacesLast) => { if (keyOf(faint) !== s.faintKey) show(faint, replacesLast); };
+        /** What the needle picks up from the nearest voice not yet heard, or null in plain static. */
         function preview() {
             const n = nearest();
-            if (n.i < 0 || n.c < FAINT_C) return { key: '' };
+            if (n.i < 0 || n.c < FAINT_C || s.heard.includes(n.i)) return null;
             const tx = STATIONS[n.i].lines.find(l => l[2]);
-            if (!tx) return { key: 'carrier' };
-            const words = garble(tx[1], n.c, n.i);
-            return { key: n.i + '|' + words, who: n.c >= 0.5 ? tx[0] : '', words, faint: words !== tx[1] };
+            return tx ? [n.c >= 0.5 ? tx[0] : '', garble(tx[1], n.c, n.i)] : null;
         }
 
         // ── the story ──
         function begin(i) {
-            s.mode = 'play'; s.st = i; s.li = 0; s.lineT = 0; s.heard.push(i);
-            const l = STATIONS[i].lines[0];
-            if (s.said !== l[0] + '|' + l[1]) say(l[0], l[1], false);
+            s.mode = 'play'; s.st = i; s.li = 0; s.lineT = 0; s.lockT = 0; s.mark = s.log.length;
+            s.heard = [...s.heard, i];
+            say(playing());
         }
         function play(dt) {
-            const st = STATIONS[s.st], l = st.lines[s.li], c = clarity(s.st);
-            if (l[2] && c < LOCK_C) {            // drifted off a transmission: it breaks up and waits for you
-                const words = garble(l[1], c, s.st);
-                if (s.gk !== words) { s.gk = words; say(c >= 0.5 ? l[0] : '', words, true); }
+            const l = playing(), c = clarity(s.st);
+            if (l[2] && c < FAINT_C) {           // tuned right away mid-transmission: drop it, it starts over next time
+                s.log = s.log.slice(0, s.mark); s.heard = s.heard.filter(i => i !== s.st); s.mode = 'tune';
+                show(null);
                 return;
             }
-            if (s.faint) { s.gk = ''; say(l[0], l[1], false); }
+            if (l[2] && c < LOCK_C) {            // drifted off a transmission: it breaks up and waits for you
+                hear([c >= 0.5 ? l[0] : '', garble(l[1], c, s.st)], true);
+                return;
+            }
+            hear(null);
             s.lineT += dt;
             if (s.lineT < lineTime(l[1])) return;
             s.li += 1; s.lineT = 0;
-            if (s.li < st.lines.length) { say(st.lines[s.li][0], st.lines[s.li][1], false); return; }
-            finish();
-        }
-        function finish() {
-            s.mode = 'tune'; s.lockT = 0;
-            if (s.st === LAST) { end(); return; }
-            if (s.heard.length === LAST && s.reveal === 0) { s.reveal = 0.01; say('', HINT, false); }
-            s.gk = preview().key;                 // do not overwrite the line just said until the needle moves
+            if (s.li < STATIONS[s.st].lines.length) { say(playing()); return; }
+            s.mode = 'tune';
+            if (s.st === LAST) end();
         }
         function end() {
             s.mode = 'end'; s.endT = 0;
-            say('', CLOSING, false);
+            say(CLOSING);
             ui.buttons([{ label: 'Run it again', primary: true, onClick: start }]);
         }
         function start() {
-            s = { f: 0.04, holdT: 0, btnDir: 0, drag: false, mode: 'tune', st: -1, li: 0, lineT: 0, lockT: 0,
-                  heard: [], reveal: 0, endT: 0, gk: '', said: '', faint: false };
-            ui.clear();
-            say('A.U.R.A.', INTRO, false);
+            s = { f: 0.04, holdT: 0, btnDir: 0, drag: false, mode: 'tune', st: -1, li: 0, lineT: 0, lockT: 0, mark: 0,
+                  heard: [], reveal: 0, waitT: 0, endT: 0, log: [], faintKey: '' };
+            for (let r = 0; r < WF_H; r++) pushRow(performance.now() - (WF_H - r) * 66);   // open on a fresh, full waterfall
+            say(INTRO);
             const hold = (label, dir) => ({ label, hold: true,
                 onDown: () => { s.btnDir = dir; tune(dir / (BW - 1)); }, onUp: () => { s.btnDir = 0; } });
             ui.buttons([hold('← Tune down', -1), hold('Tune up →', 1)]);
@@ -128,29 +137,31 @@
             if (dir && s.holdT > 0.25) tune(dir * Lab.lerp(10, 110, Lab.clamp((s.holdT - 0.25) / 1.2, 0, 1)) * dt / (BW - 1));
             if (s.reveal > 0) s.reveal = Math.min(1, s.reveal + dt / 2);
             if (s.mode === 'end') { s.endT += dt; return; }
-            if (s.mode === 'play') { play(dt); return; }
-            const p = preview();
-            if (p.key !== s.gk) {                 // a broken voice fades out when you tune back into static
-                s.gk = p.key;
-                if (p.words) say(p.who, p.words, p.faint);
-                else if (s.faint) { ui.clear(); s.faint = false; s.said = ''; }
-            }
+            if (s.mode === 'play') play(dt);
+            if (s.mode === 'end' || (s.mode === 'play' && playing()[2])) return;   // a transmission holds the needle
             const n = nearest();
-            s.lockT = n.c >= LOCK_C ? s.lockT + dt : 0;
-            if (s.lockT >= HOLD_S && !s.heard.includes(n.i)) begin(n.i);
+            s.lockT = n.c >= LOCK_C && !s.heard.includes(n.i) ? s.lockT + dt : 0;
+            if (s.mode === 'play') return;        // crew lines run on while you tune; a voice you lock waits for them
+            const p = preview();
+            hear(p, false);
+            if (s.lockT >= HOLD_S) { begin(n.i); return; }
+            if (!s.reveal && s.heard.length >= LAST - 1) {
+                if (!p) s.waitT += dt;            // only time spent searching the static counts
+                if (s.heard.length === LAST || s.waitT > REVEAL_WAIT_S) { s.reveal = 0.01; say(HINT); }
+            }
         }
 
         // ── the picture ──
         const box = (x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); ctx.fillStyle = C.void; ctx.fillRect(x + 1, y + 1, w - 2, h - 2); };
-        const clockTick = (i, now) => i >= 0 && STATIONS[i].mod === 'clock' && now % 1000 < 140;
+        const pulseOn = (i, now) => i >= 0 && STATIONS[i].mod === 'pulse' && cyc(now, 1000) < 200;
         function stripe(i, now, fade) {
             if (!live(i)) return 0;
             const st = STATIONS[i];
             const a = st.vis * (i === LAST ? s.reveal : 1 - fade) * 0.9
                 + 0.55 * Math.exp(-(((px(s.f) - st.x) / 12) ** 2)) * (1 - fade);   // brighter as the needle nears
-            if (s.mode === 'play' && s.st === i && st.lines[s.li][2]) return a * (0.4 + 0.9 * burst(now));
-            if (st.mod === 'loop') return a * (now % 3200 < 2400 ? 1 : 0.2);
-            if (st.mod === 'clock') return a * (now % 1000 < 140 ? 1.6 : 0.15);
+            if (s.mode === 'play' && s.st === i && playing()[2]) return a * (0.4 + 0.9 * burst(now));
+            if (st.mod === 'loop') return a * (cyc(now, 3200) < 2400 ? 1 : 0.2);
+            if (st.mod === 'pulse') return a * (pulseOn(i, now) ? 1.6 : 0.3);
             if (st.mod === 'flicker') return a * (0.3 + 0.7 * Math.random());
             return a;
         }
@@ -158,7 +169,7 @@
             wf.copyWithin(BW, 0, (WF_H - 1) * BW);
             const nx = px(s.f), fade = s.mode === 'end' ? Lab.clamp(s.endT / 3, 0, 1) : 0;
             for (let x = 0; x < BW; x++) {
-                const hiss = (0.1 + 0.05 * Math.sin(x * 0.07 + now * 0.0005)) * 1.7 * Math.random() ** 1.8;
+                const hiss = (0.1 + 0.05 * Math.sin(x * 0.07 + now * 0.0005)) * 1.35 * Math.random() ** 1.8;
                 const near = 0.12 * Math.exp(-(((BX + x - nx) / 14) ** 2)) * Math.random();
                 wf[x] = (hiss + near) * (1 - 0.75 * fade);
             }
@@ -193,7 +204,7 @@
                 const x = Math.round(px(k / 48)), major = k % 4 === 0;
                 ctx.fillStyle = major ? C.green : C.greenD;
                 ctx.fillRect(x, BASE_Y - (major ? 5 : 2), 1, major ? 5 : 2);
-                if (major) { const lab = String(5 + k / 4); Lab.text(ctx, lab, x - (Lab.textWidth(lab) >> 1), BASE_Y + 3, C.boneD); }
+                if (k % 8 === 0) { const lab = String(mhzOf(k / 48)); const lw = Lab.textWidth(lab); Lab.text(ctx, lab, k === 0 ? x : k === 48 ? x - lw + 1 : x - (lw >> 1), BASE_Y + 3, C.boneD); }
             }
             ctx.fillStyle = C.line2; ctx.fillRect(BX, BASE_Y, BW, 1);
             ctx.fillStyle = C.gold;                // a pencil mark over every station you have heard
@@ -203,20 +214,20 @@
             ctx.fillRect(x, DIAL_Y + 2, 1, 28); ctx.fillRect(x - 1, DIAL_Y + 1, 3, 2); ctx.fillRect(x - 1, DIAL_Y + 29, 3, 1);
         }
         function drawReadouts(n, now) {
-            const y = 129, locked = n.c >= LOCK_C;
+            const y = 129, locked = n.c >= LOCK_C && s.mode !== 'end';
             Lab.text(ctx, 'FREQ', BX, y, C.boneD);
-            const w = Lab.text(ctx, String(khzOf(s.f)), BX + 20, y, C.greenBr);
-            Lab.text(ctx, 'KHZ', BX + 24 + w, y, C.boneD);
+            const w = Lab.text(ctx, String(mhzOf(s.f)), BX + 20, y, C.greenBr);
+            Lab.text(ctx, 'MHZ', BX + 24 + w, y, C.boneD);
             let sig = n.i < 0 ? 0 : n.c * (0.55 + STATIONS[n.i].vis * (n.i === LAST ? s.reveal : 1));
-            if (n.i >= 0 && STATIONS[n.i].mod === 'clock') sig *= clockTick(n.i, now) ? 1.1 : 0.55;
+            if (n.i >= 0 && STATIONS[n.i].mod === 'pulse') sig *= pulseOn(n.i, now) ? 1.1 : 0.55;
             sig = s.mode === 'end' ? Math.random() * 0.05 : Lab.clamp(sig + Math.random() * 0.08, 0, 1);
             Lab.text(ctx, 'SIG', 100, y, C.boneD);
             for (let k = 0; k < 30; k++) {
                 ctx.fillStyle = k < Math.round(sig * 30) ? (k >= 24 ? C.amber : C.green) : C.line;
                 ctx.fillRect(114 + k * 3, y, 2, 5);
             }
-            const acquiring = locked && s.mode === 'tune' && !s.heard.includes(n.i);
-            ctx.fillStyle = locked && !(acquiring && now % 300 < 150) ? C.greenBr : n.c >= 0.5 ? C.greenD : C.line;
+            const acquiring = s.lockT > 0;           // blinks while a new voice is being locked
+            ctx.fillStyle = locked && !(acquiring && cyc(now, 300) < 150) ? C.greenBr : n.c >= 0.5 && s.mode !== 'end' ? C.greenD : C.line;
             ctx.fillRect(212, y + 1, 3, 3);
             const id = n.i >= 0 && n.c >= 0.5 && s.mode !== 'end' ? STATIONS[n.i].id : '----';
             Lab.text(ctx, id, 304 - Lab.textWidth(id), y, locked ? C.greenBr : C.bone);
@@ -226,7 +237,7 @@
             box(x0, y0, w, h, C.line);
             Lab.line(ctx, x0 + 2, mid, x0 + w - 3, mid, C.line2, 0.4);
             const c = n.i >= 0 && s.mode !== 'end' ? n.c : 0, quiet = s.mode === 'end' ? 0.2 : 1;
-            const talking = transmitting(), tick = c > 0.3 && clockTick(n.i, now);
+            const talking = transmitting(), tick = c > 0.3 && pulseOn(n.i, now);
             const color = talking ? C.greenBr : c >= 0.5 ? C.green : C.greenD;
             let prev = mid;
             for (let i = 0; i < w - 4; i++) {
@@ -241,7 +252,7 @@
         }
         function drawLog() {
             Lab.text(ctx, 'LOG', 162, 141, C.greenD);
-            s.heard.forEach((i, k) => Lab.text(ctx, khzOf(STATIONS[i].f) + ' ' + STATIONS[i].id, 162, 148 + k * 6,
+            s.heard.forEach((i, k) => Lab.text(ctx, mhzOf(STATIONS[i].f) + ' ' + STATIONS[i].id, 162, 148 + k * 6,
                 k === s.heard.length - 1 ? C.bone : C.boneD));
         }
         function drawKnob() {
@@ -268,7 +279,7 @@
         // ── input: keys, on-screen hold buttons (in start), and dragging anywhere on the picture ──
         Lab.onKey((key, e) => {
             if (e && e.repeat) return;
-            if (s.mode === 'end') { if (key === ' ') start(); return; }
+            if (s.mode === 'end') { if (key === ' ' || key === 'Enter') start(); return; }
             if (key === 'ArrowLeft' || key === 'a') tune(-1 / (BW - 1));
             if (key === 'ArrowRight' || key === 'd') tune(1 / (BW - 1));
         });
@@ -284,7 +295,6 @@
         canvas.onpointercancel = canvas.onpointerup;
 
         start();
-        for (let r = 0; r < WF_H; r++) pushRow(performance.now() - (WF_H - r) * 66);   // open on a full waterfall
         Lab.loop((dt, now) => {
             update(dt);
             if (++frame % 2 === 0) pushRow(now);
@@ -297,10 +307,10 @@
         id: 'radio', badge: 'parked',
         name: 'Dead channels',
         short: 'Tune through the dead channels',
-        verb: 'Turn the dial through static until a voice comes through, then hold the needle on it to hear it out.',
-        serves: 'The light: it copies whatever it reads, and the deep sectors are full of its copies.',
+        verb: 'Sweep the dial through static, listening for the eight ships ahead. Hold the needle on a voice to hear it out.',
+        serves: 'The light reads whatever reaches it. Every voice on this band comes from ahead, even Earth, even our own ship.',
         replaces: 'The long-range scan.',
-        controls: '← → or A D to tune (hold to sweep) · drag on the picture · rest the needle on a voice',
+        controls: '←/→ or A/D tune (tap or hold) · or drag on the picture · rest the needle on a voice · Space: run again',
         mount,
     });
 })();

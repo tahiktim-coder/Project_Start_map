@@ -43,6 +43,22 @@ that exists today, so the game gets deeper, not bigger. Nothing here is in the g
   who has gone quiet), so it replaces reading the roster panel before a jump. The count rides on it for free: five answers,
   "Four crew, Commander."
 
+## Round two (2026-10-01): nine sketches, all polished after a fresh play-through
+
+| sketch | status | what you do |
+|---|---|---|
+| Fly the corridor | reworked | one flight through sectors 1, 3 and 5: beacons heard climb to about 22,000, ships seen stay at six |
+| Date it with the disc | reworked, two axes | move one point on a when × where chart; each dated wreck stays plotted and the player draws the pattern |
+| The walk out | kept | drift from the real ship to the disc while the crew go quiet one by one |
+| Jump stations | replaces roll call | strap everyone into jump seats on the real ship before the window closes; the count rides on it |
+| Seal the breach | new | a meteor hit: watch the dust, shut hatches, send Jaxon; decide whether to shut someone in |
+| The cutting torch | new | trace a wreck's hatch seam managing heat and fuel; then the same cut on the disc |
+| The black box | new | fit torn waveform pieces together to hear EXODUS-6's last entry |
+| Take a bearing | new | cross dish bearings to find the hidden story wreck; random planets keep clear of it |
+| Dead channels | parked | tune an old radio |
+
+Shared pieces: `prototypes/sim-bay/ship.js` draws EXODUS-9 exactly like the main screen, so every sketch shows the same ship.
+
 ## Recommended order
 
 1. **Roll call** first: cheapest, and it turns the count from a scene you read into a thing you notice yourself.
