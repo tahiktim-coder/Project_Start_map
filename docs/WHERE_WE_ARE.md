@@ -52,7 +52,9 @@ Start here. One page: what is built, what is decided, what is waiting on you, an
 2. **The time throw:** keep with a job, or cut.
 3. **The colony ending where A.U.R.A. shuts off the air:** cut, soften, or keep.
 4. **The music licence.** Both tracks are Suno (January and February 2026). Free-plan tracks are non-commercial; a tip button is a grey area. Check which plan the account was on, or the tracks get replaced.
-5. **Who fixes the text:** you edit `docs/script/` and I copy it back, or I do a pass on the numbers, the offscreen knowledge and the old-style lines first.
+5. **The time throw's contradiction** (CANON §2, open issue): accept the proposed fix (hulls 1–9 flew before anyone knew; the throw only grew from hull 10), or another.
+6. **Story planets:** one or two hand-made planets per sector carrying the story, placed first, with random planets spaced around them.
+7. **Who fixes the text:** you edit `docs/script/` and I copy it back, or I do a pass on the numbers, the offscreen knowledge and the old-style lines first.
 
 ## Per sector, or per story line?
 

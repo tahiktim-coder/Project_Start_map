@@ -294,7 +294,7 @@
     }
 
     Lab.register({
-        id: 'radio',
+        id: 'radio', badge: 'parked',
         name: 'Dead channels',
         short: 'Tune through the dead channels',
         verb: 'Turn the dial through static until a voice comes through, then hold the needle on it to hear it out.',

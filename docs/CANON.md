@@ -36,6 +36,14 @@ corridor.
 
 **Nobody goes home.** The drive throws one way: outward, and backward.
 
+> **OPEN ISSUE, raised by the designer 2026-10-01.** This section contradicts itself: "each new hull is thrown further back"
+> would put hull 9 in front of hulls 1–8, yet hulls 1–8 are dead twenty years when we arrive and "EXODUS-9 arrives last".
+> Proposed fix, not yet agreed: hulls 1–9 flew with the original drive, launched before anyone knew about the light, and the
+> throw back was small for them, so they arrive in launch order. Only after hull 9 left did the first ship's twin start reciting
+> the disc. From hull 10 on, Earth tuned each drive to throw further back, trying to reach the disc before it was read. So every
+> later ship lands in front of us, and hull 9 is the last of the originals. Side effect: "eight went before you" becomes true in
+> launch order and false in arrival order, so A.U.R.A. never has to lie.
+
 ## 3. The light at the end
 
 At the end of the heading there is a light. It looks like a sun. It looks like a home star, the

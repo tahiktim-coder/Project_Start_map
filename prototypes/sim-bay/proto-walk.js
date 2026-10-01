@@ -200,7 +200,7 @@
     }
 
     Lab.register({
-        id: 'walk',
+        id: 'walk', badge: 'kept',
         name: 'The walk out',
         short: 'Drift out to the disc',
         verb: 'Drift out on a tether toward the light on a small suit tank, reach the gold disc, and decide what to do with it.',
