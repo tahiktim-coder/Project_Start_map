@@ -40,6 +40,8 @@ known rates). It holds nothing about where to send ships. The coordinates came f
 **The hole this fixes.** Voyager travels about 17 km a second. In 2026 it is a fraction of a light-day from the Sun. It cannot
 be at the end of the heading. So the disc in the light is not Voyager's.
 
+> **REJECTED by the designer, 2026-10-03:** "no, this is bad." There is only ONE disc. The copies idea below is out.
+
 **The fix: every Exodus carries a copy.** The broken message said, among other things, *do not send the disc.* What reached
 Earth read as *send the disc.* So Earth bolted a gold copy of the record into the hold of every Exodus ship. Every ship that
 reached the light delivered Earth's address to it. The thing at the end did not find us. We kept mailing it our map.
@@ -53,6 +55,22 @@ reached the light delivered Earth's address to it. The thing at the end did not 
 pulsar periods and angles it measured on the day it died. Lay that fix over our disc. How far the periods have slowed tells
 you *when* it died; how far the angles have swung tells you *where*. Knowing exactly when and where the wreck stopped,
 A.U.R.A. can retrace its last course and find where its crew went: that is the story planet the minigame reveals.
+
+## The designer's notes, 2026-10-03 (thinking aloud; paused here)
+
+- **One disc only.** Earth sent the disc.
+- **A message arrives in 2029**, rushed and broken by time and distance. Earth reads it as "do not send the disc", years too
+  late. *Or* it reads as an instruction to send Exodus ships toward the thing it names "the disc". Earth keeps sending ships to
+  those coordinates. Ship 1 goes, no reply; ship 2, ship 3… each sends back a little information. Then it is our turn: ship 9.
+  (Help wanted with the wording of the broken message.)
+- **The twist that needs fixing:** we send the warning, but *why are we the only crew who sees the whole graveyard?* The designer
+  wants a better reason than "we arrive last".
+- **Their direction:** the crews before us saw it too; they just could not send anything back. Every Exodus follows the same
+  precalculated path of planets, worked out from past data. That is how our crew finds the other ships, at planets and during
+  the jumps between sectors. The earlier ships mostly died in earlier sectors and never got as far as we do.
+- **Continuity to keep:** the wrecks seen in the corridor flight and at planets must match this path and the sector-by-sector
+  wreck ages.
+- **Still open:** what the disc *is* in this version, and why we are the ones who can send the warning.
 
 ## What the player does at the end
 
