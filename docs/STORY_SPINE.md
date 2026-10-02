@@ -31,6 +31,29 @@ We are the ninth. Eight launched before us. None reached the place. We find thei
    fragment as "the disc is there" and made reaching it the mission. At the end the disc is both the thing the light is reading
    and the antenna strong enough to reach home.
 
+## The disc: what it holds, and how it got there (added 2026-10-03, proposed)
+
+**What the disc actually holds.** The real 1977 Voyager record's pulsar map holds two things and only two: *where* Earth is
+(fourteen lines from the Sun to fourteen pulsars) and *when* the disc was made (each pulsar's period, and pulsars slow down at
+known rates). It holds nothing about where to send ships. The coordinates came from the broken message, never from the disc.
+
+**The hole this fixes.** Voyager travels about 17 km a second. In 2026 it is a fraction of a light-day from the Sun. It cannot
+be at the end of the heading. So the disc in the light is not Voyager's.
+
+**The fix: every Exodus carries a copy.** The broken message said, among other things, *do not send the disc.* What reached
+Earth read as *send the disc.* So Earth bolted a gold copy of the record into the hold of every Exodus ship. Every ship that
+reached the light delivered Earth's address to it. The thing at the end did not find us. We kept mailing it our map.
+
+- The drawing in the first wreck's logbook is that ship's own cargo note for its copy. "Why is this in a colony ship's orders?"
+- **Our ship carries one too.** After the first wreck, the crew opens a sealed crate in our hold and finds our own gold copy.
+- The finale's disc is our own copy, or the first one that ever reached the light.
+- What we send home at the end: send zero ships, and no disc.
+
+**What the dating minigame really does.** Our copy is the ruler. A wreck's navigation computer stored its last star fix: the
+pulsar periods and angles it measured on the day it died. Lay that fix over our disc. How far the periods have slowed tells
+you *when* it died; how far the angles have swung tells you *where*. Knowing exactly when and where the wreck stopped,
+A.U.R.A. can retrace its last course and find where its crew went: that is the story planet the minigame reveals.
+
 ## What the player does at the end
 
 At the disc, the commander composes the message: a few words chosen from what the run taught them. Whatever they choose,
