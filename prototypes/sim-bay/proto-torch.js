@@ -1,63 +1,58 @@
 /* proto-torch.js — The cutting torch.
-   HATCH: a dead ship has no power, so you cut its hatch open along the seam. The flame only cuts through where it
-   moves slowly enough; linger and the plate overheats (the torch pauses, the plate warps); stray off the seam and you
-   burn a scar that wastes fuel. With the keys, the torch rides the seam once it is on it, round the corners.
-   THE DISC: the same torch in the finale, on the 1977 disc. The light's sweep reads every live line as it passes.
-   Burn the centre and cut each of the fourteen lines close to it; the last sweep finds no map, only the two figures.
-   Draws at 320×180 through Lab. */
+   HATCH: a dead ship has no power, so you cut its hatch open along the seam. The flame only cuts through where it moves slowly
+   enough; linger and the plate overheats (the torch pauses, the plate warps); stray off the seam and you burn a scar. The suit
+   marks what is still to cut; a finished cut keeps a faint tempered edge. With the keys, the torch rides the seam round corners.
+   THE DISC: the same torch in the finale, on the 1977 disc. The light's sweep reads every live line. Burn the centre and cut each
+   line inside the marked ring; the last sweep finds no map, only the two figures.
+   SOUND (only while the page's sound is on): a hiss that brightens with heat, spits while metal is really cut, ticks of cooling
+   metal, a groan as the last of the seam holds; then a clunk, a rush of air, a long ring and a soft thud as the hatch drifts off.
+   On the disc a finer hiss, and one bell when the last line goes. Draws at 480×270 in the palette's colour roles. */
 (function () {
     'use strict';
-    const Lab = window.Lab, C = Lab.C, W = Lab.W, H = Lab.H;
-    const RAMP = Lab.ship.HULL_RAMP, DARK_RED = '#6e241d';      // the ship's hull ramp and its emergency red (ship.js)
-    const PLUS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    const Lab = window.Lab, C = Lab.C, W = Lab.W, H = Lab.H, PLUS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
     // ── the torch: one set of physics for both parts ──
-    const BURN = 11, BURN_R = 1.8;              // depth per second under the flame (1 = through), flame radius: cuts below ~20 px/s
-    const FAST = 21;                            // px/s: faster than this only marks the plate
-    const FOLLOW = 300;                         // px/s: the tip follows the pointer, near enough at once
-    const KEY_FIRE = 15, KEY_FREE = 30, KEY_DELAY = 0.2;   // keys: a tap moves one pixel, holding glides
-    const BURST = 0.2;                          // even a quick click on the trigger gives a short burst, enough to go through
-    const CELL = 2, GW = W / CELL, GH = H / CELL;          // the heat grid
-    const HEAT_IN = 1.6, WARN = 0.75, COOLED = 0.45;       // heat per second under the flame; at 1 it pauses until COOLED
-    const PARTS = { hatch: { fuel: 40, tau: 1.5, spread: 1, burn: 1, heat: 1 },   // fuel seconds, cooling, heat spread, burn speed,
-        disc: { fuel: 20, tau: 2.5, spread: 2, burn: 1.3, heat: 1.8 } };               // heat taken in: the disc is thin gold
-    const REACT_GAP = 1.2;                      // a reaction waits at least this long after the line before it
+    const BURN = 12.5, BURN_R = 2.4, FAST = 31;              // depth per second under the flame (1 = through), its radius: it cuts below ~30 px/s
+    const FOLLOW = 450, BURST = 0.2;                         // px/s the tip follows the pointer; even a quick click gives a short burst
+    const KEY_FIRE = 22, KEY_FREE = 45, KEY_DELAY = 0.2;     // keys: a tap moves one pixel, holding glides
+    const CELL = 3, GW = W / CELL, GH = H / CELL, HEAT_IN = 1.6, WARN = 0.75, COOLED = 0.45;   // the heat grid; at 1 the torch pauses until COOLED
+    const PARTS = { hatch: { fuel: 40, tau: 1.5, spread: 1, burn: 1, heat: 1 }, disc: { fuel: 20, tau: 2.5, spread: 2, burn: 1.3, heat: 1.8 } };   // the disc is thin gold
+    const REACT_GAP = 1.2, KERF_COOL = 1.6, HOT_FADE = 3.5;  // reactions wait after the line before; a cut fades white → warm → dark; cooling ticks fade
 
     // ── HATCH: a rounded-rectangle seam, measured by its signed distance ──
-    const HB = { cx: 214, cy: 86, hw: 28, hh: 34, r: 7 };
+    const HB = { cx: 322, cy: 132, hw: 42, hh: 51, r: 10 }, HATCH_BOX = [HB.cx - HB.hw - 1, HB.cy - HB.hh - 1, HB.cx + HB.hw + 1, HB.cy + HB.hh + 1];
     const sdf = (x, y) => {
         const qx = Math.abs(x - HB.cx) - HB.hw + HB.r, qy = Math.abs(y - HB.cy) - HB.hh + HB.r;
         return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - HB.r;
     };
     const normal = (x, y, nx = sdf(x + 0.5, y) - sdf(x - 0.5, y), ny = sdf(x, y + 0.5) - sdf(x, y - 0.5)) =>   // which way is "out" from the seam
         ({ x: nx / (Math.hypot(nx, ny) || 1), y: ny / (Math.hypot(nx, ny) || 1) });
-    const ON_SEAM = 2.5;                        // a kerf within two pixels of the seam frees it; further out is a scar
-    const TEAR = 0.97;                          // with this much of the seam cut, the last few pixels tear free
+    const ON_SEAM = 3.5, FREE_R = 3, TEAR = 0.97, GROAN_FROM = 0.8, THUD_AT = 2.3;   // a kerf within 3 px frees the seam; at TEAR it tears free; it groans from 80%; the lid knocks the rim
     const SEAM = [], SEAM_AT = new Int16Array(W * H).fill(-1);
-    for (let y = HB.cy - HB.hh - 1; y <= HB.cy + HB.hh + 1; y++) {
-        for (let x = HB.cx - HB.hw - 1; x <= HB.cx + HB.hw + 1; x++) if (Math.abs(sdf(x, y)) <= 0.5) { SEAM_AT[y * W + x] = SEAM.length; SEAM.push(y * W + x); }
-    }
-    const EDGES = [27, 137], JOINTS = [[118, 262], [92, 292], [54, 200]];   // the hull's plate joints
-    const GLINT = { x: HB.cx - 11, y: HB.cy + 19 };
+    for (let y = HATCH_BOX[1]; y <= HATCH_BOX[3]; y++) for (let x = HATCH_BOX[0]; x <= HATCH_BOX[2]; x++) if (Math.abs(sdf(x, y)) <= 0.5) { SEAM_AT[y * W + x] = SEAM.length; SEAM.push(y * W + x); }
+    const bend = x => ((x - 330) / 330) ** 2, horizon = x => Math.round(14 + 26 * bend(x));   // the wreck's hull curves away towards the top of the picture
+    const EDGES = [[50, 14], [200, 3]], JOINTS = [[176, 404], [98, 252, 446], [64, 300]];   // plate joints: across (y, bend), and down each row of plates
+    const edgeY = (k, x) => Math.round(EDGES[k][0] + EDGES[k][1] * bend(x)), rowOf = (x, y) => (y < edgeY(0, x) ? 0 : y < edgeY(1, x) ? 1 : 2);
+    const VP = { x: HB.cx + 5, y: HB.cy + 2 }, GLINT = { x: HB.cx - 2, y: HB.cy + 22 };   // where the corridor behind the hatch vanishes; the glint on its floor
+    const FAR_LIGHT = { x: 444, y: 7 };                      // the light at the end of the heading, a warm point past the hull's edge
 
     // ── THE DISC: the same fourteen lines as the dating sketch, closer ──
-    const DX = 160, DY = 90, DR = 84, CUT_NEAR = 5, CUT_FAR = 28, ON_LINE = 1.1;
-    const SWEEP = 6, FINAL_SWEEP = 2.4;         // seconds for the light's sweep to cross the disc, and its last pass
-    const LINES = [
-        [-176, 70, 0.62], [-151, 46, 0.55], [-129, 60, 0.72], [-104, 38, 0.60], [-83, 66, 0.45], [-58, 52, 0.70], [-36, 32, 0.66],
-        [-11, 64, 0.50], [12, 42, 0.74], [35, 58, 0.58], [61, 36, 0.52], [92, 68, 0.64], [124, 48, 0.68], [153, 56, 0.48],
-    ].map(([deg, len, f]) => {
-        const a = (deg * Math.PI) / 180, l = Math.round(len * 1.12);
-        return { ux: Math.cos(a), uy: Math.sin(a), len: l, notch: Math.round(l * f) };
-    });
+    const DX = 236, DY = 136, DR = 122, CUT_NEAR = 7, CUT_FAR = 42, ON_LINE = 1.6, SWEEP = 6, FINAL_SWEEP = 2.4;   // a line is cut between NEAR and FAR; sweep seconds
+    const SUN = { x: 548, y: 112, r: 104, halo: 330 };       // the light itself, just off the right edge
+    const LINES = [[-176, 70, 0.62], [-151, 46, 0.55], [-129, 60, 0.72], [-104, 38, 0.60], [-83, 66, 0.45], [-58, 52, 0.70], [-36, 32, 0.66],
+        [-11, 64, 0.50], [12, 42, 0.74], [35, 58, 0.58], [61, 36, 0.52], [92, 68, 0.64], [124, 48, 0.68], [153, 56, 0.48]]
+        .map(([deg, len, f]) => { const a = (deg * Math.PI) / 180, l = Math.round(len * 1.68); return { ux: Math.cos(a), uy: Math.sin(a), len: l, notch: Math.round(l * f) }; });
     const along = (p, l) => (p.x - DX) * l.ux + (p.y - DY) * l.uy, across = (p, l) => Math.abs((p.x - DX) * l.uy - (p.y - DY) * l.ux);
-    const MAN = ['#.........', '#...###...', '#..#####..', '#...###...', '.#...#....', '..########', '...#####.#', '...#####.#',
-        '...#####.#', '....###..#', '....###...', '....#.#...', '....#.#...', '....#.#...', '....#.#...', '....#.#...', '...##.##..'];
-    const WOMAN = ['.......', '..###..', '.#####.', '.#####.', '.#####.', '...#...', '.#####.', '#.###.#', '#.###.#',
-        '#.###.#', '..###..', '..#.#..', '..#.#..', '..#.#..', '..#.#..', '..#.#..', '.##.##.'];
-    const FIG_PX = [{ x: 167, y: 135, rows: MAN }, { x: 180, y: 135, rows: WOMAN }]
+    const MAN = ['#..........', '#....###...', '#...#####..', '#...#####..', '#...#####..', '.#...###...', '.#....#....', '..#######..',
+        '...#####.#.', '...#####.#.', '...#####.#.', '...#####.#.', '...#####.#.', '....###..#.', '....###....', '....###....',
+        '....#.#....', '....#.#....', '....#.#....', '....#.#....', '....#.#....', '....#.#....', '....#.#....', '...##.##...'];
+    const WOMAN = ['.........', '...###...', '..#####..', '..#####..', '..#####..', '...###...', '....#....', '.#######.',
+        '#.#####.#', '#.#####.#', '#.#####.#', '#.#####.#', '#..###..#', '...###...', '...###...', '...###...',
+        '...#.#...', '...#.#...', '...#.#...', '...#.#...', '...#.#...', '...#.#...', '...#.#...', '..##.##..'];
+    const FIG_PX = [{ x: DX + 9, y: DY + 62, rows: MAN }, { x: DX + 23, y: DY + 62, rows: WOMAN }]
         .flatMap(f => f.rows.flatMap((row, ry) => [...row].map((c, rx) => (c === '#' ? { x: f.x + rx, y: f.y + ry } : null)).filter(Boolean)));
     const nearFigures = (p, r) => FIG_PX.filter(q => Math.abs(q.x - p.x) <= r && Math.abs(q.y - p.y) <= r);   // figure pixels by the flame
+    const TU = { x: 0.6, y: 0.8 }, TN = { x: 0.8, y: -0.6 };   // the torch: along it towards its hose, and its lit side
 
     const SAY = {
         hatch: [['', "EXODUS-6. Dead about twenty years. No power, so the airlock won't open."],
@@ -67,80 +62,230 @@
         half: ['Vance', 'Still nothing warm on the other side.'], gap: ['Jaxon', "It's still holding somewhere. Find the bit you missed."],
         open: [['Vance', 'Hold on. Something in there caught your light.'], ['Jaxon', 'Twenty years in the dark. Go slow in there.']],
         hatchDry: [['', 'The tank is empty. The hatch still holds.'], ['Jaxon', "Come back to the lander. We'll swap the tank."]],
-        disc: [['', 'The disc is drifting into the light. The light reads whatever reaches it.'],
-            ['', 'Where the lines meet is home. Burn the centre, then cut each line close to it.']],
+        disc: [['', 'The disc is drifting into the light. The light reads whatever it touches.'],
+            ['', 'Where the lines meet is home. Burn the centre, then cut each line inside the ring.']],
         discHot: ['', 'The gold is too hot to cut. Wait for it to cool.'], fig: ['', 'You pull the torch back from the figures.'],
-        done: ['A.U.R.A.', 'The map is gone, Commander.'],
-        clean: ['', 'The two figures are still there. The light already knew what we look like.'],
-        marked: ['', 'The figures are scorched, but still there. The light already knew what we look like.'],
-        discDry: [['', 'The tank is empty. The map is still there.']],
+        done: ['A.U.R.A.', 'The map is gone, Commander.'], clean: ['', 'The light already knows what we look like.'],
+        marked: ['', 'Scorched or not, the light already knows what we look like.'], discDry: [['', 'The tank is empty. The map is still there.']],
     };
     const DIRS = { ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] };
 
-    // ── the pictures, painted once ──
+    // ── sound: built only while the page's sound is on; everything goes into Lab.audio.master ──
+    const RING = [[0.5, 0.068, 9], [1, 0.15, 12], [1.0035, 0.11, 11], [1.5, 0.06, 8], [2, 0.052, 7], [2.006, 0.038, 6], [2.98, 0.019, 4], [4.16, 0.008, 2.5]];   // the hatch: [ratio, level, seconds]; detuned pairs beat slowly
+    const BELL = [[0.5, 0.03, 7], [1, 0.11, 10], [1.0022, 0.07, 9], [2, 0.035, 6], [3.01, 0.015, 3]];   // the disc's one bell
+    function makeSound() {
+        let bus = null, wired = null, flame = null, wasFiring = false;
+        function ready() {                                       // a fresh master bus (sound toggled, sketch reopened): wire up again
+            const a = Lab.audio.get();
+            if (!a || !Lab.audio.master) return null;
+            if (wired !== Lab.audio.master) { drop(); bus = a.createGain(); bus.gain.value = 0.75; bus.connect(Lab.audio.master); wired = Lab.audio.master; }
+            return a;
+        }
+        function drop() {
+            if (flame) { try { flame.src.stop(); } catch (e) { /* never started */ } flame = null; }
+            if (bus) { try { bus.disconnect(); } catch (e) { /* already gone */ } bus = null; }
+            wired = null; wasFiring = false;
+        }
+        function filter(a, type, freq, q = 0.7) { const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; return f; }
+        function strike(a, node, peak, t, attack, decay, pan = 0) {   // route `node` through a struck envelope (and a pan) into the bus
+            const g = a.createGain();
+            g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+            node.connect(g);
+            if (pan && a.createStereoPanner) { const p = a.createStereoPanner(); p.pan.value = Lab.clamp(pan, -1, 1); g.connect(p); p.connect(bus); } else g.connect(bus);
+        }
+        function burst(a, t, type, freq, q, peak, attack, decay, pan) {   // a grain of filtered noise; returns the filter so a caller can sweep it
+            const n = a.createBufferSource(), f = filter(a, type, freq, q), dur = attack + decay + 0.05;
+            n.buffer = Lab.audio.noiseBuffer(); n.connect(f); strike(a, f, peak, t, attack, decay, pan);
+            n.start(t, Math.random() * Math.max(0, 1.9 - dur), dur);
+            return f;
+        }
+        function tone(a, t, freq, type, peak, attack, decay, pan, glideTo) {
+            const o = a.createOscillator();
+            o.type = type; o.frequency.setValueAtTime(freq, t);
+            if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t + Math.min(decay, 0.4));
+            strike(a, o, peak, t, attack, decay, pan); o.start(t); o.stop(t + attack + decay + 0.05);
+        }
+        function ring(a, t, f0, partials, cutoff) {             // layered sines, each dying away at its own rate: a struck plate, a bell
+            const lp = filter(a, 'lowpass', cutoff);
+            lp.connect(bus);
+            partials.forEach(([ratio, peak, decay]) => {
+                const o = a.createOscillator(), g = a.createGain();
+                o.frequency.value = f0 * ratio;
+                g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(peak, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+                o.connect(g); g.connect(lp); o.start(t); o.stop(t + decay + 0.05);
+            });
+        }
+        function flameOn(a, st) {                                // one looping noise: a bright band for the hiss, a low band for its body
+            if (!flame) {
+                const src = a.createBufferSource(), hiss = filter(a, 'bandpass', 900, 0.8), hissG = a.createGain(), body = filter(a, 'lowpass', 300), bodyG = a.createGain();
+                src.buffer = Lab.audio.noiseBuffer(); src.loop = true; hissG.gain.value = 0; bodyG.gain.value = 0;
+                src.connect(hiss); hiss.connect(hissG); hissG.connect(bus); src.connect(body); body.connect(bodyG); bodyG.connect(bus);
+                src.start(); flame = { src, hiss, hissG, bodyG };
+            }
+            const now = a.currentTime, disc = st.part === 'disc', on = st.firing ? 1 : 0, bright = disc ? 3200 + 3400 * st.heat : 650 + 2500 * st.heat;   // hotter metal, brighter hiss
+            flame.hissG.gain.setTargetAtTime(on * (disc ? 0.11 : 0.17) * (0.85 + Math.random() * 0.3), now, on ? 0.04 : 0.16);
+            flame.bodyG.gain.setTargetAtTime(on * (disc ? 0.06 : 0.34), now, on ? 0.05 : 0.2);
+            flame.hiss.frequency.setTargetAtTime(on ? bright : bright * 0.45, now, on ? 0.1 : 0.25);   // it drops when you stop
+            flame.hiss.Q.setTargetAtTime(disc ? 1.8 : 0.8, now, 0.1);
+            if (on && !wasFiring) burst(a, now, 'lowpass', disc ? 1600 : 800, 0.7, disc ? 0.035 : 0.07, 0.008, 0.14, st.pan);   // the flame catching
+            wasFiring = !!on;
+        }
+        return {
+            drop,
+            frame(dt, st) {                                      // every frame: the flame, spits while metal is really cut, ticks of metal cooling
+                const a = ready();
+                if (!a) { if (bus) drop(); return; }               // sound switched off: let the flame's noise go
+                flameOn(a, st);
+                const now = a.currentTime, disc = st.part === 'disc', spits = st.firing ? (st.thru > 0 ? 9 + Math.min(9, st.thru * 0.5) : 1.2) : 0;
+                if (Math.random() < 1 - Math.exp(-spits * dt)) burst(a, now + Math.random() * 0.02, 'bandpass', disc ? 4500 + Math.random() * 3500 : 1400 + Math.random() * 2600, 2.5,
+                    (disc ? 0.04 : 0.07) * (0.5 + Math.random() * 0.5), 0.002, 0.012 + Math.random() * 0.03, st.pan + (Math.random() - 0.5) * 0.3);
+                if (Math.random() < 1 - Math.exp(-Math.min(4, st.hot * 0.012) * dt)) {
+                    const f = 2000 + Math.random() * 1800, p = (st.hotX / W) * 1.4 - 0.7;
+                    tone(a, now, f, 'sine', 0.024 + Math.random() * 0.016, 0.002, 0.04 + Math.random() * 0.04, p);
+                    if (Math.random() < 0.45) tone(a, now + 0.07 + Math.random() * 0.06, f * 0.92, 'sine', 0.018, 0.002, 0.04, p);
+                }
+            },
+            groan(k) {                                           // the last of the seam holding: a low groan with a slow creak; k grows towards the end
+                const a = ready();
+                if (!a) return;
+                const t = a.currentTime, f0 = 44 + Math.random() * 12, lp = filter(a, 'lowpass', 230, 2.5), g = a.createGain();
+                g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.08 + 0.08 * k, t + 0.6); g.gain.setTargetAtTime(0.0001, t + 1.1, 0.4);
+                lp.connect(g); g.connect(bus);
+                [[1, 'triangle', 1], [1.504, 'sine', 0.5], [2.01, 'triangle', 0.25]].forEach(([r, type, v]) => {
+                    const o = a.createOscillator(), og = a.createGain();
+                    o.type = type; og.gain.value = v; o.frequency.setValueAtTime(f0 * r * 1.05, t); o.frequency.exponentialRampToValueAtTime(f0 * r * 0.93, t + 2.4);
+                    o.connect(og); og.connect(lp); o.start(t); o.stop(t + 3.4);
+                });
+                const c = a.createOscillator(), lfo = a.createOscillator(), depth = a.createGain(), bp = filter(a, 'bandpass', 480, 5);
+                c.type = 'sawtooth'; c.frequency.value = 90 + Math.random() * 25; lfo.frequency.value = 4 + Math.random() * 3; depth.gain.value = 5;
+                lfo.connect(depth); depth.connect(c.frequency); c.connect(bp); strike(a, bp, 0.012 + 0.02 * k, t + 0.25, 0.4, 1.1);
+                c.start(t + 0.25); lfo.start(t + 0.25); c.stop(t + 1.9); lfo.stop(t + 1.9);
+            },
+            warp(disc) { const a = ready(); if (a) tone(a, a.currentTime, disc ? 520 : 150, 'sine', 0.06, 0.005, 0.35, 0, disc ? 470 : 118); },   // one soft, dull knock
+            crack() {                                            // a deep clunk, a short rush of air, a long ring, and a soft thud as it drifts off
+                const a = ready();
+                if (!a) return;
+                const t = a.currentTime + 0.01;
+                tone(a, t, 98, 'sine', 0.2, 0.004, 0.6, 0, 40); tone(a, t, 196, 'triangle', 0.08, 0.003, 0.24, 0, 112);
+                burst(a, t, 'lowpass', 650, 0.7, 0.14, 0.002, 0.13);
+                const rush = burst(a, t + 0.03, 'bandpass', 2600, 0.9, 0.1, 0.04, 0.9);
+                rush.frequency.setValueAtTime(2600, t + 0.03); rush.frequency.exponentialRampToValueAtTime(480, t + 0.97);
+                ring(a, t + 0.03, 174.6, RING, 2600);
+                tone(a, t + THUD_AT, 72, 'sine', 0.18, 0.01, 0.45, 0, 44); burst(a, t + THUD_AT, 'lowpass', 300, 0.7, 0.1, 0.005, 0.2);
+            },
+            bell() { const a = ready(); if (a) ring(a, a.currentTime + 0.02, 659.3, BELL, 6000); },   // the last line on the disc goes
+        };
+    }
+
+    // ── the pictures, painted once per palette ──
     const hash = (a, b) => { const h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0, k = Math.imul(h ^ (h >>> 13), 1274126177); return ((k ^ (k >>> 16)) >>> 0) / 4294967296; };
     function paint(fn) { const c = document.createElement('canvas'); c.width = W; c.height = H; fn(c.getContext('2d')); return c; }
-    function eachPixel(fn) { for (let i = 0; i < W * H; i++) fn(i % W, (i / W) | 0); }
-    function paintWorn(b, str, x, y, scale, color, keep) {          // old paint: the pixel font with a few flakes missing
+    function eachPixel(fn, x0 = 0, y0 = 0, x1 = W - 1, y1 = H - 1) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fn(x, y); }
+    function paintWorn(b, str, x, y, scale, color, keep) {      // old paint: the pixel font with flakes missing
         const g = Object.assign(document.createElement('canvas'), { width: W, height: 5 * scale }).getContext('2d', { willReadFrequently: true });
         Lab.text(g, str, 0, 0, '#fff', scale);
         const data = g.getImageData(0, 0, W, 5 * scale).data;
         b.fillStyle = color;
         for (let py = 0; py < 5 * scale; py++) for (let px = 0; px < Lab.textWidth(str, scale); px++) if (data[(py * W + px) * 4 + 3] && hash(px, py + 50) <= keep) b.fillRect(x + px, y + py, 1, 1);
     }
-    const isRivet = (x, y, row) => Math.abs(sdf(x, y)) > 3 && ((EDGES.some(e => Math.abs(y - e) === 3) && x % 7 === 3) || (JOINTS[row].some(j => Math.abs(x - j) === 3) && y % 7 === 3));
+    const isRivet = (x, y, row) => Math.abs(sdf(x, y)) > 4 && (
+        ([0, 1].some(k => Math.abs(y - edgeY(k, x)) === 4) && x % 9 === 4) || (JOINTS[row].some(j => Math.abs(x - j) === 4) && y % 9 === 4));
+    function hullTone(x, y) {                                    // 0..1 on the hull ramp, or -1 above its edge (space)
+        const top = horizon(x);
+        if (y < top) return -1;
+        if (y === top) return 0.7;                               // its edge, lit by the sky
+        const row = rowOf(x, y), joints = JOINTS[row], left = joints.filter(j => x > j).length;
+        const ptop = row === 0 ? top : edgeY(row - 1, x), pbot = row < 2 ? edgeY(row, x) : H, fy = (y - ptop) / Math.max(1, pbot - ptop);
+        const lamp = Math.max(0, 1 - Math.hypot(x - 318, (y - 128) * 1.15) / 235), sky = Math.exp(-(y - top) / 15);   // our work lamp on the hatch; the sky's cool sheen
+        const band = x * 0.45 + y - 236, sheen = 0.12 * Math.exp(-((band / 30) ** 2)) + 0.08 * Math.exp(-(((band - 46) / 5) ** 2));   // the nebula, reflected across the plates
+        const g = 0.12 + 0.36 * lamp * lamp + 0.32 * sky + sheen + (hash(row, left) - 0.5) * 0.08 + (hash(y, Math.floor(x / 23)) - 0.5) * 0.025 + 0.07 * (0.5 - fy) - 0.06 * (y / H);
+        if ([0, 1].some(k => y === edgeY(k, x)) || joints.includes(x)) return 0.03;   // plate joints
+        if ([0, 1].some(k => y === edgeY(k, x) + 1) || joints.includes(x - 1)) return g + 0.09;   // and their lit lip
+        return isRivet(x, y, row) ? 0.6 + 0.2 * lamp : isRivet(x - 1, y - 1, row) ? 0.04 : g;   // rivets and their shadows
+    }
+    function hatchTone(x, y, g) {                                // the door inside the seam: its lip, a pressed panel, the handle recess, four bolts
+        const d = sdf(x, y);
+        if (d > 0.5) return g;
+        if (d >= -0.5) return 0.02;
+        if (d >= -1.6) return g + 0.1;
+        if (Math.abs(d + 8) < 0.5) return 0.05;
+        if (Math.abs(d + 9) < 0.5) return g + 0.07;
+        const hx = x - (HB.cx + HB.hw - 22), hy = y - (HB.cy - 3), bx = Math.abs(x - HB.cx) - (HB.hw - 14), by = Math.abs(y - HB.cy) - (HB.hh - 14);
+        if (hx >= 0 && hx <= 10 && hy >= 0 && hy <= 6) return hy === 6 ? 0.44 : hx === 0 || hx === 10 || hy === 0 ? 0.04 : 0.12;
+        if (bx >= 0 && bx <= 1 && by >= 0 && by <= 1) return bx + by === 0 ? 0.62 : 0.4;
+        return g - (d < -9 ? 0.02 : 0);
+    }
     function paintHull(b) {
-        const rnd = Lab.rng(6), pits = new Set(Array.from({ length: 180 }, () => Math.floor(rnd() * W * H)));
-        eachPixel((x, y) => {
-            const row = y < EDGES[0] ? 0 : y < EDGES[1] ? 1 : 2, d = sdf(x, y), hx = x - (HB.cx + HB.hw - 13), hy = y - (HB.cy - 2);
-            const lit = Math.max(0, 1 - Math.hypot(x - 200, y - 70) / 250);                  // our work light, on the hatch
-            let g = 0.13 + 0.25 * lit * lit + (hash(row, JOINTS[row].filter(j => x > j).length) - 0.5) * 0.05;
-            if (EDGES.includes(y) || JOINTS[row].includes(x)) g = 0.04;                      // plate joints
-            else if (EDGES.includes(y - 1) || JOINTS[row].includes(x - 1)) g += 0.1;         // and their lit lip
-            else if (isRivet(x, y, row)) g = 0.45 + 0.15 * lit;
-            else if (isRivet(x - 1, y - 1, row)) g = 0.05;                                    // rivet shadow
-            if (pits.has(y * W + x)) g -= 0.07;                                               // micrometeorite pits
-            if (Math.abs(d) <= 0.5) g = 0.02;                                                 // the hatch seam
-            else if (d < -0.5 && d >= -1.5) g += 0.08;
-            else if (hx >= 0 && hx <= 7 && hy >= 0 && hy <= 4) g = hy === 4 ? 0.42 : hx === 0 || hx === 7 || hy === 0 ? 0.04 : 0.12; // handle recess
-            b.fillStyle = Lab.ship.rampAt(RAMP, g, x, y); b.fillRect(x, y, 1, 1);
-        });
-        paintWorn(b, 'EXODUS-6', 18, 44, 3, C.boneD, 0.82);
-        paintWorn(b, 'RESCUE', HB.cx - 11, HB.cy - HB.hh - 9, 1, C.amber, 1);
-    }
-    function paintHole(b) {
-        eachPixel((x, y) => {
-            const d = sdf(x, y), far = (x - HB.cx) / HB.hw + (y - HB.cy) / HB.hh;
-            if (d > 0.5) return;
-            let col = C.void;
-            if (d > -3) col = far > 0.2 ? Lab.ship.rampAt(RAMP, 0.26 + 0.1 * (d + 3) / 3.5, x, y) : C.ink;   // the plate's cut edge
-            else if (Math.abs(d + 11) < 0.5 && Lab.on(x, y, 0.3)) col = C.line;                          // the inner door's frame
-            else if (Lab.on(x, y, 0.2 * Math.max(0, 1 - Math.hypot(x - HB.cx - 8, y - HB.cy - 14) / 22))) col = C.line;   // our light, landing inside
-            b.fillStyle = col; b.fillRect(x, y, 1, 1);
-        });
-    }
-    function paintDisc(b) {
         b.fillStyle = C.void; b.fillRect(0, 0, W, H);
-        Lab.disc(b, DX, DY, DR, d => (d < 0.82 ? 0.05 : 0.05 + 0.3 * ((d - 0.82) / 0.18) ** 2), C.amber);
-        for (let r = 14; r < DR - 6; r += 9) Lab.ring(b, DX, DY, r, C.amber, 0.12);
-        Lab.ring(b, DX, DY, DR, C.gold, 0.75);
-        Lab.ring(b, DX, DY, DR + 1, C.amber, 0.35);
+        Lab.nebula(b, 6, 0.45); Lab.stars(b, 61, 150);
+        Lab.disc(b, FAR_LIGHT.x, FAR_LIGHT.y, 6, d => 0.35 * (1 - d), C.lightHalo);
+        const rnd = Lab.rng(6), pits = new Set(Array.from({ length: 320 }, () => Math.floor(rnd() * W * H))), lit = C.hull.map(c => Lab.mix(c, C.warm, 0.16));
+        eachPixel((x, y) => {
+            const g = hullTone(x, y), lamp = Math.max(0, 1 - Math.hypot(x - 318, (y - 128) * 1.15) / 150);
+            if (g < 0) return;                                   // where our own lamp falls the metal is a little warmer; pits from micrometeorites
+            b.fillStyle = Lab.pick(Lab.on(x, y, 0.7 * lamp * lamp) ? lit : C.hull, hatchTone(x, y, g - (pits.has(y * W + x) ? 0.08 : 0)), x, y); b.fillRect(x, y, 1, 1);
+        });
+        [[70, 168, 196, 150], [372, 236, 468, 222], [150, 66, 236, 58]].forEach(([x0, y0, x1, y1]) => Lab.line(b, x0, y0, x1, y1, C.hull[3], 0.45));   // old scrapes
+        [[118, 236], [428, 96], [214, 74]].forEach(([x, y]) => { Lab.ring(b, x, y, 2, C.hull[4], 0.6); Lab.dot(b, x + 1, y + 1, C.hull[0]); Lab.dot(b, x, y, C.hull[0]); });   // small craters
+        paintWorn(b, 'EXODUS-6', 30, 92, 4, Lab.mix(C.textDim, C.hull[2], 0.3), 0.8);
+        paintWorn(b, 'RESCUE', HB.cx - Math.round(Lab.textWidth('RESCUE') / 2), HB.cy - HB.hh - 10, 1, Lab.mix(C.warm, C.hull[2], 0.4), 1);
+        Lab.dot(b, FAR_LIGHT.x, FAR_LIGHT.y, C.light); PLUS.forEach(([ox, oy]) => Lab.dot(b, FAR_LIGHT.x + ox, FAR_LIGHT.y + oy, C.lightHalo));
+    }
+    function paintHole(b) {                                      // behind the hatch: a dead corridor, lit only by our lamp
+        eachPixel((x, y) => {
+            const d = sdf(x, y), qx = Math.abs(x - VP.x) / HB.hw, qy = Math.abs(y - VP.y) / HB.hh, q = Math.max(qx, qy);   // q: 1 at the hole, 0 far away
+            if (d > 0.5) return;
+            let g = -1;
+            if (d > -4) g = (x - HB.cx) / HB.hw + (y - HB.cy) / HB.hh > 0.2 ? 0.22 + 0.14 * (d + 4) / 4.5 : 0.03;   // the plate's cut edge
+            else if (q > 0.3) {
+                g = 0.02 + 0.24 * ((q - 0.3) / 0.7) ** 2 + (qx > qy ? 0 : y > VP.y ? 0.05 : -0.03);   // walls fade into the dark; the floor a little lit
+                if ([0.42, 0.56, 0.76].some(r => Math.abs(q - r) < 0.011)) g -= 0.05;   // the corridor's ribs
+                else if (Math.abs(qx - qy) < 0.014) g += 0.05;  // its corners catch the light
+            }
+            b.fillStyle = g < 0 ? C.void : Lab.pick(C.hull, g, x, y); b.fillRect(x, y, 1, 1);
+        }, ...HATCH_BOX);
+    }
+    const paintLid = hullBg => b => {                            // the cut-out door, to drift away: a mask of the door, then the hull drawn into it
+        b.fillStyle = '#000'; eachPixel((x, y) => { if (sdf(x, y) <= -0.5) b.fillRect(x, y, 1, 1); }, ...HATCH_BOX);
+        b.globalCompositeOperation = 'source-in'; b.drawImage(hullBg, 0, 0);
+    };
+    const paintLidShadow = b => { b.fillStyle = C.void; eachPixel((x, y) => { if (sdf(x, y) <= -0.5 && Lab.on(x, y, 0.6)) b.fillRect(x, y, 1, 1); }, ...HATCH_BOX); };
+    function paintDiscScene(b) {
+        b.fillStyle = C.void; b.fillRect(0, 0, W, H);
+        Lab.nebula(b, 1977, 0.3); Lab.stars(b, 14, 120);
+        const edge = SUN.r / (SUN.r + 16);                       // the light the disc is drifting into
+        Lab.disc(b, SUN.x, SUN.y, SUN.halo, d => 0.45 * Math.pow(1 - d, 2.6), C.lightHalo);
+        Lab.disc(b, SUN.x, SUN.y, SUN.r + 64, d => 0.7 * Math.pow(1 - d, 1.6), C.light);
+        Lab.disc(b, SUN.x, SUN.y, SUN.r + 16, d => (d < edge ? 1 : (1 - d) / (1 - edge)), C.light);
+        const GOLD = [C.void, Lab.mix(C.lightHalo, C.void, 0.84), Lab.mix(C.lightHalo, C.void, 0.66), Lab.mix(C.lightHalo, C.void, 0.42), C.lightHalo, C.light];
+        eachPixel((x, y) => {
+            const r = Math.hypot(x - DX, y - DY), lit = Lab.clamp(0.5 + 0.5 * (x - DX) / DR, 0, 1), a = Math.atan2(y - DY, x - DX);
+            if (r > DR + 0.5) return;
+            let g = 0.18 + 0.32 * Math.pow(lit, 1.7) + 0.18 * Math.pow(Math.abs(Math.cos(a + 0.35)), 16);   // lit from the right; a pressed disc catches light in two wedges
+            if (r > 26 && r < DR - 4 && Math.round(r) % 3 === 0) g += 0.06;   // grooves
+            if (r > 24 && r <= 26) g -= 0.07;                    // the label's edge
+            if (r > DR - 2.5) g = 0.48 + 0.42 * lit;             // the rim, bright on the side facing the light
+            b.fillStyle = Lab.pick(GOLD, g, x, y); b.fillRect(x, y, 1, 1);
+        }, DX - DR - 1, DY - DR - 1, DX + DR + 1, DY + DR + 1);
+        Lab.ring(b, DX, DY, DR + 1, C.lightHalo, 0.25);
+        LINES.forEach(l => { const o = l.uy > 0 ? -1 : 1; Lab.line(b, DX + l.uy * o, DY - l.ux * o, DX + l.ux * l.len + l.uy * o, DY + l.uy * l.len - l.ux * o, GOLD[1]); });   // each line's engraved shadow
     }
 
     function mount(ctx, ui) {
-        const hullBg = paint(paintHull), discBg = paint(paintDisc), hole = paint(paintHole);
-        const lid = paint(b => { b.drawImage(hullBg, 0, 0); eachPixel((x, y) => { if (sdf(x, y) > -0.5) b.clearRect(x, y, 1, 1); }); });
-        const lidShadow = paint(b => { b.fillStyle = C.void; eachPixel((x, y) => { if (sdf(x, y) <= -0.5 && Lab.on(x, y, 0.6)) b.fillRect(x, y, 1, 1); }); });
-        let s = null, clock = 0, ptrFire = false, aim = null, bornAt = 0;
+        const COOL = [C.void, C.hurt[2], C.hurt[3], C.warm, C.warmBright, C.star], GLOW = [C.hurt[2], C.hurt[3], C.warm, C.warmBright];   // a fresh cut white → warm → dark; the plate heating
+        const TEMPER = Lab.mix(C.warm, C.hull[2], 0.45), CUT_LINE = Lab.mix(C.lightHalo, C.void, 0.62), DIM_GOLD = Lab.mix(C.lightHalo, C.void, 0.55);
+        const SCORCH = Lab.mix(C.warm, C.hull[1], 0.62), HOSE = [Lab.mix(C.warm, C.void, 0.74), Lab.mix(C.warm, C.void, 0.5)];   // a cut's tempered edge; the suit's hose
+        const hullBg = paint(paintHull), hole = paint(paintHole), lid = paint(paintLid(hullBg)), lidShadow = paint(paintLidShadow), snd = makeSound();
+        let discBg = null, s = null, clock = 0, ptrFire = false, aim = null, bornAt = 0;   // the disc is painted the first time it opens
         const clampTip = (x, y) => ({ x: Lab.clamp(x, 2, W - 3), y: Lab.clamp(y, 2, H - 3) });
         const cellOf = p => Lab.clamp(Math.floor((p.y + 0.5) / CELL), 0, GH - 1) * GW + Lab.clamp(Math.floor((p.x + 0.5) / CELL), 0, GW - 1);
-        const heatAt = p => s.heat[cellOf(p)];
-        const paused = () => s.pause > 0 || !!s.hotSpot;
+        const heatAt = p => s.heat[cellOf(p)], paused = () => s.pause > 0 || !!s.hotSpot, isOpen = () => ['open', 'end', 'closing'].includes(s.phase);
 
         // ── one line at a time: scripted lines wait to be read, reactions come straight after the line before ──
         function show(line) { ui.say(line[0], line[1]); s.saidAt = clock; s.nextSay = clock + Lab.clamp(1 + 0.22 * line[1].split(' ').length, 2, 3.6); }
         function script(lines, delay, then) {
             s.speech = lines.map((line, j) => ({ line, then: j === lines.length - 1 ? then : null })); s.react = null; s.nextSay = clock + delay;
+            if (!lines.length && then) then();
         }
         const react = (key, line) => { if (!s.said[key]) { s.said = { ...s.said, [key]: true }; s.react = line; } };
         function talk() {
@@ -153,16 +298,15 @@
 
         function start(part) {
             ptrFire = false; aim = null; bornAt = performance.now();
-            s = { part, P: PARTS[part], phase: 'cut', tip: part === 'hatch' ? { x: HB.cx - HB.hw - 12, y: HB.cy } : { x: 118, y: 124 },
+            if (part === 'disc' && !discBg) discBg = paint(paintDiscScene);
+            s = { part, P: PARTS[part], phase: 'cut', tip: part === 'hatch' ? { x: HB.cx - HB.hw - 18, y: HB.cy } : { x: DX - 64, y: DY + 50 },
                 speed: 0, trail: [], holdT: 0, burst: 0, fuel: 1, pause: 0, hotSpot: null, firing: false, fired: false,
                 heat: new Float32Array(GW * GH), spare: new Float32Array(GW * GH),
                 depth: new Float32Array(W * H), lastT: new Float32Array(W * H).fill(-99), thruT: new Float32Array(W * H), marks: [],
                 sparks: [], warps: [], speech: [], react: null, nextSay: 0, saidAt: -99, said: {}, scars: 0, strayT: 0, fastT: 0,
-                seamCut: new Uint8Array(SEAM.length), cut: 0, lastCut: 0, stall: 0, openT: 0,
+                seamCut: new Uint8Array(SEAM.length), cut: 0, lastCut: 0, stall: 0, openT: 0, groanT: 0, thruNow: 0, hot: 0, hotX: W / 2,
                 cutT: LINES.map(() => null), centre: false, figTouched: false, sweep: 0, final: false };
-            ui.clear();
-            script(SAY[part], 0);
-            showButtons();
+            ui.clear(); script(SAY[part], 0); showButtons();
         }
         function showButtons() {
             const go = part => () => { if (performance.now() - bornAt > 400) start(part); };   // a double click must not start twice
@@ -175,9 +319,9 @@
         const next = () => start(s.phase === 'dry' ? s.part : s.part === 'hatch' ? 'disc' : 'hatch');   // what Enter does at the end
 
         // ── the tip and the flame ──
-        function step(dx, dy, k) {                                         // a key move of k px
+        function step(dx, dy, k) {                               // a key move of k px
             const p = s.tip, l = Math.hypot(dx, dy), mx = (dx / l) * k, my = (dy / l) * k, d = sdf(p.x, p.y);
-            if (s.part === 'hatch' && Math.abs(d) <= ON_SEAM) {             // on the seam, the keys ride it, round the corners
+            if (s.part === 'hatch' && Math.abs(d) <= ON_SEAM) {   // on the seam, the keys ride it, round the corners
                 const n = normal(p.x, p.y), dir = (my * n.x - mx * n.y) / k;
                 if (Math.abs(dir) > 0.1) {
                     const q = { x: p.x - n.y * Math.sign(dir) * k, y: p.y + n.x * Math.sign(dir) * k }, e = sdf(q.x, q.y);
@@ -188,14 +332,13 @@
             }
             s.tip = clampTip(p.x + mx, p.y + my);
         }
-        function nudge(d) { if (s.phase === 'cut') { aim = null; step(d[0], d[1], 1); } }
         function moveTip(dt, wants) {
             let dx = 0, dy = 0;
             Object.entries(DIRS).forEach(([k, [x, y]]) => { if (Lab.keys.has(k)) { dx += x; dy += y; } });
             if (Math.sign(dx) || Math.sign(dy)) {
                 aim = null; s.holdT += dt;
                 if (s.holdT > KEY_DELAY) step(Math.sign(dx), Math.sign(dy), (wants ? KEY_FIRE : KEY_FREE) * dt);
-            } else s.holdT = 0;
+            } else s.holdT = s.holdT > KEY_DELAY ? Math.min(s.holdT, KEY_DELAY + 0.25) - dt : 0;   // switching arrows mid-glide keeps gliding
             if (aim) {
                 const ax = aim.x - s.tip.x, ay = aim.y - s.tip.y, dist = Math.hypot(ax, ay), max = FOLLOW * dt;
                 s.tip = dist <= max ? clampTip(aim.x, aim.y) : clampTip(s.tip.x + (ax / dist) * max, s.tip.y + (ay / dist) * max);
@@ -204,33 +347,33 @@
             const o = s.trail[0];
             s.speed = clock > o.t ? Math.hypot(s.tip.x - o.x, s.tip.y - o.y) / (clock - o.t) : 0;
         }
-        const solid = (x, y) => s.part === 'hatch' || Math.hypot(x - DX, y - DY) <= DR;     // off the disc there is nothing to burn
+        const solid = (x, y) => s.part === 'hatch' || Math.hypot(x - DX, y - DY) <= DR;   // off the disc there is nothing to burn
         function burn(p, dt) {
-            const x0 = Math.round(p.x), y0 = Math.round(p.y);
             if (!solid(p.x, p.y)) return;
-            for (let y = y0 - 2; y <= y0 + 2; y++) for (let x = x0 - 2; x <= x0 + 2; x++) {
+            const x0 = Math.round(p.x), y0 = Math.round(p.y), c = cellOf(p), gx = c % GW, gy = (c - gx) / GW;
+            for (let y = y0 - 3; y <= y0 + 3; y++) for (let x = x0 - 3; x <= x0 + 3; x++) {
                 const w = 1 - Math.hypot(x - p.x, y - p.y) / BURN_R, i = y * W + x, was = s.depth[i];
-                if (w <= 0 || x < 0 || y < 0 || x >= W || y >= H || !solid(x, y)) continue;
+                if (x < 0 || y < 0 || x >= W || y >= H || w <= 0 || !solid(x, y)) continue;
                 if (was === 0) s.marks.push(i);
                 s.depth[i] = Math.min(2, was + BURN * s.P.burn * w * dt); s.lastT[i] = clock;
                 if (was < 1 && s.depth[i] >= 1) { s.thruT[i] = clock; through(x, y); }
             }
-            const c = cellOf(p), gx = c % GW, gy = (c - gx) / GW;
             for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (gx + ox >= 0 && gy + oy >= 0 && gx + ox < GW && gy + oy < GH) s.heat[c + oy * GW + ox] += HEAT_IN * s.P.heat * dt * (ox && oy ? 0.25 : ox || oy ? 0.5 : 1);
-            for (let k = 0; k < 2; k++) if (Math.random() < dt * 30) {
-                const a = Math.random() * Math.PI * 2, v = 20 + Math.random() * 40;       // no air: sparks fly straight
-                s.sparks = s.sparks.concat({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.2 + Math.random() * 0.4 });
+            for (let k = 0; k < 2; k++) if (Math.random() < dt * 34) {   // no air: sparks fly straight
+                const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 60;
+                s.sparks = s.sparks.concat({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.2 + Math.random() * 0.45 });
             }
         }
         function through(x, y) {
-            if (s.part === 'hatch') {                                       // a kerf within two pixels frees that bit of seam
-                for (let k, oy = -2; oy <= 2; oy++) for (let ox = -2; ox <= 2; ox++) if ((k = SEAM_AT[(y + oy) * W + x + ox]) >= 0 && !s.seamCut[k]) { s.seamCut[k] = 1; s.cut++; }
+            s.thruNow++; s.hotX = x;
+            if (s.part === 'hatch') {                            // a kerf within three pixels frees that bit of seam
+                for (let k, oy = -FREE_R; oy <= FREE_R; oy++) for (let ox = -FREE_R; ox <= FREE_R; ox++) if ((k = SEAM_AT[(y + oy) * W + x + ox]) >= 0 && !s.seamCut[k]) { s.seamCut[k] = 1; s.cut++; }
                 return;
             }
-            if (Math.hypot(x - DX, y - DY) <= 1.2) s.centre = true;
+            if (Math.hypot(x - DX, y - DY) <= 1.6) s.centre = true;
             LINES.forEach((l, j) => { const a = along({ x, y }, l); if (s.cutT[j] === null && a >= CUT_NEAR && a <= CUT_FAR && across({ x, y }, l) <= ON_LINE) s.cutT[j] = clock; });
         }
-        function touch(p) {                                                 // the torch will not burn the two figures: a scorch, not a cut
+        function touch(p) {                                      // the torch will not burn the two figures: a scorch, not a cut
             s.pause = 0.9; s.figTouched = true;
             nearFigures(p, 3).forEach(q => { const i = q.y * W + q.x; if (s.depth[i] === 0) s.marks.push(i); s.depth[i] = Math.max(s.depth[i], 0.6); s.lastT[i] = clock; });
             react('fig', SAY.fig);
@@ -246,27 +389,30 @@
 
         // ── the rules ──
         function update(dt) {
+            s.thruNow = 0;
             s.sparks = s.sparks.map(p => ({ ...p, x: p.x + p.vx * dt, y: p.y + p.vy * dt, life: p.life - dt })).filter(p => p.life > 0);
-            cool(dt);
-            talk();
+            cool(dt); talk();
             if (s.part === 'disc') sweepOn(dt);
-            if (s.phase === 'open' || s.phase === 'end') s.openT += dt;
-            if (s.phase !== 'cut') { s.firing = false; return; }
+            if (isOpen()) s.openT += dt;
+            if (s.phase === 'cut') cutting(dt); else s.firing = false;
+            s.hot = s.hot * Math.exp(-dt / HOT_FADE) + s.thruNow;
+            snd.frame(dt, { firing: s.firing, heat: heatAt(s.tip), part: s.part, thru: s.thruNow, hot: s.hot, hotX: s.hotX, pan: (s.tip.x / W) * 1.2 - 0.6 });
+        }
+        function cutting(dt) {
             s.burst = Math.max(0, s.burst - dt);
             const wants = ptrFire || Lab.keys.has(' ') || s.burst > 0, from = s.tip;
             moveTip(dt, wants);
             s.pause = Math.max(0, s.pause - dt);
             if (s.hotSpot && s.pause <= 0 && heatAt(s.hotSpot) <= COOLED) s.hotSpot = null;
             s.firing = wants && !paused() && s.fuel > 0;
-            if (s.firing) fire(dt, from);
-            else { s.strayT = 0; s.fastT = 0; }
+            if (s.firing) fire(dt, from); else { s.strayT = 0; s.fastT = 0; }
             if (s.part === 'hatch') hatchRules(dt); else discRules();
-            if (s.fuel <= 0 && s.phase === 'cut') { s.phase = 'dry'; script(SAY[s.part + 'Dry'], 0); showButtons(); }
+            if (s.fuel <= 0 && s.phase === 'cut') { s.phase = 'dry'; s.firing = false; script(SAY[s.part + 'Dry'], 0); showButtons(); }
         }
         function fire(dt, from) {
             const to = s.tip, n = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 0.7));
             s.fuel = Math.max(0, s.fuel - dt / s.P.fuel); s.fired = true;
-            for (let k = 1; k <= n; k++) {                                  // burn along the whole path, so a quick stroke leaves a shallow line
+            for (let k = 1; k <= n; k++) {                       // burn along the whole path, so a quick stroke leaves a shallow line
                 const p = { x: Lab.lerp(from.x, to.x, k / n), y: Lab.lerp(from.y, to.y, k / n) };
                 if (s.part === 'disc' && nearFigures(p, 2).length) return touch(p);
                 burn(p, dt / n);
@@ -276,8 +422,8 @@
             if (h >= 1) {
                 const w = { x: Math.round(to.x), y: Math.round(to.y) };
                 s.pause = 1; s.hotSpot = { ...to };
-                if (!s.warps.some(o => Math.hypot(o.x - w.x, o.y - w.y) < 5)) s.warps = s.warps.concat(w);   // one warp per spot
-                react('warp', s.part === 'hatch' ? SAY.warp : SAY.discHot);
+                if (!s.warps.some(o => Math.hypot(o.x - w.x, o.y - w.y) < 7)) s.warps = s.warps.concat(w);   // one warp per spot
+                snd.warp(s.part === 'disc'); react('warp', s.part === 'hatch' ? SAY.warp : SAY.discHot);
             }
             if (s.part !== 'hatch') return;
             const stray = Math.abs(sdf(to.x, to.y)) > ON_SEAM;
@@ -291,20 +437,32 @@
             if (f >= 0.5) react('half', SAY.half);
             s.stall = s.cut === s.lastCut ? s.stall + dt : 0; s.lastCut = s.cut;
             if (f >= 0.9 && s.stall > 3) react('gap', SAY.gap);
-            if (f < TEAR) return;
-            s.phase = 'open'; s.openT = 0;
-            for (let k = 0; k < 60; k++) {                                   // the last of the air, and twenty years of dust
-                const i = SEAM[Math.floor(Math.random() * SEAM.length)], x = i % W, y = (i - x) / W, a = Math.atan2(y - HB.cy, x - HB.cx), v = 6 + Math.random() * 16;
-                s.sparks = s.sparks.concat({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1 + Math.random() * 1.4, dust: true });
+            if (f >= GROAN_FROM && (s.groanT -= dt) <= 0 && s.hot >= 30) {   // the last of the seam holding: the plate groans and sheds a little dust
+                s.groanT = 2.4 + Math.random() * 1.6;
+                snd.groan(Lab.clamp((f - GROAN_FROM) / (TEAR - GROAN_FROM), 0, 1));
+                const left = SEAM.filter((_, j) => !s.seamCut[j]);
+                s.sparks = s.sparks.concat(Array.from({ length: Math.min(6, left.length) }, () => {
+                    const i = left[Math.floor(Math.random() * left.length)], x = i % W;
+                    return { x, y: (i - x) / W, vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8, life: 1 + Math.random(), dust: true };
+                }));
             }
-            script(SAY.open, 2.1, () => { s.phase = 'end'; showButtons(); });   // Vance speaks as the glint shows
+            if (f >= TEAR) crackOpen();
+        }
+        function crackOpen() {
+            s.phase = 'open'; s.openT = 0;
+            snd.crack();
+            s.sparks = s.sparks.concat(Array.from({ length: 120 }, (_, k) => {   // the last of the air: a flash of ice, then twenty years of dust
+                const i = SEAM[Math.floor(Math.random() * SEAM.length)], x = i % W, y = (i - x) / W, a = Math.atan2(y - HB.cy, x - HB.cx), ice = k < 80;
+                const v = ice ? 20 + Math.random() * 60 : 5 + Math.random() * 16;
+                return { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: (ice ? 0.5 : 1.4) + Math.random() * 1.2, ice, dust: !ice };
+            }));
+            script(SAY.open, 3.2, () => { s.phase = 'end'; showButtons(); });   // Vance speaks once the hatch has moved off the glint
             showButtons();
         }
         function discRules() {
             if (!s.centre || s.cutT.some(v => v === null)) return;
-            s.phase = 'closing'; s.final = true; s.sweep = -0.2;               // the light makes one more pass, and reads nothing
-            script([], 0);
-            showButtons();
+            s.phase = 'closing'; s.final = true; s.sweep = -0.2; s.openT = 0;   // the light makes one more pass, and reads nothing
+            snd.bell(); script([], 0); showButtons();
         }
         function sweepOn(dt) {
             s.sweep += dt / (s.final ? FINAL_SWEEP : SWEEP);
@@ -316,99 +474,142 @@
         }
 
         // ── drawing ──
-        function markColor(i) {
-            const d = s.depth[i];
-            if (d >= 1) { const age = clock - s.thruT[i]; return age < 0.35 ? C.white : age < 1.1 ? C.gold : age < 2.6 ? C.amber : age < 5 ? C.red : DARK_RED; }
-            if (clock - s.lastT[i] < 0.8) return d > 0.5 ? C.amber : C.red;
-            return d > 0.3 ? C.ink : null;
+        function markColor(i, x, y) {
+            const d = s.depth[i], age = clock - s.lastT[i], tone = (0.3 + 0.35 * d) * (1 - age / 0.8);
+            if (d >= 1) return Lab.pick(COOL, Math.exp(-(clock - s.thruT[i]) / KERF_COOL), x, y);   // white-hot, warm, then a dark slot
+            if (age < 0.8 && tone > 0.1) return Lab.pick(COOL, tone, x, y);
+            if (d <= 0.3) return null;
+            return s.part === 'hatch' ? (Lab.on(x, y, 0.5) ? SCORCH : C.hull[1]) : CUT_LINE;   // where it never went through: a scorch, the cut's tempered edge
         }
-        function drawBurns(opened) {                                         // tint, glow, kerf
-            s.warps.forEach(w => { Lab.ring(ctx, w.x, w.y, 2, C.violet, 0.5); Lab.ring(ctx, w.x, w.y, 4, C.amber, 0.3); Lab.ring(ctx, w.x, w.y, 5, C.violet, 0.25); });
+        function drawBurns(opened) {                             // warps, the plate's glow, the kerf
+            const disc = s.part === 'disc';
+            s.warps.forEach(w => {                               // a buckled dimple, tempered warm inside and cool outside
+                Lab.ring(ctx, w.x, w.y, 3, disc ? DIM_GOLD : TEMPER, 0.55); Lab.ring(ctx, w.x, w.y, 5, disc ? DIM_GOLD : C.mist, 0.4);
+                Lab.dot(ctx, w.x - 1, w.y - 1, disc ? C.lightHalo : C.hull[4]); Lab.dot(ctx, w.x + 1, w.y + 1, C.void);
+            });
             for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
-                const v = s.heat[gy * GW + gx], x0 = gx * CELL, y0 = gy * CELL;
-                if (v < 0.2 || (opened && sdf(x0, y0) <= 0.5)) continue;
-                for (let y = y0; y < y0 + CELL; y++) for (let x = x0; x < x0 + CELL; x++) {
-                    const col = v > 0.85 && Lab.on(x, y, (v - 0.85) * 3) ? C.gold : v > 0.5 && Lab.on(x, y, (v - 0.5) * 1.5) ? C.amber : Lab.on(x, y, (v - 0.2) * 0.9) ? C.red : null;
-                    if (col) { ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1); }
-                }
+                const v = s.heat[gy * GW + gx], x0 = gx * CELL, y0 = gy * CELL, density = Math.min(1, (v - 0.18) * 1.4), tone = Lab.clamp((v - 0.18) / 0.82, 0, 1);
+                if (v < 0.18 || (opened && sdf(x0 + 1, y0 + 1) <= 0.5)) continue;
+                for (let y = y0; y < y0 + CELL; y++) for (let x = x0; x < x0 + CELL; x++) if (Lab.on(x, y, density)) { ctx.fillStyle = Lab.pick(GLOW, tone, x, y); ctx.fillRect(x, y, 1, 1); }
             }
             s.marks.forEach(i => {
-                const x = i % W, y = (i - x) / W, col = opened && sdf(x, y) <= 0.5 ? null : markColor(i);
+                const x = i % W, y = (i - x) / W, col = opened && sdf(x, y) <= 0.5 ? null : markColor(i, x, y);
                 if (col) { ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1); }
             });
         }
         function drawSparks() {
-            s.sparks.forEach(p => Lab.dot(ctx, p.x, p.y, p.dust ? (p.life > 0.8 ? C.bone : C.boneD) : p.life > 0.35 ? C.white : p.life > 0.15 ? C.gold : C.amber));
+            s.sparks.forEach(p => {
+                if (p.dust) return Lab.dot(ctx, p.x, p.y, p.life > 0.9 ? C.textDim : C.mist);
+                const k = p.ice ? 0.03 : 0.025;                  // a short streak behind each
+                if (p.ice || p.life > 0.25) Lab.dot(ctx, p.x - p.vx * k, p.y - p.vy * k, p.ice ? C.uiDim : C.warm);
+                Lab.dot(ctx, p.x, p.y, p.ice ? (p.life > 0.7 ? C.star : C.uiBright) : p.life > 0.3 ? C.warmBright : p.life > 0.12 ? C.warm : C.hurt[3]);
+            });
         }
-        function drawTorch() {
-            const x = Math.round(s.tip.x), y = Math.round(s.tip.y);
-            for (let k = 5; k < 32; k++) Lab.shade(ctx, x + Math.round(k * 0.4) - 1, y + k, 3, 1, k < 9 ? 0.85 : 0.5, k < 9 ? C.boneD : C.line2);
-            if (s.firing) {                                                  // the flame: a white point in a gold glow
-                Lab.disc(ctx, x, y, 4, d => 0.55 * (1 - d), C.gold);
-                return [[0, 0], ...PLUS].forEach(([ox, oy]) => Lab.dot(ctx, x + ox, y + oy, ox || oy ? (Math.random() < 0.5 ? C.white : C.gold) : C.white));
-            }
-            const col = paused() ? (Math.floor(clock * 4) % 2 ? C.red : DARK_RED) : s.part === 'disc' ? C.greenBr : C.amber;
-            PLUS.forEach(([ox, oy]) => [3, 4, 5].forEach(k => {                 // the aim: four short ticks, outlined so they stand out on the gold
+        function reticle(x, y) {                                 // the aim: four short ticks, outlined so they stand out on gold
+            const col = s.phase === 'cut' && paused() ? (Math.floor(clock * 4) % 2 ? C.danger : C.hurt[3]) : C.ui;
+            PLUS.forEach(([ox, oy]) => [4, 5, 6].forEach(k => {
                 Lab.dot(ctx, x + ox * k + oy, y + oy * k + ox, C.void); Lab.dot(ctx, x + ox * k - oy, y + oy * k - ox, C.void); Lab.dot(ctx, x + ox * k, y + oy * k, col);
             }));
-            Lab.dot(ctx, x, y, paused() ? C.red : C.boneD);
         }
-        function hud(x, y, extra, rows) {
-            const h = heatAt(s.tip), bars = [['FUEL', s.fuel, s.fuel < 0.2 ? C.red : C.green], ['HEAT', h, h >= WARN ? C.red : h > 0.5 ? C.amber : C.greenD], ...extra];
-            const all = rows.concat(s.phase === 'cut' && paused() && Math.floor(clock * 3) % 2 ? [['COOLING', C.red]] : [['', C.red]]);
-            Lab.shade(ctx, x - 4, y - 4, 72, 10 + (bars.length + all.length) * 8, 0.8, C.void);
-            bars.forEach(([label, v, col], k) => {
-                Lab.text(ctx, label, x, y + k * 8, C.boneD);
-                [[44, 0.25, C.line2], [Math.round(44 * Lab.clamp(v, 0, 1)), 0.9, col]].forEach(([w, tone, c]) => Lab.shade(ctx, x + 18, y + k * 8 + 1, w, 3, tone, c));
+        function drawTorch() {                                   // nozzle, body and hose; when the job is done it is pulled back
+            const away = s.phase === 'cut' || s.phase === 'dry' ? 0 : 300 * Math.min(1, s.openT / 0.6) ** 2;
+            const x = Math.round(s.tip.x + TU.x * away), y = Math.round(s.tip.y + TU.y * away), at = (k, o = 0) => [x + TU.x * k + TN.x * o, y + TU.y * k + TN.y * o];
+            if (s.firing) Lab.disc(ctx, x, y, 15, d => 0.3 * (1 - d) * (1 - d), C.warm);   // the flame lights the metal round it
+            const [hx, hy] = at(29), mx = hx + 14, my = hy + 24, ex = hx + 30, ey = H + 8;   // the hose sags off the bottom of the picture
+            for (let t = 0; t <= 1; t += 0.006) {
+                const u = 1 - t, px = u * u * hx + 2 * u * t * mx + t * t * ex, py = u * u * hy + 2 * u * t * my + t * t * ey;
+                Lab.dot(ctx, px - 1, py + 1, C.void); Lab.dot(ctx, px, py, HOSE[0]); Lab.dot(ctx, px + 1, py, HOSE[1]);
+            }
+            [1, 0].forEach(edge => { for (let k = 0; k <= 29; k += 0.5) for (let o = -3.5; o <= 3.5; o += 0.5) {   // a dark outline, then the body: lit along one side, a ribbed grip
+                const r = k < 7 ? 0.9 : k < 9 ? 1.6 : 2.5;
+                if (Math.abs(o) > r + edge) continue;
+                const g = 0.3 + 0.42 * o / r + (o / r > 0.4 && o / r < 0.8 ? 0.16 : 0) + (k < 2 ? 0.25 : 0) + (k > 18 && Math.floor(k) % 3 === 0 ? -0.16 : 0) + (k > 9.5 && k < 11 ? 0.2 : 0);
+                Lab.dot(ctx, ...at(k, o), edge ? C.void : Lab.pick(C.hull, g, Math.round(k), Math.round(o)));
+            } });
+            Lab.dot(ctx, ...at(14, 2), s.phase === 'cut' && paused() ? C.danger : s.firing ? C.uiBright : C.uiDim);   // the ready light
+            if (away > 0) return;
+            if (!s.firing) return reticle(x, y);
+            Lab.disc(ctx, x, y, 6, d => 0.8 * (1 - d), C.warmBright);   // the flame: a white point in a warm glow
+            Lab.disc(ctx, x, y, 2.5, d => 0.95 * (1 - d * 0.5), C.star);
+            PLUS.forEach(([ox, oy]) => { if (Math.random() < 0.5) Lab.dot(ctx, x + ox * 3, y + oy * 3, C.star); });
+        }
+        function bar(x, y, label, v, col) {
+            Lab.text(ctx, label, x, y, C.textDim, 2);
+            Lab.shade(ctx, x + 38, y + 2, 66, 6, 0.3, C.uiDim);
+            if (v > 0) Lab.shade(ctx, x + 38, y + 2, Math.max(1, Math.round(66 * Math.min(1, v))), 6, 1, col);
+        }
+        function hud(x, y, rows) {                               // fuel and heat, then this part's own rows: [label or text, value, colour, scale]
+            const h = heatAt(s.tip);
+            Lab.shade(ctx, x - 6, y - 6, 116, 48 + rows.length * 14, 0.82, C.void);
+            bar(x, y, 'FUEL', s.fuel, s.fuel < 0.2 ? C.danger : C.ui);
+            bar(x, y + 14, 'HEAT', h, h >= WARN ? C.danger : h > 0.5 ? C.warm : C.ui);
+            rows.forEach(([label, v, col, scale], k) => (v === null ? Lab.text(ctx, label, x, y + 29 + k * 14, col, scale) : bar(x, y + 28 + k * 14, label, v, col)));
+            if (s.phase === 'cut' && paused() && Math.floor(clock * 3) % 2) Lab.text(ctx, 'COOLING', x, y + 30 + rows.length * 14, C.danger, 2);
+        }
+        function drawSeamGuide(f) {                              // the suit marks what is still to cut; near the end it blinks
+            const march = Math.floor(clock * 6), blink = f >= 0.85 && Math.floor(clock * 3) % 2, col = s.fired ? C.uiDim : C.ui;
+            SEAM.forEach((i, k) => {
+                const x = i % W, y = (i - x) / W;
+                if (s.seamCut[k]) return;
+                if (blink) { PLUS.forEach(([ox, oy]) => Lab.dot(ctx, x + ox, y + oy, C.ui)); Lab.dot(ctx, x, y, C.uiBright); } else if ((x + y + march) % 6 < 3) Lab.dot(ctx, x, y, col);
             });
-            all.forEach(([str, col], k) => Lab.text(ctx, str, x, y + (bars.length + k) * 8 + 2, col));
+        }
+        function drawLid(t) {                                    // it pops, hangs, knocks the rim, then drifts out towards us
+            const p = Math.sin(Math.min(1, t / 0.18) * Math.PI / 2), u = Math.max(0, t - 0.18), v = Math.max(0, t - THUD_AT);
+            const k = 1 + 0.05 * p + 0.012 * u + 0.07 * v, lift = Math.round(2 + 30 * (k - 1));
+            ctx.save(); ctx.imageSmoothingEnabled = false;
+            ctx.translate(Math.round(HB.cx + 4 * p + 4 * u + 10 * v + 3 * v * v), Math.round(HB.cy - 3 * p - 1.5 * u - 4 * v));
+            ctx.rotate(0.012 * u + 0.05 * v + 0.03 * Math.min(1, v * 6)); ctx.scale(k, k);
+            ctx.drawImage(lidShadow, -HB.cx + lift, -HB.cy + lift); ctx.drawImage(lid, -HB.cx, -HB.cy);   // lifting off, it casts a shadow
+            ctx.restore();
+        }
+        function drawGlint() {                                   // one glint on the corridor floor: our lamp, caught by something
+            const ph = (clock * 0.6) % 1, arm = ph < 0.08 ? 3 : ph < 0.2 ? 2 : ph < 0.3 ? 1 : 0;
+            Lab.dot(ctx, GLINT.x, GLINT.y, arm ? C.star : C.warm);
+            for (let k = 1; k <= arm; k++) PLUS.forEach(([ox, oy]) => Lab.dot(ctx, GLINT.x + ox * k, GLINT.y + oy * k, k === 1 ? C.warmBright : C.warm));
         }
         function renderHatch() {
             const opened = s.phase === 'open' || s.phase === 'end', f = opened ? 1 : s.cut / SEAM.length;
+            const jolt = opened && s.openT < 0.45 ? Math.round(2.4 * (1 - s.openT / 0.45)) : 0;   // the crack shakes the picture, then settles
+            ctx.fillStyle = C.void; ctx.fillRect(0, 0, W, H);
+            ctx.setTransform(1, 0, 0, 1, jolt * (Math.random() < 0.5 ? -1 : 1), jolt * (Math.random() < 0.5 ? -1 : 1));
             ctx.drawImage(hullBg, 0, 0);
-            if (opened) ctx.drawImage(hole, 0, 0);
-            if (opened && s.openT > 2) {                                     // one small glint, far inside
-                const tw = (clock * 1.1) % 1 < 0.22;
-                Lab.dot(ctx, GLINT.x, GLINT.y, tw ? C.white : C.gold);
-                if (tw) PLUS.forEach(([ox, oy]) => Lab.dot(ctx, GLINT.x + ox, GLINT.y + oy, C.amber));
-            }
+            if (opened) { ctx.drawImage(hole, 0, 0); if (s.openT > 2.6) drawGlint(); }
+            if (opened && s.openT < 0.4) SEAM.forEach(i => {      // the last air flashing out of the seam as ice
+                const x = i % W, y = (i - x) / W, k = 1 - s.openT / 0.4;
+                Lab.shade(ctx, x - 1, y - 1, 3, 3, 0.45 * k, C.uiBright); Lab.shade(ctx, x, y, 1, 1, k, C.star);
+            });
             drawBurns(opened);
-            const march = Math.floor(clock * 6), blink = f >= 0.85 && Math.floor(clock * 3) % 2;   // cut here, as a dashed line; later, what is left
-            if (!opened && (!s.fired || blink)) SEAM.forEach((i, k) => { const x = i % W, y = (i - x) / W; if (s.seamCut[k]) return;
-                if (blink) [[0, 0], ...PLUS].forEach(([ox, oy]) => Lab.dot(ctx, x + ox, y + oy, C.amber)); else if ((x + y + march) % 4 < 2) Lab.dot(ctx, x, y, C.amber); });
-            if (opened && s.openT < 9) {                                     // the hatch drifts out towards us and away
-                const t = s.openT, k = 1 + 0.08 * t;
-                ctx.save(); ctx.imageSmoothingEnabled = false;
-                ctx.translate(Math.round(HB.cx + 12 * t + 2.5 * t * t), Math.round(HB.cy - 5 * t)); ctx.rotate(0.06 * t); ctx.scale(k, k);
-                ctx.drawImage(lidShadow, Math.round(-HB.cx + 2 + 3 * t), Math.round(-HB.cy + 2 + 3 * t));   // lifting off, it casts a shadow
-                ctx.drawImage(lid, -HB.cx, -HB.cy);
-                ctx.restore();
-            }
-            drawSparks();
-            if (s.phase === 'cut' || s.phase === 'dry') drawTorch();
-            hud(8, 132, [['SEAM', f, f >= 1 ? C.greenBr : C.bone]], [['SCARS ' + s.scars + '  WARPS ' + s.warps.length, C.boneD]]);
+            if (!opened) drawSeamGuide(f);
+            if (opened && s.openT < 10) drawLid(s.openT);
+            drawSparks(); drawTorch();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            hud(12, 198, [['SEAM', f, f >= 1 ? C.uiBright : C.text], ['SCARS ' + s.scars + '   WARPS ' + s.warps.length, null, C.textDim, 1]]);
         }
         function renderDisc() {
             ctx.drawImage(discBg, 0, 0);
-            const bx = DX - DR - 6 + s.sweep * (2 * DR + 12), lit = s.phase === 'closing' ? 0.6 : 0.3;   // the light's sweep, reading
-            for (let x = Math.ceil(bx - 5); x <= bx + 5; x++) {
+            const bx = DX - DR - 8 + s.sweep * (2 * DR + 16), lit = s.phase === 'closing' ? 0.55 : 0.32;   // the light's sweep, reading
+            for (let x = Math.ceil(bx - 7); x <= bx + 7; x++) {
                 const half = Math.sqrt(Math.max(0, DR * DR - (x - DX) * (x - DX)));
-                if (half > 0) Lab.shade(ctx, x, DY - half, 1, half * 2, lit * (1 - Math.abs(x - bx) / 5), C.gold);
+                if (half > 0) Lab.shade(ctx, x, DY - half, 1, half * 2, lit * (1 - Math.abs(x - bx) / 7), C.light);
             }
-            const glint = x => (Math.abs(x - bx) < 1 ? C.white : C.gold);
+            const glint = x => (Math.abs(x - bx) < 1.5 ? C.star : C.light);
             LINES.forEach((l, j) => {
-                const ex = DX + l.ux * l.len, ey = DY + l.uy * l.len, t = s.cutT[j];
-                if (t !== null && clock - t > 0.35) return Lab.line(ctx, DX, DY, ex, ey, C.boneD, 0.3);   // cut: a dead line, nothing to read
-                Lab.line(ctx, DX, DY, ex, ey, t !== null ? C.gold : C.boneD);                            // just cut, it flashes
-                [-3, -2, 2, 3].forEach(o => Lab.dot(ctx, DX + l.ux * l.notch - l.uy * o, DY + l.uy * l.notch + l.ux * o, t !== null ? C.gold : C.bone));
-                if (t === null) for (let d = 0; d <= l.len; d += 0.5) { const x = DX + l.ux * d; if (Math.abs(x - bx) < 3) Lab.dot(ctx, x, DY + l.uy * d, glint(x)); }
+                const ex = DX + l.ux * l.len, ey = DY + l.uy * l.len, t = s.cutT[j], col = t !== null ? C.light : C.lightHalo;
+                if (t !== null && clock - t > 0.35) return Lab.line(ctx, DX, DY, ex, ey, CUT_LINE, 0.6);   // cut: a dead line, nothing to read
+                Lab.line(ctx, DX, DY, ex, ey, col);              // just cut, it flashes
+                [-4, -3, 3, 4].forEach(o => Lab.dot(ctx, DX + l.ux * l.notch - l.uy * o, DY + l.uy * l.notch + l.ux * o, col));
+                if (t === null) for (let d = 0; d <= l.len; d += 0.5) { const x = DX + l.ux * d; if (Math.abs(x - bx) < 4) Lab.dot(ctx, x, DY + l.uy * d, glint(x)); }
             });
-            FIG_PX.forEach(p => Lab.dot(ctx, p.x, p.y, Math.abs(p.x - bx) < 3 ? glint(p.x) : C.gold));
-            if (!s.centre) { Lab.dot(ctx, DX, DY, C.white); PLUS.forEach(([ox, oy]) => Lab.dot(ctx, DX + ox, DY + oy, C.gold)); }
-            drawBurns(false); drawSparks();
-            if (s.phase === 'cut' || s.phase === 'dry') drawTorch();
+            FIG_PX.forEach(p => Lab.dot(ctx, p.x, p.y, Math.abs(p.x - bx) < 4 ? glint(p.x) : C.lightHalo));
+            if (!s.centre) { Lab.dot(ctx, DX, DY, C.light); PLUS.forEach(([ox, oy]) => Lab.dot(ctx, DX + ox, DY + oy, C.lightHalo)); }
+            if (s.phase === 'cut') for (let k = 0, m = Math.floor(clock * 6); k < 240; k++) if ((k + m) % 7 < 3) {   // the suit marks where a cut counts
+                const a = (k / 240) * Math.PI * 2;
+                Lab.dot(ctx, DX + Math.cos(a) * CUT_FAR, DY + Math.sin(a) * CUT_FAR, C.ui);
+            }
+            drawBurns(false); drawSparks(); drawTorch();
             const n = s.cutT.filter(v => v !== null).length;
-            hud(8, 8, [], [['LINES ' + String(n).padStart(2, '0') + '/14', n === 14 ? C.greenBr : C.bone], ['CENTRE ' + (s.centre ? 'CUT' : '--'), s.centre ? C.greenBr : C.bone]]);
+            hud(12, 12, [['LINES ' + String(n).padStart(2, '0') + '/14', null, n === 14 ? C.uiBright : C.text, 2], ['CENTRE ' + (s.centre ? 'CUT' : '--'), null, s.centre ? C.uiBright : C.text, 2]]);
         }
 
         // ── input ──
@@ -422,9 +623,9 @@
         cv.onpointermove = e => { aim = toAim(e); };
         cv.onpointerup = cv.onpointercancel = () => { ptrFire = false; };
         Lab.onKey((k, e) => {
-            const own = !!(e && e.target && e.target.dataset && e.target.dataset.id === 'torch');    // this sketch's own list item has focus
-            if (own && (DIRS[k] || k === ' ' || k === 'Enter')) e.preventDefault();                // so Space does not restart it, arrows do not scroll
-            if (DIRS[k]) { if (!e || !e.repeat) nudge(DIRS[k]); }                                   // held keys glide in moveTip, not by key repeat
+            const own = !!(e && e.target && e.target.dataset && e.target.dataset.id === 'torch');   // this sketch's own list item has focus
+            if (own && (DIRS[k] || k === ' ' || k === 'Enter')) e.preventDefault();   // so Space does not restart it, arrows do not scroll
+            if (DIRS[k]) { if ((!e || !e.repeat) && s.phase === 'cut') { aim = null; step(DIRS[k][0], DIRS[k][1], 1); } }   // a tap nudges; held keys glide in moveTip
             else if (k === ' ' && s.phase === 'cut') s.burst = BURST;
             else if (k === 'Enter' && (own || !(e && e.target && e.target.tagName === 'BUTTON')) && (s.phase === 'end' || s.phase === 'dry')) next();
         });
@@ -432,13 +633,11 @@
         Lab.loop(dt => { clock += dt; update(dt); if (s.part === 'hatch') renderHatch(); else renderDisc(); }, 30);
         start('hatch');
         renderHatch();
-        return () => { ptrFire = false; cv.onpointercancel = null; ctx.setTransform(1, 0, 0, 1, 0, 0); };
+        return () => { ptrFire = false; cv.onpointercancel = null; ctx.setTransform(1, 0, 0, 1, 0, 0); snd.drop(); };
     }
 
     Lab.register({
-        id: 'torch', badge: 'new',
-        name: 'The cutting torch',
-        short: 'Cut open a dead hatch',
+        id: 'torch', badge: 'new', name: 'The cutting torch', short: 'Cut open a dead hatch',
         verb: "Trace a dead ship's hatch seam with a torch, slow enough to cut and quick enough not to overheat, then take the same torch to the disc.",
         serves: 'Boarding the dead ships, and the finale: the same torch is how the map on the disc gets destroyed before the light can read it.',
         replaces: 'The instant "enter the wreck" choice.',

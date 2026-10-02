@@ -16,9 +16,9 @@
         { key: 'bridge', label: 'BRIDGE' }, { key: 'lab', label: 'LABORATORY' }, { key: 'quarters', label: 'CREW QUARTERS' },
         { key: 'cargo', label: 'CARGO HOLD' }, { key: 'engineering', label: 'ENGINEERING' }, { key: 'upgrades', label: 'FABRICATION' },
     ];
-    const HULL_RAMP = ['#06070a', '#0d1a15', '#1b3329', '#2f5a48', '#74d99a', '#d6ffe4'];
-    const RED_RAMP = ['#06070a', '#1a0b0a', '#3a1512', '#6e241d', '#d85a4e', '#ffd0c8'];
-    const LAMP = '#e8aa54', SKIN = '#e8d8c0';
+    // colours follow the active palette (Lab.C): hull = the ship's metal ramp, hurt = a damaged deck, warm = lamps
+    const hullRamp = () => Lab.C.hull, hurtRamp = () => Lab.C.hurt, lamp = () => Lab.C.warm;
+    const SKIN = '#e8d8c0';
     const CREW = {
         you: { name: 'You', role: 'COMMANDER', color: '#ffffff', station: 'bridge' },
         aris: { name: 'Aris', role: 'DOCTOR', color: '#40c8ff', station: 'lab' },
@@ -109,7 +109,7 @@
             for (let x = Math.floor(L.cx - L.maxHalf - 1); x <= Math.ceil(L.cx + L.maxHalf + 1); x++) {
                 const dx = Math.abs(x - L.cx);
                 if (hw > 0 && dx <= hw) {
-                    const isDamaged = room && damaged[room.key], ramp = isDamaged ? RED_RAMP : HULL_RAMP;
+                    const isDamaged = room && damaged[room.key], ramp = isDamaged ? hurtRamp() : hullRamp();
                     let g;
                     if (dx > hw - 2 || !room) g = 0.5 + (x < L.cx ? 0.14 : -0.08);                       // plating
                     else if (y === room.top) g = 0.42;                                                  // the deck above
@@ -118,7 +118,7 @@
                         if (ly >= rh - 2) g = 0.6;                                                      // floor
                         else {
                             const prop = PROPS[room.key](lx, ly, rw, rh);
-                            if (prop === 'lamp') { ctx.fillStyle = isDamaged ? '#6e241d' : LAMP; ctx.fillRect(x, y, 1, 1); continue; }
+                            if (prop === 'lamp') { ctx.fillStyle = isDamaged ? hurtRamp()[3] : lamp(); ctx.fillRect(x, y, 1, 1); continue; }
                             g = prop != null ? prop : 0.13 + 0.24 * Math.max(0, 1 - ly / rh) * (1 - (dx / hw) * 0.6);
                             if (isDamaged) g *= 0.6;
                         }
@@ -126,7 +126,7 @@
                     ctx.fillStyle = rampAt(ramp, g, x, y);
                     ctx.fillRect(x, y, 1, 1);
                 } else if (y >= stern.bottom && y < stern.bottom + 3 && Math.abs(dx - L.maxHalf * 0.4) < 4) {  // engine bells
-                    ctx.fillStyle = rampAt(HULL_RAMP, 0.55, x, y);
+                    ctx.fillStyle = rampAt(hullRamp(), 0.55, x, y);
                     ctx.fillRect(x, y, 1, 1);
                 }
             }
@@ -138,7 +138,7 @@
      * room (1 = black, for a room without power or air). opts.labels: draw room names. The static hull is cached per layout.
      */
     function draw(ctx, L, t = 0, opts = {}) {
-        const damaged = opts.damaged || {}, key = JSON.stringify(damaged);
+        const damaged = opts.damaged || {}, key = Lab.palette + JSON.stringify(damaged);
         if (!L.cache || L.cacheKey !== key) {
             const c = document.createElement('canvas');
             c.width = Lab.W; c.height = Lab.H;
@@ -150,11 +150,11 @@
         // the reactor's heartbeat and the engine flame
         const eng = L.room('engineering'), rw = halfWidth(L, eng.top + 4) * 2, rh = eng.bottom - eng.top;
         const beat = Math.pow(1 - ((t / 4000) % 1), 3.4), r = Math.min(rw, rh) * 0.24;
-        Lab.disc(ctx, L.cx, eng.top + rh * 0.48, r * (0.7 + 0.3 * beat), d => (0.4 + 0.6 * beat) * (1 - d * 0.5), damaged.engineering ? '#d85a4e' : '#d6ffe4');
+        Lab.disc(ctx, L.cx, eng.top + rh * 0.48, r * (0.7 + 0.3 * beat), d => (0.4 + 0.6 * beat) * (1 - d * 0.5), damaged.engineering ? Lab.C.danger : Lab.C.uiBright);
         const stern = L.rooms[L.rooms.length - 1];
         [-1, 1].forEach(side => {
             const ex = L.cx + side * L.maxHalf * 0.4, len = 4 + 3 * Math.abs(Math.sin(t / 90 + side));
-            for (let d = 0; d < len; d++) Lab.shade(ctx, ex - 2 + d * 0.3, stern.bottom + 3 + d, 5 - d * 0.6, 1, 1 - d / len, d < 2 ? '#fff4d6' : LAMP);
+            for (let d = 0; d < len; d++) Lab.shade(ctx, ex - 2 + d * 0.3, stern.bottom + 3 + d, 5 - d * 0.6, 1, 1 - d / len, d < 2 ? Lab.C.light : lamp());
         });
 
         // rooms without power
@@ -163,13 +163,13 @@
             if (!room || amount <= 0) return;
             for (let y = room.top + 1; y < room.bottom; y++) {
                 const hw = halfWidth(L, y) - 2;
-                Lab.shade(ctx, L.cx - hw, y, hw * 2, 1, amount, '#05070a');
+                Lab.shade(ctx, L.cx - hw, y, hw * 2, 1, amount, Lab.C.void);
             }
         });
 
         if (opts.labels !== false) L.rooms.forEach(room => {
             const ly = room.key === 'bridge' ? room.top + Math.round((room.bottom - room.top) * 0.5) : room.top + 3; // the nose is too narrow at the top
-            Lab.text(ctx, room.label, Math.round(L.cx - halfWidth(L, ly) + 4), ly, damaged[room.key] ? '#d85a4e' : '#2f6347');
+            Lab.text(ctx, room.label, Math.round(L.cx - halfWidth(L, ly) + 4), ly, damaged[room.key] ? Lab.C.danger : Lab.C.uiDim);
         });
     }
 
@@ -192,5 +192,5 @@
         return '#' + ch(16) + ch(8) + ch(0);
     }
 
-    Lab.ship = { ROOMS, CREW, HULL_RAMP, layout, draw, figure, rampAt };
+    Lab.ship = { ROOMS, CREW, get HULL_RAMP() { return hullRamp(); }, layout, draw, figure, rampAt };
 })();

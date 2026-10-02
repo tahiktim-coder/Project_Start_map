@@ -31,6 +31,19 @@
     .kicker { font: 600 11px/1 var(--disp); letter-spacing: 0.22em; color: var(--green); text-transform: uppercase; }
     .bay-head h1 { margin: 0; font: 600 20px/1.2 var(--disp); letter-spacing: 0.04em; color: var(--bone); text-wrap: balance; }
     .bay-head p { margin: 0; color: var(--dim); font-size: 12.5px; flex-basis: 100%; max-width: 70ch; }
+    .bay-tools { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 4px; }
+    .tool-label { font: 600 10.5px/1 var(--disp); letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); margin-right: 8px; }
+    .palette-pick { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+    .tool-btn {
+        cursor: pointer; padding: 6px 11px; background: transparent; color: var(--bone); border: 1px solid var(--line2);
+        font: 600 11px/1.2 var(--disp); letter-spacing: 0.12em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 7px;
+    }
+    .tool-btn:hover { border-color: var(--green); }
+    .tool-btn:focus-visible { outline: 1px solid var(--green-br); outline-offset: 2px; }
+    .tool-btn[aria-pressed="true"] { border-color: var(--green); color: var(--green-br); background: color-mix(in srgb, var(--green) 12%, transparent); }
+    .swatch { display: inline-flex; }
+    .swatch i { display: block; width: 7px; height: 12px; }
+    .palette-note { color: var(--dim); font-size: 12px; flex: 1 1 260px; }
 
     /* the list of prototypes */
     .list { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 0; list-style: none; }
@@ -114,7 +127,12 @@
     <header class="bay-head">
         <span class="kicker">Silent Exodus · Sim bay</span>
         <h1>Things the crew could do</h1>
-        <p>Rough, playable sketches. Each one is something the story already has the crew do, and each would replace a part of the game today rather than add to it. Sound is off. Numbers and lines are placeholders. Round two: four new, three reworked, and every one polished after a fresh play-through.</p>
+        <p>Rough, playable sketches. Each one is something the story already has the crew do, and each would replace a part of the game today rather than add to it. Numbers and lines are placeholders. Round three: six kept, rebuilt at a higher resolution in a new palette you can switch below.</p>
+        <div class="bay-tools">
+            <div class="palette-pick" role="group" aria-label="Palette"><span class="tool-label">Palette</span><span id="palettes"></span></div>
+            <button type="button" class="tool-btn" id="sound-btn" aria-pressed="false">Sound: off</button>
+            <span class="palette-note" id="palette-note"></span>
+        </div>
     </header>
 
     <nav aria-label="Prototypes">
@@ -127,7 +145,7 @@
             <h2 id="proto-name">—</h2>
             <span class="controls-hint" id="proto-controls"></span>
         </div>
-        <div class="frame"><canvas id="view" width="320" height="180" tabindex="0" aria-label="Prototype view"></canvas></div>
+        <div class="frame"><canvas id="view" width="480" height="270" tabindex="0" aria-label="Prototype view"></canvas></div>
         <div class="talk">
             <div class="talk-prev" id="talk-prev"></div>
             <div class="talk-who" id="talk-who"></div>
@@ -146,12 +164,9 @@
 <script src="ship.js"></script>
 <script src="proto-corridor.js"></script>
 <script src="proto-disc.js"></script>
-<script src="proto-walk.js"></script>
-<script src="proto-stations.js"></script>
-<script src="proto-breach.js"></script>
 <script src="proto-torch.js"></script>
-<script src="proto-blackbox.js"></script>
-<script src="proto-bearing.js"></script>
+<script src="proto-walk.js"></script>
+<script src="proto-breach.js"></script>
 <script src="proto-radio.js"></script>
 <script>
 (function () {
@@ -226,6 +241,40 @@
         const active = document.activeElement;
         if (active && active.classList && active.classList.contains('pick')) { try { canvas.focus({ preventScroll: true }); } catch (e) { canvas.focus(); } }
     }
+
+    // ── palette and sound ──
+    const PAGE_TOKENS = { void: '--void', deep: '--bg', dusk: '--panel', ui: '--green', uiBright: '--green-br', text: '--bone', textDim: '--dim', line2: '--faint', line: '--line', mist: '--line2', warm: '--amber', danger: '--red' };
+    function paintPage() {
+        Object.entries(PAGE_TOKENS).forEach(([role, token]) => document.documentElement.style.setProperty(token, Lab.C[role]));
+        el('palette-note').textContent = Lab.PALETTES[Lab.palette].note;
+        document.querySelectorAll('[data-palette]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.palette === Lab.palette)));
+    }
+    function setPalette(id) {
+        Lab.setPalette(id);
+        try { localStorage.setItem('simbay-palette', Lab.palette); } catch (e) { /* storage blocked */ }
+        paintPage();
+        if (current) open(current);                                    // re-open so cached pictures redraw in the new colours
+    }
+    Object.entries(Lab.PALETTES).forEach(([id, p]) => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'tool-btn'; b.dataset.palette = id;
+        const sw = document.createElement('span'); sw.className = 'swatch'; sw.setAttribute('aria-hidden', 'true');
+        [p.void, p.haze, p.ui, p.warm, p.lightHalo].forEach(c => { const i = document.createElement('i'); i.style.background = c; sw.appendChild(i); });
+        b.appendChild(sw); b.appendChild(document.createTextNode(p.name));
+        b.addEventListener('click', () => setPalette(id));
+        el('palettes').appendChild(b);
+    });
+    const soundBtn = el('sound-btn');
+    function setSound(v) {
+        Lab.audio.setEnabled(v);
+        if (v) Lab.audio.get();                                        // created inside the click, so the browser allows it
+        soundBtn.textContent = 'Sound: ' + (v ? 'on' : 'off');
+        soundBtn.setAttribute('aria-pressed', String(!!v));
+        try { localStorage.setItem('simbay-sound', v ? '1' : '0'); } catch (e) { /* storage blocked */ }
+    }
+    soundBtn.addEventListener('click', () => setSound(!Lab.audio.enabled));
+    try { Lab.setPalette(localStorage.getItem('simbay-palette') || 'lonely'); } catch (e) { Lab.setPalette('lonely'); }
+    paintPage();
 
     // ── the list ──
     const list = el('list');
