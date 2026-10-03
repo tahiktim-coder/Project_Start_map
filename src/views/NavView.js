@@ -31,6 +31,7 @@ class NavView {
             const x = clampTo(planet.mapData ? planet.mapData.x : Math.floor(Math.random() * 80) + 10, MAP_EDGE.left, MAP_EDGE.right);
             const y = clampTo(planet.mapData ? planet.mapData.y : Math.floor(Math.random() * 80) + 10, MAP_EDGE.top, MAP_EDGE.bottom);
 
+            if (planet.storyHidden) return NavView.contactHtml(planet, x, y, nodeSize, labelSize);
             const color = this.getPlanetColor(planet.type);
             const isGhost = planet.ghost === true;
 
@@ -53,6 +54,7 @@ class NavView {
 
                 ${miniatureHtml}
                 ${planet.isFirstSignal && !planet.exodusInvestigated ? '<span class="nav-signal">OLD TRANSPONDER</span>' : ''}
+                ${planet.isStoryPlanet && !planet.exodusInvestigated ? '<span class="nav-signal">ONE OF OUR SHIPS</span>' : ''}
 
                 <!-- Label -->
                 <div class="nav-label" style="position: absolute; top: ${Math.round(nodeSize * 1.2)}px; white-space: nowrap; color: ${color};
@@ -102,8 +104,6 @@ class NavView {
                     return '';
                 })()}">
                     ${nodesHtml}
-                    <!-- Scanner Bar Animation -->
-                    <div class="scanner-bar" style="position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: linear-gradient(to bottom, transparent, var(--color-primary), transparent); opacity: 0.5; box-shadow: 0 0 10px var(--color-primary); animation: scan 8s linear infinite; pointer-events: none; z-index: 5;"></div>
                 </div>
             </div>
         `;
@@ -113,6 +113,37 @@ class NavView {
         return this.element;
     }
 
+    /** The sector's story planet before anyone knows what it is: a faint contact with no name (not a .nav-node: no course is drawn to it). */
+    /** Under the warp button: a warning when this warp would leave too little energy for the sector jump. */
+    static jumpWarningHtml(state, planet, cost) {
+        const app = window.app, here = state.currentSystem || state.lastVisitedSystem;
+        if (!app || !app.sectorJumpCost || window.TEST_MODE || cost <= 0 || (here && here.id === planet.id) || state.currentSector >= 6) return '';
+        const left = state.energy - cost, jumpCost = app.sectorJumpCost();
+        if (left >= jumpCost) return '';
+        return `<p class="warp-jump-warning">Leaves ${Math.max(0, left)} energy. The sector jump needs ${jumpCost}.</p>`;
+    }
+
+    static contactHtml(planet, x, y, nodeSize, labelSize) {
+        return `
+            <div class="nav-contact" data-id="${planet.id}" role="button" tabindex="0" aria-label="Unidentified contact"
+                 style="left: ${x}%; top: ${y}%; width: ${nodeSize}px; height: ${nodeSize}px;">
+                <span class="nav-contact-dot"></span>
+                <div class="nav-contact-label" style="top: ${Math.round(nodeSize * 1.2)}px; font-size: ${labelSize}px;">UNIDENTIFIED</div>
+            </div>`;
+    }
+
+    /** The panel for a faint contact: nothing to scan, nothing to warp to. */
+    handleContactSelect() {
+        const panel = document.getElementById('tactical-display');
+        if (!panel) return;
+        panel.innerHTML = `
+            <div class="tactical-card nav-contact-card">
+                <h3>UNIDENTIFIED CONTACT</h3>
+                <p>A faint contact. The scanner cannot get a fix on it.</p>
+                <button class="contact-btn" disabled>NO FIX — NO COURSE</button>
+            </div>`;
+    }
+
     attachEvents(systems) {
         const jumpBtn = this.element.querySelector('#jump-sector-btn');
         if (jumpBtn) {
@@ -120,6 +151,10 @@ class NavView {
                 window.dispatchEvent(new CustomEvent('req-sector-jump'));
             });
         }
+        this.element.querySelectorAll('.nav-contact').forEach(contact => {
+            contact.addEventListener('click', () => this.handleContactSelect());
+            contact.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.handleContactSelect(); } });
+        });
 
         this.element.querySelectorAll('.nav-node').forEach(node => {
             const id = node.getAttribute('data-id');
@@ -218,7 +253,7 @@ class NavView {
         if (type === 'SHATTERED') return '#cc0000';    // Deep Red
         if (type === 'TERRAFORMED') return '#00ffcc';  // Teal
         if (type === 'CRYSTALLINE') return '#e0ffff';  // Light Cyan (Ice/Crystal)
-        if (type === 'ROGUE') return '#330066';        // Dark Indigo
+        if (type === 'ROGUE') return '#8a7ab8';        // Dusk violet (a darker label cannot be read on the map)
         if (type === 'TIDALLY_LOCKED') return '#ff8844'; // Fire/Ice blend
         if (type === 'HOLLOW') return '#ffcc33';         // Inner sun gold
         if (type === 'SYMBIOTE_WORLD') return '#74d99a'; // Bioluminescent green
@@ -234,7 +269,7 @@ class NavView {
         if (type === 'MACHINE_WORLD') return '#c4d0c4';   // Industrial blue
         if (type === 'FROZEN_OCEAN') return '#aaddff';    // Ice blue
         if (type === 'SULFUR') return '#cccc44';          // Yellow sulfur
-        if (type === 'CARBON') return '#444444';          // Dark graphite
+        if (type === 'CARBON') return '#8a8a8a';          // Graphite, light enough to read
         if (type === 'RADIATION_BELT') return '#44ff66';  // Radioactive green
         if (type === 'GHOST_WORLD') return '#8888bb';     // Ethereal purple-grey
         if (type === 'STRUCTURE') return '#ffffff';       // Bright white - endgame
@@ -287,7 +322,7 @@ class NavView {
                 signals.push({ type: 'ANCIENT RUINS', color: '#74d99a', effect: '-3% EVA risk, Artifacts' });
             }
             if (p.tags?.includes('ALIEN_SIGNALS')) {
-                signals.push({ type: 'ALIEN SIGNAL', color: '#d9a24a', effect: '+10% EVA risk, Rare loot' });
+                signals.push({ type: 'OLD SIGNAL', color: '#d9a24a', effect: '+10% landing risk, rare finds' });
             }
             if (p.tags?.includes('DERELICT')) {
                 signals.push({ type: 'DEAD SHIP', color: '#c4d0c4', effect: '+5% EVA risk, Ship salvage' });
@@ -390,18 +425,18 @@ class NavView {
                         ? `<div style="margin-top: auto; color: var(--color-primary); text-align: center; border: 1px solid var(--color-primary); padding: 4px; font-size: 0.8em;">
                             ${isDeepScanned ? 'FULL ANALYSIS COMPLETE' : 'LONG-RANGE SCAN COMPLETE'}
                            </div>`
-                        : (planet.id === this.state.currentSystem?.id
+                        : (planet.id === (this.state.currentSystem || this.state.lastVisitedSystem)?.id
                             ? `<div style="margin-top: auto; color: var(--color-primary); text-align: center; border: 1px solid var(--color-primary-dim); padding: 8px; opacity: 0.7;">
                                 CURRENT LOCATION
                                </div>`
                             : `<button class="scan-btn" style="margin-top: auto; width:100%; padding:8px; background: transparent; border: 1px solid var(--color-accent); color: var(--color-accent); cursor: pointer; font-family: var(--font-mono); font-size: 0.85em;">
-                                    LONG RANGE SCAN (-2 NRG)
+                                    LONG RANGE SCAN (${this.state && this.state.upgrades && this.state.upgrades.includes('sensor_v2') ? 'FREE' : '-2 NRG'})
                                </button>`
                         )
                     }
                 </div>
                 <div class="actions-container" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
-                    ${(isRemoteScanned || isDeepScanned) && planet.id !== this.state.currentSystem?.id ? `
+                    ${(isRemoteScanned || isDeepScanned) && planet.id !== (this.state.currentSystem || this.state.lastVisitedSystem)?.id ? `
                         <button class="probe-btn" style="width: 100%; padding: 8px; background: transparent; border: 1px solid var(--amber); color: var(--amber); font-family: var(--font-mono); cursor: pointer; font-size: 0.8em;">
                             🛰️ LAUNCH PROBE (REMOTE)
                         </button>
@@ -411,8 +446,9 @@ class NavView {
                         OUT OF REACH — NO STOPS LEFT
                     </button>` : `
                     <button class="warp-btn" style="width: 100%; padding: 12px; background: var(--color-primary); color: #000; border: none; font-weight: bold; font-family: var(--font-display); cursor: pointer; text-transform: uppercase; font-size: 0.9em;">
-                        ${planet.id === this.state.currentSystem?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
+                        ${planet.id === (this.state.currentSystem || this.state.lastVisitedSystem)?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
                     </button>`}
+                    ${NavView.jumpWarningHtml(this.state, planet, actualCost)}
                 </div>
             </div>
         `;
@@ -438,39 +474,42 @@ class NavView {
     }
 
     handleStructureSelect(structure, panel) {
-        const actualCost = structure.fuelCost || 30;
+        const actualCost = this.state && this.state.getWarpCost ? this.state.getWarpCost(structure) : (structure.fuelCost || 30); // the price handleWarp will really charge
+        // Same renderer as the map node and the orbit screen: one Structure everywhere (the old CSS orb looked like a different object)
+        const STRUCTURE_PREVIEW_SIZE = 112, STRUCTURE_PREVIEW_FRAME = 172;
 
         panel.innerHTML = `
             <div class="tactical-card" style="width: 100%; height: 100%; display: flex; flex-direction: column; background: linear-gradient(135deg, #0a0a15, #1a0a2a);">
-                <div style="border: 2px solid #8844ff; height: 140px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(136,68,255,0.2), transparent); margin-bottom: 15px; position: relative; overflow: visible;">
-                    <div class="planet-visual type-STRUCTURE" style="width: 100px; height: 100px;"></div>
+                <div style="border: 2px solid #8844ff; height: ${STRUCTURE_PREVIEW_FRAME}px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(136,68,255,0.2), transparent); margin-bottom: 15px; position: relative; overflow: hidden;">
+                    ${(window.BodyRenderer && BodyRenderer.body(structure, STRUCTURE_PREVIEW_SIZE))
+                        || '<div class="planet-visual type-STRUCTURE" style="width: 100px; height: 100px;"></div>'}
                     <div style="position: absolute; top:0; left:0; width:100%; height:100%; background: linear-gradient(rgba(136, 68, 255, 0) 50%, rgba(136, 68, 255, 0.1) 50%); background-size: 100% 4px; pointer-events: none; animation: pulse 2s infinite;"></div>
                 </div>
                 <h3 style="color: #ffffff; border-bottom: 2px solid #8844ff; padding-bottom: 8px; font-size: 1.2em; text-shadow: 0 0 10px rgba(136,68,255,0.5);">${structure.name}</h3>
                 <div style="margin-top: 10px; font-size: 0.85em; flex: 1; display: flex; flex-direction: column; gap: 8px; overflow-y: auto;">
                     <div style="color: #ccaaff; font-style: italic; font-size: 0.9em; margin-bottom: 5px; line-height: 1.5;">
-                        "${structure.desc || 'It defies comprehension. It defies physics. It waits.'}"
+                        ${structure.desc || 'Every crew before you flew toward it.'}
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #440088; padding: 4px 0;">
-                        <span style="color: #8844ff;">TYPE</span>
-                        <span style="color: #d85a4e;">UNKNOWN</span>
+                        <span style="color: #8844ff;">WHAT IT IS</span>
+                        <span style="color: #d85a4e;">It looks like a sun</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #440088; padding: 4px 0;">
-                        <span style="color: #8844ff;">ORIGIN</span>
-                        <span style="color: #d85a4e;">UNKNOWN</span>
+                        <span style="color: #8844ff;">HOW WARM</span>
+                        <span style="color: #d85a4e;">It is not</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #440088; padding: 4px 0;">
-                        <span style="color: #8844ff;">AGE</span>
-                        <span style="color: #d85a4e;">BEFORE TIME</span>
+                        <span style="color: #8844ff;">HOW OLD</span>
+                        <span style="color: #d85a4e;">Older than every wreck behind you</span>
                     </div>
                     <div style="display: flex; justify-content: space-between; border-bottom: 1px dashed #440088; padding: 4px 0;">
-                        <span style="color: #8844ff;">THREAT LEVEL</span>
-                        <span style="color: #ffffff; font-weight: bold; animation: pulse 1.5s infinite;">???</span>
+                        <span style="color: #8844ff;">ANYONE ALIVE</span>
+                        <span style="color: #ffffff; font-weight: bold;">Nothing answers. Something reads.</span>
                     </div>
                     <div style="margin-top: 10px; padding: 10px; border: 1px solid #d85a4e; background: rgba(255,0,0,0.1);">
-                        <div style="color: #d85a4e; font-weight: bold; font-size: 0.8em;">⚠ A.U.R.A. ADVISORY</div>
+                        <div style="color: #d85a4e; font-weight: bold; font-size: 0.8em;">A.U.R.A.</div>
                         <div style="color: #e07a70; font-size: 0.75em; margin-top: 5px;">
-                            "Commander, I cannot model what will happen if we approach. All predictive algorithms return null. Proceed with... I do not know."
+                            "I cannot tell you what happens if we go closer, Commander. No ship before us reported back."
                         </div>
                     </div>
                 </div>
@@ -484,7 +523,7 @@ class NavView {
                         text-shadow: 0 0 10px rgba(255,255,255,0.5);
                         transition: all 0.3s;
                     ">
-                        APPROACH THE STRUCTURE (${actualCost} NRG)
+                        GO TO THE LIGHT (${actualCost} NRG)
                     </button>
                 </div>
             </div>

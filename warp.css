@@ -732,3 +732,101 @@
 @media (prefers-reduced-motion: reduce) {
     .boarding-air.is-low .boarding-air-pips .is-home { animation: none; }
 }
+
+/* ── boarding v2 (BoardingParty.js): the station map on the left, air / this room / hands on the right ── */
+.warp-plot.boarding .warp-plot-frame {
+    width: min(1080px, 94vw);
+    max-height: 96vh;
+    overflow-y: auto;
+}
+
+.boarding-dock { margin: 0 0 8px; font-size: 0.9em; }
+.boarding-dock.is-rough { color: var(--amber); }
+.boarding-dock.is-crash { color: var(--red); }
+.boarding-pick b small { margin-left: 6px; font: 600 0.8em var(--font-mono); letter-spacing: 0; color: var(--amber); }
+
+.boarding-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.boarding-map { position: relative; }
+.boarding-doors { position: absolute; inset: 0; pointer-events: none; }
+
+/* a room's name over the map; the rooms next door are buttons with their air cost */
+.boarding-door {
+    position: absolute;
+    transform: translate(-50%, 0);
+    display: grid;
+    justify-items: center;
+    gap: 0;
+    padding: 2px 7px;
+    background: rgba(6, 7, 10, 0.8);
+    border: 1px solid var(--green);
+    border-radius: 3px;
+    color: var(--green-br);
+    font: 600 0.66em var(--font-display);
+    letter-spacing: 0.12em;
+    white-space: nowrap;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: background 150ms, transform 150ms;
+}
+
+.boarding-door kbd { font: 700 1.15em var(--font-mono); letter-spacing: 0; color: var(--bone); }
+.boarding-door i { font-style: normal; font-size: 0.85em; letter-spacing: 0.14em; }
+.boarding-door:hover:not([disabled]),
+.boarding-door:focus-visible { background: rgba(116, 217, 154, 0.22); transform: translate(-50%, -2px); }
+.boarding-door.is-homeward { border-color: var(--amber); }
+.boarding-door.is-stranding { border-color: var(--red); color: var(--red); }
+.boarding-door.is-stranding kbd { color: var(--red); }
+.boarding-door[disabled] { cursor: default; }
+.boarding-door.is-label { border-color: transparent; background: rgba(6, 7, 10, 0.55); color: var(--dim); pointer-events: none; }
+
+.boarding-side .boarding-actions { flex-direction: column; margin: 0 0 14px; }
+.boarding-side .boarding-actions button { text-align: left; }
+.boarding-cond { margin: 0 0 4px; font: 600 0.8em var(--font-display); letter-spacing: 0.08em; }
+.boarding-find { margin: 0 0 10px; font-size: 0.88em; line-height: 1.45; color: var(--bone); }
+.boarding-find b { color: var(--green-br); }
+
+/* the walk-out marker: a bright edge on the last amber block */
+.boarding-air-pips .is-mark { box-shadow: 3px 0 0 var(--bone); }
+
+.boarding-slots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.boarding-slots li {
+    min-height: 40px;
+    padding: 6px 7px;
+    border: 1px solid var(--line2);
+    border-radius: 3px;
+    font-size: 0.74em;
+    line-height: 1.3;
+    color: var(--bone);
+}
+
+.boarding-slots li.is-free { border-style: dashed; color: var(--dim); }
+.boarding-slots li.is-heavy { border-color: var(--amber); background: rgba(217, 162, 74, 0.08); }
+.boarding-slots small { font-weight: 700; color: var(--amber); }
+.boarding-pocket { margin: 6px 0 0; font-size: 0.78em; color: var(--dim); }
+
+.warp-plot.boarding.is-result .warp-plot-frame { width: min(640px, 92vw); }
+.boarding-haul { margin: 4px 0 14px; padding-left: 1.2em; line-height: 1.8; color: var(--bone); }
+.boarding-haul li::marker { color: var(--green); }
+
+/* ── docking (DockingGame.js): shares the lander's readouts and hold buttons ── */
+.docking-readout { grid-template-columns: repeat(4, 1fr); }
+.warp-plot.docking .lander-buttons .docking-auto { flex-basis: 100%; }
+
+@media (max-width: 720px) {
+    .boarding-layout { grid-template-columns: 1fr; }
+    .boarding-door { padding: 2px 4px; font-size: 0.5em; }
+}

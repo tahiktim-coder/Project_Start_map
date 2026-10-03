@@ -7,7 +7,7 @@ const UPGRADES = {
         name: 'Sensor Array V2',
         cost: 150,
         desc: 'A proper dish instead of the factory antenna.',
-        effect: 'Long-range scan shows everything about a planet.',
+        effect: 'Long-range scans cost nothing, and report air and gravity as well.',
         mount: 'Nose',
         icon: ['............', '...######...', '..#++++++#..', '.#++++++++#.', '.#++++++++#.', '..#++++++#..', '...######...', '.....##.....', '.....##.....', '.....##.....', '....####....', '...######...']
     },

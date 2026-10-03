@@ -12,10 +12,10 @@
     const DESCENT_MS = 5200, LOSS_HOLD_MS = 2600;
     const INK = '#06070a', BONE = '#c4d0c4', AMBER = '#d9a24a', GREEN = '#74d99a', GREEN_DIM = '#2f5a48';
     const ABOUT = {
-        ENGINEER: 'Jaxon fixes things. He would rather be fixing the ship.',
-        MEDIC: 'Aris keeps the other one alive. Nobody keeps Aris alive.',
-        SECURITY: 'Vance has done this before. He does not talk about it.',
-        SPECIALIST: 'Mira wants to see everything. That is the problem.',
+        ENGINEER: 'Jaxon flies the lander and fixes what breaks. He would rather be up here.',
+        MEDIC: 'Aris keeps the other one alive, and keeps a list of the ones she could not.',
+        SECURITY: 'Vance keeps watch while the other one works. He trusts nothing down there.',
+        SPECIALIST: 'Mira wants to touch everything she finds. Someone has to stop her.',
     };
     const RADIO = [
         ['Lander away. Descent is clean.', 'Boots down. Gravity feels wrong, but we are standing.', 'Moving out. Keep the channel open.'],

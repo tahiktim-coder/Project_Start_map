@@ -10,7 +10,7 @@
     'use strict';
     const PIXEL = 2, TICK_MS = 100, ORBIT_MS = 46000, DUST_COUNT = 70; // PIXEL matches the planet body's own pixel size
     const ORBIT = { rx: 0.98, ry: 0.24, tilt: -0.2 };                       // in planet diameters / radians
-    const STAR_DISTANCE = 1.25, HALO_WIDTH = 0.2;
+    const STAR_DISTANCE = 1.25, HALO_WIDTH = 0.2, ATTACH_GRACE_MS = 5000;
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
     const css = c => `rgb(${c[0] | 0},${c[1] | 0},${c[2] | 0})`;
@@ -121,11 +121,17 @@
         container.appendChild(front);
         let scene = null;
         const startedAt = performance.now(), phase = seeded(planet.id + ':orbit')() * 6.283;
+        let wasAttached = false;
 
         function paint() {
-            if (!container.isConnected) { clearInterval(timer); return; }
+            // The view is built first and attached to the page afterwards: only let go once it HAS been attached and is gone again
+            if (container.isConnected) wasAttached = true;
+            else if (wasAttached || performance.now() - startedAt > ATTACH_GRACE_MS) { clearInterval(timer); return; }
+            else return;
             if (!container.clientWidth) return;                                   // not laid out yet (hidden tab)
-            if (!scene || Math.abs(scene.w - Math.round(container.clientWidth / PIXEL)) > 2) {
+            const panelW = Math.round(container.clientWidth / PIXEL), panelH = Math.round(container.clientHeight / PIXEL);
+            if (!panelH) return;
+            if (!scene || Math.abs(scene.w - panelW) > 2 || Math.abs(scene.h - panelH) > 2) {         // height too: expanding the log only changes the height
                 scene = buildScene(container, planet, bodySize);
                 [back, front].forEach(c => { c.width = scene.w; c.height = scene.h; });
             }

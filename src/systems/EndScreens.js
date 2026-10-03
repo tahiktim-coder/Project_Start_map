@@ -20,7 +20,7 @@
         const stats = [
             ['SECTOR REACHED', `${state.currentSector} of 6`], ['CREW LOST', `${dead.length} of ${state.crew.length}`],
             ['PLACES EXPLORED', visited], ['SALVAGE', state.salvage], ['RATIONS LEFT', state.rations],
-            ['EXODUS LOGS', `${(state.exodusLogsFound || []).length} of 8`],
+            ['PAGES FOUND', `${(state.exodusLogsFound || []).length} of 6`],
         ];
         return `<dl class="end-stats">${stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
     }
@@ -67,13 +67,13 @@
         const living = state.crew.filter(c => c.status !== 'DEAD');
         return `
             <section class="end-card is-ending" role="dialog" aria-label="Ending">
-                <p class="end-kicker">THE JOURNEY ENDS · ${esc(result.ending || '')}</p>
+                <p class="end-kicker">THE JOURNEY ENDS</p>
                 <h2 class="end-title">${esc(result.title || '')}</h2>
                 <div class="end-story">${textHtml}</div>
                 <h4>THE CREW</h4>
                 ${rosterHtml(state.crew)}
                 ${statRow([['SECTOR', `${state.currentSector} of 6`], ['SURVIVORS', `${living.length} of ${state.crew.length}`],
-                    ['EXODUS LOGS', `${(state.exodusLogsFound || []).length} of 8`], ['DATA', state._colonyKnowledge || 0],
+                    ['PAGES FOUND', `${(state.exodusLogsFound || []).length} of 6`], ['DATA', state._colonyKnowledge || 0],
                     ['SALVAGE', state.salvage], ['ENERGY', state.energy + '%']])}
                 <button class="deck-action end-again" id="btn-new-game"><span>BEGIN AGAIN</span><small>a new crew, the same road</small></button>
             </section>`;

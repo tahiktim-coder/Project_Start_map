@@ -49,7 +49,7 @@
             out.push(`<button class="deck-action deck-action-repair" data-act="repair" ${quote.canAfford ? '' : 'disabled'}>`
                 + `<span>REPAIR ROOM</span><small>${quote.cost} salvage · you have ${state.salvage}${quote.notes ? ' · ' + quote.notes : ''}</small></button>`);
         }
-        if (deckKey === 'cargo') out.push(`<button class="deck-action" data-act="cargo"><span>OPEN CARGO</span><small>${state.cargo.length} / ${state.getCargoLimit ? state.getCargoLimit() : 20} items</small></button>`);
+        if (deckKey === 'cargo') out.push(`<button class="deck-action" data-act="cargo"><span>OPEN CARGO</span><small>${state.getCargoCount ? state.getCargoCount() : state.cargo.length} / ${state.getCargoLimit ? state.getCargoLimit() : 20} items</small></button>`);
         if (deckKey === 'quarters') out.push(`<button class="deck-action" data-act="crew"><span>CREW MANIFEST</span><small>health, stress, rest</small></button>`);
         if (deckKey === 'engineering') {
             out.push(`<button class="deck-action" data-act="fab" ${deck.status === 'DAMAGED' ? 'disabled' : ''}>`

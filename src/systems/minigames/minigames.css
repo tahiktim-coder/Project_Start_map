@@ -1,0 +1,169 @@
+/* minigames.css — the frame MiniHost.js opens over the game.
+   The game's frame language (thin line border, a 2px accent rule on top, spaced-caps kicker, the picture, one line of
+   dialogue, a row of buttons), coloured from the minigame palette: MiniHost sets the --mg-* tokens from MiniLab.C.
+   z-index 6000: above the game's full-screen overlays (warp plot, lander, docking, story reel: 5000; toasts: 4500),
+   below the save notice (9999) and the title menu, end screens and narrative modal (10000). */
+
+.mini-host {
+    position: fixed;
+    inset: 0;
+    z-index: 6000;
+    display: grid;
+    place-items: center;
+    padding: 16px; /* MARGIN in MiniHost.js */
+    overflow: auto;
+    background: rgba(4, 6, 8, 0.94);
+    background: color-mix(in srgb, var(--mg-void) 95%, transparent);
+    color: var(--mg-text);
+    font: 14px/1.5 var(--font-mono);
+    animation: mini-host-in 250ms ease-out;
+    transition: opacity 300ms; /* LEAVE_MS in MiniHost.js */
+}
+
+.mini-host.is-leaving { opacity: 0; }
+
+@keyframes mini-host-in { from { opacity: 0; } }
+
+.mini-frame {
+    width: min-content; /* as wide as the picture; text wraps to it */
+    display: grid;
+    gap: 10px;
+    padding: 12px 16px 14px;
+    border: 1px solid var(--mg-line2);
+    border-top: 2px solid var(--mg-ui);
+    background: linear-gradient(180deg, var(--mg-deep), var(--mg-void));
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+}
+
+.mini-head { display: grid; gap: 2px; }
+
+.mini-kicker {
+    margin: 0;
+    font: 600 0.72em/1.4 var(--font-display);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--mg-dim);
+}
+
+.mini-title {
+    margin: 0;
+    font: 600 1.45em/1.2 var(--font-display);
+    letter-spacing: 0.12em;
+    color: var(--mg-ui-br);
+}
+
+/* the picture: sized by MiniHost (whole device pixels per picture pixel where it can), never smoothed */
+.mini-screen {
+    position: relative;
+    box-shadow: 0 0 0 1px var(--mg-line2);
+    background: var(--mg-void);
+}
+
+.mini-canvas {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    cursor: crosshair;
+}
+
+.mini-canvas:focus { outline: none; } /* keys reach the minigame wherever focus sits in the frame, so the picture needs no ring */
+
+.mini-screen::after { /* scanlines */
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+}
+
+/* the dialogue: one line at a time, the one before it faint above */
+.mini-talk {
+    contain: inline-size; /* a long line wraps; it never widens the frame past the picture */
+    min-height: 82px;
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    align-content: start;
+    gap: 2px 14px;
+    padding: 8px 12px;
+    background: var(--mg-dusk);
+    border: 1px solid var(--mg-line);
+}
+
+.mini-talk p { margin: 0; }
+
+.mini-prev {
+    grid-column: 1 / -1;
+    height: 18px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    color: var(--mg-dim);
+    opacity: 0.6;
+}
+
+.mini-who {
+    font: 600 11px/2 var(--font-display);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--mg-warm);
+}
+
+.mini-who.is-aura { color: var(--mg-ui); }
+.mini-who.is-note { color: var(--mg-dim); }
+
+.mini-line {
+    max-width: 68ch;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--mg-text);
+}
+
+.mini-line.is-note { color: var(--mg-dim); font-style: italic; }
+
+/* the buttons: the game's button shapes in the minigame palette */
+.mini-buttons {
+    min-height: 40px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mini-btn {
+    padding: 11px 18px;
+    border: 1px solid var(--mg-line2);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--mg-text);
+    font: 600 0.86em/1.2 var(--font-display);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    transition: background 150ms, border-color 150ms, color 150ms, transform 150ms;
+}
+
+.mini-btn:hover:not([disabled]) { border-color: var(--mg-ui); color: var(--mg-ui-br); transform: translateY(-1px); }
+.mini-btn:focus-visible { outline: 1px solid var(--mg-ui-br); outline-offset: 2px; }
+.mini-btn:active:not([disabled]),
+.mini-btn.is-held { background: color-mix(in srgb, var(--mg-ui) 14%, transparent); border-color: var(--mg-ui); transform: none; }
+
+.mini-btn.is-primary { background: var(--mg-ui); border-color: var(--mg-ui); color: var(--mg-void); }
+.mini-btn.is-primary:hover:not([disabled]) { background: var(--mg-ui-br); border-color: var(--mg-ui-br); color: var(--mg-void); }
+.mini-btn.is-primary:active:not([disabled]),
+.mini-btn.is-primary.is-held { background: var(--mg-ui-dim); color: var(--mg-ui-br); }
+
+.mini-btn.is-quiet { color: var(--mg-dim); }
+.mini-btn[disabled] { opacity: 0.35; cursor: default; border-style: dashed; }
+
+@media (max-width: 640px) {
+    .mini-talk { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mini-host { animation: none; transition: none; }
+    .mini-screen::after { display: none; }
+    .mini-btn { transition: none; }
+}
