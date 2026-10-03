@@ -24,7 +24,7 @@ const BARK_DATA = {
             3: ["Every planet so far has had graves on it. I'll bring my list."]
         },
         SURVIVOR: {
-            0: ["Orbit's stable. No debris, no wrecks nearby. Let's keep it that way.", "Nobody takes the lander down until we've done a full sweep."],
+            0: ["Orbit's stable. Nothing's coming at us. Let's keep it that way.", "Nobody takes the lander down until we've done a full sweep."],
             3: ["Another wreck in orbit. There are always more than there should be."]
         },
         CURIOUS: {
@@ -253,7 +253,7 @@ const BARK_DATA = {
 
     // ═══════════════════════════════════════════════════════════════
     // SECTOR_3_ENTRY — Entering Sector 3, straight out of the stalled throw.
-    // Mira has the transponders: there are more than eight.
+    // The throw has just ended on Mira's line (TheThrow.js): more than eight. These are what comes after it.
     // ═══════════════════════════════════════════════════════════════
     SECTOR_3_ENTRY: {
         PESSIMIST: {
@@ -267,12 +267,12 @@ const BARK_DATA = {
             3: ["Everyone's awake, but nobody's talking. What did we all just see?"]
         },
         SURVIVOR: {
-            0: ["There are more than eight beacons on the board. I want a full list."],
+            0: ["I want a full list of those beacons. Every ship number."],
             2: ["They said eight went before us. I've got twelve beacons on one screen."],
             3: ["A.U.R.A. says four crew. The briefing said eight ships. Both numbers are wrong."]
         },
         CURIOUS: {
-            0: ["Commander. There are more than eight.", "A.U.R.A. read the beacons out for me. She sounded completely calm."],
+            0: ["Their numbers are all higher than ours. How can they be older than us?", "A.U.R.A. read the beacons out for me. She sounded completely calm."],
             2: ["That beacon says ship 212. Two hundred and twelve. That can't be a typo."],
             3: ["A.U.R.A. read out the ship numbers one by one, so calmly. I'm scared."]
         }
@@ -322,7 +322,7 @@ const BARK_DATA = {
         SURVIVOR: {
             0: ["Final sector. Stay sharp. We don't know what's out here."],
             2: ["Earth knew about every one of these ships, and sent us anyway."],
-            3: ["Five people on this ship. A.U.R.A. says four. Someone was never written down."]
+            3: ["Five people on this ship. A.U.R.A. still says four."]
         },
         CURIOUS: {
             0: ["There's a light ahead of us. A.U.R.A. has gone quiet. I think she's looking too."],
@@ -405,6 +405,9 @@ const BARK_DATA = {
         }
     }
 };
+
+// Triggers whose stressed tiers know the hull numbers and ages (see the header): tier 0 only before sector 3
+const BRIEFING_TRIGGERS = ['EXODUS_FOUND', 'SECTOR_JUMP', 'ANOMALY_FOUND'];
 
 // ═══════════════════════════════════════════════════════════════
 // ONE-TIME SPECIAL BARKS (tracked, never repeat)
@@ -494,8 +497,12 @@ class BarkSystem {
 
         if (!speaker) return;
 
-        // Get stress tier (clamped to available tiers)
-        const stress = Math.min(speaker.stress || 0, 3);
+        // Get stress tier (clamped to available tiers). Before sector 3 the wrecks are the eight from the briefing (CANON.md section 2),
+        // so the story tiers that talk about higher numbers and older hulls stay quiet there.
+        // From sector 3 on it is the other way round: no wreck is "one of the eight", so the calm wreck lines stay quiet.
+        const isBeforeTheNumbers = BRIEFING_TRIGGERS.includes(trigger) && (state.currentSector || 1) < 3;
+        const isPastTheEight = trigger === 'EXODUS_FOUND' && (state.currentSector || 1) >= 3;
+        const stress = isBeforeTheNumbers ? 0 : Math.max(isPastTheEight ? 2 : 0, Math.min(speaker.stress || 0, 3));
         const personalityBarks = triggerData[speaker.personality];
         if (!personalityBarks) return;
 

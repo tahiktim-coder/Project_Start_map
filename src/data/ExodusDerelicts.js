@@ -7,6 +7,7 @@
  *
  * Found on planets with EXODUS_WRECK tag (detected via deep scan).
  * Separate from normal EVA — this is a dedicated investigation.
+ * The team cuts the hatch open first (the Torch minigame), except where noHatch is true: nothing whole is left to cut into.
  *
  * The hull name is passed in as shipName. The runtime picks it with App.getWreckName,
  * which scales the hull number with the sector (1-8 near home, tens of thousands at the end).
@@ -14,6 +15,8 @@
  *
  * Writing rules for this file: docs/STYLE.md. Plain sentences, no nicknames, no riddles.
  */
+
+const THROW_LOG_SECTOR = 4;   // the flight recorder's captain's log (thrown back in time) only after the sector 3 page
 
 const EXODUS_SHIP_NAMES = [
     '"PIONEER"',
@@ -31,6 +34,7 @@ const EXODUS_ENCOUNTERS = [
     {
         id: 'EXODUS_BURNED',
         weight: 25,
+        noHatch: true,
         title: "BURNED HULL",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `${shipName} came in too steep and burned up on the way down. The crew deck melted. Only the transponder still works.`,
@@ -80,7 +84,7 @@ const EXODUS_ENCOUNTERS = [
         weight: 25,
         title: "SILENT SHIP",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `${shipName} landed in one piece. The air system still runs. Inside, five people sit at their stations. No wounds, no sign of a struggle. They just stopped.`,
+        context: (shipName) => `${shipName} landed in one piece. Inside, five people sit at their stations. No wounds, no sign of a struggle. They just stopped.`,
         dialogue: [
             { speaker: 'Dr. Aris', text: "No sign of pain. Whatever happened to them, it was quiet." },
             { speaker: 'Spc. Vance', text: "Five healthy people died in their chairs. I want to know what did that." },
@@ -261,15 +265,15 @@ const EXODUS_ENCOUNTERS = [
         weight: 10,
         title: "THE GROWTH",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
-        context: (shipName) => `${shipName} is covered in white mould inside. Their greenhouse kept growing after the crew died. It has eaten half the airlock. Under it, the lab still has power.`,
+        context: (shipName) => `${shipName} is covered in white mould inside. Their greenhouse kept growing after the crew died. The lab door is sealed, and the mould stops there.`,
         dialogue: [
             { speaker: 'Dr. Aris', text: "Their own greenhouse did this. Nobody touches anything without gloves." },
-            { speaker: 'Tech Mira', text: "The lab lights are still on. There could be years of research in there." },
+            { speaker: 'Tech Mira', text: "The lab is sealed. There could be years of research in there." },
             { speaker: 'Spc. Vance', text: "There aren't enough clean suits for all of us. I'll stay with the lander." }
         ],
         choices: [
             {
-                text: "Send Aris in with a suited team",
+                text: "Bring Aris down to lead a suited team in",
                 desc: "+35 Salvage, +1 Bio Sample. 15% chance someone gets hurt.",
                 requires: (state) => state.crew.some(c => c.tags.includes('MEDIC') && c.status !== 'DEAD'),
                 requiresLabel: "Requires Aris",
@@ -309,7 +313,7 @@ const EXODUS_ENCOUNTERS = [
                 }
             },
             {
-                text: "Collect spores from the airlock",
+                text: "Collect spores from the mould",
                 desc: "-5 Energy. 40% chance someone gets hurt and the sample is lost. Otherwise +1 Spore Sample.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
@@ -335,6 +339,7 @@ const EXODUS_ENCOUNTERS = [
     {
         id: 'EXODUS_LOG',
         weight: 10,
+        noHatch: true,
         title: "THE FLIGHT RECORDER",
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `Only the flight recorder is left of ${shipName}. The rest is a crater three kilometres wide. The recorder is armoured, and it survived.`,
@@ -352,23 +357,23 @@ const EXODUS_ENCOUNTERS = [
                     state.energy -= 10;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
-                    const loreBlocks = [
-                        [
-                            "CREW BRIEFING, RECORDED: 'Eight ships went this way before you. You are the ninth.' It's our briefing, word for word. But their hull number isn't nine.",
-                            "Every crew was told the same three things: you are the ninth, a good world is ahead, and the ship knows the way.",
-                            "The ship set the course. Nobody on board was ever shown where it ends."
-                        ],
-                        [
-                            "CAPTAIN'S LOG: 'We found a wreck with our mission patch today. Its hull number is higher than ours, but it's much older.'",
-                            "'I asked the ship how that was possible. It said: you were not sent further than the others, Captain.'",
-                            "'You were sent less far back in time. The drive sends every ship into the past, and each new ship goes further back.'"
-                        ],
-                        [
-                            "ENGINEERING REPORT: 'After every jump, our clock and the star positions disagree. The manual doesn't explain it.'",
-                            "MEDICAL LOG: 'Twelve percent of the sleep pods will fail. That's three of our people. I've decided not to tell them who.'",
-                            "LAST MESSAGE FROM EARTH: 'The next ship launches on schedule. If you can hear this, it's already ahead of you. Keep going.'"
-                        ]
+                    const briefing = [
+                        "CREW BRIEFING, RECORDED: 'Eight ships went this way before you. You are the ninth.' It's our briefing, word for word. But their hull number isn't nine.",
+                        "Every crew was told the same three things: you are the ninth, a good world is ahead, and the ship knows the way.",
+                        "The ship set the course. Nobody on board was ever shown where it ends."
                     ];
+                    const throwLog = [
+                        "CAPTAIN'S LOG: 'We found a wreck with our mission patch today. Its hull number is higher than ours, but it's much older.'",
+                        "'I asked the ship how that was possible. It said: you were not sent further than the others, Captain.'",
+                        "'You were sent less far back in time. The drive sends every ship into the past, and each new ship goes further back.'"
+                    ];
+                    const reports = [
+                        "ENGINEERING REPORT: 'After every jump, our clock and the star positions disagree. The manual doesn't explain it.'",
+                        "MEDICAL LOG: 'Twelve percent of the sleep pods will fail. That's three of our people. I've decided not to tell them who.'",
+                        "LAST MESSAGE FROM EARTH: 'The next ship launches on schedule. If you can hear this, it's already ahead of you. Keep going.'"
+                    ];
+                    // The captain's log says outright why the numbers are wrong, so it waits until the sector 3 page has said it (docs/STYLE.md rule 7)
+                    const loreBlocks = (state.currentSector || 1) >= THROW_LOG_SECTOR ? [briefing, throwLog, reports] : [briefing, reports];
                     const block = loreBlocks[Math.floor(Math.random() * loreBlocks.length)];
                     block.forEach(line => state.addLog(line));
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Full decryption — honored their data');

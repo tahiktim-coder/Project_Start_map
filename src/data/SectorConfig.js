@@ -65,7 +65,7 @@ const SECTOR_CONFIG = {
                 if (living.length > 0) {
                     const target = living[Math.floor(Math.random() * living.length)];
                     target.stress = Math.min(3, (target.stress || 0) + 1);
-                    state.addLog(`${target.name}: The void is getting to me. Everything feels... far away.`);
+                    state.addLog(`${target.name}: "Nothing else is out here. It's starting to get to me."`);
                 }
             },
             onScan: null,
@@ -218,7 +218,7 @@ const SECTOR_CONFIG = {
                                 if (injured.length > 0) {
                                     const target = injured[Math.floor(Math.random() * injured.length)];
                                     target.status = 'HEALTHY';
-                                    s.addLog(`ANOMALY: Temporal distortion — ${target.name}'s injuries have... healed? Wounds closed between one second and the next.`);
+                                    s.addLog(`ANOMALY: ${target.name}'s injuries are gone. The wounds closed between one second and the next.`);
                                 } else {
                                     // If nobody injured, reduce stress
                                     const stressed = s.crew.filter(c => c.status !== 'DEAD' && c.stress > 0);
@@ -235,7 +235,7 @@ const SECTOR_CONFIG = {
                             execute: function(s) {
                                 const result = s.damageRandomDeck();
                                 if (result) {
-                                    s.addLog(`ANOMALY: Reality fluctuation — ${s.shipDecks[result].label} systems scrambled. Cause: unknown.`);
+                                    s.addLog(`ANOMALY: ${s.shipDecks[result].label} systems scrambled. We cannot find a cause.`);
                                 }
                             }
                         },
@@ -253,7 +253,7 @@ const SECTOR_CONFIG = {
                                 const loss = 15 + Math.floor(Math.random() * 20);
                                 const actual = Math.min(loss, s.salvage);
                                 s.salvage = Math.max(0, s.salvage - loss);
-                                s.addLog(`ANOMALY: ${actual} units of salvage phased out of existence. Molecular bonds simply... stopped. The metal remembered it was dust.`);
+                                s.addLog(`ANOMALY: ${actual} salvage is gone from the hold. Where it was, there is only dust.`);
                             }
                         }
                     ];
@@ -295,10 +295,10 @@ const SECTOR_CONFIG = {
                     const injured = state.crew.filter(c => c.status === 'INJURED');
                     if (injured.length > 0) {
                         injured[0].status = 'HEALTHY';
-                        state.addLog(`THRESHOLD: ${injured[0].name}'s wounds seal themselves. The boundary gives.`);
+                        state.addLog(`${injured[0].name}'s wounds closed overnight. Nobody can say how.`);
                     } else {
                         state.energy = Math.min(100, state.energy + 20);
-                        state.addLog('THRESHOLD: Energy floods into the ship from nowhere. The boundary provides.');
+                        state.addLog('The reactor charged itself overnight. +20 Energy.');
                     }
                 } else if (roll < 0.30) {
                     // Curse
@@ -306,11 +306,11 @@ const SECTOR_CONFIG = {
                     if (healthy.length > 0) {
                         const target = healthy[Math.floor(Math.random() * healthy.length)];
                         target.stress = Math.min(3, (target.stress || 0) + 1);
-                        state.addLog(`THRESHOLD: ${target.name} hears something calling from beyond. They cannot unhear it.`);
+                        state.addLog(`${target.name} felt something going through their thoughts in the night. They did not sleep again.`);
                     }
                 } else if (roll < 0.40) {
                     // Vision
-                    state.addLog('THRESHOLD: For a moment, you see it. THE STRUCTURE. It sees you back.');
+                    state.addLog('For a moment the light fills every window. Then it is small again.');
                     state._structureVision = true;
                 }
             },
@@ -325,7 +325,7 @@ const SECTOR_CONFIG = {
                 // Add THE STRUCTURE as a special POI
                 const structure = {
                     id: 'THE_STRUCTURE',
-                    name: 'THE STRUCTURE',
+                    name: 'THE LIGHT',
                     type: 'STRUCTURE',
                     isStructure: true,
                     ghost: false,
@@ -337,28 +337,13 @@ const SECTOR_CONFIG = {
                     dangerLevel: 0,
                     tags: ['STRUCTURE', 'ENDGAME'],
                     metrics: { hasLife: false, hasTech: true },
-                    desc: 'It is not a planet. It is not a station. It defies comprehension. It has always been here. Waiting.',
+                    desc: 'At the end of the heading. Every crew before you flew toward it.',
                     mapData: {
                         x: 50,  // Center of the map
                         y: 50
                     }
                 };
-                planets.push(structure);
-
-                // Add dramatic log entries
-                if (state) {
-                    state.addLog('===================================');
-                    state.addLog('SECTOR 6: THE THRESHOLD');
-                    state.addLog('===================================');
-                    state.addLog('Every ship before you stopped somewhere behind you.');
-                    state.addLog('');
-                    state.addLog('And then you see it.');
-                    state.addLog('');
-                    state.addLog('THE STRUCTURE.');
-                    state.addLog('');
-                    state.addLog('It defies description. It defies physics. It defies sanity.');
-                    state.addLog('But it is there. And it is waiting for you.');
-                }
+                planets.push(structure);   // PlanetGenerator adds it (with no state); the call from App then finds it here and returns
             },
             onPlanetGenerate: null
         }

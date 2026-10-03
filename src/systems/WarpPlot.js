@@ -27,11 +27,11 @@
         bad: { label: 'BAD PLOT', effect: '25% extra fuel burned — hull shudders', color: RED, refund: -0.25 },
     };
     const LINES = {
-        perfect: [['ENGINEER', "Three for three. I didn't feel a thing."], ['SPECIALIST', 'That was beautiful. Do that every time.'], ['AURA', 'Optimal. I could not have plotted it better. Noted.']],
-        clean: [['ENGINEER', 'Textbook. The drives barely noticed.'], ['SPECIALIST', 'Clean vector. Nice hands, Commander.'], ['AURA', 'Burn normal. Reserve preserved.']],
-        rough: [['SECURITY', "We're in one piece. I'll take it."], ['MEDIC', 'Bit of a lurch. Everyone breathe.'], ['AURA', 'Course achieved. Efficiency: adequate.']],
-        bad: [['ENGINEER', "That's going to cost us. Coils are screaming."], ['MEDIC', 'Is everyone all right? That was ugly.'], ['SECURITY', 'Warn me next time you do that.']],
-        auto: [['AURA', 'Plotting complete. You may rest, Commander. I have us.'], ['AURA', 'I will take it from here. I always can.']],
+        perfect: [['ENGINEER', "Three for three. I didn't feel a thing."], ['SPECIALIST', 'That was beautiful. Do that every time.'], ['AURA', 'A perfect burn, Commander. I could not have done better.']],
+        clean: [['ENGINEER', 'Textbook. The drives barely noticed.'], ['SPECIALIST', 'Clean burn. Nice flying, Commander.'], ['AURA', 'A clean burn, Commander. We saved fuel.']],
+        rough: [['SECURITY', "We're in one piece. I'll take it."], ['MEDIC', 'Bit of a lurch. Everyone breathe.'], ['AURA', 'We are on course, Commander.']],
+        bad: [['ENGINEER', "That's going to cost us. The drive didn't like that."], ['MEDIC', 'Is everyone all right? That was ugly.'], ['SECURITY', 'Warn me next time you do that.']],
+        auto: [['AURA', 'Course plotted, Commander. You can rest.'], ['AURA', 'I will take it from here, Commander.']],
     };
     const sfx = (name, ...args) => { const audio = window.AudioSystem; if (audio && typeof audio[name] === 'function') audio[name](...args); }; // silent when muted
     const LOCK_TONE = { clean: [880, 'sine', 0.14], rough: [440, 'triangle', 0.14], bad: [150, 'sawtooth', 0.22] };

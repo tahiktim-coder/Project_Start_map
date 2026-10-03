@@ -718,6 +718,52 @@
 
 @media (prefers-reduced-motion: reduce) { .nav-signal { animation: none; } }
 
+/* the sector's story planet before it is found: a faint contact with no name (NavView.contactHtml) */
+.nav-contact {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    cursor: pointer;
+}
+.nav-contact-dot {
+    width: 22%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--bone) 0 18%, rgba(196, 208, 196, 0.25) 40%, transparent 72%);
+    opacity: 0.4;
+    animation: nav-contact-fade 4.5s ease-in-out infinite;
+}
+.nav-contact-label {
+    position: absolute;
+    white-space: nowrap;
+    color: var(--dim);
+    font-family: var(--font-mono);
+    font-style: italic;
+    letter-spacing: 0.12em;
+    pointer-events: none;
+}
+.nav-contact:hover .nav-contact-dot, .nav-contact:focus-visible .nav-contact-dot { animation: none; opacity: 0.75; }
+.nav-contact:focus-visible { outline: 1px dashed var(--line2); outline-offset: 4px; }
+@keyframes nav-contact-fade { 50% { opacity: 0.18; } }
+@media (prefers-reduced-motion: reduce) { .nav-contact-dot { animation: none; } }
+
+.nav-contact-card { display: flex; flex-direction: column; gap: 12px; height: 100%; }
+.nav-contact-card h3 { color: var(--dim); border-bottom: 1px solid var(--line2); padding-bottom: 5px; font-size: 1em; letter-spacing: 0.1em; }
+.nav-contact-card p { color: var(--bone); font-size: 0.85em; line-height: 1.5; }
+.nav-contact-card .contact-btn {   /* not .warp-btn: the tips read that as a course that can be flown */
+    margin-top: auto;
+    padding: 12px;
+    background: transparent;
+    color: var(--dim);
+    border: 1px dashed var(--line2);
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    cursor: not-allowed;
+}
+
 /* ── StoryReel.js: full-screen picture sequences ── */
 .story-reel {
     position: fixed;
@@ -996,6 +1042,8 @@
 .found-page-text li { opacity: 0; transform: translateY(4px); transition: opacity 320ms, transform 320ms; }
 .found-page-text li.is-in { opacity: 1; transform: none; }
 .found-page-next { justify-self: start; margin-top: 4px; }
+.found-page-next[hidden], .found-page-after[hidden] { display: none; }   /* .deck-action sets display, which beats the hidden attribute */
+.warp-jump-warning { margin: 0; font-family: var(--font-mono); font-size: 0.72em; line-height: 1.4; color: var(--amber); text-align: center; }   /* NavView: a warp that leaves too little for the jump */
 .found-page-after { margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); font-size: 0.92em; color: var(--bone); }
 .found-page-after b { margin-right: 10px; font: 600 0.72em var(--font-display); letter-spacing: 0.18em; color: var(--amber); }
 .found-plate-names { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; font: 600 0.72em var(--font-display); letter-spacing: 0.16em; color: var(--dim); }

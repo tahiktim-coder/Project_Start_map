@@ -7,7 +7,9 @@
  * Nothing here chases the ship. Nothing here is alien. It is all ours, copied.
  * High risk, high reward, high narrative impact.
  *
- * Found in Sector 4+ with ANOMALY tag, or triggered by the wrong wreck's nav data.
+ * One strange place is placed in every sector (App.handleAnomalyAction picks which).
+ * minSector: the first sector it can turn up in. A card that shows hull numbers or ship counts
+ * waits for the sector where those numbers belong (docs/CANON.md section 2).
  */
 
 // Helper: Test-aware chance (bad outcomes in test mode)
@@ -21,6 +23,7 @@ const ANOMALY_ENCOUNTERS = [
     {
         id: 'ANOMALY_FOLD',
         weight: 20,
+        minSector: 3,     // it moves the ship
         title: "THE SAME PLANET TWICE",
         context: () => `The same planet appears twice ahead of us, side by side, down to the last crater and shadow. Between the two copies runs a thin line where the stars don't match up.`,
         dialogue: [
@@ -115,8 +118,11 @@ const ANOMALY_ENCOUNTERS = [
                                 config.hazard.onSectorEnter(state, state.sectorNodes);
                             }
 
-                            // Pick a random planet to arrive at
-                            const arrival = state.sectorNodes[Math.floor(Math.random() * state.sectorNodes.length)];
+                            if (window.app) { window.app.plantBriefingTape(); window.app.plantSectorPage(); }   // the tape and the wreck to date, as on any jump
+
+                            // Pick a random planet to arrive at (not the sector's faint contact: that is found by dating a wreck)
+                            const reachable = state.sectorNodes.filter(p => !p.storyHidden);
+                            const arrival = reachable[Math.floor(Math.random() * reachable.length)];
                             state.currentSystem = arrival;
                             state.lastVisitedSystem = arrival;
 
@@ -265,7 +271,7 @@ const ANOMALY_ENCOUNTERS = [
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
                     // Reveal resource info for best planet
-                    const best = state.sectorNodes?.reduce((a, b) =>
+                    const best = state.sectorNodes?.filter(p => !p.storyHidden).reduce((a, b) =>
                         ((b.resources?.metals || 0) + (b.resources?.energy || 0)) >
                         ((a.resources?.metals || 0) + (a.resources?.energy || 0)) ? b : a
                     );
@@ -335,7 +341,7 @@ const ANOMALY_ENCOUNTERS = [
         title: "THE DARK PATCH",
         context: () => `There is a patch of sky ahead with no stars in it at all. Wrecks inside it are still sending distress beacons, and the beacons are switching off one by one.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "There were nine beacons in there when we arrived. Now there are seven." },
+            { speaker: 'Spc. Vance', text: "There were five beacons in there when we arrived. Now there are three." },
             { speaker: 'A.U.R.A.', text: "The sensors aren't reading zero, Commander. They're returning no reading at all." },
             { speaker: 'Tech Mira', text: "What am I looking at? Even A.U.R.A. can't tell me, and she always knows." }
         ],
@@ -386,7 +392,7 @@ const ANOMALY_ENCOUNTERS = [
                     state._hungerFled = true;
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
-                    state.addLog("Full burn. Nothing follows us. By the time we're out of range, six beacons are left.");
+                    state.addLog("Full burn. Nothing follows us. By the time we're out of range, two beacons are left.");
                     return "Burned clear. -20 Energy. Vance -1 Stress.";
                 }
             }
@@ -479,6 +485,7 @@ const ANOMALY_ENCOUNTERS = [
     {
         id: 'ANOMALY_DOOR',
         weight: 5,
+        minSector: 3,     // it can take a crew member
         title: "THE DOOR",
         context: () => `An airlock door is floating on its own in space, with no ship attached to it. It is an exact copy of our rear airlock, down to the scratch by the handle, and its light shows green.`,
         dialogue: [
@@ -566,6 +573,7 @@ const ANOMALY_ENCOUNTERS = [
     {
         id: 'ANOMALY_CHORUS',
         weight: 12,
+        minSector: 4,     // four-digit hull numbers (docs/CANON.md section 2)
         title: "THE RING OF SHIPS",
         context: () => `Seventeen dead ships sit in a ring, all pointing inward. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.`,
         dialogue: [
@@ -637,6 +645,7 @@ const ANOMALY_ENCOUNTERS = [
     {
         id: 'ANOMALY_GEOMETRY',
         weight: 10,
+        minSector: 6,     // hull numbers past forty thousand
         title: "THE LIST IN THE SKY",
         context: () => `A list is written across the sky in light, kilometres long. It has two columns: hull numbers climbing past forty thousand, and beside every one of them, the number four.`,
         dialogue: [
@@ -703,6 +712,7 @@ const ANOMALY_ENCOUNTERS = [
     {
         id: 'ANOMALY_ARCHIVE',
         weight: 8,
+        minSector: 6,     // forty thousand ships on the outcomes shelf
         title: "THE ARCHIVE",
         context: () => `Inside a hollow moon, endless shelves hold copies of the cargo of every ship that came this way, neatly stacked. Our own crates are here too, with our batch numbers, unopened.`,
         dialogue: [

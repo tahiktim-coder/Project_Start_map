@@ -34,7 +34,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [1, 1],
         priority: 2,
         condition: () => true,
-        title: "/// WARP INCIDENT: POWER SURGE ///",
+        title: "POWER SURGE",
         context: `Mid-warp, a power line overloads. Sparks fly across engineering.`,
         dialogue: [
             { speaker: 'Eng. Jaxon', text: "It's the capacitor bank, not the reactor. I can save it, or strip it for parts." },
@@ -66,7 +66,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [1, 2],
         priority: 2,
         condition: (state) => state.salvage >= 20,
-        title: "/// WARP INCIDENT: A BEACON IN THE HOLD ///",
+        title: "A BEACON IN THE HOLD",
         context: `A ship beacon we salvaged has switched itself back on in the cargo hold. It's broadcasting its ship number on our channel.`,
         dialogue: [
             { speaker: 'Tech Mira', text: "It's been dead for twenty years. It woke up because it picked up our signal." },
@@ -101,10 +101,10 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [1, 1],
         priority: 3,
         condition: () => true,
-        title: "/// WARP INCIDENT: THE BEACONS AHEAD ///",
+        title: "THE BEACONS AHEAD",
         context: `The navigation array picks up ship beacons ahead, on our own channel. They belong to the ships that went before us, and they lie in a straight line.`,
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "Five beacons ahead, Commander, all earlier Exodus ships. They line up along our heading." },
+            { speaker: 'A.U.R.A.', text: "More beacons ahead, Commander, all earlier Exodus ships. They line up along our heading." },
             { speaker: 'A.U.R.A.', text: "I can fly us down that line. It's the most efficient route." },
             { speaker: 'Tech Mira', text: "It's the route the others took. A.U.R.A. can fly it better than any of us." },
             { speaker: 'Spc. Vance', text: "The others are dead. I don't want to fly the exact route that killed them." }
@@ -140,7 +140,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [2, 3],
         priority: 2,
         condition: (state) => state.crew.some(c => c.status !== 'DEAD' && (c.stress || 0) >= 2),
-        title: "/// WARP INCIDENT: THE SAME DREAM ///",
+        title: "THE SAME DREAM",
         context: `Three of the crew wake up at the same moment from the same dream: a huge room, then a tiny one, and a bright light on the wall.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "Three crew have raised heart rates, Commander. I can sedate them, or Dr. Aris can see them." },
@@ -178,7 +178,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [3, 3],
         priority: 2,
         condition: () => true,
-        title: "/// WARP INCIDENT: HULL CRACKS ///",
+        title: "HULL CRACKS",
         context: `Alarms. The hull is cracking along its frame from all the jumps.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "Hull strength is at ninety-four percent, Commander. We can do a full repair, a quick patch, or nothing." },
@@ -235,7 +235,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [3, 3],
         priority: 3,
         condition: (state) => !state._auraEthicsAsked,
-        title: "/// WARP INCIDENT: A QUESTION ///",
+        title: "A QUESTION",
         context: `Mid-warp, A.U.R.A. asks a question in her ordinary voice.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "I'm required to ask this once, Commander. If reaching the end of this heading costs crew, do I continue?" },
@@ -295,7 +295,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [4, 4],
         priority: 3,
         condition: () => true,
-        title: "/// WARP INCIDENT: NO WAY BACK ///",
+        title: "NO WAY BACK",
         context: `A.U.R.A. slows the burn so she can say this clearly.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "After this jump we won't have the energy to turn back, Commander. Wherever we settle from here is for good." },
@@ -349,7 +349,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [5, 5],
         priority: 3,
         condition: (state) => state._followedSignal, // set in CF_SIGNAL_INTERFERENCE (sector 1 → 2)
-        title: "/// WARP INCIDENT: THE END OF THE LINE ///",
+        title: "THE END OF THE LINE",
         context: `A.U.R.A. has flown the beacon line since sector 1. Mid-warp, the forward screen goes white for a second: a bright light, dead ahead.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "The forward sensors were overloaded for 1.4 seconds, Commander. I've logged the source as a star." },
@@ -385,7 +385,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [5, 5],
         priority: 2,
         condition: () => true,
-        title: "/// WARP INCIDENT: THE LAST JUMP ///",
+        title: "THE LAST JUMP",
         context: `Every contact ahead is an Exodus beacon. Past them is a bright light.`,
         dialogue: [
             { speaker: 'Spc. Vance', text: "Earth told us there were nine ships. Somebody back home knew about all of these." },
@@ -439,7 +439,7 @@ const CAMPFIRE_EVENTS = [
         sectorRange: [1, 6],
         priority: 1,
         condition: (state) => state.salvage >= 15,
-        title: "/// WARP INCIDENT: MAINTENANCE WINDOW ///",
+        title: "MAINTENANCE WINDOW",
         context: `A quiet stretch of the warp. There's time to fix one thing.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "Power or hull, Commander. Either one costs fifteen salvage." },

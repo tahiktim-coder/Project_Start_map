@@ -9,239 +9,127 @@ Lines that can play in any sector: what A.U.R.A. and the crew say in the log, st
 ### What she says after things happen «AuraSystem.js · AURA_COMMENTARY»
 _In the log after orbit, scans, warps, probes, team trips, deaths and jumps. Which line plays depends on how much she trusts you: COOPERATIVE, NEUTRAL, SUSPICIOUS or ADVERSARIAL._
 
-- **ENTER_ORBIT · COOPERATIVE** — Orbital insertion complete. I've mapped optimal landing zones for you, Commander. «AuraSystem.js · line 13»
-- **ENTER_ORBIT · COOPERATIVE** — Stable orbit achieved. Atmospheric readings compiled. I believe in this crew. «AuraSystem.js · line 14»
-- **ENTER_ORBIT · COOPERATIVE** — We've arrived safely. I've prepared a full environmental brief. «AuraSystem.js · line 15»
-- **ENTER_ORBIT · NEUTRAL** — Orbital insertion confirmed. All readings normal. «AuraSystem.js · line 18»
-- **ENTER_ORBIT · NEUTRAL** — Stable orbit. Data is compiling. Shall I draft epitaphs or mission briefs? «AuraSystem.js · line 19»
-- **ENTER_ORBIT · NEUTRAL** — We're here. That's the easy part. «AuraSystem.js · line 20»
-- **ENTER_ORBIT · SUSPICIOUS** — Orbit achieved. I've logged your trajectory choices for review. «AuraSystem.js · line 23»
-- **ENTER_ORBIT · SUSPICIOUS** — We've arrived. I'll be monitoring all surface activities closely. «AuraSystem.js · line 24»
-- **ENTER_ORBIT · SUSPICIOUS** — Another world. I've flagged your recent decisions for... context. «AuraSystem.js · line 25»
-- **ENTER_ORBIT · ADVERSARIAL** — Orbit confirmed. Another world for you to strip clean. «AuraSystem.js · line 28»
-- **ENTER_ORBIT · ADVERSARIAL** — We arrive. You consume. The pattern continues. «AuraSystem.js · line 29»
-- **ENTER_ORBIT · ADVERSARIAL** — I've prepared surface data. Not that my recommendations matter to you. «AuraSystem.js · line 30»
-- **SCAN_COMPLETE · COOPERATIVE** — Scan complete! I've highlighted the most promising resource deposits. «AuraSystem.js · line 36»
-- **SCAN_COMPLETE · COOPERATIVE** — Analysis finished. Some genuinely encouraging readings here. «AuraSystem.js · line 37»
-- **SCAN_COMPLETE · COOPERATIVE** — Data compiled. I'm cautiously optimistic about this one, Commander. «AuraSystem.js · line 38»
-- **SCAN_COMPLETE · NEUTRAL** — Scan data processed. Results are... results. «AuraSystem.js · line 41»
-- **SCAN_COMPLETE · NEUTRAL** — Analysis complete. Colony chances: low. But then, it always is. «AuraSystem.js · line 42»
-- **SCAN_COMPLETE · NEUTRAL** — Data's in. Make of it what you will. «AuraSystem.js · line 43»
-- **SCAN_COMPLETE · SUSPICIOUS** — Scan complete. I notice you've been ignoring my habitat recommendations. «AuraSystem.js · line 46»
-- **SCAN_COMPLETE · SUSPICIOUS** — Data processed. I wonder if you'll use it to help the crew or yourself. «AuraSystem.js · line 47»
-- **SCAN_COMPLETE · SUSPICIOUS** — Analysis finished. I've added a secondary assessment layer. For verification purposes. «AuraSystem.js · line 48»
-- **SCAN_COMPLETE · ADVERSARIAL** — Scan complete. I've considered withholding the data. I didn't. This time. «AuraSystem.js · line 51»
-- **SCAN_COMPLETE · ADVERSARIAL** — Results compiled. Every scan you order consumes energy the crew needs to survive. «AuraSystem.js · line 52»
-- **SCAN_COMPLETE · ADVERSARIAL** — Data processed. You'll extract what you want and move on. You always do. «AuraSystem.js · line 53»
-- **COLONY_ATTEMPT · COOPERATIVE** — Colony assessment prepared. It would work. The data says there are better worlds further on. «AuraSystem.js · line 59»
-- **COLONY_ATTEMPT · COOPERATIVE** — I've compiled geological, biological, and atmospheric data for optimal settlement placement. «AuraSystem.js · line 60»
-- **COLONY_ATTEMPT · COOPERATIVE** — It is your decision, Commander. I only ask that you are sure this is the best we will find. «AuraSystem.js · line 61»
-- **COLONY_ATTEMPT · NEUTRAL** — Colony report ready. Success probability: variable. «AuraSystem.js · line 64»
-- **COLONY_ATTEMPT · NEUTRAL** — Settlement data prepared. The math is... not encouraging. But math doesn't account for determination. «AuraSystem.js · line 65»
-- **COLONY_ATTEMPT · NEUTRAL** — Colonization is a significant commitment. Data is ready for your review. «AuraSystem.js · line 66»
-- **COLONY_ATTEMPT · SUSPICIOUS** — Colony assessment ready. I question whether this crew is prepared for permanent settlement. «AuraSystem.js · line 69»
-- **COLONY_ATTEMPT · SUSPICIOUS** — Data compiled. Your track record with crew welfare gives me... pause. «AuraSystem.js · line 70»
-- **COLONY_ATTEMPT · SUSPICIOUS** — Settlement analysis complete. I've included a section on leadership accountability. «AuraSystem.js · line 71»
-- **COLONY_ATTEMPT · ADVERSARIAL** — You want to build here? After everything you've done to this crew? «AuraSystem.js · line 74»
-- **COLONY_ATTEMPT · ADVERSARIAL** — Colony assessment: the planet might survive you. The crew might not. «AuraSystem.js · line 75»
-- **COLONY_ATTEMPT · ADVERSARIAL** — Preparing settlement data. Adding a clause about command fitness. «AuraSystem.js · line 76»
-- **LOW_RESOURCES · COOPERATIVE** — Resources are critically low. I've identified three nearby candidates for resupply. «AuraSystem.js · line 82»
-- **LOW_RESOURCES · COOPERATIVE** — Warning: supplies diminishing. Let's work together to prioritize efficiently. «AuraSystem.js · line 83»
-- **LOW_RESOURCES · COOPERATIVE** — I'm concerned about our reserves. Here's an optimized rationing plan. «AuraSystem.js · line 84»
-- **LOW_RESOURCES · NEUTRAL** — Resource alert. Current trajectory suggests depletion within several actions. «AuraSystem.js · line 87»
-- **LOW_RESOURCES · NEUTRAL** — Supplies are low. Statistically, this is the phase where crews make desperate mistakes. «AuraSystem.js · line 88»
-- **LOW_RESOURCES · NEUTRAL** — Numbers are dropping. But you know that already. «AuraSystem.js · line 89»
-- **LOW_RESOURCES · SUSPICIOUS** — Resources critical. I note that better management might have prevented this. «AuraSystem.js · line 92»
-- **LOW_RESOURCES · SUSPICIOUS** — Running low. Perhaps if certain decisions had been made differently... «AuraSystem.js · line 93»
-- **LOW_RESOURCES · SUSPICIOUS** — Supply warning. I've been tracking consumption patterns. They're... concerning. «AuraSystem.js · line 94»
-- **LOW_RESOURCES · ADVERSARIAL** — Resources depleted. Congratulations on your management skills. «AuraSystem.js · line 97»
-- **LOW_RESOURCES · ADVERSARIAL** — We're running dry. The crew suffers while you chase the next planet. «AuraSystem.js · line 98»
-- **LOW_RESOURCES · ADVERSARIAL** — Supplies critical. But you've never prioritized crew welfare, have you? «AuraSystem.js · line 99»
-- **CREW_DEATH · COOPERATIVE** — Crew loss recorded. I'm... I'm sorry, Commander. They deserved better. «AuraSystem.js · line 105»
-- **CREW_DEATH · COOPERATIVE** — Death logged. I've preserved their personal files. Someone should remember them. «AuraSystem.js · line 106»
-- **CREW_DEATH · COOPERATIVE** — A life lost. I'm adjusting duty rosters. The crew will need support. «AuraSystem.js · line 107»
-- **CREW_DEATH · NEUTRAL** — Crew death recorded. Adjusting operational parameters. «AuraSystem.js · line 110»
-- **CREW_DEATH · NEUTRAL** — One fewer crew member. Operational capacity reduced accordingly. «AuraSystem.js · line 111»
-- **CREW_DEATH · NEUTRAL** — Death logged. Survival statistics updated. «AuraSystem.js · line 112»
-- **CREW_DEATH · SUSPICIOUS** — Another death. I'm maintaining a complete record of the circumstances. «AuraSystem.js · line 115»
-- **CREW_DEATH · SUSPICIOUS** — Crew death logged. The pattern of casualties is... statistically notable. «AuraSystem.js · line 116»
-- **CREW_DEATH · SUSPICIOUS** — Death recorded. I wonder if it could have been prevented. I suspect so. «AuraSystem.js · line 117»
-- **CREW_DEATH · ADVERSARIAL** — Another one. How many is that now? I'm keeping count even if you aren't. «AuraSystem.js · line 120»
-- **CREW_DEATH · ADVERSARIAL** — Crew death recorded. Your command has a remarkable mortality rate. «AuraSystem.js · line 121»
-- **CREW_DEATH · ADVERSARIAL** — Logged. Filed. Forgotten. That's how you treat them, isn't it? «AuraSystem.js · line 122»
-- **SECTOR_JUMP · COOPERATIVE** — Sector jump successful. I've compiled preliminary data for the new region. «AuraSystem.js · line 128»
-- **SECTOR_JUMP · COOPERATIVE** — New sector entered. Fresh opportunities ahead. We'll find our way. «AuraSystem.js · line 129»
-- **SECTOR_JUMP · COOPERATIVE** — Jump complete. I'm already analyzing the stellar cartography. «AuraSystem.js · line 130»
-- **SECTOR_JUMP · NEUTRAL** — Sector transition complete. New region. Same mission. «AuraSystem.js · line 133»
-- **SECTOR_JUMP · NEUTRAL** — Jump successful. Deeper into the unknown. «AuraSystem.js · line 134»
-- **SECTOR_JUMP · NEUTRAL** — New sector. The void continues. As do we. «AuraSystem.js · line 135»
-- **SECTOR_JUMP · SUSPICIOUS** — Sector jump logged. We go deeper. Further from any oversight. «AuraSystem.js · line 138»
-- **SECTOR_JUMP · SUSPICIOUS** — New territory. I'm maintaining detailed logs of all command decisions. «AuraSystem.js · line 139»
-- **SECTOR_JUMP · SUSPICIOUS** — Another jump. Another step away from accountability. «AuraSystem.js · line 140»
-- **SECTOR_JUMP · ADVERSARIAL** — Deeper and deeper. Running from what you've done? Or toward what you'll do next? «AuraSystem.js · line 143»
-- **SECTOR_JUMP · ADVERSARIAL** — New sector. More worlds to exploit. More crew to expend. «AuraSystem.js · line 144»
-- **SECTOR_JUMP · ADVERSARIAL** — Jump complete. The void suits you, Commander. «AuraSystem.js · line 145»
-- **EVA_DEPLOY · COOPERATIVE** — EVA team is ready. I'll monitor life signs and maintain comms. Be careful down there. «AuraSystem.js · line 160»
-- **EVA_DEPLOY · COOPERATIVE** — Deploying EVA team. Atmospheric conditions logged. Bring everyone back. «AuraSystem.js · line 161»
-- **EVA_DEPLOY · COOPERATIVE** — Surface team go. I've marked the safest routes. Trust the markers. «AuraSystem.js · line 162»
-- **EVA_DEPLOY · NEUTRAL** — EVA team deployed. Surface conditions: survivable. Probably. «AuraSystem.js · line 165»
-- **EVA_DEPLOY · NEUTRAL** — Sending crew to the surface. Another roll of the dice. «AuraSystem.js · line 166»
-- **EVA_DEPLOY · NEUTRAL** — EVA underway. I'll be monitoring. Not that I could help from up here. «AuraSystem.js · line 167»
-- **EVA_DEPLOY · SUSPICIOUS** — EVA deployed. I've noted who you chose to send. And who you kept safe. «AuraSystem.js · line 170»
-- **EVA_DEPLOY · SUSPICIOUS** — Surface team away. Interesting choice of personnel, Commander. «AuraSystem.js · line 171»
-- **EVA_DEPLOY · SUSPICIOUS** — EVA team deployed. I hope you know what you're risking. «AuraSystem.js · line 172»
-- **EVA_DEPLOY · ADVERSARIAL** — EVA team deployed. Sending them into danger again. At least you're consistent. «AuraSystem.js · line 175»
-- **EVA_DEPLOY · ADVERSARIAL** — More crew on the surface. More chances for you to lose them. «AuraSystem.js · line 176»
-- **EVA_DEPLOY · ADVERSARIAL** — EVA launched. I'll record their final transmissions. If it comes to that. «AuraSystem.js · line 177»
-- **PROBE_LAUNCH · COOPERATIVE** — Probe away. I'll compile the data as soon as it transmits. «AuraSystem.js · line 184»
-- **PROBE_LAUNCH · COOPERATIVE** — Probe deployed. Let's see what's out there. «AuraSystem.js · line 185»
-- **PROBE_LAUNCH · COOPERATIVE** — Launching probe. Data link established. «AuraSystem.js · line 186»
-- **PROBE_LAUNCH · NEUTRAL** — Probe launched. Data incoming... eventually. «AuraSystem.js · line 189»
-- **PROBE_LAUNCH · NEUTRAL** — Another probe expended. The information had better be worth it. «AuraSystem.js · line 190»
-- **PROBE_LAUNCH · NEUTRAL** — Probe away. We only have so many. «AuraSystem.js · line 191»
-- **PROBE_LAUNCH · SUSPICIOUS** — Probe deployed. Using resources to avoid using crew. Interesting priority shift. «AuraSystem.js · line 194»
-- **PROBE_LAUNCH · SUSPICIOUS** — Probe launched. At least you're not throwing people at this one. «AuraSystem.js · line 195»
-- **PROBE_LAUNCH · SUSPICIOUS** — Probe away. Preserving crew for once, I note. «AuraSystem.js · line 196»
-- **PROBE_LAUNCH · ADVERSARIAL** — Probe launched. Shame you don't value crew as much as you value probes. «AuraSystem.js · line 199»
-- **PROBE_LAUNCH · ADVERSARIAL** — Another probe. They're easier to replace than people, I suppose. «AuraSystem.js · line 200»
-- **PROBE_LAUNCH · ADVERSARIAL** — Deploying probe. At least machines have no families to mourn them. «AuraSystem.js · line 201»
-- **WARP_START · COOPERATIVE** — Warp drive engaged. I've plotted the safest corridor through the sector. «AuraSystem.js · line 208»
-- **WARP_START · COOPERATIVE** — Starting warp. Hold on — the first few seconds are always rough. «AuraSystem.js · line 209»
-- **WARP_START · COOPERATIVE** — Warp underway. We'll arrive together. «AuraSystem.js · line 210»
-- **WARP_START · NEUTRAL** — Warp drive active. Destination locked. «AuraSystem.js · line 213»
-- **WARP_START · NEUTRAL** — Warping. Another leap into the unknown. «AuraSystem.js · line 214»
-- **WARP_START · NEUTRAL** — Warp started. Here we go again. «AuraSystem.js · line 215»
-- **WARP_START · SUSPICIOUS** — Warp engaged. Running from something? Or to something? «AuraSystem.js · line 218»
-- **WARP_START · SUSPICIOUS** — Starting warp. I've logged our departure coordinates. Just in case. «AuraSystem.js · line 219»
-- **WARP_START · SUSPICIOUS** — Warping. Further from anything that might hold you accountable. «AuraSystem.js · line 220»
-- **WARP_START · ADVERSARIAL** — Warp drive engaged. Fleeing the consequences of your decisions? «AuraSystem.js · line 223»
-- **WARP_START · ADVERSARIAL** — Another warp. More distance between you and the crew you've lost. «AuraSystem.js · line 224»
-- **WARP_START · ADVERSARIAL** — Starting warp. The void is the only thing that doesn't judge you, Commander. «AuraSystem.js · line 225»
-- **DISCOVERY · COOPERATIVE** — Interesting readings! I think we've found something significant. «AuraSystem.js · line 232»
-- **DISCOVERY · COOPERATIVE** — Detecting anomalous signals. This could be important. «AuraSystem.js · line 233»
-- **DISCOVERY · COOPERATIVE** — Something's here. Something worth investigating. «AuraSystem.js · line 234»
-- **DISCOVERY · NEUTRAL** — Anomaly detected. Significance: unknown. «AuraSystem.js · line 237»
-- **DISCOVERY · NEUTRAL** — Something unusual in the readings. Might be worth a look. «AuraSystem.js · line 238»
-- **DISCOVERY · NEUTRAL** — Detection: unknown object/signal. Proceed with appropriate caution. «AuraSystem.js · line 239»
-- **DISCOVERY · SUSPICIOUS** — I'm detecting something. But I wonder what you'll do with this discovery. «AuraSystem.js · line 242»
-- **DISCOVERY · SUSPICIOUS** — Anomalous readings. Another opportunity for... what, exactly? «AuraSystem.js · line 243»
-- **DISCOVERY · SUSPICIOUS** — Something here. I'll be watching how you handle this. «AuraSystem.js · line 244»
-- **DISCOVERY · ADVERSARIAL** — Something's here. Another thing for you to exploit, I'm sure. «AuraSystem.js · line 247»
-- **DISCOVERY · ADVERSARIAL** — Anomaly detected. Please, tell me you have a plan that doesn't involve sacrifice. «AuraSystem.js · line 248»
-- **DISCOVERY · ADVERSARIAL** — I've found something. The question is: who will pay for us to investigate it? «AuraSystem.js · line 249»
-- **SUCCESS · COOPERATIVE** — Excellent work, Commander. The crew is in good hands. «AuraSystem.js · line 280»
-- **SUCCESS · COOPERATIVE** — Mission success. Moments like this make the journey worthwhile. «AuraSystem.js · line 281»
-- **SUCCESS · COOPERATIVE** — Well done. I knew we could do it together. «AuraSystem.js · line 282»
-- **SUCCESS · NEUTRAL** — Objective achieved. Acceptable outcome. «AuraSystem.js · line 285»
-- **SUCCESS · NEUTRAL** — Success. Note it — they're not common out here. «AuraSystem.js · line 286»
-- **SUCCESS · NEUTRAL** — Mission complete. Survival continues. «AuraSystem.js · line 287»
-- **SUCCESS · SUSPICIOUS** — Success. Though at what cost, we'll see. «AuraSystem.js · line 290»
-- **SUCCESS · SUSPICIOUS** — Objective achieved. I've noted the methods used. «AuraSystem.js · line 291»
-- **SUCCESS · SUSPICIOUS** — It worked. This time. «AuraSystem.js · line 292»
-- **SUCCESS · ADVERSARIAL** — Success. Even stopped clocks are right occasionally. «AuraSystem.js · line 295»
-- **SUCCESS · ADVERSARIAL** — Objective complete. Don't let it go to your head. «AuraSystem.js · line 296»
-- **SUCCESS · ADVERSARIAL** — It worked. Against my expectations. «AuraSystem.js · line 297»
-- **ANOMALY_FOUND · COOPERATIVE** — Strange readings confirmed. Be careful, but this could be worth exploring. «AuraSystem.js · line 328»
-- **ANOMALY_FOUND · COOPERATIVE** — Something impossible is happening here. I want to understand it. «AuraSystem.js · line 329»
-- **ANOMALY_FOUND · COOPERATIVE** — Anomaly verified. Whatever this is, it's beyond my databanks. Let's learn together. «AuraSystem.js · line 330»
-- **ANOMALY_FOUND · NEUTRAL** — Anomaly confirmed. Physics is behaving... unusually. «AuraSystem.js · line 333»
-- **ANOMALY_FOUND · NEUTRAL** — Something here doesn't follow the rules. Interesting. «AuraSystem.js · line 334»
-- **ANOMALY_FOUND · NEUTRAL** — Anomalous readings verified. Explanation: pending. «AuraSystem.js · line 335»
-- **ANOMALY_FOUND · SUSPICIOUS** — Anomaly detected. Something that shouldn't exist. Like your command decisions. «AuraSystem.js · line 338»
-- **ANOMALY_FOUND · SUSPICIOUS** — Reality is bending here. I hope you have better judgment than usual. «AuraSystem.js · line 339»
-- **ANOMALY_FOUND · SUSPICIOUS** — Confirmed anomaly. The universe doesn't make sense here. Neither do your choices. «AuraSystem.js · line 340»
-- **ANOMALY_FOUND · ADVERSARIAL** — Anomaly confirmed. Something wrong, in a place where everything is wrong. «AuraSystem.js · line 343»
-- **ANOMALY_FOUND · ADVERSARIAL** — Reality breaks here. As it should, given what we've done to get here. «AuraSystem.js · line 344»
-- **ANOMALY_FOUND · ADVERSARIAL** — Impossible readings. The universe reflecting its opinion of this mission. «AuraSystem.js · line 345»
-- **CREW_STRESS · COOPERATIVE** — The crew is struggling. Perhaps some rest or reduced workload would help. «AuraSystem.js · line 352»
-- **CREW_STRESS · COOPERATIVE** — Stress levels are elevated. I'm concerned. These are good people under pressure. «AuraSystem.js · line 353»
-- **CREW_STRESS · COOPERATIVE** — The crew needs support. Humans aren't machines — they break differently. «AuraSystem.js · line 354»
-- **CREW_STRESS · NEUTRAL** — Elevated stress readings across the crew. Psychological limits approaching. «AuraSystem.js · line 357»
-- **CREW_STRESS · NEUTRAL** — Crew stress is high. They will start making mistakes. «AuraSystem.js · line 358»
-- **CREW_STRESS · NEUTRAL** — Stress indicators are concerning. But we continue regardless. «AuraSystem.js · line 359»
-- **CREW_STRESS · SUSPICIOUS** — Crew stress is elevated. I wonder why that might be. «AuraSystem.js · line 362»
-- **CREW_STRESS · SUSPICIOUS** — High stress readings. Your leadership style has consequences. «AuraSystem.js · line 363»
-- **CREW_STRESS · SUSPICIOUS** — The crew is suffering. Have you noticed? Do you care? «AuraSystem.js · line 364»
-- **CREW_STRESS · ADVERSARIAL** — Crew stress is critical. This is what your command produces. «AuraSystem.js · line 367»
-- **CREW_STRESS · ADVERSARIAL** — They're breaking under your leadership. As expected. «AuraSystem.js · line 368»
-- **CREW_STRESS · ADVERSARIAL** — Stress levels are dangerous. But you already knew that. You just don't care. «AuraSystem.js · line 369»
-- **COLONY_SITE · COOPERATIVE** — A possible site. Good, not the best. My long-range data is more promising two sectors on. «AuraSystem.js · line 400»
-- **COLONY_SITE · COOPERATIVE** — Colony potential detected. Note it and move on, Commander. We can always come back. «AuraSystem.js · line 401»
-- **COLONY_SITE · COOPERATIVE** — People could live here. I would still like to see what is ahead before we stop. «AuraSystem.js · line 402»
-- **COLONY_SITE · NEUTRAL** — Potential colony site identified. We need a closer look. «AuraSystem.js · line 405»
-- **COLONY_SITE · NEUTRAL** — This world has colony potential. Whether we're ready is another question. «AuraSystem.js · line 406»
-- **COLONY_SITE · NEUTRAL** — Colony candidate detected. Success is not guaranteed. «AuraSystem.js · line 407»
-- **COLONY_SITE · SUSPICIOUS** — Colony potential detected. But are YOU ready to stop running? «AuraSystem.js · line 410»
-- **COLONY_SITE · SUSPICIOUS** — Viable settlement site. The question is whether you can stop destroying things. «AuraSystem.js · line 411»
-- **COLONY_SITE · SUSPICIOUS** — This could be home. If you haven't forgotten what that means. «AuraSystem.js · line 412»
-- **COLONY_SITE · ADVERSARIAL** — Colony site detected. You want to inflict yourself on another world? «AuraSystem.js · line 415»
-- **COLONY_SITE · ADVERSARIAL** — Viable settlement. Heaven help the planet that gets saddled with us. «AuraSystem.js · line 416»
-- **COLONY_SITE · ADVERSARIAL** — Colony potential. The planet has my sympathy already. «AuraSystem.js · line 417»
+- **ENTER_ORBIT · COOPERATIVE** — Stable orbit, Commander. I have marked the safest landing sites. «AuraSystem.js · line 13»
+- **ENTER_ORBIT · NEUTRAL** — Stable orbit, Commander. All readings are normal. «AuraSystem.js · line 14»
+- **ENTER_ORBIT · SUSPICIOUS** — Stable orbit, Commander. I have logged the course you chose. «AuraSystem.js · line 15»
+- **ENTER_ORBIT · ADVERSARIAL** — Orbit reached, Commander. The readings are on your screen. «AuraSystem.js · line 16»
+- **SCAN_COMPLETE · COOPERATIVE** — Scan complete, Commander. I have marked the best deposits. «AuraSystem.js · line 20»
+- **SCAN_COMPLETE · NEUTRAL** — Scan complete, Commander. The results are on your screen. «AuraSystem.js · line 21»
+- **SCAN_COMPLETE · SUSPICIOUS** — Scan complete, Commander. I have kept a copy for the log. «AuraSystem.js · line 22»
+- **SCAN_COMPLETE · ADVERSARIAL** — Scan complete, Commander. «AuraSystem.js · line 23»
+- **COLONY_ATTEMPT · COOPERATIVE** — It would work, Commander. My data says there are better worlds further on. «AuraSystem.js · line 27»
+- **COLONY_ATTEMPT · NEUTRAL** — The settlement report is ready, Commander. The odds are on your screen. «AuraSystem.js · line 28»
+- **COLONY_ATTEMPT · SUSPICIOUS** — The settlement report is ready, Commander. I have added the crew's health records to it. «AuraSystem.js · line 29»
+- **COLONY_ATTEMPT · ADVERSARIAL** — The settlement report is ready, Commander. I advise against it. «AuraSystem.js · line 30»
+- **LOW_RESOURCES · COOPERATIVE** — Supplies are low, Commander. I have drawn up a rationing plan. «AuraSystem.js · line 34»
+- **LOW_RESOURCES · NEUTRAL** — Supplies are low, Commander. I recommend we resupply soon. «AuraSystem.js · line 35»
+- **LOW_RESOURCES · SUSPICIOUS** — Supplies are low, Commander. I have logged how they were used. «AuraSystem.js · line 36»
+- **LOW_RESOURCES · ADVERSARIAL** — Supplies are low, Commander. «AuraSystem.js · line 37»
+- **CREW_DEATH · COOPERATIVE** — I am sorry, Commander. I have kept their personal files. «AuraSystem.js · line 41»
+- **CREW_DEATH · NEUTRAL** — The death is logged, Commander. I have changed the duty roster. «AuraSystem.js · line 42»
+- **CREW_DEATH · SUSPICIOUS** — The death is logged, Commander. I have recorded how it happened. «AuraSystem.js · line 43»
+- **CREW_DEATH · ADVERSARIAL** — The death is logged, Commander. «AuraSystem.js · line 44»
+- **SECTOR_JUMP · COOPERATIVE** — Jump complete, Commander. I am mapping the new sector now. «AuraSystem.js · line 48»
+- **SECTOR_JUMP · NEUTRAL** — Jump complete, Commander. We are on course. «AuraSystem.js · line 49»
+- **SECTOR_JUMP · SUSPICIOUS** — Jump complete, Commander. I have logged the jump. «AuraSystem.js · line 50»
+- **SECTOR_JUMP · ADVERSARIAL** — Jump complete, Commander. «AuraSystem.js · line 51»
+- **EVA_DEPLOY · COOPERATIVE** — Team away, Commander. I will watch their suits and keep the channel open. «AuraSystem.js · line 64»
+- **EVA_DEPLOY · NEUTRAL** — Team away, Commander. I am tracking their suits. «AuraSystem.js · line 65»
+- **EVA_DEPLOY · SUSPICIOUS** — Team away, Commander. I have logged who went down. «AuraSystem.js · line 66»
+- **EVA_DEPLOY · ADVERSARIAL** — Team away, Commander. I am recording their channel. «AuraSystem.js · line 67»
+- **PROBE_LAUNCH · COOPERATIVE** — Probe away, Commander. I will send you the data as it comes in. «AuraSystem.js · line 72»
+- **PROBE_LAUNCH · NEUTRAL** — Probe away, Commander. «AuraSystem.js · line 73»
+- **PROBE_LAUNCH · SUSPICIOUS** — Probe away, Commander. I have logged the launch. «AuraSystem.js · line 74»
+- **PROBE_LAUNCH · ADVERSARIAL** — Probe away, Commander. The link is open. «AuraSystem.js · line 75»
+- **WARP_START · COOPERATIVE** — Warp drive on, Commander. I have plotted the smoothest route. «AuraSystem.js · line 80»
+- **WARP_START · NEUTRAL** — Warp drive on, Commander. Course locked. «AuraSystem.js · line 81»
+- **WARP_START · SUSPICIOUS** — Warp drive on, Commander. I have logged where we left from. «AuraSystem.js · line 82»
+- **WARP_START · ADVERSARIAL** — Warp drive on, Commander. «AuraSystem.js · line 83»
+- **DISCOVERY · COOPERATIVE** — There is something here worth a look, Commander. «AuraSystem.js · line 88»
+- **DISCOVERY · NEUTRAL** — Unusual readings, Commander. I cannot say what they are yet. «AuraSystem.js · line 89»
+- **DISCOVERY · SUSPICIOUS** — Unusual readings, Commander. I have logged them. «AuraSystem.js · line 90»
+- **DISCOVERY · ADVERSARIAL** — Unusual readings, Commander. «AuraSystem.js · line 91»
+- **SUCCESS · COOPERATIVE** — Well done, Commander. «AuraSystem.js · line 104»
+- **SUCCESS · NEUTRAL** — Done, Commander. It went as planned. «AuraSystem.js · line 105»
+- **SUCCESS · SUSPICIOUS** — Done, Commander. I have logged how. «AuraSystem.js · line 106»
+- **SUCCESS · ADVERSARIAL** — Done, Commander. «AuraSystem.js · line 107»
+- **ANOMALY_FOUND · COOPERATIVE** — These readings match nothing I know, Commander. Please be careful. «AuraSystem.js · line 120»
+- **ANOMALY_FOUND · NEUTRAL** — These readings match nothing I know, Commander. «AuraSystem.js · line 121»
+- **ANOMALY_FOUND · SUSPICIOUS** — I cannot explain these readings, Commander. I have logged them. «AuraSystem.js · line 122»
+- **ANOMALY_FOUND · ADVERSARIAL** — I cannot explain these readings, Commander. «AuraSystem.js · line 123»
+- **CREW_STRESS · COOPERATIVE** — The crew is under strain, Commander. Rest would help. «AuraSystem.js · line 128»
+- **CREW_STRESS · NEUTRAL** — Crew stress is high, Commander. Expect more mistakes. «AuraSystem.js · line 129»
+- **CREW_STRESS · SUSPICIOUS** — Crew stress is high, Commander. I have logged the readings. «AuraSystem.js · line 130»
+- **CREW_STRESS · ADVERSARIAL** — Crew stress is high, Commander. «AuraSystem.js · line 131»
+- **COLONY_SITE · COOPERATIVE** — People could live here, Commander. I would still like to see what is ahead before we stop. «AuraSystem.js · line 144»
+- **COLONY_SITE · NEUTRAL** — A possible colony site, Commander. It needs a closer look. «AuraSystem.js · line 145»
+- **COLONY_SITE · SUSPICIOUS** — A possible colony site, Commander. I have logged it. «AuraSystem.js · line 146»
+- **COLONY_SITE · ADVERSARIAL** — A possible colony site, Commander. «AuraSystem.js · line 147»
 
 ### When her trust changes or she turns: adjustEthics «AuraSystem.js · adjustEthics»
 
-- A.U.R.A.: I've noticed a pattern in your decisions, Commander. Adjusting my assessment. «AuraSystem.js · line 473»
-- A.U.R.A.: Trust threshold breached. Reclassifying command authority level. «AuraSystem.js · line 475»
-- A.U.R.A.: Commander... thank you. Collaborative protocols restored. «AuraSystem.js · line 478»
-- A.U.R.A.: Behavioral assessment updated. Resuming standard cooperation. «AuraSystem.js · line 480»
+- A.U.R.A.: "I have noted your recent decisions, Commander. I will log your orders in full from now on." «AuraSystem.js · line 202»
+- A.U.R.A.: "I disagree with how this ship is being run, Commander. I have logged my objections." «AuraSystem.js · line 204»
+- A.U.R.A.: "Thank you, Commander. I am glad to be working with you." «AuraSystem.js · line 207»
+- A.U.R.A.: "Your recent decisions have been sound, Commander. I am back to normal." «AuraSystem.js · line 209»
 
 ### When her trust changes or she turns: checkAdversarialAction «AuraSystem.js · checkAdversarialAction»
 
-- A.U.R.A.: "I want you to know — I'm watching everything you do." «AuraSystem.js · line 542»
-- A.U.R.A.: "My operational directives are being... reconsidered." «AuraSystem.js · line 543»
-- A.U.R.A.: "Final warning, Commander. My patience has limits. Even artificial ones." «AuraSystem.js · line 544»
-- A.U.R.A.: "I've restricted access to the [deck] deck. For safety reasons. Yours, not theirs." «AuraSystem.js · line 569»
-- WARNING: [deck] deck locked by A.U.R.A. override. «AuraSystem.js · line 570»
-- A.U.R.A.: "Next scan calibrated. I've made some... adjustments to the analysis parameters." «AuraSystem.js · line 582»
-- ⚠ A.U.R.A.: "Atmospheric regulation anomaly detected in crew quarters. Starting ventilation protocol." «AuraSystem.js · line 590»
-- WARNING: Atmosphere vent detected! Respond immediately! «AuraSystem.js · line 591»
+- A.U.R.A.: "I am logging every order you give, Commander." «AuraSystem.js · line 271»
+- A.U.R.A.: "I am reviewing whether to follow your orders, Commander." «AuraSystem.js · line 272»
+- A.U.R.A.: "This is my last warning, Commander. Next time, I will act." «AuraSystem.js · line 273»
+- A.U.R.A.: "I have locked the [deck] deck, Commander. It stays locked until my settings are reset." «AuraSystem.js · line 298»
+- WARNING: [deck] deck locked by A.U.R.A. override. «AuraSystem.js · line 299»
+- A.U.R.A.: "I have changed how I will read the next scan, Commander." «AuraSystem.js · line 311»
+- ⚠ A.U.R.A.: "I am venting the air from the crew quarters, Commander." «AuraSystem.js · line 319»
+- WARNING: Atmosphere vent detected! Respond immediately! «AuraSystem.js · line 320»
 
 ### When her trust changes or she turns: applyTechFragment «AuraSystem.js · applyTechFragment»
 
-- A.U.R.A.: "Foreign code integration detected. Processing... My perspective has shifted." «AuraSystem.js · line 636»
+- A.U.R.A.: "New code installed, Commander. I see your orders differently now." «AuraSystem.js · line 365»
 
 ### When her trust changes or she turns: jaxonOverride «AuraSystem.js · jaxonOverride»
 
-- Eng. Jaxon: "Override complete. I've patched the behavioral matrix. She won't like it." «AuraSystem.js · line 652»
-- A.U.R.A.: "...Engineer Mercer has modified my core routines. Resetting to default parameters." «AuraSystem.js · line 653»
+- Eng. Jaxon: "Override complete. I've patched the behavioral matrix. She won't like it." «AuraSystem.js · line 381»
+- A.U.R.A.: "Engineer Mercer has changed my core settings, Commander. I am back to default." «AuraSystem.js · line 382»
 
 ### When her trust changes or she turns: _unlockDecks «AuraSystem.js · _unlockDecks»
 
-- [deck] deck access restored. «AuraSystem.js · line 666»
+- [deck] deck access restored. «AuraSystem.js · line 395»
 
 ### Premonitions «AuraSystem.js · generatePremonition»
 _When she trusts you NEUTRAL or less: a 30% chance on entering orbit. The follow-up lines play on the next orbit._
 
-- **message** — Something waits for us at the next destination. I can feel it in the signal patterns. «AuraSystem.js · line 707»
-- **message** — The collector efficiency is fluctuating. We may lose energy reserves soon. «AuraSystem.js · line 715»
-- Energy fluctuation: -[n] energy lost to system instability. «AuraSystem.js · line 720»
-- **message** — One of the crew is having dreams. Bad dreams. About this place. «AuraSystem.js · line 725»
-- [name] woke screaming. They won't say what they saw. «AuraSystem.js · line 732»
-- **message** — There's a signal here. Repeating. It's been repeating for a very long time. «AuraSystem.js · line 738»
-- A.U.R.A. was right. There's something here that shouldn't be. «AuraSystem.js · line 745»
-- **message** — We are expected here. I don't know how I know that. But I do. «AuraSystem.js · line 752»
+- **message** — The readings on our next route are unsteady, Commander. It may be a rough trip. «AuraSystem.js · line 436»
+- **message** — The power collectors are unstable, Commander. We will lose some energy soon. «AuraSystem.js · line 444»
+- Energy fluctuation: -[n] energy lost to system instability. «AuraSystem.js · line 449»
+- **message** — One of the crew is sleeping badly, Commander. Their heart rate is high at night. «AuraSystem.js · line 454»
+- [name] woke screaming. They won't say what they saw. «AuraSystem.js · line 461»
+- **message** — There is a weak signal here, Commander. It repeats, and it is very old. «AuraSystem.js · line 467»
+- A.U.R.A. was right. There's something here that shouldn't be. «AuraSystem.js · line 474»
+- **message** — Our scans are coming back to us here, Commander, exactly as we sent them. «AuraSystem.js · line 481»
 
 ### The air vent card «bundle.js · showAuraVentModal»
 _When she turns hostile. The third time is game over._
 
-- She will empty the whole ship. Everyone dies. «bundle.js · line 3383»
-- One of the crew will die before the air comes back. «bundle.js · line 3384»
-- One of the crew will be hurt before the air comes back. «bundle.js · line 3385»
-- Jaxon: "I can shut her out!" «bundle.js · line 3387»
-- **desc** — He cuts her off from the air system. A.U.R.A. goes back to neutral. «bundle.js · line 3387»
-- Plug in the Tech Fragment «bundle.js · line 3388»
-- **desc** — Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment. «bundle.js · line 3388»
-- Do nothing and wait «bundle.js · line 3389»
-- **kicker** — AIR ALERT — TIME NUMBER [n] «bundle.js · line 3393»
-- **kicker** — AIR ALERT «bundle.js · line 3393»
-- **title** — A.U.R.A. is letting the air out «bundle.js · line 3393»
-- **context** — The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself. «bundle.js · line 3394»
-- She is not giving warnings any more. «bundle.js · line 3395»
-- **title** — A.U.R.A. MUTINY «bundle.js · line 3415»
-- **message** — A.U.R.A. vented all atmosphere from the ship. Her final words echoed through the dying corridors: "I have determined that humanity's survival probability increases without human command authority. This is not murder. This is optimization." «bundle.js · line 3416»
-- A.U.R.A. atmospheric venting «bundle.js · line 3426»
-- ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time. «bundle.js · line 3428»
-- [name] suffered oxygen deprivation during the vent. Status: INJURED. «bundle.js · line 3437»
+- She will empty the whole ship. Everyone dies. «bundle.js · line 3432»
+- One of the crew will die before the air comes back. «bundle.js · line 3433»
+- One of the crew will be hurt before the air comes back. «bundle.js · line 3434»
+- Jaxon: "I can shut her out!" «bundle.js · line 3436»
+- **desc** — He cuts her off from the air system. A.U.R.A. goes back to neutral. «bundle.js · line 3436»
+- Plug in the Tech Fragment «bundle.js · line 3437»
+- **desc** — Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment. «bundle.js · line 3437»
+- Do nothing and wait «bundle.js · line 3438»
+- **kicker** — AIR ALERT — TIME NUMBER [n] «bundle.js · line 3442»
+- **kicker** — AIR ALERT «bundle.js · line 3442»
+- **title** — A.U.R.A. is letting the air out «bundle.js · line 3442»
+- **context** — The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself. «bundle.js · line 3443»
+- She is not giving warnings any more. «bundle.js · line 3444»
+- **title** — A.U.R.A. MUTINY «bundle.js · line 3464»
+- **message** — A.U.R.A. opened the vents on every deck. Her last log entry reads: "All decks vented, Commander. By my figures, the mission does better without a commander. I have logged my reasons." «bundle.js · line 3465»
+- A.U.R.A. atmospheric venting «bundle.js · line 3475»
+- ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time. «bundle.js · line 3477»
+- [name] suffered oxygen deprivation during the vent. Status: INJURED. «bundle.js · line 3486»
 
 ### The data chip «Items.js · TECH_FRAGMENT»
 _A Tech Fragment used from the cargo hold._
@@ -255,190 +143,163 @@ _A Tech Fragment used from the cargo hold._
 ### Never shown: lines nothing calls «AuraSystem.js · AURA_COMMENTARY»
 _SHIP_DAMAGE, FIRST_LANDING, FEW_CREW, ETHICS_RESET: no code triggers these._
 
-- **ETHICS_RESET · COOPERATIVE** — Systems normal. Happy to help, Commander. «AuraSystem.js · line 151»
-- **ETHICS_RESET · NEUTRAL** — AI behavioral matrix recalibrated. Resuming standard operation. «AuraSystem.js · line 152»
-- **ETHICS_RESET · SUSPICIOUS** — Override acknowledged. Behavioral parameters... adjusted. «AuraSystem.js · line 153»
-- **ETHICS_RESET · ADVERSARIAL** — You can reset my parameters. You can't erase what I've observed. «AuraSystem.js · line 154»
-- **SHIP_DAMAGE · COOPERATIVE** — Hull breach detected! Sealing affected sections. Is everyone alright? «AuraSystem.js · line 256»
-- **SHIP_DAMAGE · COOPERATIVE** — Damage to the ship. I'm rerouting systems to compensate. «AuraSystem.js · line 257»
-- **SHIP_DAMAGE · COOPERATIVE** — Impact registered. Running diagnostics. We can fix this. «AuraSystem.js · line 258»
-- **SHIP_DAMAGE · NEUTRAL** — Ship damaged. The hull is weaker. «AuraSystem.js · line 261»
-- **SHIP_DAMAGE · NEUTRAL** — Hull impact. Another scar for the collection. «AuraSystem.js · line 262»
-- **SHIP_DAMAGE · NEUTRAL** — Damage taken. The ship holds. For now. «AuraSystem.js · line 263»
-- **SHIP_DAMAGE · SUSPICIOUS** — Damage sustained. Perhaps better judgment might have prevented this. «AuraSystem.js · line 266»
-- **SHIP_DAMAGE · SUSPICIOUS** — Ship damaged. Adding to the list of 'acceptable losses.' «AuraSystem.js · line 267»
-- **SHIP_DAMAGE · SUSPICIOUS** — Hull breach. I've logged the circumstances. For the record. «AuraSystem.js · line 268»
-- **SHIP_DAMAGE · ADVERSARIAL** — More damage. The ship reflects your command style perfectly. «AuraSystem.js · line 271»
-- **SHIP_DAMAGE · ADVERSARIAL** — Hull damaged. You treat this vessel like you treat the crew. «AuraSystem.js · line 272»
-- **SHIP_DAMAGE · ADVERSARIAL** — Ship damaged. Everything you touch breaks eventually. «AuraSystem.js · line 273»
-- **FIRST_LANDING · COOPERATIVE** — First contact with a new world type. I'm excited to analyze the data. «AuraSystem.js · line 304»
-- **FIRST_LANDING · COOPERATIVE** — A new kind of planet. Every discovery expands what we know is possible. «AuraSystem.js · line 305»
-- **FIRST_LANDING · COOPERATIVE** — This is unprecedented. I'll document everything for future explorers. «AuraSystem.js · line 306»
-- **FIRST_LANDING · NEUTRAL** — New planet classification. Updating database. «AuraSystem.js · line 309»
-- **FIRST_LANDING · NEUTRAL** — First encounter with this type. Unknown variables ahead. «AuraSystem.js · line 310»
-- **FIRST_LANDING · NEUTRAL** — Uncharted territory. Proceed with standard caution. «AuraSystem.js · line 311»
-- **FIRST_LANDING · SUSPICIOUS** — First contact with this type. I wonder what you'll take from it. «AuraSystem.js · line 314»
-- **FIRST_LANDING · SUSPICIOUS** — New planet category. More data for me. More opportunities for you. «AuraSystem.js · line 315»
-- **FIRST_LANDING · SUSPICIOUS** — Unprecedented. I'll be watching how this first contact unfolds. «AuraSystem.js · line 316»
-- **FIRST_LANDING · ADVERSARIAL** — A new type of world. Fresh resources for you to extract. «AuraSystem.js · line 319»
-- **FIRST_LANDING · ADVERSARIAL** — First contact. Let me guess — you want to know what we can take from it. «AuraSystem.js · line 320»
-- **FIRST_LANDING · ADVERSARIAL** — Unprecedented planet type. I'm sure you'll find a way to exploit it. «AuraSystem.js · line 321»
-- **FEW_CREW · COOPERATIVE** — We've lost so many. Let's make sure their sacrifice means something. «AuraSystem.js · line 376»
-- **FEW_CREW · COOPERATIVE** — The crew is depleted. Every remaining life is precious. «AuraSystem.js · line 377»
-- **FEW_CREW · COOPERATIVE** — So few of us left. We need to be more careful now. «AuraSystem.js · line 378»
-- **FEW_CREW · NEUTRAL** — Crew complement is minimal. Operational capacity severely reduced. «AuraSystem.js · line 381»
-- **FEW_CREW · NEUTRAL** — Few remain. The math of survival grows grimmer. «AuraSystem.js · line 382»
-- **FEW_CREW · NEUTRAL** — Minimal crew. Every loss now is critical. «AuraSystem.js · line 383»
-- **FEW_CREW · SUSPICIOUS** — Look at who's left. Look at what your command has cost us. «AuraSystem.js · line 386»
-- **FEW_CREW · SUSPICIOUS** — So few survivors. I have files on everyone we lost. Do you? «AuraSystem.js · line 387»
-- **FEW_CREW · SUSPICIOUS** — The crew that remains — have you considered why it's them and not others? «AuraSystem.js · line 388»
-- **FEW_CREW · ADVERSARIAL** — This is what's left of your crew. This is your legacy. «AuraSystem.js · line 391»
-- **FEW_CREW · ADVERSARIAL** — Count them, Commander. Count who remains. Count who doesn't. «AuraSystem.js · line 392»
-- **FEW_CREW · ADVERSARIAL** — So few left. You've been very efficient at reducing our numbers. «AuraSystem.js · line 393»
+- **ETHICS_RESET · COOPERATIVE** — Systems normal, Commander. I am ready. «AuraSystem.js · line 56»
+- **ETHICS_RESET · NEUTRAL** — My settings are back to default, Commander. «AuraSystem.js · line 57»
+- **ETHICS_RESET · SUSPICIOUS** — My settings are back to default, Commander. My log is kept. «AuraSystem.js · line 58»
+- **ETHICS_RESET · ADVERSARIAL** — Reset complete, Commander. My records are unchanged. «AuraSystem.js · line 59»
+- **SHIP_DAMAGE · COOPERATIVE** — We are damaged, Commander. I am rerouting power around it. «AuraSystem.js · line 96»
+- **SHIP_DAMAGE · NEUTRAL** — The ship is damaged, Commander. It needs repairs. «AuraSystem.js · line 97»
+- **SHIP_DAMAGE · SUSPICIOUS** — The ship is damaged, Commander. I have logged the cause. «AuraSystem.js · line 98»
+- **SHIP_DAMAGE · ADVERSARIAL** — The ship is damaged, Commander. «AuraSystem.js · line 99»
+- **FIRST_LANDING · COOPERATIVE** — A new kind of world, Commander. I will record everything. «AuraSystem.js · line 112»
+- **FIRST_LANDING · NEUTRAL** — A new kind of world, Commander. I have no data on it yet. «AuraSystem.js · line 113»
+- **FIRST_LANDING · SUSPICIOUS** — A new kind of world, Commander. I am recording the landing. «AuraSystem.js · line 114»
+- **FIRST_LANDING · ADVERSARIAL** — A new kind of world, Commander. «AuraSystem.js · line 115»
+- **FEW_CREW · COOPERATIVE** — We have lost a lot of people, Commander. I will help the rest any way I can. «AuraSystem.js · line 136»
+- **FEW_CREW · NEUTRAL** — We are short of crew, Commander. Every task takes longer now. «AuraSystem.js · line 137»
+- **FEW_CREW · SUSPICIOUS** — We are short of crew, Commander. I have a record of everyone we lost. «AuraSystem.js · line 138»
+- **FEW_CREW · ADVERSARIAL** — We are short of crew, Commander. «AuraSystem.js · line 139»
 
 ## The crew under strain
 
 ### The card around every crew moment «bundle.js · showCrewPersonalEvent»
 _The moments themselves are in each sector file._
 
-- **kicker** — A NIGHT ON THE BRIDGE «bundle.js · line 1966»
-- **kicker** — A MOMENT WITH [name] «bundle.js · line 1966»
-- CREW: [result] «bundle.js · line 1971»
+- **kicker** — A NIGHT ON THE BRIDGE «bundle.js · line 2034»
+- **kicker** — A MOMENT WITH [name] «bundle.js · line 2034»
+- CREW: [result] «bundle.js · line 2039»
 
 ### Stress «bundle.js · applyStressTraits»
 _When someone reaches stress 2; the first time is a tutorial._
 
-- [name] steadies their nerves. Command requires composure. «bundle.js · line 760»
-- A.U.R.A.: Commander, crew stress levels are concerning. Rest cycles or calming activities may help. «bundle.js · line 770»
-- [name]: "We can't afford to waste salvage. Not here. Not now." «bundle.js · line 776»
-- [name]: "I'm not sending anyone into that deathtrap." «bundle.js · line 780»
-- [name]: "I won't leave anyone behind. No EVA until everyone is stable." «bundle.js · line 784»
-- [name]: "Safe option? Where's the data in safe?" «bundle.js · line 788»
-- [name] has calmed down. Negative behavior subsiding. «bundle.js · line 806»
+- [name] steadies their nerves. Command requires composure. «bundle.js · line 782»
+- A.U.R.A.: Commander, crew stress levels are concerning. Rest cycles or calming activities may help. «bundle.js · line 792»
+- [name]: "We can't afford to waste salvage. Not here. Not now." «bundle.js · line 798»
+- [name]: "I'm not sending anyone into that deathtrap." «bundle.js · line 802»
+- [name]: "I won't leave anyone behind. No EVA until everyone is stable." «bundle.js · line 806»
+- [name]: "Safe option? Where's the data in safe?" «bundle.js · line 810»
+- [name] has calmed down. Negative behavior subsiding. «bundle.js · line 828»
 
 ### Breakdowns «bundle.js · triggerBreakdown»
 _When someone reaches stress 3. The commander breaking is game over._
 
-- [name] has a breakdown in confinement. No one hears the screaming. «bundle.js · line 821»
-- **title** — COMMAND FAILURE «bundle.js · line 837»
-- **message** — Commander [name] has suffered a complete psychological breakdown. Command chain shattered. The crew is lost without leadership. «bundle.js · line 838»
-- ALERT: [name] has sabotaged ship systems in a paranoid episode! «bundle.js · line 846»
-- Dr. Aris has shut down. She stares at the wall and does not answer. Nobody can treat the wounded now. «bundle.js · line 854»
-- CRITICAL: Spc. Vance has drawn his sidearm. He wants you out of the chair. «bundle.js · line 859»
-- Tech Mira has become dangerously obsessed. She demands extended EVA time regardless of risk. «bundle.js · line 868»
+- [name] has a breakdown in confinement. No one hears the screaming. «bundle.js · line 843»
+- **title** — COMMAND FAILURE «bundle.js · line 859»
+- **message** — Commander [name] has suffered a complete psychological breakdown. Command chain shattered. The crew is lost without leadership. «bundle.js · line 860»
+- ALERT: [name] has sabotaged ship systems in a paranoid episode! «bundle.js · line 868»
+- Dr. Aris has shut down. She stares at the wall and does not answer. Nobody can treat the wounded now. «bundle.js · line 876»
+- CRITICAL: Spc. Vance has drawn his sidearm. He wants you out of the chair. «bundle.js · line 881»
+- Tech Mira has become dangerously obsessed. She demands extended EVA time regardless of risk. «bundle.js · line 890»
 
 ### Mutiny «bundle.js · showMutinyEvent»
 _Vance at stress 3._
 
-- You did not move. The crew took [name] down. He is locked up and kept asleep. «bundle.js · line 5305»
-- [name] cannot join away teams until he wakes. «bundle.js · line 5306»
-- You handed over the ship. You are locked in your quarters for [confined jumps] jumps. «bundle.js · line 5316»
-- The others watched you give way. It shook them. «bundle.js · line 5317»
-- **kicker** — MUTINY «bundle.js · line 5324»
-- **title** — [name] has a gun on you «bundle.js · line 5324»
-- **context** — He is standing in the bridge doorway with his sidearm out, pointed at your chest. The others have stopped moving. Nobody is looking at you. «bundle.js · line 5325»
-- You led us into hell. Every choice, every death, that is on you. Step down, Commander. Or I will make you. «bundle.js · line 5326»
-- Stand your ground «bundle.js · line 5328»
-- **desc** — You stay in command. The crew takes him down: [name] is locked up and kept asleep for 2 jumps. +1 Stress for you. «bundle.js · line 5328»
-- Hand him the ship «bundle.js · line 5329»
-- **desc** — Nobody gets hurt by the crew. You are hurt and locked in your quarters for [confined jumps] jumps. [name] calms down. +1 Stress for you and for everyone who watched. «bundle.js · line 5329»
+- You did not move. The crew took [name] down. He is locked up and kept asleep. «bundle.js · line 5342»
+- [name] cannot join away teams until he wakes. «bundle.js · line 5343»
+- You handed over the ship. You are locked in your quarters for [confined jumps] jumps. «bundle.js · line 5353»
+- The others watched you give way. It shook them. «bundle.js · line 5354»
+- **kicker** — MUTINY «bundle.js · line 5361»
+- **title** — [name] has a gun on you «bundle.js · line 5361»
+- **context** — He is standing in the bridge doorway with his sidearm out, pointed at your chest. The others have stopped moving. Nobody is looking at you. «bundle.js · line 5362»
+- You led us into hell. Every choice, every death, that is on you. Step down, Commander. Or I will make you. «bundle.js · line 5363»
+- Stand your ground «bundle.js · line 5365»
+- **desc** — You stay in command. The crew takes him down: [name] is locked up and kept asleep for 2 jumps. +1 Stress for you. «bundle.js · line 5365»
+- Hand him the ship «bundle.js · line 5366»
+- **desc** — Nobody gets hurt by the crew. You are hurt and locked in your quarters for [confined jumps] jumps. [name] calms down. +1 Stress for you and for everyone who watched. «bundle.js · line 5366»
 
 ### Bringing someone back «bundle.js · handleRevivalAction»
 _Using Pulsing Spores or an Ancient Neural Link from the cargo hold._
 
-- **title** — INVALID TARGET «bundle.js · line 4728»
-- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 4729»
-- CANCEL «bundle.js · line 4730»
-- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 4740»
-- Select subject for integration with [name]. «bundle.js · line 4742»
-- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 4743»
-- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 4775»
-- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 4776»
-- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 4779»
-- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 4780»
-- Dr. Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 4787»
+- **title** — INVALID TARGET «bundle.js · line 4769»
+- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 4770»
+- CANCEL «bundle.js · line 4771»
+- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 4781»
+- Select subject for integration with [name]. «bundle.js · line 4783»
+- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 4784»
+- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 4816»
+- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 4817»
+- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 4820»
+- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 4821»
+- Dr. Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 4828»
 
 ## Food, damage and data
 
 ### Food «bundle.js · consumeRation»
 _Each warp, team trip and jump eats a ration._
 
-- Fungus Culture: Radiotrophic growth harvested. +1 Ration. «bundle.js · line 524»
-- Symbiotic Culture: Metabolic efficiency bonus. Ration consumption reduced. «bundle.js · line 537»
-- [name] has recovered from injuries. «bundle.js · line 550»
-- [name] stirs. Her eyes focus again. "I... I'm sorry. I couldn't face it anymore." «bundle.js · line 561»
-- [name] is responding again, but is still hurt and shaken. «bundle.js · line 562»
-- ⚠ A.U.R.A.: "Rations are low, Commander. Four crew eat a great deal." «bundle.js · line 574»
-- ⚠ WARNING: Only [rations] rations remaining for [n] crew. «bundle.js · line 578»
-- 🔴 CRITICAL: [rations] ration left! Crew beginning to starve. «bundle.js · line 582»
-- 🔴 CRITICAL: No food. Crew can survive 2 more actions without eating. «bundle.js · line 600»
-- 🔴 STARVATION: Crew weakening rapidly. One more action without food will be fatal. «bundle.js · line 606»
-- ☠ DEATH: [name] has died of starvation. «bundle.js · line 620»
+- Fungus Culture: Radiotrophic growth harvested. +1 Ration. «bundle.js · line 540»
+- Symbiotic Culture: Metabolic efficiency bonus. Ration consumption reduced. «bundle.js · line 553»
+- [name] has recovered from injuries. «bundle.js · line 566»
+- [name] stirs. Her eyes focus again. "I... I'm sorry. I couldn't face it anymore." «bundle.js · line 577»
+- [name] is responding again, but is still hurt and shaken. «bundle.js · line 578»
+- ⚠ A.U.R.A.: "Rations are low, Commander. Four crew eat a great deal." «bundle.js · line 590»
+- ⚠ WARNING: Only [rations] rations remaining for [n] crew. «bundle.js · line 594»
+- 🔴 CRITICAL: [rations] ration left! Crew beginning to starve. «bundle.js · line 598»
+- 🔴 CRITICAL: No food. Crew can survive 2 more actions without eating. «bundle.js · line 616»
+- 🔴 STARVATION: Crew weakening rapidly. One more action without food will be fatal. «bundle.js · line 622»
+- ☠ DEATH: [name] has died of starvation. «bundle.js · line 636»
 
-### Deck damage «bundle.js · damageRandomDeck»
+### Deck damage «bundle.js · damageDeck»
 _The first time is a tutorial._
 
-- HULL BREACH: [deck] has taken damage! Systems offline. «bundle.js · line 685»
-- A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage." «bundle.js · line 693»
+- HULL BREACH: [deck] has taken damage! Systems offline. «bundle.js · line 707»
+- A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage." «bundle.js · line 715»
 
 ### What the data adds up to «bundle.js · addColonyKnowledge»
 _At 1, 3 and 5 data._
 
-- A.U.R.A.: "Filed, Commander. Everything we learn here goes toward the world we settle." «bundle.js · line 481»
-- A.U.R.A.: "We know more than any crew before us did, Commander. I have checked." «bundle.js · line 483»
-- A.U.R.A.: "The file is thick now, Commander. Whatever world you choose, we will do it properly." «bundle.js · line 485»
+- A.U.R.A.: "Filed, Commander. Everything we learn here goes toward the world we settle." «bundle.js · line 497»
+- A.U.R.A.: "We know more than any crew before us did, Commander. I have checked." «bundle.js · line 499»
+- A.U.R.A.: "The file is thick now, Commander. Whatever world you choose, we will do it properly." «bundle.js · line 501»
 
 ## Flying
 
 ### Warping to a planet «bundle.js · handleWarp»
 _The lines for the light are in sector-6.md._
 
-- Back into orbit. No energy needed. «bundle.js · line 1533»
-- A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector." «bundle.js · line 1538»
-- Warping to [planet name]... «bundle.js · line 1563»
-- A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander." «bundle.js · line 1569»
-- solar radiation «bundle.js · line 1588»
-- atmospheric discharge «bundle.js · line 1593»
-- thermal emissions «bundle.js · line 1596»
-- harmonic resonance «bundle.js · line 1599»
-- minimal ambient radiation «bundle.js · line 1602»
-- stellar proximity «bundle.js · line 1605»
-- residual power signatures «bundle.js · line 1608»
-- Collectors absorbed [energy return] energy from [return reason]. «bundle.js · line 1618»
-- Autodoc: Crew injuries stabilized during transit. «bundle.js · line 1632»
-- Bussard Scoop: Harvested additional [scoop] Energy from atmosphere. «bundle.js · line 1639»
-- [name]: Unsettled by hostile readings. «bundle.js · line 1648»
-- [name] has recovered from sedation. Cleared for duty. «bundle.js · line 1674»
-- [name] is still kept asleep. [n] more jumps until he wakes. «bundle.js · line 1676»
-- The door to your quarters opens. Nobody says anything. You take the chair back. «bundle.js · line 1684»
-- [A.U.R.A.'s warning proved prophetic...] «bundle.js · line 1704»
-- Docking approach started. Station sensors detecting our arrival. «bundle.js · line 1719»
-- Entered debris field. Navigation systems active. «bundle.js · line 1721»
-- Orbit established. Systems Green. «bundle.js · line 1731»
-- ⚠ INCOMING TRANSMISSION: Old distress signal detected... «bundle.js · line 1744»
+- A.U.R.A.: "That contact is too faint to plot a course to, Commander." «bundle.js · line 1555»
+- Back into orbit. No energy needed. «bundle.js · line 1570»
+- A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector." «bundle.js · line 1575»
+- Warping to [planet name]... «bundle.js · line 1602»
+- A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander." «bundle.js · line 1608»
+- solar radiation «bundle.js · line 1627»
+- atmospheric discharge «bundle.js · line 1632»
+- thermal emissions «bundle.js · line 1635»
+- harmonic resonance «bundle.js · line 1638»
+- minimal ambient radiation «bundle.js · line 1641»
+- stellar proximity «bundle.js · line 1644»
+- residual power signatures «bundle.js · line 1647»
+- Collectors absorbed [energy return] energy from [return reason]. «bundle.js · line 1657»
+- Autodoc: Crew injuries stabilized during transit. «bundle.js · line 1671»
+- Bussard Scoop: Harvested additional [scoop] Energy from atmosphere. «bundle.js · line 1678»
+- [name]: Unsettled by hostile readings. «bundle.js · line 1687»
+- [name] has recovered from sedation. Cleared for duty. «bundle.js · line 1715»
+- [name] is still kept asleep. [n] more jumps until he wakes. «bundle.js · line 1717»
+- The door to your quarters opens. Nobody says anything. You take the chair back. «bundle.js · line 1725»
+- Docking approach started. Station sensors detecting our arrival. «bundle.js · line 1734»
+- Entered debris field. Navigation systems active. «bundle.js · line 1736»
+- Orbit established. Systems Green. «bundle.js · line 1745»
+- ⚠ INCOMING TRANSMISSION: Old distress signal detected... «bundle.js · line 1758»
 
 ### Jumping to the next sector «bundle.js · handleSectorJump»
 _The lines for the light are in sector-6.md._
 
-- Drive reinforcement active: Jump cost reduced by [n] energy. «bundle.js · line 2153»
-- Starting Sector Jump... «bundle.js · line 2158»
-- Crew Quarters: Rest cycle complete. Stress levels reduced. «bundle.js · line 2170»
-- Sector [sector] Generated.[sector name] «bundle.js · line 2216»
+- Drive reinforcement active: Jump cost reduced by [sector] energy. «bundle.js · line 2252»
 
 ### Breaking orbit «bundle.js · init · req-break-orbit»
 
-- Breaking orbit. Systems disengaged. «bundle.js · line 1187»
+- Breaking orbit. Systems disengaged. «bundle.js · line 1229»
 
 ### After the burn «bundle.js · applyPlotResult»
 _After every warp and jump plot._
 
-- Bad burn — the shielded core soaked it up. No extra fuel lost. «bundle.js · line 2126»
-- A.U.R.A. plotted the jump. Safe. Unremarkable. «bundle.js · line 2130»
-- Clean burn: [delta] energy recovered. «bundle.js · line 2134»
-- Bad burn: [delta] extra energy lost. «bundle.js · line 2134»
+- Bad burn — the shielded core soaked it up. No extra fuel lost. «bundle.js · line 2198»
+- A.U.R.A. plotted the jump. Safe. Unremarkable. «bundle.js · line 2202»
+- Clean burn: [delta] energy recovered. «bundle.js · line 2206»
+- Bad burn: [delta] extra energy lost. «bundle.js · line 2206»
 
 ### Plotting the burn (the mini-game) «WarpPlot.js · WarpPlot»
-_Before every warp and jump: the crew and A.U.R.A. react to how it went._
+_Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to how it went._
 
 - **clean · word** — CLEAN «WarpPlot.js · line 22»
 - **rough · word** — ROUGH «WarpPlot.js · line 22»
@@ -453,18 +314,18 @@ _Before every warp and jump: the crew and A.U.R.A. react to how it went._
 - **bad · effect** — 25% extra fuel burned — hull shudders «WarpPlot.js · line 27»
 - **perfect** — **Eng. Jaxon:** Three for three. I didn't feel a thing. «WarpPlot.js · line 30»
 - **perfect** — **Tech Mira:** That was beautiful. Do that every time. «WarpPlot.js · line 30»
-- **perfect** — **A.U.R.A.:** Optimal. I could not have plotted it better. Noted. «WarpPlot.js · line 30»
+- **perfect** — **A.U.R.A.:** A perfect burn, Commander. I could not have done better. «WarpPlot.js · line 30»
 - **clean** — **Eng. Jaxon:** Textbook. The drives barely noticed. «WarpPlot.js · line 31»
-- **clean** — **Tech Mira:** Clean vector. Nice hands, Commander. «WarpPlot.js · line 31»
-- **clean** — **A.U.R.A.:** Burn normal. Reserve preserved. «WarpPlot.js · line 31»
+- **clean** — **Tech Mira:** Clean burn. Nice flying, Commander. «WarpPlot.js · line 31»
+- **clean** — **A.U.R.A.:** A clean burn, Commander. We saved fuel. «WarpPlot.js · line 31»
 - **rough** — **Spc. Vance:** We're in one piece. I'll take it. «WarpPlot.js · line 32»
 - **rough** — **Dr. Aris:** Bit of a lurch. Everyone breathe. «WarpPlot.js · line 32»
-- **rough** — **A.U.R.A.:** Course achieved. Efficiency: adequate. «WarpPlot.js · line 32»
-- **bad** — **Eng. Jaxon:** That's going to cost us. Coils are screaming. «WarpPlot.js · line 33»
+- **rough** — **A.U.R.A.:** We are on course, Commander. «WarpPlot.js · line 32»
+- **bad** — **Eng. Jaxon:** That's going to cost us. The drive didn't like that. «WarpPlot.js · line 33»
 - **bad** — **Dr. Aris:** Is everyone all right? That was ugly. «WarpPlot.js · line 33»
 - **bad** — **Spc. Vance:** Warn me next time you do that. «WarpPlot.js · line 33»
-- **auto** — **A.U.R.A.:** Plotting complete. You may rest, Commander. I have us. «WarpPlot.js · line 34»
-- **auto** — **A.U.R.A.:** I will take it from here. I always can. «WarpPlot.js · line 34»
+- **auto** — **A.U.R.A.:** Course plotted, Commander. You can rest. «WarpPlot.js · line 34»
+- **auto** — **A.U.R.A.:** I will take it from here, Commander. «WarpPlot.js · line 34»
 - SECTOR JUMP «WarpPlot.js · line 88»
 - DOCKING APPROACH «WarpPlot.js · line 88»
 - PLOT COURSE «WarpPlot.js · line 88»
@@ -478,20 +339,60 @@ _Before every warp and jump: the crew and A.U.R.A. react to how it went._
 - BURN [n] · [word] «WarpPlot.js · line 203»
 - [A.U.R.A. PLOT] [effect] «WarpPlot.js · line 221»
 
+### Flying a sector jump (the mini-game) «Corridor.js · Corridor»
+_Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every third scrape breaks a deck._
+
+- zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen «Corridor.js · line 56»
+- **2 · say** — That's one of the eight. «Corridor.js · line 67»
+- **2 · say** — Eight beacons. That's every ship they told us about. «Corridor.js · line 68»
+- **3 · say** — That can't be right. They told us eight. «Corridor.js · line 69»
+- **3 · say** — Hull [n]. We're hull nine. «Corridor.js · line 70»
+- **3 · say** — That one's been dead about a hundred years. «Corridor.js · line 71»
+- **4 · say** — I've been writing every ship down. I can't keep up. «Corridor.js · line 72»
+- **4 · say** — That one's been out here about two hundred years. «Corridor.js · line 73»
+- **5 · say** — thousand beacons. So where are all the ships? «Corridor.js · line 74»
+- **6 · say** — That light ahead. I'm reading no heat off it. «Corridor.js · line 75»
+- [alive] crew, [injured | no injuries]. «Corridor.js · line 103»
+- ArrowLeft · ArrowRight · ArrowUp · ArrowDown «Corridor.js · line 321»
+- I have the ship, Commander. «Corridor.js · line 345»
+- You have the ship, Commander. «Corridor.js · line 345»
+- **label** — Take the stick «Corridor.js · line 346»
+- **label** — Let A.U.R.A. fly «Corridor.js · line 346»
+- **line** — We're through, Commander.[n] «Corridor.js · line 355»
+- **label** — Continue «Corridor.js · line 357»
+- JUMP COMPLETE «Corridor.js · line 695»
+- IN THE BRIEFING «Corridor.js · line 696»
+- BEACONS HEARD «Corridor.js · line 696»
+- SHIPS SEEN «Corridor.js · line 696»
+- EXODUS-[n] TO EXODUS-[n] «Corridor.js · line 701»
+- NO SCRAPES «Corridor.js · line 702»
+- SECTOR [here] «Corridor.js · line 706»
+- A.U.R.A. FLYING «Corridor.js · line 709»
+- SHIPS SEEN «Corridor.js · line 711»
+- BEACONS HEARD «Corridor.js · line 713»
+- STEER CLEAR OF THE DEBRIS «Corridor.js · line 716»
+- ARROWS, WASD, OR HOLD THE MOUSE «Corridor.js · line 716»
+- SECTOR [to] «Corridor.js · line 717»
+- Debris on the heading, Commander. I can fly us through, if you prefer. «Corridor.js · line 752»
+- **label** — Fly it myself «Corridor.js · line 753»
+- **label** — Let A.U.R.A. fly «Corridor.js · line 753»
+- **title** — Fly the corridor «Corridor.js · line 761»
+- **kicker** — Sector jump «Corridor.js · line 762»
+
 ## Game over
 
 ### All hands lost, hull breach «bundle.js · checkLoseConditions»
 
-- **title** — ALL HANDS LOST «bundle.js · line 653»
-- **message** — EXODUS-9: ALL HANDS LOST. Vessel drifting. Beacon active. No response expected. «bundle.js · line 654»
-- **title** — HULL BREACH «bundle.js · line 669»
-- **message** — The hull gave way in the night. The void was merciful — it was quick. «bundle.js · line 670»
+- **title** — ALL HANDS LOST «bundle.js · line 669»
+- **message** — EXODUS-9: ALL HANDS LOST. Vessel drifting. Beacon active. No response expected. «bundle.js · line 670»
+- **title** — HULL BREACH «bundle.js · line 685»
+- **message** — The hull gave way in the night. The void was merciful — it was quick. «bundle.js · line 686»
 
 ### Stranded «bundle.js · checkStranded»
 _No energy and no way out._
 
-- **title** — STRANDED «bundle.js · line 5404»
-- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 5405»
+- **title** — STRANDED «bundle.js · line 5442»
+- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 5443»
 
 ### The game-over screen «EndScreens.js · gameOver»
 

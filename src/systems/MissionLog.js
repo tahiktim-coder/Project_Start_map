@@ -48,11 +48,11 @@
         return SHIP_WORDS.test(text) ? 'ship' : 'event';
     }
 
-    /** "Warping to X..." and "Sector N Generated" start a new stop. */
+    /** "Warping to X..." and "Sector N — NAME" start a new stop ("Sector N Generated." is how older saves wrote it). */
     function stopNameFor(text) {
         const warp = text.match(/^Warping to (.+?)\.{3}$/);
         if (warp) return warp[1];
-        const sector = text.match(/^Sector (\d+) Generated\.?(?: — (.+))?$/);
+        const sector = text.match(/^Sector (\d+)(?: Generated\.?)?(?: — (.+))?$/);
         return sector ? `SECTOR ${sector[1]}${sector[2] ? ' — ' + sector[2] : ''}` : null;
     }
 

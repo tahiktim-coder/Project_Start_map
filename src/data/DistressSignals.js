@@ -12,6 +12,8 @@
  * about twenty years in sector 1, about four hundred by sector 6. The getSignalAge
  * closures below are kept for the signature; their numbers are not used.
  *
+ * minSector: the first sector a call can turn up in, so ship counts match docs/CANON.md section 2.
+ *
  * Writing rules for this file: docs/STYLE.md. Plain sentences, no nicknames, no riddles.
  */
 
@@ -48,7 +50,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                     state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     if (Math.random() < 0.3) {
-                        const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned);
+                        const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned && !p.storyHidden);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
                             state.addLog("The beacon had a fix on the nearest planet. One planet added to the map.");
@@ -122,7 +124,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         mira.stress = Math.min(3, (mira.stress || 0) + outcome.stress);
                     }
                     if (outcome.reveal) {
-                        const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned);
+                        const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned && !p.storyHidden);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
                             state.addLog("Coordinates plotted. One planet added to the map.");
@@ -203,7 +205,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                     state.energy = Math.max(0, state.energy - 5);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     if (Math.random() < 0.5) {
-                        const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned);
+                        const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned && !p.storyHidden);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
                             state.addLog("Navigation track copied. Exactly the same heading as ours. One planet added to the map.");
@@ -235,6 +237,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
     {
         id: 'DISTRESS_BUOY',
         weight: 20,
+        minSector: 4,     // the list: thousands of hull numbers
         title: "BROKEN NAVIGATION BUOY",
         getSignalAge: () => Math.floor(Math.random() * 15) + 1,
         context: (age) => `A navigation buoy, dropped by an earlier ship to mark the route. Broken for ${age} years. It sends a heading, then garbage, then the heading again.`,
@@ -360,6 +363,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
     {
         id: 'DISTRESS_ALIEN',
         weight: 8,
+        minSector: 3,     // a call that arrived before we sent it
         title: "OUR OWN DISTRESS CALL",
         getSignalAge: () => 'UNKNOWN',
         context: (age) => `It's a distress call from our own ship: our name, our call sign, our crew list. It has arrived before we ever sent it.`,
@@ -467,8 +471,8 @@ function rollDistressSignal(state, trigger = 'scan') {
         state.currentSystem._distressChecked = true;
     }
 
-    // Select by weight
-    const encounters = DISTRESS_SIGNAL_ENCOUNTERS;
+    // Select by weight, from the calls this sector has reached (minSector)
+    const encounters = DISTRESS_SIGNAL_ENCOUNTERS.filter(e => (state.currentSector || 1) >= (e.minSector || 1));
     const totalWeight = encounters.reduce((sum, e) => sum + e.weight, 0);
     let roll = Math.random() * totalWeight;
     for (const enc of encounters) {

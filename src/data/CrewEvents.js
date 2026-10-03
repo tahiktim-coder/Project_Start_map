@@ -15,6 +15,13 @@
  */
 
 const CREW_SCENE_CHANCE = 0.75; // per warp, when a scene is waiting; the old every-third-action gate starved them
+const CENTURY_HULLS = [212, 980];  // sector 3's hull numbers: dead about a hundred years (docs/CANON.md section 2)
+
+/** The highest sector 3 hull number the team has boarded, or 0: Aris talks about a ship the player has seen. */
+function boardedCenturyHull(state) {
+    const hulls = ((state && state._boardedHulls) || []).map(name => parseInt(String(name).replace('EXODUS-', ''), 10));
+    return Math.max(0, ...hulls.filter(n => n >= CENTURY_HULLS[0] && n <= CENTURY_HULLS[1]));
+}
 
 const CREW_PERSONAL_EVENTS = [
     // ═══════════════════════════════════════════════════════════════
@@ -28,7 +35,7 @@ const CREW_PERSONAL_EVENTS = [
         title: "JAXON'S PHOTO",
         context: "Cargo bay, night shift. Jaxon is sitting on a crate with a photograph in his hands. He doesn't hear you come in.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "That's my daughter. She was eight when we left. She'd be forty-three now." },
+            { speaker: 'Eng. Jaxon', text: "That's my daughter. She was eight when we left. She'd be older than I am now." },
             { speaker: 'Eng. Jaxon', text: "I record a letter to her after every jump. There's no way to send them." },
             { speaker: 'Eng. Jaxon', text: "When we find a planet we can live on, I want us to land and stay." }
         ],
@@ -154,7 +161,7 @@ const CREW_PERSONAL_EVENTS = [
                     state._arisPatientSeen = true;
                     state.rations = Math.max(0, state.rations - 1);
                     state.noteStanding && state.noteStanding('aris');
-                    state.addLog("Aris: 'Thank you.' At the next wreck she reads out eleven names, and everyone waits until she's done.");
+                    state.addLog("Aris: 'Thank you.' At the next wreck she reads out four names, and everyone waits until she's done.");
                     return "Aris reads the names at every ship. Aris -1 Stress. -1 Ration.";
                 }
             },
@@ -186,12 +193,12 @@ const CREW_PERSONAL_EVENTS = [
     {
         id: 'ARIS_GARDEN',
         crewId: 'aris',
-        trigger: (state, crew) => crew.name.includes('Aris') && state.currentSector >= 3 && state.currentSector <= 4 && !state._arisGardenSeen,
+        trigger: (state, crew) => crew.name.includes('Aris') && state.currentSector >= 3 && state.currentSector <= 4 && !state._arisGardenSeen && boardedCenturyHull(state) > 0,
         weight: 20,
-        title: "SHIP NUMBER 980",
-        context: "Aris's list of the dead is nine pages long now. The newest names came off a wreck with the number 980 on its hull.",
-        dialogue: [
-            { speaker: 'Dr. Aris', text: "That ship's number is 980, and it's been dead about a hundred years." },
+        title: "THE SHIP NUMBERS",
+        context: state => `Aris's list of the dead is nine pages long now. The newest names came off a wreck with the number ${boardedCenturyHull(state) || CENTURY_HULLS[1]} on its hull.`,
+        dialogue: state => [
+            { speaker: 'Dr. Aris', text: `That ship's number is ${boardedCenturyHull(state) || CENTURY_HULLS[1]}, and it's been dead about a hundred years.` },
             { speaker: 'Dr. Aris', text: "We're ship number nine. A ship with a higher number should be newer than us, not older." },
             { speaker: 'Dr. Aris', text: "I don't just want to survive this, Commander. I want to understand it, even if that's dangerous." }
         ],
@@ -292,7 +299,7 @@ const CREW_PERSONAL_EVENTS = [
     {
         id: 'VANCE_WATCH',
         crewId: 'vance',
-        trigger: (state, crew) => crew.name.includes('Vance') && state.currentSector >= 3 && state.currentSector <= 4 && !state._vanceWatchSeen,
+        trigger: (state, crew) => crew.name.includes('Vance') && state.currentSector === 3 && !state._vanceWatchSeen,   // his count (311) is a sector 3 number
         weight: 20,
         title: "NIGHT WATCH",
         context: "Night shift. Vance is at the scanner console, writing down every ship beacon it picks up. He's been at it for hours.",

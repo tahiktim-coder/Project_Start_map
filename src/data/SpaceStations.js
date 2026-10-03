@@ -5,6 +5,7 @@
  * dug in, welded on to another, or stripped itself to feed a beacon.
  * Larger than ship wrecks, multiple rooms to explore.
  * Higher risk, higher reward. No trading - just looting.
+ * minSector: the first sector a station can turn up in, so ship counts match docs/CANON.md section 2.
  *
  * Writing rules for this file: docs/STYLE.md. Plain sentences, no nicknames, no riddles.
  */
@@ -157,6 +158,7 @@ const SPACE_STATION_ENCOUNTERS = [
     {
         id: 'STATION_REFUGEE',
         weight: 12,
+        minSector: 3,     // forty-one calls from Exodus ships
         title: "THE JOINED HULLS",
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
         context: (name) => `${name} is three ships welded together. Their hull numbers are not in order. Inside, the walls are covered in names, dates and goodbyes. Some are in children's handwriting.`,
@@ -275,6 +277,7 @@ const SPACE_STATION_ENCOUNTERS = [
     {
         id: 'STATION_TRADE',
         weight: 15,
+        minSector: 4,     // the ledger: thousands of ships
         title: "THE STOREHOUSE",
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
         context: (name) => `${name} belonged to a crew who collected things. They sorted and shelved parts from every wreck they passed. There are aisles of it, and a ledger by the door.`,

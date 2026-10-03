@@ -87,13 +87,13 @@
     }
 
     function cargo(app) {
-        const state = app.state, count = state.cargo.length;
+        const state = app.state, count = state.getCargoCount ? state.getCargoCount() : state.cargo.length;   // papers take no room
         const limit = state.getCargoLimit ? state.getCargoLimit() : FALLBACK_CARGO_LIMIT;
         const modal = open('cargo-panel', 'Cargo hold', `
             <header class="deck-panel-head"><h3>CARGO HOLD</h3>
                 <span class="deck-panel-status">${count} OF ${limit} ITEMS${count >= limit ? ' — FULL' : ''}</span>
                 <button class="deck-panel-close close-modal" aria-label="Close">✕</button></header>
-            ${count === 0 ? '<p class="roster-note">Empty. Probes, away teams and boarding parties bring things back here.</p>'
+            ${state.cargo.length === 0 ? '<p class="roster-note">Empty. Probes, away teams and boarding parties bring things back here.</p>'
                 : `<ul class="cargo-grid">${state.cargo.map(itemCard).join('')}</ul>`}`);
         if (window.ItemIcons) window.ItemIcons.hydrate(modal);
         modal.querySelectorAll('.cargo-use').forEach(btn => btn.addEventListener('click', () => {

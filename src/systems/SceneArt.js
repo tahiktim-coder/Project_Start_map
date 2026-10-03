@@ -397,7 +397,7 @@
     };
 
     // ═══ THE DARK PATCH — a hole in the sky with no stars in it; distress beacons inside switch off one by one. ═══
-    const HUNGER = { x: 282, y: 80, r: 62, wrecks: 9, deadAtStart: 2, firstOffMs: 9000, offEveryMs: 7000, keepLit: 2, blinkMs: 1700, tries: 600 };
+    const HUNGER = { x: 282, y: 80, r: 62, wrecks: 5, deadAtStart: 2, firstOffMs: 9000, offEveryMs: 7000, keepLit: 2, blinkMs: 1700, tries: 600 };
     const hungerDist = (x, y) => Math.hypot(x - HUNGER.x, (y - HUNGER.y) * 1.35) / HUNGER.r + (fbm(x / 26, y / 26, 9, 3) - 0.5) * 0.6;
     SCENES.ANOMALY_HUNGER = {
         build(p) {

@@ -13,20 +13,25 @@ Objective line: *One last log to find. Then there is only the light.* «Coach.js
 
 ## Arriving
 
-Arrival card: *The oldest wrecks of all. At the end of the heading, a light.* «bundle.js · SECTOR_ARRIVAL_LINES.6»  
+### Flying the jump «Corridor.js · LINES.6»
+_The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_
 
-**A.U.R.A.:** Sector 6, Commander. The oldest wrecks, and a light at the end of the heading.  
-**Dr. Aris:** It looks like a sun. Every one of them flew toward it.  
-**Tech Mira:** It gives off no heat. A real sun would.  
-**Spc. Vance:** Thirty thousand wrecks between us and that light.  
+**Eng. Jaxon:** That light ahead. I'm reading no heat off it.  
 
 Closing shot «StoryReel.js · jump6»: *Sector 6. The end of the heading. It looks like a sun.*    
 _Source on screen: HULL CAMERA · AFT_
 
 ## The story beats (always here)
 
+### The story planet: Tethys-1 Prime «StoryPlanets.js · sector 6»
+_A faint contact on the map from the start. Dating one of our wrecks here names it (sector-1.md, Dating a wreck with the disc); A.U.R.A. names it anyway when one stop is left. Its wreck is EXODUS-40,963, a whole ship with the page below in it._
+
+Map text: *A cold world a day's flight from the light. One of our ships stopped here.*  
+On the disc's map: the light at the end of the heading, labelled THE LIGHT. Then:  
+**Dr. Aris:** One ship stopped a day short of it. I want to read its log.  
+
 ### Found page: LAST ENTRY «ExodusLogs.js · PAGE_LIGHT»
-_In one wreck in this sector. The last entry from a ship four hundred years dead, a day's flight from the light. In the cargo hold it is called: Captain's Log (the light)._
+_In the wreck on Tethys-1 Prime. The last entry from a ship four hundred years dead, a day's flight from the light. In the cargo hold it is called: Captain's Log (the light)._
 
 It looks like a sun, but it gives off no heat.  
 My crew felt it going through their heads, one by one. It read everything they knew.  
@@ -40,20 +45,19 @@ If you are reading this, you are the last ship. Go to it. Then decide.
 ### On the sector map «NavView.js · handleStructureSelect»
 _The panel when you click the light._
 
-- "[It defies comprehension. It defies physics. It waits.]" «NavView.js · line 452»
-- TYPE UNKNOWN «NavView.js · line 455»
-- ORIGIN UNKNOWN «NavView.js · line 459»
-- AGE BEFORE TIME «NavView.js · line 463»
-- THREAT LEVEL ??? «NavView.js · line 467»
-- ⚠ A.U.R.A. ADVISORY «NavView.js · line 472»
-- "Commander, I cannot model what will happen if we approach. All predictive algorithms return null. Proceed with... I do not know." «NavView.js · line 473»
-- APPROACH THE STRUCTURE ([actual cost] NRG) «NavView.js · line 487»
+- [Every crew before you flew toward it.] «NavView.js · line 490»
+- WHAT IT IS It looks like a sun «NavView.js · line 493»
+- HOW WARM It is not «NavView.js · line 497»
+- HOW OLD Older than every wreck behind you «NavView.js · line 501»
+- ANYONE ALIVE Nothing answers. Something reads. «NavView.js · line 505»
+- "I cannot tell you what happens if we go closer, Commander. No ship before us reported back." «NavView.js · line 511»
+- GO TO THE LIGHT ([actual cost] NRG) «NavView.js · line 525»
 
 ### The jump button «NavView.js · render · jump button»
 _In the last sector the jump button is disabled._
 
-- END OF THE CORRIDOR «NavView.js · line 93»
-- >> JUMP SECTOR (-[jump cost] ENERGY)[jump cost note] «NavView.js · line 93»
+- END OF THE CORRIDOR «NavView.js · line 95»
+- >> JUMP SECTOR (-[jump cost] ENERGY)[jump cost note] «NavView.js · line 95»
 
 ### In orbit at the light «OrbitView.js · renderStructure»
 
@@ -77,78 +81,67 @@ _In the last sector the jump button is disabled._
 
 ### The final button «OrbitView.js · updateCommandDeck · btn-structure»
 
-- GO INTO THE LIGHT «OrbitView.js · line 339»
-- IT READS WHATEVER REACHES IT «OrbitView.js · line 340»
-- IT IS DONE «OrbitView.js · line 344»
-- THERE IS NOTHING MORE TO DECIDE «OrbitView.js · line 345»
+- GO INTO THE LIGHT «OrbitView.js · line 348»
+- IT READS WHATEVER REACHES IT «OrbitView.js · line 349»
+- IT IS DONE «OrbitView.js · line 353»
+- THERE IS NOTHING MORE TO DECIDE «OrbitView.js · line 354»
 
 ### Warping to the light «bundle.js · handleWarp»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "The drive fires, Commander. We do not move." «bundle.js · line 1525»
-- A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in." «bundle.js · line 1526»
-- A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in." «bundle.js · line 1532»
-- Approach complete. The light fills every window. It is not warm. «bundle.js · line 1724»
-- A.U.R.A.: "Five crew, Commander. All accounted for." «bundle.js · line 1725»
+- A.U.R.A.: "The drive fires, Commander. We do not move." «bundle.js · line 1562»
+- A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in." «bundle.js · line 1563»
+- A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in." «bundle.js · line 1569»
+- Approach complete. The light fills every window. It is not warm. «bundle.js · line 1739»
 
 ### Trying to jump past it «bundle.js · handleSectorJump»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light." «bundle.js · line 2141»
+- A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light." «bundle.js · line 2245»
 
 ### Scanning it «bundle.js · handleScanAction»
 _Only these lines of it play at the light._
 
-- Deep Scan started... «bundle.js · line 3452»
-- === SCAN ERROR === «bundle.js · line 3453»
-- Mass: [OVERFLOW - VALUE EXCEEDS SENSOR RANGE] «bundle.js · line 3454»
-- Composition: [NULL - MATERIAL UNKNOWN] «bundle.js · line 3455»
-- Age: [ERROR - NEGATIVE VALUE DETECTED] «bundle.js · line 3456»
-- Energy readings: [∞] «bundle.js · line 3457»
-- A.U.R.A.: "Commander, the scan returns impossible values. The readings don't match any known physics." «bundle.js · line 3458»
-- The probe sent a burst of static before going silent. Its signal traces to a location that doesn't exist. «bundle.js · line 3459»
-- PROBE STATUS: DESTROYED. It didn't break — it simply ceased to be. «bundle.js · line 3465»
-- PROBE STATUS: Integrity at [probe integrity]%. Something is wrong with its memory banks. «bundle.js · line 3467»
+- Deep Scan started... «bundle.js · line 3501»
+- SCAN: Light, but no heat. «bundle.js · line 3502»
+- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 3503»
+- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 3504»
+- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 3510»
+- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 3512»
 
 ### Sending a probe «bundle.js · handleProbeAction»
 _Only these lines of it play at the light._
 
-- No probe available. Perhaps that is fortunate. «bundle.js · line 3598»
-- Probe launched toward THE STRUCTURE... «bundle.js · line 3602»
-- Signal lost instantly. No data. No wreckage. The probe simply... ceased. «bundle.js · line 3604»
-- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 3605»
+- No probe available. «bundle.js · line 3643»
+- Probe launched toward the light... «bundle.js · line 3647»
+- Signal lost at once. No data, and no wreckage. «bundle.js · line 3648»
+- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 3649»
 
 ### Sending the team «bundle.js · handleEvaAction»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 3801»
+- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 3845»
 
 ### Trying to leave «bundle.js · init · req-break-orbit»
 _Breaking orbit at the light._
 
-- A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times." «bundle.js · line 1183»
+- A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times." «bundle.js · line 1225»
 
 ## The sector's own trouble: THRESHOLD_CALL «SectorConfig.js · 6.hazard»
 _Nothing here is random. The light reads what reaches it._
 
 On a warp inside this sector:
-- THRESHOLD: [name]'s wounds seal themselves. The boundary gives. «SectorConfig.js · 6.hazard.onWarp»
-- THRESHOLD: Energy floods into the ship from nowhere. The boundary provides. «SectorConfig.js · 6.hazard.onWarp»
-- THRESHOLD: [name] hears something calling from beyond. They cannot unhear it. «SectorConfig.js · 6.hazard.onWarp»
-- THRESHOLD: For a moment, you see it. THE STRUCTURE. It sees you back. «SectorConfig.js · 6.hazard.onWarp»
+- [name]'s wounds closed overnight. Nobody can say how. «SectorConfig.js · 6.hazard.onWarp»
+- The reactor charged itself overnight. +20 Energy. «SectorConfig.js · 6.hazard.onWarp»
+- [name] felt something going through their thoughts in the night. They did not sleep again. «SectorConfig.js · 6.hazard.onWarp»
+- For a moment the light fills every window. Then it is small again. «SectorConfig.js · 6.hazard.onWarp»
 
 On arrival:
-- **name** — THE STRUCTURE «SectorConfig.js · 6.hazard.onSectorEnter»
-- **desc** — It is not a planet. It is not a station. It defies comprehension. It has always been here. Waiting. «SectorConfig.js · 6.hazard.onSectorEnter»
-- SECTOR 6: THE THRESHOLD «SectorConfig.js · 6.hazard.onSectorEnter»
-- Every ship before you stopped somewhere behind you. «SectorConfig.js · 6.hazard.onSectorEnter»
-- And then you see it. «SectorConfig.js · 6.hazard.onSectorEnter»
-- THE STRUCTURE. «SectorConfig.js · 6.hazard.onSectorEnter»
-- It defies description. It defies physics. It defies sanity. «SectorConfig.js · 6.hazard.onSectorEnter»
-- But it is there. And it is waiting for you. «SectorConfig.js · 6.hazard.onSectorEnter»
+- **name** — THE LIGHT «SectorConfig.js · 6.hazard.onSectorEnter»
+- **desc** — At the end of the heading. Every crew before you flew toward it. «SectorConfig.js · 6.hazard.onSectorEnter»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name]_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / MUTINY / SHIP ALERT_
 
 ### NIGHT ON THE BRIDGE «CrewEvents.js · COMMANDER_DOUBT»
 _Sectors 5, 6_
@@ -177,12 +170,12 @@ Nothing plays here: there is no jump out of sector 6. The jump button reads END 
 
 From the shared pools ([pools.md](pools.md)):
 - [Wreckage in orbit](pools.md#wreckage-in-orbit)
-- [Strange places](pools.md#strange-places) — one is always placed in every sector; THE FOLD and THE DOOR only from sector 3
+- [Strange places](pools.md#strange-places) — one is always placed in every sector; some only from a later sector, as marked
 - [The Wrong Place](pools.md#the-wrong-place) — only through THE FOLD
 - [Late places](pools.md#late-places) — the beacon and the dome from sector 4, the graves from sector 5
-- [Old stations](pools.md#old-stations)
+- [Old stations](pools.md#old-stations) — some only from a later sector, as marked
 - [Asteroid fields](pools.md#asteroid-fields)
-- [Distress calls](pools.md#distress-calls)
+- [Distress calls](pools.md#distress-calls) — some only from a later sector, as marked
 - [Ship problems](pools.md#ship-problems) — on warps and jumps, never on the approach to the light
 - [Surface finds](pools.md#surface-finds)
 

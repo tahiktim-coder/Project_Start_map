@@ -65,11 +65,14 @@
         return String(desc || '').replace(REWARD_PATTERN, (hit) => `<b class="${isLoss(hit) ? 'is-loss' : 'is-gain'}">${hit}</b>`);
     }
 
-    /** "+20 Salvage", "30% chance" pulled out of a description as chips; a very short description is kept as a plain hint. */
+    /**
+     * "+20 Salvage", "30% risk" pulled out of a description as chips; a very short description is kept as a plain hint.
+     * A chance in a description is always a chance of something going wrong, so its chip says "risk" and reads as a loss.
+     */
     function chipsHtml(desc) {
         const text = String(desc || ''), hits = [];
         text.replace(REWARD_PATTERN, (hit) => { hits.push(hit.trim()); return hit; });
-        text.replace(CHANCE_PATTERN, (hit) => { hits.push(hit.trim()); return hit; });
+        text.replace(CHANCE_PATTERN, (hit) => { hits.push(hit.trim().replace(/chance$/i, 'risk')); return hit; });
         if (hits.length) return `<span class="enc-chips">${hits.map(h => `<i class="${isLoss(h) ? 'is-loss' : 'is-gain'}">${esc(h)}</i>`).join('')}</span>`;
         const first = (text.match(/^[^.!?]+[.!?]?/) || [''])[0].trim();
         return first && first.split(/\s+/).length <= SHORT_HINT_WORDS ? `<span class="enc-chips"><i>${esc(first)}</i></span>` : '';

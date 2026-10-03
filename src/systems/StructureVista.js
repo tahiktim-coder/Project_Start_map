@@ -47,7 +47,7 @@
         const canvas = document.createElement('canvas');
         canvas.className = 'structure-vista';
         canvas.setAttribute('role', 'img');
-        canvas.setAttribute('aria-label', 'The Structure: a black slab with one lit edge, far too large, with rings turning round it');
+        canvas.setAttribute('aria-label', 'The light at the end of the heading: it looks like a sun, with dark hulls drifting across its face');
         container.appendChild(canvas);
         active = { container, canvas, view: null, wasAttached: false };
         // The shared clock does not run under "reduce motion" (or in a hidden tab), so make sure one still frame always lands

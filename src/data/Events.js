@@ -170,7 +170,7 @@ const EVENTS = [
         id: 'SHIP_GRAVEYARD',
         trigger: (planet) => planet.type === 'GRAVEYARD',
         title: "THE SCRAP HEAP",
-        desc: "Thousands of ships are crushed together into one huge heap, and the team is walking on their hulls. The salvage is incredible, but the pile could collapse.",
+        desc: "Hundreds of ships are crushed together into one huge heap, and the team is walking on their hulls. The salvage is incredible, but the pile could collapse.",
         choices: [
             { text: "Strip the hulls on top", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } },
             { text: "Cut down into the middle", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }

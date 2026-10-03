@@ -287,7 +287,7 @@
                 drawTapeWear(ctx, t);
             },
         },
-        jump2: jumpShot('Sector 2. One of the eight, drifting.', { density: 0.06, hull: ['EXODUS-6', 1200] }),
+        jump2: jumpShot('Sector 2. One of the eight, drifting.', { density: 0.06, hull: ['EXODUS-7', 1200] }),
         jump4: jumpShot('Sector 4. Ship numbers in the thousands.', { density: 0.5, wrecks: 0.5, grid: 0.35, hull: ['EXODUS-2207', 900] }),
         jump5: jumpShot('Sector 5. A ship that looks exactly like yours.', { density: 0.75, wrecks: 0.8, grid: 0.7, twin: 1500 }),
         jump6: jumpShot('Sector 6. The end of the heading. It looks like a sun.', { density: 1, wrecks: 1, grid: 1, light: 1, noStars: true, twin: 600 }),

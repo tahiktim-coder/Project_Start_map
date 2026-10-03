@@ -13,7 +13,7 @@ const SOURCES = {};
 const read = rel => SOURCES[rel] || (SOURCES[rel] = fs.readFileSync(path.join(ROOT, rel), 'utf8'));
 
 // ── load the data files the way the browser does: one shared global scope ──
-const DATA = ['SectorConfig', 'Items', 'ExodusLogs', 'Events', 'ExodusDerelicts', 'DerelictEncounters', 'SpaceStations', 'FailedColonyEncounters',
+const DATA = ['SectorConfig', 'Items', 'ExodusLogs', 'StoryPlanets', 'Events', 'ExodusDerelicts', 'DerelictEncounters', 'SpaceStations', 'FailedColonyEncounters',
     'AsteroidFields', 'DistressSignals', 'AnomalyEncounters', 'LateGamePOIs', 'ShipEvents', 'CrewEvents', 'CampfireEvents', 'StructureEncounter'];
 const sandbox = { window: {}, document: { addEventListener() {}, querySelector() { return null; } }, console, Math, setTimeout() {}, CustomEvent: function () {} };
 sandbox.window.dispatchEvent = () => {};
@@ -35,6 +35,7 @@ function mockState(sector) {
     const state = {
         currentSector: sector, energy: 60, salvage: 100, maxSalvage: 300, rations: 15, maxRations: 30, probeIntegrity: 80, cargo: [], upgrades: [],
         crew: CREW(), sectorNodes: [], _colonyKnowledge: 2, actionsTaken: 20, exodusLogsFound: [],
+        _boardedHulls: ['EXODUS-980 "ORPHEUS"'],   // a sector 3 wreck the team boarded: scenes that name one need it
         shipDecks: { bridge: deck('Bridge'), lab: deck('Laboratory'), quarters: deck('Crew quarters'), cargo: deck('Cargo hold'), engineering: deck('Engineering'), upgrades: deck('Fabrication') },
         addLog: m => logs.push(String(m)), emitUpdates() {}, noteStanding() {}, hasStanding() { return false; }, isDeckOperational() { return true; },
         consumeRation() {}, consumeEnergy() { return true; }, damageRandomDeck() { return 'lab'; }, hasActiveTrait() { return false; },
@@ -290,6 +291,7 @@ function sceneMd(enc, file, opts = {}) {
     const out = [], sector = opts.sector || 3;
     out.push(`### ${clean(enc.title || enc.name || enc.id)}${tag(file, enc.id)}`);
     if (opts.where) out.push(`_${opts.where}_`);
+    else if (enc.minSector > 1) out.push(`_Only from sector ${enc.minSector}._`);
     const ctx = enc.context != null ? ctxOf(enc.context, opts.ctxArg) : enc.desc ? clean(enc.desc) : '';
     if (ctx) out.push('', `> ${ctx}`);
     let talk = enc.dialogue;
@@ -314,6 +316,8 @@ function sceneMd(enc, file, opts = {}) {
 
 // ── the beats that live in code: read them from the source ──
 const BUNDLE = read('src/bundle.js');
+const MINI = 'src/systems/minigames/', CORRIDOR = `${MINI}Corridor.js`;
+const isSaid = t => !/^[a-z]+$/.test(t.text) && !/^\w+: /.test(t.text);       // a mini-game's own keys, ids and error messages are not text
 function methodSource(name) {
     const start = BUNDLE.indexOf(`    ${name}(`);
     if (start < 0) return '';
@@ -341,11 +345,15 @@ function arrivalLines() {
     if (obj) { const re = /(\d):\s*'((?:\\'|[^'])*)'/g; let m; while ((m = re.exec(obj[1]))) lines[m[1]] = m[2].replace(/\\'/g, "'"); }
     return lines;
 }
-function arrivalCrew(sector) {
-    const src = methodSource('getWarpDialogue'), block = new RegExp(`\\n\\s*${sector}: \\[([\\s\\S]*?)\\],\\n`).exec(src);
-    if (!block) return [];
-    const re = /say\('([^']+)',\s*'((?:\\'|[^'])*)'/g, out = [];
-    let m; while ((m = re.exec(block[1]))) out.push(lineOf(m[1], m[2].replace(/\\'/g, "'")) + '  ');
+/** The crew's lines while the jump into `sector` is flown (Corridor.js LINES): the words, with [number] where the game counts. */
+function corridorLines(sector) {
+    const table = /const LINES = \{([\s\S]*?)\n {4}\};/.exec(read(CORRIDOR));
+    const row = table && new RegExp(`\\b${sector}: \\[([\\s\\S]*?\\})\\],?\\s*\\n`).exec(table[1] + '\n');
+    if (!row) return [];
+    const words = expr => expr.replace(/^[^=]*=>\s*/, '').split(/('(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*")/)
+        .map(part => (/^['"]/.test(part) ? part.slice(1, -1).replace(/\\(['"])/g, '$1') : /\w/.test(part) ? '[number]' : '')).join('');
+    const re = /role: '(\w+)', who: '[^']+', say: ([^}]*?)\s*\}/g, out = [];
+    let m; while ((m = re.exec(row[1]))) out.push(lineOf(ROLE_SPEAKER[m[1]] || m[1], words(m[2])) + '  ');
     return out;
 }
 function coachLines() {
@@ -383,7 +391,7 @@ const POOL_SECTORS = {
     'Strange places': [1, 2, 3, 4, 5, 6], 'The Wrong Place': [3, 4, 5, 6], 'Late places': [4, 5, 6], 'Old stations': [1, 2, 3, 4, 5, 6], 'Asteroid fields': [1, 2, 3, 4, 5, 6],
     'Distress calls': [1, 2, 3, 4, 5, 6], 'Ship problems': [1, 2, 3, 4, 5, 6], 'Surface finds': [1, 2, 3, 4, 5, 6],
 };
-const POOL_NOTES = { 'Strange places': 'one is always placed in every sector; THE FOLD and THE DOOR only from sector 3', 'The Wrong Place': 'only through THE FOLD',
+const POOL_NOTES = { 'Strange places': 'one is always placed in every sector; some only from a later sector, as marked', 'Old stations': 'some only from a later sector, as marked', 'Distress calls': 'some only from a later sector, as marked', 'The Wrong Place': 'only through THE FOLD',
     'Late places': 'the beacon and the dome from sector 4, the graves from sector 5', 'Ship problems': 'on warps and jumps, never on the approach to the light' };
 const sectorList = list => list.length === 6 ? 'any sector' : `sector${list.length > 1 ? 's' : ''} ${list.join(', ')}`;
 const poolAnchor = title => title.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim().replace(/ +/g, '-');
@@ -391,7 +399,7 @@ const poolAnchor = title => title.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim(
 // ── what each sector is for (the one place in this tool that is written by hand) ──
 const INTENT = {
     1: { idea: 'Everything looks exactly like the briefing said: the wrecks of the eight ships that went before you, about twenty years dead. The player learns the controls.',
-        wrong: 'The only wrong note: A.U.R.A. says there are four crew when there are five. You are not on her list.',
+        wrong: 'The only wrong note: A.U.R.A. says there are four crew when there are five. Nobody explains it (the answer is being redesigned).',
         learn: 'The count. The drawing of the gold disc (why is it in a colony ship\'s orders?). A crew plate with four names and a blank fifth.' },
     2: { idea: 'The last of the eight. The first real crack in the story.',
         wrong: 'An uncut copy of the briefing film shows your heading full of ships, not eight. A.U.R.A. brushes it off.',
@@ -403,8 +411,8 @@ const INTENT = {
         wrong: 'The briefing was not a mistake. It was written that way on purpose.',
         learn: 'Orders for commanders only: tell your crew they are the ninth; the ship\'s computer knows and will not tell them.' },
     5: { idea: 'Tens of thousands of ships, three hundred years dead. The scale of it.',
-        wrong: 'Every ship was lost before it was launched. No commander was ever written down, on any ship.',
-        learn: 'The launch ledger, with the wrecks you boarded yourself in it. The count clicks.' },
+        wrong: 'Every ship was lost before it was launched.',
+        learn: 'The launch ledger, with the wrecks you boarded yourself in it.' },
     6: { idea: 'The oldest wrecks, and at the end of the heading a light that looks like a sun. Nothing random happens on the way in.',
         wrong: 'It gives off no heat.',
         learn: 'A dead commander\'s last log: it read my crew, it could not find me. Then the light, and the choice.' },
@@ -443,9 +451,29 @@ function hazardMd(sector) {
     if (b.length === 3) b.push('It has no lines of its own; it only changes the rules of the sector.', '');
     return b;
 }
+const STORY_PLANETS = G('STORY_PLANETS') || [];
+const FULL_NAME = { Aris: 'Dr. Aris', Mira: 'Tech Mira', Vance: 'Spc. Vance', Jaxon: 'Eng. Jaxon' };
+const PLACE_SHOWN = { beacon: 'a moon with one lamp lit', graves: 'a grey world; the close-up shows its graves', light: 'the light at the end of the heading' };
+/** The sector's story planet (StoryPlanets.js): a faint contact until a dated wreck points at it; its wreck holds the page. */
+function storyPlanetMd(def) {
+    const line = def.reward.line;
+    return [`### The story planet: ${def.name}${tag('StoryPlanets.js', `sector ${def.sector}`)}`,
+        `_A faint contact on the map from the start. Dating one of our wrecks here names it (sector-1.md, Dating a wreck with the disc); A.U.R.A. names it anyway when one stop is left. Its wreck is EXODUS-${def.hull.toLocaleString('en-US')}, a whole ship with the page below in it._`, '',
+        `Map text: *${clean(def.desc)}*  `,
+        `On the disc's map: ${PLACE_SHOWN[def.reward.kind]}${def.reward.label ? `, labelled ${def.reward.label.toUpperCase()}` : ''}. Then:  `,
+        `${lineOf(FULL_NAME[line.who] || line.who, line.text)}  `, ''];
+}
 function extrasMd(sector) {
     const b = [];
     if (sector === 1) {
+        b.push('## Dating a wreck with the disc (all sectors)', '_Offered after any of our wrecks once the disc drawing is in cargo, and on the command deck while in orbit. Each wreck once. The first wreck dated in a sector names that sector\'s story planet._', '');
+        b.push(...textSection(3, 'The faint contact on the map', method('src/views/NavView.js', 'handleContactSelect'), 'The story planet before it is named: a faint dot labelled UNIDENTIFIED. Clicking it:'));
+        b.push(...textSection(3, 'The offer', bm('offerDiscDating'), 'A card after the wreck. Mira asks; A.U.R.A. if Mira is dead.'));
+        b.push(...textSection(3, 'Dating it (the mini-game)', whole(`${MINI}DiscDating.js`), 'The reactions by depth play the first time a wreck that deep is dated; after that A.U.R.A. says the age.', isSaid));
+        b.push(...textSection(3, 'In the log afterwards', bm('dateWreck'), ''), ...bulletsOf(bm('storyFoundLine')), '');
+        b.push(...textSection(3, 'When nobody dated a wreck', bm('revealLateStoryPlanet'), 'Back on the map with one stop left.'));
+        b.push(...textSection(2, 'The hole in the hull (the mini-game)', whole(`${MINI}Breach.js`), 'Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time.', isSaid));
+        b.push(...textSection(3, 'In the log afterwards', bm('applyBreachResult'), ''));
         b.push(...textSection(3, 'How every found page is shown (all sectors)', whole('src/systems/FoundPage.js'), 'The card around each found page; the ledger rows are built from the wrecks you boarded (sector 5).'));
         b.push(...textSection(2, 'If you try to settle a planet here (sectors 1 and 2)', bm('showColonyWarningModal'), 'The crew warn you off. Sector 2 uses the same card.'));
     }
@@ -472,19 +500,24 @@ for (let sector = 1; sector <= 6; sector++) {
     b.push(`**What this sector is for.** ${intent.idea}`, '', `**What is wrong.** ${intent.wrong}`, '', `**What the player learns.** ${intent.learn}`, '');
     b.push(`Map text: *${clean(cfg.ambientDesc)}*${tag('SectorConfig.js', `${sector}.ambientDesc`)}  `);
     if (sector === 1) b.push('', 'Objective lines (the tip above the log, one at a time, whichever fits what you are doing):', ...bulletsOf(COACH_TIPS, inside(COACH_SECTOR_1)));
-    else b.push(`Objective line: *${clean(coachLines()[sector] || '')}*${tag('Coach.js', `SECTOR_LINE.${sector}`)}`);
+    else if (coachLines()[sector]) b.push(`Objective line: *${clean(coachLines()[sector])}*${tag('Coach.js', `SECTOR_LINE.${sector}`)}`);
+    else b.push('Objective line: only where to look (the lines listed in sector 2), while the page is still out there.');
     if (sector === 2) b.push('', 'When the page is found or the stops run out (sectors 2 to 6):', ...bulletsOf(COACH_TIPS, t => t.line > COACH_SECTOR_1[1]));
+    if (sector === 2) b.push('', 'Added to the objective line, once (sectors 2 to 6), while the page is still out there:', ...bulletsOf(block('src/systems/Coach.js', /function whereLine/, 'whereLine')));
     if (sector >= 2) {
         b.push('', '## Arriving', '');
-        if (sector === 3) b.push(`### The jump that does not finish${tag('TheThrow.js', 'BEATS')}`, '', ...throwBeats(), '', ...textSection(4, 'The card when it ends', method('src/systems/TheThrow.js', 'play'), 'Also the log lines. Mira says the line; A.U.R.A. says hers if Mira is dead.'));
-        b.push(`Arrival card: *${clean(arrivalLines()[sector] || '')}*${tag('bundle.js', `SECTOR_ARRIVAL_LINES.${sector}`)}  `, '', ...arrivalCrew(sector));
-        if (sector === 2) b.push('', ...textSection(4, 'A.U.R.A. on who has been flying', bm('getRelianceVoice'), 'Added to every arrival card from here on, once you have plotted four or more jumps: one line if you let her fly most of them, the other if you flew them yourself.'));
+        if (sector === 3) {
+            b.push(...textSection(3, 'The burn that stalls', bm('plotStalledBurn'), 'The jump is plotted (the burn mini-game, 09-ship-and-crew.md) and its card says only this.'));
+            b.push(`### The jump that does not finish${tag('TheThrow.js', 'BEATS')}`, '', ...throwBeats(), '', ...textSection(4, 'The card when it ends', method('src/systems/TheThrow.js', 'play'), 'Also the log lines. Mira says the line; A.U.R.A. says hers if Mira is dead.'));
+            b.push(`Card line: *${clean(arrivalLines()[sector] || '')}*${tag('bundle.js', `SECTOR_ARRIVAL_LINES.${sector}`)}  `);
+        } else b.push(`### Flying the jump${tag('Corridor.js', `LINES.${sector}`)}`, '_The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_', '', ...corridorLines(sector));
+        if (sector === 2) b.push('', ...textSection(4, 'A.U.R.A. on who has been flying', bm('getRelianceVoice'), 'In the log after every jump from here on, once she has seen four or more burns and flights: one line if she flew most of them, the other if you did. She says nothing when this jump went against the pattern.'));
         const shot = sector === 3 ? null : `jump${sector}`;
         if (shot && reelCaptions(shot).length) b.push('', `Closing shot${tag('StoryReel.js', shot)}: ${reelCaptions(shot).join(' ')}  `, reelSource(shot));
     }
     b.push('', '## The story beats (always here)', '');
     if (sector === 1) {
-        b.push(`### The marked beacon — the first wreck${tag('bundle.js', 'findDiscDrawing')}`, '_The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_', '', ...bulletsOf(bm('findDiscDrawing')), '');
+        b.push(`### The marked beacon — the first wreck${tag('bundle.js', 'findDiscDrawing')}`, '_The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), always a whole ship, so the team cuts its hatch first (10-away-team.md). It is named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_', '', ...bulletsOf(bm('findDiscDrawing')), '');
         b.push(`#### The drawing of the gold disc${tag('DiscDocument.js', 'NOTES')}`, '_A card with the drawing. Point at each label to read its note._', '', ...bulletsOf(block('src/systems/DiscDocument.js', /const o = Object\.assign/, 'open · defaults')), '');
         ((sandbox.window.DiscDocument || {}).NOTES || []).forEach(n => b.push(`- **${n.label}** — ${clean(n.text)}${tag('DiscDocument.js', `NOTES.${n.key}`)}`));
         b.push('', 'In the cargo hold afterwards:', ...bulletsOf(block('src/data/Items.js', /^\s{4}DISC_DRAWING: \{/m, 'DISC_DRAWING')), '');
@@ -495,8 +528,11 @@ for (let sector = 1; sector <= 6; sector++) {
         const tape = methodSource('findBriefingTape');
         b.push(`### The uncut briefing tape${tag('StoryReel.js', 'uncut')}`, '_In one of the wrecks. Plays as a film, then:_', reelSource('uncut'), '', ...reelCaptions('uncut'), '', ...logsFrom(tape), '', 'In the cargo hold afterwards:', ...bulletsOf(block('src/data/Items.js', /^\s{4}BRIEFING_TAPE: \{/m, 'BRIEFING_TAPE')), '');
     }
+    const story = STORY_PLANETS.find(d => d.sector === sector);
+    if (story) b.push(...storyPlanetMd(story));
     PAGES.filter(p => p.sector === sector).forEach(page => {
-        b.push(`### Found page: ${page.logTitle}${tag('ExodusLogs.js', page.id)}`, `_In one wreck in this sector. ${clean(page.desc)} In the cargo hold it is called: ${clean(page.name)}._`, '');
+        const where = story && story.page === page.id ? `In the wreck on ${story.name}.` : 'In one wreck in this sector.';
+        b.push(`### Found page: ${page.logTitle}${tag('ExodusLogs.js', page.id)}`, `_${where} ${clean(page.desc)} In the cargo hold it is called: ${clean(page.name)}._`, '');
         page.lines.forEach(l => b.push(`${clean(l)}  `));
         if (page.names) b.push('', `Names on it: ${page.names.map(n => n || '(blank)').join(' · ')}`);
         if (page.after) b.push('', lineOf(page.after.speaker, page.after.text));
@@ -639,12 +675,13 @@ for (let sector = 1; sector <= 6; sector++) {
     b.push(...textSection(3, 'Stress', bm('applyStressTraits'), 'When someone reaches stress 2; the first time is a tutorial.'));
     b.push(...textSection(3, 'Breakdowns', bm('triggerBreakdown'), 'When someone reaches stress 3. The commander breaking is game over.'), ...textSection(3, 'Mutiny', bm('showMutinyEvent'), 'Vance at stress 3.'));
     b.push(...textSection(3, 'Bringing someone back', bm('handleRevivalAction'), 'Using Pulsing Spores or an Ancient Neural Link from the cargo hold.'));
-    b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('consumeRation'), 'Each warp, team trip and jump eats a ration.'), ...textSection(3, 'Deck damage', bm('damageRandomDeck'), 'The first time is a tutorial.'));
+    b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('consumeRation'), 'Each warp, team trip and jump eats a ration.'), ...textSection(3, 'Deck damage', bm('damageDeck'), 'The first time is a tutorial.'));
     b.push(...textSection(3, 'What the data adds up to', bm('addColonyKnowledge'), 'At 1, 3 and 5 data.'));
     b.push('## Flying', '');
     [['handleWarp', 'Warping to a planet'], ['handleSectorJump', 'Jumping to the next sector']].forEach(([n, title]) => { const p = bm(n); b.push(...textSection(3, title, p, 'The lines for the light are in sector-6.md.', outside(...lightRanges(p)))); });
     b.push(...textSection(3, 'Breaking orbit', BREAK_ORBIT, '', outside(...lightRanges(BREAK_ORBIT))), ...textSection(3, 'After the burn', bm('applyPlotResult'), 'After every warp and jump plot.'));
-    b.push(...textSection(3, 'Plotting the burn (the mini-game)', whole('src/systems/WarpPlot.js'), 'Before every warp and jump: the crew and A.U.R.A. react to how it went.'));
+    b.push(...textSection(3, 'Plotting the burn (the mini-game)', whole('src/systems/WarpPlot.js'), 'Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to how it went.'));
+    b.push(...textSection(3, 'Flying a sector jump (the mini-game)', whole(CORRIDOR), 'Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every third scrape breaks a deck.', isSaid));
     b.push('## Game over', '', ...textSection(3, 'All hands lost, hull breach', bm('checkLoseConditions'), ''), ...textSection(3, 'Stranded', bm('checkStranded'), 'No energy and no way out.'));
     b.push(...textSection(3, 'The game-over screen', block('src/systems/EndScreens.js', /function gameOver/), ''), ...textSection(3, 'The dead, on that screen', block('src/systems/EndScreens.js', /function memorialHtml/), ''));
     b.push(...textSection(3, 'The numbers, on that screen', block('src/systems/EndScreens.js', /function statsHtml/), ''));
@@ -673,6 +710,7 @@ for (let sector = 1; sector <= 6; sector++) {
     });
     b.push(...textSection(3, 'Who goes, and the radio', whole('src/systems/AwayTeam.js'), 'The crew picker, their chatter on the way down, and the return screen.'));
     b.push(...textSection(3, 'Landing (the mini-game)', whole('src/systems/LanderGame.js'), ''), ...textSection(3, 'How the landing went', bm('applyLanding'), ''));
+    b.push(...textSection(3, 'Cutting into one of our wrecks (the mini-game)', whole(`${MINI}Torch.js`), "Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet.", isSaid), ...textSection(3, 'When the hatch is open', bm('cutIntoWreck'), ''));
     b.push(...textSection(3, 'The choice card on the surface', bm('showEventModal'), 'The card around every surface find (pools.md, Surface finds).'), ...textSection(3, 'How the trip went', bm('resolveEvaOutcome'), 'Dangers and results by planet type, deaths, injuries and rewards.'));
     b.push(...textSection(3, 'Paradise found', bm('showEdenEvaModal'), 'A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one).'));
     b.push('## Boarding a station', '', ...textSection(3, 'Docking (the mini-game)', whole('src/systems/DockingGame.js'), ''));

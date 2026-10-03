@@ -63,7 +63,7 @@ class OrbitView {
                             <dt>MACHINES</dt><dd class="${hasTech ? 'is-warn' : ''}">${hasTech ? 'Yes, something was built here' : 'None found'}</dd>
                         </dl>
                         <h4 class="site-sub">WHAT IS HERE</h4>
-                        ${OrbitView.findingsHtml(planet.tags)}
+                        ${OrbitView.findingsHtml(planet.tags, planet)}
                         ${OrbitView.dangerHtml(planet, hasLife)}`
                         : `<p class="site-note">We cannot see the ground from here. Run a deep scan to find out what is down there.</p>`}
                     </div>
@@ -255,11 +255,13 @@ class OrbitView {
         GRAVE: ['Graves', 'rows of markers, as far as the scan reaches', 'plain'],
     };
 
-    static findingsHtml(tags) {
+    static findingsHtml(tags, planet) {
         if (!tags || tags.length === 0) return '<div style="color:var(--color-text-dim); font-style:italic;">Nothing unusual.</div>';
         const TONE = { good: 'var(--green-br)', warn: 'var(--amber)', bad: 'var(--red)', plain: 'var(--bone)' };
+        const isSearched = tag => tag === 'EXODUS_WRECK' && planet && planet.exodusInvestigated;   // the team has been: no more "send the team"
         return tags.map(tag => {
-            const [label, note, tone] = OrbitView.FINDINGS[tag] || [tag.replace(/_/g, ' ').toLowerCase(), '', 'plain'];
+            const [label, todo, tone] = OrbitView.FINDINGS[tag] || [tag.replace(/_/g, ' ').toLowerCase(), '', 'plain'];
+            const note = isSearched(tag) ? 'one of ours — the team has searched it' : todo;
             return `<div style="margin-bottom:5px; padding-left:8px; border-left:2px solid ${TONE[tone]}; line-height:1.35;">
                 <span style="color:${TONE[tone]}; font-weight:bold;">${label}</span>${note ? `<span style="color:var(--dim); font-size:0.85em;"> — ${note}</span>` : ''}</div>`;
         }).join('');
@@ -334,6 +336,13 @@ class OrbitView {
                     </button>`;
                 })()}
 
+                ${window.app && window.app.canDateWreck && window.app.canDateWreck(planet)
+                    ? `<button class="cmd-btn cmd-site" id="btn-date-wreck">
+                        <div>DATE THE WRECK</div>
+                        <div class="cost">WITH THE DISC · NO COST</div>
+                       </button>`
+                    : ''}
+
                 ${planet.isStructure && !planet.structureApproached
                     ? `<button class="cmd-btn" id="btn-structure" style="border-color: #ffd27a; color: #fff3cf; background: linear-gradient(135deg, rgba(168,120,31,0.28), rgba(255,210,122,0.14));">
                         <div style="font-size: 1.1em; font-weight: bold;">GO INTO THE LIGHT</div>
@@ -398,6 +407,9 @@ class OrbitView {
 
         const btnEva = rightPanel.querySelector('#btn-eva');
         if (btnEva) btnEva.addEventListener('click', () => window.dispatchEvent(new CustomEvent('req-action-eva')));
+
+        const btnDateWreck = rightPanel.querySelector('#btn-date-wreck');
+        if (btnDateWreck) btnDateWreck.addEventListener('click', () => window.dispatchEvent(new CustomEvent('req-action-date-wreck')));
 
         const btnStation = rightPanel.querySelector('#btn-station:not([disabled])');
         if (btnStation) btnStation.addEventListener('click', () => window.dispatchEvent(new CustomEvent('req-action-station')));

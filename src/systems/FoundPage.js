@@ -1,7 +1,7 @@
 /* FoundPage — a page found in a dead ship, read one line at a time.
    The six pages in EXODUS_LOGS are the spine of the story. Each is drawn as the object it is (a cast plate, a printed page,
    a captain's log screen, the launch ledger) on the left, with its lines on the right, then one spoken line from whoever
-   aboard would say something. open(app, page) shows it; the page stays in cargo (isKept) and can be read again from there.
+   aboard would say something. open(app, page) shows it and resolves when it is put away; the page stays in cargo (isKept) and can be read again from there.
    The ledger is built at run time from the wrecks this player actually boarded, so the proof is their own journey. */
 
 (function () {
@@ -82,7 +82,7 @@
 
     // ── the card ──
     function open(app, page, foundIn) {
-        if (!page || document.querySelector('.found-page')) return;
+        if (!page || document.querySelector('.found-page')) return Promise.resolve();
         const state = app && app.state, isLedger = page.kind === 'ledger', shipName = foundIn || page.shipName || 'a dead ship';
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay disc-doc found-page';
@@ -120,10 +120,12 @@
             const timer = setInterval(() => { if (!overlay.isConnected) { clearInterval(timer); return; } draw(ctx, page, performance.now() - startedAt); }, TICK_MS);
             draw(ctx, page, 0);
         }
-        const close = () => { overlay.remove(); if (state && state.emitUpdates) state.emitUpdates(); };
-        overlay.querySelector('.disc-doc-close').addEventListener('click', close);
-        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
         next.focus({ preventScroll: true });
+        return new Promise(resolve => {
+            const close = () => { overlay.remove(); if (state && state.emitUpdates) state.emitUpdates(); resolve(); };
+            overlay.querySelector('.disc-doc-close').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        });
     }
 
     window.FoundPage = { open };

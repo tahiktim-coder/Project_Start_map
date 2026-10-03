@@ -2,8 +2,8 @@
  * THE LIGHT — the end of the heading (docs/CANON.md sections 6 and 9).
  *
  * Nothing random happens here. The light reads the ship: first A.U.R.A. (a machine, read at once, and made again — she says
- * "five crew" for the first time), then the crew. It cannot read the commander, because nothing about the commander was ever
- * written down. So whatever is done in there, the commander does it. You may only choose an ending you have standing for:
+ * "five crew" for the first time), then the crew. It cannot read the commander (why is being redesigned; nobody explains it here).
+ * So whatever is done in there, the commander does it. You may only choose an ending you have standing for:
  * you backed that person during the run. Nobody goes home. Every ending closes on the computer's twin in the vault on Earth.
  */
 
@@ -21,7 +21,6 @@ const STRUCTURE_ENCOUNTER = {
             { speaker: 'Spc. Vance', text: 'Five. She has never said five before.' },
             { speaker: 'Tech Mira', text: 'It is in my head. It is reading everything I know.' },
             { speaker: 'Dr. Aris', text: 'It is reading all of us. Not you, Commander. It cannot find you.' },
-            { speaker: 'Spc. Vance', text: 'You were never on any list. It only knows what was written down.' },
             { speaker: 'Eng. Jaxon', text: 'Then whatever we do here, you are the one who has to do it.' },
         ],
     },

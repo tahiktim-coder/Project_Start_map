@@ -24,7 +24,7 @@
 
     // ── what is said, and when. A speaker of '' is the narration. ──
     const BEATS = [
-        [400, '', 'The third burn did not finish.'],
+        [400, '', 'The jump did not finish.'],
         [2400, 'Eng. Jaxon', 'The reactor has gone cold.'],
         [4000, 'Spc. Vance', 'Everyone, sound off.'],
         [5400, '', 'Nobody answers.'],
@@ -113,7 +113,7 @@
             sizeWrong();
             let beatIndex = -1, isDone = false, darkened = 0, musicOut = false, lastHum = 0, fade = 0;
             const isDead = speaker => !!(speaker && state && state.isSilentSpeaker && state.isSilentSpeaker(`${speaker}: `));
-            if (state && state.addLog) state.addLog('SECTOR 3 Generated. — no name. no stars.');
+            if (state && state.addLog) state.addLog('SECTOR 3 — no name. no stars.');
 
             function restore() {
                 clearInterval(fade);                                                             // a skip mid-fade must not keep turning the music down

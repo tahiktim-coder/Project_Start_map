@@ -24,7 +24,6 @@
     // A.U.R.A.'s hand: wanted speeds (px/s) by height, how tightly she holds the drift, and the height she keeps while still sliding over to level ground
     const AUTO = { cruiseDown: 26, approachDown: 14, settleDown: 8, hoverDown: 2, climbUp: -8, highAlt: 45, lowAlt: 14, glideAlt: 24, climbGap: 8, sideGain: 0.45, sideMax: 20, sideBand: 3, sideBandMin: 1, sideHard: 7, minRoom: 4, reach: 3 };
     const RESULT_HOLD_MS = 1700, MAX_STEP = 0.033;
-    const GRACE_MS = 3000; // the lander hangs under the ship until you touch a control (or this long), so nobody crashes while reading
     const INK = '#06070a', BONE = '#c4d0c4', AMBER = '#d9a24a', RED = '#d85a4e', GREEN = '#74d99a', DIM = '#2f5a48';
     const LOW_FUEL = 25, LOW_FUEL_BEEP_MS = 900, THRUST_SOUND_MS = 120;
     const DOCKED_TEXT = 'Docked under the ship. Touch a control to let go.', AUTO_TEXT = 'A.U.R.A. has the stick. She is flying to the marked spot.';
@@ -403,8 +402,7 @@
             window.LanderGame.current = { state: s, ground: g }; // read-only handle for automated play-tests
             const el = name => overlay.querySelector(name);
             const fuelBar = el('.lander-fuel b'), downEl = el('.lander-down'), sideEl = el('.lander-side'), altEl = el('.lander-alt'), groundEl = el('.lander-ground'), markEl = el('.lander-mark'), resultEl = el('.warp-plot-result');
-            const startedAt = performance.now();
-            let last = startedAt, isClosed = false, lastBeep = 0, lastFuelWarn = 0;
+            let last = performance.now(), isClosed = false, lastBeep = 0, lastFuelWarn = 0;
 
             const KEYMAP = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right' };
             function onKey(e) {
@@ -455,7 +453,7 @@
             (function frame(now) {
                 if (isClosed) return;
                 const dt = Math.min(MAX_STEP, (now - last) / 1000); last = now;
-                const isHolding = !s.isReleased && !s.isAuto && !s.keys.left && !s.keys.right && now - startedAt < GRACE_MS;
+                const isHolding = !s.isReleased && !s.isAuto && !s.keys.left && !s.keys.right;   // it hangs under the ship until you touch a control, so nobody crashes while reading
                 if (!isHolding && !s.isReleased) { s.isReleased = true; sfx('sfxUndock'); }
                 const status = s.grade ? null : isHolding ? DOCKED_TEXT : s.isAuto ? AUTO_TEXT : '';
                 if (status !== null && status !== s.status) { s.status = status; resultEl.textContent = status; }

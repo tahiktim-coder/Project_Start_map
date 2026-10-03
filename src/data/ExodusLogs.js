@@ -17,7 +17,6 @@ const EXODUS_LOGS = [
             'Someone made a plate for five people, and only ever had four names to put on it.',
         ],
         names: ['R. OSEI · ENGINEER', 'T. YUEN · DOCTOR', 'K. ADEYEMI · SECURITY', 'L. PARK · SCIENTIST', ''],
-        after: { speaker: 'Spc. Vance', text: 'Four names and a blank line. Same as our crew list.' },
     },
     {
         id: 'PAGE_VAULT', sector: 2, kind: 'paper', type: 'EXODUS_LOG', value: 0, isKept: true,
@@ -69,7 +68,6 @@ const EXODUS_LOGS = [
             'Every ship has four crew names. The commander\'s column is empty on every line, ours included.',
             'Our ship is the last line. The "lost" column is still empty.',
         ],
-        after: { speaker: 'Spc. Vance', text: 'Nobody ever wrote a commander down. Not once, on any ship.' },
     },
     {
         id: 'PAGE_LIGHT', sector: 6, kind: 'log', type: 'EXODUS_LOG', value: 0, isKept: true,

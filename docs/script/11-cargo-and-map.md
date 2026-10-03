@@ -106,7 +106,7 @@ _Every item: its name, its description, and what using it says. The tape, the di
 
 ### Reading a found page again «bundle.js · pageItem»
 
-- You read it again. «bundle.js · line 1433»
+- You read it again. «bundle.js · line 1473»
 
 ## The fabricator «Upgrades.js · UPGRADES»
 _Each part: name, description, what it changes, where it shows on the ship._
@@ -157,7 +157,7 @@ _The description of each kind of world._
 - **HOLLOW · desc** — Mass readings inconsistent. Interior cavity detected. Something is inside. «PlanetGenerator.js · line 40»
 - **SYMBIOTE_WORLD · desc** — The biosphere is responding to our presence. It seems... welcoming. «PlanetGenerator.js · line 41»
 - **MIRROR · desc** — Surface is perfectly reflective. Scans returning our own vessel's signature. «PlanetGenerator.js · line 42»
-- **GRAVEYARD · desc** — Artificial planetoid. Compressed wreckage of millions of vessels. Massive salvage potential. «PlanetGenerator.js · line 43»
+- **GRAVEYARD · desc** — Artificial planetoid. The wreckage of hundreds of ships, crushed together. Massive salvage potential. «PlanetGenerator.js · line 43»
 - **SINGING · desc** — Emitting a harmonic frequency across all bands. Crew reports involuntary calm. «PlanetGenerator.js · line 44»
 - **STORM_WORLD · desc** — Perpetual hypercane covers the entire surface. Wind speeds exceed 800 km/h. Lightning discharges constantly. «PlanetGenerator.js · line 46»
 - **FUNGAL · desc** — Covered in continent-spanning fungal networks. Spore density extreme. The mycelium appears to communicate. «PlanetGenerator.js · line 47»
@@ -172,8 +172,8 @@ _The description of each kind of world._
 
 ## Stations on the map «PlanetGenerator.js · generateStation»
 
-- Orbital-7 · Waypoint Kappa · Deep Anchor · The Relay · Station Erebus · Outpost Terminus · The Hub · Platform Zeta · Cargo Ring Alpha · Research Station Omega · Refinery-12 · Mining Platform 6 · Colony Support Station · The Watchtower «PlanetGenerator.js · line 185»
-- **desc** — Abandoned orbital station. Power readings intermittent. Worth investigating. «PlanetGenerator.js · line 198»
+- Orbital-7 · Waypoint Kappa · Deep Anchor · The Relay · Station Erebus · Outpost Terminus · The Hub · Platform Zeta · Cargo Ring Alpha · Research Station Omega · Refinery-12 · Mining Platform 6 · Colony Support Station · The Watchtower «PlanetGenerator.js · line 206»
+- **desc** — Abandoned orbital station. Power readings intermittent. Worth investigating. «PlanetGenerator.js · line 219»
 
 ## Asteroid fields on the map «AsteroidFields.js · ASTEROID_FIELD_NAMES»
 
