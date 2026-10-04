@@ -204,7 +204,7 @@ class ProbeSystem {
             },
             GRAVEYARD: {
                 metals: ["Stripped hull plating from a crushed freighter.", "Compressed wreckage yielded dense salvageable alloys.", "Ship graveyard: millions of tons of recyclable metal."],
-                energy: ["Dead reactor cores still held trace power.", "Emergency batteries from a thousand ships — most still charged.", "Power conduits from an ancient vessel still flickered with current."]
+                energy: ["Dead reactor cores still held trace power.", "Emergency batteries from hundreds of ships — most still charged.", "Power conduits from an ancient vessel still flickered with current."]
             },
             SINGING: {
                 metals: ["Resonance-hardened minerals formed by millennia of harmonic vibration.", "The singing crystallized nearby metals into pure formations."],

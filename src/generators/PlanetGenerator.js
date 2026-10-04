@@ -40,7 +40,7 @@ const PLANET_DATA = {
     HOLLOW: { scanCost: 5, hazardChance: 0.8, desc: "Mass readings inconsistent. Interior cavity detected. Something is inside." },
     SYMBIOTE_WORLD: { scanCost: 2, hazardChance: 0.1, desc: "The biosphere is responding to our presence. It seems... welcoming." },
     MIRROR: { scanCost: 4, hazardChance: 0.5, desc: "Surface is perfectly reflective. Scans returning our own vessel's signature." },
-    GRAVEYARD: { scanCost: 3, hazardChance: 0.85, desc: "Artificial planetoid. Compressed wreckage of millions of vessels. Massive salvage potential." },
+    GRAVEYARD: { scanCost: 3, hazardChance: 0.85, desc: "Artificial planetoid. The wreckage of hundreds of ships, crushed together. Massive salvage potential." },
     SINGING: { scanCost: 3, hazardChance: 0.2, desc: "Emitting a harmonic frequency across all bands. Crew reports involuntary calm." },
     // New exotic types
     STORM_WORLD: { scanCost: 4, hazardChance: 0.85, desc: "Perpetual hypercane covers the entire surface. Wind speeds exceed 800 km/h. Lightning discharges constantly." },
@@ -69,7 +69,8 @@ class PlanetGenerator {
             max = config.planetCount[1];
         }
         const count = Math.floor(Math.random() * (max - min + 1)) + min;
-        const sector = [];
+        const story = this.generateStoryPlanet(level, config);
+        const sector = story ? [story] : [];   // the story planet first: it has a fixed place, the others are spaced round it
 
         // Generate normal planets
         // Re-roll duplicates: heavy type bias (e.g. S1) used to produce three identical DESERT worlds
@@ -126,10 +127,11 @@ class PlanetGenerator {
     static assignNonOverlappingPositions(sector) {
         const minDistance = 15; // Minimum distance between planets (percentage)
         const positions = [];
+        const isFixed = body => body.isStructure || body._isWrongPlace || body.isStoryPlanet;
 
-        // First, collect positions of fixed bodies (like THE STRUCTURE)
+        // First, collect positions of fixed bodies (THE STRUCTURE, the story planet)
         sector.forEach(body => {
-            if (body.isStructure || body._isWrongPlace) {
+            if (isFixed(body)) {
                 // Keep fixed position, add to collision list
                 if (body.mapData) {
                     positions.push({ x: body.mapData.x, y: body.mapData.y });
@@ -140,7 +142,7 @@ class PlanetGenerator {
         // Then assign positions to non-fixed bodies
         sector.forEach((body, index) => {
             // Skip bodies with fixed positions
-            if (body.isStructure || body._isWrongPlace) {
+            if (isFixed(body)) {
                 return;
             }
 
@@ -175,6 +177,25 @@ class PlanetGenerator {
             }
             positions.push({ x, y });
         });
+    }
+
+    /**
+     * The sector's story planet (src/data/StoryPlanets.js): one of our wrecks with the sector's found page, at a fixed place.
+     * It starts hidden: a faint contact with no name (App.revealStoryPlanet names it).
+     */
+    static generateStoryPlanet(level, config) {
+        const def = (typeof STORY_PLANETS !== 'undefined' ? STORY_PLANETS : []).find(d => d.sector === level);
+        if (!def) return null;
+        const planet = this.generatePlanet(level, config, def.type);
+        return {
+            ...planet,
+            id: `story-${level}-${Date.now()}`,
+            name: def.name, desc: def.desc,
+            tags: ['EXODUS_WRECK'],
+            hasPage: def.page, wreckHull: def.hull,
+            isStoryPlanet: true, storyHidden: true,
+            mapData: { x: def.at.x, y: def.at.y },
+        };
     }
 
     /**

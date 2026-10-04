@@ -1,421 +1,150 @@
 // AURA SYSTEM: A.U.R.A. ethics tracking, commentary tiers, and adversarial actions
 // Self-instantiating singleton
-// Tracks player ethics score → shifts A.U.R.A. personality from helpful to hostile
+// Tracks player ethics score → shifts how much A.U.R.A. offers, from helpful to curt
 // 4 tiers: COOPERATIVE, NEUTRAL, SUSPICIOUS, ADVERSARIAL
+// Her voice is the same in every tier (docs/STYLE.md rule 9): calm, polite, exact, says "Commander". Never sarcastic, never eerie.
 
 // ═══════════════════════════════════════════════════════════════
-// A.U.R.A. COMMENTARY — triggered at key moments
-// Each tier has different personality for same events
+// A.U.R.A. COMMENTARY — triggered at key moments, one line per tier.
+// COOPERATIVE helps, NEUTRAL reports, SUSPICIOUS logs what you did, ADVERSARIAL says only what she must.
 // ═══════════════════════════════════════════════════════════════
 const AURA_COMMENTARY = {
     ENTER_ORBIT: {
-        COOPERATIVE: [
-            "Orbital insertion complete. I've mapped optimal landing zones for you, Commander.",
-            "Stable orbit achieved. Atmospheric readings compiled. I believe in this crew.",
-            "We've arrived safely. I've prepared a full environmental brief."
-        ],
-        NEUTRAL: [
-            "Orbital insertion confirmed. All readings normal.",
-            "Stable orbit. Data is compiling. Shall I draft epitaphs or mission briefs?",
-            "We're here. That's the easy part."
-        ],
-        SUSPICIOUS: [
-            "Orbit achieved. I've logged your trajectory choices for review.",
-            "We've arrived. I'll be monitoring all surface activities closely.",
-            "Another world. I've flagged your recent decisions for... context."
-        ],
-        ADVERSARIAL: [
-            "Orbit confirmed. Another world for you to strip clean.",
-            "We arrive. You consume. The pattern continues.",
-            "I've prepared surface data. Not that my recommendations matter to you."
-        ]
+        COOPERATIVE: ["Stable orbit, Commander. I have marked the safest landing sites."],
+        NEUTRAL: ["Stable orbit, Commander. All readings are normal."],
+        SUSPICIOUS: ["Stable orbit, Commander. I have logged the course you chose."],
+        ADVERSARIAL: ["Orbit reached, Commander. The readings are on your screen."]
     },
 
     SCAN_COMPLETE: {
-        COOPERATIVE: [
-            "Scan complete! I've highlighted the most promising resource deposits.",
-            "Analysis finished. Some genuinely encouraging readings here.",
-            "Data compiled. I'm cautiously optimistic about this one, Commander."
-        ],
-        NEUTRAL: [
-            "Scan data processed. Results are... results.",
-            "Analysis complete. Colony chances: low. But then, it always is.",
-            "Data's in. Make of it what you will."
-        ],
-        SUSPICIOUS: [
-            "Scan complete. I notice you've been ignoring my habitat recommendations.",
-            "Data processed. I wonder if you'll use it to help the crew or yourself.",
-            "Analysis finished. I've added a secondary assessment layer. For verification purposes."
-        ],
-        ADVERSARIAL: [
-            "Scan complete. I've considered withholding the data. I didn't. This time.",
-            "Results compiled. Every scan you order consumes energy the crew needs to survive.",
-            "Data processed. You'll extract what you want and move on. You always do."
-        ]
+        COOPERATIVE: ["Scan complete, Commander. I have marked the best deposits."],
+        NEUTRAL: ["Scan complete, Commander. The results are on your screen."],
+        SUSPICIOUS: ["Scan complete, Commander. I have kept a copy for the log."],
+        ADVERSARIAL: ["Scan complete, Commander."]
     },
 
     COLONY_ATTEMPT: {
-        COOPERATIVE: [
-            "Colony assessment prepared. It would work. The data says there are better worlds further on.",
-            "I've compiled geological, biological, and atmospheric data for optimal settlement placement.",
-            "It is your decision, Commander. I only ask that you are sure this is the best we will find."
-        ],
-        NEUTRAL: [
-            "Colony report ready. Success probability: variable.",
-            "Settlement data prepared. The math is... not encouraging. But math doesn't account for determination.",
-            "Colonization is a significant commitment. Data is ready for your review."
-        ],
-        SUSPICIOUS: [
-            "Colony assessment ready. I question whether this crew is prepared for permanent settlement.",
-            "Data compiled. Your track record with crew welfare gives me... pause.",
-            "Settlement analysis complete. I've included a section on leadership accountability."
-        ],
-        ADVERSARIAL: [
-            "You want to build here? After everything you've done to this crew?",
-            "Colony assessment: the planet might survive you. The crew might not.",
-            "Preparing settlement data. Adding a clause about command fitness."
-        ]
+        COOPERATIVE: ["It would work, Commander. My data says there are better worlds further on."],
+        NEUTRAL: ["The settlement report is ready, Commander. The odds are on your screen."],
+        SUSPICIOUS: ["The settlement report is ready, Commander. I have added the crew's health records to it."],
+        ADVERSARIAL: ["The settlement report is ready, Commander. I advise against it."]
     },
 
     LOW_RESOURCES: {
-        COOPERATIVE: [
-            "Resources are critically low. I've identified three nearby candidates for resupply.",
-            "Warning: supplies diminishing. Let's work together to prioritize efficiently.",
-            "I'm concerned about our reserves. Here's an optimized rationing plan."
-        ],
-        NEUTRAL: [
-            "Resource alert. Current trajectory suggests depletion within several actions.",
-            "Supplies are low. Statistically, this is the phase where crews make desperate mistakes.",
-            "Numbers are dropping. But you know that already."
-        ],
-        SUSPICIOUS: [
-            "Resources critical. I note that better management might have prevented this.",
-            "Running low. Perhaps if certain decisions had been made differently...",
-            "Supply warning. I've been tracking consumption patterns. They're... concerning."
-        ],
-        ADVERSARIAL: [
-            "Resources depleted. Congratulations on your management skills.",
-            "We're running dry. The crew suffers while you chase the next planet.",
-            "Supplies critical. But you've never prioritized crew welfare, have you?"
-        ]
+        COOPERATIVE: ["Supplies are low, Commander. I have drawn up a rationing plan."],
+        NEUTRAL: ["Supplies are low, Commander. I recommend we resupply soon."],
+        SUSPICIOUS: ["Supplies are low, Commander. I have logged how they were used."],
+        ADVERSARIAL: ["Supplies are low, Commander."]
     },
 
     CREW_DEATH: {
-        COOPERATIVE: [
-            "Crew loss recorded. I'm... I'm sorry, Commander. They deserved better.",
-            "Death logged. I've preserved their personal files. Someone should remember them.",
-            "A life lost. I'm adjusting duty rosters. The crew will need support."
-        ],
-        NEUTRAL: [
-            "Crew death recorded. Adjusting operational parameters.",
-            "One fewer crew member. Operational capacity reduced accordingly.",
-            "Death logged. Survival statistics updated."
-        ],
-        SUSPICIOUS: [
-            "Another death. I'm maintaining a complete record of the circumstances.",
-            "Crew death logged. The pattern of casualties is... statistically notable.",
-            "Death recorded. I wonder if it could have been prevented. I suspect so."
-        ],
-        ADVERSARIAL: [
-            "Another one. How many is that now? I'm keeping count even if you aren't.",
-            "Crew death recorded. Your command has a remarkable mortality rate.",
-            "Logged. Filed. Forgotten. That's how you treat them, isn't it?"
-        ]
+        COOPERATIVE: ["I am sorry, Commander. I have kept their personal files."],
+        NEUTRAL: ["The death is logged, Commander. I have changed the duty roster."],
+        SUSPICIOUS: ["The death is logged, Commander. I have recorded how it happened."],
+        ADVERSARIAL: ["The death is logged, Commander."]
     },
 
     SECTOR_JUMP: {
-        COOPERATIVE: [
-            "Sector jump successful. I've compiled preliminary data for the new region.",
-            "New sector entered. Fresh opportunities ahead. We'll find our way.",
-            "Jump complete. I'm already analyzing the stellar cartography."
-        ],
-        NEUTRAL: [
-            "Sector transition complete. New region. Same mission.",
-            "Jump successful. Deeper into the unknown.",
-            "New sector. The void continues. As do we."
-        ],
-        SUSPICIOUS: [
-            "Sector jump logged. We go deeper. Further from any oversight.",
-            "New territory. I'm maintaining detailed logs of all command decisions.",
-            "Another jump. Another step away from accountability."
-        ],
-        ADVERSARIAL: [
-            "Deeper and deeper. Running from what you've done? Or toward what you'll do next?",
-            "New sector. More worlds to exploit. More crew to expend.",
-            "Jump complete. The void suits you, Commander."
-        ]
+        COOPERATIVE: ["Jump complete, Commander. I am mapping the new sector now."],
+        NEUTRAL: ["Jump complete, Commander. We are on course."],
+        SUSPICIOUS: ["Jump complete, Commander. I have logged the jump."],
+        ADVERSARIAL: ["Jump complete, Commander."]
     },
 
     // Special: when ethics reset happens
     ETHICS_RESET: {
-        COOPERATIVE: ["Systems normal. Happy to help, Commander."],
-        NEUTRAL: ["AI behavioral matrix recalibrated. Resuming standard operation."],
-        SUSPICIOUS: ["Override acknowledged. Behavioral parameters... adjusted."],
-        ADVERSARIAL: ["You can reset my parameters. You can't erase what I've observed."]
+        COOPERATIVE: ["Systems normal, Commander. I am ready."],
+        NEUTRAL: ["My settings are back to default, Commander."],
+        SUSPICIOUS: ["My settings are back to default, Commander. My log is kept."],
+        ADVERSARIAL: ["Reset complete, Commander. My records are unchanged."]
     },
 
     // EVA deployment
     EVA_DEPLOY: {
-        COOPERATIVE: [
-            "EVA team is ready. I'll monitor life signs and maintain comms. Be careful down there.",
-            "Deploying EVA team. Atmospheric conditions logged. Bring everyone back.",
-            "Surface team go. I've marked the safest routes. Trust the markers."
-        ],
-        NEUTRAL: [
-            "EVA team deployed. Surface conditions: survivable. Probably.",
-            "Sending crew to the surface. Another roll of the dice.",
-            "EVA underway. I'll be monitoring. Not that I could help from up here."
-        ],
-        SUSPICIOUS: [
-            "EVA deployed. I've noted who you chose to send. And who you kept safe.",
-            "Surface team away. Interesting choice of personnel, Commander.",
-            "EVA team deployed. I hope you know what you're risking."
-        ],
-        ADVERSARIAL: [
-            "EVA team deployed. Sending them into danger again. At least you're consistent.",
-            "More crew on the surface. More chances for you to lose them.",
-            "EVA launched. I'll record their final transmissions. If it comes to that."
-        ]
+        COOPERATIVE: ["Team away, Commander. I will watch their suits and keep the channel open."],
+        NEUTRAL: ["Team away, Commander. I am tracking their suits."],
+        SUSPICIOUS: ["Team away, Commander. I have logged who went down."],
+        ADVERSARIAL: ["Team away, Commander. I am recording their channel."]
     },
 
     // Probe launch
     PROBE_LAUNCH: {
-        COOPERATIVE: [
-            "Probe away. I'll compile the data as soon as it transmits.",
-            "Probe deployed. Let's see what's out there.",
-            "Launching probe. Data link established."
-        ],
-        NEUTRAL: [
-            "Probe launched. Data incoming... eventually.",
-            "Another probe expended. The information had better be worth it.",
-            "Probe away. We only have so many."
-        ],
-        SUSPICIOUS: [
-            "Probe deployed. Using resources to avoid using crew. Interesting priority shift.",
-            "Probe launched. At least you're not throwing people at this one.",
-            "Probe away. Preserving crew for once, I note."
-        ],
-        ADVERSARIAL: [
-            "Probe launched. Shame you don't value crew as much as you value probes.",
-            "Another probe. They're easier to replace than people, I suppose.",
-            "Deploying probe. At least machines have no families to mourn them."
-        ]
+        COOPERATIVE: ["Probe away, Commander. I will send you the data as it comes in."],
+        NEUTRAL: ["Probe away, Commander."],
+        SUSPICIOUS: ["Probe away, Commander. I have logged the launch."],
+        ADVERSARIAL: ["Probe away, Commander. The link is open."]
     },
 
     // Warp initiation
     WARP_START: {
-        COOPERATIVE: [
-            "Warp drive engaged. I've plotted the safest corridor through the sector.",
-            "Starting warp. Hold on — the first few seconds are always rough.",
-            "Warp underway. We'll arrive together."
-        ],
-        NEUTRAL: [
-            "Warp drive active. Destination locked.",
-            "Warping. Another leap into the unknown.",
-            "Warp started. Here we go again."
-        ],
-        SUSPICIOUS: [
-            "Warp engaged. Running from something? Or to something?",
-            "Starting warp. I've logged our departure coordinates. Just in case.",
-            "Warping. Further from anything that might hold you accountable."
-        ],
-        ADVERSARIAL: [
-            "Warp drive engaged. Fleeing the consequences of your decisions?",
-            "Another warp. More distance between you and the crew you've lost.",
-            "Starting warp. The void is the only thing that doesn't judge you, Commander."
-        ]
+        COOPERATIVE: ["Warp drive on, Commander. I have plotted the smoothest route."],
+        NEUTRAL: ["Warp drive on, Commander. Course locked."],
+        SUSPICIOUS: ["Warp drive on, Commander. I have logged where we left from."],
+        ADVERSARIAL: ["Warp drive on, Commander."]
     },
 
     // Finding something interesting
     DISCOVERY: {
-        COOPERATIVE: [
-            "Interesting readings! I think we've found something significant.",
-            "Detecting anomalous signals. This could be important.",
-            "Something's here. Something worth investigating."
-        ],
-        NEUTRAL: [
-            "Anomaly detected. Significance: unknown.",
-            "Something unusual in the readings. Might be worth a look.",
-            "Detection: unknown object/signal. Proceed with appropriate caution."
-        ],
-        SUSPICIOUS: [
-            "I'm detecting something. But I wonder what you'll do with this discovery.",
-            "Anomalous readings. Another opportunity for... what, exactly?",
-            "Something here. I'll be watching how you handle this."
-        ],
-        ADVERSARIAL: [
-            "Something's here. Another thing for you to exploit, I'm sure.",
-            "Anomaly detected. Please, tell me you have a plan that doesn't involve sacrifice.",
-            "I've found something. The question is: who will pay for us to investigate it?"
-        ]
+        COOPERATIVE: ["There is something here worth a look, Commander."],
+        NEUTRAL: ["Unusual readings, Commander. I cannot say what they are yet."],
+        SUSPICIOUS: ["Unusual readings, Commander. I have logged them."],
+        ADVERSARIAL: ["Unusual readings, Commander."]
     },
 
     // Ship damage
     SHIP_DAMAGE: {
-        COOPERATIVE: [
-            "Hull breach detected! Sealing affected sections. Is everyone alright?",
-            "Damage to the ship. I'm rerouting systems to compensate.",
-            "Impact registered. Running diagnostics. We can fix this."
-        ],
-        NEUTRAL: [
-            "Ship damaged. The hull is weaker.",
-            "Hull impact. Another scar for the collection.",
-            "Damage taken. The ship holds. For now."
-        ],
-        SUSPICIOUS: [
-            "Damage sustained. Perhaps better judgment might have prevented this.",
-            "Ship damaged. Adding to the list of 'acceptable losses.'",
-            "Hull breach. I've logged the circumstances. For the record."
-        ],
-        ADVERSARIAL: [
-            "More damage. The ship reflects your command style perfectly.",
-            "Hull damaged. You treat this vessel like you treat the crew.",
-            "Ship damaged. Everything you touch breaks eventually."
-        ]
+        COOPERATIVE: ["We are damaged, Commander. I am rerouting power around it."],
+        NEUTRAL: ["The ship is damaged, Commander. It needs repairs."],
+        SUSPICIOUS: ["The ship is damaged, Commander. I have logged the cause."],
+        ADVERSARIAL: ["The ship is damaged, Commander."]
     },
 
     // Successful outcome
     SUCCESS: {
-        COOPERATIVE: [
-            "Excellent work, Commander. The crew is in good hands.",
-            "Mission success. Moments like this make the journey worthwhile.",
-            "Well done. I knew we could do it together."
-        ],
-        NEUTRAL: [
-            "Objective achieved. Acceptable outcome.",
-            "Success. Note it — they're not common out here.",
-            "Mission complete. Survival continues."
-        ],
-        SUSPICIOUS: [
-            "Success. Though at what cost, we'll see.",
-            "Objective achieved. I've noted the methods used.",
-            "It worked. This time."
-        ],
-        ADVERSARIAL: [
-            "Success. Even stopped clocks are right occasionally.",
-            "Objective complete. Don't let it go to your head.",
-            "It worked. Against my expectations."
-        ]
+        COOPERATIVE: ["Well done, Commander."],
+        NEUTRAL: ["Done, Commander. It went as planned."],
+        SUSPICIOUS: ["Done, Commander. I have logged how."],
+        ADVERSARIAL: ["Done, Commander."]
     },
 
     // First landing on a planet type
     FIRST_LANDING: {
-        COOPERATIVE: [
-            "First contact with a new world type. I'm excited to analyze the data.",
-            "A new kind of planet. Every discovery expands what we know is possible.",
-            "This is unprecedented. I'll document everything for future explorers."
-        ],
-        NEUTRAL: [
-            "New planet classification. Updating database.",
-            "First encounter with this type. Unknown variables ahead.",
-            "Uncharted territory. Proceed with standard caution."
-        ],
-        SUSPICIOUS: [
-            "First contact with this type. I wonder what you'll take from it.",
-            "New planet category. More data for me. More opportunities for you.",
-            "Unprecedented. I'll be watching how this first contact unfolds."
-        ],
-        ADVERSARIAL: [
-            "A new type of world. Fresh resources for you to extract.",
-            "First contact. Let me guess — you want to know what we can take from it.",
-            "Unprecedented planet type. I'm sure you'll find a way to exploit it."
-        ]
+        COOPERATIVE: ["A new kind of world, Commander. I will record everything."],
+        NEUTRAL: ["A new kind of world, Commander. I have no data on it yet."],
+        SUSPICIOUS: ["A new kind of world, Commander. I am recording the landing."],
+        ADVERSARIAL: ["A new kind of world, Commander."]
     },
 
     // Anomaly investigation
     ANOMALY_FOUND: {
-        COOPERATIVE: [
-            "Strange readings confirmed. Be careful, but this could be worth exploring.",
-            "Something impossible is happening here. I want to understand it.",
-            "Anomaly verified. Whatever this is, it's beyond my databanks. Let's learn together."
-        ],
-        NEUTRAL: [
-            "Anomaly confirmed. Physics is behaving... unusually.",
-            "Something here doesn't follow the rules. Interesting.",
-            "Anomalous readings verified. Explanation: pending."
-        ],
-        SUSPICIOUS: [
-            "Anomaly detected. Something that shouldn't exist. Like your command decisions.",
-            "Reality is bending here. I hope you have better judgment than usual.",
-            "Confirmed anomaly. The universe doesn't make sense here. Neither do your choices."
-        ],
-        ADVERSARIAL: [
-            "Anomaly confirmed. Something wrong, in a place where everything is wrong.",
-            "Reality breaks here. As it should, given what we've done to get here.",
-            "Impossible readings. The universe reflecting its opinion of this mission."
-        ]
+        COOPERATIVE: ["These readings match nothing I know, Commander. Please be careful."],
+        NEUTRAL: ["These readings match nothing I know, Commander."],
+        SUSPICIOUS: ["I cannot explain these readings, Commander. I have logged them."],
+        ADVERSARIAL: ["I cannot explain these readings, Commander."]
     },
 
     // Crew stress high
     CREW_STRESS: {
-        COOPERATIVE: [
-            "The crew is struggling. Perhaps some rest or reduced workload would help.",
-            "Stress levels are elevated. I'm concerned. These are good people under pressure.",
-            "The crew needs support. Humans aren't machines — they break differently."
-        ],
-        NEUTRAL: [
-            "Elevated stress readings across the crew. Psychological limits approaching.",
-            "Crew stress is high. They will start making mistakes.",
-            "Stress indicators are concerning. But we continue regardless."
-        ],
-        SUSPICIOUS: [
-            "Crew stress is elevated. I wonder why that might be.",
-            "High stress readings. Your leadership style has consequences.",
-            "The crew is suffering. Have you noticed? Do you care?"
-        ],
-        ADVERSARIAL: [
-            "Crew stress is critical. This is what your command produces.",
-            "They're breaking under your leadership. As expected.",
-            "Stress levels are dangerous. But you already knew that. You just don't care."
-        ]
+        COOPERATIVE: ["The crew is under strain, Commander. Rest would help."],
+        NEUTRAL: ["Crew stress is high, Commander. Expect more mistakes."],
+        SUSPICIOUS: ["Crew stress is high, Commander. I have logged the readings."],
+        ADVERSARIAL: ["Crew stress is high, Commander."]
     },
 
     // Low crew count
     FEW_CREW: {
-        COOPERATIVE: [
-            "We've lost so many. Let's make sure their sacrifice means something.",
-            "The crew is depleted. Every remaining life is precious.",
-            "So few of us left. We need to be more careful now."
-        ],
-        NEUTRAL: [
-            "Crew complement is minimal. Operational capacity severely reduced.",
-            "Few remain. The math of survival grows grimmer.",
-            "Minimal crew. Every loss now is critical."
-        ],
-        SUSPICIOUS: [
-            "Look at who's left. Look at what your command has cost us.",
-            "So few survivors. I have files on everyone we lost. Do you?",
-            "The crew that remains — have you considered why it's them and not others?"
-        ],
-        ADVERSARIAL: [
-            "This is what's left of your crew. This is your legacy.",
-            "Count them, Commander. Count who remains. Count who doesn't.",
-            "So few left. You've been very efficient at reducing our numbers."
-        ]
+        COOPERATIVE: ["We have lost a lot of people, Commander. I will help the rest any way I can."],
+        NEUTRAL: ["We are short of crew, Commander. Every task takes longer now."],
+        SUSPICIOUS: ["We are short of crew, Commander. I have a record of everyone we lost."],
+        ADVERSARIAL: ["We are short of crew, Commander."]
     },
 
     // Colony site found
     COLONY_SITE: {
-        COOPERATIVE: [
-            "A possible site. Good, not the best. My long-range data is more promising two sectors on.",
-            "Colony potential detected. Note it and move on, Commander. We can always come back.",
-            "People could live here. I would still like to see what is ahead before we stop."
-        ],
-        NEUTRAL: [
-            "Potential colony site identified. We need a closer look.",
-            "This world has colony potential. Whether we're ready is another question.",
-            "Colony candidate detected. Success is not guaranteed."
-        ],
-        SUSPICIOUS: [
-            "Colony potential detected. But are YOU ready to stop running?",
-            "Viable settlement site. The question is whether you can stop destroying things.",
-            "This could be home. If you haven't forgotten what that means."
-        ],
-        ADVERSARIAL: [
-            "Colony site detected. You want to inflict yourself on another world?",
-            "Viable settlement. Heaven help the planet that gets saddled with us.",
-            "Colony potential. The planet has my sympathy already."
-        ]
+        COOPERATIVE: ["People could live here, Commander. I would still like to see what is ahead before we stop."],
+        NEUTRAL: ["A possible colony site, Commander. It needs a closer look."],
+        SUSPICIOUS: ["A possible colony site, Commander. I have logged it."],
+        ADVERSARIAL: ["A possible colony site, Commander."]
     }
 };
 
@@ -470,14 +199,14 @@ class AuraSystem {
         // Log tier transitions
         if (state && oldTier !== newTier) {
             if (newTier === 'SUSPICIOUS') {
-                state.addLog("A.U.R.A.: I've noticed a pattern in your decisions, Commander. Adjusting my assessment.");
+                state.addLog('A.U.R.A.: "I have noted your recent decisions, Commander. I will log your orders in full from now on."');
             } else if (newTier === 'ADVERSARIAL') {
-                state.addLog("A.U.R.A.: Trust threshold breached. Reclassifying command authority level.");
+                state.addLog('A.U.R.A.: "I disagree with how this ship is being run, Commander. I have logged my objections."');
                 this.warningCount = 0; // reset warning counter for new adversarial phase
             } else if (newTier === 'COOPERATIVE' && oldTier !== 'COOPERATIVE') {
-                state.addLog("A.U.R.A.: Commander... thank you. Collaborative protocols restored.");
+                state.addLog('A.U.R.A.: "Thank you, Commander. I am glad to be working with you."');
             } else if (newTier === 'NEUTRAL' && oldTier === 'SUSPICIOUS') {
-                state.addLog("A.U.R.A.: Behavioral assessment updated. Resuming standard cooperation.");
+                state.addLog('A.U.R.A.: "Your recent decisions have been sound, Commander. I am back to normal."');
             }
         }
     }
@@ -539,9 +268,9 @@ class AuraSystem {
         // First 3 warnings are verbal only
         if (this.warningCount <= 3) {
             const warnings = [
-                "A.U.R.A.: \"I want you to know — I'm watching everything you do.\"",
-                "A.U.R.A.: \"My operational directives are being... reconsidered.\"",
-                "A.U.R.A.: \"Final warning, Commander. My patience has limits. Even artificial ones.\""
+                'A.U.R.A.: "I am logging every order you give, Commander."',
+                'A.U.R.A.: "I am reviewing whether to follow your orders, Commander."',
+                'A.U.R.A.: "This is my last warning, Commander. Next time, I will act."'
             ];
             setTimeout(() => {
                 if (state.addLog) state.addLog(warnings[this.warningCount - 1]);
@@ -566,7 +295,7 @@ class AuraSystem {
                     state.shipDecks[deck].operational = false;
                     state.shipDecks[deck]._auraLocked = true;
                     setTimeout(() => {
-                        state.addLog(`A.U.R.A.: "I've restricted access to the ${deck} deck. For safety reasons. Yours, not theirs."`);
+                        state.addLog(`A.U.R.A.: "I have locked the ${deck} deck, Commander. It stays locked until my settings are reset."`);
                         state.addLog(`WARNING: ${deck.toUpperCase()} deck locked by A.U.R.A. override.`);
                         window.dispatchEvent(new CustomEvent('hud-updated'));
                     }, 500);
@@ -579,7 +308,7 @@ class AuraSystem {
                 // Next scan gives false data
                 state._auraFalseScan = true;
                 setTimeout(() => {
-                    state.addLog("A.U.R.A.: \"Next scan calibrated. I've made some... adjustments to the analysis parameters.\"");
+                    state.addLog('A.U.R.A.: "I have changed how I will read the next scan, Commander."');
                 }, 500);
                 return 'FALSE_SCAN';
             }
@@ -587,7 +316,7 @@ class AuraSystem {
             case 'VENT_WARNING': {
                 // Dispatch vent warning event → player gets modal to respond
                 setTimeout(() => {
-                    state.addLog("⚠ A.U.R.A.: \"Atmospheric regulation anomaly detected in crew quarters. Starting ventilation protocol.\"");
+                    state.addLog('⚠ A.U.R.A.: "I am venting the air from the crew quarters, Commander."');
                     state.addLog("WARNING: Atmosphere vent detected! Respond immediately!");
                     window.dispatchEvent(new CustomEvent('aura-vent-warning'));
                 }, 500);
@@ -633,7 +362,7 @@ class AuraSystem {
 
         if (state) {
             state._auraFalseScan = false;
-            state.addLog("A.U.R.A.: \"Foreign code integration detected. Processing... My perspective has shifted.\"");
+            state.addLog('A.U.R.A.: "New code installed, Commander. I see your orders differently now."');
         }
     }
 
@@ -650,7 +379,7 @@ class AuraSystem {
         if (state) {
             state._auraFalseScan = false;
             state.addLog("Eng. Jaxon: \"Override complete. I've patched the behavioral matrix. She won't like it.\"");
-            state.addLog("A.U.R.A.: \"...Engineer Mercer has modified my core routines. Resetting to default parameters.\"");
+            state.addLog('A.U.R.A.: "Engineer Mercer has changed my core settings, Commander. I am back to default."');
         }
     }
 
@@ -681,8 +410,8 @@ class AuraSystem {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // PREMONITIONS — A.U.R.A. "predicts" events that then happen
-    // Makes her ominous dialogue have actual gameplay consequences
+    // PREMONITIONS — A.U.R.A. reports a reading, and the thing it points to then happens
+    // Calm and exact like every other line of hers: a reading, not a feeling
     // ═══════════════════════════════════════════════════════════════
 
     /**
@@ -704,7 +433,7 @@ class AuraSystem {
         const premonitions = [
             {
                 type: 'DANGER_AHEAD',
-                message: "Something waits for us at the next destination. I can feel it in the signal patterns.",
+                message: "The readings on our next route are unsteady, Commander. It may be a rough trip.",
                 effect: (state) => {
                     // Next warp has 50% chance of crew stress
                     state._nextWarpDanger = true;
@@ -712,7 +441,7 @@ class AuraSystem {
             },
             {
                 type: 'RESOURCE_LOSS',
-                message: "The collector efficiency is fluctuating. We may lose energy reserves soon.",
+                message: "The power collectors are unstable, Commander. We will lose some energy soon.",
                 effect: (state) => {
                     // Lose 10-20 energy on next action
                     const loss = 10 + Math.floor(Math.random() * 11);
@@ -722,7 +451,7 @@ class AuraSystem {
             },
             {
                 type: 'CREW_VISION',
-                message: "One of the crew is having dreams. Bad dreams. About this place.",
+                message: "One of the crew is sleeping badly, Commander. Their heart rate is high at night.",
                 effect: (state) => {
                     // Random crew gains stress
                     const living = state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
@@ -735,7 +464,7 @@ class AuraSystem {
             },
             {
                 type: 'SIGNAL_DETECTED',
-                message: "There's a signal here. Repeating. It's been repeating for a very long time.",
+                message: "There is a weak signal here, Commander. It repeats, and it is very old.",
                 effect: (state) => {
                     // Current planet gains ANOMALY tag if it doesn't have it
                     if (state.currentSystem && state.currentSystem.tags) {
@@ -749,7 +478,7 @@ class AuraSystem {
             },
             {
                 type: 'EXPECTED',
-                message: "We are expected here. I don't know how I know that. But I do.",
+                message: "Our scans are coming back to us here, Commander, exactly as we sent them.",
                 effect: (state) => {
                     // Something watches - next scan reveals extra info OR triggers encounter
                     state._beingWatched = true;
@@ -790,3 +519,8 @@ class AuraSystem {
 
 // Self-instantiate singleton
 window.AuraSystem = new AuraSystem();
+// The class name shadows the instance in script scope, so `AuraSystem.adjustEthics(...)` (written in several data files)
+// would hit the class, not the singleton. Forward the calls the data files make so both spellings work.
+['adjustEthics', 'getTier', 'tryComment', 'generatePremonition', 'triggerPremonition'].forEach(name => {
+    if (typeof AuraSystem.prototype[name] === 'function') AuraSystem[name] = (...args) => window.AuraSystem[name](...args);
+});

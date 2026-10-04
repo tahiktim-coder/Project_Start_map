@@ -59,6 +59,7 @@
                 <span class="deck-panel-status">${state.crew.filter(c => c.status !== 'DEAD').length} OF ${state.crew.length} ALIVE</span>
                 <button class="deck-panel-close close-modal" aria-label="Close">✕</button></header>
             ${isQuartersOk ? '' : '<p class="roster-note is-bad">Crew quarters are out of action — nobody can rest until they are repaired.</p>'}
+            ${state._sleepers > 0 ? `<p class="roster-note">${state._sleepers} sleeper${state._sleepers === 1 ? '' : 's'} in the hold, in pods, from older hulls. They stay asleep until you decide otherwise.</p>` : ''}
             <ul class="roster-list">${state.crew.map((m, i) => personRow(m, i, canRest, cut)).join('')}</ul>`);
         modal.querySelectorAll('.roster-rest:not([disabled])').forEach(btn => btn.addEventListener('click', () => {
             const member = state.crew[+btn.dataset.idx];
@@ -86,13 +87,13 @@
     }
 
     function cargo(app) {
-        const state = app.state, count = state.cargo.length;
+        const state = app.state, count = state.getCargoCount ? state.getCargoCount() : state.cargo.length;   // papers take no room
         const limit = state.getCargoLimit ? state.getCargoLimit() : FALLBACK_CARGO_LIMIT;
         const modal = open('cargo-panel', 'Cargo hold', `
             <header class="deck-panel-head"><h3>CARGO HOLD</h3>
                 <span class="deck-panel-status">${count} OF ${limit} ITEMS${count >= limit ? ' — FULL' : ''}</span>
                 <button class="deck-panel-close close-modal" aria-label="Close">✕</button></header>
-            ${count === 0 ? '<p class="roster-note">Empty. Probes, away teams and boarding parties bring things back here.</p>'
+            ${state.cargo.length === 0 ? '<p class="roster-note">Empty. Probes, away teams and boarding parties bring things back here.</p>'
                 : `<ul class="cargo-grid">${state.cargo.map(itemCard).join('')}</ul>`}`);
         if (window.ItemIcons) window.ItemIcons.hydrate(modal);
         modal.querySelectorAll('.cargo-use').forEach(btn => btn.addEventListener('click', () => {

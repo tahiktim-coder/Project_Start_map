@@ -98,7 +98,7 @@
             function finish(match, isAuto) {
                 if (s.isDone) return;
                 s.isDone = true;
-                cancelAnimationFrame(raf);
+                (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(raf);
                 const grade = isAuto ? 'fair' : gradeOf(match), info = GRADES[grade];
                 sfx(grade === 'sharp' ? 'sfxDiscovery' : grade === 'weak' ? 'sfxError' : 'sfxScan');
                 [pitchEl, strengthEl, lockBtn, autoBtn].forEach(el => { el.disabled = true; });
@@ -119,13 +119,13 @@
                 timerEl.style.transform = `scaleX(${left})`;
                 draw(ctx, s, now);
                 if (left === 0) { finish(s.match, false); return; } // signal faded: you get whatever you had
-                raf = requestAnimationFrame(frame);
+                raf = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(frame);
             }
 
             lockBtn.addEventListener('click', () => finish(s.match, false));
             autoBtn.addEventListener('click', () => finish(AUTO_MATCH, true));
             pitchEl.focus();
-            raf = requestAnimationFrame(frame);
+            raf = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(frame);
         });
     }
 
