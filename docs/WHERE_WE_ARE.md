@@ -1,5 +1,7 @@
 # Where we are (2026-09-27)
 
+**Everything open, in one list: [BACKLOG.md](BACKLOG.md).**
+
 Start here. One page: what is built, what is decided, what is waiting on you, and where everything lives.
 
 ## The build

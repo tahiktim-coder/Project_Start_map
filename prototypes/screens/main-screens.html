@@ -1,0 +1,1490 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Main Screens</title>
+<meta name="description" content="Silent Exodus: the sector map, orbit screen, ship panel, header and log, rethought around the heading and the light. A mockup.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── The interface palette: "Graphite & sodium" (prototypes/sim-bay/lab.js). Steel and grey; sodium only for people and
+      warmth; one red, for the ship being hurt. The pictures inside the canvases use "Deep field" instead (see the script). ── */
+:root {
+    color-scheme: dark;
+    --void: #0a0a0b;
+    --deep: #111214;
+    --dusk: #1a1c20;
+    --haze: #2a2d33;
+    --mist: #44484f;
+    --line: #1d1f23;
+    --line2: #33373e;
+    --text: #e4e4e0;
+    --dim: #8b8d90;
+    --faint: #5a6168;
+    --ui: #c9d1d6;
+    --ui-br: #ffffff;
+    --warm: #f08c2e;
+    --warm-br: #ffc27a;
+    --danger: #e0453a;
+
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+
+    --proto-h: 34px;
+    --hud-h: 54px;
+    --bar-h: 116px;
+    --ship-w: 296px;
+    --gutter: 20px;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --fast: 140ms;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--void); }
+body { color: var(--text); font: 15px/1.5 var(--f-text); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+button { font: inherit; color: inherit; }
+p { margin: 0; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* ── mockup controls: not part of the game ── */
+.proto {
+    height: var(--proto-h);
+    display: flex; align-items: center; gap: 14px;
+    padding: 0 16px;
+    border-bottom: 1px dashed #26282c;
+    background: #07070800;
+    font: 500 11px/1 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+    overflow: hidden; white-space: nowrap;
+}
+.proto-tag { padding: 3px 6px; border: 1px solid #2c2f34; color: var(--dim); }
+.proto-tabs { display: flex; gap: 4px; }
+.proto-tabs button {
+    padding: 5px 9px; border: 1px solid transparent; background: none; cursor: pointer;
+    font: 600 11px/1 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim);
+}
+.proto-tabs button:hover { color: var(--text); border-color: var(--line2); }
+.proto-tabs button[aria-selected="true"] { color: var(--ui-br); border-color: var(--mist); }
+.proto-tabs button:focus-visible { outline: 1px solid var(--ui-br); outline-offset: 2px; }
+.proto-hint { overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0.02em; font: 400 12px/1 var(--f-text); }
+
+/* ── the game frame ── */
+.game {
+    position: relative;
+    height: calc(100vh - var(--proto-h));
+    height: calc(100dvh - var(--proto-h));
+    min-height: 620px;
+    display: grid;
+    grid-template-columns: var(--ship-w) minmax(0, 1fr);
+    grid-template-rows: var(--hud-h) minmax(0, 1fr) var(--bar-h);
+    grid-template-areas: "hud hud" "ship view" "ship bar";
+    overflow: hidden;
+    background:
+        radial-gradient(120% 80% at 70% 40%, #121316 0%, var(--void) 70%);
+}
+
+/* header: who we are, where on the heading, what we have. Nothing else. */
+.hud {
+    grid-area: hud;
+    display: flex; align-items: center; gap: 22px;
+    padding: 0 var(--gutter);
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #121316, #0d0d0f);
+    min-width: 0;
+}
+.wordmark { font: 600 13px/1 var(--f-ui); letter-spacing: 0.32em; color: var(--ui); white-space: nowrap; }
+.route { display: flex; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
+.route li { display: flex; align-items: center; }
+.route li + li::before { content: ''; width: 12px; height: 1px; background: var(--line2); }
+.route .n {
+    width: 18px; height: 18px; display: grid; place-items: center;
+    font: 500 10.5px/1 var(--f-num); color: var(--faint);
+    border: 1px solid var(--line2); border-radius: 50%;
+}
+.route .is-past .n { color: var(--dim); background: var(--dusk); border-color: var(--dusk); }
+.route .is-now .n { color: var(--void); background: var(--ui); border-color: var(--ui); }
+.route .end::before { width: 18px !important; background: linear-gradient(90deg, var(--line2), #6a4a2a) !important; }
+.route .sun {
+    width: 8px; height: 8px; border-radius: 50%; margin-left: 2px;
+    background: #fff3dc;
+    box-shadow: 0 0 calc(4px + var(--glow, 0.1) * 18px) calc(var(--glow, 0.1) * 6px) rgba(240, 160, 80, 0.55);
+}
+.hud-sector { display: flex; align-items: baseline; gap: 10px; min-width: 0; white-space: nowrap; }
+.hud-sector .k { font: 600 11px/1 var(--f-ui); letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim); }
+.hud-sector .v { font: 500 15px/1 var(--f-ui); letter-spacing: 0.03em; color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+.res { margin: 0 0 0 auto; display: flex; gap: 26px; }
+.res div { display: grid; gap: 3px; }
+.res dt { font: 600 10px/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--faint); }
+.res dd { margin: 0; font: 500 16px/1 var(--f-num); color: var(--text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.res dd small { margin-left: 6px; font: 400 11.5px/1 var(--f-text); color: var(--dim); }
+.res dd.is-low { color: var(--warm-br); }
+.hud-btns { display: flex; gap: 6px; }
+.hud-btn {
+    position: relative;
+    height: 30px; padding: 0 12px; cursor: pointer;
+    background: transparent; border: 1px solid var(--line2); border-radius: 2px;
+    font: 600 11px/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim);
+    transition: color var(--fast), border-color var(--fast), background var(--fast);
+}
+.hud-btn:hover { color: var(--text); border-color: var(--mist); }
+.hud-btn:focus-visible { outline: 1px solid var(--ui-br); outline-offset: 2px; }
+.hud-btn[aria-expanded="true"] { color: var(--ui-br); border-color: var(--ui); }
+.hud-btn.is-new::after { content: ''; position: absolute; top: -3px; right: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--ui); }
+.hud-btn.icon { width: 30px; padding: 0; font-size: 15px; letter-spacing: 0; }
+
+/* ── the ship ── */
+.ship {
+    grid-area: ship;
+    display: flex; flex-direction: column; min-height: 0;
+    border-right: 1px solid var(--line);
+    background: linear-gradient(180deg, #0d0d0f, var(--void));
+}
+.panel-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 14px 18px 8px;
+}
+.k { font: 600 11px/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--dim); }
+.panel-head .aside { font: 400 12px/1 var(--f-text); color: var(--faint); }
+.ship-stage { position: relative; flex: 1; min-height: 0; margin: 0 12px; overflow: hidden; }
+.ship-stage canvas { position: absolute; left: 0; top: 0; }
+.room-tag {
+    position: absolute; transform: translateY(1px);
+    font: 600 9.5px/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: #6d7378;
+    pointer-events: none; white-space: nowrap; text-shadow: 0 0 4px #000;
+}
+.room-tag.is-hurt { color: var(--danger); }
+.crew { list-style: none; margin: 0; padding: 10px 18px 16px; border-top: 1px solid var(--line); display: grid; gap: 7px; }
+.crew li { display: grid; grid-template-columns: 10px 1fr auto; align-items: baseline; gap: 10px; font: 400 13px/1.25 var(--f-text); color: var(--text); }
+.crew .dot { width: 6px; height: 6px; border-radius: 1px; transform: translateY(-1px); }
+.crew .you { color: var(--faint); font-size: 12px; margin-left: 4px; }
+.crew .where { font: 500 10.5px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.crew .where.is-hurt { color: var(--warm-br); }
+
+/* ── the view ── */
+.view { grid-area: view; position: relative; min-width: 0; min-height: 0; }
+.screen { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; }
+.screen[hidden] { display: none; }
+.screen-head {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; flex-wrap: wrap;
+    padding: 16px var(--gutter) 12px;
+}
+.title-block { display: grid; gap: 6px; min-width: 0; }
+.title-block h1 { margin: 0; font: 500 26px/1.05 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
+.caption { font: 400 14px/1.4 var(--f-text); color: var(--dim); }
+.readouts { display: flex; align-items: flex-end; gap: 26px; }
+.readout { display: grid; gap: 5px; }
+.readout dt, .readout .k { font: 600 10px/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--faint); }
+.readout dd { margin: 0; font: 500 20px/1 var(--f-num); color: var(--text); font-variant-numeric: tabular-nums; }
+.pips { display: flex; gap: 5px; height: 20px; align-items: center; }
+.pips i { width: 9px; height: 9px; border: 1px solid var(--mist); transform: rotate(45deg); }
+.pips i.is-on { background: var(--ui); border-color: var(--ui); }
+.dl-reset { margin: 0; display: contents; }
+
+/* a frame with instrument corners, for the map and the picture */
+.stage {
+    position: relative; flex: 1; min-height: 0;
+    margin: 0 var(--gutter) 14px;
+    border: 1px solid var(--line);
+    background: #06090c;
+    overflow: hidden;
+}
+.stage::before, .stage::after, .frame::before, .frame::after {
+    content: ''; position: absolute; width: 12px; height: 12px; pointer-events: none; z-index: 3;
+    border-color: var(--mist); border-style: solid;
+}
+.stage::before, .frame::before { left: -1px; top: -1px; border-width: 1px 0 0 1px; }
+.stage::after, .frame::after { right: -1px; bottom: -1px; border-width: 0 1px 1px 0; }
+.stage > canvas { position: absolute; left: 0; top: 0; }
+
+/* markers on the map: the picture is in the canvas; these are the click targets and the plain words */
+.markers { position: absolute; inset: 0; z-index: 2; }
+.mk {
+    position: absolute; transform: translate(-50%, -50%);
+    padding: 0; border: 0; background: none; cursor: pointer;
+    --c: var(--mist);
+}
+.mk .ring {
+    position: absolute; inset: 0; opacity: 0; transition: opacity var(--fast), inset var(--fast) var(--ease);
+    background:
+        linear-gradient(var(--c), var(--c)) left top / 7px 1px no-repeat,
+        linear-gradient(var(--c), var(--c)) left top / 1px 7px no-repeat,
+        linear-gradient(var(--c), var(--c)) right top / 7px 1px no-repeat,
+        linear-gradient(var(--c), var(--c)) right top / 1px 7px no-repeat,
+        linear-gradient(var(--c), var(--c)) left bottom / 7px 1px no-repeat,
+        linear-gradient(var(--c), var(--c)) left bottom / 1px 7px no-repeat,
+        linear-gradient(var(--c), var(--c)) right bottom / 7px 1px no-repeat,
+        linear-gradient(var(--c), var(--c)) right bottom / 1px 7px no-repeat;
+}
+.mk:hover .ring, .mk:focus-visible .ring { opacity: 1; inset: -3px; }
+.mk.is-selected { --c: var(--ui-br); }
+.mk.is-selected .ring { opacity: 1; inset: -5px; }
+.mk:focus-visible { outline: none; }
+.mk .label {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    display: grid; gap: 2px; white-space: nowrap; text-align: left; pointer-events: none;
+    text-shadow: 0 0 6px #000, 0 0 2px #000, 0 0 1px #000;
+}
+.mk.lbl-r .label { left: calc(100% + 8px); }
+.mk.lbl-l .label { right: calc(100% + 8px); text-align: right; }
+.mk.lbl-b .label { top: calc(100% + 8px); left: 50%; transform: translateX(-50%); text-align: center; }
+.mk.lbl-t .label { top: auto; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); text-align: center; }
+.mk .name { font: 500 12.5px/1.1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: #cfd2d0; transition: color var(--fast); }
+.mk .tag { font: 400 12px/1.2 var(--f-text); color: var(--dim); transition: color var(--fast); }
+.mk:hover .name, .mk.is-selected .name { color: var(--ui-br); }
+.mk.is-selected .tag { color: var(--ui); }
+.mk.is-behind .name, .mk.is-behind .tag { color: var(--faint); }
+.mk.is-contact .name { color: var(--dim); letter-spacing: 0.18em; }
+.mk.is-light .name { color: var(--warm-br); }
+.mk.is-light .label { top: calc(100% + 26px); padding: 5px 9px 6px; background: rgba(6, 9, 12, 0.82); border: 1px solid rgba(255, 194, 122, 0.18); text-shadow: none; }
+.mk .dated { font: 500 11px/1.2 var(--f-num); color: var(--ui); }
+.heading-tag {
+    position: absolute; z-index: 2; pointer-events: none;
+    font: 600 10px/1 var(--f-ui); letter-spacing: 0.26em; text-transform: uppercase; color: #4f5961;
+    text-shadow: 0 0 4px #000;
+}
+
+/* orbit */
+.orbit-wrap { flex: 1; min-height: 0; display: grid; place-items: center; padding: 0 var(--gutter) 14px; }
+.frame { position: relative; border: 1px solid var(--line2); background: #06090c; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); }
+.frame canvas { width: 100%; height: 100%; }
+.dated-chip {
+    display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px;
+    border: 1px solid var(--line2); font: 500 12px/1 var(--f-num); color: var(--ui);
+}
+.dated-chip b { font: 600 10px/1 var(--f-ui); letter-spacing: 0.22em; text-transform: uppercase; color: var(--faint); }
+.dated-chip[hidden] { display: none; }
+
+/* ── the bar: one line of talk, and the one thing to do ── */
+.bar {
+    grid-area: bar;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 28px;
+    padding: 12px var(--gutter) 14px;
+    border-top: 1px solid var(--line);
+    background: linear-gradient(180deg, #0f1012, var(--void));
+    min-width: 0;
+}
+.talk { display: grid; grid-template-columns: 112px minmax(0, 1fr); column-gap: 14px; row-gap: 4px; align-content: center; min-width: 0; }
+.talk-prev { grid-column: 1 / -1; font: 400 12.5px/1.3 var(--f-text); color: #5d6166; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 16px; }
+.talk-who { font: 600 11px/1.9 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--warm); }
+.talk-who.is-aura { color: var(--ui); }
+.talk-who.is-note { color: var(--faint); }
+.talk-line { font: 400 16.5px/1.45 var(--f-text); color: var(--text); max-width: 64ch; animation: talk-in 260ms var(--ease); }
+.talk-line.is-note { color: var(--dim); font-style: italic; font-size: 15px; }
+@keyframes talk-in { from { opacity: 0; transform: translateY(3px); } }
+
+.act { display: flex; align-items: center; justify-content: flex-end; gap: 16px; min-width: 0; max-width: 620px; }
+.pick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 16px; min-width: 0; }
+.thumb { width: 128px; height: 72px; border: 1px solid var(--line2); }
+.pick-text { display: grid; gap: 4px; min-width: 0; }
+.pick-name { font: 500 15px/1.1 var(--f-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ui-br); }
+.pick-line { font: 400 13.5px/1.35 var(--f-text); color: var(--dim); max-width: 38ch; }
+.pick-cost { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 500 11.5px/1.2 var(--f-num); color: var(--ui); text-transform: uppercase; letter-spacing: 0.04em; }
+.pick-cost .gain { color: var(--warm-br); }
+.pick-cost .muted { color: var(--faint); }
+.act-note { font: 400 13.5px/1.4 var(--f-text); color: var(--faint); max-width: 40ch; text-align: right; }
+.steps { display: grid; gap: 8px; justify-items: end; }
+.steps-row { display: flex; align-items: center; gap: 8px; }
+.step-sub { font: 400 12.5px/1.3 var(--f-text); color: var(--dim); }
+
+.btn {
+    position: relative;
+    padding: 13px 20px; border: 1px solid var(--line2); border-radius: 2px; background: transparent; cursor: pointer;
+    font: 600 12.5px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--text); white-space: nowrap;
+    transition: background var(--fast), border-color var(--fast), color var(--fast), transform var(--fast) var(--ease), box-shadow var(--fast);
+}
+.btn:hover:not([disabled]) { border-color: var(--ui); color: var(--ui-br); transform: translateY(-1px); }
+.btn:active:not([disabled]) { transform: translateY(0); background: rgba(201, 209, 214, 0.08); }
+.btn:focus-visible { outline: 1px solid var(--ui-br); outline-offset: 3px; }
+.btn.primary { background: var(--ui); border-color: var(--ui); color: #0b0b0c; padding-right: 38px; }
+.btn.primary::after { content: ''; position: absolute; right: 16px; top: 50%; width: 9px; height: 9px; margin-top: -5px; border: solid #0b0b0c; border-width: 1.5px 1.5px 0 0; transform: rotate(45deg); transition: right var(--fast) var(--ease); }
+.btn.primary:hover:not([disabled]) { background: var(--ui-br); border-color: var(--ui-br); color: #000; box-shadow: 0 6px 24px rgba(201, 209, 214, 0.12); }
+.btn.primary:hover:not([disabled])::after { right: 13px; }
+.btn.primary:active:not([disabled]) { background: #aeb7bd; }
+.btn.quiet { border-color: transparent; color: var(--dim); padding-inline: 12px; }
+.btn.quiet:hover:not([disabled]) { border-color: var(--line2); color: var(--text); }
+.btn.small { padding: 9px 14px; font-size: 11.5px; }
+.btn[disabled] { opacity: 0.4; cursor: default; }
+
+/* ── the log: a journal you open, not a fourth place to read the story ── */
+.log {
+    position: absolute; z-index: 20; top: var(--hud-h); right: 0; bottom: 0; width: min(400px, 100%);
+    display: flex; flex-direction: column;
+    background: rgba(13, 13, 15, 0.97); border-left: 1px solid var(--line2);
+    box-shadow: -40px 0 80px rgba(0, 0, 0, 0.55);
+    transform: translateX(102%); visibility: hidden;
+    transition: transform 280ms var(--ease), visibility 0s linear 280ms;
+}
+.log.is-open { transform: none; visibility: visible; transition: transform 280ms var(--ease); }
+.log-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid var(--line); }
+.log-head h2 { margin: 0; font: 500 18px/1 var(--f-ui); letter-spacing: 0.04em; }
+.log-body { flex: 1; overflow-y: auto; padding: 6px 20px 24px; }
+.log-group { margin-top: 18px; }
+.log-group h3 { margin: 0 0 8px; font: 600 10.5px/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--faint); }
+.log-group ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.log-group li { padding-left: 12px; border-left: 1px solid var(--line2); font: 400 14px/1.45 var(--f-text); color: #b9bbb8; }
+.log-group li.is-fresh { border-left-color: var(--ui); color: var(--text); }
+
+.menu-pop {
+    position: absolute; z-index: 30; top: calc(var(--hud-h) - 6px); right: var(--gutter);
+    display: grid; gap: 2px; padding: 6px; min-width: 180px;
+    background: var(--deep); border: 1px solid var(--line2); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+.menu-pop[hidden] { display: none; }
+.menu-pop button { text-align: left; padding: 9px 10px; background: none; border: 0; cursor: pointer; font: 400 13px/1 var(--f-text); color: var(--dim); }
+.menu-pop button:hover { background: var(--dusk); color: var(--text); }
+
+/* ── narrow screens: one column, the ship below ── */
+@media (max-width: 900px) {
+    :root { --gutter: 14px; --ship-w: 100%; }
+    .proto-hint { display: none; }
+    .game { height: auto; min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto; grid-template-areas: "hud" "view" "bar" "ship"; }
+    .hud { flex-wrap: wrap; gap: 10px 16px; padding-block: 10px; }
+    .hud .route { order: 3; }
+    .res { order: 4; margin-left: 0; gap: 18px; width: 100%; }
+    .hud-btns { margin-left: auto; }
+    .view { height: 76vh; min-height: 480px; }
+    .screen-head { padding-top: 12px; }
+    .title-block h1 { font-size: 22px; }
+    .readouts { gap: 14px 18px; flex-wrap: wrap; }
+    .bar { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .talk { grid-template-columns: minmax(0, 1fr); }
+    .act { justify-content: flex-start; max-width: none; }
+    .pick { grid-template-columns: auto minmax(0, 1fr); }
+    .pick .btn { grid-column: 1 / -1; justify-self: start; }
+    .thumb { width: 96px; height: 54px; }
+    .steps { justify-items: stretch; width: 100%; }
+    .steps-row { flex-direction: column-reverse; align-items: stretch; }
+    .steps-row .btn { white-space: normal; text-align: left; line-height: 1.3; }
+    .view.is-orbit { height: auto; min-height: 0; }
+    .view.is-orbit .screen { position: relative; }
+    .view.is-orbit .orbit-wrap { flex: none; }
+    .ship { border-right: 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; }
+    .ship .panel-head { grid-column: 1 / -1; }
+    .ship-stage { height: 400px; flex: none; }
+    .crew { border-top: 0; align-content: start; padding-top: 4px; }
+    .crew li { grid-template-columns: 10px 1fr; }
+    .crew .where { grid-column: 2; }
+    .mk .tag { display: none; }
+}
+@media (max-width: 520px) {
+    .wordmark { letter-spacing: 0.2em; }
+    .hud-sector .v { font-size: 14px; }
+    .ship { grid-template-columns: minmax(0, 1fr); }
+    .crew li { grid-template-columns: 10px 1fr auto; }
+    .crew .where { grid-column: auto; }
+    .mk .name { font-size: 11px; letter-spacing: 0.06em; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .talk-line { animation: none; }
+    .log, .btn, .mk .ring { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<nav class="proto" aria-label="Mockup controls">
+    <span class="proto-tag">Mockup</span>
+    <div class="proto-tabs" role="tablist" aria-label="Which sector">
+        <button type="button" role="tab" data-sector="1" aria-selected="true">Sector 1</button>
+        <button type="button" role="tab" data-sector="5" aria-selected="false">Sector 5</button>
+        <button type="button" role="tab" data-sector="6" aria-selected="false">Sector 6</button>
+    </div>
+    <span class="proto-hint">Click a planet, then Go there. Try the beacon in sector 1: send the team, then date the wreck.</span>
+</nav>
+
+<div class="game" id="game">
+    <header class="hud">
+        <span class="wordmark">EXODUS-9</span>
+        <ol class="route" id="route" aria-label="The heading: six sectors, then the light"></ol>
+        <div class="hud-sector"><span class="k" id="hud-k">Sector 1</span><span class="v" id="hud-v">The Graveyard</span></div>
+        <dl class="res" id="res">
+            <div><dt>Energy</dt><dd id="r-energy">100</dd></div>
+            <div><dt>Rations</dt><dd id="r-rations">25</dd></div>
+            <div><dt>Salvage</dt><dd id="r-salvage">50</dd></div>
+        </dl>
+        <div class="hud-btns">
+            <button class="hud-btn" id="log-btn" type="button" aria-expanded="false" aria-controls="log">Log</button>
+            <button class="hud-btn icon" id="menu-btn" type="button" aria-expanded="false" aria-label="Menu">&#8943;</button>
+        </div>
+    </header>
+
+    <aside class="ship" aria-label="The ship">
+        <div class="panel-head"><span class="k">The ship</span><span class="aside">Five aboard</span></div>
+        <div class="ship-stage" id="ship-stage"><canvas id="ship-canvas" aria-hidden="true"></canvas></div>
+        <ul class="crew" id="crew"></ul>
+    </aside>
+
+    <main class="view">
+        <section class="screen" id="screen-map" aria-labelledby="map-title">
+            <div class="screen-head">
+                <div class="title-block">
+                    <span class="k" id="map-k">Sector 1 of 6</span>
+                    <h1 id="map-title">The Graveyard</h1>
+                </div>
+                <div class="readouts">
+                    <dl class="dl-reset"><div class="readout"><dt>Beacons heard</dt><dd id="beacons">1</dd></div></dl>
+                    <div class="readout"><span class="k">Stops left</span><div class="pips" id="pips"></div></div>
+                    <button class="btn small" id="jump-btn" type="button">Jump to sector 2 · 8 energy</button>
+                </div>
+            </div>
+            <div class="stage" id="map-stage">
+                <canvas id="map-canvas" aria-hidden="true"></canvas>
+                <span class="heading-tag" id="heading-tag">Our heading &rarr;</span>
+                <div class="markers" id="markers"></div>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-orbit" aria-labelledby="orbit-title" hidden>
+            <div class="screen-head">
+                <div class="title-block">
+                    <span class="k" id="orbit-k">In orbit · Sector 1 of 6</span>
+                    <h1 id="orbit-title">Titan-61 IV</h1>
+                    <p class="caption" id="orbit-caption"></p>
+                </div>
+                <span class="dated-chip" id="dated-chip" hidden><b>Dated</b><span id="dated-text"></span></span>
+            </div>
+            <div class="orbit-wrap" id="orbit-wrap">
+                <div class="frame" id="orbit-frame"><canvas id="orbit-canvas" width="480" height="270" aria-hidden="true"></canvas></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bar">
+        <div class="talk" aria-live="polite">
+            <p class="talk-prev" id="talk-prev"></p>
+            <p class="talk-who" id="talk-who"></p>
+            <p class="talk-line" id="talk-line"></p>
+        </div>
+        <div class="act" id="act"></div>
+    </footer>
+
+    <aside class="log" id="log" aria-label="Ship's log">
+        <div class="log-head"><h2>Ship's log</h2><button class="btn quiet small" id="log-close" type="button">Close</button></div>
+        <div class="log-body" id="log-body"></div>
+    </aside>
+
+    <div class="menu-pop" id="menu" hidden>
+        <button type="button">Sound: off</button>
+        <button type="button">Save and quit</button>
+        <button type="button">Test tools</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 1. The picture recipe (from src/systems/SceneArt.js): ordered 8×8 Bayer dither between colour ramps, seeded
+    //    value noise, one light. Every ramp starts at the same near-black ink so every material fades into the dark.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const INK = '#06090c', TICK_MS = 125, PX = 2, SHIP_PX = 3;
+    const BAYER8 = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
+        3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21].map(v => (v + 0.5) / 64);
+    const threshold = (x, y) => BAYER8[((y & 7) << 3) | (x & 7)];
+    const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+    const smooth = (a, b, v) => { const k = clamp01((v - a) / (b - a)); return k * k * (3 - 2 * k); };
+    function seeded(seed) { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+    const PERM = (() => { const r = seeded(1337), p = Array.from({ length: 256 }, (_, i) => i); for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } return Uint8Array.from(p); })();
+    const hash = (x, y, s = 0) => PERM[(PERM[(PERM[x & 255] + y) & 255] + s) & 255] / 255;
+    function vnoise(x, y, s = 0) {
+        const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+        const a = hash(xi, yi, s), b = hash(xi + 1, yi, s), c = hash(xi, yi + 1, s), d = hash(xi + 1, yi + 1, s);
+        return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+    }
+    function fbm(x, y, s = 0, oct = 4) { let sum = 0, amp = 0.5, f = 1, n = 0; for (let i = 0; i < oct; i++) { sum += amp * vnoise(x * f, y * f, s + i * 17); n += amp; f *= 2.03; amp *= 0.5; } return sum / n; }
+    const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const ramp = (...hex) => ({ hex, rgb: hex.map(hexRgb) });
+    function level(r, v, x, y) { const top = r.hex.length - 1, pos = clamp01(v) * top, lo = Math.floor(pos); return Math.min(top, lo + (pos - lo > threshold(x, y) ? 1 : 0)); }
+
+    // The world palette, "Deep field": teal-black space, rust-gold dust, ice instruments; amber only for people; the false sun warmest.
+    const RP = {
+        STAR: ramp(INK, '#1b272c', '#4c5f66', '#b3c2c0', '#f6f1e4'),
+        HAZE: ramp(INK, '#0a1317', '#0f222a', '#152f38', '#1f3a43'),
+        DUST: ramp(INK, '#160f0b', '#2c1a10', '#4e2f1a', '#7c4a26', '#b0733c'),
+        SUN: ramp(INK, '#1f140b', '#4a2e12', '#9a5a26', '#e9a25e', '#f7c483', '#fff3dc'),
+        HULL: ramp(INK, '#121c22', '#22333b', '#3d5560', '#8aa2aa', '#e6eef0'),
+        HURT: ramp(INK, '#1d0d0c', '#3a1714', '#6e2a22', '#e2574c', '#ffd2c8'),
+        UI: ramp(INK, '#13232a', '#284650', '#3d6670', '#9fd8e6', '#e1f6fb'),
+        ICE: ramp(INK, '#0c1a20', '#1a3440', '#33606e', '#7fb3c2', '#d6eef4'),
+        STONE: ramp(INK, '#13181a', '#272f31', '#465153', '#7c8786', '#c4ccc8'),
+        DESERT: ramp(INK, '#1a110c', '#38231a', '#664129', '#9c6a42', '#d0a376'),
+        GAS: ramp(INK, '#1c120b', '#3f2715', '#6c4523', '#a26f3b', '#d9ad74'),
+        DARK: ramp(INK, '#0e1216', '#1d242b', '#333d47', '#66727d', '#b4c0c8'),
+        AMBER: ramp(INK, '#3a2410', '#8a5422', '#e8964a', '#f7c483', '#fff3dc'),
+        RED: ramp(INK, '#3a1210', '#8a2a22', '#e2574c', '#ffd2c8'),
+    };
+    const PLANET_RAMP = { desert: RP.DESERT, gas: RP.GAS, ice: RP.ICE, rock: RP.STONE, dark: RP.DARK };
+
+    /** A pixel buffer painted once. An opaque buffer starts as ink; a clear one starts empty, and tone() leaves its darkest step empty. */
+    function painter(W, H, isOpaque) {
+        const data = new Uint8ClampedArray(W * H * 4);
+        if (isOpaque) { const k = hexRgb(INK); for (let i = 0; i < W * H; i++) { data[i * 4] = k[0]; data[i * 4 + 1] = k[1]; data[i * 4 + 2] = k[2]; data[i * 4 + 3] = 255; } }
+        const set = (x, y, rgb) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return; const o = (y * W + x) * 4; data[o] = rgb[0]; data[o + 1] = rgb[1]; data[o + 2] = rgb[2]; data[o + 3] = 255; };
+        const clear = (x, y) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return; data[(y * W + x) * 4 + 3] = 0; };
+        const get = (x, y) => { const o = (y * W + x) * 4; return [data[o], data[o + 1], data[o + 2], data[o + 3]]; };
+        const solid = (x, y, r, v) => set(x, y, r.rgb[level(r, v, Math.floor(x), Math.floor(y))]);
+        const tone = (x, y, r, v) => { const k = level(r, v, Math.floor(x), Math.floor(y)); if (k === 0 && !isOpaque) return; set(x, y, r.rgb[k]); };
+        const cover = (x, y, r, v, a) => { if (a > threshold(Math.floor(x) + 3, Math.floor(y) + 5)) tone(x, y, r, v); };
+        const region = (x0, y0, x1, y1, fn) => { for (let y = Math.max(0, Math.floor(y0)); y < Math.min(H, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(W, Math.ceil(x1)); x++) fn(x, y); };
+        const ellipse = (cx, cy, rx, ry, fn) => region(cx - rx - 1, cy - ry - 1, cx + rx + 1, cy + ry + 1, (x, y) => { const q = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2; if (q < 1) fn(x, y, q); });
+        const line = (x0, y0, x1, y1, fn) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let k = 0; k <= n; k++) fn(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), k / n); };
+        const canvas = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').putImageData(new ImageData(data, W, H), 0, 0); return c; };
+        return { W, H, data, set, clear, get, solid, tone, cover, region, ellipse, line, canvas };
+    }
+
+    /** The moving layer: a few rectangles a frame, straight onto the canvas. */
+    function framer(ctx, W, H) {
+        let cur = '';
+        const px = (x, y, hex, w = 1, h = 1) => { const xi = Math.round(x), yi = Math.round(y); if (xi + w <= 0 || yi + h <= 0 || xi >= W || yi >= H) return; if (hex !== cur) { ctx.fillStyle = hex; cur = hex; } ctx.fillRect(xi, yi, w, h); };
+        const tone = (x, y, r, v, w = 1, h = 1) => { const xi = Math.round(x), yi = Math.round(y), k = level(r, v, xi, yi); if (k === 0) return; px(xi, yi, r.hex[k], w, h); };
+        const glow = (cx, cy, rad, r, peak) => { for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) { const d = Math.hypot(x, y) / rad; if (d < 1) tone(cx + x, cy + y, r, peak * (1 - d) ** 1.5); } };
+        return { px, tone, glow };
+    }
+
+    // ── shared pieces ──
+    function scatterStars(p, seed, count, where) {
+        const rand = seeded(seed), list = [];
+        for (let i = 0; i < count; i++) {
+            const x = Math.floor(rand() * p.W), y = Math.floor(rand() * p.H), mag = rand();
+            if (where && !where(x, y)) continue;
+            if (mag > 0.978) { p.set(x, y, RP.STAR.rgb[4]); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => p.set(x + dx, y + dy, RP.STAR.rgb[2])); }
+            else if (mag > 0.87) { p.set(x, y, RP.STAR.rgb[3]); }
+            else p.set(x, y, RP.STAR.rgb[mag > 0.55 ? 2 : 1]);
+            list.push({ x, y, mag });
+        }
+        return list;
+    }
+    function keepVisible(p, list) {
+        return list.filter(s => { if (s.mag < 0.87) return false; const c = p.get(s.x, s.y); return RP.STAR.rgb.slice(3).some(k => k[0] === c[0] && k[1] === c[1] && k[2] === c[2]); });
+    }
+    function twinkle(f, list, t) {
+        const step = Math.floor(t / 375);
+        list.forEach((s, i) => { if (hash(i, step, 5) < 0.88) return; f.px(s.x - 1, s.y, RP.STAR.hex[3], 3, 1); f.px(s.x, s.y - 1, RP.STAR.hex[3], 1, 3); f.px(s.x, s.y, RP.STAR.hex[4]); });
+    }
+
+    /** Space: a thin teal haze, and rust-gold dust that only shows where the light reaches it. */
+    function spaceAndDust(p, seed, lx, ly, halo, dustAmount) {
+        p.region(0, 0, p.W, p.H, (x, y) => {
+            const d = Math.hypot(x - lx, (y - ly) * 1.15), lit = Math.exp(-d / (halo * 0.85 + 6));
+            const dust = Math.max(0, fbm(x / 46, y / 26, seed + 7, 4) - 0.5) * 3.4 * dustAmount;
+            const vd = dust * 2.8 * lit;
+            if (vd > 0.12) { p.tone(x, y, RP.DUST, vd); return; }
+            const vh = Math.max(0, fbm(x / 70, y / 38, seed, 4) - 0.5) * 1.15;
+            if (vh > 0.03) p.tone(x, y, RP.HAZE, vh);
+        });
+    }
+
+    /** The false sun: a white-gold core, a soft dithered halo and a thin horizontal streak. */
+    function lightGlow(p, lx, ly, o, breath = 1) {
+        const reach = o.halo * 3.2 + o.core + 8, s = o.strength * breath;
+        p.region(lx - reach, ly - reach, lx + reach, ly + reach, (x, y) => {
+            const dx = x + 0.5 - lx, dy = (y + 0.5 - ly) * 1.06, d = Math.hypot(dx, dy);
+            if (d < o.core) { p.tone(x, y, RP.SUN, 1.02 - 0.3 * (d / o.core) ** 3); return; }            // a little darker at the edge of its face
+            let v = s * (1.15 * Math.exp(-(d - o.core) / (o.core * 0.5 + 1.4)) + 0.7 * Math.exp(-d / (o.halo * 0.32 + 1)) + 0.34 * Math.exp(-d / (o.halo * 1.1 + 1)));
+            if (Math.abs(dy) < 0.6) v += 0.34 * s * Math.exp(-Math.abs(dx) / (o.halo * 0.9 + 8));
+            if (o.spikes && (Math.abs(dx) < 0.6 || Math.abs(dy) < 0.6)) v += 0.7 * Math.exp(-d / o.spikes);
+            v *= 1 - smooth(reach * 0.55, reach, d);                                                  // fade to nothing before the edge of the box
+            if (v > 0.004) p.tone(x, y, RP.SUN, v);
+        });
+    }
+
+    /** A planet: lit from the light's direction L, shaded with its own ramp; the edge facing the light can catch a warm rim. */
+    function sphere(p, o) {
+        const L = o.L, edge = Math.max(0, 1 - 1.5 / o.r) ** 2;
+        if (o.atmo) p.ellipse(o.cx, o.cy, o.r + o.atmo.w, o.r + o.atmo.w, (x, y) => {
+            const nx = (x + 0.5 - o.cx) / o.r, ny = (y + 0.5 - o.cy) / o.r, d = Math.hypot(nx, ny);
+            if (d < 1) return;
+            const facing = (nx * L[0] + ny * L[1]) / d;
+            if (facing > 0.1) p.cover(x, y, o.atmo.ramp, 0.55 * facing, (1 - (d - 1) * o.r / o.atmo.w) * facing);
+        });
+        p.ellipse(o.cx, o.cy, o.r, o.r, (x, y, q) => {
+            const nx = (x + 0.5 - o.cx) / o.r, ny = (y + 0.5 - o.cy) / o.r, nz = Math.sqrt(Math.max(0, 1 - q));
+            const lam = Math.max(0, (nx * L[0] + ny * L[1] + nz * L[2] + 0.06) / 1.06);                // a slightly soft dusk line
+            let v = (o.ambient == null ? 0.02 : o.ambient) + Math.pow(lam, 1.1) * (o.gain || 0.92);
+            if (o.surface) v = o.surface(v, nx, ny, nz, lam);
+            v *= o.dim == null ? 1 : o.dim;
+            if (o.rim && q > edge && lam > 0.12) { p.solid(x, y, RP.SUN, Math.min(0.95, 0.25 + o.rim * lam)); return; }
+            p.solid(x, y, o.ramp, v);
+        });
+    }
+    function surfaceFor(type, seed, L) {
+        if (type === 'desert') return (v, nx, ny) => v * (0.8 + 0.34 * fbm(nx * 2.4 + seed, ny * 7, seed, 3)) - 0.16 * smooth(0.55, 0.68, fbm(nx * 2.2 + 9, ny * 2.2, seed + 4, 3)) * Math.min(1, v * 3);
+        if (type === 'gas') return (v, nx, ny) => v * (0.68 + 0.38 * (0.5 + 0.5 * Math.sin(ny * 12 + 2.8 * fbm(nx * 1.6, ny * 5, seed, 3)))) - (Math.hypot((nx - 0.25) / 0.2, (ny - 0.32) / 0.09) < 1 ? 0.12 : 0);
+        if (type === 'ice') return (v, nx, ny) => {
+            let k = v * (0.84 + 0.2 * fbm(nx * 4, ny * 4, seed, 2));
+            if (Math.abs(vnoise(nx * 9 + seed, ny * 9, seed) - 0.5) < 0.013) k *= 0.74;                // thin cracks
+            const cap = smooth(-0.6, -0.86, ny + (fbm(nx * 5, 3, seed, 2) - 0.5) * 0.16);              // a ragged polar cap
+            return k * (1 - cap) + Math.min(1, v * 1.22 + 0.03) * cap;
+        };
+        if (type === 'dark') return (v, nx, ny) => v * 0.62 * (0.82 + 0.36 * fbm(nx * 5, ny * 5, seed, 2));
+        const rand = seeded(seed + 3), craters = Array.from({ length: 12 }, () => [(rand() - 0.5) * 1.6, (rand() - 0.5) * 1.6, 0.06 + rand() * rand() * 0.2]);
+        return (v, nx, ny) => {
+            let k = v - 0.18 * smooth(0.5, 0.62, fbm(nx * 2.6 + 4, ny * 2.6, seed, 3)) * Math.min(1, v * 3);
+            craters.forEach(([ux, uy, ur]) => {
+                const d = Math.hypot(nx - ux, ny - uy) / ur, toward = (nx - ux) * L[0] + (ny - uy) * L[1];
+                if (d < 0.85) k *= toward > 0 ? 0.95 : 0.7;
+                else if (d < 1.15 && toward < 0) k += 0.1 * Math.min(1, -toward / ur);
+            });
+            return k;
+        };
+    }
+    const lightVector = (fx, fy, lx, ly, depth) => { const x = lx - fx, y = ly - fy, z = depth, n = Math.hypot(x, y, z); return [x / n, y / n, z / n]; };
+
+    /** An Exodus-class hull side on (SceneArt's drawHull): round nose, raised bridge, dark windows, plate seams, engine block, fins. */
+    function hullEdges(u) {
+        if (u < 0 || u > 1) return null;
+        const nose = u < 0.12 ? Math.sqrt(u / 0.12) : 1;
+        let top = -0.5 * (0.35 + 0.65 * nose), bottom = 0.5 * (0.35 + 0.65 * nose);
+        if (u > 0.14 && u < 0.36) top -= 0.2 * Math.min(1, (u - 0.14) / 0.04, (0.36 - u) / 0.05);
+        if (u > 0.74 && u < 0.8) { top += 0.08; bottom -= 0.08; }
+        if (u >= 0.8) { top -= 0.06; bottom += 0.06; }
+        if (u > 0.86) { const fin = (u - 0.86) / 0.14; top -= 0.3 * fin; bottom += 0.3 * fin; }
+        return [top, bottom];
+    }
+    function drawHull(p, o) {
+        const { len, ht } = o, c = Math.cos(o.angle || 0), s = Math.sin(o.angle || 0), dir = o.flip ? -1 : 1, seed = o.seed || 1, dim = o.light == null ? 1 : o.light;
+        const anchor = 0.5;
+        const at = (u, v) => { const along = (u - anchor) * len * dir, across = v * ht; return [o.x + along * c - across * s, o.y + along * s + across * c]; };
+        const reach = len * 0.5 + ht;
+        p.region(o.x - reach, o.y - reach, o.x + reach, o.y + reach, (x, y) => {
+            const dx = x + 0.5 - o.x, dy = y + 0.5 - o.y, u = anchor + (dx * c + dy * s) * dir / len, v = (-dx * s + dy * c) / ht;
+            const e = hullEdges(u); if (!e || v < e[0] || v > e[1]) return;
+            const mid = (e[0] + e[1]) / 2, half = (e[1] - e[0]) / 2, n = (v - mid) / half, pxu = u * len;
+            let light = 0.66 - 0.42 * n;
+            if ((v - e[0]) * ht < 1.3) light += 0.24;
+            if (u > 0.8) light -= 0.14;
+            if (len > 30 && (pxu % 15 < 1 || Math.abs((v - mid) * ht - half * ht * 0.35) < 0.5)) light -= 0.18;
+            if (len > 30 && u > 0.17 && u < 0.33 && (v - e[0]) * ht > 2 && (v - e[0]) * ht < 4.5 && pxu % 5 > 1.5) light = 0.1;
+            if (o.rust) light -= (fbm(pxu / 9, v * ht / 6, seed, 3) - 0.45) * 0.5;
+            if (o.holes && fbm(pxu / 16, v * ht / 10, seed + 3, 3) > 0.66) light = pxu % 6 < 1.2 ? 0.28 : 0.04;
+            p.solid(x, y, o.ramp || RP.HULL, light * dim);
+        });
+        return at;
+    }
+
+    /** A small station: a hub, a ring, two panel arms. Lit from the right. Returns where its one window is. */
+    function drawStation(p, cx, cy, s, seed) {
+        for (const side of [-1, 1]) {
+            p.region(Math.min(cx + side * 4 * s, cx + side * 26 * s), cy - 0.5 * s, Math.max(cx + side * 4 * s, cx + side * 26 * s), cy + 0.5 * s + 1, (x, y) => p.solid(x, y, RP.HULL, 0.42));
+            p.region(Math.min(cx + side * 9 * s, cx + side * 24 * s), cy - 7 * s, Math.max(cx + side * 9 * s, cx + side * 24 * s), cy + 7 * s, (x, y) => {
+                if (Math.abs(y + 0.5 - cy) < 1.6 * s) return;
+                const gx = (x - cx) / (2.5 * s), gy = (y - cy) / (2.2 * s), isGrid = Math.abs(gx - Math.round(gx)) < 0.12 || Math.abs(gy - Math.round(gy)) < 0.14;
+                p.solid(x, y, RP.UI, isGrid ? 0.22 : 0.3 + 0.18 * (side > 0 ? 1 : 0) + 0.1 * fbm(x / 3, y / 3, seed, 2));
+            });
+        }
+        const ring = (front) => p.ellipse(cx, cy, 15 * s, 5 * s, (x, y, q) => {
+            if (q < 0.62) return;
+            const isFront = y + 0.5 > cy; if (isFront !== front) return;
+            p.solid(x, y, RP.HULL, 0.32 + 0.4 * clamp01((x - cx) / (15 * s) * 0.5 + 0.5) + (q > 0.9 ? -0.12 : 0));
+        });
+        ring(false);
+        p.region(cx - 3.4 * s, cy - 11 * s, cx + 3.4 * s, cy + 11 * s, (x, y) => {
+            const nx = (x + 0.5 - cx) / (3.4 * s), ends = Math.abs(y + 0.5 - cy) / (11 * s);
+            if (ends > 0.9 && Math.abs(nx) > 0.6) return;
+            p.solid(x, y, RP.HULL, 0.3 + 0.42 * (nx * 0.5 + 0.5) + (Math.abs((y - cy) % (4 * s)) < 0.6 ? -0.15 : 0));
+        });
+        ring(true);
+        return [Math.round(cx + 1.2 * s), Math.round(cy - 4 * s)];
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 2. The story and the numbers for each mockup sector. Every line follows docs/STYLE.md: plain, one idea, ≤20 words.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const CREW = [
+        { id: 'cora', name: 'Cora Moon', role: 'Commander', color: '#fff3df', you: true },
+        { id: 'jaxon', name: 'Jaxon Mercer', role: 'Engineer', color: '#f08c2e' },
+        { id: 'vance', name: 'Kael Vance', role: 'Security', color: '#c4622a' },
+        { id: 'aris', name: 'Aris Novak', role: 'Doctor', color: '#ffc27a' },
+        { id: 'mira', name: 'Mira Chen', role: 'Scientist', color: '#dca25a' },
+    ];
+    const ROOM_NAMES = { bridge: 'Bridge', lab: 'Lab', quarters: 'Quarters', hold: 'Hold', engineering: 'Engineering' };
+    const SECTOR_NAMES = { 1: 'The Graveyard', 2: 'The Dark Void', 3: 'The Signal', 4: 'The Garden', 5: 'The Tally', 6: 'The Light' };
+
+    const team = (label, sub, who, line, log, extra) => Object.assign({ label, sub, then: { who, line }, log }, extra || {});
+
+    const SECTORS = {
+        1: {
+            seed: 11, glow: 0.12, dust: 0.12, jumpCost: 8, beacons: 1, ticks: 0, hulls: 0,
+            light: { x: 0.985, y: 0.47, core: 1, halo: 0.05, strength: 1, spikes: 4 },
+            orbitLight: { x: 452, y: 40, core: 1.2, halo: 14, strength: 0.95, spikes: 5 },
+            res: { energy: 100, rations: 25, salvage: 50 }, stops: 3, ship: { x: 0.06, y: 0.47 },
+            crewAt: { cora: 'bridge', jaxon: 'engineering', vance: 'hold', aris: 'lab', mira: 'lab' }, hurt: {}, damaged: {}, pods: 0, rimWarm: 0.05,
+            talk: [{ who: 'Aris', line: 'Everyone is up. Sixty-one years, and nobody even feels hungry.' },
+                { who: 'A.U.R.A.', line: 'There is an old ship beacon on our route, Commander. I have marked it on the map.' }],
+            log: [{ head: 'Sector 1 · The Graveyard', items: ['Woke from the long sleep, sixty-one years out from Earth.', 'A.U.R.A. marked an old ship beacon on the route.'] }],
+            planets: [
+                { id: 'zeta', name: 'Platform Zeta', kind: 'station', x: 0.17, y: 0.25, r: 9, lbl: 'r', tag: 'Old station', cost: 4,
+                    line: 'An old station. Its docking port still answers.', react: ['Vance', 'A station out here. Somebody put it on this route on purpose.'],
+                    orbit: { caption: 'A station from a mission before ours.', arrive: ['A.U.R.A.', 'The docking port answers, Commander. Nothing else does.'], window: true,
+                        steps: [team('Board the station', 'One of the crew goes in on one tank of air.', 'Aris', 'Nobody aboard. They left the lights on.', 'Boarded Platform Zeta. Nobody aboard.')] } },
+                { id: 'titan', name: 'Titan-61 IV', kind: 'wreck', type: 'desert', x: 0.30, y: 0.68, r: 10, lbl: 'r', tag: 'Old transponder', cost: 5, beacon: 'red',
+                    line: 'A dry world. A ship beacon is still running down there.', react: ['Mira', "That's a ship's transponder. One of the eight, I bet."],
+                    orbit: { caption: 'A dry world. Hot by day, frozen at night.', arrive: ['A.U.R.A.', 'Orbit, Commander. The beacon belongs to EXODUS-4. It is still running.'],
+                        steps: [
+                            team('Send the team to the wreck', 'Vance and Aris take the lander.', 'Vance', "We're back. Nobody alive down there. We brought their last star reading.", 'The team searched EXODUS-4. Nobody alive.'),
+                            team('Date the wreck', "Lay its star reading over the disc's map.", 'Mira', 'Hull 4 died twenty-one years ago. They were flying to that grey moon.', 'Dated hull 4: twenty-one years dead.', { reveal: 'rhea', dated: 'Hull 4 · 21 years dead' }),
+                        ] } },
+                { id: 'kryos', name: 'Kryos-68 Prime', kind: 'gas', type: 'gas', x: 0.52, y: 0.24, r: 15, lbl: 'r', tag: 'Gas giant · fuel', cost: 6, gain: 15,
+                    line: 'A gas giant. We can skim fuel from its clouds.', react: ['Jaxon', 'We can skim fuel there. It will cost us a stop.'],
+                    orbit: { caption: 'A gas giant, banded rust and gold.', arrive: ['Jaxon', "Scoops are open. We fill the tanks on the next pass."],
+                        steps: [team('Skim fuel', '+15 energy.', 'A.U.R.A.', 'Tanks are full, Commander.', 'Skimmed fuel at Kryos-68 Prime.', { gain: 15 })] } },
+                { id: 'chronos', name: 'Chronos-37 Proxima', kind: 'world', type: 'ice', x: 0.48, y: 0.82, r: 11, lbl: 'r', tag: 'Ice world', cost: 5,
+                    line: 'An ice world. Nothing on the scanner.', react: ['Aris', 'Nothing on the scanner. Just old ice.'],
+                    orbit: { caption: 'An ice world. Nothing moves down there.', arrive: ['A.U.R.A.', 'No signal, Commander. The ice is old and clean.'],
+                        steps: [team('Send the team down', 'Search the surface.', 'Jaxon', 'Nothing down there but ice. We took some for water.', 'Searched Chronos-37 Proxima. Only ice.')] } },
+                { id: 'rhea', name: 'Rhea-4 Minor', kind: 'story', type: 'rock', x: 0.71, y: 0.27, r: 7, lbl: 'r', tag: 'Grey moon · one of our ships', cost: 0, costNote: 'their last course', hidden: true, beacon: 'red',
+                    line: 'A small grey moon. Its emergency lamp still flashes.', react: ['Mira', 'They saw a lamp on that moon and went to help. They never got there.'],
+                    orbit: { caption: 'A small grey moon. One of our ships came down on it.', arrive: ['A.U.R.A.', 'Orbit, Commander. EXODUS-6 is down there. Its emergency lamp is still flashing.'],
+                        steps: [team('Send the team to the wreck', 'Aris and Mira take the lander.', 'Aris', "I'm adding their names to my list.", 'The team searched EXODUS-6 and found a page.')] } },
+                { id: 'zephyr', name: 'Zephyr-97 X', kind: 'world', type: 'rock', x: 0.85, y: 0.73, r: 9, lbl: 'l', tag: 'Dead rock', cost: 6,
+                    line: 'A dead rock. No signal.', react: ['A.U.R.A.', 'A dead rock, Commander. There is no signal from it.'],
+                    orbit: { caption: 'A dead rock, close to nothing.', arrive: ['A.U.R.A.', 'Nothing here, Commander. Not even old wreckage.'],
+                        steps: [team('Send the team down', 'Search the surface.', 'Vance', "Rock and dust. We shouldn't have stopped.", 'Searched Zephyr-97 X. Nothing.')] } },
+            ],
+        },
+        5: {
+            seed: 55, glow: 0.62, dust: 0.85, jumpCost: 8, beacons: 21483, ticks: 520, hulls: 9,
+            light: { x: 1.02, y: 0.47, core: 8, halo: 0.34, strength: 1.3 },
+            orbitLight: { x: 520, y: 96, core: 24, halo: 120, strength: 1.25 },
+            res: { energy: 31, rations: 10, salvage: 25 }, stops: 2, ship: { at: 'aea' },
+            crewAt: { cora: 'bridge', jaxon: 'engineering', vance: 'quarters', aris: 'lab', mira: 'lab' }, hurt: { vance: true }, damaged: { quarters: true }, pods: 3, rimWarm: 0.55,
+            talk: [{ who: 'Vance', line: 'Twenty-one thousand beacons. So where are all the ships?' },
+                { who: 'A.U.R.A.', line: 'We are through the jump, Commander. I count 21,483 beacons on this heading.' }],
+            log: [
+                { head: 'Sector 4 · The Garden', items: ['Buried the crew of hull 2,210 on Pallas-17 Major.', 'Aris added forty-one names to her list.'] },
+                { head: 'Sector 5 · The Tally', items: ['Flew the corridor. 21,483 beacons heard, two ships seen.', 'Skimmed fuel at Aea-64 Alpha.', 'A rock hit the quarters. Vance was hurt.'] },
+            ],
+            planets: [
+                { id: 'aea', name: 'Aea-64 Alpha', kind: 'gas', type: 'gas', x: 0.14, y: 0.30, r: 14, lbl: 'r', tag: 'Gas giant · fuel', cost: 6, visited: true,
+                    line: 'We skimmed fuel here.', react: ['Jaxon', 'Tanks are as full as they will get.'], orbit: { caption: 'A gas giant.', arrive: ['A.U.R.A.', 'Back in orbit, Commander.'], steps: [] } },
+                { id: 'kryos0', name: 'Kryos-0 Alpha', kind: 'wreck', type: 'ice', x: 0.40, y: 0.70, r: 11, lbl: 'r', tag: 'A wreck · hull 14,086', cost: 5, beacon: 'red',
+                    line: 'An ice world. A wreck on it sends hull number 14,086.', react: ['Vance', 'Hull number 14,086. Earth kept building ships after we left.'],
+                    orbit: { caption: 'An ice world. The light is bright here, even at night.', arrive: ['A.U.R.A.', 'Orbit, Commander. The wreck is on the ice, near the north pole.'],
+                        steps: [
+                            team('Send the team to the wreck', 'Jaxon and Aris take the lander.', 'Jaxon', 'Their ship is far better than ours. And it has been dead for centuries.', 'The team searched hull 14,086.'),
+                            team('Date the wreck', "Lay its star reading over the disc's map.", 'Mira', 'About three hundred years dead. They were flying to a dark moon.', 'Dated hull 14,086: about three hundred years dead.', { reveal: 'iapetus', dated: 'Hull 14,086 · ~300 years dead' }),
+                        ] } },
+                { id: 'kryos72', name: 'Kryos-72 Proxima', kind: 'station', x: 0.57, y: 0.22, r: 9, lbl: 'r', tag: 'Station · no power', cost: 5, dark: true,
+                    line: 'A station built by a later ship. No power.', react: ['Aris', "That station is newer than anything we have. And it's dead."],
+                    orbit: { caption: 'A station from a later ship. No power.', arrive: ['A.U.R.A.', 'No power aboard, Commander. One navigation light is still blinking.'],
+                        steps: [team('Board the station', 'One of the crew goes in on one tank of air.', 'Jaxon', 'Everything in there is newer than our ship. All of it is broken.', 'Boarded Kryos-72 Proxima.')] } },
+                { id: 'iapetus', name: 'Iapetus-60 Minor', kind: 'story', type: 'dark', x: 0.74, y: 0.36, r: 8, lbl: 'l', tag: 'Dark moon · one of our ships', cost: 0, costNote: 'their last course', hidden: true, beacon: 'warm',
+                    line: "A dark moon. Someone built a shelter from a ship's hull.", react: ['Mira', 'That lamp was set up by hand. Someone lived on that moon.'],
+                    orbit: { caption: 'A dark moon. A lamp is burning on the night side.', arrive: ['A.U.R.A.', 'Orbit, Commander. There is a shelter down there, built from a hull.'],
+                        steps: [team('Send the team to the lamp', 'Aris and Mira take the lander.', 'Aris', 'Someone lived here for years. They kept a calendar on the wall.', 'The team found a shelter and a page.')] } },
+                { id: 'chronos61', name: 'Chronos-61 IV', kind: 'world', type: 'rock', x: 0.63, y: 0.82, r: 10, lbl: 'r', tag: 'Dead rock · three wrecks in orbit', cost: 6,
+                    line: 'A dead rock. Three dead ships circle it.', react: ['A.U.R.A.', 'Nothing on the ground, Commander. Three beacons in orbit around it.'],
+                    orbit: { caption: 'A dead rock. Three ships circle it.', arrive: ['A.U.R.A.', 'Three dead ships in orbit, Commander. None of them answer.'],
+                        steps: [team('Send the team down', 'Search the surface.', 'Jaxon', "Just rock. And a lot of other people's debris.", 'Searched Chronos-61 IV.')] } },
+            ],
+        },
+        6: {
+            seed: 66, glow: 1, dust: 1, jumpCost: 0, beacons: 39806, ticks: 760, hulls: 14,
+            light: { x: 0.86, y: 0.47, core: 13, halo: 0.34, strength: 1.25, onMap: true },
+            orbitLight: { x: 540, y: 110, core: 40, halo: 170, strength: 1.3 },
+            res: { energy: 14, rations: 4, salvage: 30 }, stops: 3, ship: { x: 0.05, y: 0.47 },
+            crewAt: { cora: 'bridge', jaxon: 'engineering', vance: 'hold', aris: 'lab', mira: 'bridge' }, hurt: {}, damaged: {}, pods: 3, rimWarm: 0.9,
+            talk: [{ who: 'Aris', line: 'It looks like a sun.' },
+                { who: 'A.U.R.A.', line: 'Nothing is charted past this sector, Commander. The heading ends at the light.' }],
+            log: [{ head: 'Sector 6 · The Light', items: ['Flew the corridor. 39,806 beacons heard.', 'Entered the last sector. The light is ahead.'] }],
+            planets: [
+                { id: 'erebus', name: 'Station Erebus', kind: 'station', x: 0.28, y: 0.26, r: 9, lbl: 'r', tag: 'Station · watching the light', cost: 4,
+                    line: 'A station parked facing the light.', react: ['Aris', 'A station this close to it. Someone wanted to watch.'],
+                    orbit: { caption: 'A station parked facing the light.', arrive: ['A.U.R.A.', 'The station is empty, Commander. Every window faces the light.'], window: true,
+                        steps: [team('Board the station', 'One of the crew goes in on one tank of air.', 'Vance', 'They wrote down every sweep of the light. Thousands of them.', 'Boarded Station Erebus.')] } },
+                { id: 'titan92', name: 'Titan-92 X', kind: 'wreck', type: 'rock', x: 0.44, y: 0.72, r: 10, lbl: 'r', tag: 'A wreck · hull 38,412', cost: 5, beacon: 'red',
+                    line: 'A grey world. A wreck on it sends hull number 38,412.', react: ['Vance', 'Hull number 38,412. The last ones got this far.'],
+                    orbit: { caption: 'A grey world, lit gold on one side.', arrive: ['A.U.R.A.', 'Orbit, Commander. The wreck sits facing the light.'],
+                        steps: [
+                            team('Send the team to the wreck', 'Jaxon and Vance take the lander.', 'Jaxon', 'They parked facing it. Like they were waiting for something.', 'The team searched hull 38,412.'),
+                            team('Date the wreck', "Lay its star reading over the disc's map.", 'Mira', 'About four hundred years dead. They were going to a world near the light.', 'Dated hull 38,412: about four hundred years dead.', { reveal: 'tethys', dated: 'Hull 38,412 · ~400 years dead' }),
+                        ] } },
+                { id: 'tethys', name: 'Tethys-1 Prime', kind: 'story', type: 'ice', x: 0.66, y: 0.22, r: 8, lbl: 'l', tag: 'Ice world · one of our ships', cost: 0, costNote: 'their last course', hidden: true, beacon: 'red',
+                    line: "A cold world a day's flight from the light.", react: ['Aris', 'One ship stopped a day short of it. I want to read its log.'],
+                    orbit: { caption: "A cold world, a day's flight from the light.", arrive: ['A.U.R.A.', 'Orbit, Commander. One of our ships stopped here.'],
+                        steps: [team('Send the team to the wreck', 'Aris and Mira take the lander.', 'Aris', 'Their last page is here. They decided not to go on.', 'The team found the last page.')] } },
+                { id: 'light', name: 'The light', kind: 'light', x: 0.86, y: 0.47, r: 14, lbl: 'b', tag: 'The end of the heading', cost: 0, costNote: 'the last stop',
+                    line: 'It looks like a sun. It gives no heat.', react: ['Aris', 'It looks warm. Nothing out here is warm.'],
+                    orbit: { caption: 'It looks like a sun. It gives no heat.', arrive: ['A.U.R.A.', 'We are holding position, Commander. I cannot tell you what happens if we go closer.'],
+                        steps: [team('Go into the light', 'What you choose there is final.', '', 'Mockup: the finale starts here.', 'Held position in front of the light.')] } },
+            ],
+        },
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 3. The sector map: the heading as a line toward the light; planets along the route; beacons heard as faint ticks.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const mapCache = new Map();   // the parts that never change in a sector: space, dust, stars, the light's breathing frames
+    function mapBackdrop(n, W, H) {
+        const key = `${n}:${W}x${H}`;
+        if (mapCache.has(key)) return mapCache.get(key);
+        const sec = SECTORS[n], L = sec.light, lx = L.x * W, ly = L.y * H, halo = L.halo * H;
+        const base = painter(W, H, true);
+        spaceAndDust(base, sec.seed, lx, ly, Math.max(halo, 18), sec.dust);
+        const stars = scatterStars(base, sec.seed + 1, Math.round(W * H / 200), (x, y) => Math.hypot(x - lx, y - ly) > halo * 0.9 + L.core + 8);
+        const glow = Array.from({ length: 8 }, (_, k) => { const p = painter(W, H, false); lightGlow(p, lx, ly, { core: L.core, halo, strength: L.strength, spikes: L.spikes }, 0.9 + 0.1 * Math.sin(k / 8 * Math.PI * 2)); return p.canvas(); });
+        const out = { base: base.canvas(), glow, stars: keepVisible(base, stars), lx, ly, halo };
+        mapCache.set(key, out);
+        return out;
+    }
+
+    function planetScale(W) { return Math.max(0.6, Math.min(1.25, W / 560)); }
+
+    /** The things on the heading, painted once per change: the line, the dead beacons, small hulls, the planets, our ship. */
+    function mapForeground(n, W, H, st) {
+        const sec = SECTORS[n], bd = mapBackdrop(n, W, H), p = painter(W, H, false), rand = seeded(sec.seed + 41), k = planetScale(W);
+        const hy = Math.round(sec.light.y * H), endX = sec.light.onMap ? bd.lx - sec.light.core - 6 : W;
+        for (let x = 4; x < endX; x += 3) p.tone(x, hy, RP.UI, 0.3);                                     // the heading: a dotted line
+        const blinkers = [];
+        const toX = sec.light.onMap ? bd.lx : W - 4;
+        for (let i = 0; i < sec.ticks; i++) {                                                             // every dead beacon heard: a faint tick
+            const along = 1 - Math.pow(rand(), 1.45), x = 6 + along * (toX - 10), narrow = sec.light.onMap ? 1 - 0.55 * along : 0.4 + along;
+            const off = (rand() + rand() + rand() - 1.5) * H * 0.11 * narrow, y = hy + off;
+            if (sec.light.onMap && Math.hypot(x - bd.lx, y - bd.ly) < sec.light.core + 3) continue;       // nothing sits on the light's face
+            const tall = 1 + Math.floor(rand() * 3), lit = Math.exp(-Math.hypot(x - bd.lx, y - bd.ly) / (bd.halo + 1));
+            for (let d = 0; d < tall; d++) { if (lit > 0.32) p.solid(x, y - d, RP.HULL, 0.06); else p.tone(x, y - d, RP.UI, 0.16 + 0.22 * rand()); }
+            if (rand() < 0.05 && lit < 0.4) blinkers.push({ x: Math.round(x), y: Math.round(y), period: 4000 + rand() * 7000, phase: rand() * 9000 });
+        }
+        for (let i = 0; i < sec.hulls; i++) {                                                             // a few hulls big enough to see; dark against the glow
+            const along = 0.25 + 0.75 * Math.pow(rand(), 0.6), x = along * (endX - 20), y = hy + (rand() - 0.5) * H * 0.22;
+            drawHull(p, { x, y, len: (8 + rand() * 9) * k, ht: (2.6 + rand() * 1.6) * k, angle: (rand() - 0.5) * 0.9, flip: rand() < 0.5, light: 0.32, seed: i + 7 });
+        }
+        const spots = {};
+        st.planets.forEach(pl => {
+            const cx = Math.round(pl.x * W), cy = Math.round(pl.y * H), r = Math.max(4, Math.round(pl.r * k));
+            spots[pl.id] = { cx, cy, r };
+            if (pl.kind === 'light') return;
+            if (pl.hidden) return;                                                                        // a contact: drawn as a blip in the moving layer
+            const isBehind = isBehindShip(pl, st), dim = isBehind ? 0.45 : 1, L = lightVector(cx, cy, bd.lx, bd.ly, Math.max(60, W * 0.12));
+            if (pl.kind === 'station') { spots[pl.id].win = drawStation(p, cx, cy, 0.46 * k, 3); return; }
+            sphere(p, { cx, cy, r, ramp: PLANET_RAMP[pl.type] || RP.STONE, L, dim, surface: surfaceFor(pl.type, pl.r * 7 + 3, L), rim: sec.glow > 0.5 ? 0.5 : 0,
+                atmo: pl.type === 'ice' || pl.type === 'gas' ? { ramp: pl.type === 'gas' ? RP.DUST : RP.ICE, w: 2 } : null });
+        });
+        const ship = shipSpot(st, W, H);                                                                  // our ship: small, nose toward the light
+        drawHull(p, { x: ship.x, y: ship.y, len: 18 * k, ht: 5 * k, flip: true, light: 1, seed: 9 });
+        return { canvas: p.canvas(), blinkers, spots, ship };
+    }
+
+    function shipSpot(st, W, H) {
+        const at = st.shipAt && st.planets.find(p => p.id === st.shipAt);
+        if (at) return { x: Math.round(at.x * W - at.r * planetScale(W) - 14), y: Math.round(at.y * H + at.r * planetScale(W) + 6), fx: at.x };
+        return { x: Math.round(st.shipX * W + 10), y: Math.round(st.shipY * H), fx: st.shipX };
+    }
+    function isBehindShip(pl, st) {
+        if (pl.id === st.shipAt) return false;
+        const at = st.shipAt && st.planets.find(p => p.id === st.shipAt), fx = at ? at.x : st.shipX;
+        return pl.x < fx - 0.02;
+    }
+
+    function paintMapFrame(ctx, W, H, n, fg, st, t) {
+        const sec = SECTORS[n], bd = mapBackdrop(n, W, H), f = framer(ctx, W, H);
+        ctx.drawImage(bd.base, 0, 0);
+        ctx.drawImage(bd.glow[Math.floor(t / 500) % bd.glow.length], 0, 0);
+        twinkle(f, bd.stars, t);
+        ctx.drawImage(fg.canvas, 0, 0);
+        fg.blinkers.forEach(b => { if ((t + b.phase) % b.period < 220) f.px(b.x, b.y - 1, RP.UI.hex[5], 1, 2); });
+        if (sec.light.onMap) lightSweep(f, bd.lx, bd.ly, sec.light.core, t);
+        st.planets.forEach(pl => {
+            const s = fg.spots[pl.id]; if (!s) return;
+            if (pl.hidden) { contactBlip(f, s.cx, s.cy, t); return; }
+            if (pl.beacon && !pl.visited && !isBehindShip(pl, st)) {
+                const bx = s.cx - Math.round(s.r * 0.55), by = s.cy + Math.round(s.r * 0.35);
+                if (pl.beacon === 'warm') { f.glow(bx, by, 3, RP.AMBER, 0.75 + 0.1 * Math.sin(t / 300)); f.px(bx, by, RP.AMBER.hex[4]); }
+                else if (t % 1500 < 380) { f.glow(bx, by, 4, RP.RED, 0.9); f.px(bx, by, RP.RED.hex[4]); } else f.px(bx, by, RP.RED.hex[2]);
+            }
+            if (pl.kind === 'station' && s.win && !pl.dark && !isBehindShip(pl, st)) f.px(s.win[0], s.win[1], RP.AMBER.hex[4]);
+            if (pl.kind === 'station' && s.win && pl.dark && t % 2200 < 220) { f.glow(s.win[0], s.win[1] - 3, 3, RP.RED, 0.8); f.px(s.win[0], s.win[1] - 3, RP.RED.hex[4]); }
+        });
+        const k = planetScale(W), nose = [fg.ship.x + 9 * k, fg.ship.y];
+        f.px(fg.ship.x + 3 * k, fg.ship.y - 1, RP.AMBER.hex[3]);                                           // one lit window: people aboard
+        if (Math.floor(t / TICK_MS) % 3) f.tone(fg.ship.x - 10 * k, fg.ship.y, RP.UI, 0.8, 2, 1);          // the drive
+        const goal = st.selected && st.planets.find(pl => pl.id === st.selected), target = goal && fg.spots[goal.id];
+        if (target && goal.id !== st.shipAt && !goal.hidden && !isBehindShip(goal, st)) {                // the course: warm, because it is ours
+            const dx = target.cx - nose[0], dy = target.cy - nose[1], len = Math.hypot(dx, dy);
+            for (let d = 4; d < len - target.r - 4; d++) {
+                const phase = ((d - t * 0.012) % 8 + 8) % 8;
+                if (phase < 3.5) f.tone(nose[0] + dx * d / len, nose[1] + dy * d / len, RP.AMBER, phase < 1 ? 0.95 : 0.7);
+            }
+        }
+    }
+    function contactBlip(f, x, y, t) {
+        const cycle = (t % 2600) / 2600, r = 2 + cycle * 9;
+        f.tone(x, y, RP.UI, 0.55 + 0.3 * Math.sin(t / 200));
+        for (let a = 0; a < Math.PI * 2; a += 1.2 / r) f.tone(x + Math.cos(a) * r, y + Math.sin(a) * r, RP.UI, 0.6 * (1 - cycle));
+    }
+    /** The slow sweep across the light's face, left to right, over and over. */
+    function lightSweep(f, cx, cy, r, t) {
+        const period = 6400, u = (t % period) / period, x = cx - r * 1.4 + u * r * 2.8;
+        for (let y = -r; y <= r; y++) { const w = Math.sqrt(Math.max(0, r * r - y * y)); if (Math.abs(x - cx) < w) f.px(x, cy + y, RP.SUN.hex[5], 1, 1); if (Math.abs(x - 1 - cx) < w) f.px(x - 1, cy + y, RP.SUN.hex[4], 1, 1); }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 4. The orbit picture: 480 × 270, the minigame size. One planet, one light (the false sun, always ahead, to
+    //    the right), one focal light on the ground. Our ship small in the corner, for scale.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const OW = 480, OH = 270, orbitCache = new Map();
+    function buildOrbit(n, pl) {
+        const key = `${n}:${pl.id}`;
+        if (orbitCache.has(key)) return orbitCache.get(key);
+        const sec = SECTORS[n], ol = sec.orbitLight, p = painter(OW, OH, true), seed = pl.r * 13 + n;
+        spaceAndDust(p, seed, ol.x, ol.y, ol.halo, sec.dust);
+        const stars = scatterStars(p, seed + 1, 520, (x, y) => Math.hypot(x - ol.x, y - ol.y) > ol.halo * 0.8 + ol.core + 6);
+        if (pl.kind !== 'light') lightGlow(p, ol.x, ol.y, ol);
+        const st = { stars: [], focal: null, kind: pl.kind };
+        if (pl.kind === 'light') Object.assign(st, orbitTheLight(p, sec));
+        else if (pl.kind === 'station') Object.assign(st, orbitStation(p, sec, pl));
+        else Object.assign(st, orbitPlanet(p, sec, pl, seed));
+        if (pl.kind !== 'light') { const ship = st.shipAt || [78, 46]; drawHull(p, { x: ship[0], y: ship[1], len: 66, ht: 12, flip: true, seed: 9 }); st.window = [ship[0] + 13, ship[1] - 4]; }
+        st.stars = keepVisible(p, stars);
+        st.base = p.canvas();
+        orbitCache.set(key, st);
+        return st;
+    }
+    function orbitPlanet(p, sec, pl, seed) {
+        const big = { gas: [196, 172, 132], dark: [206, 176, 104], story: [200, 178, 110] }, [cx, cy, r] = big[pl.type] || big[pl.kind] || [190, 182, 118];
+        const ol = sec.orbitLight, L = lightVector(cx, cy, ol.x, ol.y, 70), ramp = PLANET_RAMP[pl.type] || RP.STONE;
+        sphere(p, { cx, cy, r, ramp, L, surface: surfaceFor(pl.type, seed, L), rim: sec.glow > 0.5 ? 0.6 : 0.12, ambient: 0.012, gain: 0.84,
+            atmo: { ramp: pl.type === 'gas' || pl.type === 'desert' ? RP.DUST : RP.ICE, w: 4 } });
+        const out = {};
+        if (pl.beacon) {                                                                                  // the focal light sits on the night side, near the dusk line
+            const n = pl.beacon === 'warm' ? [-0.58, 0.12] : [-0.6, pl.type === 'ice' ? -0.45 : 0.1];
+            out.focal = { x: Math.round(cx + n[0] * r), y: Math.round(cy + n[1] * r), kind: pl.beacon };
+            if (pl.beacon === 'warm') p.ellipse(out.focal.x, out.focal.y + 2, 9, 4, (x, y, q) => p.cover(x, y, RP.AMBER, 0.32, (1 - q) * 0.6));
+            else p.line(out.focal.x + 3, out.focal.y + 1, out.focal.x + 16, out.focal.y - 2, (x, y) => p.solid(x, y, RP.STONE, 0.02));   // the furrow it cut coming down
+        }
+        if (pl.id === 'chronos61') out.orbiters = [[318, 64, 0.2], [96, 120, -0.6], [338, 214, 0.9]];
+        if (out.orbiters) out.orbiters.forEach(([x, y, a], i) => drawHull(p, { x, y, len: 22, ht: 5, angle: a, light: 0.55, rust: true, seed: i + 30, ramp: RP.DESERT }));
+        return out;
+    }
+    function orbitStation(p, sec, pl) {
+        const ol = sec.orbitLight, cx = 250, cy = 640, r = 470, L = lightVector(240, 200, ol.x, ol.y, 260);
+        sphere(p, { cx, cy, r, ramp: pl.dark ? RP.DARK : RP.STONE, L, surface: surfaceFor('rock', 21, L), rim: sec.glow > 0.5 ? 0.5 : 0.1, ambient: 0.01, gain: 0.75 });
+        const win = drawStation(p, 268, 104, 2.1, 5);
+        return { focal: { x: win[0], y: win[1], kind: pl.dark ? 'nav' : 'window' }, shipAt: [86, 54] };
+    }
+    function orbitTheLight(p, sec) {
+        const cx = 330, cy = 128, R = 54;
+        lightGlow(p, cx, cy, { core: R, halo: 120, strength: 1 });
+        const rand = seeded(606), transits = [];
+        for (let i = 0; i < 7; i++) {                                                                     // the graveyard, inside the light: hulls in transit
+            const a = rand() * Math.PI * 2, d = (0.2 + 0.8 * Math.sqrt(rand())) * R * 1.1, x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d * 0.9;
+            drawHull(p, { x, y, len: 16 + rand() * 16, ht: 4 + rand() * 3, angle: (rand() - 0.5) * 0.5, flip: rand() < 0.5, light: 0.06, seed: i + 50 });
+            transits.push([x, y]);
+        }
+        drawHull(p, { x: 112, y: 168, len: 104, ht: 19, flip: true, seed: 9, light: 0.9 });
+        return { lightCore: [cx, cy, R], window: [128, 162] };
+    }
+
+    function paintOrbitFrame(ctx, st, t) {
+        const f = framer(ctx, OW, OH);
+        ctx.drawImage(st.base, 0, 0);
+        twinkle(f, st.stars, t);
+        if (st.lightCore) lightSweep(f, st.lightCore[0], st.lightCore[1], st.lightCore[2], t);
+        const fo = st.focal;
+        if (fo) {
+            if (fo.kind === 'red') { if (t % 1500 < 380) { f.glow(fo.x, fo.y, 7, RP.RED, 0.9); f.px(fo.x - 1, fo.y - 1, RP.RED.hex[4], 2, 2); } else f.px(fo.x, fo.y, RP.RED.hex[2]); }
+            else if (fo.kind === 'warm') { const flick = hash(Math.floor(t / TICK_MS), 2, 9) > 0.12 ? 1 : 0.6; f.glow(fo.x, fo.y, 6, RP.AMBER, 0.85 * flick); f.px(fo.x, fo.y, RP.AMBER.hex[5]); }
+            else if (fo.kind === 'window') { f.glow(fo.x, fo.y, 3, RP.AMBER, 0.7); f.px(fo.x, fo.y, RP.AMBER.hex[4], 2, 1); }
+            else if (fo.kind === 'nav') { if (t % 2200 < 260) { f.glow(fo.x, fo.y - 9, 4, RP.RED, 0.85); f.px(fo.x, fo.y - 9, RP.RED.hex[4]); } }
+        }
+        if (st.window) f.px(st.window[0], st.window[1], RP.AMBER.hex[3], 2, 1);                                  // our ship: one lit window
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 5. The ship: the same vertical cross-section, five rooms, in the world palette. People are the only warm
+    //    things aboard. The side facing the light catches it, a little more each sector.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const ROOMS = ['bridge', 'lab', 'quarters', 'hold', 'engineering'];
+    const FIGURE = ['.###.', '.###.', '..#..', '#####', '#####', '.###.', '.###.', '.#.#.', '.#.#.'];
+    const FIGURE_STEP = ['.###.', '.###.', '..#..', '#####', '#####', '.###.', '.###.', '..##.', '.#...'];
+    const SKIN = '#e8d6bc';
+
+    function shipLayout(W, H) {
+        const top = 10, engine = 22, body = H - top - engine, cx = Math.floor(W / 2) + 0.5, maxHalf = Math.min(Math.floor(W / 2) - 14, Math.floor(body * 0.24));
+        const bridgeH = Math.round(body * 0.21), rest = (body - bridgeH) / (ROOMS.length - 1);
+        let y = top;
+        const rooms = ROOMS.map((key, i) => { const h = i === 0 ? bridgeH : Math.round(rest); const r = { key, top: Math.round(y), bottom: Math.round(y + h) }; y += h; return r; });
+        rooms[rooms.length - 1].bottom = top + body;
+        const L = { W, H, cx, maxHalf, rooms, top, end: top + body };
+        L.hw = yy => {
+            const nose = rooms[0], stern = rooms[rooms.length - 1];
+            if (yy < nose.top || yy >= stern.bottom) return 0;
+            if (yy < nose.bottom) return maxHalf * (0.26 + 0.74 * Math.sin(((yy - nose.top) / (nose.bottom - nose.top)) * Math.PI / 2));
+            if (yy >= stern.top) return maxHalf * (1 - 0.2 * ((yy - stern.top) / (stern.bottom - stern.top)));
+            return maxHalf;
+        };
+        L.room = k => rooms.find(r => r.key === k);
+        L.roomAt = yy => rooms.find(r => yy >= r.top && yy < r.bottom);
+        return L;
+    }
+
+    function buildShip(W, H, n) {
+        const sec = SECTORS[n], L = shipLayout(W, H), p = painter(W, H, false), dam = sec.damaged, warm = sec.rimWarm;
+        const discAt = (() => { const lab = L.room('lab'); return [L.cx - L.maxHalf * 0.48, lab.top + (lab.bottom - lab.top) * 0.44, Math.max(4, (lab.bottom - lab.top) * 0.19)]; })();
+        for (let y = L.top; y < L.end; y++) {
+            const hw = L.hw(y), room = L.roomAt(y); if (!room || hw <= 0) continue;
+            const rh = room.bottom - room.top, ly = y - room.top, isDam = !!dam[room.key], rp = isDam ? RP.HURT : RP.HULL;
+            for (let x = Math.floor(L.cx - hw); x <= Math.ceil(L.cx + hw); x++) {
+                const dx = x + 0.5 - L.cx, adx = Math.abs(dx); if (adx > hw) continue;
+                if (adx > hw - 2.4) {                                                                     // plating, lit from the right: the light is ahead
+                    if (dx > hw - 1.2) { if (warm > 0 && threshold(x, y) < warm * 0.7) p.solid(x, y, RP.SUN, 0.5); else p.solid(x, y, RP.HULL, 0.82); continue; }
+                    p.solid(x, y, RP.HULL, dx > 0 ? 0.6 : 0.3 + 0.06 * vnoise(x * 0.5, y * 0.5)); continue;
+                }
+                if (ly === 0) { p.solid(x, y, rp, 0.46); continue; }                                       // the deck above
+                if (ly >= rh - 2) { p.solid(x, y, rp, ly === rh - 2 ? 0.56 : 0.34); continue; }           // the floor
+                const lx = x - (L.cx - hw), rw = hw * 2;
+                const prop = roomProp(room.key, { x, y, lx, ly, rw, rh, dx, adx, hw, L, discAt, pods: sec.pods });
+                if (prop === 'window') { p.clear(x, y); continue; }                                       // the stars stream past behind it
+                if (prop) { p.solid(x, y, isDam && prop.r !== RP.AMBER ? RP.HURT : prop.r, prop.v * (isDam ? 0.7 : 1)); continue; }
+                const lamp = 0.08 + 0.2 * Math.max(0, 1 - ly / rh) * (1 - (adx / hw) * 0.6);
+                p.solid(x, y, rp, lamp * (isDam ? 0.75 : 1));
+            }
+        }
+        for (const side of [-1, 1]) {                                                                     // fins at the stern
+            const stern = L.room('engineering');
+            for (let y = Math.round(stern.top + (stern.bottom - stern.top) * 0.35); y < L.end + 6; y++) {
+                const grow = (y - stern.top - (stern.bottom - stern.top) * 0.35) * 0.38, edge = L.hw(Math.min(y, L.end - 1)) || L.maxHalf * 0.8;
+                for (let k = 0; k < Math.min(7, grow); k++) p.solid(L.cx + side * (edge + k + 0.5), y, RP.HULL, side > 0 ? 0.62 - k * 0.04 : 0.3);
+            }
+        }
+        for (const side of [-1, 1]) p.region(L.cx + side * L.maxHalf * 0.42 - 3, L.end, L.cx + side * L.maxHalf * 0.42 + 3, L.end + 4, (x, y) => p.solid(x, y, RP.HULL, x > L.cx + side * L.maxHalf * 0.42 ? 0.62 : 0.36));
+        const rand = seeded(n * 7 + 1);
+        const stars = Array.from({ length: Math.round(W * H / 90) }, () => ({ x: Math.floor(rand() * W), y: rand() * H, v: 0.2 + rand() * 0.7, speed: 0.004 + rand() * 0.012 }));
+        return { L, hull: p.canvas(), stars, discAt };
+    }
+
+    function roomProp(key, c) {
+        const { lx, ly, rw, rh, dx, adx, hw } = c;
+        if (key === 'bridge') {
+            const wy0 = rh * 0.2, wy1 = rh * 0.48, ww = hw * 0.62;
+            if (ly > wy0 && ly < wy1 && adx < ww) return (ly < wy0 + 1 || ly > wy1 - 1 || adx > ww - 1) ? { r: RP.HULL, v: 0.6 } : 'window';
+            if (ly >= rh - 8 && ly < rh - 3 && adx < hw * 0.62) return ly === rh - 8 ? { r: RP.UI, v: (Math.floor(lx) % 3 === 0) ? 0.72 : 0.35 } : { r: RP.HULL, v: 0.4 };
+            if (ly === 2 && adx < 2) return { r: RP.AMBER, v: 0.8 };
+            return null;
+        }
+        if (key === 'lab') {
+            const [ax, ay, ar] = c.discAt, d = Math.hypot(c.x + 0.5 - ax, c.y + 0.5 - ay);
+            if (d < ar + 1.5) {                                                                           // the disc's star map, on the wall: fourteen lines
+                if (d > ar + 0.5) return { r: RP.HULL, v: 0.5 };
+                if (d < 1.2) return { r: RP.UI, v: 0.95 };
+                const a = Math.atan2(c.y + 0.5 - ay, c.x + 0.5 - ax), k = Math.round((a + Math.PI) / (Math.PI * 2) * 14);
+                const along = Math.abs(a + Math.PI - k * Math.PI * 2 / 14) * d, reach = ar * (0.55 + 0.45 * hash(k, 3, 7));
+                return along < 0.55 && d < reach ? { r: RP.UI, v: 0.5 } : { r: RP.UI, v: 0.1 };
+            }
+            if (ly >= rh - 7 && ly < rh - 3 && dx > hw * 0.05 && dx < hw * 0.8) return { r: RP.HULL, v: ly === rh - 7 ? 0.6 : 0.36 };
+            if (ly === 2 && Math.abs(dx - hw * 0.4) < 2) return { r: RP.AMBER, v: 0.75 };
+            return null;
+        }
+        if (key === 'quarters') {
+            const isBunk = [0.46, 0.74].some(h => ly === Math.round(rh * h)) && adx > hw * 0.36;
+            if (isBunk) return { r: RP.HULL, v: 0.55 };
+            if ([0.46, 0.74].some(h => ly === Math.round(rh * h) + 1) && adx > hw * 0.36) return { r: RP.HULL, v: 0.16 };
+            if (ly === 2 && adx < 2) return { r: RP.AMBER, v: 0.85 };
+            const pool = Math.hypot(dx / (hw * 0.7), (ly - rh * 0.3) / (rh * 0.45));               // the lamp's warm cast: people live here
+            if (pool < 1 && threshold(c.x, c.y) < 0.4 * (1 - pool)) return { r: RP.AMBER, v: 0.2 };
+            return null;
+        }
+        if (key === 'hold') {
+            if (c.pods && dx < -hw * 0.05) {                                                              // sleepers: cold pods, a small warm light in each
+                for (let k = 0; k < c.pods; k++) {
+                    const py = Math.round(rh * 0.24 + k * 5);
+                    if (ly >= py && ly < py + 3 && dx > -hw * 0.86 && dx < -hw * 0.12) {
+                        if (ly === py) return { r: RP.ICE, v: 0.62 };
+                        if (Math.abs(dx + hw * 0.5) < 1) return { r: RP.AMBER, v: 0.7 };
+                        return { r: RP.HULL, v: 0.4 };
+                    }
+                }
+            }
+            if (dx > hw * 0.08 && dx < hw * 0.86 && ly < rh - 2) {
+                const bay = Math.floor((dx - hw * 0.08) / (hw * 0.26)), h = [8, 5, 10][bay] || 0;
+                const inBay = (dx - hw * 0.08) - bay * hw * 0.26;
+                if (inBay > 1 && inBay < hw * 0.26 - 1 && ly >= rh - 2 - h) return { r: RP.HULL, v: 0.32 + (((Math.floor(inBay) + ly) % 4) < 2 ? 0.2 : 0) };
+            }
+            return null;
+        }
+        if (key === 'engineering') {
+            const rr = Math.min(rw, rh) * 0.25, d = Math.hypot(lx - rw / 2, ly - rh * 0.48);
+            if (d < rr) return { r: RP.HULL, v: 0.05 };
+            if (d < rr + 2) return { r: RP.HULL, v: 0.56 };
+            if (Math.abs(ly - Math.round(rh * 0.48)) < 1) return { r: RP.UI, v: 0.36 };
+            return null;
+        }
+        return null;
+    }
+
+    function paintShipFrame(ctx, sh, n, t) {
+        const sec = SECTORS[n], { L } = sh, f = framer(ctx, L.W, L.H);
+        ctx.fillStyle = INK; ctx.fillRect(0, 0, L.W, L.H);
+        sh.stars.forEach(s => f.tone(s.x, (s.y + t * s.speed) % L.H, RP.STAR, s.v));                       // flying: the stars stream past
+        ctx.drawImage(sh.hull, 0, 0);
+        const eng = L.room('engineering'), rh = eng.bottom - eng.top, rr = Math.min(L.hw(eng.top + 2) * 2, rh) * 0.25;
+        const beat = Math.pow(1 - ((t / 4000) % 1), 3.2), cy = eng.top + rh * 0.48;                     // the reactor's heartbeat: a machine, so ice
+        for (let y = -rr; y <= rr; y++) for (let x = -rr; x <= rr; x++) { const d = Math.hypot(x, y) / (rr * (0.7 + 0.3 * beat)); if (d < 1) f.tone(L.cx + x, cy + y, RP.UI, (0.45 + 0.55 * beat) * (1 - d * 0.6)); }
+        for (const side of [-1, 1]) {                                                                     // the drive flame
+            const ex = L.cx + side * L.maxHalf * 0.42, len = 5 + 3 * Math.abs(Math.sin(t / 90 + side));
+            for (let d = 0; d < len; d++) f.tone(ex - 2 + d * 0.25, L.end + 4 + d, RP.UI, 1 - d / len, Math.max(1, 5 - d * 0.7), 1);
+        }
+        const br = L.room('bridge');                                                                      // console screens blink
+        if (Math.floor(t / 600) % 2) f.px(L.cx - L.maxHalf * 0.3, br.bottom - 8, RP.UI.hex[5]);
+        if (sec.pods) for (let k = 0; k < sec.pods; k++) { const hold = L.room('hold'), py = Math.round((hold.bottom - hold.top) * 0.24 + k * 5) + hold.top + 1; if ((t / 1800 + k * 0.3) % 1 < 0.5) f.px(L.cx - L.hw(py) * 0.5 - 0.5, py, RP.AMBER.hex[4]); }
+        Object.keys(sec.damaged).forEach(key => {                                                          // a hurt deck: the lights fail, sparks
+            const room = L.room(key), step = Math.floor(t / TICK_MS);
+            if (step % 9 === 0) for (let y = room.top + 2; y < room.bottom - 2; y += 2) f.tone(L.cx - L.hw(y) + 3, y, RP.RED, 0.3, Math.max(1, L.hw(y) * 2 - 6), 1);
+            for (let i = 0; i < 2; i++) if (hash(step, i, 3) > 0.7) f.px(L.cx + (hash(step, i, 4) - 0.5) * L.hw(room.top + 4) * 1.6, room.top + 3 + hash(step, i, 5) * (room.bottom - room.top - 6), RP.RED.hex[4]);
+        });
+        drawCrew(f, L, sec, t);
+    }
+    function drawCrew(f, L, sec, t) {
+        const count = {};
+        CREW.forEach((m, i) => {
+            const key = sec.crewAt[m.id], room = L.room(key); if (!room) return;
+            const slot = count[key] = (count[key] || 0) + 1, rh = room.bottom - room.top;
+            if (sec.hurt[m.id]) { figure(f, L.cx + L.maxHalf * 0.62, room.top + Math.round(rh * 0.46), m.color, false, true); return; }
+            const hwF = L.hw(room.bottom - 3) - 7, pace = Math.sin(t / 2800 + i * 1.9) * 0.55, base = slot === 1 ? 0.2 : -0.45;
+            const x = L.cx + (base + pace * 0.4) * hwF, stepping = Math.abs(Math.cos(t / 2800 + i * 1.9)) > 0.35 && Math.floor(t / 250) % 2 === 0;
+            figure(f, x, room.bottom - 2, m.color, stepping, false);
+        });
+    }
+    function figure(f, feetX, feetY, color, isStepping, isLying) {
+        const rows = isStepping ? FIGURE_STEP : FIGURE, dimC = shade(color, 0.55);
+        rows.forEach((row, r) => { for (let c = 0; c < row.length; c++) {
+            if (row[c] !== '#') continue;
+            const hex = r < 2 ? SKIN : (r >= 7 ? dimC : color);
+            if (isLying) f.px(Math.round(feetX) - r + 4, feetY - 1 - (c % 3), hex); else f.px(Math.round(feetX) + c - 2, feetY - (rows.length - r), hex);
+        } });
+    }
+    function shade(hex, k) { const n = parseInt(hex.slice(1), 16), ch = s => Math.round(((n >> s) & 255) * k).toString(16).padStart(2, '0'); return '#' + ch(16) + ch(8) + ch(0); }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 6. A small picture of the selected place, for the bar.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    function paintThumb(canvas, n, pl) {
+        const W = 64, H = 36, p = painter(W, H, true), sec = SECTORS[n];
+        spaceAndDust(p, pl.r + 4, W + 8, 14, 10 + sec.glow * 30, sec.dust);
+        scatterStars(p, pl.r * 3 + 1, 70);
+        lightGlow(p, W + 4, 12, { core: 1 + sec.glow * 4, halo: 6 + sec.glow * 26, strength: 0.9, spikes: sec.glow < 0.3 ? 3 : 0 });
+        const L = lightVector(24, 20, W + 4, 12, 30);
+        if (pl.hidden) { for (let a = 0; a < 6.28; a += 0.4) p.tone(26 + Math.cos(a) * 6, 18 + Math.sin(a) * 6, RP.UI, 0.45); p.tone(26, 18, RP.UI, 0.9); }
+        else if (pl.kind === 'light') { lightGlow(p, 34, 18, { core: 8, halo: 18, strength: 1 }); }
+        else if (pl.kind === 'station') drawStation(p, 28, 18, 0.9, 3);
+        else sphere(p, { cx: 24, cy: 20, r: 15, ramp: PLANET_RAMP[pl.type] || RP.STONE, L, surface: surfaceFor(pl.type, pl.r * 7 + 3, L), rim: sec.glow > 0.5 ? 0.5 : 0.1 });
+        if (pl.beacon && !pl.hidden) p.set(16, 22, pl.beacon === 'warm' ? RP.AMBER.rgb[4] : RP.RED.rgb[3]);
+        canvas.width = W; canvas.height = H;
+        canvas.getContext('2d').putImageData(new ImageData(p.data, W, H), 0, 0);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 7. The screens: state, words, buttons.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const $ = id => document.getElementById(id);
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+    const fmt = v => Number(v).toLocaleString('en-US');
+
+    let S = null;                       // the live state of the mockup
+    let map = { W: 0, H: 0, fg: null }, ship = { W: 0, H: 0, sh: null }, orbit = null;
+    const mapCtx = $('map-canvas').getContext('2d'), shipCtx = $('ship-canvas').getContext('2d'), orbitCtx = $('orbit-canvas').getContext('2d');
+    const startedAt = performance.now();
+
+    function load(n) {
+        const sec = SECTORS[n];
+        S = {
+            n, screen: 'map', selected: null, planets: sec.planets.map(p => Object.assign({}, p, { step: 0 })),
+            shipAt: sec.ship.at || null, shipX: sec.ship.x || 0, shipY: sec.ship.y || 0.47,
+            stops: sec.stops, res: Object.assign({}, sec.res), talk: [], log: sec.log.map(g => ({ head: g.head, items: g.items.map(t => ({ t })) })),
+        };
+        document.querySelectorAll('.proto-tabs button').forEach(b => b.setAttribute('aria-selected', String(+b.dataset.sector === n)));
+        sec.talk.forEach(l => say(l.who, l.line));
+        map.fg = null;
+        showMap();
+        renderHud(); renderCrew(); renderLog();
+        ship.sh = null; sizeShip();
+    }
+
+    function renderHud() {
+        const n = S.n, route = $('route');
+        route.innerHTML = '';
+        for (let k = 1; k <= 6; k++) { const li = el('li', k < n ? 'is-past' : k === n ? 'is-now' : ''); li.appendChild(el('span', 'n', String(k))); li.title = `Sector ${k}: ${SECTOR_NAMES[k]}`; route.appendChild(li); }
+        const end = el('li', 'end'); const sun = el('span', 'sun'); sun.style.setProperty('--glow', SECTORS[n].glow); end.title = 'The light'; end.appendChild(sun); route.appendChild(end);
+        $('hud-k').textContent = `Sector ${n}`; $('hud-v').textContent = SECTOR_NAMES[n];
+        const jumps = n >= 6 ? 0 : 6 - n, rationJumps = Math.floor(S.res.rations / 5);
+        $('r-energy').textContent = S.res.energy; $('r-energy').classList.toggle('is-low', S.res.energy <= 20);
+        $('r-rations').innerHTML = ''; $('r-rations').append(String(S.res.rations), el('small', '', n >= 6 ? 'no jumps left' : `food for ${rationJumps} jump${rationJumps === 1 ? '' : 's'}`));
+        $('r-rations').parentElement.title = n >= 6 ? 'No jumps left.' : `Each jump the five of you eat 5 rations. ${jumps} jump${jumps === 1 ? '' : 's'} to the light.`;
+        $('r-rations').classList.toggle('is-low', n < 6 && rationJumps < jumps);
+        $('r-salvage').textContent = S.res.salvage;
+    }
+
+    function renderCrew() {
+        const sec = SECTORS[S.n], ul = $('crew');
+        ul.innerHTML = '';
+        CREW.forEach(m => {
+            const li = el('li'), dot = el('span', 'dot'), name = el('span', '', m.name);
+            dot.style.background = m.color;
+            if (m.you) name.appendChild(el('span', 'you', 'you'));
+            const where = el('span', 'where' + (sec.hurt[m.id] ? ' is-hurt' : ''), sec.hurt[m.id] ? 'Hurt' : ROOM_NAMES[sec.crewAt[m.id]]);
+            li.append(dot, name, where); ul.appendChild(li);
+        });
+    }
+
+    function renderLog(freshText) {
+        const body = $('log-body');
+        body.innerHTML = '';
+        S.log.slice().reverse().forEach(g => {
+            const box = el('section', 'log-group'), ol = el('ol');
+            box.appendChild(el('h3', '', g.head));
+            g.items.slice().reverse().forEach(it => ol.appendChild(el('li', it.t === freshText ? 'is-fresh' : '', it.t)));
+            box.appendChild(ol); body.appendChild(box);
+        });
+    }
+    function logLine(text) {
+        const head = `Sector ${S.n} · ${SECTOR_NAMES[S.n]}`;
+        let g = S.log.find(x => x.head === head); if (!g) { g = { head, items: [] }; S.log.push(g); }
+        g.items.push({ t: text }); renderLog(text);
+        if ($('log-btn').getAttribute('aria-expanded') !== 'true') $('log-btn').classList.add('is-new');
+    }
+
+    /** One line at a time, everywhere: who is speaking, the line, the line before it faint above. */
+    function say(who, line) {
+        const prev = S.talk[S.talk.length - 1];
+        S.talk.push({ who, line });
+        $('talk-prev').textContent = prev ? (prev.who ? `${prev.who}: ${prev.line}` : prev.line) : '';
+        const w = $('talk-who'), l = $('talk-line');
+        w.textContent = who || 'Note'; w.className = 'talk-who' + (who === 'A.U.R.A.' ? ' is-aura' : !who ? ' is-note' : '');
+        l.textContent = line; l.className = 'talk-line' + (!who ? ' is-note' : '');
+        l.style.animation = 'none'; void l.offsetWidth; l.style.animation = '';
+    }
+
+    // ── the map screen ──
+    function showMap() {
+        S.screen = 'map';
+        $('screen-map').hidden = false; $('screen-orbit').hidden = true;
+        document.querySelector('.view').classList.remove('is-orbit');
+        const n = S.n, sec = SECTORS[n];
+        $('map-k').textContent = `Sector ${n} of 6`; $('map-title').textContent = SECTOR_NAMES[n];
+        $('beacons').textContent = fmt(sec.beacons);
+        const pips = $('pips'); pips.innerHTML = '';
+        for (let i = 0; i < 3; i++) pips.appendChild(el('i', i < S.stops ? 'is-on' : ''));
+        $('pips').parentElement.title = `${S.stops} of 3 stops left before the jump window closes`;
+        const jb = $('jump-btn');
+        jb.textContent = n >= 6 ? 'End of the heading' : `Jump to sector ${n + 1} · ${sec.jumpCost} energy`;
+        jb.disabled = n >= 6;
+        jb.classList.toggle('primary', S.stops === 0 && n < 6);
+        sizeMap(true);
+        renderAct();
+    }
+
+    function sizeMap(force) {
+        const stage = $('map-stage'), W = Math.max(60, Math.floor(stage.clientWidth / PX)), H = Math.max(60, Math.floor(stage.clientHeight / PX));
+        if (!force && W === map.W && H === map.H && map.fg) return;
+        map.W = W; map.H = H;
+        const c = $('map-canvas'); c.width = W; c.height = H; c.style.width = W * PX + 'px'; c.style.height = H * PX + 'px';
+        map.fg = mapForeground(S.n, W, H, S);
+        renderMarkers();
+    }
+
+    function renderMarkers() {
+        const box = $('markers'), W = map.W, H = map.H;
+        box.innerHTML = '';
+        const tag = $('heading-tag'), hy = SECTORS[S.n].light.y * H * PX;
+        tag.style.left = `${Math.round(W * PX * 0.085)}px`; tag.style.top = `${Math.round(hy + 10)}px`;
+        S.planets.forEach(pl => {
+            const s = map.fg.spots[pl.id], size = Math.max(34, (s.r * 2 + 8) * PX);
+            const isNarrow = W * PX < 640, side = isNarrow ? (pl.hidden ? 't' : 'b') : (pl.lbl || 'r');     // narrow: names sit under their planets
+            const b = el('button', 'mk lbl-' + side);
+            b.type = 'button';
+            b.style.left = (s.cx + 0.5) * PX + 'px'; b.style.top = (s.cy + 0.5) * PX + 'px'; b.style.width = size + 'px'; b.style.height = size + 'px';
+            const behind = isBehindShip(pl, S), here = pl.id === S.shipAt;
+            b.classList.toggle('is-behind', behind); b.classList.toggle('is-contact', !!pl.hidden); b.classList.toggle('is-light', pl.kind === 'light');
+            b.classList.toggle('is-selected', S.selected === pl.id);
+            const label = el('span', 'label');
+            label.appendChild(el('span', 'name', pl.hidden ? (isNarrow ? 'Unknown' : 'Unidentified contact') : pl.name));
+            const tagText = pl.hidden ? 'No fix yet' : here ? 'We are here' : behind ? (pl.visited ? 'Visited' : 'Behind us') : pl.tag;
+            label.appendChild(el('span', 'tag', tagText));
+            if (pl.dated) label.appendChild(el('span', 'dated', pl.dated));
+            b.append(el('span', 'ring'), label);
+            b.setAttribute('aria-label', `${pl.hidden ? 'Unidentified contact' : pl.name}. ${tagText}.`);
+            b.addEventListener('click', () => select(pl.id));
+            box.appendChild(b);
+        });
+    }
+
+    function select(id) {
+        const pl = S.planets.find(p => p.id === id);
+        if (!pl) return;
+        S.selected = id;
+        document.querySelectorAll('.mk').forEach((b, i) => b.classList.toggle('is-selected', S.planets[i].id === id));
+        if (pl.hidden) say('A.U.R.A.', 'I cannot get a fix on that contact, Commander. There is no course to it yet.');
+        else if (pl.id === S.shipAt) say('A.U.R.A.', `We are in orbit at ${pl.name}, Commander.`);
+        else if (isBehindShip(pl, S)) say('Jaxon', "That's behind us. The drive only throws us one way.");
+        else if (pl.react) say(pl.react[0], pl.react[1]);
+        renderAct();
+    }
+
+    /** The one thing to do now, on the right of the bar. */
+    function renderAct() {
+        const act = $('act'); act.innerHTML = '';
+        if (S.screen === 'orbit') return renderSteps(act);
+        const pl = S.selected && S.planets.find(p => p.id === S.selected);
+        if (!pl) {
+            const left = S.stops === 1 ? 'One stop' : `${S.stops} stops`;
+            act.appendChild(el('p', 'act-note', S.n >= 6 ? `Choose a stop. ${left} left, then the light.` : S.stops > 0 ? `Choose a stop on the heading. ${left} left before the jump.` : 'No stops left. The jump window is open.'));
+            return;
+        }
+        const pick = el('div', 'pick'), thumb = el('canvas', 'thumb'), text = el('div', 'pick-text'), cost = el('p', 'pick-cost');
+        paintThumb(thumb, S.n, pl);
+        text.appendChild(el('p', 'pick-name', pl.hidden ? 'Unidentified contact' : pl.name));
+        let button = null;
+        if (pl.hidden) {
+            text.appendChild(el('p', 'pick-line', 'A faint contact. Date a wreck in this sector to learn what it is.'));
+            cost.appendChild(el('span', 'muted', 'No course yet'));
+        } else if (pl.id === S.shipAt) {
+            text.appendChild(el('p', 'pick-line', pl.line));
+            cost.appendChild(el('span', 'muted', 'We are here'));
+            button = el('button', 'btn', 'Back into orbit'); button.addEventListener('click', () => enterOrbit(pl, true));
+        } else if (isBehindShip(pl, S)) {
+            text.appendChild(el('p', 'pick-line', pl.visited ? 'We have been here.' : 'We passed it. The ship only flies forward.'));
+            cost.appendChild(el('span', 'muted', 'Behind us'));
+        } else {
+            text.appendChild(el('p', 'pick-line', pl.line));
+            const price = pl.cost, isFree = price === 0;
+            cost.appendChild(el('span', '', isFree ? `0 energy · ${pl.costNote}` : `${price} energy`));
+            cost.appendChild(el('span', '', pl.kind === 'light' ? 'the end of the heading' : 'uses a stop'));
+            if (pl.gain) cost.appendChild(el('span', 'gain', `+${pl.gain} from its clouds`));
+            const noStops = S.stops <= 0 && pl.kind !== 'light', noEnergy = price > S.res.energy;
+            button = el('button', 'btn primary', pl.kind === 'light' ? 'Go to the light' : 'Go there');
+            if (noStops || noEnergy) { button.disabled = true; button.textContent = noStops ? 'No stops left' : 'Not enough energy'; }
+            button.addEventListener('click', () => goThere(pl));
+        }
+        text.appendChild(cost);
+        pick.append(thumb, text);
+        if (button) pick.appendChild(button);
+        act.appendChild(pick);
+    }
+
+    function goThere(pl) {
+        S.res.energy = Math.max(0, S.res.energy - pl.cost);
+        if (pl.kind !== 'light') S.stops = Math.max(0, S.stops - 1);
+        S.shipAt = pl.id; pl.visited = true;
+        renderHud();
+        logLine(`Orbit at ${pl.name}.`);
+        enterOrbit(pl, false);
+    }
+
+    // ── the orbit screen ──
+    function enterOrbit(pl, isReturn) {
+        S.screen = 'orbit'; S.orbitId = pl.id;
+        $('screen-map').hidden = true; $('screen-orbit').hidden = false;
+        document.querySelector('.view').classList.add('is-orbit');
+        $('orbit-k').textContent = `In orbit · Sector ${S.n} of 6`;
+        $('orbit-title').textContent = pl.name;
+        $('orbit-caption').textContent = pl.orbit.caption;
+        $('dated-chip').hidden = !pl.dated; $('dated-text').textContent = pl.dated || '';
+        orbit = buildOrbit(S.n, pl);
+        sizeOrbit();
+        if (!isReturn) say(pl.orbit.arrive[0], pl.orbit.arrive[1]);
+        renderAct();
+    }
+    function sizeOrbit() {
+        const wrap = $('orbit-wrap'), cs = getComputedStyle(wrap);
+        const aw = wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        const ah = window.innerWidth <= 900 ? aw * OH / OW : wrap.clientHeight - parseFloat(cs.paddingBottom);   // narrow: the picture sets the height
+        const fit = Math.min(aw / OW, ah / OH);
+        let s = Math.floor(fit + 0.001);
+        if (s < 1 || s / fit < 0.85) s = fit;
+        const frame = $('orbit-frame');
+        frame.style.width = Math.floor(OW * s) + 'px'; frame.style.height = Math.floor(OH * s) + 'px';
+    }
+
+    function renderSteps(act) {
+        const pl = S.planets.find(p => p.id === S.orbitId), step = pl.orbit.steps[pl.step];
+        const box = el('div', 'steps'), row = el('div', 'steps-row');
+        if (step) {
+            const main = el('button', 'btn primary', step.label);
+            main.addEventListener('click', () => doStep(pl, step));
+            const leave = el('button', 'btn quiet', 'Leave orbit');
+            leave.addEventListener('click', leaveOrbit);
+            row.append(leave, main);
+            box.append(row, el('p', 'step-sub', step.sub));
+        } else {
+            const leave = el('button', 'btn primary', 'Leave orbit');
+            leave.addEventListener('click', leaveOrbit);
+            row.append(leave);
+            box.append(row, el('p', 'step-sub', S.stops > 0 ? `Back to the map. ${S.stops === 1 ? 'One stop' : `${S.stops} stops`} left.` : 'Back to the map. The jump window is open.'));
+        }
+        act.appendChild(box);
+    }
+
+    function doStep(pl, step) {
+        pl.step++;
+        say(step.then.who, step.then.line);
+        if (step.gain) { S.res.energy = Math.min(100, S.res.energy + step.gain); renderHud(); }
+        if (step.log) logLine(step.log);
+        if (step.dated) { pl.dated = step.dated; $('dated-chip').hidden = false; $('dated-text').textContent = step.dated; }
+        if (step.reveal) {
+            const story = S.planets.find(p => p.id === step.reveal);
+            if (story && story.hidden) { story.hidden = false; logLine(`The faint contact is ${story.name}. One of our ships is there.`); }
+        }
+        renderAct();
+    }
+
+    function leaveOrbit() {
+        S.selected = null;
+        showMap();
+        const story = S.planets.find(p => p.kind === 'story' && !p.hidden && !p.visited);
+        if (story && S.stops > 0) { S.selected = story.id; renderMarkers(); say(story.react[0], story.react[1]); renderAct(); }
+        else say('A.U.R.A.', S.stops > 0 ? 'Back on the heading, Commander.' : 'No stops left, Commander. The jump window is open.');
+    }
+
+    // ── sizing and the clock ──
+    function sizeShip() {
+        const stage = $('ship-stage'), W = Math.max(40, Math.floor(stage.clientWidth / SHIP_PX)), H = Math.max(80, Math.floor(stage.clientHeight / SHIP_PX));
+        if (ship.sh && W === ship.W && H === ship.H && ship.n === S.n) return;
+        ship.W = W; ship.H = H; ship.n = S.n;
+        const c = $('ship-canvas'); c.width = W; c.height = H; c.style.width = W * SHIP_PX + 'px'; c.style.height = H * SHIP_PX + 'px';
+        ship.sh = buildShip(W, H, S.n);
+        stage.querySelectorAll('.room-tag').forEach(t => t.remove());
+        const L = ship.sh.L, sec = SECTORS[S.n];
+        L.rooms.forEach(r => {
+            const y = r.key === 'bridge' ? r.top + Math.round((r.bottom - r.top) * 0.62) : r.top + 3, hurt = !!sec.damaged[r.key];
+            const t = el('span', 'room-tag' + (hurt ? ' is-hurt' : ''), ROOM_NAMES[r.key] + (hurt ? ' · damaged' : ''));
+            t.style.left = (L.cx - L.hw(y) + 3) * SHIP_PX + 'px'; t.style.top = y * SHIP_PX + 'px';
+            stage.appendChild(t);
+        });
+    }
+
+    function tick() {
+        const t = performance.now() - startedAt;
+        if (S.screen === 'map' && map.fg) paintMapFrame(mapCtx, map.W, map.H, S.n, map.fg, S, t);
+        if (S.screen === 'orbit' && orbit) paintOrbitFrame(orbitCtx, orbit, t);
+        if (ship.sh) paintShipFrame(shipCtx, ship.sh, S.n, t);
+    }
+
+    let resizeTimer = 0;
+    function onResize() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => { if (S.screen === 'map') sizeMap(false); else sizeOrbit(); sizeShip(); }, 120);
+    }
+
+    // ── wiring ──
+    document.querySelectorAll('.proto-tabs button').forEach(b => b.addEventListener('click', () => load(+b.dataset.sector)));
+    $('jump-btn').addEventListener('click', () => say('', `Mockup: the jump flies the corridor, then sector ${S.n + 1} opens here.`));
+    const openLog = isOpen => { $('log').classList.toggle('is-open', isOpen); $('log-btn').setAttribute('aria-expanded', String(isOpen)); if (isOpen) { $('log-btn').classList.remove('is-new'); $('log-close').focus({ preventScroll: true }); } $('game').scrollLeft = 0; };
+    $('log-btn').addEventListener('click', () => openLog(!$('log').classList.contains('is-open')));
+    $('log-close').addEventListener('click', () => { openLog(false); $('log-btn').focus({ preventScroll: true }); });
+    $('menu-btn').addEventListener('click', e => { e.stopPropagation(); const m = $('menu'), open = m.hidden; m.hidden = !open; $('menu-btn').setAttribute('aria-expanded', String(open)); });
+    document.addEventListener('click', e => { if (!$('menu').hidden && !$('menu').contains(e.target)) { $('menu').hidden = true; $('menu-btn').setAttribute('aria-expanded', 'false'); } });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { openLog(false); $('menu').hidden = true; } });
+    window.addEventListener('resize', onResize);
+    if (window.ResizeObserver) { new ResizeObserver(onResize).observe($('map-stage')); new ResizeObserver(onResize).observe($('ship-stage')); }
+
+    load(1);
+    const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    tick();
+    setInterval(tick, reduced ? 1000 : TICK_MS);
+})();
+</script>
+</body>
+</html>

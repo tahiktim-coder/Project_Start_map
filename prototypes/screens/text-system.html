@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Text System</title>
+<meta name="description" content="Silent Exodus: the three ways the game shows words (voices, pages, the ship), playable. See docs/TEXT_SYSTEM.md.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Interface: "Graphite & sodium" (prototypes/sim-bay/lab.js). World pictures: "Deep field". Sodium = people. Steel = machines. One red. */
+:root{
+  --g-void:#0a0a0b;--g-deep:#111214;--g-dusk:#1a1c20;--g-haze:#2a2d33;--g-mist:#44484f;--g-line:#1d1f23;--g-line2:#33373e;
+  --g-text:#e4e4e0;--g-dim:#8b8d90;--g-steel:#c9d1d6;--g-white:#fff;--g-sdim:#5a6168;--sodium:#f08c2e;--red:#e0453a;
+  --w-void:#06090c;--w-deep:#0b1418;--w-ice:#9fd8e6;
+  --paper:#d8d0bc;--paper-2:#c4baa1;--ink:#1c1d1c;--ink-dim:#756e5d;--pencil:#4c5360;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;--cond:'IBM Plex Sans Condensed','IBM Plex Sans',sans-serif;--mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--g-void)}
+body{min-height:100vh;background:radial-gradient(120% 70% at 75% -10%,#16181b 0,var(--g-void) 60%) fixed;color:var(--g-text);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+kbd{font-family:var(--mono)}
+.wrap{max-width:1440px;margin:0 auto;padding:16px 24px 28px}
+/* ── page header ── */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--g-line2)}
+.eyebrow{font:500 10.5px/1 var(--mono);letter-spacing:.24em;text-transform:uppercase;color:var(--g-dim)}
+h1{margin-top:8px;font:600 30px/1.05 var(--cond);letter-spacing:.01em;color:var(--g-white)}
+.lede{margin-top:5px;font-size:13.5px;color:var(--g-dim)}
+.legend{display:flex;gap:8px;list-style:none;flex-wrap:wrap}
+.legend li{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;align-items:center;padding:8px 12px;border:1px solid var(--g-line2);background:var(--g-deep);min-width:178px}
+.legend b{font:600 11px/1 var(--cond);letter-spacing:.24em;color:var(--g-white)}
+.legend span{grid-column:2;font:400 11.5px/1.3 var(--mono);color:var(--g-dim)}
+.sw{grid-row:span 2;width:4px;height:30px}
+.sw.voice,.reg.voice i{background:var(--sodium);box-shadow:0 0 10px rgba(240,140,46,.45)}
+.sw.page,.reg.page i{background:var(--paper)}
+.sw.ship,.reg.ship i{background:var(--g-steel)}
+.chapters{display:flex;gap:2px;margin:10px 0 14px;flex-wrap:wrap;border-bottom:1px solid var(--g-line)}
+.chap{padding:9px 13px 8px;margin-bottom:-1px;border-bottom:2px solid transparent;color:var(--g-dim);font:500 12px/1 var(--cond);letter-spacing:.16em;text-transform:uppercase;display:flex;gap:8px;align-items:baseline;transition:color .15s}
+.chap i{font:500 10px var(--mono);font-style:normal;color:var(--g-sdim)}
+.chap:hover,.chap:focus-visible{color:var(--g-text);outline:none}
+.chap[aria-current=true]{color:var(--g-white);border-bottom-color:var(--g-steel)}
+.chap.alt{margin-left:auto;color:var(--paper)}
+/* ── the game frame ── */
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px;align-items:start}
+.frame{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 248px;grid-template-rows:34px minmax(0,1fr) 186px;grid-template-areas:"hud hud" "view deck" "log log";height:clamp(600px,calc(100vh - 178px),780px);border:1px solid var(--g-line2);background:var(--g-void);overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.55)}
+.hud{grid-area:hud;display:flex;align-items:center;gap:22px;padding:0 14px;background:var(--g-deep);border-bottom:1px solid var(--g-line2);font:500 12px var(--mono);white-space:nowrap}
+.hud i{margin-right:7px;font:500 10px var(--cond);font-style:normal;letter-spacing:.22em;color:var(--g-dim)}
+.hud .ship{font:600 12px var(--cond);letter-spacing:.22em;color:var(--g-white)}
+.hud .res{position:relative}
+.hud .first{margin-left:auto}
+.float{position:absolute;left:100%;top:-3px;margin-left:5px;font:500 11px var(--mono);font-style:normal;pointer-events:none;animation:float 1.8s ease-out forwards}
+.float.gain{color:var(--g-white)}.float.loss{color:var(--red)}
+@keyframes float{from{opacity:0;transform:translateY(6px)}20%{opacity:1;transform:none}to{opacity:0;transform:translateY(-9px)}}
+.view{grid-area:view;position:relative;overflow:hidden;background:var(--w-void)}
+.view canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
+.place{position:absolute;left:16px;top:14px;display:grid;gap:3px;text-shadow:0 1px 3px #000}
+.place b{font:600 13px var(--cond);letter-spacing:.24em;color:var(--g-white)}
+.place span{font:400 11.5px var(--mono);color:var(--g-steel)}
+.site{position:absolute;width:24px;height:24px;margin:-12px 0 0 -12px;background:linear-gradient(var(--g-white),var(--g-white)) 0 0/6px 1px,linear-gradient(var(--g-white),var(--g-white)) 0 0/1px 6px,linear-gradient(var(--g-white),var(--g-white)) 100% 0/6px 1px,linear-gradient(var(--g-white),var(--g-white)) 100% 0/1px 6px,linear-gradient(var(--g-white),var(--g-white)) 0 100%/6px 1px,linear-gradient(var(--g-white),var(--g-white)) 0 100%/1px 6px,linear-gradient(var(--g-white),var(--g-white)) 100% 100%/6px 1px,linear-gradient(var(--g-white),var(--g-white)) 100% 100%/1px 6px;background-repeat:no-repeat;opacity:.8}
+.site::after{content:'';position:absolute;left:10px;top:10px;width:4px;height:4px;background:#e2574c;box-shadow:0 0 8px #e2574c;animation:blink 1.4s steps(2,start) infinite}
+.site span{position:absolute;left:30px;top:3px;font:500 10.5px var(--mono);color:var(--g-white);white-space:nowrap;text-shadow:0 1px 2px #000,0 0 6px #000}
+.deck{grid-area:deck;display:flex;flex-direction:column;gap:8px;padding:14px 12px;background:var(--g-deep);border-left:1px solid var(--g-line2);overflow:auto}
+.deck h3,.log-head{font:500 10.5px var(--cond);letter-spacing:.26em;color:var(--g-dim)}
+.deck h3{padding:0 2px 6px;border-bottom:1px solid var(--g-line)}
+.cmd{display:grid;gap:3px;width:100%;padding:10px 12px 10px 13px;text-align:left;background:var(--g-dusk);border:1px solid var(--g-line2);border-left:2px solid var(--g-sdim);color:var(--g-steel);transition:transform .15s,border-color .15s,background .15s,color .15s}
+.cmd span{display:flex;justify-content:space-between;align-items:center;gap:8px;font:600 12.5px/1.2 var(--cond);letter-spacing:.14em}
+.cmd small{font:400 11px/1.35 var(--mono);color:var(--g-dim)}
+.cmd:hover:not(:disabled),.cmd:focus-visible{background:var(--g-haze);border-color:var(--g-mist);border-left-color:var(--g-white);color:var(--g-white);transform:translateX(2px);outline:none}
+.cmd:active:not(:disabled){transform:none}
+.cmd:disabled{opacity:.42;cursor:default;border-left-color:var(--g-line2)}
+.cmd em{padding:1px 5px;font:600 9.5px var(--mono);font-style:normal;letter-spacing:.12em;background:var(--g-white);color:#000}
+.cmd.is-new{border-left-color:var(--g-white);color:var(--g-white);animation:newpulse 1.8s ease-in-out 3}
+@keyframes newpulse{50%{box-shadow:0 0 0 1px var(--g-steel),0 0 24px rgba(201,209,214,.28)}}
+.deck-empty{margin-top:8px;font:500 11px/1.7 var(--mono);color:var(--g-dim)}
+.log{grid-area:log;display:grid;grid-template-rows:auto auto minmax(0,1fr);border-top:1px solid var(--g-line2);background:var(--g-void);min-height:0}
+.log-head{display:flex;gap:14px;padding:7px 14px 6px;border-bottom:1px solid var(--g-line)}
+.log-head span{margin-left:auto;letter-spacing:.12em;color:var(--g-sdim)}
+.next{display:flex;align-items:baseline;gap:12px;padding:7px 14px;border-bottom:1px solid var(--g-line);background:linear-gradient(90deg,rgba(201,209,214,.08),transparent 70%)}
+.next[hidden]{display:none}
+.next>b{font:600 10px var(--cond);letter-spacing:.24em;padding:2px 6px;background:var(--g-steel);color:#000}
+.next>span{flex:1;font:400 13.5px/1.4 var(--sans)}
+.next kbd,.notes kbd{padding:1px 6px;border:1px solid var(--g-mist);border-left:2px solid var(--g-steel);background:var(--g-dusk);font:600 10.5px var(--cond);letter-spacing:.14em;color:var(--g-white);white-space:nowrap}
+.next button{font:400 11px var(--mono);color:var(--g-dim);text-decoration:underline;text-underline-offset:3px}
+.log-scroll{overflow:auto;padding:4px 0 8px;min-height:0}
+.log ul{list-style:none}
+.e{display:grid;grid-template-columns:20px auto minmax(0,1fr) auto;align-items:baseline;gap:4px 10px;padding:3px 14px 3px 12px;border-left:2px solid transparent;font:400 12.5px/1.45 var(--mono);color:#aeb2b5;transition:background 1s,border-color 1s}
+.e.is-fresh{border-left-color:var(--g-steel);background:rgba(201,209,214,.06)}
+.e.stop{display:flex;gap:10px;margin-top:6px;padding-top:7px;border-top:1px solid var(--g-line);font:600 10.5px var(--cond);letter-spacing:.24em;color:var(--g-steel)}
+.e .g{font-style:normal;text-align:center;color:var(--g-sdim)}
+.e.rec>span:first-of-type{grid-column:2/4}
+.e .who{font:600 10.5px var(--cond);letter-spacing:.2em;text-transform:uppercase;color:var(--sodium)}
+.e .who.aura,.who.aura{color:var(--g-steel)}
+.e q{font:400 13px/1.45 var(--sans);color:var(--g-text);quotes:none}
+.mini{display:inline-block;width:18px;height:18px;align-self:center;border:1px solid rgba(240,140,46,.6);background:var(--g-dusk) center/cover}
+.mini.aura{border:1.5px solid var(--g-steel);border-radius:50%;width:13px;height:13px;margin:0 2px;background:none}
+.chips{display:inline-flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.chips em{padding:0 6px;border:1px solid var(--g-line2);font:500 10.5px/1.65 var(--mono);font-style:normal;color:var(--g-steel);white-space:nowrap}
+.chips em.loss{color:var(--red);border-color:rgba(224,69,58,.45)}
+.again{margin-left:8px;color:var(--g-steel);text-underline-offset:3px}
+/* ── the layer every text surface opens in ── */
+.layer{position:absolute;inset:34px 0 0;z-index:5;display:grid;padding:16px;overflow:auto;background:rgba(6,9,12,.84);backdrop-filter:blur(3px);animation:fade .25s ease-out;outline:none}
+.layer[hidden]{display:none}
+.layer>*{margin:auto}
+.layer.is-page{background:radial-gradient(90% 75% at 50% 40%,rgba(19,35,42,.6),rgba(6,9,12,.95) 72%)}
+.layer.is-film,.layer.is-arrival{inset:0;padding:0;background:#000}
+.layer.is-arrival{padding:16px;background:radial-gradient(70% 60% at 30% 40%,#0b1418,#030405 75%)}
+@keyframes fade{from{opacity:0}}
+/* register 1 — voices: the scene card and the strip */
+.card{width:min(620px,100%);background:var(--g-deep);border:1px solid var(--g-line2);border-top:2px solid var(--g-steel);box-shadow:0 40px 100px rgba(0,0,0,.7)}
+.card-head{padding:14px 20px 12px}
+.kick{font:500 10.5px/1.45 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--g-dim)}
+.card h2,.mini-head h2{margin-top:3px;font:600 21px/1.15 var(--cond);letter-spacing:.14em;color:var(--g-white)}
+.pic{display:block;width:100%;aspect-ratio:3/1;image-rendering:pixelated;border-block:1px solid var(--g-line);background:var(--w-void)}
+.strip{display:grid;gap:6px;padding:12px 20px}
+.strip .prev{min-height:18px;font:400 12px/1.5 var(--sans);color:var(--g-dim);opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now{display:grid;grid-template-columns:64px minmax(0,1fr);gap:16px;align-items:start;min-height:64px}
+.now.no-face{grid-template-columns:minmax(0,1fr)}
+.now.no-face .slot{display:none}
+.now.is-in{animation:linein .32s cubic-bezier(.16,1,.3,1)}
+@keyframes linein{from{opacity:0;transform:translateY(5px)}}
+.face{position:relative;display:block;width:64px;height:64px;overflow:hidden;background:var(--g-dusk);border:1px solid rgba(240,140,46,.6);box-shadow:0 0 0 3px rgba(240,140,46,.07),0 0 20px rgba(240,140,46,.2)}
+.face img{display:block;width:100%;height:100%;object-fit:cover}
+.face b{display:none}.face.no-img b{display:grid;place-items:center;height:100%;font:600 24px var(--cond);color:var(--sodium)}
+.face.aura{display:grid;place-items:center;border-color:var(--g-mist);box-shadow:none;background:radial-gradient(circle,#1e2125 0,#0d0e10 72%)}
+.face.aura i{position:relative;width:34px;height:34px;border-radius:50%;border:1.5px solid var(--g-steel);animation:breathe 3.4s ease-in-out infinite}
+.face.aura i::after{content:'';position:absolute;inset:12px;border-radius:50%;background:var(--g-steel)}
+@keyframes breathe{50%{box-shadow:0 0 16px rgba(201,209,214,.35);transform:scale(.93)}}
+.spk .who{font:600 11px/1.6 var(--cond);letter-spacing:.22em;text-transform:uppercase;color:var(--sodium)}
+.spk .line{max-width:48ch;font:400 17px/1.5 var(--sans);color:var(--g-text)}
+.is-note .line{font:400 14.5px/1.62 var(--mono);color:#c2c6c8}
+.cue{display:inline-block;margin-left:8px;font-size:.78em;color:var(--g-steel);animation:blink 1.1s steps(2,start) infinite}
+@keyframes blink{to{visibility:hidden}}
+.hint{display:flex;align-items:center;justify-content:space-between;gap:12px;font:400 10.5px var(--mono);color:var(--g-sdim)}
+.hint[hidden]{display:none}
+.ticks{display:flex;gap:4px}.ticks i{width:14px;height:2px;background:var(--g-line2)}.ticks i.on{background:var(--g-steel)}
+.decide{display:grid;gap:8px;padding:2px 20px 18px}
+.decide[hidden]{display:none}
+.ask{font:500 10.5px var(--cond);letter-spacing:.26em;text-transform:uppercase;color:var(--g-dim)}
+.choices{display:grid;gap:6px;list-style:none}
+.choice{display:grid;grid-template-columns:24px minmax(0,1fr) auto;align-items:center;gap:12px;width:100%;padding:11px 12px;text-align:left;border:1px solid var(--g-line2);background:var(--g-void);transition:transform .15s,border-color .15s,background .15s}
+.choice kbd{display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--g-mist);font-size:11px;color:var(--g-steel)}
+.choice .t{font:500 15px/1.35 var(--sans);color:var(--g-white)}
+.choice:hover,.choice:focus-visible{border-color:var(--g-steel);background:var(--g-dusk);outline:none;transform:translateX(2px)}
+.choice:hover kbd,.choice:focus-visible kbd{background:var(--g-steel);border-color:var(--g-steel);color:#000}
+.choice:active{transform:none}
+/* register 2 — pages: the object itself */
+.pagebox{display:grid;justify-items:center;gap:14px;width:100%}
+.prov{font:500 10.5px/1.5 var(--mono);letter-spacing:.14em;color:var(--g-dim);text-align:center}
+.pwrap{max-width:100%;filter:drop-shadow(0 26px 30px rgba(0,0,0,.7));transition:transform .6s cubic-bezier(.5,0,.75,0),opacity .6s;cursor:pointer}
+.pwrap.is-stashed{transform:translateY(34%) scale(.5) rotate(-6deg);opacity:0}
+.paper{position:relative;background:linear-gradient(90deg,transparent 49.7%,rgba(60,48,30,.12) 50%,rgba(255,255,255,.18) 50.3%,transparent 50.8%),radial-gradient(130% 100% at 50% 40%,transparent 55%,rgba(70,55,30,.22)),var(--tex,none) 0 0/128px 128px,var(--paper);color:var(--ink);image-rendering:pixelated;clip-path:polygon(0 0,100% 0,100% calc(100% - 28px),calc(100% - 28px) 100%,0 100%);transition:clip-path .25s}
+.pwrap:hover .paper{clip-path:polygon(0 0,100% 0,100% calc(100% - 40px),calc(100% - 40px) 100%,0 100%)}
+.corner{position:absolute;right:0;bottom:0;width:28px;height:28px;background:linear-gradient(to bottom right,#b5ab90 0,#cdc4ab 50%,transparent 50%);transition:width .25s,height .25s}
+.pwrap:hover .corner{width:40px;height:40px}
+.memo{width:min(470px,calc(100vw - 72px));padding:26px 34px 22px;transform:rotate(-.5deg)}
+.lh{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1.5px solid var(--ink)}
+.seal{display:grid;place-items:center;width:36px;height:36px;border:1.5px solid var(--ink);border-radius:50%}
+.seal i{width:20px;height:20px;border-radius:50%;border:1px solid var(--ink);background:radial-gradient(circle,var(--ink) 0 2px,transparent 3px),linear-gradient(var(--ink),var(--ink)) 50%/1px 100% no-repeat}
+.lh b{display:block;font:600 13px var(--cond);letter-spacing:.24em}
+.lh small{font:500 10px var(--mono);letter-spacing:.2em;color:var(--ink-dim)}
+.stampmark{margin-left:auto;padding:2px 7px;border:1.5px solid var(--ink-dim);font:600 10px var(--mono);letter-spacing:.2em;color:var(--ink-dim);transform:rotate(-4deg)}
+.lines{display:grid;gap:11px;list-style:none}
+.txt{font:400 13.5px/1.62 var(--mono);color:var(--ink)}
+li.is-past .txt{opacity:.3;transition:opacity .2s}
+li.is-now .txt.is-read{animation:reveal .6s steps(24) both}
+@keyframes reveal{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}
+.bar{display:inline-block;height:.6em;margin:0 .34em .08em 0;vertical-align:middle;background:rgba(28,29,28,.15)}
+.pf{display:flex;justify-content:center;margin-top:14px;font:500 10.5px var(--mono);letter-spacing:.2em;color:var(--ink-dim)}
+.sheet{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;width:min(690px,calc(100vw - 72px));padding:22px 26px 16px;transform:rotate(.35deg)}
+.photo{position:relative;width:300px;height:300px;background:#05070a;box-shadow:0 0 0 6px #121416}
+.photo canvas{display:block;width:100%;height:100%;image-rendering:pixelated}
+.callout{position:absolute;display:grid;place-items:center;width:20px;height:20px;margin:-10px 0 0 -10px;border-radius:50%;font:600 10.5px var(--mono);background:var(--paper);color:var(--ink);opacity:0;transform:scale(.5);transition:opacity .25s,transform .25s}
+.callout.on{opacity:.85;transform:none}.callout.now{opacity:1;background:#fff3dc;box-shadow:0 0 0 3px rgba(255,243,220,.3)}
+.annot b{display:block;margin-bottom:2px;font:600 10.5px var(--cond);letter-spacing:.22em}
+.annot .hand{font-style:italic;color:var(--pencil);transform:rotate(-1.2deg);transform-origin:left}
+.annot li.is-past:hover .txt{opacity:.85}
+.sheet .pf{grid-column:1/-1;margin-top:2px}
+.under{display:grid;justify-items:center;gap:8px;width:min(640px,100%)}
+.under .strip{display:none;width:100%;background:var(--g-deep);border:1px solid var(--g-line2);border-top:2px solid var(--g-steel)}
+.is-talk .under .strip{display:grid}
+.turn-hint{font:400 11px var(--mono);color:var(--g-dim);text-align:center}
+.is-talk .turn-hint{display:none}
+.is-talk .pwrap{filter:drop-shadow(0 26px 30px rgba(0,0,0,.7)) brightness(.62)}
+.kept{display:none;padding:3px 9px;border:1px solid var(--g-line2);background:var(--g-deep);font:500 10.5px var(--mono);letter-spacing:.14em;color:var(--g-steel)}
+.is-talk .kept{display:block}
+/* a minigame: lines keep time, names only */
+.mini-frame{display:grid;gap:10px;width:min(720px,100%);padding:12px 16px 14px;background:linear-gradient(180deg,var(--g-deep),var(--g-void));border:1px solid var(--g-line2);border-top:2px solid var(--g-steel);box-shadow:0 30px 80px rgba(0,0,0,.7)}
+.mscreen{position:relative;box-shadow:0 0 0 1px var(--g-line2)}
+.mscreen canvas{display:block;width:100%;aspect-ratio:16/9;image-rendering:pixelated;cursor:ew-resize;touch-action:none}
+.readout{position:absolute;right:10px;top:8px;display:flex;gap:16px;font:500 11px var(--mono);color:var(--g-dim)}
+.readout b{color:var(--g-white)}.readout b.good{color:var(--w-ice)}
+.mtalk{display:grid;grid-template-columns:96px minmax(0,1fr);gap:2px 14px;min-height:76px;padding:8px 12px;background:var(--g-dusk);border:1px solid var(--g-line)}
+.mtalk .prev{grid-column:1/-1;height:18px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px;color:var(--g-dim);opacity:.65}
+.mtalk .who{font:600 11px/1.9 var(--cond);letter-spacing:.2em;text-transform:uppercase;color:var(--sodium)}
+.mtalk .line{font:400 15px/1.5 var(--sans)}
+.mbtns{display:flex;gap:8px;flex-wrap:wrap}
+.mbtn{padding:9px 14px;border:1px solid var(--g-line2);background:var(--g-dusk);font:600 11.5px var(--cond);letter-spacing:.14em;text-transform:uppercase;color:var(--g-steel)}
+.mbtn:hover:not(:disabled){border-color:var(--g-steel);color:var(--g-white)}
+.mbtn.primary{margin-left:auto;border-color:var(--g-steel);color:var(--g-white)}
+.mbtn:disabled{opacity:.38;cursor:default}
+/* films and the arrival card */
+.layer>.film{position:absolute;inset:0;margin:0;cursor:pointer}
+.film canvas{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+.cap{position:absolute;left:50%;bottom:10%;display:grid;justify-items:center;gap:4px;width:min(760px,90%);transform:translateX(-50%);text-align:center}
+.cap .n{font:400 16px/1.5 var(--mono);color:#cfd3d6;text-shadow:0 1px 3px #000}
+.cap b{font:600 11px var(--cond);letter-spacing:.24em;text-transform:uppercase;color:var(--sodium)}
+.cap .v{font:400 19px/1.45 var(--sans);color:var(--g-white);text-shadow:0 1px 3px #000}
+.cap.is-in{animation:linein .5s ease-out}
+.fhint{position:absolute;right:16px;bottom:12px;font:400 10.5px var(--mono);color:var(--g-sdim)}
+.fbar{position:absolute;inset:auto 0 0;height:2px;background:var(--g-line)}.fbar b{display:block;width:0;height:100%;background:var(--g-sdim);transition:width .3s}
+.arrive{display:grid;gap:10px;justify-items:start;width:min(640px,100%);cursor:pointer}
+.arrive h2{font:600 clamp(40px,6vw,64px)/1 var(--cond);letter-spacing:.12em;color:var(--g-white)}
+.aline{max-width:52ch;margin-bottom:10px;font:400 15px/1.6 var(--mono);color:#c2c6c8}
+.arrive .strip{width:100%;padding:14px 0 0;border-top:1px solid var(--g-line2)}
+/* ── the notes beside the frame ── */
+.notes{position:sticky;top:14px;display:grid;gap:15px;padding:18px;background:var(--g-deep);border:1px solid var(--g-line2)}
+.reg{display:flex;gap:10px;align-items:center;font:600 10.5px var(--cond);letter-spacing:.26em;color:var(--g-white)}
+.reg i{width:4px;height:14px}
+.notes h2{font:600 19px/1.25 var(--cond);color:var(--g-white)}
+.notes dl{display:grid;gap:10px}
+.notes dt{font:500 10px var(--cond);letter-spacing:.24em;text-transform:uppercase;color:var(--g-dim)}
+.notes dd{margin-top:2px;font:400 13px/1.5 var(--sans)}
+.meter{display:grid;gap:6px;padding-top:12px;border-top:1px solid var(--g-line2)}
+.meter p{display:flex;justify-content:space-between;font:400 11px var(--mono);color:var(--g-dim)}.meter b{color:var(--g-white)}
+.track{height:3px;background:var(--g-line2)}.fill{height:100%;width:0;background:var(--g-steel);transition:width .3s}
+.meter.over .fill{background:var(--red)}
+.rules{display:grid;gap:6px;padding-top:12px;border-top:1px solid var(--g-line2);list-style:none;counter-reset:r}
+.rules li{display:grid;grid-template-columns:18px 1fr;counter-increment:r;font:400 12px/1.45 var(--sans);color:var(--g-dim)}
+.rules li::before{content:counter(r);font:500 10.5px/1.7 var(--mono);color:var(--g-steel)}
+.foot{margin-top:14px;font:400 11px var(--mono);color:var(--g-sdim)}
+.top{flex-wrap:nowrap}
+@media (max-width:1200px){.top{flex-wrap:wrap}}
+@media (max-width:1120px){.stage{grid-template-columns:minmax(0,1fr)}.notes{position:static}}
+@media (max-width:760px){
+  .wrap{padding:14px 16px 24px}h1{font-size:25px}.legend li{flex:1 1 100%;min-width:0}.chap.alt{margin-left:0}
+  .frame{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto 260px;grid-template-areas:"hud" "view" "deck" "log";height:auto}
+  .frame.has-layer{min-height:0}.frame.has-layer>:not(.layer){display:none}
+  .frame.has-layer .layer{position:relative;inset:auto;grid-area:1/1/-1/-1;min-height:640px;overflow:visible}.hud{flex-wrap:wrap;row-gap:4px;padding:8px 12px;white-space:normal}.hud .first{margin-left:0}
+  .view{aspect-ratio:16/10}.deck{border-left:0;border-top:1px solid var(--g-line2)}.layer{inset:0}
+  .sheet{grid-template-columns:minmax(0,1fr)}.photo{justify-self:center;width:min(300px,100%);height:auto;aspect-ratio:1}
+  .choice{grid-template-columns:24px minmax(0,1fr)}.choice .chips{grid-column:2;justify-content:flex-start}
+  .e{grid-template-columns:20px minmax(0,1fr) auto}.e .who{grid-column:2}.e q{grid-column:2/-1}.e.rec>span:first-of-type{grid-column:2/3}
+  .memo,.sheet{padding:20px 20px 16px}.strip{padding:12px 14px}.now{grid-template-columns:48px minmax(0,1fr);gap:12px}.face{width:48px;height:48px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><p class="eyebrow">Silent Exodus · interface study · 2026-10-07</p><h1>One way to read</h1>
+      <p class="lede">Three kinds of text. One way to move on. Buttons only for decisions. Click inside the screen to play.</p></div>
+    <ul class="legend">
+      <li><i class="sw voice"></i><b>VOICE</b><span>face · name · one line</span></li>
+      <li><i class="sw page"></i><b>PAGE</b><span>the found thing itself</span></li>
+      <li><i class="sw ship"></i><b>SHIP</b><span>log · NEXT · title cards</span></li>
+    </ul>
+  </header>
+  <nav class="chapters" aria-label="Walkthrough">
+    <button class="chap" data-go="1"><i>01</i>In orbit</button><button class="chap" data-go="2"><i>02</i>The team goes in</button>
+    <button class="chap" data-go="3"><i>03</i>What they found</button><button class="chap" data-go="4"><i>04</i>Date the wreck</button>
+    <button class="chap" data-go="5"><i>05</i>The jump</button><button class="chap alt" data-memo><i>+</i>A printed page</button>
+  </nav>
+  <main class="stage">
+    <section class="frame" id="frame" aria-label="Game screen mockup">
+      <div class="hud" id="hud"></div>
+      <div class="view"><canvas id="view" width="480" height="270" aria-hidden="true"></canvas>
+        <p class="place" id="place"></p><div class="site" id="site" style="left:49.6%;top:70.4%"><span></span></div></div>
+      <aside class="deck"><h3>COMMAND DECK</h3><div id="deck" style="display:grid;gap:8px"></div></aside>
+      <section class="log" aria-label="Ship's log"><p class="log-head">SHIP'S LOG <span>everything said is kept here</span></p>
+        <p class="next" id="next"><b>NEXT</b><span id="next-text"></span><button id="hide-tips" type="button">hide tips</button></p>
+        <div class="log-scroll" id="log-scroll"><ul id="log"></ul></div></section>
+      <div class="layer" id="layer" tabindex="-1" hidden></div>
+    </section>
+    <aside class="notes" id="notes" aria-live="polite"></aside>
+  </main>
+  <p class="foot">Crew, A.U.R.A., page and film lines are from the game (src/data, src/systems); the wreck narration, Mira's dating line and the NEXT tips are cut to fit the length rules, and the log lines for scan, probe and landing are written for this mockup. The disc dating screen stands in for the real minigame. Spec: docs/TEXT_SYSTEM.md</p>
+</div>
+<script>
+'use strict';
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const AURA = 'A.U.R.A.', FACE_DIR = '../../assets/crew/', CREW = { Jaxon: 'M_2', Vance: 'M_4', Aris: 'F_3', Mira: 'F_5' };
+const WRECK = 'EXODUS-4 “SOJOURN”', FIT_YEARS = 21, WORD_LIMIT = 40;
+
+// ── pixels: 8×8 Bayer dithering between Deep field ramps (docs/ART_STYLE.md) ──
+const B8 = [0,32,8,40,2,34,10,42,48,16,56,24,50,18,58,26,12,44,4,36,14,46,6,38,60,28,52,20,62,30,54,22,3,35,11,43,1,33,9,41,51,19,59,27,49,17,57,25,15,47,7,39,13,45,5,37,63,31,55,23,61,29,53,21];
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), ramp = (...c) => c.map(hex);
+const RAMP = {
+  sky: ramp('#06090c','#0b1418','#13232a','#1f3a43','#35606b'), dust: ramp('#06090c','#1a120d','#3a2416','#6b4024','#a86a3a'),
+  ground: ramp('#06090c','#0d0b09','#1c150f','#2e2118','#46321f'), hull: ramp('#06090c','#121c22','#22333b','#3d5560','#8aa2aa','#e6eef0'),
+  rust: ramp('#06090c','#1f120c','#3e2215','#6a3a20','#9a5a32'), ice: ramp('#06090c','#0f1d22','#1f3a43','#35606b','#6fa7b5','#cfeef5'),
+  moon: ramp('#06090c','#1c2629','#3a4b51','#82979c','#dfe9eb'), gold: ramp('#140d03','#4a3510','#8a6a22','#d9a24a','#ffe6a0'),
+};
+function hash(x, y, s) { let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 982451653)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+function vnoise(x, y, s) { const xi = Math.floor(x), yi = Math.floor(y), u = (x - xi) ** 2 * (3 - 2 * (x - xi)), v = (y - yi) ** 2 * (3 - 2 * (y - yi)); const a = hash(xi, yi, s), b = hash(xi + 1, yi, s), c = hash(xi, yi + 1, s), d = hash(xi + 1, yi + 1, s); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+function fbm(x, y, s) { let t = 0, a = .5, f = 1; for (let o = 0; o < 4; o++) { t += a * vnoise(x * f, y * f, s + o); a *= .5; f *= 2; } return t; }
+function put(im, x, y, r, v) { v = Math.max(0, Math.min(.999, v)) * (r.length - 1); let i = v | 0; if (v - i > (B8[((y & 7) << 3) + (x & 7)] + .5) / 64) i++; setc(im, x, y, r[i]); }
+function setc(im, x, y, c) { if (x < 0 || y < 0 || x >= im.width || y >= im.height) return; const o = (y * im.width + x) << 2; im.data[o] = c[0]; im.data[o + 1] = c[1]; im.data[o + 2] = c[2]; im.data[o + 3] = 255; }
+const dith = (x, y, v) => v > (B8[((y & 7) << 3) + (x & 7)] + .5) / 64;
+
+let timers = [], bgTimer = null;
+const later = (ms, fn) => { const id = setTimeout(fn, ms); timers.push(id); return id; };
+const every = (ms, fn) => { const id = setInterval(fn, ms); timers.push(id); return id; };
+const stopAll = () => { timers.forEach(id => { clearTimeout(id); clearInterval(id); }); timers = []; };
+/** Paints once into a buffer, then draws the buffer plus a few moving pixels ~8 times a second. */
+function animate(cv, im, tick, keep) { const ctx = cv.getContext('2d'), base = document.createElement('canvas'); base.width = im.width; base.height = im.height; base.getContext('2d').putImageData(im, 0, 0); let f = 0; const step = () => { ctx.drawImage(base, 0, 0); tick(ctx, f++); }; step(); return keep ? setInterval(step, 125) : every(125, step); }
+
+function starsInto(im, n, seed, maxY, avoid) { const lit = []; for (let k = 0; k < n; k++) { const x = hash(k, 1, seed) * im.width | 0, y = hash(k, 2, seed) * maxY | 0; if (avoid && avoid(x, y)) continue; const b = hash(k, 3, seed) > .82; setc(im, x, y, b ? [230, 236, 238] : [86, 112, 120]); if (b) lit.push([x, y]); } return lit; }
+const twinkle = (ctx, lit, f) => { if (!lit.length) return; const [x, y] = lit[(f * 7) % lit.length]; ctx.fillStyle = '#fff'; ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x, y - 1, 1, 3); };
+
+/** The orbit view: an ice world from above, lit from the upper left, a rust-gold dust cloud behind. */
+function paintOrbit() {
+  const cv = $('#view'), im = cv.getContext('2d').createImageData(480, 270), cx = 300, cy = 470, r = 330, L = [-.58, -.56, .59];
+  for (let y = 0; y < 270; y++) for (let x = 0; x < 480; x++) {
+    const nx = (x - cx) / r, ny = (y - cy) / r, q = nx * nx + ny * ny;
+    if (q < 1) { const nz = Math.sqrt(1 - q), d = nx * L[0] + ny * L[1] + nz * L[2]; put(im, x, y, RAMP.ice, .03 + Math.max(0, d) * .82 * (.72 + fbm(x * .012 + ny * 3, y * .04, 4) * .5)); }
+    else if (q < 1.04) { const d = nx * L[0] + ny * L[1]; put(im, x, y, RAMP.ice, Math.max(0, d) * (1.04 - q) * 14); }
+    else { const n = fbm(x * .008, y * .013, 8); put(im, x, y, RAMP.dust, n > .55 ? (n - .55) * 1.3 : 0); }
+  }
+  const lit = starsInto(im, 150, 21, 200, (x, y) => ((x - cx) / r) ** 2 + ((y - cy) / r) ** 2 < 1.05);
+  clearInterval(bgTimer); bgTimer = animate(cv, im, (ctx, f) => twinkle(ctx, lit, f), true);
+}
+/** Sector 3 from the bridge: dark sky and more ship beacons than anyone said, along one heading. */
+function paintMap() {
+  const cv = $('#view'), im = cv.getContext('2d').createImageData(480, 270);
+  for (let y = 0; y < 270; y++) for (let x = 0; x < 480; x++) { const n = fbm(x * .007, y * .012, 12); put(im, x, y, RAMP.dust, n > .56 ? (n - .56) * 1.2 : 0); }
+  const lit = starsInto(im, 120, 33, 270), beacons = [];
+  for (let k = 0; k < 140; k++) { const t = hash(k, 5, 7), x = 20 + t * 440 | 0, y = 200 - t * 120 + (hash(k, 6, 7) - .5) * 70 * (1 - t * .6) | 0; beacons.push([x, y]); setc(im, x, y, [61, 102, 112]); }
+  clearInterval(bgTimer); bgTimer = animate(cv, im, (ctx, f) => { twinkle(ctx, lit, f); ctx.fillStyle = '#9fd8e6'; for (let k = f % 9; k < beacons.length; k += 9) ctx.fillRect(beacons[k][0], beacons[k][1], 1, 1); }, true);
+}
+
+/** An Exodus hull side on (SceneArt.drawHull, simplified): round nose, bridge, seams, rim light on top, torn open. Returns local → screen. */
+function hull(im, o) {
+  const { x: X, y: Y, len, ht, ang, from = 0, to = 1, seed, gy } = o, ca = Math.cos(ang), sa = Math.sin(ang);
+  const inside = (u, v) => {
+    if (u < 0 || u > len || v > 0) return false;
+    if (u < ht / 2 && (u - ht / 2) ** 2 + (v + ht / 2) ** 2 > (ht / 2) ** 2) return false;
+    return v >= -ht || (u > len * .12 && u < len * .3 && v >= -ht - 6) || (u > len - 18 && v >= -ht - 4) || (u > len - 36 && u < len - 18 && v >= -ht - 4 - (u - len + 36) * .5);
+  };
+  const cut = (u, v) => { const f = u / len, edge = 9 * vnoise(v * .4, f * 9, seed); return f < from || f > to || (to < 1 && (to - f) * len < edge) || (from > 0 && (f - from) * len < edge); };
+  for (let y = Math.max(0, Y - len * Math.abs(sa) - ht - 16 | 0); y < Math.min(im.height, Y + 6); y++) for (let x = Math.max(0, X - 4); x < Math.min(im.width, X + len + 4); x++) {
+    const dx = x - X, dy = y - Y, u = dx * ca + dy * sa, v = -dx * sa + dy * ca;
+    if (!inside(u, v) || cut(u, v) || y > gy(x) + (u < len * .35 ? 0 : 3)) continue;   // the nose is buried
+    const top = Math.max(0, Math.min(1, -v / ht)), isRim = !inside(u, v - 1.6);
+    let val = .14 + .52 * top ** 1.4 + (fbm(u * .07, v * .18, seed) - .5) * .22;
+    if (isRim) val = .93; else if (u % 15 < 1) val *= .55;
+    if (!isRim && v > -ht + 3 && v < -ht + 6 && u > len * .1 && u < len * .33 && u % 6 < 3) val = .03;   // dark window slots
+    if (!isRim && fbm(u * .05, v * .12, seed + 7) > .64 && top < .85) val = u % 6 < 1.3 ? .34 : .02;      // torn open: the frame shows
+    put(im, x, y, fbm(u * .03, v * .09, seed + 11) > .6 ? RAMP.rust : RAMP.hull, val);
+  }
+  return (u, v) => [X + u * ca - v * sa, Y + u * sa + v * ca];
+}
+/** The scene picture: one of our ships, snapped in two, nose in the ground, a red beacon still blinking on its mast. */
+function paintWreck(cv) {
+  const W = 480, H = 160, HZ = 112, im = cv.getContext('2d').createImageData(W, H), gy = x => HZ + Math.round(Math.sin(x * .011) * 2 + (vnoise(x * .04, 3, 7) - .5) * 5);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (y < gy(x)) { const d = Math.exp(-(((y - HZ + 16) / 13) ** 2)) * (.35 + fbm(x * .018, y * .07, 2) * .9); if (d > .42) put(im, x, y, RAMP.dust, (d - .3) * .9); else put(im, x, y, RAMP.sky, .03 + (y / HZ) ** 2 * .5 + (fbm(x * .01, y * .04, 1) - .5) * .16); }
+    else put(im, x, y, RAMP.ground, .5 - (y - HZ) / (H - HZ) * .36 + (fbm(x * .035, y * .11, 3) - .5) * .34);
+  }
+  const mx = 398, my = 30, mr = 15;
+  for (let y = my - mr; y <= my + mr; y++) for (let x = mx - mr; x <= mx + mr; x++) { const nx = (x - mx) / mr, ny = (y - my) / mr, q = nx * nx + ny * ny; if (q < 1) put(im, x, y, RAMP.moon, .1 + .85 * Math.max(0, -nx * .75 - ny * .25 + Math.sqrt(1 - q) * .45) + (fbm(x * .3, y * .3, 9) - .5) * .2); }
+  const lit = starsInto(im, 80, 5, 70, (x, y) => Math.hypot(x - mx, y - my) < mr + 3);
+  hull(im, { x: 34, y: HZ + 16, len: 270, ht: 30, ang: -.19, to: .5, seed: 3, gy });
+  const tail = hull(im, { x: 52, y: HZ + 4, len: 270, ht: 30, ang: -.03, from: .57, seed: 4, gy });
+  for (let x = 318; x < 476; x++) if (hash(x, 1, 9) > (x - 318) / 170) { put(im, x, gy(x) + 1, RAMP.ground, .02); if (hash(x, 2, 9) > .5) put(im, x, gy(x) + 2, RAMP.ground, .08); }   // the furrow it cut coming down
+  for (let k = 0; k < 9; k++) { const x = 170 + hash(k, 4, 3) * 110 | 0; put(im, x, gy(x) - 1, RAMP.hull, .5); put(im, x + 1, gy(x) - 1, RAMP.hull, .3); }
+  const [bx, by] = tail(222, -31).map(Math.round);
+  for (let k = 0; k < 12; k++) setc(im, bx, by - k, [61, 85, 96]);
+  const dust = Array.from({ length: 6 }, (_, k) => [hash(k, 8, 2) * W, HZ - 2 + hash(k, 9, 2) * 30]);
+  animate(cv, im, (ctx, f) => {
+    twinkle(ctx, lit, f);
+    if (f % 16 < 6) { for (let dy = -7; dy <= 7; dy++) for (let dx = -7; dx <= 7; dx++) { const d = Math.hypot(dx, dy) / 7; if (d < 1 && dith(bx + dx + 64, by - 13 + dy + 64, (1 - d) * .55)) { ctx.fillStyle = '#6e2a22'; ctx.fillRect(bx + dx, by - 13 + dy, 1, 1); } } ctx.fillStyle = '#e2574c'; ctx.fillRect(bx - 1, by - 14, 3, 2); ctx.fillStyle = '#ffd2c8'; ctx.fillRect(bx, by - 14, 1, 1); }
+    ctx.fillStyle = '#6b4024'; dust.forEach((p, k) => ctx.fillRect(((p[0] + f * (.6 + k * .15)) % W) | 0, p[1] | 0, 1, 1));
+  });
+}
+
+/** The disc (DiscDocument.js): dithered gold, four etchings, something reading across it left to right. */
+const DISC = [
+  { label: 'THE DISC', at: [262, 34], region: null, text: 'Gold. Thrown out of our solar system in 1977, bolted to a probe the size of a car. The oldest thing we ever sent anywhere.' },
+  { label: 'THE MAP', at: [58, 122], region: [96, 168, 62], text: 'Fourteen lines from one point. Each line is a star that ticks like a clock. Where they meet is home. Anyone who can count can find us.' },
+  { label: 'THE TWO FIGURES', at: [244, 104], region: [206, 138, 40], text: 'What we look like. One of them is waving.' },
+  { label: 'WRITTEN IN THE MARGIN', at: [186, 40], region: [150, 52, 40], hand: true, text: '“Why is this in a colony ship’s orders? Why is it the only page marked with our heading? — K.”' },
+];
+function discMarks() {
+  const S = 300, m = new Uint8Array(S * S); let s = 1977; const rand = () => (s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296;
+  const dot = (x, y) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && x < S && y >= 0 && y < S) m[y * S + x] = 1; };
+  const line = (a, b, c, d) => { const n = Math.ceil(Math.hypot(c - a, d - b)); for (let k = 0; k <= n; k++) dot(a + (c - a) * k / n, b + (d - b) * k / n); };
+  const ring = (cx, cy, r) => { for (let a = 0; a < 6.283; a += .5 / r) dot(cx + Math.cos(a) * r, cy + Math.sin(a) * r); };
+  for (let k = 0; k < 14; k++) { const a = k / 14 * 6.283 + rand() * .3, l = 22 + rand() * 40; line(96, 168, 96 + Math.cos(a) * l, 168 + Math.sin(a) * l); for (let t = 8; t < l; t += 4) if (rand() < .6) dot(96 + Math.cos(a) * t - Math.sin(a) * 2, 168 + Math.sin(a) * t + Math.cos(a) * 2); }
+  [[196, 0], [216, 1]].forEach(([x, w]) => { ring(x, 114, 4); line(x, 118, x, 142); line(x, 142, x - 5, 160); line(x, 142, x + 5, 160); line(x, 124, x - 7, 136); if (w) line(x, 124, x + 8, 114); else line(x, 124, x + 7, 136); });
+  ring(60, 236, 6); for (let k = 0; k < 9; k++) ring(78 + k * 15, 236, k === 4 || k === 5 ? 4 : 2);
+  ring(222, 204, 5); ring(244, 204, 5); line(227, 204, 239, 204);
+  ring(150, 52, 16); for (let a = 0; a < 6.283; a += .39) line(150 + Math.cos(a) * 16, 52 + Math.sin(a) * 16, 150 + Math.cos(a) * 20, 52 + Math.sin(a) * 20);
+  return m;
+}
+function drawDisc(ctx, marks, t, focus) {
+  const S = 300, im = ctx.createImageData(S, S), glint = t / 4000, scan = ((t / 9000) % 1) * 360 - 30, lit = [255, 244, 208], etch = [42, 28, 6], reader = [185, 139, 214];
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const dx = x - 150, dy = y - 150, d = Math.hypot(dx, dy);
+    if (d > 140) { setc(im, x, y, [5, 7, 10]); continue; }
+    let v = .42 + .34 * Math.cos(2 * (Math.atan2(dy, dx) - glint)) + (d > 137 ? .2 : 0); if (d > 112 && Math.floor(d) % 3 === 0) v -= .3;
+    const inF = focus && Math.hypot(x - focus[0], y - focus[1]) < focus[2]; if (focus) v = inF ? Math.min(v, .8) : v * .45;
+    if (marks[y * S + x]) setc(im, x, y, inF ? lit : etch); else put(im, x, y, RAMP.gold, v);
+    if (Math.abs(x - scan) < 14 && dith(x, y, .5 - Math.abs(x - scan) / 28)) setc(im, x, y, reader);
+  }
+  ctx.putImageData(im, 0, 0);
+}
+
+// ── state, header, command deck, log ──
+let S, active = null;
+const fresh = () => ({ energy: 86, salvage: 50, rations: 19, data: 0, sector: 1, sectorName: 'THE GRAVEYARD', scanned: false, probed: false, sent: false, dateReady: false, dated: false, map: false, tipsHidden: false });
+function hud() { $('#hud').innerHTML = `<span class="ship">EXODUS-9</span><span><i>SECTOR</i>${S.sector} · ${S.sectorName}</span>` + [['energy', 'ENERGY', '%'], ['salvage', 'SALVAGE', '/300'], ['rations', 'RATIONS', '/30'], ['data', 'DATA', '']].map(([k, l, u], i) => `<span class="res${i ? '' : ' first'}" data-k="${k}"><i>${l}</i>${S[k]}${u}</span>`).join(''); }
+function bump(k, d, quiet) { S[k] += d; hud(); if (!quiet) $(`.res[data-k=${k}]`).insertAdjacentHTML('beforeend', `<em class="float ${d > 0 ? 'gain' : 'loss'}">${d > 0 ? '+' : '−'}${Math.abs(d)}</em>`); }
+function place() {
+  const p = $('#place'), site = $('#site');
+  if (S.map) { p.innerHTML = '<b>SECTOR 3 · THE SIGNAL</b><span>the sector map</span>'; site.hidden = true; return; }
+  p.innerHTML = `<b>ATLAS-90 ALPHA</b><span>${S.scanned ? 'ice world · one of our ships on the surface' : 'ice world · an old ship beacon'}</span>`;
+  site.hidden = false; $('span', site).textContent = S.scanned ? 'EXODUS-4' : '';
+}
+function deck() {
+  const d = $('#deck');
+  if (S.map) { d.innerHTML = '<p class="deck-empty">NO TARGET SELECTED<br>Click a beacon on the map.</p>'; return; }
+  const btn = (id, label, note, o = {}) => `<button class="cmd${o.isNew ? ' is-new' : ''}" data-cmd="${id}" ${o.done ? 'disabled' : ''}><span>${label}${o.isNew ? '<em>NEW</em>' : ''}</span><small>${note}</small></button>`;
+  d.innerHTML = [
+    btn('scan', 'DEEP SCAN', S.scanned ? 'done' : '−2 energy · see what is down there', { done: S.scanned }),
+    btn('probe', S.probed ? 'PROBE CAME BACK' : 'LAUNCH PROBE', S.probed ? 'one per stop' : 'the safe way to bring things back', { done: S.probed }),
+    S.sent ? btn('team', 'TEAM ALREADY WENT', 'one trip per stop', { done: true }) : btn('team', S.scanned ? 'SEND TEAM TO THE WRECK' : 'SEND TEAM DOWN', S.scanned ? 'one of our ships · −5 energy · −1 ration' : '−5 energy · −1 ration · search the surface'),
+    S.dated ? btn('date', 'WRECK DATED', `dead ${FIT_YEARS} years`, { done: true }) : S.dateReady ? btn('date', 'DATE THE WRECK', 'with the disc · no cost', { isNew: true }) : '',
+    btn('orbit', 'BREAK ORBIT', 'back to the map'),
+  ].join('');
+}
+const faceUrl = who => `${FACE_DIR}${CREW[who]}.png`;
+const miniFace = who => who === AURA ? '<i class="mini aura" aria-hidden="true"></i>' : `<i class="mini" style="background-image:url(${faceUrl(who)})" aria-hidden="true"></i>`;
+const chips = list => (list && list.length ? `<span class="chips">${list.map(c => `<em class="${c[0] === '!' ? 'loss' : ''}">${esc(c.replace(/^!/, ''))}</em>`).join('')}</span>` : '');
+function log(e, quiet) {
+  const li = document.createElement('li');
+  li.className = `e ${e.t}${quiet ? '' : ' is-fresh'}`;
+  if (e.t === 'stop') li.innerHTML = `<b>${esc(e.name)}</b>`;
+  else if (e.t === 'said') li.innerHTML = `${miniFace(e.who)}<b class="who${e.who === AURA ? ' aura' : ''}">${esc(e.who)}</b><q>${esc(e.text)}</q>`;
+  else li.innerHTML = `<i class="g">${e.g || '›'}</i><span>${e.html || esc(e.text)}</span>${chips(e.chips)}`;
+  $('#log').appendChild(li);
+  if (!quiet) setTimeout(() => li.classList.remove('is-fresh'), 6500);
+  const box = $('#log-scroll'); box.scrollTop = box.scrollHeight;
+}
+const key = s => `<kbd>${s}</kbd>`;
+function next(html) { S.nextHtml = html; $('#next-text').innerHTML = html || ''; $('#next').hidden = !html || S.tipsHidden; words(); }
+
+// ── the notes beside the frame: what you are looking at, and its rules ──
+const REG = { voice: ['voice', 'VOICE · a person speaks'], page: ['page', 'PAGE · a thing you found'], ship: ['ship', 'SHIP · the ship and the world report'] };
+const NOTES = {
+  orbit: ['ship', 'The ship reports. Nothing waits for you.', [['Looks', 'Instrument type, no faces in boxes. A.U.R.A.\'s routine lines go to the log with her steel ring.'], ['Moves on', 'It never needs a click.'], ['Buttons', 'Only the command deck: things you can do here.'], ['NEXT', 'One tip, inside the log, naming its button in a key cap. Hidden while anything else is open.'], ['Was', 'The coach bar floated over the map, and said what A.U.R.A. and the log had just said.']], `Try ${key('DEEP SCAN')} then ${key('SEND TEAM')}.`],
+  scene: ['voice', 'People talk one line at a time.', [['Looks', 'The picture first. The world speaks in ship type, no name. Then faces, one line each, the last line faint above.'], ['Moves on', 'Click anywhere, Space or Enter. Esc skips to the choice.'], ['Buttons', 'None until the choice.'], ['Was', 'NEXT ›, DECIDE ›, skip the talk, a "more" link, a colour per person.']], 'Click anywhere in the card.'],
+  choice: ['voice', 'A choice is the only button.', [['Looks', 'Full-width rows, a number key, the verb first, what it costs as chips.'], ['Moves on', 'Click one, or press 1 or 2.'], ['Rule', 'Always two or more. A "choice" with one option (Take command, DEAL WITH IT) becomes the next line.'], ['After', 'The result goes to the log with its numbers. No result box.']], 'Pick one.'],
+  disc: ['page', 'A page is the thing itself, not a panel.', [['Looks', 'The drawing and its notes are on the paper. Notes you have not reached are grey bars; read ones fade.'], ['Moves on', 'Click the page, Space or →. ← goes back. Esc puts it away.'], ['Buttons', 'None. It goes in your cargo by itself.'], ['Was', 'READ ON, KEEP IT, FOLD IT AWAY, GO ON, and four labels you had to hover to read.']], 'Click the page.'],
+  memo: ['page', 'A printed page. You read down it.', [['Looks', 'Typed on Earth letterhead. One line at full ink; the rest are bars until you reach them.'], ['Moves on', 'Click the page, Space or →. ← back. Esc puts it away.'], ['Then', 'Someone aboard reacts under the page, in the same strip as a scene.'], ['Was', 'A drawing of fake text on the left, the real words in a list on the right, READ ON.']], 'Click the page.'],
+  talk: ['voice', 'Someone aboard reacts.', [['Looks', 'The same strip as in a scene, under the page.'], ['Moves on', 'Click or Space. After the last line, one more click puts the page away.'], ['Kept', 'The page is in your cargo already. The log keeps a "read again" link.']], 'Click to go on.'],
+  dateReady: ['ship', 'Date the wreck: one place, one way.', [['Was', 'A card asked "Date this wreck / Not now", and the same button waited on the right. Saying "later" still left it there.'], ['Now', 'No card. Mira says it once, under the page. The button appears on the command deck, marked NEW, and NEXT points at it.'], ['Lasts', 'While you are in orbit of this wreck.']], `Press ${key('DATE THE WRECK')}.`],
+  mini: ['voice', 'In a minigame, lines do not wait.', [['Looks', 'Names, no faces. The line before fades above. Your eyes are on the picture.'], ['Moves on', 'On a timer. Your hands are busy.'], ['Buttons', 'Only the game\'s own controls.'], ['Stand-in', 'The real disc minigame (DiscDating.js) plays here.']], 'Drag the chart, or use the buttons, until the marks fit. Then lock.'],
+  dated: ['ship', 'Done. The log keeps it.', [['Looks', 'The date is a log line. Aris\'s reaction is kept with her face.'], ['Deck', 'The button now says what happened and cannot be pressed.']], `${key('BREAK ORBIT')} goes on to the jump.`],
+  film: ['voice', 'Films keep time. You can hurry them.', [['Looks', 'Narration in ship type, centred. Voices with a name and no face: nobody can see anyone.'], ['Moves on', 'On a timer. Click or Space: the next line now. Esc skips the film.'], ['Was', 'Space skipped the whole film, though everywhere else it means "next line".']], 'Watch, or click to hurry it.'],
+  arrival: ['ship', 'Arrival: a title, then a voice.', [['Looks', 'The sector\'s name, one line of what is out there, then one person, with a face.'], ['Moves on', 'Click anywhere.'], ['Was', 'A CONTINUE button, and a third way of quoting people.']], 'Click to go on.'],
+  end: ['ship', 'That is the whole loop.', [['Voices', 'Face, name, one line. Click for the next.'], ['Pages', 'The thing itself. Click to turn.'], ['Ship', 'The log and the NEXT line. Never waits.']], 'Restart from 01, or open a printed page.'],
+};
+function notes(id) {
+  const [reg, title, rows, tryIt] = NOTES[id], [cls, label] = REG[reg];
+  $('#notes').innerHTML = `<p class="reg ${cls}"><i></i>${label}</p><h2>${title}</h2><dl>${rows.map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join('')}<div><dt>Try</dt><dd>${tryIt}</dd></div></dl>
+    <div class="meter" id="meter"><p><span>Words on screen now</span><span><b id="wc">0</b> / ${WORD_LIMIT}</span></p><div class="track"><div class="fill" id="wfill"></div></div></div>
+    <ol class="rules"><li>A button is a decision. Nothing else is a button.</li><li>Click, Space or Enter: next. Esc: skip. On a page, ← goes back.</li><li>Faces when the game waits for you. Names only when it does not.</li><li>A.U.R.A. has no face: a steel ring. People are sodium.</li><li>The screen shows now. The log keeps what was said.</li></ol>`;
+  words();
+}
+/** Words the player is asked to read right now: the open text surface, or the NEXT line when none is open. */
+function words() {
+  const scope = active ? $('#layer') : $('#frame'), els = $$('.w', scope).filter(e => e.offsetParent !== null && !(active ? false : e.closest('.layer')));
+  const n = els.reduce((sum, e) => sum + ((e.dataset.raw || e.textContent).trim().split(/\s+/).filter(Boolean).length), 0) + (!active && S && S.nextHtml && !S.tipsHidden ? $('#next-text').textContent.trim().split(/\s+/).length : 0);
+  if (!$('#wc')) return; $('#wc').textContent = n; $('#wfill').style.width = Math.min(100, n / WORD_LIMIT * 100) + '%'; $('#meter').classList.toggle('over', n > WORD_LIMIT);
+}
+
+// ── the layer and the one input rule ──
+function open(kind, html, handlers) { const L = $('#layer'); stopAll(); L.className = `layer is-${kind}`; L.innerHTML = html; L.hidden = false; $('#frame').classList.add('has-layer'); active = handlers; L.focus({ preventScroll: true }); return L; }
+function close() { stopAll(); const L = $('#layer'); L.hidden = true; L.innerHTML = ''; active = null; $('#frame').classList.remove('has-layer'); words(); }
+$('#layer').addEventListener('click', e => { if (active && !e.target.closest('button, a, canvas.drag')) active.next(); });
+document.addEventListener('keydown', e => {
+  if (!active || e.altKey || e.ctrlKey || e.metaKey) return;
+  const onButton = e.target.closest && e.target.closest('#layer button');
+  if ((e.key === ' ' || e.key === 'Enter') && !onButton) { e.preventDefault(); active.next(); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); (active.right || active.next)(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); if (active.left || active.back) (active.left || active.back)(); }
+  else if (e.key === 'Escape') { e.preventDefault(); if (active.skip) active.skip(); }
+  else if (/^[1-3]$/.test(e.key) && active.pick) active.pick(+e.key - 1);
+});
+
+// ── the voice strip: one component for scenes, pages and arrivals ──
+const stripHtml = hint => `<div class="strip"><p class="prev w"></p><div class="now"><span class="slot"></span><div class="spk"><p class="who"></p><p class="line w"></p></div></div><p class="hint"><span class="ticks"></span><span class="hint-text">${hint}</span></p></div>`;
+const faceHtml = who => (who === AURA ? '<span class="face aura" aria-hidden="true"><i></i></span>' : `<span class="face"><img src="${faceUrl(who)}" alt="" onerror="this.parentNode.classList.add('no-img');this.remove()"><b>${who[0]}</b></span>`);
+function say(root, b, faces = true) {
+  const st = $('.strip', root), prev = $('.prev', st), who = $('.who', st), line = $('.line', st), now = $('.now', st), text = b.n || b.t;
+  if (line.dataset.raw) prev.textContent = (who.textContent ? who.textContent + ': ' : '') + line.dataset.raw;
+  now.classList.toggle('is-note', !b.s); now.classList.toggle('no-face', !b.s || !faces);
+  $('.slot', st).innerHTML = b.s && faces ? faceHtml(b.s) : '';
+  who.textContent = b.s || ''; who.className = 'who' + (b.s === AURA ? ' aura' : '');
+  line.dataset.raw = text; line.innerHTML = esc(text) + '<span class="cue" aria-hidden="true">▸</span>';
+  now.classList.remove('is-in'); void now.offsetWidth; now.classList.add('is-in'); words();
+}
+const ticks = (root, i, n) => { $('.ticks', root).innerHTML = Array.from({ length: n }, (_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join(''); };
+
+// ── 01 orbit ──
+function base() {
+  log({ t: 'stop', name: 'SECTOR 1 — THE GRAVEYARD' }, true);
+  log({ t: 'said', who: AURA, text: 'Systems online. Waiting for your orders, Commander.' }, true);
+  log({ t: 'stop', name: 'ATLAS-90 ALPHA' }, true);
+  log({ t: 'rec', text: 'A.U.R.A. plotted the jump.', chips: ['!−10 energy'] }, true);
+  log({ t: 'said', who: 'Aris', text: "In orbit. The med bay's ready if anyone needs it." }, true);
+  log({ t: 'said', who: AURA, text: 'Orbit, Commander. The scanner is ready, and so is the lander.' }, true);
+  next(`${key('DEEP SCAN')} first, to see what is down there.`);
+}
+function scan(quiet) {
+  S.scanned = true; bump('energy', -2, quiet);
+  log({ t: 'rec', text: 'Deep scan: one of our ships is on the surface.', chips: ['!−2 energy', '+1 data'] }, quiet); bump('data', 1, quiet);
+  log({ t: 'said', who: AURA, text: 'Scan complete, Commander. The results are on your screen.' }, quiet);
+  next(`${key('SEND TEAM')} goes down to the wreck. People can get hurt.`); place(); deck();
+}
+function team(quiet) {
+  S.sent = true; bump('energy', -5, quiet); bump('rations', -1, quiet);
+  log({ t: 'rec', text: `Jaxon and Vance take the lander down and cut the hatch of ${WRECK} open.`, chips: ['!−5 energy', '!−1 ration'] }, quiet); deck();
+}
+$('#deck').addEventListener('click', e => {
+  const b = e.target.closest('.cmd'); if (!b || b.disabled || active) return;
+  const cmd = b.dataset.cmd;
+  if (cmd === 'scan') scan(false);
+  if (cmd === 'probe') { S.probed = true; bump('salvage', 12); log({ t: 'rec', g: '+', text: 'The probe comes back from the surface with scrap.', chips: ['+12 salvage'] }); deck(); }
+  if (cmd === 'team') { team(false); next(''); later(700, openScene); }
+  if (cmd === 'date') openMini();
+  if (cmd === 'orbit') later(200, startFilm);                       // the sector map is skipped in this mockup
+});
+$('#hide-tips').addEventListener('click', () => { S.tipsHidden = true; next(S.nextHtml); });
+
+// ── 02 a scene: picture, the world's line, faces, then a choice ──
+const SCENE = {
+  kick: `${WRECK} · THE HOLD · JAXON AND VANCE WENT IN`, title: 'THE STOCKPILE',
+  beats: [{ n: 'The decks are wrecked, but the hold is sealed and dry. A note on the crates says: “For whoever comes next.”' },
+    { s: 'Jaxon', t: "They packed this for the next crew. That's a decent thing to do." },
+    { s: 'Vance', t: "The manifest matches what's in the hold. That's the first honest list I've seen out here." }],
+  choices: [{ t: 'Take everything', c: ['+30 salvage', '+2 food', '+1 luxury', '!Jaxon +1 stress'] }, { t: 'Take half, leave a note of our own', c: ['+15 salvage', '+1 food', '!−1 ration', 'Jaxon −1 stress'] }],
+};
+function openScene() {
+  chapter(2); let i = -1, isDeciding = false, isPicked = false;
+  const L = open('scene', `<section class="card" role="dialog" aria-label="The stockpile"><header class="card-head"><p class="kick">${SCENE.kick}</p><h2 class="w">${SCENE.title}</h2></header>
+    <canvas class="pic" width="480" height="160" aria-hidden="true"></canvas>${stripHtml('Click or Space · Esc skips the talk')}
+    <div class="decide" hidden><p class="ask">What do you do?</p><ol class="choices">${SCENE.choices.map((c, k) => `<li><button class="choice" data-k="${k}"><kbd>${k + 1}</kbd><span class="t w">${esc(c.t)}</span>${chips(c.c)}</button></li>`).join('')}</ol></div></section>`, {
+    next() { if (isDeciding) return; if (i < SCENE.beats.length - 1) { i++; say(L, SCENE.beats[i]); ticks(L, i, SCENE.beats.length); if (i === SCENE.beats.length - 1) $('.hint-text', L).textContent = 'Click or Space for the choice'; } else decide(); },
+    skip() { if (isDeciding) return; i = SCENE.beats.length - 1; say(L, SCENE.beats[i]); ticks(L, i, SCENE.beats.length); decide(); },
+    pick(k) { if (isDeciding) choose(k); },
+  });
+  function decide() { isDeciding = true; $('.prev', L).textContent = ''; $('.decide', L).hidden = false; $('.hint', L).hidden = true; const cue = $('.cue', L); if (cue) cue.remove(); notes('choice'); $('.choice', L).focus({ preventScroll: true }); words(); }
+  function choose(k) { if (isPicked) return; isPicked = true; close(); sceneResult(k, false); }
+  $$('.choice', L).forEach(b => b.addEventListener('click', () => choose(+b.dataset.k)));
+  paintWreck($('.pic', L)); notes('scene'); active.next();
+}
+function sceneResult(k, quiet) {
+  SCENE.beats.filter(b => b.s).forEach(b => log({ t: 'said', who: b.s, text: b.t }, quiet));      // what was said is written down once it has been said
+  if (k === 0) { log({ t: 'rec', text: "Jaxon folds up the note and puts it in his pocket. He doesn't say anything." }, quiet); log({ t: 'rec', g: '+', text: 'Hold emptied.', chips: SCENE.choices[0].c }, quiet); bump('salvage', 30, quiet); }
+  else { log({ t: 'rec', text: 'We write the date and our names on the lid, then seal the hold again.' }, quiet); log({ t: 'rec', g: '+', text: 'Half the hold taken.', chips: SCENE.choices[1].c }, quiet); bump('salvage', 15, quiet); bump('rations', -1, quiet); }
+  if (!quiet) { notes('orbit'); later(900, openDisc); }
+}
+
+// ── 03 pages: the thing itself, turned like a page ──
+const bars = text => text.split(/\s+/).map(w => `<i class="bar" style="width:${(w.length * .56).toFixed(2)}em"></i>`).join(' ');
+function showLines(L, i, texts) {
+  $$('.lines > li', L).forEach((li, k) => {
+    const txt = $('.txt', li), isRead = k <= i;
+    if (isRead && !txt.classList.contains('is-read')) { txt.classList.add('is-read'); txt.textContent = texts[k]; }
+    if (!isRead && txt.classList.contains('is-read')) { txt.classList.remove('is-read'); txt.innerHTML = bars(texts[k]); }
+    li.classList.toggle('is-now', k === i); li.classList.toggle('is-past', k < i);
+    txt.classList.toggle('w', k === i);
+  });
+  $('.count', L).textContent = `${i + 1} of ${texts.length}`; words();
+}
+function openPage(P) {
+  let i = 0, v = -1, stage = 'read', isGone = false;
+  const L = open('page', `<div class="pagebox"><p class="prov">${P.prov}</p><div class="pwrap">${P.html}</div>
+    <div class="under"><p class="turn-hint">Click the page or press Space · ← back · Esc puts it away</p><p class="kept">▤ IN YOUR CARGO</p>${stripHtml('Click or Space')}</div></div>`, {
+    next() { if (stage === 'read') { if (i < P.lines.length - 1) { i++; P.show(L, i); } else if (P.voices.length) { stage = 'talk'; L.classList.add('is-talk'); talk(); } else stash(); } else if (v < P.voices.length - 1) talk(); else stash(); },
+    back() { if (stage === 'read' && i > 0) { i--; P.show(L, i); } },
+    skip: stash,
+  });
+  function talk() { if (v < 0) $$('.txt', L).forEach(t => t.classList.remove('w')); v++; say(L, P.voices[v]); ticks(L, v, P.voices.length); if (!v) notes('talk'); if (v === P.voices.length - 1) $('.hint-text', L).textContent = 'Click to put the page away'; }
+  function stash() { if (isGone) return; isGone = true; $('.pwrap', L).classList.add('is-stashed'); later(620, () => { close(); P.done(); }); }
+  P.show(L, 0); if (P.start) P.start(L); return L;
+}
+function openDisc(reread) {
+  if (!reread) chapter(3); const marks = discMarks(); let focus = null;
+  const html = `<article class="paper sheet" aria-label="A drawing of the disc"><div class="photo"><canvas width="300" height="300" aria-hidden="true"></canvas>${DISC.map((n, k) => `<span class="callout" style="left:${n.at[0] / 3}%;top:${n.at[1] / 3}%">${k + 1}</span>`).join('')}</div>
+    <ol class="lines annot">${DISC.map((n, k) => `<li data-k="${k}"><b>${k + 1} · ${n.label}</b><p class="txt${n.hand ? ' hand' : ''}">${bars(n.text)}</p></li>`).join('')}</ol><p class="pf"><span class="count"></span></p><span class="corner"></span></article>`;
+  openPage({
+    prov: `FOUND IN ${WRECK} · A PAGE FOLDED INTO THE LOGBOOK`, html, lines: DISC.map(n => n.text),
+    voices: reread ? [] : [{ s: AURA, t: 'An old curiosity, Commander. I would not spend time on it.' }, { s: 'Mira', t: "The disc has a pulsar map. Match the wreck's last star fix to it, and we'll know when they died." }],
+    show(L, i) { showLines(L, i, DISC.map(n => n.text)); focus = DISC[i].region; $$('.callout', L).forEach((c, k) => { c.classList.toggle('on', k <= i); c.classList.toggle('now', k === i); }); },
+    start(L) {
+      const ctx = $('canvas', L).getContext('2d'), t0 = performance.now(); every(100, () => drawDisc(ctx, marks, performance.now() - t0, focus)); drawDisc(ctx, marks, 0, focus);
+      $$('.annot li', L).forEach(li => li.addEventListener('mouseenter', () => { if (li.classList.contains('is-past')) focus = DISC[+li.dataset.k].region; }));
+    },
+    done: () => (reread ? null : pageDone(false)),
+  });
+  notes('disc');
+}
+function pageDone(quiet) {
+  log({ t: 'rec', g: '▤', html: `In the logbook of ${esc(WRECK)}: a drawing of a gold disc. <a href="#" class="again" data-page="disc">read again</a>`, chips: ['in cargo'] }, quiet);
+  log({ t: 'said', who: AURA, text: 'An old curiosity, Commander. I would not spend time on it.' }, quiet);
+  log({ t: 'said', who: 'Mira', text: "The disc has a pulsar map. Match the wreck's last star fix to it, and we'll know when they died." }, quiet);
+  S.dateReady = true; deck(); next(`${key('DATE THE WRECK')} lines its last star fix up with the disc.`);
+  if (!quiet) { chapter(4); notes('dateReady'); }
+}
+const MEMO = ['Every Exodus ship\'s computer has a twin here on Earth. The two stay linked, however far apart they are.', 'At 03:14 the twin of the first ship started talking in a voice that was not its own.', 'It was reading out the gold disc we sent into space in 1977. The greeting. The two figures. The map to Earth.', 'Nobody sent it that. Something out there has the disc, and it is reading it through our ship.', 'Keep building ships.'];
+function openMemo() {
+  const cur = $('.chap[aria-current=true]'), interrupted = active && cur ? +cur.dataset.go : 0;   // a scene or page was open: replay its chapter after
+  close();
+  openPage({
+    prov: 'FOUND IN EXODUS-8 “HALCYON” · FOLDED INTO A DEAD CAPTAIN\'S POCKET · SECTOR 2', lines: MEMO, voices: [{ s: 'Mira', t: "Every ship's computer has a twin on Earth? Does ours?" }],
+    html: `<article class="paper memo" aria-label="Memo from Earth"><header class="lh"><span class="seal" aria-hidden="true"><i></i></span><div><b>EXODUS PROGRAMME</b><small>INTERNAL</small></div><span class="stampmark">NOT FOR CREW</span></header>
+      <ol class="lines">${MEMO.map(t => `<li><p class="txt">${bars(t)}</p></li>`).join('')}</ol><p class="pf"><span class="count"></span></p><span class="corner"></span></article>`,
+    show: (L, i) => showLines(L, i, MEMO),
+    done() { log({ t: 'rec', g: '▤', html: 'In EXODUS-8 “HALCYON”: a printed memo from Earth. <a href="#" class="again" data-page="memo">read again</a>', chips: ['in cargo'] }); log({ t: 'said', who: 'Mira', text: "Every ship's computer has a twin on Earth? Does ours?" });
+      if (interrupted) go(interrupted); else notes(S.map ? 'end' : S.dateReady && !S.dated ? 'dateReady' : S.dated ? 'dated' : 'orbit'); },
+  });
+  notes('memo');
+}
+$('#log').addEventListener('click', e => { const a = e.target.closest('.again'); if (!a) return; e.preventDefault(); if (active) return; if (a.dataset.page === 'memo') openMemo(); else openDisc(true); });
+
+// ── 04 the disc minigame (a stand-in): lines keep time, the controls are the only buttons ──
+const PULSARS = Array.from({ length: 14 }, (_, k) => ({ a: (k / 14) * 6.283 - 3.05 + hash(k, 1, 4) * .25, len: 70 + hash(k, 2, 4) * 56, f: .45 + hash(k, 3, 4) * .3, rate: .3 + k * .12, swing: .002 + k * .0012 }));
+function drawChart(ctx, err, f, isLocked) {
+  ctx.fillStyle = '#06090c'; ctx.fillRect(0, 0, 480, 270);
+  for (let k = 0; k < 90; k++) { ctx.fillStyle = hash(k, 3, 2) > .85 ? '#e6eef0' : '#22333b'; ctx.fillRect(hash(k, 1, 2) * 480 | 0, hash(k, 2, 2) * 270 | 0, 1, 1); }
+  const cx = 240, cy = 140, seg = (a, l, col, from = 0) => { ctx.fillStyle = col; for (let t = from; t < l; t += 1) ctx.fillRect(cx + Math.cos(a) * t | 0, cy + Math.sin(a) * t | 0, 1, 1); };
+  const notch = (a, d, col) => { ctx.fillStyle = col; for (let s = -3; s <= 3; s++) ctx.fillRect(cx + Math.cos(a) * d - Math.sin(a) * s | 0, cy + Math.sin(a) * d + Math.cos(a) * s | 0, 1, 1); };
+  PULSARS.forEach(p => {
+    seg(p.a, p.len, '#5a4518', 6); notch(p.a, p.len * p.f, '#d9a24a');
+    const a2 = p.a + err * p.swing, d2 = Math.max(8, p.len * p.f + err * p.rate);
+    seg(a2, p.len, isLocked ? '#e1f6fb' : '#3d6670', 6); notch(a2, d2, isLocked ? '#ffffff' : '#9fd8e6');
+  });
+  ctx.fillStyle = f % 8 < 4 ? '#fff3dc' : '#e9a25e'; ctx.fillRect(cx - 1, cy - 1, 3, 3);
+}
+function openMini() {
+  chapter(4); let years = 45, isLocked = false;
+  const L = open('mini', `<section class="mini-frame" role="dialog" aria-label="Date the wreck"><header class="mini-head"><p class="kick">THE DISC · ${WRECK}</p><h2>DATE THE WRECK</h2></header>
+    <div class="mscreen"><canvas class="drag" width="480" height="270" aria-label="Pulsar chart: drag sideways to change the years"></canvas><p class="readout"><span>YEARS DEAD <b class="yr">45</b></span><span>FIT <b class="fit">poor</b></span></p></div>
+    <div class="mtalk" aria-live="polite"><p class="prev"></p><p class="who"></p><p class="line w"></p></div>
+    <div class="mbtns"><button class="mbtn" data-n="-1" type="button">◀ Fewer years</button><button class="mbtn" data-n="1" type="button">More years ▶</button><button class="mbtn primary" data-lock type="button" disabled>Lock the date</button></div></section>`, {
+    next() {}, skip() {}, left: () => nudge(-1), right: () => nudge(1),
+  });
+  const cv = $('canvas', L), ctx = cv.getContext('2d'); let f = 0;
+  const msay = (who, text) => { const p = $('.prev', L), w = $('.who', L), l = $('.line', L); if (l.textContent) p.textContent = (w.textContent ? w.textContent + ': ' : '') + l.textContent; w.textContent = who; w.className = 'who' + (who === AURA ? ' aura' : ''); l.textContent = text; words(); };
+  function render() { const e = years - FIT_YEARS, fit = Math.abs(e) <= 1 ? 'lines up' : Math.abs(e) <= 6 ? 'close' : 'poor'; $('.yr', L).textContent = years; const fe = $('.fit', L); fe.textContent = isLocked ? 'locked' : fit; fe.classList.toggle('good', fit === 'lines up'); $('[data-lock]', L).disabled = isLocked || fit !== 'lines up'; drawChart(ctx, isLocked ? 0 : e, f, isLocked); }
+  function nudge(d) { if (isLocked) return; years = Math.max(0, Math.min(60, years + d)); render(); }
+  let isDragging = false; const fromX = e => { const r = cv.getBoundingClientRect(); years = Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * 60); render(); };
+  cv.addEventListener('pointerdown', e => { if (isLocked) return; isDragging = true; cv.setPointerCapture(e.pointerId); fromX(e); });
+  cv.addEventListener('pointermove', e => { if (isDragging && !isLocked) fromX(e); });
+  cv.addEventListener('pointerup', () => { isDragging = false; });
+  $$('[data-n]', L).forEach(b => b.addEventListener('click', () => nudge(+b.dataset.n)));
+  $('[data-lock]', L).addEventListener('click', () => {
+    isLocked = true; years = FIT_YEARS; $$('.mbtn', L).forEach(b => { b.disabled = true; }); render();
+    msay('Aris', 'Twenty-one years. We were still asleep when they died.'); later(3200, () => { close(); dated(false); });
+  });
+  every(125, () => { f++; drawChart(ctx, isLocked ? 0 : years - FIT_YEARS, f, isLocked); });
+  render(); notes('mini');
+  later(300, () => msay(AURA, "EXODUS-4's last star fix, Commander. It can tell us when the ship died."));
+  later(2900, () => isLocked || msay('Mira', "Move the point on the chart until the wreck's lines and marks fit the disc."));
+}
+function dated(quiet) {
+  S.dated = true; deck();
+  log({ t: 'rec', text: `The disc dates ${WRECK}: dead for ${FIT_YEARS} years.` }, quiet);
+  log({ t: 'said', who: 'Aris', text: 'Twenty-one years. We were still asleep when they died.' }, quiet);
+  next(`Done here? ${key('BREAK ORBIT')} returns to the map.`); if (!quiet) notes('dated');
+}
+
+// ── 05 the jump: a film that keeps time, then the arrival ──
+const THROW = [['', 'The jump did not finish.'], ['Jaxon', 'The reactor has gone cold.'], ['Vance', 'Everyone, sound off.'], ['', 'Nobody answers.'], ['Mira', 'A.U.R.A.? Are you there?'], ['', 'Nobody answers.'],
+  ['', 'Nobody answers. Nobody answers.'], ['', 'Nobody answers. Nobody answers. Nobody answers.'], ['', 'Ships. Thousands of them, in one long line. None of them are moving.'], ['', 'Every ship Earth ever built. All on the same heading.'], ['', 'Yours is the last one in the line.'], ['', 'At the far end, a light the size of a pinhead.'], ['', 'The burn finishes.']];
+function drawThrow(ctx, b, f) {
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, 480, 270);
+  const gone = b < 3 ? 0 : b < 8 ? (b - 2) / 6 : 1;
+  for (let k = 0; k < 220; k++) if (hash(k, 4, 6) >= gone) { ctx.fillStyle = hash(k, 3, 6) > .85 ? '#e6eef0' : '#2a3b42'; ctx.fillRect(hash(k, 1, 6) * 480 | 0, hash(k, 2, 6) * 270 | 0, 1, 1); }
+  if (b < 8) return;
+  const ship = (x, y, s, isOurs) => {                                // a tiny Exodus hull: rim on top, dark belly, a bridge bump, a round nose
+    const w = Math.max(2, Math.round(s * 2.3)), h = Math.max(1, Math.round(s * .55)), px = x | 0, py = y | 0;
+    ctx.fillStyle = isOurs ? '#3d6670' : s > 6 ? '#22333b' : '#1a282e'; ctx.fillRect(px + (h > 2 ? 1 : 0), py, w - (h > 2 ? 1 : 0), h);
+    if (h > 2) { ctx.fillStyle = '#0b1418'; ctx.fillRect(px + 1, py + h - 1, w - 1, 1); ctx.fillStyle = isOurs ? '#e1f6fb' : '#8aa2aa'; ctx.fillRect(px + 2, py, w - 3, 1); ctx.fillRect(px + Math.round(w * .2), py - 1, Math.max(2, Math.round(w * .15)), 1); }
+    if (isOurs) { ctx.fillStyle = '#e8964a'; ctx.fillRect(px + Math.round(w * .3), py + 1, 2, 1); }   // one lit window: the only people here
+  };
+  for (let k = 259; k >= 0; k--) {                                   // every hull, hanging in one instant, narrowing to the light; none of them move
+    const t = k / 260, x = 24 + (1 - (1 - t) ** 2.2) * 410, s = Math.max(.6, 13 * (1 - t) ** 1.7), y = 135 + (hash(k, 7, 6) - .5) * 80 * (1 - t) ** 1.2;
+    ship(x, y, s, k === 0 && b >= 10);
+  }
+  if (b >= 11) { const R = 11 + (f % 16 < 8 ? 1 : 0); for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) { const d = Math.hypot(dx, dy) / R; if (d < 1 && dith(452 + dx, 134 + dy, (1 - d) ** 1.6)) { ctx.fillStyle = d < .35 ? '#fff3dc' : '#e9a25e'; ctx.fillRect(452 + dx, 134 + dy, 1, 1); } } }   // the light, the size of a pinhead
+}
+function startFilm() {
+  chapter(5); let b = -1, f = 0, timer = null;
+  const L = open('film', `<div class="film"><canvas width="480" height="270" aria-hidden="true"></canvas><p class="cap" aria-live="polite"></p><p class="fhint">Click or Space: next line · Esc: skip</p><i class="fbar"><b></b></i></div>`, { next: advance, skip: arrive });
+  const ctx = $('canvas', L).getContext('2d');
+  every(80, () => drawThrow(ctx, Math.max(0, b), f++));
+  function advance() {
+    b++; if (b >= THROW.length) { arrive(); return; }
+    const [who, text] = THROW[b], cap = $('.cap', L);
+    cap.innerHTML = who ? `<b>${esc(who)}</b><span class="v w">${esc(text)}</span>` : `<span class="n w">${esc(text)}</span>`;
+    cap.classList.remove('is-in'); void cap.offsetWidth; cap.classList.add('is-in');
+    $('.fbar b', L).style.width = `${(b + 1) / THROW.length * 100}%`; clearTimeout(timer); timer = later(b >= 8 ? 3200 : 2100, advance); words();
+  }
+  notes('film'); advance();
+}
+function arrive() {
+  const L = open('arrival', `<div class="arrive" role="dialog" aria-label="Sector 3"><p class="kick">SECTOR 3 OF 6 · THE BURN FINISHED</p><h2 class="w">THE SIGNAL</h2>
+    <p class="aline w">Hundreds of ship beacons, all ours. Their numbers are higher than ours, and they are a hundred years old.</p>${stripHtml('Click to go on')}</div>`, { next() { close(); toSector3(false); }, skip() { close(); toSector3(false); } });
+  say(L, { s: 'Mira', t: 'Commander, there are a lot more than eight ships out here.' }); ticks(L, 0, 1); notes('arrival');
+}
+function toSector3(quiet) {
+  Object.assign(S, { sector: 3, sectorName: 'THE SIGNAL', map: true }); hud(); place(); deck(); paintMap();
+  log({ t: 'stop', name: 'SECTOR 3 — THE SIGNAL' }, quiet);
+  log({ t: 'rec', text: 'The burn finishes. You were in the warp the whole time.' }, quiet);
+  log({ t: 'said', who: 'Mira', text: 'Commander, there are a lot more than eight ships out here.' }, quiet);
+  next("Date a wreck with the disc to find this sector's signal."); notes('end');
+}
+
+// ── chapters: each one replays the ones before it quietly, then opens ──
+function chapter(n) { $$('.chap[data-go]').forEach(c => c.setAttribute('aria-current', String(+c.dataset.go === n))); }
+function go(n) {
+  close(); S = fresh(); $('#log').innerHTML = ''; hud(); place(); deck(); paintOrbit(); base();
+  if (n >= 2) { scan(true); team(true); }
+  if (n >= 3) sceneResult(1, true);
+  if (n >= 4) pageDone(true);
+  if (n >= 5) dated(true);
+  hud(); chapter(n);
+  ({ 1: () => notes('orbit'), 2: openScene, 3: () => openDisc(false), 4: openMini, 5: startFilm })[n]();
+}
+$$('.chap[data-go]').forEach(c => c.addEventListener('click', () => go(+c.dataset.go)));
+$('.chap[data-memo]').addEventListener('click', openMemo);
+
+(function paperTexture() {                                           // a dithered paper grain, so pages belong to the pixel world
+  const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), im = x.createImageData(64, 64);
+  for (let y = 0; y < 64; y++) for (let i = 0; i < 64; i++) setc(im, i, y, dith(i, y, fbm(i * .09, y * .09, 31) * .55 - .08) ? [196, 186, 161] : [216, 208, 188]);
+  x.putImageData(im, 0, 0); document.documentElement.style.setProperty('--tex', `url(${c.toDataURL()})`);
+})();
+const start = /^#(\d|memo)(?:\/(\d+))?/.exec(location.hash);           // #3/2 opens chapter 3 and presses "next" twice: a link to any moment
+go(start && start[1] !== 'memo' ? Math.min(5, Math.max(1, +start[1])) : 1);
+if (start && start[1] === 'memo') openMemo();
+if (start && start[2]) for (let k = 0; k < +start[2]; k++) if (active) active.next();
+</script>
+</body>
+</html>
