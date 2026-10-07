@@ -193,7 +193,7 @@ const CAMPFIRE_EVENTS = [
                 requiresLabel: "Needs 25 Salvage",
                 effect: (state) => {
                     state.salvage -= 25;
-                    state._driveReinforced = true; // read by App.handleSectorJump and NavView: 20% off the next jump, once
+                    state._driveReinforced = true; // read by App.sectorJumpCost: 4 off the next jump, once
                     const damaged = Object.entries(state.shipDecks).find(([k, v]) => v.status === 'DAMAGED');
                     if (damaged) {
                         damaged[1].status = 'OPERATIONAL';
@@ -209,7 +209,7 @@ const CAMPFIRE_EVENTS = [
                 requiresLabel: "Needs 10 Salvage",
                 effect: (state) => {
                     state.salvage -= 10;
-                    state._driveReinforced = true; // read by App.handleSectorJump and NavView: 20% off the next jump, once
+                    state._driveReinforced = true; // read by App.sectorJumpCost: 4 off the next jump, once
                     return "The cracked frame is patched. Jaxon: 'It'll hold.' -10 Salvage.";
                 }
             },
@@ -465,7 +465,7 @@ const CAMPFIRE_EVENTS = [
                         damaged[1].status = 'OPERATIONAL';
                         return `${damaged[1].label} repaired. -15 Salvage.`;
                     }
-                    state._driveReinforced = true; // read by App.handleSectorJump and NavView: 20% off the next jump, once
+                    state._driveReinforced = true; // read by App.sectorJumpCost: 4 off the next jump, once
                     return "Nothing was damaged, so Jaxon braces the drive instead. The next sector jump costs less. -15 Salvage.";
                 }
             },

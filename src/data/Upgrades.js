@@ -7,7 +7,7 @@ const UPGRADES = {
         name: 'Sensor Array V2',
         cost: 150,
         desc: 'A proper dish instead of the factory antenna.',
-        effect: 'Long-range scans cost nothing, and report air and gravity as well.',
+        effect: 'Long-range scans report air and gravity as well.',
         mount: 'Nose',
         icon: ['............', '...######...', '..#++++++#..', '.#++++++++#.', '.#++++++++#.', '..#++++++#..', '...######...', '.....##.....', '.....##.....', '.....##.....', '....####....', '...######...']
     },
@@ -34,7 +34,7 @@ const UPGRADES = {
         name: 'Bussard Fuel Scoop',
         cost: 100,
         desc: 'Magnetic funnels that drink hydrogen.',
-        effect: 'Orbiting a gas giant refuels 5–10 energy.',
+        effect: 'Arriving at a gas giant refuels 8–15 energy.',
         mount: 'Beside the nose',
         icon: ['#..........#', '##........##', '#+#......#+#', '#++#....#++#', '.#++#..#++#.', '..#++##++#..', '...#++++#...', '....#++#....', '....#++#....', '....####....', '.....##.....', '.....##.....']
     },

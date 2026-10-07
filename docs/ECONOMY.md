@@ -1,7 +1,7 @@
 # The economy (2026-10-07)
 
-**Status:** a proposal. Nothing in the game has been changed. Numbers below come from the code as it is today
-(`src/bundle.js`, `src/data/*`, `src/systems/*`), not from the older design docs.
+**Status:** a proposal. The "First aid" block of section 5 is in the game (2026-10-07); nothing else is. Sections 1 and 2
+describe the code as it was before that, from `src/bundle.js`, `src/data/*` and `src/systems/*`, not from the older design docs.
 
 **The short answer.** Today a careful player runs dry in sector 2. That does not end the game. It deletes the story: the
 ship jumps "on the reserve" through sectors 3 to 5 without stopping, and reaches the light with one page of six. Without
@@ -341,9 +341,15 @@ launch, once the spine is decided. Seeded maps only as a debug tool. No endless 
 ## 5. Checklist
 
 **First aid** (about 5 h). Moves the careful player's dry point from sector 2 to about sector 5:
-- [ ] Deep scan, team trips and map scans cost no energy; site labels show on the map (assessment item 3) — 2–3 h
-- [ ] Rations only on jumps (and "a day" options); remove the per-action drain and the REST button — 1 h
-- [ ] Warps 4–6 shown as one price, no refunds; jump 8; the dated story planet free — 1.5 h
+- [x] Deep scan, team trips and map scans cost no energy; site labels show on the map (assessment item 3) — 2–3 h
+- [x] Rations only on jumps (and "a day" options); remove the per-action drain and the REST button — 1 h
+- [x] Warps 4–6 shown as one price, no refunds; jump 8; the dated story planet free — 1.5 h
+
+  Done 2026-10-07. The crew eats 1 ration a jump for now (`RATIONS_PER_JUMP`): "5 per jump" needs the start of 25 and the
+  food finds from section 3 first. A braced drive takes a flat 4 off the next jump (the card already said "+4"). Mira's
+  "obsessed" trip costs a ration ("a full day") instead of double energy. A headless run of the section 1 careful player
+  on 2,000 random maps: energy now runs short in sector 5 (was sector 2), 4.4 pages of 6 (was 1); story stops only reach
+  the light with all 6 pages and about 3 energy; rations reach 0 in sector 5 for the careful player (no deaths).
 
 **Cut**
 - [ ] Fabricator, the 7 upgrades, the ship add-ons, every upgrade check (list in section 2, item 7); the FABRICATION room

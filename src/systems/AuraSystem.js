@@ -125,7 +125,7 @@ const AURA_COMMENTARY = {
 
     // Crew stress high
     CREW_STRESS: {
-        COOPERATIVE: ["The crew is under strain, Commander. Rest would help."],
+        COOPERATIVE: ["The crew is under strain, Commander. They rest on the jumps, while the quarters work."],
         NEUTRAL: ["Crew stress is high, Commander. Expect more mistakes."],
         SUSPICIOUS: ["Crew stress is high, Commander. I have logged the readings."],
         ADVERSARIAL: ["Crew stress is high, Commander."]
