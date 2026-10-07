@@ -1,0 +1,477 @@
+<!doctype html>
+<!--
+  CREW STUDY — new crew sprites for Silent Exodus (12 × 24, side view). A study page; nothing in the game is changed.
+
+  ┌─ HOW IT FITS TOGETHER ────────────────────────────────────────────────────────────────────────────────────────┐
+  │ crew/skeleton.js  the shared skeleton: pose tables for every action and frame, and the renderer. Everyone    │
+  │                   moves the same way. Do not change it for one character; ask the style lead.                │
+  │ crew/<name>.js    one costume per character: cora (reference), jaxon, aris, vance, mira.                     │
+  │ docs/CREW_SPRITES.md  the rules: size, outline, light, tones, palettes, actions.                               │
+  └────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+  REGISTER API — each crew/<name>.js makes exactly one call:
+
+    CrewSprites.register({
+      id: 'cora', name: 'Cora', role: 'Commander',
+      portrait: '../../assets/crew/F_1.png',          // shown beside the sprite
+      signature: 'one line: what makes them readable',
+      idle: 'behind',                                  // arm habit when standing: 'hang' | 'behind' | 'crossed' | 'hips'
+      palette: { hair: [dark, mid, light, (highlight)], skin: [...], suit: [...], ... },   // hex, darkest first
+      keys: { '1': 'hair:0', 's': 'skin:1', ... },      // map character -> 'material:tone'
+      blink: ['e', 's'],                               // on a blink (and asleep) the eye key is drawn as this key
+      head: {
+        side: { anchor: [col, row], map: [...] },      // facing right; anchor = the neck cell (last row = collar)
+        back: { anchor: [col, row], map: [...] },      // seen from behind (climbing)
+        down: { anchor: [col, row], map: [...] },      // optional: head bowed (kneeling, facing the wall)
+      },
+      torso: {
+        side: { spine: col, squash: row, map: [...] }, // row 0 = shoulders, last row = hips; spine = the column over the hips
+        back: { spine: col, squash: row, map: [...] }, // same row count as side
+      },
+      neckX: 0, shoulderX: 0, backShoulder: 3,         // optional nudges (columns)
+      limbs: { arm: 'suit', hand: 'skin', cuff: 'trim', leg: 'suit', foot: 'boot',
+               armWidth: 2, legWidth: 2, bootRows: 1, rim: false },   // arms and legs are drawn by the skeleton
+      extras(api, layer) { … },                        // optional: layer 'back' (before the body) or 'front' (after)
+                                                       // api: put(x, y, material, tone), has(x, y), view, action, frame,
+                                                       //      pose, S (shoulder), J (arm joint), hip, neck, hands
+    });
+
+  READING SPRITES (for the game later): CrewSprites.draw(ctx, id, action, frame, x, feetY, { dir: 1 | -1 }) draws on
+  a low-res canvas; CrewSprites.pixels(id, action, frame) gives [[x, y, hex], …]; CrewSprites.frameAt(action, ms)
+  gives the frame; CrewSprites.ACTIONS[action] has frames, ms (per frame) and move ([dx, dy] per frame).
+  Actions: idle, walk, console, climb, sit, sleep, tend, carry, wall.
+
+  DEBUG (the browser pane can pause requestAnimationFrame): crewStudy.pause(), crewStudy.setTime(ms),
+  crewStudy.step(ms = 125), crewStudy.play(). URL: ?t=1500 shows a still at 1.5 s.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew Study</title>
+<meta name="description" content="Silent Exodus: new 12 x 24 crew sprites built from the five portraits. One shared skeleton, one costume per character. Cora is finished as the reference; the other four are placeholders.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    color-scheme: dark;
+    --void: #0a0a0b; --deep: #111214; --dusk: #1a1c20; --mist: #44484f;
+    --line: #1d1f23; --line2: #33373e;
+    --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --ui-br: #ffffff;
+    --warm: #f08c2e; --warm-br: #ffc27a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --gutter: clamp(16px, 2.2vw, 40px);
+    --fast: 140ms; --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--void); }
+body { color: var(--text); font: 15px/1.55 var(--f-text); -webkit-font-smoothing: antialiased; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #05070a; }
+p { margin: 0; }
+h1, h2, h3 { margin: 0; font-family: var(--f-ui); font-weight: 600; letter-spacing: 0.01em; }
+.page { max-width: 1840px; margin: 0 auto; padding: 0 var(--gutter) 96px; }
+
+.bar { display: flex; align-items: center; gap: 18px; height: 44px; border-bottom: 1px solid var(--line); font: 500 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.bar .tag { padding: 4px 7px; border: 1px solid var(--line2); color: var(--dim); }
+.hero { padding: 48px 0 32px; border-bottom: 1px solid var(--line); }
+.hero h1 { font-size: clamp(34px, 3.6vw, 52px); line-height: 1.02; color: var(--ui-br); }
+.hero .lede { margin-top: 14px; max-width: 70ch; font-size: 17px; color: var(--ui); }
+
+.controls { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 0; background: var(--void); border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line2); }
+.seg button { padding: 8px 14px; border: 0; border-right: 1px solid var(--line2); background: none; cursor: pointer; font: 500 13px/1 var(--f-ui); letter-spacing: 0.04em; color: var(--dim); transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
+.seg button:last-child { border-right: 0; }
+.seg button:hover { color: var(--text); background: var(--deep); }
+.seg button[aria-pressed="true"] { color: var(--void); background: var(--ui); }
+.seg button:focus-visible { outline: 1px solid var(--ui-br); outline-offset: 2px; }
+.controls .label { margin-right: 4px; }
+.clock { margin-left: auto; font: 400 12px/1 var(--f-num); color: var(--faint); }
+
+.sec { padding-top: 48px; }
+.sec-head { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px 16px; align-items: baseline; margin-bottom: 24px; }
+.sec-head .num { font: 500 13px/1 var(--f-num); color: var(--faint); }
+.sec-head h2 { font-size: 28px; color: var(--ui-br); }
+.sec-head p { grid-column: 2; max-width: 76ch; color: var(--dim); }
+.label { font: 600 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.indent { margin-left: 72px; }
+
+/* size */
+.size { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-end; }
+.size figure, .who figure { margin: 0; }
+.size figcaption, .who figcaption { margin-top: 8px; font-size: 13px; color: var(--dim); }
+.size figcaption b, .who figcaption b { color: var(--text); font: 600 13px/1 var(--f-ui); letter-spacing: 0.05em; margin-right: 6px; }
+.size img { width: 204px; height: 204px; display: block; image-rendering: pixelated; }
+.why { max-width: 56ch; color: var(--ui); }
+.why li { margin: 4px 0; }
+.why li::marker { color: var(--faint); }
+
+/* lineup */
+.lineup-portraits { display: grid; grid-template-columns: repeat(5, 170px); }
+.lineup-portraits img { width: 150px; height: 150px; margin: 0 10px; display: block; image-rendering: pixelated; }
+.lineup-names { display: grid; grid-template-columns: repeat(5, 170px); margin-top: 8px; }
+.lineup-names span { text-align: center; font: 600 14px/1 var(--f-ui); color: var(--text); }
+.lineup-names em { display: block; margin-top: 4px; font: 400 11.5px/1 var(--f-num); font-style: normal; color: var(--faint); }
+
+/* one character */
+.who { padding: 32px 0 40px; border-top: 1px solid var(--line); }
+.who-head { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 20px; align-items: start; margin-bottom: 24px; }
+.who-head img { width: 160px; height: 160px; display: block; image-rendering: pixelated; border: 1px solid var(--line2); }
+.who-head h3 { font-size: 30px; color: var(--ui-br); }
+.who-head .role { margin-left: 10px; font: 400 13px/1 var(--f-num); color: var(--faint); }
+.who-head .sig { margin-top: 8px; color: var(--ui); max-width: 60ch; }
+.tag-ph { display: inline-block; margin-left: 10px; padding: 3px 7px; border: 1px solid var(--line2); font: 600 10.5px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); vertical-align: 6px; }
+.tag-ref { border-color: var(--warm); color: var(--warm-br); }
+.scales { display: flex; gap: 28px; align-items: flex-end; margin-top: 18px; }
+.stages { display: grid; grid-template-columns: repeat(auto-fill, 216px); gap: 18px 16px; margin-bottom: 28px; }
+.sheet-wrap { display: grid; grid-template-columns: 150px auto; gap: 0 12px; align-items: start; }
+.sheet-rows { display: grid; grid-auto-rows: 64px; }
+.sheet-rows span { display: flex; align-items: center; justify-content: flex-end; font-size: 12.5px; color: var(--dim); text-align: right; }
+
+.api { max-width: 92ch; color: var(--dim); }
+.api code { font: 400 13px/1.5 var(--f-num); color: var(--ui); }
+.foot { margin-top: 40px; color: var(--faint); font-size: 13px; }
+
+@media (max-width: 900px) {
+    .indent { margin-left: 0; }
+    .sec-head { grid-template-columns: 1fr; }
+    .sec-head p { grid-column: 1; }
+    .who-head { grid-template-columns: 1fr; }
+    .lineup-wrap { overflow-x: auto; }
+    .stages { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="bar"><span class="tag">Study</span><span>Silent Exodus · crew sprites · 7 Oct</span></div>
+    <header class="hero">
+        <h1>The crew, as sprites</h1>
+        <p class="lede">New crew figures built from the five portraits. One skeleton moves everyone the same way; each person has their own costume. Cora is finished as the example. The other four are rough stand-ins until their own pass.</p>
+    </header>
+
+    <div class="controls" role="group" aria-label="Playback">
+        <span class="label">Motion</span>
+        <div class="seg"><button type="button" id="play" aria-pressed="true">Play</button><button type="button" id="step">Step</button></div>
+        <span class="label">Facing</span>
+        <div class="seg" id="facing"><button type="button" data-dir="1" aria-pressed="true">Right</button><button type="button" data-dir="-1" aria-pressed="false">Left</button></div>
+        <span class="label">Room</span>
+        <div class="seg" id="room"><button type="button" data-room="lamp" aria-pressed="true">Lamp on</button><button type="button" data-room="dark" aria-pressed="false">Dark</button></div>
+        <span class="clock" id="clock">0.00 s</span>
+    </div>
+
+    <section class="sec" aria-labelledby="size-h">
+        <div class="sec-head"><span class="num">01</span><h2 id="size-h">Size: 12 × 24</h2>
+            <p>The Tall option (9 × 17) was the right shape but its head is 4 pixels high: not enough for a fringe, a collar and a face. At 12 × 24 the head is 6 rows plus a collar, and the body is 4 heads tall, which still reads as a grown adult.</p></div>
+        <div class="size indent">
+            <figure><img src="../../assets/crew/F_1.png" alt="Cora's portrait"><figcaption><b>Portrait</b>F_1</figcaption></figure>
+            <figure><canvas id="size-cmp"></canvas><figcaption><b>9 × 17</b>today's Tall &nbsp; <b>12 × 24</b>new, at 6×</figcaption></figure>
+            <figure><canvas id="size-1x"></canvas><figcaption><b>1×</b>as in the game</figcaption></figure>
+            <ul class="why">
+                <li>The head gets 6 rows: hair top, fringe, eyes, nose, chin, and the bob ending at the jaw.</li>
+                <li>Room for one signature detail each: Cora's cyan seam, Aris's goggles, Vance's ring collar.</li>
+                <li>Legs are 11 rows, so a 6-frame walk has a real stride and a knee.</li>
+                <li>In a cutaway seen closer (the This War of Mine idea) 24 rows is a person, not a token.</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="sec" aria-labelledby="lineup-h">
+        <div class="sec-head"><span class="num">02</span><h2 id="lineup-h">The five, side by side</h2>
+            <p>The test: shown the sprites and the portraits, a stranger should match all five at a glance. Only Cora is drawn for real; the others are stand-ins in their portrait colours.</p></div>
+        <div class="indent lineup-wrap">
+            <div class="lineup-portraits" id="lineup-portraits"></div>
+            <canvas id="lineup"></canvas>
+            <div class="lineup-names" id="lineup-names"></div>
+        </div>
+    </section>
+
+    <section class="sec" aria-labelledby="crew-h">
+        <div class="sec-head"><span class="num">03</span><h2 id="crew-h">Each of them, every action</h2>
+            <p>Idle, walk, work at a console, climb, sit, sleep, kneel and tend someone, carry a box, and stand alone facing a wall. Below each set, every frame in a row.</p></div>
+        <div id="crew"></div>
+    </section>
+
+    <section class="sec" aria-labelledby="api-h">
+        <div class="sec-head"><span class="num">04</span><h2 id="api-h">For the next pass</h2>
+            <p>The rules are in docs/CREW_SPRITES.md. The register API is written at the top of this file.</p></div>
+        <div class="api indent">
+            <p>Each character is one file in <code>prototypes/screens/crew/</code> that calls <code>CrewSprites.register({ … })</code> with a palette, keys, two head maps, two torso maps and limb materials. Arms, legs, feet, timing and poses come from <code>crew/skeleton.js</code> and are the same for everyone.</p>
+        </div>
+    </section>
+    <p class="foot">Study page only. Nothing in the game is changed. No sound.</p>
+</div>
+
+<script src="crew/skeleton.js"></script>
+<script src="crew/cora.js"></script>
+<script src="crew/jaxon.js"></script>
+<script src="crew/aris.js"></script>
+<script src="crew/vance.js"></script>
+<script src="crew/mira.js"></script>
+<script>
+(function () {
+    'use strict';
+    const CS = window.CrewSprites;
+    const ORDER = ['cora', 'jaxon', 'aris', 'vance', 'mira'];
+    const crew = ORDER.map(id => CS.get(id)).filter(Boolean);
+    const BAYER8 = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22, 3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21].map(v => (v + 0.5) / 64);
+    const bayer = (x, y) => BAYER8[((y & 7) << 3) | (x & 7)];
+    const ramp = (r, v, x, y) => { const top = r.length - 1, pos = Math.max(0, Math.min(1, v)) * top, lo = Math.floor(pos); return r[Math.min(top, lo + (pos - lo > bayer(x, y) ? 1 : 0))]; };
+    // the room: steel cooling to the ink, a lamp pool that warms it (warmth is what people made)
+    const WALL = ['#05070a', '#0b0e12', '#12161b', '#1b1e22', '#2b2620', '#4a3826'];
+    const FLOOR = ['#05070a', '#0e1317', '#182026', '#26313a', '#3a4852'];
+    const STEEL = ['#0b0f13', '#18212a', '#283440', '#3c4a57', '#5b6b78'];
+    const BLANKET = ['#24160f', '#43291b', '#62402a', '#80583a'];
+    const SCREEN = ['#05070a', '#0a2a30', '#145a64', '#2fa7b4', '#8fe9f2'];
+
+    const state = { t: 0, playing: true, dir: 1, room: 'lamp', last: null };
+    const params = new URLSearchParams(location.search);
+    if (params.has('t')) { state.t = Number(params.get('t')) || 0; state.playing = false; }
+
+    // ── crisp canvases: each sprite pixel is a whole number of device pixels ──
+    function crisp(canvas, w, h, scale) {
+        const dpr = window.devicePixelRatio || 1, k = Math.max(1, Math.round(scale * dpr));
+        canvas.width = w * k; canvas.height = h * k;
+        canvas.style.width = (w * k / dpr) + 'px'; canvas.style.height = (h * k / dpr) + 'px';
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        return { canvas, ctx, w, h, k };
+    }
+    function begin(view) {
+        const { ctx, w, k } = view;
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, view.canvas.width, view.canvas.height);
+        ctx.setTransform(state.dir < 0 ? -k : k, 0, 0, k, state.dir < 0 ? w * k : 0, 0);
+        return ctx;
+    }
+    const rect = (ctx, hex, x, y, w = 1, h = 1) => { ctx.fillStyle = hex; ctx.fillRect(x, y, w, h); };
+
+    // ── backgrounds, painted once per size and room ──
+    const BG = new Map();
+    function room(w, h, floorY, lampX, mode) {
+        const key = [w, h, floorY, lampX, mode].join(',');
+        if (BG.has(key)) return BG.get(key);
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const x2 = c.getContext('2d'), strength = { lamp: 0.62, dim: 0.36, dark: 0.16 }[mode] || 0.62;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+            let hex;
+            if (y > floorY) hex = y === floorY + 1 ? FLOOR[3] : ramp(FLOOR, 0.42 - (y - floorY) * 0.06 + (x % 12 === 0 ? -0.15 : 0), x, y);
+            else {
+                const d = Math.hypot((x - lampX) / 1.4, y - 1), lamp = Math.exp(-d / 17) * strength;
+                hex = ramp(WALL, 0.2 + lamp * 0.9 - (x % 16 === 0 ? 0.08 : 0), x, y);
+            }
+            x2.fillStyle = hex; x2.fillRect(x, y, 1, 1);
+        }
+        if (mode !== 'dark') { x2.fillStyle = '#ffd28a'; x2.fillRect(lampX - 1, 0, 3, 1); x2.fillStyle = '#7a5528'; x2.fillRect(lampX - 2, 0, 1, 1); x2.fillRect(lampX + 2, 0, 1, 1); }
+        BG.set(key, c);
+        return c;
+    }
+
+    // ── props ──
+    function consoleProp(ctx, x0, floorY, t) {
+        for (let y = floorY - 8; y <= floorY; y++) for (let x = x0; x < x0 + 10; x++) rect(ctx, y === floorY - 8 ? STEEL[4] : x === x0 ? STEEL[3] : ramp(STEEL, 0.35 - (y - floorY + 8) * 0.03, x, y), x, y);
+        const flick = Math.floor(t / 340) % 3;
+        for (let y = floorY - 19; y <= floorY - 11; y++) for (let x = x0 + 4; x < x0 + 9; x++) {
+            const edge = y === floorY - 19 || y === floorY - 11 || x === x0 + 4 || x === x0 + 8;
+            rect(ctx, edge ? STEEL[2] : ramp(SCREEN, 0.45 + ((y + flick) % 3 === 0 ? 0.35 : 0) - (x - x0 - 5) * 0.05, x, y), x, y);
+        }
+        for (let y = floorY - 24; y <= floorY - 6; y++) for (let x = x0 - 2; x < x0 + 4; x++) {
+            const v = 0.3 * Math.exp(-Math.hypot(x - x0 - 4, y - floorY + 15) / 4);
+            if (v > bayer(x + 3, y) * 0.5 + 0.1) rect(ctx, SCREEN[1], x, y);
+        }
+    }
+    function ladderProp(ctx, cx, h, rungPhase) {
+        for (let y = 0; y < h; y++) {
+            rect(ctx, STEEL[1], cx - 7, y); rect(ctx, STEEL[3], cx - 6, y);
+            rect(ctx, STEEL[1], cx + 6, y); rect(ctx, STEEL[3], cx + 7, y);
+            if (((y - rungPhase) % 4 + 4) % 4 === 0) for (let x = cx - 5; x <= cx + 5; x++) rect(ctx, x === cx - 5 ? STEEL[3] : STEEL[2], x, y);
+        }
+    }
+    function chairProp(ctx, sx, floorY, front) {
+        if (!front) { for (let y = floorY - 13; y <= floorY - 4; y++) rect(ctx, STEEL[2], sx - 5, y); rect(ctx, STEEL[3], sx - 5, floorY - 13); return; }
+        for (let x = sx - 5; x <= sx + 2; x++) { rect(ctx, STEEL[3], x, floorY - 4); rect(ctx, STEEL[1], x, floorY - 3); }
+        for (let y = floorY - 2; y <= floorY; y++) { rect(ctx, STEEL[1], sx - 4, y); rect(ctx, STEEL[1], sx + 1, y); }
+    }
+    function bunkProp(ctx, x0, x1, top) {
+        for (let x = x0; x <= x1; x++) { rect(ctx, '#3b3a36', x, top + 1); rect(ctx, '#2a2925', x, top + 2); rect(ctx, STEEL[3], x, top + 3); rect(ctx, STEEL[1], x, top + 4); }
+        for (let x = x0; x <= x1; x++) { rect(ctx, STEEL[3], x, top - 15); rect(ctx, STEEL[1], x, top - 14); }
+        for (let y = top - 15; y <= top + 12; y++) { rect(ctx, STEEL[2], x0 - 1, y); rect(ctx, STEEL[2], x1 + 1, y); }
+    }
+    function pillow(ctx, x, top) { for (let i = 0; i < 6; i++) { rect(ctx, '#5d5850', x + i, top - 1); rect(ctx, '#3e3a35', x + i, top); } rect(ctx, '#77716a', x + 1, top - 2, 4, 1); }
+    /** Blanket over the sleeper from column x0 on: it follows the top of the body, lit along its top edge. */
+    function blanket(ctx, id, frame, sx, feetY, x0, x1) {
+        const tops = new Map();
+        CS.pixels(id, 'sleep', frame).forEach(([x, y]) => { const X = sx + x; if (!tops.has(X) || feetY + 1 + y < tops.get(X)) tops.set(X, feetY + 1 + y); });
+        for (let x = x0; x <= x1; x++) {
+            const top = Math.min(tops.has(x) ? tops.get(x) - 1 : feetY - 1, feetY - 1);
+            for (let y = top; y <= feetY + 1; y++) rect(ctx, y === top ? BLANKET[3] : ramp(BLANKET, 0.6 - (y - top) * 0.12, x, y), x, y);
+        }
+    }
+    function wallProp(ctx, x0, w, floorY) {
+        for (let y = 0; y <= floorY; y++) for (let x = x0; x < w; x++) rect(ctx, x === x0 ? STEEL[3] : x === x0 + 1 ? STEEL[1] : ramp(STEEL, 0.2 + ((y % 14) === 0 ? -0.2 : 0), x, y), x, y);
+    }
+
+    // ── one stage per action ──
+    const STAGE_W = 72, STAGE_H = 44, FLOOR_Y = 38;
+    const STAGES = {
+        idle: (ctx, c, t) => CS.draw(ctx, c.id, 'idle', CS.frameAt('idle', t), 36, FLOOR_Y),
+        walk: (ctx, c, t) => walkAcross(ctx, c, 'walk', t),
+        carry: (ctx, c, t) => walkAcross(ctx, c, 'carry', t),
+        console: (ctx, c, t) => { consoleProp(ctx, 34, FLOOR_Y, t); CS.draw(ctx, c.id, 'console', CS.frameAt('console', t), 28, FLOOR_Y); },
+        climb: (ctx, c, t) => {
+            const n = CS.stepsAt('climb', t), feetY = FLOOR_Y - (n % 16);
+            ladderProp(ctx, 36, STAGE_H, (FLOOR_Y + 1) % 4);
+            CS.draw(ctx, c.id, 'climb', n % 4, 36, feetY);
+        },
+        sit: (ctx, c, t) => { chairProp(ctx, 30, FLOOR_Y, false); CS.draw(ctx, c.id, 'sit', CS.frameAt('sit', t), 30, FLOOR_Y); chairProp(ctx, 30, FLOOR_Y, true); },
+        sleep: (ctx, c, t) => {
+            const top = 27, f = CS.frameAt('sleep', t);
+            bunkProp(ctx, 20, 52, top); pillow(ctx, 21, top);
+            CS.draw(ctx, c.id, 'sleep', f, 36, top);
+            blanket(ctx, c.id, f, 36, top, 33, 51);
+        },
+        tend: (ctx, c, t) => {
+            const other = crew[(crew.indexOf(c) + 1) % crew.length];
+            CS.draw(ctx, other.id, 'sleep', 0, 38, FLOOR_Y);
+            CS.draw(ctx, c.id, 'tend', CS.frameAt('tend', t), 20, FLOOR_Y);
+        },
+        wall: (ctx, c, t) => { wallProp(ctx, 44, STAGE_W, FLOOR_Y); CS.draw(ctx, c.id, 'wall', CS.frameAt('wall', t), 37, FLOOR_Y); },
+    };
+    function walkAcross(ctx, c, action, t) {
+        const n = CS.stepsAt(action, t), span = STAGE_W + 28, x = -14 + ((n * CS.ACTIONS[action].move[0]) % span);
+        CS.draw(ctx, c.id, action, n % 6, x, FLOOR_Y);
+    }
+    const ROOM_MODE = { wall: 'dark', sleep: 'dim' };
+
+    // ── build the page ──
+    const views = [];
+    function addView(canvas, w, h, scale, paint) { const v = crisp(canvas, w, h, scale); v.paint = paint; views.push(v); return v; }
+
+    function buildSize() {
+        const cora = CS.get('cora');
+        addView(document.getElementById('size-cmp'), 40, 34, 6, (ctx, t) => {
+            ctx.drawImage(room(40, 34, 28, 20, state.room), 0, 0);
+            drawTallCora(ctx, 9, 28);
+            if (cora) CS.draw(ctx, 'cora', 'idle', CS.frameAt('idle', t), 28, 28);
+        });
+        addView(document.getElementById('size-1x'), 40, 34, 1, (ctx, t) => {
+            ctx.drawImage(room(40, 34, 28, 20, state.room), 0, 0);
+            drawTallCora(ctx, 9, 28);
+            if (cora) CS.draw(ctx, 'cora', 'idle', CS.frameAt('idle', t), 28, 28);
+        });
+    }
+    // Cora at the Tall size (9 × 17), drawn as well as that size allows, for comparison.
+    const TALL_CORA = ['..2333...', '.123344..', '.12223333', '112sSeS..', '.12kSSS..', '...bnc...', '..bnnNc..', '..bnnNc..', '..bnnNc..', '..bbnnc..', '..bbnnn..', '...bnn...', '...bnn...', '...bnn...', '...bnn...', '...ooo...', '...oooo..'];
+    function drawTallCora(ctx, x, feetY) {
+        const c = CS.get('cora');
+        if (!c) return;
+        const key = { 1: c.palette.hair[0], 2: c.palette.hair[1], 3: c.palette.hair[2], 4: c.palette.hair[3], s: c.palette.skin[1], S: c.palette.skin[2], k: c.palette.skin[0], e: c.palette.eye[1], b: c.palette.suit[0], n: c.palette.suit[1], N: c.palette.suit[2], c: c.palette.trim[1], o: c.palette.boot[1] };
+        TALL_CORA.forEach((row, r) => [...row].forEach((ch, i) => { if (key[ch]) rect(ctx, key[ch], x + i - 4, feetY - 16 + r); }));
+    }
+
+    function buildLineup() {
+        const ports = document.getElementById('lineup-portraits'), names = document.getElementById('lineup-names');
+        crew.forEach(c => {
+            const img = document.createElement('img'); img.src = c.portrait; img.alt = c.name + "'s portrait"; img.width = 150; img.height = 150; ports.appendChild(img);
+            const s = document.createElement('span'); s.textContent = c.name; const em = document.createElement('em'); em.textContent = c.placeholder ? 'stand-in' : 'drawn'; s.appendChild(em); names.appendChild(s);
+        });
+        const v = addView(document.getElementById('lineup'), 170, 36, 5, (ctx, t) => {
+            ctx.drawImage(room(170, 36, 30, 85, state.room), 0, 0);
+            crew.forEach((c, i) => CS.draw(ctx, c.id, 'idle', CS.frameAt('idle', t + i * 530), 17 + 34 * i, 30));
+        });
+        const col = parseFloat(v.canvas.style.width) / 5;                   // one column per sprite, whatever the screen scale
+        [ports, names].forEach(e => { e.style.gridTemplateColumns = `repeat(5, ${col}px)`; });
+        ports.querySelectorAll('img').forEach(img => { img.style.width = img.style.height = Math.min(150, col - 16) + 'px'; img.style.margin = '0 auto'; });
+    }
+
+    function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+    function buildCharacter(c) {
+        const art = el('article', 'who'), head = el('div', 'who-head');
+        const img = el('img'); img.src = c.portrait; img.alt = c.name + "'s portrait"; img.width = 160; img.height = 160;
+        const info = el('div'), h = el('h3', null, c.name);
+        h.appendChild(el('span', 'role', c.role));
+        h.appendChild(el('span', c.placeholder ? 'tag-ph' : 'tag-ph tag-ref', c.placeholder ? 'Stand-in' : 'Reference'));
+        info.append(h, el('p', 'sig', c.signature || ''));
+        const scales = el('div', 'scales');
+        [1, 3, 6].forEach(s => {
+            const fig = el('figure'), cv = el('canvas'), cap = el('figcaption');
+            cap.innerHTML = '<b>' + s + '×</b>';
+            fig.append(cv, cap); scales.appendChild(fig);
+            addView(cv, 20, 30, s, (ctx, t) => { ctx.drawImage(room(20, 30, 26, 10, state.room), 0, 0); CS.draw(ctx, c.id, 'idle', CS.frameAt('idle', t), 10, 26); });
+        });
+        info.appendChild(scales);
+        head.append(img, info);
+        const stages = el('div', 'stages');
+        Object.keys(STAGES).forEach(action => {
+            const fig = el('figure'), cv = el('canvas'), cap = el('figcaption');
+            const a = CS.ACTIONS[action];
+            cap.innerHTML = '<b>' + a.label + '</b>' + a.frames.length + ' frames';
+            fig.append(cv, cap); stages.appendChild(fig);
+            const mode = ROOM_MODE[action];
+            addView(cv, STAGE_W, STAGE_H, 3, (ctx, t) => {
+                ctx.drawImage(room(STAGE_W, STAGE_H, FLOOR_Y, 36, state.room === 'dark' || mode === 'dark' ? 'dark' : mode === 'dim' ? 'dim' : 'lamp'), 0, 0);
+                STAGES[action](ctx, c, t);
+            });
+        });
+        art.append(head, stages, buildSheet(c));
+        return art;
+    }
+    function buildSheet(c) {
+        const wrap = el('div', 'sheet-wrap'), labels = el('div', 'sheet-rows'), cv = el('canvas');
+        const actions = Object.keys(CS.ACTIONS), CW = 30, CH = 32;
+        actions.forEach(a => labels.appendChild(el('span', null, CS.ACTIONS[a].label + ' · ' + CS.ACTIONS[a].frames.length)));
+        wrap.append(labels, cv);
+        const cols = Math.max(...actions.map(a => CS.ACTIONS[a].frames.length));
+        addView(cv, cols * CW, actions.length * CH, 2, ctx => {
+            actions.forEach((a, r) => CS.ACTIONS[a].frames.forEach((_, f) => {
+                const x0 = f * CW, y0 = r * CH;
+                ctx.drawImage(room(CW, CH, 27, 15, state.room), x0, y0);
+                rect(ctx, '#05070a', x0, y0, 1, CH);
+                CS.draw(ctx, c.id, a, f, x0 + 15, y0 + (a === 'climb' ? 29 : 27));
+            }));
+        });
+        return wrap;
+    }
+
+    // ── loop ──
+    function render() {
+        views.forEach(v => { const ctx = begin(v); v.paint(ctx, state.t); });
+        document.getElementById('clock').textContent = (state.t / 1000).toFixed(2) + ' s';
+    }
+    function tick(now) {
+        if (state.playing) { if (state.last != null) state.t += Math.min(100, now - state.last); state.last = now; render(); }
+        else state.last = null;
+        requestAnimationFrame(tick);
+    }
+    function setPressed(group, attr, value) { document.querySelectorAll('#' + group + ' button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === String(value)))); }
+    function bindControls() {
+        const play = document.getElementById('play');
+        play.addEventListener('click', () => { state.playing = !state.playing; play.setAttribute('aria-pressed', String(state.playing)); play.textContent = state.playing ? 'Play' : 'Paused'; });
+        document.getElementById('step').addEventListener('click', () => { state.playing = false; play.setAttribute('aria-pressed', 'false'); play.textContent = 'Paused'; state.t += 125; render(); });
+        document.querySelectorAll('#facing button').forEach(b => b.addEventListener('click', () => { state.dir = Number(b.dataset.dir); setPressed('facing', 'dir', state.dir); render(); }));
+        document.querySelectorAll('#room button').forEach(b => b.addEventListener('click', () => { state.room = b.dataset.room; setPressed('room', 'room', state.room); render(); }));
+        if (!state.playing) { play.setAttribute('aria-pressed', 'false'); play.textContent = 'Paused'; }
+    }
+
+    buildSize();
+    buildLineup();
+    const host = document.getElementById('crew');
+    crew.forEach(c => host.appendChild(buildCharacter(c)));
+    bindControls();
+    render();
+    requestAnimationFrame(tick);
+    window.crewStudy = {
+        pause() { state.playing = false; render(); },
+        play() { state.playing = true; },
+        setTime(ms) { state.t = ms; render(); return state.t; },
+        step(ms = 125) { state.t += ms; render(); return state.t; },
+        time: () => state.t,
+        render,
+    };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+/* Silent Exodus game screen: the reading layer (voices, scenes as film, found pages, the ship's record) and the words of the
+   ship view. Everything sits in the scene: no boxes, no panels. Under words the picture darkens with the dither grain (drawn
+   on the canvas by the world); a one-pixel ink edge on the letters does the rest.
+   Sizes follow the CSS viewport through --t (0 at 1280 wide, 1 at 1920; set by the world). --px is one art pixel in CSS px. */
+:root {
+    --px: 3px;
+    --fs-narr: calc(14px + 2px * var(--t)); --fs-page: calc(19px + 5px * var(--t)); --fs-page-k: calc(14px + 0px * var(--t));
+    --fs-rec: calc(14px + 2px * var(--t)); --fs-rec-head: calc(13px + 1px * var(--t)); --fs-rec-sector: calc(18px + 5px * var(--t));
+    --fs-choice: calc(17px + 4px * var(--t)); --fs-room: calc(13px + 1px * var(--t)); --fs-room-sub: calc(14px + 1px * var(--t));
+    --face: calc(var(--px) * 24); --page-measure: calc(560px + 200px * var(--t));
+}
+
+/* five warm crew tones (names, faces) and their darker inks for the paper logbook; A.U.R.A. is steel */
+.tone-cora { --tone: #f2e2c4; --ink-tone: #3e3524; }
+.tone-jaxon { --tone: #f08c2e; --ink-tone: #5a2c05; }
+.tone-vance { --tone: #c4622a; --ink-tone: #561f08; }
+.tone-aris { --tone: #ffc27a; --ink-tone: #4a3306; }
+.tone-mira { --tone: #e8836a; --ink-tone: #5e2416; }
+.tone-aura { --tone: var(--ui); --ink-tone: #22343e; }
+
+/* ── a voice in the scene: name, line, the faint line before it, the cue ── */
+.voice {
+    position: absolute; left: 0; top: 0; display: grid; gap: 6px; width: max-content; max-width: var(--measure);
+    text-shadow: var(--shadow); pointer-events: none; opacity: 0; transition: opacity 160ms var(--ease);
+}
+.voice.is-in { opacity: 1; }
+.voice.is-ask { pointer-events: auto; }
+.who { display: flex; align-items: center; gap: 8px; margin: 0; font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--warm)); }
+.who .ring { flex: none; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }
+.who .from { font: 400 var(--fs-who)/1 var(--f-text); letter-spacing: 0.02em; text-transform: none; color: var(--dim); }
+.say { margin: 0; font: 400 var(--fs-voice)/1.36 var(--f-text); color: var(--text); text-wrap: balance; }
+.say.is-narr { font: 400 var(--fs-narr)/1.6 var(--f-num); color: #c7c9c6; }
+.cue { display: inline-block; margin-left: 0.4em; font-size: 0.62em; color: var(--dim); vertical-align: 0.12em; animation: cue 1s steps(2, jump-none) infinite; }
+@keyframes cue { 50% { opacity: 0.15; } }
+.prev { margin: 2px 0 0; font: 400 max(14px, calc(var(--fs-voice) * 0.72))/1.35 var(--f-text); color: var(--text); opacity: 0.45; text-wrap: pretty; }
+.prev b { font: 500 max(13px, calc(var(--fs-who) * 0.92))/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--tone, var(--warm)); margin-right: 0.6em; }
+.prev.is-narr { font-family: var(--f-num); font-size: max(14px, calc(var(--fs-narr) * 0.92)); }
+.read-hint { margin: 4px 0 0; font: 400 var(--fs-hint)/1.3 var(--f-num); color: var(--dim); letter-spacing: 0.02em; }
+
+/* ── numbered choices: verb first, chips on the right, only after the last line ── */
+.choices { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: 1.6em max-content max-content; gap: 2px 14px; }
+.choices li { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; }
+.choice {
+    display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline;
+    padding: 6px 0; margin: 0; background: none; border: 0; cursor: pointer; text-align: left; text-shadow: var(--shadow);
+}
+.choice .n { font: 400 var(--fs-note-cost)/1 var(--f-num); color: var(--dim); transition: color 140ms var(--ease); }
+.choice .verb { font: 400 var(--fs-choice)/1.25 var(--f-text); color: var(--text); transition: color 140ms var(--ease), transform 140ms var(--ease); }
+.choice .chips { display: inline-flex; gap: 12px; padding-left: 10px; }
+.choice .chip { font: 400 var(--fs-note-cost)/1 var(--f-num); color: var(--ui); }
+.choice .chip.is-gain { color: var(--text); }
+.choice .chip.is-loss { color: var(--danger); }
+.choice:hover .verb, .choice:focus-visible .verb { color: var(--warm); transform: translateX(3px); }
+.choice:hover .n, .choice:focus-visible .n { color: var(--warm); }
+.choice:active .verb { color: var(--warm-br); }
+.choice:focus-visible { outline: none; }
+
+/* ── a scene, as film: the picture between black bands, the words in the bottom band ── */
+.film-band { position: absolute; left: 0; right: 0; display: grid; pointer-events: none; }
+.film-band.is-top { align-content: end; padding: 0 0 18px; }
+.film-band.is-bottom { align-content: start; padding: 22px 0 0; }
+.film-col { width: min(900px, calc(100vw - 48px)); margin: 0 auto; }
+.film-title { margin: 0; font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.22em; text-transform: uppercase; color: var(--ui); }
+.film-now { display: grid; gap: 8px; pointer-events: auto; }
+.film-line { display: grid; grid-template-columns: var(--face) minmax(0, 1fr); gap: 0 18px; align-items: start; }
+.film-line.is-narr { grid-template-columns: minmax(0, 1fr); }
+.film-line .text { display: grid; gap: 7px; padding-top: 2px; }
+.face { position: static; display: block; width: var(--face); height: var(--face); image-rendering: auto; background: var(--ink); }
+.face-ring { display: grid; place-items: center; width: var(--face); height: var(--face); }
+.face-ring::before { content: ''; width: 58%; height: 58%; border: 1px solid var(--ui); border-radius: 50%; }
+.film-now .prev { padding-left: calc(var(--face) + 18px); }
+.film-now .prev.is-flush { padding-left: 0; }
+
+/* ── a found page: the object itself, its words one line at a time ── */
+.page-view { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 16px; pointer-events: auto; cursor: pointer; }
+.page-k { margin: 0; font: 500 var(--fs-page-k)/1 var(--f-ui); letter-spacing: 0.22em; text-transform: uppercase; color: var(--ui); text-shadow: var(--shadow); }
+.page-k span { color: var(--dim); letter-spacing: 0.12em; }
+.page-object { position: relative; }
+.page-object canvas { position: static; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+.page-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; width: var(--page-measure); max-width: calc(100vw - 48px); text-shadow: var(--shadow); }
+.page-lines li { display: grid; grid-template-columns: 2.2em minmax(0, 1fr); align-items: baseline; min-height: 0.8em; }
+.page-lines .num { font: 400 var(--fs-note-cost)/1 var(--f-num); color: var(--faint); }
+.page-lines .is-read .text { color: var(--dim); font-size: calc(var(--fs-page) * 0.8); }
+.page-lines .is-now .num { color: var(--warm); }
+.page-lines .text { font: 400 var(--fs-page)/1.4 var(--f-text); color: var(--text); text-wrap: pretty; }
+.page-lines .text.is-hand { font-style: italic; color: #e9dcc0; }
+.page-lines .label { display: block; margin-bottom: 4px; font: 500 var(--fs-page-k)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+.page-after { min-height: var(--face); width: var(--page-measure); max-width: calc(100vw - 48px); }
+.page-after .film-line { opacity: 0; transition: opacity 180ms var(--ease); }
+.page-after .film-line.is-in { opacity: 1; }
+.page-kept { margin: 0; font: 400 var(--fs-hint)/1 var(--f-num); color: var(--dim); }
+.page-view .read-hint { text-shadow: var(--shadow); }
+
+/* ── the ship's record: a logbook lying open over the dimmed painting ── */
+.record-view { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 14px; pointer-events: auto; }
+.book { position: relative; }
+.book canvas { position: static; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+.book-text { position: absolute; overflow: hidden; color: #201b15; }
+.book-flow { height: 100%; column-count: 2; column-fill: auto; transition: transform 260ms var(--ease); }
+.book-flow > * { break-inside: avoid; }
+.rec-stop-block { break-before: column; }                     /* one stop to a page: the book reads like a logbook, not a wall */
+.rec-stop-block.is-first { break-before: auto; }
+.rec-title { margin: 0 0 0.9em; font: 500 var(--fs-rec-head)/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: #4a4234; }
+.rec-sector { margin: 0.2em 0 0.55em; font: 300 var(--fs-rec-sector)/1.1 var(--f-text); letter-spacing: 0.08em; color: #201b15; }
+.rec-sector small { display: block; margin-bottom: 0.35em; font: 500 var(--fs-rec-head)/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: #4b4337; }
+.rec-stop { margin: 0.9em 0 0.35em; font: 500 var(--fs-rec-head)/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: #4a4234; display: flex; align-items: center; gap: 0.6em; }
+.rec-stop::after { content: ''; flex: 1; height: 1px; background: repeating-linear-gradient(90deg, rgba(74, 66, 52, 0.45) 0 2px, transparent 2px 5px); }
+.rec-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.32em; }
+.rec { position: relative; display: grid; grid-template-columns: 1.3em minmax(0, 1fr); align-items: baseline; font: 400 var(--fs-rec)/1.42 var(--f-num); color: #2b251d; }
+.rec .mark { font: 400 calc(var(--fs-rec) * 0.8)/1 var(--f-num); color: #8b8270; }
+.rec.is-story { color: #17130e; font-weight: 500; }
+.rec.is-story .mark { color: #8a2a1e; }
+.rec .chip { margin-left: 0.5em; color: #4b4337; font-weight: 400; }
+.rec .chip.is-loss { color: #8a2a1e; }
+.rec .chip.is-gain { color: #201b15; }
+.rec .says { font-family: var(--f-text); font-style: italic; color: #2b251d; }
+.rec .name { margin-right: 0.55em; font: 500 max(14px, calc(var(--fs-rec) * 0.8))/1 var(--f-ui); font-style: normal; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-tone); }
+.rec .dot { display: inline-block; width: 0.55em; height: 0.55em; background: var(--tone); box-shadow: 0 0 0 1px rgba(32, 27, 21, 0.55); }
+.rec .ringmark { display: inline-block; width: 0.62em; height: 0.62em; border: 1px solid var(--ink-tone); border-radius: 50%; }
+.rec.is-routine { color: #5a5142; font-size: max(14px, calc(var(--fs-rec) * 0.9)); }
+.rec.is-routine .says { color: #5a5142; }
+.rec-again { display: block; margin: 0.35em 0 0; padding: 0; background: none; border: 0; cursor: pointer; text-align: left; font: italic 400 var(--fs-rec)/1.3 var(--f-text); color: #201b15; }
+.rec-again::before { content: '▸ '; font-style: normal; color: #8a2a1e; }
+.rec-again:hover, .rec-again:focus-visible { color: #8a2a1e; outline: none; }
+.record-view .read-hint { text-shadow: var(--shadow); }
+
+/* ── the ship view's words: under each room, and the person you point at ── */
+.room-words { display: grid; gap: 4px; justify-items: center; text-align: center; }
+.room-words .rname { font: 500 var(--fs-room)/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: #9aa3a8; }
+.room-words .rline { font: 400 var(--fs-room-sub)/1.3 var(--f-num); color: var(--ui); white-space: normal; max-width: 14em; text-wrap: balance; }
+.room-words .rline.is-low { color: var(--text); }
+.room-words .rline.is-bad { color: var(--danger); }
+.who-tag { display: grid; gap: 3px; justify-items: center; text-align: center; }
+.who-tag .wname { font: 500 var(--fs-note-name)/1 var(--f-ui); letter-spacing: 0.04em; color: var(--tone, var(--text)); }
+.who-tag .wstate { font: 400 var(--fs-note-line)/1.2 var(--f-text); color: var(--dim); }
+.who-tag .wstate.is-bad { color: var(--danger); }
+
+@media (prefers-reduced-motion: reduce) {
+    .cue { animation: none; }
+    .voice, .choice .verb, .page-after .film-line, .book-flow { transition: none; }
+}
+
+/* while a page or the record is open, the world's own words step back with the picture */
+body.is-reading #marks { opacity: 0; }

@@ -1,0 +1,2145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silent Exodus Screen</title>
+<meta name="description" content="Silent Exodus game screen mockup: the whole sector is one painting. Point at a world and the ship flies there.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* The words are "Graphite": bone, grey, steel; sodium only for people and the false sun; one red, for harm. The picture is
+   "Deep field" (the script). Text sizes follow the CSS viewport, not the pixel scale: --t runs 0 at 1280 wide to 1 at 1920
+   (set by measure()), so 1440 x 900 reads as well as either end. Nothing you must read is under 14px. */
+:root {
+    color-scheme: dark;
+    --t: 1;
+    --ink: #05070a;
+    --text: #e4e4e0;
+    --dim: #8b8d90;
+    --faint: #5a6168;
+    --ui: #c9d1d6;
+    --warm: #f08c2e;
+    --warm-br: #ffc27a;
+    --danger: #e0453a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --fs-voice: calc(19px + 5px * var(--t)); --fs-who: calc(14px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t));
+    --fs-note-name: calc(17px + 3px * var(--t)); --fs-note-line: calc(15px + 2px * var(--t)); --fs-note-cost: calc(14px + 1px * var(--t));
+    --fs-chip: calc(14px + 2px * var(--t)); --fs-title: calc(34px + 12px * var(--t)); --fs-act: calc(17px + 3px * var(--t)); --fs-act-sub: calc(14px + 1px * var(--t));
+    --fs-tag: calc(14px + 1px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));
+    --shadow: 0 1px 0 #05070a;                                     /* one hard ink edge: the dither shade under words does the rest */
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+#stage { position: fixed; inset: 0; overflow: hidden; outline: none; }
+#stage.is-pointing { cursor: pointer; }
+canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+#film { display: none; }
+.layer { position: absolute; inset: 0; pointer-events: none; }
+
+/* ── words that belong to the world: a place's note, names, chips, the sector title, the actions in orbit ── */
+.w { position: absolute; left: 0; top: 0; white-space: nowrap; text-shadow: var(--shadow); pointer-events: none; will-change: transform, opacity; }
+.note { display: grid; gap: 3px; }
+.note .name { font: 500 var(--fs-note-name)/1.15 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
+.note .line { font: 400 var(--fs-note-line)/1.35 var(--f-text); color: var(--dim); }
+.note .cost { font: 400 var(--fs-note-cost)/1.4 var(--f-num); color: var(--ui); }
+.note .cost .gain { color: var(--text); }
+.note.is-left { text-align: right; justify-items: end; }
+.tag { font: 500 var(--fs-tag)/1.2 var(--f-ui); letter-spacing: 0.08em; color: #aeb3b4; }
+.dated { font: 400 var(--fs-tag)/1.3 var(--f-num); color: var(--ui); }
+.hint { font: 400 var(--fs-hint)/1.3 var(--f-num); color: var(--dim); }
+.chips { display: flex; gap: 14px; }
+.chip { font: 400 var(--fs-chip)/1 var(--f-num); color: var(--ui); }
+.chip.is-gain { color: var(--text); }
+.chip.is-loss { color: var(--danger); }
+.title { font: 300 var(--fs-title)/1 var(--f-text); letter-spacing: 0.2em; color: var(--text); }
+.supplies { display: grid; gap: 3px; }
+.supplies .nums { font: 400 var(--fs-note-cost)/1.3 var(--f-num); color: var(--ui); }
+.supplies .sub { font: 400 var(--fs-note-line)/1.3 var(--f-text); color: var(--dim); }
+.low { font: 400 var(--fs-note-cost)/1 var(--f-num); color: var(--text); }
+.place-head { display: grid; gap: 4px; }
+.place-head .name { font: 500 calc(var(--fs-note-name) * 1.3)/1.1 var(--f-ui); letter-spacing: 0.03em; color: var(--text); }
+.place-head .line { font: 400 var(--fs-note-line)/1.35 var(--f-text); color: var(--dim); }
+.place-head.is-right { text-align: right; justify-items: end; }
+.act {
+    position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; display: grid; gap: 3px;
+    padding: 6px 8px; margin: 0; background: none; border: 0; text-align: left; white-space: nowrap;
+    text-shadow: var(--shadow); will-change: transform, opacity;
+}
+.act .verb { font: 400 var(--fs-act)/1.2 var(--f-text); color: var(--text); transition: color 140ms var(--ease); }
+.act .sub { font: 400 var(--fs-act-sub)/1.3 var(--f-num); color: var(--dim); }
+.act:hover .verb, .act:focus-visible .verb, .act.is-hot .verb { color: var(--warm); }
+.act:focus-visible { outline: none; }
+.act.is-pulse .verb { animation: act-pulse 900ms var(--ease) 3; }
+@keyframes act-pulse { 50% { color: var(--warm-br); } }
+
+/* ── the reading layer, the ship view and their words live in game-screen/reading.css ── */
+
+/* ── the Esc menu: five quiet words in the middle of a dimmed screen ── */
+.menu { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; }
+.menu[hidden] { display: none; }
+.menu ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; text-align: center; }
+.menu button { background: none; border: 0; cursor: pointer; font: 300 calc(var(--fs-voice) * 1.05)/1.2 var(--f-text); letter-spacing: 0.06em; color: var(--dim); text-shadow: var(--shadow); transition: color 140ms var(--ease); }
+.menu button:hover, .menu button:focus-visible { color: var(--text); outline: none; }
+
+/* ── mockup controls: NOT part of the game. Nothing shows until the backtick key opens the list. ── */
+.mockup-btn {
+    display: none; position: fixed; left: 8px; bottom: 8px; z-index: 40; padding: 3px 6px; cursor: pointer;
+    font: 500 10px/1 var(--f-ui); letter-spacing: 0.2em; color: #50565c; background: rgba(5, 7, 10, 0.6); border: 1px dashed #2c3036;
+}
+.mockup-btn:hover, .mockup-btn:focus-visible { color: #9aa0a6; border-color: #50565c; outline: none; }
+.moments { position: fixed; left: 8px; bottom: 8px; z-index: 40; padding: 8px 10px 10px; background: rgba(10, 12, 15, 0.94); border: 1px dashed #2c3036; display: grid; gap: 2px; min-width: 250px; }
+.moments[hidden] { display: none; }
+.moments b { font: 500 10px/1.6 var(--f-ui); letter-spacing: 0.2em; color: #6d747a; text-transform: uppercase; }
+.moments button { text-align: left; background: none; border: 0; padding: 4px 4px; cursor: pointer; font: 400 12px/1.2 var(--f-num); color: #9aa0a6; }
+.moments button:hover, .moments button:focus-visible { color: #fff; background: #1a1d21; outline: none; }
+.moments small { font: 400 11px/1.4 var(--f-text); color: #6d747a; }
+@media (prefers-reduced-motion: reduce) { .act.is-pulse .verb { animation: none; } }
+</style>
+<link rel="stylesheet" href="game-screen/reading.css?v=20261008i">
+<script src="../../src/systems/SceneArt.js?v=20261007"></script>
+<!-- dating opens the real disc game, the same files the game runs (never a lookalike); silent here, the mockup has no AudioSystem -->
+<link rel="stylesheet" href="../../src/systems/minigames/minigames.css?v=1">
+<script src="../../src/systems/minigames/MiniLab.js?v=2"></script>
+<script src="../../src/systems/minigames/MiniShip.js?v=1"></script>
+<script src="../../src/systems/minigames/MiniHost.js?v=5"></script>
+<script src="../../src/systems/minigames/DiscDating.js?v=5"></script>
+<!-- the crew figures (12 x 24): one shared skeleton, one costume per person (docs/CREW_SPRITES.md) -->
+<script src="crew/skeleton.js?v=20261007b"></script>
+<script>
+// A costume that is being redrawn must not stop the page: its person falls back to a plain stand-in in the ship view.
+// The figures keep their portrait colours: the designer wants them to look like the portraits.
+(function () {
+    const CS = window.CrewSprites; if (!CS) return;
+    const HOUSE = {};
+    const register = CS.register;
+    CS.register = c => {
+        try { return register(HOUSE[c.id] ? Object.assign({}, c, { palette: Object.assign({}, c.palette, HOUSE[c.id]) }) : c); }
+        catch (err) { console.warn('Crew costume skipped:', err.message); return null; }
+    };
+})();
+</script>
+<script src="crew/cora.js?v=20261007b"></script>
+<script src="crew/jaxon.js?v=20261007b"></script>
+<script src="crew/aris.js?v=20261007b"></script>
+<script src="crew/vance.js?v=20261007b"></script>
+<script src="crew/mira.js?v=20261007b"></script>
+<!-- the reading layer, the pictures of things you read, and the ship cut open -->
+<script src="game-screen/pages.js?v=20261008h"></script>
+<script src="game-screen/reading.js?v=20261008i"></script>
+<script src="game-screen/shipview.js?v=20261008h"></script>
+</head>
+<body>
+<div id="stage" tabindex="-1" aria-label="The sector">
+    <canvas id="world" aria-hidden="true"></canvas>
+    <canvas id="film" width="480" height="160" aria-hidden="true"></canvas>
+    <div class="layer" id="marks"></div>
+    <div class="layer" id="reading" aria-live="polite"></div>
+</div>
+<div class="menu" id="menu" hidden>
+    <ul>
+        <li><button type="button" data-menu="resume">Resume</button></li>
+        <li><button type="button" data-menu="record">The ship's record</button></li>
+        <li><button type="button" data-menu="sound">Sound</button></li>
+        <li><button type="button" data-menu="save">Save</button></li>
+        <li><button type="button" data-menu="quit">Quit</button></li>
+    </ul>
+</div>
+<button class="mockup-btn" id="mockup-btn" type="button" aria-expanded="false" aria-controls="moments">MOCKUP</button>
+<div class="moments" id="moments" hidden>
+    <b>Mockup only · not in the game</b>
+    <small>Keys 1–6 switch sector · ` opens and closes this list</small>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 1. The picture recipe (from main-screens.html and src/systems/SceneArt.js): ordered 8x8 Bayer dither between
+    //    colour ramps, seeded value noise, one light. Every ramp starts at the same ink so every material fades out.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const INK = '#05070a', TICK = 125, SW = 640, SH = 360;
+    const BAYER_RAW = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
+        3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21];
+    const BAYER8 = BAYER_RAW.map(v => (v + 0.5) / 64);
+    const threshold = (x, y) => BAYER8[((y & 7) << 3) | (x & 7)];
+    const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+    const smooth = (a, b, v) => { const k = clamp01((v - a) / (b - a)); return k * k * (3 - 2 * k); };
+    const lerp = (a, b, k) => a + (b - a) * k;
+    function seeded(seed) { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+    const PERM = (() => { const r = seeded(1337), p = Array.from({ length: 256 }, (_, i) => i); for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } return Uint8Array.from(p); })();
+    const hash = (x, y, s = 0) => PERM[(PERM[(PERM[x & 255] + y) & 255] + s) & 255] / 255;
+    function vnoise(x, y, s = 0) {
+        const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+        const a = hash(xi, yi, s), b = hash(xi + 1, yi, s), c = hash(xi, yi + 1, s), d = hash(xi + 1, yi + 1, s);
+        return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+    }
+    function fbm(x, y, s = 0, oct = 4) { let sum = 0, amp = 0.5, f = 1, n = 0; for (let i = 0; i < oct; i++) { sum += amp * vnoise(x * f, y * f, s + i * 17); n += amp; f *= 2.03; amp *= 0.5; } return sum / n; }
+    const gauss = rand => (rand() + rand() + rand() + rand() - 2) * 0.87;
+    const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const ramp = (...hex) => ({ hex, rgb: hex.map(hexRgb) });
+    function level(r, v, x, y) { const top = r.hex.length - 1, pos = clamp01(v) * top, lo = Math.floor(pos); return Math.min(top, lo + (pos - lo > threshold(x, y) ? 1 : 0)); }
+    const norm3 = (x, y, z) => { const n = Math.hypot(x, y, z) || 1; return [x / n, y / n, z / n]; };
+
+    // The world palette, "Deep field": teal-black space, rust-gold dust, ice instruments; amber only for people; the false sun warmest.
+    const RP = {
+        STAR: ramp(INK, '#1b272c', '#4c5f66', '#b3c2c0', '#f6f1e4'),
+        HAZE: ramp(INK, '#0a1317', '#0f222a', '#152f38', '#1f3a43'),
+        DUST: ramp(INK, '#160f0b', '#2c1a10', '#4e2f1a', '#7c4a26', '#b0733c'),
+        SUN: ramp(INK, '#1f140b', '#4a2e12', '#9a5a26', '#e9a25e', '#f7c483', '#fff3dc'),
+        HULL: ramp(INK, '#121c22', '#22333b', '#3d5560', '#8aa2aa', '#e6eef0'),
+        UI: ramp(INK, '#13232a', '#284650', '#3d6670', '#9fd8e6', '#e1f6fb'),
+        ICE: ramp(INK, '#0c1a20', '#1a3440', '#33606e', '#7fb3c2', '#d6eef4'),
+        STONE: ramp(INK, '#13181a', '#272f31', '#465153', '#7c8786', '#c4ccc8'),
+        DESERT: ramp(INK, '#1a110c', '#38231a', '#664129', '#9c6a42', '#d0a376'),
+        GAS: ramp(INK, '#1c120b', '#3f2715', '#6c4523', '#a26f3b', '#d9ad74'),
+        DARK: ramp(INK, '#0e1216', '#1d242b', '#333d47', '#66727d', '#b4c0c8'),
+        AMBER: ramp(INK, '#3a2410', '#8a5422', '#e8964a', '#f7c483', '#fff3dc'),
+        RED: ramp(INK, '#3a1210', '#8a2a22', '#e2574c', '#ffd2c8'),
+        RING: ramp(INK, '#11171a', '#1f292e', '#34424a', '#5a6a6e', '#93a3a2'),
+        RUST: ramp(INK, '#140f0e', '#261c19', '#3a2b25', '#564034', '#7a604f'),
+        OCEAN: ramp(INK, '#07161c', '#0c2a33', '#134249', '#1f6463', '#4b9488', '#a4d3c1'),
+        LAND: ramp(INK, '#0c170f', '#17301f', '#26482c', '#45683d', '#829a63'),
+        CLOUD: ramp(INK, '#141c20', '#34444a', '#71878a', '#c3d2d0', '#eef4f2'),
+    };
+    const PLANET_RAMP = { desert: RP.DESERT, gas: RP.GAS, ice: RP.ICE, rock: RP.STONE, dark: RP.DARK };
+
+    /** A pixel buffer painted once. An opaque buffer starts as ink; a clear one starts empty, and tone() leaves its darkest step empty. */
+    function painter(W, H, isOpaque) {
+        const data = new Uint8ClampedArray(W * H * 4);
+        if (isOpaque) { const k = hexRgb(INK); for (let i = 0; i < W * H; i++) { data[i * 4] = k[0]; data[i * 4 + 1] = k[1]; data[i * 4 + 2] = k[2]; data[i * 4 + 3] = 255; } }
+        const set = (x, y, rgb) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return; const o = (y * W + x) * 4; data[o] = rgb[0]; data[o + 1] = rgb[1]; data[o + 2] = rgb[2]; data[o + 3] = 255; };
+        const get = (x, y) => { const o = (y * W + x) * 4; return [data[o], data[o + 1], data[o + 2], data[o + 3]]; };
+        const solid = (x, y, r, v) => set(x, y, r.rgb[level(r, v, Math.floor(x), Math.floor(y))]);
+        const tone = (x, y, r, v) => { const k = level(r, v, Math.floor(x), Math.floor(y)); if (k === 0 && !isOpaque) return; set(x, y, r.rgb[k]); };
+        const add = (x, y, r, v) => { const k = level(r, v, Math.floor(x), Math.floor(y)); if (k > 0) set(x, y, r.rgb[k]); };   // light laid over what is there: never paints ink
+        const cover = (x, y, r, v, a) => { if (a > threshold(Math.floor(x) + 3, Math.floor(y) + 5)) tone(x, y, r, v); };
+        const region = (x0, y0, x1, y1, fn) => { for (let y = Math.max(0, Math.floor(y0)); y < Math.min(H, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(W, Math.ceil(x1)); x++) fn(x, y); };
+        const ellipse = (cx, cy, rx, ry, fn) => region(cx - rx - 1, cy - ry - 1, cx + rx + 1, cy + ry + 1, (x, y) => { const q = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2; if (q < 1) fn(x, y, q); });
+        const line = (x0, y0, x1, y1, fn) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let k = 0; k <= n; k++) fn(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), k / n); };
+        const canvas = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').putImageData(new ImageData(data, W, H), 0, 0); return c; };
+        return { W, H, data, set, get, solid, tone, add, cover, region, ellipse, line, canvas };
+    }
+
+    /** The moving layer: a few rectangles a frame, straight onto the canvas. */
+    function framer(ctx, W, H) {
+        let cur = '';
+        const px = (x, y, hex, w = 1, h = 1) => { const xi = Math.round(x), yi = Math.round(y); if (xi + w <= 0 || yi + h <= 0 || xi >= W || yi >= H) return; if (hex !== cur) { ctx.fillStyle = hex; cur = hex; } ctx.fillRect(xi, yi, w, h); };
+        const tone = (x, y, r, v, w = 1, h = 1) => { const xi = Math.round(x), yi = Math.round(y), k = level(r, v, xi, yi); if (k === 0) return; px(xi, yi, r.hex[k], w, h); };
+        const glow = (cx, cy, rad, r, peak) => { for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) { const d = Math.hypot(x, y) / rad; if (d < 1) tone(cx + x, cy + y, r, peak * (1 - d) ** 1.5); } };
+        return { px, tone, glow };
+    }
+
+    // ── shared pieces ──
+    function scatterStars(p, seed, count, where) {
+        const rand = seeded(seed), list = [];
+        for (let i = 0; i < count; i++) {
+            const x = Math.floor(rand() * p.W), y = Math.floor(rand() * p.H), mag = rand();
+            if (where && !where(x, y)) continue;
+            if (mag > 0.979) { p.set(x, y, RP.STAR.rgb[4]); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => p.set(x + dx, y + dy, RP.STAR.rgb[2])); }
+            else if (mag > 0.88) p.set(x, y, RP.STAR.rgb[3]);
+            else p.set(x, y, RP.STAR.rgb[mag > 0.55 ? 2 : 1]);
+            list.push({ x, y, mag });
+        }
+        return list;
+    }
+    function keepVisible(p, list) {
+        return list.filter(s => { if (s.mag < 0.88 || s.x < 0 || s.y < 0 || s.x >= p.W || s.y >= p.H) return false; const c = p.get(s.x, s.y); return RP.STAR.rgb.slice(3).some(k => k[0] === c[0] && k[1] === c[1] && k[2] === c[2]); });
+    }
+    function twinkle(f, list, t) {
+        const step = Math.floor(t / 375);
+        list.forEach((s, i) => { if (hash(i, step, 5) < 0.9) return; f.px(s.x - 1, s.y, RP.STAR.hex[3], 3, 1); f.px(s.x, s.y - 1, RP.STAR.hex[3], 1, 3); f.px(s.x, s.y, RP.STAR.hex[4]); });
+    }
+    /** Space: a thin teal haze, and rust-gold dust that only shows where the light reaches it. */
+    function spaceAndDust(p, seed, lx, ly, halo, dustAmount, hazeAmount = 1) {
+        p.region(0, 0, p.W, p.H, (x, y) => {
+            const d = Math.hypot(x - lx, (y - ly) * 1.15), lit = Math.exp(-d / (halo * 0.85 + 6));
+            const dust = Math.max(0, fbm(x / 46, y / 26, seed + 7, 4) - 0.5) * 3.4 * dustAmount, vd = dust * 2.8 * lit;
+            const vh = Math.max(0, fbm(x / 70, y / 38, seed, 4) - 0.5) * 1.15 * hazeAmount;
+            if (vd > 0.12 && vd * 0.75 > vh) { p.tone(x, y, RP.DUST, vd); return; }                  // whichever is stronger: no hard edge where the dust begins
+            if (vh > 0.03) p.tone(x, y, RP.HAZE, vh);
+        });
+    }
+    /** The false sun: a white-gold core, a soft dithered halo and a thin horizontal streak. */
+    function lightGlow(p, lx, ly, o, breath = 1) {
+        const reach = o.halo * 3.2 + o.core + 8, s = o.strength * breath;
+        p.region(lx - reach, ly - reach, lx + reach, ly + reach, (x, y) => {
+            const dx = x + 0.5 - lx, dy = (y + 0.5 - ly) * 1.06, d = Math.hypot(dx, dy);
+            if (d < o.core) { p.tone(x, y, RP.SUN, 1.02 - 0.3 * (d / o.core) ** 3); return; }
+            let v = s * (1.15 * Math.exp(-(d - o.core) / (o.core * 0.5 + 1.4)) + 0.7 * Math.exp(-d / (o.halo * 0.32 + 1)) + 0.34 * Math.exp(-d / (o.halo * 1.1 + 1)));
+            if (Math.abs(dy) < 0.6 && o.halo < 40) v += 0.34 * s * Math.exp(-Math.abs(dx) / (o.halo * 0.9 + 8));   // a short streak on small lights only
+            if (o.spikes && (Math.abs(dx) < 0.6 || Math.abs(dy) < 0.6)) v += 0.7 * Math.exp(-d / o.spikes);
+            v *= 1 - smooth(reach * 0.55, reach, d);
+            if (v > 0.004) p.add(x, y, RP.SUN, v);
+        });
+    }
+    /** A planet lit from L. The edge facing the light can catch a warm rim. Edge pixels go into o.rims (for the pointing highlight). */
+    function sphere(p, o) {
+        const L = o.L, edge = Math.max(0, 1 - 1.5 / o.r) ** 2;
+        if (o.atmo) p.ellipse(o.cx, o.cy, o.r + o.atmo.w, o.r + o.atmo.w, (x, y) => {
+            const nx = (x + 0.5 - o.cx) / o.r, ny = (y + 0.5 - o.cy) / o.r, d = Math.hypot(nx, ny);
+            if (d < 1) return;
+            const facing = (nx * L[0] + ny * L[1]) / d;
+            if (facing > 0.1) p.cover(x, y, o.atmo.ramp, 0.55 * facing, (1 - (d - 1) * o.r / o.atmo.w) * facing);
+        });
+        p.ellipse(o.cx, o.cy, o.r, o.r, (x, y, q) => {
+            const nx = (x + 0.5 - o.cx) / o.r, ny = (y + 0.5 - o.cy) / o.r, nz = Math.sqrt(Math.max(0, 1 - q));
+            const lam = Math.max(0, (nx * L[0] + ny * L[1] + nz * L[2] + 0.06) / 1.06);
+            let v = (o.ambient == null ? 0.02 : o.ambient) + Math.pow(lam, 1.1) * (o.gain || 0.92);
+            if (o.surface) v = o.surface(v, nx, ny, nz, lam);
+            v *= o.dim == null ? 1 : o.dim;
+            const isEdge = q > edge;
+            if (o.rim && isEdge && lam > 0.12) { const rv = Math.min(0.95, 0.25 + o.rim * lam) * (o.dim == null ? 1 : o.dim); p.solid(x, y, RP.SUN, rv); if (o.rims) o.rims.push([x, y, RP.SUN, level(RP.SUN, rv, x, y)]); return; }
+            p.solid(x, y, o.ramp, v);
+            if (o.rims && isEdge && lam > 0.06) o.rims.push([x, y, o.ramp, level(o.ramp, v, x, y)]);
+        });
+    }
+    function surfaceFor(type, seed, L) {
+        if (type === 'desert') return (v, nx, ny) => v * (0.8 + 0.34 * fbm(nx * 2.4 + seed, ny * 7, seed, 3)) - 0.16 * smooth(0.55, 0.68, fbm(nx * 2.2 + 9, ny * 2.2, seed + 4, 3)) * Math.min(1, v * 3);
+        if (type === 'gas') return (v, nx, ny) => v * (0.5 + 0.7 * (0.5 + 0.5 * Math.sin(ny * 17 + 3.4 * fbm(nx * 1.8, ny * 6, seed, 3)))) - (Math.hypot((nx - 0.25) / 0.2, (ny - 0.32) / 0.09) < 1 ? 0.12 : 0);
+        if (type === 'ice') return (v, nx, ny) => {
+            let k = v * (0.84 + 0.2 * fbm(nx * 4, ny * 4, seed, 2));
+            if (Math.abs(vnoise(nx * 9 + seed, ny * 9, seed) - 0.5) < 0.013) k *= 0.74;
+            const cap = smooth(-0.6, -0.86, ny + (fbm(nx * 5, 3, seed, 2) - 0.5) * 0.16);
+            return k * (1 - cap) + Math.min(1, v * 1.22 + 0.03) * cap;
+        };
+        if (type === 'dark') return (v, nx, ny) => v * 0.62 * (0.82 + 0.36 * fbm(nx * 5, ny * 5, seed, 2));
+        const rand = seeded(seed + 3), craters = Array.from({ length: 12 }, () => [(rand() - 0.5) * 1.6, (rand() - 0.5) * 1.6, 0.06 + rand() * rand() * 0.2]);
+        return (v, nx, ny) => {
+            let k = v - 0.18 * smooth(0.5, 0.62, fbm(nx * 2.6 + 4, ny * 2.6, seed, 3)) * Math.min(1, v * 3);
+            craters.forEach(([ux, uy, ur]) => {
+                const d = Math.hypot(nx - ux, ny - uy) / ur, toward = (nx - ux) * L[0] + (ny - uy) * L[1];
+                if (d < 0.85) k *= toward > 0 ? 0.95 : 0.7;
+                else if (d < 1.15 && toward < 0) k += 0.1 * Math.min(1, -toward / ur);
+            });
+            return k;
+        };
+    }
+    const lightVector = (fx, fy, lx, ly, depth) => norm3(lx - fx, ly - fy, depth);
+
+    /** An Exodus-class hull side on (SceneArt's drawHull): round nose, raised bridge, plate seams, engine block, fins.
+        o: { x, y, len, ht, angle, flip (nose right), ramp, light, holes, rust, seed, from, to, anchor, rimDir:[dx,dy], rim:0..1 }. Returns at(u, v). */
+    function hullEdges(u) {
+        if (u < 0 || u > 1) return null;
+        const nose = u < 0.12 ? Math.sqrt(u / 0.12) : 1;
+        let top = -0.5 * (0.35 + 0.65 * nose), bottom = 0.5 * (0.35 + 0.65 * nose);
+        if (u > 0.14 && u < 0.36) top -= 0.2 * Math.min(1, (u - 0.14) / 0.04, (0.36 - u) / 0.05);
+        if (u > 0.74 && u < 0.8) { top += 0.08; bottom -= 0.08; }
+        if (u >= 0.8) { top -= 0.06; bottom += 0.06; }
+        if (u > 0.86) { const fin = (u - 0.86) / 0.14; top -= 0.3 * fin; bottom += 0.3 * fin; }
+        return [top, bottom];
+    }
+    function drawHull(p, o) {
+        const { len, ht } = o, c = Math.cos(o.angle || 0), s = Math.sin(o.angle || 0), dir = o.flip ? -1 : 1, seed = o.seed || 1;
+        const from = o.from || 0, to = o.to == null ? 1 : o.to, anchor = o.anchor == null ? (from + to) / 2 : o.anchor, dim = o.light == null ? 1 : o.light;
+        const at = (u, v) => { const along = (u - anchor) * len * dir, across = v * ht; return [o.x + along * c - across * s, o.y + along * s + across * c]; };
+        const isBroken = from > 0 || to < 1, detail = len > 30;
+        const uvAt = (x, y) => { const dx = x + 0.5 - o.x, dy = y + 0.5 - o.y; return [anchor + (dx * c + dy * s) * dir / len, (-dx * s + dy * c) / ht]; };
+        const jagAt = (u, v) => (isBroken ? (vnoise(v * 6, u * 4, seed) - 0.5) * 0.07 : 0);
+        const inside = (x, y) => { const [u, v] = uvAt(x, y), jag = jagAt(u, v); if ((from > 0 && u < from + jag) || (to < 1 && u > to + jag)) return false; const e = hullEdges(u); return !!e && v >= e[0] && v <= e[1]; };
+        const reach = len * Math.max(anchor - from, to - anchor) + ht;
+        p.region(o.x - reach, o.y - reach, o.x + reach, o.y + reach, (x, y) => {
+            const [u, v] = uvAt(x, y), jag = jagAt(u, v);
+            if ((from > 0 && u < from + jag) || (to < 1 && u > to + jag)) return;
+            const e = hullEdges(u); if (!e || v < e[0] || v > e[1]) return;
+            const mid = (e[0] + e[1]) / 2, half = (e[1] - e[0]) / 2, n = (v - mid) / half, pxu = u * len;
+            let light = 0.68 - 0.42 * n;
+            if ((v - e[0]) * ht < 1.4) light += 0.22;
+            if (u > 0.8) light -= 0.14;
+            if (detail && (pxu % 15 < 1 || Math.abs((v - mid) * ht - half * ht * 0.35) < 0.5)) light -= 0.18;
+            if (detail && u > 0.17 && u < 0.33 && (v - e[0]) * ht > 2 && (v - e[0]) * ht < 4.5 && pxu % 5 > 1.5) light = 0.1;
+            if (o.rust) light -= (fbm(pxu / 9, v * ht / 6, seed, 3) - 0.45) * 0.5;
+            if (o.holes && fbm(pxu / 16, v * ht / 10, seed + 3, 3) > (o.holes === true ? 0.64 : o.holes)) light = pxu % 6 < 1.2 ? 0.28 : 0.04;
+            if (isBroken && ((from > 0 && u < from + jag + 0.02) || (to < 1 && u > to + jag - 0.02))) light *= 0.45;
+            if (o.rim && o.rimDir && !inside(x + o.rimDir[0] * 1.5, y + o.rimDir[1] * 1.5) && threshold(x, y) < o.rim) { p.solid(x, y, RP.SUN, 0.42 + 0.4 * o.rim); return; }
+            p.solid(x, y, o.ramp || RP.HULL, light * dim);
+        });
+        return at;
+    }
+    /** A small station: a hub, a ring, two panel arms. Lit from the right. Returns where its one window is. */
+    function drawStation(p, cx, cy, s, seed, dim = 1) {
+        for (const side of [-1, 1]) {
+            p.region(Math.min(cx + side * 4 * s, cx + side * 26 * s), cy - 0.5 * s, Math.max(cx + side * 4 * s, cx + side * 26 * s), cy + 0.5 * s + 1, (x, y) => p.solid(x, y, RP.HULL, 0.42 * dim));
+            p.region(Math.min(cx + side * 9 * s, cx + side * 24 * s), cy - 7 * s, Math.max(cx + side * 9 * s, cx + side * 24 * s), cy + 7 * s, (x, y) => {
+                if (Math.abs(y + 0.5 - cy) < 1.6 * s) return;
+                const gx = (x - cx) / (2.5 * s), gy = (y - cy) / (2.2 * s), isGrid = Math.abs(gx - Math.round(gx)) < 0.12 || Math.abs(gy - Math.round(gy)) < 0.14;
+                p.solid(x, y, RP.UI, (isGrid ? 0.22 : 0.3 + 0.18 * (side > 0 ? 1 : 0) + 0.1 * fbm(x / 3, y / 3, seed, 2)) * dim);
+            });
+        }
+        const ring = (front) => p.ellipse(cx, cy, 15 * s, 5 * s, (x, y, q) => {
+            if (q < 0.62) return;
+            const isFront = y + 0.5 > cy; if (isFront !== front) return;
+            p.solid(x, y, RP.HULL, (0.32 + 0.4 * clamp01((x - cx) / (15 * s) * 0.5 + 0.5) + (q > 0.9 ? -0.12 : 0)) * dim);
+        });
+        ring(false);
+        p.region(cx - 3.4 * s, cy - 11 * s, cx + 3.4 * s, cy + 11 * s, (x, y) => {
+            const nx = (x + 0.5 - cx) / (3.4 * s), ends = Math.abs(y + 0.5 - cy) / (11 * s);
+            if (ends > 0.9 && Math.abs(nx) > 0.6) return;
+            p.solid(x, y, RP.HULL, (0.3 + 0.42 * (nx * 0.5 + 0.5) + (Math.abs((y - cy) % (4 * s)) < 0.6 ? -0.15 : 0)) * dim);
+        });
+        ring(true);
+        return [Math.round(cx + 1.2 * s), Math.round(cy - 4 * s)];
+    }
+    /** A faint contact: a soft dithered smudge of cold light that brightens and fades in slow steps. No ring, no reticle. */
+    function contactBlip(f, x, y, t, strong) {
+        const step = Math.floor(t / (TICK * 3)) % 8, swell = [0, 0.15, 0.3, 0.42, 0.42, 0.3, 0.15, 0.05][step];
+        f.glow(x, y, 5, RP.ICE, (strong ? 0.62 : 0.34) + swell * 0.4);
+        f.tone(x, y, RP.ICE, (strong ? 0.95 : 0.62) + swell * 0.3);
+    }
+    // A small pixel font, 5 rows high (3 wide, M W N wider): for numbers painted on hulls, names cast into a plate and the
+    // pencil marks on a drawing. Words drawn inside a picture belong to the picture, so they are pixels too.
+    const FONT = {
+        A: '010/101/111/101/101', B: '110/101/110/101/110', C: '011/100/100/100/011', D: '110/101/101/101/110', E: '111/100/110/100/111',
+        F: '111/100/110/100/100', G: '011/100/101/101/011', H: '101/101/111/101/101', I: '111/010/010/010/111', J: '001/001/001/101/010',
+        K: '101/101/110/101/101', L: '100/100/100/100/111', M: '10001/11011/10101/10001/10001', N: '1001/1101/1011/1001/1001', O: '010/101/101/101/010',
+        P: '110/101/110/100/100', Q: '010/101/101/110/011', R: '110/101/110/101/101', S: '011/100/010/001/110', T: '111/010/010/010/010',
+        U: '101/101/101/101/111', V: '101/101/101/101/010', W: '10001/10001/10101/11011/10001', X: '101/101/010/101/101', Y: '101/101/010/010/010',
+        Z: '111/001/010/100/111', 0: '111/101/101/101/111', 1: '010/110/010/010/111', 2: '111/001/111/100/111', 3: '111/001/111/001/111',
+        4: '101/101/111/001/001', 5: '111/100/111/001/111', 6: '111/100/111/101/111', 7: '111/001/001/001/001', 8: '111/101/111/101/111',
+        9: '111/101/111/001/111', '.': '0/0/0/0/1', ',': '00/00/00/01/10', '·': '0/0/1/0/0', '-': '000/000/111/000/000', ':': '0/1/0/1/0',
+        "'": '1/1/0/0/0', '?': '111/001/010/000/010', ' ': '00/00/00/00/00',
+    };
+    const glyphRows = ch => (FONT[ch] || FONT[String(ch).toUpperCase()] || FONT[' ']).split('/');
+    function pixelTextWidth(str, gap = 1) { const s = [...String(str)]; return s.reduce((w, ch) => w + glyphRows(ch)[0].length, 0) + Math.max(0, s.length - 1) * gap; }
+    /** Calls cell(x, y) for every lit pixel of str, top-left at (x, y). */
+    function pixelText(str, x, y, cell, gap = 1) {
+        let cx = 0;
+        [...String(str)].forEach(ch => { const rows = glyphRows(ch); rows.forEach((row, r) => { for (let c = 0; c < row.length; c++) if (row[c] === '1') cell(x + cx + c, y + r); }); cx += rows[0].length + gap; });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 2. The enormous thing in each sector. Each paints into the sector's still layer and may add moving parts.
+    //    geo: { light: [x, y] in canvas pixels }. G is the live canvas geometry (section 4).
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const GIANT = { R: 306, fromRight: 166, belowBottom: 115, tilt: 0.38, open: 0.24, r0: 1.4, r1: 1.74, back: 0.9, storm: [0.3, -0.86] };
+    function giantGeo() { return { cx: G.W - GIANT.fromRight, cy: G.H + GIANT.belowBottom, R: GIANT.R }; }
+
+    /** Sector 1: Kryos-68 Prime, a gas giant rising from the lower right. The side facing the light is a wide lit crescent with
+        rust and gold belts and one big storm; its ring curves up out of the lower left and goes behind it. */
+    function paintGiant(p, out, geo) {
+        const { cx, cy, R } = giantGeo(), [lx, ly] = geo.light, d0 = Math.hypot(lx - cx, ly - cy);
+        const L = norm3(lx - cx, ly - cy, -GIANT.back * d0), ct = Math.cos(GIANT.tilt), sn = Math.sin(GIANT.tilt), rims = [];
+        const ringV = rho => {
+            const k = (rho - GIANT.r0) / (GIANT.r1 - GIANT.r0);
+            let v = 0.24 + 0.4 * smooth(0, 0.1, k) * (1 - smooth(0.85, 1, k));
+            if (k > 0.56 && k < 0.64) v *= 0.1;                                                     // a dark gap in the ring
+            if (k < 0.18) v *= 0.5;
+            return v * (0.6 + 0.65 * vnoise(rho * 90, 3.3, 9));                                     // fine ringlets
+        };
+        const edge = R - 1.6, stormLat = -GIANT.storm[0] * sn + GIANT.storm[1] * ct, stormLon = GIANT.storm[0] * ct + GIANT.storm[1] * sn;
+        // the ring plane in 3D (x right, y down, z toward us): spanned by the ring's long axis and its tilted short axis
+        const b = GIANT.open, ax = [ct, sn, 0], mz = [-sn * b, ct * b, Math.sqrt(1 - b * b)];
+        const nrm = [ax[1] * mz[2] - ax[2] * mz[1], ax[2] * mz[0] - ax[0] * mz[2], ax[0] * mz[1] - ax[1] * mz[0]], nL = nrm[0] * L[0] + nrm[1] * L[1] + nrm[2] * L[2];
+        /** How much of the light the ring blocks before it reaches this point of the planet (0 none .. ~0.8). */
+        const ringShadow = (px, py, pz) => {
+            if (Math.abs(nL) < 1e-4) return 0;
+            const tt = -(nrm[0] * px + nrm[1] * py + nrm[2] * pz) / nL; if (tt <= 0) return 0;
+            const rho = Math.hypot(px + L[0] * tt, py + L[1] * tt, pz + L[2] * tt) / R;
+            return rho > GIANT.r0 && rho < GIANT.r1 ? Math.min(0.85, ringV(rho) * 2.2) : 0;
+        };
+        const ringPixel = (x, y, rho, shade) => {
+            if (hash(x, y, 31) > 0.975 && hash(x + 7, y, 2) > 0.4) { p.solid(x, y, RP.HULL, 0.35 + 0.35 * hash(x, y, 4)); return; }       // broken plating
+            const clump = fbm(x / 9, y / 5, 69, 3);                                                     // ice and dust in clumps, not a painted stripe
+            p.cover(x, y, RP.RING, ringV(rho) * shade * (0.7 + 0.5 * x / p.W) * (0.75 + 0.5 * clump), 0.42 + 0.5 * clump);   // ringlets of ice and dust; a few stars show through
+        };
+        p.region(0, 0, p.W, p.H, (x, y) => {
+            const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+            const u = dx * ct + dy * sn, w = -dx * sn + dy * ct, rho = Math.hypot(u, w / GIANT.open) / R;
+            const isRing = rho > GIANT.r0 && rho < GIANT.r1;
+            if (d < R) {
+                if (isRing && w > 0) { ringPixel(x, y, rho, 0.55); return; }                        // the near side passes in front, backlit
+                const nx = dx / R, ny = dy / R, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+                const lam = Math.max(0, nx * L[0] + ny * L[1] + nz * L[2]);
+                const lat = -nx * sn + ny * ct, lon = nx * ct + ny * sn;                             // the bands run with the ring
+                const band = 0.5 + 0.5 * Math.sin(lat * 21 + 4.4 * fbm(lon * 2.4 + 7, lat * 9, 68, 4));       // broad belts and zones
+                const fine = 0.5 + 0.5 * Math.sin(lat * 74 + 7 * fbm(lon * 5 + 2, lat * 24, 67, 3));            // thin streaks inside them
+                const tone = 0.64 * band + 0.36 * fine;
+                const sd = Math.hypot((lon - stormLon) / 0.12, (lat - stormLat) / 0.05);           // the storm: a dark eye with a pale edge
+                const storm = sd < 1 ? -0.34 * (1 - sd * sd) : sd < 1.45 ? 0.24 * (1 - (sd - 1) / 0.45) : 0;
+                const shadow = lam > 0 ? ringShadow(nx * R, ny * R, nz * R) : 0;
+                let v = 0.03 + 0.06 * tone + Math.pow(lam, 0.62) * (0.16 + 1.05 * tone + storm) * (1 - shadow);
+                if (d > edge && lam > 0.05) { const rv = Math.min(0.92, 0.32 + 1.4 * lam); p.solid(x, y, RP.SUN, rv); rims.push([x, y, RP.SUN, level(RP.SUN, rv, x, y)]); return; }
+                p.solid(x, y, RP.GAS, v);
+                if (d > edge - 1 && lam > 0.02) rims.push([x, y, RP.GAS, level(RP.GAS, v, x, y)]);
+                return;
+            }
+            if (isRing) { ringPixel(x, y, rho, 1); return; }
+            if (d < R + 6) {                                                                         // a thin warm atmosphere on the lit limb
+                const facing = (dx * L[0] + dy * L[1]) / d;
+                if (facing > 0.25) p.cover(x, y, RP.DUST, 0.6 * facing, (1 - (d - R) / 6) * facing);
+            }
+        });
+        const rand = seeded(68);                                                                     // the graveyard: small broken hulls caught in the ring
+        for (let i = 0; i < 16; i++) {
+            const rho = lerp(GIANT.r0 + 0.08, GIANT.r1 - 0.05, rand()), phi = Math.PI + (rand() - 0.5) * 0.5;
+            const u = rho * R * Math.cos(phi), w = rho * R * GIANT.open * Math.sin(phi) * (rand() < 0.5 ? 1 : -1);
+            const x = cx + u * ct - w * sn, y = cy + u * sn + w * ct;
+            if (x < 4 || y > p.H - 2 || Math.hypot(x - cx, y - cy) < R + 6) continue;
+            const len = 4 + rand() * rand() * 12;
+            drawHull(p, { x, y, len, ht: len * 0.26, angle: GIANT.tilt + (rand() - 0.5) * 1.4, flip: rand() < 0.5, light: 0.5, rust: true, seed: i + 70, from: rand() < 0.5 ? 0.2 + rand() * 0.3 : 0, to: rand() < 0.4 ? 0.6 + rand() * 0.3 : 1 });
+        }
+        out.giant = { cx, cy, R, rims };
+    }
+
+    /** Sector 2: a rogue world with no sun, a disc of pure black where the stars stop; a thin ice edge on the side facing the light. */
+    function paintRogue(p, out, geo) {
+        const cx = G.ox + 452, cy = G.oy + 150, R = 150, [lx, ly] = geo.light, L = norm3(lx - cx, ly - cy, -0.9 * Math.hypot(lx - cx, ly - cy)), ink = hexRgb(INK);
+        p.region(cx - R - 3, cy - R - 3, cx + R + 3, cy + R + 3, (x, y) => {
+            const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+            if (d > R + 2) return;
+            const facing = (dx * L[0] + dy * L[1]) / d;
+            if (d > R) { if (facing > 0.55) p.cover(x, y, RP.ICE, 0.3 * facing, 0.5 * (R + 2 - d) / 2); return; }
+            if (d > R - 1.2 && facing > 0.35) { p.solid(x, y, RP.ICE, 0.35 + 0.55 * facing); return; }
+            if (d > R - 2.6 && facing > 0.6) { p.solid(x, y, RP.ICE, 0.18 + 0.2 * facing); return; }
+            p.set(x, y, ink);
+        });
+        out.rogue = { cx, cy, R };
+    }
+
+    /** Sector 3: a long band of hundreds of dead transponders across the sky; near the ship a few resolve into hulls. */
+    function paintSignalBand(p, out) {
+        const A = [G.ox - 40, G.oy + 330], C = [G.ox + 300, G.oy + 30], B = [G.W + 40, G.oy + 150];
+        const at = s => [(1 - s) ** 2 * A[0] + 2 * s * (1 - s) * C[0] + s * s * B[0], (1 - s) ** 2 * A[1] + 2 * s * (1 - s) * C[1] + s * s * B[1]];
+        const dist = new Float32Array(p.W * p.H).fill(1e9), REACH = 64;                            // a faint haze along it: distance to the band
+        for (let s = -0.02; s <= 1.02; s += 0.008) {
+            const [bx, by] = at(s);
+            p.region(bx - REACH, by - REACH, bx + REACH, by + REACH, (x, y) => { const d = Math.hypot(x - bx, y - by), i = y * p.W + x; if (d < dist[i]) dist[i] = d; });
+        }
+        p.region(0, 0, p.W, p.H, (x, y) => {
+            const best = dist[y * p.W + x]; if (best > REACH) return;
+            const v = Math.exp(-best / 22) * (0.25 + 0.5 * fbm(x / 30, y / 12, 33, 3));
+            if (v > 0.06) p.tone(x, y, RP.HAZE, v * 1.4);
+        });
+        const rand = seeded(303), points = [];
+        for (let i = 0; i < 2000; i++) {
+            const s = Math.pow(rand(), 0.8), [bx, by] = at(s), spread = 3 + 14 * (1 - s) * (1 - s), x = Math.round(bx + gauss(rand) * spread), y = Math.round(by + gauss(rand) * spread * 0.6);
+            if (x < 0 || y < 0 || x >= p.W || y >= p.H) continue;
+            const v = 0.3 + 0.55 * rand() * rand();
+            p.add(x, y, RP.UI, v);
+            if (v > 0.6 && rand() < 0.3) p.add(x + 1, y, RP.UI, v * 0.6);
+            if (rand() < 0.08) points.push({ x, y, period: 2200 + rand() * 6000, phase: rand() * 9000, red: rand() < 0.08 });
+        }
+        for (let i = 0; i < 6; i++) {                                                                 // close to us they are ships
+            const s = 0.2 + i * 0.045 + rand() * 0.02, [bx, by] = at(s), len = 13 + rand() * 16;
+            drawHull(p, { x: bx + gauss(rand) * 14, y: by + gauss(rand) * 8, len, ht: len * 0.24, angle: (rand() - 0.5) * 1.2, flip: rand() < 0.5, light: 0.55, rust: true, holes: rand() < 0.4, seed: 300 + i });
+        }
+        out.blinkers = points;
+    }
+
+    /** Sector 4: a blue-green world filling the bottom of the frame; the warm lamps of a dead colony on its night side. */
+    function paintGardenWorld(p, out) {
+        const R = 1150, cx = G.ox + 300, cy = G.H - 0.4 * SH + R, L = norm3(0.95, 0.06, 0.3), lamps = [];
+        p.region(0, cy - R - 8, p.W, p.H, (x, y) => {
+            const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+            if (d > R) { const a = (d - R) / 6; if (a < 1) { const facing = clamp01(dx / R * 4 + 0.35); p.cover(x, y, RP.OCEAN, 0.55 * facing * (1 - a), (1 - a) * (0.15 + 0.7 * facing)); } return; }
+            const nx = dx / R, ny = dy / R, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+            const lam = nx * L[0] + ny * L[1] + nz * L[2], day = smooth(-0.02, 0.24, lam);
+            const u = nx * 7, w = nz * 9 - ny;                                                         // surface coordinates: they crowd toward the limb, as a sphere should
+            const landN = fbm(u * 1.4 + 3, w * 1.5, 44, 4), isLand = landN > 0.53;
+            const cloud = smooth(0.54, 0.72, fbm(u * 2.6 + 9, w * 3.4, 45, 4));
+            if (R - d < 1.6) { p.solid(x, y, RP.OCEAN, 0.2 + 0.6 * day); return; }
+            if (day > 0.04 && cloud > threshold(x + 1, y + 2) + 0.05) { p.solid(x, y, RP.CLOUD, 0.06 + 0.5 * day * (0.6 + 0.4 * cloud)); return; }
+            // a few lamps of a dead colony, not a living city
+            if (isLand && day < 0.1 && fbm(u * 5, w * 5, 46, 2) > 0.69 && hash(x, y, 9) > 0.9) { p.solid(x, y, RP.AMBER, 0.5 + 0.45 * hash(x, y, 3)); if (hash(x, y, 2) > 0.7) lamps.push({ x, y }); return; }
+            const v = 0.02 + day * (isLand ? 0.5 + 0.5 * (landN - 0.53) : 0.4 + 0.25 * landN);
+            p.solid(x, y, isLand ? RP.LAND : RP.OCEAN, v);
+        });
+        out.lamps = lamps.slice(0, 60);
+    }
+
+    /** Sector 5: a river of dead hulls. Thousands of them, all flying the same way, nose to the light: big and broken near the
+        lower left, smaller and smaller up the current, then specks and ticks against the gold. Painted into its own layer so the
+        current can drift. The nearest carries its number, 14,086, the hull Kryos-0 Alpha's wreck sends. */
+    const RIVER_PAD = 32;
+    function paintHullRiver(geo) {
+        const p = painter(G.W + RIVER_PAD, G.H, false), [lx0, ly] = geo.light, V = [lx0 + RIVER_PAD, ly];
+        const N = [RIVER_PAD + G.ox - 40, G.oy + 372], z0 = 1.5, rand = seeded(5051), blinkers = [];
+        const dx = N[0] - V[0], dy = N[1] - V[1], dl = Math.hypot(dx, dy), px = dy / dl, py = -dx / dl;
+        const at = (z, X, Y) => { const f = z0 / z, m = 24 * Math.sin(z * 0.23) + 16 * Math.sin(z * 0.071 + 1); return [V[0] + (dx + px * (X + m)) * f, V[1] + (dy + py * (X + m) + Y) * f]; };
+        const glowAt = (x, y) => Math.exp(-Math.hypot(x - V[0], (y - V[1]) * 1.2) / 95);
+        const flowAt = (x, y) => Math.atan2(V[1] - y, V[0] - x);                                   // the way the current runs here: into the light
+        for (let i = 0; i < 9000; i++) {                                                             // far away: ticks, then specks, against the gold
+            const f = 0.004 + 0.16 * Math.pow(rand(), 1.3), [x, y] = at(z0 / f, gauss(rand) * 84, gauss(rand) * 30), lit = glowAt(x, y);
+            if (x < 0 || x >= p.W || y < 0 || y >= p.H) continue;
+            const long = f > 0.07 && rand() < 0.5 ? 2 : 1, a = flowAt(x, y);                           // the bigger specks are short dashes along the current
+            for (let k = 0; k < long; k++) { const sx = x - Math.cos(a) * k, sy = y - Math.sin(a) * k; if (lit > 0.18) p.solid(sx, sy, RP.HULL, 0.04); else p.tone(sx, sy, RP.UI, 0.1 + 0.22 * rand()); }
+        }
+        const hulls = [];                                                                            // few near and big, a thousand far and small
+        for (let i = 0; i < 1100; i++) { const z = 1.7 + 52 * Math.pow(rand(), 0.66); hulls.push({ z, X: gauss(rand) * 86, Y: gauss(rand) * 30, a: (rand() - 0.5) * (z < 6 ? 0.5 : 0.26), holes: rand() < (z < 6 ? 0.6 : 0.3), cut: rand() * (z < 6 ? 0.6 : 1), cutAt: rand(), seed: i + 500 }); }
+        [[1.66, 150, -30, 0.2], [1.9, -160, 30, -0.14], [2.1, 60, 40, 0.3], [2.35, -60, -40, 0.1], [2.2, 220, 10, -0.22], [2.6, 150, 50, 0.16], [3.1, -110, -10, -0.06]].forEach(([z, X, Y, a], i) =>
+            hulls.push({ z, X, Y, a, holes: i % 3 !== 1, cut: i % 2 ? 0.1 : 0.9, cutAt: 0.3 + 0.1 * i, seed: 8800 + i, rust: i % 3 === 0 }));   // the near ones, broken, drifting the same way
+        hulls.push({ z: 1.72, fixed: [150, 306], len: 116, a: 0.18, holes: false, cut: 0.3, cutAt: 0.82, seed: 9001, number: '14,086' });   // the nearest, whole in frame: seams and its number
+        hulls.push({ z: 2.7, X: 92, Y: -26, a: 0.12, holes: true, cut: 0.1, cutAt: 0.4, seed: 9002 });
+        hulls.sort((a, b) => b.z - a.z).forEach((h, i) => {
+            const [x, y] = h.fixed ? [cvX(h.fixed[0]) + RIVER_PAD, cvY(h.fixed[1])] : at(h.z, h.X, h.Y), len = h.len || 128 * z0 / h.z, lit = glowAt(x, y);
+            if (x < -len || x > p.W + len || y < -len || y > p.H + len) return;
+            if (!h.number && len > 40 && Math.abs(x - RIVER_PAD - cvX(SHIP.restX)) < 70 && y < cvY(SHIP.restY) + 60) return;   // keep the space round our ship clear
+            if (!h.number && len > 30 && Math.abs(x - RIVER_PAD - cvX(150)) < 90 && Math.abs(y - cvY(306)) < 34) return;          // and round the numbered hull
+            const toV = norm3(V[0] - x, V[1] - y, 0), angle = flowAt(x, y) + h.a;
+            const broken = h.cut < 0.32 ? (h.cutAt < 0.5 ? { from: 0.15 + h.cutAt * 0.6 } : { to: 0.5 + h.cutAt * 0.4 }) : {};
+            const at2 = drawHull(p, Object.assign({ x, y, len, ht: len * 0.23, angle: h.number ? flowAt(x, y) * 0.5 : angle, flip: true, light: h.number ? 0.4 : 0.02 + (0.06 + 0.11 * Math.min(1, 2.6 / h.z)) * (1 - lit) * (0.75 + 0.5 * hash(i, 9, 2)),   // we see their dark sides
+                rust: len > 12, holes: h.holes, seed: h.seed, rimDir: [toV[0], toV[1]], rim: Math.min(0.9, 0.22 + 2.2 * lit), ramp: h.rust || hash(i, 4, 8) > 0.72 ? RP.RUST : RP.HULL }, broken));
+            if (h.number) { const [nx, ny] = at2(0.6, 0.05), w = pixelTextWidth(h.number); pixelText(h.number, Math.round(nx - w / 2), Math.round(ny - 2), (gx, gy) => p.solid(gx, gy, RP.HULL, 0.78)); }
+            if (h.z > 3 && h.z < 20 && blinkers.length < 15 && hash(i, 3, 7) > 0.8) { const [bx, by] = at2(0.35, -0.6); blinkers.push({ x: Math.round(bx) - RIVER_PAD, y: Math.round(by), period: 1100 + hash(i, 1, 3) * 2400, phase: hash(i, 2, 3) * 4000 }); }
+        });
+        return { canvas: p.canvas(), blinkers };
+    }
+
+    /** Sector 6: the light's face, cut by the right edge of the frame: the frame is still mostly dark. Gold at the limb, cream
+        toward its hidden middle, a boiling grain over it, and a stream of hulls crossing it: the far ones small and lost in the
+        glare, the near ones black. */
+    const FACE_R = 190;
+    function faceGeo() { return { cx: G.W + 64, cy: G.oy + 169, R: FACE_R }; }
+    function paintLightFace(p, out, geo, at) {
+        const { cx, cy, R } = at || faceGeo(), mask = new Uint8Array(p.W * p.H), hullScale = R / FACE_R;
+        const tone = new Float32Array(p.W * p.H);
+        const faceTone = (x, y) => {                                                                 // dark gold at the limb, cream at the middle, a slow boil
+            const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), k = Math.min(1, d / R), mu = Math.sqrt(1 - k * k);
+            const cells = fbm(x / 4, y / 4, 66, 3), swirl = fbm(x / 34 + 3, y / 22, 67, 3);
+            return 0.14 + 0.86 * Math.pow(mu, 1.15) + (cells - 0.5) * 0.16 + (swirl - 0.5) * 0.12 * mu;
+        };
+        p.region(0, 0, p.W, p.H, (x, y) => {
+            const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+            if (d < R) { const v = faceTone(x, y); p.solid(x, y, RP.SUN, v); tone[y * p.W + x] = v; mask[y * p.W + x] = 1; return; }
+            const e = d - R, a = Math.atan2(dy, dx), streak = fbm(a * 7 + 3, e / 90, 61, 3);
+            const v = 0.7 * Math.exp(-e / (R * 0.025)) + 0.32 * Math.exp(-e / (R * 0.09)) + 0.2 * Math.exp(-e / (R * 0.32)) * (0.3 + 1.1 * streak);
+            if (v > 0.03) p.add(x, y, RP.SUN, v);
+        });
+        const rand = seeded(6006), left = Math.max(cx - R, 0);
+        for (let i = 0; i < 34; i++) {                                                               // ships in front of it, all heading in
+            const y = cy + (rand() - 0.5) * R * 1.8, half = Math.sqrt(Math.max(0, R * R - (y - cy) ** 2)), x = lerp(Math.max(left, cx - half), Math.min(p.W + 10, cx + half), rand());
+            if (half < 8) continue;
+            const len = (6 + Math.pow(rand(), 3.2) * 60) * Math.max(0.45, hullScale), isFar = len < 26;   // most are far and small; a few near ones are black
+            const o = { x, y, len, ht: len * 0.24, angle: (rand() - 0.5) * 0.5, flip: true, seed: 600 + i, from: rand() < 0.3 ? 0.3 : 0, holes: len > 40 && rand() < 0.5 };
+            if (isFar) Object.assign(o, { ramp: RP.SUN, light: Math.max(0.12, faceTone(Math.round(x), Math.round(y)) * 0.92 - 0.12) });   // lost in the glare
+            else o.light = 0.03;
+            drawHull(p, o);
+        }
+        for (let i = 0; i < p.W * p.H; i++) if (mask[i] && p.data[i * 4] < 120) mask[i] = 0;               // the sweep passes behind the hulls
+        out.face = { cx, cy, R, mask, tone };
+    }
+    /** The slow sweep across the light's face: a brighter meridian that turns with it, so it reads as a sphere, not a line. */
+    function faceSweep(c, face, W, t) {
+        // written into one small buffer and drawn once: thousands of single-pixel fills a frame would stall the canvas
+        const x0 = Math.max(0, Math.floor(face.cx - face.R)), y0 = Math.max(0, Math.floor(face.cy - face.R)), x1 = Math.min(W, Math.ceil(face.cx + face.R)), y1 = Math.min(G.H, Math.ceil(face.cy + face.R));
+        const bw = x1 - x0, bh = y1 - y0; if (bw <= 0 || bh <= 0) return;
+        if (!face.sweep || face.sweep.c.width !== bw || face.sweep.c.height !== bh) { const sc = document.createElement('canvas'); sc.width = bw; sc.height = bh; const g = sc.getContext('2d'); face.sweep = { c: sc, g, img: g.createImageData(bw, bh), key: '' }; }
+        const period = 14000, step = Math.floor(t / TICK), key = step;                               // stepped at 8 fps, like everything slow in this style
+        const S2 = face.sweep;
+        if (S2.key !== key) {
+            S2.key = key;
+            const phi = -1.25 + (((step * TICK) % period) / period) * 2.5, s = Math.sin(phi), d = S2.img.data;
+            d.fill(0);
+            for (let y = y0; y < y1; y++) {
+                const half = Math.sqrt(Math.max(0, face.R * face.R - (y + 0.5 - face.cy) ** 2)), xm = face.cx + s * half;
+                for (let k = -7; k <= 7; k++) {
+                    const x = Math.round(xm + k); if (x < x0 || x >= x1) continue;
+                    const i = y * W + x; if (!face.mask[i]) continue;
+                    const lv = level(RP.SUN, face.tone[i] + 0.16 * (1 - Math.abs(k) / 8), x, y + (step & 1));
+                    if (lv <= level(RP.SUN, face.tone[i], x, y)) continue;
+                    const rgb = RP.SUN.rgb[lv], o = ((y - y0) * bw + (x - x0)) * 4; d[o] = rgb[0]; d[o + 1] = rgb[1]; d[o + 2] = rgb[2]; d[o + 3] = 255;
+                }
+            }
+            S2.g.putImageData(S2.img, 0, 0);
+        }
+        c.drawImage(S2.c, x0, y0);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 3. The six sectors. Places sit in stage pixels (640 x 360; our ship rests at 192, 194). Lines follow docs/STYLE.md.
+    //    Sectors 1, 5 and 6 are the spec's (docs/GAME_SCREEN.md). 2, 3 and 4 are paintings only, with plain placeholder notes.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const SHIP = { len: 56, ht: 13, restX: 192, restY: 194, windowsU: [0.24, 0.37, 0.49, 0.61, 0.72] };
+    const JUMP = { energy: 8, rations: 5 };
+    const ROOMS = ['bridge', 'lab', 'quarters', 'hold', 'engineering'];
+    const CREW = [
+        { id: 'cora', name: 'Cora' }, { id: 'jaxon', name: 'Jaxon' }, { id: 'vance', name: 'Vance' }, { id: 'aris', name: 'Aris' }, { id: 'mira', name: 'Mira' },
+    ];
+    const team = (verb, sub, extra) => Object.assign({ verb, sub, at: 'beacon', does: 'team' }, extra);
+
+    // A scene plays as film: narration first, then voices with faces, then a real choice. Lines are [who, line, from?].
+    const SCENE_STOCKPILE = {
+        key: 'EXODUS_WRECK', title: 'EXODUS-4 · The stockpile',
+        narration: 'The decks are wrecked, but the hold is sealed and dry. A note on top says: For whoever comes next.',
+        // only the two who went down speak from the hold: Vance and Aris
+        lines: [['Aris', "They packed this for the next crew. That's a decent thing to do."], ['Vance', "The manifest matches what's in the hold. That's the first honest list I've seen out here."],
+            ['Aris', 'The labels are all handwritten. Someone took real care over this.']],
+        choices: [{ verb: 'Take everything', chips: [['+30 salvage', 'gain']], gain: { salvage: 30 }, record: 'Took everything in their hold.' },
+            { verb: 'Take half, leave a note of our own', chips: [['+15 salvage', 'gain'], ['−1 ration', 'loss']], gain: { salvage: 15, rations: -1 }, record: 'Took half their hold and left a note for the next crew.' }],
+    };
+    // A found page is the object itself; its words come one line at a time; the after-lines are said under it.
+    const PAGE_DISC = {
+        id: 'disc', kind: 'drawing', title: 'A drawing from their logbook', source: 'EXODUS-4', record: 'Found a drawing of a gold disc in their logbook.',
+        lines: [
+            { label: 'The disc', part: 'disc', t: 'Gold. Thrown out of our solar system in 1977, bolted to a probe the size of a car. The oldest thing we ever sent anywhere.' },
+            { label: 'The map', part: 'map', t: 'Fourteen lines from one point. Each line is a star that ticks like a clock. Where they meet is home.' },
+            { label: 'The two figures', part: 'figures', t: 'What we look like. One of them is waving.' },
+            { label: 'Written in the margin', part: 'margin', hand: true, t: '“Why is this in a colony ship’s orders? Why is it the only page marked with our heading?” K.' },
+        ],
+        after: [['A.U.R.A.', 'An old curiosity, Commander. I would not spend time on it.'], ['Mira', "The disc's map uses real stars. Match it to their last star reading, and we'll know when they died."]],
+    };
+    const PAGE_PLATE = {
+        id: 'plate', kind: 'plate', title: 'The crew plate', source: 'EXODUS-6', record: 'Found the crew plate on Rhea-4 Minor.',
+        lines: [{ part: 'names', t: 'A metal plate from beside the airlock. Four crew names are cast into it.' }, { part: 'blank', t: 'Below them is a fifth panel, the same size. It is blank. It was made blank.' },
+            { part: 'all', t: 'Someone made a plate for five people, and only ever had four names to put on it.' }],
+        cast: ['R. OSEI · ENGINEER', 'T. YUEN · DOCTOR', 'K. ADEYEMI · SECURITY', 'L. PARK · SCIENTIST', ''],
+        after: [['Aris', "I'm adding their names to my list."]],
+    };
+    // Crew remarks never show on screen: they go to the ship's record only (BarkSystem lines, docs/script/pools.md).
+    const BARKS = {
+        orbit: ['Aris', "In orbit. The med bay's ready if anyone needs it."],
+        lander: ['Jaxon', "Lander's fuelled and checked. Bring it back in one piece."],
+        exodus: ['Aris', "One of the eight ships. I'll read the crew names before we take anything."],
+    };
+
+    const SECTORS = {
+        1: {
+            title: 'The Graveyard', seed: 11, dust: 0.14, haze: 1, rim: 0.08, stops: 3, next: 5, thing: 'giant',
+            res: { energy: 100, rations: 25, salvage: 50 },
+            light: { core: 1, halo: 7, strength: 1, spikes: 4 }, orbitLight: { x: 603, y: 53, core: 1.4, halo: 16, strength: 0.95, spikes: 6 },
+            arrive: [['A.U.R.A.', 'Good morning, Commander. All four crew are awake and well. The ship is in one piece.'], ['Aris', 'Everyone is up. Sixty-one years, and nobody even feels hungry.'],
+                ['A.U.R.A.', 'I hear one old ship beacon on our route, Commander.']],
+            wake: [{ t: 'All five woke after sixty-one years asleep.' }, { who: 'Vance', t: 'There are five of us on this ship. She keeps saying four.' }],
+            hint: { at: 'titan', text: 'Click a world to go there.' },
+            crew: { at: { cora: 'bridge', jaxon: 'engineering', vance: 'hold', aris: 'lab', mira: 'lab' }, hurt: {}, damaged: {}, pods: 0 },
+            places: [
+                { id: 'zeta', name: 'Platform Zeta', kind: 'station', x: 262, y: 92, r: 16, cost: 4, line: 'An old station. Its docking port still answers.',
+                    react: ['Vance', 'A station out here. Somebody put it on this route on purpose.'],
+                    orbit: { line: 'A station from a mission before ours.', arrive: ['A.U.R.A.', 'The docking port answers, Commander. Nothing else does.'],
+                        steps: [{ verb: 'Board the station', sub: 'One of the crew goes in on one tank of air', at: 'station', does: 'board', then: ['Aris', 'Nobody aboard. They left the lights on.'], record: 'Boarded Platform Zeta. Nobody aboard.' }] } },
+                { id: 'titan', name: 'Titan-61 IV', kind: 'world', type: 'desert', x: 350, y: 122, r: 20, cost: 5, beacon: 'red',
+                    line: 'A dry world. A ship beacon is still running down there.', react: ['Mira', "That's a ship's transponder. One of the eight, I bet."],
+                    orbit: { line: 'A dry world. Hot by day, frozen at night.', arrive: ['A.U.R.A.', 'Orbit, Commander. The beacon belongs to EXODUS-4. It is still running.'],
+                        steps: [
+                            team('Send the team', 'Vance and Aris take the lander', { crew: 'Vance and Aris', scene: SCENE_STOCKPILE, bark: 'exodus', then: ['Vance', "We're back. Nobody alive down there. We brought their last star reading."], page: PAGE_DISC, record: 'The team searched EXODUS-4. Nobody alive.' }),
+                            { verb: 'Date it with the star map', sub: 'Mira lines it up with the stars', at: 'beacon', does: 'date', pulse: true, story: true,
+                                then: ['Mira', 'Hull 4 died twenty-one years ago. They were flying to that grey moon.'], dated: 'Hull 4 · 21 years dead', reveal: 'rhea', record: 'Dated hull 4: twenty-one years dead.' },
+                        ] } },
+                { id: 'chronos', name: 'Chronos-37 Proxima', kind: 'world', type: 'ice', x: 424, y: 56, r: 15, cost: 5, line: 'An ice world. Nothing on the scanner.',
+                    react: ['Aris', 'Nothing on the scanner. Just old ice.'],
+                    orbit: { line: 'An ice world. Nothing moves down there.', arrive: ['A.U.R.A.', 'No signal, Commander. The ice is old and clean.'],
+                        steps: [team('Send the team down', 'Search the surface', { then: ['Jaxon', 'Nothing down there but ice. We took some for water.'], record: 'Searched Chronos-37 Proxima. Only ice.' })] } },
+                { id: 'rhea', name: 'Rhea-4 Minor', kind: 'world', type: 'rock', x: 494, y: 126, r: 11, free: true, hidden: true, beacon: 'red',
+                    line: 'A small grey moon. Its emergency lamp still flashes.', react: ['Mira', 'They saw a lamp on that moon and went to help. They never got there.'],
+                    orbit: { line: 'A small grey moon. One of our ships came down on it.', arrive: ['A.U.R.A.', 'Orbit, Commander. EXODUS-6 is down there. Its emergency lamp is still flashing.'],
+                        steps: [team('Send the team', 'Aris and Mira take the lander', { crew: 'Aris and Mira', page: PAGE_PLATE, record: 'The team searched EXODUS-6. Nobody alive.' })] } },
+                { id: 'zephyr', name: 'Zephyr-97 X', kind: 'world', type: 'rock', x: 566, y: 78, r: 14, cost: 6, line: 'A dead rock. No signal.',
+                    react: ['A.U.R.A.', 'A dead rock, Commander. There is no signal from it.'],
+                    orbit: { line: 'A dead rock, close to nothing.', arrive: ['A.U.R.A.', 'Nothing here, Commander. Not even old wreckage.'],
+                        steps: [team('Send the team down', 'Search the surface', { then: ['Vance', "Rock and dust. We shouldn't have stopped."], record: 'Searched Zephyr-97 X. Nothing.' })] } },
+                { id: 'kryos', name: 'Kryos-68 Prime', kind: 'giant', type: 'gas', cost: 6, gain: { energy: 15 }, line: 'A gas giant. We can skim fuel from its clouds.',
+                    react: ['Jaxon', 'We can skim fuel there. It will cost us a stop.'],
+                    orbit: { line: 'A gas giant, banded rust and gold.', arrive: ['Jaxon', 'Scoops are open. We fill the tanks on the next pass.'],
+                        steps: [{ verb: 'Skim fuel', sub: '+15 energy', at: 'clouds', does: 'fuel', then: ['A.U.R.A.', 'Tanks are full, Commander.'], gain: { energy: 15 }, record: 'Skimmed fuel at Kryos-68 Prime.' }] } },
+            ],
+        },
+        2: {
+            title: 'The Dark Void', seed: 22, dust: 0.1, haze: 0.6, rim: 0.1, stops: 3, next: 3, thing: 'rogue', stars: 1.8, titleAt: [0.7, 0.42],
+            res: { energy: 84, rations: 20, salvage: 70 },
+            light: { core: 1.5, halo: 10, strength: 1, spikes: 5 }, orbitLight: { x: 600, y: 56, core: 2, halo: 22, strength: 0.95, spikes: 6 },
+            arrive: [], crew: { at: { cora: 'bridge', jaxon: 'engineering', vance: 'hold', aris: 'lab', mira: 'lab' }, hurt: {}, damaged: {}, pods: 1 },
+            places: [
+                { id: 'hyperion', name: 'Hyperion-9 Minor', kind: 'world', type: 'ice', x: 268, y: 70, r: 14, cost: 5, line: 'A frozen moon, far from any star.', orbit: { line: 'A frozen moon, far from any star.', steps: [] } },
+                { id: 'nysa', name: 'Nysa-40 X', kind: 'world', type: 'rock', x: 330, y: 300, r: 15, cost: 5, line: 'A dark rock. It reflects almost no light.', orbit: { line: 'A dark rock. It reflects almost no light.', steps: [] } },
+            ],
+        },
+        3: {
+            title: 'The Signal', seed: 33, dust: 0.3, haze: 0.8, rim: 0.2, stops: 3, next: 4, thing: 'band',
+            res: { energy: 66, rations: 15, salvage: 60 },
+            light: { core: 2.5, halo: 18, strength: 1.05, spikes: 6 }, orbitLight: { x: 598, y: 60, core: 4, halo: 34, strength: 1 },
+            arrive: [], crew: { at: { cora: 'bridge', jaxon: 'engineering', vance: 'hold', aris: 'lab', mira: 'bridge' }, hurt: {}, damaged: {}, pods: 2 },
+            places: [
+                { id: 'helike', name: 'Helike-22 IV', kind: 'world', type: 'desert', x: 340, y: 278, r: 16, cost: 5, line: 'A dry world under a sky full of transponders.', orbit: { line: 'A dry world under a sky full of transponders.', steps: [] } },
+                { id: 'calypso', name: 'Calypso-5 Prime', kind: 'world', type: 'ice', x: 470, y: 230, r: 14, cost: 6, line: 'An ice world. Two transponders sit on it.', orbit: { line: 'An ice world. Two transponders sit on it.', steps: [] } },
+            ],
+        },
+        4: {
+            title: 'The Garden', seed: 44, dust: 0.45, haze: 0.8, rim: 0.3, stops: 3, next: 5, thing: 'garden',
+            res: { energy: 48, rations: 15, salvage: 40 },
+            light: { core: 4, halo: 30, strength: 1.1 }, orbitLight: { x: 598, y: 70, core: 8, halo: 60, strength: 1.05 },
+            arrive: [], crew: { at: { cora: 'bridge', jaxon: 'engineering', vance: 'hold', aris: 'lab', mira: 'lab' }, hurt: {}, damaged: {}, pods: 3 },
+            places: [
+                { id: 'thebe', name: 'Thebe-8 Minor', kind: 'world', type: 'rock', x: 404, y: 132, r: 12, cost: 4, line: 'A small grey moon of the green world.', orbit: { line: 'A small grey moon of the green world.', steps: [] } },
+                { id: 'ione', name: 'Ione-31 X', kind: 'world', type: 'ice', x: 520, y: 112, r: 15, cost: 5, line: 'An ice world, well away from the green one.', orbit: { line: 'An ice world, well away from the green one.', steps: [] } },
+            ],
+        },
+        5: {
+            title: 'The Tally', seed: 55, dust: 0.85, haze: 1, rim: 0.55, stops: 2, next: 6, thing: 'river', lowEnergy: true,
+            res: { energy: 22, rations: 10, salvage: 25 },
+            light: { core: 9, halo: 120, strength: 1.3, beyond: true, baked: true }, orbitLight: { x: 660, y: 118, core: 26, halo: 150, strength: 1.25 },
+            arrive: [['A.U.R.A.', 'We are through the jump, Commander. I count 21,483 beacons on this heading.'], ['Vance', 'Twenty-one thousand beacons. So where are all the ships?'],
+                ['Jaxon', "We're low on power. Pick our stops carefully.", 'from engineering']],
+            crew: { at: { cora: 'bridge', jaxon: 'engineering', vance: 'quarters', aris: 'quarters', mira: 'lab' }, hurt: { vance: true }, damaged: { quarters: true }, pods: 3 },
+            record: [
+                { head: 'Sector 1 · The Graveyard', items: [
+                    { t: 'All five woke after sixty-one years asleep.', stop: 'Waking up' },
+                    { who: 'Vance', t: 'There are five of us on this ship. She keeps saying four.', stop: 'Waking up' },
+                    { t: 'Flew to Titan-61 IV.', chips: [['−5 energy', 'spend']], routine: true, stop: 'Titan-61 IV' },
+                    { t: 'The team searched EXODUS-4. Nobody alive.', stop: 'Titan-61 IV' },
+                    { t: 'Found a drawing of a gold disc in their logbook.', story: true, page: 'disc', stop: 'Titan-61 IV' },
+                    { t: 'Dated hull 4: twenty-one years dead.', story: true, stop: 'Titan-61 IV' },
+                    { t: 'Flew to Rhea-4 Minor on their last course.', routine: true, stop: 'Rhea-4 Minor' },
+                    { t: 'Found the crew plate on Rhea-4 Minor.', story: true, page: 'plate', stop: 'Rhea-4 Minor' },
+                ] },
+                { head: 'Sector 5 · The Tally', items: [
+                    { t: 'Jumped from the Graveyard.', chips: [['−8 energy', 'spend'], ['−5 rations', 'spend']], routine: true, stop: 'The jump' },
+                    { t: 'Flew the corridor. 21,483 beacons heard.', story: true, stop: 'The jump' },
+                    { who: 'A.U.R.A.', t: 'We are through the jump, Commander. All systems are working.', routine: true, stop: 'The jump' },
+                    { t: 'A rock hit the quarters. Vance was hurt.', stop: 'The jump' },
+                    { who: 'Aris', t: "I've got him. His vitals are steady. He'll be fine.", stop: 'The jump' },
+                    { t: 'The crew ate 5 rations. 10 left.', routine: true, stop: 'The jump' },
+                    { who: 'Jaxon', t: "Reactor or hull. Pick one. I haven't slept enough to do both.", stop: 'The jump' },
+                ] },
+            ],
+            places: [
+                { id: 'aea', name: 'Aea-64 Alpha', kind: 'world', type: 'gas', x: 74, y: 92, r: 24, cost: 6, visited: true, line: 'We skimmed fuel here.' },
+                { id: 'kryos0', name: 'Kryos-0 Alpha', kind: 'world', type: 'ice', x: 300, y: 92, r: 18, cost: 5, beacon: 'red',
+                    line: 'An ice world. A wreck on it sends hull number 14,086.', react: ['Vance', 'Hull number 14,086. Earth kept building ships after we left.'],
+                    orbit: { line: 'An ice world. The light is bright here, even at night.', arrive: ['A.U.R.A.', 'Orbit, Commander. The wreck is on the ice, near the north pole.'],
+                        steps: [
+                            team('Send the team', 'Jaxon and Aris take the lander', { then: ['Jaxon', 'Their ship is far better than ours. And it has been dead for centuries.'], record: 'The team searched hull 14,086.' }),
+                            { verb: 'Date it with the star map', sub: 'Mira lines it up with the stars', at: 'beacon', does: 'date', pulse: true,
+                                then: ['Mira', 'About three hundred years dead. They were flying to a dark moon.'], dated: 'Hull 14,086 · ~300 years dead', reveal: 'iapetus', record: 'Dated hull 14,086: about three hundred years dead.' },
+                        ] } },
+                { id: 'kryos72', name: 'Kryos-72 Proxima', kind: 'station', dark: true, x: 386, y: 50, r: 16, cost: 5, line: 'A station built by a later ship. No power.',
+                    react: ['Aris', "That station is newer than anything we have. And it's dead."],
+                    orbit: { line: 'A station from a later ship. No power.', arrive: ['A.U.R.A.', 'No power aboard, Commander. One navigation light is still blinking.'],
+                        steps: [{ verb: 'Board the station', sub: 'One of the crew goes in on one tank of air', at: 'station', does: 'board', then: ['Jaxon', 'Everything in there is newer than our ship. All of it is broken.'], record: 'Boarded Kryos-72 Proxima.' }] } },
+                { id: 'iapetus', name: 'Iapetus-60 Minor', kind: 'world', type: 'dark', x: 470, y: 112, r: 12, free: true, hidden: true, beacon: 'warm',
+                    line: "A dark moon. Someone built a shelter from a ship's hull.", react: ['Mira', 'That lamp was set up by hand. Someone lived on that moon.'],
+                    orbit: { line: 'A dark moon. A lamp is burning on the night side.', arrive: ['A.U.R.A.', 'Orbit, Commander. There is a shelter down there, built from a hull.'],
+                        steps: [team('Send the team to the lamp', 'Aris and Mira take the lander', { then: ['Aris', 'Someone lived here for years. They kept a calendar on the wall.'], record: 'The team found a shelter on Iapetus-60 Minor.' })] } },
+                { id: 'chronos61', name: 'Chronos-61 IV', kind: 'world', type: 'rock', x: 430, y: 282, r: 18, cost: 6, orbiters: true, line: 'A dead rock. Three dead ships circle it.',
+                    react: ['A.U.R.A.', 'Nothing on the ground, Commander. Three beacons in orbit around it.'],
+                    orbit: { line: 'A dead rock. Three ships circle it.', arrive: ['A.U.R.A.', 'Three dead ships in orbit, Commander. None of them answer.'],
+                        steps: [team('Send the team down', 'Search the surface', { then: ['Jaxon', "Just rock. And a lot of other people's debris."], record: 'Searched Chronos-61 IV.' })] } },
+            ],
+        },
+        6: {
+            title: 'The Light', seed: 66, dust: 1, haze: 0.8, rim: 0.9, stops: 3, next: null, thing: 'face', notesLeft: true, titleAt: [0.2, 0.3],
+            res: { energy: 14, rations: 4, salvage: 30 },
+            light: { face: true }, orbitLight: { x: 690, y: 160, core: 30, halo: 150, strength: 1.3 },   // planets here are lit by the face, just off the frame
+            arrive: [['Jaxon', "That light ahead. I'm reading no heat off it."], ['A.U.R.A.', 'Nothing is charted past this sector, Commander. The heading ends at the light.']],
+            crew: { at: { cora: 'bridge', jaxon: 'engineering', vance: 'hold', aris: 'lab', mira: 'bridge' }, hurt: {}, damaged: {}, pods: 3 },
+            places: [
+                { id: 'erebus', name: 'Station Erebus', kind: 'station', x: 262, y: 74, r: 16, cost: 4, line: 'A station parked facing the light.',
+                    react: ['Aris', 'A station this close to it. Someone wanted to watch.'],
+                    orbit: { line: 'A station parked facing the light.', arrive: ['A.U.R.A.', 'The station is empty, Commander. Every window faces the light.'],
+                        steps: [{ verb: 'Board the station', sub: 'One of the crew goes in on one tank of air', at: 'station', does: 'board', then: ['Vance', 'They wrote down every sweep of the light. Thousands of them.'], record: 'Boarded Station Erebus.' }] } },
+                { id: 'titan92', name: 'Titan-92 X', kind: 'world', type: 'rock', x: 300, y: 272, r: 18, cost: 5, beacon: 'red', line: 'A grey world. A wreck on it sends hull number 38,412.',
+                    react: ['Vance', 'Hull number 38,412. The last ones got this far.'],
+                    orbit: { line: 'A grey world, lit gold on one side.', arrive: ['A.U.R.A.', 'Orbit, Commander. The wreck sits facing the light.'],
+                        steps: [team('Send the team', 'Jaxon and Vance take the lander', { then: ['Jaxon', 'They parked facing it. Like they were waiting for something.'], record: 'The team searched hull 38,412.' })] } },
+                { id: 'tethys', name: 'Tethys-1 Prime', kind: 'world', type: 'ice', x: 352, y: 132, r: 14, free: true, hidden: true, beacon: 'red', line: "A cold world a day's flight from the light.",
+                    react: ['Aris', 'One ship stopped a day short of it. I want to read its log.'], orbit: { line: "A cold world, a day's flight from the light.", steps: [] } },
+            ],
+            lightOrbit: { line: 'It looks like a sun. It gives no heat.', arrive: ['A.U.R.A.', 'We are holding position, Commander. I cannot tell you what happens if we go closer.'],
+                steps: [{ verb: 'Go into the light', sub: 'What you choose there is final', at: 'light', does: 'end' }] },
+        },
+    };
+    const SECTOR_KEYS = [1, 2, 3, 4, 5, 6];
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 4. Geometry and the clock. The canvas is 640 x 360 at a whole number of SCREEN pixels per art pixel (3 on a 1920 x 1080
+    //    display, 2 on 1280 x 720), counted in device pixels, so a Windows display at 125% still gets even pixels: G.k is
+    //    device pixels per art pixel, G.s = G.k / devicePixelRatio is CSS pixels per art pixel. Extra width or height is more
+    //    sky, never stretch. Time runs on our own clock so a hidden pane can be stepped.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const $ = id => document.getElementById(id);
+    const G = { k: 3, s: 3, dpr: 1, W: SW, H: SH, ox: 0, oy: 0, left: 0, top: 0 };
+    const cv = $('world'), ctx = cv.getContext('2d');
+    const filmCv = $('film'), filmCtx = filmCv.getContext('2d');
+    function measure() {
+        const dpr = window.devicePixelRatio || 1, iw = window.innerWidth, ih = window.innerHeight, dw = Math.round(iw * dpr), dh = Math.round(ih * dpr);
+        const k = Math.max(2, Math.floor(Math.min(dw / SW, dh / SH) + 1e-6));
+        G.k = k; G.dpr = dpr; G.s = k / dpr;
+        G.W = Math.ceil(dw / k); G.H = Math.ceil(dh / k); G.ox = Math.round((G.W - SW) / 2); G.oy = Math.round((G.H - SH) / 2);
+        G.left = Math.floor((dw - G.W * k) / 2) / dpr; G.top = Math.floor((dh - G.H * k) / 2) / dpr;      // on the device pixel grid
+        cv.width = G.W; cv.height = G.H; cv.style.width = G.W * G.s + 'px'; cv.style.height = G.H * G.s + 'px'; cv.style.left = G.left + 'px'; cv.style.top = G.top + 'px';
+        document.documentElement.style.setProperty('--t', Math.max(0, Math.min(1.5, (iw - 1280) / 640)).toFixed(3));   // text follows the CSS viewport
+        document.documentElement.style.setProperty('--px', G.s + 'px');                                // one art pixel, in CSS px
+    }
+    const toScreen = (cx, cy) => [G.left + cx * G.s, G.top + cy * G.s];
+    const toCanvas = (px, py) => [(px - G.left) / G.s, (py - G.top) / G.s];
+    const cvX = x => G.ox + x, cvY = y => G.oy + y;
+
+    const clock = { t: 0, timers: [], seq: 0, frozen: false };
+    function after(ms, fn) { const id = ++clock.seq; clock.timers.push({ id, at: clock.t + ms, fn }); return id; }
+    function cancelTimer(id) { const i = clock.timers.findIndex(x => x.id === id); if (i >= 0) clock.timers.splice(i, 1); }
+    function advance(dt) {
+        const end = clock.t + dt;
+        for (;;) {
+            let next = null;
+            for (const x of clock.timers) if (x.at <= end && (!next || x.at < next.at)) next = x;
+            if (!next) break;
+            clock.timers.splice(clock.timers.indexOf(next), 1);
+            const before = clock.t; clock.t = Math.max(clock.t, next.at); update(clock.t - before);
+            try { next.fn(); } catch (err) { console.error(err); }
+        }
+        const rest = end - clock.t; clock.t = end; update(rest);
+    }
+    const ease = s => (s < 0.5 ? 2 * s * s : 1 - 2 * (1 - s) * (1 - s));
+    const easeOut = s => 1 - (1 - s) ** 3;
+
+    // Bayer masks: a pattern per level (0..64) of ink pixels. Used to dim, to dissolve and to darken under words.
+    const patterns = [];
+    function pattern(levelN) {
+        const L = Math.max(0, Math.min(64, Math.round(levelN)));
+        if (!patterns[L]) { const c = document.createElement('canvas'); c.width = 8; c.height = 8; const g = c.getContext('2d'); g.fillStyle = INK; for (let i = 0; i < 64; i++) if (BAYER_RAW[i] < L) g.fillRect(i & 7, i >> 3, 1, 1); patterns[L] = ctx.createPattern(c, 'repeat'); }
+        return patterns[L];
+    }
+    function dimWith(c, amount) { if (amount <= 0) return; c.fillStyle = pattern(amount * 64); c.fillRect(0, 0, G.W, G.H); }
+    /** Darkens the picture in place for pages, the record, the menu and dating. A multiply keeps the dither grain that is
+        already there; laying a Bayer pattern of ink over a bright planet turns it into a coarse checkerboard. */
+    function darken(c, amount) {
+        if (amount <= 0) return;
+        const v = Math.round(255 * (1 - clamp01(amount)));
+        c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = `rgb(${v},${v},${v})`; c.fillRect(0, 0, G.W, G.H); c.restore();
+    }
+    const offscreens = {};
+    function offscreen(name) { let o = offscreens[name]; if (!o || o.c.width !== G.W || o.c.height !== G.H) { const c = document.createElement('canvas'); c.width = G.W; c.height = G.H; o = offscreens[name] = { c, g: c.getContext('2d') }; } return o; }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 5. State.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    let S = null;
+    const record = [];                    // the ship's record: [{ head, items: [{ t, who? }] }], newest group last
+    const pagesRead = [];
+    function fresh(n) {
+        const sec = SECTORS[n];
+        return {
+            n, view: 'sector', res: Object.assign({}, sec.res), stops: sec.stops,
+            places: sec.places.map(p => Object.assign({ step: 0 }, p)),
+            ship: { x: SHIP.restX, y: SHIP.restY, angle: 0 }, at: null, orbitOf: null,
+            hover: null, tab: -1, course: null, wake: [], intro: null, sectorT0: clock.t, version: 1,
+            flags: { hintGone: false, namesUntil: 0, altNames: false, said: {} }, trans: null, jump: null, lander: null, dating: null,
+            film: null, dim: 0, ending: null, reveal: null, lowSaid: false,
+        };
+    }
+    const placeById = id => S.places.find(p => p.id === id);
+    const lightPos = () => { const sec = SECTORS[S.n]; if (sec.light.face) { const f = faceGeo(); return [f.cx, f.cy]; } return [sec.light.beyond ? G.W + 6 : G.W - 3, cvY(169)]; };
+    function shipNoseStage() { return [S.ship.x + Math.cos(S.ship.angle) * SHIP.len / 2, S.ship.y + Math.sin(S.ship.angle) * SHIP.len / 2]; }
+    /** Where a place sits, in canvas pixels; the giant's spot is the point of its limb nearest our ship. */
+    function placeSpot(pl) {
+        if (pl.kind === 'giant') { const g = giantGeo(), [nx, ny] = shipNoseStage(), sx = cvX(nx), sy = cvY(ny), d = Math.hypot(sx - g.cx, sy - g.cy); return { cx: g.cx + (sx - g.cx) / d * g.R, cy: g.cy + (sy - g.cy) / d * g.R, r: 4 }; }
+        return { cx: cvX(pl.x), cy: cvY(pl.y), r: pl.r };
+    }
+    function isBehind(pl) {
+        if (pl.id === S.at) return false;
+        const [nx] = shipNoseStage(), sp = placeSpot(pl);
+        return sp.cx - G.ox + (pl.kind === 'giant' ? 0 : pl.r) < nx - 2;
+    }
+    const placesAhead = () => S.places.filter(pl => !isBehind(pl) && !pl.visited && pl.id !== S.at);
+    const answers = pl => !pl.hidden && !isBehind(pl) && (S.stops > 0 || pl.id === S.at);
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 6. The sector painting: the still layer (space, the enormous thing, the light), the places layer, our ship.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const paintings = new Map();
+    function sectorPainting(n) {
+        const key = `${n}:${G.W}x${G.H}`;
+        if (paintings.has(key)) return paintings.get(key);
+        const sec = SECTORS[n], saved = S.n; S.n = n;
+        const [lx, ly] = lightPos(), base = painter(G.W, G.H, true), out = { glow: null, river: null, blinkers: [] };
+        spaceAndDust(base, sec.seed, lx, ly, sec.light.face ? 120 : Math.max(sec.light.halo || 0, 18), sec.dust, sec.haze);
+        const away = sec.light.face ? FACE_R + 30 : (sec.light.halo || 0) * 0.9 + (sec.light.core || 0) + 8;
+        const stars = scatterStars(base, sec.seed + 1, Math.round(G.W * G.H / 190 * (sec.stars || 1)), (x, y) => Math.hypot(x - lx, y - ly) > away);
+        const geo = { light: [lx, ly] }, sky = base.data.slice();                                   // what is sky: the stretch of the jump only runs there
+        if (sec.thing === 'giant') paintGiant(base, out, geo);
+        if (sec.thing === 'rogue') paintRogue(base, out, geo);
+        if (sec.thing === 'band') paintSignalBand(base, out, geo);
+        if (sec.thing === 'garden') paintGardenWorld(base, out, geo);
+        if (sec.thing === 'face') paintLightFace(base, out, geo);
+        out.isSky = new Uint8Array(G.W * G.H);
+        for (let i = 0; i < G.W * G.H; i++) out.isSky[i] = sky[i * 4] === base.data[i * 4] && sky[i * 4 + 1] === base.data[i * 4 + 1] && sky[i * 4 + 2] === base.data[i * 4 + 2] ? 1 : 0;
+        if (sec.light.baked) lightGlow(base, lx, ly, sec.light);
+        else if (!sec.light.face) {
+            const L = sec.light, reach = Math.ceil(L.halo * 3.2 + L.core + 10), size = reach * 2;
+            out.glow = Array.from({ length: 8 }, (_, k) => { const p = painter(size, size, false); lightGlow(p, reach + (lx - Math.round(lx)), reach + (ly - Math.round(ly)), L, 0.9 + 0.1 * Math.sin(k / 8 * Math.PI * 2)); return { canvas: p.canvas(), x: Math.round(lx) - reach, y: Math.round(ly) - reach }; });
+        }
+        if (sec.thing === 'river') { const r = paintHullRiver(geo); out.river = r.canvas; out.blinkers = r.blinkers; }
+        out.stars = keepVisible(base, stars);
+        out.allStars = stars.filter(s => s.mag > 0.6);
+        out.base = base.canvas();
+        out.baseData = base.data;
+        S.n = saved;
+        paintings.set(key, out);
+        return out;
+    }
+
+    let placesCache = null;
+    function placesLayer() {
+        const key = `${S.n}:${G.W}x${G.H}:${S.version}`;
+        if (placesCache && placesCache.key === key) return placesCache;
+        const sec = SECTORS[S.n], p = painter(G.W, G.H, false), [lx, ly] = lightPos(), spots = {};
+        S.places.forEach(pl => {
+            if (pl.kind === 'giant') { spots[pl.id] = { rims: sectorPainting(S.n).giant ? sectorPainting(S.n).giant.rims : [] }; return; }
+            const { cx, cy, r } = placeSpot(pl), dim = isBehind(pl) || pl.visited ? 0.42 : S.stops <= 0 && pl.id !== S.at ? 0.6 : 1, rims = [];
+            const spot = spots[pl.id] = { cx, cy, r, rims };
+            if (pl.hidden) return;                                                                     // a contact: a blip in the moving layer
+            const L = lightVector(cx, cy, lx, ly, Math.max(70, Math.hypot(lx - cx, ly - cy) * 0.35));
+            if (pl.kind === 'station') { spot.win = drawStation(p, cx, cy, 0.9, 3, dim); return; }
+            sphere(p, { cx, cy, r, ramp: PLANET_RAMP[pl.type] || RP.STONE, L, dim, surface: surfaceFor(pl.type, pl.r * 7 + 3, L), rim: sec.rim > 0.4 ? 0.55 * sec.rim + 0.1 : 0, rims,
+                atmo: pl.type === 'ice' || pl.type === 'gas' ? { ramp: pl.type === 'gas' ? RP.DUST : RP.ICE, w: 2 } : null });
+            if (pl.beacon) spot.beacon = [Math.round(cx - r * 0.55), Math.round(cy + r * 0.35)];
+            if (pl.orbiters) [[-1.9, -0.6, 0.3], [1.7, -0.9, -0.5], [0.4, 1.8, 0.9]].forEach(([ax, ay, a], i) => drawHull(p, { x: cx + ax * r, y: cy + ay * r, len: 7, ht: 2, angle: a, light: 0.45 * dim, seed: 40 + i, ramp: RP.DESERT }));
+        });
+        placesCache = { key, canvas: p.canvas(), spots, data: p.data };
+        return placesCache;
+    }
+
+    const spriteCache = new Map();
+    function shipSprites(len, ht, warm) {
+        const key = `${len}:${ht}:${warm.toFixed(2)}`;
+        if (spriteCache.has(key)) return spriteCache.get(key);
+        const list = [];
+        for (let i = -26; i <= 26; i++) {
+            const a = i * 0.05, half = Math.ceil(len / 2 + ht + 4), p = painter(half * 2, half * 2, false);
+            const at = drawHull(p, { x: half, y: half, len, ht, angle: a, flip: true, seed: 9, rimDir: [Math.cos(a) * 0.7, -0.7], rim: warm });
+            const rel = q => [q[0] - half, q[1] - half];
+            list.push({ a, canvas: p.canvas(), half, windows: SHIP.windowsU.map(u => rel(at(u, -0.05))), tail: rel(at(1.0, 0)) });
+        }
+        spriteCache.set(key, list);
+        return list;
+    }
+    const spriteFor = (list, a) => list[Math.max(0, Math.min(list.length - 1, Math.round(a / 0.05) + 26))];
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 7. Drawing the sector, frame by frame.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    function drawSector(c, t) {
+        const sec = SECTORS[S.n], P = sectorPainting(S.n), Lp = placesLayer(), f = framer(c, G.W, G.H);
+        c.drawImage(P.base, 0, 0);
+        if (P.glow) { const g = P.glow[Math.floor(t / 500) % P.glow.length]; c.drawImage(g.canvas, g.x, g.y); }
+        const drift = Math.min(30, Math.floor((t - S.sectorT0) / 8000));                             // the river's current: a pixel every eight seconds
+        if (P.river) c.drawImage(P.river, -RIVER_PAD + drift, 0);
+        twinkle(f, P.stars, t);
+        P.blinkers.forEach(b => { if ((t + b.phase) % b.period < 200) { if (b.red || P.river) { f.px(b.x + (P.river ? drift : 0), b.y, RP.RED.hex[3], 1, 1); f.px(b.x + (P.river ? drift : 0), b.y - 1, RP.RED.hex[2], 1, 1); } else f.px(b.x, b.y, RP.UI.hex[5]); } });
+        if (P.lamps) P.lamps.forEach((l, i) => { if (hash(i, Math.floor(t / 750), 4) > 0.86) f.px(l.x, l.y, RP.AMBER.hex[5]); });
+        if (P.face) faceSweep(c, P.face, G.W, t);
+        c.drawImage(Lp.canvas, 0, 0);
+        drawPlaceMotion(f, t, Lp);
+        drawHover(f, t, Lp);
+        drawCourse(f, t);
+        drawShip(c, f, t);
+        if (S.jump && S.jump.phase !== 'go') drawStretch(c, f, t, P);
+    }
+
+    function drawPlaceMotion(f, t, Lp) {
+        S.places.forEach(pl => {
+            const s = Lp.spots[pl.id]; if (!s || pl.kind === 'giant') return;
+            if (pl.hidden) { contactBlip(f, s.cx, s.cy, t); if (pl.beacon === 'warm') { f.px(s.cx + 3, s.cy + 2, RP.AMBER.hex[hash(Math.floor(t / TICK), 1, 9) > 0.15 ? 4 : 3]); } return; }
+            if (S.reveal && S.reveal.id === pl.id) {                                                    // the contact grows into the world
+                const k = clamp01((t - S.reveal.t0) / 900);
+                if (k < 1) { for (let y = -s.r - 2; y <= s.r + 2; y++) for (let x = -s.r - 2; x <= s.r + 2; x++) { const d = Math.hypot(x, y) / (s.r + 2); if (d < 1 && d > k * 1.2 - 0.1 && threshold(s.cx + x, s.cy + y) > k) f.px(s.cx + x, s.cy + y, INK); } contactBlip(f, s.cx, s.cy, t, true); }
+            }
+            const live = !isBehind(pl) && !pl.visited;
+            if (s.beacon && live) {
+                const [bx, by] = s.beacon;
+                if (pl.beacon === 'warm') { f.glow(bx, by, 3, RP.AMBER, 0.75 + 0.1 * Math.sin(t / 300)); f.px(bx, by, RP.AMBER.hex[4]); }
+                else if (t % 1500 < 380) { f.glow(bx, by, 4, RP.RED, 0.9); f.px(bx, by, RP.RED.hex[4]); } else f.px(bx, by, RP.RED.hex[2]);
+            }
+            if (pl.kind === 'station' && s.win && live) {
+                if (!pl.dark) f.px(s.win[0], s.win[1], RP.AMBER.hex[4]);
+                else if (t % 2200 < 220) { f.glow(s.win[0], s.win[1] - 3, 3, RP.RED, 0.8); f.px(s.win[0], s.win[1] - 3, RP.RED.hex[4]); }
+            }
+        });
+    }
+
+    function drawHover(f, t, Lp) {
+        const h = S.hover; if (!h || S.course) return;
+        if (h.kind === 'place') { const s = Lp.spots[h.id]; if (s && s.rims) s.rims.forEach(([x, y, r, lv]) => f.px(x, y, r.hex[Math.min(r.hex.length - 1, lv + 1)])); }
+        if (h.kind === 'light' && !SECTORS[S.n].light.face) { const [lx, ly] = lightPos(); for (let d = 2; d < 9; d++) { const v = 0.85 - d * 0.08; f.tone(lx - d, ly, RP.SUN, v); f.tone(lx, ly - d, RP.SUN, v); f.tone(lx, ly + d, RP.SUN, v); } }
+    }
+
+    // ── the course: a warm dithered curve from our nose to the world; the ship flies the same curve ──
+    function courseTo(target) {
+        const [nx, ny] = shipNoseStage(), p0 = [nx, ny], p2 = target, dx = p2[0] - p0[0], dy = p2[1] - p0[1], d = Math.hypot(dx, dy) || 1;
+        // leave along our heading (nose first), then swing in to the world: the curve starts flat and bends toward it
+        const lift = d * (dy > -0.3 * d ? 0.2 : 0.06);                                                // never a straight line: always a gentle climb
+        return { p0, p1: [p0[0] + Math.max(18, dx * 0.55), p0[1] + dy * 0.12 - lift], p2, dist: d };
+    }
+    const bez = (c, s) => [(1 - s) ** 2 * c.p0[0] + 2 * s * (1 - s) * c.p1[0] + s * s * c.p2[0], (1 - s) ** 2 * c.p0[1] + 2 * s * (1 - s) * c.p1[1] + s * s * c.p2[1]];
+    const bezD = (c, s) => [2 * (1 - s) * (c.p1[0] - c.p0[0]) + 2 * s * (c.p2[0] - c.p1[0]), 2 * (1 - s) * (c.p1[1] - c.p0[1]) + 2 * s * (c.p2[1] - c.p1[1])];
+    function dockFor(pl) {
+        if (pl.kind === 'light') { const [lx, ly] = lightPos(); return [lx - G.ox - 40, ly - G.oy]; }
+        const sp = placeSpot(pl), [nx, ny] = shipNoseStage(), cx = sp.cx - G.ox, cy = sp.cy - G.oy, d = Math.hypot(nx - cx, ny - cy) || 1, r = (pl.kind === 'giant' ? 0 : pl.r) + 4;
+        return [cx + (nx - cx) / d * r, cy + (ny - cy) / d * r];
+    }
+    function arcPoints(c, from, to, fn) { const n = Math.ceil(c.dist * 1.25); for (let i = Math.floor(from * n); i <= to * n; i++) fn(bez(c, i / n), i); }
+    function drawCourse(f, t) {
+        let c = null, reveal = 1, locked = false, from = 0;
+        if (S.course) { c = S.course.curve; locked = true; from = ease(S.course.s || 0); }
+        else if (S.hover && S.hover.kind === 'place' && S.hover.curve) { c = S.hover.curve; reveal = clamp01((t - S.hover.t0) / 380); }
+        if (!c) return;
+        // not a dotted line to the target: a short warm arc that leaves our nose, thins out through the dither and is gone
+        // well before the world. The world's own rim lights up to say where it ends.
+        const march = Math.floor(t / TICK), reach = locked ? 0.97 : 0.62;
+        arcPoints(c, from + 0.04, Math.min(reveal * reach, reach), ([x, y], i) => {
+            const s = i / Math.ceil(c.dist * 1.25), fade = 1 - clamp01((s - from) / (reach - from + 0.001)), ph = ((i - march) % 5 + 5) % 5;
+            if (fade * 0.9 + 0.1 > threshold(Math.round(cvX(x)) + ph, Math.round(cvY(y)))) f.tone(cvX(x), cvY(y), RP.AMBER, (locked ? 0.55 : 0.4) + 0.4 * fade);
+        });
+    }
+
+    function shipWarmth() { const g = { 1: 0.05, 2: 0.07, 3: 0.12, 4: 0.2, 5: 0.5, 6: 0.8 }; return g[S.n] || 0.1; }
+    function drawShip(c, f, t) {
+        const list = shipSprites(SHIP.len, SHIP.ht, shipWarmth()), sp = spriteFor(list, S.ship.angle);
+        const isResting = !S.course && !S.jump && !S.intro;
+        const bob = isResting ? (Math.floor(t / 1700) % 2) : 0;
+        const cx = Math.round(cvX(S.ship.x)), cy = Math.round(cvY(S.ship.y)) + bob;
+        S.wake.forEach((w, i) => { const k = i / S.wake.length; if (i % 2 === 0) f.tone(cvX(w[0]), cvY(w[1]), RP.AMBER, 0.15 + 0.55 * k); });
+        c.drawImage(sp.canvas, cx - sp.half, cy - sp.half);
+        const sec = SECTORS[S.n], hurt = sec.crew && sec.crew.damaged.quarters;
+        sp.windows.forEach(([wx, wy], i) => {
+            if (i === 2 && hurt) { if (Math.floor(t / 700) % 2 === 0) f.px(cx + wx, cy + wy, RP.RED.hex[3], 2, 1); else f.px(cx + wx, cy + wy, RP.RED.hex[1], 2, 1); return; }
+            f.px(cx + wx, cy + wy, i === 0 ? RP.AMBER.hex[4] : RP.AMBER.hex[3], 2, 1);
+        });
+        // the drive: a weak glow when energy is low, a long flame in flight
+        const low = S.res.energy <= 25, flying = S.course && S.course.phase === 'fly', priming = S.course && S.course.phase === 'lock';
+        let flame = low ? 1 : 2;
+        if (priming) flame = 2 + Math.floor(clamp01((t - S.course.t0) / 1200) * 3);
+        if (flying || (S.jump && S.jump.phase === 'go')) flame = (low ? 5 : 9) + (Math.floor(t / TICK) % 2);
+        if (S.intro && t - S.intro.t0 < 2800) flame = low ? 3 : 5;
+        const [tx, ty] = sp.tail, ca = Math.cos(S.ship.angle), sa = Math.sin(S.ship.angle);
+        for (let d = 0; d < flame; d++) { const v = (low ? 0.55 : 0.95) * (1 - d / (flame + 1)); f.tone(cx + tx - ca * d, cy + ty - sa * d, RP.UI, v, d < 2 ? 2 : 1, 1); }
+    }
+
+    function drawStretch(c, f, t, P) {
+        const j = S.jump, [lx, ly] = lightPos();
+        if (j.phase === 'black') { c.fillStyle = INK; c.fillRect(0, 0, G.W, G.H); return; }
+        const k = Math.min(6, Math.floor((t - j.t1) / TICK) + 1);                                   // six stepped frames
+        dimWith(c, k / 7);
+        const over = placesCache ? placesCache.data : null;
+        const isSky = (x, y) => { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= G.W || y >= G.H) return false; const i = y * G.W + x; return P.isSky[i] && !(over && over[i * 4 + 3]); };
+        P.allStars.forEach(s => {                                                                      // stars stretch toward the light, but never across a planet
+            if (!isSky(s.x, s.y)) return;
+            const dx = lx - s.x, dy = ly - s.y, d = Math.hypot(dx, dy) || 1, len = k * k * 2.2 * (0.5 + s.mag);
+            for (let i = 0; i < len; i++) { const x = s.x + dx / d * i, y = s.y + dy / d * i; if (!isSky(x, y)) break; f.tone(x, y, RP.STAR, (0.4 + 0.5 * s.mag) * (1 - i / len)); }
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 8. Orbit: the planet huge and cut by the frame, framed differently for each world; our ship small, holding station.
+    //    The thing you can do is written in the dark sky just off the limb, with a thread down to the beacon it acts on.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const orbits = new Map();
+    const DATE_STARS = [[80, 36], [214, 22], [118, 104]], DATE_O = [150, 66];
+    // Stage pixels (640 x 360). lz: how far in front of the planet the light sits; below 0 it is behind, so the planet is a lit crescent and mostly night.
+    // beacon: [angle in degrees (0 right, -90 up), depth as a fraction of r], near the limb, where the ground is dark enough
+    // for its blink to show. ship: [x, y, length]. The dating stars sit in the upper left, so no planet goes there when a
+    // wreck can be dated.
+    const ORBIT_AT = {
+        titan: { cx: 250, cy: 486, r: 300, lz: -0.7, beacon: [-134, 0.95], ship: [478, 78, 58] },
+        rhea: { cx: 462, cy: 418, r: 214, lz: -0.6, beacon: [-154, 0.92], ship: [196, 88, 54] },
+        chronos: { cx: 330, cy: 540, r: 330, lz: -0.4, ship: [488, 74, 58] },
+        zephyr: { cx: 54, cy: 250, r: 250, lz: -0.45, ship: [470, 112, 56] },
+        kryos: { cx: 300, cy: 690, r: 500, lz: -0.55, ship: [470, 68, 58], clouds: [-80, 0.97] },
+        kryos0: { cx: 470, cy: 452, r: 256, lz: -0.65, beacon: [-150, 0.93], ship: [306, 88, 56] },
+        iapetus: { cx: 196, cy: 446, r: 236, lz: -0.7, beacon: [-126, 0.9], ship: [478, 96, 56] },
+        chronos61: { cx: 318, cy: 512, r: 268, lz: -0.45, ship: [502, 70, 56] },
+        titan92: { cx: 170, cy: 430, r: 246, lz: -0.55, beacon: [-128, 0.92], ship: [470, 116, 56] },
+    };
+    const ORBIT_DEFAULTS = [{ cx: 250, cy: 480, r: 286, lz: -0.45, ship: [480, 82, 56] }, { cx: 430, cy: 470, r: 270, lz: -0.45, ship: [190, 88, 56] }, { cx: 64, cy: 252, r: 246, lz: -0.45, ship: [470, 110, 56] }];
+    const orbitLayout = pl => ORBIT_AT[pl.id] || ORBIT_DEFAULTS[(pl.id.length + (pl.r || 0)) % ORBIT_DEFAULTS.length];
+    function orbitPainting(pl) {
+        const key = `${S.n}:${pl.id}:${G.W}x${G.H}`;
+        if (orbits.has(key)) return orbits.get(key);
+        const sec = SECTORS[S.n], p = painter(G.W, G.H, true), seed = (pl.r || 20) * 13 + S.n * 7 + pl.id.length;
+        const isLight = pl.kind === 'light', ol = isLight ? null : sec.orbitLight, lx = isLight ? cvX(440) : cvX(ol.x), ly = isLight ? cvY(170) : cvY(ol.y);
+        spaceAndDust(p, seed, lx, ly, isLight ? 120 : ol.halo, sec.dust, sec.haze);
+        const dateStars = DATE_STARS.map(([x, y]) => [cvX(x), cvY(y)]);
+        const stars = scatterStars(p, seed + 1, Math.round(G.W * G.H / 170), (x, y) => Math.hypot(x - lx, y - ly) > (isLight ? 150 : ol.halo * 0.8 + ol.core + 6) && dateStars.every(([a, b]) => Math.hypot(x - a, y - b) > 6));
+        dateStars.forEach(([x, y]) => { p.set(x, y, RP.STAR.rgb[4]); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => p.set(x + dx, y + dy, RP.STAR.rgb[3])); [[-2, 0], [2, 0], [0, -2], [0, 2]].forEach(([dx, dy]) => p.set(x + dx, y + dy, RP.STAR.rgb[1])); });
+        if (!isLight) lightGlow(p, lx, ly, ol);
+        const skyData = p.data.slice();                                                            // before the planet and our ship: what is sky
+        const o = { stars: [], focal: null, anchors: {}, dateStars, kind: pl.kind };
+        if (isLight) orbitTheLight(p, o, lx, ly);
+        else if (pl.kind === 'station') orbitStation(p, o, sec, pl, lx, ly);
+        else orbitPlanet(p, o, sec, pl, seed, lx, ly);
+        if (!isLight) {
+            const lay = pl.kind === 'station' ? { ship: [500, 70, 56] } : orbitLayout(pl), [ax, ay, len] = lay.ship, sx = cvX(ax), sy = cvY(ay), ht = Math.round(len * 0.21);
+            const at = drawHull(p, { x: sx, y: sy, len, ht, flip: true, seed: 9, rimDir: [0.6, -0.8], rim: shipWarmth() });
+            o.ship = { x: sx, y: sy, len, ht, windows: SHIP.windowsU.map(u => at(u, -0.05).map(Math.round)), belly: at(0.5, 0.5).map(Math.round), tail: at(1, 0).map(Math.round) };
+            o.anchors.ship = [sx, sy + Math.ceil(ht / 2) + 3];
+        }
+        o.isSky = new Uint8Array(G.W * G.H);
+        for (let i = 0; i < G.W * G.H; i++) o.isSky[i] = skyData[i * 4] === p.data[i * 4] && skyData[i * 4 + 1] === p.data[i * 4 + 1] && skyData[i * 4 + 2] === p.data[i * 4 + 2] ? 1 : 0;
+        o.stars = keepVisible(p, stars);
+        o.base = p.canvas();
+        o.data = p.data;
+        orbits.set(key, o);
+        return o;
+    }
+    function orbitPlanet(p, o, sec, pl, seed, lx, ly) {
+        const lay = orbitLayout(pl), isGas = pl.type === 'gas' || pl.kind === 'giant', type = isGas ? 'gas' : pl.type;
+        const cx = cvX(lay.cx), cy = cvY(lay.cy), r = lay.r, L = norm3(lx - cx, ly - cy, lay.lz * Math.hypot(lx - cx, ly - cy));   // lz below 0: lit from behind, most of it night
+        sphere(p, { cx, cy, r, ramp: PLANET_RAMP[type] || RP.STONE, L, surface: surfaceFor(type, seed, L), rim: sec.rim > 0.4 ? 0.6 : 0.2, ambient: 0.012, gain: 0.9,
+            atmo: { ramp: type === 'gas' || type === 'desert' ? RP.DUST : RP.ICE, w: 5 } });
+        /** A point on the surface at an angle and depth, and the point in the sky just off the limb above it. */
+        const onSurface = ([deg, depth]) => { const a = deg * Math.PI / 180, nx = Math.cos(a), ny = Math.sin(a); return { x: Math.round(cx + nx * r * depth), y: Math.round(cy + ny * r * depth), sky: [Math.round(cx + nx * (r + 26)), Math.round(cy + ny * (r + 26))], n: [nx, ny] }; };
+        const beaconAt = onSurface(lay.beacon || [-118, 0.9]);
+        if (pl.beacon) {
+            o.focal = { x: beaconAt.x, y: beaconAt.y, kind: pl.beacon };
+            if (pl.beacon === 'warm') p.ellipse(o.focal.x, o.focal.y + 2, 11, 5, (x, y, q) => p.cover(x, y, RP.AMBER, 0.32, (1 - q) * 0.6));
+            else {                                                                                       // the wreck the beacon stands on: a small dark hull, lying tilted
+                const tilt = Math.atan2(beaconAt.n[1], beaconAt.n[0]) + Math.PI / 2;
+                drawHull(p, { x: o.focal.x + Math.cos(tilt) * 6, y: o.focal.y + Math.sin(tilt) * 6 + 1, len: 18, ht: 4, angle: tilt + 0.25, light: 0.22, seed: 77, from: 0.12 });
+                p.line(o.focal.x, o.focal.y, o.focal.x - Math.round(beaconAt.n[0] * 3), o.focal.y - Math.round(beaconAt.n[1] * 3), (x, y) => p.solid(x, y, RP.HULL, 0.3));   // its mast
+            }
+        }
+        o.anchors.beacon = [beaconAt.x, beaconAt.y];
+        o.anchors.sky = beaconAt.sky; o.anchors.skyN = beaconAt.n;                                    // where words about the ground sit: just off the limb
+        const cl = onSurface(lay.clouds || [-75, 0.9]);
+        o.anchors.clouds = [cl.x, cl.y]; o.anchors.cloudsSky = cl.sky; o.anchors.cloudsN = cl.n;
+        if (pl.orbiters) [[430, 92, 0.2], [128, 150, -0.6], [560, 200, 0.9]].forEach(([x, y, a], i) => drawHull(p, { x: cvX(x), y: cvY(y), len: 22, ht: 5, angle: a, light: 0.5, rust: true, seed: i + 30, ramp: RP.DESERT }));
+        o.planet = { cx, cy, r };
+    }
+    function orbitStation(p, o, sec, pl, lx, ly) {
+        const cx = cvX(250), cy = cvY(850), r = 630, L = lightVector(cvX(240), cvY(270), lx, ly, 340);
+        sphere(p, { cx, cy, r, ramp: pl.dark ? RP.DARK : RP.STONE, L, surface: surfaceFor('rock', 21, L), rim: sec.rim > 0.4 ? 0.5 : 0.1, ambient: 0.01, gain: 0.75 });
+        const win = drawStation(p, cvX(320), cvY(150), 2.8, 5);
+        o.focal = { x: win[0], y: win[1], kind: pl.dark ? 'nav' : 'window' };
+        o.anchors.station = [win[0], win[1]];
+        o.anchors.beacon = [win[0], win[1]];
+        o.anchors.sky = [cvX(320) - 80, cvY(150) - 24]; o.anchors.skyN = [-0.9, -0.4];
+    }
+    function orbitTheLight(p, o, cx, cy) {
+        const R = 96, face = {};
+        paintLightFace(p, face, null, { cx, cy, R });                                                // the same face as the sector painting, closer
+        o.face = face.face;
+        const sx = cvX(150), sy = cvY(236), len = 96, at = drawHull(p, { x: sx, y: sy, len, ht: 19, flip: true, seed: 9, light: 0.9, rimDir: [0.8, -0.6], rim: 0.85 });
+        o.ship = { x: sx, y: sy, len, ht: 19, windows: SHIP.windowsU.map(u => at(u, -0.05).map(Math.round)), belly: at(0.5, 0.5).map(Math.round), tail: at(1, 0).map(Math.round) };
+        o.lightCore = [cx, cy, R];
+        o.anchors.light = [cx - R - 14, cy + 30];
+        o.anchors.beacon = o.anchors.light;
+        o.anchors.sky = o.anchors.light; o.anchors.skyN = [-1, 0];
+        o.anchors.ship = [sx, sy + 14];
+    }
+
+    function drawOrbit(c, t) {
+        const pl = S.orbitOf, o = orbitPainting(pl), f = framer(c, G.W, G.H);
+        c.drawImage(o.base, 0, 0);
+        twinkle(f, o.stars, t);
+        if (o.face) faceSweep(c, o.face, G.W, t);
+        const fo = o.focal;
+        if (S.actThread) drawThread(f, t, S.actThread, S.actHot === 'act:step');
+        if (fo) {
+            if (fo.kind === 'red') {                                                                     // a stepped blink you can see from orbit: flash, glow, ember, dark
+                const ph = Math.floor((t % 1500) / TICK);
+                if (ph < 2) { f.glow(fo.x, fo.y, 9, RP.RED, 0.95); f.px(fo.x - 1, fo.y - 1, RP.RED.hex[4], 3, 3); f.px(fo.x - 3, fo.y, RP.RED.hex[3], 7, 1); f.px(fo.x, fo.y - 3, RP.RED.hex[3], 1, 7); }
+                else if (ph < 4) { f.glow(fo.x, fo.y, 6, RP.RED, 0.7); f.px(fo.x, fo.y, RP.RED.hex[4], 2, 2); }
+                else f.px(fo.x, fo.y, RP.RED.hex[ph < 7 ? 3 : 2], 2, 2);
+            }
+            else if (fo.kind === 'warm') { const flick = hash(Math.floor(t / TICK), 2, 9) > 0.12 ? 1 : 0.6; f.glow(fo.x, fo.y, 6, RP.AMBER, 0.85 * flick); f.px(fo.x, fo.y, RP.AMBER.hex[5]); }
+            else if (fo.kind === 'window') { f.glow(fo.x, fo.y, 3, RP.AMBER, 0.7); f.px(fo.x, fo.y, RP.AMBER.hex[4], 2, 1); }
+            else if (fo.kind === 'nav') { if (t % 2200 < 260) { f.glow(fo.x, fo.y - 9, 4, RP.RED, 0.85); f.px(fo.x, fo.y - 9, RP.RED.hex[4]); } }
+        }
+        if (o.ship) o.ship.windows.forEach(([x, y], i) => f.px(x, y, i === 0 ? RP.AMBER.hex[4] : RP.AMBER.hex[3], 2, 1));
+        if (S.lander) drawLander(f, t, o);
+    }
+    /** A dithered thread from an action's words down to the thing it acts on: faint while it waits, warm while you point. */
+    function drawThread(f, t, th, hot) {
+        const [ax, ay] = th.from, [bx, by] = th.to, d = Math.hypot(bx - ax, by - ay), n = Math.ceil(d);
+        for (let i = 3; i < n - 4; i++) {
+            const on = hot ? ((i + Math.floor(t / TICK)) % 4) < 2 : (i % 3) === 0;
+            if (on) f.tone(ax + (bx - ax) * i / n, ay + (by - ay) * i / n, hot ? RP.AMBER : RP.DARK, hot ? 0.62 : 0.5 + 0.2 * (1 - i / n));
+        }
+    }
+    /** The lander: a 2 x 2 warm speck dropping from our ship to the ground in stepped frames, and back. */
+    function drawLander(f, t, o) {
+        const L = S.lander, s = clamp01(Math.floor((t - L.t0) / TICK) * TICK / L.dur), k = L.up ? 1 - s : s;
+        const [ax, ay] = o.ship ? o.ship.belly : [0, 0], [bx, by] = L.to, x = lerp(ax, bx, k) - Math.sin(k * Math.PI) * 18, y = lerp(ay, by, k * k * 0.4 + k * 0.6);
+        f.px(x, y, RP.AMBER.hex[4], 2, 2);
+        if (Math.floor(t / TICK) % 2) f.px(x + (L.up ? 0 : 0.5), y - 2, RP.AMBER.hex[2], 1, 1);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 9. The frame: one view, or a one-second Bayer dissolve between two. Then the dim, the shades under words, the film.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const VIEWS = { sector: drawSector, jump: drawSector, orbit: drawOrbit, black: c => { c.fillStyle = INK; c.fillRect(0, 0, G.W, G.H); }, film: c => { c.fillStyle = INK; c.fillRect(0, 0, G.W, G.H); }, end: drawEnd };
+    function drawEnd(c, t) {
+        const k = clamp01((t - S.ending.t0) / 2400);
+        c.fillStyle = INK; c.fillRect(0, 0, G.W, G.H);
+        c.fillStyle = RP.SUN.hex[6]; c.globalAlpha = 1; c.fillRect(0, 0, G.W, G.H);
+        dimWith(c, 1 - k);
+    }
+    function render() {
+        const t = clock.t;
+        if (S.trans) {
+            const tr = S.trans, k = clamp01((t - tr.t0) / tr.dur), lv = Math.floor(k * 8) / 8 * 64;
+            VIEWS[tr.from](ctx, t);
+            if (lv > 0) { const b = offscreen('b'); VIEWS[tr.to](b.g, t); b.g.globalCompositeOperation = 'destination-in'; b.g.fillStyle = pattern(lv); b.g.fillRect(0, 0, G.W, G.H); b.g.globalCompositeOperation = 'source-over'; ctx.drawImage(b.c, 0, 0); }
+        } else VIEWS[S.view](ctx, t);
+        if (S.intro) { const k = clamp01((t - S.intro.t0) / 1000); if (k < 1) dimWith(ctx, 1 - Math.floor(k * 8) / 8); }
+        if (S.dim > 0) darken(ctx, S.dim);
+        drawShades();
+        if (S.film) paintFilm(t);
+        placeWords(t);
+        Reading.frame(t);
+        if (peekBox) drawPeek();
+    }
+    // mockup debug only: ?peek=x,y,w shows that part of the canvas magnified, to judge the pixels from a screenshot
+    const peekBox = (() => { const q = new URLSearchParams(location.search).get('peek'); if (!q) return null; const [x, y, w] = q.split(',').map(Number); return { x, y, w, h: Math.round(w * 9 / 16) }; })();
+    function drawPeek() {
+        let o = document.getElementById('peek');
+        if (!o) { o = document.createElement('canvas'); o.id = 'peek'; o.style.cssText = `left:0;top:0;width:${window.innerWidth}px;height:${window.innerHeight}px;z-index:99;pointer-events:none`; $('stage').appendChild(o); }
+        if (o.width !== peekBox.w) { o.width = peekBox.w; o.height = peekBox.h; }
+        o.getContext('2d').drawImage(cv, peekBox.x, peekBox.y, peekBox.w, peekBox.h, 0, 0, peekBox.w, peekBox.h);
+    }
+    function paintFilm(t) {
+        const F = S.film;
+        if (window.SceneArt && SceneArt.has(F.scene.key)) SceneArt.paint(filmCtx, F.scene.key, t - F.t0);
+        else { filmCtx.fillStyle = INK; filmCtx.fillRect(0, 0, 480, 160); }
+        const k = clamp01((t - F.t0) / 700);
+        if (k < 1) { filmCtx.fillStyle = pattern((1 - Math.floor(k * 8) / 8) * 64); filmCtx.fillRect(0, 0, 480, 160); }
+    }
+    function filmGeometry() {
+        // a whole number of device pixels per picture pixel, as for the world
+        const dpr = G.dpr, iw = window.innerWidth, ih = window.innerHeight, k = Math.max(1, Math.floor(Math.min(iw * dpr / 480, (ih - 400) * dpr / 160) + 1e-6));
+        const w = 480 * k / dpr, h = 160 * k / dpr, x = Math.floor((iw * dpr - 480 * k) / 2) / dpr, y = Math.floor((ih * dpr - 160 * k) / 2) / dpr;
+        return { s: k / dpr, x, y, w, h, bandTop: { y: 0, h: Math.floor(y) }, bandBottom: { y: Math.ceil(y + h), h: ih - Math.ceil(y + h) } };
+    }
+    function showFilmCanvas(on) {
+        filmCv.style.display = on ? 'block' : 'none';
+        if (!on) return;
+        const g = filmGeometry();
+        filmCv.style.width = g.w + 'px'; filmCv.style.height = g.h + 'px'; filmCv.style.left = g.x + 'px'; filmCv.style.top = g.y + 'px';
+    }
+
+    // ── shades: the picture darkens softly under words, with the same dither grain (rects in screen pixels) ──
+    const shades = new Map(), shadeSprites = new Map(), SHADE_PAD = 14;
+    function setShade(key, rect) { if (rect) shades.set(key, rect); else shades.delete(key); }
+    /** One soft dithered dark patch, cached by size, grain phase and strength. */
+    function shadeSprite(w, hgt, ax, ay, strength) {
+        const key = `${w}x${hgt}:${ax}:${ay}:${strength}`;
+        let c = shadeSprites.get(key);
+        if (c) return c;
+        const W2 = w + SHADE_PAD * 2, H2 = hgt + SHADE_PAD * 2, a0 = strength / 20, ink = hexRgb(INK);
+        c = document.createElement('canvas'); c.width = W2; c.height = H2;
+        const g = c.getContext('2d'), img = g.createImageData(W2, H2);
+        const hw = w / 2, hh = hgt / 2, round = Math.min(hw, hh);
+        for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+            // signed distance to a stadium (fully rounded ends): negative inside. Darkest in the middle, fading out well past the
+            // words, and the edge is roughened with noise, so over a planet it reads as a patch of shadow, never as a box.
+            const qx = Math.abs(x + 0.5 - SHADE_PAD - hw) - (hw - round), qy = Math.abs(y + 0.5 - SHADE_PAD - hh) - (hh - round);
+            const sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - round + (fbm(x / 7, y / 4, 17, 2) - 0.5) * 16;
+            const a = a0 * (1 - smooth(-12, SHADE_PAD, sd));
+            if (a > threshold(x + ax, y + ay)) { const o = (y * W2 + x) * 4; img.data[o] = ink[0]; img.data[o + 1] = ink[1]; img.data[o + 2] = ink[2]; img.data[o + 3] = 255; }
+        }
+        g.putImageData(img, 0, 0);
+        if (shadeSprites.size > 240) shadeSprites.clear();
+        shadeSprites.set(key, c);
+        return c;
+    }
+    /** Where shade may fall: the sky only. A planet, a station, the giant or our own ship is never darkened under words (that
+        is what cut box-shaped notches out of planets); words are placed off them instead (World.luma). */
+    let skyMaskCache = null;
+    function skyMask() {
+        if (!S || S.trans) return null;
+        let key = null, isSky = null, over = null;
+        if (S.view === 'sector' || S.view === 'jump') { const P = sectorPainting(S.n), Lp = placesLayer(); key = 's:' + Lp.key; isSky = P.isSky; over = Lp.data; }
+        else if (S.view === 'orbit' && S.orbitOf) { const o = orbitPainting(S.orbitOf); key = 'o:' + S.n + ':' + S.orbitOf.id + ':' + G.W + 'x' + G.H; isSky = o.isSky; }
+        if (!isSky) return null;
+        if (skyMaskCache && skyMaskCache.key === key) return skyMaskCache.c;
+        const c = document.createElement('canvas'); c.width = G.W; c.height = G.H;
+        const g = c.getContext('2d'), img = g.createImageData(G.W, G.H);
+        for (let i = 0; i < G.W * G.H; i++) img.data[i * 4 + 3] = isSky[i] && !(over && over[i * 4 + 3]) ? 255 : 0;
+        g.putImageData(img, 0, 0);
+        skyMaskCache = { key, c };
+        return c;
+    }
+    function drawShades() {
+        if (!shades.size) return;
+        const mask = skyMask(), o = mask ? offscreen('shade') : null, g = o ? o.g : ctx;
+        if (o) g.clearRect(0, 0, G.W, G.H);
+        const paint = (target, r) => {
+            const [fx0, fy0] = toCanvas(r.x, r.y), [fx1, fy1] = toCanvas(r.x + r.w, r.y + r.h);
+            const x0 = Math.floor(fx0), y0 = Math.floor(fy0), w = Math.max(1, Math.ceil(fx1) - x0), hgt = Math.max(1, Math.ceil(fy1) - y0);
+            const strength = Math.round((r.strength || 0.62) * 20), sx = x0 - SHADE_PAD, sy = y0 - SHADE_PAD;
+            if (strength > 0) target.drawImage(shadeSprite(w, hgt, sx & 7, sy & 7, strength), sx, sy);
+        };
+        shades.forEach(r => { if (!r.everywhere) paint(g, r); });
+        const lastly = () => shades.forEach(r => { if (r.everywhere) paint(ctx, r); });               // a page's words sit on solid ink, whatever is under them
+        if (!o) { lastly(); return; }
+        g.globalCompositeOperation = 'destination-in'; g.drawImage(mask, 0, 0);
+        if (S.view === 'sector' || S.view === 'jump') {                                               // nor our own ship
+            g.globalCompositeOperation = 'destination-out'; const sx = Math.round(cvX(S.ship.x)), sy = Math.round(cvY(S.ship.y)), half = SHIP.len / 2 + 6;
+            g.fillRect(sx - half, sy - half, half * 2, half * 2);
+        }
+        g.globalCompositeOperation = 'source-over';
+        ctx.drawImage(o.c, 0, 0);
+        lastly();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 10. Words that belong to the world: places' notes, the names on arrival, the hint, dates written on the picture,
+    //     the sector title, chips, our supplies, and the actions in orbit. Placed every frame from canvas anchors.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const marks = $('marks');
+    const words = new Map();
+    function h(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+    /** opts: { at: () => [cx, cy] canvas, side: 'right'|'left'|'below'|'above'|'center', gap (canvas px), fade: { t0, inMs, holdMs, outMs }, shade, view } */
+    function word(key, el, opts) {
+        unword(key);
+        el.classList.add('w');
+        marks.appendChild(el);
+        const rec = { el, opts, w: el.offsetWidth, h: el.offsetHeight };
+        words.set(key, rec);
+        return rec;
+    }
+    function unword(key) { const r = words.get(key); if (r) { r.el.remove(); words.delete(key); setShade('w:' + key, null); } if (key === 'act:step' && S) S.actThread = null; }
+    function unwordAll(prefix) { [...words.keys()].forEach(k => { if (!prefix || k.startsWith(prefix)) unword(k); }); }
+    function remeasureWords() { words.forEach(r => { r.w = r.el.offsetWidth; r.h = r.el.offsetHeight; }); }
+    /** Where a word's box goes for one side of its anchor (screen pixels), kept inside the window. */
+    function wordRect(r, o, side, sx, sy, gap) {
+        let x = sx, y = sy;
+        if (side === 'right') { x = sx + gap; y = sy - r.h / 2; }
+        else if (side === 'left') { x = sx - gap - r.w; y = sy - r.h / 2; }
+        else if (side === 'below') { x = sx - (o.alignLeft ? 0 : o.alignRight ? r.w : r.w / 2); y = sy + gap; }
+        else if (side === 'above') { x = sx - (o.alignLeft ? 0 : o.alignRight ? r.w : r.w / 2); y = sy - gap - r.h; }
+        else if (side === 'center') { x = sx - r.w / 2; y = sy - r.h / 2; }
+        return [Math.max(8, Math.min(window.innerWidth - r.w - 8, x)), Math.max(8, Math.min(window.innerHeight - r.h - 8, y))];
+    }
+    function placeWords(t) {
+        // words that give way to others go last, so they test against where the others are this frame, not last frame
+        [...words].sort((a, b) => (a[1].opts.yields ? 1 : 0) - (b[1].opts.yields ? 1 : 0)).forEach(([key, r]) => {
+            if (words.get(key) !== r) return;
+            const o = r.opts;
+            if (o.view && o.view !== S.view) { r.el.style.opacity = '0'; setShade('w:' + key, null); return; }
+            let alpha = 1;
+            if (o.fade) { const e = t - o.fade.t0; alpha = e < 0 ? 0 : e < o.fade.inMs ? e / o.fade.inMs : e < o.fade.inMs + o.fade.holdMs ? 1 : 1 - (e - o.fade.inMs - o.fade.holdMs) / o.fade.outMs; alpha = clamp01(alpha); if (o.fade.outMs && e > o.fade.inMs + o.fade.holdMs + o.fade.outMs) { if (o.fade.remove !== false) { unword(key); return; } } }
+            if (o.rise) alpha *= 1 - clamp01((t - o.rise.t0 - 400) / 1100);
+            if (o.hideOnHover && (S.hover || S.course)) alpha = 0;
+            const [cx, cy] = o.at(t), gap = (o.gap == null ? 6 : o.gap) * G.s, [sx, sy] = toScreen(cx, cy - (o.rise ? clamp01((t - o.rise.t0) / 1500) * 20 : 0));
+            let x, y;
+            if (o.sides) {                                                                            // several sides to try: the darkest wins, and stays unless it turns bright
+                const rects = o.sides.map(side => wordRect(r, o, side, sx, sy, gap));
+                if (r.pick == null || !r.pickAt || Math.hypot(r.pickAt[0] - sx, r.pickAt[1] - sy) > 18) {
+                    const score = rects.map(q => World.luma({ x: q[0], y: q[1], w: r.w, h: r.h }));
+                    let best = 0; score.forEach((v, i) => { if (v < score[best] - 0.004) best = i; });
+                    r.pick = r.pick != null && score[r.pick] < 0.05 ? r.pick : best; r.pickAt = [sx, sy];
+                }
+                [x, y] = rects[r.pick];
+            } else [x, y] = wordRect(r, o, o.side, sx, sy, gap);
+            if (o.yields && alpha > 0) {                                                              // a name gives way to a note or a voice line that sits on it
+                if (o.place && S.hover && S.hover.kind === 'place' && S.hover.id === o.place) alpha = 0;   // its own note says the name already
+                const n = words.get('note'), nr = n && n.el.style.opacity !== '0' ? n.box : null;
+                [shades.get('r:voice'), shades.get('r:ask'), nr].forEach(v => { if (v && x < v.x + v.w && x + r.w > v.x && y < v.y + v.h && y + r.h > v.y) alpha = 0; });
+            }
+            r.box = { x, y, w: r.w, h: r.h };
+            if (o.thread && key === 'act:step') {                                                     // the thread starts at the edge of the words nearest the thing
+                const [tx, ty] = toScreen(o.thread[0], o.thread[1]);
+                S.actThread = alpha > 0.05 ? { from: toCanvas(Math.max(x, Math.min(x + r.w, tx)), Math.max(y + 4, Math.min(y + r.h - 4, ty))), to: o.thread } : null;
+            }
+            r.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+            r.el.style.opacity = String(alpha);
+            if (r.el.tagName === 'BUTTON') r.el.style.pointerEvents = alpha > 0.05 ? '' : 'none';           // an action you cannot see cannot be clicked
+            setShade('w:' + key, o.shade && alpha > 0.05 ? { x, y, w: r.w, h: r.h, strength: (o.shadeStrength || 0.62) * Math.min(1, alpha * 1.4) } : null);
+        });
+    }
+    const spotOf = id => () => { const pl = placeById(id); const s = placeSpot(pl); return [s.cx, s.cy]; };
+    const sideFor = pl => { const sp = placeSpot(pl); return SECTORS[S.n].notesLeft || sp.cx - G.ox > SW * 0.8 ? 'left' : 'right'; };
+    const gapFor = pl => (pl.kind === 'giant' ? 8 : (pl.r || 8) + 6);
+    /** A place's note goes beside it, or over or under it when that side is on the giant or the light: the darkest wins. */
+    const notesSides = pl => { const first = sideFor(pl); return [first, 'above', 'below', first === 'left' ? 'right' : 'left']; };
+
+    function costLine(pl) {
+        const stop = S.stops >= 3 ? 'uses a stop' : S.stops === 2 ? 'uses a stop · one more after this' : 'our last stop before the jump';
+        if (pl.free) return `no energy, we have their course · ${stop}`;             // the course is free; the stop is not
+        return `${pl.cost} energy · ${stop}`;
+    }
+    function noteEl(name, line, cost, gain, isLeft) {
+        const el = h('div', 'note' + (isLeft ? ' is-left' : ''));
+        el.append(h('p', 'name', name));
+        if (line) el.append(h('p', 'line', line));
+        if (cost) { const c = h('p', 'cost', cost); if (gain) c.append(' · ', h('span', 'gain', gain)); el.append(c); }
+        return el;
+    }
+    function showNote(target) {
+        unword('note');
+        if (!target) return;
+        if (target.kind === 'place') {
+            const pl = placeById(target.id), left = sideFor(pl) === 'left';
+            if (pl.hidden) { word('note', noteEl('Contact', 'A faint contact. No course to it yet.', null, null, left), { at: spotOf(pl.id), sides: notesSides(pl), gap: gapFor(pl), shade: true, view: 'sector' }); return; }
+            const here = pl.id === S.at;
+            word('note', noteEl(pl.name, here ? 'We are here.' : pl.line, here ? 'back into orbit' : costLine(pl), pl.gain && !here ? `+${pl.gain.energy} energy` : null, left), { at: spotOf(pl.id), sides: notesSides(pl), gap: gapFor(pl), shade: true, view: 'sector' });
+        }
+        if (target.kind === 'light') {
+            const isEnd = S.n === 6, [lx, ly] = lightPos();
+            const at = isEnd ? () => { const f = faceGeo(); return [f.cx - f.R, f.cy + 40]; } : () => [lx, ly];
+            word('note', noteEl(isEnd ? 'The light' : 'The light ahead', isEnd ? 'It looks like a sun. It gives no heat.' : 'Jump to the next sector.', isEnd ? 'the end of the heading' : `${JUMP.energy} energy · ${JUMP.rations} rations`, null, true), { at, sides: ['left', 'above', 'below'], alignRight: true, gap: 10, shade: true, view: 'sector' });
+        }
+        if (target.kind === 'ship') {
+            const el = h('div', 'supplies');
+            el.append(h('p', 'nums', `Energy ${S.res.energy} · Rations ${S.res.rations} · Salvage ${S.res.salvage}`), h('p', 'sub', 'Click to look inside'));
+            word('note', el, { at: () => [cvX(S.ship.x), cvY(S.ship.y - SHIP.ht / 2 - 2)], side: 'above', gap: 6, shade: true, view: 'sector' });
+        }
+    }
+    function showLowSupply() {
+        unword('low');
+        const lows = [];
+        if (S.res.energy <= 25) lows.push(`Energy ${S.res.energy}`);
+        if (S.n < 6 && S.res.rations < JUMP.rations) lows.push(`Rations ${S.res.rations}`);
+        if (!lows.length) return;
+        word('low', h('p', 'low', lows.join(' · ')), { at: () => [cvX(S.ship.x - SHIP.len / 2 - 2), cvY(S.ship.y)], side: 'left', gap: 3, view: 'sector', shade: true });   // behind the tail: clear of the voice lines over and under the ship
+    }
+    function showNames(ms) {
+        unwordAll('name:');
+        placesAhead().forEach(pl => {
+            if (pl.hidden) return;
+            word('name:' + pl.id, h('p', 'tag', pl.name), { at: spotOf(pl.id), side: sideFor(pl), gap: gapFor(pl), fade: ms ? { t0: clock.t, inMs: 400, holdMs: ms, outMs: 700 } : null, view: 'sector', yields: true, place: pl.id });
+        });
+    }
+    function showDatedNotes() {
+        S.places.forEach(pl => {
+            if (!pl.datedNote) { unword('dated:' + pl.id); return; }
+            const left = sideFor(pl) === 'left';
+            word('dated:' + pl.id, h('p', 'dated', pl.datedNote), { at: () => { const s = placeSpot(pl); return [s.cx, s.cy + pl.r + 3]; }, side: 'below', gap: 1, view: 'sector', alignLeft: !left, yields: true });
+        });
+    }
+    function showTitle(text) {
+        const at = SECTORS[S.n].titleAt;                                                               // sector 6 keeps every word on the dark left half
+        word('title', h('p', 'title', text), { at: () => at ? [cvX(SW * at[0]), cvY(SH * at[1])] : [G.W / 2, G.H * 0.22], side: 'center', fade: { t0: clock.t, inMs: 1000, holdMs: 3000, outMs: 1000 } });
+    }
+    function chips(list, from) {
+        const el = h('div', 'chips');
+        list.forEach(([text, kind]) => el.append(h('span', 'chip' + (kind === 'gain' ? ' is-gain' : kind === 'loss' ? ' is-loss' : ''), text)));
+        const key = 'chip:' + (++clock.seq), t0 = clock.t;
+        const at = from || (() => S.view === 'orbit' && S.orbitOf ? (orbitPainting(S.orbitOf).ship ? [orbitPainting(S.orbitOf).ship.x, orbitPainting(S.orbitOf).ship.y - 14] : [G.W / 2, G.H / 2]) : [cvX(S.ship.x), cvY(S.ship.y - SHIP.ht / 2 - 4)]);
+        word(key, el, { at, side: 'above', gap: 2, rise: { t0 }, fade: { t0, inMs: 1, holdMs: 1499, outMs: 1, remove: true } });
+    }
+    function applyGain(g) {
+        if (!g) return;
+        Object.keys(g).forEach(k => { S.res[k] = Math.max(0, Math.min(k === 'energy' ? 100 : 999, S.res[k] + g[k])); });
+        showLowSupply();
+    }
+    /** Where the ship is, for grouping the record by stop. */
+    function currentStop() {
+        if (S.orbitOf && (S.view === 'orbit' || S.at === S.orbitOf.id)) return S.orbitOf.kind === 'light' ? 'The light' : S.orbitOf.name;
+        if (S.at) { const pl = placeById(S.at); if (pl) return pl.name; }
+        return S.n === 1 ? 'Waking up' : 'Arrival';
+    }
+    /** The ship's record. opts: { who, story, routine, page, chips, stop } (a plain string is taken as who, as before). */
+    function logRecord(text, opts) {
+        const o = typeof opts === 'string' ? { who: opts } : (opts || {});
+        const head = `Sector ${S.n} · ${SECTORS[S.n].title}`;
+        let g = record.find(x => x.head === head); if (!g) { g = { head, items: [] }; record.push(g); }
+        const item = { t: text, stop: o.stop || currentStop() };
+        ['who', 'story', 'routine', 'page', 'chips'].forEach(k => { if (o[k]) item[k] = o[k]; });
+        g.items.push(item);
+    }
+    const barked = new Set();
+    /** A crew remark goes to the record once a run, never on screen. */
+    function barkOnce(key) { if (!BARKS[key] || barked.has(key)) return; barked.add(key); logRecord(BARKS[key][1], { who: BARKS[key][0] }); }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 11. What happens: arriving in a sector, pointing, choosing, flying, orbit, the team, the film, dating, the jump.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    let scenesSeen = 0;
+    function enterSector(n, opts = {}) {
+        clock.timers = [];
+        Reading.clear();
+        unwordAll();
+        shades.clear();
+        showFilmCanvas(false);
+        S = fresh(n);
+        const sec = SECTORS[n];
+        if (sec.record && !opts.keepRecord) { record.length = 0; sec.record.forEach(g => record.push({ head: g.head, items: g.items.slice() })); ['disc', 'plate'].forEach(id => { if (!pagesRead.includes(id)) pagesRead.push(id); }); }
+        else if (sec.record) sec.record.filter(g => g.head.startsWith(`Sector ${n}`)).forEach(g => { if (!record.some(x => x.head === g.head)) record.push({ head: g.head, items: g.items.slice() }); });
+        if (sec.wake && !record.some(g => g.head.startsWith(`Sector ${n} `))) sec.wake.forEach(w => logRecord(w.t, { who: w.who, stop: 'Waking up' }));
+        sectorPainting(n);
+        showDatedNotes();
+        showLowSupply();
+        if (opts.quiet) { ShipView.prepare(); return; }
+        S.intro = { t0: clock.t };
+        after(60, () => ShipView.prepare());                                                            // the cut-open ship is painted while the screen is still black
+        S.ship.x = -50;
+        after(1200, () => showTitle(sec.title));
+        after(2800, () => { S.intro = null; });
+        const lines = sec.arrive || [];
+        const run = i => {                                                                              // one line at a time; a click on a world ends the run
+            if (i >= lines.length) { arrivalHint(); return; }
+            if (i === lines.length - 1) arrivalNames();
+            const [who, line, from] = lines[i];
+            Reading.say(who, line, { anchor: 'ship', from, scene: 'arrival:' + n }).then(ok => {
+                if (ok) { run(i + 1); return; }
+                if (!S.course && S.view === 'sector' && !S.flags.namesShown) arrivalNames();                // skipped: still show the names
+                arrivalHint();
+            });
+        };
+        after(lines.length ? 5300 : 4400, () => { if (lines.length) run(0); else { arrivalNames(); arrivalHint(); } });
+    }
+    function arrivalNames() {
+        S.flags.namesShown = true;
+        showNames(4000);
+    }
+    /** The one-time hint beside a world, only once the voices are done: never two hints on screen at once. */
+    function arrivalHint() {
+        const sec = SECTORS[S.n];
+        if (!sec.hint || S.flags.hintGone || S.n !== 1 || S.view !== 'sector' || S.course) return;
+        const pl = placeById(sec.hint.at);
+        word('hint', h('p', 'hint', sec.hint.text), { at: () => { const s = placeSpot(pl); return [s.cx, s.cy + pl.r + 3]; }, side: 'below', gap: 2, view: 'sector', alignLeft: false, shade: true, shadeStrength: 0.5, hideOnHover: true, yields: true, fade: { t0: clock.t + 400, inMs: 600, holdMs: 1e9, outMs: 0 } });
+    }
+    function update(dt) {
+        if (!S || dt <= 0) return;
+        if (S.intro) { const k = easeOut(clamp01((clock.t - S.intro.t0 - 200) / 2600)); S.ship.x = lerp(-50, SHIP.restX, k); }
+        const C = S.course;
+        if (C && C.phase === 'fly') {
+            C.s = Math.min(1, C.s + dt / C.dur * C.speed);
+            const e = ease(C.s), [nx, ny] = bez(C.curve, e), [ddx, ddy] = bezD(C.curve, Math.max(0.001, e)), want = Math.max(-1.3, Math.min(1.3, Math.atan2(ddy, ddx)));
+            const a = S.ship.angle + (want - S.ship.angle) * Math.min(1, dt / 220);                  // the hull turns smoothly, it does not snap
+            S.ship.angle = a; S.ship.x = nx - Math.cos(a) * SHIP.len / 2; S.ship.y = ny - Math.sin(a) * SHIP.len / 2;
+            const tail = [S.ship.x - Math.cos(a) * SHIP.len / 2, S.ship.y - Math.sin(a) * SHIP.len / 2];
+            const last = S.wake[S.wake.length - 1];
+            if (!last || Math.hypot(tail[0] - last[0], tail[1] - last[1]) >= 1) { S.wake.push([Math.round(tail[0]), Math.round(tail[1])]); if (S.wake.length > 26) S.wake.shift(); }
+            if (C.s >= 1) arrive(C);
+        } else if (S.wake.length && Math.floor(clock.t / 60) !== Math.floor((clock.t - dt) / 60)) S.wake.shift();
+        const J = S.jump;
+        if (J && J.phase === 'go') {
+            const k = clamp01((clock.t - J.t0) / 1100), e = k * k * k, [lx, ly] = lightPos();
+            S.ship.x = lerp(J.x0, lx - G.ox + 30, e); S.ship.y = lerp(J.y0, ly - G.oy, e); S.ship.angle = Math.atan2(ly - G.oy - J.y0, lx - G.ox - J.x0);
+        }
+    }
+
+    // ── pointing ──
+    function pick(cx, cy) {
+        if (S.view !== 'sector' || S.jump) return null;
+        const Lp = placesLayer();
+        for (let i = S.places.length - 1; i >= 0; i--) {
+            const pl = S.places[i]; if (pl.kind === 'giant') continue;
+            const s = Lp.spots[pl.id]; if (s && Math.hypot(cx - s.cx, cy - s.cy) <= (s.r || 8) + 6) return { kind: 'place', id: pl.id };
+        }
+        const [lx, ly] = lightPos();
+        if (SECTORS[S.n].light.face) { const f = faceGeo(); if (Math.hypot(cx - f.cx, cy - f.cy) < f.R + 8) return { kind: 'light' }; }
+        else if (Math.hypot(cx - lx, (cy - ly) * 0.8) < 18 || (cx > G.W - 14 && Math.abs(cy - ly) < 26)) return { kind: 'light' };
+        const sx = cvX(S.ship.x), sy = cvY(S.ship.y);
+        if (Math.abs(cx - sx) < SHIP.len / 2 + 3 && Math.abs(cy - sy) < SHIP.ht / 2 + 4) return { kind: 'ship' };
+        const gp = S.places.find(p => p.kind === 'giant');
+        if (gp) { const g = giantGeo(); if (Math.hypot(cx - g.cx, cy - g.cy) < g.R) return { kind: 'place', id: gp.id }; }
+        return null;
+    }
+    const sameTarget = (a, b) => (!a && !b) || (a && b && a.kind === b.kind && a.id === b.id);
+    function setHover(target) {
+        if (target && target.kind === 'place') { const pl = placeById(target.id); if (!answers(pl) && !pl.hidden) target = null; }
+        if (target && target.kind === 'light' && S.course) target = null;
+        if (sameTarget(S.hover, target)) return;
+        const wasShip = S.hover && S.hover.kind === 'ship';
+        S.hover = target ? Object.assign({ t0: clock.t }, target) : null;
+        if (target && target.kind === 'ship') unword('low'); else if (wasShip) showLowSupply();
+        if (S.hover && S.hover.kind === 'place') { const pl = placeById(S.hover.id); if (!pl.hidden && pl.id !== S.at && !S.course) S.hover.curve = courseTo(dockFor(pl)); }
+        $('stage').classList.toggle('is-pointing', !!target);
+        if (!S.course) showNote(S.hover);
+    }
+
+    // ── choosing ──
+    function choosePlace(pl) {
+        if (S.flags.hintGone === false) { S.flags.hintGone = true; unword('hint'); }
+        if (pl.id === S.at) { enterOrbit(pl, true); return; }
+        if (isBehind(pl) || pl.visited) { sayOnce('passed:' + pl.id, 'A.U.R.A.', 'We passed it, Commander. The ship only flies forward.'); return; }
+        if (pl.hidden) { sayOnce('contact:' + pl.id, 'A.U.R.A.', 'I cannot get a fix on that contact, Commander. There is no course to it yet.'); return; }
+        if (S.stops <= 0) return;                                                                     // the worlds ahead have sunk back: only the light answers
+        if (!pl.free && pl.cost > S.res.energy) { sayOnce('energy:' + pl.id, 'Jaxon', "We don't have the energy to get there.", { from: 'from engineering' }); return; }
+        const curve = courseTo(dockFor(pl));
+        S.course = { id: pl.id, phase: 'lock', t0: clock.t, curve, s: 0, speed: 1, dur: 3200 + curve.dist * 4 };
+        unwordAll('name:');
+        showNote(null);
+        if (pl.react) Reading.say(pl.react[0], pl.react[1], { anchor: 'ship' });
+        S.course.timer = after(1200, () => launch(pl));
+    }
+    function launch(pl) {
+        const C = S.course; if (!C || C.id !== pl.id) return;
+        C.phase = 'fly';
+        if (!pl.free) { S.res.energy -= pl.cost; chips([[`−${pl.cost} energy`, 'spend']]); }
+        S.stops = Math.max(0, S.stops - 1);
+        logRecord(pl.free ? `Flew to ${pl.name} on their last course.` : `Flew to ${pl.name}.`, { routine: true, stop: pl.name, chips: pl.free ? null : [[`−${pl.cost} energy`, 'spend']] });
+        showLowSupply();
+    }
+    function cancelCourse() {
+        const C = S.course; if (!C || C.phase !== 'lock') return false;
+        cancelTimer(C.timer); S.course = null;
+        Reading.say('A.U.R.A.', 'Holding course, Commander.', { anchor: 'ship' });
+        showNote(S.hover);
+        return true;
+    }
+    function hurry() { if (S.course && S.course.phase === 'fly') { S.course.speed = 3; return true; } return false; }
+    function sayOnce(key, who, line, opts) { if (Reading.isShowing(line)) return; Reading.say(who, line, Object.assign({ anchor: 'ship' }, opts)); }
+
+    function arrive(C) {
+        const pl = placeById(C.id);
+        S.course = null;
+        S.at = pl.id;
+        S.restAfter = C.curve.p2;
+        S.orbitOf = pl;
+        setHover(null);
+        transition('sector', 'orbit', 1000, () => { S.wake = []; settleShipAt(pl); });
+        after(400, () => enterOrbitWords(pl, false));
+        if (pl.orbit && pl.orbit.arrive) logRecord(pl.orbit.arrive[1], { who: pl.orbit.arrive[0], routine: true });
+        barkOnce('orbit');
+    }
+    function settleShipAt(pl) {
+        const [nx, ny] = S.restAfter || dockFor(pl);
+        S.ship.angle = 0; S.ship.x = Math.round(nx - SHIP.len / 2 - 9); S.ship.y = Math.round(ny + (pl.kind === 'giant' ? -12 : 7));
+        S.version++;
+    }
+    function transition(from, to, dur, done) { S.trans = { from, to, t0: clock.t, dur }; after(dur, () => { S.trans = null; S.view = to; if (done) done(); }); }
+
+    // ── orbit ──
+    function enterOrbit(pl, isReturn) {
+        S.orbitOf = pl;
+        setHover(null);
+        transition('sector', 'orbit', 1000);
+        after(400, () => enterOrbitWords(pl, isReturn));
+    }
+    function orbitData(pl) { return pl.kind === 'light' ? SECTORS[6].lightOrbit : pl.orbit; }
+    function enterOrbitWords(pl, isReturn) {
+        unwordAll('name:'); unword('note'); unword('hint');
+        const od = orbitData(pl), o = orbitPainting(pl);
+        const head = h('div', 'place-head');
+        head.append(h('p', 'name', pl.kind === 'light' ? 'The light' : pl.name), h('p', 'line', od.line));
+        const headLeft = pl.kind === 'light' || !o.ship || o.ship.x - G.ox > SW / 2;                                           // the name goes in the top corner away from our ship
+        head.classList.toggle('is-right', !headLeft);
+        word('orbit-head', head, { at: () => headLeft ? [cvX(24), cvY(22)] : [cvX(SW - 24), cvY(22)], side: 'below', alignLeft: headLeft, alignRight: !headLeft, gap: 0, view: 'orbit', shade: true, fade: { t0: clock.t + 300, inMs: 800, holdMs: 4200, outMs: 1200 } });
+        if (pl.datedNote) datedWord(o, pl.datedNote);
+        if (!isReturn && od.arrive) after(1500, () => Reading.say(od.arrive[0], od.arrive[1], { anchor: 'orbit-ship' }));
+        after(isReturn ? 300 : 1900, () => showActs(pl));
+    }
+    /** The date written beside a dated wreck's beacon, on whichever side of it is darkest. */
+    function datedWord(o, text) { word('orbit-dated', h('p', 'dated', text), { at: () => o.anchors.beacon, sides: ['below', 'left', 'right', 'above'], gap: 7, view: 'orbit', shade: true }); }
+    /** The sides to try for words about something on the ground: first the one facing away from the planet. */
+    function sidesAway(n) {
+        if (!n) return ['right', 'left', 'above', 'below'];
+        const out = [];
+        if (n[1] < -0.55) out.push('above');
+        if (Math.abs(n[0]) > 0.4) out.push(n[0] < 0 ? 'left' : 'right');
+        return out.concat(['above', n[0] < 0 ? 'left' : 'right', n[0] < 0 ? 'right' : 'left', 'below']).filter((s, i, a) => a.indexOf(s) === i);
+    }
+    function showActs(pl) {
+        unwordAll('act:');
+        const od = orbitData(pl), o = orbitPainting(pl), step = od.steps[pl.step];
+        if (step) {
+            const target = o.anchors[step.at] || o.anchors.beacon, isClouds = step.at === 'clouds';
+            const sky = isClouds ? o.anchors.cloudsSky : o.anchors.sky, n = isClouds ? o.anchors.cloudsN : o.anchors.skyN;
+            actWord('act:step', step.verb, step.sub, sky || target, step.at === 'light' ? ['left'] : sidesAway(n), () => doStep(pl, step), step.pulse, step.at === 'station' || step.at === 'light' ? null : target);
+        }
+        if (pl.kind !== 'light' || !step) actWord('act:leave', 'Leave orbit', null, o.anchors.ship, ['below', 'left', 'right'], leaveOrbit);
+    }
+    function actWord(key, verb, sub, anchor, sides, onClick, pulse, thread) {
+        const b = h('button', 'act' + (pulse ? ' is-pulse' : ''));
+        b.type = 'button';
+        b.append(h('span', 'verb', verb)); if (sub) b.append(h('span', 'sub', sub));
+        b.addEventListener('click', e => { e.stopPropagation(); if (Reading.isOpen() || S.trans) return; S.actHot = null; onClick(); });
+        b.addEventListener('pointerenter', () => { S.actHot = key; b.classList.add('is-hot'); });
+        b.addEventListener('pointerleave', () => { if (S.actHot === key) S.actHot = null; b.classList.remove('is-hot'); });
+        word(key, b, { at: () => anchor, sides, gap: 6, view: 'orbit', shade: true, thread, yields: true });   // it waits while a voice line sits on it
+    }
+    function doStep(pl, step) {
+        unwordAll('act:');
+        const o = orbitPainting(pl);
+        const note = () => { if (step.record) logRecord(step.record, { story: !!step.story, chips: step.gain && step.gain.energy ? [[`+${step.gain.energy} energy`, 'gain']] : null }); };
+        const finish = () => { pl.step++; after(700, () => showActs(pl)); };
+        if (step.does === 'team' || step.does === 'board') {
+            const to = o.anchors[step.at] || o.anchors.beacon;
+            logRecord(step.does === 'board' ? 'One of the crew went aboard on one tank of air.' : `The lander went down with ${step.crew || 'the team'}.`, { routine: true });
+            if (step.does === 'team') barkOnce('lander');
+            if (step.bark) barkOnce(step.bark);
+            S.lander = { t0: clock.t, to, dur: 2000, up: false };
+            const backUp = () => new Promise(done => { S.lander = { t0: clock.t, to, dur: 1300, up: true }; after(1400, () => { S.lander = null; done(); }); });
+            const home = () => { if (!step.scene) note(); applyGain(step.gain); return afterTeam(step); };
+            after(2300, () => {
+                if (step.scene) { note(); playFilm(step.scene, () => backUp().then(home).then(finish)); return; }   // what they searched comes before what they chose there
+                backUp().then(home).then(finish);
+            });
+            return;
+        }
+        if (step.does === 'fuel') { applyGain(step.gain); chips([[`+${step.gain.energy} energy`, 'gain']]); note(); Reading.say(step.then[0], step.then[1], { anchor: 'orbit-ship' }); finish(); return; }
+        if (step.does === 'date') { startDating(pl, step, () => { note(); finish(); }); return; }
+        if (step.does === 'end') { goIntoTheLight(); }
+    }
+    /** The team is back: what they say, then what they found (a page goes to the record, and can be read again there). */
+    function afterTeam(step) {
+        let chain = Promise.resolve();
+        if (step.then && !step.page) { Reading.say(step.then[0], step.then[1], { anchor: 'orbit-beacon' }); return chain; }   // nothing to wait for
+        if (step.then) chain = chain.then(() => Reading.say(step.then[0], step.then[1], { anchor: 'orbit-beacon' }));
+        if (step.page) chain = chain.then(() => {
+            logRecord(step.page.record, { story: true, page: step.page.id });
+            if (!pagesRead.includes(step.page.id)) pagesRead.push(step.page.id);
+            return Reading.showPage(step.page);
+        });
+        return chain;
+    }
+
+    function playFilm(scene, done) {
+        transition('orbit', 'black', 600);
+        after(600, () => {
+            S.view = 'film'; S.film = { scene, t0: clock.t }; showFilmCanvas(true);
+            const g = filmGeometry();
+            Reading.playScene(scene, { top: { y: g.bandTop.y, h: g.bandTop.h }, bottom: { y: g.bandBottom.y, h: g.bandBottom.h }, first: scenesSeen < 2 }).then(i => {
+                scenesSeen++;
+                const choice = scene.choices && scene.choices[i];
+                S.film = null; showFilmCanvas(false); S.view = 'black';
+                transition('black', 'orbit', 800);
+                after(800, () => { if (choice) { applyGain(choice.gain); chips(choice.chips); if (choice.record) logRecord(choice.record, { chips: choice.chips }); } done(); });
+            });
+        });
+    }
+
+    // Dating is the real disc game (src/systems/minigames/DiscDating.js), the one the game runs. "Not now" leaves the wreck undated.
+    function startDating(pl, step, finish) {
+        if (!window.MiniHost || !window.MiniHost.has('disc')) { console.warn('The disc game did not load.'); showActs(pl); return; }
+        S.dating = true;                                                                                // the disc game has the keys and clicks while it is open
+        window.MiniHost.play('disc', {
+            wreck: { hull: 4, sector: 1 }, plotted: [], crew: null,
+            reward: { name: 'Rhea-4 Minor', kind: 'beacon', line: { who: 'Mira', text: 'They saw a lamp on that moon and went to help. They never got there.' } },
+            names: ['Kryos-68 Prime', 'Chronos-37 Proxima', 'Zephyr-97 X'],
+        }).then(result => {
+            S.dating = null;
+            if (!result || !result.dated) { showActs(pl); return; }
+            pl.datedNote = step.dated;
+            if (step.reveal) S.pendingReveal = step.reveal;
+            Reading.say(step.then[0], step.then[1], { anchor: 'orbit-ship' });
+            datedWord(orbitPainting(pl), step.dated);
+            finish();
+        });
+    }
+
+    function leaveOrbit() {
+        const pl = S.orbitOf, od = orbitData(pl), waiting = od && od.steps[pl.step];
+        if (waiting && waiting.does === 'date') {                                                       // dating is only possible in this orbit: leaving gives it up
+            pl.step++;
+            logRecord(`Left ${pl.name} without dating the wreck.`);
+            if (waiting.reveal) { S.pendingReveal = waiting.reveal; S.revealLate = true; }
+        }
+        unwordAll('act:'); unword('orbit-head'); unword('orbit-dated');
+        Reading.clear();
+        transition('orbit', 'sector', 1000, () => {
+            showDatedNotes(); showLowSupply();
+            if (S.pendingReveal) {
+                const story = placeById(S.pendingReveal); S.pendingReveal = null;
+                if (story && story.hidden) { story.hidden = false; S.version++; S.reveal = { id: story.id, t0: clock.t + 300 }; logRecord(`The faint contact is ${story.name}. One of our ships is there.`); after(1300, () => { S.reveal = null; setHover({ kind: 'place', id: story.id }); }); }
+            }
+            const late = S.revealLate; S.revealLate = false;
+            after(500, () => Reading.say('A.U.R.A.', late ? 'I have a course to the faint contact now, Commander.' : stopsLine(), { anchor: 'ship' }).then(ok => { if (ok && late) Reading.say('A.U.R.A.', stopsLine(), { anchor: 'ship' }); }));
+        });
+        S.orbitOf = pl;
+    }
+    function stopsLine() {
+        if (S.n === 6) return S.stops > 0 ? `We can make ${S.stops === 1 ? 'one more stop' : S.stops === 2 ? 'two more stops' : 'three more stops'} before the light, Commander.` : 'Only the light is left, Commander.';
+        if (S.stops >= 2) return `We can make ${S.stops === 2 ? 'two' : 'three'} more stops before the jump, Commander.`;
+        if (S.stops === 1) return 'We can make one more stop before the jump, Commander.';
+        return 'No stops left, Commander. Only the jump is ahead.';
+    }
+
+    // ── the light: the jump (sectors 1-5) or the end of the heading (sector 6) ──
+    function clickLight() {
+        if (S.n === 6) {
+            const fake = { id: 'light', kind: 'light', name: 'The light', step: S.lightStep || 0 };
+            Reading.say('Aris', 'It looks warm. Nothing out here is warm.', { anchor: 'ship' });
+            after(2200, () => { S.lightPlace = fake; enterOrbitLight(fake); });
+            return;
+        }
+        if (S.res.energy < JUMP.energy) { sayOnce('jump-energy', 'Jaxon', "We don't have the energy to jump.", { from: 'from engineering' }); return; }
+        if (S.stops > 0) {
+            const line = S.stops === 1 ? 'We still have a stop left here, Commander. Jump anyway?' : `We still have ${S.stops === 2 ? 'two' : 'three'} stops left here, Commander. Jump anyway?`;
+            Reading.ask('A.U.R.A.', line, [{ verb: 'Jump now', chips: [[`−${JUMP.energy} energy`, 'spend'], [`−${JUMP.rations} rations`, 'spend']] }, { verb: 'Not yet' }], { anchor: 'ship' }).then(i => { if (i === 0) doJump(); });
+            return;
+        }
+        doJump();
+    }
+    function enterOrbitLight(pl) {
+        S.orbitOf = pl; pl.orbit = SECTORS[6].lightOrbit;
+        transition('sector', 'orbit', 1000);
+        after(500, () => enterOrbitWords(pl, false));
+    }
+    function doJump() {
+        Reading.clear(); showNote(null); setHover(null);
+        S.res.energy -= JUMP.energy; S.res.rations = Math.max(0, S.res.rations - JUMP.rations);
+        chips([[`−${JUMP.energy} energy`, 'spend'], [`−${JUMP.rations} rations`, 'spend']]);
+        S.jump = { phase: 'go', t0: clock.t, x0: S.ship.x, y0: S.ship.y };
+        S.view = 'jump';
+        unwordAll('dated:'); unword('low');
+        after(1100, () => { S.jump.phase = 'stretch'; S.jump.t1 = clock.t; });
+        after(1100 + TICK * 6, () => { S.jump.phase = 'black'; });
+        after(1100 + TICK * 6 + 40, () => sectorPainting(SECTORS[S.n].next || 5));                 // paint the next sector while the screen is black
+        after(1100 + TICK * 6 + 600, () => enterSector(SECTORS[S.n].next || 5, { keepRecord: true }));
+    }
+    function goIntoTheLight() {
+        Reading.clear(); unwordAll();
+        S.ending = { t0: clock.t };
+        transition('orbit', 'end', 1600);
+        after(3200, () => word('end', h('p', 'hint', 'Mockup: the finale starts here. Esc to go back.'), { at: () => [G.W / 2, G.H * 0.8], side: 'center', view: 'end' }));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 12. THE WORLD API, for the reading layer. The reading layer calls only these; the world calls only Reading.*.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const World = {
+        /** CSS pixels per art pixel (the art is drawn at a whole number of device pixels each). */
+        get k() { return G.s; },
+        now: () => clock.t,
+        after, cancel: cancelTimer,
+        /** The first place for words at a named anchor (see anchors). */
+        anchor(name) { const list = World.anchors(name); return list && list.length ? list[0] : null; },
+        /** Every place words may sit for a named anchor, best first, in screen pixels: [{ x, y, side, align? }]. The reading
+            layer takes the darkest of them (World.luma), so a line never lands on a gas giant's rim or on a planet.
+            'ship' (beside our ship), 'orbit-ship', 'orbit-beacon' (the sky just off the limb above the beacon), 'place:<id>',
+            'light', 'center'. side: where the words go from the point; align 'center' centres them on it. */
+        anchors(name) {
+            if (!S) return null;
+            const at = (cx, cy, side, align) => { const [x, y] = toScreen(cx, cy); return { x, y, side, align }; };
+            if (name === 'ship' && S.view === 'ship') { const a = ShipView.anchor(); return a ? [at(a[0], a[1], 'below')] : null; }
+            if (name === 'ship') {
+                // the hull's box as it is turned in flight: the words hang under or over it, never on it
+                const ca = Math.abs(Math.cos(S.ship.angle)), sa = Math.abs(Math.sin(S.ship.angle)), halfW = ca * SHIP.len / 2 + sa * SHIP.ht / 2, halfH = sa * SHIP.len / 2 + ca * SHIP.ht / 2;
+                const tail = cvX(S.ship.x - halfW) - 8, top = cvY(S.ship.y - halfH) - 10, bottom = cvY(S.ship.y + halfH) + 10;
+                const out = [at(tail, bottom, 'below'), at(tail, top, 'above')];
+                if (S.ship.x > 300) out.push(at(tail, cvY(S.ship.y), 'left'));
+                return out;
+            }
+            if (name === 'orbit-ship' || name === 'orbit-beacon') {
+                if (!S.orbitOf) return [World.anchors('center')[0]];
+                const o = orbitPainting(S.orbitOf);
+                if (S.orbitOf.kind === 'light') return [at(cvX(28), cvY(282), 'below'), at(cvX(28), cvY(78), 'below')];   // the second clears the name in the corner
+                const sh = o.ship, onRight = sh.x - G.ox > SW / 2, hl = sh.len / 2 + 8;
+                const besideShip = [at(sh.x + (onRight ? -hl : hl), sh.y - 2, onRight ? 'left' : 'right'), at(sh.x - sh.len / 2, sh.y - sh.ht / 2 - 8, 'above'), at(sh.x - sh.len / 2, sh.y + sh.ht / 2 + 26, 'below')];
+                if (name === 'orbit-ship') return besideShip;
+                const [sx, sy] = o.anchors.sky || o.anchors.beacon;
+                return sidesAway(o.anchors.skyN).map(side => at(sx + (side === 'left' ? -4 : side === 'right' ? 4 : 0), sy + (side === 'above' ? -4 : side === 'below' ? 4 : 0), side, side === 'above' || side === 'below' ? 'center' : null)).concat(besideShip);
+            }
+            if (name.startsWith('place:')) { const pl = placeById(name.slice(6)); if (!pl) return null; const s = placeSpot(pl); return [at(s.cx, s.cy, sideFor(pl))]; }
+            if (name === 'light') { const [lx, ly] = lightPos(); return [at(lx, ly, 'left')]; }
+            return [{ x: window.innerWidth / 2, y: window.innerHeight / 2, side: 'center' }];
+        },
+        /** Darken the picture under words with the dither grain. rect in screen pixels { x, y, w, h, strength? }, or null to remove. */
+        shade(key, rect) { setShade('r:' + key, rect); },
+        /** Dim the whole picture (0 none .. 1 black), in dither steps. Pages and the record use about 0.7. */
+        dim(amount) { if (S) S.dim = clamp01(amount); },
+        /** True for the first two scenes, while the "Click or Space" hint should show. */
+        isEarly: () => scenesSeen < 2,
+        state: () => ({ sector: S.n, title: SECTORS[S.n].title, view: S.view, res: Object.assign({}, S.res), stops: S.stops, record: record.map(g => ({ head: g.head, items: g.items.slice() })), pages: pagesRead.slice() }),
+        /** Everything the ship-and-crew view needs: rooms from the nose, who is where, who is hurt, damage, pods, supplies. */
+        shipState() {
+            const sec = SECTORS[S.n], c = sec.crew;
+            const where = { bridge: 'on the bridge', lab: 'in the lab', quarters: 'in the quarters', hold: 'in the hold', engineering: 'in engineering' };
+            return {
+                sector: S.n, rooms: ROOMS.slice(), damaged: Object.assign({}, c.damaged), hurt: Object.assign({}, c.hurt), pods: c.pods, res: Object.assign({}, S.res), stops: S.stops,
+                foodForJumps: Math.floor(S.res.rations / JUMP.rations),
+                crew: CREW.map(m => ({ id: m.id, name: m.name, room: c.at[m.id], hurt: !!c.hurt[m.id], label: `${m.name} · ${c.hurt[m.id] ? 'hurt' : (m.id === 'aris' && c.hurt.vance ? 'with Vance' : where[c.at[m.id]])}` })),
+            };
+        },
+        pages: { plate: PAGE_PLATE, disc: PAGE_DISC },
+        /** The picture recipe, for the ship view and the pictures of pages (same ramps, same dither, same hull). */
+        art: { INK, TICK, RP, BAYER_RAW, threshold, level, hash, vnoise, fbm, seeded, clamp01, smooth, lerp, ramp, hexRgb, painter, framer, drawHull, hullEdges, pattern, dimWith, darken, glyphText: pixelText, glyphWidth: pixelTextWidth },
+        geom: () => ({ k: G.k, s: G.s, dpr: G.dpr, W: G.W, H: G.H, ox: G.ox, oy: G.oy, left: G.left, top: G.top }),
+        view: () => (S ? S.view : null),
+        /** How busy the picture is under a screen rect, read from the cached paintings (no canvas read-back): the mean
+            brightness plus a share of the pixels that are bright, so a thin gold rim under the words counts, not only a big glow. */
+        luma(rect) {
+            if (!S) return 0;
+            const P = (S.view === 'sector' || S.view === 'jump') ? sectorPainting(S.n) : null, O = S.view === 'orbit' && S.orbitOf ? orbitPainting(S.orbitOf) : null;
+            const data = P ? P.baseData : O ? O.data : null, over = P && placesCache ? placesCache.data : null;
+            if (!data) return 0;
+            const [x0, y0] = toCanvas(rect.x, rect.y), [x1, y1] = toCanvas(rect.x + rect.w, rect.y + rect.h);
+            let sum = 0, bright = 0, onPlace = 0, n = 0;
+            for (let y = Math.max(0, Math.floor(y0)); y < Math.min(G.H, Math.ceil(y1)); y += 2) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(G.W, Math.ceil(x1)); x += 2) {
+                const o = (y * G.W + x) * 4, isPlace = over && over[o + 3], src = isPlace ? over : data, l = (0.2126 * src[o] + 0.7152 * src[o + 1] + 0.0722 * src[o + 2]) / 255;
+                sum += l; if (l > 0.16) bright++; if (isPlace) onPlace++; n++;
+            }
+            return n ? sum / n + 0.6 * bright / n + 0.8 * onPlace / n : 0;                           // words on a world hide it, however dim it is
+        },
+        /** Words that belong to the world, placed every frame from a canvas anchor (keys are kept apart from the world's own). */
+        word: (key, el, opts) => word('x:' + key, el, opts),
+        unwordAll: prefix => unwordAll('x:' + (prefix || '')),
+        sectorBase: () => (S ? sectorPainting(S.n) : null),
+        openShip, closeShip,
+        openRecord: () => Reading.openRecord(),
+    };
+    window.World = World;
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 12b. The ship and the crew: the hull cut open (game-screen/shipview.js), a view of its own with a dissolve both ways.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const ShipView = window.GameShipView.create(World);
+    VIEWS.ship = (c, t) => ShipView.draw(c, t);
+    function openShip() {
+        if (!S || S.view !== 'sector' || S.trans || S.jump || S.intro) return;
+        setHover(null); showNote(null);
+        ShipView.open(clock.t);
+        transition('sector', 'ship', 600);
+    }
+    function closeShip() {
+        if (!S || S.view !== 'ship' || S.trans) return;
+        ShipView.close();
+        stage.classList.remove('is-pointing');
+        transition('ship', 'sector', 600, () => showLowSupply());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 13. The reading layer (game-screen/reading.js): voices in the scene, scenes as film, found pages, the ship's record.
+    //     The world calls only Reading.*; the reading layer calls only World.*.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const Reading = window.GameReading.create(World);
+    window.Reading = Reading;
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 14. Input, the Esc menu, the mockup control, deep links, the loop.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const stage = $('stage'), menu = $('menu');
+    const menuOpen = () => !menu.hidden;
+    function openMenu(on) { menu.hidden = !on; if (S) S.dim = on ? 0.65 : 0; if (on) menu.querySelector('button').focus({ preventScroll: true }); }
+    stage.addEventListener('pointermove', e => {
+        if (!S || menuOpen() || Reading.isOpen() || S.trans) return;
+        const [cx, cy] = toCanvas(e.clientX, e.clientY);
+        if (S.view === 'ship') { stage.classList.toggle('is-pointing', ShipView.hover(cx, cy)); return; }
+        if (S.view !== 'sector') { if (S.hover) setHover(null); return; }
+        setHover(pick(cx, cy));
+    });
+    stage.addEventListener('pointerleave', () => { if (S && S.view === 'sector') setHover(null); if (S && S.view === 'ship') ShipView.hover(-99, -99); });
+    stage.addEventListener('click', e => {
+        if (!S || S.dating || menuOpen()) return;
+        if (Reading.isOpen()) { Reading.advance(); return; }
+        if (S.trans) return;
+        if (S.view === 'ship') {                                                                     // the ship cut open: the logbook, a person, or outside to close
+            const [cx, cy] = toCanvas(e.clientX, e.clientY), where = ShipView.click(cx, cy);
+            if (where === 'record') Reading.openRecord(); else if (where === 'outside') closeShip(); else Reading.advance();
+            return;
+        }
+        if (S.view === 'orbit') { Reading.advance(); return; }
+        if (S.view === 'end') return;
+        if (S.view !== 'sector' || S.intro) return;
+        if (S.course) { if (S.course.phase === 'lock') cancelCourse(); else hurry(); return; }
+        const [cx, cy] = toCanvas(e.clientX, e.clientY), target = pick(cx, cy);
+        if (!target) { Reading.advance(); return; }
+        if (target.kind === 'place') choosePlace(placeById(target.id));
+        else if (target.kind === 'light') clickLight();
+        else if (target.kind === 'ship') Reading.openShip();
+    });
+    menu.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) { openMenu(false); return; }
+        const what = b.dataset.menu;
+        if (what === 'resume') openMenu(false);
+        if (what === 'record') { openMenu(false); Reading.openRecord(); }
+        if (what === 'sound') b.textContent = 'Sound · off in the mockup';
+        if (what === 'save') b.textContent = 'Saved';
+        if (what === 'quit') b.textContent = 'Quit · not in the mockup';
+    });
+    document.addEventListener('keydown', e => {
+        if (!S || S.dating) return;
+        if (e.key === '`') { e.preventDefault(); toggleMoments(); return; }
+        if (menuOpen()) { if (e.key === 'Escape') { e.preventDefault(); openMenu(false); } return; }
+        if (Reading.onKey(e)) { e.preventDefault(); return; }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            if (!$('moments').hidden) { toggleMoments(false); return; }
+            if (S.view === 'end') { enterSector(6, { quiet: true, keepRecord: true }); return; }
+            if (cancelCourse()) return;
+            if (S.view === 'ship') { closeShip(); return; }
+            openMenu(true); return;
+        }
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            if (hurry()) return;
+            if (Reading.advance()) return;
+            if (e.key === 'Enter' && S.hover && S.view === 'sector' && !S.course) { if (S.hover.kind === 'place') choosePlace(placeById(S.hover.id)); else if (S.hover.kind === 'light') clickLight(); }
+            return;
+        }
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            if (S.view !== 'sector' || S.course) return;
+            const list = placesAhead().filter(p => !p.hidden && answers(p)).concat([{ id: '__light' }]);
+            S.tab = (S.tab + (e.shiftKey ? list.length - 1 : 1)) % list.length;
+            const it = list[S.tab]; setHover(it.id === '__light' ? { kind: 'light' } : { kind: 'place', id: it.id });
+            return;
+        }
+        if (e.key === 'Alt') { e.preventDefault(); if (S.view === 'sector' && !S.flags.altNames) { S.flags.altNames = true; showNames(0); } return; }
+        if (e.key === 'e' || e.key === 'E') { if (S.view === 'sector') Reading.openShip(); else if (S.view === 'ship') closeShip(); return; }
+        if (e.key === 'l' || e.key === 'L') { Reading.openRecord(); return; }
+        if (/^[1-6]$/.test(e.key)) { moment('s' + e.key); }
+    });
+    document.addEventListener('keyup', e => { if (e.key === 'Alt' && S && S.flags.altNames) { S.flags.altNames = false; unwordAll('name:'); } });
+    window.addEventListener('blur', () => { if (S && S.flags.altNames) { S.flags.altNames = false; unwordAll('name:'); } });
+
+    // ── the mockup's moments: deep links (#s1, #orbit, …) and the small list behind the MOCKUP corner ──
+    const MOMENTS = [
+        ['s1', 'Sector 1 arrives'], ['orbit', 'Orbit over Titan-61 IV'], ['scene', 'The team, as film'], ['date', 'Dating the wreck'], ['plate', 'A found page: the crew plate'],
+        ['disc', 'A found page: the drawing'], ['ship', 'The ship and the crew · sector 5'], ['ship1', 'The ship and the crew · sector 1'], ['record', "The ship's record"], ['jump', 'The jump'], ['s5', 'Sector 5 · The Tally'], ['s6', 'Sector 6 · The Light'],
+        ['s2', 'Sector 2 · painting only'], ['s3', 'Sector 3 · painting only'], ['s4', 'Sector 4 · painting only'],
+    ];
+    function moment(name) {
+        openMenu(false); toggleMoments(false);
+        const titan = () => placeById('titan');
+        const toOrbit = (pl) => { S.at = pl.id; S.restAfter = dockFor(pl); settleShipAt(pl); S.orbitOf = pl; S.view = 'orbit'; S.intro = null; enterOrbitWords(pl, true); };
+        if (/^s[1-6]$/.test(name)) { if (name === 's1') { record.length = 0; pagesRead.length = 0; barked.clear(); } enterSector(+name.slice(1), { keepRecord: name !== 's5' }); return; }
+        if (name === 'orbit' || name === 'scene' || name === 'date' || name === 'plate' || name === 'jump' || name === 'disc') {
+            record.length = 0; pagesRead.length = 0; barked.clear();
+            enterSector(1, { quiet: true });
+            S.flags.hintGone = true; S.stops = 2; S.res.energy = 95;
+            if (name === 'orbit') { toOrbit(titan()); return; }
+            if (name === 'scene') { toOrbit(titan()); after(400, () => doStep(titan(), titan().orbit.steps[0])); return; }
+            if (name === 'disc') {                                                                        // straight to the page the team brings back
+                const t = titan(); S.res.salvage = 80; logRecord('The team searched EXODUS-4. Nobody alive.'); toOrbit(t); unwordAll('act:');
+                after(500, () => afterTeam({ page: PAGE_DISC }).then(() => { t.step = 1; after(700, () => showActs(t)); }));
+                return;
+            }
+            if (name === 'date') { const t = titan(); t.step = 1; S.res.salvage = 80; logRecord('The team searched EXODUS-4. Nobody alive.'); toOrbit(t); return; }
+            const t = titan(); t.step = 2; t.datedNote = 'Hull 4 · 21 years dead'; S.res.salvage = 80; logRecord('The team searched EXODUS-4. Nobody alive.'); logRecord('Dated hull 4: twenty-one years dead.');
+            const rhea = placeById('rhea'); rhea.hidden = false;
+            if (name === 'plate') { S.stops = 1; toOrbit(rhea); after(300, () => doStep(rhea, rhea.orbit.steps[0])); return; }
+            S.stops = 1; S.at = 'titan'; S.restAfter = dockFor(t); settleShipAt(t); showDatedNotes();
+            after(200, () => { setHover({ kind: 'light' }); after(900, clickLight); });
+            return;
+        }
+        if (name === 'ship' || name === 'ship1') { if (name === 'ship1') { record.length = 0; pagesRead.length = 0; barked.clear(); } enterSector(name === 'ship' ? 5 : 1, { quiet: true }); after(100, () => Reading.openShip()); return; }
+        if (name === 'record') { enterSector(5, { quiet: true }); after(100, () => Reading.openRecord()); return; }
+        enterSector(1);
+    }
+    function toggleMoments(force) {
+        const box = $('moments'), on = force == null ? box.hidden : force;
+        box.hidden = !on; $('mockup-btn').setAttribute('aria-expanded', String(on));
+    }
+    MOMENTS.forEach(([key, label]) => { const b = h('button', null, `#${key}  ${label}`); b.type = 'button'; b.addEventListener('click', e => { e.stopPropagation(); history.replaceState(null, '', '#' + key); moment(key); }); $('moments').appendChild(b); });
+    $('mockup-btn').addEventListener('click', e => { e.stopPropagation(); toggleMoments(); });
+    window.addEventListener('hashchange', () => { moment(location.hash.slice(1) || 's1'); render(); });
+
+    // ── sizing ──
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { measure(); placesCache = null; if (S && S.view === 'ship') ShipView.relayout(); remeasureWords(); Reading.relayout(); if (S && S.film) showFilmCanvas(true); render(); }, 140); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { remeasureWords(); Reading.relayout(); });
+
+    // ── the loop: our own clock, advanced by animation frames; window.step(ms) moves it by hand (for a hidden pane) ──
+    let lastReal = null, lastRender = 0;
+    function frame(now) {
+        if (clock.frozen) return;
+        if (lastReal != null) advance(Math.min(100, now - lastReal));
+        lastReal = now; lastRender = now;
+        render();
+    }
+    function loop(now) { frame(now); requestAnimationFrame(loop); }
+    /** Moves our clock on by hand in 16 ms steps, letting promise callbacks run between steps as they would between frames. Resolves to the time. */
+    window.step = async ms => { let left = Math.max(0, +ms || 0); while (left > 0) { const d = Math.min(16, left); advance(d); left -= d; await Promise.resolve(); await Promise.resolve(); } render(); return Math.round(clock.t); };
+    window.moment = moment;
+    // mockup debug only: retune a painting live (window.__dev.GIANT.open = 0.3; __dev.repaint()) and judge it at real size
+    window.__dev = { GIANT, ORBIT_AT, get S() { return S; }, repaint() { paintings.clear(); orbits.clear(); placesCache = null; render(); return 'repainted'; }, lens(x, y, s) { const b = document.body; if (!s) { b.style.transform = ''; return 'off'; } b.style.transformOrigin = '0 0'; b.style.transform = `scale(${s}) translate(${-x}px, ${-y}px)`; return 'on'; } };
+    window.freeze = on => { clock.frozen = on !== false; lastReal = null; return clock.frozen; };   // mockup debug: stop real time so step() alone drives it
+    window.frameCost = n => { const out = []; for (let i = 0; i < (n || 60); i++) { const a = performance.now(); advance(16); render(); out.push(performance.now() - a); } out.sort((a, b) => a - b); return { median: +out[out.length >> 1].toFixed(2), p95: +out[Math.floor(out.length * 0.95)].toFixed(2), max: +out[out.length - 1].toFixed(2) }; };
+
+    measure();
+    const params = new URLSearchParams(location.search), stillAt = params.has('t') ? Math.max(0, +params.get('t') || 0) : null;
+    moment(location.hash.slice(1) || 's1');
+    if (stillAt != null) { clock.frozen = true; window.step(stillAt).then(() => { document.body.dataset.still = 'ready'; }); }
+    else {
+        render();
+        requestAnimationFrame(loop);
+        setInterval(() => { const now = performance.now(); if (!clock.frozen && now - lastRender > 400) { advance(Math.min(250, lastReal == null ? 125 : now - lastReal)); lastReal = now; lastRender = now; render(); } }, 250);
+    }
+})();
+</script>
+</body>
+</html>
