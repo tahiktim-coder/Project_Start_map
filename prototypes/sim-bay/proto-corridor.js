@@ -1,46 +1,84 @@
-/* proto-corridor.js — Fly the corridor (480×270, long range). One flight, three jumps down the heading: sectors 1, 3 and 5.
-   The radio counts every transponder it hears (eight, then hundreds, then tens of thousands), but only two dead hulls per sector
-   come close enough to SEE. Each is a point with a warm beacon far down the heading; it grows out of the haze and passes large
-   while the camera glances at it: our own class, some torn in two. You dodge the debris round them in a wide box with soft edges;
-   the camera follows late and banks, and looking down shows the galaxy's band. A.U.R.A. can fly. Quiet optional sound. */
+/* proto-corridor.js — Fly the corridor (480×270, long range). One flight, three jumps down the heading: sectors 1, 3 and 5,
+   each about a minute: quiet stretches of space, debris that comes in waves, two dead hulls far apart. The radio counts every
+   transponder it hears (eight, then hundreds, then tens of thousands), but only those hulls come close enough to SEE. Each is
+   a point with a warm beacon far down the heading; it grows out of the haze and passes large while the camera glances at it:
+   our own class, some torn in two. In sector 5 a ship exactly like ours flies beside us for a while, a quarter of a second
+   late, and the light at the end of the heading grows to fill the view. The ship follows the pointer (or the arrows);
+   holding the mouse, Space, W or Shift opens the throttle. At the end A.U.R.A. says what the flight found, one line at a time.
+   A.U.R.A. can fly: steady, never faster. Quiet optional sound. (The game's version: src/systems/minigames/Corridor.js.) */
 (function () {
     'use strict';
-    const Lab = window.Lab, { W, H, clamp } = Lab;
+    const Lab = window.Lab, { W, H, clamp, lerp } = Lab;
 
     const F = 360, CX = 240, CY = 126;                          // px per unit at depth 1; the screen point straight ahead
-    const SPEED = 18, ZHIT = 2.8, NEAR = 0.7;                   // course units/s; the plane where things cross us; behind us
+    const SPEED = 18, ZHIT = 2.8, NEAR = 0.7;                   // course units/s at cruise; the plane where things cross us; behind us
     const FAR_HULL = 470, FAR_FRAG = 120, FAR_DUST = 330;       // draw distances
-    const SEE_AT = 70, AIM_AT = 28, WARN = 1.1;                 // a hull is named; loose debris sets its course; warning (s)
+    const SEE_AT = 70, AIM_AT = 28, WARN = 1.1;                 // a hull is named; loose debris sets its course; warning (course s)
     const BOX = [7, 4.6], MAXV = [7.5, 5.5], SHIP_R = [0.5, 0.32];                 // steering box (soft edges), speed, our half-size
     const LOOK_POS = [0.022, 0.03], LOOK_STICK = [0.08, 0.11], BANK = 0.1, GLANCE = 0.4; // camera: follow, lead, bank, turn to a wreck
-    const JUMP_TIME = 1.4, LINE_GAP = 3.4, FOG_T = 0.3, DROP = 3;  // the jump; gap between lines; haze tone; speed on dropping out
+    const JUMP_TIME = 1.4, FOG_T = 0.3, DROP = 3;                // the jump; haze tone; speed on dropping out
+    // how long a line stays before the next: a base, plus a little per word, within limits (a long line gets time to be read)
+    const GAP = { base: 2.4, word: 0.08, min: 2.6, max: 4.4 };
+    const gapFor = s => clamp(GAP.base + GAP.word * s.split(/\s+/).length, GAP.min, GAP.max);
+    // the throttle: the course comes up to BOOST times faster (held all the way, a leg takes about 58% of the time) and the
+    // world streams past up to FEEL times faster; it opens over BOOST_UP s and eases back over BOOST_DOWN s. Near full it pushes
+    // the view wider by PUSH and shakes it a little.
+    const BOOST = 1.75, FEEL = 2.2, BOOST_UP = 0.8, BOOST_DOWN = 0.6, PUSH = 0.07, SHAKE_AT = 0.85;
+    const AIM_GAIN = 3.2, AIM_REACH = [200, 100];               // the pointer: how keenly the ship goes where it points; px from the middle to the box edge
+    // a leg's shape, in shares of the course: the hulls far apart, the debris in waves [middle, half-width, share] that build
+    // and ease, with empty space before, between and after
+    const HULL_AT = [0.34, 0.82], DEBRIS_FROM = 0.07, WAVES = [[0.17, 0.09, 0.3], [0.65, 0.13, 0.52], [0.9, 0.04, 0.18]], NEB_SWELL = 0.08;
+    // the twin (sector 5): when it is beside us (shares of the course); how far to the side, above, ahead and behind; how late it
+    // copies us; how far the camera turns to it; how much of our speed-up it shows by dropping back
+    const TWIN = { from: 0.4, to: 0.62, side: 4.6, up: -0.6, z: 6, behind: -6, lag: 0.25, settled: 0.3, look: 0.5, slip: 0.35 };
+    // the end: the light, when A.U.R.A. starts her report, and how long after its last line the way on shows
+    const DONE_SUN = 1.12, REPORT_DELAY = 1.6, CONTINUE_BEAT = 1.2, BRIEFED = 8;
     // EXODUS class, as ship.js draws it: half-length in course units, then in half-lengths: half-width, decks, stern
     const HULL_L = 1.8, HW = 0.33, DECKS = [0.624, 0.323, 0.022, -0.278, -0.579], STERN = -0.8;
     const M_PLATE = 1, M_SEAM = 2, M_WINDOW = 3, M_INSIDE = 4, M_BELL = 5;
-    const NEB = [0.42, 0.5, 0.38], NEB_U = [0, 0, 100];         // nebula strength and offset per sector
-    const LEGS = [   // in course seconds; hulls pass at 62% and 90% of a leg, so both start as points far down the heading
-        { sector: 1, dur: 19, nums: [[1, 8], [1, 8]], heard: 8, curve: 1.2, debris: 28, aim: 0.18, broken: 0.3, sun: 0.06 },
-        { sector: 3, dur: 20, nums: [[200, 599], [600, 999]], heard: 650, curve: 1.6, debris: 44, aim: 0.15, broken: 0.6, sun: 0.2 },
-        { sector: 5, dur: 23, nums: [[2000, 9999], [10000, 21000]], heard: 22400, curve: 2.2, debris: 62, aim: 0.13, broken: 0.8, sun: 0.35 },
+    // the legs, in course seconds; the false sun and the nebula's strength at the start and end of each, its offset and mirroring
+    const LEGS = [
+        { sector: 1, dur: 44, nums: [[1, 8], [1, 8]], heard: 8, curve: 1.2, debris: 32, aim: 0.18, broken: 0.3, sun: [0.05, 0.07], neb: [0.42, 0.5], nebU: 0, flip: 1 },
+        { sector: 3, dur: 48, nums: [[200, 599], [600, 999]], heard: 650, curve: 1.6, debris: 48, aim: 0.15, broken: 0.6, sun: [0.18, 0.22], neb: [0.52, 0.42], nebU: 0, flip: -1 },
+        { sector: 5, dur: 54, nums: [[2000, 9999], [10000, 21000]], heard: 22400, curve: 2.2, debris: 64, aim: 0.13, broken: 0.8, sun: [0.35, 1], neb: [0.42, 0.3], nebU: 100, flip: 1, twin: true },
     ];
     const THOUSANDS = 'Ten Eleven Twelve Thirteen Fourteen Fifteen Sixteen Seventeen Eighteen Nineteen Twenty Twenty-one Twenty-two Twenty-three'.split(' ');
     const fmt = n => n.toLocaleString('en-US');
-    // Crew lines per leg, each said once when enough hulls are seen, enough beacons heard and (at) enough of the leg is flown.
-    // The words are made when the line shows, so a number in it matches the counter on screen.
+    const smooth = x => x * x * (3 - 2 * x);
+    // Lines per leg, each said once when enough hulls are seen, enough beacons heard, (at) enough of the leg is flown and (twin)
+    // the twin is beside us; names: the line says the hull's number, so A.U.R.A. does not. The words are made when the line
+    // shows, so a number in it matches the counter on screen. A.U.R.A. names every other hull as it comes into view.
     const LINES = [
-        [{ seen: 1, who: 'Jaxon', say: () => "That's one of the eight." },
+        [{ at: 0.06, who: 'A.U.R.A.', say: () => "I'll count every beacon we hear, Commander." },
+            { seen: 1, who: 'Jaxon', say: () => "That's one of the eight." },
+            { at: 0.5, who: 'A.U.R.A.', say: () => 'Debris ahead, Commander.' },
             { heard: 8, who: 'Aris', say: () => "Eight beacons. That's every ship they told us about." }],
-        [{ heard: 20, who: 'Mira', say: () => "That can't be right. They told us eight." },
-            { seen: 1, who: 'Vance', say: (g, leg) => 'Hull ' + fmt(leg.hulls[0].num) + ". We're hull nine." },
+        [{ heard: 20, at: 0.1, who: 'Mira', say: () => "That can't be right. They told us eight." },
+            { seen: 1, names: true, who: 'Vance', say: leg => 'Hull ' + fmt(leg.hulls[0].num) + ". We're hull nine." },
+            { at: 0.5, who: 'A.U.R.A.', say: () => 'More debris ahead, Commander.' },
             { seen: 2, who: 'Jaxon', say: () => "That one's been dead about a hundred years." }],
         [{ heard: 2000, who: 'Aris', say: () => "I've been writing every ship down. I can't keep up." },
             { seen: 1, who: 'Mira', say: () => "That one's been out here about two hundred years." },
-            { seen: 2, heard: 12000, who: 'Vance', say: g => THOUSANDS[Math.floor(g.heard / 1000) - 10] + ' thousand beacons. So where are all the ships?' },
-            { at: 0.8, who: 'Jaxon', say: () => "That light ahead. I'm reading no heat off it." }],
+            { twin: true, who: 'A.U.R.A.', say: () => 'That ship is exactly like ours, Commander.' },
+            { twin: true, who: 'A.U.R.A.', say: () => 'It turns when we turn, a quarter of a second late.' },
+            { at: 0.56, who: 'A.U.R.A.', say: () => 'More debris ahead. Heavier than before.' },
+            { seen: 2, heard: 12000, who: 'Vance', say: (leg, heard) => THOUSANDS[Math.floor(heard / 1000) - 10] + ' thousand beacons. So where are all the ships?' },
+            { at: 0.88, who: 'Jaxon', say: () => "That light ahead. I'm reading no heat off it." }],
     ];
     const u32 = hex => { const n = parseInt(hex.slice(1), 16); return (0xff000000 | ((n & 0xff) << 16) | (n & 0xff00) | (n >> 16)) >>> 0; };
     const hash = (n, s) => { const h = Math.imul(Math.imul(n, 374761393) ^ s, 1274126177); return ((h ^ (h >>> 15)) & 1023) / 1023; };
     const bandV = u => 104 + u * 0.1;                           // the galaxy's band lies below the heading, tilted a little
+    const ONES = 'no one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen'.split(' ');
+    const count = n => (n < 20 ? ONES[n] : fmt(n));
+    let throttleTaught = false;                                 // the hint shows until the player first opens the throttle
+    /** What A.U.R.A. reports once through, one line each: the crew, the beacons against the briefing, the hulls we passed, the
+        scrapes. Plain words where a card used to be. */
+    function report(heard, nums, hits) {
+        const cap = s => s[0].toUpperCase() + s.slice(1);
+        return ["We're through, Commander. Four crew, no injuries.", `${fmt(heard)} beacons heard. The briefing said eight.`,
+            `We passed ${count(nums.length)} hulls, from number ${fmt(Math.min(...nums))} to number ${fmt(Math.max(...nums))}.`,
+            `${cap(count(hits))} ${hits === 1 ? 'scrape' : 'scrapes'} on the hull.`];
+    }
 
     // ── the nebula: a tone field bigger than the screen, made once per page and sampled through the camera each frame ──
     const NW = 800, NH = 520;
@@ -68,6 +106,8 @@
     /** Half-width of an EXODUS-class hull at u: the rounded nose over the bridge, the taper at the stern (as ship.js). */
     const hwAt = u => (u > DECKS[0] ? HW * (0.3 + 0.7 * Math.sin(((1 - u) / (1 - DECKS[0])) * Math.PI / 2))
         : u < DECKS[4] ? HW * (1 - 0.22 * (DECKS[4] - u) / (DECKS[4] - STERN)) : HW);
+    /** Half-width of an engine bell at u (below STERN), widening to its mouth at u = -1. */
+    const bellAt = u => HW * (0.17 + 0.24 * (STERN - u) / (1 + STERN));
     /** What is at (u, v) on hull h: u runs stern (-1) to nose (+1), v across; px is about one screen pixel in these units. */
     function hullAt(h, u, v, px, detail) {
         if (u > 1 || u < -1) return 0;
@@ -79,7 +119,7 @@
             else if (h.cut === 2) { if (u > h.deck + jag) return 0; torn = u > h.deck + jag - 0.04; }                          // the front gone
             else { if (u < h.deck - jag) return 0; torn = u < h.deck - jag + 0.04; }                                           // the back gone
         }
-        if (u < STERN) return Math.abs(av - HW * 0.5) < HW * (0.17 + 0.24 * (STERN - u) / (1 + STERN)) ? M_BELL : 0;  // two engine bells
+        if (u < STERN) return Math.abs(av - HW * 0.5) < bellAt(u) ? M_BELL : 0;   // two engine bells
         const hw = hwAt(u);
         if (av > hw) return 0;
         if (torn && av < hw - px * 1.5) return M_INSIDE;
@@ -117,13 +157,19 @@
             return hullAt(h, (dx * ca + dy * sa) / HULL_L, (-dx * sa + dy * ca) / HULL_L, 0.01, false) > 0;
         });
     }
+    /** Where in the leg (course seconds) a piece of loose debris comes: in one of the waves, never in the first stretch. */
+    function debrisAt(cfg, r) {
+        let pick = r(), w = WAVES[WAVES.length - 1];
+        for (const wave of WAVES) { if (pick < wave[2]) { w = wave; break; } pick -= wave[2]; }
+        return clamp(w[0] + w[1] * (r() + r() - 1), DEBRIS_FROM, 0.97) * cfg.dur;
+    }
     /** One leg: a smooth safe line (the one A.U.R.A. flies), two hulls, debris (some will set a course for wherever we are, and a
-        cloud round each hull, none on the safe line), and what the radio will have heard by the end. */
+        cloud round each hull, none on the safe line), the twin in sector 5, what the radio will have heard by the end, the lines. */
     function makeLeg(i, r, from) {
         const cfg = LEGS[i], ph = [0, 1, 2, 3].map(() => r() * 6.28), nums = [], frags = [];
         cfg.nums.forEach(([lo, hi]) => { let n; do n = lo + Math.floor(r() * (hi - lo + 1)); while (nums.includes(n)); nums.push(n); });
         let side = r() < 0.5 ? -1 : 1;
-        const hulls = nums.sort((a, b) => a - b).map((num, k) => makeHull(cfg, r, num, cfg.dur * [0.62, 0.9][k] + (r() - 0.5) * 0.6, side = -side, k === 1 && i > 0));
+        const hulls = nums.sort((a, b) => a - b).map((num, k) => makeHull(cfg, r, num, cfg.dur * HULL_AT[k] + (r() - 0.5) * 0.6, side = -side, k === 1 && i > 0));
         const lean = tt => hulls.reduce((acc, h) => {   // the safe line leans towards each hull as it passes, for a close look
             const w = Math.exp(-(((tt - h.at) / 2.4) ** 2)), under = h.y > BOX[1];
             return [acc[0] + (under ? 0 : Math.sign(h.x) * 3 * w), acc[1] + (under ? 2.2 * w : 0)];
@@ -139,12 +185,16 @@
             frags.push({ at, x, y, vx: 0, vy: 0, rad, aimed, a0: r() * 6.28, spin: (r() - 0.5) * 4, flip: 0.5 + r() * 3, pts: plate(r), done: false, gone: false });
         };
         for (let k = 0; k < cfg.debris; k++) {
-            const inBox = r() < 0.62, at = 3 + r() * (cfg.dur - 3.5);
-            add(at, (r() * 2 - 1) * (inBox ? BOX[0] + 0.5 : 13), (r() * 2 - 1) * (inBox ? BOX[1] + 0.4 : 9), 0.1 + r() * r() * 0.35, inBox && at > 4 && r() < cfg.aim);
+            const inBox = r() < 0.62, at = debrisAt(cfg, r);
+            add(at, (r() * 2 - 1) * (inBox ? BOX[0] + 0.5 : 13), (r() * 2 - 1) * (inBox ? BOX[1] + 0.4 : 9), 0.1 + r() * r() * 0.35, inBox && at > cfg.dur * 0.12 && r() < cfg.aim);
         }
         hulls.forEach(h => { for (let k = 0; k < 16; k++) { const a = r() * 6.28, d = HULL_L * (0.5 + r() * 1.4); add(h.at + (r() - 0.5) * 1.6, h.x + Math.cos(a) * d, h.y + Math.sin(a) * d, 0.06 + r() * 0.2, false); } });
         const to = cfg.heard < 20 ? cfg.heard : Math.round(cfg.heard * (0.97 + r() * 0.06));
-        return { cfg, path, hulls, frags: frags.sort((a, b) => a.at - b.at), from, to, seen: 0, lines: LINES[i].map(l => ({ ...l })) };
+        const where = h => (h.y > BOX[1] ? 'below us' : h.x < 0 ? 'on our left' : 'on our right');
+        const naming = hulls.map((h, k) => (LINES[i].some(l => l.seen === k + 1 && l.names) ? null
+            : { seen: k + 1, who: 'A.U.R.A.', say: () => `Hull number ${fmt(h.num)}, ${where(h)}.` })).filter(Boolean);
+        const twin = cfg.twin ? { side: r() < 0.5 ? -1 : 1, x: 0, y: 0, z: TWIN.behind, b: 0, q: -1, on: false, settled: false } : null;
+        return { cfg, path, hulls, twin, frags: frags.sort((a, b) => a.at - b.at), from, to, seen: 0, lines: [...naming, ...LINES[i]].map(l => ({ ...l, done: false })) };
     }
 
     // ── sound: quiet, and only while the page's toggle is on ──
@@ -222,12 +272,13 @@
             buf[i] = (0xff000000 | ((b + (c[2] - b) * a) << 16) | ((g + (c[1] - g) * a) << 8) | (r + (c[0] - r) * a)) >>> 0;
         };
         const fogAt = (z, near, far) => clamp((z - near) / (far - near), 0, 1) ** 0.8;
-        const sound = makeSound(), shipL = Lab.ship.layout(8, 186, 36, 76), ROOM_KEYS = Lab.ship.ROOMS.map(r => r.key);
-        let mode = 'ready', li = 0, leg = null, g = null, t = 0, phaseT = 0, clock = 0, legAt = -9, whiteAt = -99, rowAt = 0, runs = 0;
+        const sound = makeSound(), shipL = Lab.ship.layout(8, 172, 36, 76), ROOM_KEYS = Lab.ship.ROOMS.map(r => r.key);
+        let mode = 'ready', li = 0, leg = null, g = null, t = 0, phaseT = 0, clock = 0, whiteAt = -99, rowAt = 0, runs = 0, saidAt = -99, isEndReady = false;
         let auto = false, cam = [0, 0], vel = [0, 0], look = [0, 0], roll = 0, jolt = 0, nearT = 0, threat = false;
-        let pointer = null, queue = [], nextLine = 0, pinged = 0, pingAt = -9, farStars = [];
-        const view = { cr: 1, sr: 0, lx: 0, ly: 0, ox: 0, oy: 0, sunX: CX, sunY: CY, sunR: 0 };
-        const taps = new Map(), STEER = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'd', 'w', 's'];
+        let pointer = null, aiming = false, pressed = false, th = 0, queue = [], nextLine = 0, pinged = 0, pingAt = -9, farStars = [];
+        const trail = [], held = new Set();   // where we were lately (the twin copies it); throttle keys pressed since the run began
+        const view = { cr: 1, sr: 0, zm: 1, lx: 0, ly: 0, ox: 0, oy: 0, sunX: CX, sunY: CY, sunR: 0 };
+        const taps = new Map(), STEER = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'd'], THROTTLE = [' ', 'w', 'Shift'];
 
         // the sky: stars fixed at infinity (they only pan and tilt), thick along the galaxy's band; dust in depth; streaks close by
         function seedSky(sector) {
@@ -245,61 +296,71 @@
         };
         const dust = Array.from({ length: 130 }, () => newDust(false)), streaks = Array.from({ length: 44 }, () => newStreak(false));
 
-        // ── flow: ready → run (three legs, a jump after each) → done ──
+        // ── flow: ready → run (three legs, a jump after each) → done (A.U.R.A.'s report) ──
         // a row of buttons; the second click of a double click must not land on the button that replaces the first
         const row = defs => { rowAt = clock; ui.buttons(defs.map(d => ({ ...d, onClick: () => { if (clock - rowAt > 0.3) d.onClick(); } }))); };
-        const say = (who, line, gap) => { ui.say(who, line); nextLine = clock + gap; };
+        const say = (who, line, gap) => { ui.say(who, line); saidAt = clock; nextLine = clock + gap; };
         function prepare() {
-            g = { heard: 0, heardAt: -9, seen: 0, seenAt: -9, hits: 0, damaged: {}, nums: [], r: Lab.rng(++runs * 104729 + 7) };
-            cam = [0, 0]; vel = [0, 0]; look = [0, 0]; roll = 0; jolt = 0; nearT = 0; pinged = 0; whiteAt = -99; buildLeg(0);
+            g = { heard: 0, heardAt: -9, seen: 0, hits: 0, damaged: {}, nums: [], r: Lab.rng(++runs * 104729 + 7) };
+            cam = [0, 0]; vel = [0, 0]; look = [0, 0]; roll = 0; jolt = 0; nearT = 0; th = 0; pinged = 0; whiteAt = -99; trail.length = 0; buildLeg(0);
         }
-        function buildLeg(i) { li = i; leg = makeLeg(i, g.r, g.heard); t = 0; legAt = clock; queue = []; seedSky(LEGS[i].sector); }
+        function buildLeg(i) { li = i; leg = makeLeg(i, g.r, g.heard); t = 0; queue = []; trail.length = 0; seedSky(LEGS[i].sector); }
         function setAuto(on) {
             auto = on; say('A.U.R.A.', on ? 'I have the ship, Commander.' : 'You have the ship, Commander.', 2);
             row([{ label: on ? 'Take the stick' : 'Let A.U.R.A. fly', primary: on, onClick: () => setAuto(!auto) }]);
         }
-        function start(isAuto) { if (mode !== 'ready') prepare(); mode = 'run'; legAt = clock; setAuto(isAuto); }
+        function start(isAuto) { if (mode !== 'ready') prepare(); mode = 'run'; isEndReady = false; setAuto(isAuto); }
+        /** Through: A.U.R.A. reports, one line at a time; only after her last line does the way on show. */
         function finish() {
-            mode = 'done'; phaseT = 0; nextLine = clock + 2.8; queue = [{ who: 'A.U.R.A.', line: () => "We're through, Commander. Four crew, no injuries." }];
-            row([{ label: 'Run it again', primary: true, onClick: () => start(false) }]);
+            mode = 'done'; phaseT = 0; nextLine = clock + REPORT_DELAY;
+            queue = report(g.heard, g.nums, g.hits).map(line => ({ who: 'A.U.R.A.', line: () => line }));
+            row([]);
         }
+        function showAgain() { isEndReady = true; row([{ label: 'Run it again', primary: true, onClick: () => start(false) }]); }
 
         // ── simulation ──
-        function input() {   // a key counts while held, and for a moment after any press, so a quick tap between frames still steers
+        /** The controls this frame: the arrows (a key counts while held, and for a moment after any press, so a quick tap between
+            frames still steers), else where the pointer points; and whether the throttle is held. */
+        function input() {
             const has = (...ks) => (ks.some(k => Lab.keys.has(k) || (taps.get(k) || 0) > clock) ? 1 : 0);
-            let ix = has('ArrowRight', 'd') - has('ArrowLeft', 'a'), iy = has('ArrowDown', 's') - has('ArrowUp', 'w');
-            if (pointer && Math.abs(pointer.x - CX) > 6) ix += clamp((pointer.x - CX) / 90, -1, 1);
-            if (pointer && Math.abs(pointer.y - CY) > 6) iy += clamp((pointer.y - CY) / 60, -1, 1);
-            return [clamp(ix, -1, 1), clamp(iy, -1, 1)];
+            const stick = [has('ArrowRight', 'd') - has('ArrowLeft', 'a'), has('ArrowDown') - has('ArrowUp')], keys = !!(stick[0] || stick[1]);
+            if (keys) aiming = false;                                                   // the arrows have it until the pointer moves again
+            held.forEach(k => { if (!Lab.keys.has(k)) held.delete(k); });
+            return { stick, keys, aim: !keys && aiming && pointer ? aimAt(pointer) : null, throttle: pressed || held.size > 0 };
         }
+        /** The spot in the box the pointer points at: the middle of the picture is the middle of the corridor. */
+        const aimAt = p => [p.x - CX, p.y - CY].map((d, i) => clamp(d / AIM_REACH[i], -1, 1) * (BOX[i] - SHIP_R[i]));
         const zOf = at => (at - t) * SPEED + ZHIT;
         /** The ship eases off while a hull drifts past, so you can read it: slowest when the hull is about 15 units out. */
         const paceAt = tt => 1 - 0.6 * Math.max(0, ...leg.hulls.map(h => { const p = clamp(1 - Math.abs((h.at - tt) * SPEED + ZHIT - 15) / 13, 0, 1); return p * p * (3 - 2 * p); }));
-        function glance() {   // the camera turns a little towards a named wreck as it slides past, so it passes large and in frame
-            const out = [0, 0];
-            if (mode === 'run') leg.hulls.forEach(h => {
+        function glance() {   // the camera turns a little towards a named wreck as it slides past (and the twin), so they pass in frame
+            const out = [0, 0], turn = (x, y, z, w) => { out[0] += w * clamp((x - cam[0]) / z, -0.6, 0.6); out[1] += w * clamp((y - cam[1]) / z, -0.6, 0.6); };
+            if (mode !== 'run') return out;
+            leg.hulls.forEach(h => {
                 const z = zOf(h.at), w = GLANCE * clamp(Math.min((60 - z) / 30, (z - 3) / 6), 0, 1);
-                if (h.seenAt < 0 || w <= 0) return;
-                out[0] += w * clamp((h.x - cam[0]) / z, -0.6, 0.6); out[1] += w * clamp((h.y - cam[1]) / z, -0.6, 0.6);
+                if (h.seenAt >= 0 && w > 0) turn(h.x, h.y, z, w);
             });
+            const tw = leg.twin, zc = tw && tw.z + HULL_L;
+            if (tw && tw.on && zc > 1) turn(tw.x, tw.y, zc, TWIN.look * clamp((zc - 1) / 4, 0, 1));
             return out;
         }
-        function fly(dt, stick, rate) {
-            if (auto && mode === 'run' && (stick[0] || stick[1])) setAuto(false);       // touching the controls takes the ship back
-            const isAuto = auto && mode === 'run', k = Math.min(1, dt * (isAuto ? 8 : 5));
-            const want = isAuto ? [0, 1].map(i => {                                      // A.U.R.A. follows the safe line exactly
+        function fly(dt, ctl, rate) {
+            const isRun = mode === 'run';
+            if (auto && isRun && (ctl.keys || ctl.throttle)) setAuto(false);           // touching the controls takes the ship back
+            const isAuto = auto && isRun, k = Math.min(1, dt * (isAuto ? 8 : 5));
+            const want = !isRun ? [0, 0] : isAuto ? [0, 1].map(i => {                   // A.U.R.A. follows the safe line exactly
                 const p = leg.path(t)[i], q = leg.path(t + 0.05)[i];
                 return clamp((q - p) / 0.05 * rate + (p - cam[i]) * 5, -MAXV[i], MAXV[i]);
-            }) : stick.map((s, i) => {                                                   // soft edges: you ease off as you near them
+            }) : ctl.keys ? ctl.stick.map((s, i) => {                                   // soft edges: you ease off as you near them
                 const w = s * MAXV[i], e = clamp((Math.abs(cam[i]) / BOX[i] - 0.35) / 0.65, 0, 1);
                 return w * cam[i] > 0 ? w * (1 - e * e * (3 - 2 * e)) : w;
-            });
+            }) : ctl.aim ? ctl.aim.map((a, i) => clamp((a - cam[i]) * AIM_GAIN, -MAXV[i], MAXV[i])) : [0, 0];   // the pointer: go there
             vel = vel.map((v, i) => v + (want[i] - v) * k);
             cam = cam.map((c, i) => clamp(c + vel[i] * dt, -BOX[i], BOX[i]) * (mode === 'done' ? 1 - Math.min(1, dt * 0.8) : 1));
-            // the camera looks after you, late, and further while you hold the stick; it banks into the turn and glances at wrecks.
-            // Once through, it tips down to put the light above the numbers.
-            const lean = isAuto ? vel.map((v, i) => v / MAXV[i]) : stick, gl = glance();
-            look = look.map((l, i) => l + ((mode === 'done' ? [0, 0.11][i] : LOOK_POS[i] * cam[i] + LOOK_STICK[i] * lean[i] + gl[i]) - l) * Math.min(1, dt * 2));
+            // the camera looks after you, late, and further while you steer; it banks into the turn and glances at wrecks.
+            // Once through, it settles straight ahead on the light.
+            const lean = isRun && ctl.keys && !isAuto ? ctl.stick : vel.map((v, i) => v / MAXV[i]), gl = glance();
+            look = look.map((l, i) => l + ((mode === 'done' ? 0 : LOOK_POS[i] * cam[i] + LOOK_STICK[i] * lean[i] + gl[i]) - l) * Math.min(1, dt * 2));
             roll += (-BANK * (0.6 * vel[0] / MAXV[0] + 0.4 * lean[0]) - roll) * Math.min(1, dt * 2.5);
         }
         function reach(f) {                                                              // a fragment reaches our plane: does it touch us?
@@ -320,43 +381,76 @@
             f.x += f.vx * step; f.y += f.vy * step;
         }
         function listen() {                                                              // transponders coming in, faster and faster
-            const x = Math.min(1, t / (leg.cfg.dur * 0.9)), v = leg.from + (leg.to - leg.from) * x ** leg.cfg.curve;
+            const x = Math.min(1, t / (leg.cfg.dur * 0.94)), v = leg.from + (leg.to - leg.from) * x ** leg.cfg.curve;
             const heard = x >= 1 ? leg.to : Math.min(leg.to, Math.floor(leg.to < 20 ? v : v * (0.985 + Math.random() * 0.03)));
             if (heard > g.heard) { g.heard = heard; g.heardAt = clock; }
             if (g.heard <= pinged) return;                                               // one ping per beacon at first, then now and then
             if (g.heard <= 8 || clock > pingAt) { sound.ping(clamp(Math.log10(g.heard) / 4.4, 0, 1)); pingAt = clock + 0.45 + Math.random() * 0.35; }
             pinged = g.heard;
         }
+        function queueLines() {                                                          // lines whose moment has come
+            const twinReady = !!(leg.twin && leg.twin.settled), lg = leg;
+            leg.lines.forEach(l => {
+                if (l.done || leg.seen < (l.seen || 0) || g.heard < (l.heard || 0) || t < (l.at || 0) * leg.cfg.dur || (l.twin && !twinReady)) return;
+                l.done = true; queue.push({ who: l.who, line: () => l.say(lg, g.heard) });
+            });
+        }
+        /** Where we were exactly `lag` seconds ago, between two frames: [clock, x, y, course, throttle]. */
+        function lagged(lag) {
+            const when = clock - lag;
+            for (let i = trail.length - 1; i > 0; i--) {
+                const a = trail[i - 1], b = trail[i];
+                if (a[0] <= when) { const k = b[0] > a[0] ? clamp((when - a[0]) / (b[0] - a[0]), 0, 1) : 1; return a.map((v, j) => v + (b[j] - v) * k); }
+            }
+            return trail[0];
+        }
+        /** Sector 5: a ship exactly like ours pulls up beside us, copies every move a quarter of a second late (so it drops
+            back while we speed up, and its engines flare late), then falls behind as the debris thickens. */
+        function moveTwin() {
+            const tw = leg.twin;
+            if (!tw) return;
+            tw.q = (t / leg.cfg.dur - TWIN.from) / (TWIN.to - TWIN.from);
+            tw.on = tw.q > 0 && tw.q < 1;
+            if (!tw.on) return;
+            const [, px, py, pt, pb] = lagged(TWIN.lag), near = smooth(clamp(tw.q / 0.2, 0, 1)) - smooth(clamp((tw.q - 0.78) / 0.22, 0, 1));
+            tw.z = TWIN.behind + (TWIN.z - TWIN.behind) * near - (t - pt - TWIN.lag) * SPEED * TWIN.slip;
+            tw.x = px + tw.side * TWIN.side; tw.y = py + TWIN.up; tw.b = pb;
+            tw.settled = tw.settled || tw.q > TWIN.settled;
+        }
         function runLeg(dt) {   // after a jump the ship drops out fast and settles to cruise, so far wrecks come up from the horizon
-            const rate = paceAt(t) * (1 + DROP * Math.exp(-(clock - whiteAt) / 0.6)), step = dt * rate;
+            const pace = paceAt(t), rate = pace * (1 + (BOOST - 1) * smooth(th) * pace) * (1 + DROP * Math.exp(-(clock - whiteAt) / 0.6)), step = dt * rate;
             t += step;
+            trail.push([clock, cam[0], cam[1], t, smooth(th)]);
+            while (trail.length > 2 && trail[1][0] < clock - 1) trail.shift();
             leg.frags.forEach(f => { if (!f.done) { drift(f, step); if (f.at <= t) reach(f); } else if (!f.gone) { f.x += f.vx * step; f.y += f.vy * step; } });
             leg.hulls.forEach(h => {
                 if (!h.crossed && h.at <= t) { h.crossed = true; if (!auto && hullHit(h, cam, t)) scrape(); }
-                if (h.seenAt < 0 && zOf(h.at) < SEE_AT) { h.seenAt = clock; leg.seen++; g.seen++; g.seenAt = clock; g.nums.push(h.num); sound.lock(); }
+                if (h.seenAt < 0 && zOf(h.at) < SEE_AT) { h.seenAt = clock; leg.seen++; g.seen++; g.nums.push(h.num); sound.lock(); }
             });
+            moveTwin();
             listen();
-            const lg = leg;
-            leg.lines.forEach(l => {
-                if (l.done || leg.seen < (l.seen || 0) || g.heard < (l.heard || 0) || t < (l.at || 0) * leg.cfg.dur) return;
-                l.done = true; queue.push({ who: l.who, line: () => l.say(g, lg) });
-            });
+            queueLines();
             if (t >= leg.cfg.dur) { mode = 'jump'; phaseT = 0; sound.jump(); }
             return rate;
         }
         function update(dt) {
             clock += dt; jolt = Math.max(0, jolt - dt); nearT = Math.max(0, nearT - dt);
-            if (queue.length && clock >= nextLine) { const q = queue.shift(); say(q.who, q.line(), LINE_GAP); }
-            const stick = input();
-            if (mode === 'ready' && (stick[0] || stick[1])) start(false);               // steering from the start screen just goes
+            if (queue.length && clock >= nextLine) { const q = queue.shift(), s = q.line(); say(q.who, s, q.gap || gapFor(s)); }
+            if (mode === 'done' && !isEndReady && !queue.length && phaseT > REPORT_DELAY && clock - saidAt > CONTINUE_BEAT) showAgain();
+            const ctl = input();
+            if (mode === 'ready' && ctl.keys) start(false);                              // the arrows on the start screen just go
+            const opening = ctl.throttle && mode === 'run';
+            if (opening) throttleTaught = true;
             let rate = 1;
             if (mode === 'run') rate = runLeg(dt);
             else if (mode === 'jump' || mode === 'done') {
                 phaseT += dt;
                 if (mode === 'jump' && phaseT >= JUMP_TIME) { whiteAt = clock; if (li < LEGS.length - 1) { buildLeg(li + 1); mode = 'run'; } else finish(); }
             }
-            fly(dt, mode === 'run' ? stick : [0, 0], rate);
-            const mul = mode === 'run' ? rate : mode === 'jump' ? 1 + (phaseT / JUMP_TIME) ** 2 * 12 : mode === 'ready' ? 0.3 : 0.25, step = SPEED * mul * dt;
+            fly(dt, ctl, rate);                                                         // (this may hand the ship back from A.U.R.A.)
+            th = clamp(th + (opening && !auto ? dt / BOOST_UP : -dt / BOOST_DOWN), 0, 1);  // A.U.R.A. never opens the throttle
+            const mul = mode === 'run' ? rate * lerp(1, FEEL / BOOST, smooth(th)) : mode === 'jump' ? 1 + (phaseT / JUMP_TIME) ** 2 * 12 : mode === 'ready' ? 0.3 : 0.25;
+            const step = SPEED * mul * dt;
             for (let i = 0; i < dust.length; i++) { dust[i].z -= step; if (dust[i].z < NEAR) dust[i] = newDust(true); }
             for (let i = 0; i < streaks.length; i++) { streaks[i].z -= step; if (streaks[i].z < NEAR) streaks[i] = newStreak(true); }
             sound.tick(mul, mode === 'run' || mode === 'jump' ? clamp((Math.log10(g.heard + 1) - 1.3) / 3, 0, 1) : 0);
@@ -364,13 +458,17 @@
         }
 
         // ── drawing: the camera and the sky ──
-        function setView() {   // the bank, where the camera looks, a shake after a scrape; the false sun sits dead ahead at infinity
-            view.cr = Math.cos(roll); view.sr = Math.sin(roll); view.lx = look[0] * F; view.ly = look[1] * F;
-            view.ox = jolt > 0 ? Math.round((Math.random() - 0.5) * 12 * jolt) : 0; view.oy = jolt > 0 ? Math.round((Math.random() - 0.5) * 9 * jolt) : 0;
+        function setView() {   // the bank, where the camera looks, the push and shake of speed, a jolt after a scrape; the false sun sits dead ahead
+            const b = smooth(th), shake = Math.max(0, (b - SHAKE_AT) / (1 - SHAKE_AT)) * 2.4 + 12 * jolt, rnd = () => Math.round((Math.random() - 0.5) * shake);
+            view.cr = Math.cos(roll); view.sr = Math.sin(roll); view.zm = 1 - PUSH * b; view.lx = look[0] * F; view.ly = look[1] * F;
+            view.ox = shake > 0 ? rnd() : 0; view.oy = shake > 0 ? Math.round(rnd() * 0.75) : 0;
             [view.sunX, view.sunY] = sky(0, 0);
         }
         /** A direction at infinity (in px at depth F) → the screen; and a point in the world → the screen. */
-        const sky = (u, v) => [CX + view.ox + (u - view.lx) * view.cr - (v - view.ly) * view.sr, CY + view.oy + (u - view.lx) * view.sr + (v - view.ly) * view.cr];
+        const sky = (u, v) => {
+            const du = (u - view.lx) * view.zm, dv = (v - view.ly) * view.zm;
+            return [CX + view.ox + du * view.cr - dv * view.sr, CY + view.oy + du * view.sr + dv * view.cr];
+        };
         const proj = (x, y, z) => sky((x - cam[0]) * F / z, (y - cam[1]) * F / z);
         function segZ(x0, y0, x1, y1, c, z, tone) {           // a line, behind anything nearer than z
             x0 = Math.round(x0); y0 = Math.round(y0); x1 = Math.round(x1); y1 = Math.round(y1);
@@ -383,9 +481,12 @@
                 if (e2 <= dx) { err += dx; y0 += sy; }
             }
         }
-        function drawBackdrop() {   // the nebula (mirrored or shifted per sector) and the galaxy's band, the same in every sector
-            const { tone, hue, band } = nebulaField(), fx = li === 1 ? -1 : 1, du = NEB_U[li], str = NEB[li] / 255;   // tone is 0..255
-            const cr = view.cr, sr = view.sr, ox = CX + view.ox, oy = CY + view.oy, hw = NW >> 1, hh = NH >> 1;
+        /** How far through the leg we are (its end in the jump and after the last one). */
+        const progress = () => (mode === 'run' ? Math.min(1, t / leg.cfg.dur) : 1);
+        function drawBackdrop() {   // the nebula (mirrored or shifted per sector, thickening and thinning as we go) and the galaxy's band
+            const { tone, hue, band } = nebulaField(), cfg = LEGS[li], fx = cfg.flip, du = cfg.nebU, p = progress();
+            const str = (lerp(cfg.neb[0], cfg.neb[1], p) + NEB_SWELL * Math.sin(Math.PI * p)) / 255;   // tone is 0..255
+            const cr = view.cr / view.zm, sr = view.sr / view.zm, ox = CX + view.ox, oy = CY + view.oy, hw = NW >> 1, hh = NH >> 1;
             for (let y = 0; y < H; y++) {
                 const ey = y - oy, rowI = y * W, by = (y & 3) << 2, by2 = ((y + 2) & 3) << 2;
                 let u = -ox * cr + ey * sr + view.lx, v = ox * sr + ey * cr + view.ly;
@@ -405,9 +506,9 @@
                 if (x >= 0 && x < W && y >= 0 && y < H) buf[y * W + x] = s.tw >= 0 && Math.sin(clock * 2.6 + s.tw) > 0.7 ? P.star : P[s.c];
             }
         }
-        /** The light at the end of the heading: a point in sector 1, a small glow in sector 3, a warm bloom on the horizon by the end. */
+        /** The light at the end of the heading: a point in sector 1, a small glow in sector 3, filling the view by the end of 5. */
         function drawSun() {
-            const amt = mode === 'done' ? 1.12 : li < 2 ? LEGS[li].sun : LEGS[2].sun + (1 - LEGS[2].sun) * Math.min(1, t / LEGS[2].dur);
+            const [a, b] = LEGS[li].sun, amt = mode === 'done' ? b * (1 + (DONE_SUN - 1) * smooth(Math.min(1, phaseT / 3))) : a + (b - a) * progress() ** 1.5;
             const sx = view.sunX, sy = view.sunY, rh = 4 + 112 * amt ** 1.5, rc = 0.6 + 7 * amt ** 1.7, inner = rc * 2.6 + 2, halo = 0.35 + 0.6 * Math.min(1, amt);
             view.sunR = amt > 0.3 ? rh * 0.55 : 0;                    // dust inside this catches the light
             for (let y = Math.max(0, Math.floor(sy - rh)); y <= Math.min(H - 1, sy + rh); y++) {
@@ -418,13 +519,13 @@
                     glow(x, y, LIGHT, d <= rc ? 1 : clamp(1 - (d - rc) / inner, 0, 1) ** 1.6, 10);
                 }
             }
-            if (amt >= 0.15) for (let s = -rh * 1.9; s <= rh * 1.9; s++) glow(Math.round(sx + s * view.cr), Math.round(sy + s * view.sr), HALO, (1 - Math.abs(s) / (rh * 1.9)) ** 2 * 0.7 * amt, 8);
+            if (amt >= 0.15) for (let s = -rh * 1.9; s <= rh * 1.9; s++) glow(Math.round(sx + s * view.cr), Math.round(sy + s * view.sr), HALO, (1 - Math.abs(s) / (rh * 1.9)) ** 2 * 0.7 * Math.min(1, amt), 8);
             return amt;
         }
-        function drawMotes(mul) {   // dust down the heading (lit warm where it crosses the light), streaks close by; a jump stretches all
+        function drawMotes(mul) {   // dust down the heading (lit warm where it crosses the light), streaks close by; speed stretches all
             const tail = 0.25 + mul * 1.15;
             for (let i = 0; i < dust.length; i++) {
-                const d = dust[i], a = proj(d.x, d.y, d.z), b = mul > 2.5 ? proj(d.x, d.y, d.z + tail) : a;
+                const d = dust[i], a = proj(d.x, d.y, d.z), b = mul > 1.5 ? proj(d.x, d.y, d.z + tail) : a;
                 if (a[0] < -30 || a[0] > W + 30 || a[1] < -30 || a[1] > H + 30) { if (d.z < 80) dust[i] = newDust(true); continue; }
                 const lit = Math.hypot(a[0] - view.sunX, a[1] - view.sunY) < view.sunR;
                 segZ(b[0], b[1], a[0], a[1], lit ? P.lightHalo : d.z < 90 ? P.textDim : P.line2, d.z, d.z > 240 ? 0.55 : 0.95);
@@ -436,7 +537,7 @@
             }
         }
 
-        // ── drawing: wrecks and debris ──
+        // ── drawing: wrecks, the twin and debris ──
         /** Fill a shape centred on (sx, sy), turned by a, inside a box ex × ey; shape(u, v) works in units of `unit` px and returns a
             material (0 = empty). paint(px, py, i, edge, lean, m, u, v, lv): edge 1 faces the false sun, 2 faces away, 0 inside;
             lean is -1..1 towards the light; lv is the light's direction across the shape. */
@@ -476,7 +577,7 @@
             for (const [ex, ey, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) for (let i = 0; i < arm; i++) { put(ex + i * dx, ey, c); put(ex, ey + i * dy, c); }
         }
         function drawHull(h, z, sx, sy, tags, sunAmt) {
-            const unit = HULL_L * F / z, fog = fogAt(z, 30, FAR_HULL * 0.85), a = h.a0 + h.spin * t + roll, ca = Math.cos(a), sa = Math.sin(a);
+            const unit = HULL_L * F * view.zm / z, fog = fogAt(z, 30, FAR_HULL * 0.85), a = h.a0 + h.spin * t + roll, ca = Math.cos(a), sa = Math.sin(a);
             const ex = Math.abs(ca) * unit + Math.abs(sa) * HW * unit, ey = Math.abs(sa) * unit + Math.abs(ca) * HW * unit + 2;
             if (unit < 3.2) dput(sx, sy, 0.95 - fog * 0.4, unit < 2 ? P.haze : P.mist);   // a point down the heading
             else {
@@ -497,8 +598,50 @@
             if (since < 1.6 && Math.floor(since * 5) % 2 === 0) brackets(sx, sy, ex + 3, ey + 1, P.ui);
             if (sx > -20 && sx < W + 20 && sy - ey < H - 24 && sy + ey > 24) tags.push({ z, s: 'EXODUS-' + fmt(h.num), sx, sy: sy - ey - 14, below: sy + ey + 4, fresh: since < 1.6 });
         }
+        /** One slice of the twin, a disc at depth z. Seen from behind with the light ahead, the hull is dark; its outline (where
+            the slice's edge turns side-on to us) catches the light. face: the flat stern plate, in shadow; tone: a deck's shade. */
+        function twinSlice(cx, cy, R, z, tone, face, rimWarm) {
+            if (R < 0.4 || cx + R < 0 || cx - R >= W || cy + R < 0 || cy - R >= H) return;
+            const lx0 = view.sunX - cx, ly0 = view.sunY - cy, ll = Math.hypot(lx0, ly0) || 1, Lx = lx0 / ll / R, Ly = ly0 / ll / R, R2 = R * R, E2 = Math.max(0, R - 1.3) ** 2;
+            for (let y = Math.max(0, Math.floor(cy - R)); y <= Math.min(H - 1, Math.ceil(cy + R)); y++) {
+                const dy = y - cy;
+                for (let x = Math.max(0, Math.floor(cx - R)); x <= Math.min(W - 1, Math.ceil(cx + R)); x++) {
+                    const dx = x - cx, d2 = dx * dx + dy * dy;
+                    if (d2 > R2) continue;
+                    const i = y * W + x, c = dx * Lx + dy * Ly;
+                    depth[i] = z;
+                    if (face) buf[i] = ramp(d2 > E2 ? 0.3 : 0.05, x, y);
+                    else if (Math.abs(c) < 0.24 || (face === null && c > -0.3 && d2 > E2)) buf[i] = rimWarm > bay(x, y) ? P.lightHalo : ramp(0.74, x, y);
+                    else buf[i] = ramp(tone * (0.2 + 0.2 * Math.max(0, c)), x, y);
+                }
+            }
+        }
+        /** Sector 5's twin: a ship exactly like ours beside us, seen from behind: the hull as slices from the nose (far) to the
+            engine bells (near), then the bells' mouths, burning brighter as its throttle opens. */
+        function drawTwin(tw, sunAmt) {
+            const s = z => F * view.zm / Math.max(z, NEAR), a = proj(tw.x, tw.y, Math.max(tw.z, NEAR)), b = proj(tw.x, tw.y, tw.z + 2 * HULL_L);
+            const n = clamp(Math.ceil(Math.hypot(a[0] - b[0], a[1] - b[1]) * 1.4), 40, 200), rimWarm = sunAmt > 0.4 ? (sunAmt - 0.4) * 0.9 : 0;
+            const bells = [-1, 1].map(k => tw.x + k * HW * 0.5 * HULL_L), face = Math.ceil(n * (1 + STERN) / 2);
+            for (let k = n; k >= 0; k--) {                                                           // far to near
+                const u = -1 + (2 * k) / n, z = tw.z + (u + 1) * HULL_L;
+                if (z < NEAR) break;
+                if (u < STERN) { bells.forEach(bx => { const [cx, cy] = proj(bx, tw.y, z); twinSlice(cx, cy, bellAt(u) * HULL_L * s(z), z, 1.4, false, rimWarm); }); continue; }
+                const [cx, cy] = proj(tw.x, tw.y, z), seam = DECKS.some(d => Math.abs(u - d) < 1.5 / n), deck = DECKS.findIndex(d => u > d) % 2 ? 1.15 : 0.9;
+                twinSlice(cx, cy, hwAt(u) * HULL_L * s(z), z, seam ? 0.45 : deck, k === face ? true : u > DECKS[0] ? null : false, rimWarm);
+            }
+            if (tw.z < NEAR) return;
+            const flare = 0.45 + 0.55 * tw.b;
+            bells.forEach(bx => {                                                                   // the engines, burning
+                const [cx, cy] = proj(bx, tw.y, tw.z), R = bellAt(-1) * HULL_L * s(tw.z), RH = R * (1.5 + 1.5 * tw.b);
+                for (let y = Math.max(0, Math.floor(cy - RH)); y <= Math.min(H - 1, cy + RH); y++) for (let x = Math.max(0, Math.floor(cx - RH)); x <= Math.min(W - 1, cx + RH); x++) {
+                    const d = Math.hypot(x - cx, y - cy);
+                    if (d < R * 0.6) { const k = flare * (1 - (d / (R * 0.6)) ** 2); buf[y * W + x] = k > 0.55 + bay(x, y) * 0.2 ? P.light : k > 0.2 ? P.warmBright : P.warm; }
+                    else if (d < RH) glow(x, y, HALO, (1 - d / RH) ** 2 * 0.55 * flare, 10);
+                }
+            });
+        }
         function drawFrag(f, z, sx, sy) {
-            const R = f.rad * F / z, fog = fogAt(z, 14, FAR_FRAG), face = Math.cos(f.flip * clock + f.a0), glint = face > 0.97 && z < 95;  // face-on to the light
+            const R = f.rad * F * view.zm / z, fog = fogAt(z, 14, FAR_FRAG), face = Math.cos(f.flip * clock + f.a0), glint = face > 0.97 && z < 95;  // face-on to the light
             if (R < 1.4) {
                 if (glint) put(Math.round(sx), Math.round(sy), P.star);
                 else dput(sx, sy, 1 - fog * 0.8, f.threat ? P.danger : R < 0.7 ? P.haze : P.mist);
@@ -515,26 +658,28 @@
             put(gx, gy, P.star);
             for (let i = 1; i <= arm; i++) [[i, 0], [-i, 0], [0, i], [0, -i]].forEach(([dx, dy]) => dput(gx + dx, gy + dy, 1 - i / (arm + 1), P.star));
         }
-        function drawField(sunAmt) {
+        function drawField(sunAmt) {   // far to near; kind 0 debris, 1 a hull, 2 the twin
             const vis = [], tags = [];
             threat = false;
-            leg.hulls.forEach(h => { const z = zOf(h.at); if (z > NEAR && z < FAR_HULL) vis.push([z, h, true]); });
+            leg.hulls.forEach(h => { const z = zOf(h.at); if (z > NEAR && z < FAR_HULL) vis.push([z, h, 1]); });
+            if (leg.twin && leg.twin.on && leg.twin.z + 2 * HULL_L > NEAR) vis.push([leg.twin.z + HULL_L, leg.twin, 2]);
             leg.frags.forEach(f => {
                 const z = zOf(f.at), left = f.at - t;
                 if (f.gone || z < NEAR || z > FAR_FRAG) return;
                 f.threat = mode === 'run' && !f.done && !auto && left < WARN
                     && ((cam[0] - f.x - f.vx * left) / (SHIP_R[0] + f.rad)) ** 2 + ((cam[1] - f.y - f.vy * left) / (SHIP_R[1] + f.rad)) ** 2 < 1;
                 threat = threat || f.threat;
-                vis.push([z, f, false]);
+                vis.push([z, f, 0]);
             });
-            vis.sort((p, q) => q[0] - p[0]).forEach(([z, w, isHull]) => {
+            vis.sort((p, q) => q[0] - p[0]).forEach(([z, w, kind]) => {
+                if (kind === 2) { drawTwin(w, sunAmt); return; }
                 const [sx, sy] = proj(w.x, w.y, z);
-                if (isHull) drawHull(w, z, sx, sy, tags, sunAmt); else drawFrag(w, z, sx, sy);
+                if (kind) drawHull(w, z, sx, sy, tags, sunAmt); else drawFrag(w, z, sx, sy);
             });
             return tags;
         }
 
-        // ── drawing: instruments ──
+        // ── drawing: what the pilot sees besides the view ──
         function drawBox() {   // our own size where things cross us: corner brackets, turning with the bank
             const col = jolt > 0 ? P.danger : threat && Math.floor(clock * 8) % 2 ? P.danger : nearT > 0 ? P.uiBright : P.uiDim;
             const c = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([kx, ky]) => proj(cam[0] + kx * SHIP_R[0], cam[1] + ky * SHIP_R[1], ZHIT));
@@ -544,7 +689,7 @@
             }));
         }
         function panel(x0, y0, x1, y1) {
-            for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) buf[y * W + x] = y === y0 || y === y1 || x === x0 || x === x1 ? (jolt > 0 && x1 < 60 ? P.danger : P.line2) : P.void;
+            for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) buf[y * W + x] = y === y0 || y === y1 || x === x0 || x === x1 ? (jolt > 0 ? P.danger : P.line2) : P.void;
         }
         function drawOverlays() {
             if (jolt > 0) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {          // a scrape: the edges flash
@@ -554,10 +699,15 @@
             // the jump: stars stretch, then one short flash from the light that clears as the next sector opens
             const white = mode === 'jump' ? clamp((phaseT - JUMP_TIME + 0.3) / 0.25, 0, 1) : clamp(1 - (clock - whiteAt) / 0.45, 0, 1);
             if (white > 0) for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) glow(x, y, STAR, white * 1.6 - Math.hypot(x - view.sunX, y - view.sunY) / 300, 8);
-            panel(4, 182, 47, 265);                                            // behind our own ship
-            const prog = mode === 'run' ? t / leg.cfg.dur : mode === 'jump' || mode === 'done' ? 1 : 0;
-            for (let x = 8; x <= 100; x++) { const on = x - 8 < prog * 92; put(x, 23, on ? P.ui : P.line2); put(x, 24, on ? P.uiDim : P.line); }
-            if (mode === 'done' && phaseT > 0.3) panel(108, 134, 372, 254);
+            panel(4, 168, 47, 265);                                            // behind our own ship
+        }
+        function drawThrust() {   // our own engines burn longer and brighter as the throttle opens (and in the jump)
+            const b = Math.max(smooth(th), mode === 'jump' ? phaseT / JUMP_TIME : 0), top = shipL.rooms[shipL.rooms.length - 1].bottom + 3;
+            if (b < 0.03) return;
+            [-1, 1].forEach(side => {
+                const ex = shipL.cx + side * shipL.maxHalf * 0.4, len = 4 + 14 * b + 1.5 * Math.sin(clock * 37 + side);
+                for (let d = 0; d < len; d++) Lab.shade(ctx, ex - 2.5 + d * 0.25, top + d, 5.5 - d * 4.5 / len, 1, (1 - d / len) * (0.55 + 0.45 * b), d < 2 + 3 * b ? C.light : C.warm);
+            });
         }
 
         // ── text, drawn over the picture ──
@@ -577,32 +727,14 @@
                 Lab.text(ctx, tag.s, x, y, tag.fresh ? C.uiBright : tag.z < 30 ? C.text : C.textDim, 2);
             }
         }
-        function drawHud() {
-            const hs = fmt(g.heard), seen = String(g.seen);
-            stext('SECTOR ' + LEGS[li].sector, 8, 8, C.text, 2);
-            Lab.text(ctx, 'JUMP', 104, 21, mode === 'jump' ? C.uiBright : C.uiDim);
-            right('EXODUS-9', W - 8, 8, C.ui);
-            if (auto && (mode === 'run' || mode === 'jump')) right('A.U.R.A. FLYING', W - 8, 17, C.ui);
+        function drawHud() {   // the radio's count; who flies; on the start screen how to steer; once, how to go faster
+            if (auto && (mode === 'run' || mode === 'jump')) right('A.U.R.A. FLYING', W - 8, 8, C.ui);
             if (mode !== 'done') {
-                stext('SHIPS SEEN', 54, 246, C.textDim);
-                stext(seen, 54, 254, clock - g.seenAt < 1.2 ? C.uiBright : C.text, 2);
                 right('BEACONS HEARD', W - 8, 246, C.textDim);
-                right(hs, W - 8, 254, clock - g.heardAt < 0.35 ? C.uiBright : C.text, 2);
+                right(fmt(g.heard), W - 8, 254, clock - g.heardAt < 0.35 ? C.uiBright : C.text, 2);
             }
-            if (mode === 'ready') { centred('STEER CLEAR OF THE DEBRIS', CX, 180, C.text, 2); centred('ARROWS, WASD, OR HOLD THE MOUSE', CX, 196, C.textDim, 2); }
-            if (mode === 'run' && clock - legAt > 0.3 && clock - legAt < 2.8) {   // once the jump flash has cleared
-                if (li) centred('TWO JUMPS LATER', CX, 38, C.textDim, 2);
-                centred('SECTOR ' + LEGS[li].sector, CX, 54, C.text, 3);
-            }
-            if (mode !== 'done' || phaseT < 0.3) return;
-            centred('JUMP COMPLETE', CX, 142, C.ui, 2);                         // the card: told, heard, seen, one at a time
-            [['8', 'IN THE BRIEFING'], [hs, 'BEACONS HEARD'], [seen, 'SHIPS SEEN']].forEach(([n, label], i) => {
-                if (phaseT < 0.8 + i * 0.6) return;
-                right(n, 224, 160 + i * 20, i === 1 ? C.uiBright : C.text, 3); stext(label, 236, 163 + i * 20, C.textDim, 2);
-            });
-            if (phaseT < 2.4) return;
-            centred('EXODUS-' + fmt(Math.min(...g.nums)) + ' TO EXODUS-' + fmt(Math.max(...g.nums)), CX, 224, C.textDim, 2);
-            centred(g.hits ? g.hits + (g.hits === 1 ? ' SCRAPE' : ' SCRAPES') : 'NO SCRAPES', CX, 238, g.hits ? C.danger : C.textDim, 2);
+            if (mode === 'ready') { centred('STEER CLEAR OF THE DEBRIS', CX, 180, C.text, 2); centred('USE THE MOUSE OR THE ARROWS', CX, 196, C.textDim, 2); }
+            if (mode === 'run' && !auto && !throttleTaught && clock - Math.max(0, whiteAt) > 1.2) stext('HOLD TO GO FASTER', 54, 252, C.uiBright);
         }
         function render(mul) {   // far to near: nebula, band and stars, the false sun, wrecks and debris, dust; then the instruments
             setView(); depth.fill(1e9);
@@ -613,28 +745,35 @@
             drawOverlays();
             ctx.putImageData(img, 0, 0);
             Lab.ship.draw(ctx, shipL, clock * 1000, { damaged: g.damaged, labels: false });
+            drawThrust();
             if (mode === 'run') drawTags(tags);
             drawHud();
         }
 
-        // ── input ──
+        // ── input: the pointer steers wherever it is over the picture; holding the button (or Space, W, Shift) is the throttle ──
+        ui.canvas.onpointermove = e => { pointer = ui.toPixel(e); aiming = true; };
+        ui.canvas.onpointerleave = () => { if (!pressed) pointer = null; };
         ui.canvas.onpointerdown = e => {
-            pointer = ui.toPixel(e);
+            if (e.button) return;                                                       // the main button (or a touch) only
+            pointer = ui.toPixel(e); aiming = true;
+            if (mode === 'ready') { start(false); return; }                             // the click that starts the flight is not the throttle
+            pressed = true;
             try { ui.canvas.setPointerCapture(e.pointerId); } catch (_) { /* capture is optional */ }
-            if (mode === 'ready') start(false);
         };
-        ui.canvas.onpointermove = e => { if (pointer) pointer = ui.toPixel(e); };
-        const release = () => { pointer = null; };
+        const release = () => { pressed = false; };
         ui.canvas.onpointerup = release;
         window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release);
         Lab.onKey((k, e) => {
-            const target = (e && e.target) || {}, isGameKey = STEER.includes(k) || k === ' ' || k === 'Enter';
+            const target = (e && e.target) || {}, isRepeat = !!(e && e.repeat), isGameKey = STEER.includes(k) || THROTTLE.includes(k) || k === 'Enter';
             // our own entry in the sketch list keeps focus after you pick it: its keys belong to the game, not to reopening the sketch
             const isOwnPick = target.classList && target.classList.contains('pick') && target.dataset.id === 'corridor';
+            const isOnButton = target.tagName === 'BUTTON' && !isOwnPick;
             if (isOwnPick && isGameKey) e.preventDefault();
             if (STEER.includes(k)) { taps.set(k, clock + 0.12); return; }
-            if (!isGameKey || (target.tagName === 'BUTTON' && !isOwnPick)) return;  // a focused button handles its own
-            if (mode === 'ready' || (mode === 'done' && phaseT > 2)) start(false);
+            const isGo = (k === ' ' || k === 'Enter') && !isOnButton && !isRepeat;       // a focused button handles its own
+            const isAgain = mode === 'done' && isEndReady && clock - rowAt > (k === 'Enter' ? 0.3 : 1);   // only once A.U.R.A. is done
+            if (isGo && (mode === 'ready' || isAgain)) { start(false); return; }                // not the throttle
+            if (THROTTLE.includes(k) && mode !== 'ready' && !isRepeat && !(k === ' ' && isOnButton)) held.add(k);
         });
 
         mode = 'ready'; prepare();
@@ -642,15 +781,15 @@
         row([{ label: 'Fly it myself', primary: true, onClick: () => start(false) }, { label: 'Let A.U.R.A. fly', onClick: () => start(true) }]);
         render(0.3);
         Lab.loop(dt => render(update(dt)), 30);
-        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); };
+        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); ui.canvas.onpointerleave = null; queue = []; sound.stop(); };
     }
 
     Lab.register({
         id: 'corridor', badge: 'reworked', name: 'Fly the corridor', short: 'Hear thousands, see a few',
-        verb: 'Steer through the debris on three jumps down the heading, while the radio counts every transponder it hears.',
+        verb: 'Steer through the debris on three jumps down the heading, a minute each, while the radio counts every transponder it hears.',
         serves: 'Told eight ships went before: the radio hears tens of thousands, but only a handful ever come close enough to see.',
-        replaces: 'The timing bar used for jumps today.',
-        controls: 'Arrows or WASD to steer · or hold the mouse on the picture · Space starts',
+        replaces: 'The timing bar used for jumps today, and the short films after each jump.',
+        controls: 'Move the mouse over the picture (or the arrows) to steer · hold the mouse, Space, W or Shift to go faster · Space starts',
         mount,
     });
 })();

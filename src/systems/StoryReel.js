@@ -151,9 +151,10 @@
         }
     }
 
-    // ── the view from alongside EXODUS-9 as it jumps: used by the short shot that closes each sector ──
+    // ── EXODUS-9 from outside, for the reading. (The short films that closed each sector are gone: the flown jump,
+    //    Corridor.js, now shows the drifting hull, the numbers in the thousands, the twin and the light itself.) ──
     const SLAB_WIDE = 78;                                                          // matches drawStructure
-    const SHIP_SCALE = 2, SHIP_Y = 58, TWIN_Y = 176, HULL_Y = 206, HULL_SCALE = 2;
+    const SHIP_SCALE = 2;
     const SHIP_ART = [
         '...........####...............',
         '.....#####++++++####..........',
@@ -164,63 +165,14 @@
         '.....#####......####..........',
     ];
 
-    function drawShip(ctx, x, y, time, isTwin) {
-        const ink = isTwin ? { '#': '#3a1f66', '+': '#6a44c8', '-': '#b79bff' } : { '#': '#5a574e', '+': BONE, '-': '#7fd0de' };
+    function drawShip(ctx, x, y, time) {
+        const ink = { '#': '#5a574e', '+': BONE, '-': '#7fd0de' };
         SHIP_ART.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) if (row[rx] !== '.') { ctx.fillStyle = ink[row[rx]]; ctx.fillRect(x + rx * SHIP_SCALE, y + ry * SHIP_SCALE, SHIP_SCALE, SHIP_SCALE); } });
         const flame = 5 + Math.floor((time / 90) % 5);
         for (let k = 0; k < flame; k++) {
-            ctx.fillStyle = isTwin ? '#8844ff' : k < 2 ? '#fff4d0' : k < 5 ? AMBER : '#a8321c';
+            ctx.fillStyle = k < 2 ? '#fff4d0' : k < 5 ? AMBER : '#a8321c';
             ctx.fillRect(x - (k + 1) * SHIP_SCALE, y + (3 + (k % 2)) * SHIP_SCALE, SHIP_SCALE, SHIP_SCALE);
         }
-    }
-
-    /** A dead hull sliding past the window, close enough to read the number painted on it. */
-    function drawPassingHull(ctx, x, y, label) {
-        const k = HULL_SCALE;
-        ctx.fillStyle = '#2a201d'; ctx.fillRect(x, y, 130 * k, 30 * k);
-        for (let py = y; py < y + 30 * k; py++) for (let px = Math.max(0, x); px < Math.min(W, x + 130 * k); px++) if (dith(px, py, 0.3 - (py - y) / (90 * k))) { ctx.fillStyle = '#4a3530'; ctx.fillRect(px, py, 1, 1); } // what light there is, on its upper plates
-        ctx.fillStyle = '#6a2f2a'; ctx.fillRect(x, y, 130 * k, 1); ctx.fillRect(x + 10 * k, y - 7 * k, 40 * k, 7 * k);
-        ctx.fillStyle = INK; ctx.fillRect(x + 78 * k, y + 5 * k, 30 * k, 14 * k); ctx.fillRect(x + 30 * k, y + 16 * k, 12 * k, 14 * k); // holes torn in it
-        ctx.fillStyle = BONE; ctx.font = 'bold 14px monospace'; ctx.textBaseline = 'top'; ctx.fillText(label, x + 6 * k, y + 5 * k);
-    }
-
-    /** From sector 4 on the stars stop being scattered and start standing in rows. */
-    function drawStarGrid(ctx, strength, time) {
-        if (strength <= 0) return;
-        ctx.fillStyle = strength > 0.6 ? BONE : DIM;
-        for (let gy = 12; gy < H; gy += 24) for (let gx = 12; gx < W; gx += 24) if (dith(gx / 24 | 0, gy / 24 | 0, strength) && Math.floor(time / 700 + gx + gy) % 5) ctx.fillRect(gx, gy, 1, 1);
-    }
-
-    /** A still field of dead transponders along the heading, thicker the deeper you are. Nothing in it moves; a few still blink. */
-    function drawField(ctx, world, density, pan, time) {
-        world.wrecks.forEach((wreck, i) => {
-            if (((i * 31) % 97) / 97 > density) return;
-            const x = Math.round(wreck.x * 0.6 - pan * 0.5), y = Math.round(wreck.y);
-            if (x < 0 || x >= W) return;
-            const lit = i % 13 === 0 && Math.floor(time / 700 + i) % 9 === 0;
-            ctx.fillStyle = lit ? AMBER : wreck.old > 0.6 ? '#6a2f2a' : DIM;
-            ctx.fillRect(x, y, lit ? 2 : 1, 1);
-        });
-    }
-
-    /** One closing shot. wrong = { density, grid, hull: [label, from ms], twin: from ms, light: 0..1, noStars } */
-    function jumpShot(caption, wrong) {
-        return {
-            length: 5600,
-            source: 'HULL CAMERA · AFT',
-            beats: [[300, caption]],
-            draw(ctx, world, t) {
-                const pan = 300 + t * 0.03;
-                if (wrong.noStars) { ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H); } else drawSky(ctx, world, pan);
-                drawStarGrid(ctx, wrong.grid || 0, t);
-                drawField(ctx, world, wrong.density, pan, t);
-                if (wrong.wrecks) drawWrecks(ctx, world, wrong.wrecks, pan * 0.4 + 100, t);
-                if (wrong.light) drawLight(ctx, t, wrong.light * span(t, 0, 3000));      // the end of the heading, filling the right of the frame
-                if (wrong.hull && t > wrong.hull[1]) drawPassingHull(ctx, Math.round(W - (t - wrong.hull[1]) * 0.2), HULL_Y, wrong.hull[0]);
-                drawShip(ctx, 110 + Math.round(Math.sin(t / 900) * 3), SHIP_Y + Math.round(Math.sin(t / 1300) * 2), t, false);
-                if (wrong.twin && t > wrong.twin && Math.floor(t / 110) % 9 !== 0) drawShip(ctx, 110 + Math.round(Math.sin((t - 260) / 900) * 3), TWIN_Y + Math.round(Math.sin((t - 260) / 1300) * 2), t - 260, true); // same ship, a quarter of a second late
-            },
-        };
     }
 
     /** An old tape: a tracking band rolling down the picture, and now and then a line that tears sideways. */
@@ -260,7 +212,7 @@
             draw(ctx, world, t) {
                 ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
                 drawLight(ctx, t, span(t, 0, 2600));
-                drawShip(ctx, 150 + Math.round(Math.sin(t / 900) * 2), 118 + Math.round(Math.sin(t / 1300) * 2), t, false);
+                drawShip(ctx, 150 + Math.round(Math.sin(t / 900) * 2), 118 + Math.round(Math.sin(t / 1300) * 2), t);
                 drawReading(ctx, t, 6200, 5200);
             },
         },
@@ -287,10 +239,6 @@
                 drawTapeWear(ctx, t);
             },
         },
-        jump2: jumpShot('Sector 2. One of the eight, drifting.', { density: 0.06, hull: ['EXODUS-7', 1200] }),
-        jump4: jumpShot('Sector 4. Ship numbers in the thousands.', { density: 0.5, wrecks: 0.5, grid: 0.35, hull: ['EXODUS-2207', 900] }),
-        jump5: jumpShot('Sector 5. A ship that looks exactly like yours.', { density: 0.75, wrecks: 0.8, grid: 0.7, twin: 1500 }),
-        jump6: jumpShot('Sector 6. The end of the heading. It looks like a sun.', { density: 1, wrecks: 1, grid: 1, light: 1, noStars: true, twin: 600 }),
         corridor: {
             length: 21000,
             source: 'BRIDGE DISPLAY · THE FILM, WITH EVERY TRANSPONDER WE CAN HEAR',

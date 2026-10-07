@@ -86,6 +86,7 @@
         const q = sel => overlay.querySelector(sel);
         q('.mini-kicker').textContent = opts.kicker || def.kicker || '';
         q('.mini-title').textContent = opts.title || def.title;
+        if (def.hideHeader && !opts.title && !opts.kicker) q('.mini-head').style.display = 'none';   // the title still names the dialog for screen readers
         return { overlay, frame: q('.mini-frame'), canvas: q('canvas'), prev: q('.mini-prev'), who: q('.mini-who'), line: q('.mini-line'), row: q('.mini-buttons') };
     }
 
