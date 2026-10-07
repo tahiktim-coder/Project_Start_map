@@ -877,12 +877,11 @@ class GameState {
                 // Stress stays high — she's catatonic, not recovering
                 break;
 
-            case 'SURVIVOR': // Vance — Mutiny: confronts Commander
-                this.addLog(`CRITICAL: Spc. Vance has drawn his sidearm. He wants you out of the chair.`);
-                // Mutiny handler will reset Vance's stress based on outcome
-                setTimeout(() => {
-                    window.dispatchEvent(new CustomEvent('crew-mutiny', { detail: { instigator: c } }));
-                }, 100);
+            case 'SURVIVOR': // Vance — shuts himself in the cargo hold until the next jump
+                c.tags = (c.tags || []).concat('CONFINED');
+                c._confinedUntilWarp = 1;
+                c.stress = 2;
+                this.addLog(`${c.name} has shut himself in the cargo hold. He won't take orders until the next jump.`);
                 break;
 
             case 'CURIOUS': // Mira — Obsessed: EVA costs double but extra loot
@@ -1083,11 +1082,6 @@ class App {
                 </div>
 
             </div>
-            <!-- Credits - outside fadeIn, fixed at bottom -->
-            <div style="position: absolute; bottom: 30px; left: 0; right: 0; text-align: center;
-                font-size: 0.7em; color: #3a4a40; letter-spacing: 2px;">
-                BUILT WITH AI ASSISTANCE // 2024
-            </div>
         `;
 
         document.body.appendChild(overlay);
@@ -1259,7 +1253,6 @@ class App {
         window.addEventListener('deck-damaged', () => this.screenShake('light'));
 
         // Mutiny handler (Vance stress 3 breakdown)
-        window.addEventListener('crew-mutiny', (e) => this.showMutinyEvent(e.detail));
 
         // Anomaly teleportation handler (visual effect + view refresh)
         window.addEventListener('anomaly-teleport', (e) => this.handleAnomalyTeleport(e.detail));
@@ -1722,7 +1715,7 @@ class App {
                     if (c._confinedUntilWarp <= 0) {
                         c.tags = c.tags.filter(t => t !== 'CONFINED');
                         delete c._confinedUntilWarp;
-                        this.state.addLog('The door to your quarters opens. Nobody says anything. You take the chair back.');
+                        this.state.addLog((c.tags || []).includes('LEADER') ? 'The door to your quarters opens. Nobody says anything. You take the chair back.' : `${c.name} is back at his post. Nobody brings it up.`);
                     }
                 }
             });
@@ -2520,6 +2513,19 @@ class App {
         return selected;
     }
 
+    /**
+     * Which of the wreck stories this planet's wreck is. Picked once and kept on the planet, so the landing game can draw
+     * the same wreck the story then tells (whole, broken in two, burned, or only a crater).
+     */
+    wreckEncounterFor(planet) {
+        const all = typeof EXODUS_ENCOUNTERS !== 'undefined' ? EXODUS_ENCOUNTERS : [];
+        const kept = planet.wreckEncounter && all.find(e => e.id === planet.wreckEncounter);
+        if (kept) return kept;
+        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal || planet.hasTape);
+        if (picked) planet.wreckEncounter = picked.id;
+        return picked;
+    }
+
     /** The team boards one of our wrecks: they cut the hatch open (Torch), then the wreck's story, then what it held. */
     handleExodusAction() {
         const planet = this.state.currentSystem;
@@ -2533,7 +2539,7 @@ class App {
         }
         // A story planet's ship is whole (its map line says so); so is the first wreck, whose logbook holds the disc drawing,
         // and the wreck with the tape in its archive.
-        const selected = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal || planet.hasTape);
+        const selected = this.wreckEncounterFor(planet);
         if (!selected) {
             this.state.addLog("ERROR: Exodus encounter data unavailable.");
             return;
@@ -3853,7 +3859,7 @@ Then you're through.`,
         }
 
         // Commander stays on the bridge — only non-LEADER crew go on EVA
-        const evaCrew = this.state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
+        const evaCrew = this.state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER') && !c.tags.includes('CONFINED') && !c.tags.includes('SEDATED'));
         const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
 
         // BLEEDING_HEART (Aris stress trait): Refuses EVA unless ALL living crew are healthy
@@ -3923,7 +3929,8 @@ Then you're through.`,
             // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
             const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
             if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
-            const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null })
+            const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
+            const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null, wreck: wreck && wreck.id })
                 : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
             const afterDescent = goDown.then(landing => this.applyLanding(landing, evaTeam));
 
@@ -5324,53 +5331,6 @@ Then you're through.`,
         overlay.querySelector('#btn-restart').onclick = () => location.reload();
     }
 
-    showMutinyEvent(detail) {
-        const vance = detail.instigator;
-        const commander = this.state.crew.find(c => c.tags.includes('LEADER') && c.status !== 'DEAD');
-        if (!commander) return; // Commander already dead, mutiny is moot
-
-        const CONFINED_JUMPS = 2;
-        const standGround = () => {
-            // Vance is restrained and sedated - cannot take part in away missions
-            vance.status = 'INJURED';
-            vance.stress = 1;
-            vance.trait = null;
-            vance.breakdownFired = false;
-            vance.tags = vance.tags || [];
-            if (!vance.tags.includes('SEDATED')) vance.tags.push('SEDATED');
-            vance._sedatedUntilWarp = 2;
-            this.state.addLog(`You did not move. The crew took ${vance.name} down. He is locked up and kept asleep.`);
-            this.state.addLog(`${vance.name} cannot join away teams until he wakes.`);
-            commander.stress = Math.min(3, (commander.stress || 0) + 1);
-        };
-        const stepDown = () => {
-            commander.status = 'INJURED';
-            commander.stress = Math.min(3, (commander.stress || 0) + 1);
-            commander.tags = commander.tags || [];
-            if (!commander.tags.includes('CONFINED')) commander.tags.push('CONFINED');
-            commander._confinedUntilWarp = CONFINED_JUMPS;
-            this.state.crew.forEach(m => { if (m !== commander && m !== vance && m.status !== 'DEAD') m.stress = Math.min(3, (m.stress || 0) + 1); });
-            this.state.addLog(`You handed over the ship. You are locked in your quarters for ${CONFINED_JUMPS} jumps.`);
-            this.state.addLog(`The others watched you give way. It shook them.`);
-            vance.stress = 1;
-            vance.trait = null;
-            vance.breakdownFired = false;
-        };
-
-        window.EncounterCard.open(this, {
-            tone: 'distress', kicker: 'MUTINY', title: `${vance.name} has a gun on you`, zIndex: 3000,
-            context: 'He is standing in the bridge doorway with his sidearm out, pointed at your chest. The others have stopped moving. Nobody is looking at you.',
-            dialogue: [{ speaker: vance.name, text: 'You led us into hell. Every choice, every death, that is on you. Step down, Commander. Or I will make you.' }],
-            choices: [
-                { text: 'Stand your ground', desc: `You stay in command. The crew takes him down: ${vance.name} is locked up and kept asleep for 2 jumps. +1 Stress for you.` },
-                { text: 'Hand him the ship', desc: `Nobody gets hurt by the crew. You are hurt and locked in your quarters for ${CONFINED_JUMPS} jumps. ${vance.name} calms down. +1 Stress for you and for everyone who watched.` },
-            ],
-            onPick: (idx) => {
-                if (idx === 0) standGround(); else stepDown();
-                this.state.emitUpdates();
-            }
-        });
-    }
 
     renderNav() {
         this.revealLateStoryPlanet();

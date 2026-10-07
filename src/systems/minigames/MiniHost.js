@@ -54,7 +54,19 @@
         if (!def) return Promise.reject(new Error(`MiniHost: no minigame "${id}" is registered`));
         if (window.TEST_MODE) return new Promise(resolve => resolve(def.autoResult(opts)));
         if (current) return Promise.reject(new Error(`MiniHost: "${current}" is still open`));
-        return new Promise(resolve => open(def, opts, resolve));
+        return new Promise(resolve => {
+            const restoreMusic = duckMusic();
+            open(def, opts, result => { restoreMusic(); resolve(result); });
+        });
+    }
+
+    /** While a minigame is open the game's music drops, so the minigame's own sounds carry. Returns the restore function. */
+    const MUSIC_DUCK = 0.3;
+    function duckMusic() {
+        const audio = window.AudioSystem, music = audio && audio.bgMusic;
+        if (!music || audio.muted) return () => {};
+        music.volume = audio.musicVolume * MUSIC_DUCK;
+        return () => { if (!audio.muted) music.volume = audio.musicVolume; };
     }
 
     // ── the frame ──

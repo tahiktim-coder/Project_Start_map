@@ -40,11 +40,17 @@ Every note from the designer's play sessions lands here until it is done. Status
 | Energy runs out by the end of sector 2 for a careful player | next (economy) | playtest finding |
 | Warping between planets inside a sector: the sound "kinda sucks" and the visuals are "meh" | next | today it is the old timing-bar plot (WarpPlot.js); candidates: a short corridor-style flight, or a quiet A.U.R.A.-flown transition with better sound |
 | Wreck stories repeat from sector 4 (only seven of them) | later | |
+| Cards pile on top of each other: on landing, one notice is covered by a crew moment ("rest or keep working", stress with no clear benefit), then back to the quest text | next | needs one rule: one interruption at a time, no crew moments during a site visit, every crew moment states what each choice gets you |
+| Idea from the designer: the interface frays a little as the crew's stress rises (everything slightly more irritating) | idea | does not exist today (only the crew portraits fade); keep it subtle |
+| Vance pulls a gun on you (twice) | done 2026-10-07 | now he shuts himself in the cargo hold until the next jump and sits out away missions; the mutiny card is gone |
+| Music too loud during minigames | done 2026-10-07 | music drops to 30% while a minigame is open |
+| A.U.R.A. letting the air out / "A.U.R.A. mutiny" game over contradicts her calm, never-sinister character | next | same family as Vance's gun scene |
 
 ## Release
 
 | item | status | notes |
 |---|---|---|
+| "BUILT WITH AI ASSISTANCE // 2024" on the title screen | done 2026-10-07 | removed; the AI disclosure belongs on the itch page |
 | Hide the TEST button in the public build | next | friends can switch it on by accident (the designer did) |
 | New pull request for everything since #5 was merged | next | public link: https://tahiktim-coder.github.io/Project_Start_map/ |
 | Music licence (both tracks are Suno), AI disclosure, phone layout | later, before itch.io | docs/ASSESSMENT_2026-09-29.md §3 |
