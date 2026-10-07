@@ -177,3 +177,10 @@ Order: 1 → 2 → 5 (fixes the complaint fast) → 3 → 4 → 8/9 → 6/7 → 
 5. **Names:** the mockup shows first names only ("Jaxon", "Vance"), dropping "Eng." / "Spc." / "Tech". OK?
 6. **Hint line** ("Click or Space · Esc skips"): show it for the first two scenes only, or always?
 7. **Fabricator:** it's still in the deck list at `localhost:8000` today. Is it cut? (Not part of this job. Spotted while looking.)
+
+**Decided 2026-10-07** (the designer: "yes all", and names only): 1 barks go to the log only · 2 no dating after you leave
+orbit · 3 keep the faint previous line · 4 IBM Plex · 5 first names only, never "Eng." / "Spc." / "Tech" · 6 the hint line
+shows in the first two scenes only · 7 the fabricator is cut (with the economy work).
+
+**Verdict on the mockup:** the three kinds of text are right, but the screen "looks like a dashboard". Reading must live in
+the game scene, not in panels. See docs/GAME_SCREEN.md (the next pass).

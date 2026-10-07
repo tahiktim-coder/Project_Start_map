@@ -248,3 +248,13 @@ Do it with ECONOMY.md's first aid, not before it. The new map and orbit screens 
 7. **Beacons in sector 1:** the map says 1 (the marked transponder) and the corridor starts its count at 0. Pick one.
 8. **The title screen** shows a purple ringed planet, which is off-palette. It could open on the heading instead: a dark
    field, one warm star at the far edge.
+
+**Decided 2026-10-07:** 1 forward only · 2 five warm crew tones · 3 IBM Plex · 4 settle only on worlds people could live
+on · 5 drop the classic art mode on the main screens · 6 the cards and pages get the matching pass next · 7 sector 1 says
+1 beacon · 8 the title opens on a dark field with one warm star.
+
+**Verdict on the mockup (2026-10-07):** "it looks like a dashboard, it takes you out." The planets and the space background
+are loved and must always be on show, with one enormous thing per sector. The space view should be the control itself: click
+where to go and the ship takes you there. No straight heading line, no "SECTOR 1 OF 6" header, no panel layout; the ship sat
+too far left. The layout in this document is replaced by docs/GAME_SCREEN.md. Its content decisions (what each screen must
+show, what is cut) still stand.
