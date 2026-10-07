@@ -6,7 +6,9 @@
    giant, which has no ground at all — there a floating rig with beacons, chevrons and lift pods is the only place to set down.
    Colours come from the planet's own dither ramp, so the ground matches the globe you saw from orbit.
    Strange worlds (crystal, mirror, singing, ghost, tomb, graveyard, hollow, living, machine, shattered, fungal, symbiote,
-   rogue, radiation) get their own look on top of the terrain; the flat strips you land on stay clear. */
+   rogue, radiation) get their own look on top of the terrain; the flat strips you land on stay clear.
+   build(g, planet, site): when the team is going somewhere (a wreck, ruins, graves, a dome, a beacon), LanderSites.js
+   places and paints it beside the marked spot, and the rocks and growth keep off it. */
 
 (function () {
     'use strict';
@@ -112,7 +114,8 @@
 
     const DRESSING_GAP = 3; // rocks and growth keep this far off a level stretch, so a flat ledge looks like one
     const isOnLevel = (g, x) => (g.level || []).some(l => x >= l.x0 - DRESSING_GAP && x <= l.x1 + DRESSING_GAP);
-    const isFreeGround = (g, x) => x > 2 && x < W - 3 && !g.hot[x] && g.heights[x] < H && !isOnLevel(g, x);
+    const isOnSite = (g, x) => !!g.site && x >= g.site.x0 - DRESSING_GAP * 2 && x <= g.site.x1 + DRESSING_GAP * 2;
+    const isFreeGround = (g, x) => x > 2 && x < W - 3 && !g.hot[x] && g.heights[x] < H && !isOnLevel(g, x) && !isOnSite(g, x);
 
     /** What grows, juts or lies on the surface: this is what makes an ice world not look like a desert. */
     function paintDressing(ctx, g, ramp, rand, kindName) {
@@ -354,8 +357,10 @@
         FUNGAL: [paintSporeTowers, drawSpores], SYMBIOTE_WORLD: [paintTendrils, drawTips], RADIATION_BELT: [null, drawAurora],
     };
 
-    function build(g, planet) {
-        const kindName = g.kindName || 'rock';
+    /** site: what the team is going to ('wreck', 'ruins', 'stones', 'dome', 'beacon'), or null; detail: which wreck story. Sets g.site to where it stands. */
+    function build(g, planet, site, detail) {
+        const kindName = g.kindName || 'rock', Sites = window.LanderSites;
+        g.site = site && Sites ? Sites.place(g, site, detail) : null;                          // placed first, so the dressing keeps off it
         const ramp = rampOf(planet), rand = seeded(planet.id + ':scene');
         const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
@@ -367,6 +372,7 @@
         if (!strange.length) paintDressing(ctx, g, ramp, rand, kindName);                // strange worlds get their own dressing instead of rocks and ice
         if (strange[0]) strange[0](ctx, g, ramp, rand, scene);
         if (g.kind.platform) paintPlatform(ctx, g);
+        if (g.site) Sites.paint(ctx, g, ramp, seeded(planet.id + ':site'), soilOf(ramp, kindName));
         scene.backdrop = canvas;
         return scene;
     }
@@ -464,6 +470,7 @@
         drawPools(ctx, g, now);
         drawWeather(ctx, g, scene, now);
         if (scene.live) scene.live(ctx, g, scene, now, s);
+        if (g.site && window.LanderSites) window.LanderSites.drawLive(ctx, g, now);
         if (g.kind.platform) drawPlatformLights(ctx, g, now);
         drawShadow(ctx, g, s);
         if (nozzles.length && !s.grade) emit(scene, g, s, nozzles);
@@ -472,5 +479,5 @@
         drawShip(ctx, scene.dockX, now, !s.isReleased);
     }
 
-    window.LanderScene = { build, drawLive };
+    window.LanderScene = { build, drawLive, util: { W, H, INK, BAYER, dith, css, mix, put, seeded, clampX } }; // util: shared with LanderSites and LanderCrew
 })();

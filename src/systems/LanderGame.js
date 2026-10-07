@@ -9,6 +9,8 @@
    A bit fast, or the ground a bit uneven → ROUGH landing: nothing changes
    Too fast, on a slope, in lava or water → CRASH: someone is hurt before they even step outside
    "LET A.U.R.A. LAND" hands her the stick: she steers to the nearest level stretch and puts it down there.
+   After a landing the team steps out in suits and walks to the site while the view closes in (LanderCrew.js); a click
+   or Enter skips the wait. The site itself is painted by LanderSites.js.
    play(app, planet, team) → Promise<{ grade: 'soft'|'rough'|'crash', auto: boolean }> */
 
 (function () {
@@ -23,7 +25,7 @@
     const LAVA_LEVEL = 146, SEA_LEVEL = 138, SHORE_GAP = 2; // low ground floods to here (y grows downward); a shelf always sits SHORE_GAP above the flood line
     // A.U.R.A.'s hand: wanted speeds (px/s) by height, how tightly she holds the drift, and the height she keeps while still sliding over to level ground
     const AUTO = { cruiseDown: 26, approachDown: 14, settleDown: 8, hoverDown: 2, climbUp: -8, highAlt: 45, lowAlt: 14, glideAlt: 24, climbGap: 8, sideGain: 0.45, sideMax: 20, sideBand: 3, sideBandMin: 1, sideHard: 7, minRoom: 4, reach: 3 };
-    const RESULT_HOLD_MS = 1700, MAX_STEP = 0.033;
+    const RESULT_HOLD_MS = 1700, MAX_STEP = 0.033, SKIP_AFTER_MS = 500, SKIP_KEYS = ['Enter', 'Escape'];
     const INK = '#06070a', BONE = '#c4d0c4', AMBER = '#d9a24a', RED = '#d85a4e', GREEN = '#74d99a', DIM = '#2f5a48';
     const LOW_FUEL = 25, LOW_FUEL_BEEP_MS = 900, THRUST_SOUND_MS = 120;
     const DOCKED_TEXT = 'Docked under the ship. Touch a control to let go.', AUTO_TEXT = 'A.U.R.A. has the stick. She is flying to the marked spot.';
@@ -268,32 +270,17 @@
         for (let gy = y + LANDER_TALL + 3; gy < groundY - 1; gy += GUIDE_GAP) ctx.fillRect(x, gy, 1, 1);
     }
 
-    /** The marked spot: a blinking beacon at each end, a chevron above, and whatever the team is going to (a wreck, ruins) just past it. */
-    function drawMark(ctx, g, now, site) {
+    /** The marked spot: a blinking beacon at each end and a chevron above (gone once the lander is down). The site beside it is LanderSites'. */
+    function drawMark(ctx, g, now, isDown) {
         if (!g.mark) return;
         const m = g.mark, y = Math.round(m.y), on = Math.floor(now / MARK_BLINK_MS) % 2 === 0, cx = Math.round(m.cx);
         ctx.fillStyle = on ? GREEN : DIM;
         [m.x0 + 1, m.x1 - 1].forEach(bx => { ctx.fillRect(Math.round(bx), y - 5, 2, 5); ctx.fillRect(Math.round(bx) - 1, y - 6, 4, 2); });   // a beacon at each end
         ctx.fillRect(Math.round(m.x0 + 1), y, Math.round(m.x1 - m.x0 - 1), 1);                                                          // the stretch itself, lit
+        if (isDown) return;
         const chevronY = y - 34 - (on ? 0 : 3);
         for (let k = 0; k < 6; k++) { ctx.fillRect(cx - 6 + k, chevronY + k, 2, 1); ctx.fillRect(cx + 5 - k, chevronY + k, 2, 1); }   // a big chevron pointing down at it
         ctx.fillStyle = DIM; for (let by = chevronY + 8; by < y - 7; by += 3) ctx.fillRect(cx, by, 1, 1);                               // and a dotted beam down to the ground
-        if (!site) return;
-        const sx = m.x1 + 6 < W - 30 ? Math.round(m.x1 + 6) : Math.round(m.x0 - 30), sy = Math.round(g.heights[clampX(sx + 12)]);
-        if (site === 'wreck') {                                                // a hull half in the ground, tilted, one lit edge
-            ctx.fillStyle = '#1a1c1e'; ctx.fillRect(sx, sy - 7, 24, 7); ctx.fillRect(sx + 4, sy - 11, 10, 4);
-            ctx.fillStyle = '#5c6058'; ctx.fillRect(sx, sy - 7, 24, 1); ctx.fillRect(sx + 4, sy - 11, 10, 1);
-            ctx.fillStyle = on ? AMBER : '#5a4520'; ctx.fillRect(sx + 20, sy - 9, 1, 2);   // its beacon, still going
-        } else if (site === 'ruins') {                                         // walls with no roofs
-            ctx.fillStyle = '#2a2d2a'; [0, 7, 14, 20].forEach((dx, i) => ctx.fillRect(sx + dx, sy - 5 - (i % 2) * 3, 3, 5 + (i % 2) * 3));
-            ctx.fillStyle = '#5c6058'; [0, 7, 14, 20].forEach((dx, i) => ctx.fillRect(sx + dx, sy - 5 - (i % 2) * 3, 3, 1));
-        } else if (site === 'stones') {                                        // rows of markers
-            ctx.fillStyle = '#8f8a7a'; for (let k = 0; k < 8; k++) ctx.fillRect(sx + k * 3, sy - 4 - (k % 2), 2, 4 + (k % 2));
-        } else if (site === 'dome') {                                          // a glass dome, green inside
-            for (let dx = -10; dx <= 10; dx++) { const h = Math.round(Math.sqrt(100 - dx * dx)); ctx.fillStyle = '#c4d0c4'; ctx.fillRect(sx + 12 + dx, sy - h, 1, 1); ctx.fillStyle = '#2f6a3e'; ctx.fillRect(sx + 12 + dx, sy - Math.max(1, h - 2), 1, Math.max(1, h - 2)); }
-        } else if (site === 'beacon') {                                        // a mast with a light on top
-            ctx.fillStyle = '#5c6058'; ctx.fillRect(sx + 10, sy - 16, 2, 16); ctx.fillStyle = on ? '#ffe6a0' : AMBER; ctx.fillRect(sx + 9, sy - 19, 4, 3);
-        }
     }
 
     /** The clamp it hangs from before it is let go. */
@@ -336,7 +323,7 @@
         ctx.fillRect(g.padX - 1, g.padY - 3, 2, 3); ctx.fillRect(g.padX + PAD_WIDTH - 1, g.padY - 3, 2, 3);
     }
 
-    function draw(ctx, s, g, colors, look, now, scene) {
+    function draw(ctx, s, g, look, now, scene) {
         const x = Math.round(s.x), y = Math.round(s.y);
         const isLit = !s.grade && s.fuel > 0, nozzles = [];                                                  // pushing left fires the RIGHT thruster, and the other way round
         if (isLit && s.keys.right) nozzles.push([x - LANDER_HALF + NOZZLE_LEFT, y + NOZZLE_ROW]);
@@ -347,15 +334,20 @@
         else {
             const isLeftBurn = s.keys.right && s.fuel > 0, isRightBurn = s.keys.left && s.fuel > 0; // pushing left fires the RIGHT thruster, and the other way round
             if (!s.grade) drawGuide(ctx, s, g, x, y);
-            drawMark(ctx, g, now, s.site);
+            drawMark(ctx, g, now, !!s.grade);
+            if (s.crew) window.LanderCrew.drawBehind(ctx, s.crew, g, now);                                  // the team steps out: see LanderCrew.js
             drawSprite(ctx, x - LANDER_HALF, y, statusColor(s, g));
             if (isLeftBurn) drawFlame(ctx, x - LANDER_HALF + NOZZLE_LEFT, y + NOZZLE_ROW, g, look);
             if (isRightBurn) drawFlame(ctx, x - LANDER_HALF + NOZZLE_RIGHT, y + NOZZLE_ROW, g, look);
+            if (s.crew) window.LanderCrew.drawFront(ctx, s.crew, g, now);
         }
-        if (s.grade && s.grade !== 'crash') colors.forEach((c, i) => {                                       // the team steps out
-            const out = Math.min(1, (now - s.endedAt) / 900), fx = x + (i ? 1 : -1) * Math.round(8 + out * 12), fy = Math.round(g.heights[clampX(fx)]) - 9;
-            ctx.fillStyle = BONE; ctx.fillRect(fx, fy, 3, 3); ctx.fillStyle = c; ctx.fillRect(fx - 1, fy + 3, 5, 4); ctx.fillRect(fx, fy + 7, 1, 2); ctx.fillRect(fx + 2, fy + 7, 1, 2);
-        });
+    }
+
+    /** Copy the world onto the screen canvas: whole, or the window the camera has closed in on after touchdown. */
+    function present(viewCtx, world, s, now) {
+        const cam = s.crew ? window.LanderCrew.view(s.crew, now) : null;
+        if (!cam || cam.w >= W) { viewCtx.drawImage(world, 0, 0); return; }
+        viewCtx.drawImage(world, cam.left, cam.top, cam.w, cam.h, 0, 0, W, H);
     }
 
     function overlayHtml(planet, team, colors, site) {
@@ -381,9 +373,12 @@
         </div>`;
     }
 
-    /** opts.site: what the team is going to ('wreck', 'ruins', 'stones', 'dome', 'beacon'), drawn beside the marked spot. */
+    /**
+     * opts.site: what the team is going to ('wreck', 'ruins', 'stones', 'dome', 'beacon'), drawn beside the marked spot.
+     * opts.wreck: for a wreck, its story id (ExodusDerelicts.js), so it is drawn as that story finds it: whole, broken, burned or a crater.
+     */
     function play(app, planet, team, opts) {
-        const site = (opts && opts.site) || null;
+        const site = (opts && opts.site) || null, wreck = (opts && opts.wreck) || null;
         return new Promise(resolve => {
             const colors = team.map(m => (window.ShipCutaway ? rgb(window.ShipCutaway.colorOf(m)) : BONE));
             const overlay = document.createElement('div');
@@ -393,8 +388,10 @@
             overlay.innerHTML = overlayHtml(planet, team, colors, site);
             document.body.appendChild(overlay);
 
-            const ctx = overlay.querySelector('canvas').getContext('2d'), g = buildGround(planet), look = palette(planet);
-            const scene = window.LanderScene ? window.LanderScene.build(g, planet) : null;
+            const viewCtx = overlay.querySelector('canvas').getContext('2d'), world = document.createElement('canvas');
+            world.width = W; world.height = H; viewCtx.imageSmoothingEnabled = false;
+            const ctx = world.getContext('2d'), g = buildGround(planet), look = palette(planet);   // everything is drawn on `world`, then shown through the camera
+            const scene = window.LanderScene ? window.LanderScene.build(g, planet, site, wreck) : null;
             const gravityG = Math.max(0.4, Math.min(2.2, (planet.metrics && planet.metrics.gravity) || 1));
             const gravity = BASE_GRAVITY * Math.pow(gravityG, GRAVITY_CURVE);
             const s = startState(g);
@@ -421,9 +418,16 @@
                 if (isClosed) return;
                 isClosed = true;
                 unlisten();
+                window.removeEventListener('keydown', onSkipKey);
                 overlay.classList.add('is-leaving');
                 setTimeout(() => { overlay.remove(); resolve(result); }, 350);
             }
+
+            let result = null;
+            const skip = () => { if (result && performance.now() - s.endedAt > SKIP_AFTER_MS) close(result); }; // once down, a click or Enter goes on at once
+            function onSkipKey(e) { if (SKIP_KEYS.includes(e.key) && !e.repeat) skip(); }
+            overlay.addEventListener('pointerdown', skip);
+            window.addEventListener('keydown', onSkipKey);
 
             function end(landed) {
                 const isOffMark = landed !== 'crash' && !g.kind.platform && !isOnMark(g, Math.round(s.x));
@@ -434,7 +438,9 @@
                 resultEl.innerHTML = `<strong style="color:${info.color}">${info.label}</strong><span>${info.effect}</span>`;
                 sfx('sfxTouchdown', grade);
                 if (grade === 'crash' && app.screenShake) app.screenShake('heavy');
-                setTimeout(() => close({ grade, auto: !!s.isAuto, offMark: isOffMark }), RESULT_HOLD_MS);
+                if (grade !== 'crash' && window.LanderCrew) s.crew = window.LanderCrew.plan(g, s, colors, planet, s.endedAt); // they suit up and step out
+                result = { grade, auto: !!s.isAuto, offMark: isOffMark };
+                setTimeout(() => close(result), s.crew ? s.crew.duration : RESULT_HOLD_MS);
             }
 
             el('.lander-auto').addEventListener('click', () => { // hand it to A.U.R.A.: she flies the same lander down to level ground while you watch
@@ -475,7 +481,8 @@
                     if (s.fuel > 0 && s.fuel < LOW_FUEL && now - lastFuelWarn > LOW_FUEL_BEEP_MS) { lastFuelWarn = now; sfx('sfxLowFuel'); }
                     if (landed) end(landed);
                 }
-                draw(ctx, s, g, colors, look, now, scene);
+                draw(ctx, s, g, look, now, scene);
+                present(viewCtx, world, s, now);
                 nextFrame(frame);
             })(last);
             el('.lander-hold').focus();
@@ -491,7 +498,7 @@
     }
 
     window.LanderGame = {
-        play, GRADES, drawLander, LANDER_TALL,
+        play, GRADES, drawLander, LANDER_TALL, SPRITE, SPRITE_INK,                     // SPRITE: LanderSites draws an abandoned lander like ours
         internals: { buildGround, step, autopilot, startState, gradeLanding, groundReading, tiltAt, isOnMark, BASE_GRAVITY, GRAVITY_CURVE, FUEL_FULL, PAD_WIDTH, LANDER_HALF, LEVEL_TILT, ROUGH_TILT, SOFT, ROUGH, GROUND_OF }, // internals: for headless play-tests
     };
 })();

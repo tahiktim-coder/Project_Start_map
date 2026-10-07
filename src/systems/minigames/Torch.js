@@ -2,6 +2,10 @@
    HATCH: the away team boards one of our wrecks. It has no power, so you cut its hatch open along the seam. The flame only cuts
    through where it moves slowly enough; linger and the plate overheats (the torch pauses, the plate warps); stray off the seam
    and you burn a scar. The suit marks what is still to cut. With the keys, the torch rides the seam round corners.
+   FEEDBACK: the metal under the flame shows its heat (dull, red, orange, then white when it is cut through), and the cut cools to
+   a dark slot behind you; sparks fly only while metal is really cut. Off the seam the plate is thick: the flame only scorches it.
+   One short readout by the torch says what to do the first time, what is going wrong, and how far the cut has got.
+   The system pointer is hidden over the picture while you hold the torch: the drawn torch is the pointer.
    A crew member can take the torch at any time ("Let Jaxon cut it"): they finish the cut slowly and carefully, without you.
    THE DISC (for the finale): the same torch on the 1977 disc. The light's sweep reads every live line. Burn the centre and cut
    each line inside the marked ring; the last sweep finds no map, only the two figures.
@@ -26,11 +30,21 @@
 
     // ── the torch: one set of physics for both parts ──
     const BURN = 12.5, BURN_R = 2.4, FAST = 31;              // depth per second under the flame (1 = through), its radius: it cuts below ~30 px/s
-    const FOLLOW = 450, BURST = 0.2;                         // px/s the tip follows the pointer; even a quick click gives a short burst
+    const BURST = 0.2, FPS = 60;                             // even a quick click gives a short burst; the drawn torch is the pointer, so it draws at 60 a second
     const KEY_FIRE = 22, KEY_FREE = 45, KEY_DELAY = 0.2;     // keys: a tap moves one pixel, holding glides
     const CELL = 3, GW = W / CELL, GH = H / CELL, HEAT_IN = 1.6, WARN = 0.75, COOLED = 0.45;   // the heat grid; at 1 the torch pauses until COOLED
     const PARTS = { hatch: { fuel: 40, tau: 1.5, spread: 1, burn: 1, heat: 1 }, disc: { fuel: 20, tau: 2.5, spread: 2, burn: 1.3, heat: 1.8 } };   // the disc is thin gold
     const REACT_GAP = 1.2, KERF_COOL = 1.6, HOT_FADE = 3.5;  // reactions wait after the line before; a cut fades white → warm → dark; cooling ticks fade
+    const HEAT_SHOW = 0.45, OFF_SEAM_MAX = 0.45, SPARK_CHANCE = 0.7;   // s an uncut patch keeps its red; off the seam the flame only scorches; sparks per pixel cut through
+
+    // ── the readout by the torch: one short line at a time, never over the seam the torch is on ──
+    const STANDOFF = 3, LABEL_GAP = 8, LABEL_SCALE = 2;      // the nozzle is held this far off the metal, so the glow under the flame stays in view
+    const STRAY_AFTER = 0.15, FAST_AFTER = 0.3, IDLE_AFTER = 0.35, IDLE_SPEED = 6, READOUT_FOR = 0.8, TAUGHT_AT = 0.05;   // s, s, s, px/s, s, share of the seam
+    const HINTS = {                                          // the first time only: what to do, in plain words
+        hatch: [['PRESS AND HOLD', 'ON THE DOTTED LINE'], ['WHITE MEANS CUT', 'FOLLOW THE LINE SLOWLY']],
+        disc: [['PRESS AND HOLD ON A LINE', 'INSIDE THE DOTTED RING']],
+    };
+    let taught = { hatch: false, disc: false };              // for this page: once the player has cut a little, the hints stay away
 
     // ── HATCH: a rounded-rectangle seam, measured by its signed distance ──
     const HB = { cx: 322, cy: 132, hw: 42, hh: 51, r: 10 }, HATCH_BOX = [HB.cx - HB.hw - 1, HB.cy - HB.hh - 1, HB.cx + HB.hw + 1, HB.cy + HB.hh + 1];
@@ -43,6 +57,8 @@
     const ON_SEAM = 3.5, FREE_R = 3, TEAR = 0.97, GROAN_FROM = 0.8, THUD_AT = 2.3;   // a kerf within 3 px frees the seam; at TEAR it tears free; it groans from 80%; the lid knocks the rim
     const SEAM = [], SEAM_AT = new Int16Array(W * H).fill(-1);
     for (let y = HATCH_BOX[1]; y <= HATCH_BOX[3]; y++) for (let x = HATCH_BOX[0]; x <= HATCH_BOX[2]; x++) if (Math.abs(sdf(x, y)) <= 0.5) { SEAM_AT[y * W + x] = SEAM.length; SEAM.push(y * W + x); }
+    const NEAR_SEAM = new Uint8Array(W * H);                 // where the plate is thin enough to cut: the seam and a hand's width either side
+    for (let y = HATCH_BOX[1] - 5; y <= HATCH_BOX[3] + 5; y++) for (let x = HATCH_BOX[0] - 5; x <= HATCH_BOX[2] + 5; x++) if (Math.abs(sdf(x, y)) <= ON_SEAM) NEAR_SEAM[y * W + x] = 1;
 
     // ── the crew member's cut: the seam walked one pixel at a time, clockwise from the left edge ──
     const AUTO_CUT = KEY_FIRE, AUTO_GLIDE = 45, AUTO_REACH = 90;   // px/s: cutting (a held key's steady pace, under FAST), over seam already cut, out to the seam
@@ -102,7 +118,7 @@
     }
     const sayLines = ({ hull, deadFor, cutter, spotter }) => ({
         hatch: [['', `${hull}. Dead about ${deadFor}. The hatch has no power, so it won't open.`],
-            [cutter, 'Trace the seam all the way round. Let it cut through before you move on.']],
+            [cutter, 'Hold the torch on the line until it glows white, then move on.']],
         fast: [cutter, "Too fast. That's only marking the plate, not cutting it."], hot: [cutter, "The plate's getting hot. Keep moving."],
         warp: [cutter, "Too hot, and now it's warped. Let it cool a second."], stray: [spotter, "You're off the seam. That's fuel we don't get back."],
         half: [spotter, 'Still nothing warm on the other side.'], gap: [cutter, "It's still holding somewhere. Find the bit you missed."],
@@ -327,7 +343,8 @@
     }
 
     function mount(ctx, ui, opts) {
-        const COOL = [C.void, C.hurt[2], C.hurt[3], C.warm, C.warmBright, C.star], GLOW = [C.hurt[2], C.hurt[3], C.warm, C.warmBright];   // a fresh cut white → warm → dark; the plate heating
+        const HEATING = [C.hurt[2], C.hurt[3], C.danger, C.warm, C.warmBright], GLOW = [C.hurt[2], C.hurt[3], C.warm, C.warmBright];   // metal under the flame: dull → red → orange; the plate heating
+        const KERF = [C.void, C.hurt[2], C.hurt[3], C.danger, C.warm, C.warmBright, C.star];   // a cut: white-hot while the flame is on it, then cooling to a dark slot
         const TEMPER = MiniLab.mix(C.warm, C.hull[2], 0.45), CUT_LINE = MiniLab.mix(C.lightHalo, C.void, 0.62), DIM_GOLD = MiniLab.mix(C.lightHalo, C.void, 0.55);
         const SCORCH = MiniLab.mix(C.warm, C.hull[1], 0.62), HOSE = [MiniLab.mix(C.warm, C.void, 0.74), MiniLab.mix(C.warm, C.void, 0.5)];   // a cut's tempered edge; the suit's hose
         const setup = readOpts(opts), SAY = sayLines(setup), snd = makeSound();
@@ -354,9 +371,10 @@
 
         function start(part) {
             s = { part, P: PARTS[part], phase: 'cut', tip: part === 'hatch' ? { x: HB.cx - HB.hw - 18, y: HB.cy } : { x: DX - 64, y: DY + 50 },
-                speed: 0, trail: [], holdT: 0, burst: 0, fuel: 1, tanks: 1, auto: null, pause: 0, hotSpot: null, firing: false, fired: false,
+                speed: 0, trail: [], holdT: 0, burst: 0, fuel: 1, tanks: 1, auto: null, pause: 0, hotSpot: null, firing: false,
                 heat: new Float32Array(GW * GH), spare: new Float32Array(GW * GH),
-                depth: new Float32Array(W * H), lastT: new Float32Array(W * H).fill(-99), thruT: new Float32Array(W * H), marks: [],
+                depth: new Float32Array(W * H), lastT: new Float32Array(W * H).fill(-99), marks: [],
+                glow: 0, idleT: 0, lastThruT: -99, progT: -99, progText: '',   // the metal's heat under the tip; for the readout by the torch
                 sparks: [], warps: [], speech: [], react: null, nextSay: 0, saidAt: -99, said: {}, scars: 0, strayT: 0, fastT: 0,
                 seamCut: new Uint8Array(SEAM.length), cut: 0, lastCut: 0, stall: 0, openT: 0, groanT: 0, thruNow: 0, hot: 0, hotX: W / 2,
                 cutT: LINES.map(() => null), centre: false, figTouched: false, sweep: 0, final: false };
@@ -410,10 +428,7 @@
                 aim = null; s.holdT += dt;
                 if (s.holdT > KEY_DELAY) step(Math.sign(dx), Math.sign(dy), (wants ? KEY_FIRE : KEY_FREE) * dt);
             } else s.holdT = s.holdT > KEY_DELAY ? Math.min(s.holdT, KEY_DELAY + 0.25) - dt : 0;   // switching arrows mid-glide keeps gliding
-            if (aim) {
-                const ax = aim.x - s.tip.x, ay = aim.y - s.tip.y, dist = Math.hypot(ax, ay), max = FOLLOW * dt;
-                s.tip = dist <= max ? clampTip(aim.x, aim.y) : clampTip(s.tip.x + (ax / dist) * max, s.tip.y + (ay / dist) * max);
-            }
+            if (aim) s.tip = clampTip(aim.x, aim.y);             // the drawn torch is the pointer: it sits exactly under it (fire() burns the whole way between)
         }
         function playerMove(dt) {                                // returns whether the player wants the flame
             const wants = ptrFire || MiniLab.keys.has(' ') || s.burst > 0;
@@ -458,24 +473,39 @@
             for (let y = y0 - 3; y <= y0 + 3; y++) for (let x = x0 - 3; x <= x0 + 3; x++) {
                 const w = 1 - Math.hypot(x - p.x, y - p.y) / BURN_R, i = y * W + x, was = s.depth[i];
                 if (x < 0 || y < 0 || x >= W || y >= H || w <= 0 || !solid(x, y)) continue;
+                const most = s.part === 'hatch' && !NEAR_SEAM[i] ? OFF_SEAM_MAX : 2;   // off the seam the plate is thick: a scorch, never a cut
                 if (was === 0) s.marks.push(i);
-                s.depth[i] = Math.min(2, was + BURN * s.P.burn * w * dt); s.lastT[i] = clock;
-                if (was < 1 && s.depth[i] >= 1) { s.thruT[i] = clock; through(x, y); }
+                s.depth[i] = Math.min(most, was + BURN * s.P.burn * w * dt); s.lastT[i] = clock;
+                if (was < 1 && s.depth[i] >= 1) through(x, y);
             }
             for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (gx + ox >= 0 && gy + oy >= 0 && gx + ox < GW && gy + oy < GH) s.heat[c + oy * GW + ox] += HEAT_IN * s.P.heat * dt * (ox && oy ? 0.25 : ox || oy ? 0.5 : 1);
-            for (let k = 0; k < 2; k++) if (Math.random() < dt * 34) {   // no air: sparks fly straight
-                const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 60;
-                s.sparks = s.sparks.concat({ x: p.x, y: p.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.2 + Math.random() * 0.45 });
-            }
         }
-        function through(x, y) {
+        function spark(x, y) {                                   // no air: sparks fly straight, out of the metal being cut
+            const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 70;
+            s.sparks = s.sparks.concat({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.2 + Math.random() * 0.45 });
+        }
+        function progress(text) { s.progT = clock; s.progText = text; }
+        function teach() { if (!s.auto && !taught[s.part]) taught = { ...taught, [s.part]: true }; }   // only the player's own hand learns
+        function through(x, y) {                                 // a pixel just cut through
             s.thruNow++; s.hotX = x;
+            if (Math.random() < SPARK_CHANCE) spark(x, y);
             if (s.part === 'hatch') {                            // a kerf within three pixels frees that bit of seam
+                const was = s.cut;
                 for (let k, oy = -FREE_R; oy <= FREE_R; oy++) for (let ox = -FREE_R; ox <= FREE_R; ox++) if ((k = SEAM_AT[(y + oy) * W + x + ox]) >= 0 && !s.seamCut[k]) { s.seamCut[k] = 1; s.cut++; }
+                if (s.cut > was) progress('');
                 return;
             }
-            if (Math.hypot(x - DX, y - DY) <= 1.6) s.centre = true;
-            LINES.forEach((l, j) => { const a = along({ x, y }, l); if (s.cutT[j] === null && a >= CUT_NEAR && a <= CUT_FAR && across({ x, y }, l) <= ON_LINE) s.cutT[j] = clock; });
+            if (!s.centre && Math.hypot(x - DX, y - DY) <= 1.6) { s.centre = true; progress('CENTRE'); teach(); }
+            LINES.forEach((l, j) => {
+                const a = along({ x, y }, l);
+                if (s.cutT[j] !== null || a < CUT_NEAR || a > CUT_FAR || across({ x, y }, l) > ON_LINE) return;
+                s.cutT[j] = clock; progress(s.cutT.filter(v => v !== null).length + '/' + LINES.length); teach();
+            });
+        }
+        function uncutNearTip() {                                // the hatch: is any seam still holding within reach of the flame?
+            const x0 = Math.round(s.tip.x), y0 = Math.round(s.tip.y);
+            for (let y = y0 - FREE_R; y <= y0 + FREE_R; y++) for (let x = x0 - FREE_R; x <= x0 + FREE_R; x++) { const k = SEAM_AT[y * W + x]; if (k >= 0 && !s.seamCut[k]) return true; }
+            return false;
         }
         function touch(p) {                                      // the torch will not burn the two figures: a scorch, not a cut
             s.pause = 0.9; s.figTouched = true;
@@ -498,9 +528,10 @@
             cool(dt); talk();
             if (s.part === 'disc') sweepOn(dt);
             if (isOpen()) s.openT += dt;
-            if (s.phase === 'cut') cutting(dt); else s.firing = false;
+            if (s.phase === 'cut') cutting(dt); else { s.firing = false; s.glow = 0; }
+            if (s.thruNow) s.lastThruT = clock;
             s.hot = s.hot * Math.exp(-dt / HOT_FADE) + s.thruNow;
-            snd.frame(dt, { firing: s.firing, heat: heatAt(s.tip), part: s.part, thru: s.thruNow, hot: s.hot, hotX: s.hotX, pan: (s.tip.x / W) * 1.2 - 0.6 });
+            snd.frame(dt, { firing: s.firing, heat: Math.max(heatAt(s.tip), s.glow), part: s.part, thru: s.thruNow, hot: s.hot, hotX: s.hotX, pan: (s.tip.x / W) * 1.2 - 0.6 });   // the hiss brightens as the metal heats
         }
         function cutting(dt) {
             s.burst = Math.max(0, s.burst - dt);
@@ -509,7 +540,7 @@
             s.pause = Math.max(0, s.pause - dt);
             if (s.hotSpot && s.pause <= 0 && heatAt(s.hotSpot) <= COOLED) s.hotSpot = null;
             s.firing = wants && !paused() && s.fuel > 0;
-            if (s.firing) fire(dt, from); else { s.strayT = 0; s.fastT = 0; }
+            if (s.firing) fire(dt, from); else { s.strayT = 0; s.fastT = 0; s.idleT = 0; s.glow = 0; }
             if (s.part === 'hatch') hatchRules(dt); else discRules();
             if (s.fuel <= 0 && s.phase === 'cut') runDry();
         }
@@ -519,12 +550,13 @@
         }
         function fire(dt, from) {
             const to = s.tip, n = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 0.7));
-            s.fuel = Math.max(0, s.fuel - dt / s.P.fuel); s.fired = true;
+            s.fuel = Math.max(0, s.fuel - dt / s.P.fuel);
             for (let k = 1; k <= n; k++) {                       // burn along the whole path, so a quick stroke leaves a shallow line
                 const p = { x: MiniLab.lerp(from.x, to.x, k / n), y: MiniLab.lerp(from.y, to.y, k / n) };
                 if (s.part === 'disc' && nearFigures(p, 2).length) return touch(p);
                 burn(p, dt / n);
             }
+            readMetal(dt, to);
             const h = heatAt(to);
             if (h >= WARN && s.part === 'hatch') react('hot', SAY.hot);
             if (h >= 1) {
@@ -536,11 +568,18 @@
             if (s.part !== 'hatch') return;
             const stray = Math.abs(sdf(to.x, to.y)) > ON_SEAM;
             s.strayT = stray ? s.strayT + dt : 0;
-            if (stray && s.strayT >= 0.15 && s.strayT - dt < 0.15) { s.scars++; react('stray', SAY.stray); }
-            s.fastT = !stray && s.speed > FAST ? s.fastT + dt : Math.max(0, s.fastT - dt);
+            if (stray && s.strayT >= STRAY_AFTER && s.strayT - dt < STRAY_AFTER) { s.scars++; react('stray', SAY.stray); }
+        }
+        function readMetal(dt, to) {                             // what the metal under the flame is doing: its heat, too fast, done here
+            const i = Math.round(to.y) * W + Math.round(to.x), hatch = s.part === 'hatch', cuttable = solid(to.x, to.y) && (!hatch || NEAR_SEAM[i] === 1);
+            const holding = hatch ? uncutNearTip() : s.depth[i] < 1;   // something here still to cut
+            s.glow = cuttable ? Math.min(1, s.depth[i]) : 0;
+            s.fastT = cuttable && holding && s.speed > FAST * s.P.burn ? s.fastT + dt : Math.max(0, s.fastT - dt);
+            s.idleT = hatch && cuttable && !holding && s.glow >= 1 && s.speed < IDLE_SPEED ? s.idleT + dt : 0;
         }
         function hatchRules(dt) {
             const f = s.cut / SEAM.length;
+            if (f >= TAUGHT_AT) teach();
             if (s.fastT > 0.6 && !s.auto) react('fast', SAY.fast);
             if (f >= 0.5) react('half', SAY.half);
             s.stall = s.cut === s.lastCut ? s.stall + dt : 0; s.lastCut = s.cut;
@@ -582,10 +621,12 @@
         }
 
         // ── drawing ──
-        function markColor(i, x, y) {
-            const d = s.depth[i], age = clock - s.lastT[i], tone = (0.3 + 0.35 * d) * (1 - age / 0.8);
-            if (d >= 1) return MiniLab.pick(COOL, Math.exp(-(clock - s.thruT[i]) / KERF_COOL), x, y);   // white-hot, warm, then a dark slot
-            if (age < 0.8 && tone > 0.1) return MiniLab.pick(COOL, tone, x, y);
+        function markColor(i, x, y) {                            // the metal's heat, read at a glance
+            const d = s.depth[i], age = clock - s.lastT[i];
+            if (d >= 1) return MiniLab.pick(KERF, Math.exp(-age / KERF_COOL), x, y);   // cut through: white while the flame is on it, then warm, red, a dark slot
+            if (s.part === 'hatch' && !NEAR_SEAM[i]) return d > 0.12 && MiniLab.on(x, y, 0.2 + 0.5 * d) ? SCORCH : null;   // thick plate: a faint scorch, no glow
+            const glow = d * Math.exp(-age / HEAT_SHOW);
+            if (glow > 0.08) return MiniLab.pick(HEATING, glow, x, y);   // heating: dull, red, orange; it fades if the flame moves on too soon
             if (d <= 0.3) return null;
             return s.part === 'hatch' ? (MiniLab.on(x, y, 0.5) ? SCORCH : C.hull[1]) : CUT_LINE;   // where it never went through: a scorch, the cut's tempered edge
         }
@@ -613,16 +654,20 @@
                 MiniLab.dot(ctx, p.x, p.y, p.ice ? (p.life > 0.7 ? C.star : C.uiBright) : p.life > 0.3 ? C.warmBright : p.life > 0.12 ? C.warm : C.hurt[3]);
             });
         }
-        function reticle(x, y) {                                 // the aim: four short ticks, outlined so they stand out on gold
+        function reticle(x, y) {                                 // the aim, and the pointer: four short ticks, outlined so they stand out on gold and bright plate
             const col = s.phase === 'cut' && paused() ? (Math.floor(clock * 4) % 2 ? C.danger : C.hurt[3]) : C.ui;
             PLUS.forEach(([ox, oy]) => [4, 5, 6].forEach(k => {
                 MiniLab.dot(ctx, x + ox * k + oy, y + oy * k + ox, C.void); MiniLab.dot(ctx, x + ox * k - oy, y + oy * k - ox, C.void); MiniLab.dot(ctx, x + ox * k, y + oy * k, col);
             }));
+            if (!s.firing) { PLUS.forEach(([ox, oy]) => MiniLab.dot(ctx, x + ox, y + oy, C.void)); MiniLab.dot(ctx, x, y, C.uiBright); }   // the exact point the flame will touch
         }
-        function drawTorch() {                                   // nozzle, body and hose; when the job is done it is pulled back
+        function drawFlameLight() {                              // under the burns: the flame lights the metal round it, more as the metal glows
+            if (!s.firing) return;
+            MiniLab.disc(ctx, Math.round(s.tip.x), Math.round(s.tip.y), 15, d => (0.1 + 0.2 * s.glow) * (1 - d) * (1 - d), C.warm);
+        }
+        function drawTorch() {                                   // nozzle, body and hose, held just off the metal; when the job is done it is pulled back
             const away = s.phase === 'cut' || s.phase === 'dry' ? 0 : 300 * Math.min(1, s.openT / 0.6) ** 2;
-            const x = Math.round(s.tip.x + TU.x * away), y = Math.round(s.tip.y + TU.y * away), at = (k, o = 0) => [x + TU.x * k + TN.x * o, y + TU.y * k + TN.y * o];
-            if (s.firing) MiniLab.disc(ctx, x, y, 15, d => 0.3 * (1 - d) * (1 - d), C.warm);   // the flame lights the metal round it
+            const x = Math.round(s.tip.x + TU.x * away), y = Math.round(s.tip.y + TU.y * away), at = (k, o = 0) => [x + TU.x * (k + STANDOFF) + TN.x * o, y + TU.y * (k + STANDOFF) + TN.y * o];
             const [hx, hy] = at(29), mx = hx + 14, my = hy + 24, ex = hx + 30, ey = H + 8;   // the hose sags off the bottom of the picture
             for (let t = 0; t <= 1; t += 0.006) {
                 const u = 1 - t, px = u * u * hx + 2 * u * t * mx + t * t * ex, py = u * u * hy + 2 * u * t * my + t * t * ey;
@@ -636,26 +681,46 @@
             } });
             MiniLab.dot(ctx, ...at(14, 2), s.phase === 'cut' && paused() ? C.danger : s.firing ? C.uiBright : C.uiDim);   // the ready light
             if (away > 0) return;
-            if (!s.firing) return reticle(x, y);
-            MiniLab.disc(ctx, x, y, 6, d => 0.8 * (1 - d), C.warmBright);   // the flame: a white point in a warm glow
-            MiniLab.disc(ctx, x, y, 2.5, d => 0.95 * (1 - d * 0.5), C.star);
-            PLUS.forEach(([ox, oy]) => { if (Math.random() < 0.5) MiniLab.dot(ctx, x + ox * 3, y + oy * 3, C.star); });
+            if (s.firing) for (let k = 1; k <= STANDOFF; k += 0.5) MiniLab.dot(ctx, x + TU.x * k, y + TU.y * k, k < 2 ? C.star : C.uiBright);   // the flame: a thin blue-white jet; the metal shows its own heat
+            reticle(x, y);
         }
-        function bar(x, y, label, v, col) {
+        const growing = () => clock - s.progT < READOUT_FOR;
+        function tipLabel() {                                    // one short readout by the torch, or none: what is wrong, what to do, how far
+            if (!canSteer()) return null;
+            if (paused()) return Math.floor(clock * 3) % 3 ? [['COOLING'], C.danger] : null;
+            if (s.firing && s.strayT >= STRAY_AFTER) return [['OFF THE LINE'], C.text];
+            if (!taught[s.part]) { const hints = HINTS[s.part]; return [hints[Math.min(hints.length - 1, s.cut > 0 ? 1 : 0)], C.uiBright]; }
+            if (s.firing && s.fastT > FAST_AFTER) return [['SLOW DOWN'], C.warmBright];
+            if (s.firing && s.idleT > IDLE_AFTER) return [['MOVE ON'], C.warmBright];
+            if (growing()) return [[s.part === 'hatch' ? seamPercent() + '%' : s.progText], C.uiBright];
+            return null;
+        }
+        function drawTipLabel() {                                // up and to the left of the tip: clear of the torch, and of the seam running through the tip
+            const label = tipLabel();
+            if (!label) return;
+            const [lines, col] = label, sc = LABEL_SCALE, lh = 6 * sc, w = Math.max(...lines.map(l => MiniLab.textWidth(l, sc))), h = lines.length * lh - sc;
+            const x = Math.round(s.tip.x), y = Math.round(s.tip.y);
+            const lx = MiniLab.clamp(x - LABEL_GAP - w < 3 ? x + LABEL_GAP : x - LABEL_GAP - w, 3, W - 3 - w), ly = MiniLab.clamp(y - LABEL_GAP - h < 3 ? y + LABEL_GAP : y - LABEL_GAP - h, 3, H - 3 - h);
+            MiniLab.shade(ctx, lx - 3, ly - 3, w + 6, h + 6, 0.85, C.void);
+            lines.forEach((l, k) => MiniLab.text(ctx, l, lx, ly + k * lh, col, sc));
+        }
+        const seamPercent = () => Math.min(100, Math.floor((100 * s.cut) / (SEAM.length * TEAR)));   // the hatch tears free at TEAR: that is 100%
+        function bar(x, y, label, v, col, note) {
             MiniLab.text(ctx, label, x, y, C.textDim, 2);
             MiniLab.shade(ctx, x + 38, y + 2, 66, 6, 0.3, C.uiDim);
             if (v > 0) MiniLab.shade(ctx, x + 38, y + 2, Math.max(1, Math.round(66 * Math.min(1, v))), 6, 1, col);
+            if (note) MiniLab.text(ctx, note, x + 110, y, col, 2);
         }
-        function hud(x, y, rows) {                               // fuel and heat, then this part's own rows: [label or text, value, colour, scale]
-            const h = heatAt(s.tip);
-            MiniLab.shade(ctx, x - 6, y - 6, 116, 48 + rows.length * 14, 0.82, C.void);
+        function hud(x, y, rows) {                               // fuel and heat, then this part's own rows: [label or text, value, colour, scale, note after a bar]
+            const h = heatAt(s.tip), wide = rows.some(r => r[4]);
+            MiniLab.shade(ctx, x - 6, y - 6, wide ? 148 : 116, 48 + rows.length * 14, 0.82, C.void);
             bar(x, y, 'FUEL', s.fuel, s.fuel < 0.2 ? C.danger : C.ui);
             bar(x, y + 14, 'HEAT', h, h >= WARN ? C.danger : h > 0.5 ? C.warm : C.ui);
-            rows.forEach(([label, v, col, scale], k) => (v === null ? MiniLab.text(ctx, label, x, y + 29 + k * 14, col, scale) : bar(x, y + 28 + k * 14, label, v, col)));
+            rows.forEach(([label, v, col, scale, note], k) => (v === null ? MiniLab.text(ctx, label, x, y + 29 + k * 14, col, scale) : bar(x, y + 28 + k * 14, label, v, col, note)));
             if (s.phase === 'cut' && paused() && Math.floor(clock * 3) % 2) MiniLab.text(ctx, 'COOLING', x, y + 30 + rows.length * 14, C.danger, 2);
         }
-        function drawSeamGuide(f) {                              // the suit marks what is still to cut; near the end it blinks
-            const march = Math.floor(clock * 6), blink = f >= 0.85 && Math.floor(clock * 3) % 2, col = s.fired ? C.uiDim : C.ui;
+        function drawSeamGuide(f) {                              // the suit marks what is still to cut, in its own cool colour; near the end it blinks
+            const march = Math.floor(clock * 6), blink = f >= 0.85 && Math.floor(clock * 3) % 2, col = C.ui;
             SEAM.forEach((i, k) => {
                 const x = i % W, y = (i - x) / W;
                 if (s.seamCut[k]) return;
@@ -687,12 +752,14 @@
                 const x = i % W, y = (i - x) / W, k = 1 - s.openT / 0.4;
                 MiniLab.shade(ctx, x - 1, y - 1, 3, 3, 0.45 * k, C.uiBright); MiniLab.shade(ctx, x, y, 1, 1, k, C.star);
             });
-            drawBurns(opened);
+            drawFlameLight(); drawBurns(opened);
             if (!opened) drawSeamGuide(f);
             if (opened && s.openT < 10) drawLid(s.openT);
             drawSparks(); drawTorch();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
-            hud(12, 198, [['SEAM', f, f >= 1 ? C.uiBright : C.text], ['SCARS ' + s.scars + '   WARPS ' + s.warps.length, null, C.textDim, 1]]);
+            drawTipLabel();
+            const pct = opened ? 100 : seamPercent();             // the readout moves as the seam frees, and flashes while it does
+            hud(12, 198, [['SEAM', pct / 100, pct >= 100 || growing() ? C.uiBright : C.text, null, pct + '%'], ['SCARS ' + s.scars + '   WARPS ' + s.warps.length, null, C.textDim, 1]]);
         }
         function renderDisc() {
             ctx.drawImage(discBg, 0, 0);
@@ -715,9 +782,9 @@
                 const a = (k / 240) * Math.PI * 2;
                 MiniLab.dot(ctx, DX + Math.cos(a) * CUT_FAR, DY + Math.sin(a) * CUT_FAR, C.ui);
             }
-            drawBurns(false); drawSparks(); drawTorch();
+            drawFlameLight(); drawBurns(false); drawSparks(); drawTorch(); drawTipLabel();
             const n = s.cutT.filter(v => v !== null).length;
-            hud(12, 12, [['LINES ' + String(n).padStart(2, '0') + '/14', null, n === 14 ? C.uiBright : C.text, 2], ['CENTRE ' + (s.centre ? 'CUT' : '--'), null, s.centre ? C.uiBright : C.text, 2]]);
+            hud(12, 12, [['LINES ' + String(n).padStart(2, '0') + '/14', null, n === 14 || growing() ? C.uiBright : C.text, 2], ['CENTRE ' + (s.centre ? 'CUT' : '--'), null, s.centre ? C.uiBright : C.text, 2]]);
         }
 
         // ── input ──
@@ -737,11 +804,15 @@
             else if (k === 'Enter' && !onButton) { if (s.phase === 'end') done(); else newTank(); }
         });
 
+        const syncCursor = () => {                               // while you hold the torch, the drawn torch is the pointer; otherwise the normal arrow
+            const want = s && canSteer() ? 'none' : 'default';
+            if (cv.style.cursor !== want) cv.style.cursor = want;
+        };
         const render = setup.mode === 'hatch' ? renderHatch : renderDisc;
-        MiniLab.loop(dt => { clock += dt; update(dt); render(); }, 30);
+        MiniLab.loop(dt => { clock += dt; update(dt); render(); syncCursor(); }, FPS);
         start(setup.mode);
-        render();
-        return () => snd.drop();
+        render(); syncCursor();
+        return () => { cv.style.cursor = ''; snd.drop(); };
     }
 
     MiniHost.register({
