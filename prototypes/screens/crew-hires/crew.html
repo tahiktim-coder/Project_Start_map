@@ -1,0 +1,496 @@
+<!doctype html>
+<!--
+  CREW SPRITES v2 · the review page. A study page; nothing in the game is changed. Spec: docs/CREW_SPRITES.md.
+  Files: engine.js (the shared engine and its API, documented at its top), one file per person, this page.
+  DEBUG (a hidden browser pane can pause requestAnimationFrame):
+    window.crewPage.pause() / play() / step(ms) / setTime(ms)
+    URL: ?t=1500 opens paused at 1.5 s · ?dir=-1 faces left · ?room=dark starts in the dark room
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew Sprites</title>
+<meta name="description" content="Silent Exodus crew sprites v2: every person beside their portrait, every action and frame at 2x, lamp-lit and dark, both directions, a 1x lineup and two decks at cutaway scale.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    color-scheme: dark;
+    --void: #0a0a0b; --deep: #111214; --line: #1d1f23; --line2: #33373e;
+    --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --ui-br: #ffffff;
+    --warm: #f08c2e; --warm-br: #ffc27a; --cyan: #5ff2cf;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --gutter: clamp(16px, 2.2vw, 40px);
+    --fast: 140ms; --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--void); }
+body { color: var(--text); font: 15px/1.55 var(--f-text); -webkit-font-smoothing: antialiased; }
+canvas { display: block; image-rendering: crisp-edges; image-rendering: pixelated; background: #05070a; }
+p { margin: 0; }
+h1, h2, h3 { margin: 0; font-family: var(--f-ui); font-weight: 600; letter-spacing: 0.01em; }
+.page { max-width: 1840px; margin: 0 auto; padding: 0 var(--gutter) 96px; }
+.bar { display: flex; align-items: center; gap: 18px; height: 44px; border-bottom: 1px solid var(--line); font: 500 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.bar .tag { padding: 4px 7px; border: 1px solid var(--warm); color: var(--warm-br); }
+.hero { padding: 36px 0 26px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 16px 48px; align-items: flex-end; }
+.hero h1 { font-size: clamp(32px, 3.4vw, 50px); line-height: 1.02; color: var(--ui-br); }
+.hero .lede { margin-top: 12px; max-width: 60ch; font-size: 17px; color: var(--ui); }
+.spec { display: grid; grid-template-columns: auto auto; gap: 6px 16px; font: 400 13px/1.3 var(--f-num); color: var(--dim); }
+.spec b { color: var(--text); font-weight: 500; }
+.controls { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 0; background: var(--void); border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line2); }
+.seg button { padding: 8px 14px; border: 0; border-right: 1px solid var(--line2); background: none; cursor: pointer; font: 500 13px/1 var(--f-ui); letter-spacing: 0.04em; color: var(--dim); transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
+.seg button:last-child { border-right: 0; }
+.seg button:hover { color: var(--text); background: var(--deep); }
+.seg button:active { background: var(--line2); }
+.seg button[aria-pressed="true"] { color: var(--void); background: var(--ui); }
+.seg button:focus-visible { outline: 1px solid var(--ui-br); outline-offset: 2px; }
+.label { font: 600 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.clock { margin-left: auto; font: 400 12px/1 var(--f-num); color: var(--faint); }
+.sec { padding-top: 44px; }
+.sec-head { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px 16px; align-items: baseline; margin-bottom: 22px; }
+.sec-head .num { font: 500 13px/1 var(--f-num); color: var(--faint); }
+.sec-head h2 { font-size: 28px; color: var(--ui-br); }
+.sec-head p { grid-column: 2; max-width: 80ch; color: var(--dim); }
+.scroll { overflow-x: auto; padding-bottom: 6px; }
+figure { margin: 0; }
+figcaption { margin-top: 8px; font-size: 13px; color: var(--dim); }
+figcaption b { color: var(--text); font: 600 13px/1 var(--f-ui); letter-spacing: 0.05em; margin-right: 6px; }
+.who { padding: 30px 0 38px; border-top: 1px solid var(--line); }
+.who-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 18px; }
+.who-head h3 { font-size: 30px; color: var(--ui-br); }
+.who-head .role { font: 400 13px/1 var(--f-num); color: var(--faint); }
+.who-head .ph { padding: 3px 7px; border: 1px solid var(--line2); font: 600 11px/1 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--warm-br); }
+.who-head .sig { flex-basis: 100%; color: var(--ui); max-width: 80ch; }
+.row { display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-end; }
+.row + .row { margin-top: 26px; }
+.pair { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; padding-right: 22px; border-right: 1px solid var(--line); }
+.pair img, .faces img { display: block; border: 1px solid var(--line2); }
+.faces { display: grid; grid-template-columns: repeat(5, 150px); gap: 0 24px; }
+.faces figcaption { text-align: center; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px 40px; max-width: 1500px; }
+.notes h3 { font-size: 17px; color: var(--ui-br); margin-bottom: 8px; }
+.notes li { color: var(--ui); font-size: 14.5px; margin: 4px 0; }
+.notes ul { margin: 0; padding-left: 18px; }
+.notes li::marker { color: var(--faint); }
+.notes code { font: 400 13px/1 var(--f-num); color: var(--warm-br); }
+@media (max-width: 900px) { .sec-head { grid-template-columns: 1fr; } .sec-head p { grid-column: 1; } .pair { border-right: 0; } .faces { grid-template-columns: repeat(auto-fill, 150px); gap: 16px 24px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="bar"><span class="tag">Crew v2</span><span>Silent Exodus · crew sprites · 8 Oct</span></div>
+    <header class="hero">
+        <div>
+            <h1>The crew, at cutaway size</h1>
+            <p class="lede">A hand-drawn head on a lit body. Every person, every action, beside the portrait.</p>
+        </div>
+        <div class="spec">
+            <span>Cell</span><b>48 × 104 px, shown at 2×</b>
+            <span>Person</span><b>180 to 200 px tall on 1920 × 1080</b>
+            <span>Actions</span><b>9 actions · 40 frames each person</b>
+        </div>
+    </header>
+
+    <div class="controls" role="group" aria-label="View controls">
+        <span class="label">Motion</span>
+        <div class="seg"><button type="button" id="play" aria-pressed="true">Playing</button><button type="button" id="step">Step</button></div>
+        <span class="label">Facing</span>
+        <div class="seg" id="facing"><button type="button" data-v="1" aria-pressed="true">Right</button><button type="button" data-v="-1" aria-pressed="false">Left</button></div>
+        <span class="label">Room</span>
+        <div class="seg" id="room"><button type="button" data-v="lamp" aria-pressed="true">Lamp</button><button type="button" data-v="dark" aria-pressed="false">Dark</button></div>
+        <span class="clock" id="clock">0.00 s</span>
+    </div>
+
+    <section class="sec" aria-labelledby="ship-h">
+        <div class="sec-head"><span class="num">01</span><h2 id="ship-h">Two decks at 2×</h2>
+            <p>As they sit on a 1920 × 1080 screen. Upper deck: carrying a crate, at the console. Climbing between decks. Lower deck: sitting under the lamp, alone at the wall.</p></div>
+        <div class="scroll" id="ship"></div>
+    </section>
+
+    <section class="sec" aria-labelledby="crew-h">
+        <div class="sec-head"><span class="num">02</span><h2 id="crew-h">Each of them, beside the portrait</h2>
+            <p>The portrait, the sprite's own head at 6× (front, down, back, lying), standing at 2× under a lamp and in the dark, and at 1×. Then all nine actions moving, and every frame.</p></div>
+        <div id="crew"></div>
+    </section>
+
+    <section class="sec" aria-labelledby="line-h">
+        <div class="sec-head"><span class="num">03</span><h2 id="line-h">All five</h2>
+            <p>Match each sprite to its portrait at a glance. Then the same line at 1×.</p></div>
+        <div class="faces" id="faces"></div>
+        <div class="row" id="lineup" style="margin-top:14px"></div>
+    </section>
+
+    <section class="sec" aria-labelledby="notes-h">
+        <div class="sec-head"><span class="num">04</span><h2 id="notes-h">For the artists</h2></div>
+        <div class="notes">
+            <div><h3>Your file</h3><ul>
+                <li>Edit only your own <code>&lt;name&gt;.js</code>. It calls <code>CrewEngine.register({…})</code> once.</li>
+                <li>Never change frames, timing or positions. If something looks wrong for everyone, tell the engine owner.</li>
+                <li>Pixel slips on one frame go in <code>fixes</code>: a handful of pixels at most.</li>
+            </ul></div>
+            <div><h3>Colour</h3><ul>
+                <li>Sample the portrait. 5 to 8 colours a ramp, each starting at <code>#05070a</code>.</li>
+                <li>Skin a little warmer than the portrait. Dark cloth lifted (no mid tone under <code>#262f38</code>). Light cloth a step below white.</li>
+                <li>Saturated colour only on the signature detail.</li>
+            </ul></div>
+            <div><h3>Heads</h3><ul>
+                <li>Draw <code>front</code>, <code>down</code> and <code>back</code> by hand, one letter a pixel. <code>lying</code> is optional.</li>
+                <li>13 to 15 rows crown to chin. Never wider than the shoulders.</li>
+                <li>Check it here at 2× and 1×, lamp and dark, both ways.</li>
+            </ul></div>
+        </div>
+    </section>
+</div>
+
+<script src="engine.js"></script>
+<script src="cora.js"></script>
+<script src="jaxon.js"></script>
+<script src="aris.js"></script>
+<script src="vance.js"></script>
+<script src="mira.js"></script>
+<script>
+'use strict';
+(() => {
+    const CE = window.CrewEngine, A = CE.ACTIONS, INK = CE.INK;
+    const ORDER = ['cora', 'jaxon', 'aris', 'vance', 'mira'];
+    const PEOPLE = CE.people().filter(p => ORDER.includes(p.id)).sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+    const SEED = id => ORDER.indexOf(id) + 1;
+
+    // ───────────── pixel helpers (the house style: ramps from the ink, 8 × 8 Bayer) ─────────────
+    const B8 = [[0,32,8,40,2,34,10,42],[48,16,56,24,50,18,58,26],[12,44,4,36,14,46,6,38],[60,28,52,20,62,30,54,22],
+                [3,35,11,43,1,33,9,41],[51,19,59,27,49,17,57,25],[15,47,7,39,13,45,5,37],[63,31,55,23,61,29,53,21]];
+    const bay = (x, y) => (B8[y & 7][x & 7] + 0.5) / 64;
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    function hash2(x, y, s) { let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 362437)) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; }
+    function vnoise(x, y, s) { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf); const a = hash2(xi, yi, s), b = hash2(xi + 1, yi, s), c = hash2(xi, yi + 1, s), d = hash2(xi + 1, yi + 1, s); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+    function fbm(x, y, s) { let t = 0, a = 0.5, f = 1, n = 0; for (let i = 0; i < 3; i++) { t += vnoise(x * f, y * f, s + i * 17) * a; n += a; a *= 0.5; f *= 2; } return t / n; }
+    const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const ramp = (R, v, x, y) => R[clamp(Math.floor(v * (R.length - 1) + bay(x, y)), 0, R.length - 1)];
+    const WALL = [INK, '#090d12', '#0e141b', '#141c25', '#1c2731', '#283541', '#3a4a58', '#56687a'];
+    const WARM = [INK, '#0f0b09', '#1d150f', '#2e2014', '#4a3018', '#7a4a1e', '#b4732c', '#e8a650'];
+    const FLOOR = [INK, '#0b0f14', '#151c24', '#222c36', '#34414c'];
+    const METAL = [INK, '#10161c', '#1b242c', '#29343e', '#3a4752', '#55636e'];
+    const BED = [INK, '#121821', '#1d2632', '#2b3746', '#3d4b5c', '#566577'];
+    const WOOL = [INK, '#1a1416', '#2a2024', '#3e2f30', '#56423c', '#735a4b'];
+    const SCR = [INK, '#0b2a30', '#11505a', '#1e8c96', '#58d6dc', '#b8f6f4'];
+
+    // ───────────── rooms: painted once per layout into a pixel buffer, cached ─────────────
+    const roomCache = new Map();
+    function room(w, h, floorY, o) {
+        const key = JSON.stringify([w, h, floorY, o]);
+        if (roomCache.has(key)) return roomCache.get(key);
+        const lamps = o.lamps || [], seed = o.seed || 3, dark = !!o.dark;
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const cx = cv.getContext('2d'), img = cx.createImageData(w, h);
+        const put = (x, y, hex) => { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= w || y >= h) return; const c = rgb(hex); img.data.set([c[0], c[1], c[2], 255], (y * w + x) * 4); };
+        const get = (x, y) => { const k = (y * w + x) * 4; return img.data[k] + img.data[k + 1] + img.data[k + 2]; };
+        const LY = 15, base = dark ? 0.62 : 1;
+        const ribs = w > 150 ? Array.from({ length: Math.floor(w / 150) }, (_, i) => 70 + i * 150 + Math.round(hash2(i, seed, 2) * 30)) : [];
+        const glowAt = (x, y) => { let g = 0; for (const lx of lamps) { const d = Math.hypot((x - lx) / 1.35, (y - LY) * 0.9); g += Math.exp(-d / 38) * (y < LY ? 0.6 : 1); } return Math.min(1, g); };
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+            const glow = glowAt(x, y);
+            let hex;
+            if (y >= floorY) {
+                const fy = y - floorY, g = (fy === 0 ? 0.6 : fy === 1 ? 0.34 : 0.14 + ((x + fy * 2) % 6 === 0 ? -0.07 : 0) + fbm(x * 0.2, y * 0.3, seed + 5) * 0.12) * base;
+                hex = ramp(FLOOR, g + glow * 0.2, x, y);
+                if (glow * 1.4 > bay(x, y) + 0.05 && fy <= 2) hex = ramp(WARM, g + glow * 0.42, x, y);
+            } else if (y < 8) {
+                const pipe = (y === 2 || y === 6 ? 0.45 : y === 3 || y === 7 ? 0.2 : y === 0 ? 0.3 : 0.08) * base;
+                hex = ramp(WALL, pipe + glow * 0.3, x, y);
+                if (glow * 0.9 > bay(x, y) + 0.25 && (y === 2 || y === 6)) hex = ramp(WARM, 0.3 + glow * 0.5, x, y);
+            } else {
+                const px = (x + (Math.floor((y - 8) / 26) % 2) * 17) % 34, py = (y - 8) % 26;
+                let v = 0.2 + (fbm(x * 0.07, y * 0.09, seed) - 0.5) * 0.12;
+                if (px === 0 || py === 0) v -= 0.11; if (px === 1 || py === 1) v += 0.06;
+                if ((px === 3 || px === 30) && (py === 3 || py === 22)) v += 0.18;
+                v -= Math.max(0, (y - (floorY - 14)) / 14) * 0.08;
+                for (const r of ribs) { const d = x - r; if (d >= 0 && d < 7) v = d === 0 ? 0.5 : d === 1 ? 0.36 : d === 6 ? 0.08 : 0.26 + (y % 18 === 0 ? -0.1 : 0); }
+                const lv = v * base + glow * 0.5;
+                hex = (Math.pow(glow, 0.8) * 1.05 > bay(x, y)) ? ramp(WARM, lv + 0.04, x, y) : ramp(WALL, lv, x, y);
+            }
+            put(x, y, hex);
+        }
+        for (const lx of lamps) {                                             // a caged lamp under the pipes
+            for (let y = 8; y < LY - 2; y++) put(lx, y, '#2a2420');
+            for (let dx = -3; dx <= 3; dx++) { put(lx + dx, LY - 2, '#3a2c20'); put(lx + dx, LY - 1, Math.abs(dx) === 3 ? '#7a4a1e' : '#ffd28a'); }
+            for (let dx = -2; dx <= 2; dx++) put(lx + dx, LY, dx === 0 ? '#fff4d6' : '#f0b060');
+            for (let dx = -1; dx <= 1; dx++) put(lx + dx, LY + 1, '#c4803a');
+        }
+        for (const c of o.consoles || []) {                                   // a desk at the console height, the screen tilted to the user
+            const top = floorY - A.console.desk;
+            for (let x = c - 4; x < c + 26; x++) for (let y = Math.max(0, top - 30); y < floorY - 4; y++) {
+                const g = Math.exp(-Math.hypot((x - c - 12) * 0.8, (y - top + 10) * 0.9) / 9) * 0.55;
+                if (x >= 0 && x < w && g > bay(x, y) + 0.06 && get(x, y) < 150) put(x, y, g > 0.35 ? '#123a40' : '#0c252b');
+            }
+            for (let y = top; y < floorY; y++) for (let x = c; x < c + 22; x++) {
+                if (y > top + 2 && (x < c + 4 || x > c + 18)) continue;
+                put(x, y, ramp(WALL, y === top ? 0.8 : y <= top + 2 ? 0.5 : x === c + 4 ? 0.42 : 0.2 + fbm(x * 0.3, y * 0.2, 9) * 0.12 - (y - top) / 160, x, y));
+            }
+            for (let j = 0; j < 18; j++) for (let i = 0; i < 4; i++) { const x = c + 15 + i - Math.floor(j / 6), y = top - 18 + j; put(x, y, i === 0 ? ramp(SCR, 0.75 - j / 60, x, y) : i === 1 ? ramp(SCR, 0.45, x, y) : ramp(WALL, 0.3 - i * 0.06, x, y)); }
+            for (let x = c + 2; x < c + 13; x += 3) put(x, top - 1, x % 2 ? '#2fb6c0' : '#c4803a');
+        }
+        for (const L of o.ladders || []) {                                    // rails just outside the hands, a rung every 8 rows
+            const y0 = L.top || 0, y1 = L.bottom || floorY;
+            for (let y = y0; y < y1; y++) for (const rx of [L.x - 13, L.x + 12]) { put(rx, y, ramp(METAL, 0.55, rx, y)); put(rx + 1, y, ramp(METAL, 0.32, rx + 1, y)); }
+            for (let y = floorY - A.climb.firstRung; y >= y0; y -= A.climb.rung) for (let x = L.x - 11; x < L.x + 12; x++) { put(x, y, ramp(METAL, 0.5, x, y)); put(x, y + 1, ramp(METAL, 0.18, x, y + 1)); }
+        }
+        for (const c of o.chairs || []) {                                     // a seat 22 rows high, the backrest behind
+            const seat = floorY - A.sit.seat;
+            for (let x = c - 8; x <= c + 9; x++) { put(x, seat, ramp(METAL, 0.62, x, seat)); put(x, seat + 1, ramp(METAL, 0.4, x, seat + 1)); put(x, seat + 2, ramp(METAL, 0.2, x, seat + 2)); }
+            for (let y = seat - 26; y < seat; y++) for (let x = c - 10; x <= c - 8; x++) put(x, y, ramp(METAL, x === c - 8 ? 0.5 : 0.28, x, y));
+            for (let y = seat + 3; y < floorY; y++) { put(c - 7, y, ramp(METAL, 0.3, c - 7, y)); put(c + 8, y, ramp(METAL, 0.42, c + 8, y)); }
+        }
+        for (const b of o.bunks || []) {                                      // frame, mattress, pillow; the blanket comes later
+            for (let x = b.x0; x <= b.x1; x++) {
+                for (let y = b.y; y < b.y + 3; y++) put(x, y, ramp(BED, y === b.y ? 0.62 : 0.4 - (y - b.y) * 0.08, x, y));
+                for (let y = b.y + 3; y < b.y + 6; y++) put(x, y, ramp(METAL, y === b.y + 3 ? 0.45 : 0.22, x, y));
+            }
+            for (const lx of [b.x0 + 2, b.x1 - 2]) for (let y = b.y + 6; y < floorY; y++) put(lx, y, ramp(METAL, 0.3, lx, y));
+            for (let x = b.x0 + 2; x < b.x0 + 18; x++) for (let y = b.y - 4; y < b.y; y++) if (!((x === b.x0 + 2 || x === b.x0 + 17) && y === b.y - 4)) put(x, y, ramp(BED, 0.7 - (y - b.y + 4) * 0.08, x, y));
+        }
+        for (const bh of o.bulkheads || []) {                                 // a bulkhead face: a lit edge, a dark seam, rivets
+            const x1 = bh.side > 0 ? w : 0;
+            for (let x = Math.min(bh.x, x1); x < Math.max(bh.x, x1); x++) for (let y = 8; y < floorY; y++) {
+                const d = Math.abs(x - bh.x);
+                let v = d === 0 ? 0.62 : d === 1 ? 0.42 : 0.24 + fbm(x * 0.2, y * 0.08, 21) * 0.1 - (d === 6 ? 0.12 : 0);
+                if (d === 3 && y % 12 === 4) v = 0.55;
+                put(x, y, ramp(METAL, v * base + glowAt(x, y) * 0.25, x, y));
+            }
+        }
+        cx.putImageData(img, 0, 0);
+        roomCache.set(key, cv);
+        return cv;
+    }
+    const screenFlicker = (ctx, c, floorY, t) => {
+        const top = floorY - A.console.desk, f = Math.floor(t / 125);
+        for (let i = 0; i < 2; i++) { const j = (f * 5 + i * 7) % 18; ctx.fillStyle = i ? '#58d6dc' : '#b8f6f4'; ctx.fillRect(c + 15 - Math.floor(j / 6), top - 18 + j, 1, 1 + (f + i) % 2); }
+    };
+
+    // the room's light on a person: warmth by distance to the nearest lamp, a warm edge on the lamp's side
+    function lampLight(x, lamps) {
+        if (!lamps.length) return { warm: 0, rim: 0 };
+        const near = lamps.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a));
+        const d = near - x;
+        return { warm: Math.round(3 * Math.exp(-Math.abs(d) / 50)), rim: Math.abs(d) > 6 && Math.abs(d) < 110 ? Math.sign(d) : 0 };
+    }
+    function person(ctx, id, action, t, x, floorY, lamps, facing = 1) {
+        return CE.draw(ctx, id, action, t, x, floorY, Object.assign({ facing, seed: SEED(id) }, lampLight(x, lamps)));
+    }
+
+    // the blanket over a sleeper: it follows the top of the body, so it rises when they breathe
+    const silhouettes = new WeakMap();
+    function topRows(S) {
+        if (silhouettes.has(S.canvas)) return silhouettes.get(S.canvas);
+        const d = S.canvas.getContext('2d').getImageData(0, 0, S.w, S.h).data, tops = new Int16Array(S.w).fill(-1);
+        for (let x = 0; x < S.w; x++) for (let y = 0; y < S.h; y++) if (d[(y * S.w + x) * 4 + 3]) { tops[x] = y; break; }
+        silhouettes.set(S.canvas, tops); return tops;
+    }
+    function blanket(ctx, S, x, floorY) {
+        const tops = topRows(S), x0 = S.origin.x - 16, x1 = S.w - 1;
+        for (let c = x0; c <= x1; c++) {
+            const top = tops[Math.min(S.w - 1, c)], X = x - S.origin.x + c;
+            const y0 = floorY - S.origin.y + (top < 0 ? S.origin.y - 3 : Math.max(0, top - 1));
+            for (let y = y0; y < floorY; y++) {
+                const v = (y === y0 ? 0.72 : 0.42 - (y - y0) * 0.03) + (c === x0 ? -0.15 : 0) + ((c + y) % 5 === 0 ? -0.06 : 0);
+                ctx.fillStyle = ramp(WOOL, v, X, y); ctx.fillRect(X, y, 1, 1);
+            }
+        }
+    }
+
+    // ───────────── views: crisp, whole device pixels per art pixel ─────────────
+    const views = [];
+    const state = { t: 0, playing: true, last: null, facing: 1, room: 'lamp' };
+    function makeView(host, w, h, scale, draw, caption, live = true) {
+        const fig = document.createElement('figure'), cv = document.createElement('canvas');
+        const dpr = window.devicePixelRatio || 1, k = Math.max(1, Math.round(scale * dpr));
+        cv.width = w * k; cv.height = h * k; cv.style.width = (w * k / dpr) + 'px'; cv.style.height = (h * k / dpr) + 'px';
+        fig.appendChild(cv);
+        if (caption) { const fc = document.createElement('figcaption'); fc.innerHTML = caption; fig.appendChild(fc); }
+        host.appendChild(fig);
+        const v = { cv, ctx: cv.getContext('2d'), k, w, h, draw, live, dirty: true };
+        views.push(v);
+        return v;
+    }
+    function paint(v) {
+        const c = v.ctx; c.setTransform(v.k, 0, 0, v.k, 0, 0); c.imageSmoothingEnabled = false;
+        c.fillStyle = INK; c.fillRect(0, 0, v.w, v.h);
+        try { v.draw(c, state.t); } catch (e) { console.error('crew view failed', e); }
+        v.dirty = false;
+    }
+    // a tile is laid out facing right; facing left mirrors the whole tile (room and people together)
+    function tile(host, w, h, scale, fn, caption) {
+        return makeView(host, w, h, scale, (ctx, t) => {
+            if (state.facing < 0) { ctx.translate(w, 0); ctx.scale(-1, 1); }
+            fn(ctx, t, state.room === 'lamp');
+        }, caption);
+    }
+
+    // ───────────── the nine actions, each in its own small room ─────────────
+    const TH = 120, FY = 114, walkX = (t, act, w) => ((Math.floor(t / A[act].ms) * A[act].move) % (w + 48)) - 24;
+    const ACTION_TILES = [
+        ['idle', 64, TH, (ctx, id, t, lit) => { const L = lit ? [46] : []; ctx.drawImage(room(64, TH, FY, { lamps: L, dark: !lit, seed: 2 }), 0, 0); person(ctx, id, 'idle', t, 26, FY, L); }, 'Standing'],
+        ['walk', 150, TH, (ctx, id, t, lit) => { const L = lit ? [75] : []; ctx.drawImage(room(150, TH, FY, { lamps: L, dark: !lit, seed: 4 }), 0, 0); person(ctx, id, 'walk', t, walkX(t, 'walk', 150), FY, L); }, 'Walking'],
+        ['console', 84, TH, (ctx, id, t, lit) => { const L = lit ? [20] : []; ctx.drawImage(room(84, TH, FY, { lamps: L, dark: !lit, consoles: [50], seed: 6 }), 0, 0); screenFlicker(ctx, 50, FY, t); person(ctx, id, 'console', t, 50 + 2 - A.console.reach, FY, L); }, 'At a console'],
+        ['climb', 72, 150, (ctx, id, t, lit) => {
+            const L = lit ? [60] : [], fy = 146, n = Math.floor(t / A.climb.ms) % 12;
+            ctx.drawImage(room(72, 150, fy, { lamps: L, dark: !lit, ladders: [{ x: 36 }], seed: 7 }), 0, 0);
+            person(ctx, id, 'climb', t, 36, fy - A.climb.rise * n, L);
+        }, 'Climbing'],
+        ['sit', 72, TH, (ctx, id, t, lit) => { const L = lit ? [50] : [], x = 34; ctx.drawImage(room(72, TH, FY, { lamps: L, dark: !lit, chairs: [x + A.sit.hipX], seed: 8 }), 0, 0); person(ctx, id, 'sit', t, x, FY, L); }, 'Sitting'],
+        ['sleep', 130, TH, (ctx, id, t, lit) => {
+            const L = lit ? [40] : [], bed = 92, x = 66;
+            ctx.drawImage(room(130, TH, FY, { lamps: L, dark: !lit, bunks: [{ x0: 8, x1: 122, y: bed }], seed: 9 }), 0, 0);
+            blanket(ctx, person(ctx, id, 'sleep', t, x, bed, L), x, bed);
+        }, 'Asleep'],
+        ['tend', 124, TH, (ctx, id, t, lit) => {
+            const L = lit ? [70] : [], x = 60, other = PEOPLE[(PEOPLE.findIndex(p => p.id === id) + 1) % PEOPLE.length].id;
+            ctx.drawImage(room(124, TH, FY, { lamps: L, dark: !lit, seed: 10 }), 0, 0);
+            const hands = CE.sprite(id, 'tend', 0).hands, handX = x - CE.SIZE.hipX + hands[1].x;
+            person(ctx, other, 'sleep', t, handX - 18, FY, L, -1);
+            person(ctx, id, 'tend', t, x, FY, L);
+        }, 'Tending someone'],
+        ['carry', 150, TH, (ctx, id, t, lit) => { const L = lit ? [75] : []; ctx.drawImage(room(150, TH, FY, { lamps: L, dark: !lit, seed: 11 }), 0, 0); person(ctx, id, 'carry', t, walkX(t, 'carry', 150), FY, L); }, 'Carrying'],
+        ['wall', 72, TH, (ctx, id, t, lit) => { const L = lit ? [12] : [], x = 22; ctx.drawImage(room(72, TH, FY, { lamps: L, dark: !lit, bulkheads: [{ x: x + A.wall.reach, side: 1 }], seed: 12 }), 0, 0); person(ctx, id, 'wall', t, x, FY, L); }, 'At the wall'],
+    ];
+
+    function headStill(host, id, action, view, label) {
+        const S = CE.sprite(id, action, 0, { screen: false }), lying = view === 'lying';
+        const W = 30, H = 30, sx = lying ? S.neck.x - 25 : S.neck.x - 15, sy = lying ? S.neck.y - 15 : S.neck.y - 24;
+        makeView(host, W, H, 6, ctx => { ctx.fillStyle = '#0e141b'; ctx.fillRect(0, 0, W, H); ctx.drawImage(S.canvas, sx, sy, W, H, 0, 0, W, H); }, `<b>${label}</b>6×`, false);
+    }
+
+    function buildCrew() {
+        const host = document.getElementById('crew');
+        PEOPLE.forEach((P, ci) => {
+            const sec = document.createElement('article'); sec.className = 'who'; sec.setAttribute('aria-label', P.name);
+            const head = document.createElement('div'); head.className = 'who-head';
+            const h3 = document.createElement('h3'); h3.textContent = P.name; head.appendChild(h3);
+            const role = document.createElement('span'); role.className = 'role'; role.textContent = P.role || ''; head.appendChild(role);
+            if (P.placeholder) { const ph = document.createElement('span'); ph.className = 'ph'; ph.textContent = 'Placeholder'; head.appendChild(ph); }
+            const sig = document.createElement('p'); sig.className = 'sig'; sig.textContent = P.signature || ''; head.appendChild(sig);
+            sec.appendChild(head);
+            // portrait, head stills, standing lit / dark / 1×
+            const row1 = document.createElement('div'); row1.className = 'row';
+            const pair = document.createElement('div'); pair.className = 'pair';
+            const fig = document.createElement('figure'), img = document.createElement('img');
+            img.src = P.portrait; img.alt = `${P.name}'s portrait`; img.width = 180; img.height = 180;
+            fig.appendChild(img); const fc = document.createElement('figcaption'); fc.innerHTML = '<b>Portrait</b>'; fc.append(P.portrait.split('/').pop()); fig.appendChild(fc);
+            pair.appendChild(fig);
+            headStill(pair, P.id, 'idle', 'front', 'Front'); headStill(pair, P.id, 'console', 'down', 'Down');
+            headStill(pair, P.id, 'climb', 'back', 'Back'); headStill(pair, P.id, 'sleep', 'lying', 'Lying');
+            row1.appendChild(pair);
+            makeView(row1, 64, TH, 2, (ctx, t) => { ctx.drawImage(room(64, TH, FY, { lamps: [44], seed: 20 + ci }), 0, 0); person(ctx, P.id, 'idle', t, 26, FY, [44], state.facing); }, '<b>Lamp</b>2×');
+            makeView(row1, 64, TH, 2, (ctx, t) => { ctx.drawImage(room(64, TH, FY, { dark: true, seed: 30 + ci }), 0, 0); person(ctx, P.id, 'idle', t, 32, FY, [], state.facing); }, '<b>Dark</b>2×');
+            makeView(row1, 64, TH, 1, (ctx, t) => { ctx.drawImage(room(64, TH, FY, { lamps: [44], seed: 20 + ci }), 0, 0); person(ctx, P.id, 'idle', t, 26, FY, [44], state.facing); }, '<b>1×</b>');
+            sec.appendChild(row1);
+            // every action, moving
+            const row2 = document.createElement('div'); row2.className = 'row';
+            ACTION_TILES.forEach(([act, w, h, fn, cap]) => tile(row2, w, h, 2, (ctx, t, lit) => fn(ctx, P.id, t, lit), `<b>${cap}</b>${A[act].frames} frames`));
+            sec.appendChild(row2);
+            // every frame, still
+            const row3 = document.createElement('div'); row3.className = 'row';
+            Object.keys(A).forEach(act => {
+                const lying = act === 'sleep', cw = lying ? A.sleep.w + 4 : CE.SIZE.w + 4, ch = lying ? A.sleep.h + 6 : CE.SIZE.h + 6, n = A[act].frames;
+                makeView(row3, cw * n, ch, 2, ctx => {
+                    for (let f = 0; f < n; f++) {
+                        ctx.fillStyle = f % 2 ? '#0e141b' : '#111922'; ctx.fillRect(f * cw, 0, cw, ch);
+                        ctx.fillStyle = '#1c2731'; ctx.fillRect(f * cw, ch - 3, cw, 1);
+                        const S = CE.sprite(P.id, act, f, { rim: state.room === 'lamp' ? 1 : 0, warm: state.room === 'lamp' ? 2 : 0 });
+                        if (state.facing > 0) ctx.drawImage(S.canvas, f * cw + 2, ch - 3 - S.origin.y);
+                        else { ctx.save(); ctx.translate(f * cw + 2 + S.w, 0); ctx.scale(-1, 1); ctx.drawImage(S.canvas, 0, ch - 3 - S.origin.y); ctx.restore(); }
+                    }
+                }, `<b>${act}</b>${n} frames`, false);
+            });
+            sec.appendChild(row3);
+            host.appendChild(sec);
+        });
+    }
+
+    // ───────────── the ship: two decks at 2× ─────────────
+    const SHIP_W = 900, DECK = 128, GAP = 8, SHIP_H = DECK * 2 + GAP, UP_F = DECK - 8, LO_F = DECK + GAP + DECK - 8, LADDER = 470;
+    const has = id => PEOPLE.some(p => p.id === id);
+    function drawShip(ctx, t) {
+        const up = [170, 640], lo = [300], lit = state.room === 'lamp';
+        const U = lit ? up : [], L = lit ? lo : [];
+        ctx.drawImage(room(SHIP_W, DECK, UP_F, { lamps: U, dark: !lit, consoles: [770], ladders: [{ x: LADDER, top: 8, bottom: DECK }], seed: 3 }), 0, 0);
+        ctx.fillStyle = INK; ctx.fillRect(0, DECK, SHIP_W, GAP); ctx.fillStyle = '#1c2731'; ctx.fillRect(0, DECK + 1, SHIP_W, 1);
+        ctx.drawImage(room(SHIP_W, DECK, UP_F, { lamps: L, dark: !lit, chairs: [300 + A.sit.hipX], bulkheads: [{ x: 60, side: -1 }], ladders: [{ x: LADDER, top: 0 }], seed: 8 }), 0, DECK + GAP);
+        ctx.fillStyle = INK; ctx.fillRect(LADDER - 11, UP_F, 23, DECK - UP_F + GAP);                 // the hatch, rungs running through it
+        for (let y = UP_F - A.climb.firstRung + A.climb.rung; y < DECK + GAP; y += A.climb.rung) { ctx.fillStyle = '#3a4752'; ctx.fillRect(LADDER - 11, y, 23, 1); ctx.fillStyle = '#1b242c'; ctx.fillRect(LADDER - 11, y + 1, 23, 1); }
+        screenFlicker(ctx, 770, UP_F, t);
+        if (has('cora')) person(ctx, 'cora', 'console', t, 770 + 2 - A.console.reach, UP_F, U);
+        if (has('aris')) {
+            const span = 300, step = Math.floor(t / A.carry.ms) * A.carry.move, pos = step % (2 * span), dir = pos < span ? 1 : -1;
+            person(ctx, 'aris', 'carry', t, 250 + (pos < span ? pos : 2 * span - pos), UP_F, U, dir);
+        }
+        if (has('mira')) { const n = Math.floor(t / A.climb.ms) % 36; person(ctx, 'mira', 'climb', t, LADDER, LO_F - A.climb.rise * n, L.concat(U)); }
+        if (has('vance')) person(ctx, 'vance', 'sit', t, 300, LO_F, L);
+        if (has('jaxon')) person(ctx, 'jaxon', 'wall', t, 60 + A.wall.reach, LO_F, L, -1);
+    }
+
+    function buildLineup() {
+        const faces = document.getElementById('faces');
+        PEOPLE.forEach(P => {
+            const fig = document.createElement('figure'), img = document.createElement('img');
+            img.src = P.portrait; img.alt = `${P.name}'s portrait`; img.width = 150; img.height = 150;
+            const fc = document.createElement('figcaption'); fc.textContent = P.name;
+            fig.appendChild(img); fig.appendChild(fc); faces.appendChild(fig);
+        });
+        const host = document.getElementById('lineup'), LW = 87 * PEOPLE.length, lamps = [LW * 0.3, LW * 0.75].map(Math.round);
+        const line = (ctx, t) => {
+            ctx.drawImage(room(LW, TH, FY, { lamps: state.room === 'lamp' ? lamps : [], dark: state.room !== 'lamp', seed: 40 }), 0, 0);
+            PEOPLE.forEach((P, i) => person(ctx, P.id, 'idle', t, 43 + i * 87, FY, state.room === 'lamp' ? lamps : [], state.facing));
+        };
+        makeView(host, LW, TH, 2, line, '<b>2×</b>the cutaway scale');
+        makeView(host, LW, TH, 1, line, '<b>1×</b>native pixels');
+    }
+
+    // ───────────── playback ─────────────
+    function render(all) {
+        views.forEach(v => { if (all || v.live || v.dirty) paint(v); });
+        document.getElementById('clock').textContent = (state.t / 1000).toFixed(2) + ' s';
+    }
+    function tick(now) {
+        if (state.playing) { if (state.last != null) state.t += Math.min(100, now - state.last); state.last = now; render(false); }
+        requestAnimationFrame(tick);
+    }
+    function setPlaying(on) {
+        state.playing = on; state.last = null;
+        const b = document.getElementById('play'); b.setAttribute('aria-pressed', String(on)); b.textContent = on ? 'Playing' : 'Paused';
+    }
+    function seg(id, key, parse) {
+        const btns = document.querySelectorAll(`#${id} button`);
+        const sync = () => btns.forEach(b => b.setAttribute('aria-pressed', String(parse(b.dataset.v) === state[key])));
+        btns.forEach(b => b.addEventListener('click', () => { state[key] = parse(b.dataset.v); sync(); render(true); }));
+        sync();
+    }
+    function init() {
+        const q = new URLSearchParams(location.search);
+        if (q.get('dir') === '-1') state.facing = -1;
+        if (q.get('room') === 'dark') state.room = 'dark';
+        if (q.has('t')) { state.t = Math.max(0, Number(q.get('t')) || 0); state.playing = false; }
+        makeView(document.getElementById('ship'), SHIP_W, SHIP_H, 2, drawShip);
+        buildCrew();
+        buildLineup();
+        setPlaying(state.playing);
+        document.getElementById('play').addEventListener('click', () => { setPlaying(!state.playing); render(true); });
+        document.getElementById('step').addEventListener('click', () => { setPlaying(false); state.t += 100; render(true); });
+        seg('facing', 'facing', Number); seg('room', 'room', String);
+        render(true);
+        requestAnimationFrame(tick);
+    }
+    window.crewPage = {
+        pause() { setPlaying(false); render(true); }, play() { setPlaying(true); },
+        step(ms = 100) { setPlaying(false); state.t += ms; render(true); }, setTime(ms) { state.t = Math.max(0, ms); render(true); },
+    };
+    init();
+})();
+</script>
+</body>
+</html>
