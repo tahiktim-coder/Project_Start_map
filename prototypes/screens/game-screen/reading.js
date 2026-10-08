@@ -354,11 +354,11 @@
             frag.append(list);
             return frag;
         }
-        function sectorBlocks(group) {
+        function sectorBlocks(group, chrono) {
             const [num, name] = group.head.split(' · '), byStop = [], title = h('h3', 'rec-sector');
             title.append(h('small', null, num), document.createTextNode(name || ''));
             group.items.forEach(it => { const stop = it.stop || 'On the way'; let s = byStop.find(b => b.stop === stop); if (!s) { s = { stop, items: [] }; byStop.push(s); } s.items.push(it); });
-            return byStop.reverse().map((s, i) => stopBlock(s.stop, s.items, i === 0 ? title : null));
+            return (chrono ? byStop : byStop.reverse()).map((s, i) => stopBlock(s.stop, s.items, i === 0 ? title : null));
         }
         function openRecord() {
             if (overlay && overlay.kind === 'record') return;
@@ -382,7 +382,8 @@
             flow.style.columnGap = gap + 'px';
             flow.append(h('p', 'rec-title', "The ship's record"));
             if (!st.record.length) flow.append(h('p', 'rec', 'Nothing written yet.'));
-            st.record.slice().reverse().forEach(gp => sectorBlocks(gp).forEach(b => flow.append(b)));
+            const chrono = !!World.recordInOrder;                                                       // v3: written in order, sector 1 first, and the book opens at the latest page
+            (chrono ? st.record.slice() : st.record.slice().reverse()).forEach(gp => sectorBlocks(gp, chrono).forEach(b => flow.append(b)));
             const first = flow.querySelector('.rec-stop-block'); if (first) first.classList.add('is-first');   // every other stop starts a new page
             text.append(flow); book.append(cv, text); view.append(book);
             const hint = recordsOpened <= 2 ? h('p', 'read-hint', 'Esc closes') : null;
@@ -400,6 +401,7 @@
             view.addEventListener('click', e => { e.stopPropagation(); if (!book.contains(e.target)) close(); });
             overlay = { kind: 'record', el: view, close, paginate, turn: d => { spread = Math.max(0, Math.min(spreads - 1, spread + d)); paginate(); }, relayout: () => { close(); openRecord(); } };
             paginate();
+            if (chrono && spreads > 1) { flow.style.transition = 'none'; spread = spreads - 1; paginate(); void flow.offsetWidth; flow.style.transition = ''; }   // no slide on opening
         }
         function readAgain(id) {
             const page = PAGES_BY_ID()[id]; if (!page) return;

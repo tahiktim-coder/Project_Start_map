@@ -1,0 +1,1767 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silent Exodus Flight</title>
+<meta name="description" content="Silent Exodus game screen v3 mockup: always flying toward the light. Worlds come up ahead and slide past; click one to pull in and stop.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* Words are "Graphite" (bone, grey, steel; sodium only for people and the false sun; one red, for harm). The picture is
+   "Deep field" (game-screen-v3/paint.js). Text sizes follow the CSS viewport: --t runs 0 at 1280 wide to 1 at 1920. */
+:root {
+    color-scheme: dark;
+    --t: 1;
+    --ink: #05070a;
+    --text: #e4e4e0;
+    --dim: #8b8d90;
+    --faint: #5a6168;
+    --ui: #c9d1d6;
+    --warm: #f08c2e;
+    --warm-br: #ffc27a;
+    --danger: #e0453a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --fs-voice: calc(19px + 5px * var(--t)); --fs-who: calc(14px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t));
+    --fs-note-name: calc(17px + 3px * var(--t)); --fs-note-line: calc(15px + 2px * var(--t)); --fs-note-cost: calc(14px + 1px * var(--t));
+    --fs-chip: calc(14px + 2px * var(--t)); --fs-title: calc(34px + 12px * var(--t)); --fs-act: calc(17px + 3px * var(--t)); --fs-act-sub: calc(14px + 1px * var(--t));
+    --fs-tag: calc(14px + 1px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));
+    --shadow: 0 1px 0 #05070a;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+#stage { position: fixed; inset: 0; overflow: hidden; outline: none; }
+#stage.is-pointing { cursor: pointer; }
+canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+#film, #inside { display: none; }
+.layer { position: absolute; inset: 0; pointer-events: none; }
+
+/* ── words that belong to the world ── */
+.w { position: absolute; left: 0; top: 0; white-space: nowrap; text-shadow: var(--shadow); pointer-events: none; will-change: transform, opacity; }
+.note { display: grid; gap: 3px; }
+.note .name { font: 500 var(--fs-note-name)/1.15 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
+.note .line { font: 400 var(--fs-note-line)/1.35 var(--f-text); color: var(--dim); }
+.note .cost { font: 400 var(--fs-note-cost)/1.4 var(--f-num); color: var(--ui); }
+.note .cost .gain { color: var(--text); }
+.note.is-left { text-align: right; justify-items: end; }
+.tagname { display: grid; gap: 2px; }
+.tagname .n { font: 500 var(--fs-tag)/1.1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: #cfd2d0; }
+.tagname .g { font: 400 var(--fs-tag)/1.2 var(--f-text); color: var(--dim); }
+.tagname.is-left { text-align: right; justify-items: end; }
+.tagname.is-contact .n { color: var(--dim); letter-spacing: 0.18em; }
+.tagname.is-gone .n, .tagname.is-gone .g { color: var(--faint); }
+.dated { font: 400 var(--fs-tag)/1.3 var(--f-num); color: var(--ui); }
+.hint { font: 400 var(--fs-hint)/1.3 var(--f-num); color: var(--dim); }
+.chips { display: flex; gap: 14px; }
+.chip { font: 400 var(--fs-chip)/1 var(--f-num); color: var(--ui); }
+.chip.is-gain { color: var(--text); }
+.chip.is-loss { color: var(--danger); }
+.title { font: 300 var(--fs-title)/1 var(--f-text); letter-spacing: 0.2em; color: var(--text); }
+.supplies { display: grid; gap: 3px; }
+.supplies .nums { font: 400 var(--fs-note-cost)/1.3 var(--f-num); color: var(--ui); }
+.supplies .sub { font: 400 var(--fs-note-line)/1.3 var(--f-text); color: var(--dim); }
+.place-head { display: grid; gap: 4px; }
+.place-head .name { font: 500 calc(var(--fs-note-name) * 1.3)/1.1 var(--f-ui); letter-spacing: 0.03em; color: var(--text); }
+.place-head .line { font: 400 var(--fs-note-line)/1.35 var(--f-text); color: var(--dim); }
+.place-head.is-right { text-align: right; justify-items: end; }
+.act {
+    position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; display: grid; gap: 3px;
+    padding: 6px 8px; margin: 0; background: none; border: 0; text-align: left; white-space: nowrap;
+    text-shadow: var(--shadow); will-change: transform, opacity;
+}
+.act .verb { font: 400 var(--fs-act)/1.2 var(--f-text); color: var(--text); transition: color 140ms var(--ease); }
+.act .sub { font: 400 var(--fs-act-sub)/1.3 var(--f-num); color: var(--dim); }
+.act:hover .verb, .act:focus-visible .verb, .act.is-hot .verb { color: var(--warm); }
+.act:focus-visible { outline: none; }
+.act.is-pulse .verb { animation: act-pulse 900ms var(--ease) 3; }
+@keyframes act-pulse { 50% { color: var(--warm-br); } }
+#inside-words .room-words { justify-items: start; text-align: left; transition: opacity 200ms var(--ease); }
+
+/* ── the Esc menu ── */
+.menu { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; }
+.menu[hidden] { display: none; }
+.menu ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; text-align: center; }
+.menu button { background: none; border: 0; cursor: pointer; font: 300 calc(var(--fs-voice) * 1.05)/1.2 var(--f-text); letter-spacing: 0.06em; color: var(--dim); text-shadow: var(--shadow); transition: color 140ms var(--ease); }
+.menu button:hover, .menu button:focus-visible { color: var(--text); outline: none; }
+
+/* ── mockup controls: NOT part of the game. Nothing shows until the backtick key opens the list. ── */
+.moments { position: fixed; left: 8px; bottom: 8px; z-index: 40; padding: 8px 10px 10px; background: rgba(10, 12, 15, 0.94); border: 1px dashed #2c3036; display: grid; gap: 2px; min-width: 260px; }
+.moments[hidden] { display: none; }
+.moments b { font: 500 10px/1.6 var(--f-ui); letter-spacing: 0.2em; color: #6d747a; text-transform: uppercase; }
+.moments button { text-align: left; background: none; border: 0; padding: 4px 4px; cursor: pointer; font: 400 12px/1.2 var(--f-num); color: #9aa0a6; }
+.moments button:hover, .moments button:focus-visible { color: #fff; background: #1a1d21; outline: none; }
+.moments small { font: 400 11px/1.4 var(--f-text); color: #6d747a; }
+@media (prefers-reduced-motion: reduce) { .act.is-pulse .verb { animation: none; } }
+</style>
+<link rel="stylesheet" href="game-screen/reading.css?v=20261008i">
+<!-- dating opens the real disc game, the same files the game runs (never a lookalike); silent here -->
+<link rel="stylesheet" href="../../src/systems/minigames/minigames.css?v=1">
+<script src="../../src/systems/minigames/MiniLab.js?v=2"></script>
+<script src="../../src/systems/minigames/MiniShip.js?v=1"></script>
+<script src="../../src/systems/minigames/MiniHost.js?v=5"></script>
+<script src="../../src/systems/minigames/DiscDating.js?v=5"></script>
+<!-- the crew and the living ship: the crew-hires files, loaded as they are -->
+<script src="crew-hires/engine.js"></script>
+<script src="crew-hires/cora.js"></script>
+<script src="crew-hires/jaxon.js"></script>
+<script src="crew-hires/aris.js"></script>
+<script src="crew-hires/vance.js"></script>
+<script src="crew-hires/mira.js"></script>
+<script src="crew-hires/ship-art.js"></script>
+<script src="crew-hires/ship-rooms.js"></script>
+<script src="crew-hires/ship-sim.js"></script>
+<!-- the reading layer and the pictures of things you read (v2's modules) -->
+<script src="game-screen/pages.js?v=20261008h"></script>
+<script src="game-screen/reading.js?v=20261008j"></script>
+<!-- v3: the picture recipes, the story, the ship view -->
+<script src="game-screen-v3/paint.js?v=3"></script>
+<script src="game-screen-v3/data.js?v=3"></script>
+<script src="game-screen-v3/inside.js?v=2"></script>
+</head>
+<body>
+<div id="stage" tabindex="-1" aria-label="Flying toward the light">
+    <canvas id="world" aria-hidden="true"></canvas>
+    <canvas id="film" width="288" height="144" aria-hidden="true"></canvas>
+    <canvas id="inside" aria-hidden="true"></canvas>
+    <div class="layer" id="inside-words"></div>
+    <div class="layer" id="marks"></div>
+    <div class="layer" id="reading" aria-live="polite"></div>
+</div>
+<div class="menu" id="menu" hidden>
+    <ul>
+        <li><button type="button" data-menu="resume">Resume</button></li>
+        <li><button type="button" data-menu="record">The ship's record</button></li>
+        <li><button type="button" data-menu="sound">Sound</button></li>
+        <li><button type="button" data-menu="save">Save</button></li>
+        <li><button type="button" data-menu="quit">Quit</button></li>
+    </ul>
+</div>
+<div class="moments" id="moments" hidden>
+    <b>Mockup only · not in the game</b>
+    <small>` opens and closes this list · hold F to fast-forward</small>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    const P = window.V3Paint, DATA = window.V3Data;
+    const { INK, TICK, RP, threshold, clamp01, smooth, lerp, hash, level } = P;
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 1. Screen, clock and the fixed places of the travelling view (docs/GAME_SCREEN_V3.md, "Positions and timings").
+    //    The canvas is 640 x 360 art pixels at a whole number of device pixels each (v2's measure). Extra width or height
+    //    is more sky, never stretch. Everything below is in stage pixels (640 x 360); cvX/cvY turn them into canvas pixels.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const SW = 640, SH = 360;
+    const LIGHT = [604, 158];                                    // the light: where everything comes out of; it never moves
+    const SHIP = { x: 224, y: 196, len: 48, ht: 15 };            // the Lander at rest, nose on the light; width a third of its length
+    const CRUISE = 52, SLOW = 26, CREEP = 5;                     // px a second on the stop layer. On the lane we never go below SLOW; CREEP is only for the ship view
+    const REACH_LEAD = 96;                                       // a world is in reach from about 2 s (at cruise) before its closest point until it passes our tail
+    const LINGER = 900;                                          // px of flight a passed world stays in sight behind us (about 17 s at cruise), grey and shrinking
+    const ORBIT_R = Math.round(SH * 0.43);                       // in orbit a world's diameter is about 86% of the screen height (v1's orbit framing)
+    const ORBIT_SHIP = 2;                                        // our ship in orbit is twice its lane size
+    const FLOW_LN = Math.log(900 / 22);                          // the stream of specks: distance from the vanishing point runs 22 → 900 px
+    const BASE_ANGLE = Math.atan2(LIGHT[1] - SHIP.y, LIGHT[0] - SHIP.x);
+    const GIANT_R = 190, GIANT_TILT = 0.75, GIANT_OPEN = 0.3;
+    const $ = id => document.getElementById(id);
+    const G = { k: 3, s: 3, dpr: 1, W: SW, H: SH, ox: 0, oy: 0, left: 0, top: 0 };
+    const cv = $('world'), ctx = cv.getContext('2d');
+    const filmCv = $('film'), filmCtx = filmCv.getContext('2d');
+    function measure() {
+        const dpr = window.devicePixelRatio || 1, iw = window.innerWidth, ih = window.innerHeight, dw = Math.round(iw * dpr), dh = Math.round(ih * dpr);
+        const k = Math.max(2, Math.floor(Math.min(dw / SW, dh / SH) + 1e-6));
+        G.k = k; G.dpr = dpr; G.s = k / dpr;
+        G.W = Math.ceil(dw / k); G.H = Math.ceil(dh / k); G.ox = Math.round((G.W - SW) / 2); G.oy = Math.round((G.H - SH) / 2);
+        G.left = Math.floor((dw - G.W * k) / 2) / dpr; G.top = Math.floor((dh - G.H * k) / 2) / dpr;
+        cv.width = G.W; cv.height = G.H; cv.style.width = G.W * G.s + 'px'; cv.style.height = G.H * G.s + 'px'; cv.style.left = G.left + 'px'; cv.style.top = G.top + 'px';
+        document.documentElement.style.setProperty('--t', Math.max(0, Math.min(1.5, (iw - 1280) / 640)).toFixed(3));
+        document.documentElement.style.setProperty('--px', G.s + 'px');
+    }
+    const toScreen = (cx, cy) => [G.left + cx * G.s, G.top + cy * G.s];
+    const toCanvas = (px, py) => [(px - G.left) / G.s, (py - G.top) / G.s];
+    const cvX = x => G.ox + x, cvY = y => G.oy + y;
+
+    const clock = { t: 0, timers: [], seq: 0, frozen: false };
+    function after(ms, fn) { const id = ++clock.seq; clock.timers.push({ id, at: clock.t + ms, fn }); return id; }
+    function cancelTimer(id) { const i = clock.timers.findIndex(x => x.id === id); if (i >= 0) clock.timers.splice(i, 1); }
+    function advance(dt) {
+        const end = clock.t + dt;
+        for (;;) {
+            let next = null;
+            for (const x of clock.timers) if (x.at <= end && (!next || x.at < next.at)) next = x;
+            if (!next) break;
+            clock.timers.splice(clock.timers.indexOf(next), 1);
+            const before = clock.t; clock.t = Math.max(clock.t, next.at); update(clock.t - before);
+            try { next.fn(); } catch (err) { console.error(err); }
+        }
+        const rest = end - clock.t; clock.t = end; update(rest);
+    }
+    const ease = s => (s < 0.5 ? 2 * s * s : 1 - 2 * (1 - s) * (1 - s));
+    const easeOut = s => 1 - (1 - s) ** 3;
+
+    const patterns = [];
+    function pattern(levelN) {
+        const Lv = Math.max(0, Math.min(64, Math.round(levelN)));
+        if (!patterns[Lv]) { const c = document.createElement('canvas'); c.width = 8; c.height = 8; const g = c.getContext('2d'); g.fillStyle = INK; for (let i = 0; i < 64; i++) if (P.BAYER_RAW[i] < Lv) g.fillRect(i & 7, i >> 3, 1, 1); patterns[Lv] = ctx.createPattern(c, 'repeat'); }
+        return patterns[Lv];
+    }
+    function dimWith(c, amount) { if (amount <= 0) return; c.fillStyle = pattern(amount * 64); c.fillRect(0, 0, G.W, G.H); }
+    function darken(c, amount) {
+        if (amount <= 0) return;
+        const v = Math.round(255 * (1 - clamp01(amount)));
+        c.save(); c.globalCompositeOperation = 'multiply'; c.fillStyle = `rgb(${v},${v},${v})`; c.fillRect(0, 0, G.W, G.H); c.restore();
+    }
+    const offscreens = {};
+    function offscreen(name) { let o = offscreens[name]; if (!o || o.c.width !== G.W || o.c.height !== G.H) { const c = document.createElement('canvas'); c.width = G.W; c.height = G.H; o = offscreens[name] = { c, g: c.getContext('2d') }; } return o; }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 2. State. One heading: sectors in order, supplies and the record carried across every jump.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    let S = null;
+    const record = [];
+    const pagesRead = [];
+    function prepPlace(pl, sec) {
+        if (pl.kind === 'giant') return pl;
+        const [px, py] = pl.pass;
+        pl.k = (LIGHT[0] - px) / CRUISE;                                                         // the approach keeps one speed through its closest point
+        pl.full = pl.kind === 'station' ? 24 * pl.s : pl.r;                                       // how big it is at its closest (a station's half width)
+        // once past, it glides back along our wake and rests near the left edge, grey and shrinking, then slips away
+        const restR = pl.full * 0.45, slope = (py - LIGHT[1]) / (LIGHT[0] - px), rx = 30 + restR;
+        pl.rest = [rx, Math.max(restR + 10, Math.min(SH - restR * 0.6 - 8, py + slope * (px - rx) * 0.35))];
+        const d = Math.hypot(LIGHT[0] - px, LIGHT[1] - py);
+        pl.L = P.lightVector(px, py, LIGHT[0], LIGHT[1], 0.5 * d);                                // one light per world, in front of the picture (lz about +0.45: most of its lit face shows), lane and orbit alike
+        pl.rim = sec.rim;
+        return pl;
+    }
+    function fresh(n, carry) {
+        const sec = DATA.SECTORS[n];
+        return {
+            n, view: 'travel', D: 0, speed: CRUISE, res: Object.assign({}, carry || sec.res), stops: sec.stops,
+            places: sec.places.map(p => prepPlace(Object.assign({ step: 0, passed: false, visited: false, reachMs: 0 }, p), sec)),
+            ship: { angle: BASE_ANGLE }, hover: null, course: null, push: null, orbit: null, jump: null, shipView: null, film: null,
+            intro: null, mid: { x: 0, y: 0 }, roll: 0, wake: [], passedCount: 0, lastPassD: 0, flow: 0, rejoinT: null, jumpReady: false, sectorT0: clock.t, fadeIn: null,
+            flags: { said: {}, hint: false, hintGone: false, passSaid: false, firstReach: null }, dim: 0, reveal: null, shuttle: null, reachT0: {},
+        };
+    }
+    const placeById = id => S && S.places.find(p => p.id === id);
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 3. The stream of worlds. A world d seconds ahead (at cruise) sits on a curve out of the light: f = k / (k + d),
+    //    position = light + (closest point - light) * f, radius = full * f^1.4. k is chosen per world so it moves one pixel
+    //    for each pixel we fly as it passes its closest point; after that it carries straight on, past our tail.
+    //    A glint while the radius is under 1.5, a flat disc under 8, the full v1 sphere after.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    function geom(pl, D) {
+        if (pl.kind === 'giant') return giantGeom(D);
+        const d = (pl.at - D) / CRUISE;
+        let x, y, r, f;
+        if (d >= 0) {
+            // size follows f; place follows sqrt(k/2 / (k/2 + d)), which meets f with the same speed at the closest point but keeps
+            // far worlds spread out from the light as separate glints you can count, instead of lost in its glow
+            f = pl.k / (pl.k + d); const fp = Math.sqrt(pl.k / 2 / (pl.k / 2 + d));
+            x = LIGHT[0] + (pl.pass[0] - LIGHT[0]) * fp; y = LIGHT[1] + (pl.pass[1] - LIGHT[1]) * fp; r = pl.full * Math.pow(f, 1.4);
+        } else {                                                                                   // passed: it glides back along the wake, greys and shrinks, waits, then slips away
+            const s = D - pl.at, tau = pl.pass[0] - pl.rest[0], e = 1 - Math.exp(-s / tau), out = Math.max(0, s - LINGER);
+            f = 1; x = pl.pass[0] - tau * e - out * 1.4; y = pl.pass[1] + (pl.rest[1] - pl.pass[1]) * e; r = pl.full * (1 - 0.55 * e);
+        }
+        return { x, y, r, f, d };
+    }
+    /** The sector's enormous thing, on a slow layer: it drifts across the frame once a sector. */
+    const GIANT_PATH = { p0: [830, 560], mid: [300, 406] };
+    function giantGeom(D) {
+        const pl = S.places.find(p => p.kind === 'giant'), at = pl ? pl.at : 3400, k = D / at;
+        const e = k <= 1 ? Math.pow(Math.max(0, k), 2.2) : 1 + 2.2 * (k - 1);                   // far off it barely moves; it comes on faster as we close, and goes behind
+        return { x: lerp(GIANT_PATH.p0[0], GIANT_PATH.mid[0], e), y: lerp(GIANT_PATH.p0[1], GIANT_PATH.mid[1], e), r: GIANT_R, f: 1, d: (at - D) / CRUISE };
+    }
+    /** The point of the giant's limb nearest our ship: where its clouds pass under our lane. */
+    function giantLimb(g) { const dx = SHIP.x - g.x, dy = SHIP.y - g.y, d = Math.hypot(dx, dy) || 1; return [g.x + dx / d * g.r, g.y + dy / d * g.r]; }
+    function inReach(pl, g) {
+        if (!S || pl.visited || pl.passed || pl.hidden || S.stops <= 0) return false;
+        if (pl.kind === 'giant') return S.D > pl.at - 320 && S.D < pl.at + 140;
+        g = g || geom(pl, S.D);
+        return S.D >= pl.at - REACH_LEAD && g.x > TAIL_X;
+    }
+    const TAIL_X = SHIP.x - SHIP.len / 2;                                                           // a world is behind us once it slides past our tail
+    const isPassed = (pl, g) => (pl.kind === 'giant' ? S.D >= pl.at + 140 : (g || geom(pl, S.D)).x < TAIL_X);
+    const reachPlaces = () => (S ? S.places.filter(pl => inReach(pl)) : []);
+
+    // ── sprites, painted once per size (whole-pixel radii) ──
+    const spriteCache = new Map();
+    function worldSprite(pl, rInt, grey) {
+        const key = `${S.n}:${pl.id}:${rInt}:${grey ? 1 : 0}`;
+        if (spriteCache.has(key)) return spriteCache.get(key);
+        let out;
+        if (pl.kind === 'station') {
+            const s = pl.s * rInt / pl.full, half = Math.ceil(27 * s + 3), p = P.painter(half * 2, half * 2, false);
+            const win = P.drawStation(p, half, half, s, pl.seed, grey ? 0.85 : 0.75 + 0.25 * clamp01(rInt / pl.full), grey ? { hull: RP.PASSED, panel: RP.PASSED } : null);
+            out = { canvas: p.canvas(), half, win: [win[0] - half, win[1] - half], rims: [] };
+        } else {
+            const r = rInt, w = Math.max(2, Math.round(r / 22)), half = r + w + 3, p = P.painter(half * 2, half * 2, false), rims = [];
+            const frac = r / pl.full, dim = grey ? 0.85 : 0.62 + 0.38 * smooth(0.12, 0.85, frac);              // far worlds sit back in the haze
+            const type = pl.type, ramp0 = grey ? RP.PASSED : (P.PLANET_RAMP[type] || RP.STONE);
+            P.sphere(p, { cx: half, cy: half, r, ramp: ramp0, L: pl.L, dim, surface: P.surfaceFor(type, pl.seed, pl.L), rim: grey ? 0 : pl.rim, ambient: 0.012, gain: 0.84, rims,
+                atmo: grey ? null : { ramp: type === 'gas' || type === 'desert' ? RP.DUST : RP.ICE, w } });
+            if (pl.beacon && !grey && r >= 60) {                                                   // v1's orbitPlanet: the furrow the wreck cut coming down, beside its beacon
+                const [bx, by] = beaconOffset(pl, r), k = r / 118, X = half + bx, Y = half + by;
+                p.line(X + 3 * k, Y + k, X + 16 * k, Y - 2 * k, (x, y) => p.solid(x, y, RP.STONE, 0.02));
+            }
+            out = { canvas: p.canvas(), half, rims: rims.map(([x, y, rr, lv]) => [x - half, y - half, rr, lv]) };
+        }
+        spriteCache.set(key, out);
+        if (spriteCache.size > 900) spriteCache.clear();
+        return out;
+    }
+    /** Where a world's beacon sits, from its centre, on the night side (v1's spot). */
+    const beaconOffset = (pl, r) => [Math.round(-0.6 * r), Math.round((pl.type === 'ice' ? -0.45 : 0.1) * r)];
+
+    // ── the Lander: one drawing, cached every 2 degrees and per length ──
+    const landerCache = new Map();
+    const SUN_ANGLE = Math.atan2(LIGHT[1] - SHIP.y, LIGHT[0] - SHIP.x);
+    /** THE drawing of our ship: one recipe for the lane, orbit and the turn into the ship view. roll: how far the camera has
+        rolled (the light turns with it, so the hull stays lit from the same side). Returns where its ports, bridge, nose, bell,
+        skirt and shuttle clamp are, relative to (x, y). */
+    function paintLander(p, x, y, len, a, roll = 0) {
+        const ht = Math.round(len / 3.15 * 10) / 10, sa = SUN_ANGLE + roll;
+        const o = { x, y, len, ht, angle: a, flip: true, seed: 9, anchor: 0.5, sun: len < 80 ? 0.24 : 0.32, sunDir: [Math.cos(sa), Math.sin(sa)], fade: 0.22, mirror: false, flat: len < 130 };
+        const at = P.hull(p, o, P.shapeL);
+        if (len >= 150 && len < 400 && Math.abs(a - roll) < 0.5) P.hullName(p, at, o, 'EXODUS-9', 0.52, 0.16);
+        const rel = q => [q[0] - x, q[1] - y];
+        return {
+            ht, ports: [0, 1, 2, 3, 4, 5].map(i => rel(at(P.DECK_U(i) + 0.054, -0.32))),                    // a porthole per deck, on the side we see
+            bridge: rel(at(P.LANDER.NOSE - 0.02, -0.12)), nose: rel(at(0, 0)), bell: rel(at(1.0, 0)),
+            windows: [-0.3, -0.05, 0.2].map(v => rel(at(P.LANDER.NOSE - 0.014, v))), winSize: Math.max(1.3, ht * 0.04),   // the bridge's ring of windows (shapeL)
+            skirt: [0.87, 0.89, 0.91, 0.93].map(u => rel(at(u, 0.6))), clamp: rel(at(P.DECK_U(4) + 0.05, 0.56 + 1.2 / ht)),
+        };
+    }
+    function landerSprite(len, angle) {
+        const deg = Math.round(angle * 180 / Math.PI / 2) * 2, a = deg * Math.PI / 180, key = `${len}:${deg}`;
+        if (landerCache.has(key)) return landerCache.get(key);
+        const ht = Math.round(len / 3.15 * 10) / 10, half = Math.ceil(len / 2 + ht + 8), p = P.painter(half * 2, half * 2, false);
+        const out = Object.assign({ canvas: null, half, len, angle: a }, paintLander(p, half, half, len, a));
+        out.canvas = p.canvas();
+        landerCache.set(key, out);
+        return out;
+    }
+    /** The shuttle: a small copy of our hull, clamped beside the hold. */
+    function shuttleSprite(len, angle) { return landerSprite(Math.max(6, Math.round(len)), angle); }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 4. The sector's still parts: space (v1's haze, dust and stars, on a strip that slides at 0.02 of our speed), the
+    //    light's breathing frames, the enormous thing, the far scenery.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const arts = new Map();
+    const STRIP_EXTRA = 200;
+    function sectorArt(n) {
+        const key = `${n}:${G.W}x${G.H}`;
+        if (arts.has(key)) return arts.get(key);
+        const sec = DATA.SECTORS[n], lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]), halo = Math.max(sec.light.halo, 18);
+        const strip = P.spaceStrip(G.W + STRIP_EXTRA, G.H, sec.seed, sec.dust, sec.haze, sec.stars);
+        const lit = new Float32Array(G.W * G.H);
+        for (let y = 0; y < G.H; y++) for (let x = 0; x < G.W; x++) lit[y * G.W + x] = Math.exp(-Math.hypot(x - lx, (y - ly) * 1.15) / (halo * 0.85 + 6));
+        const bp = P.painter(G.W, G.H, true), canvas = document.createElement('canvas'); canvas.width = G.W; canvas.height = G.H;
+        const A = { n, strip, lit, bp, canvas, g: canvas.getContext('2d'), off: null, bright: [], glows: new Map(), thing: null, scenery: [] };
+        if (sec.thing === 'giant') A.thing = paintGiantCanvas();
+        if (sec.thing === 'rogue') A.thing = paintRogueCanvas();
+        (sec.scenery || []).forEach(sc => {
+            const half = sc.r + 2, p = P.painter(half * 2, half * 2, false), L = P.lightVector(sc.x, sc.y, LIGHT[0], LIGHT[1], 60);
+            const haze = P.ramp(INK, RP.HAZE.hex[2], RP.HAZE.hex[4], RP.STONE.hex[2], RP.STONE.hex[3]);   // far: flat dither, fewer colours, toward the haze
+            P.sphere(p, { cx: half, cy: half, r: sc.r, ramp: haze, L, dim: 0.85, surface: P.surfaceFor(sc.type, sc.seed, L) });
+            A.scenery.push(Object.assign({ canvas: p.canvas(), half }, sc));
+        });
+        arts.set(key, A);
+        return A;
+    }
+    function ensureBackdrop(A, off) {
+        off = Math.max(0, Math.min(STRIP_EXTRA, off));
+        if (A.off === off) return;
+        const sec = DATA.SECTORS[A.n], lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]), away = sec.light.halo * 0.9 + sec.light.core + 8;
+        A.bright = P.paintSpace(A.bp, A.strip, off, A.lit, (x, y) => Math.hypot(x - lx, y - ly) < away);
+        A.g.putImageData(new ImageData(A.bp.data, G.W, G.H), 0, 0);
+        A.off = off;
+    }
+    /** The light grows a little after each world we pass, and much more sector by sector. */
+    const LIGHT_STEP = 1.13;                                                                        // six places a sector: the light has doubled by the jump
+    function lightNow() { const L = DATA.SECTORS[S.n].light, k = Math.pow(LIGHT_STEP, S.passedCount); return { core: L.core * k, halo: L.halo * k, strength: L.strength, spikes: L.spikes * Math.sqrt(k) }; }
+    function glowFrames(A) {
+        const L = lightNow(), key = L.core.toFixed(2);
+        if (A.glows.has(key)) return A.glows.get(key);
+        const lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]), reach = Math.ceil(L.halo * 3.2 + L.core + 10), size = reach * 2;
+        const frames = Array.from({ length: 8 }, (_, k) => { const p = P.painter(size, size, false); P.lightGlow(p, reach + (lx - Math.round(lx)), reach + (ly - Math.round(ly)), L, 0.9 + 0.1 * Math.sin(k / 8 * Math.PI * 2)); return { canvas: p.canvas(), x: Math.round(lx) - reach, y: Math.round(ly) - reach }; });
+        A.glows.set(key, frames);
+        return frames;
+    }
+    function giantLight() { const [mx, my] = GIANT_PATH.mid, d = Math.hypot(LIGHT[0] - mx, LIGHT[1] - my); return P.norm3(LIGHT[0] - mx, LIGHT[1] - my, 0.258 * d); }
+    function paintGiantCanvas() {
+        const hx = Math.ceil(GIANT_R * 1.74 * Math.sqrt(Math.cos(GIANT_TILT) ** 2 + (GIANT_OPEN * Math.sin(GIANT_TILT)) ** 2)) + 10;
+        const hy = Math.ceil(GIANT_R * 1.74 * Math.sqrt(Math.sin(GIANT_TILT) ** 2 + (GIANT_OPEN * Math.cos(GIANT_TILT)) ** 2)) + 10;
+        const W = Math.max(hx, GIANT_R + 10) * 2, H = Math.max(hy, GIANT_R + 10) * 2, p = P.painter(W, H, false);
+        const out = P.paintGiant(p, { cx: W / 2, cy: H / 2, R: GIANT_R, L: giantLight(), tilt: GIANT_TILT, open: GIANT_OPEN });
+        return { kind: 'giant', canvas: p.canvas(), cx: W / 2, cy: H / 2, rims: out.rims.map(([x, y, r, lv]) => [x - W / 2, y - H / 2, r, lv]) };
+    }
+    const ROGUE = { R: 150, p0: [470, 420], v: [-0.06, -0.03] };
+    function paintRogueCanvas() {
+        const R = ROGUE.R, half = R + 4, p = P.painter(half * 2, half * 2, false), d = Math.hypot(LIGHT[0] - ROGUE.p0[0], LIGHT[1] - ROGUE.p0[1]);
+        P.paintRogue(p, { cx: half, cy: half, R, L: P.norm3(LIGHT[0] - ROGUE.p0[0], LIGHT[1] - ROGUE.p0[1], 0.3 * d) });
+        return { kind: 'rogue', canvas: p.canvas(), cx: half, cy: half };
+    }
+    function thingPos(A) {
+        if (!A.thing) return null;
+        if (A.thing.kind === 'giant') { const g = giantGeom(S.D); return [g.x, g.y]; }
+        return [ROGUE.p0[0] + ROGUE.v[0] * S.D, ROGUE.p0[1] + ROGUE.v[1] * S.D];
+    }
+
+    // ── a bake queue: big paintings done one a frame in real time, so a push-in never stalls (a still frame bakes on the spot) ──
+    const bakeQueue = [];
+    function bakeLater(fn) { bakeQueue.push(fn); }
+    function bakeOne() { const job = bakeQueue.shift(); if (job) { try { job(); } catch (err) { console.warn('Bake skipped:', err.message); } } }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 5. Drawing the flight, frame by frame. Layers far to near: space (0.02), mid stars (0.1, the living ship's own star
+    //    tile), the enormous thing, the light, dust motes (0.6), the worlds (1.0), the searchlight, our ship with its wake,
+    //    plume and lit portholes, and near dust streaks (2.0) passing in front of everything.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    let front = null, back = null, near = null;
+    function layers() { if (!front || front.W !== G.W || front.H !== G.H) { front = P.pixelLayer(G.W, G.H); back = P.pixelLayer(G.W, G.H); near = P.pixelLayer(G.W, G.H); } return { front, back, near }; }
+    let occCache = { t: -1, on: [true, true, true, true, true, true] };
+    function occupied(t) { if (Math.abs(t - occCache.t) > 250 && Inside) occCache = { t, on: Inside.occupied(t) }; return occCache.on; }
+
+    // ── one camera. Looking ahead from behind our ship: everything streams out of the light. A pull-in scales every layer about
+    //    the world we pull in to, each at its own depth. The ship view rolls the whole world with the hull as it turns nose up. ──
+    /** During a pull-in: maps a lane point at depth q (1 = the world we pull in to, 0 = as far off as the light) to the screen. */
+    function camAt(q) {
+        const o = S.orbit; if (!o) return null;
+        const k = pushK(); if (k.e <= 0) return null;
+        const Z = Math.pow(o.Z, k.e), Zq = 1 + (Z - 1) * q, ax = lerp(o.P0[0], o.P1[0], k.e), ay = lerp(o.P0[1], o.P1[1], k.e);
+        return { e: k.e, Z, Zq, map: (x, y) => [o.P0[0] + (ax - o.P0[0]) * q + (x - o.P0[0]) * Zq, o.P0[1] + (ay - o.P0[1]) * q + (y - o.P0[1]) * Zq] };
+    }
+    /** The ship view's roll, from the frame the hull is on: the world turns about our ship by the same angle as the hull. */
+    function viewRoll() {
+        const sv = S.shipView; if (!sv) return null;
+        const F = shipViewFrames().frames[Math.round(sv.k * 7)];
+        return { a: F.roll, cx: F.x, cy: F.y, k: sv.k };
+    }
+    function rolled(c, roll, fn) {
+        if (!roll) { fn(); return; }
+        c.save(); c.translate(Math.round(roll.cx), Math.round(roll.cy)); c.rotate(roll.a); c.translate(-cvX(SHIP.x), -cvY(SHIP.y));
+        fn();
+        c.restore();
+    }
+
+    function drawFlight(c, t) {
+        const A = sectorArt(S.n), f = P.framer(c, G.W, G.H), { front: FL, back: BL, near: NL } = layers(), roll = viewRoll();
+        ensureBackdrop(A, Math.round(S.D * 0.02));
+        c.imageSmoothingEnabled = false;
+        if (roll) { c.fillStyle = INK; c.fillRect(0, 0, G.W, G.H); }
+        rolled(c, roll, () => {
+            if (roll) {                                                                            // turning nose up: the sky dissolves to the living ship's own star tiles
+                drawTiles(c, 0, 0, 0, true);
+                const o = offscreen('roll'); o.g.clearRect(0, 0, G.W, G.H); o.g.drawImage(A.canvas, 0, 0);
+                o.g.globalCompositeOperation = 'destination-out'; o.g.fillStyle = pattern(Math.floor(roll.k * 8) / 8 * 64); o.g.fillRect(0, 0, G.W, G.H); o.g.globalCompositeOperation = 'source-over';
+                c.drawImage(o.c, 0, 0);
+            } else c.drawImage(A.canvas, 0, 0);
+            drawTiles(c, 1, S.mid.x, S.mid.y, !!roll);
+            const tp = thingPos(A);
+            if (tp) drawThing(c, A, tp);
+            drawScenery(c, A);
+            const gl = glowFrames(A), g = gl[Math.floor(t / 500) % gl.length]; c.drawImage(g.canvas, g.x, g.y);
+            const discs = visibleDiscs();                                                           // a star never twinkles in front of a world
+            P.twinkle(f, A.bright.filter(st => !discs.some(([x, y, r]) => Math.hypot(st.x - x, st.y - y) < r + 2)), t);
+            BL.clear(); FL.clear(); NL.clear();
+            flowField(BL, FLOW.motes);
+            BL.draw(c);
+            drawWorlds(c, f, t);
+            drawSearchlight(FL, f, t);
+            drawWake(FL, t);
+            flowField(FL, FLOW.streaks);
+            FL.draw(c);
+        });
+        drawShip(c, f, t);
+        rolled(c, roll, () => { flowField(NL, FLOW.near); NL.draw(c); });                          // the nearest dust passes in front of our ship
+        drawHover(f, t);
+        drawCourse(f, t);
+        drawThread(f, t);
+        if (S.jump) drawJump(c, f, t);
+    }
+    /** The living ship's star tiles (ShipArt.stars): layer 1 is our mid stars. Rolled, they cover past the screen's corners. */
+    function drawTiles(c, layer, mx, my, wide) {
+        const T = window.ShipArt.stars(layer), n = T.size, ox = ((Math.round(mx) % n) + n) % n, oy = ((Math.round(my) % n) + n) % n, pad = wide ? Math.max(G.W, G.H) : 0;
+        for (let y = oy - n - pad; y < G.H + pad; y += n) for (let x = ox - n - pad; x < G.W + pad; x += n) c.drawImage(T.canvas, x, y);
+    }
+    /** The sector's enormous thing. Pulled in on a world, it grows at half the rate, is carried out of frame and fades through the dither. */
+    function drawThing(c, A, tp) {
+        const th = A.thing;
+        if (th.kind === 'giant' && S.orbit && S.orbit.focal) { const fr = giantPushFrame(pushK().step); if (fr) { c.drawImage(fr, 0, 0); return; } }
+        const cam = S.orbit && camAt(0.5);
+        if (!cam) { c.drawImage(th.canvas, Math.round(cvX(tp[0]) - th.cx), Math.round(cvY(tp[1]) - th.cy)); return; }
+        const fade = Math.floor(smooth(0.1, 0.8, cam.e) * 8) / 8;
+        if (fade >= 1) return;
+        const [x, y] = cam.map(tp[0], tp[1]), Zq = cam.Zq, o = offscreen('thing');
+        o.g.imageSmoothingEnabled = false; o.g.clearRect(0, 0, G.W, G.H);
+        o.g.drawImage(th.canvas, Math.round(cvX(x) - th.cx * Zq), Math.round(cvY(y) - th.cy * Zq), Math.round(th.canvas.width * Zq), Math.round(th.canvas.height * Zq));
+        if (fade > 0) { o.g.globalCompositeOperation = 'destination-out'; o.g.fillStyle = pattern(fade * 64); o.g.fillRect(0, 0, G.W, G.H); o.g.globalCompositeOperation = 'source-over'; }
+        c.drawImage(o.c, 0, 0);
+    }
+    function drawScenery(c, A) {
+        const cam = S.orbit && camAt(0.3);
+        A.scenery.forEach(sc => {
+            let x = sc.x - sc.speed * S.D, y = sc.y, z = 1;
+            if (cam) { [x, y] = cam.map(x, y); z = cam.Zq; }
+            const s = Math.round(sc.half * 2 * z);
+            c.drawImage(sc.canvas, Math.round(cvX(x) - s / 2), Math.round(cvY(y) - s / 2), s, s);
+        });
+    }
+
+    // ── space streaming past ──
+    /** Specks on rays out of the vanishing point (the light). A speck's distance grows exponentially with its phase, as in a
+        forward view: far ones crawl near the light, near ones rush past the frame edge. Its tail is where it was a moment ago,
+        so tails stretch with speed and shrink to dots when we stop. During a pull-in the rays come out of the world we pull
+        in to and the specks spread apart, as a zoom spreads them. rate: phase per px of flight (2x our speed at the ship, for
+        streaks). */
+    const FLOW = {
+        motes: { n: 110, seed: 41, rate: 0.0005, tail: 0.1, q: 0.15, ramp: 'DUST', v: 0.85, lit: true },
+        streaks: { n: 260, seed: 43, rate: 0.0015, tail: 0.17, q: 0.35, ramp: 'STAR', v: 0.9 },
+        near: { n: 34, seed: 47, rate: 0.0027, tail: 0.13, q: 0.6, ramp: 'STAR', v: 1.05, wide: 0.5 },
+    };
+    function flowPoint() {
+        const lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]), o = S.orbit, k = o ? pushK().e : 0;
+        if (!o || k <= 0) return [lx, ly];
+        return [lerp(lx, cvX(o.P1[0]), k), lerp(ly, cvY(o.P1[1]), k)];
+    }
+    function flowField(L, o) {
+        const cam = S.orbit ? camAt(o.q) : null, [vx, vy] = flowPoint(), base = S.flow * o.rate + (cam ? Math.log(cam.Zq) / FLOW_LN : 0);
+        const ramp0 = RP[o.ramp], tailPh = Math.min(0.12, S.speed * o.rate * o.tail), lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]);
+        for (let i = 0; i < o.n; i++) {
+            const ph = hash(i, 1, o.seed) + hash(i, 7, o.seed) / 256 + base, cyc = Math.floor(ph), u = ph - cyc;
+            const th = (hash(i + cyc * 13, 2, o.seed) + hash(i, cyc & 255, o.seed + 1) / 256) * Math.PI * 2, dx = Math.cos(th), dy = Math.sin(th);
+            const d = 22 * Math.exp(u * FLOW_LN), x = vx + dx * d, y = vy + dy * d;
+            if (x < -60 || y < -60 || x > G.W + 60 || y > G.H + 60) continue;
+            let v = o.v * smooth(22, 90, d) * (0.55 + 0.45 * hash(i, 3, o.seed));
+            if (o.lit) v *= 0.3 + 1.1 * Math.exp(-Math.hypot(x - lx, y - ly) / 170);
+            if (v < 0.08) continue;
+            const len = Math.max(0, d - 22 * Math.exp(Math.max(0, u - tailPh) * FLOW_LN)), thick = o.wide && hash(i, 5, o.seed) < o.wide;
+            for (let k = 0; k <= len; k++) {
+                const a = v * (1 - k / (len + 1)), px = x - dx * k, py = y - dy * k;
+                L.tone(px, py, ramp0, a);
+                if (thick) L.tone(px - dy, py + dx, ramp0, a * 0.8);
+            }
+        }
+    }
+
+    // ── the worlds ──
+    function drawWorlds(c, f, t) {
+        const list = S.places.filter(pl => pl.kind !== 'giant').map(pl => ({ pl, g: placeGeom(pl) })).sort((a, b) => (a.pl === focusPlace() ? 1 : 0) - (b.pl === focusPlace() ? 1 : 0) || a.g.r - b.g.r);
+        list.forEach(({ pl, g }) => {
+            const x = Math.round(cvX(g.x)), y = Math.round(cvY(g.y));
+            if (x < -g.r - 40 || x > G.W + g.r + 40 || y < -g.r - 40 || y > G.H + g.r + 40) return;
+            if (pl.hidden) { if (g.r < 1.5) drawGlint(f, pl, x, y, t); else P.contactBlip(f, x, y, t, g.r > 8); return; }
+            const grey = pl.passed && !isFocus(pl);
+            if (g.r < 1.5) { drawGlint(f, pl, x, y, t); return; }
+            if (g.r < 8 && pl.kind !== 'station') { flatDisc(f, pl, x, y, g.r); return; }
+            if (pl.kind === 'station' && g.r < 7) { f.tone(x, y, RP.HULL, 0.45); f.tone(x - 1, y, RP.UI, 0.3); f.tone(x + 1, y, RP.UI, 0.3); return; }
+            const sp = worldSprite(pl, Math.round(g.r), grey);
+            if (S.reveal && S.reveal.id === pl.id) { revealWorld(c, f, sp, x, y, t); return; }
+            if (pl.greyAt && !isFocus(pl) && t - pl.greyAt < 900) {                                   // turning grey: a dither crossfade in steps
+                const k = Math.floor((t - pl.greyAt) / 900 * 8) / 8, colour = worldSprite(pl, Math.round(g.r), false), o = offscreen('fade');
+                c.drawImage(colour.canvas, x - colour.half, y - colour.half);
+                o.g.clearRect(0, 0, G.W, G.H); o.g.drawImage(sp.canvas, x - sp.half, y - sp.half);
+                o.g.globalCompositeOperation = 'destination-out'; o.g.fillStyle = pattern((1 - k) * 64); o.g.fillRect(0, 0, G.W, G.H); o.g.globalCompositeOperation = 'source-over';
+                c.drawImage(o.c, 0, 0);
+            } else c.drawImage(sp.canvas, x - sp.half, y - sp.half);
+            if (grey) return;                                                                        // a beacon keeps running after we have been there
+            if (pl.beacon && g.r >= 10) {
+                const [bx, by] = beaconOffset(pl, g.r), X = x + bx, Y = y + by, ph = Math.floor((t % 1500) / TICK);
+                if (g.r < 40) { if (ph < 3) { f.glow(X, Y, 4, RP.RED, 0.9); f.px(X, Y, RP.RED.hex[4]); } else f.px(X, Y, RP.RED.hex[2]); }
+                else if (ph < 2) { f.glow(X, Y, 9, RP.RED, 0.95); f.px(X - 1, Y - 1, RP.RED.hex[4], 3, 3); f.px(X - 3, Y, RP.RED.hex[3], 7, 1); f.px(X, Y - 3, RP.RED.hex[3], 1, 7); }   // v2's orbit blink: flash, glow, ember, dark
+                else if (ph < 4) { f.glow(X, Y, 6, RP.RED, 0.7); f.px(X, Y, RP.RED.hex[4], 2, 2); }
+                else f.px(X, Y, RP.RED.hex[ph < 7 ? 3 : 2], 2, 2);
+            }
+            if (pl.kind === 'station' && sp.win) f.px(x + sp.win[0], y + sp.win[1], RP.AMBER.hex[4], g.r > 40 ? 2 : 1, 1);
+        });
+    }
+    /** A world far ahead: a small tinted cross (the colour of what it is: dust gold, ice, stone, station steel) that swells and
+        fades slowly, unlike a star's quick twinkle. They sit out from the light along the lanes they will come down. */
+    function drawGlint(f, pl, x, y, t) {
+        if (Math.hypot(x - cvX(LIGHT[0]), y - cvY(LIGHT[1])) < lightNow().core + 8) return;           // never on top of the light itself
+        const ramp0 = pl.kind === 'station' ? RP.UI : pl.hidden || pl.type === 'ice' ? RP.ICE : pl.type === 'rock' ? RP.DUST : RP.AMBER;   // never star-white
+        const ph = Math.floor(t / TICK) * TICK, pulse = 0.5 + 0.5 * Math.sin(ph / 1100 + (pl.at % 97)), core = 0.7 + 0.28 * pulse, arm = 0.3 + 0.32 * pulse;
+        [[-1, -1], [1, -1], [-1, 1], [1, 1], [-2, 0], [2, 0], [0, -2], [0, 2]].forEach(([dx, dy]) => f.px(x + dx, y + dy, INK));   // a dark collar: it stands out of the light's glow, unlike any star
+        f.px(x, y, ramp0.hex[level(ramp0, core, x, y) || 1]);
+        [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => f.tone(x + dx, y + dy, ramp0, arm));
+        if (pulse > 0.75) [[-2, 0], [2, 0], [0, -2], [0, 2]].forEach(([dx, dy]) => f.tone(x + dx, y + dy, ramp0, 0.3));
+    }
+    /** A world still far off: a flat dithered disc in fewer colours, toward the haze, lit on the side facing the light. */
+    function flatDisc(f, pl, x, y, r) {
+        const ramp0 = P.PLANET_RAMP[pl.type] || RP.STONE, L = pl.L;
+        for (let yy = -Math.ceil(r); yy <= Math.ceil(r); yy++) for (let xx = -Math.ceil(r); xx <= Math.ceil(r); xx++) {
+            const q = (xx * xx + yy * yy) / (r * r); if (q >= 1) continue;
+            const lam = Math.max(0, (xx * L[0] + yy * L[1]) / r + 0.25 * L[2]);
+            const v = 0.12 + 0.42 * lam * (0.5 + 0.5 * r / 8);
+            if (v < 0.16 && threshold(x + xx, y + yy) > 0.5) f.tone(x + xx, y + yy, RP.HAZE, 0.5); else f.tone(x + xx, y + yy, ramp0, Math.min(0.6, v));
+        }
+    }
+    function revealWorld(c, f, sp, x, y, t) {
+        const k = clamp01((t - S.reveal.t0) / 900), o = offscreen('fade');
+        o.g.clearRect(0, 0, G.W, G.H); o.g.drawImage(sp.canvas, x - sp.half, y - sp.half);
+        o.g.globalCompositeOperation = 'destination-in'; o.g.fillStyle = pattern(Math.floor(k * 8) / 8 * 64); o.g.fillRect(0, 0, G.W, G.H); o.g.globalCompositeOperation = 'source-over';
+        c.drawImage(o.c, 0, 0);
+        if (k < 1) P.contactBlip(f, x, y, t, true);
+    }
+
+    // ── our ship ──
+    /** Where the ship is and how big, now: at rest on the lane, or on its way into orbit and back. */
+    function shipPose(t, still) {
+        if (S.orbit) { const o = S.orbit, k = pushK(); return { x: lerp(o.S0[0], o.S1[0], k.e), y: lerp(o.S0[1], o.S1[1], k.e), len: Math.round(SHIP.len * Math.pow(ORBIT_SHIP, k.e)), angle: lerp(o.a0, o.a1, k.e) }; }
+        if (still || S.shipView) return { x: SHIP.x, y: SHIP.y, len: SHIP.len, angle: S.ship.angle };
+        const [dx, dy, da] = drift(t);
+        return { x: SHIP.x + dx, y: SHIP.y + dy, len: SHIP.len, angle: S.ship.angle + da };
+    }
+    /** The ship is never parked: a slow drift of a few pixels and a slight roll, settling in after we rejoin the lane. */
+    function drift(t) {
+        const amp = S.rejoinT ? smooth(0, 2500, t - S.rejoinT) : 1;
+        return [Math.round(amp * 2 * Math.sin(t / 3100)), Math.round(amp * 2.6 * Math.sin(t / 2300 + 1)), amp * 0.035 * Math.sin(t / 2700 + 2)];
+    }
+    function burnLevel() {
+        if (S.jump) return S.jump.phase === 'burn' ? 1 + 2.4 * clamp01((clock.t - S.jump.t0) / 1500) : 3.4;
+        if (S.course && S.course.phase === 'flip') return -1;                                      // the burn flips: braking
+        if (S.push && S.push.dir === 'in') return -1;
+        if (S.view === 'orbit' && !S.push) return 0.15;
+        return 0.35 + 0.65 * clamp01(S.speed / CRUISE);
+    }
+    function drawShip(c, f, t) {
+        if (S.shipView) { drawShipViewFrame(c, f, t); return; }
+        const pose = shipPose(t), sp = landerSprite(pose.len, pose.angle), cx = Math.round(cvX(pose.x)), cy = Math.round(cvY(pose.y));
+        const ca = Math.cos(sp.angle), sa = Math.sin(sp.angle), scale = pose.len / SHIP.len;
+        drawExhaust(f, t, cx + sp.bell[0], cy + sp.bell[1], ca, sa, scale);
+        if (!S.shuttle || S.shuttle.phase === 'home') drawShuttleAt(c, cx + sp.clamp[0], cy + sp.clamp[1], pose.len, sp.angle);
+        c.drawImage(sp.canvas, cx - sp.half, cy - sp.half);
+        drawPlume(f, t, cx + sp.bell[0], cy + sp.bell[1], ca, sa, scale, sp);
+        const on = occupied(t);
+        sp.ports.forEach(([px, py], i) => { if (on[i]) f.px(cx + px, cy + py, i === 0 ? RP.AMBER.hex[4] : RP.AMBER.hex[3], scale > 1.5 ? 2 : 1, 1); });
+        f.px(cx + sp.bridge[0], cy + sp.bridge[1], RP.AMBER.hex[on[0] ? 4 : 2]);
+        if (pose.len >= 80) { const ws = Math.max(1, Math.round(sp.winSize * 1.6)); sp.windows.forEach(([px, py]) => f.px(cx + px - (ws >> 1), cy + py - (ws >> 1), RP.AMBER.hex[on[0] ? 3 : 2], ws, ws)); }
+        if (S.shuttle && S.shuttle.phase !== 'home') drawShuttleFlight(c, f, t, cx + sp.clamp[0], cy + sp.clamp[1], pose.len, sp.angle);
+        const bc = Math.abs(Math.cos(sp.angle)), bs = Math.abs(Math.sin(sp.angle));               // the box the turned hull really covers
+        S.shipBox = { x: cx, y: cy, w: bc * pose.len + bs * pose.len / 3 + 6, h: bs * pose.len + bc * pose.len / 3 + 8 };
+    }
+    function drawPlume(f, t, bx, by, ca, sa, scale, sp) {
+        const lvl = burnLevel();
+        if (lvl < 0) {                                                                             // braking: small flames at the nose
+            const [nx, ny] = [bx + (sp.nose[0] - sp.bell[0]), by + (sp.nose[1] - sp.bell[1])];
+            const n = 3 + (Math.floor(t / TICK) % 2);
+            for (let d = 1; d <= n * scale; d++) for (const s of [-1, 1]) f.tone(nx + ca * d - sa * s * 2 * scale, ny + sa * d + ca * s * 2 * scale, RP.PLUME, 0.9 - d / (n * scale + 1) * 0.7);
+            return;
+        }
+        if (lvl <= 0) return;
+        if (scale > 6 && (bx < -200 || by < -200 || bx > G.W + 200 || by > G.H + 200)) return;
+        const frame = Math.floor(t / TICK) % 4, flick = [1, 0.72, 1.16, 0.88][frame], len = (10 + 15 * lvl) * scale * flick, w0 = Math.max(1, 1.8 * scale * (0.8 + 0.2 * lvl));
+        const hot = [1, 0.86, 1, 0.92][frame];                                                      // a clear flicker in brightness too, not only in length
+        for (let d = 0; d < len; d++) {
+            const hw = w0 * (1 - (d / len) * 0.6);
+            for (let s = -Math.ceil(hw); s <= Math.ceil(hw); s++) {
+                const u = Math.abs(s) / (hw + 0.01), v = (1 - d / len) ** 0.8 * (1 - u * u) * hot;
+                if (v > 0.06) f.tone(bx - ca * d - sa * s, by - sa * d + ca * s, RP.PLUME, v);
+            }
+        }
+        sp.skirt.forEach(([sx, sy], i) => { if ((i + frame) % 2 === 0 || lvl > 1) f.tone(bx - sp.bell[0] + sx, by - sp.bell[1] + sy, RP.PLUME, 0.4 + 0.15 * lvl); });   // the plume's cold light on the skirt
+    }
+    function drawExhaust(f, t, bx, by, ca, sa, scale) {
+        if (burnLevel() <= 0.2) return;
+        for (let i = 0; i < 9; i++) {
+            const age = ((t / 1000) * 0.8 + hash(i, 1, 57)) % 1, dist = (14 + age * 40) * scale, side = (hash(i, 2, 57) - 0.5) * age * 9 * scale;
+            f.tone(bx - ca * dist - sa * side, by - sa * dist + ca * side, RP.PLUME, 0.62 * (1 - age));
+        }
+    }
+    /** The wake: where the bell has been, carried back by the stream, so it curves with every bob and turn. */
+    function drawWake(L, t) {
+        if (S.shipView || S.view === 'orbit') return;
+        const w = S.wake, n = w.length;
+        for (let i = n - 1; i >= 0; i--) {
+            const p = w[i], s = S.D - p.D; if (s > 150) break;
+            const age = clock.t - p.t, a = (1 - s / 150) * (1 - clamp01(age / 7000));
+            if (a <= 0) continue;
+            const x = p.x - s, spread = 1 + s / 40;
+            for (let k = -Math.ceil(spread); k <= Math.ceil(spread); k++) { const v = 0.32 * a * (1 - Math.abs(k) / (spread + 1)); if (threshold(Math.round(x), Math.round(p.y + k)) < a * 0.55) L.tone(x, p.y + k, RP.PLUME, v); }
+        }
+    }
+    /** The searchlight: light, not a wedge, and nothing like the course line. Warm dust lights up as it drifts along the beam
+        from the bridge, and the lit edge of the world it finds brightens. */
+    function drawSearchlight(L, f, t) {
+        if (S.view !== 'travel' || S.push || S.shipView || S.jump || S.stops <= 0 || S.course || (S.hover && S.hover.kind === 'place')) return;   // pointing: the course line takes over
+        const pl = reachPlaces()[0]; if (!pl) return;
+        const g = placeGeom(pl), pose = shipPose(t), sp = landerSprite(pose.len, pose.angle), ax = cvX(pose.x) + sp.bridge[0], ay = cvY(pose.y) + sp.bridge[1];
+        const target = pl.kind === 'giant' ? giantLimb(g) : [g.x, g.y], tx = cvX(target[0]), ty = cvY(target[1]);
+        const t0 = S.reachT0[pl.id] || t, sweep = ease(clamp01((t - t0) / 900));
+        const ahead = [ax + Math.cos(BASE_ANGLE) * 200, ay + Math.sin(BASE_ANGLE) * 200], cx = lerp(ahead[0], tx, sweep), cy = lerp(ahead[1], ty, sweep);
+        const dx = cx - ax, dy = cy - ay, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist, rad = pl.kind === 'giant' ? 30 : g.r;
+        const end = dist - (pl.kind === 'giant' ? 4 : rad * 0.92), half = Math.min(0.16, Math.atan2(Math.max(10, rad * 0.6), dist));
+        for (let i = 0; i < 18; i++) {                                                            // warm dust lit up along the beam, drifting out to the world
+            const k = (hash(i, 1, 62) + t / 2600) % 1, s = 10 + k * (end - 10), off = (hash(i, 2, 62) - 0.5) * 2 * Math.tan(half) * s;
+            L.tone(ax + ux * s - uy * off, ay + uy * s + ux * off, RP.SUN, sweep * (0.4 + 0.5 * Math.sin(k * Math.PI)));
+        }
+        if (pl.kind !== 'giant' && g.r >= 8 && !(S.hover && S.hover.id === pl.id)) {                // the edge it finds brightens
+            const sp2 = worldSprite(pl, Math.round(g.r), false), x = Math.round(cvX(g.x)), y = Math.round(cvY(g.y));
+            sp2.rims.forEach(([rx, ry, r, lv]) => { if (threshold(x + rx + 3, y + ry) < sweep * 0.55) f.px(x + rx, y + ry, r.hex[Math.min(r.hex.length - 1, lv + 1)]); });
+        }
+    }
+
+    // ── the shuttle ──
+    function drawShuttleAt(c, x, y, len, angle) { const sp = shuttleSprite(len * 0.18, angle); c.drawImage(sp.canvas, Math.round(x) - sp.half, Math.round(y) - sp.half); }
+    function drawShuttleFlight(c, f, t, hx, hy, len, angle) {
+        const sh = S.shuttle, s = clamp01(Math.floor((t - sh.t0) / TICK) * TICK / sh.dur), k = sh.phase === 'up' ? 1 - s : s;
+        const [bx, by] = sh.to, x = lerp(hx, bx, k) - Math.sin(k * Math.PI) * 22, y = lerp(hy, by, k * k * 0.4 + k * 0.6);
+        const size = len * 0.22 * (1 - 0.6 * k), sp = shuttleSprite(size, angle + (Math.PI / 2 + 0.1 - angle) * k);
+        c.drawImage(sp.canvas, Math.round(x) - sp.half, Math.round(y) - sp.half);
+        if (Math.floor(t / TICK) % 2) f.tone(x, y - 2, RP.PLUME, 0.8);
+    }
+
+    // ── pointing: the rim brightens, the nose turns, a warm curve leaves our nose and fades before the world ──
+    function drawHover(f, t) {
+        const h = S.hover; if (!h || S.course || S.push || S.orbit || S.view !== 'travel') return;
+        if (h.kind === 'place') {
+            const pl = placeById(h.id), g = placeGeom(pl);
+            if (pl.kind === 'giant') { const A = sectorArt(S.n), x = Math.round(cvX(g.x)), y = Math.round(cvY(g.y)); A.thing.rims.forEach(([rx, ry, r, lv]) => f.px(x + rx, y + ry, r.hex[Math.min(r.hex.length - 1, lv + 1)])); return; }
+            const sp = worldSprite(pl, Math.round(g.r), false), x = Math.round(cvX(g.x)), y = Math.round(cvY(g.y));
+            sp.rims.forEach(([rx, ry, r, lv]) => f.px(x + rx, y + ry, r.hex[Math.min(r.hex.length - 1, lv + 1)]));
+        }
+        if (h.kind === 'light') { const lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]); for (let d = 3; d < 11; d++) { const v = 0.85 - d * 0.06; f.tone(lx - d, ly, RP.SUN, v); f.tone(lx, ly - d, RP.SUN, v); f.tone(lx, ly + d, RP.SUN, v); } }
+    }
+    function noseStage() { const pose = shipPose(clock.t); return [pose.x + Math.cos(pose.angle) * pose.len / 2, pose.y + Math.sin(pose.angle) * pose.len / 2]; }
+    function dockFor(pl) {
+        const g = placeGeom(pl), [nx, ny] = noseStage();
+        if (pl.kind === 'giant') return giantLimb(g);
+        const d = Math.hypot(nx - g.x, ny - g.y) || 1, r = g.r + 4;
+        return [g.x + (nx - g.x) / d * r, g.y + (ny - g.y) / d * r];
+    }
+    function courseTo(target) {
+        const [nx, ny] = noseStage(), p0 = [nx, ny], p2 = target, dx = p2[0] - p0[0], dy = p2[1] - p0[1], d = Math.hypot(dx, dy) || 1;
+        const lift = d * (dy > -0.3 * d ? 0.2 : 0.06);
+        return { p0, p1: [p0[0] + Math.max(18, dx * 0.55), p0[1] + dy * 0.12 - lift], p2, dist: d };
+    }
+    const bez = (c, s) => [(1 - s) ** 2 * c.p0[0] + 2 * s * (1 - s) * c.p1[0] + s * s * c.p2[0], (1 - s) ** 2 * c.p0[1] + 2 * s * (1 - s) * c.p1[1] + s * s * c.p2[1]];
+    function drawCourse(f, t) {
+        let c = null, reveal = 1, locked = false;
+        if (S.course && S.course.phase === 'lock') { c = courseTo(dockFor(placeById(S.course.id))); locked = true; }
+        else if (S.hover && S.hover.kind === 'place' && !S.push && S.view === 'travel') { c = courseTo(dockFor(placeById(S.hover.id))); reveal = clamp01((t - S.hover.t0) / 380); }
+        if (!c) return;
+        const march = Math.floor(t / TICK), reach = locked ? 0.97 : 0.62, n = Math.ceil(c.dist * 1.25);
+        for (let i = Math.floor(0.04 * n); i <= Math.min(reveal * reach, reach) * n; i++) {
+            const s = i / n, [x, y] = bez(c, s), fade = 1 - clamp01(s / (reach + 0.001)), ph = ((i - march) % 5 + 5) % 5;
+            if (fade * 0.9 + 0.1 > threshold(Math.round(cvX(x)) + ph, Math.round(cvY(y)))) f.tone(cvX(x), cvY(y), RP.AMBER, (locked ? 0.55 : 0.4) + 0.4 * fade);
+        }
+    }
+
+    // ── the jump: the burn runs to full, every streak stretches toward the light, white-gold, black ──
+    function drawJump(c, f, t) {
+        const J = S.jump, lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]);
+        if (J.phase === 'black') { c.fillStyle = INK; c.fillRect(0, 0, G.W, G.H); return; }
+        if (J.phase === 'flash') { const k = clamp01((t - J.t2) / 400); c.fillStyle = RP.SUN.hex[6]; c.fillRect(0, 0, G.W, G.H); dimWith(c, Math.floor(k * 8) / 8 * 0.9); return; }
+        if (J.phase !== 'stretch') return;
+        const k = Math.min(6, Math.floor((t - J.t1) / TICK) + 1), L = P.pixelLayer(G.W, G.H);
+        dimWith(c, k / 8);
+        const stars = sectorArt(S.n).bright.concat(window.ShipArt.stars(1).bright.map(s => ({ x: ((s.x + Math.round(S.mid.x)) % 512 + 512) % 512, y: ((s.y + Math.round(S.mid.y)) % 512 + 512) % 512, mag: 0.95 })).filter(s => s.x < G.W && s.y < G.H));
+        stars.forEach(s => {
+            const dx = lx - s.x, dy = ly - s.y, d = Math.hypot(dx, dy) || 1, len = Math.min(d, k * k * 2.6 * (0.5 + s.mag));
+            for (let i = 0; i < len; i++) L.tone(s.x + dx / d * i, s.y + dy / d * i, RP.STAR, (0.45 + 0.5 * s.mag) * (1 - i / len));
+        });
+        L.draw(c);
+        f.glow(lx, ly, 6 + k * 3, RP.SUN, 0.6 + k * 0.06);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 6. Pulling in: no cut. The same planet drawing and the same ship grow by the same amount (2x, eight pre-baked sizes,
+    //    stepped) while the light stays where it is. Orbit is the end of that push; leaving plays it backwards.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const focusPlace = () => (S && S.orbit ? S.orbit.pl : null);
+    const isFocus = pl => !!S.orbit && S.orbit.pl === pl;
+    /** A place's geometry on screen, with the camera's push applied: the world we pull in to grows to fill the frame; the
+        others move with it at their own depth (a world beside us as much, a glint near the light hardly at all). */
+    function placeGeom(pl) {
+        const g = geom(pl, S.D);
+        if (pl.kind === 'giant' || !S.orbit) return g;
+        const o = S.orbit, k = pushK();
+        if (isFocus(pl)) return { x: lerp(o.P0[0], o.P1[0], k.e), y: lerp(o.P0[1], o.P1[1], k.e), r: o.r0 * Math.pow(o.Z, k.e), f: 1, d: 0 };
+        const cam = camAt(Math.max(0.05, Math.min(1, g.f))); if (!cam) return g;
+        const [x, y] = cam.map(g.x, g.y);
+        return { x, y, r: g.r * cam.Zq, f: g.f, d: g.d };
+    }
+    /** How far into the push we are: eight steps, 0 at the lane, 7 in orbit. */
+    function pushK() {
+        const o = S.orbit; if (!o) return { step: 0, e: 0 };
+        if (!S.push) return S.view === 'orbit' ? { step: 7, e: 1 } : { step: 0, e: 0 };
+        const pu = S.push, k = clamp01((clock.t - pu.t0) / pu.dur), step = Math.min(7, Math.floor(k * 8)), s = pu.dir === 'in' ? step : 7 - step;
+        return { step: s, e: ease(s / 7) };
+    }
+    /** The camera move into orbit. P0 → P1: where the zoom's centre starts and ends; Z: how much the world grows; S0 → S1 and
+        a0 → a1: our ship. The world ends v1-sized: its diameter about 86% of the screen height, a whole round world (cut by
+        the frame at most a little), right of centre with the light clear beside it. Our ship holds station in open sky on
+        the side it came in from, nose toward the light. The giant is pushed in on about the point of its limb under us. */
+    function orbitLayout(pl) {
+        const g = geom(pl, S.D), now = shipPose(clock.t), S0 = [now.x, now.y], a0 = now.angle;
+        if (pl.kind === 'giant') {
+            const [fx, fy] = giantLimb(g), st = [Math.min(520, fx + 170), Math.max(70, fy - 120)];
+            return { P0: [fx, fy], P1: [fx, fy], Z: 2, r0: GIANT_R, focal: [fx, fy], S0, S1: st, a0, a1: Math.atan2(LIGHT[1] - st[1], LIGHT[0] - st[0]) };
+        }
+        const isStation = pl.kind === 'station', Z = isStation ? 3 : ORBIT_R / g.r, R1 = isStation ? 27 * pl.s * Z : ORBIT_R;
+        const dl = Math.hypot(S0[0] - g.x, S0[1] - g.y) || 1, dir = [(S0[0] - g.x) / dl, (S0[1] - g.y) / dl];
+        const W1 = [Math.max(R1 + 8, Math.min(LIGHT[0] - 40 - R1, SW / 2 - dir[0] * 70)), Math.max(ORBIT_R - 24, Math.min(SH - ORBIT_R + 24, SH / 2 - dir[1] * 70))];
+        const gap = R1 + (isStation ? 70 : 58);
+        const S1 = [Math.max(64, Math.min(SW - 64, W1[0] + dir[0] * gap)), Math.max(40, Math.min(SH - 40, W1[1] + dir[1] * gap))];
+        return { P0: [g.x, g.y], P1: W1, Z, r0: g.r, S0, S1, a0, a1: Math.atan2(LIGHT[1] - S1[1], LIGHT[0] - S1[0]) };
+    }
+    /** Bakes the eight sizes of the world and the ship before the push needs them. */
+    function bakePush(pl) {
+        const o = S.orbit;
+        for (let i = 0; i < 8; i++) {
+            const e = ease(i / 7), ang = lerp(o.a0, o.a1, e), len = Math.round(SHIP.len * Math.pow(ORBIT_SHIP, e));
+            bakeLater(() => landerSprite(len, ang));
+            if (pl.kind === 'giant') bakeLater(() => giantPushFrame(i));
+            else bakeLater(() => worldSprite(pl, Math.round(o.r0 * Math.pow(o.Z, e)), false));
+        }
+    }
+    const giantFrames = new Map();
+    /** The giant pushed in on, about the point of its limb under us: painted fresh at each of the eight sizes (screen-sized). */
+    function giantPushFrame(step) {
+        const o = S.orbit; if (!o || !o.focal || step <= 0) return null;
+        const key = `${S.n}:${G.W}x${G.H}:${o.focal.map(Math.round).join(',')}:${step}`;
+        if (giantFrames.has(key)) return giantFrames.get(key);
+        const s = Math.pow(o.Z, ease(step / 7)), [fx, fy] = o.focal, g = giantGeom(S.D), p = P.painter(G.W, G.H, false);
+        P.paintGiant(p, { cx: cvX(fx + (g.x - fx) * s), cy: cvY(fy + (g.y - fy) * s), R: GIANT_R * s, L: giantLight(), tilt: GIANT_TILT, open: GIANT_OPEN });
+        const c = p.canvas();
+        if (giantFrames.size > 24) giantFrames.clear();
+        giantFrames.set(key, c);
+        return c;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 7. The ship view: the camera closes on the hull and it turns a quarter turn, nose up, ending exactly where the living
+    //    ship's hull stands; then the plating falls away through the dither. Esc plays it backwards.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const SHIPVIEW = { push: 800, dissolve: 600, deck: 1 };
+    let shipFrames = null;
+    function shipViewFrames() {
+        const key = `${G.W}x${G.H}:${Inside ? Inside.k : 0}`;
+        if (shipFrames && shipFrames.key === key) return shipFrames;
+        const pose = Inside.pose(SHIPVIEW.deck), dpr = G.dpr;
+        const toArtX = dev => (dev - G.left * dpr) / G.k, toArtY = dev => (dev - G.top * dpr) / G.k;
+        const lenF = pose.rows * pose.k / G.k, cxF = toArtX(pose.cx), tipF = toArtY(pose.tipY), cyF = tipF + lenF / 2;
+        const sx = cvX(SHIP.x), sy = cvY(SHIP.y), turn = -Math.PI / 2 - BASE_ANGLE, frames = [];
+        for (let i = 0; i < 8; i++) {                                                               // the same recipe as on the lane (paintLander): never mirrored, lit from the light, which turns with the camera
+            const e = ease(i / 7), roll = turn * e;
+            frames.push({ e, roll, angle: BASE_ANGLE + roll, len: Math.round(SHIP.len * Math.pow(lenF / SHIP.len, e)), x: lerp(sx, cxF, e), y: lerp(sy, cyF, e), pic: null });
+        }
+        shipFrames = { key, frames };
+        return shipFrames;
+    }
+    function shipFramePicture(F) {
+        if (F.pic) return F.pic;
+        if (F.e === 0) { const sp = landerSprite(F.len, F.angle), p = P.painter(G.W, G.H, false), c = p.canvas(); c.getContext('2d').drawImage(sp.canvas, Math.round(F.x) - sp.half, Math.round(F.y) - sp.half); F.pic = { canvas: c, parts: sp, ox: Math.round(F.x), oy: Math.round(F.y) }; return F.pic; }
+        const p = P.painter(G.W, G.H, false), parts = paintLander(p, F.x, F.y, F.len, F.angle, F.roll);
+        F.pic = { canvas: p.canvas(), parts, ox: F.x, oy: F.y };
+        return F.pic;
+    }
+    function drawShipViewFrame(c, f, t) {
+        const sv = S.shipView, fr = shipViewFrames().frames;
+        const step = sv.phase === 'push' ? Math.min(7, Math.floor(clamp01((t - sv.t0) / SHIPVIEW.push) * 8)) : sv.phase === 'back' ? 7 - Math.min(7, Math.floor(clamp01((t - sv.t0) / SHIPVIEW.push) * 8)) : 7;
+        sv.k = step / 7;
+        S.roll = fr[step].roll;
+        const F = fr[step], pic = shipFramePicture(F), q = pic.parts, scale = F.len / SHIP.len, ca = Math.cos(F.angle), sa = Math.sin(F.angle);
+        const bx = pic.ox + q.bell[0], by = pic.oy + q.bell[1];
+        drawExhaust(f, t, bx, by, ca, sa, scale);
+        c.drawImage(pic.canvas, 0, 0);
+        drawPlume(f, t, bx, by, ca, sa, scale, q);                                                  // the drive keeps burning through the turn
+        const on = occupied(t), w = scale < 1.6 ? 1 : 2;
+        q.ports.forEach(([px, py], i) => { if (on[i]) f.px(pic.ox + px - (w >> 1), pic.oy + py - (w >> 1), i === 0 ? RP.AMBER.hex[4] : RP.AMBER.hex[3], w, w); });
+        f.px(pic.ox + q.bridge[0], pic.oy + q.bridge[1], RP.AMBER.hex[on[0] ? 4 : 2], w, w);            // the bridge is lit from inside at every size: its screens never go off
+        if (F.len >= 80) { const ws = Math.max(1, Math.round(q.winSize * 1.6)); q.windows.forEach(([px, py]) => f.px(pic.ox + px - (ws >> 1), pic.oy + py - (ws >> 1), RP.AMBER.hex[on[0] ? 3 : 2], ws, ws)); }
+    }
+    function openShip() {
+        if (!S || !Inside || S.view !== 'travel' || S.push || S.course || S.jump || S.shipView || S.intro) return;
+        setHover(null); showNote(null); unwordAll('name:'); unword('hint'); unword('low');
+        Inside.open(SHIPVIEW.deck);
+        S.shipView = { phase: 'push', t0: clock.t, k: 0 };
+        after(SHIPVIEW.push, () => { S.shipView.phase = 'dissolve'; S.shipView.t0 = clock.t; Inside.setReveal(0); Inside.show(true); });
+        after(SHIPVIEW.push + SHIPVIEW.dissolve, () => { S.shipView.phase = 'in'; Inside.setReveal(1); S.view = 'inside'; });
+    }
+    function closeShip() {
+        if (!S || !S.shipView || S.shipView.phase !== 'in') return;
+        Reading.clear();
+        S.view = 'travel'; S.shipView.phase = 'undissolve'; S.shipView.t0 = clock.t;
+        after(SHIPVIEW.dissolve, () => { Inside.show(false); S.shipView.phase = 'back'; S.shipView.t0 = clock.t; });
+        after(SHIPVIEW.dissolve + SHIPVIEW.push, () => { S.shipView = null; S.roll = 0; refreshNames(); });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 8. The frame: the flight (with the push, the jump and the ship view folded in), then the dim, the shades, the film.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    function render() {
+        const t = clock.t;
+        if (!S) return;
+        bakeOne();
+        placeWords(t);                                                                              // words first: the shades under them are drawn this frame, not next
+        Reading.frame(t);
+        let ra = 1;                                                                                  // a line open during the pull-in fades out, waits, and comes back where our ship ends up
+        if (S.push && S.push.dir === 'in') { const k = clamp01((t - S.push.t0) / S.push.dur); ra = k < 0.2 ? 1 - k / 0.2 : k < 0.65 ? 0 : (k - 0.65) / 0.35; }
+        readingLayer.style.opacity = String(Math.floor(ra * 8) / 8);
+        if (ra < 1) { setShade('r:voice', null); setShade('r:ask', null); S.readingHidden = true; }
+        else if (S.readingHidden) { S.readingHidden = false; Reading.relayout(); }
+        if (S.view === 'film' || S.view === 'black') { ctx.fillStyle = INK; ctx.fillRect(0, 0, G.W, G.H); }
+        else if (S.view !== 'inside') drawFlight(ctx, t);
+        if (S.fadeIn) { const k = clamp01((t - S.fadeIn.t0) / S.fadeIn.dur); if (k < 1) dimWith(ctx, 1 - Math.floor(k * 8) / 8); else S.fadeIn = null; }
+        if (S.trans) { const k = clamp01((t - S.trans.t0) / S.trans.dur); dimWith(ctx, S.trans.out ? Math.floor(k * 8) / 8 : 1 - Math.floor(k * 8) / 8); }
+        if (S.dim > 0) darken(ctx, S.dim);
+        if (S.view !== 'inside') drawShades(ctx, toCanvas, true);
+        if (Inside && Inside.isShown()) {
+            if (S.shipView) { const sv = S.shipView, k = clamp01((t - sv.t0) / SHIPVIEW.dissolve); Inside.setReveal(sv.phase === 'dissolve' ? Math.floor(k * 8) / 8 : sv.phase === 'undissolve' ? 1 - Math.floor(k * 8) / 8 : 1); }
+            Inside.render(t, S.view === 'inside' ? (c, conv) => drawShades(c, conv, false) : null);
+        }
+        if (S.film) paintFilm(t);
+    }
+    function paintFilm(t) {
+        const F = S.film;
+        P.filmFrame(filmCtx, t - F.t0);
+        const k = clamp01((t - F.t0) / 700);
+        if (k < 1) { filmCtx.fillStyle = pattern((1 - Math.floor(k * 8) / 8) * 64); filmCtx.fillRect(0, 0, P.FILM_W, P.FILM_H); }
+    }
+    function filmGeometry() {
+        const dpr = G.dpr, iw = window.innerWidth, ih = window.innerHeight, k = Math.max(1, Math.floor(Math.min(iw * dpr / P.FILM_W, (ih - 400) * dpr / P.FILM_H) + 1e-6));
+        const w = P.FILM_W * k / dpr, h = P.FILM_H * k / dpr, x = Math.floor((iw * dpr - P.FILM_W * k) / 2) / dpr, y = Math.floor((ih * dpr - P.FILM_H * k) / 2) / dpr;
+        return { x, y, w, h, bandTop: { y: 0, h: Math.floor(y) }, bandBottom: { y: Math.ceil(y + h), h: ih - Math.ceil(y + h) } };
+    }
+    function showFilmCanvas(on) {
+        filmCv.style.display = on ? 'block' : 'none';
+        if (!on) return;
+        const g = filmGeometry();
+        filmCv.style.width = g.w + 'px'; filmCv.style.height = g.h + 'px'; filmCv.style.left = g.x + 'px'; filmCv.style.top = g.y + 'px';
+    }
+
+    // ── shades: the picture darkens softly under words, with the same dither grain; never over a world or our ship ──
+    const shades = new Map(), shadeSprites = new Map(), SHADE_PAD = 14;
+    function setShade(key, rect) { if (rect) shades.set(key, rect); else shades.delete(key); }
+    function shadeSprite(w, hgt, ax, ay, strength) {
+        const key = `${w}x${hgt}:${ax}:${ay}:${strength}`;
+        let c = shadeSprites.get(key);
+        if (c) return c;
+        const W2 = w + SHADE_PAD * 2, H2 = hgt + SHADE_PAD * 2, a0 = strength / 20, ink = P.hexRgb(INK);
+        c = document.createElement('canvas'); c.width = W2; c.height = H2;
+        const g = c.getContext('2d'), img = g.createImageData(W2, H2), hw = w / 2, hh = hgt / 2, round = Math.min(hw, hh);
+        for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+            const qx = Math.abs(x + 0.5 - SHADE_PAD - hw) - (hw - round), qy = Math.abs(y + 0.5 - SHADE_PAD - hh) - (hh - round);
+            const sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - round + (P.fbm(x / 7, y / 4, 17, 2) - 0.5) * 16;
+            const a = a0 * (1 - smooth(-12, SHADE_PAD, sd));
+            if (a > threshold(x + ax, y + ay)) { const o = (y * W2 + x) * 4; img.data[o] = ink[0]; img.data[o + 1] = ink[1]; img.data[o + 2] = ink[2]; img.data[o + 3] = 255; }
+        }
+        g.putImageData(img, 0, 0);
+        if (shadeSprites.size > 240) shadeSprites.clear();
+        shadeSprites.set(key, c);
+        return c;
+    }
+    /** conv(screenX, screenY) → the target's own pixels. In the flight, the worlds, the giant and our ship are cut out. */
+    function drawShades(target, conv, isFlight) {
+        if (!shades.size) return;
+        const W = target.canvas.width, H = target.canvas.height, o = isFlight ? offscreen('shade') : null, g = o ? o.g : target;
+        if (o) g.clearRect(0, 0, W, H);
+        const paint = (to, r) => {
+            const [fx0, fy0] = conv(r.x, r.y), [fx1, fy1] = conv(r.x + r.w, r.y + r.h);
+            const x0 = Math.floor(fx0), y0 = Math.floor(fy0), w = Math.max(1, Math.ceil(fx1) - x0), hgt = Math.max(1, Math.ceil(fy1) - y0);
+            const strength = Math.round((r.strength || 0.62) * 20), sx = x0 - SHADE_PAD, sy = y0 - SHADE_PAD;
+            if (strength > 0) to.drawImage(shadeSprite(w, hgt, sx & 7, sy & 7, strength), sx, sy);
+        };
+        shades.forEach(r => { if (!r.everywhere) paint(g, r); });
+        if (o) {
+            g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000';
+            visibleDiscs().forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r + 2, 0, Math.PI * 2); g.fill(); });
+            if (S.shipBox && !S.shipView) { const b = S.shipBox; g.fillRect(b.x - b.w / 2, b.y - b.h / 2, b.w, b.h); }
+            g.globalCompositeOperation = 'source-over';
+            target.drawImage(o.c, 0, 0);
+        }
+        shades.forEach(r => { if (r.everywhere) paint(target, r); });
+    }
+    /** Every round thing on screen now, in canvas pixels: [x, y, r]. Glints count too, so no star twinkles on one. */
+    function visibleDiscs() {
+        if (!S || S.view === 'inside') return [];
+        const out = [];
+        S.places.forEach(pl => { if (pl.kind === 'giant') return; const g = placeGeom(pl); out.push([cvX(g.x), cvY(g.y), g.r < 3 ? 3 : pl.kind === 'station' ? g.r * 1.1 : g.r + 3]); });
+        const gs = giantShape(); if (gs) out.push([gs.cx, gs.cy, gs.R]);
+        const A = sectorArt(S.n), tp = thingPos(A);
+        if (tp && A.thing.kind === 'rogue') out.push([cvX(tp[0]), cvY(tp[1]), ROGUE.R]);
+        return out;
+    }
+    /** The giant as it is on screen now (lane, pushed in on, or carried away by a push on another world), in canvas pixels. */
+    function giantShape() {
+        const A = sectorArt(S.n); if (!A.thing || A.thing.kind !== 'giant') return null;
+        const g = giantGeom(S.D);
+        if (S.orbit && S.orbit.focal) { const [fx, fy] = S.orbit.focal, Z = Math.pow(S.orbit.Z, pushK().e); return { cx: cvX(fx + (g.x - fx) * Z), cy: cvY(fy + (g.y - fy) * Z), R: GIANT_R * Z }; }
+        const cam = S.orbit && camAt(0.5);
+        if (cam) { if (cam.e > 0.6) return null; const [x, y] = cam.map(g.x, g.y); return { cx: cvX(x), cy: cvY(y), R: GIANT_R * cam.Zq }; }
+        return { cx: cvX(g.x), cy: cvY(g.y), R: GIANT_R };
+    }
+    const RING_C = Math.cos(GIANT_TILT), RING_S = Math.sin(GIANT_TILT);
+    function onRing(gs, x, y) {
+        const dx = x - gs.cx, dy = y - gs.cy, u = dx * RING_C + dy * RING_S, w = -dx * RING_S + dy * RING_C, rho = Math.hypot(u, w / GIANT_OPEN) / gs.R;
+        return rho > P.GIANT.r0 - 0.04 && rho < P.GIANT.r1 + 0.04;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 9. Words that belong to the world (v2's word system): names in reach, the note when you point, the hint, the title,
+    //    chips, our supplies, the place's name in orbit and the actions written in the sky.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const marks = $('marks'), readingLayer = $('reading');
+    const words = new Map();
+    function h(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+    function word(key, el, opts) {
+        unword(key);
+        el.classList.add('w');
+        marks.appendChild(el);
+        const rec = { el, opts, w: el.offsetWidth, h: el.offsetHeight };
+        words.set(key, rec);
+        return rec;
+    }
+    function unword(key) { const r = words.get(key); if (r) { r.el.remove(); words.delete(key); setShade('w:' + key, null); } if (key === 'act:step' && S) S.actThread = null; }
+    function unwordAll(prefix) { [...words.keys()].forEach(k => { if (!prefix || k.startsWith(prefix)) unword(k); }); }
+    function remeasureWords() { words.forEach(r => { r.w = r.el.offsetWidth; r.h = r.el.offsetHeight; }); }
+    function wordRect(r, o, side, sx, sy, gap) {
+        let x = sx, y = sy;
+        if (side === 'right') { x = sx + gap; y = sy - r.h / 2; }
+        else if (side === 'left') { x = sx - gap - r.w; y = sy - r.h / 2; }
+        else if (side === 'below') { x = sx - (o.alignLeft ? 0 : o.alignRight ? r.w : r.w / 2); y = sy + gap; }
+        else if (side === 'above') { x = sx - (o.alignLeft ? 0 : o.alignRight ? r.w : r.w / 2); y = sy - gap - r.h; }
+        else if (side === 'center') { x = sx - r.w / 2; y = sy - r.h / 2; }
+        return [Math.max(8, Math.min(window.innerWidth - r.w - 8, x)), Math.max(8, Math.min(window.innerHeight - r.h - 8, y))];
+    }
+    function placeWords(t) {
+        [...words].sort((a, b) => (a[1].opts.yields ? 1 : 0) - (b[1].opts.yields ? 1 : 0)).forEach(([key, r]) => {
+            if (words.get(key) !== r) return;
+            const o = r.opts;
+            if (o.view && o.view !== S.view) { r.el.style.opacity = '0'; setShade('w:' + key, null); return; }
+            let alpha = 1;
+            if (o.fade) { const e = t - o.fade.t0; alpha = e < 0 ? 0 : e < o.fade.inMs ? e / o.fade.inMs : e < o.fade.inMs + o.fade.holdMs ? 1 : 1 - (e - o.fade.inMs - o.fade.holdMs) / o.fade.outMs; alpha = clamp01(alpha); if (o.fade.outMs && e > o.fade.inMs + o.fade.holdMs + o.fade.outMs) { if (o.fade.remove !== false) { unword(key); return; } } }
+            if (o.rise) alpha *= 1 - clamp01((t - o.rise.t0 - 400) / 1100);
+            if (o.when) alpha *= o.when(t);
+            if (o.hideOnHover && (S.hover || S.course)) alpha = 0;
+            if (S.push || S.shipView || S.jump) { if (!o.keepInMotion) alpha = 0; }
+            const at = o.at(t); if (!at) { r.el.style.opacity = '0'; setShade('w:' + key, null); return; }
+            const [cx, cy] = at, gap = (typeof o.gap === 'function' ? o.gap() : o.gap == null ? 6 : o.gap) * G.s, [sx, sy] = toScreen(cx, cy - (o.rise ? clamp01((t - o.rise.t0) / 1500) * 20 : 0));
+            let x, y;
+            if (o.sides) {
+                const sides = typeof o.sides === 'function' ? o.sides() : o.sides;
+                const build = far => { const near = sides.map(side => wordRect(r, o, side, sx, sy, gap)); return far ? near.concat(sides.map(side => wordRect(r, o, side, sx, sy, gap * 2.4 + 12 * G.s))) : near; };
+                let rects = build(!!r.far);
+                if (r.pick == null || r.pick >= rects.length || !r.pickAt || Math.hypot(r.pickAt[0] - sx, r.pickAt[1] - sy) > 18) {
+                    const talk = o.solid ? [shades.get('r:voice'), shades.get('r:ask')].filter(Boolean) : [];
+                    const scoreOf = list => list.map(q => World.luma({ x: q[0], y: q[1], w: r.w, h: r.h }) + (talk.some(v => q[0] < v.x + v.w && q[0] + r.w > v.x && q[1] < v.y + v.h && q[1] + r.h > v.y) ? 0.5 : 0));
+                    rects = build(false); let score = scoreOf(rects);
+                    r.far = Math.min(...score) > 0.06;                                                  // every place beside it is busy (the giant's ring, a limb): step further out into open sky
+                    if (r.far) { rects = build(true); score = scoreOf(rects); }
+                    let best = 0; score.forEach((v, i) => { if (v < score[best] - 0.004) best = i; });
+                    r.pick = r.pick != null && r.pick < rects.length && score[r.pick] < 0.05 ? r.pick : best; r.pickAt = [sx, sy];
+                }
+                [x, y] = rects[r.pick];
+            } else [x, y] = wordRect(r, o, o.side, sx, sy, gap);
+            if (o.yields && alpha > 0) {
+                if (o.place && S.hover && S.hover.kind === 'place' && S.hover.id === o.place) alpha = 0;
+                const n = words.get('note'), nr = n && n.el.style.opacity !== '0' ? n.box : null;
+                [shades.get('r:voice'), shades.get('r:ask'), nr].forEach(v => { if (v && x < v.x + v.w && x + r.w > v.x && y < v.y + v.h && y + r.h > v.y) alpha = 0; });
+            }
+            r.box = { x, y, w: r.w, h: r.h };
+            if (o.thread && key === 'act:step') {
+                const [tx, ty] = toScreen(o.thread[0], o.thread[1]);
+                S.actThread = alpha > 0.05 ? { from: toCanvas(Math.max(x, Math.min(x + r.w, tx)), Math.max(y + 4, Math.min(y + r.h - 4, ty))), to: o.thread } : null;
+            }
+            r.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+            r.el.style.opacity = String(alpha);
+            if (r.el.tagName === 'BUTTON') r.el.style.pointerEvents = alpha > 0.05 ? '' : 'none';
+            setShade('w:' + key, o.shade && alpha > 0.05 ? { x, y, w: r.w, h: r.h, strength: (o.shadeStrength || 0.62) * Math.min(1, alpha * 1.4) } : null);
+        });
+    }
+    // the giant's words go in the open sky over our ship, clear of its ring and limb
+    const spotOf = id => () => { const pl = placeById(id); if (!pl) return null; const g = placeGeom(pl); if (pl.kind === 'giant') { const [lx, ly] = giantLimb(g); return [cvX(lx), cvY(Math.min(ly, SHIP.y) - 34)]; } return [cvX(g.x), cvY(g.y)]; };
+    const gapFor = pl => () => (pl.kind === 'giant' ? 10 : placeGeom(pl).r + 7);
+    const sidesFor = pl => () => { if (pl.kind === 'giant') return ['above', 'right', 'left']; const g = placeGeom(pl), first = g.x > 470 ? 'left' : 'right'; return [first, g.y > SHIP.y ? 'below' : 'above', first === 'left' ? 'right' : 'left']; };
+
+    function stopText() { return S.stops >= 3 ? 'uses a stop' : S.stops === 2 ? 'uses a stop · one more after this' : 'our last stop before the jump'; }
+    function costLine(pl) {
+        if (pl.free) return `no energy, we have their course · ${stopText()}`;
+        return `${pl.cost} energy · ${stopText()}${pl.fills ? ' · fills the tanks' : ''}`;
+    }
+    function noteEl(name, line, cost, isLeft) {
+        const el = h('div', 'note' + (isLeft ? ' is-left' : ''));
+        el.append(h('p', 'name', name));
+        if (line) el.append(h('p', 'line', line));
+        if (cost) el.append(h('p', 'cost', cost));
+        return el;
+    }
+    function showNote(target) {
+        unword('note');
+        if (!target) return;
+        if (target.kind === 'place') {
+            const pl = placeById(target.id);
+            word('note', noteEl(pl.name, pl.line, S.stops > 0 ? costLine(pl) : 'No stops left before the jump'), { at: spotOf(pl.id), sides: sidesFor(pl), gap: gapFor(pl), shade: true, view: 'travel' });
+        }
+        if (target.kind === 'noStops') { const pl = placeById(target.id); word('note', noteEl(pl.name, null, 'No stops left before the jump'), { at: spotOf(pl.id), sides: sidesFor(pl), gap: gapFor(pl), shade: true, view: 'travel' }); }
+        if (target.kind === 'light') word('note', noteEl('The light ahead', 'Jump to the next sector.', `${DATA.JUMP.energy} energy · ${DATA.JUMP.rations} rations`, true), { at: () => [cvX(LIGHT[0]), cvY(LIGHT[1])], sides: ['below', 'left', 'above'], alignRight: true, gap: () => Math.round(20 + lightNow().halo * 0.9), shade: true, shadeStrength: 0.75, view: 'travel' });   // below and left, clear of its glow
+        if (target.kind === 'ship') {
+            const el = h('div', 'supplies');
+            el.append(h('p', 'nums', `Energy ${S.res.energy} · Rations ${S.res.rations} · Salvage ${S.res.salvage}`), h('p', 'sub', 'Click to look inside'));
+            word('note', el, { at: () => [cvX(SHIP.x), cvY(SHIP.y - SHIP.ht / 2 - 2)], side: 'above', gap: 6, shade: true, view: 'travel' });
+        }
+    }
+    /** The name and tag beside each world while it is beside us (v1's labels); a contact shows as a contact. */
+    function refreshNames() {
+        if (!S || S.view !== 'travel' || S.shipView) return;
+        S.places.forEach(pl => {
+            const key = 'name:' + pl.id, g = geom(pl, S.D), near = S.D >= (pl.kind === 'giant' ? pl.at - 320 : pl.at - REACH_LEAD) && !isPassed(pl, g);
+            const want = near && !(S.hover && S.hover.id === pl.id) ? (pl.hidden ? 'contact' : pl.visited ? 'visited' : 'name') : null;
+            const cur = words.get(key);
+            if (!want) { if (cur && !cur.leaving) { cur.leaving = true; cur.opts.fade = { t0: clock.t, inMs: 1, holdMs: 0, outMs: 900, remove: true }; cur.el.classList.add('is-gone'); } return; }
+            if (cur && cur.kindOf === want && !cur.leaving) return;
+            const el = h('div', 'tagname' + (want === 'contact' ? ' is-contact' : want === 'visited' ? ' is-gone' : ''));
+            el.append(h('p', 'n', want === 'contact' ? pl.contact.name : pl.name), h('p', 'g', want === 'contact' ? pl.contact.tag : want === 'visited' ? visitedTag(pl) : pl.tag));
+            const rec = word(key, el, { at: spotOf(pl.id), sides: sidesFor(pl), gap: gapFor(pl), view: 'travel', yields: true, place: pl.id, fade: { t0: clock.t, inMs: 500, holdMs: 1e9, outMs: 0, remove: false } });
+            rec.kindOf = want;
+        });
+    }
+    /** What a world's tag says once we have been there: what we actually did, never what we did not. */
+    function visitedTag(pl) { return pl.orbit && pl.orbit.steps.length && pl.step >= 1 && pl.doneTag ? pl.doneTag : 'We stopped here'; }
+    function showTitle(text) { word('title', h('p', 'title', text), { at: () => [G.W / 2, G.H * 0.2], side: 'center', fade: { t0: clock.t, inMs: 1000, holdMs: 3000, outMs: 1000 } }); }
+    function chips(list, from) {
+        const el = h('div', 'chips');
+        list.forEach(([text, kind]) => el.append(h('span', 'chip' + (kind === 'gain' ? ' is-gain' : kind === 'loss' ? ' is-loss' : ''), text)));
+        const key = 'chip:' + (++clock.seq), t0 = clock.t;
+        const at = from || (() => { const p = shipPose(clock.t); return [cvX(p.x - p.len / 2 - 6), cvY(p.y)]; });
+        word(key, el, { at, side: 'left', gap: 2, rise: { t0 }, keepInMotion: true, fade: { t0, inMs: 1, holdMs: 1499, outMs: 1, remove: true } });
+    }
+    function showHint(pl) {
+        if (S.n !== 1 || S.flags.hint || S.flags.hintGone) return;
+        S.flags.hint = true;
+        word('hint', h('p', 'hint', DATA.SECTORS[1].hint), { at: () => { const at = spotOf(pl.id)(); if (!at) return null; const g = placeGeom(pl); return [at[0], at[1] + (g.y > SHIP.y ? g.r + 26 : -g.r - 26)]; }, side: 'center', view: 'travel', shade: true, shadeStrength: 0.5, hideOnHover: true, fade: { t0: clock.t + 400, inMs: 600, holdMs: 1e9, outMs: 0 } });
+    }
+    /** What a gain really gave us: the tanks cap at 100. */
+    function applyGain(g) {
+        const real = {};
+        if (!g) return real;
+        Object.keys(g).forEach(k => { const before = S.res[k]; S.res[k] = Math.max(0, Math.min(k === 'energy' ? 100 : 999, S.res[k] + g[k])); real[k] = S.res[k] - before; });
+        return real;
+    }
+    function gainChips(real, asked) {
+        return Object.keys(real).map(k => { const v = real[k], full = k === 'energy' && S.res.energy >= 100 && asked && asked[k] > v; return [`${v >= 0 ? '+' : '−'}${Math.abs(v)} ${k === 'rations' && Math.abs(v) === 1 ? 'ration' : k}${full ? ' · tanks full' : ''}`, v >= 0 ? 'gain' : 'loss']; });
+    }
+    function currentStop() {
+        if (S.orbit) return S.orbit.pl.name;
+        return S.n === 1 && S.D < 900 ? 'Waking up' : S.D < 200 ? 'Arrival' : 'On the way';
+    }
+    function logRecord(text, opts) {
+        const o = opts || {}, head = `Sector ${S.n} · ${DATA.SECTORS[S.n].title}`;
+        let g = record.find(x => x.head === head); if (!g) { g = { head, items: [] }; record.push(g); }
+        const item = { t: text, stop: o.stop || currentStop() };
+        ['who', 'story', 'routine', 'page', 'chips'].forEach(k => { if (o[k]) item[k] = o[k]; });
+        g.items.push(item);
+    }
+    const barked = new Set();
+    function barkOnce(key) { if (!DATA.BARKS[key] || barked.has(key)) return; barked.add(key); logRecord(DATA.BARKS[key][1], { who: DATA.BARKS[key][0] }); }
+    function sayOnce(key, who, line, opts) { if (S.flags.said[key]) return; S.flags.said[key] = true; Reading.say(who, line, Object.assign({ anchor: 'ship' }, opts)); }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 10. What happens.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    let scenesSeen = 0;
+    function enterSector(n, opts = {}) {
+        clock.timers = [];
+        Reading.clear(); unwordAll(); shades.clear(); showFilmCanvas(false);
+        if (Inside) Inside.show(false);
+        const carry = opts.carry || null;
+        S = fresh(n, carry);
+        S.D = opts.D || 0;
+        const sec = DATA.SECTORS[n];
+        if (sec.wake && !record.some(g => g.head.startsWith(`Sector ${n} `))) sec.wake.forEach(w => logRecord(w.t, { who: w.who, stop: 'Waking up' }));
+        if (opts.quiet) { S.flags.hintGone = !!opts.noHint; return; }
+        S.fadeIn = { t0: clock.t, dur: opts.fromJump ? 1000 : 1000 };
+        S.intro = { t0: clock.t };
+        after(1200, () => showTitle(sec.title));
+        after(2400, () => { S.intro = null; });
+        const lines = sec.arrive || [];
+        const run = i => {
+            if (i >= lines.length) return;
+            const [who, line] = lines[i];
+            Reading.say(who, line, { anchor: 'ship', scene: 'arrival:' + n }).then(ok => { if (ok) run(i + 1); });
+        };
+        after(opts.fromJump ? 2600 : 4400, () => run(0));
+    }
+    function speedTarget() {
+        if (S.jump) return S.jump.phase === 'burn' ? CRUISE + 160 * clamp01((clock.t - S.jump.t0) / 1500) : 260;
+        if (S.view === 'orbit' || S.push || S.film) return 0;
+        if (S.course) return S.course.phase === 'flip' ? 0 : SLOW;
+        if (S.view === 'inside' || S.shipView) return CREEP;                                      // looking inside is a pause: the worlds wait
+        if (S.rejoin) return CRUISE;
+        return reachPlaces().length ? SLOW : CRUISE;                                              // never below SLOW on the lane; pointing or talking never changes speed
+    }
+    function update(dt) {
+        if (!S || dt <= 0) return;
+        if (Inside) Inside.update(dt);
+        const target = speedTarget(), tau = S.jump ? 400 : S.rejoin ? 700 : 500;
+        S.speed += (target - S.speed) * (1 - Math.exp(-dt / tau));
+        if (Math.abs(target - S.speed) < 0.02) S.speed = target;
+        const move = S.speed * dt / 1000;
+        S.D += move; S.flow += move;
+        S.mid.x -= move * 0.1;                                                                       // the mid stars (the ship view rolls them with the hull)
+        // the nose: on the light, or a few degrees toward the world you point at
+        let aim = BASE_ANGLE;
+        const hp = S.hover && S.hover.kind === 'place' ? placeById(S.hover.id) : S.course ? placeById(S.course.id) : null;
+        if (hp && !S.push) { const [tx, ty] = dockFor(hp); aim = BASE_ANGLE + Math.max(-0.16, Math.min(0.16, Math.atan2(ty - SHIP.y, tx - SHIP.x) - BASE_ANGLE)); }
+        S.ship.angle += (aim - S.ship.angle) * (1 - Math.exp(-dt / 320));
+        // the wake: where the bell has been
+        if (S.view === 'travel' && !S.shipView && !S.orbit) {
+            const pose = shipPose(clock.t), sp = landerSprite(pose.len, pose.angle), last = S.wake[S.wake.length - 1];
+            if (!last || S.D - last.D >= 1.5) { S.wake.push({ D: S.D, x: cvX(pose.x) + sp.bell[0] - 1, y: cvY(pose.y) + sp.bell[1], t: clock.t }); if (S.wake.length > 160) S.wake.shift(); }
+        }
+        if (S.view !== 'travel' || S.jump) return;
+        // reach and passing
+        S.places.forEach(pl => {
+            const g = geom(pl, S.D);
+            if (inReach(pl, g)) {
+                if (!S.reachT0[pl.id]) S.reachT0[pl.id] = clock.t;
+                pl.reachMs += dt;
+                if (!S.flags.firstReach) { S.flags.firstReach = pl.id; after(900, () => showHint(pl)); }
+                if (pl.reachLine && !S.flags.said['reach:' + pl.id] && !Reading.isOpen() && !(clock.t < S.quietUntil)) sayOnce('reach:' + pl.id, pl.reachLine[0], pl.reachLine[1]);
+            }
+            if (pl.hidden && pl.contact && pl.contact.line && !pl.passed && S.D >= pl.at - REACH_LEAD && !S.flags.said['near:' + pl.id] && !Reading.isOpen() && !(clock.t < S.quietUntil)) sayOnce('near:' + pl.id, 'A.U.R.A.', pl.contact.line);
+            if (!pl.passed && isPassed(pl, g)) passed(pl);
+        });
+        if (Math.floor(clock.t / 250) !== Math.floor((clock.t - dt) / 250)) refreshNames();
+        if (!S.jumpReady && S.places.every(pl => pl.passed) && !S.push && !S.orbit && S.D - S.lastPassD > 150) {   // the last world is behind us (still in sight, grey)
+            S.jumpReady = true; if (DATA.SECTORS[S.n].next) Reading.say('A.U.R.A.', "That's the last world on this heading, Commander. The jump is ready.", { anchor: 'ship' });
+        }
+    }
+    function passed(pl) {
+        pl.passed = true; S.passedCount++; S.lastPassD = S.D;
+        if (pl.hidden || pl.kind === 'giant') return;
+        pl.greyAt = clock.t;
+        if (S.hover && S.hover.id === pl.id) setHover(null);
+        if (S.flags.hint && !S.flags.hintGone && words.has('hint')) { S.flags.hintGone = true; unword('hint'); }
+        if (!pl.visited && !S.flags.passSaid) {                                                     // said while the world is still in sight behind us
+            S.flags.passSaid = true; S.flags.passSaidAt = clock.t;
+            Reading.say('A.U.R.A.', `We passed ${pl.name}, Commander. We can't turn back.`, { anchor: 'ship' }); logRecord(`Passed ${pl.name} without stopping.`, { routine: true });
+        }
+    }
+
+    // ── pointing ──
+    function pick(cx, cy) {
+        if (S.view !== 'travel' || S.jump || S.push || S.shipView) return null;
+        const sx = cx - G.ox, sy = cy - G.oy;
+        for (let i = S.places.length - 1; i >= 0; i--) {
+            const pl = S.places[i]; if (pl.kind === 'giant') continue;
+            const g = placeGeom(pl); if (g.r < 4) continue;
+            if (Math.hypot(sx - g.x, sy - g.y) <= g.r + 6) return { kind: 'place', id: pl.id };
+        }
+        if (Math.hypot(sx - LIGHT[0], (sy - LIGHT[1]) * 0.8) < 18) return { kind: 'light' };
+        if (Math.abs(sx - SHIP.x) < SHIP.len / 2 + 4 && Math.abs(sy - SHIP.y) < SHIP.ht / 2 + 5) return { kind: 'ship' };
+        const gp = S.places.find(p => p.kind === 'giant');
+        if (gp && sectorArt(S.n).thing) { const g = giantGeom(S.D); if (Math.hypot(sx - g.x, sy - g.y) < g.r) return { kind: 'place', id: gp.id }; }
+        return null;
+    }
+    const sameTarget = (a, b) => (!a && !b) || (a && b && a.kind === b.kind && a.id === b.id);
+    function answers(target) {
+        if (!target) return null;
+        if (target.kind === 'place') { const pl = placeById(target.id); if (inReach(pl)) return target; if (!pl.passed && !pl.hidden && !pl.visited && S.stops <= 0 && S.D >= pl.at - REACH_LEAD) return { kind: 'noStops', id: pl.id }; return null; }
+        if (target.kind === 'light') return S.jumpReady ? target : null;
+        return target;
+    }
+    function setHover(target) {
+        target = answers(target);
+        if (S.course) target = null;
+        if (sameTarget(S.hover, target)) return;
+        S.hover = target ? Object.assign({ t0: clock.t }, target) : null;
+        $('stage').classList.toggle('is-pointing', !!target && target.kind !== 'noStops');
+        showNote(S.hover);
+        refreshNames();
+    }
+
+    // ── choosing ──
+    function clickPlace(pl) {
+        if (S.flags.hint && !S.flags.hintGone) { S.flags.hintGone = true; unword('hint'); }
+        if (pl.passed || isPassed(pl)) {
+            const justSaid = S.flags.passSaidAt != null && clock.t - S.flags.passSaidAt < 9000;          // she has just said so: no second line on top of it
+            if (!pl.hidden && pl.kind !== 'giant' && !justSaid) sayOnce('passed:' + pl.id, 'A.U.R.A.', 'We passed it, Commander. The ship only flies forward.');
+            return;
+        }
+        if (pl.hidden) { sayOnce('contact:' + pl.id, 'A.U.R.A.', 'I cannot get a fix on that contact, Commander. There is no course to it yet.'); return; }
+        if (!inReach(pl)) return;
+        if (!pl.free && pl.cost > S.res.energy) { sayOnce('energy:' + pl.id, 'Jaxon', "We don't have the energy to get there.", { from: 'from engineering' }); return; }
+        S.course = { id: pl.id, phase: 'lock', t0: clock.t };
+        S.hover = null; $('stage').classList.remove('is-pointing');
+        showNote(null); unwordAll('name:');
+        if (pl.react) Reading.say(pl.react[0], pl.react[1], { anchor: 'ship' });
+        S.course.timer = after(1000, () => launch(pl));
+    }
+    function cancelCourse() {
+        const C = S.course; if (!C || C.phase !== 'lock') return false;
+        cancelTimer(C.timer); S.course = null;
+        Reading.say('A.U.R.A.', 'Holding course, Commander.', { anchor: 'ship' });
+        refreshNames();
+        return true;
+    }
+    function launch(pl) {
+        const C = S.course; if (!C || C.id !== pl.id) return;
+        C.phase = 'flip';
+        if (!pl.free) { S.res.energy -= pl.cost; chips([[`−${pl.cost} energy`, 'spend']]); }
+        S.stops = Math.max(0, S.stops - 1);
+        pl.visited = true;
+        logRecord(pl.free ? `Flew to ${pl.name} on their last course.` : `Pulled in to ${pl.name}.`, { routine: true, stop: pl.name, chips: pl.free ? null : [[`−${pl.cost} energy`, 'spend']] });
+        S.orbit = Object.assign({ pl }, orbitLayout(pl));
+        bakePush(pl);
+        after(600, () => {                                                                         // braked: the push starts from exactly where things are now
+            S.course = null; S.speed = 0;
+            const S0 = S.orbit.S0, a0 = S.orbit.a0;
+            S.orbit = Object.assign({ pl }, orbitLayout(pl), { S0, a0 });
+            S.push = { dir: 'in', t0: clock.t, dur: 1600 };
+        });
+        after(2200, () => { S.push = null; S.view = 'orbit'; enterOrbitWords(pl); barkOnce('orbit'); });
+    }
+
+    // ── orbit ──
+    function orbitAnchors() {
+        const o = S.orbit, pl = o.pl, wx = cvX(o.P1[0]), wy = cvY(o.P1[1]), ship = [cvX(o.S1[0]), cvY(o.S1[1])], len = SHIP.len * ORBIT_SHIP;
+        const ca = Math.abs(Math.cos(o.a1)), sa = Math.abs(Math.sin(o.a1)), hh = (sa * len + ca * len / 3) / 2;   // half the height the turned hull covers
+        const out = { ship: [ship[0], ship[1] + hh + 2], shipBox: { x: ship[0], y: ship[1], len, hh } };
+        if (pl.kind === 'giant') {
+            const g = giantGeom(S.D), [fx, fy] = o.focal, cx = cvX(fx + (g.x - fx) * 2), cy = cvY(fy + (g.y - fy) * 2), R = GIANT_R * 2;
+            const n = [Math.cos(-1.95), Math.sin(-1.95)], ang = Math.atan2(cvY(fy) - cy, cvX(fx) - cx), nn = [Math.cos(ang - 0.18), Math.sin(ang - 0.18)];
+            out.clouds = [cx + nn[0] * (R - 4), cy + nn[1] * (R - 4)]; out.cloudsSky = [cx + nn[0] * (R + 30), cy + nn[1] * (R + 30)]; out.cloudsN = nn;
+            out.beacon = out.clouds; out.sky = out.cloudsSky; out.skyN = nn; void n;
+            return out;
+        }
+        const r = o.r0 * o.Z, s = pl.s * o.Z;
+        if (pl.kind === 'station') { out.station = [wx + Math.round(1.2 * s), wy - Math.round(4 * s)]; out.beacon = out.station; out.sky = [wx - r * 0.6, wy - r * 0.9]; out.skyN = [-0.6, -0.8]; return out; }
+        const [bx, by] = beaconOffset(pl, r), bl = Math.hypot(bx, by) || 1, n = [bx / bl, by / bl];
+        out.beacon = [wx + bx, wy + by]; out.sky = [wx + n[0] * (r + 26), wy + n[1] * (r + 26)]; out.skyN = n;
+        return out;
+    }
+    function enterOrbitWords(pl) {
+        unwordAll('name:'); unword('note'); unword('hint');
+        const od = pl.orbit, A = orbitAnchors();
+        const head = h('div', 'place-head');
+        head.append(h('p', 'name', pl.name), h('p', 'line', od.line));
+        const headLeft = A.shipBox.x - G.ox > SW / 2;
+        head.classList.toggle('is-right', !headLeft);
+        word('orbit-head', head, { at: () => headLeft ? [cvX(24), cvY(22)] : [cvX(SW - 24), cvY(22)], side: 'below', alignLeft: headLeft, alignRight: !headLeft, gap: 0, view: 'orbit', shade: true, fade: { t0: clock.t + 300, inMs: 800, holdMs: 4200, outMs: 1200 } });
+        if (pl.datedNote) datedWord(pl.datedNote);
+        if (od.arrive) { after(1400, () => Reading.say(od.arrive[0], od.arrive[1], { anchor: 'orbit-ship' })); logRecord(od.arrive[1], { who: od.arrive[0], routine: true }); }
+        after(1800, () => showActs(pl));
+    }
+    function datedWord(text) { word('orbit-dated', h('p', 'dated', text), { at: () => orbitAnchors().beacon, sides: ['below', 'left', 'right', 'above'], gap: 7, view: 'orbit', shade: true }); }
+    function sidesAway(n) {
+        if (!n) return ['right', 'left', 'above', 'below'];
+        const out = [];
+        if (n[1] < -0.55) out.push('above');
+        if (Math.abs(n[0]) > 0.4) out.push(n[0] < 0 ? 'left' : 'right');
+        return out.concat(['above', n[0] < 0 ? 'left' : 'right', n[0] < 0 ? 'right' : 'left', 'below']).filter((s, i, a) => a.indexOf(s) === i);
+    }
+    function stepSub(pl, step) {
+        if (step.does === 'fuel') { const room = 100 - S.res.energy, get = Math.min(step.gain.energy, room); return get >= step.gain.energy ? `+${get} energy` : `+${get} energy · fills the tanks`; }
+        return step.sub;
+    }
+    function showActs(pl) {
+        unwordAll('act:');
+        if (S.view !== 'orbit') return;
+        const A = orbitAnchors(), step = pl.orbit.steps[pl.step];
+        if (step) {
+            const isClouds = step.at === 'clouds', target = isClouds ? A.clouds : (A[step.at] || A.beacon), sky = isClouds ? A.cloudsSky : A.sky, n = isClouds ? A.cloudsN : A.skyN;
+            actWord('act:step', step.verb, stepSub(pl, step), sky || target, sidesAway(n), () => doStep(pl, step), step.pulse, step.at === 'station' ? null : target);
+        }
+        actWord('act:leave', 'Leave orbit', null, A.ship, ['below', 'right', 'left'], leaveOrbit, false, null, { yields: false, solid: true });   // never hides: voice lines move round it
+        after(40, () => Reading.relayout());
+    }
+    function actWord(key, verb, sub, anchor, sides, onClick, pulse, thread, extra) {
+        const b = h('button', 'act' + (pulse ? ' is-pulse' : ''));
+        b.type = 'button';
+        b.append(h('span', 'verb', verb)); if (sub) b.append(h('span', 'sub', sub));
+        b.addEventListener('click', e => { e.stopPropagation(); if (Reading.isOpen() || S.push) return; S.actHot = null; onClick(); });
+        b.addEventListener('pointerenter', () => { S.actHot = key; b.classList.add('is-hot'); });
+        b.addEventListener('pointerleave', () => { if (S.actHot === key) S.actHot = null; b.classList.remove('is-hot'); });
+        word(key, b, Object.assign({ at: () => anchor, sides, gap: 6, view: 'orbit', shade: true, thread, yields: true }, extra));
+    }
+    function drawThread(f, t) {
+        const th = S.actThread; if (!th || S.view !== 'orbit') return;
+        const hot = S.actHot === 'act:step', [ax, ay] = th.from, [bx, by] = th.to, n = Math.ceil(Math.hypot(bx - ax, by - ay));
+        for (let i = 3; i < n - 4; i++) { const on = hot ? ((i + Math.floor(t / TICK)) % 4) < 2 : (i % 3) === 0; if (on) f.tone(ax + (bx - ax) * i / n, ay + (by - ay) * i / n, hot ? RP.AMBER : RP.HULL, hot ? 0.62 : 0.34 + 0.12 * (1 - i / n)); }
+    }
+    function doStep(pl, step) {
+        unwordAll('act:');
+        const A = orbitAnchors();
+        const note = (extraChips) => { if (step.record) logRecord(step.record, { story: !!step.story, chips: extraChips || null }); };
+        const finish = () => { pl.step++; after(700, () => showActs(pl)); };
+        if (step.does === 'team' || step.does === 'board') {
+            const to = A[step.at] || A.beacon;
+            logRecord(step.does === 'board' ? 'One of the crew went aboard on one tank of air.' : `The shuttle went down with ${step.crew || 'the team'}.`, { routine: true });
+            if (step.does === 'team') barkOnce('shuttle');
+            if (step.bark) barkOnce(step.bark);
+            S.shuttle = { phase: 'down', t0: clock.t, to, dur: 2000 };
+            const backUp = () => new Promise(done => { S.shuttle = { phase: 'up', t0: clock.t, to, dur: 1300 }; after(1400, () => { S.shuttle = null; done(); }); });
+            const home = () => { if (!step.scene) note(); return afterTeam(step); };
+            after(2300, () => {
+                S.shuttle = { phase: 'down-held', t0: clock.t - 2000, to, dur: 2000 };
+                if (step.scene) { note(); playFilm(step.scene, () => backUp().then(home).then(finish)); return; }
+                backUp().then(home).then(finish);
+            });
+            return;
+        }
+        if (step.does === 'fuel') {
+            const real = applyGain(step.gain), ch = gainChips(real, step.gain);
+            chips(ch); note(ch);
+            Reading.say(step.then[0], S.res.energy >= 100 ? step.then[1] : `Tanks at ${S.res.energy}, Commander.`, { anchor: 'orbit-ship' });
+            finish(); return;
+        }
+        if (step.does === 'date') { startDating(pl, step, () => { note(); finish(); }); }
+    }
+    function afterTeam(step) {
+        let chain = Promise.resolve();
+        if (step.then && !step.page) { Reading.say(step.then[0], step.then[1], { anchor: 'orbit-beacon' }); return chain; }
+        if (step.then) chain = chain.then(() => Reading.say(step.then[0], step.then[1], { anchor: 'orbit-beacon' }));
+        if (step.page) chain = chain.then(() => {
+            logRecord(step.page.record, { story: true, page: step.page.id });
+            if (!pagesRead.includes(step.page.id)) pagesRead.push(step.page.id);
+            return Reading.showPage(step.page);
+        });
+        return chain;
+    }
+    function playFilm(scene, done) {
+        S.trans = { t0: clock.t, dur: 600, out: true };
+        after(600, () => {
+            S.trans = null; S.view = 'film'; S.film = { scene, t0: clock.t }; showFilmCanvas(true);
+            const g = filmGeometry();
+            Reading.playScene(scene, { top: { y: g.bandTop.y, h: g.bandTop.h }, bottom: { y: g.bandBottom.y, h: g.bandBottom.h }, first: scenesSeen < 2 }).then(i => {
+                scenesSeen++;
+                const choice = scene.choices && scene.choices[i];
+                S.film = null; showFilmCanvas(false); S.view = 'orbit';
+                S.trans = { t0: clock.t, dur: 800, out: false };
+                after(800, () => {
+                    S.trans = null;
+                    if (choice) { const real = applyGain(choice.gain), ch = gainChips(real, choice.gain); chips(ch); if (choice.record) logRecord(choice.record, { chips: ch }); }
+                    done();
+                });
+            });
+        });
+    }
+    function startDating(pl, step, finish) {
+        if (!window.MiniHost || !window.MiniHost.has('disc')) { console.warn('The disc game did not load.'); showActs(pl); return; }
+        S.dating = true;
+        window.MiniHost.play('disc', {
+            wreck: { hull: 4, sector: 1 }, plotted: [], crew: null,
+            reward: { name: 'Rhea-4 Minor', kind: 'beacon', line: { who: 'Mira', text: 'They saw a lamp on that moon and went to help. They never got there.' } },
+            names: ['Kryos-68 Prime', 'Chronos-37 Proxima', 'Zephyr-97 X'],
+        }).then(result => {
+            S.dating = null;
+            if (!result || !result.dated) { showActs(pl); return; }
+            pl.datedNote = step.dated;
+            if (step.reveal) S.pendingReveal = step.reveal;
+            Reading.say(step.then[0], step.then[1], { anchor: 'orbit-ship' });
+            datedWord(step.dated);
+            finish();
+        });
+    }
+    function leaveOrbit() {
+        const pl = S.orbit.pl, waiting = pl.orbit.steps[pl.step];
+        if (waiting && waiting.does === 'date') { pl.step++; logRecord(`Left ${pl.name} without dating the wreck.`); }
+        unwordAll('act:'); unword('orbit-head'); unword('orbit-dated');
+        Reading.clear();
+        S.view = 'travel';
+        S.orbit.S0 = [SHIP.x, SHIP.y]; S.orbit.a0 = BASE_ANGLE;                                    // back to our place on the lane, nose on the light
+        S.push = { dir: 'out', t0: clock.t, dur: 1400 };
+        after(1400, () => {
+            S.push = null; S.orbit = null; S.rejoin = true; S.rejoinT = clock.t; S.ship.angle = BASE_ANGLE;
+            after(2000, () => { S.rejoin = false; });
+            let revealed = false;
+            if (S.pendingReveal) {
+                const story = placeById(S.pendingReveal); S.pendingReveal = null;
+                if (story && story.hidden && !story.passed) { story.hidden = false; revealed = true; S.reveal = { id: story.id, t0: clock.t + 300 }; logRecord(`The faint contact is ${story.name}. One of our ships is there.`); after(1300, () => { S.reveal = null; refreshNames(); }); }
+            }
+            after(500, () => Reading.say('A.U.R.A.', revealed ? 'I have a course to the faint contact now, Commander.' : stopsLine(), { anchor: 'ship' }).then(ok => { if (ok && revealed) Reading.say('A.U.R.A.', stopsLine(), { anchor: 'ship' }); }));
+        });
+    }
+    function stopsLine() {
+        if (S.stops >= 2) return `We can make ${S.stops === 2 ? 'two' : 'three'} more stops before the jump, Commander.`;
+        if (S.stops === 1) return 'We can make one more stop before the jump, Commander.';
+        return 'That was our last stop before the jump, Commander.';
+    }
+
+    // ── the light: the jump ──
+    function clickLight() {
+        if (!DATA.SECTORS[S.n].next) return;
+        if (S.res.energy < DATA.JUMP.energy) { sayOnce('jump-energy', 'Jaxon', "We don't have the energy to jump.", { from: 'from engineering' }); return; }
+        if (!S.jumpReady) {
+            Reading.ask('A.U.R.A.', 'There are still worlds ahead, Commander. Jump anyway?', [{ verb: 'Jump now', chips: [[`−${DATA.JUMP.energy} energy`, 'spend'], [`−${DATA.JUMP.rations} rations`, 'spend']] }, { verb: 'Not yet' }], { anchor: 'ship' }).then(i => { if (i === 0) doJump(); });
+            return;
+        }
+        doJump();
+    }
+    function doJump() {
+        Reading.clear(); setHover(null); unwordAll('name:'); unword('hint');
+        const J = DATA.JUMP, from = DATA.SECTORS[S.n].title;
+        S.res.energy -= J.energy; S.res.rations = Math.max(0, S.res.rations - J.rations);
+        chips([[`−${J.energy} energy`, 'spend'], [`−${J.rations} rations`, 'spend']]);
+        S.jump = { phase: 'burn', t0: clock.t };
+        const carry = Object.assign({}, S.res), next = DATA.SECTORS[S.n].next;
+        after(1500, () => { S.jump.phase = 'stretch'; S.jump.t1 = clock.t; });
+        after(1500 + 750, () => { S.jump.phase = 'flash'; S.jump.t2 = clock.t; });
+        after(1500 + 750 + 400, () => { S.jump.phase = 'black'; unwordAll(); });
+        after(1500 + 750 + 400 + 60, () => sectorArt(next));                                      // paint the next sector while the screen is black
+        after(1500 + 750 + 400 + 1200, () => {
+            enterSector(next, { carry, fromJump: true });
+            S.D = 0;
+            logRecord(`Jumped from the ${from.replace(/^The /, '')}. The crew ate ${J.rations} rations. ${carry.rations} left.`, { routine: true, stop: 'The jump', chips: [[`−${J.energy} energy`, 'spend'], [`−${J.rations} rations`, 'spend']] });
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 11. THE WORLD API, for the reading layer and the ship view.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const World = {
+        get k() { return G.s; },
+        now: () => clock.t,
+        after, cancel: cancelTimer,
+        anchor(name) { const list = World.anchors(name); return list && list.length ? list[0] : null; },
+        anchors(name) {
+            if (!S) return null;
+            const at = (cx, cy, side, align) => { const [x, y] = toScreen(cx, cy); return { x, y, side, align }; };
+            if (name.startsWith('person:')) { const a = Inside && Inside.anchor(name.slice(7)); return a ? [{ x: a.x, y: a.y, side: 'above', align: 'center' }] : [{ x: innerWidth / 2, y: innerHeight * 0.2, side: 'center' }]; }
+            if (S.view === 'inside') return [{ x: innerWidth * 0.5, y: innerHeight * 0.12, side: 'below', align: 'center' }];
+            if (name === 'ship' && S.orbit && (S.view === 'orbit' || (S.push && S.push.dir === 'in' && clock.t - S.push.t0 > S.push.dur * 0.25))) name = 'orbit-ship';   // a line during the pull-in waits where our ship will be
+            if (name === 'ship' || (S.view !== 'orbit' && name.startsWith('orbit'))) {
+                const p = shipPose(clock.t, true), half = p.len / 2, tail = cvX(p.x - half) - 6, top = cvY(p.y - p.len / 6) - 12, bottom = cvY(p.y + p.len / 6) + 12;
+                return [at(tail, bottom, 'below'), at(tail, top, 'above')];
+            }
+            if ((name === 'orbit-ship' || name === 'orbit-beacon') && S.orbit) {
+                const A = orbitAnchors(), b = A.shipBox, onRight = b.x - G.ox > SW / 2, hl = b.len / 2 + 8;
+                const besideShip = [at(b.x + (onRight ? -hl : hl), b.y - 2, onRight ? 'left' : 'right'), at(b.x - b.len / 2, b.y - b.hh - 8, 'above'), at(b.x - b.len / 2, b.y + b.hh + 26, 'below')];
+                if (name === 'orbit-ship') return besideShip;
+                const [sx, sy] = A.sky || A.beacon;
+                return sidesAway(A.skyN).map(side => at(sx + (side === 'left' ? -4 : side === 'right' ? 4 : 0), sy + (side === 'above' ? -4 : side === 'below' ? 4 : 0), side, side === 'above' || side === 'below' ? 'center' : null)).concat(besideShip);
+            }
+            return [{ x: window.innerWidth / 2, y: window.innerHeight / 2, side: 'center' }];
+        },
+        shade(key, rect) { setShade('r:' + key, rect); },
+        dim(amount) { if (S) S.dim = clamp01(amount); },
+        isEarly: () => scenesSeen < 2,
+        state: () => ({ sector: S.n, title: DATA.SECTORS[S.n].title, view: S.view, res: Object.assign({}, S.res), stops: S.stops, record: record.map(g => ({ head: g.head, items: g.items.slice() })), pages: pagesRead.slice() }),
+        pages: { plate: DATA.PAGE_PLATE, disc: DATA.PAGE_DISC },
+        art: { INK, TICK, RP, BAYER_RAW: P.BAYER_RAW, threshold, level, hash, vnoise: P.vnoise, fbm: P.fbm, seeded: P.seeded, clamp01, smooth, lerp, ramp: P.ramp, hexRgb: P.hexRgb, painter: P.painter, framer: P.framer, glyphText: P.pixelText, glyphWidth: P.pixelTextWidth, pattern, dimWith, darken },
+        geom: () => ({ k: G.k, s: G.s, dpr: G.dpr, W: G.W, H: G.H, ox: G.ox, oy: G.oy, left: G.left, top: G.top }),
+        view: () => (S ? (S.view === 'travel' ? 'sector' : S.view) : null),
+        /** How busy the picture is under a screen rect: words never sit on a world, the giant, our ship or the light. */
+        luma(rect) {
+            if (!S || S.view === 'inside') return 0.05;
+            const [x0, y0] = toCanvas(rect.x, rect.y), [x1, y1] = toCanvas(rect.x + rect.w, rect.y + rect.h);
+            const discs = visibleDiscs(), gs = giantShape(), lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]), lr = 16 + lightNow().halo * 0.9, box = S.shipView ? null : S.shipBox;
+            const solids = [...words.values()].filter(r => r.opts.solid && r.box && r.el.style.opacity !== '0').map(r => { const [a, b] = toCanvas(r.box.x, r.box.y), [c, d] = toCanvas(r.box.x + r.box.w, r.box.y + r.box.h); return [a - 3, b - 3, c + 3, d + 3]; });
+            let hits = 0, n = 0;
+            const nx = Math.min(40, Math.ceil((x1 - x0) / 5)), ny = Math.min(12, Math.ceil((y1 - y0) / 4));
+            for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {                         // sample the box every few pixels: worlds, the giant and its (thin) ring, our ship, the light, "Leave orbit"
+                const x = lerp(x0, x1, i / nx), y = lerp(y0, y1, j / ny); n++;
+                if (discs.some(([cx, cy, r]) => Math.hypot(x - cx, y - cy) < r + 2) || (gs && onRing(gs, x, y)) || Math.hypot(x - lx, y - ly) < lr
+                    || (box && Math.abs(x - box.x) < box.w / 2 + 2 && Math.abs(y - box.y) < box.h / 2 + 2) || solids.some(([a, b, c, d]) => x >= a && x <= c && y >= b && y <= d)) hits++;
+            }
+            let v = 0.02 + (hits ? 0.3 + 0.6 * hits / n : 0);
+            if (x0 < 0 || y0 < 0 || x1 > G.W || y1 > G.H) v += 0.1;
+            return v;
+        },
+        word: (key, el, opts) => word('x:' + key, el, opts),
+        unwordAll: prefix => unwordAll('x:' + (prefix || '')),
+        say: (who, line, opts) => Reading.say(who, line, opts),
+        openShip, closeShip,
+        openRecord: () => Reading.openRecord(),
+        recordInOrder: true,
+    };
+    window.World = World;
+    const Reading = window.GameReading.create(World);
+    window.Reading = Reading;
+    const sayRaw = Reading.say;
+    Reading.say = (who, line, opts) => { if (S) S.quietUntil = clock.t + Math.max(3200, String(line).split(/\s+/).length * 300 + 1600); return sayRaw(who, line, opts); };
+    const Inside = window.V3Inside ? window.V3Inside.create(World) : null;
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 12. Input, the Esc menu, the moments, the loop.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const stage = $('stage'), menu = $('menu');
+    const menuOpen = () => !menu.hidden;
+    function openMenu(on) { menu.hidden = !on; if (S) S.dim = on ? 0.65 : 0; if (on) menu.querySelector('button').focus({ preventScroll: true }); }
+    stage.addEventListener('pointermove', e => {
+        if (!S || menuOpen() || Reading.isOpen()) return;
+        if (S.view === 'inside') { stage.classList.toggle('is-pointing', Inside.hover(e.clientX, e.clientY)); return; }
+        if (S.view !== 'travel') { if (S.hover) setHover(null); return; }
+        const [cx, cy] = toCanvas(e.clientX, e.clientY);
+        setHover(pick(cx, cy));
+    });
+    stage.addEventListener('pointerleave', () => { if (S && S.view === 'travel') setHover(null); });
+    stage.addEventListener('wheel', e => { if (S && S.view === 'inside') { e.preventDefault(); Inside.wheel(e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY); } }, { passive: false });
+    stage.addEventListener('click', e => {
+        if (!S || S.dating || menuOpen()) return;
+        if (Reading.isOpen()) { Reading.advance(); return; }
+        if (S.view === 'inside') { const where = Inside.click(e.clientX, e.clientY); if (where === 'outside') closeShip(); return; }
+        if (S.view === 'orbit' || S.view === 'film') { Reading.advance(); return; }
+        if (S.view !== 'travel' || S.push || S.jump || S.shipView) return;
+        if (S.course) { cancelCourse(); return; }
+        const [cx, cy] = toCanvas(e.clientX, e.clientY), target = pick(cx, cy);
+        if (!target) { Reading.advance(); return; }
+        if (target.kind === 'place') clickPlace(placeById(target.id));
+        else if (target.kind === 'light') clickLight();
+        else if (target.kind === 'ship') openShip();
+    });
+    menu.addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) { openMenu(false); return; }
+        const what = b.dataset.menu;
+        if (what === 'resume') openMenu(false);
+        if (what === 'record') { openMenu(false); Reading.openRecord(); }
+        if (what === 'sound') b.textContent = 'Sound · off in the mockup';
+        if (what === 'save') b.textContent = 'Saved';
+        if (what === 'quit') b.textContent = 'Quit · not in the mockup';
+    });
+    let fastHeld = false;
+    document.addEventListener('keydown', e => {
+        if (!S || S.dating) return;
+        if (e.key === '`') { e.preventDefault(); toggleMoments(); return; }
+        if (e.key === 'f' || e.key === 'F') { fastHeld = true; return; }
+        if (menuOpen()) { if (e.key === 'Escape') { e.preventDefault(); openMenu(false); } return; }
+        if (Reading.onKey(e)) { e.preventDefault(); return; }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            if (!$('moments').hidden) { toggleMoments(false); return; }
+            if (cancelCourse()) return;
+            if (S.view === 'inside') { closeShip(); return; }
+            openMenu(true); return;
+        }
+        if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            if (Reading.advance()) return;
+            if (e.key === 'Enter' && S.hover && S.view === 'travel' && !S.course) { if (S.hover.kind === 'place') clickPlace(placeById(S.hover.id)); else if (S.hover.kind === 'light') clickLight(); }
+            return;
+        }
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            if (S.view !== 'travel' || S.course) return;
+            const list = reachPlaces().map(p => ({ kind: 'place', id: p.id })).concat(S.jumpReady ? [{ kind: 'light' }] : []);
+            if (!list.length) return;
+            S.tab = ((S.tab == null ? -1 : S.tab) + 1) % list.length; setHover(list[S.tab]);
+            return;
+        }
+        if (S.view === 'inside' && (e.key === 'ArrowDown' || e.key === 'PageDown')) { Inside.stepDeck(1); e.preventDefault(); return; }
+        if (S.view === 'inside' && (e.key === 'ArrowUp' || e.key === 'PageUp')) { Inside.stepDeck(-1); e.preventDefault(); return; }
+        if (e.key === 'e' || e.key === 'E') { if (S.view === 'travel') openShip(); else if (S.view === 'inside') closeShip(); return; }
+        if (e.key === 'l' || e.key === 'L') { Reading.openRecord(); }
+    });
+    document.addEventListener('keyup', e => { if (e.key === 'f' || e.key === 'F') fastHeld = false; });
+    window.addEventListener('blur', () => { fastHeld = false; });
+
+    // ── the moments: deep links (#s1, #reach, …) and the list behind the backtick key ──
+    const MOMENTS = [
+        ['s1', 'Sector 1 from black'], ['reach', 'Platform Zeta comes up'], ['pass', 'Letting Platform Zeta go'], ['orbit', 'Pulling in to Titan-61 IV'],
+        ['giant', 'The giant under our lane'], ['ship', 'The ship view'], ['jump', 'The last world, then the jump'], ['s2', 'Sector 2 · The Dark Void'], ['record', "The ship's record"],
+    ];
+    let currentMoment = 's1';
+    /** Pretend to point at something and (optionally) click it: for the deep links, which play themselves. */
+    function pointAt(target, click) { if (!S) return; setHover(target); if (click) { if (target.kind === 'place') clickPlace(placeById(target.id)); else if (target.kind === 'light') clickLight(); else if (target.kind === 'ship') openShip(); } }
+    function s1Record() {
+        record.length = 0; pagesRead.length = 0; barked.clear();
+    }
+    function moment(name) {
+        openMenu(false); toggleMoments(false);
+        currentMoment = name;
+        clock.t = 0; clock.timers = [];
+        const quiet1 = (D, extra) => { s1Record(); enterSector(1, { quiet: true, D, noHint: extra && extra.noHint }); };
+        if (name === 's1') { s1Record(); enterSector(1); return; }
+        if (name === 'reach') { quiet1(placeById0(1, 'zeta').at - 640); after(14000, () => pointAt({ kind: 'place', id: 'zeta' })); return; }
+        if (name === 'pass') { quiet1(placeById0(1, 'zeta').at - 60, { noHint: true }); after(19000, () => clickPlace(placeById('zeta'))); return; }
+        if (name === 'orbit') {
+            quiet1(placeById0(1, 'titan').at - 40, { noHint: true }); S.flags.passSaid = true; placeById('zeta').passed = true; S.passedCount = 1;
+            after(700, () => pointAt({ kind: 'place', id: 'titan' })); after(1500, () => pointAt({ kind: 'place', id: 'titan' }, true));
+            return;
+        }
+        if (name === 'giant') {
+            quiet1(placeById0(1, 'kryos').at - 220, { noHint: true }); S.flags.passSaid = true; Object.assign(S.res, HISTORY.afterTitan); S.stops = 2;
+            ['zeta', 'titan', 'rhea'].forEach(id => { const pl = placeById(id); pl.passed = true; }); placeById('titan').visited = true; placeById('rhea').hidden = false; S.passedCount = 3;
+            after(800, () => pointAt({ kind: 'place', id: 'kryos' })); after(2200, () => pointAt({ kind: 'place', id: 'kryos' }, true));
+            return;
+        }
+        if (name === 'ship') { quiet1(400, { noHint: true }); after(900, () => pointAt({ kind: 'ship' })); after(1700, () => openShip()); return; }
+        if (name === 'jump') {
+            quiet1(placeById0(1, 'zephyr').at + 300, { noHint: true }); S.flags.passSaid = true; S.stops = 1; Object.assign(S.res, HISTORY.beforeJump);
+            S.places.forEach(pl => { if (pl.id !== 'zephyr') pl.passed = true; }); placeById('titan').visited = true; placeById('kryos').visited = true; placeById('rhea').hidden = false; S.passedCount = 5;
+            after(5600, () => pointAt({ kind: 'light' })); after(6600, () => pointAt({ kind: 'light' }, true));
+            return;
+        }
+        if (name === 's2' || name === 'record') {
+            s1Record();
+            S = fresh(1); S.D = 5500;
+            const seed = (t, o) => logRecord(t, o);
+            DATA.SECTORS[1].wake.forEach(w => seed(w.t, { who: w.who, stop: 'Waking up' }));
+            seed('Passed Platform Zeta without stopping.', { routine: true, stop: 'On the way' });
+            seed('Pulled in to Titan-61 IV.', { routine: true, stop: 'Titan-61 IV', chips: [['−5 energy', 'spend']] });
+            seed('The team searched EXODUS-4. Nobody alive.', { stop: 'Titan-61 IV' });
+            seed('Took everything in their hold.', { stop: 'Titan-61 IV', chips: [['+30 salvage', 'gain']] });
+            seed('Found a drawing of a gold disc in their logbook.', { story: true, page: 'disc', stop: 'Titan-61 IV' });
+            seed('Pulled in to Kryos-68 Prime.', { routine: true, stop: 'Kryos-68 Prime', chips: [['−6 energy', 'spend']] });
+            seed('Skimmed fuel at Kryos-68 Prime.', { stop: 'Kryos-68 Prime', chips: [['+11 energy · tanks full', 'gain']] });
+            pagesRead.push('disc');
+            const carry = Object.assign({}, HISTORY.afterJump);
+            enterSector(2, { carry, fromJump: true, quiet: name === 'record' });
+            logRecord('Jumped from the Graveyard. The crew ate 5 rations. 20 left.', { routine: true, stop: 'The jump', chips: [['−8 energy', 'spend'], ['−5 rations', 'spend']] });
+            if (name === 'record') { S.D = 300; after(300, () => Reading.openRecord()); }
+            return;
+        }
+        s1Record(); enterSector(1);
+    }
+    /** One scripted history behind every deep link, so they all tell the same supply story: start 100 / 25 / 50; Titan −5
+        energy and +30 salvage from their hold; Kryos −6, then skimming +15 is capped at the full tanks (+11); the jump −8
+        energy and −5 rations. */
+    const HISTORY = { afterTitan: { energy: 95, rations: 25, salvage: 80 }, beforeJump: { energy: 100, rations: 25, salvage: 80 }, afterJump: { energy: 92, rations: 20, salvage: 80 } };
+    function placeById0(n, id) { return DATA.SECTORS[n].places.find(p => p.id === id); }
+    function toggleMoments(force) { const box = $('moments'), on = force == null ? box.hidden : force; box.hidden = !on; }
+    MOMENTS.forEach(([key, label]) => { const b = h('button', null, `#${key}  ${label}`); b.type = 'button'; b.addEventListener('click', e => { e.stopPropagation(); history.replaceState(null, '', '#' + key); moment(key); }); $('moments').appendChild(b); });
+    window.addEventListener('hashchange', () => { moment(location.hash.slice(1) || 's1'); render(); });
+
+    // ── sizing ──
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { measure(); if (Inside) Inside.resize(); shipFrames = null; remeasureWords(); Reading.relayout(); if (S && S.film) showFilmCanvas(true); render(); }, 140); });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { remeasureWords(); Reading.relayout(); });
+
+    // ── the loop: our own clock; window.step(ms) moves it by hand, window.setTime(ms) replays the moment to that time ──
+    const params = new URLSearchParams(location.search), SPEED = Math.max(0.25, Math.min(16, +params.get('speed') || 1));
+    let lastReal = null, lastRender = 0;
+    function frame(now) {
+        if (clock.frozen) return;
+        if (lastReal != null) advance(Math.min(100, now - lastReal) * SPEED * (fastHeld ? 6 : 1));
+        lastReal = now; lastRender = now;
+        render();
+    }
+    function loop(now) { frame(now); requestAnimationFrame(loop); }
+    window.step = async ms => { let left = Math.max(0, +ms || 0); while (left > 0) { const d = Math.min(16, left); advance(d); left -= d; await Promise.resolve(); await Promise.resolve(); } render(); return Math.round(clock.t); };
+    window.setTime = async ms => { const was = clock.frozen; clock.frozen = true; moment(currentMoment); const out = await window.step(ms); clock.frozen = was; lastReal = null; return out; };
+    window.moment = name => { moment(name); render(); return name; };
+    window.freeze = on => { clock.frozen = on !== false; lastReal = null; return clock.frozen; };
+    window.v3 = {
+        get S() { return S; }, get inside() { return Inside; }, shades: () => [...shades.entries()].map(([k, r]) => k + ":" + [r.x, r.y, r.w, r.h].map(Math.round).join(",")), record, point: pointAt, click: (kind, id) => pointAt({ kind, id }, true),
+        act: name => { const b = words.get('act:' + name); if (b) b.el.click(); return !!b; },
+        advance: () => Reading.advance(), key: k => document.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true })),
+        words: () => [...words.entries()].filter(([, r]) => r.el.style.opacity !== '0').map(([k, r]) => k + ': ' + r.el.textContent),
+        frameCost: n => { const out = []; for (let i = 0; i < (n || 60); i++) { const a = performance.now(); advance(16); render(); out.push(performance.now() - a); } out.sort((a, b) => a - b); return { median: +out[out.length >> 1].toFixed(2), p95: +out[Math.floor(out.length * 0.95)].toFixed(2), max: +out[out.length - 1].toFixed(2) }; },
+    };
+
+    measure();
+    const stillAt = params.has('t') ? Math.max(0, +params.get('t') || 0) : null;
+    if (Inside) Inside.prepare();
+    moment(location.hash.slice(1) || 's1');
+    if (stillAt != null) { clock.frozen = true; window.step(stillAt).then(() => { document.body.dataset.still = 'ready'; }); }
+    else {
+        render();
+        requestAnimationFrame(loop);
+        setInterval(() => { const now = performance.now(); if (!clock.frozen && now - lastRender > 400) { advance(Math.min(250, lastReal == null ? 125 : now - lastReal) * SPEED); lastReal = now; lastRender = now; render(); } }, 250);
+    }
+})();
+</script>
+</body>
+</html>
