@@ -4,29 +4,35 @@
    long nose and a stubbled square jaw. A worn white EVA shell with cool shadows, grey knee joints and shoulder bearings,
    brown leather gloves, a grey life-support pack, a chest box with one amber and one cyan light.
    Stance and movement: heavy and square, hands on his hips, feet wide; he barely lifts his boots when he walks (lift 4).
-   Heads: front, down (lids lowered, chin into the ring), back (spikes, both ears, the ring from behind), lying (his
-   profile turned up, eyes shut; the collar band there is the front map's collar turned on its side). */
+   Heads (redrawn twice on 2026-10-08: first he read as angry and masked, then as a square box): front (three-quarter,
+   a long face, level brows, calm tired eyes), down (shorter brows, the lash line a row below them, chin into the ring),
+   back (spikes, both ears, the ring from behind), lying (a true profile turned face up: forehead, softened brow, a
+   closed eye, a long nose from the eye line, lips, stubbled chin, ear mid-head, hair spread on the pillow). */
 (function (E) {
     const INK = E.INK;
-    // ragged spikes 2-3 rows above the skull with one white lock falling on the forehead, solid 2-row brow bars over the
-    // blue eyes, a stubbled square jaw, and the padded ring collar: light top edge, mid body, dark lining against the neck
+    // three-quarter, facing right, lit from the front. Grey hair in messy tufts of uneven length over an uneven
+    // hairline, one white lock falling on the near side of the forehead, a grey one on the far side. A long face (the
+    // hairline to the chin is longer than the face is wide) whose jaw tapers a pixel each side over its bottom 3 rows.
+    // Calm and weary, never angry: 1-px brows dead level, a lid row, blue eyes (iris + dark pupil), a cheekbone shadow
+    // under each eye, a long lit nose with the shadow under it centred on the bridge, a fold from the near nostril, a
+    // 3-px level mouth, two-tone stubble on the chin and jaw only, both ears. Then the padded ring collar.
     const FRONT = [
-        '.....d...f..g...e.....',
-        '....cd..efg.gf.fe.....',
-        '...bcdedefgfgfefe.....',
-        '..bcdedefgfgffgfeed...',
-        '..bcdcdedfegfhgfefe...',
-        '..bcccdcded55h665e....',
-        '..bcdcd3BBB5h44BB4....',
-        '..bcdc333BBB54BB44....',
-        '..bcb4332LE353EL34....',
-        '..ab42344544544453....',
-        '...312344454564453....',
-        '...222t344tn2nt443....',
-        '....12tu3uMMMMut32....',
-        '....12tututuvuutu2....',
-        '.....12tutuvvuttu1....',
-        '......12ttuutut21.....',
+        '........ef.g.f........',
+        '.....d.efgfggff.e.....',
+        '...ccdefgfgffgfffdc...',
+        '....bcdehf55gffedc....',
+        '....bcc4h4556g4eed....',
+        '....bc3h44555545dc....',
+        '....bc3BBB444BBBcb....',
+        '....3334334543354.....',
+        '....4234EP455EP55.....',
+        '....4134333553454.....',
+        '....3233443566453.....',
+        '.....23344322345......',
+        '......34434l4444......',
+        '.......t44MMM4t.......',
+        '.......tu4uluut.......',
+        '.......1tutvut1.......',
         'rswjki1221111111ikjwsr',
         'swxkjiiiiiiiiiiiijkxws',
         'wxxwkjiiiiiiiiiijkwxxw',
@@ -36,7 +42,14 @@
         'qrsssswwwwwwwwwwssssrq',
         '.pqrrrrrrrrrrrrrrrrrrq',
     ];
-    const DOWN = ['.'.repeat(22), ...FRONT.slice(0, 16), ...FRONT.slice(17)].map(r => r.replace('LE', 'LL').replace('EL', 'LL'));
+    // looking down (console, tend, wall): the head tips forward a row into the ring. The brows shorten to 2 px and the
+    // lash line drops a row below them, with lid skin between, so brow and lid don't stack into a squint.
+    const DOWN_ROWS = {
+        6: '....bc3BB44444BBcb....',
+        8: '....4234334553355.....',
+        9: '....4134LL355LL54.....',
+    };
+    const DOWN = ['.'.repeat(22), ...FRONT.slice(0, 16).map((r, i) => DOWN_ROWS[i] || r), ...FRONT.slice(17)];
 
     E.register({
         id: 'vance', name: 'Vance', role: 'The hard one', portrait: '../../../assets/crew/M_4.png',
@@ -68,18 +81,18 @@
                 keys: {
                     a: '#1f1f28', b: '#2f313d', c: '#434755', d: '#5a5f6e', e: '#787d8c', f: '#9a9fab', g: '#c2c5cd', h: '#eceef2',
                     1: '#43282a', 2: '#74493f', 3: '#a87560', 4: '#cc9475', 5: '#e3ae88', 6: '#f2c9a0',
-                    t: '#8e7666', u: '#a68a78', v: '#b89a86', B: '#16121a', L: '#2a1a1c', E: '#4f8cc4', F: '#3e6688', m: '#8a5446', M: '#6a3a32', n: '#4e2c2a',
+                    t: '#8e7666', u: '#a68a78', v: '#b89a86', B: '#2b2830', L: '#3a2422', E: '#5a96cc', P: '#1a2230', m: '#9c5c4a', M: '#7a4438', l: '#c48a70', n: '#5e3430',
                     p: '#30313a', q: '#4f515b', r: '#767881', s: '#9c9ea3', w: '#c1c1bd', x: '#dcdbd4',
                     i: '#1a1620', j: '#2c2634', k: '#4a4252',
                 },
-                blink: { L: '#74493f', E: '#a87560', F: '#a87560' },
+                blink: { E: '#74493f', P: '#74493f' },
                 map: FRONT,
             },
             down: { anchor: [11, 21], map: DOWN },        // console, tend, wall: the head tips forward into the ring, lids lowered
             back: {                                    // climb: the back of the hair, the nape, both ears, the ring from behind
                 anchor: [11, 22],
                 map: [
-                    '......................',
+                    '.......d...f..e.......',
                     '......e.fg.gf.f.......',
                     '.....deffgfggfeef.....',
                     '....cdefgfgfgfefed....',
@@ -105,29 +118,29 @@
                     '..pqqrrrrrrrrrrrrqqp..',
                 ],
             },
-            lying: {                                   // sleep: on his back, the profile turned up, eyes shut, the ring on its side
+            lying: {                                   // sleep: on his back, a true profile turned face up, eye shut, the ring on its side
                 anchor: [21, 10],
                 map: [
-                    '................rssrqqp.',
-                    '................sxwssrq.',
-                    '...........5....wwwwwsrp',
-                    '........5.56....ssswwwsq',
-                    '.....566B455n5Mvkjjxwwsq',
-                    '..gfg6653L443uMutkjxwwsr',
-                    '.gfge55543444uuvujkxxwsr',
-                    '.fgfd44444543uvutiixxwwr',
-                    'fgeedc344544uvut1iixxwwr',
-                    'gffecdc33443uut11iixxwwr',
-                    'eedddc34344uut111iixxwwr',
-                    'feedcd32343tt1221iixxwwr',
-                    'eddccc2133tt12221iixxwwr',
-                    'deccbcc323211222111xxwwr',
-                    'ccddcbccc211122222ixwwsr',
-                    'ddccbcbcb1jjjjjj21ixwwsr',
-                    '.cbbbbbba1jjjjjj1jixwwsr',
-                    '.bbbabbb........kkkwwwsq',
-                    '..aaaaaa........jiiwwsrq',
-                    '...aaaa.........sjjwwrqp',
+                    '.........66.....rssrqqp.',
+                    '.....6655554544vsxwssrq.',
+                    '...ed55345445mluwwwwwsrp',
+                    '..efhh53L4344Mutssswwwsq',
+                    '.gfff453L34444tukjjxwwsq',
+                    '..fgge44444443ut3kjxwwsr',
+                    '..gfff44454333t2tjkxxwsr',
+                    '.ffggg33333332221iixxwwr',
+                    '..gfffeee33222221iixxwwr',
+                    '..fgggf4222322222iixxwwr',
+                    '.eeffff3444322221iixxwwr',
+                    '...eeeeedcc22222jiixxwwr',
+                    '..dddddddddc2211jiixxwwr',
+                    '...ccccccccb11..jiixxwwr',
+                    '....bbbbbbba....jiixwwsr',
+                    '................jiixwwsr',
+                    '................jjixwwsr',
+                    '................kkkwwwsq',
+                    '................jiiwwsrq',
+                    '................sjjwwrqp',
                     '................rssssqp.',
                     '................qrqrqp..',
                 ],

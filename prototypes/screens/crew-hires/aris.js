@@ -5,44 +5,56 @@
 (function (E) {
     const INK = E.INK;
     const KEYS = {
-        // helmet shell (maroon-purple), the goggles and the ear cup (cream), two amber lenses
-        p: '#2a0c22', q: '#4a1430', r: '#6e1a3a', s: '#962a46',
-        k: '#3a2c28', l: '#6e5a48', m: '#a8906a', n: '#d3b374', N: '#eedc9c', O: '#7a3a14', A: '#ffb84a',
+        // helmet shell (maroon-purple) with a hard sheen, the goggles and the ear cup (cream), amber lenses with a glass
+        // highlight
+        p: '#2a0c22', q: '#4a1430', r: '#6e1a3a', s: '#962a46', S: '#c4506a',
+        k: '#3a2c28', l: '#6e5a48', m: '#a8906a', n: '#d3b374', N: '#eedc9c', O: '#7a3a14', o: '#c8701e', A: '#ffe0a0',
         // hair: blue-black with magenta lights
         a: '#0e0418', b: '#1f0f32', c: '#3a1442', d: '#8a2474', e: '#d04aa6',
-        // skin, warm; raised cheeks catch the light
-        1: '#5a1c24', 2: '#8a3a34', 3: '#b85a44', 4: '#d8784c', 5: '#e8995a', 6: '#f6c280',
-        L: '#1a0610', E: '#4a1a10', w: '#e8c0a0', M: '#8a1c2c', R: '#c84848', W: '#f4d4b4',
+        // skin, warm, lit from the front: 1 the jaw shadow … 6 the light on the cheek and the nose; h the blush
+        1: '#5a1c24', 2: '#8a3a34', 3: '#b85a44', 4: '#d8784c', 5: '#e8995a', 6: '#f6c280', h: '#d86a52',
+        // the face: brows, the lash line, a warm brown iris with a light catch, the smile
+        B: '#2e0e24', V: '#7a3436', L: '#1a0610', I: '#8a4020', P: '#1a0608', G: '#ffe6c0', w: '#f0c8a8', M: '#7a1a26', R: '#c84a4a', T: '#f6dcc4', Q: '#a8343e',
         // the ring collar: blue-violet
         x: '#16142e', y: '#2a2656', z: '#4a4488', Z: '#8078c8',
     };
-    // three-quarter, facing right. The cream ear cup on the near side, the goggles pushed up with two amber lenses, the
-    // hair in four swept clumps trailing behind, the smile with its light pixel. Anchor [12, 18]: the foot of the ring.
+    // shut: the lid comes down over the iris, the lashes rest where the eye was
+    const BLINK = { L: '#b85a44', I: '#b85a44', P: '#1a0610', G: '#1a0610', w: '#1a0610' };
+    // three-quarter, facing right. The helmet dome (a sheen on the shell so it reads hard, not knitted) with the goggles
+    // pushed up on its brow: two 3 x 2 amber lenses, each with a pale glass highlight, split by dark rims (the old 1-px
+    // lenses on a tan strip read as a tiara). The fringe swept across the forehead, the cream ear cup at the back of the
+    // head, the hair in clumps flying out behind. The face: soft level brows a row above the eyes; each eye a lash line
+    // over a brown iris, a dark pupil and a light catch; the nose from between the eyes down to a lit tip; one blush
+    // pixel per cheek; the smile, a dark-rose line with both corners lifted a row over a glimpse of teeth; the chin
+    // rounded by cutting its bottom corners. Anchor [12, 19]: the foot of the ring.
     const FRONT = [
-        '.........pqrrrrqp...',
-        '.......pqrrssssrrq..',
-        '......pqklmnnNnnmlk.',
-        '......pqkOAmmOAmkrq.',
-        '.....abpqrrrrrrrrrsq',
-        '...abcdbqbd344545db.',
-        '..abceabbc3LL45LL4c.',
-        '.abdcbamnm3wE55Ew4c.',
-        'abcecb.nkn46654664b.',
-        '.adebacmnm35554554..',
-        '.bd.acbad234M55M43..',
-        '...bdab.ce234WW443..',
-        '.....cd.ab234RR532..',
-        '.......de.1234432...',
-        '........d..12221....',
+        '..........pqrrqp....',
+        '........pqrrsSrrqp..',
+        '.......pqrssssSsrq..',
+        '......pqkAoOkkAoOk..',
+        '.....apqmoOOmmoOOm..',
+        '....abcbbcddecbdeb6.',
+        '...abcebcc4VBB55BV4.',
+        '..abdcbmnc345556554.',
+        '.abdcbmNnc4LIL56LI4.',
+        'abcecbkmkb4wPG56PG4.',
+        '.adebacbcb345543654.',
+        '.bd.acbacb2h45542h3.',
+        '...bdabbcb2345QTTQ3.',
+        '.....cd.ab12344MM4..',
+        '.......de...234h4...',
+        '........d....233....',
         '.......xyzzZZZZzzyx.',
         '......xyzZZyyyyyZZzx',
         '......xyzzyxxxxxyzzx',
         '.......xyyzzzzzzyyx.',
     ];
-    // looking down (console, tend, wall): everything above the ring drops a row, lids lowered, the smile let go
-    const DOWN = ['.'.repeat(20), ...FRONT.slice(0, 14), ...FRONT.slice(15)]
-        .map(r => r.replace('wE', 'LL').replace('Ew', 'LL').replace('WW', 'MM'));
-    // climbing, from behind: the dome, the goggle strap across the back, both ear cups, the hair loose to the collar
+    // looking down (console, tend, wall): everything above the ring drops a row, the lids come down, the iris looks down
+    const DOWN = ['.'.repeat(20), ...FRONT.slice(0, 15), ...FRONT.slice(16)]
+        .map(r => r.replace('4LIL56LI4', '433356334').replace('4wPG56PG4', '4LIL56LI4'));
+    // climbing, from behind: the dome, the goggle strap across the back, the hair loose to the collar in clumps that sway
+    // to the left, lit magenta near the crown and darker toward the nape (no ear cups here: a cream one on each side read
+    // as earmuffs)
     const BACK = [
         '.....pqrrqp.....',
         '...pqrrssrrqp...',
@@ -50,29 +62,45 @@
         '..pqrrrssrrrqp..',
         '..klmmnnnnmmlk..',
         '.pqrrrrrrrrrrqp.',
-        'mnpqrrrrrrrrqpnm',
-        'nNkbccbcbbcbbkNn',
-        'mnkabcdbcbdcbknm',
-        '.kbacbdacbadbak.',
-        '.babcdabcabdcab.',
-        'cbabdcabbacdbabc',
-        'd.bacdbaabdcab.d',
-        '.e.bcdab.bacdb.e',
-        '..d.cd....dc.d..',
+        'bcpqrrrrrrrrqpcb',
+        'cdkbccdcccdcbkdc',
+        'bckcdecbcdecckcb',
+        '.bcdcbacdccbccb.',
+        'bcdcbabcdcbcbcba',
+        'cdcbabcdcbabcba.',
+        'dcba.bccba.bba..',
+        'cba..abcb..ab...',
+        'ea....ba....a...',
         '..xyzzZZZZzzyx..',
         '.xyzZZyyyyZZzyx.',
         '.xyzzyyyyyyzzyx.',
         '..xyyzzzzzzyyx..',
     ];
-    // asleep: the helmet off, the hair loose on the pillow, eyes shut. Drawn standing, then turned to lie face up.
-    const HAIR_FOR = { p: 'a', q: 'b', r: 'a', s: 'c', k: 'b', l: 'c', m: 'c', n: 'd', N: 'e', O: 'b', A: 'd' };
-    const ASLEEP = FRONT.map(r => r.replace(/[pqrsklmnNOA]/g, ch => HAIR_FOR[ch]).replace('wE', 'LL').replace('Ew', 'LL').replace('WW', 'MM'));
-    const turn = (map, anchor) => {                                // standing (x, y) → lying (y, w - 1 - x): crown left, face up
-        const w = map[0].length, out = [];
-        for (let Y = 0; Y < w; Y++) { let s = ''; for (let X = 0; X < map.length; X++) s += map[X][w - 1 - Y]; out.push(s); }
-        return { anchor: [anchor[1], w - 1 - anchor[0]], map: out };
+    // asleep: the helmet off, face up in profile, crown to the left. Forehead, brow, the closed eye's lash line, a small
+    // nose at eye height, lips, chin, the ear at mid-head, the hair loose on the pillow. The ring is the front's, turned.
+    const RING = FRONT.slice(16);
+    const LYING_HEAD = [
+        '...........5......',
+        '..........563.....',
+        '....555564554RMR4.',
+        '..cc455BB555543432',
+        '.bec44444LLh544321',
+        '.cbb3445555h543211',
+        'bbbdc3445444432112',
+        'bdcbbb344344332122',
+        'cbbbdcbbb243321122',
+        'aadcaaadc232211222',
+        '.baaacbaaac1112221',
+        '..acbaaacbaaa11111',
+        '...aaacbaaacb..11.',
+        '.ab.bcdabcbda.....',
+        '..b.dab.adb.......',
+        '...d...e....d.....',
+    ];
+    const LYING = {
+        anchor: [21, 7], blink: {},
+        map: LYING_HEAD.map((row, Y) => row + RING.map(r => (Y < 20 ? r[19 - Y] : '.')).join('')),
     };
-    const LYING = turn(ASLEEP, [12, 18]);
 
     E.register({
         id: 'aris', name: 'Aris', role: 'Doctor', portrait: '../../../assets/crew/F_3.png',
@@ -101,8 +129,8 @@
             hand: 'skin',
         },
         heads: {
-            front: { anchor: [12, 18], keys: KEYS, map: FRONT, blink: { w: '#b85a44', E: '#1a0610' } },
-            down: { anchor: [12, 18], map: DOWN },
+            front: { anchor: [12, 19], keys: KEYS, map: FRONT, blink: BLINK },
+            down: { anchor: [12, 19], map: DOWN },
             back: { anchor: [8, 18], map: BACK },
             lying: LYING,
         },

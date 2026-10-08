@@ -59,6 +59,25 @@ lamp gets a warm edge.
 - **Climbing is seen from behind**: the engine draws a back view, and the person supplies a `back` head.
 - Sleeping is the body lying on its back, head to the left, eyes shut.
 
+## Faces (a head is 14 to 22 pixels wide)
+
+- **Eyes** are 2 × 1 or 2 × 2: a dark pupil with a lighter iris or a 1-pixel light catch. Never a solid black square,
+  which reads as an empty socket. Eyeliner goes on the upper-outer corner only, never as a bar across the eye.
+- **Brows** are 1 pixel high, one over each eye, with skin between them. Their angle carries the mood: level is calm,
+  inner ends down is angry, inner ends up is sad. Nobody aboard looks angry at rest.
+- **Mouths** are 1 pixel high and 2 to 4 wide, set a pixel inside the face edge. Their ends carry the mood. Never a 2 × 2
+  block of lip colour, which reads as a pout.
+- **A profile** (Jaxon, and every sleeping head) runs forehead, brow ridge, a nose that starts at eye height, upper lip,
+  lips, chin, jaw, with the ear about mid-head and the skull round at the back. The jaw edge is a mid-shadow skin tone,
+  never near-black, or it reads as a strap.
+- **Skin** uses 3 or 4 tones, lit from the front. Stubble is 2 tones, on the chin and jaw below the mouth only.
+- **Hair** gets tufts of uneven length and an uneven hairline; evenly spaced spikes read as a crown. Hair texture runs in
+  strands, not a checkerboard, which reads as a knitted cap.
+- **Asleep**, the brow is softened to a skin shade so it doesn't stack beside the 2-pixel lid line into one dark slot.
+  Signature colour on the face edge (Jaxon's amber) stays on the brow and nose: turned on its side, a full edge reads as
+  a fringe of flames.
+- Every view (`front`, `down`, `back`, `lying`) is checked at 6× beside the portrait at the same height, and at 2×.
+
 ## Palette
 
 - Every colour is **sampled from the portrait**, then tuned for the dark ship. Each material is one ramp of 5 to 8
