@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew Option B</title>
+<meta name="description" content="Silent Exodus crew bake-off, option B: figures painted in code on a skeleton (shaded capsules, ellipses and polygons, lit by the room lamp), rasterised at about 40 x 88 pixels. Cora and Vance: idle, walk, console, head close-up.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    color-scheme: dark;
+    --void: #0a0a0b; --deep: #111214; --line: #1d1f23; --line2: #33373e;
+    --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --gutter: clamp(16px, 2.2vw, 40px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--void); }
+body { color: var(--text); font: 15px/1.55 var(--f-text); -webkit-font-smoothing: antialiased; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #05070a; }
+h1, h2, h3, p { margin: 0; }
+h1, h2, h3 { font-family: var(--f-ui); font-weight: 600; letter-spacing: 0.01em; }
+.page { max-width: 1880px; margin: 0 auto; padding: 0 var(--gutter) 80px; }
+.bar { display: flex; align-items: baseline; gap: 22px; padding: 18px 0 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.bar h1 { font-size: 26px; }
+.bar .size { font: 500 13px/1 var(--f-num); color: var(--warm-br); }
+.bar .note { font: 500 12px/1.4 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.bar .ctl { margin-left: auto; display: flex; gap: 6px; }
+button { font: 500 12px/1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); background: none; border: 1px solid var(--line2); padding: 7px 11px; cursor: pointer; }
+button:hover { color: var(--text); border-color: var(--dim); }
+button:focus-visible { outline: 1px solid #fff; outline-offset: 2px; }
+.stage { position: relative; margin-top: 18px; width: max-content; max-width: 100%; overflow-x: auto; }
+.tag { position: absolute; font: 500 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); pointer-events: none; }
+.cap { margin-top: 8px; font: 500 12px/1.4 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+section { margin-top: 40px; }
+section > h2 { font-size: 18px; margin-bottom: 14px; color: var(--ui); }
+.close { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+.who { display: flex; gap: 18px; align-items: flex-end; padding: 18px; background: var(--deep); border: 1px solid var(--line); flex-wrap: wrap; }
+.who figure { margin: 0; }
+.who figcaption { margin-top: 6px; font: 500 11px/1.3 var(--f-ui); letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.who img { display: block; width: 240px; height: 240px; image-rendering: pixelated; }
+.who .name { width: 100%; display: flex; gap: 14px; align-items: baseline; }
+.who .name h3 { font-size: 20px; }
+.who .name span { color: var(--dim); font: 400 13px/1 var(--f-ui); letter-spacing: 0.06em; }
+.notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; max-width: 1500px; }
+.notes h3 { font-size: 15px; color: var(--warm-br); margin-bottom: 6px; letter-spacing: 0.06em; text-transform: uppercase; }
+.notes p, .notes li { color: var(--dim); font-size: 14px; }
+.notes ul { margin: 0; padding-left: 18px; }
+@media (max-width: 900px) { .close, .notes { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="page">
+    <header class="bar">
+        <h1>Option B: painted on a skeleton</h1>
+        <span class="size">native cell 40 × 88 px (Cora 77 px tall, Vance 84) · shown at 2× (154 and 168 screen px) · and at 1×</span>
+        <span class="note">Cora and Vance · idle · walk · console</span>
+        <div class="ctl"><button id="bPlay" type="button">Pause</button><button id="bStep" type="button">Step</button></div>
+    </header>
+
+    <div class="stage" id="stage2">
+        <canvas id="scene2" aria-label="Two decks of the ship: Cora above, Vance below, standing, walking and working at a console"></canvas>
+    </div>
+    <p class="cap">At the cutaway scale (2×): two decks on a 1920 × 1080 screen. Light comes from the lamp; the walking figure is lit from whichever side the lamp is on.</p>
+
+    <section>
+        <h2>Close-up, beside the portraits</h2>
+        <div class="close">
+            <div class="who">
+                <div class="name"><h3>Cora</h3><span>commander · F_1</span></div>
+                <figure><img src="../../../assets/crew/F_1.png" alt="Cora's portrait"><figcaption>Portrait</figcaption></figure>
+                <figure><canvas id="headC" width="26" height="26"></canvas><figcaption>Sprite head, 9×</figcaption></figure>
+                <figure><canvas id="bodyC" width="48" height="92"></canvas><figcaption>Standing, 4×</figcaption></figure>
+            </div>
+            <div class="who">
+                <div class="name"><h3>Vance</h3><span>the hard one · M_4</span></div>
+                <figure><img src="../../../assets/crew/M_4.png" alt="Vance's portrait"><figcaption>Portrait</figcaption></figure>
+                <figure><canvas id="headV" width="26" height="26"></canvas><figcaption>Sprite head, 9×</figcaption></figure>
+                <figure><canvas id="bodyV" width="48" height="92"></canvas><figcaption>Standing, 4×</figcaption></figure>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>The same scene at 1×</h2>
+        <canvas id="scene1" aria-label="The same scene at native size"></canvas>
+    </section>
+
+    <section class="notes">
+        <div>
+            <h3>How it is drawn</h3>
+            <p>Each body is a skeleton (hips, spine, neck, arms, legs) posed in code every frame. Limbs and torso are shaded tubes, the head is an ellipse with a jaw shape, hair and collars are polygons. Every pixel gets its light from the room lamp, then picks a colour from a short ramp that starts at the near-black, with a little ordered dither. The face is a small hand-placed pixel map on top: eyes, nose, mouth, cheek marks.</p>
+        </div>
+        <div>
+            <h3>Cost for the whole crew</h3>
+            <p id="costText"></p>
+        </div>
+        <div>
+            <h3>Weak points</h3>
+            <ul id="weakText"></ul>
+        </div>
+    </section>
+</div>
+
+<script>
+/* Silent Exodus — crew bake-off, OPTION B: "painted on a skeleton".
+   Figures are posed on a 2D skeleton every frame, then rasterised from shaded shapes (tubes, ellipses, polygons) onto
+   the scene's pixel grid, lit by the room lamp, with colour ramps that start at the ink #05070a and a little Bayer dither.
+   Faces are small hand-placed pixel maps laid over the shaded head.
+   Debug: window.crewB.pause(), .play(), .step(ms), .setTime(ms); ?t=1234 opens paused at that time. */
+const COST = 'What is built here and shared by everyone: the skeleton, the shape painter, the lamp light, and three actions (idle, walk, console). The six other actions (climb, sit, sleep, tend, carry, wall) are each one pose function written once for all five people: about half a session each, so 3 to 4 sessions. Each new person is a build (bone lengths, torso shape), a palette, one or two costume details and a hand-placed head of about 12 × 13 pixels: half a session each once the head is right, so about 2 sessions for Jaxon, Aris and Mira. The catch is heads: they do not rotate, so climbing (seen from behind), sleeping (lying down) and bowed actions need extra head maps, about 3 more per person (15 small maps, roughly 1.5 sessions). Total for 5 people × 9 actions: about 7 to 9 sessions. Every frame is computed, so any new action, speed or lamp position is free afterwards; the figures can also be baked to sprite sheets at load.';
+const WEAK = [
+    'Faces are about 6 × 6 pixels: the likeness comes from hair, colour, build and collar, not from the face itself.',
+    'Heads are fixed maps: no turning, tilting or looking down without drawing another map.',
+    'Smooth movement means edges change by a pixel from frame to frame; it is less crisp than hand-drawn frames.',
+    'Bodies are tubes: no cloth folds, no fingers, hands are small blobs. Up close they look a little like mannequins.',
+    "The light is real: far from a lamp people go dim, and Cora's black suit gets hard to read in dark rooms.",
+    'The three-quarter view is a cheat: arms and legs swing in a side plane, so some poses (reaching across, turning) look flat.',
+];
+(function () {
+    'use strict';
+    const INK = '#05070a';
+    const SW = 900, DECK = 129, SH = DECK * 2, FPS = 12, DITHER = 0.7;
+    const BAYER8 = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
+        3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21].map(v => (v + 0.5) / 64);
+    const thr = (x, y) => BAYER8[((y & 7) << 3) | (x & 7)];
+    const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+    const clamp01 = v => clamp(v, 0, 1);
+    const smooth = v => { const k = clamp01(v); return k * k * (3 - 2 * k); };
+    const lerp = (a, b, k) => a + (b - a) * k;
+    function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+    const PERM = (() => { const rand = seeded(1337), perm = Array.from({ length: 256 }, (_, i) => i); for (let i = 255; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [perm[i], perm[j]] = [perm[j], perm[i]]; } return Uint8Array.from(perm); })();
+    const hash = (x, y, s = 0) => PERM[(PERM[(PERM[x & 255] + y) & 255] + s) & 255] / 255;
+    function vnoise(x, y, s = 0) {
+        const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+        const a = hash(xi, yi, s), b = hash(xi + 1, yi, s), c = hash(xi, yi + 1, s), d = hash(xi + 1, yi + 1, s);
+        return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+    }
+    function fbm(x, y, s = 0, oct = 4) { let sum = 0, amp = 0.5, f = 1, n = 0; for (let i = 0; i < oct; i++) { sum += amp * vnoise(x * f, y * f, s + i * 17); n += amp; f *= 2.03; amp *= 0.5; } return sum / n; }
+
+    // ── ramps (dark → light, all from the ink) ──
+    const hexRgb = hex => { const n = parseInt(hex.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const RAMPS = [];
+    function ramp(...hex) { const r = { id: RAMPS.length, hex, rgb: hex.map(hexRgb), n: hex.length }; RAMPS.push(r); return r; }
+    function pick(r, v, x, y, minL = 1, maxL = r.n - 1) {
+        const pos = clamp01(v) * (r.n - 1), lo = Math.floor(pos), f = pos - lo, cut = 0.5 + (thr(x, y) - 0.5) * DITHER;
+        return clamp(lo + (f > cut ? 1 : 0), minL, maxL);
+    }
+    // the room
+    const WALL = ramp(INK, '#0c1013', '#141a1f', '#1e262c', '#2c363d', '#44505a');
+    const WALL_W = ramp(INK, '#120d0a', '#22170f', '#3a2716', '#5e4024', '#946638');
+    const HULL = ramp(INK, '#171d20', '#343f43', '#66747a', '#a6b3b3', '#e0e9e5');
+    const AMBER = ramp(INK, '#3a2610', '#8a5f22', '#d9a24a', '#ffe6a0', '#fff6e0');
+    const SCREEN = ramp(INK, '#0a2426', '#14484a', '#2a8a86', '#6fe0d2', '#d0fff6');
+    const FLOOR = ramp(INK, '#0e1012', '#191c1f', '#262a2e', '#3a4046', '#5a626a');
+    // people (sampled from the portraits, then warmed: people are the warm thing)
+    const C = {
+        skin: ramp(INK, '#2a1824', '#583442', '#946260', '#cc9a84', '#f2d2bc'),
+        hair: ramp(INK, '#24223a', '#47466a', '#7f84a6', '#bcc8da', '#eaf8f2'),
+        suit: ramp(INK, '#0f121b', '#1a202c', '#283142', '#3d4a60', '#5e6f88'),
+        boot: ramp(INK, '#0b0d13', '#151a23', '#222a37', '#36404f'),
+        eye: hexRgb('#140e1e'), iris: hexRgb('#46c9c4'), lip: hexRgb('#b25c66'), lipD: hexRgb('#7c3446'),
+        cyan: hexRgb('#5ff0dc'), cyanDim: hexRgb('#2b8f86'), cyanHi: hexRgb('#c8fff4'), brow: hexRgb('#6a6a8a'),
+    };
+    const V = {
+        skin: ramp(INK, '#2a1510', '#5a3020', '#91563c', '#c2845c', '#e8b68c'),
+        hair: ramp(INK, '#1a1a22', '#373843', '#686a76', '#a2a4ae', '#dcdde2'),
+        eva: ramp(INK, '#1c1d22', '#3a3b42', '#67676c', '#9d9a93', '#cdc8bc'),
+        glove: ramp(INK, '#1c1714', '#382f29', '#5a4d45', '#857466'),
+        brown: ramp(INK, '#23170e', '#462f20', '#70523b', '#9a7859'),
+        boot: ramp(INK, '#111215', '#22242a', '#3a3c44', '#5c5f68'),
+        under: ramp(INK, '#16141c', '#2a2632', '#423c4c', '#625a6c'),
+        eye: hexRgb('#1a1416'), iris: hexRgb('#6aa8e6'), brow: hexRgb('#211a1c'), mouth: hexRgb('#7a4234'),
+        amber: hexRgb('#ffb347'),
+    };
+
+    // ── the scene buffer + a figure layer (ramp id, level, emissive colour, lit flag) ──
+    const data = new Uint8ClampedArray(SW * SH * 4), still = new Uint8ClampedArray(SW * SH * 4);
+    const fR = new Int16Array(SW * SH).fill(-1), fL = new Uint8Array(SW * SH), fE = new Uint32Array(SW * SH), fLit = new Uint8Array(SW * SH), fP = new Uint16Array(SW * SH);
+    let curPart = 0, collect = null;
+    const setS = (buf, x, y, rgb) => { if (x < 0 || y < 0 || x >= SW || y >= SH) return; const o = (y * SW + x) * 4; buf[o] = rgb[0]; buf[o + 1] = rgb[1]; buf[o + 2] = rgb[2]; buf[o + 3] = 255; };
+    const putF = (x, y, r, lvl, lit) => { if (x < 0 || y < 0 || x >= SW || y >= SH) return; const i = y * SW + x; fR[i] = r.id; fL[i] = lvl; fLit[i] = lit ? 1 : 0; fP[i] = curPart; if (collect) collect.push(i); };
+    const putE = (x, y, rgb) => { if (x < 0 || y < 0 || x >= SW || y >= SH) return; const i = y * SW + x; fR[i] = -2; fE[i] = (rgb[0] << 16) | (rgb[1] << 8) | rgb[2]; fP[i] = curPart; };
+    // one body part at a time: whatever it covers keeps a one-pixel shadow on its far side from the lamp (separates arm from chest)
+    function part(LC, fn, castShadow = true) {
+        curPart++; collect = []; fn(); const px = collect; collect = null;
+        if (!castShadow) return;
+        const sx = -Math.round(LC.L2[0]), sy = -Math.round(LC.L2[1]), off = sy * SW + sx;
+        px.forEach(i => { const j = i + off; if (j < 0 || j >= fR.length || fP[j] === curPart || fR[j] < 0) return; fL[j] = Math.max(1, fL[j] - 1); fLit[j] = 0; });
+    }
+
+    // ── frames: a local space (x forward, y up for bodies, y down for heads) placed in the scene ──
+    const frame = (ox, oy, fx, fy) => ({ ox, oy, fx, fy });
+    const toScene = (F, x, y) => [F.ox + x * F.fx, F.oy + y * F.fy];
+    function forPix(F, x0, y0, x1, y1, fn) {
+        const a = toScene(F, x0, y0), b = toScene(F, x1, y1);
+        const sx0 = Math.max(0, Math.floor(Math.min(a[0], b[0])) - 1), sx1 = Math.min(SW - 1, Math.ceil(Math.max(a[0], b[0])) + 1);
+        const sy0 = Math.max(0, Math.floor(Math.min(a[1], b[1])) - 1), sy1 = Math.min(SH - 1, Math.ceil(Math.max(a[1], b[1])) + 1);
+        for (let sy = sy0; sy <= sy1; sy++) for (let sx = sx0; sx <= sx1; sx++) fn(sx, sy, (sx + 0.5 - F.ox) * F.fx, (sy + 0.5 - F.oy) * F.fy);
+    }
+    // light: L is the scene direction to the lamp (x right, y down, z to the viewer); Cv an optional cool console light
+    function shade(F, LC, nx, ny, nz) {
+        const sx = nx * F.fx, sy = ny * F.fy, d = sx * LC.L[0] + sy * LC.L[1] + nz * LC.L[2];
+        let v = LC.amb + LC.key * Math.max(0, (d + 0.35) / 1.35);
+        if (LC.C) v += LC.cool * Math.max(0, sx * LC.C[0] + sy * LC.C[1] + nz * LC.C[2]);
+        return [v, d > 0.25];
+    }
+    function paint(F, LC, M, sx, sy, n, info) {
+        if (M.detail) { const d = M.detail(info, sx, sy); if (d) { if (d.em) { putE(sx, sy, d.em); return; } if (d.skip) return; } }
+        const [v0, lit] = shade(F, LC, n[0], n[1], n[2]);
+        const v = v0 * (M.mult ?? 1) + (M.bias ?? 0) + (M.tex ? M.tex(info, sx, sy) : 0);
+        let r = M.r, lvl = pick(r, v, sx, sy, M.minL ?? 1, M.maxL ?? r.n - 1);
+        if (M.detail) { const d = M.detail(info, sx, sy, true); if (d && d.dl) lvl = clamp(lvl + d.dl, 1, r.n - 1); if (d && d.r) { r = d.r; lvl = pick(r, v + (d.dv || 0), sx, sy, 1); } }
+        putF(sx, sy, r, lvl, lit);
+    }
+    // a tapered tube from A to B; prof(t) → [back, front] offsets from the axis (front = clockwise side in y-up space)
+    function tube(F, LC, M, A, B, prof, caps = [true, true]) {
+        const P = typeof prof === 'function' ? prof : (t => { const r = lerp(prof[0], prof[1], t); return [-r, r]; });
+        const dx = B[0] - A[0], dy = B[1] - A[1], len = Math.hypot(dx, dy) || 1e-6, ax = dx / len, ay = dy / len;
+        const px = ay * F.fy * -1, py = -ax * F.fy * -1;                       // clockwise in y-up; mirrored for y-down frames
+        let R = 0; for (let k = 0; k <= 8; k++) { const [b, f] = P(k / 8); R = Math.max(R, Math.abs(b), Math.abs(f)); }
+        forPix(F, Math.min(A[0], B[0]) - R, Math.min(A[1], B[1]) - R, Math.max(A[0], B[0]) + R, Math.max(A[1], B[1]) + R, (sx, sy, lx, ly) => {
+            const rx = lx - A[0], ry = ly - A[1], t = (rx * ax + ry * ay) / len, s = rx * px + ry * py;
+            let n, info;
+            if (t >= 0 && t <= 1) {
+                const [b, f] = P(t); if (s < b || s > f) return;
+                const mid = (b + f) / 2, half = Math.max(0.01, (f - b) / 2), u = (s - mid) / half;
+                n = [px * u, py * u, Math.sqrt(Math.max(0, 1 - u * u))]; info = { t, u, s, half };
+            } else {
+                const end = t < 0 ? 0 : 1; if (!caps[end]) return;
+                const [b, f] = P(end), mid = (b + f) / 2, half = (f - b) / 2, E = end ? B : A;
+                const cx = E[0] + px * mid, cy = E[1] + py * mid, ex = (lx - cx) / half, ey = (ly - cy) / half, q = ex * ex + ey * ey;
+                if (q > 1) return;
+                n = [ex, ey, Math.sqrt(1 - q)]; info = { t: end, u: ex * px + ey * py, s, half, cap: true };
+            }
+            paint(F, LC, M, sx, sy, n, info);
+        });
+    }
+    function ellipse(F, LC, M, c, rx, ry, rot = 0) {
+        const R = Math.max(rx, ry), cs = Math.cos(rot), sn = Math.sin(rot);
+        forPix(F, c[0] - R, c[1] - R, c[0] + R, c[1] + R, (sx, sy, lx, ly) => {
+            const dx = lx - c[0], dy = ly - c[1], ex = (dx * cs + dy * sn) / rx, ey = (-dx * sn + dy * cs) / ry, q = ex * ex + ey * ey;
+            if (q > 1) return;
+            paint(F, LC, M, sx, sy, [ex * cs - ey * sn, ex * sn + ey * cs, Math.sqrt(1 - q)], { q, ex, ey, lx, ly });
+        });
+    }
+    // polygons (even-odd over all contours) with a normal function in local space
+    function poly(F, LC, M, contours, nfn) {
+        const sc = contours.map(c => c.map(([x, y]) => toScene(F, x, y)));
+        const ys = sc.flat().map(p => p[1]), y0 = Math.max(0, Math.floor(Math.min(...ys))), y1 = Math.min(SH - 1, Math.ceil(Math.max(...ys)));
+        for (let y = y0; y <= y1; y++) {
+            const cy = y + 0.5, xs = [];
+            sc.forEach(pts => pts.forEach(([ax, ay], i) => { const [bx, by] = pts[(i + 1) % pts.length]; if ((ay <= cy) !== (by <= cy)) xs.push(ax + (cy - ay) / (by - ay) * (bx - ax)); }));
+            xs.sort((a, b) => a - b);
+            for (let k = 0; k + 1 < xs.length; k += 2) for (let x = Math.max(0, Math.round(xs[k])); x < Math.min(SW, Math.round(xs[k + 1])); x++) {
+                const lx = (x + 0.5 - F.ox) * F.fx, ly = (cy - F.oy) * F.fy;
+                paint(F, LC, M, x, y, nfn(lx, ly), { lx, ly });
+            }
+        }
+    }
+    const ellN = (cx, cy, rx, ry) => (x, y) => { let ex = (x - cx) / rx, ey = (y - cy) / ry; const q = ex * ex + ey * ey; if (q > 0.92) { const k = Math.sqrt(0.92 / q); ex *= k; ey *= k; } return [ex, ey, Math.sqrt(Math.max(0, 1 - ex * ex - ey * ey))]; };
+    // a padded ring (Vance's collar), seen from a little above; part: 'back' (hole + far rim) or 'front'
+    function ring(F, LC, M, holeM, c, rxO, ryO, rxI, ryI, part) {
+        forPix(F, c[0] - rxO, c[1] - ryO, c[0] + rxO, c[1] + ryO, (sx, sy, lx, ly) => {
+            const dx = lx - c[0], dy = ly - c[1], eO = (dx / rxO) ** 2 + (dy / ryO) ** 2, eI = (dx / rxI) ** 2 + (dy / ryI) ** 2;
+            if (eO > 1) return;
+            const front = dy * -F.fy < 0;                       // the half nearer the viewer is the lower half on screen
+            if (eI < 1) { if (part === 'back') paint(F, LC, holeM, sx, sy, [0, F.fy * -0.3, 0.6], {}); return; }
+            if ((part === 'front') !== front) return;
+            const a = Math.sqrt(eI), b = Math.sqrt(eO), k = (a - 1) / Math.max(0.001, a - b), u = 2 * k - 1, l = Math.hypot(dx / rxO, dy / ryO) || 1;
+            let nx = dx / rxO / l * u, ny = dy / ryO / l * u - 0.35 * F.fy; const nz = Math.sqrt(Math.max(0, 1 - u * u));
+            const m = Math.hypot(nx, ny, nz); paint(F, LC, M, sx, sy, [nx / m, ny / m, nz / m], { u, front });
+        });
+    }
+    // ── skeleton helpers (body frame: x forward, y up, origin on the ground under the hips) ──
+    const add = (a, b) => [a[0] + b[0], a[1] + b[1]];
+    const dirA = a => [Math.sin(a), Math.cos(a)];                     // angle from straight up, + leans forward
+    const rot = (p, a) => [p[0] * Math.cos(a) - p[1] * Math.sin(a), p[0] * Math.sin(a) + p[1] * Math.cos(a)];
+    const limbEnd = (o, ang, len) => [o[0] + Math.sin(ang) * len, o[1] - Math.cos(ang) * len];   // angle from straight down, + forward
+    function ik(A, T, l1, l2, bend) {
+        let dx = T[0] - A[0], dy = T[1] - A[1], d = Math.hypot(dx, dy); const dm = l1 + l2 - 0.01;
+        if (d > dm) { dx *= dm / d; dy *= dm / d; d = dm; }
+        const a = Math.acos(clamp((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d), -1, 1)), base = Math.atan2(dy, dx), g = base + bend * a;
+        return { J: [A[0] + l1 * Math.cos(g), A[1] + l1 * Math.sin(g)], E: [A[0] + dx, A[1] + dy] };
+    }
+    // a point on the torso: u across (+ = front), v along the spine from the chest top (+ = up)
+    const onTorso = (top, ang, u, v) => [top[0] + Math.cos(ang) * u + Math.sin(ang) * v, top[1] - Math.sin(ang) * u + Math.cos(ang) * v];
+
+    // ── the two people ──
+    const CORA = {
+        key: 'cora', pal: C,
+        hipH: 38, thigh: 18.4, shin: 17.9, ankleH: 2.4, spine: 24.5, neck: 3.2, upper: 13, fore: 11.5,
+        hipNear: [-1.4, 0], hipFar: [1.6, 0.3], shNear: [-2.5, -2.4], shFar: [2.6, -2.0],
+        thighR: [4.0, 2.8], shinR: [2.7, 1.8], upperR: [2.1, 1.8], foreR: [1.8, 1.4], handR: [1.3, 1.8],
+        headOff: [0.7, 4.3],
+        foot: [[-1.7, -2.4], [-1.9, 0.3], [-0.6, 1.5], [1.2, 0.7], [3.9, -0.7], [4.7, -1.6], [4.5, -2.4]],
+        torso: [[0, -3.8, 3.8], [0.14, -5.0, 4.8], [0.42, -3.9, 3.8], [0.64, -4.5, 5.0], [0.78, -5.0, 5.5], [0.92, -5.8, 5.2], [1, -5.4, 4.2]],
+        walkT: 1080, stride: 46, stance: 0.6, lift: 3.2, lean: 0.04, armSwing: 0.3, breathT: 4300,
+        idleLean: 0.0, idleArms: 'clasp',
+    };
+    const VANCE = {
+        key: 'vance', pal: V,
+        hipH: 41.5, thigh: 19.6, shin: 19.2, ankleH: 3.2, spine: 26.5, neck: 2.6, upper: 14.5, fore: 13,
+        hipNear: [-2.4, 0], hipFar: [2.4, 0.3], shNear: [-4.2, -3.0], shFar: [4.0, -2.6],
+        thighR: [5.0, 4.0], shinR: [4.2, 3.6], upperR: [3.9, 3.4], foreR: [3.5, 3.2], handR: [2.1, 2.5],
+        headOff: [1.1, 4.6],
+        foot: [[-2.6, -3.2], [-2.8, 0.6], [-1.0, 2.0], [1.8, 1.2], [5.0, -0.6], [6.0, -2.0], [5.8, -3.2]],
+        torso: [[0, -5.8, 5.8], [0.14, -7.2, 7.0], [0.42, -7.2, 7.2], [0.66, -7.8, 8.0], [0.88, -8.6, 8.0], [1, -7.6, 6.6]],
+        walkT: 1320, stride: 44, stance: 0.62, lift: 2.6, lean: 0.07, armSwing: 0.22, breathT: 5600,
+        idleLean: 0.06, idleArms: 'hang',
+    };
+    const profOf = rows => t => {
+        for (let i = 1; i < rows.length; i++) if (t <= rows[i][0]) { const a = rows[i - 1], b = rows[i], k = (t - a[0]) / (b[0] - a[0] || 1); return [lerp(a[1], b[1], k), lerp(a[2], b[2], k)]; }
+        const z = rows[rows.length - 1]; return [z[1], z[2]];
+    };
+    CORA.prof = profOf(CORA.torso); VANCE.prof = profOf(VANCE.torso);
+
+    // ── poses ──
+    function footAt(P, q, D) {                     // walk: one foot at cycle phase q → ankle, pitch
+        const half = D.stance * D.stride / 2, toeX = D.foot[6][0], heelX = D.foot[0][0];
+        if (q < D.stance) {
+            const s = q / D.stance, x = half - q * D.stride;
+            if (s < 0.12) { const ph = 0.22 * (1 - s / 0.12), H = [x + heelX, 0]; return { ankle: add(H, rot([-heelX, D.ankleH], ph)), pitch: ph }; }
+            if (s > 0.68) { const ph = -0.7 * ((s - 0.68) / 0.32) ** 1.4, T = [x + toeX, 0]; return { ankle: add(T, rot([-toeX, D.ankleH], ph)), pitch: ph }; }
+            return { ankle: [x, D.ankleH], pitch: 0 };
+        }
+        const s = (q - D.stance) / (1 - D.stance), toeOff = -0.7, T0 = [-half + toeX, 0];
+        const start = add(T0, rot([-toeX, D.ankleH], toeOff)), endA = add([half + heelX, 0], rot([-heelX, D.ankleH], 0.22));
+        const k = smooth(s), lift = D.lift * Math.sin(Math.PI * Math.min(1, s * 1.1));
+        return { ankle: [lerp(start[0], endA[0], k), lerp(start[1], endA[1], k) + lift], pitch: lerp(toeOff, 0.22, smooth(s * 1.2)) };
+    }
+    function pose(D, act, t) {
+        const P = { blink: false, look: 0 };
+        const breath = 0.5 - 0.5 * Math.cos(2 * Math.PI * t / D.breathT);
+        let pelvis, spineAng, feet, arms = null, headTilt = [0, 0];
+        if (act === 'walk') {
+            const p = (t / D.walkT) % 1;
+            feet = [footAt(P, p, D), footAt(P, (p + 0.5) % 1, D)];
+            let hy = D.hipH - 0.4 + 0.5 * Math.cos(4 * Math.PI * (p - 0.25));
+            const hips = [D.hipNear, D.hipFar];
+            feet.forEach((f, i) => { const dx = f.ankle[0] - hips[i][0], L = D.thigh + D.shin - 0.35; hy = Math.min(hy, f.ankle[1] + Math.sqrt(Math.max(0, L * L - dx * dx)) - hips[i][1]); });
+            pelvis = [0.4, hy];
+            spineAng = D.lean + 0.02 * Math.cos(4 * Math.PI * p);
+            const sw = D.armSwing, c = Math.cos(2 * Math.PI * (p - 0.05));
+            arms = [{ a1: -sw * c + 0.04, a2: 0.22 + 0.32 * Math.max(0, -c) }, { a1: sw * c + 0.04, a2: 0.22 + 0.32 * Math.max(0, c) }];
+            P.shoulderRoll = D.key === 'vance' ? 0.6 * Math.sin(2 * Math.PI * p) : 0.25 * Math.sin(2 * Math.PI * p);
+            headTilt = [0.3, 0];
+            P.blink = (t % 3900) < 130;
+        } else if (act === 'idle') {
+            const sway = Math.sin(2 * Math.PI * t / 7300);
+            pelvis = [0.35 * sway, D.hipH - 0.7];
+            feet = [{ ankle: [-2.0 + (D.key === 'vance' ? -1 : 0), D.ankleH], pitch: 0 }, { ankle: [2.4 + (D.key === 'vance' ? 1.4 : 0), D.ankleH], pitch: 0 }];
+            spineAng = D.idleLean - 0.025 * breath - 0.012 * sway;
+            P.breath = breath;
+            P.blink = (t % 4700) > 4560 || ((t + 900) % 9400) > 9280;
+            headTilt = D.key === 'vance' ? [0.2 * breath, -0.4 * breath] : [0, 0.25 * breath];
+        } else {   // console
+            const sway = Math.sin(2 * Math.PI * t / 6100);
+            pelvis = [0.2 + 0.3 * sway, D.hipH - 0.45];
+            feet = [{ ankle: [-2.4, D.ankleH], pitch: 0 }, { ankle: [2.6 + (D.key === 'vance' ? 1 : 0), D.ankleH], pitch: 0 }];
+            spineAng = 0.17 + 0.015 * breath;
+            P.breath = breath * 0.6;
+            P.blink = (t % 5200) > 5080;
+            headTilt = [1.1, -1.0];
+            P.console = true;
+        }
+        P.pelvis = pelvis; P.spineAng = spineAng;
+        const sp = D.spine + (P.breath || 0) * 0.5;
+        P.chestBase = add(pelvis, rot([0, -5], -spineAng));
+        P.chestTop = add(pelvis, [Math.sin(spineAng) * sp, Math.cos(spineAng) * sp]);
+        const na = spineAng + (act === 'console' ? 0.2 : D.key === 'vance' ? 0.08 : -0.03);
+        P.neckTop = add(P.chestTop, [Math.sin(na) * D.neck, Math.cos(na) * D.neck]);
+        P.head = add(add(P.neckTop, rot(D.headOff, -na * 0.5)), headTilt);
+        const lift = (P.breath || 0) * 0.45, roll = P.shoulderRoll || 0;
+        P.sh = [onTorso(P.chestTop, spineAng, D.shNear[0], D.shNear[1] + lift + roll), onTorso(P.chestTop, spineAng, D.shFar[0], D.shFar[1] + lift - roll)];
+        const hipsL = [D.hipNear, D.hipFar].map(h => add(pelvis, h));
+        P.legs = feet.map((f, i) => { const k = ik(hipsL[i], f.ankle, D.thigh, D.shin, 1); return { hip: hipsL[i], knee: k.J, ankle: k.E, pitch: f.pitch }; });
+        // arms
+        if (act === 'console') {
+            const tap = i => { const step = Math.floor((t + i * 85) / 170), h = hash(step, i, 3); return h > 0.55 ? -0.9 : 0; };
+            const reach = ((t % 4300) > 3300) ? smooth(Math.sin(Math.PI * ((t % 4300) - 3300) / 1000)) : 0;
+            const tN = [10.5 + reach * 3.5, 41.2 + tap(0) + reach * 8.5], tF = [13.8, 41.6 + tap(1)];
+            P.arms = [ik(P.sh[0], tN, D.upper, D.fore, -1), ik(P.sh[1], tF, D.upper, D.fore, -1)].map((k, i) => ({ sh: P.sh[i], el: k.J, wr: k.E, hand: 0.35 }));
+        } else if (act === 'idle' && D.idleArms === 'behind') {
+            const tgtN = [P.pelvis[0] - 4.6, P.pelvis[1] - 2.2 + 0.3 * (P.breath || 0)], tgtF = [P.pelvis[0] - 3.4, P.pelvis[1] - 1.6];
+            P.arms = [ik(P.sh[0], tgtN, D.upper, D.fore, -1), ik(P.sh[1], tgtF, D.upper, D.fore, -1)].map((k, i) => ({ sh: P.sh[i], el: k.J, wr: k.E, hand: 1.9, behind: true }));
+        } else if (act === 'idle' && D.idleArms === 'clasp') {     // hands held together low in front: calm, formal
+            const tg = [P.pelvis[0] + 4.2, P.pelvis[1] - 4.5 + 0.25 * (P.breath || 0)];
+            P.arms = [ik(P.sh[0], tg, D.upper, D.fore, -1), ik(P.sh[1], add(tg, [0.8, 0.4]), D.upper, D.fore, -1)].map((k, i) => ({ sh: P.sh[i], el: k.J, wr: k.E, hand: 0.9 }));
+        } else {
+            const A = arms || [{ a1: -0.05 - 0.02 * (P.breath || 0), a2: 0.32 }, { a1: 0.04, a2: 0.28 }];
+            P.arms = A.map((a, i) => { const el = limbEnd(P.sh[i], a.a1, D.upper), wr = limbEnd(el, a.a1 + a.a2, D.fore); return { sh: P.sh[i], el, wr, hand: a.a1 + a.a2 }; });
+        }
+        return P;
+    }
+
+    // ── drawing a person ──
+    function clearFig(x0, y0, x1, y1) { for (let y = Math.max(0, y0); y <= Math.min(SH - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(SW - 1, x1); x++) fR[y * SW + x] = -1; }
+    let box = null;
+    function composeFig(x0, y0, x1, y1, LC) {
+        box = [1e9, 1e9, -1e9, -1e9];
+        const nx = Math.round(LC.L2[0]), ny = Math.round(LC.L2[1]);
+        for (let y = Math.max(0, y0); y <= Math.min(SH - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(SW - 1, x1); x++) {
+            const i = y * SW + x, r = fR[i]; if (r === -1) continue;
+            box = [Math.min(box[0], x), Math.min(box[1], y), Math.max(box[2], x), Math.max(box[3], y)];
+            if (r === -2) { const e = fE[i]; setS(data, x, y, [e >> 16, (e >> 8) & 255, e & 255]); continue; }
+            const R = RAMPS[r]; let lvl = fL[i];
+            if (fLit[i] && LC.key > 0.3) {                 // a one-pixel rim on the side that faces the lamp
+                const xx = x + nx, yy = y + ny, j = yy * SW + xx;
+                if (xx >= 0 && yy >= 0 && xx < SW && yy < SH && fR[j] === -1) lvl = Math.min(R.n - 1, lvl + 1);
+            }
+            setS(data, x, y, R.rgb[lvl]);
+        }
+    }
+    function lightFor(cx, cy, deck, consoleX) {
+        const lamp = LAMPS[deck], dx = lamp[0] - cx, dy = lamp[1] - cy, dist = Math.hypot(dx, dy), z = 30, m = Math.hypot(dx, dy, z);
+        const LC = { L: [dx / m, dy / m, z / m], L2: [dx / Math.hypot(dx, dy || 0.01), dy / Math.hypot(dx, dy || 0.01)], key: clamp(1.3 - dist / 380, 0.22, 1), amb: 0.2 };
+        if (consoleX !== undefined) { const ex = consoleX - cx, ey = -20, ez = 14, mm = Math.hypot(ex, ey, ez); LC.C = [ex / mm, ey / mm, ez / mm]; LC.cool = 0.45; }
+        return LC;
+    }
+
+    function torsoMat(D, base) {
+        const pal = D.pal, V2 = D === VANCE;
+        return Object.assign({}, base, {
+            detail: (i, sx, sy, after) => {
+                if (i.cap) return null;
+                if (!V2) return (after && i.t > 0.24 && i.t < 0.9 && Math.abs(i.u - 0.42) * i.half < 0.5) ? { dl: -1 } : null;
+                if (!after) return null;
+                if (i.t > 0.1 && i.t < 0.19) return { r: pal.brown };                                  // belt
+                if (i.t > 0.6 && i.t < 0.75 && i.u > 0.1 && i.u < 0.75) return { dl: -1 };            // chest unit
+                if (Math.abs(i.u + 0.05) * i.half < 0.5 && i.t > 0.19 && i.t < 0.9) return { dl: -1 }; // front seam
+                return null;
+            },
+        });
+    }
+    function drawPerson(D, act, t, F, LC) {
+        const P = pose(D, act, t), pal = D.pal, V2 = D === VANCE;
+        const cloth = V2 ? pal.eva : pal.suit;
+        const grime = V2 ? (i, sx, sy) => (fbm(sx / 3, sy / 3, 11, 2) - 0.5) * 0.16 : (i, sx, sy) => (hash(sx, sy, 2) - 0.5) * 0.04;
+        const far = { r: cloth, mult: 0.6, tex: grime }, near = { r: cloth, tex: grime };
+        const handM = f => V2 ? { r: pal.glove, mult: f } : { r: pal.skin, mult: f, bias: 0.06 };
+        const foreM = (base, f) => Object.assign({}, base, { detail: (i, sx, sy, after) => {
+            if (i.cap) return null;
+            if (!V2) return (!after && i.t > 0.86) ? { em: f > 0.8 ? pal.cyan : pal.cyanDim } : null;
+            return (after && i.t > 0.8) ? { r: pal.brown } : null; } });
+        const shinM = base => Object.assign({}, base, { detail: (i, sx, sy, after) => (V2 && after && i.t < 0.18 && !i.cap) ? { dl: -1 } : null });
+        const foot = (l, M) => { const pts = D.foot.map(p => add(l.ankle, rot(p, l.pitch))); const c = add(l.ankle, rot([1.4, -0.4], l.pitch)); poly(F, LC, M, [pts], ellN(c[0], c[1], 4.4, 3.2)); };
+        const arm = (a, M, f) => {
+            ellipse(F, LC, M, add(a.sh, [0, -0.6]), D.upperR[0] * 1.15, D.upperR[0] * 1.1);          // the shoulder
+            tube(F, LC, M, a.sh, a.el, D.upperR);
+            tube(F, LC, foreM(M, f), a.el, a.wr, D.foreR);
+            const h = limbEnd(a.wr, a.hand, D.handR[1] * 0.75);
+            ellipse(F, LC, handM(f), h, D.handR[0], D.handR[1], -a.hand);
+        };
+        const leg = (l, M, bm) => { tube(F, LC, M, l.hip, l.knee, D.thighR); tube(F, LC, shinM(M), l.knee, l.ankle, D.shinR); foot(l, bm); };
+
+        part(LC, () => arm(P.arms[1], far, 0.6), false);
+        part(LC, () => leg(P.legs[1], far, { r: pal.boot, mult: 0.6 }), false);
+        part(LC, () => tube(F, LC, torsoMat(D, near), P.chestBase, P.chestTop, D.prof));
+        if (V2) { const lt = onTorso(P.chestTop, P.spineAng, 4.4, -8.6); putE(...toScene(F, lt[0], lt[1]).map(Math.floor), (Math.floor(t / 900) % 3) ? pal.amber : hexRgb('#6a4a18')); }
+        part(LC, () => leg(P.legs[0], near, { r: pal.boot }));
+
+        const anchor = toScene(F, P.head[0], P.head[1]).map(Math.round);
+        const H = frame(anchor[0], anchor[1], F.fx, 1);
+        const LCh = Object.assign({}, LC, { amb: LC.amb + 0.32, key: LC.key * 0.6 });
+        const skin = { r: pal.skin };
+        if (V2) {
+            const rc = onTorso(P.chestTop, P.spineAng, 0.6, 0.9), ringM = { r: pal.eva, tex: grime, bias: 0.12 }, hole = { r: pal.eva, mult: 0.2, maxL: 1 };
+            part(LC, () => ring(F, LC, ringM, hole, rc, 9.6, 4.3, 4.6, 2.0, 'back'));
+            part(LC, () => tube(F, LC, { r: V.under, bias: 0.05 }, P.chestTop, add(P.neckTop, [0.6, 1.5]), [2.7, 2.5], [false, true]), false);   // dark neck gaiter, as in the portrait
+            part(LCh, () => headMap(H, LCh, VANCE_HEAD, -6, -9, vanceLegend(), P.blink), false);
+            part(LC, () => ring(F, LC, ringM, hole, rc, 9.6, 4.3, 4.6, 2.0, 'front'));
+        } else {
+            part(LC, () => tube(F, LC, skin, P.chestTop, add(P.neckTop, [0.5, 2]), [1.5, 1.4], [false, true]), false);
+            const collarM = { r: pal.suit, bias: 0.08, detail: (i, sx, sy, after) => (!after && i.t > 0.8 && !i.cap) ? { em: pal.cyan } : null };
+            part(LC, () => tube(F, LC, collarM, add(P.chestTop, rot([0, -1.0], -P.spineAng)), add(P.neckTop, rot([0.3, -0.2], -P.spineAng)), t2 => [-2.3 + 0.2 * t2, 2.1 - 0.3 * t2], [true, false]));
+            part(LCh, () => headMap(H, LCh, CORA_HEAD, -5, -7, coraLegend(), P.blink), false);
+        }
+        part(LC, () => {
+            arm(P.arms[0], near, 1);
+            if (!V2) { const sp = add(P.arms[0].sh, [0.1, 0.2]); ellipse(F, LC, { r: pal.suit, bias: 0.12, detail: (i, sx, sy, after) => (!after && i.q > 0.5 && i.ey > 0.15) ? { em: pal.cyanDim } : null }, sp, 2.7, 2.3, 0); }
+        });
+        return { P, anchor };
+    }
+
+    // ── heads: a hand-placed map of materials (hair, skin, eyes…) that the lamp still lights. Head frame: y DOWN. ──
+    function headMap(H, LC, map, c0, r0, legend, blink) {
+        map.forEach((row, r) => [...row].forEach((ch, c) => {
+            let k = ch; if (k === '.') return; if (blink && (k === 'E' || k === 'i')) k = 'b';
+            const e = legend[k]; if (!e) return;
+            const lc = c0 + c, lr = r0 + r, sx = H.fx > 0 ? H.ox + lc : H.ox - 1 - lc, sy = H.oy + lr;
+            if (sx < 0 || sy < 0 || sx >= SW || sy >= SH) return;
+            if (e.em) { putE(sx, sy, e.em); return; }
+            const info = { lx: lc + 0.5, ly: lr + 0.5 }, n = e.n(info.lx, info.ly), M = e.M;
+            const [v0, lit] = shade(H, LC, n[0], n[1], n[2]);
+            const v = v0 * (M.mult ?? 1) + (M.bias ?? 0) + (M.tex ? M.tex(info, sx, sy) : 0);
+            const lvl = pick(M.r, v, sx, sy, M.minL ?? 1) + (e.dl || 0) + (e.check && ((sx + sy) & 1) ? e.check : 0);
+            putF(sx, sy, M.r, clamp(lvl, 1, M.r.n - 1), lit);
+        }));
+    }
+    const CORA_HEAD = [
+        '...HHHHH....',
+        '.HHHHHkkHH..',
+        '.HHHHkkkkHH.',
+        'HHHHHHkkHHHH',
+        'HHHHHHHHHHHH',
+        'hHHHHHHHHHHH',
+        'hHHHsEisiEFH',
+        'hHHHcFFFlFFH',
+        'hHHHCFFslFFh',
+        'hhHHsFLLFFh.',
+        '.hhH.sFFs...',
+        '.....sFs....',
+    ];
+    function coraLegend() {
+        const hairN = ellN(0.5, -1.6, 6.6, 6.6), skinN = ellN(1.6, 0.6, 4.4, 5.2);
+        const hair = { r: C.hair, bias: 0.12, minL: 2, tex: i => (vnoise(i.lx * 1.7 + 3, i.ly * 0.3, 4) - 0.5) * 0.3 };
+        const skin = { r: C.skin, bias: 0.1, minL: 2 };
+        return { H: { M: hair, n: hairN }, k: { M: hair, n: hairN, dl: 1 }, h: { M: hair, n: hairN, dl: -1 },
+            F: { M: skin, n: skinN }, s: { M: skin, n: skinN, dl: -1 }, l: { M: skin, n: skinN, dl: 1 }, b: { M: skin, n: skinN, dl: -1 },
+            E: { em: C.eye }, i: { em: C.iris }, L: { em: C.lip }, c: { em: C.cyan }, C: { em: C.cyanDim } };
+    }
+    const VANCE_HEAD = [
+        '...k..k..k...',
+        '..kk.kk.kk...',
+        '.kHkkHkkHkk..',
+        '.HHHHHHHHHHk.',
+        'HHHHHHHHHHHHk',
+        'gHHHHHHHlFHH.',
+        'ggHHHHFsFFFF.',
+        'gggHsFBBFBBF.',
+        '.ggesdiFldiF.',
+        '.geeFFFFFlFF.',
+        '..eeFFFsFdlFF',
+        '...FxFsMMsF..',
+        '....xxxxxx...',
+        '.....xxxx....',
+    ];
+    function vanceLegend() {
+        const hairN = ellN(-0.3, -3.5, 7, 7), skinN = ellN(1.4, -0.5, 7.5, 8);
+        const hair = { r: V.hair, bias: 0.06, minL: 2, tex: i => { const a = Math.atan2(i.ly + 2, i.lx), r = Math.hypot(i.lx, i.ly + 2); return (vnoise(a * 7, r * 0.6, 5) - 0.5) * 0.4 + (r - 6) * 0.05; } };
+        const skin = { r: V.skin, bias: 0.14, minL: 2, tex: (i, sx, sy) => (hash(sx, sy, 9) - 0.5) * 0.1 };
+        return { H: { M: hair, n: hairN }, k: { M: hair, n: hairN, dl: 1 }, g: { M: Object.assign({}, hair, { minL: 1 }), n: hairN, dl: -2 },
+            F: { M: skin, n: skinN }, s: { M: skin, n: skinN, dl: -1 }, d: { M: skin, n: skinN, dl: -2 }, l: { M: skin, n: skinN, dl: 1 },
+            e: { M: skin, n: skinN, dl: 0 }, b: { M: skin, n: skinN, dl: -1 }, x: { M: skin, n: skinN, check: -1 }, X: { M: skin, n: skinN, dl: -1 },
+            E: { em: V.eye }, i: { em: V.iris }, B: { em: V.brow }, M: { em: V.mouth } };
+    }
+
+    // ── the room (painted once) ──
+    const LAMPS = [[330, 32], [330, DECK + 32]];
+    const CONSOLES = [770, 770];
+    function paintRoom() {
+        const buf = still, set = (x, y, r, v) => setS(buf, x, y, r.rgb[pick(r, v, x, y, 0)]);
+        for (let d = 0; d < 2; d++) {
+            const y0 = d * DECK, floorY = y0 + 113, lamp = LAMPS[d];
+            for (let y = y0; y < y0 + DECK; y++) for (let x = 0; x < SW; x++) {
+                const ly = y - y0;
+                if (ly < 12) {                                                       // ceiling: pipes
+                    const pipe = ly >= 3 && ly < 8 ? 1 - Math.abs(ly - 5) / 2.6 : 0;
+                    set(x, y, WALL, pipe ? 0.18 + 0.32 * pipe + (fbm(x / 9, ly, 3, 2) - 0.5) * 0.1 : 0.06);
+                    continue;
+                }
+                if (y >= floorY) {                                                   // floor plate: lit edge, grating, then the deck slab
+                    const fy = y - floorY;
+                    if (fy === 0) { set(x, y, FLOOR, 0.62 + Math.max(0, 0.3 - Math.abs(x - lamp[0]) / 600)); continue; }
+                    if (fy < 6) { set(x, y, FLOOR, ((x % 4 === 0) || fy === 3 ? 0.18 : 0.32) - fy * 0.02); continue; }
+                    set(x, y, FLOOR, fy < 9 ? 0.12 : 0.04); continue;
+                }
+                const dx = x - lamp[0], dy = y - lamp[1], dist = Math.hypot(dx, dy * 1.25);
+                const glow = Math.exp(-(dist * dist) / (2 * 62 * 62)), far = Math.exp(-(dist * dist) / (2 * 190 * 190));
+                let v = 0.2 + 0.1 * far + 0.42 * glow + (fbm(x / 26, y / 18, 7, 4) - 0.5) * 0.16 - Math.max(0, ly - 80) * 0.004;
+                const px = (x + d * 23) % 52, py = ly - 12;
+                if (px === 0 || py === 34 || py === 70) v -= 0.12;                  // plate seams, lit lip under them
+                else if (px === 1 || py === 35 || py === 71) v += 0.06;
+                if ((x % 160) > 150) v += ((x % 160) === 151 ? 0.12 : -0.05);       // frame ribs
+                set(x, y, glow > hash(x, y, 1) * 0.55 + 0.12 ? WALL_W : WALL, v);
+            }
+            // lamp fixture + halo
+            for (let y = -3; y <= 3; y++) for (let x = -8; x <= 8; x++) {
+                const X = lamp[0] + x, Y = lamp[1] + y;
+                if (y === -3 || Math.abs(x) === 8) set(X, Y, HULL, 0.35); else if (y >= -1 && y <= 1 && Math.abs(x) < 6) set(X, Y, AMBER, 0.9 - Math.abs(x) * 0.04); else set(X, Y, HULL, 0.22);
+            }
+            // a door at the left
+            for (let y = y0 + 26; y < floorY; y++) for (let x = 24; x < 62; x++) {
+                const e = x === 24 || x === 61 || y === y0 + 26, inner = x > 27 && x < 58 && y > y0 + 29;
+                set(x, y, e ? HULL : WALL, e ? 0.3 : inner ? 0.12 + (x === 43 ? -0.06 : 0) : 0.2);
+            }
+            // console: a desk, an angled screen, glow on the wall
+            const cx = CONSOLES[d];
+            for (let y = floorY - 60; y < floorY; y++) for (let x = cx - 40; x < cx + 40; x++) {
+                const g = Math.exp(-(((x - cx - 6) / 30) ** 2 + ((y - (floorY - 50)) / 20) ** 2));
+                if (g > 0.25) set(x, y, SCREEN, 0.04 + g * 0.26);
+            }
+            for (let y = floorY - 40; y < floorY; y++) for (let x = cx - 6; x < cx + 22; x++) {
+                const top = y < floorY - 37, front = x < cx - 3;
+                set(x, y, HULL, top ? 0.42 - (x - cx) * 0.004 : front ? 0.28 : 0.16 + (fbm(x / 4, y / 4, 8, 2) - 0.5) * 0.08);
+            }
+            for (let k = 0; k < 18; k++) for (let w = 0; w < 13; w++) {             // screen leaning toward the operator
+                const x = cx + 3 + Math.round(k * 0.45) + w, y = floorY - 42 - k;
+                set(x, y, w === 0 || k === 17 ? HULL : SCREEN, w === 0 || k === 17 ? 0.3 : 0.55 + 0.1 * ((k % 4) === 1 ? 1 : 0) - w * 0.012);
+            }
+        }
+    }
+
+    // ── the show ──
+    const canvas2 = document.getElementById('scene2'), canvas1 = document.getElementById('scene1');
+    [canvas2, canvas1].forEach(c => { c.width = SW; c.height = SH; });
+    canvas2.style.width = SW * 2 + 'px'; canvas2.style.height = SH * 2 + 'px';
+    canvas1.style.width = SW + 'px'; canvas1.style.height = SH + 'px';
+    const ctx = canvas2.getContext('2d'), ctx1 = canvas1.getContext('2d'), img = ctx.createImageData(SW, SH);
+    const ACTORS = [
+        { D: CORA, deck: 0, act: 'idle', x: 150 },
+        { D: CORA, deck: 0, act: 'walk', x: 240, lane: 330 },
+        { D: CORA, deck: 0, act: 'console', x: 755 },
+        { D: VANCE, deck: 1, act: 'idle', x: 150 },
+        { D: VANCE, deck: 1, act: 'walk', x: 240, lane: 330, offset: 5300 },
+        { D: VANCE, deck: 1, act: 'console', x: 751 },
+    ];
+    const heads = {}, SIZES = {};
+    function contactShadow(x, y, w) {
+        for (let dx = -w; dx <= w; dx++) for (let dy = 0; dy < 2; dy++) {
+            const X = Math.round(x + dx), Y = y + dy, k = 1 - Math.abs(dx) / (w + 1);
+            if (k > thr(X, Y) * 1.3) { const o = (Y * SW + X) * 4; data[o] = data[o] * 0.45; data[o + 1] = data[o + 1] * 0.45; data[o + 2] = data[o + 2] * 0.45; }
+        }
+    }
+    function render(t) {
+        data.set(still);
+        ACTORS.forEach(A => {
+            const floorY = A.deck * DECK + 113;
+            let x = A.x, facing = 1;
+            if (A.act === 'walk') {
+                const tt = t + (A.offset || 0), dist = tt / A.D.walkT * A.D.stride, u = dist % (2 * A.lane);
+                if (u < A.lane) x = A.x + u; else { x = A.x + 2 * A.lane - u; facing = -1; }
+            }
+            const F = frame(x, floorY, facing, -1);
+            const LC = lightFor(x, floorY - 60, A.deck, A.act === 'console' ? CONSOLES[A.deck] + 6 : undefined);
+            contactShadow(x, floorY, A.D === VANCE ? 11 : 8);
+            const x0 = Math.floor(x) - 26, x1 = Math.floor(x) + 26, y0 = floorY - 100, y1 = floorY;
+            clearFig(x0, y0, x1, y1);
+            const tt = A.act === 'walk' ? t + (A.offset || 0) : t + (A.D === VANCE ? 1700 : 0);
+            const out = drawPerson(A.D, A.act, tt, F, LC);
+            composeFig(x0, y0, x1, y1, LC);
+            SIZES[A.D.key + ' ' + A.act] = [box[2] - box[0] + 1, box[3] - box[1] + 1];
+            if (A.act === 'idle') heads[A.D.key] = { anchor: out.anchor, x: Math.floor(x), floorY };
+        });
+        // console screens: a slow scrolling line
+        CONSOLES.forEach((cx, d) => { const floorY = d * DECK + 113, k = 1 + Math.floor(t / 250) % 16; for (let w = 2; w < 11; w++) setS(data, cx + 3 + Math.round(k * 0.45) + w, floorY - 42 - k, SCREEN.rgb[5]); });
+        img.data.set(data); ctx.putImageData(img, 0, 0);
+        ctx1.clearRect(0, 0, SW, SH); ctx1.drawImage(canvas2, 0, 0);
+        closeups();
+    }
+    function closeups() {
+        [['cora', 'headC', 'bodyC'], ['vance', 'headV', 'bodyV']].forEach(([k, hId, bId]) => {
+            const h = heads[k]; if (!h) return;
+            const hc = document.getElementById(hId), bc = document.getElementById(bId);
+            if (!hc.dataset.sized) { hc.style.width = hc.width * 9 + 'px'; hc.style.height = hc.height * 9 + 'px'; bc.style.width = bc.width * 4 + 'px'; bc.style.height = bc.height * 4 + 'px'; hc.dataset.sized = 1; }
+            if (!h.crop) h.crop = [h.anchor[0] - 12, h.anchor[1] - 13];
+            const hx = hc.getContext('2d'); hx.imageSmoothingEnabled = false; hx.clearRect(0, 0, 26, 26); hx.drawImage(canvas2, h.crop[0], h.crop[1], 26, 26, 0, 0, 26, 26);
+            const bx = bc.getContext('2d'); bx.imageSmoothingEnabled = false; bx.clearRect(0, 0, 48, 92); bx.drawImage(canvas2, h.x - 24, h.floorY - 90, 48, 92, 0, 0, 48, 92);
+            heads[k].crop = h.crop;
+        });
+    }
+
+    // ── time ──
+    paintRoom();
+    const qs = new URLSearchParams(location.search);
+    let T = qs.has('t') ? +qs.get('t') : 0, playing = !qs.has('t'), last = null, shown = -1;
+    const draw = () => { const ft = Math.floor(T / (1000 / FPS)) * (1000 / FPS); if (ft !== shown) { shown = ft; render(ft); } };
+    function loop(now) { if (playing) { if (last !== null) T += Math.min(100, now - last); last = now; } else last = null; draw(); requestAnimationFrame(loop); }
+    const bPlay = document.getElementById('bPlay');
+    const setPlaying = p => { playing = p; bPlay.textContent = p ? 'Pause' : 'Play'; };
+    bPlay.addEventListener('click', () => setPlaying(!playing));
+    document.getElementById('bStep').addEventListener('click', () => { setPlaying(false); T += 1000 / FPS; draw(); });
+    window.crewB = { pause: () => setPlaying(false), play: () => setPlaying(true), step: (ms = 1000 / FPS) => { T += ms; draw(); }, setTime: ms => { T = ms; draw(); }, get time() { return T; }, sizes: () => SIZES };
+    setPlaying(playing);
+    draw();
+    requestAnimationFrame(loop);
+
+    document.getElementById('costText').textContent = COST;
+    WEAK.forEach(w => { const li = document.createElement('li'); li.textContent = w; document.getElementById('weakText').appendChild(li); });
+})();
+</script>
+</body>
+</html>

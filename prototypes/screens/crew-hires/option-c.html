@@ -1,0 +1,782 @@
+<!doctype html>
+<!--
+  CREW BAKE-OFF · OPTION C "From the portraits" (48 × 104 native). A study page; nothing in the game is changed.
+
+  How it is drawn:
+    1. Palettes are sampled from the portrait PNGs (k-means per region: hair, face, suit, trim), every ramp starting at #05070a.
+    2. The body is a little clay model: tapered capsules (limbs) and ellipsoids (pelvis, waist, chest, shoulders) posed by a
+       skeleton, rasterised with a z-buffer so near parts cover far ones, lit by one light from above and in front of the face,
+       then quantised onto the material ramps with a light 8 × 8 Bayer dither and a little noise in the cloth.
+    3. The head (and Cora's collar, Vance's ring collar) is hand-placed pixel by pixel from the portrait, reduced feature by
+       feature: hair shape first, then brows, eyes, nose, jaw and the signature detail. It sits on the neck of the pose.
+  DEBUG (the browser pane can pause requestAnimationFrame): optC.pause(), optC.play(), optC.setTime(ms), optC.step(ms).
+  URL: ?t=1500 shows a still at 1.5 s. ?dir=-1 faces left.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew Option C</title>
+<meta name="description" content="Silent Exodus crew bake-off, option C: 48 x 104 crew figures drawn from the portraits, Cora and Vance, idle, walk and console.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    color-scheme: dark;
+    --void: #0a0a0b; --deep: #111214; --line: #1d1f23; --line2: #33373e;
+    --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --ui-br: #ffffff;
+    --warm: #f08c2e; --warm-br: #ffc27a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --gutter: clamp(16px, 2.2vw, 40px);
+    --fast: 140ms; --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--void); }
+body { color: var(--text); font: 15px/1.55 var(--f-text); -webkit-font-smoothing: antialiased; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #05070a; }
+p { margin: 0; }
+h1, h2, h3 { margin: 0; font-family: var(--f-ui); font-weight: 600; letter-spacing: 0.01em; }
+.page { max-width: 1840px; margin: 0 auto; padding: 0 var(--gutter) 96px; }
+.bar { display: flex; align-items: center; gap: 18px; height: 44px; border-bottom: 1px solid var(--line); font: 500 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.bar .tag { padding: 4px 7px; border: 1px solid var(--warm); color: var(--warm-br); }
+.hero { padding: 40px 0 28px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 16px 48px; align-items: flex-end; }
+.hero h1 { font-size: clamp(32px, 3.4vw, 50px); line-height: 1.02; color: var(--ui-br); }
+.hero .lede { margin-top: 12px; max-width: 64ch; font-size: 17px; color: var(--ui); }
+.spec { display: grid; grid-template-columns: auto auto; gap: 6px 16px; font: 400 13px/1.3 var(--f-num); color: var(--dim); }
+.spec b { color: var(--text); font-weight: 500; }
+.controls { position: sticky; top: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 0; background: var(--void); border-bottom: 1px solid var(--line); }
+.seg { display: inline-flex; border: 1px solid var(--line2); }
+.seg button { padding: 8px 14px; border: 0; border-right: 1px solid var(--line2); background: none; cursor: pointer; font: 500 13px/1 var(--f-ui); letter-spacing: 0.04em; color: var(--dim); transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
+.seg button:last-child { border-right: 0; }
+.seg button:hover { color: var(--text); background: var(--deep); }
+.seg button[aria-pressed="true"] { color: var(--void); background: var(--ui); }
+.seg button:focus-visible { outline: 1px solid var(--ui-br); outline-offset: 2px; }
+.label { font: 600 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.clock { margin-left: auto; font: 400 12px/1 var(--f-num); color: var(--faint); }
+.sec { padding-top: 44px; }
+.sec-head { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px 16px; align-items: baseline; margin-bottom: 22px; }
+.sec-head .num { font: 500 13px/1 var(--f-num); color: var(--faint); }
+.sec-head h2 { font-size: 28px; color: var(--ui-br); }
+.sec-head p { grid-column: 2; max-width: 80ch; color: var(--dim); }
+.scroll { overflow-x: auto; padding-bottom: 6px; }
+figure { margin: 0; }
+figcaption { margin-top: 8px; font-size: 13px; color: var(--dim); }
+figcaption b { color: var(--text); font: 600 13px/1 var(--f-ui); letter-spacing: 0.05em; margin-right: 6px; }
+.who { padding: 28px 0 36px; border-top: 1px solid var(--line); }
+.who-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 18px; }
+.who-head h3 { font-size: 30px; color: var(--ui-br); }
+.who-head .role { font: 400 13px/1 var(--f-num); color: var(--faint); }
+.who-head .sig { flex-basis: 100%; color: var(--ui); max-width: 80ch; }
+.row { display: flex; flex-wrap: wrap; gap: 22px 22px; align-items: flex-end; }
+.pair { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding-right: 22px; border-right: 1px solid var(--line); }
+.pair img { display: block; image-rendering: pixelated; border: 1px solid var(--line2); }
+.strip { margin-top: 22px; }
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px 40px; max-width: 1500px; }
+.notes h3 { font-size: 17px; color: var(--ui-br); margin-bottom: 8px; }
+.notes p, .notes li { color: var(--ui); font-size: 14.5px; }
+.notes ul { margin: 0; padding-left: 18px; }
+.notes li { margin: 4px 0; }
+.notes li::marker { color: var(--faint); }
+.notes .num { font-family: var(--f-num); color: var(--warm-br); }
+@media (max-width: 900px) { .sec-head { grid-template-columns: 1fr; } .sec-head p { grid-column: 1; } .pair { border-right: 0; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="bar"><span class="tag">Option C</span><span>Silent Exodus · crew bake-off · 7 Oct</span></div>
+    <header class="hero">
+        <div>
+            <h1>Option C: from the portraits</h1>
+            <p class="lede">Colours sampled from each portrait. The face reduced feature by feature from the picture. The body is a small lit model on a skeleton, so it can lean, walk and work without every frame being drawn by hand.</p>
+        </div>
+        <div class="spec">
+            <span>Native</span><b>48 × 104 px</b>
+            <span>Cora</span><b>91 rows tall · head 14</b>
+            <span>Vance</span><b>101 rows tall · head 14 + spiked hair</b>
+            <span>Cutaway</span><b>2× · 182 and 202 px on a 1920 × 1080 screen</b>
+        </div>
+    </header>
+
+    <div class="controls" role="group" aria-label="Playback">
+        <span class="label">Motion</span>
+        <div class="seg"><button type="button" id="play" aria-pressed="true">Play</button><button type="button" id="step">Step</button></div>
+        <span class="label">Facing</span>
+        <div class="seg" id="facing"><button type="button" data-dir="1" aria-pressed="true">Right</button><button type="button" data-dir="-1" aria-pressed="false">Left</button></div>
+        <span class="clock" id="clock">0.00 s</span>
+    </div>
+
+    <section class="sec" aria-labelledby="ship-h">
+        <div class="sec-head"><span class="num">01</span><h2 id="ship-h">In the ship, at cutaway size (2×)</h2>
+            <p>Two decks, as they would sit on a 1920 × 1080 screen. Upper deck: Cora by the lamp, Vance at the console. Lower deck: Cora walking, Vance waiting.</p></div>
+        <div class="scroll"><canvas id="ship"></canvas></div>
+    </section>
+
+    <section class="sec" aria-labelledby="crew-h">
+        <div class="sec-head"><span class="num">02</span><h2 id="crew-h">Each of them, beside the portrait</h2>
+            <p>The portrait, the sprite's own head enlarged 8×, then standing, walking and working at 2×, and the same three at 1×. Below, every frame at 2×.</p></div>
+        <div id="crew"></div>
+    </section>
+
+    <section class="sec" aria-labelledby="one-h">
+        <div class="sec-head"><span class="num">03</span><h2 id="one-h">At 1×</h2>
+            <p>Native pixels, one to one. Too small to judge a face, but it shows how much is there.</p></div>
+        <div class="scroll"><canvas id="one"></canvas></div>
+    </section>
+
+    <section class="sec" aria-labelledby="notes-h">
+        <div class="sec-head"><span class="num">04</span><h2 id="notes-h">What it costs</h2></div>
+        <div class="notes" id="notes">
+            <div><h3>How it is drawn</h3><ul>
+                <li>Every colour is taken from the portrait PNG: the hair, skin, suit and trim ramps are clusters of its real pixels, darkest first, each starting at the ink #05070a.</li>
+                <li>The head is placed by hand, pixel by pixel, against a shrunken copy of the portrait: Cora 14 × 17 with her collar, Vance 22 × 23 with his ring collar. Hair shape first, then brows, eyes, nose, jaw, and the one signature detail.</li>
+                <li>The body is 15 to 20 simple shapes (tubes for limbs, ovals for chest, waist and hips) hung on a skeleton, lit from one side, snapped to the palette with a light dither, then cleaned: a lit edge toward the light, a dark edge away from it, lone pixels merged.</li>
+                <li>A move is numbers, not drawings: the walk is two foot paths and a bob (the planted foot never slides); the console is two hand targets. The lamp warms whoever stands under it; the screen lights their front.</li>
+            </ul></div>
+            <div><h3>The cost of the whole cast (5 people × 9 actions)</h3><ul>
+                <li><span class="num">Once, shared:</span> the body renderer and skeleton (done on this page) plus the other 6 actions (climb, sit, sleep, kneel and tend, carry, face the wall). An action is a pose script, so about 1½ to 2 days for all six, including the back view for climbing.</li>
+                <li><span class="num">Per person:</span> the head by hand, 3 or 4 passes against the portrait (half a day); a back of the head and a bowed head for climbing and the wall (2 to 3 hours); build numbers and costume details (2 hours). About 1 day each, so 3 days for Jaxon, Aris and Mira.</li>
+                <li><span class="num">Total:</span> about 5 to 6 working days for 5 × 9, plus a polish day once they stand side by side. Painting 48 × 104 frames by hand at this finish would be about 270 frames: several weeks.</li>
+            </ul></div>
+            <div><h3>Weaknesses</h3><ul>
+                <li>The body is smooth and a little soft. Cloth has no real folds, so up close it can read as a figurine. Hand touch-ups per frame would fix it but break the cheap pipeline.</li>
+                <li>The head is a flat sticker in three-quarter view. It does not turn, and facing left is a mirror, so Cora's cheek lines swap cheeks.</li>
+                <li>14 pixels of head hold the hair, brows, eyes and jaw, not an expression. Moods mean extra heads: about an hour per mood per person.</li>
+                <li>Hair does not move. Aris's loose, flying hair will need a few extra hand-drawn frames.</li>
+            </ul></div>
+        </div>
+    </section>
+</div>
+
+<script>
+'use strict';
+(() => {
+    // ───────────────────────── helpers ─────────────────────────
+    const INK = '#05070a';
+    const B8 = [[0,32,8,40,2,34,10,42],[48,16,56,24,50,18,58,26],[12,44,4,36,14,46,6,38],[60,28,52,20,62,30,54,22],
+                [3,35,11,43,1,33,9,41],[51,19,59,27,49,17,57,25],[15,47,7,39,13,45,5,37],[63,31,55,23,61,29,53,21]];
+    const bay = (x, y) => (B8[y & 7][x & 7] + 0.5) / 64;
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+    function hash2(x, y, s) {
+        let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 362437)) | 0;
+        h = Math.imul(h ^ (h >>> 13), 1274126177);
+        return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+    }
+    function vnoise(x, y, s) {
+        const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+        const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+        const a = hash2(xi, yi, s), b = hash2(xi + 1, yi, s), c = hash2(xi, yi + 1, s), d = hash2(xi + 1, yi + 1, s);
+        return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+    }
+    function fbm(x, y, s, o = 3) { let t = 0, a = 0.5, f = 1, n = 0; for (let i = 0; i < o; i++) { t += vnoise(x * f, y * f, s + i * 17) * a; n += a; a *= 0.5; f *= 2; } return t / n; }
+    const rgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+    const toHex = (r, g, b) => '#' + [r, g, b].map(v => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0')).join('');
+    const mix = (h1, h2, t) => { const a = rgb(h1), b = rgb(h2); return toHex(lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)); };
+    const ramp = (R, v, x, y, d = 1) => R[clamp(Math.floor(v * (R.length - 1) + bay(x, y) * d + (1 - d) * 0.5), 0, R.length - 1)];
+    const v2 = (x, y) => ({ x, y });
+
+    // ───────────────────────── the people ─────────────────────────
+    // Ramps are clusters of the portraits' own pixels (see the note at the top), darkest first, from the ink.
+    const CORA = {
+        id: 'cora', name: 'Cora', role: 'Commander · the player', portrait: '../../../assets/crew/F_1.png',
+        sig: 'Silver-white bob with a heavy straight fringe, faint cyan lines on the near cheek, black high-collar suit with cyan trim. Slight, upright, hands behind her back.',
+        ramps: {
+            suit: [INK, '#110e1a', '#1f1b2d', '#2f2a42', '#433d5a', '#5e5674'],
+            boot: [INK, '#0c0a12', '#19161f', '#29252f', '#3c3744'],
+            skin: [INK, '#4a2838', '#8a5462', '#b07c7c', '#c9a08c', '#dcbfa6'],
+            trim: [INK, '#0d3a38', '#1a7f72', '#2fcdb0', '#7ff5da'],
+        },
+        tex: { suit: 0.07, boot: 0.05, skin: 0.03, trim: 0 },
+        build: { stride: 16, lift: 5, idle: 'hang', thigh: [3.6, 2.6], shin: [2.5, 1.7], foot: 1.5, toe: 4,
+                 arm: [1.9, 1.6], fore: [1.6, 1.2], hand: 1.5, upper: 14.5, lower: 13,
+                 pelvis: [5.8, 5.4, 5], waist: [4.6, 5.6, 4.4], chest: [6.2, 8.4, 5.4], bust: true,
+                 sh: [3.1, 2.8], shX: [-3.4, 4.2], shY: -25, neckY: -26.5, chestY: -18, waistY: -9, stanceX: [-2.5, 2.5] },
+        head: {
+            anchor: [7, 16],
+            keys: {
+                a: '#3a2c48', b: '#5f4865', c: '#776e87', d: '#8d90a3', e: '#a9b8bf', f: '#b5d5cb', g: '#c9f2dc',
+                1: '#4a2838', 2: '#8a5462', 3: '#b07c7c', 4: '#c9a08c', 5: '#dcbfa6',
+                L: '#2a1430', E: '#3a8a90', w: '#b9b4b8', m: '#a84f64', C: '#6fb9a8',
+                k: '#110e1a', K: '#221d31', J: '#383250', t: '#1d9a86', T: '#5ff2cf',
+            },
+            blink: { L: '#5a3346', E: '#8a5462', w: '#b07c7c' },
+            map: [
+                '....bcddcc....',
+                '..bcdeffeedc..',
+                '.bcdeffggffdc.',
+                'bcddeffggfeedc',
+                'bcddeeffeeeedc',
+                'bcdddeeeeeeddc',
+                'bcdcdddcdddcdc',
+                'bccd2LL4LL3dc.',
+                'bccd3wE45E4dc.',
+                'bbcdC3445543dc',
+                'abcd2C44453dc.',
+                'abcd2334mm4dc.',
+                'abcc.23444dc..',
+                'aabb..1233c...',
+                '.abb..12......',
+                '..ab.kKKtJ....',
+                '....kKJJtTt...',
+            ],
+        },
+    };
+
+    const VANCE = {
+        id: 'vance', name: 'Vance', role: 'The hard one', portrait: '../../../assets/crew/M_4.png',
+        sig: 'Spiky grey-white hair, heavy dark brows over blue eyes, stubble, a tired weathered face. Bulky white-grey EVA suit with the big ring collar. Heavy, square, hands on his hips.',
+        ramps: {
+            suit: [INK, '#262024', '#3e363a', '#594f52', '#777579', '#9c9c99', '#c4c1bb', '#d9d4c4'],
+            dark: [INK, '#1a1618', '#2e2729', '#443b3d', '#5d5254'],
+            glove: [INK, '#1c1719', '#332b2d', '#4d4446', '#6b6163'],
+            boot: [INK, '#1c1819', '#332c2d', '#4d4446', '#6b6163', '#8c8486'],
+            skin: [INK, '#463132', '#805e57', '#b1826e', '#d19f82', '#e8ba94'],
+            warm: [INK, '#3a1610', '#7a2e1a', '#c4552c', '#f08c4e'],
+        },
+        tex: { suit: 0.16, dark: 0.08, glove: 0.05, boot: 0.08, skin: 0.03, warm: 0 },
+        build: { stride: 16, lift: 5.5, idle: 'hips', thigh: [5.3, 4.3], shin: [4.2, 3.4], foot: 2.5, toe: 5,
+                 arm: [3.3, 3.0], fore: [3.0, 2.7], hand: 2.4, upper: 15.5, lower: 14,
+                 pelvis: [7.8, 6, 6], waist: [7.4, 6.8, 6], chest: [9.4, 10.6, 7.6], pack: true,
+                 sh: [4.4, 4], shX: [-5.8, 6.4], shY: -28, neckY: -30, chestY: -21, waistY: -9.5, stanceX: [-5, 4] },
+        head: {
+            anchor: [9, 22],
+            keys: {
+                a: '#24222d', b: '#454350', c: '#656674', d: '#888e9c', e: '#c3c2c5', f: '#eeeef2',
+                1: '#463132', 2: '#805e57', 3: '#b1826e', 4: '#d19f82', 5: '#e8ba94',
+                B: '#2b1b1e', E: '#6aa0d6', L: '#3a2525', x: '#7a6058', y: '#9a7d6e', m: '#7a4640',
+                i: '#1e191c', j: '#3a2f31', r: '#3f373a', s: '#6c6c74', u: '#929296', v: '#c4c1bb', w: '#e2ddcd',
+            },
+            blink: { L: '#5c3e3a', E: '#805e57' },
+            map: [
+                '..........c...........',
+                '.....c...cd.d.c.......',
+                '....cdc.cdedddcd......',
+                '...bcddcddeddedc......',
+                '...bcdcdedddcdddc.....',
+                '..abccdcdcddcddcd.....',
+                '..abbccbccdcbcdcc.....',
+                '..aabbc3ec43e4cb......',
+                '..aab2344555543c......',
+                '..ab12BBB34BBBB3......',
+                '..a1222LE245EL2.......',
+                '..2312334455432.......',
+                '..3212333455542.......',
+                '..2x12333223322.......',
+                '...1xy23mmm32x........',
+                '....xxy234432x........',
+                '.....xxxy44yx.........',
+                '......xxxyyx..........',
+                '..rsuvwwwvvvvvusr.....',
+                '.rsuvwiijjjjjjwvusr...',
+                '.suvwjj111111jjwvusr..',
+                '.rsuvvwwwwwwvvvvusr...',
+                '..rrssuuuuuuussrr.....',
+            ],
+        },
+    };
+    const CREW = [CORA, VANCE];
+
+    // ───────────────────────── the body: a lit clay model ─────────────────────────
+    const SW = 48, SH = 104, GROUND = 101, ANKLE = 99, HIPY = 53.3, HIPX = 24, THIGH = 23, SHIN = 22.5;
+    const DESK = 54;                                       // a standing console's top, in rows above the floor
+    const REACH = C => C.id === 'vance' ? 15 : 13;         // hip to hands at the console
+    const LIGHT = (() => { const l = [0.5, -0.62, 0.6], n = Math.hypot(...l); return l.map(v => v / n); })();
+
+    function ik(root, target, l1, l2, bend) {
+        let dx = target.x - root.x, dy = target.y - root.y, d = Math.hypot(dx, dy);
+        const dd = clamp(d, Math.abs(l1 - l2) + 0.01, (l1 + l2) * 0.999);
+        dx /= d || 1; dy /= d || 1;
+        const a = (l1 * l1 - l2 * l2 + dd * dd) / (2 * dd), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+        const joint = v2(root.x + dx * a - dy * h * bend, root.y + dy * a + dx * h * bend);
+        return { joint, end: v2(root.x + dx * dd, root.y + dy * dd) };
+    }
+
+    // Pose: the joints for one frame. dir is always +1 here; facing left is a mirror of the finished frame.
+    function pose(C, action, f) {
+        const b = C.build;
+        let hip = v2(HIPX, HIPY), lean = 0, headDx = 0, headDy = 0, breath = 0, feet, hands, look = 0;
+        if (action === 'idle') {
+            breath = [0, 0.5, 1, 0.5][f];
+            feet = [v2(HIPX + b.stanceX[0], ANKLE), v2(HIPX + b.stanceX[1], ANKLE)];
+            headDy = -Math.round(breath);
+        } else if (action === 'walk') {
+            const p = f / 8, S = b.stride;
+            hip.y = HIPY + 0.9 * Math.cos(4 * Math.PI * p) + 0.8;
+            feet = [0, 0.5].map(off => {
+                const q = (p + off) % 1;
+                if (q < 0.5) return v2(HIPX + S / 2 - (q / 0.5) * S, ANKLE);
+                const s = (q - 0.5) / 0.5;
+                return v2(HIPX - S / 2 + S * (0.5 - 0.5 * Math.cos(Math.PI * s)), ANKLE - Math.sin(Math.PI * Math.pow(s, 0.75)) * b.lift);
+            });
+            lean = 0.05; headDy = Math.round(hip.y - HIPY - 0.8);
+            const sw = Math.cos(2 * Math.PI * p);
+            hands = { swing: [-0.42 * sw, 0.42 * sw] };
+        } else if (action === 'console') {
+            feet = [v2(HIPX + b.stanceX[0], ANKLE), v2(HIPX + b.stanceX[1] + 1, ANKLE)];
+            lean = 0.17; headDx = 2; headDy = 1; look = 1;
+            const tap = [[0, 0], [-1, 0], [0, -1], [0, 0]][f];
+            const reach = REACH(C), deskY = GROUND + 1 - DESK - 2;
+            hands = { target: [v2(HIPX + reach, deskY + tap[0]), v2(HIPX + reach + 3, deskY - 0.5 + tap[1])] };
+        }
+        // the torso leans from the hip; breathing lifts the chest and shoulders
+        const up = (dy) => v2(hip.x - Math.sin(lean) * dy, hip.y + Math.cos(lean) * dy);
+        const sY = b.shY - breath * 0.6;
+        const shN = up(sY), shF = up(sY - 0.5);
+        shN.x += b.shX[0]; shF.x += b.shX[1];
+        const neck = up(b.neckY); neck.x = Math.round(neck.x + 0.5 + headDx); neck.y = Math.round(neck.y + headDy);
+        return { hip, lean, breath, feet, hands, shN, shF, neck, look, up, action, f };
+    }
+
+    function prims(C, P) {
+        const b = C.build, out = [];
+        const cap = (a, bb, ra, rb, z, mat, part) => out.push({ t: 'c', a, b: bb, ra, rb, z, mat, part });
+        const ell = (c, rx, ry, rz, ang, z, mat, part) => out.push({ t: 'e', c, rx, ry, rz, ang, z, mat, part });
+        const legMat = C.id === 'vance' ? ((t) => t > 0.62 ? 'boot' : 'suit') : ((t) => t > 0.6 ? 'boot' : 'suit');
+        // legs: hips sit either side of the pelvis (near = left, the back side in a three-quarter view)
+        const hipN = v2(P.hip.x - 2.2, P.hip.y + 0.5), hipF = v2(P.hip.x + 2.4, P.hip.y);
+        const legs = [hipN, hipF].map((h, i) => {
+            const k = ik(h, P.feet[i], THIGH, SHIN, -1);
+            return { h, knee: k.joint, ankle: k.end };
+        });
+        // arms
+        const arms = [P.shN, P.shF].map((s, i) => {
+            let target;
+            if (P.hands && P.hands.target) target = P.hands.target[i];
+            else if (P.hands && P.hands.swing) {
+                const a = P.hands.swing[i], bend = 0.25 + Math.max(0, a) * 0.9;
+                const el = v2(s.x + Math.sin(a) * b.upper, s.y + Math.cos(a) * b.upper);
+                const fa = a + bend;
+                return { s, el, wr: v2(el.x + Math.sin(fa) * b.lower, el.y + Math.cos(fa) * b.lower) };
+            } else if (b.idle === 'behind') target = i === 0 ? v2(P.hip.x - 3.5, P.hip.y - 4) : v2(P.hip.x - 3, P.hip.y - 4.5);
+            else if (b.idle === 'hang') target = v2(s.x + (i === 0 ? 0.6 : 1.4), s.y + b.upper + b.lower - 1.8);
+            else if (b.idle === 'hips') target = i === 0 ? v2(P.hip.x - 5, P.hip.y - 8) : v2(P.hip.x + 7, P.hip.y - 8);
+            const bend = (b.idle === 'hips' && !P.hands && i === 1) ? -1 : 1;
+            const k = ik(s, target, b.upper, b.lower, P.action === 'console' ? 1 : bend);
+            return { s, el: k.joint, wr: k.end };
+        });
+        const Z = { farArm: -7, farLeg: -3, torso: 0, nearLeg: 2.5, nearArm: 6.5 };
+        // far side first
+        const behind = !P.hands && b.idle === 'behind';
+        const limb = (arm, z, part) => {
+            cap(arm.s, arm.el, b.arm[0], b.arm[1], z, 'suit', part);
+            if (behind) z = -6;
+            cap(arm.el, arm.wr, b.fore[0], b.fore[1], z + 0.4, (t) => t > 0.84 ? (C.id === 'cora' ? 'trim' : 'dark') : 'suit', part);
+            const hd = Math.hypot(arm.wr.x - arm.el.x, arm.wr.y - arm.el.y) || 1;
+            const hc = v2(arm.wr.x + (arm.wr.x - arm.el.x) / hd * b.hand * 0.9, arm.wr.y + (arm.wr.y - arm.el.y) / hd * b.hand * 0.9);
+            ell(hc, b.hand, b.hand * 1.15, b.hand, Math.atan2(-(arm.wr.x - arm.el.x), arm.wr.y - arm.el.y), z + 0.6, C.id === 'vance' ? 'glove' : 'skin', part);
+        };
+        const leg = (L, z, part, swingLift) => {
+            cap(L.h, L.knee, b.thigh[0], b.thigh[1], z, 'suit', part);
+            cap(L.knee, L.ankle, b.thigh[1] * 0.98, b.shin[1], z + 0.2, legMat, part);
+            if (C.id === 'vance') ell(v2(L.knee.x + 1.2, L.knee.y), 2.6, 2.8, 2.4, 0, z + 2.2, 'dark', part);
+            const tilt = swingLift ? -0.18 : 0;
+            const sole = GROUND + 0.9 - ANKLE - b.foot;             // the sole of a planted foot sits on row 101
+            const heel = v2(L.ankle.x - 1.2, L.ankle.y + sole), toe = v2(L.ankle.x + b.toe * Math.cos(tilt), L.ankle.y + sole + 0.3 + b.toe * Math.sin(-tilt) * 0.6);
+            cap(heel, toe, b.foot, b.foot * 0.85, z + 0.5, 'boot', part);
+        };
+        limb(arms[1], Z.farArm, 'farArm');
+        leg(legs[1], Z.farLeg, 'farLeg', P.feet[1].y < ANKLE - 0.5);
+        // torso: pelvis, waist, chest, shoulders (a union of ellipsoids)
+        const ang = P.lean, b2 = P.breath;
+        if (b.pack) ell(P.up(-19), 3.2, 9.5, 4, ang, -3.5, 'dark', 'torso');
+        if (b.pack) out[out.length - 1].c.x -= 8.5;
+        ell(P.up(-1), b.pelvis[0], b.pelvis[1], b.pelvis[2], ang, 0, 'suit', 'torso');
+        ell(P.up(b.waistY), b.waist[0], b.waist[1], b.waist[2], ang, 0, C.id === 'vance' ? ((u, v) => Math.abs(v - 3) < 1.1 ? 'dark' : 'suit') : 'suit', 'torso');
+        const ch = P.up(b.chestY - b2 * 0.4); ch.x += 0.6;
+        ell(ch, b.chest[0], b.chest[1] + b2 * 0.3, b.chest[2], ang, 0, 'suit', 'torso');
+        if (b.bust) { const bu = P.up(b.chestY - 1.5 - b2 * 0.4); bu.x += 3.4; ell(bu, 3, 2.7, 2.6, ang, 3.4, 'suit', 'torso'); }
+        ell(P.shF, b.sh[0], b.sh[1], b.sh[0], ang, -1, 'suit', 'torso');
+        ell(P.shN, b.sh[0], b.sh[1], b.sh[0], ang, 3, (u, v) => (C.id === 'cora' && v < -1.2 && v > -2.4 && u < 1.5) ? 'trim' : 'suit', 'nearArm');
+        leg(legs[0], Z.nearLeg, 'nearLeg', P.feet[0].y < ANKLE - 0.5);
+        limb(arms[0], Z.nearArm, 'nearArm');
+        return { list: out, legs, arms };
+    }
+
+    function raster(list) {
+        const N = SW * SH, z = new Float32Array(N).fill(-1e9), id = new Int16Array(N).fill(-1);
+        const nx = new Float32Array(N), ny = new Float32Array(N), nz = new Float32Array(N), tu = new Float32Array(N), tv = new Float32Array(N);
+        list.forEach((p, i) => {
+            let x0, x1, y0, y1;
+            if (p.t === 'c') { const r = Math.max(p.ra, p.rb) + 1; x0 = Math.min(p.a.x, p.b.x) - r; x1 = Math.max(p.a.x, p.b.x) + r; y0 = Math.min(p.a.y, p.b.y) - r; y1 = Math.max(p.a.y, p.b.y) + r; }
+            else { const r = Math.max(p.rx, p.ry) + 1; x0 = p.c.x - r; x1 = p.c.x + r; y0 = p.c.y - r; y1 = p.c.y + r; }
+            for (let y = Math.max(0, Math.floor(y0)); y <= Math.min(SH - 1, Math.ceil(y1)); y++) {
+                for (let x = Math.max(0, Math.floor(x0)); x <= Math.min(SW - 1, Math.ceil(x1)); x++) {
+                    const px = x + 0.5, py = y + 0.5;
+                    let h, n0, n1, n2, u, v;
+                    if (p.t === 'c') {
+                        const ax = p.b.x - p.a.x, ay = p.b.y - p.a.y, len2 = ax * ax + ay * ay || 1, len = Math.sqrt(len2);
+                        const t = clamp(((px - p.a.x) * ax + (py - p.a.y) * ay) / len2, 0, 1);
+                        const dx = px - (p.a.x + ax * t), dy = py - (p.a.y + ay * t), d = Math.hypot(dx, dy), r = lerp(p.ra, p.rb, t);
+                        if (d > r) continue;
+                        h = Math.sqrt(r * r - d * d); n0 = dx / r; n1 = dy / r; n2 = h / r; u = t; v = (dx * -ay + dy * ax) / len;
+                    } else {
+                        const ca = Math.cos(p.ang), sa = Math.sin(p.ang), dx = px - p.c.x, dy = py - p.c.y;
+                        const lu = ca * dx + sa * dy, lv = -sa * dx + ca * dy, q = (lu / p.rx) ** 2 + (lv / p.ry) ** 2;
+                        if (q > 1) continue;
+                        h = p.rz * Math.sqrt(1 - q);
+                        let a = lu / (p.rx * p.rx), bb = lv / (p.ry * p.ry), c = h / (p.rz * p.rz); const m = Math.hypot(a, bb, c) || 1;
+                        a /= m; bb /= m; c /= m; n0 = ca * a - sa * bb; n1 = sa * a + ca * bb; n2 = c; u = lu; v = lv;
+                    }
+                    const k = y * SW + x, zz = p.z + h;
+                    if (zz > z[k]) { z[k] = zz; id[k] = i; nx[k] = n0; ny[k] = n1; nz[k] = n2; tu[k] = u; tv[k] = v; }
+                }
+            }
+        });
+        return { z, id, nx, ny, nz, tu, tv };
+    }
+
+    function shadeBody(C, list, R) {
+        const out = new Array(SW * SH).fill(null), mats = new Array(SW * SH).fill(null), idxs = new Int8Array(SW * SH);
+        for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+            const k = y * SW + x, i = R.id[k];
+            if (i < 0) continue;
+            const p = list[i];
+            const d = R.nx[k] * LIGHT[0] + R.ny[k] * LIGHT[1] + R.nz[k] * LIGHT[2];
+            let lum = 0.1 + 0.9 * Math.max(0, (d + 0.22) / 1.22);
+            lum *= 1 - 0.2 * (y / SH);
+            // a nearer part over this one leaves a soft shadow line: that is what separates arm from body
+            for (const [ox, oy] of [[1, 0], [-1, 0], [0, -1], [0, 1]]) {
+                const xx = x + ox, yy = y + oy; if (xx < 0 || yy < 0 || xx >= SW || yy >= SH) continue;
+                const j = R.id[yy * SW + xx];
+                if (j >= 0 && list[j].part !== p.part && R.z[yy * SW + xx] > R.z[k] + 1.4) { lum *= 0.62; break; }
+            }
+            const mat = typeof p.mat === 'function' ? p.mat(R.tu[k], R.tv[k]) : p.mat;
+            const ramp_ = C.ramps[mat];
+            lum += (vnoise(R.tu[k] * (p.t === 'c' ? 5 : 0.5) + i * 7.3, R.tv[k] * 0.55, 11) - 0.5) * (C.tex[mat] || 0) * 2;
+            const n = ramp_.length - 1;
+            mats[k] = mat;
+            idxs[k] = clamp(Math.round(lum * n + (bay(x, y) - 0.5) * 0.75), 1, n);
+        }
+        // painter's pass 1: a lit edge where the form turns toward the light, a dark one on the far edge
+        const empty = (x, y) => x < 0 || y < 0 || x >= SW || y >= SH || R.id[y * SW + x] < 0;
+        const adj = new Int8Array(SW * SH);
+        for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+            const k = y * SW + x; if (!mats[k]) continue;
+            const n = C.ramps[mats[k]].length - 1;
+            if ((empty(x + 1, y) || empty(x, y - 1)) && idxs[k] >= n * 0.45 && mats[k] !== 'trim') adj[k] = 1;
+            else if (empty(x - 1, y) && idxs[k] > 1) adj[k] = -1;
+        }
+        for (let k = 0; k < SW * SH; k++) if (mats[k]) idxs[k] = clamp(idxs[k] + adj[k], 1, C.ramps[mats[k]].length - 1);
+        // painter's pass 2: lone pixels join their neighbours, so the clusters read as brush marks, not noise
+        const snap = Int8Array.from(idxs);
+        for (let y = 1; y < SH - 1; y++) for (let x = 1; x < SW - 1; x++) {
+            const k = y * SW + x; if (!mats[k]) continue;
+            const nb = [k - 1, k + 1, k - SW, k + SW];
+            if (nb.every(j => mats[j] === mats[k] && snap[j] === snap[k - 1]) && snap[k] !== snap[k - 1]) idxs[k] = snap[k - 1];
+        }
+        for (let k = 0; k < SW * SH; k++) if (mats[k]) out[k] = C.ramps[mats[k]][idxs[k]];
+        return out;
+    }
+
+    // details painted on top of the body, in sprite space
+    function decorate(C, P, out, R, list) {
+        const at = (x, y) => (x >= 0 && y >= 0 && x < SW && y < SH) ? y * SW + x : -1;
+        const partAt = (x, y) => { const k = at(x, y); return k >= 0 && R.id[k] >= 0 ? list[R.id[k]].part : null; };
+        if (C.id === 'cora') {
+            // the dim cyan seam down the front of the suit, and a belt with one bright pixel
+            const top = P.up(-23), bot = P.up(-3);
+            for (let y = Math.round(top.y); y <= Math.round(bot.y); y++) {
+                const t = (y - top.y) / (bot.y - top.y), x = Math.round(lerp(top.x + 3.2, bot.x + 2.6, t));
+                const k = at(x, y); if (k >= 0 && partAt(x, y) === 'torso') out[k] = t < 0.12 ? C.ramps.trim[3] : t < 0.3 ? C.ramps.trim[2] : C.ramps.trim[1];
+            }
+            const wy = Math.round(P.up(-4.5).y);
+            for (let x = 0; x < SW; x++) { const k = at(x, wy); if (k >= 0 && partAt(x, wy) === 'torso') out[k] = '#0c0a12'; }
+            const bk = at(Math.round(P.up(-4.5).x + 2.6), wy); if (bk >= 0 && partAt(Math.round(P.up(-4.5).x + 2.6), wy) === 'torso') out[bk] = C.ramps.trim[3];
+        } else {
+            // the chest box: one warm indicator, a seam down the suit front
+            const c = P.up(C.build.chestY + 2); const cx = Math.round(c.x + 4), cy = Math.round(c.y);
+            for (let y = cy - 2; y <= cy + 1; y++) for (let x = cx - 2; x <= cx + 2; x++) {
+                const k = at(x, y); if (k < 0 || partAt(x, y) !== 'torso') continue;
+                out[k] = y === cy - 2 ? C.ramps.suit[5] : x === cx + 2 ? C.ramps.dark[4] : C.ramps.dark[2];
+            }
+            const k = at(cx - 1, cy - 1); if (k >= 0) out[k] = C.ramps.warm[3];
+            const k2 = at(cx + 1, cy - 1); if (k2 >= 0) out[k2] = '#6fb8c8';
+            const top = P.up(-27), bot = P.up(-12);
+            for (let y = Math.round(top.y); y <= Math.round(bot.y); y++) {
+                const x = Math.round(lerp(top.x, bot.x, (y - top.y) / (bot.y - top.y)) + 1.5), kk = at(x, y);
+                if (kk >= 0 && partAt(x, y) === 'torso' && out[kk] && Math.abs(x - cx) > 2) out[kk] = mix(out[kk], INK, 0.35);
+            }
+        }
+    }
+
+    function pasteHead(C, P, out, blink) {
+        const H = C.head, map = H.map;
+        const ox = P.neck.x - H.anchor[0], oy = P.neck.y - H.anchor[1];
+        for (let r = 0; r < map.length; r++) for (let c = 0; c < map[r].length; c++) {
+            const ch = map[r][c]; if (!(ch in H.keys)) continue;
+            const x = ox + c, y = oy + r; if (x < 0 || y < 0 || x >= SW || y >= SH) continue;
+            let col = (blink && H.blink[ch]) || H.keys[ch];
+            out[y * SW + x] = col;
+        }
+    }
+
+    // a console screen lights the front edge of the figure, cool
+    function screenLight(out) {
+        for (let y = 0; y < 70; y++) {
+            let seen = 0;
+            for (let x = SW - 1; x >= 0 && seen < 3; x--) {
+                const k = y * SW + x; if (!out[k]) continue;
+                out[k] = mix(out[k], '#7fe0e6', [0.42, 0.22, 0.1][seen] * (y < 30 ? 1 : 0.8)); seen++;
+            }
+        }
+    }
+
+    const ACTIONS = { idle: { frames: 4, ms: [700, 800, 900, 800] }, walk: { frames: 8, ms: 115, move: 4 }, console: { frames: 4, ms: 190 } };
+    function frameAt(action, t) {
+        const A = ACTIONS[action];
+        if (Array.isArray(A.ms)) { const tot = A.ms.reduce((a, b) => a + b, 0); let m = t % tot; for (let i = 0; i < A.ms.length; i++) { if (m < A.ms[i]) return i; m -= A.ms[i]; } return 0; }
+        return Math.floor(t / A.ms) % A.frames;
+    }
+    const cache = new Map();
+    function sprite(C, action, f, blink = false, warm = 0) {
+        const key = [C.id, action, f, blink, warm].join('|');
+        if (cache.has(key)) return cache.get(key);
+        const P = pose(C, action, f), pr = prims(C, P), R = raster(pr.list);
+        const out = shadeBody(C, pr.list, R);
+        decorate(C, P, out, R, pr.list);
+        pasteHead(C, P, out, blink || P.look && false);
+        if (action === 'console') screenLight(out);
+        if (warm) for (let k = 0; k < out.length; k++) if (out[k]) { const [r, g, b] = rgb(out[k]), l = (r + g + b) / 765; out[k] = mix(out[k], '#f0a860', warm * 0.04 * l); }   // the lamp warms whoever stands under it
+        const cv = document.createElement('canvas'); cv.width = SW; cv.height = SH;
+        const cx = cv.getContext('2d'), img = cx.createImageData(SW, SH);
+        out.forEach((h, k) => { if (!h) return; const [r, g, b] = rgb(h); img.data.set([r, g, b, 255], k * 4); });
+        cx.putImageData(img, 0, 0);
+        const S = { cv, neck: P.neck };
+        cache.set(key, S);
+        return S;
+    }
+    const blinking = (t, seed) => ((t + seed * 1700) % 4300) < 140;
+    let sceneLamps = [];                                   // set by each view before it draws people
+    function drawFig(ctx, C, action, t, x, floorY, dir, seed = 0) {
+        const warm = Math.round(3 * sceneLamps.reduce((m, lx) => Math.max(m, Math.exp(-Math.abs(x - lx) / 50)), 0));
+        const f = frameAt(action, t), S = sprite(C, action, f, action !== 'walk' && blinking(t, seed), warm);
+        ctx.save();
+        if (dir < 0) { ctx.translate(x + HIPX, 0); ctx.scale(-1, 1); ctx.drawImage(S.cv, 0, floorY - GROUND - 1); }
+        else ctx.drawImage(S.cv, x - HIPX, floorY - GROUND - 1);
+        ctx.restore();
+    }
+
+    // ───────────────────────── the room ─────────────────────────
+    const WALL = [INK, '#090d12', '#0e141b', '#141c25', '#1c2731', '#283541', '#3a4a58', '#56687a'];
+    const WARM = [INK, '#0f0b09', '#1d150f', '#2e2014', '#4a3018', '#7a4a1e', '#b4732c', '#e8a650'];
+    const FLOOR = [INK, '#0b0f14', '#151c24', '#222c36', '#34414c'];
+    const roomCache = new Map();
+    function room(w, h, floorY, lamps, consoles = [], seed = 3) {
+        const key = [w, h, floorY, lamps.join(';'), consoles.join(';'), seed].join(',');
+        if (roomCache.has(key)) return roomCache.get(key);
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        const cx = cv.getContext('2d'), img = cx.createImageData(w, h);
+        const put = (x, y, hex) => { if (x < 0 || y < 0 || x >= w || y >= h) return; const [r, g, b] = rgb(hex); img.data.set([r, g, b, 255], (y * w + x) * 4); };
+        const LY = 15;                                        // lamp height: hung just under the pipes
+        const ribs = w > 150 ? Array.from({ length: Math.floor(w / 150) }, (_, i) => 70 + i * 150 + Math.round(hash2(i, seed, 2) * 30)) : [];
+        const glowAt = (x, y) => { let g = 0; for (const lx of lamps) { const d = Math.hypot((x - lx) / 1.35, (y - LY) * 0.9); g += Math.exp(-d / 38) * (y < LY ? 0.6 : 1); } return Math.min(1, g); };
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+            const glow = glowAt(x, y);
+            let hex;
+            if (y >= floorY) {
+                const fy = y - floorY;
+                const g = fy === 0 ? 0.6 : fy === 1 ? 0.34 : 0.14 + ((x + fy * 2) % 6 === 0 ? -0.07 : 0) + fbm(x * 0.2, y * 0.3, seed + 5) * 0.12;
+                hex = ramp(FLOOR, g + glow * 0.2, x, y);
+                if (glow * 1.4 > bay(x, y) + 0.05 && fy <= 2) hex = ramp(WARM, g + glow * 0.42, x, y);
+            } else if (y < 8) {
+                const pipe = y === 2 || y === 6 ? 0.45 : y === 3 || y === 7 ? 0.2 : y === 0 ? 0.3 : 0.08;
+                hex = ramp(WALL, pipe + glow * 0.3, x, y);
+                if (glow * 0.9 > bay(x, y) + 0.25 && (y === 2 || y === 6)) hex = ramp(WARM, 0.3 + glow * 0.5, x, y);
+            } else {
+                const px = (x + (Math.floor((y - 8) / 26) % 2) * 17) % 34, py = (y - 8) % 26;
+                let v = 0.2 + (fbm(x * 0.07, y * 0.09, seed) - 0.5) * 0.12;
+                if (px === 0 || py === 0) v -= 0.11; if (px === 1 || py === 1) v += 0.06;
+                if ((px === 3 || px === 30) && (py === 3 || py === 22)) v += 0.18;
+                v -= Math.max(0, (y - (floorY - 14)) / 14) * 0.08;               // the wall darkens toward the floor
+                for (const r of ribs) { const d = x - r; if (d >= 0 && d < 7) v = d === 0 ? 0.5 : d === 1 ? 0.36 : d === 6 ? 0.08 : 0.26 + (y % 18 === 0 ? -0.1 : 0); }
+                const lv = v + glow * 0.5;
+                hex = (Math.pow(glow, 0.8) * 1.05 > bay(x, y)) ? ramp(WARM, lv + 0.04, x, y) : ramp(WALL, lv, x, y);
+            }
+            put(x, y, hex);
+        }
+        // lamps: a caged fitting hung under the pipes, the brightest warm thing in the room
+        for (const lx of lamps) {
+            for (let y = 8; y < LY - 2; y++) put(lx, y, '#2a2420');
+            for (let dx = -3; dx <= 3; dx++) put(lx + dx, LY - 2, '#3a2c20');
+            for (let dx = -3; dx <= 3; dx++) put(lx + dx, LY - 1, Math.abs(dx) === 3 ? '#7a4a1e' : '#ffd28a');
+            for (let dx = -2; dx <= 2; dx++) put(lx + dx, LY, dx === 0 ? '#fff4d6' : '#f0b060');
+            for (let dx = -1; dx <= 1; dx++) put(lx + dx, LY + 1, '#c4803a');
+        }
+        // consoles: a desk at hip height, a screen on its far edge tilted toward whoever stands there
+        const SCR = [INK, '#0b2a30', '#11505a', '#1e8c96', '#58d6dc', '#b8f6f4'];
+        for (const c of consoles) {
+            const top = floorY - DESK;
+            for (let x = c - 4; x < c + 26; x++) for (let y = top - 30; y < floorY - 4; y++) {
+                const g = Math.exp(-Math.hypot((x - c - 12) * 0.8, (y - top + 10) * 0.9) / 9) * 0.55;
+                if (g > bay(x, y) + 0.06 && x >= 0 && x < w && y >= 0) { const k = (y * w + x) * 4, d = img.data; if (d[k] + d[k + 1] + d[k + 2] < 150) put(x, y, g > 0.35 ? '#123a40' : '#0c252b'); }
+            }
+            for (let y = top; y < floorY; y++) for (let x = c; x < c + 22; x++) {
+                if (y > top + 2 && (x < c + 4 || x > c + 18)) continue;                  // a pedestal under the desk top
+                const v = y === top ? 0.8 : y <= top + 2 ? 0.5 : x === c + 4 ? 0.42 : 0.2 + fbm(x * 0.3, y * 0.2, 9) * 0.12 - (y - top) / 160;
+                put(x, y, ramp(WALL, v, x, y));
+            }
+            for (let j = 0; j < 18; j++) for (let i = 0; i < 4; i++) {                // the screen, edge on to us, glowing on its face
+                const x = c + 15 + i - Math.floor(j / 6), y = top - 18 + j;
+                put(x, y, i === 0 ? ramp(SCR, 0.75 - j / 60, x, y) : i === 1 ? ramp(SCR, 0.45, x, y) : ramp(WALL, 0.3 - i * 0.06, x, y));
+            }
+            for (let x = c + 2; x < c + 13; x += 3) put(x, top - 1, x % 2 ? '#2fb6c0' : '#c4803a');   // keys lit on the desk
+        }
+        cx.putImageData(img, 0, 0);
+        roomCache.set(key, cv);
+        return cv;
+    }
+    const screenFlicker = (ctx, c, floorY, t) => {
+        const top = floorY - DESK, f = Math.floor(t / 125);
+        for (let i = 0; i < 2; i++) { const j = (f * 5 + i * 7) % 18; ctx.fillStyle = i ? '#58d6dc' : '#b8f6f4'; ctx.fillRect(c + 15 - Math.floor(j / 6), top - 18 + j, 1, 1 + (f + i) % 2); }
+    };
+
+    // ───────────────────────── views ─────────────────────────
+    const dpr = () => window.devicePixelRatio || 1;
+    const views = [];
+    function makeView(host, w, h, scale, draw, caption) {
+        const fig = document.createElement('figure'), cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.style.width = (w * scale / dpr()) + 'px'; cv.style.height = (h * scale / dpr()) + 'px';
+        fig.appendChild(cv);
+        if (caption) { const fc = document.createElement('figcaption'); fc.innerHTML = caption; fig.appendChild(fc); }
+        host.appendChild(fig);
+        const v = { cv, ctx: cv.getContext('2d'), draw, scale, w, h };
+        views.push(v);
+        return v;
+    }
+    const state = { t: 0, playing: true, dir: 1, last: null };
+
+    // the cutaway: two decks
+    const SHIP_W = 760, DECK_H = 128, SHIP_H = DECK_H * 2 + 6;
+    function drawShip(ctx, t) {
+        const d = state.dir;
+        ctx.drawImage(room(SHIP_W, DECK_H, DECK_H - 8, [150, 560], [610]), 0, 0);
+        ctx.fillStyle = '#05070a'; ctx.fillRect(0, DECK_H, SHIP_W, 6);
+        ctx.fillStyle = '#1c2731'; ctx.fillRect(0, DECK_H + 1, SHIP_W, 1);
+        ctx.drawImage(room(SHIP_W, DECK_H, DECK_H - 8, [300], [], 8), 0, DECK_H + 6);
+        screenFlicker(ctx, 610, DECK_H - 8, t);
+        sceneLamps = [150, 560];
+        drawFig(ctx, CORA, 'idle', t, 170, DECK_H - 8, d, 0);
+        drawFig(ctx, VANCE, 'console', t, 610 + 2 - REACH(VANCE), DECK_H - 8, 1, 1);
+        // lower deck: Cora walks the length and back, Vance waits near the lamp
+        const A = ACTIONS.walk, step = Math.floor(t / A.ms), span = 420, pos = (step * A.move) % (2 * span);
+        const wd = pos < span ? 1 : -1, wx = 120 + (pos < span ? pos : 2 * span - pos);
+        sceneLamps = [300];
+        drawFig(ctx, VANCE, 'idle', t, 330, SHIP_H - 8, -d, 1);
+        drawFig(ctx, CORA, 'walk', t, wx, SHIP_H - 8, wd, 0);
+    }
+
+    function buildCrew() {
+        const host = document.getElementById('crew');
+        CREW.forEach((C, ci) => {
+            const sec = document.createElement('div'); sec.className = 'who';
+            sec.innerHTML = `<div class="who-head"><h3>${C.name}</h3><span class="role">${C.role}</span><p class="sig">${C.sig}</p></div>`;
+            const row = document.createElement('div'); row.className = 'row';
+            const pair = document.createElement('div'); pair.className = 'pair';
+            const fig = document.createElement('figure'); const img = document.createElement('img');
+            img.src = C.portrait; img.alt = `${C.name}'s portrait`; img.width = 224; img.height = 224;
+            fig.appendChild(img); const fc = document.createElement('figcaption'); fc.innerHTML = '<b>Portrait</b>' + C.portrait.split('/').pop(); fig.appendChild(fc);
+            pair.appendChild(fig);
+            const CW = 28, CH = 28;
+            makeView(pair, CW, CH, 8, (ctx, t) => {
+                const S = sprite(C, 'idle', 0, false), ox = S.neck.x - (C.id === 'vance' ? 15 : 14), oy = S.neck.y - (C.id === 'vance' ? 25 : 21);
+                ctx.fillStyle = '#0e141b'; ctx.fillRect(0, 0, CW, CH); ctx.fillStyle = '#141c25'; ctx.fillRect(0, 0, CW, 10);
+                ctx.drawImage(S.cv, ox, oy, CW, CH, 0, 0, CW, CH);
+            }, '<b>Head, 8×</b>the sprite\'s own pixels');
+            row.appendChild(pair);
+            const RW = 72, RH = 112, FY = 108;
+            makeView(row, RW, RH, 2, (ctx, t) => { ctx.drawImage(room(RW, RH, FY, [30], [], 2 + ci), 0, 0); sceneLamps = [30]; drawFig(ctx, C, 'idle', t, 36, FY, state.dir, ci); }, '<b>Standing</b>breathing, 2×');
+            makeView(row, 120, RH, 2, (ctx, t) => {
+                ctx.drawImage(room(120, RH, FY, [60], [], 4 + ci), 0, 0); sceneLamps = [60];
+                const A = ACTIONS.walk, step = Math.floor(t / A.ms), span = 120 + 48, x = (step * A.move) % span - 24;
+                if (state.dir > 0) drawFig(ctx, C, 'walk', t, x, FY, 1); else drawFig(ctx, C, 'walk', t, 120 - x, FY, -1);
+            }, '<b>Walking</b>8 frames, 2×');
+            makeView(row, 84, RH, 2, (ctx, t) => {
+                ctx.drawImage(room(84, RH, FY, [22], [52], 6 + ci), 0, 0); screenFlicker(ctx, 52, FY, t); sceneLamps = [22];
+                drawFig(ctx, C, 'console', t, 52 + 2 - REACH(C), FY, 1, ci);
+            }, '<b>At a console</b>4 frames, 2×');
+            makeView(row, 200, RH, 1, (ctx, t) => {
+                ctx.drawImage(room(200, RH, FY, [60], [150], 9 + ci), 0, 0); screenFlicker(ctx, 150, FY, t); sceneLamps = [60];
+                drawFig(ctx, C, 'idle', t, 26, FY, state.dir, ci);
+                const A = ACTIONS.walk, step = Math.floor(t / A.ms), x = 50 + (step * A.move) % 60;
+                drawFig(ctx, C, 'walk', t, x, FY, 1);
+                drawFig(ctx, C, 'console', t, 150 + 2 - REACH(C), FY, 1, ci);
+            }, '<b>1×</b>the same three');
+            sec.appendChild(row);
+            // every frame
+            const strip = document.createElement('div'); strip.className = 'strip scroll';
+            const frames = [['idle', 4], ['walk', 8], ['console', 4]];
+            const FW = 40, total = frames.reduce((a, [, n]) => a + n, 0);
+            makeView(strip, FW * total, RH, 2, (ctx) => {
+                ctx.fillStyle = '#0b0f14'; ctx.fillRect(0, 0, FW * total, RH);
+                let i = 0;
+                frames.forEach(([a, n], gi) => {
+                    for (let f = 0; f < n; f++, i++) {
+                        ctx.fillStyle = gi % 2 ? '#0e141b' : '#111922'; ctx.fillRect(i * FW, 0, FW, RH);
+                        ctx.fillStyle = '#1c2731'; ctx.fillRect(i * FW, FY, FW, 1);
+                        const S = sprite(C, a, f);
+                        ctx.drawImage(S.cv, i * FW + FW / 2 - HIPX, FY - GROUND - 1);
+                    }
+                });
+            }, '<b>Every frame</b>idle 4 · walk 8 · console 4');
+            sec.appendChild(strip);
+            host.appendChild(sec);
+        });
+    }
+
+    function render() {
+        views.forEach(v => { v.ctx.imageSmoothingEnabled = false; v.draw(v.ctx, state.t); });
+        document.getElementById('clock').textContent = (state.t / 1000).toFixed(2) + ' s';
+    }
+    function tick(now) {
+        if (state.playing) { if (state.last != null) state.t += Math.min(100, now - state.last); state.last = now; render(); }
+        requestAnimationFrame(tick);
+    }
+    function init() {
+        makeView(document.getElementById('ship').parentNode, SHIP_W, SHIP_H, 2, drawShip);
+        document.getElementById('ship').remove();
+        buildCrew();
+        const one = document.getElementById('one');
+        makeView(one.parentNode, 420, 112, 1, (ctx, t) => {
+            ctx.drawImage(room(420, 112, 108, [120, 330], [360], 12), 0, 0); screenFlicker(ctx, 360, 108, t); sceneLamps = [120, 330];
+            drawFig(ctx, CORA, 'idle', t, 40, 108, state.dir, 0); drawFig(ctx, VANCE, 'idle', t, 80, 108, -state.dir, 1);
+            const step = Math.floor(t / 115), x = 120 + (step * 4) % 180;
+            drawFig(ctx, CORA, 'walk', t, x, 108, 1); drawFig(ctx, VANCE, 'console', t, 360 + 2 - REACH(VANCE), 108, 1, 1);
+        });
+        one.remove();
+        const q = new URLSearchParams(location.search);
+        if (q.has('dir')) state.dir = Number(q.get('dir')) < 0 ? -1 : 1;
+        if (q.has('t')) { state.t = Number(q.get('t')) || 0; state.playing = false; }
+        const playBtn = document.getElementById('play');
+        playBtn.setAttribute('aria-pressed', String(state.playing)); playBtn.textContent = state.playing ? 'Play' : 'Paused';
+        playBtn.addEventListener('click', () => { state.playing = !state.playing; state.last = null; playBtn.setAttribute('aria-pressed', String(state.playing)); playBtn.textContent = state.playing ? 'Play' : 'Paused'; render(); });
+        document.getElementById('step').addEventListener('click', () => { state.playing = false; playBtn.setAttribute('aria-pressed', 'false'); playBtn.textContent = 'Paused'; state.t += 115; render(); });
+        document.querySelectorAll('#facing button').forEach(b => b.addEventListener('click', () => {
+            state.dir = Number(b.dataset.dir);
+            document.querySelectorAll('#facing button').forEach(o => o.setAttribute('aria-pressed', String(o === b)));
+            render();
+        }));
+        render();
+        requestAnimationFrame(tick);
+    }
+    window.optC = {
+        pause() { state.playing = false; render(); }, play() { state.playing = true; state.last = null; },
+        setTime(ms) { state.t = ms; render(); }, step(ms = 115) { state.t += ms; render(); },
+        sprite: (id, action, f) => sprite(CREW.find(c => c.id === id), action, f).cv,
+        // a still sheet of frames as a PNG data URL: frames = [[action, frame], …]
+        sheet(frames, scale = 4, bg = '#141c25') {
+            const c = document.createElement('canvas'); c.width = frames.length * SW * scale; c.height = CREW.length * SH * scale;
+            const x = c.getContext('2d'); x.imageSmoothingEnabled = false; x.fillStyle = bg; x.fillRect(0, 0, c.width, c.height);
+            CREW.forEach((C, r) => frames.forEach(([a, f], i) => x.drawImage(sprite(C, a, f).cv, i * SW * scale, r * SH * scale, SW * scale, SH * scale)));
+            return c.toDataURL();
+        },
+    };
+    init();
+})();
+</script>
+</body>
+</html>
