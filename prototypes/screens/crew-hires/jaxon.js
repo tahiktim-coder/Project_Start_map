@@ -1,73 +1,106 @@
 /* JAXON, engineer. Portrait: assets/crew/M_2.png.
    Read at a glance: a near-profile head with a strong nose and a square stubbled jaw; dark hair slicked straight back,
-   grey streaks at the temple above a big ear; a heavy dark brow; amber light running down the front of his face, as in
-   the portrait. A dark work jacket with a standing collar over brown work trousers and a tool belt. Heavy, arms
+   grey streaks at the temple above a big ear; a heavy dark brow; amber light catching his brow and nose, as in the
+   portrait. A dark work jacket with a standing collar over brown work trousers and a tool belt. Heavy, arms
    crossed, head carried a little forward. */
 (function (E) {
     const INK = E.INK;
-    // the head, drawn against the portrait: near-black hair slicked back with grey only at the temple, a mid-tan face,
-    // the amber light as a 1-pixel edge down the brow, nose, lip and chin; a small ear, a stubble stipple, a square chin.
-    // Turned about 15 degrees off profile so the face agrees with the three-quarter body. Anchor [6, 19]: the collar's foot.
+    // the head, redrawn 2026-10-08 against the portrait (the old one read as a beak, then as a chin strap and a muzzle):
+    // a true side profile turned a touch toward us. Near-black hair slicked straight back with grey strands over the
+    // temple and in the short sideburn, a high forehead, a level heavy brow on the lit brow ridge, a deep-set eye (dark
+    // pupil, blue-grey catch), a straight nose that starts at eye height, a lit upper lip over a short level mouth line,
+    // stubble only below it, a square chin, the ear at mid-head. The side of the face sits in shade behind the cheekbone,
+    // and the jaw is only the edge between the face and the neck's shade, no dark line. The lit front edge is skin;
+    // amber only on the brow ridge and the bridge of the nose, dark rust on the forelock and the chin; the lamp adds
+    // the rest. 15 rows from crown to chin. Anchor [6, 19]: the collar's foot.
     const KEYS = {
         a: '#0a0e12', b: '#121a20', c: '#1b242b', d: '#2a353d', g: '#4e585f', h: '#7d878e', i: '#a9b1b5',
         1: '#3a1e12', 2: '#5e3520', 3: '#7a4a30', 4: '#93583a', 5: '#a5643f', 6: '#bd7849',
-        r: '#9a3c14', o: '#e0761e', y: '#ffb52e', B: '#160c08', K: '#1a0d09', E: '#8fb0c4', n: '#3a1a10', m: '#5c2a1a',
-        s: '#5a463c', t: '#76604f', q: '#13181c', Q: '#1d2328', J: '#283037', L: '#3a434b',
+        r: '#9a3c14', o: '#e0761e', y: '#ffb52e', B: '#1c0f0a', K: '#140c0a', E: '#8fb0c4', n: '#3a1a10', m: '#5c2a1a',
+        s: '#6a5446', t: '#83674f', q: '#13181c', Q: '#1d2328', J: '#283037', L: '#3a434b',
     };
-    const FRONT = [
-        '......abbbbba.......',
-        '...abbccddccbar.....',
-        '..abcccddcccdcbo....',
-        '.abcddcccddcb45o....',
-        '.abcccdcgcb33455o...',
-        '.abccdcghgb34BBBBy..',
-        '.abcdcghg334445KE5o.',
-        '.abcbg3433445556666o',
-        '.abc24n323445556666y',
-        '.ab123n2233445555nr.',
-        '..a12233334445555o..',
-        '...2333233s4445mmo..',
-        '....23332st3t4445o..',
-        '....233332ts3t445y..',
-        '.....23332t3t3t5rr..',
+    const BLINK = { K: '#4a2618', E: '#93583a' };          // shut: the pupil becomes the lid crease, the catch is skin
+    const COLLAR = [
         '..qQQq2332qq........',
         '.qQJQQq22qQJq.......',
         '.qLJJQQqqQJJJQq.....',
         '.qLJJJJQQJJJJLQq....',
         'qQQJJJJJJJJJJJQQq...',
     ];
-    // looking down (console, tend, wall): the head drops a row into the collar, the lids come down
-    const DOWN = ['.'.repeat(20), ...FRONT.slice(0, 15), ...FRONT.slice(16)].map(r => r.replace('KE', 'KK'));
-    // climbing, from behind: dark hair, grey at both temples, both ears, the nape, the collar
+    const pad = r => r.padEnd(20, '.');
+    const FRONT = [
+        '......abbcb......',         // crown, slicked straight back
+        '....abccdcdcb....',
+        '..abccdcgdcdcbr..',         // the forelock, its front catching the lamp
+        '.abcdcgdhgdcc56..',         // the hairline climbs back off a high forehead; grey strands swept back
+        '.abcdhgdgdc34556.',
+        '.abcghdgg3445566.',         // grey over the temple
+        '.abc343g334BBB6o.',         // the ear's top under the grey; a level heavy brow on the lit brow ridge
+        '.abc423g334KE456.',         // the eye, set back under the brow; the nose starts here, at eye height
+        '.abc413g3455456o.',         // the ear's bowl; the lit cheekbone; the bridge of the nose
+        '.abc4233344435566',         // the side of the face in shade; the nose's wing and tip
+        '.ab2243233444453.',         // the ear lobe; the shade under the nose
+        '..1222223344456..',         // the lit upper lip
+        '..1222222334nm4..',         // the mouth: a short level dark line, the lips closed at the edge
+        '...12222223sts45.',         // the lower lip; stubble only below the mouth
+        '...1222222ststr..',         // the square chin; the neck in shade behind the jaw
+    ].map(pad).concat(COLLAR);
+    // looking down (console, tend, wall): the head drops a row into the collar, the lid comes down over the catch
+    const DOWN = ['.'.repeat(20), ...FRONT.slice(0, 15), ...FRONT.slice(16)].map(r => r.replace('KE', 'K3'));
+    // climbing, from behind: the same skull, as wide as it is deep. Dark hair combed straight back in lines, a sheen on
+    // the crown from the light above, grey over both ears, the ears standing out with lit rims, the hair tapering to a
+    // soft point at the nape (not cut straight across, which read as a cap), a thick neck, the collar
     const BACK = [
         '......abbbbba......',
-        '....abbcccccbba....',
-        '...abccccddcccba...',
-        '..abcccddccccdcba..',
-        '..abddccccddccdba..',
-        '..agcccdddcccccga..',
-        '.aghcccccccddcchga.',
-        '.3gbcddcccccccbg3..',
-        '.4abcccccddcccba4..',
-        '.3abccddccccccba3..',
-        '..1abcccccddcba1...',
-        '...1abbcccccbba1...',
-        '....1aabbbbbaa1....',
-        '.....2aaabaaa2.....',
-        '......2333332......',
+        '....abcdcgcdcba....',
+        '...abdcgchcgcdba...',
+        '..abcdcgcgcgcdcba..',
+        '..bdccdccgcddcdcb..',
+        '..bgcdcdccdcdccgb..',
+        '.3ghcdcdcdcdcdchg3.',
+        '.43gbdccdcdcdcbg34.',
+        '.42gbcdcdcdccdbg24.',
+        '.42abdcbcdcbcdba24.',
+        '.32abbcbcbcbcbba23.',
+        '..2aabcbcbcbcbaa2..',
+        '...1aabcbcbcbaa1...',
+        '....21abbcbba12....',
+        '.....231aaa132.....',
         '....qQ2333332Qq....',
         '..qQQq1222221qQQq..',
         '.qQJQQq11111qQQJQq.',
         '.qLJJJQQQQQQQJJJLQq',
         'qQQJJJJJJJJJJJJJQQq',
     ];
-    // asleep: the same head turned to lie face up (crown to the left), eyes shut, so the dark hair still frames it
-    const turn = (map, anchor) => {
-        const w = map[0].length, out = [];
-        for (let Y = 0; Y < w; Y++) { let r = ''; for (let X = 0; X < map.length; X++) r += map[X][w - 1 - Y]; out.push(r); }
-        return { anchor: [anchor[1], w - 1 - anchor[0]], map: out };
+    // asleep: the profile above turned to lie face up and redrawn for it: crown to the left, the back of the head on the
+    // pillow, forehead, brow, nose, lips and chin along the top. The eye is shut to a 2-pixel lid line with skin between
+    // it and a shorter brow, so the two don't merge into one dark slot. The amber stays only on the brow ridge and the
+    // nose; on the forelock and the chin it read, turned on its side, as a fringe of orange spikes along the head.
+    const LYING = {
+        anchor: [19, 13],
+        map: [
+            '....................',
+            '....................',
+            '....................',
+            '.........6.........q',
+            '....66o6o63.......qQ',
+            '..c656656556m4s..qQQ',
+            '..b5553455454st..QLJ',
+            '.bcc453n43443ts.qJJJ',
+            '.cdc344n54444stqJJJJ',
+            'bdcdc444544433sqQJJJ',
+            'ccdgd33344333222qQJJ',
+            'bdghgg33333322232qQJ',
+            'bccddgggg32222232qQJ',
+            'acdggd3333322222qQJJ',
+            '.bcchh421242222qQQJJ',
+            '.acddg344422222QQJJJ',
+            '..bccccccc22211QJJJJ',
+            '..abbbbbbbb11..qQLLQ',
+            '...aaaaaaaa.....qqqQ',
+            '...................q',
+        ],
     };
-    const LYING = turn(FRONT.map(r => r.replace('KE', '4K')), [6, 19]);
     E.register({
         id: 'jaxon', name: 'Jaxon', role: 'Engineer', portrait: '../../../assets/crew/M_2.png',
         signature: 'Dark hair slicked back, grey at the temple; strong nose and stubbled jaw in near profile; amber light down the front of his face. Dark work jacket, tool belt. Heavy, arms crossed.',
@@ -130,7 +163,7 @@
             }
             if (on(cx + 1, cy - 1, 'torso')) { api.set(cx + 1, cy - 1, R.amber[5]); if (on(cx + 1, cy, 'torso')) api.set(cx + 1, cy, R.amber[3]); }
         },
-        heads: { front: { anchor: [6, 19], keys: KEYS, map: FRONT, blink: { E: '#93583a' } }, down: { anchor: [6, 19], map: DOWN },
+        heads: { front: { anchor: [6, 19], keys: KEYS, map: FRONT, blink: BLINK }, down: { anchor: [6, 19], map: DOWN },
                  back: { anchor: [9, 19], map: BACK }, lying: LYING },
     });
 })(CrewEngine);

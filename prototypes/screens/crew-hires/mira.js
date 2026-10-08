@@ -6,27 +6,32 @@
 (function (E) {
     const INK = E.INK;
     const SUIT = [INK, '#262820', '#40433a', '#62665a', '#868a7a', '#a8ac9a', '#c4c8b4', '#d8dcc8'];   // pale sage cream, as in the portrait
-    // three-quarter, facing right, as in the portrait: the ear shows behind the cheek, the near eye sits well back from
-    // the face edge, the far eye beside the nose, the lips inside the nose line with a small half-smile. The tied tail
-    // hangs down her back, black, then teal for its last rows. Anchor [8, 20]: the foot of the gold collar.
+    // three-quarter, facing right (the portrait mirrored), sized to the cast (crown to chin 14 rows, like Cora's). The hair
+    // is a round black dome with a dim blue sheen, a thin teal streak arcing down the crown, a fringe that sweeps over the
+    // far temple and leaves a little forehead. The ear (lit rim, dark bowl) sits in the hair behind the cheek, a dark
+    // lock in front of it. Two level soft-brown brows with skin between them; liner only at each eye's upper-outer corner
+    // (a full bar on each eye read as a visor); the near eye white, green, pupil, the far eye green, pupil. The nose is
+    // 2 px at the far cheek's edge, lit above, shaded under. The mouth is 1 px high and a pixel inside the jaw line: a
+    // darker pixel and a rose one, the near corner lifted a row, her calm half-smile (the old 2 x 2 lip block read as a
+    // pout). The tied tail hangs down her back, black, then teal. Anchor [8, 20]: the collar foot.
     const FRONT = [
         '.....abccba.....',
-        '...abcddddcb....',
-        '..abcdeffedcb...',
-        '.abcdeefTTedcb..',
-        '.abcddeTUtdddcb.',
-        '.abcddtdcb3445b.',
-        '.abcdcbc3BB4BBb.',
-        '.abcd433LE45EL4b',
-        '.abcb4234453554b',
-        '.abcb3234455453.',
-        '..abc2334452443.',
-        '..abc12344mMM43.',
-        '..abc12344455m..',
-        '..abc1234443....',
-        '..abc.1223321...',
-        '..abc..2332.....',
-        '..abc..1221.....',
+        '...abccdddcb....',
+        '..abcTdeefddb...',
+        '.abTUcddeeeedb..',
+        'aaTcdcd455eedb..',          // a little forehead under the fringe
+        'aatccd345554db..',          // the fringe sweeps over the far temple
+        'abbccc3BBB4BBd..',          // two level soft-brown brows, skin between them
+        'abb34b3L4444L4..',          // liner only at each eye's upper-outer corner; the ear's top, a dark lock in front of it
+        '.ab42b3wEP5EP5..',          // the ear's bowl; the near eye white, green, pupil; the far eye green, pupil
+        '.ab32b345544455.',          // the nose, 2 px at the edge: lit above
+        '.abc32344444343.',          // the ear lobe; the nose's shaded side, its underside
+        '.abcb13444m443..',          // the near corner of the mouth lifted a row; the shadow under the nose
+        '..abc123444mM3..',          // the lips: a darker pixel, a rose one, a row inside the jaw line
+        '..abc12223443...',
+        '..abc.122211....',
+        '..abc..2343.....',
+        '..abc..1232.....',
         '.abcgGGHHHHGg...',
         '.abckKKJJjjjH...',
         '.abtkKJJjjjjG...',
@@ -36,9 +41,10 @@
         '..TU............',
         '..T.............',
     ];
-    // looking down: the face drops a row (a neck row goes), the eyes become lowered lids
+    // looking down: the face drops a row (a neck row goes), the lids come down: the liner goes back to skin, the eye row
+    // becomes a thin lash line under the brows
     const DOWN = ['.'.repeat(16), ...FRONT.slice(0, 15), ...FRONT.slice(16)]
-        .map(r => r.replace('LE', '3L').replace('EL', 'L3'));
+        .map(r => r.replace('b3L4444L4', 'b34444444').replace('wEP5EP', '3LL5LL'));
     E.register({
         id: 'mira', name: 'Mira', role: 'Tech', portrait: '../../../assets/crew/F_5.png',
         signature: 'Black hair swept back behind the ear and tied low, a teal streak and teal ends; green eyes; cream high-collar uniform with gold trim. Slight, composed, arms straight at her sides.',
@@ -63,50 +69,51 @@
             front: {
                 anchor: [8, 20],
                 keys: {
-                    a: '#120c10', b: '#1d151b', c: '#2a2128', d: '#3b3238', e: '#474b4a', f: '#646a66',
+                    a: '#120c10', b: '#1d151b', c: '#2a2128', d: '#3b3238', e: '#263236', f: '#38494f',
                     t: '#17594c', T: '#2fae8e', U: '#8aeccb',
                     1: '#5a2a2c', 2: '#975749', 3: '#c27e5d', 4: '#d99f70', 5: '#ecc28c',
-                    B: '#3a2224', L: '#1a0e10', E: '#34a283', w: '#c9b49a', r: '#d08a78', q: '#7a3a38', m: '#a8404c', M: '#d26c66',
+                    B: '#5e3a30', L: '#1a0e10', E: '#34a283', P: '#0f2a26', w: '#e6d6c0', r: '#d08a78', q: '#7a3a38', m: '#a8404c', M: '#d26c66',
                     k: SUIT[3], K: SUIT[4], J: SUIT[5], j: SUIT[6], g: '#a07a2a', G: '#e2c46a', H: '#ffe08a',
                 },
-                blink: { E: '#c27e5d', w: '#c27e5d' },
+                blink: { L: '#c27e5d', E: '#5a2a2c', P: '#5a2a2c', w: '#5a2a2c' },
                 map: FRONT,
             },
             down: { anchor: [8, 20], map: DOWN },
-            lying: {                                   // asleep, face up: the tail fanned out on the pillow, teal ends
-                anchor: [24, 7],
+            lying: {                                   // asleep on her back: the front head turned face-up, eyes shut to
+                anchor: [20, 7],                       // lash lines, brows softened, the neck a pixel shorter, the jaw
+                                                       // shadow lightened (dark, it read as a slit across the throat), the
+                                                       // tail under her neck with its teal ends out on the pillow
                 map: [
-                    '...............4.........',
-                    '.........cccc45534.......',
-                    '........bddd44542M43.....',
-                    '.......bcdd555544mM4...HG',
-                    '.......cddd4444443441GHGj',
-                    '......bdTddB4L4444431Hjjj',
-                    '......cdet4B4L4433322Hjjj',
-                    '....abdeeU333L3332213HJjj',
-                    '..abccdefecc222221122GJJj',
-                    '.abcdbdefetd421211122GKJJ',
-                    'tTabcacdeeTt343111111gKKK',
-                    'UTtab.bcddddccbaaa...gkkk',
-                    '.tTta.abccdcddcbbbb......',
-                    '.......abccccccbaaa......',
-                    '........abbbbbba.........',
-                    '.........aaaaaa..........',
+                    '..........53.........',
+                    '....bbbd455433.......',
+                    '...bddd34L434M3.....G',
+                    '..bdee434L444m42.gHGj',
+                    '.acdee544544m4422Gjjj',
+                    '.bdfe5534L5444323Hjjj',
+                    '.cdee5534L5444222Hjjj',
+                    '.cded443434443222HJjj',
+                    '.bcddd3333333222.HJJj',
+                    '.acTccdcbbb2222..GKJJ',
+                    '..bcUdcc4223bccccGKKK',
+                    '..abTccc343ccbbbbgkkk',
+                    '...abTtbbbbbbatTt....',
+                    '....aaabbaaaatTU.....',
+                    '.....aaaa............',
                 ],
             },
-            back: {
-                anchor: [7, 18],
+            back: {                                    // climbing: swept back to a low tie, the teal streak on her left, the
+                anchor: [7, 18],                       // ears just showing, the tail down her back with teal ends
                 map: [
                     '....abccba....',
-                    '...bcddddcb...',
-                    '..bcdeeeedcb..',
-                    '.bcdeffffedcb.',
-                    '.bcdeeffeedcb.',
-                    'abcddeeeedTcba',
-                    'abcdddddddTcba',
-                    'abccddddddcTba',
-                    'abcccdddccctba',
-                    'abbcccddcccbba',
+                    '..abctddddcb..',
+                    '.abcTeeeddccb.',
+                    '.bcUdeedddccb.',
+                    'abTcdddddcccba',
+                    'atcdcddcdcccba',
+                    'abccdcdcdcccba',
+                    '3bccdcdcdcccb3',
+                    '2abcccdcdccba2',
+                    '.abbccdcdccba.',
                     '.abbcccccccba.',
                     '.2abbccccbba2.',
                     '..1aabccbaa1..',
