@@ -1,53 +1,107 @@
 /* MIRA, tech. Portrait: assets/crew/F_5.png.
-   Read at a glance: black hair swept back behind the ear and tied low at the nape, a teal streak over the crown and teal
-   ends on the tail; a side-swept fringe; green eyes, red lips; a pale cream high-collar uniform with gold trim.
-   Slight, long-necked, composed: she stands straight, feet together, arms at her sides, and walks with a light, low step.
-   The cream cloth stays a step below white so her face is still the warmest, brightest thing. */
+   Read at a glance: black hair tied back behind the ear, one teal lock falling at the front over the far temple; green
+   eyes; a calm half-smile; a pale cream high-collar uniform with gold trim. Slight, long-necked, composed: she stands
+   straight, feet together, arms at her sides, and walks with a light, low step. The cream cloth stays a step below
+   white so her face is still the warmest, brightest thing.
+   Heads (redrawn 2026-10-08 in Aris's construction, the approved set): front three-quarter with the hair close to the
+   skull and a small knot at the nape, a 1-px half-smile (never a red pout), the far eye clear of the hair and the ear,
+   the teal lock joined to the hair; down (lids lowered); back (a gold tie over the knot); lying (face up in profile). */
 (function (E) {
     const INK = E.INK;
     const SUIT = [INK, '#262820', '#40433a', '#62665a', '#868a7a', '#a8ac9a', '#c4c8b4', '#d8dcc8'];   // pale sage cream, as in the portrait
-    // three-quarter, facing right (the portrait mirrored), sized to the cast (crown to chin 14 rows, like Cora's). The hair
-    // is a round black dome with a dim blue sheen, a thin teal streak arcing down the crown, a fringe that sweeps over the
-    // far temple and leaves a little forehead. The ear (lit rim, dark bowl) sits in the hair behind the cheek, a dark
-    // lock in front of it. Two level soft-brown brows with skin between them; liner only at each eye's upper-outer corner
-    // (a full bar on each eye read as a visor); the near eye white, green, pupil, the far eye green, pupil. The nose is
-    // 2 px at the far cheek's edge, lit above, shaded under. The mouth is 1 px high and a pixel inside the jaw line: a
-    // darker pixel and a rose one, the near corner lifted a row, her calm half-smile (the old 2 x 2 lip block read as a
-    // pout). The tied tail hangs down her back, black, then teal. Anchor [8, 20]: the collar foot.
+    // the head keys: hair black with a cool sheen (f the one bright strand on the crown), the teal lock, warm skin lit
+    // from the front (1 the jaw shadow ... 6 the light on the forehead and the nose; h the blush), the face, the cream
+    // collar with its gold trim (g o also the hair tie)
+    const KEYS = {
+        a: '#19131c', b: '#231b28', c: '#2d2534', d: '#3a3346', e: '#4c4a64', f: '#6c7090',
+        t: '#176a6a', T: '#2fb0a6',
+        1: '#5a2a2c', 2: '#8e4e44', 3: '#bc7658', 4: '#d89a6c', 5: '#eab886', 6: '#f8d6a4', h: '#d48c74',
+        B: '#24121a', V: '#6a3a34', L: '#140a0e', I: '#2a9a78', P: '#0a1e1a', G: '#7ad8b4', w: '#e8cdb4',
+        q: '#8a3c3e', m: '#c87c70', M: '#d88a7c',
+        k: SUIT[3], K: SUIT[4], J: SUIT[5], j: SUIT[6], g: '#a07a2a', o: '#e2c46a', H: '#ffe08a',
+    };
+    // shut: the lid comes down over the eye, the lashes rest where it was
+    const BLINK = { L: '#bc7658', I: '#bc7658', P: '#140a0e', G: '#140a0e', w: '#140a0e' };
+    // three-quarter, facing right (the portrait mirrored), built the same way as Aris's head: the same face columns, turn
+    // and light. The hair close to the skull: a dark dome with one cool sheen strand from the crown, swept back past the
+    // ear into a small knot low at the nape. The teal lock starts inside the hairline on the far side of the forehead and
+    // falls four pixels over the temple, joined to the hair, its end dark (no pale tip); black hair frames the far temple
+    // behind it. The ear sits back from the eye with a hair pixel between. The face: level 1-px brows a row above the
+    // eyes; each eye a lash line over a green iris, then the white, a dark pupil and a light catch, the lash row ending at
+    // the eye; the nose from between the eyes down to a lit tip; one blush pixel on the near cheek; the half-smile, a
+    // 1-px dark-rose line with only the near corner lifted a row and one lip-tone pixel under it; a short, soft chin.
+    // Then the long neck and the cream high collar with its gold edge. Anchor [12, 19]: the collar foot.
     const FRONT = [
-        '.....abccba.....',
-        '...abccdddcb....',
-        '..abcTdeefddb...',
-        '.abTUcddeeeedb..',
-        'aaTcdcd455eedb..',          // a little forehead under the fringe
-        'aatccd345554db..',          // the fringe sweeps over the far temple
-        'abbccc3BBB4BBd..',          // two level soft-brown brows, skin between them
-        'abb34b3L4444L4..',          // liner only at each eye's upper-outer corner; the ear's top, a dark lock in front of it
-        '.ab42b3wEP5EP5..',          // the ear's bowl; the near eye white, green, pupil; the far eye green, pupil
-        '.ab32b345544455.',          // the nose, 2 px at the edge: lit above
-        '.abc32344444343.',          // the ear lobe; the nose's shaded side, its underside
-        '.abcb13444m443..',          // the near corner of the mouth lifted a row; the shadow under the nose
-        '..abc123444mM3..',          // the lips: a darker pixel, a rose one, a row inside the jaw line
-        '..abc12223443...',
-        '..abc.122211....',
-        '..abc..2343.....',
-        '..abc..1232.....',
-        '.abcgGGHHHHGg...',
-        '.abckKKJJjjjH...',
-        '.abtkKJJjjjjG...',
-        '.atTkKJjjjjjjG..',
-        '.tTU............',
-        '.tTt............',
-        '..TU............',
-        '..T.............',
+        '.....................',
+        '..........abccba.....',
+        '........abcdeffedcb..',
+        '.......abcdeeddcccbb.',
+        '......abcdedcc455tcb.',
+        '.....abcddcd445556Tb.',
+        '....abcdcb3VBB55BVTb.',
+        '...abc43cb34555655Tb.',
+        '...abc42cb4LIL56LItb.',
+        '...abc32cb4wPG56PG4..',
+        '..abdcbabb345543654..',
+        '..adecbaa12h4q54243..',
+        '...bdcba.12345qq443..',
+        '....aba..11234m443...',
+        '..........1233321....',
+        '...........1221......',
+        '........gooHHHHog....',
+        '........kKKJJjjjH....',
+        '........kKJJjjjjo....',
+        '........kKJjjjjjjo...',
     ];
-    // looking down: the face drops a row (a neck row goes), the lids come down: the liner goes back to skin, the eye row
-    // becomes a thin lash line under the brows
-    const DOWN = ['.'.repeat(16), ...FRONT.slice(0, 15), ...FRONT.slice(16)]
-        .map(r => r.replace('b3L4444L4', 'b34444444').replace('wEP5EP', '3LL5LL'));
+    // looking down (console, tend, wall): everything above the collar drops a row, the lids come down, the iris looks down
+    const DOWN = ['.'.repeat(21), ...FRONT.slice(0, 15), ...FRONT.slice(16)]
+        .map(r => r.replace('4LIL56LIt', '43335633t').replace('4wPG56PG4', '4LIL56LI4'));
+    // climbing, from behind: the dome with its sheen strand, the combed lines meeting at the nape, both ears, the hair
+    // gathered under a gold tie into a small knot over a little bare neck, the high collar from behind
+    const BACK = [
+        '.....abccba.....',
+        '...abcdeedcba...',
+        '..abcdeffedcba..',
+        '.abcdedeedcdcba.',
+        '.abcdcdeddcdcba.',
+        'abcdcdcedcdcdcba',
+        'abcdcdcdcdcdcdba',
+        '3abcdcdcdcdcdba3',
+        '4abcdcdcdcdcdba4',
+        '32abcdcdcdcdba23',
+        '.2abcdcdcdcdba2.',
+        '..2abcgoogcba2..',
+        '...23bcdedcb32..',
+        '....12bcddcb21..',
+        '....123abba321..',
+        '...gooHHHHHoog..',
+        '..kKKJJjjJJKKk..',
+        '..kKJJJjjjJJKk..',
+        '..kKJJjjjjJJKk..',
+    ];
+    // asleep: face up in profile, crown to the left, like Aris's. Forehead, a soft brow, the closed eye's lash line, a
+    // small straight nose, closed lips, chin; the ear mid-head; the tied hair under her head with the teal lock out on
+    // the pillow by the jaw. The last four columns are the front's collar, turned.
+    const LYING = [
+        '...........5..........',
+        '..........553.........',
+        '....555565554mqM4.....',
+        '..cc455VV555543432...o',
+        '.bdc44444LLh544321gHoj',
+        '.cdb34455554543211ojjj',
+        'bcdbc3444444432112Hjjj',
+        'bdcbb3454344332122Hjjj',
+        'cbdcb3423243321122HJjj',
+        'acdcbb322232211222HJJj',
+        '.bcdcbbbb221112221oKJJ',
+        '..acbdcbbaa1.11111oKKK',
+        '...abcdcbaabtTt11.gkkk',
+        '....aabcbbatTTt.......',
+        '......aaa..tTt........',
+    ];
     E.register({
         id: 'mira', name: 'Mira', role: 'Tech', portrait: '../../../assets/crew/F_5.png',
-        signature: 'Black hair swept back behind the ear and tied low, a teal streak and teal ends; green eyes; cream high-collar uniform with gold trim. Slight, composed, arms straight at her sides.',
+        signature: 'Black hair tied back behind the ear, one teal lock falling at the front; green eyes, a calm half-smile; cream high-collar uniform with gold trim. Slight, composed, arms straight at her sides.',
         ramps: {
             suit: SUIT,
             boot: [INK, '#14110e', '#262019', '#3a3127', '#524537'],
@@ -66,70 +120,10 @@
             hand: 'skin',
         },
         heads: {
-            front: {
-                anchor: [8, 20],
-                keys: {
-                    a: '#120c10', b: '#1d151b', c: '#2a2128', d: '#3b3238', e: '#263236', f: '#38494f',
-                    t: '#17594c', T: '#2fae8e', U: '#8aeccb',
-                    1: '#5a2a2c', 2: '#975749', 3: '#c27e5d', 4: '#d99f70', 5: '#ecc28c',
-                    B: '#5e3a30', L: '#1a0e10', E: '#34a283', P: '#0f2a26', w: '#e6d6c0', r: '#d08a78', q: '#7a3a38', m: '#a8404c', M: '#d26c66',
-                    k: SUIT[3], K: SUIT[4], J: SUIT[5], j: SUIT[6], g: '#a07a2a', G: '#e2c46a', H: '#ffe08a',
-                },
-                blink: { L: '#c27e5d', E: '#5a2a2c', P: '#5a2a2c', w: '#5a2a2c' },
-                map: FRONT,
-            },
-            down: { anchor: [8, 20], map: DOWN },
-            lying: {                                   // asleep on her back: the front head turned face-up, eyes shut to
-                anchor: [20, 7],                       // lash lines, brows softened, the neck a pixel shorter, the jaw
-                                                       // shadow lightened (dark, it read as a slit across the throat), the
-                                                       // tail under her neck with its teal ends out on the pillow
-                map: [
-                    '..........53.........',
-                    '....bbbd455433.......',
-                    '...bddd34L434M3.....G',
-                    '..bdee434L444m42.gHGj',
-                    '.acdee544544m4422Gjjj',
-                    '.bdfe5534L5444323Hjjj',
-                    '.cdee5534L5444222Hjjj',
-                    '.cded443434443222HJjj',
-                    '.bcddd3333333222.HJJj',
-                    '.acTccdcbbb2222..GKJJ',
-                    '..bcUdcc4223bccccGKKK',
-                    '..abTccc343ccbbbbgkkk',
-                    '...abTtbbbbbbatTt....',
-                    '....aaabbaaaatTU.....',
-                    '.....aaaa............',
-                ],
-            },
-            back: {                                    // climbing: swept back to a low tie, the teal streak on her left, the
-                anchor: [7, 18],                       // ears just showing, the tail down her back with teal ends
-                map: [
-                    '....abccba....',
-                    '..abctddddcb..',
-                    '.abcTeeeddccb.',
-                    '.bcUdeedddccb.',
-                    'abTcdddddcccba',
-                    'atcdcddcdcccba',
-                    'abccdcdcdcccba',
-                    '3bccdcdcdcccb3',
-                    '2abcccdcdccba2',
-                    '.abbccdcdccba.',
-                    '.abbcccccccba.',
-                    '.2abbccccbba2.',
-                    '..1aabccbaa1..',
-                    '...12abba21...',
-                    '....2abba2....',
-                    '..gGGabbaGGg..',
-                    '.kKKJabbaJKKk.',
-                    '.kKJJabbaJJKk.',
-                    '.kKJJabcaJJKk.',
-                    '.....abca.....',
-                    '.....abct.....',
-                    '.....atTt.....',
-                    '......tU......',
-                    '......T.......',
-                ],
-            },
+            front: { anchor: [12, 19], keys: KEYS, map: FRONT, blink: BLINK },
+            down: { anchor: [12, 19], map: DOWN },
+            back: { anchor: [8, 18], map: BACK },
+            lying: { anchor: [21, 8], blink: {}, map: LYING },
         },
         decorate(api, P) {
             const gold = api.ramps.gold;
