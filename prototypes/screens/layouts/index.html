@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four Layouts</title>
+<style>
+  :root {
+    --ink: #07090d;
+    --text: #c8d0d6;
+    --dim: #7d8890;
+    --warm: #e8b878;
+    --cold: #8fc4d4;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ink);
+    color: var(--text);
+    font: 16px/1.55 "Segoe UI", system-ui, sans-serif;
+  }
+  main { max-width: 1480px; margin: 0 auto; padding: 48px 16px 80px; }
+  h1 { font-size: 15px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin: 0 0 18px; }
+  .pick { font-size: 20px; line-height: 1.5; max-width: 900px; margin: 0 0 64px; }
+  .pick b { color: var(--warm); font-weight: 600; }
+  section { margin: 0 0 72px; }
+  h2 { font-size: 26px; font-weight: 600; margin: 0 0 4px; }
+  h2 span { color: var(--warm); margin-right: 10px; }
+  .score { color: var(--dim); font-size: 14px; margin-left: 10px; font-weight: 400; }
+  p.line { margin: 0 0 14px; max-width: 900px; }
+  a { color: var(--cold); }
+  a:hover, a:focus-visible { color: var(--warm); }
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .shots img { width: 100%; height: auto; display: block; }
+  @media (max-width: 760px) { .shots { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ship and journey on one screen: four tries</h1>
+  <p class="pick">
+    <b>Go with A.</b> It is the layout you described: the ship on the left, the journey on the right, all under one sky. It keeps the v3 space and the living ship's decks at full size, and its best moment is the best in all four: a world slides behind our hull and shows up in the bridge window while Mira says her line.
+    Before it goes into the game it needs whole decks on screen (the ladder and the chair are cut off now) and a fix for the gap in the nose where a world shows through.
+  </p>
+
+  <section>
+    <h2><span>A</span>Side by side <span class="score">34 / 40</span></h2>
+    <p class="line">The Lander on the left, space on the right. Worlds come out of the light, swell, then slide behind our hull and into the bridge window. <a href="variant-a.html">Open it live</a></p>
+    <div class="shots">
+      <img src="shots/variant-a-1.png" width="1920" height="1080" alt="Variant A: bridge and lab on the left, Titan ahead on the right">
+      <img src="shots/variant-a-2.png" width="1920" height="1080" alt="Variant A: Titan sliding behind the hull, Mira at the bridge window">
+    </div>
+  </section>
+
+  <section>
+    <h2><span>D</span>The bridge <span class="score">33 / 40</span></h2>
+    <p class="line">Inside the bridge, with one big window onto the journey. It is the prettiest of the four, but it is a new bridge, not the living ship's, and the other decks stay out of sight. It would make the best close-up for when you stop at a world. <a href="variant-d.html">Open it live</a></p>
+    <div class="shots">
+      <img src="shots/variant-d-1.png" width="1920" height="1080" alt="Variant D: the crew on the bridge, Titan small in the big window">
+      <img src="shots/variant-d-2.png" width="1920" height="1080" alt="Variant D: in orbit, Titan fills the window, the crew lined up">
+    </div>
+  </section>
+
+  <section>
+    <h2><span>C</span>Deck strip <span class="score">30 / 40</span></h2>
+    <p class="line">Open sky on top and one deck along the bottom. The sky is as good as v3's, but you only see one deck at a time and the cut-away roof looks broken. <a href="variant-c.html">Open it live</a></p>
+    <div class="shots">
+      <img src="shots/variant-c-1.png" width="1920" height="1080" alt="Variant C: the galley at the bottom, Titan far off in the sky above">
+      <img src="shots/variant-c-2.png" width="1920" height="1080" alt="Variant C: the bridge at the bottom, Titan rising above it">
+    </div>
+  </section>
+
+  <section>
+    <h2><span>B</span>Nose up <span class="score">30 / 40</span></h2>
+    <p class="line">The living ship as it is, with space down both sides. It feels like the most alive of the four, but the worlds get two thin strips, and in a smaller window those almost disappear. <a href="variant-b.html">Open it live</a></p>
+    <div class="shots">
+      <img src="shots/variant-b-1.png" width="1920" height="1080" alt="Variant B: the tower centre screen, Titan coming in top left">
+      <img src="shots/variant-b-2.png" width="1920" height="1080" alt="Variant B: the crew turned to face Titan beside the hull">
+    </div>
+  </section>
+</main>
+</body>
+</html>

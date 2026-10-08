@@ -1,0 +1,87 @@
+<!doctype html>
+<!--
+  LAYOUT VARIANT B · "Nose up" · a study page; nothing in the game is changed.
+  The journey turned vertical: the far light is at the top, worlds come down past the ship on either side, dust streams
+  down. The Lander flies nose up in the middle, cut open (the living ship from crew-hires/ship-life.html), so the crew
+  live their day while space goes by. Click a world beside the ship to stop there; click a person to hear them; scroll
+  to move along the ship.
+  Reused, loaded from where they live and not edited: crew-hires/engine.js and the five person files, ship-art.js,
+  ship-rooms.js (the ship), game-screen-v3/paint.js (the worlds, the light, the ramps).
+  New, in layouts/variant-b/: voyage-sim.js (a copy of ship-sim.js with a voyage routine), ship-view.js (ship-life's
+  drawing code), journey.js (space, light, dust, worlds), main.js (camera, clocks, clicks).
+  Still frames: ?t=ms opens paused at that time · ?arrive=titan|chronos · window.variantB.step(ms) / setTime(ms)
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nose Up</title>
+<meta name="description" content="Silent Exodus layout study B: the Lander flies nose up through the middle of the screen, cut open, while worlds slide down past it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    color-scheme: dark;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ice: #9fd8e6;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --fast: 160ms; --slow: 420ms; --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--ink); }
+body { color: var(--text); font: 15px/1.45 var(--f-text); -webkit-font-smoothing: antialiased; }
+#view { position: fixed; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; cursor: default; touch-action: none; }
+#view.pointer { cursor: pointer; }
+
+/* a line someone says, in the scene, over their head (ship-life.html) */
+.say { position: fixed; z-index: 3; max-width: 300px; padding: 7px 11px 8px; background: rgba(5, 7, 10, 0.82); border-left: 2px solid var(--who, #c9d1d6);
+       pointer-events: none; opacity: 0; transform: translate(-50%, calc(-100% + 4px)); transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease); }
+.say.on { opacity: 1; transform: translate(-50%, -100%); }
+.say b { display: block; font: 600 11px/1.2 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--who, #c9d1d6); margin-bottom: 2px; }
+.say span { font-size: 15px; line-height: 1.4; color: #eceae2; }
+.say::after { content: ''; position: absolute; left: calc(50% - 5px); bottom: -6px; border: 5px solid transparent; border-bottom: 0; border-top-color: rgba(5, 7, 10, 0.82); }
+.say.aura span { color: #d6eef4; }
+
+/* a world's name, on its dark side: plain words, no box */
+.tag { position: fixed; z-index: 2; pointer-events: none; opacity: 0; transition: opacity var(--slow) var(--ease); text-shadow: 0 1px 2px #05070a, 0 0 8px #05070a; }
+.tag.on { opacity: 1; }
+.tag.right { text-align: right; }
+.tag b { display: block; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ice); }
+.tag .line, .tag .act { display: block; max-height: 0; overflow: hidden; opacity: 0; transition: max-height var(--slow) var(--ease), opacity var(--slow) var(--ease); }
+.tag .line { font-size: 14.5px; line-height: 1.4; color: #c9d1d6; margin-top: 3px; }
+.tag .act { font: 500 12px/1.3 var(--f-ui); letter-spacing: 0.06em; color: var(--dim); margin-top: 4px; }
+.tag.open .line, .tag.open .act { max-height: 80px; opacity: 1; }
+
+/* one quiet line for the study, gone after a moment */
+.hint { position: fixed; left: 50%; bottom: 18px; z-index: 2; transform: translateX(-50%); font: 500 12.5px/1.3 var(--f-ui); letter-spacing: 0.05em; color: var(--faint);
+        text-shadow: 0 0 6px #05070a; pointer-events: none; animation: hint 9s var(--ease) forwards; white-space: nowrap; }
+@keyframes hint { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+body.clean .hint { display: none; }
+@media (prefers-reduced-motion: reduce) { .say, .tag, .tag .line, .tag .act { transition: none; } .hint { animation: none; } }
+</style>
+</head>
+<body>
+<canvas id="view" aria-label="The Lander flying nose up toward a far light, cut open so its decks and crew show, while worlds slide down past it"></canvas>
+<div class="say" id="say" role="status" aria-live="polite"><b></b><span></span></div>
+<p class="hint">Click a world to stop beside it · click someone to hear them · scroll to move along the ship</p>
+
+<script>
+// ?debug: keep warnings and errors so a headless check can read them out of the page (#debug)
+if (/[?&]debug/.test(location.search)) { window.__logs = []; ['warn', 'error'].forEach(k => { const o = console[k]; console[k] = (...a) => { window.__logs.push(k + ': ' + a.join(' ')); o.apply(console, a); }; }); addEventListener('error', e => window.__logs.push('error: ' + e.message)); }
+</script>
+<script src="../crew-hires/engine.js"></script>
+<script src="../crew-hires/cora.js"></script>
+<script src="../crew-hires/jaxon.js"></script>
+<script src="../crew-hires/aris.js"></script>
+<script src="../crew-hires/vance.js"></script>
+<script src="../crew-hires/mira.js"></script>
+<script src="../crew-hires/ship-art.js"></script>
+<script src="../crew-hires/ship-rooms.js"></script>
+<script src="../game-screen-v3/paint.js"></script>
+<script src="variant-b/voyage-sim.js"></script>
+<script src="variant-b/ship-view.js"></script>
+<script src="variant-b/journey.js"></script>
+<script src="variant-b/main.js"></script>
+</body>
+</html>
