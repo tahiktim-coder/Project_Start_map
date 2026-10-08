@@ -87,7 +87,7 @@ const ITEMS = {
     FUNGUS_CULTURE: {
         id: 'FUNGUS_CULTURE', name: 'Fungus Culture', type: 'LIVING', value: 80,
         desc: 'A sealed tray of fungus that feeds on radiation and grows food. It gives +1 Ration every 3 major actions.',
-        onUse: null // Passive effect handled by GameState.consumeRation()
+        onUse: null // Passive effect handled by GameState.passTime()
     },
     // Food Pack (ration recovery)
     WILD_HARVEST: {

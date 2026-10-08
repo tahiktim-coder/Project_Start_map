@@ -24,12 +24,7 @@ class NavView {
 
         const nodesHtml = systems.map(planet => {
             // Safety fallback if mapData missing
-            // Keep every node, and the name under it, inside the map: the label hangs below the body, so the bottom margin is the big one.
-            // Done here (not in the generator) so saved games are fixed too.
-            const MAP_EDGE = { left: 8, right: 92, top: 12, bottom: 76 };
-            const clampTo = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
-            const x = clampTo(planet.mapData ? planet.mapData.x : Math.floor(Math.random() * 80) + 10, MAP_EDGE.left, MAP_EDGE.right);
-            const y = clampTo(planet.mapData ? planet.mapData.y : Math.floor(Math.random() * 80) + 10, MAP_EDGE.top, MAP_EDGE.bottom);
+            const { x, y } = NavView.mapPlace(planet) || NavView.mapPlace({ mapData: { x: Math.floor(Math.random() * 80) + 10, y: Math.floor(Math.random() * 80) + 10 } });
 
             if (planet.storyHidden) return NavView.contactHtml(planet, x, y, nodeSize, labelSize);
             const color = this.getPlanetColor(planet.type);
@@ -56,27 +51,21 @@ class NavView {
                 ${planet.isFirstSignal && !planet.exodusInvestigated ? '<span class="nav-signal">OLD TRANSPONDER</span>' : ''}
                 ${planet.isStoryPlanet && !planet.exodusInvestigated ? '<span class="nav-signal">ONE OF OUR SHIPS</span>' : ''}
 
-                <!-- Label -->
+                <!-- Label: the name, and what is there (free to see, no scan needed: docs/ECONOMY.md) -->
                 <div class="nav-label" style="position: absolute; top: ${Math.round(nodeSize * 1.2)}px; white-space: nowrap; color: ${color};
                             font-size: ${labelSize}px; font-family: var(--font-mono); text-shadow: 0 0 5px #000; pointer-events: none; opacity: 0.8;
                             ${isGhost ? 'font-style: italic;' : ''}">
-                    ${planet.name}
+                    ${planet.name}${NavView.siteLabelHtml(planet)}
                 </div>
             </div>`;
         }).join('');
 
-        // Calculate actual jump cost for display
-        let jumpCost = 20;
+        // The jump's price, the one App.handleSectorJump charges
+        const app = window.app;
+        const jumpCost = app && app.sectorJumpCost ? app.sectorJumpCost() : 8;
         let jumpCostNote = '';
-        if (this.state && !this.state.isDeckOperational('engineering')) {
-            jumpCost = 40;
-            jumpCostNote = ' [ENGINEERING DAMAGED]';
-        }
-        if (this.state && this.state._driveReinforced) {
-            const discount = Math.floor(jumpCost * 0.2);
-            jumpCost -= discount;
-            jumpCostNote = ` [DRIVES REINFORCED: -${discount}]`;
-        }
+        if (this.state && !this.state.isDeckOperational('engineering')) jumpCostNote = ' [ENGINEERING DAMAGED]';
+        if (this.state && this.state._driveReinforced) jumpCostNote += ' [DRIVE BRACED]';
 
         // Sector 6 holds THE STRUCTURE; there is nothing charted past it (App enforces the same cap)
         const isFinalSector = !!this.state && this.state.currentSector >= 6;
@@ -111,6 +100,32 @@ class NavView {
         this.attachEvents(systems);
         if (window.NavVista) window.NavVista.mount(this.element.querySelector('.sector-map-container'), this.state); // the living backdrop
         return this.element;
+    }
+
+    /**
+     * Where a place sits on the map, in percent of the map: the box every node is drawn in. Done here (not in the generator)
+     * so saved games are fixed too. The label hangs below the body, so the bottom margin is the big one. Null without map data.
+     */
+    static mapPlace(planet) {
+        if (!planet || !planet.mapData) return null;
+        const edge = NavView.MAP_EDGE, clampTo = (value, lo, hi) => Math.max(lo, Math.min(hi, value));
+        return { x: clampTo(planet.mapData.x, edge.left, edge.right), y: clampTo(planet.mapData.y, edge.top, edge.bottom) };
+    }
+
+    /** How far apart two map places look, in percent of the map's width (the map is wider than it is tall). Warps are priced by it. */
+    static mapDistance(a, b) {
+        return Math.hypot(b.x - a.x, (b.y - a.y) * NavView.MAP_ASPECT);
+    }
+
+    /** Under a place's name: what is there (a wreck, a station, a strange site), dimmed once the team has been. Free to see. */
+    static siteLabelHtml(planet) {
+        const hasBadge = !planet.exodusInvestigated && (planet.isFirstSignal || planet.isStoryPlanet);   // its badge already says so
+        if (hasBadge || planet.ghost) return '';
+        const site = window.app && window.app.siteOf ? window.app.siteOf(planet) : null;
+        const kind = planet.isStation ? { word: 'STATION', isDone: !!planet.stationInvestigated }
+            : planet.isAsteroidField ? { word: 'ASTEROID FIELD', isDone: !!planet.asteroidMined }
+            : site ? { word: site.label.replace(/^THE /, ''), isDone: !!planet[site.done] } : null;
+        return kind ? `<span class="nav-site${kind.isDone ? ' is-done' : ''}">${kind.word}${kind.isDone ? ' · DONE' : ''}</span>` : '';
     }
 
     /** The sector's story planet before anyone knows what it is: a faint contact with no name (not a .nav-node: no course is drawn to it). */
@@ -290,9 +305,9 @@ class NavView {
 
         const isDeepScanned = planet.scanned;
         const isRemoteScanned = planet.remoteScanned;
-        // Must mirror App.handleWarp: a damaged (or A.U.R.A.-locked) bridge makes every warp cost half again as much
-        const bridgeFactor = this.state.isDeckOperational('bridge') ? 1 : 1.5;
-        const actualCost = this.state.getWarpCost ? this.state.getWarpCost(planet) : Math.floor(planet.fuelCost * bridgeFactor);
+        // The one price App.handleWarp charges (GameState.getWarpCost: distance, bridge damage, charts; free courses are 0)
+        const actualCost = this.state.getWarpCost(planet);
+        const isReentry = this.state.isReentry(planet), isFreeCourse = !isReentry && actualCost === 0;
 
         // Resource level calculation (based on planet.resources)
         const getResourceLevel = (value) => {
@@ -430,7 +445,7 @@ class NavView {
                                 CURRENT LOCATION
                                </div>`
                             : `<button class="scan-btn" style="margin-top: auto; width:100%; padding:8px; background: transparent; border: 1px solid var(--color-accent); color: var(--color-accent); cursor: pointer; font-family: var(--font-mono); font-size: 0.85em;">
-                                    LONG RANGE SCAN (${this.state && this.state.upgrades && this.state.upgrades.includes('sensor_v2') ? 'FREE' : '-2 NRG'})
+                                    LONG RANGE SCAN (FREE)
                                </button>`
                         )
                     }
@@ -441,12 +456,12 @@ class NavView {
                             🛰️ LAUNCH PROBE (REMOTE)
                         </button>
                     ` : ''}
-                    ${(actualCost > 0 && !window.TEST_MODE && this.state.getStopsLeft && this.state.getStopsLeft() <= 0) ? `
+                    ${(!isReentry && !window.TEST_MODE && this.state.getStopsLeft && this.state.getStopsLeft() <= 0) ? `
                     <button class="warp-btn" disabled style="width: 100%; padding: 12px; background: transparent; color: var(--dim); border: 1px dashed var(--line2); font-weight: bold; font-family: var(--font-display); cursor: not-allowed; text-transform: uppercase; font-size: 0.85em;">
                         OUT OF REACH — NO STOPS LEFT
                     </button>` : `
                     <button class="warp-btn" style="width: 100%; padding: 12px; background: var(--color-primary); color: #000; border: none; font-weight: bold; font-family: var(--font-display); cursor: pointer; text-transform: uppercase; font-size: 0.9em;">
-                        ${planet.id === (this.state.currentSystem || this.state.lastVisitedSystem)?.id ? 'RE-ESTABLISH ORBIT (0 NRG)' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
+                        ${isReentry ? 'RE-ESTABLISH ORBIT (0 NRG)' : isFreeCourse ? 'FOLLOW THEIR COURSE (0 NRG) · USES 1 STOP' : `INITIATE WARP (${actualCost} NRG) · USES 1 STOP`}
                     </button>`}
                     ${NavView.jumpWarningHtml(this.state, planet, actualCost)}
                 </div>
@@ -548,3 +563,10 @@ class NavView {
         }
     }
 }
+
+// The map box (mapPlace): every node is drawn inside it, in percent of the map.
+NavView.MAP_EDGE = Object.freeze({ left: 8, right: 92, top: 12, bottom: 76 });
+// Where the ship is when it has just arrived in a sector: the mouth of the heading, lower left (NavVista draws it there).
+NavView.SHIP_START = Object.freeze({ x: 4, y: 80 });
+// The map's height over its width in a usual window, so a distance in percent matches what the eye sees (mapDistance).
+NavView.MAP_ASPECT = 0.6;

@@ -51,10 +51,10 @@
                 if (stopsLeft <= 0) return 'No stops left in this sector. Press JUMP SECTOR to move on — whatever you skipped is gone for good.';
                 const signal = (state.sectorNodes || []).find(p => p.isFirstSignal && !p.exodusInvestigated);
                 if (signal && !document.querySelector('.warp-btn')) return `An old ship beacon is marked on the map at ${signal.name}. Click it, warp there, scan, then send the team to the wreck.`;
-                if (storyHere && !storyHere.storyHidden && !document.querySelector('.warp-btn')) return `${storyHere.name} is on the map now. One of our ships is there. Warp to it and send the team.`;
+                if (storyHere && !storyHere.storyHidden && !document.querySelector('.warp-btn')) return `${storyHere.name} is on the map now. One of our ships is there. ${storyHere.courseKnown ? 'Their course is free to fly.' : 'Warp to it and send the team.'}`;
                 if (!signal && !pageHere && !document.querySelector('.warp-btn')) return `This sector's page is found. Use your ${stopsLeft === 1 ? 'last stop' : `${stopsLeft} stops`} to look around, or JUMP SECTOR.`;
                 if (!document.querySelector('.warp-btn')) return 'Click a planet on the map to look at it. You only get a few STOPS per sector, so you cannot visit them all.';
-                return 'LONG RANGE SCAN shows what is there for 2 energy. INITIATE WARP flies there and uses one STOP.';
+                return 'LONG RANGE SCAN is free. INITIATE WARP costs the energy on the button and uses one STOP.';
             }
             if (here.isStation) return here.stationInvestigated ? 'Nothing more here. BREAK ORBIT to go back to the map.' : 'BOARD STATION sends one person inside on a tank of air. A DEEP SCAN first shows the rooms.';
             if (!here.scanned) return 'DEEP SCAN first, to see what is down there. Tune it by hand for a chance at bonus data.';
@@ -66,7 +66,7 @@
         if (stopsLeft <= 0) return sector >= 6 ? 'No stops left. The only place left to go is the light.' : 'No stops left in this sector. JUMP SECTOR when you are ready — whatever you skipped is gone for good.';
         if (pageHere || tapeHere) return [SECTOR_LINE[sector], whereLine(state, pageHere && storyHere)].filter(Boolean).join(' ');
         if (sector >= 6) return 'Every page is found. Nothing here is random any more. Go to the light when you are ready.';
-        return `Nothing left to find in this sector. ${stopsLeft} ${stopsLeft === 1 ? 'stop' : 'stops'} left: rest, repair, salvage, then JUMP SECTOR.`;
+        return `Nothing left to find in this sector. ${stopsLeft} ${stopsLeft === 1 ? 'stop' : 'stops'} left: repair, salvage, then JUMP SECTOR.`;
     }
 
     setInterval(() => {

@@ -74,6 +74,7 @@
     function splitRewards(text) {
         const tags = [];
         const sentence = text.replace(REWARD, (_, hit) => { tags.push(hit.trim()); return ''; })
+            .replace(/\(\s*\)/g, '')                                       // "(+25 Salvage, +10 Energy)" leaves empty brackets behind
             .replace(/\s+([.,;:!])/g, '$1').replace(/[,;:]\s*(?=[.!]|$)/g, '').replace(/(^|[.!]\s*)[.,;:]+\s*/g, '$1').replace(/\s{2,}/g, ' ').trim();
         return { sentence, tags };
     }

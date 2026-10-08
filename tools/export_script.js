@@ -675,7 +675,7 @@ for (let sector = 1; sector <= 6; sector++) {
     b.push(...textSection(3, 'Stress', bm('applyStressTraits'), 'When someone reaches stress 2; the first time is a tutorial.'));
     b.push(...textSection(3, 'Breakdowns', bm('triggerBreakdown'), 'When someone reaches stress 3. The commander breaking is game over.'), ...textSection(3, 'Mutiny', bm('showMutinyEvent'), 'Vance at stress 3.'));
     b.push(...textSection(3, 'Bringing someone back', bm('handleRevivalAction'), 'Using Pulsing Spores or an Ancient Neural Link from the cargo hold.'));
-    b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('consumeRation'), 'Each warp, team trip and jump eats a ration.'), ...textSection(3, 'Deck damage', bm('damageDeck'), 'The first time is a tutorial.'));
+    b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('eatOnJump'), 'The crew eats one ration on each sector jump.'), ...textSection(3, 'Deck damage', bm('damageDeck'), 'The first time is a tutorial.'));
     b.push(...textSection(3, 'What the data adds up to', bm('addColonyKnowledge'), 'At 1, 3 and 5 data.'));
     b.push('## Flying', '');
     [['handleWarp', 'Warping to a planet'], ['handleSectorJump', 'Jumping to the next sector']].forEach(([n, title]) => { const p = bm(n); b.push(...textSection(3, title, p, 'The lines for the light are in sector-6.md.', outside(...lightRanges(p)))); });

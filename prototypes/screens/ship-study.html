@@ -1,0 +1,1372 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ship Study</title>
+<meta name="description" content="Silent Exodus: four hulls for EXODUS-9 (close up, in space, and as a wreck) and three ways to draw the crew walking around inside. A mockup to choose from; nothing in the game is changed.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* The interface is "Graphite" (steel and grey, sodium only for people). The pictures inside the canvases are "Deep field". */
+:root {
+    color-scheme: dark;
+    --void: #0a0a0b;
+    --deep: #111214;
+    --dusk: #1a1c20;
+    --haze: #2a2d33;
+    --mist: #44484f;
+    --line: #1d1f23;
+    --line2: #33373e;
+    --text: #e4e4e0;
+    --dim: #8b8d90;
+    --faint: #5a6168;
+    --ui: #c9d1d6;
+    --ui-br: #ffffff;
+    --warm: #f08c2e;
+    --warm-br: #ffc27a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --gutter: clamp(16px, 2.2vw, 40px);
+    --fast: 140ms;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--void); }
+body { color: var(--text); font: 15px/1.55 var(--f-text); -webkit-font-smoothing: antialiased; }
+canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #05070a; }
+p { margin: 0; }
+h1, h2, h3 { margin: 0; font-family: var(--f-ui); font-weight: 600; letter-spacing: 0.01em; }
+a { color: var(--ui); text-underline-offset: 3px; }
+a:hover { color: var(--ui-br); }
+.page { max-width: 1840px; margin: 0 auto; padding: 0 var(--gutter) 96px; }
+@media (min-width: 1855px) { .page { padding-left: 40px; padding-right: 40px; } }
+
+/* ── top ── */
+.bar { display: flex; align-items: center; gap: 18px; height: 44px; border-bottom: 1px solid var(--line); font: 500 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.bar .tag { padding: 4px 7px; border: 1px solid var(--line2); color: var(--dim); }
+.bar nav { margin-left: auto; display: flex; gap: 4px; }
+.bar nav a { padding: 6px 10px; color: var(--dim); text-decoration: none; border: 1px solid transparent; transition: color var(--fast) var(--ease), border-color var(--fast) var(--ease); }
+.bar nav a:hover { color: var(--text); border-color: var(--line2); }
+.bar nav a:focus-visible { outline: 1px solid var(--ui-br); outline-offset: 2px; }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 48px; align-items: end; padding: 56px 0 40px; border-bottom: 1px solid var(--line); }
+.hero h1 { font-size: clamp(34px, 3.6vw, 56px); line-height: 1.02; color: var(--ui-br); }
+.hero .lede { margin-top: 16px; max-width: 66ch; font-size: 17px; color: var(--ui); }
+.hero dl { display: grid; grid-template-columns: auto auto; gap: 6px 18px; margin: 0; font: 400 13px/1.3 var(--f-text); color: var(--dim); }
+.hero dt { font: 500 12px/1.3 var(--f-num); color: var(--warm-br); text-align: right; }
+.hero dd { margin: 0; }
+
+/* ── sections ── */
+.sec { padding-top: 56px; }
+.sec-head { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px 16px; align-items: baseline; margin-bottom: 28px; }
+.sec-head .num { font: 500 13px/1 var(--f-num); color: var(--faint); }
+.sec-head h2 { font-size: 30px; color: var(--ui-br); }
+.sec-head p { grid-column: 2; max-width: 74ch; color: var(--dim); }
+.label { font: 600 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+
+/* the four hulls side by side, small */
+.lineup { display: grid; grid-template-columns: repeat(4, 360px); gap: 24px; margin: 0 0 48px 80px; }
+.lineup figure { margin: 0; }
+.lineup canvas { width: 360px; height: 216px; border: 1px solid var(--line); }
+.lineup figcaption { display: flex; gap: 10px; align-items: baseline; margin-top: 10px; }
+.lineup .k { font: 500 14px/1 var(--f-num); color: var(--warm-br); }
+.lineup .n { font: 600 15px/1 var(--f-ui); color: var(--text); }
+.lineup .s { font-size: 13px; color: var(--faint); }
+
+/* one hull */
+.hull { padding: 32px 0 36px; border-top: 1px solid var(--line); }
+.hull-head { display: grid; grid-template-columns: 64px minmax(0, 520px) minmax(0, 1fr); gap: 16px 16px; align-items: start; margin-bottom: 20px; }
+.hull-head .key { width: 48px; height: 48px; display: grid; place-items: center; border: 1px solid var(--mist); font: 500 22px/1 var(--f-num); color: var(--ui-br); }
+.hull.is-pick .hull-head .key { border-color: var(--warm); color: var(--warm-br); }
+.hull-head h3 { font-size: 26px; color: var(--ui-br); }
+.hull-head .line { margin-top: 4px; color: var(--ui); }
+.hull-head .says { color: var(--dim); padding-left: 20px; border-left: 1px solid var(--line2); max-width: 70ch; }
+.hull-head .says b { display: block; margin-bottom: 4px; font: 600 11px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+.pick-tag { display: inline-block; margin-left: 10px; padding: 3px 7px; border: 1px solid var(--warm); font: 600 10.5px/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--warm-br); vertical-align: 5px; }
+.shots { display: grid; grid-template-columns: repeat(3, 576px); gap: 16px; }
+.shots figure { margin: 0; }
+.shots canvas { width: 576px; height: 288px; }
+.shots figcaption { margin-top: 8px; }
+
+/* inside */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin: 0 0 24px 80px; }
+.seg { display: inline-flex; border: 1px solid var(--line2); }
+.seg button { padding: 8px 14px; border: 0; border-right: 1px solid var(--line2); background: none; cursor: pointer; font: 500 13px/1 var(--f-ui); letter-spacing: 0.04em; color: var(--dim); transition: color var(--fast) var(--ease), background var(--fast) var(--ease); }
+.seg button:last-child { border-right: 0; }
+.seg button:hover { color: var(--text); background: var(--deep); }
+.seg button[aria-pressed="true"] { color: var(--void); background: var(--ui); }
+.seg button:focus-visible { outline: 1px solid var(--ui-br); outline-offset: 2px; }
+.seg button span { font-family: var(--f-num); margin-right: 6px; }
+.controls .note { font-size: 13px; color: var(--faint); }
+.sizes { display: flex; flex-wrap: wrap; gap: 28px; align-items: end; margin: 0 0 36px 80px; }
+.sizes figure { margin: 0; }
+.sizes figcaption { margin-top: 8px; }
+.sizes .k { color: var(--text); font: 600 13px/1 var(--f-ui); letter-spacing: 0.06em; }
+.sizes .d { margin-left: 8px; font: 400 12px/1 var(--f-num); color: var(--faint); }
+.crew-opts { display: grid; grid-template-columns: repeat(auto-fill, 570px); gap: 25px; }
+.opt { border-top: 1px solid var(--mist); padding-top: 14px; }
+.opt.is-pick { border-top-color: var(--warm); }
+.opt h3 { font-size: 20px; line-height: 28px; height: 28px; white-space: nowrap; color: var(--ui-br); }
+.opt h3 .pick-tag { vertical-align: 3px; }
+.opt h3 .num { font: 500 13px/1 var(--f-num); color: var(--faint); margin-right: 8px; vertical-align: 2px; }
+.opt h3 .dim { font: 400 13px/1 var(--f-num); color: var(--faint); margin-left: 8px; }
+.opt .line { margin: 4px 0 16px; color: var(--dim); font-size: 14px; line-height: 22px; min-height: 44px; }
+.opt-body { display: flex; gap: 14px; align-items: start; }
+.opt-body .cut { width: 280px; height: 760px; }
+.grid-wrap { display: grid; grid-template-columns: 36px 240px; }
+.grid-cols { grid-column: 2; display: grid; grid-template-columns: repeat(5, 48px); margin-bottom: 6px; }
+.grid-cols span, .grid-rows span { font: 600 10.5px/1 var(--f-ui); letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); text-align: center; }
+.grid-rows { display: grid; grid-template-rows: repeat(5, 72px); }
+.grid-rows span { display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; text-transform: none; letter-spacing: 0.02em; font-size: 12.5px; color: var(--dim); }
+.grid-wrap canvas { width: 240px; height: 360px; }
+.legend { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin: 36px 0 0; max-width: 1760px; }
+.legend div { border-top: 1px solid var(--line2); padding-top: 10px; }
+.legend .who { display: flex; align-items: center; gap: 8px; font: 600 15px/1 var(--f-ui); color: var(--text); }
+.legend .sw { width: 10px; height: 10px; }
+.legend .role { font: 400 12px/1 var(--f-num); color: var(--faint); margin-left: auto; }
+.legend p { margin-top: 6px; font-size: 13px; color: var(--dim); }
+
+/* pick */
+.pick { display: grid; grid-template-columns: repeat(2, minmax(0, 600px)); gap: 24px; margin-left: 80px; }
+.pick article { border: 1px solid var(--line2); padding: 20px 22px 22px; background: var(--deep); }
+.pick h3 { font-size: 22px; color: var(--warm-br); }
+.pick ul { margin: 12px 0 0; padding-left: 18px; color: var(--ui); }
+.pick li { margin: 4px 0; }
+.pick li::marker { color: var(--faint); }
+.pick .hours { margin-top: 14px; font: 400 13px/1.4 var(--f-num); color: var(--dim); }
+.foot { margin: 40px 0 0 80px; color: var(--faint); font-size: 13px; }
+
+/* narrower windows: stack, and let the pictures shrink (they stop being whole pixels below this) */
+@media (max-width: 1854px) {
+    .shots { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .shots canvas { width: 100%; height: auto; aspect-ratio: 2 / 1; }
+}
+@media (max-width: 1560px) {
+    .lineup { grid-template-columns: repeat(2, 360px); }
+}
+@media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .sec-head, .hull-head { grid-template-columns: 1fr; }
+    .sec-head p { grid-column: 1; }
+    .hull-head .says { padding-left: 0; border-left: 0; }
+    .lineup, .shots, .controls, .sizes, .crew-opts, .legend, .pick, .foot { margin-left: 0; }
+    .lineup { grid-template-columns: minmax(0, 1fr); }
+    .lineup canvas { width: 100%; height: auto; aspect-ratio: 5 / 3; }
+    .shots { grid-template-columns: minmax(0, 1fr); }
+    .crew-opts { grid-template-columns: minmax(0, 1fr); }
+    .opt-body { flex-wrap: wrap; }
+    .legend { grid-template-columns: minmax(0, 1fr); }
+    .pick { grid-template-columns: minmax(0, 1fr); }
+    .bar nav { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+    <div class="bar"><span class="tag">Mockup</span><span>Silent Exodus · ship study · 7 Oct</span>
+        <nav aria-label="Sections"><a href="#outside">Outside</a><a href="#inside">Inside</a><a href="#pick">My pick</a></nav>
+    </div>
+
+    <header class="hero">
+        <div>
+            <h1>What EXODUS-9 looks like</h1>
+            <p class="lede">Every wreck on every planet is our own hull, so the ship's shape shows up all over the game. Here is today's ship and three new ones, each close up, in space and crashed. Below that, three ways to draw the crew walking around inside. Nothing in the game has been changed.</p>
+        </div>
+        <dl>
+            <dt>4</dt><dd>hulls: today's and three new</dd>
+            <dt>3</dt><dd>ways to draw the crew</dd>
+            <dt>0</dt><dd>game files changed</dd>
+        </dl>
+    </header>
+
+    <section class="sec" id="outside" aria-labelledby="outside-h">
+        <div class="sec-head"><span class="num">01</span><h2 id="outside-h">Outside: four hulls</h2>
+            <p>A small long-haul ship for five, built in a hurry, one of many. Each option says some of that. First, all four at the size the map and the orbit screen show them.</p></div>
+        <div class="lineup" id="lineup"></div>
+        <div id="hulls"></div>
+    </section>
+
+    <section class="sec" id="inside" aria-labelledby="inside-h">
+        <div class="sec-head"><span class="num">02</span><h2 id="inside-h">Inside: the crew, walking</h2>
+            <p>The same cutaway as the ship panel, at the panel's real size (two screen pixels per art pixel), now with a ladder and a door on every deck. The five of them work, walk, climb between decks and sit down. Each option is drawn from the same few measurements, so the five stay different by build, hair and posture.</p></div>
+        <div class="sizes" id="sizes"></div>
+        <div class="controls">
+            <span class="label">Hull</span>
+            <div class="seg" id="hull-pick" role="group" aria-label="Which hull the cutaway uses"></div>
+            <span class="note">The cutaway follows the hull you pick here.</span>
+        </div>
+        <div class="crew-opts" id="crew-opts"></div>
+        <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="sec" id="pick" aria-labelledby="pick-h">
+        <div class="sec-head"><span class="num">03</span><h2 id="pick-h">My pick</h2>
+            <p>What each option would change in the game, and rough hours, are in <a href="../../docs/SHIP_STUDY.md">docs/SHIP_STUDY.md</a>.</p></div>
+        <div class="pick">
+            <article>
+                <h3>Hull B, the Lander</h3>
+                <ul>
+                    <li>It says what the ship is for: land once and become the first house.</li>
+                    <li>The wrecks get a new, simple picture: hulls still standing where they came down.</li>
+                    <li>The cutaway is already a tower with the nose up. The Lander makes that true.</li>
+                    <li>It is one long body, like today's hull, so every place that draws the hull keeps working.</li>
+                </ul>
+                <p class="hours">about 16 hours, wrecks and minigames included</p>
+            </article>
+            <article>
+                <h3>Crew option 2, Tall</h3>
+                <ul>
+                    <li>Big enough to tell all five apart from across the panel.</li>
+                    <li>Six-frame walk, and room for coats, hair and a tool in hand.</li>
+                    <li>Lamplit (3) is the moodiest, but the five blur together in dark rooms.</li>
+                </ul>
+                <p class="hours">about 10 hours in ShipCutaway, plus about 4 for the minigames</p>
+            </article>
+        </div>
+        <p class="foot">No sound on this page. The pictures move at eight frames a second, like the scene cards.</p>
+    </section>
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 1. The picture recipe from src/systems/SceneArt.js: 8×8 Bayer dither between colour ramps that all start
+    //    at the same ink, seeded value noise and fbm, one light. Painted once; a few small things move on top.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    const INK = '#05070a', TICK_MS = 125, PW = 288, PH = 144;
+    const BAYER8 = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
+        3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21].map(v => (v + 0.5) / 64);
+    const threshold = (x, y) => BAYER8[((y & 7) << 3) | (x & 7)];
+    const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
+    const smooth = (a, b, v) => { const k = clamp01((v - a) / (b - a)); return k * k * (3 - 2 * k); };
+    function seeded(seed) { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+    const PERM = (() => { const r = seeded(1337), p = Array.from({ length: 256 }, (_, i) => i); for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; } return Uint8Array.from(p); })();
+    const hash = (x, y, s = 0) => PERM[(PERM[(PERM[x & 255] + y) & 255] + s) & 255] / 255;
+    function vnoise(x, y, s = 0) {
+        const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+        const a = hash(xi, yi, s), b = hash(xi + 1, yi, s), c = hash(xi, yi + 1, s), d = hash(xi + 1, yi + 1, s);
+        return (a * (1 - u) + b * u) * (1 - v) + (c * (1 - u) + d * u) * v;
+    }
+    function fbm(x, y, s = 0, oct = 4) { let sum = 0, amp = 0.5, f = 1, n = 0; for (let i = 0; i < oct; i++) { sum += amp * vnoise(x * f, y * f, s + i * 17); n += amp; f *= 2.03; amp *= 0.5; } return sum / n; }
+    const hexRgb = h => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+    const rgbHex = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+    const shade = (hex, k) => rgbHex(hexRgb(hex).map(v => v * k));
+    const mix = (a, b, t) => { const x = hexRgb(a), y = hexRgb(b); return rgbHex(x.map((v, i) => v + (y[i] - v) * t)); };
+    const ramp = (...hex) => ({ hex, rgb: hex.map(hexRgb) });
+    function level(r, v, x, y) { const top = r.hex.length - 1, pos = clamp01(v) * top, lo = Math.floor(pos); return Math.min(top, lo + (pos - lo > threshold(x, y) ? 1 : 0)); }
+
+    // "Deep field": teal-black space, rust-gold dust, ice instruments; amber only for people; the false sun warmest.
+    const R = {
+        STAR: ramp(INK, '#1b272c', '#4c5f66', '#b3c2c0', '#f6f1e4'),
+        HAZE: ramp(INK, '#0a1317', '#0f222a', '#152f38', '#1f3a43'),
+        DUST: ramp(INK, '#160f0b', '#2c1a10', '#4e2f1a', '#7c4a26', '#b0733c'),
+        SUN: ramp(INK, '#1f140b', '#4a2e12', '#9a5a26', '#e9a25e', '#f7c483', '#fff3dc'),
+        HULL: ramp(INK, '#121c22', '#22333b', '#3d5560', '#8aa2aa', '#e6eef0'),
+        RUST: ramp(INK, '#1e0f0d', '#4a2320', '#7a3a2e', '#a8604a', '#d6a882'),
+        RED: ramp(INK, '#3a1210', '#8a2a22', '#e2574c', '#ffd2c8'),
+        AMBER: ramp(INK, '#3a2410', '#8a5422', '#e8964a', '#f7c483', '#fff3dc'),
+        UI: ramp(INK, '#13232a', '#284650', '#3d6670', '#9fd8e6', '#e1f6fb'),
+        DUSK: ramp(INK, '#0d1016', '#1c1f26', '#3a3632', '#6e5c46', '#a88a60'),
+        GROUND: ramp(INK, '#0e0f10', '#1d1d1c', '#34312c', '#56504a', '#7a7064'),
+        MOON: ramp(INK, '#141a20', '#2c363f', '#58666f', '#9aa8ae', '#dde6e8'),
+    };
+
+    /** A pixel buffer painted once. An opaque one starts as ink; a clear one starts empty. over() never paints the darkest step. */
+    function painter(W, H, isOpaque = true) {
+        const data = new Uint8ClampedArray(W * H * 4), ink = hexRgb(INK);
+        if (isOpaque) for (let i = 0; i < W * H; i++) { data[i * 4] = ink[0]; data[i * 4 + 1] = ink[1]; data[i * 4 + 2] = ink[2]; data[i * 4 + 3] = 255; }
+        const set = (x, y, rgb) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return; const o = (y * W + x) * 4; data[o] = rgb[0]; data[o + 1] = rgb[1]; data[o + 2] = rgb[2]; data[o + 3] = 255; };
+        const clear = (x, y) => { x = Math.floor(x); y = Math.floor(y); if (x >= 0 && y >= 0 && x < W && y < H) data[(y * W + x) * 4 + 3] = 0; };
+        const get = (x, y) => { const o = (y * W + x) * 4; return [data[o], data[o + 1], data[o + 2]]; };
+        const tone = (x, y, r, v) => set(x, y, r.rgb[level(r, v, Math.floor(x), Math.floor(y))]);
+        const over = (x, y, r, v) => { const k = level(r, v, Math.floor(x), Math.floor(y)); if (k > 0) set(x, y, r.rgb[k]); };
+        const cover = (x, y, r, v, a) => { if (a > threshold(Math.floor(x) + 3, Math.floor(y) + 5)) tone(x, y, r, v); };
+        const region = (x0, y0, x1, y1, fn) => { for (let y = Math.max(0, Math.floor(y0)); y < Math.min(H, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(W, Math.ceil(x1)); x++) fn(x, y); };
+        const ellipse = (cx, cy, rx, ry, fn) => region(cx - rx - 1, cy - ry - 1, cx + rx + 1, cy + ry + 1, (x, y) => { const q = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2; if (q < 1) fn(x, y, q); });
+        const line = (x0, y0, x1, y1, fn) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let k = 0; k <= n; k++) fn(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), k / n); };
+        const canvas = () => { const c = document.createElement('canvas'); c.width = W; c.height = H; c.getContext('2d').putImageData(new ImageData(data, W, H), 0, 0); return c; };
+        return { W, H, data, set, clear, get, tone, over, cover, region, ellipse, line, canvas };
+    }
+
+    /** The moving layer: a few rectangles a frame, straight onto the canvas. */
+    function framer(ctx, W, H) {
+        let cur = '';
+        const px = (x, y, hex, w = 1, h = 1) => { const xi = Math.round(x), yi = Math.round(y); if (xi + w <= 0 || yi + h <= 0 || xi >= W || yi >= H) return; if (hex !== cur) { ctx.fillStyle = hex; cur = hex; } ctx.fillRect(xi, yi, w, h); };
+        const tone = (x, y, r, v, w = 1, h = 1) => { const xi = Math.round(x), yi = Math.round(y), k = level(r, v, xi, yi); if (k > 0) px(xi, yi, r.hex[k], w, h); };
+        const glow = (cx, cy, rad, r, peak) => { for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) { const d = Math.hypot(x, y) / rad; if (d < 1) tone(cx + x, cy + y, r, peak * (1 - d) ** 1.5); } };
+        return { px, tone, glow };
+    }
+
+    // ── shared pieces of sky and ground ──
+    function scatterStars(p, seed, count, where) {
+        const rand = seeded(seed), list = [];
+        for (let i = 0; i < count; i++) {
+            const x = Math.floor(rand() * p.W), y = Math.floor(rand() * p.H), mag = rand();
+            if (where && !where(x, y)) continue;
+            if (mag > 0.978) { p.set(x, y, R.STAR.rgb[4]); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => p.set(x + dx, y + dy, R.STAR.rgb[2])); }
+            else if (mag > 0.87) p.set(x, y, R.STAR.rgb[3]);
+            else p.set(x, y, R.STAR.rgb[mag > 0.55 ? 2 : 1]);
+            list.push({ x, y, mag });
+        }
+        return list;
+    }
+    /** Only the bright stars nothing was painted over can twinkle later. */
+    function keepVisible(p, list) {
+        return list.filter(s => { if (s.mag < 0.87) return false; const c = p.get(s.x, s.y); return R.STAR.rgb.slice(3).some(k => k[0] === c[0] && k[1] === c[1] && k[2] === c[2]); });
+    }
+    function twinkle(f, list, t) {
+        const step = Math.floor(t / 375);
+        list.forEach((s, i) => { if (hash(i, step, 5) < 0.88) return; f.px(s.x - 1, s.y, R.STAR.hex[3], 3, 1); f.px(s.x, s.y - 1, R.STAR.hex[3], 1, 3); f.px(s.x, s.y, R.STAR.hex[4]); });
+    }
+    function dust(f, t, count, box, r, seed, speed) {
+        const [x0, y0, x1, y1] = box;
+        for (let i = 0; i < count; i++) {
+            const v = speed * (0.5 + hash(i, 1, seed)), x = x0 + ((hash(i, 2, seed) * (x1 - x0) + t / 1000 * v) % (x1 - x0));
+            f.tone(x, y0 + hash(i, 3, seed) * (y1 - y0) + Math.sin(t / 1300 + i) * 2, r, 0.45 + hash(i, 4, seed) * 0.4, hash(i, 5, seed) > 0.5 ? 2 : 1, 1);
+        }
+    }
+    /** Space: a thin teal haze, and rust-gold dust that only shows where the false sun reaches it. */
+    function spaceAndDust(p, seed, lx, ly, reach, dustAmount) {
+        p.region(0, 0, p.W, p.H, (x, y) => {
+            const lit = Math.exp(-Math.hypot(x - lx, (y - ly) * 1.15) / reach), d = Math.max(0, fbm(x / 40, y / 22, seed + 7, 4) - 0.5) * 3.4 * dustAmount * 2.8 * lit;
+            if (d > 0.12) { p.tone(x, y, R.DUST, d); return; }
+            const h = Math.max(0, fbm(x / 60, y / 34, seed, 4) - 0.48) * 1.2;
+            if (h > 0.03) p.over(x, y, R.HAZE, h);
+        });
+    }
+    /** The false sun: a white-gold core, a dithered halo, a thin horizontal streak. */
+    function sunGlow(p, lx, ly, o) {
+        const reach = o.halo * 3.2 + o.core + 8;
+        p.region(lx - reach, ly - reach, lx + reach, ly + reach, (x, y) => {
+            const dx = x + 0.5 - lx, dy = (y + 0.5 - ly) * 1.06, d = Math.hypot(dx, dy);
+            if (d < o.core) { p.tone(x, y, R.SUN, 1.02 - 0.3 * (d / o.core) ** 3); return; }
+            let v = o.strength * (1.15 * Math.exp(-(d - o.core) / (o.core * 0.5 + 1.4)) + 0.7 * Math.exp(-d / (o.halo * 0.32 + 1)) + 0.34 * Math.exp(-d / (o.halo * 1.1 + 1)));
+            if (Math.abs(dy) < 0.6) v += 0.34 * o.strength * Math.exp(-Math.abs(dx) / (o.halo * 0.9 + 8));
+            if (o.spikes && (Math.abs(dx) < 0.6 || Math.abs(dy) < 0.6)) v += 0.7 * Math.exp(-d / o.spikes);
+            p.over(x, y, R.SUN, v * (1 - smooth(reach * 0.55, reach, d)));
+        });
+    }
+    /** Dusk on a dead world, as on the wreck card the designer likes: warm low glow, hills, cold ground. */
+    function duskLand(p, horizon, glowAt, seed) {
+        p.region(0, 0, p.W, horizon, (x, y) => p.tone(x, y, R.DUSK, 0.05 + 0.72 * Math.pow(y / horizon, 2.4) + 0.3 * Math.exp(-Math.hypot(x - glowAt, (y - horizon) * 3) / 56)));
+        const stars = scatterStars(p, seed, 190, (x, y) => y < horizon * 0.5);
+        p.region(0, horizon - 14, p.W, horizon + 1, (x, y) => { if (y > horizon - 3 - 11 * fbm(x / 36, 0, seed, 3) * smooth(0, 40, Math.abs(x - glowAt))) p.tone(x, y, R.DUSK, 0.16); });
+        p.region(0, horizon, p.W, p.H, (x, y) => p.tone(x, y, R.GROUND, 0.12 + 0.36 * Math.exp(-(y - horizon) / 10) + (fbm(x / 5, y / 2.5, seed + 1, 3) - 0.5) * 0.24));
+        p.ellipse(242, 24, 9, 9, (x, y) => { const nx = (x + 0.5 - 242) / 9, ny = (y + 0.5 - 24) / 9; p.tone(x, y, R.MOON, clamp01(-nx * 0.8 + ny * 0.3 + 0.2) * 1.1); });
+        return stars;
+    }
+    const mound = (p, cx, cy, rx, ry, seed) => p.ellipse(cx, cy, rx, ry, (x, y) => p.tone(x, y, R.GROUND, 0.42 - (y - (cy - ry)) / (ry * 3.4) + (fbm(x / 4, y / 2.5, seed, 2) - 0.5) * 0.3));
+    const beam = (p, x0, y0, x1, y1, r, v, w = 1) => p.line(x0, y0, x1, y1, (x, y) => p.region(x, y, x + w, y + 1, (a, b) => p.tone(a, b, r, a === x ? v : v * 0.6)));
+
+    // a 3 × 5 font for hull numbers (SceneArt's)
+    const GLYPHS = { 0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001', 5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111',
+        E: '111100111100111', X: '101101010101101', O: '111101101101111', D: '110101101101110', U: '101101101101111', S: '111100111001111', '-': '000000111000000', ' ': '000000000000000' };
+    function stencil(p, str, cx, y, r = R.HULL, v = 0.2) {
+        const x0 = Math.round(cx - (str.length * 4 - 1) / 2);
+        [...str].forEach((ch, i) => { const g = GLYPHS[ch] || GLYPHS[' ']; for (let k = 0; k < 15; k++) if (g[k] === '1') p.tone(x0 + i * 4 + (k % 3), Math.round(y) + Math.floor(k / 3), r, v); });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 2. The hulls, side on. A shape answers one question: at u along the ship (0 = nose, 1 = tail) and v across
+    //    it (in hull heights, negative = the top, which faces the light), how bright is the hull, or is it empty (-1)?
+    //    hull() turns that into pixels, with SceneArt's breaks, rust, holes and a warm rim where the false sun hits.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    function hull(p, o, shape) {
+        const c = Math.cos(o.angle || 0), s = Math.sin(o.angle || 0), dir = o.flip ? -1 : 1, seed = o.seed || 1;
+        const from = o.from || 0, to = o.to == null ? 1 : o.to, anchor = o.anchor == null ? (from + to) / 2 : o.anchor, dim = o.light == null ? 1 : o.light;
+        const at = (u, v) => { const a = (u - anchor) * o.len * dir, b = v * o.ht; return [o.x + a * c - b * s, o.y + a * s + b * c]; };
+        const uvOf = (x, y) => { const dx = x + 0.5 - o.x, dy = y + 0.5 - o.y; return [anchor + (dx * c + dy * s) * dir / o.len, (-dx * s + dy * c) / o.ht]; };
+        const reach = o.len * Math.max(anchor - from, to - anchor) + o.ht * (shape.span || 0.8) + 3;
+        const [sx, sy] = o.sunDir ? [o.sunDir[0] * 1.5, o.sunDir[1] * 1.5] : [0, 0];
+        p.region(o.x - reach, o.y - reach, o.x + reach, o.y + reach, (x, y) => {
+            const [u, v] = uvOf(x, y), jag = (vnoise(v * 6, u * 4, seed) - 0.5) * 0.07;
+            if ((from > 0 && u < from + jag) || (to < 1 && u > to + jag)) return;
+            let light = shape(u, v, o);
+            if (light < 0) return;
+            const pu = u * o.len, pv = v * o.ht;
+            if (o.rust) light -= (fbm(pu / 9, pv / 6, seed, 3) - 0.45) * 0.5;
+            if (o.holes && fbm(pu / 16, pv / 10, seed + 3, 3) > o.holes) light = pu % 6 < 1.2 ? 0.3 : 0.05;     // torn open: the frame shows
+            if ((from > 0 && u < from + jag + 0.02) || (to < 1 && u > to + jag - 0.02)) light *= 0.45;         // a scorched break
+            if (o.fade) light *= 1 - o.fade * clamp01(u);                                                      // lit from ahead: the tail is in shadow
+            if (o.sun) { const [u2, v2] = uvOf(x + sx, y + sy); if (shape(u2, v2, o) < 0 && threshold(x, y) < o.sun) { p.tone(x, y, R.SUN, 0.5 + 0.35 * o.sun); return; } }
+            p.tone(x, y, o.ramp || R.HULL, light * dim);
+        });
+        return at;
+    }
+    /** A round body lit from above: bright rim along the top, dark underneath. */
+    const cyl = (v, top, bottom, ht) => 0.7 - 0.42 * ((v - (top + bottom) / 2) / ((bottom - top) / 2)) + ((v - top) * ht < 1.4 ? 0.22 : 0);
+
+    // A · today's hull (SceneArt.drawHull): round nose, raised bridge, engine block, fins.
+    function edgesA(u) {
+        if (u < 0 || u > 1) return null;
+        const nose = u < 0.12 ? Math.sqrt(u / 0.12) : 1;
+        let top = -0.5 * (0.35 + 0.65 * nose), bottom = 0.5 * (0.35 + 0.65 * nose);
+        if (u > 0.14 && u < 0.36) top -= 0.2 * Math.min(1, (u - 0.14) / 0.04, (0.36 - u) / 0.05);
+        if (u > 0.74 && u < 0.8) { top += 0.08; bottom -= 0.08; }
+        if (u >= 0.8) { top -= 0.06; bottom += 0.06; }
+        if (u > 0.86) { const fin = (u - 0.86) / 0.14; top -= 0.3 * fin; bottom += 0.3 * fin; }
+        return [top, bottom];
+    }
+    function shapeA(u, v, o) {
+        const e = edgesA(u);
+        if (!e || v < e[0] || v > e[1]) return -1;
+        const mid = (e[0] + e[1]) / 2, half = (e[1] - e[0]) / 2, pu = u * o.len, big = o.len > 30;
+        let l = cyl(v, e[0], e[1], o.ht);
+        if (u > 0.8) l -= 0.14;
+        if (big && (pu % 15 < 1 || Math.abs((v - mid) * o.ht - half * o.ht * 0.35) < 0.5)) l -= 0.2;
+        if (big && u > 0.17 && u < 0.33 && (v - e[0]) * o.ht > 2 && (v - e[0]) * o.ht < 4.5 && pu % 5 > 1.5) l = 0.12;
+        if (u > 0.985) l = 0.18;
+        return l;
+    }
+    shapeA.span = 0.8;
+
+    // B · the Lander: a bullet that flies nose first and lands on its tail. Legs folded along the skirt, one bell.
+    const B_DECKS = [0.2, 0.33, 0.46, 0.59, 0.72, 0.8];
+    function radiusB(u) {
+        if (u < 0 || u > 1) return -1;
+        if (u < 0.2) return 0.5 * (0.1 + 0.9 * Math.pow(u / 0.2, 0.55));
+        if (u < 0.8) return 0.5;
+        if (u < 0.87) return 0.5 + 0.08 * (u - 0.8) / 0.07;
+        if (u < 0.94) return 0.58;
+        return 0.2 + 0.2 * (u - 0.94) / 0.06;
+    }
+    function shapeB(u, v, o) {
+        const r = radiusB(u);
+        if (r < 0) return -1;
+        const av = Math.abs(v), pu = u * o.len, pv = v * o.ht, big = o.len > 40;
+        if (av > r) {                                                                      // the landing legs, folded flat
+            if (!big || u < 0.52 || u > 0.945) return -1;
+            const d = av * o.ht - 0.5 * o.ht, c = 1.2 + 4.2 * (u - 0.52) / 0.36;               // the strut slants out from its hinge to the pad
+            if (u < 0.88 && Math.abs(d - c) < 0.9) return v < 0 ? 0.64 : 0.3;
+            if (u < 0.555 && d > 0 && d < 3.2) return v < 0 ? 0.5 : 0.24;
+            if (u >= 0.875 && u < 0.945 && d > c - 1.5 && d < c + 2) return v < 0 ? (d > c + 1 ? 0.78 : 0.5) : 0.22;
+            return -1;
+        }
+        if (u >= 0.94) return 0.2 + 0.32 * (1 - (v + r) / (2 * r));
+        let l = cyl(v, -r, r, o.ht) - (u > 0.8 ? 0.12 : 0);
+        if (!big) return l;
+        if (B_DECKS.some(k => Math.abs(pu - k * o.len) < 0.6)) l -= 0.18;                  // a seam at every deck
+        if (u > 0.8 && pu % 4 < 1) l -= 0.1;                                               // ribs on the skirt
+        if (u > 0.2 && u < 0.8 && Math.abs(pv + 0.22 * o.ht) < 0.5) l -= 0.12;
+        if (u > 0.156 && u < 0.18 && [-0.3, -0.05, 0.2].some(k => Math.abs(v - k) * o.ht < 1.3)) return 0.1;   // a ring of windows round the bridge
+        if ([0.4, 0.53].some(k => Math.hypot((u - k) * o.len, pv + 0.32 * o.ht) < 1.6)) return 0.12;           // a porthole per deck
+        if (u > 0.61 && u < 0.67 && v > -0.08 && v < 0.3) {                                // the hatch, with the ramp folded into it
+            const edge = Math.min((u - 0.61) * o.len, (0.67 - u) * o.len, (v + 0.08) * o.ht, (0.3 - v) * o.ht);
+            if (o.hatchOpen) return edge < 1 ? 0.55 : 0.04;
+            if (edge < 1) return l - 0.24;
+        }
+        return l;
+    }
+    shapeB.span = 0.8;
+
+    // C · the Shield ship: a dish taller than the ship takes the dust; five live in a small drum behind it;
+    //     a long spine with tanks and radiators keeps the reactor and the drive far from them.
+    const C_SHIELD = 1.3;
+    function shapeC(u, v, o) {
+        if (u < -0.01 || u > 1) return -1;
+        const av = Math.abs(v), pu = u * o.len, pv = v * o.ht, big = o.len > 40;
+        if (av < C_SHIELD) {
+            const q = av / C_SHIELD, face = 0.03 * q * q, back = face + Math.max(1.6 / o.len, 0.012 + 0.022 * (1 - q * q));
+            if (u >= face && u < back) {
+                if ((u - face) * o.len < 1.3) return 0.84 - 0.3 * q - (big && fbm(pv / 2.5, 3, (o.seed || 1) + 9, 2) > 0.6 ? 0.3 : 0);   // the face, pitted by dust
+                return 0.42 - 0.22 * v / C_SHIELD;
+            }
+        }
+        if (u >= 0.035 && u < 0.1) return av < 0.16 ? cyl(v, -0.16, 0.16, o.ht) - 0.12 : -1;
+        if (u >= 0.1 && u < 0.37) {                                                        // the drum: five decks
+            const end = Math.min(u - 0.1, 0.37 - u) * o.len, r = end < 3 ? 0.5 - (3 - end) * 0.045 : 0.5;
+            if (av > r) return -1;
+            let l = cyl(v, -r, r, o.ht);
+            if (big && [0.154, 0.208, 0.262, 0.316].some(k => Math.abs(u - k) * o.len < 0.6)) l -= 0.18;
+            if (big && u > 0.112 && u < 0.135 && [-0.28, 0, 0.26].some(k => Math.abs(v - k) * o.ht < 1.2)) return 0.1;
+            return l;
+        }
+        if (u >= 0.37 && u < 0.87) {                                                       // the spine
+            for (const tu of [0.44, 0.52]) {
+                const tr = 0.27 * o.ht, d = Math.hypot((u - tu) * o.len, pv) / tr;
+                if (d < 1) return 0.74 - 0.46 * (pv / tr * 0.5 + 0.5) - (big && Math.abs(pv) < 0.5 ? 0.15 : 0);
+            }
+            if (u > 0.6 && u < 0.84) { const reach = Math.min(0.95, 0.16 + (u - 0.6) * 3.3); if (av > 0.15 && av < reach) return big ? (pu % 3 < 1 ? 0.32 : 0.15) : 0.22; }
+            if (Math.abs(av - 0.12) * o.ht < 0.6 || (o.ht < 10 && av < 0.15)) return v < 0 ? 0.62 : 0.34;
+            if (av < 0.12) { const k = (pu % 8) / 8, zig = (k < 0.5 ? k * 2 : 2 - k * 2) * 0.24 - 0.12; if (Math.abs(v - zig) * o.ht < 0.6) return 0.42; }
+            return -1;
+        }
+        if (u < 0.95) { if (av > 0.3) return -1; return cyl(v, -0.3, 0.3, o.ht) - 0.15 - (big && pu % 3 < 1 ? 0.1 : 0); }
+        const r = 0.16 + 0.18 * (u - 0.95) / 0.05;
+        return av < r ? 0.22 + 0.3 * (1 - (v + r) / (2 * r)) : -1;
+    }
+    shapeC.span = 1.35;
+
+    // D · the Kit ship: five boxes off a factory line, bolted to a frame. Panels that don't match, lifting lugs left on.
+    const D_MODS = [0, 1, 2, 3, 4].map(k => [0.08 + k * 0.15, 0.215 + k * 0.15]);
+    function shapeD(u, v, o) {
+        if (u < 0 || u > 1) return -1;
+        const av = Math.abs(v), pu = u * o.len, pv = v * o.ht, big = o.len > 40, H2 = 0.46;
+        if (u < 0.07) { const r = 0.2 + 0.24 * u / 0.07; return av <= r ? cyl(v, -r, r, o.ht) - 0.06 : -1; }
+        for (let k = 0; k < 5; k++) {
+            const [a, b] = D_MODS[k];
+            if (u < a || u >= b) continue;
+            const lx = (u - a) * o.len, ml = (b - a) * o.len;
+            if (big && v < -H2 && v > -H2 - 2.2 / o.ht && ((lx > 3 && lx < 5.5) || (lx > ml - 5.5 && lx < ml - 3))) return 0.7;   // lifting lugs, never taken off
+            if (av > H2) break;
+            const cu = Math.min(lx, ml - lx), cv = (H2 - av) * o.ht, rr = big ? 2.5 : 0.8;
+            if (cu < rr && cv < rr && Math.hypot(rr - cu, rr - cv) > rr) break;
+            let l = (v + H2) * o.ht < 1.6 ? 0.86 : (H2 - v) * o.ht < 1 ? 0.16 : 0.5 - 0.12 * v / H2;
+            if (!big) return l;
+            const plate = hash(k * 4 + (lx < ml / 2 ? 0 : 2) + (v < 0 ? 0 : 1), 11, o.seed || 1);
+            l += (plate - 0.5) * 0.2 + (plate > 0.86 ? 0.16 : 0);                              // the panels don't match: some are newer
+            if (Math.abs(lx - ml / 2) < 0.5 || Math.abs(pv) < 0.5) l -= 0.16;
+            if ((Math.abs(lx - ml / 2) < 1.6 && Math.abs(lx - ml / 2) > 0.6 && Math.round(pv) % 4 === 0) || (Math.abs(pv) < 1.6 && Math.abs(pv) > 0.6 && Math.round(lx) % 4 === 2)) l += 0.16;   // bolts
+            if (k === 0 && v > -0.32 && v < -0.14 && pu % 4 > 1.5) return 0.1;                   // the bridge's window slots
+            if (k > 0 && Math.hypot(lx - ml * 0.28, pv + 0.22 * o.ht) < 1.6) return 0.12;
+            return l;
+        }
+        if (u < 0.83 && av <= 0.24) return cyl(v, -0.24, 0.24, o.ht) - 0.18;
+        if (u >= 0.06 && u < 0.87) {                                                       // the frame: a rail above and below, tied to each box
+            if (Math.abs(av - 0.56) * o.ht < 0.6) return v < 0 ? 0.64 : 0.3;
+            if (big && av > H2 && av < 0.56 && D_MODS.some(([a, b]) => Math.abs(u - (a + b) / 2) * o.len < 0.6 || Math.abs(u - a - 0.012) * o.len < 0.6)) return 0.4;
+        }
+        if (u >= 0.83 && u < 0.93) { const tr = 0.3 * o.ht, d = Math.hypot((u - 0.875) * o.len, pv) / tr; if (d < 1) return 0.72 - 0.46 * (pv / tr * 0.5 + 0.5); if (av < 0.1) return 0.4; }
+        if (u >= 0.93) { const r = 0.14 + 0.16 * (u - 0.93) / 0.07; return av < r ? 0.22 + 0.3 * (1 - (v + r) / (2 * r)) : -1; }
+        return -1;
+    }
+    shapeD.span = 0.8;
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 3. The four options and their pictures: close up, in space at orbit size, and as a wreck at dusk.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    const OPTS = [
+        { key: 'A', name: 'Today', shape: shapeA, close: { len: 246, ht: 44 }, space: { len: 66, ht: 12 }, map: { len: 22, ht: 6 },
+            line: 'The ship we have. Round nose, raised bridge, fins.',
+            says: 'Not much. It reads as a small plane, while the cutaway is stacked like a tower. Nothing on it says long trip, hurry or one of many.',
+            win: o => (o.len > 30 ? [(Math.floor(0.25 * o.len / 5) * 5 + 3.2) / o.len, -0.7 + 3.2 / o.ht] : [0.27, -0.42]),
+            paint: (p, at) => { const [x, y] = at(0.62, 0.02); stencil(p, 'EXODUS-9', x, y); },
+            wreck: wreckA },
+        { key: 'B', name: 'Lander', shape: shapeB, close: { len: 250, ht: 48 }, space: { len: 64, ht: 14 }, map: { len: 22, ht: 7 },
+            line: 'Built to land once and stand on the new world as the first house.',
+            says: 'Small, long-haul, and made to settle. It flies nose first and lands on its tail, so the decks are floors of a tower. Every wreck is still standing where it came down, like a grave marker, and you can see others on the horizon.',
+            win: () => [0.168, -0.05],
+            paint: (p, at) => { const [x, y] = at(0.4, 0.04); stencil(p, 'EXODUS-9', x, y); },
+            wreck: wreckB },
+        { key: 'C', name: 'Shield ship', shape: shapeC, close: { len: 262, ht: 30 }, space: { len: 72, ht: 9 }, map: { len: 24, ht: 4 },
+            line: 'A small room for five behind a big dust shield, far from the engine.',
+            says: 'Long-haul: at this speed a grain of dust hits like a bullet, so the shield is the biggest part of the ship. The five of them live in a drum smaller than the tanks. The wreck is the shield standing in the ground like a coin.',
+            win: () => [0.124, 0],
+            paint: (p, at) => { const [x, y] = at(0.235, 0.12); stencil(p, 'EXODUS-9', x, y); },
+            wreck: wreckC },
+        { key: 'D', name: 'Kit ship', shape: shapeD, close: { len: 256, ht: 44 }, space: { len: 70, ht: 12 }, map: { len: 24, ht: 6 },
+            line: 'Five boxes from a factory line, bolted to a frame.',
+            says: 'Built in a hurry and one of many. The panels don\'t match, the lifting lugs were never cut off, and each box carries its factory number. The numbers run into the thousands, which is a quiet hint at how many ships Earth built.',
+            win: () => [0.14, -0.23],
+            paint: (p, at) => {
+                ['2207', '', '2210', '2208', '2214'].forEach((n, k) => { if (!n) return; const [a, b] = D_MODS[k], [x, y] = at((a + b) / 2, 0.08); stencil(p, n, x, y, R.HULL, 0.24); });
+                const [x, y] = at((D_MODS[1][0] + D_MODS[1][1]) / 2, 0.05); stencil(p, 'EXODUS-9', x, y);
+            },
+            wreck: wreckD },
+    ];
+    const PICK = 'B';
+
+    function closeUp(opt) {
+        return { W: PW, H: PH, build(p) {
+            const stars = scatterStars(p, 21, 300);
+            p.region(0, 0, PW, PH, (x, y) => { const h = Math.max(0, fbm(x / 60, y / 34, 22, 4) - 0.46) * 1.1; if (h > 0.03) p.over(x, y, R.HAZE, h); });
+            sunGlow(p, PW + 16, 26, { core: 5, halo: 22, strength: 0.55 });                         // the false sun, just out of frame
+            const o = Object.assign({ x: 148, y: 74, flip: true, seed: 9, sun: 0.55, sunDir: [1, -0.3], light: 0.88, fade: 0.34 }, opt.close);
+            const at = hull(p, o, opt.shape);
+            opt.paint(p, at, o);
+            return { stars: keepVisible(p, stars), win: at(...opt.win(o)).map(Math.round) };
+        }, frame(f, t, s) {
+            twinkle(f, s.stars, t);
+            const [x, y] = s.win, flick = hash(Math.floor(t / TICK_MS), 2, 9) > 0.08 ? 1 : 0.75;             // one lit window: people aboard
+            f.glow(x, y, 4, R.AMBER, 0.6 * flick); f.px(x, y, R.AMBER.hex[4]);
+        } };
+    }
+
+    function inSpace(opt) {
+        const LX = 266, LY = 44;
+        return { W: PW, H: PH, build(p) {
+            spaceAndDust(p, 33, LX, LY, 46, 0.55);
+            sunGlow(p, LX, LY, { core: 2, halo: 16, strength: 0.95, spikes: 5 });
+            const stars = scatterStars(p, 34, 360, (x, y) => Math.hypot(x - LX, y - LY) > 24);
+            const k = opt.space.ht / opt.space.len;                                          // two sister ships far off: the same hull, again
+            [[52, 30, 14, -0.35, false], [204, 118, 11, 0.4, true]].forEach(([x, y, len, a, flip], i) => hull(p, { x, y, len, ht: Math.max(2, len * k), angle: a, flip, light: 0.42, seed: i + 4 }, opt.shape));
+            const o = Object.assign({ x: 112, y: 84, flip: true, seed: 9, sun: 0.75, sunDir: [1, -0.3], fade: 0.25 }, opt.space);
+            const at = hull(p, o, opt.shape);
+            return { stars: keepVisible(p, stars), win: at(...opt.win(o)).map(Math.round), tail: at(1.01, 0).map(Math.round), len: o.len };
+        }, frame(f, t, s) {
+            twinkle(f, s.stars, t);
+            const step = Math.floor(t / TICK_MS), [tx, ty] = s.tail, flame = 4 + Math.floor(hash(step, 7, 2) * 4);   // the drive: a machine, so ice
+            for (let d = 0; d < flame; d++) f.tone(tx - d, ty, R.UI, 1 - d / flame, 1, 1);
+            f.px(tx, ty, R.UI.hex[5]);
+            f.px(s.win[0], s.win[1], R.AMBER.hex[4]);
+            dust(f, t, 9, [0, 0, PW, PH], R.DUST, 5, 3);
+        } };
+    }
+
+    function wreckPicture(opt) {
+        return { W: PW, H: PH, build(p) {
+            const stars = duskLand(p, 96, 64, 61), state = opt.wreck(p);
+            return Object.assign({ stars: keepVisible(p, stars) }, state);
+        }, frame(f, t, s) {
+            twinkle(f, s.stars, t);
+            const [x, y] = s.light;
+            if (t % 1500 < 380) { f.glow(x, y, 6, R.RED, 0.9); f.px(x - 1, y - 1, R.RED.hex[4], 2, 2); } else f.px(x, y, R.RED.hex[2]);
+            dust(f, t, 10, [0, 104, PW, 142], R.GROUND, 13, 6);
+        } };
+    }
+    const WRECK = { ramp: R.RUST, rust: true, seed: 3, light: 0.8 };
+    // A: broken in two, nose buried, the furrow behind it (the card in the game today)
+    function wreckA(p) {
+        p.region(196, 96, 288, 112, (x, y) => { if (Math.abs(y - (104 - (x - 196) * 0.08)) < 2.5 - (x - 196) * 0.02) p.tone(x, y, R.GROUND, 0.04); });
+        p.ellipse(110, 126, 92, 5, (x, y) => p.tone(x, y, R.GROUND, 0.03));
+        const o = Object.assign({}, WRECK, { x: 104, y: 110, len: 162, ht: 26, holes: 0.7 });
+        hull(p, Object.assign({}, o, { angle: -0.05, from: 0.55, anchor: 0.5 }), shapeA);
+        const at = hull(p, Object.assign({}, o, { angle: -0.08, to: 0.52, anchor: 0.5 }), shapeA);
+        mound(p, 32, 126, 34, 11, 3);
+        const [mx, my] = at(0.3, -0.72);
+        p.line(mx, my, mx + 2, my - 11, (x, y) => p.tone(x, y, R.HULL, 0.5));
+        return { light: [Math.round(mx + 2), Math.round(my - 12)] };
+    }
+    // B: it landed. Still standing, leaning, a leg buckled, the hatch open and the ramp down. Others on the horizon.
+    function wreckB(p) {
+        [[206, 97, 22, 0.06], [248, 96, 15, -0.36], [176, 97, 11, 0.14]].forEach(([x, y, len, lean], i) =>                // others, on the horizon
+            hull(p, { x, y, len, ht: len * 0.23, angle: -Math.PI / 2 + lean, flip: true, anchor: 1, light: 0.4 - i * 0.05, ramp: R.RUST, seed: i + 20 }, shapeB));
+        const o = Object.assign({}, WRECK, { x: 86, y: 121, len: 104, ht: 24, angle: -Math.PI / 2 + 0.16, flip: true, anchor: 1, holes: 0.74, seed: 5, hatchOpen: true });
+        const at = hull(p, o, shapeB);
+        const [lx, ly] = at(0.83, -0.62), [rx, ry] = at(0.83, 0.62);
+        beam(p, lx, ly, lx - 15, 122, R.RUST, 0.55, 2);                                       // one leg still planted
+        p.region(lx - 19, 122, lx - 10, 124, (x, y) => p.tone(x, y, R.RUST, 0.45));
+        beam(p, rx, ry, rx + 9, ry + 6, R.RUST, 0.45, 2); beam(p, rx + 9, ry + 6, rx + 13, 123, R.RUST, 0.38, 2);   // the other one buckled
+        const [hx, hy] = at(0.67, -0.55);
+        beam(p, hx, hy, hx - 24, 121, R.RUST, 0.62, 2);                                       // the ramp, still down
+        mound(p, 86, 126, 34, 8, 5);
+        const [nx, ny] = at(0, 0);
+        p.line(nx, ny, nx, ny - 4, (x, y) => p.tone(x, y, R.HULL, 0.55));
+        return { light: [Math.round(nx), Math.round(ny - 5)] };
+    }
+    // C: the shield stands in the ground like a coin; the drum lies behind it; the spine trails back along the furrow.
+    function wreckC(p) {
+        p.region(170, 100, 288, 118, (x, y) => { if (Math.abs(y - (108 - (x - 170) * 0.06)) < 2) p.tone(x, y, R.GROUND, 0.04); });
+        const o = Object.assign({}, WRECK, { len: 150, ht: 30, holes: 0.72 });
+        hull(p, Object.assign({}, o, { x: 252, y: 114, angle: 0.32, from: 0.64, to: 0.98, seed: 8 }), shapeC);
+        hull(p, Object.assign({}, o, { x: 204, y: 120, angle: -0.14, from: 0.4, to: 0.6, seed: 9 }), shapeC);
+        const at = hull(p, Object.assign({}, o, { x: 148, y: 114, angle: 0.08, from: 0.1, to: 0.37, seed: 7 }), shapeC);
+        const cx = 70, cy = 92, rx = 30, ry = 40, a = -0.22, ca = Math.cos(a), sa = Math.sin(a);
+        p.region(cx - 46, cy - 46, cx + 46, cy + 46, (x, y) => {
+            const dx = x + 0.5 - cx, dy = y + 0.5 - cy, ex = (dx * ca + dy * sa) / rx, ey = (-dx * sa + dy * ca) / ry, q = ex * ex + ey * ey;
+            if (q >= 1) return;
+            let v = 0.32 + 0.3 * (-ex * 0.7 - ey * 0.5) * 0.5 + (fbm(x / 3, y / 3, 41, 2) > 0.62 ? -0.18 : 0) - (fbm(x / 9, y / 9, 44, 3) - 0.5) * 0.4;
+            if (q > 0.86) v = ex < 0.2 ? 0.66 : 0.2;                                          // the rim
+            if (Math.abs(q - 0.3) < 0.04) v -= 0.12;                                         // a ring of plates
+            p.tone(x, y, R.RUST, v);
+        });
+        mound(p, 70, 132, 50, 9, 6);
+        mound(p, 214, 128, 10, 4, 7);
+        p.ellipse(186, 127, 7, 6, (x, y, q) => { if (y < 128) p.tone(x, y, R.RUST, 0.6 - (y - 121) * 0.05 - q * 0.2); });   // a tank, half in the ground
+        const [bx, by] = at(0.2, -0.5);
+        p.line(bx, by, bx, by - 8, (x, y) => p.tone(x, y, R.HULL, 0.5));
+        return { light: [Math.round(bx), Math.round(by - 9)] };
+    }
+    // D: the boxes came apart and lie along the furrow like dropped crates; one stands on its end.
+    function wreckD(p) {
+        p.region(20, 102, 288, 122, (x, y) => { if (Math.abs(y - (118 - (x - 20) * 0.05)) < 2.2) p.tone(x, y, R.GROUND, 0.04); });
+        const base = Object.assign({}, WRECK, { len: 200, ht: 32, holes: 0.76 });
+        const pieces = [[0.0, 0.22, 44, 118, -0.5], [0.225, 0.37, 92, 117, 0.16], [0.375, 0.52, 136, 104, Math.PI / 2 - 0.1], [0.525, 0.67, 182, 118, -0.26], [0.675, 1, 242, 112, 0.07]];
+        let top = null;
+        pieces.forEach(([from, to, x, y, angle], i) => {
+            const at = hull(p, Object.assign({}, base, { from, to, x, y, angle, seed: 11 + i }), shapeD);
+            if (i === 2) top = at(from + 0.006, 0);
+        });
+        mound(p, 30, 126, 22, 8, 9);
+        p.line(top[0], top[1], top[0], top[1] - 6, (x, y) => p.tone(x, y, R.HULL, 0.5));
+        return { light: [Math.round(top[0]), Math.round(top[1] - 7)] };
+    }
+
+    /** The line-up: each hull at the map's size (top) and the orbit screen's size (bottom), against the dust. */
+    function lineupPicture(opt) {
+        const W = 120, H = 72;
+        return { W, H, build(p) {
+            spaceAndDust(p, 5, W + 30, 26, 52, 0.42);
+            const stars = scatterStars(p, 6, 70);
+            const a = hull(p, Object.assign({ x: 30, y: 16, flip: true, seed: 9, sun: 0.7, sunDir: [1, 0] }, opt.map), opt.shape);
+            const b = hull(p, Object.assign({ x: 56, y: 48, flip: true, seed: 9, sun: 0.7, sunDir: [1, 0], fade: 0.25 }, opt.space), opt.shape);
+            return { stars: keepVisible(p, stars), wins: [a(...opt.win(opt.map)), b(...opt.win(Object.assign({}, opt.space)))].map(w => w.map(Math.round)) };
+        }, frame(f, t, s) { twinkle(f, s.stars, t); s.wins.forEach(([x, y]) => f.px(x, y, R.AMBER.hex[4])); } };
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 4. The crew. Each is a few measurements (height, depth, shoulders, lean, hair, a habit), and every pose is
+    //    drawn from them, so the five stay different in every frame. Colours: people are the only warm things.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    const CREW = [
+        { id: 'cora', name: 'Cora', role: 'Commander', color: '#f2e2c4', skin: '#e6c8a8', hair: '#d4d9da', hairLo: '#9ba3a6',
+            body: { tall: 17, small: 12, depth: 4, shoulders: 5, lean: 0, hair: 'bob', idle: 'behind' }, note: 'White bob. Tall and straight. Hands behind her back.' },
+        { id: 'jaxon', name: 'Jaxon', role: 'Engineer', color: '#f08c2e', skin: '#b47850', hair: '#4d4541', hairLo: '#948d86',
+            body: { tall: 16, small: 11, depth: 5, shoulders: 7, lean: 1, hair: 'swept', idle: 'wrench', belt: true }, note: 'Broad, a little stooped. Tool belt, a wrench in his hand.' },
+        { id: 'vance', name: 'Vance', role: 'Security', color: '#c4622a', skin: '#d6ae8a', hair: '#9a9c9b', hairLo: '#5d605f',
+            body: { tall: 18, small: 13, depth: 5, shoulders: 7, lean: 0, hair: 'spiky', idle: 'crossed', boots: 2 }, note: 'Tallest and widest. Grey spikes. Arms crossed, heavy boots.' },
+        { id: 'aris', name: 'Aris', role: 'Doctor', color: '#ffc27a', skin: '#c58c64', hair: '#4e2c3b', hairLo: '#82506a',
+            body: { tall: 16, small: 11, depth: 4, shoulders: 5, lean: 1, hair: 'wavy', idle: 'tablet', coat: 4 }, note: 'Long coat, dark hair to her shoulders. Carries a tablet.' },
+        { id: 'mira', name: 'Mira', role: 'Scientist', color: '#e8836a', skin: '#e0b690', hair: '#3a2e34', hairLo: '#76626c',
+            body: { tall: 14, small: 10, depth: 3, shoulders: 5, lean: 0, hair: 'tail', idle: 'bounce' }, note: 'Smallest. A ponytail that bounces. Never stands still.' },
+    ];
+    CREW.forEach(c => {                                                                      // one colour per pixel key
+        c.k = { C: c.color, k: shade(c.color, 0.76), a: shade(c.color, 0.86), p: shade(c.color, 0.64), c: shade(c.color, 0.44),
+            S: c.skin, s: shade(c.skin, 0.66), E: '#1b1512', H: c.hair, h: c.hairLo, B: '#2c2622', b: '#18140f', A: '#4c3626', M: '#8aa2aa', T: '#9fd8e6', L: '#c6e6e8' };
+    });
+
+    const SIZES = {
+        small: { frames: 4, walk: [[2, 0], [0, 0], [-2, -1], [0, -1]], swing: [-1, 0, 1, 0], bob: [1, 0, 1, 0] },
+        tall: { frames: 6, walk: [[3, 0], [1, 0], [-1, 0], [-2, -1], [0, -2], [2, -1]], swing: [-2, -1, 1, 2, 1, -1], bob: [1, 0, 0, 1, 0, 0] },
+    };
+    // Heads and hair as little maps. Side view: columns from -2, rows from -2; the head itself sits at columns 0.., rows 0...
+    const HEAD_SIDE = {
+        tall: {
+            bob: ['.......', '..HHH..', '.HHHHH.', '.HHHSE.', '.HHHSSS', '.hhhS..'],
+            swept: ['.......', '.hHH...', '.HHHH..', '.HSSSE.', '..SSSSS', '...Ss..'],
+            spiky: ['..H.H..', '.HHhHH.', '.HHSSS.', '.HSSSE.', '..SSSSS', '...SS..'],
+            wavy: ['.......', '..HHH..', '.HHHHH.', 'HHHSSE.', 'HHhSSSS', 'HHhSS..', 'HHh....', 'Hh.....'],
+            tail: ['.......', '..HHH..', '.HHHHH.', 'hHSSSE.', '..SSSSS', '...SS..'],
+        },
+        small: {
+            bob: ['......', '..HH..', '.HHHH.', '.HHSS.', '.hhSS.'],
+            swept: ['......', '.HH...', '.HHHH.', '.HSSS.', '...SS.'],
+            spiky: ['..H.H.', '.HHHH.', '.HHSS.', '..SSS.', '...SS.'],
+            wavy: ['......', '..HH..', '.HHHH.', 'HHHSS.', 'HhSSS.', 'h.....'],
+            tail: ['......', '..HH..', '.HHHH.', 'hHSSS.', '...SS.'],
+        },
+    };
+    // Back view (climbing): columns from -3 (tall) or -2 (small), rows from -2.
+    const HEAD_BACK = {
+        tall: {
+            bob: ['......', '.HHHH.', 'HHHHHH', 'HHHHHH', 'HHHHHH', 'hhhhhh'],
+            swept: ['......', '.HhHH.', '.HHHH.', '.HHHH.', '.SHHS.', '..SS..'],
+            spiky: ['.H.H.H', '.HHHH.', '.HHhH.', '.HHHH.', '.SHHS.', '..SS..'],
+            wavy: ['......', '.HHHH.', 'HHHHHH', 'HHHHHH', 'HHHHHH', 'HHhhHH', 'Hh..hH', 'h....h'],
+            tail: ['......', '.HHHH.', '.HHHH.', '.HHHH.', '.HhhH.', '..HH..', '..Hh..', '...h..'],
+        },
+        small: {
+            bob: ['.....', '.HHH.', 'HHHHH', 'HHHHH', 'hhhhh'],
+            swept: ['.....', '.HhH.', '.HHH.', '.SHS.', '..S..'],
+            spiky: ['.H.H.', '.HHH.', '.HHH.', '.SHS.', '..S..'],
+            wavy: ['.....', '.HHH.', 'HHHHH', 'HHHHH', 'HhhhH', 'h...h'],
+            tail: ['.....', '.HHH.', '.HHH.', '.HhH.', '..H..', '..h..'],
+        },
+    };
+
+    function grid() {
+        const m = new Map();
+        const put = (x, y, k) => m.set(x + ',' + y, [x, y, k]);
+        const line = (x0, y0, x1, y1, k, w = 1) => { const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1); for (let i = 0; i <= n; i++) { const x = Math.round(x0 + (x1 - x0) * i / n), y = Math.round(y0 + (y1 - y0) * i / n); for (let j = 0; j < w; j++) put(x + j, y, k); } };
+        const map = (rows, col0, row0, dx, dy) => rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch !== '.') put(i + col0 + dx, j + row0 + dy, ch); }));
+        return { m, put, line, map };
+    }
+    function measure(c, size) {
+        const t = size !== 'small', b = c.body, h = t ? b.tall : b.small, head = t ? 4 : 3;
+        const legs = Math.round(h * (t ? 0.43 : 0.4)), torso = h - legs - head, depth = t ? b.depth : (b.depth >= 5 ? 4 : 3);
+        const back = -Math.floor((depth - 1) / 2);
+        return { t, h, head, legs, torso, depth, back, front: back + depth - 1, lean: t ? b.lean : 0, sY: -(legs + torso), hipRow: -(legs + 1), top: -h };
+    }
+    function leg(g, m, c, [fx, lift], by, isFar, hipY = -m.legs) {
+        const hipX = isFar ? -1 : 0, hy = hipY + by, fy = -1 + lift, kx = Math.round((hipX + fx) / 2) + (lift < 0 ? 1 : 0), ky = Math.round((hy + fy) / 2);
+        const k = isFar ? 'c' : 'p', w = m.t ? 2 : 1, bk = isFar ? 'b' : 'B';
+        g.line(hipX, hy, kx, ky, k, w); g.line(kx, ky, fx, fy, k, w);
+        for (let j = 0; j < (m.t ? 3 : 2); j++) g.put(fx + j, fy, bk);
+        if (m.t && c.body.boots > 1) { g.put(fx, fy - 1, bk); g.put(fx + 1, fy - 1, bk); }
+    }
+    function arm(g, m, [hx, hy], by, isFar, bend) {
+        const sx = m.lean + (isFar ? -1 : 0), sy = m.sY + 1 + by, k = isFar ? 'c' : 'a';
+        if (bend) { g.line(sx, sy, bend[0], bend[1] + by, k); g.line(bend[0], bend[1] + by, hx, hy + by, k); } else g.line(sx, sy, hx, hy + by, k);
+        g.put(hx, hy + by, isFar ? 's' : 'S');
+    }
+    function torso(g, m, c, by, hem) {
+        for (let y = m.sY; y <= m.hipRow; y++) {
+            const shift = y < m.sY + 2 ? m.lean : 0;
+            for (let x = m.back; x <= m.front; x++) { if (y === m.sY && x === m.back && m.depth > 3) continue; g.put(x + shift, y + by, x === m.back ? 'k' : 'C'); }
+        }
+        if (c.body.belt) { for (let x = m.back - 1; x <= m.front; x++) g.put(x, m.hipRow + by, 'A'); if (m.t) g.put(m.back - 1, m.hipRow + by + 1, 'A'); }
+        if (c.body.coat && hem != null) {                                                  // Aris's long coat, over the tops of her legs
+            const n = m.t ? c.body.coat : 2;
+            for (let i = 1; i <= n; i++) for (let x = m.back; x <= m.front + (i >= n - 1 ? 1 : 0); x++) g.put(x + (i === n ? hem : 0), m.hipRow + i + by, i === n ? 'k' : 'C');
+        }
+    }
+    function headSide(g, m, c, by, dx, isLit) {
+        const size = m.t ? 'tall' : 'small', x0 = m.lean - 1 + dx, y0 = m.top + by;
+        g.map(['...SSS.', '..SSSS.', '..SSSSS', '...SS..'].map(r => (m.t ? r : r.slice(1, 6).replace(/S$/, '.'))), -2, 0, x0, y0);
+        g.map(HEAD_SIDE[size][c.body.hair], -2, -2, x0, y0);
+        if (isLit) { g.put(x0 + (m.t ? 4 : 2), y0 + (m.t ? 2 : 1), 'L'); if (m.t) g.put(x0 + 3, y0 + 3, 'L'); }   // the screen lights the face
+    }
+    function ponytail(g, m, c, by, f, dx) {
+        if (c.body.hair !== 'tail') return;
+        const x0 = m.lean - 1 + dx, y0 = m.top + by + 1, s = f % 2 ? -1 : 0;
+        if (m.t) { g.put(x0 - 3, y0, 'H'); g.put(x0 - 4, y0 + 1 + s, 'H'); g.put(x0 - 4, y0 + 2 + s, 'h'); }
+        else { g.put(x0 - 2, y0, 'H'); g.put(x0 - 3, y0 + 1 + s, 'h'); }
+    }
+    /** Arms for standing still: each of them has a habit. */
+    function idleArms(g, m, c, by, f) {
+        const s = m.sY, t = m.t;
+        switch (c.body.idle) {
+            case 'behind': arm(g, m, [m.back - 1, s + m.torso - 1], by, false); break;
+            case 'wrench': { const hy = s + m.torso + (t ? 1 : 0); arm(g, m, [m.front, hy], by, false); g.put(m.front, hy + by + 1, 'M'); g.put(m.front, hy + by + 2, 'M'); if (t) g.put(m.front + 1, hy + by + 3, 'M'); break; }
+            case 'crossed': g.line(m.back + 1, s + 2 + by, m.front + 1, s + 2 + by, 'a'); g.put(m.front + 1, s + 3 + by, 'S'); if (t) g.put(m.lean, s + 1 + by, 'a'); break;
+            case 'tablet': arm(g, m, [m.front + 1, s + 3], by, false, [m.lean, s + 3]); for (let i = 0; i < (t ? 3 : 2); i++) g.put(m.front + 2, s + 1 + i + by, 'T'); break;
+            default: arm(g, m, [m.back, s + m.torso - (t ? 0 : 1)], by, false);
+        }
+    }
+
+    const SPRITES = new Map();
+    /** A sprite: [x, y, key] pixels, facing right, feet on row -1. Poses: walk, idle, console, climb, sit. */
+    function sprite(c, size, pose, frame) {
+        const id = c.id + size + pose + frame;
+        if (SPRITES.has(id)) return SPRITES.get(id);
+        const g = grid(), m = measure(c, size), S = SIZES[m.t ? 'tall' : 'small'];
+        if (pose === 'walk') {
+            const f = frame % S.frames, by = S.bob[f] + (c.body.idle === 'bounce' && f % 2 ? -1 : 0), sw = S.swing[f];
+            leg(g, m, c, S.walk[(f + S.frames / 2) % S.frames], by, true);
+            arm(g, m, [-sw, m.sY + m.torso - (Math.abs(sw) > 1 ? 1 : 0)], by, true);
+            leg(g, m, c, S.walk[f], by, false);
+            torso(g, m, c, by, f % 3 === 0 ? 0 : -1);
+            arm(g, m, [sw + (sw > 0 ? m.lean : 0), m.sY + m.torso - (Math.abs(sw) > 1 ? 1 : 0)], by, false);
+            headSide(g, m, c, by, 0, false); ponytail(g, m, c, by, f, 0);
+        } else if (pose === 'idle' || pose === 'console') {
+            const f = frame % 2, isWork = pose === 'console', by = c.body.idle === 'bounce' && !isWork ? -f : 0, breath = !isWork && c.body.idle !== 'bounce' ? f : 0;
+            leg(g, m, c, [-1, 0], by, true); leg(g, m, c, [0, 0], by, false);
+            if (isWork) arm(g, m, [m.front + 2, -m.legs - 1 + (f ? 0 : 1)], by, true, [m.front, m.sY + 3]);
+            torso(g, m, c, by, 0);
+            if (isWork) arm(g, m, [m.front + 3, -m.legs - 1 + f], by, false, [m.front + 1, m.sY + 3]);
+            else idleArms(g, m, c, by, f);
+            headSide(g, m, c, by + breath, isWork ? 1 : 0, isWork); ponytail(g, m, c, by, f, isWork ? 1 : 0);
+        } else if (pose === 'sit') {
+            const seat = 4, hipY = -seat - 1, kx = m.t ? 4 : 3, f = frame % 2, swing = c.body.idle === 'bounce' && f ? 1 : 0;
+            const ms = Object.assign({}, m, { hipRow: hipY - 1, sY: hipY - m.torso, top: hipY - m.torso - m.head });
+            g.line(-1, hipY, kx - 1, hipY, 'c'); g.line(kx - 1, hipY, kx - 1, -2, 'c'); g.put(kx - 1, -1, 'b'); g.put(kx, -1, 'b');
+            const thigh = c.body.coat ? 'C' : 'p';
+            g.line(0, hipY, kx, hipY, thigh, 1); if (m.t) g.line(0, hipY + 1, kx, hipY + 1, thigh);
+            g.line(kx + swing, hipY + 1, kx + swing, -2 - swing, 'p', m.t ? 2 : 1);
+            for (let j = 0; j < (m.t ? 3 : 2); j++) g.put(kx + swing + j, -1 - swing, 'B');
+            torso(g, ms, Object.assign({}, c, { body: Object.assign({}, c.body, { coat: 0 }) }), f && !swing ? 1 : 0);
+            arm(g, ms, [kx - 1, hipY - 1], 0, false);
+            headSide(g, ms, c, f && !swing ? 1 : 0, 0, false); ponytail(g, ms, c, 0, f, 0);
+        } else {                                                                           // climb: seen from behind, on the ladder
+            const f = frame % 4, phase = [0, 1, 2, 1][f], sw = m.t ? c.body.shoulders : Math.max(3, c.body.shoulders - 2), half = Math.floor(sw / 2);
+            const lw = m.t ? 2 : 1;
+            [-1, 1].forEach(side => {
+                const up = phase === 1 ? 1 : ((phase === 0) === (side > 0) ? 3 : 0), legX = side < 0 ? (m.t ? -2 : -1) : (m.t ? 0 : 1);
+                for (let y = -m.legs; y <= -1 - up; y++) for (let j = 0; j < lw; j++) g.put(legX + j + (up > 1 && y > -m.legs + 1 && y < -1 - up ? side : 0), y, 'p');
+                for (let j = 0; j < lw; j++) g.put(legX + j, -1 - up, 'B');
+            });
+            for (let y = m.sY; y <= m.hipRow; y++) { const w = y < m.sY + 2 ? sw : Math.max(3, sw - 2), x0 = -Math.floor(w / 2); for (let x = x0; x < x0 + w; x++) g.put(x, y, x === x0 || x === x0 + w - 1 ? 'k' : 'C'); }
+            if (c.body.belt) for (let x = -Math.floor((sw - 2) / 2); x < -Math.floor((sw - 2) / 2) + sw - 2; x++) g.put(x, m.hipRow, 'A');
+            if (c.body.coat) for (let i = 1; i <= (m.t ? 3 : 2); i++) for (let x = -2; x <= 1; x++) g.put(x, m.hipRow + i, i === (m.t ? 3 : 2) ? 'k' : 'C');
+            [-1, 1].forEach(side => {
+                const raise = phase === 1 ? 'mid' : ((phase === 0) === (side < 0) ? 'up' : 'low'), sx = side < 0 ? -half : half - (sw % 2 ? 0 : 1);
+                const hy = raise === 'up' ? m.top - 1 : raise === 'mid' ? m.top + 2 : m.sY + 1, hx = sx + side;
+                g.line(sx, m.sY + 1, hx, hy, 'a'); g.put(hx, hy, 'S');
+            });
+            g.map(HEAD_BACK[m.t ? 'tall' : 'small'][c.body.hair], m.t ? -3 : -2, -2, 0, m.top);
+        }
+        const px = [...g.m.values()];
+        SPRITES.set(id, px);
+        return px;
+    }
+    function poseFrame(pose, size, n) {
+        if (pose === 'walk') return n % SIZES[size === 'small' ? 'small' : 'tall'].frames;
+        if (pose === 'idle') return Math.floor(n / 10) % 2;
+        if (pose === 'console') return Math.floor(n / 2) % 2;
+        if (pose === 'climb') return n % 4;
+        return Math.floor(n / 14) % 2;
+    }
+    const OUTLINE = '#07090b', FAR = new Set(['c', 's', 'b']);
+    /** Draws one person: feet on screen row feetY. Modes: small (with a dark outline), tall, lamplit (in shadow, rim-lit). */
+    function drawPerson(f, mode, c, pose, frame, x, feetY, dir, lampDir) {
+        const size = mode === 'small' ? 'small' : 'tall', flip = pose !== 'climb' && dir < 0, px = sprite(c, size, pose, frame);
+        const occ = new Set(px.map(([a, b]) => (flip ? -a : a) + ',' + b)), X = Math.round(x), Y = feetY + 1;
+        if (mode === 'small') {
+            const done = new Set();
+            px.forEach(([a0, b]) => { const a = flip ? -a0 : a0; [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => { const id = (a + dx) + ',' + (b + dy); if (!occ.has(id) && !done.has(id) && b + dy < 0) { done.add(id); f.px(X + a + dx, Y + b + dy, OUTLINE); } }); });
+        }
+        px.forEach(([a0, b, k]) => {
+            const a = flip ? -a0 : a0;
+            let hex = c.k[k];
+            if (mode === 'lamplit' && k !== 'T' && k !== 'L') {
+                const isRim = !occ.has(a + ',' + (b - 1)) || !occ.has((a + lampDir) + ',' + b);
+                const keep = FAR.has(k) ? 0.12 : k === 'H' || k === 'h' ? 0.42 : k === 'S' ? 0.3 : 0.2;
+                hex = k === 'E' ? '#0b0d0f' : isRim ? (FAR.has(k) ? mix(c.k[k], INK, 0.35) : c.k[k]) : mix(INK, c.k[k], keep);
+            }
+            f.px(X + a, Y + b, hex);
+        });
+    }
+    // today's figure, for comparison: 5 × 9, one colour per role
+    const TODAY = ['.###.', '.###.', '..#..', '#####', '#####', '.###.', '.###.', '.#.#.', '.#.#.'];
+    function drawToday(f, c, x, feetY) {
+        TODAY.forEach((row, r) => [...row].forEach((ch, i) => { if (ch === '#') f.px(x + i - 2, feetY - 8 + r, r < 2 ? '#e8d6bc' : r >= 7 ? shade(c.color, 0.55) : c.color); }));
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 5. The cutaway: five decks stacked nose up (the ship's "down" is toward the engine), a ladder well on the
+    //    left with a sliding door on every deck. Its outline follows the hull picked above.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    const CW = 140, CH = 380, MH = 54, DOOR_H = 22, ROOM_KEYS = ['bridge', 'lab', 'quarters', 'hold', 'engineering'];
+    function stackRooms(top, heights) { let y = top; return heights.map((h, i) => { const r = { key: ROOM_KEYS[i], top: Math.round(y), bottom: Math.round(y + h) }; y += h; r.floor = r.bottom - 3; return r; }); }
+    const rounded = (y, a, b, rad) => { const d = Math.min(y - a, b - 1 - y); return d >= rad ? 0 : rad - Math.sqrt(Math.max(0, rad * rad - (rad - d - 0.5) ** 2)); };
+    const CUT = {
+        A(L) {
+            const top = 10, end = 354, rooms = stackRooms(top, [74, 67.5, 67.5, 67.5, 67.5]);
+            Object.assign(L, { rooms, top, end, bands: [], drives: [[L.cx - MH * 0.42, end + 4], [L.cx + MH * 0.42, end + 4]] });
+            L.span = y => {
+                if (y < top || y >= end) return null;
+                let hw = MH; const b = rooms[0], e = rooms[4];
+                if (y < b.bottom) hw = MH * (0.26 + 0.74 * Math.sin(Math.min(1, (y - top) / ((b.bottom - top) * 0.62)) * Math.PI / 2));
+                else if (y >= e.top) hw = MH * (1 - 0.2 * (y - e.top) / (e.bottom - e.top));
+                return [L.cx - hw, L.cx + hw];
+            };
+            L.deco = p => {
+                const e = rooms[4];
+                for (const side of [-1, 1]) for (let y = Math.round(e.top + 24); y < end + 6; y++) {
+                    const grow = (y - e.top - 24) * 0.38, edge = (L.span(Math.min(y, end - 1)) || [L.cx - MH * 0.8, L.cx + MH * 0.8])[side < 0 ? 0 : 1];
+                    for (let k = 0; k < Math.min(7, grow); k++) p.tone(edge + side * (k + 0.5), y, R.HULL, side > 0 ? 0.62 - k * 0.04 : 0.3);
+                }
+                L.drives.forEach(([x]) => p.region(x - 3, end, x + 3, end + 4, (a, b) => p.tone(a, b, R.HULL, a > x ? 0.62 : 0.36)));
+            };
+        },
+        B(L) {
+            const top = 10, cone = 36, end = 350, rooms = stackRooms(top + cone, [64, 60, 60, 60, 60]);
+            Object.assign(L, { rooms, top, end, bands: [{ top, bottom: top + cone, kind: 'nose' }], drives: [[L.cx, end + 13]] });
+            L.span = y => {
+                if (y < top || y >= end) return null;
+                const hw = y < top + cone ? MH * (0.07 + 0.93 * Math.pow((y - top) / cone, 0.78)) : MH;
+                return [L.cx - hw, L.cx + hw];
+            };
+            L.deco = p => {
+                for (let y = end - 22; y < end; y++) {                                         // the skirt flares out over the engine
+                    const extra = 5 * (y - end + 22) / 22, [xl, xr] = L.span(y);
+                    for (let k = 1; k <= extra; k++) { p.tone(xl - k, y, R.HULL, 0.24 + (y % 4 === 0 ? -0.08 : 0)); p.tone(xr + k - 1, y, R.HULL, 0.58 - k * 0.03 + (y % 4 === 0 ? -0.1 : 0)); }
+                }
+                const legTop = rooms[3].top + 12;
+                for (const side of [-1, 1]) {                                                  // two of the landing legs, folded up
+                    const x = side < 0 ? L.cx - MH - 8 : L.cx + MH + 7;
+                    p.region(x, legTop, x + 2, end + 9, (a, b) => p.tone(a, b, R.HULL, side > 0 ? (a === x ? 0.66 : 0.46) : (a === x ? 0.3 : 0.22)));
+                    p.region(Math.min(x, x - side * 5), legTop - 2, Math.max(x + 2, x - side * 5 + 2), legTop + 2, (a, b) => p.tone(a, b, R.HULL, 0.42));
+                    p.region(x - 3, end + 9, x + 5, end + 11, (a, b) => p.tone(a, b, R.HULL, b === end + 9 ? 0.6 : 0.3));
+                }
+                for (let y = end; y < end + 12; y++) { const hw = 7 + (y - end) * 0.5; p.region(L.cx - hw, y, L.cx + hw, y + 1, (a, b) => p.tone(a, b, R.HULL, 0.3 + 0.3 * (a - L.cx + hw) / (2 * hw))); }
+            };
+        },
+        C(L) {
+            const neck = 12, top = 18, drumEnd = 250, podTop = 300, end = 352, rooms = stackRooms(top, [60, 57, 57, 58, 0]);
+            rooms[4] = { key: 'engineering', top: podTop, bottom: end, floor: end - 3 };
+            const spine = [L.shaft.x0 - 3, L.shaft.x1 + 4];
+            Object.assign(L, { rooms, top: 4, end, bands: [{ top: neck, bottom: top, kind: 'neck' }, { top: drumEnd, bottom: podTop, kind: 'spine' }], drives: [[L.cx, end + 12]] });
+            L.span = y => {
+                if (y >= neck && y < top) return [L.cx - 13, L.cx + 13];
+                if (y >= top && y < drumEnd) { const r = rounded(y, top, drumEnd, 9); return [L.cx - MH + r, L.cx + MH - r]; }
+                if (y >= drumEnd && y < podTop) return spine;
+                if (y >= podTop && y < end) { const r = rounded(y, podTop, end, 9), hw = MH * 0.82; return [L.cx - hw + r, L.cx + hw - r]; }
+                return null;
+            };
+            L.deco = p => {
+                p.region(L.cx - MH * 1.25, 4, L.cx + MH * 1.25, neck, (x, y) => {               // the shield: wider than the ship, its face up front
+                    const q = Math.abs(x + 0.5 - L.cx) / (MH * 1.25), face = 4 + Math.round(3 * q * q), back = face + Math.max(2, Math.round(6 * (1 - q * q)));
+                    if (y < face || y >= back) return;
+                    p.tone(x, y, R.HULL, y === face ? 0.8 - 0.25 * q - (fbm(x / 2.5, 3, 19, 2) > 0.6 ? 0.3 : 0) : 0.3 + 0.25 * (x - L.cx) / (MH * 1.25) + 0.1);
+                });
+                const tx = spine[1] + 9;                                                       // tanks and a lattice beside the spine; radiators out to both sides
+                for (let y = drumEnd; y < podTop; y++) {
+                    if ((y - drumEnd) % 10 < 1) p.region(spine[1], y, tx + 9, y + 1, (a, b) => p.tone(a, b, R.HULL, 0.42));
+                    p.tone(tx + 9, y, R.HULL, 0.5);
+                    const k = ((y - drumEnd) % 10) / 10; p.tone(spine[1] + Math.round(k * (tx + 9 - spine[1])), y, R.HULL, 0.34);
+                }
+                [drumEnd + 13, drumEnd + 35].forEach(cy => p.ellipse(tx + 1, cy, 8, 8, (x, y) => p.tone(x, y, R.HULL, 0.66 - 0.4 * ((y - cy) / 8 * 0.5 + 0.5) + (x > tx + 3 ? 0.08 : -0.06))));
+                for (const side of [-1, 1]) for (let i = 0; i < 22; i++) {
+                    const x0 = side < 0 ? spine[0] - 1 - i : tx + 10 + i, y0 = drumEnd + 18 + i * 0.6;
+                    p.region(x0, y0, x0 + 1, y0 + 16 - i * 0.3, (a, b) => p.tone(a, b, R.HULL, (b + a) % 3 === 0 ? 0.32 : 0.18));
+                }
+                for (let y = end; y < end + 12; y++) { const hw = 6 + (y - end) * 0.55; p.region(L.cx - hw, y, L.cx + hw, y + 1, (a, b) => p.tone(a, b, R.HULL, 0.3 + 0.3 * (a - L.cx + hw) / (2 * hw))); }
+            };
+        },
+        D(L) {
+            const top = 22, end = 352, rooms = stackRooms(top, [66, 66, 66, 66, 66]);
+            Object.assign(L, { rooms, top: 8, end, bands: [{ top: 8, bottom: top, kind: 'nose' }], drives: [[L.cx, end + 20]] });
+            L.span = y => {
+                if (y >= 8 && y < top) { const hw = MH * (0.42 + 0.4 * (y - 8) / 14); return [L.cx - hw, L.cx + hw]; }
+                const r = rooms.find(rm => y >= rm.top && y < rm.bottom);
+                if (!r) return null;
+                const rr = rounded(y, r.top, r.bottom, 3);
+                return [L.cx - MH + rr, L.cx + MH - rr];
+            };
+            L.deco = p => {
+                const xl = L.cx - MH - 5, xr = L.cx + MH + 4;
+                p.region(xl, 12, xl + 1, end + 4, (a, b) => p.tone(a, b, R.HULL, 0.3));                // the frame's two rails
+                p.region(xr, 12, xr + 1, end + 4, (a, b) => p.tone(a, b, R.HULL, 0.62));
+                rooms.forEach((r, k) => {
+                    const mid = Math.round((r.top + r.bottom) / 2);
+                    [r.top + 8, mid, r.bottom - 9].forEach(y => { p.region(xl + 1, y, L.cx - MH, y + 1, (a, b) => p.tone(a, b, R.HULL, 0.36)); p.region(L.cx + MH, y, xr, y + 1, (a, b) => p.tone(a, b, R.HULL, 0.5)); });
+                    if (k > 0) p.region(L.cx - MH - 2, r.top - 1, L.cx + MH + 2, r.top + 1, (a, b) => p.tone(a, b, R.HULL, a % 3 === 0 ? 0.74 : b === r.top - 1 ? 0.5 : 0.3));   // the bolted flange
+                    [L.cx - MH - 2, L.cx + MH].forEach(x => p.region(x, r.top + 3, x + 2, r.top + 6, (a, b) => p.tone(a, b, R.HULL, 0.66)));   // lifting lugs, left on
+                });
+                p.ellipse(L.cx, end + 7, 9, 7, (x, y) => p.tone(x, y, R.HULL, 0.62 - 0.4 * ((y - end) / 14) + (x > L.cx + 3 ? 0.06 : 0)));
+                for (let y = end + 14; y < end + 22; y++) { const hw = 4 + (y - end - 14) * 0.6; p.region(L.cx - hw, y, L.cx + hw, y + 1, (a, b) => p.tone(a, b, R.HULL, 0.3 + 0.3 * (a - L.cx + hw) / (2 * hw))); }
+            };
+        },
+    };
+
+    function cutLayout(kind) {
+        const L = { kind, cx: CW / 2 };
+        const x0 = Math.round(L.cx - MH * 0.74);
+        L.shaft = { x0, x1: x0 + 10 };
+        L.wallX = L.shaft.x1 + 1; L.shaftMid = x0 + 5;
+        CUT[kind](L);
+        L.shaft.top = L.rooms[0].floor - DOOR_H - 6;
+        L.inner = y => { const s = L.span(y); return s ? [Math.round(s[0]) + 2, Math.round(s[1]) - 3] : null; };
+        L.rooms.forEach(r => { r.fx0 = L.wallX + 5; r.fx1 = L.inner(r.floor)[1] - 2; r.w = r.fx1 - r.fx0; r.rh = r.bottom - r.top; r.ceil = r.key === 'lab' || r.key === 'quarters' ? r.floor - 31 : null; });
+        const [b, l, q, h, e] = L.rooms;
+        L.fit = {
+            window: [b.top + Math.round(b.rh * 0.2), b.top + Math.round(b.rh * 0.48)], desk: [Math.round(b.fx0 + b.w * 0.46), b.fx1 - 1],
+            disc: [Math.round(l.fx0 + l.w * 0.2), l.floor - 16, 8], bench: [Math.round(l.fx0 + l.w * 0.56), l.fx1 - 1],
+            table: Math.round(q.fx0 + q.w * 0.36), bunk: q.fx1 - 24, crates: Math.round(h.fx0 + h.w * 0.52),
+            reactor: [Math.round(e.fx0 + e.w * 0.56), e.top + Math.round(e.rh * 0.46), Math.min(12, Math.round(e.rh * 0.2))], eDesk: [e.fx0 + 1, e.fx0 + 12],
+        };
+        const F = L.fit;
+        L.spots = {
+            'bridge.helm': { room: 0, x: F.desk[0] - 4, dir: 1 }, 'bridge.view': { room: 0, x: Math.round(L.cx - 4), dir: 1 }, 'bridge.side': { room: 0, x: b.fx0 + 7, dir: 1 },
+            'lab.bench': { room: 1, x: F.bench[0] - 4, dir: 1 }, 'lab.disc': { room: 1, x: F.disc[0] + 12, dir: -1 }, 'lab.mid': { room: 1, x: Math.round(l.fx0 + l.w * 0.42), dir: 1 },
+            'quarters.seatL': { room: 2, x: F.table - 9, dir: 1 }, 'quarters.seatR': { room: 2, x: F.table + 9, dir: -1 }, 'quarters.seatF': { room: 2, x: F.table + 19, dir: -1 }, 'quarters.bunk': { room: 2, x: F.bunk - 6, dir: 1 },
+            'hold.crates': { room: 3, x: F.crates - 5, dir: 1 }, 'hold.mid': { room: 3, x: h.fx0 + 16, dir: -1 },
+            'engineering.desk': { room: 4, x: F.eDesk[1] + 4, dir: -1 }, 'engineering.core': { room: 4, x: F.reactor[0] + F.reactor[2] + 6, dir: -1 },
+        };
+        return L;
+    }
+
+    /** Room furniture: returns [ramp, tone], 'clear' (a window onto the stars), or null for bare lit wall. */
+    function furniture(L, r, x, y) {
+        const F = L.fit, ly = y - r.top, fl = r.floor;
+        const desk = (x0, x1) => { if (x < x0 || x > x1) return null; if (y === fl - 6) return [R.HULL, 0.66]; if (y > fl - 6) return [R.HULL, x === x0 ? 0.42 : y === fl ? 0.2 : 0.3]; if (y >= fl - 12 && y <= fl - 8 && x > x0 + 2 && x < x1 - 3) return y === fl - 12 || y === fl - 8 ? [R.HULL, 0.5] : [R.UI, (x + y) % 3 === 0 ? 0.62 : 0.26]; return null; };
+        if (r.key === 'bridge') {
+            const [w0, w1] = F.window, [il, ir] = L.inner(y), xl = Math.max(L.cx - MH * 0.36, il + 3), xr = Math.min(L.cx + MH * 0.6, ir - 3);
+            if (y >= w0 && y <= w1 && x >= xl && x <= xr) return (y === w0 || y === w1 || x <= xl + 0.5 || x >= xr - 0.5) ? [R.HULL, 0.6] : 'clear';
+            if (ly === 2 && Math.abs(x - L.cx) < 7) return [R.HULL, 0.78];
+            return desk(F.desk[0], F.desk[1]);
+        }
+        if (r.key === 'lab') {
+            const [ax, ay, ar] = F.disc, d = Math.hypot(x + 0.5 - ax, y + 0.5 - ay);
+            if (d < ar + 1.5) {                                                                // the star map on the wall: fourteen lines
+                if (d > ar + 0.5) return [R.HULL, 0.5];
+                if (d < 1.2) return [R.UI, 0.95];
+                const a = Math.atan2(y + 0.5 - ay, x + 0.5 - ax), k = Math.round((a + Math.PI) / (Math.PI * 2) * 14), along = Math.abs(a + Math.PI - k * Math.PI * 2 / 14) * d;
+                return along < 0.55 && d < ar * (0.55 + 0.45 * hash(k, 3, 7)) ? [R.UI, 0.5] : [R.UI, 0.1];
+            }
+            if (y === fl - 21 && x >= F.bench[0] + 2 && x <= F.bench[1]) return [R.HULL, 0.5];             // a shelf of sample jars
+            if (y > fl - 25 && y < fl - 21 && x >= F.bench[0] + 3 && x <= F.bench[1] - 1 && x % 4 < 2) return [R.UI, y === fl - 24 ? 0.5 : 0.3];
+            return desk(F.bench[0], F.bench[1]);
+        }
+        if (r.key === 'quarters') {
+            const bunks = [fl - 18, fl - 6];                                                   // a bunk bed: two berths, posts, a photo
+            if (x === F.bunk && y >= fl - 22) return [R.HULL, 0.44];
+            if (x > F.bunk && bunks.includes(y)) return [R.HULL, 0.56];
+            if (x > F.bunk && bunks.includes(y - 1)) return [R.HULL, 0.3];
+            if (x > F.bunk && bunks.some(b => y === b - 1) && x > r.fx1 - 6) return [R.HULL, 0.42];
+            if (x >= F.bunk + 6 && x <= F.bunk + 7 && y >= fl - 25 && y <= fl - 24) return [R.AMBER, 0.55];
+            if (Math.abs(x - F.table) <= 5 && y === fl - 5) return [R.HULL, 0.6];
+            if (Math.abs(x - F.table) <= 0 && y > fl - 5) return [R.HULL, 0.3];
+            for (const sx of [F.table - 9, F.table + 9, F.table + 19]) { if (Math.abs(x - sx) <= 1 && y === fl - 3) return [R.HULL, 0.56]; if (x === sx && y > fl - 3) return [R.HULL, 0.3]; }
+            const pool = Math.hypot((x - L.cx) / (MH * 0.5), (y - r.ceil - 9) / 16);              // the lamp's warm cast: people live here
+            if (pool < 1 && threshold(x, y) < 0.26 * (1 - pool)) return [R.AMBER, 0.18];
+            return null;
+        }
+        if (r.key === 'hold') {
+            if (x >= F.crates && x <= r.fx1) {
+                const bay = Math.floor((x - F.crates) / 11), inBay = (x - F.crates) % 11, hgt = [16, 10, 22, 13][bay] || 0;
+                if (inBay > 0 && inBay < 10 && y > fl - hgt) return [R.HULL, y === fl - hgt + 1 ? 0.6 : inBay === 1 ? 0.42 : (y - fl) % 6 === 0 ? 0.22 : 0.33];
+            }
+            if (ly > 14 && y < fl - 2 && x > r.fx0 + 2 && x < F.crates - 9 && ((x + ly) % 7 === 0 || (x - ly + 70) % 7 === 0)) return [R.HULL, 0.2];   // a cargo net
+            if (ly === 5 || ly === 6) return [R.HULL, ly === 5 ? 0.5 : 0.26];                                        // the gantry rail
+            const tx = F.crates + 16;
+            if (Math.abs(x - tx) <= 2 && ly >= 7 && ly <= 9) return [R.HULL, 0.55];
+            if (x === tx && ly > 9 && y < fl - 28) return [R.HULL, 0.4];
+            if (Math.abs(x - tx) <= 1 && y === fl - 28) return [R.HULL, 0.6];
+            return null;
+        }
+        const [rx, ry, rr] = F.reactor, d = Math.hypot(x + 0.5 - rx, y + 0.5 - ry), pl = rx - rr - 8, pr = rx + rr + 8;
+        if ((Math.abs(x - pl) <= 1 || Math.abs(x - pr) <= 1) && ly > 1 && y <= fl) return [R.HULL, x === pl - 1 || x === pr - 1 ? 0.5 : 0.28];   // coolant pipes
+        if (d < rr) return [R.HULL, 0.05];
+        if (d < rr + 2) return [R.HULL, 0.56];
+        if (Math.abs(y - ry) < 1) return [R.UI, 0.36];
+        return desk(F.eDesk[0], F.eDesk[1]);
+    }
+
+    function buildCut(kind) {
+        const L = cutLayout(kind), p = painter(CW, CH, false), s = L.shaft, last = L.rooms.length - 1;
+        const isHatchRow = y => L.rooms.some((r, k) => (k < last && y > r.floor && y < r.bottom) || (k > 0 && y === r.top));
+        for (let y = 0; y < CH; y++) {
+            const sp = L.span(y);
+            if (!sp) continue;
+            const xl = Math.round(sp[0]), xr = Math.round(sp[1]), r = L.rooms.find(rm => y >= rm.top && y < rm.bottom), band = L.bands.find(b => y >= b.top && y < b.bottom);
+            for (let x = xl; x < xr; x++) {
+                const fromL = x - xl, fromR = xr - 1 - x, inShaft = x >= s.x0 && x <= s.x1;
+                const shaftHere = (r && (r.key !== 'bridge' || y >= s.top)) || (band && band.kind === 'spine');
+                if (fromR < 1) { p.tone(x, y, R.HULL, 0.8); continue; }                        // plating, lit from the right: the light is ahead
+                if (fromR < 2) { p.tone(x, y, R.HULL, 0.56); continue; }
+                if (fromL < 2) { p.tone(x, y, R.HULL, fromL < 1 ? 0.22 : 0.32); continue; }
+                if (L.kind === 'D' && r && (fromL < 3 || fromR < 3)) { p.tone(x, y, R.HULL, 0.3 + (hash(L.rooms.indexOf(r), fromL < 3 ? 1 : 2, 5) - 0.5) * 0.3); continue; }   // mismatched panels
+                if (inShaft && shaftHere && y > s.top) { shaftPixel(p, L, x, y, isHatchRow(y), r, last); continue; }
+                if (!r) { p.tone(x, y, R.HULL, 0.24 + 0.3 * (x - xl) / (xr - xl) + (y % 6 === 0 ? -0.1 : 0)); continue; }
+                roomPixel(p, L, r, x, y);
+            }
+        }
+        L.deco(p);
+        const win = [];
+        for (let y = L.fit.window[0]; y <= L.fit.window[1]; y++) for (let x = 0; x < CW; x++) if (p.data[(y * CW + x) * 4 + 3] === 0 && L.span(y) && x > L.span(y)[0] && x < L.span(y)[1]) win.push([x, y]);
+        const rand = seeded(kind.charCodeAt(0));
+        const stars = Array.from({ length: Math.round(CW * CH / 80) }, () => ({ x: Math.floor(rand() * CW), y: rand() * CH, v: 0.2 + rand() * 0.7, speed: 0.004 + rand() * 0.012 }));
+        return { L, base: p.canvas(), stars, win };
+    }
+    function shaftPixel(p, L, x, y, isHatch, r, last) {
+        const s = L.shaft, rail = x === s.x0 + 2 || x === s.x1 - 2, bottom = L.rooms[last].floor;
+        if (r && L.rooms.indexOf(r) === last && y > r.floor) { p.tone(x, y, R.HULL, y === r.floor + 1 ? 0.58 : 0.34); return; }
+        if (isHatch) { if (x === s.x0 || x === s.x1) p.tone(x, y, R.HULL, 0.62); else if (rail) p.tone(x, y, R.HULL, 0.5); else p.tone(x, y, R.HULL, 0.04); return; }
+        if (y === s.top + 1) { p.tone(x, y, R.HULL, 0.5); return; }
+        if (rail && y <= bottom) { p.tone(x, y, R.HULL, x === s.x0 + 2 ? 0.58 : 0.44); return; }
+        if (x > s.x0 + 2 && x < s.x1 - 2 && y % 4 === 0 && y <= bottom) { p.tone(x, y, R.HULL, 0.46); return; }
+        p.tone(x, y, R.HULL, x === s.x0 ? 0.16 : 0.09);
+    }
+    function roomPixel(p, L, r, x, y) {
+        const s = L.shaft, ly = y - r.top, fl = r.floor, isWall = x === s.x1 + 1 || x === s.x1 + 2, from = r.key === 'bridge' ? s.top : r.top + 1;
+        if (ly === 0) { p.tone(x, y, R.HULL, 0.46); return; }
+        if (y > fl) { p.tone(x, y, R.HULL, y === fl + 1 ? 0.58 : 0.34); return; }
+        if (isWall && y >= from) {
+            if (y === fl - DOOR_H) { p.tone(x, y, R.HULL, 0.68); return; }
+            p.tone(x, y, R.HULL, y > fl - DOOR_H ? 0.05 : x === s.x1 + 1 ? 0.5 : 0.34); return;
+        }
+        if (x < s.x0 && y >= from) { p.tone(x, y, R.HULL, (x - s.x0) % 4 === 0 || (fl - y) % 9 === 0 ? 0.1 : 0.17 + (y === fl - 10 && x === s.x0 - 2 ? 0.3 : 0)); return; }   // lockers
+        if (r.ceil && y < r.ceil) { servicePixel(p, r, x, y); return; }
+        if (r.ceil && y === r.ceil) { p.tone(x, y, R.HULL, 0.5); return; }
+        if (r.ceil && y === r.ceil + 1 && Math.abs(x - L.cx) < 4) { p.tone(x, y, r.key === 'quarters' ? R.AMBER : R.HULL, 0.88); return; }   // the lamp
+        const item = furniture(L, r, x, y);
+        if (item === 'clear') { p.clear(x, y); return; }
+        if (item) { p.tone(x, y, item[0], item[1]); return; }
+        const [il, ir] = L.inner(y), hw = (ir - il) / 2, adx = Math.abs(x - (il + ir) / 2), top = r.ceil || r.top;
+        p.tone(x, y, R.HULL, 0.08 + 0.2 * Math.max(0, 1 - (y - top) / (fl - top)) * (1 - (adx / hw) * 0.6));
+    }
+    /** Above a lowered ceiling: pipes, a duct, cable. Dark; nobody goes up there. */
+    function servicePixel(p, r, x, y) {
+        const d = r.ceil - y;
+        if (d === 3 || d === 4 || d === 8 || d === 9) { const flange = (x + (d > 5 ? 7 : 0)) % 16 < 2; p.tone(x, y, R.HULL, flange ? 0.58 : d === 4 || d === 9 ? 0.44 : 0.24); return; }
+        if (x > r.fx0 + 24 && x < r.fx0 + 50 && d > 11 && y > r.top + 2) { p.tone(x, y, R.HULL, (x - r.fx0) % 8 === 0 ? 0.1 : y === r.top + 3 ? 0.4 : 0.2); return; }
+        p.tone(x, y, R.HULL, (x + y) % 11 === 0 && d > 11 ? 0.14 : 0.06);
+    }
+
+    function paintCut(ctx, view, sim, t, mode) {
+        const L = view.L, f = framer(ctx, CW, CH), step = Math.floor(t / TICK_MS);
+        ctx.fillStyle = INK; ctx.fillRect(0, 0, CW, CH);
+        view.stars.forEach(s => f.tone(s.x, (s.y + t * s.speed) % CH, R.STAR, s.v));             // flying nose first: the stars stream past
+        if (view.win.length) for (let i = 0; i < 16; i++) {                                    // more of them through the bridge window
+            const [wx, wy] = view.win[Math.floor(hash(i, 1, 7) * view.win.length)], y0 = view.win[0][1], hgt = view.win[view.win.length - 1][1] - y0 + 1;
+            f.px(wx, y0 + ((wy - y0 + Math.floor(t * 0.006 * (0.5 + hash(i, 2, 7)))) % hgt), R.STAR.hex[hash(i, 3, 7) > 0.7 ? 3 : 2]);
+        }
+        ctx.drawImage(view.base, 0, 0);
+        const [rx, ry, rr] = L.fit.reactor, beat = Math.pow(1 - ((t / 4000) % 1), 3.2);          // the reactor's heartbeat: a machine, so ice
+        for (let y = -rr; y <= rr; y++) for (let x = -rr; x <= rr; x++) { const d = Math.hypot(x, y) / (rr * (0.7 + 0.3 * beat)); if (d < 1) f.tone(rx + x, ry + y, R.UI, (0.45 + 0.55 * beat) * (1 - d * 0.6)); }
+        L.drives.forEach(([dx, dy], i) => { const len = 5 + 3 * Math.abs(Math.sin(t / 90 + i)); for (let d = 0; d < len; d++) f.tone(dx - 2 + d * 0.25, dy + d, R.UI, 1 - d / len, Math.max(1, 5 - d * 0.7), 1); });
+        if (step % 6 < 3) f.px(L.fit.desk[0] + 5, L.rooms[0].floor - 10, R.UI.hex[5]);
+        if (step % 8 < 5) f.px(L.fit.bench[0] + 6, L.rooms[1].floor - 11, R.UI.hex[4]);
+        L.rooms.forEach((r, k) => {                                                            // the doors slide up into the wall
+            const open = sim.doors[k], from = r.floor - DOOR_H + 1 + Math.round(open * (DOOR_H - 3));
+            for (let y = from; y <= r.floor; y++) { f.px(L.wallX, y, R.HULL.hex[4]); f.px(L.wallX + 1, y, (y - from) % 7 === 3 ? R.HULL.hex[1] : R.HULL.hex[3]); }
+            f.px(L.wallX + 2, r.floor - DOOR_H + 1, R.HULL.hex[3], 1, DOOR_H);
+            f.px(L.wallX + 3, r.floor - DOOR_H - 3, open > 0.5 ? R.UI.hex[5] : R.UI.hex[2], 2, 1);
+        });
+        const order = sim.crew.slice().sort((a, b) => (a.pose === 'climb') - (b.pose === 'climb'));
+        order.forEach(m => drawPerson(f, mode, m.c, m.pose, poseFrame(m.pose, mode, m.frame), m.pose === 'climb' ? L.shaftMid : m.x, m.y, m.dir, m.x < L.cx ? 1 : -1));
+    }
+
+    // ── the crew's day: where each goes, what they do there, for how long (seconds) ──
+    const ROUTINES = {
+        cora: [['bridge.helm', 'console', 14], ['bridge.view', 'idle', 9], ['lab.mid', 'idle', 6], ['bridge.helm', 'console', 12], ['quarters.seatL', 'sit', 9]],
+        jaxon: [['engineering.desk', 'console', 12], ['engineering.core', 'idle', 8], ['hold.crates', 'idle', 6], ['engineering.desk', 'console', 10], ['quarters.seatR', 'sit', 10]],
+        vance: [['hold.mid', 'idle', 11], ['bridge.side', 'idle', 8], ['hold.crates', 'idle', 7], ['quarters.bunk', 'idle', 6]],
+        aris: [['lab.bench', 'console', 12], ['quarters.bunk', 'idle', 7], ['lab.mid', 'idle', 6], ['lab.bench', 'console', 10], ['quarters.seatF', 'sit', 8]],
+        mira: [['lab.disc', 'console', 10], ['bridge.side', 'idle', 6], ['quarters.seatR', 'sit', 8], ['lab.disc', 'console', 9], ['engineering.core', 'idle', 6]],
+    };
+    const WALK_PX = 2, CLIMB_PX = 2, ticks = s => Math.round(s * 1000 / TICK_MS);
+    function makeSim(L) {
+        const crew = CREW.map((c, i) => {
+            const plan = ROUTINES[c.id], [key, pose, secs] = plan[0], sp = L.spots[key];
+            return { c, i, plan, step: 0, room: sp.room, x: sp.x, y: L.rooms[sp.room].floor, dir: sp.dir, pose, frame: i * 3, wait: ticks(secs * (0.3 + 0.17 * i)), path: [] };
+        });
+        return { L, crew, doors: L.rooms.map(() => 0) };
+    }
+    function stepSim(S) {
+        S.crew.forEach(m => {
+            if (!m.path.length) {
+                if (m.wait > 0) { m.wait--; m.frame++; if (m.c.body.idle === 'bounce' && m.pose === 'idle' && m.wait % 18 === 9) m.dir = -m.dir; return; }
+                m.step = (m.step + 1) % m.plan.length;
+                const [key, pose, secs] = m.plan[m.step], sp = S.L.spots[key];
+                if (sp.room !== m.room) m.path.push({ walk: S.L.shaftMid }, { climb: sp.room });
+                m.path.push({ walk: sp.x }, { arrive: true, pose, dir: sp.dir, wait: ticks(secs) + Math.floor(hash(m.i, m.step, 3) * 16) });
+            }
+            move(S, m);
+        });
+        S.doors = S.doors.map((d, k) => { const near = S.crew.some(m => m.room === k && m.pose !== 'climb' && Math.abs(m.x - S.L.wallX) < 11); return clamp01(d + (near ? 0.34 : -0.17)); });
+    }
+    function move(S, m) {
+        const w = m.path[0];
+        if (w.walk != null) {
+            const dx = w.walk - m.x;
+            if (dx) m.dir = Math.sign(dx);
+            if (Math.abs(dx) <= WALK_PX) { m.x = w.walk; m.path.shift(); m.pose = 'walk'; m.frame++; return; }
+            const nx = m.x + Math.sign(dx) * WALK_PX, wall = S.L.wallX + 0.5;
+            if ((m.x - wall) * (nx - wall) <= 0 && S.doors[m.room] < 0.85) { m.pose = 'idle'; return; }   // wait for the door
+            m.x = nx; m.pose = 'walk'; m.frame++;
+            return;
+        }
+        if (w.climb != null) {
+            const dy = S.L.rooms[w.climb].floor - m.y;
+            m.pose = 'climb'; m.x = S.L.shaftMid;
+            if (Math.abs(dy) <= CLIMB_PX) { m.y += dy; m.room = w.climb; m.path.shift(); return; }
+            m.y += Math.sign(dy) * CLIMB_PX; m.frame++;
+            return;
+        }
+        m.path.shift(); m.pose = w.pose; m.dir = w.dir; m.wait = w.wait; m.frame = 0;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    // 6. The page: build every canvas, then one clock at eight frames a second paints whatever is on screen.
+    // ═══════════════════════════════════════════════════════════════════════════════════════════════════════
+    const $ = id => document.getElementById(id);
+    const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+    const views = [];
+    function addView(canvas, paint) { const v = { canvas, paint, visible: true }; views.push(v); if (io) io.observe(canvas); return v; }
+    const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { const v = views.find(w => w.canvas === e.target); if (v) v.visible = e.isIntersecting; }), { rootMargin: '200px' }) : null;
+    function pictureView(canvas, pic) {
+        canvas.width = pic.W; canvas.height = pic.H;
+        const ctx = canvas.getContext('2d'), p = painter(pic.W, pic.H, true), state = pic.build(p) || {}, image = new ImageData(p.data, pic.W, pic.H);
+        return addView(canvas, t => { ctx.putImageData(image, 0, 0); pic.frame(framer(ctx, pic.W, pic.H), t, state); });
+    }
+
+    // outside
+    OPTS.forEach(opt => {
+        const fig = el('figure'), c = el('canvas'), cap = el('figcaption');
+        c.setAttribute('role', 'img'); c.setAttribute('aria-label', `${opt.name}: the hull at map size and at orbit size`);
+        cap.append(el('span', 'k', opt.key), el('span', 'n', opt.name), el('span', 's', 'map size, orbit size'));
+        fig.append(c, cap); $('lineup').appendChild(fig);
+        pictureView(c, lineupPicture(opt));
+
+        const art = el('article', 'hull' + (opt.key === PICK ? ' is-pick' : '')), head = el('div', 'hull-head'), title = el('div'), says = el('p', 'says');
+        art.id = 'hull-' + opt.key.toLowerCase();
+        const h3 = el('h3', '', opt.name);
+        if (opt.key === PICK) h3.appendChild(el('span', 'pick-tag', 'My pick'));
+        title.append(h3, el('p', 'line', opt.line));
+        says.append(el('b', '', 'What it says'), document.createTextNode(opt.says));
+        head.append(el('div', 'key', opt.key), title, says);
+        const shots = el('div', 'shots');
+        [['Close up', closeUp(opt)], ['In space, at orbit size', inSpace(opt)], ['As a wreck', wreckPicture(opt)]].forEach(([label, pic]) => {
+            const f = el('figure'), cv = el('canvas');
+            cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', `${opt.name}: ${label.toLowerCase()}`);
+            f.append(cv, el('figcaption', 'label', label)); shots.appendChild(f);
+            pictureView(cv, pic);
+        });
+        art.append(head, shots);
+        $('hulls').appendChild(art);
+    });
+
+    // inside: the size line-up (today's figure next to the new ones)
+    [['Today', '5 × 9', 50, 'today'], ['Small', '7 × 12', 66, 'small'], ['Tall', '9 × 17', 76, 'tall']].forEach(([name, dims, w, kind]) => {
+        const fig = el('figure'), c = el('canvas'), cap = el('figcaption');
+        c.width = w; c.height = 28; c.style.width = w * 4 + 'px'; c.style.height = 28 * 4 + 'px';
+        c.setAttribute('role', 'img'); c.setAttribute('aria-label', `The five crew drawn ${name.toLowerCase()}, ${dims} pixels`);
+        cap.append(el('span', 'k', name), el('span', 'd', dims));
+        fig.append(c, cap); $('sizes').appendChild(fig);
+        const ctx = c.getContext('2d');
+        addView(c, t => {
+            const f = framer(ctx, w, 28), n = Math.floor(t / TICK_MS);
+            ctx.fillStyle = '#0b1115'; ctx.fillRect(0, 0, w, 28); ctx.fillStyle = R.HULL.hex[2]; ctx.fillRect(0, 25, w, 1);
+            CREW.forEach((cr, i) => {
+                const x = 5 + i * (kind === 'today' ? 10 : kind === 'small' ? 13 : 15);
+                if (kind === 'today') drawToday(f, cr, x, 24);
+                else drawPerson(f, kind, cr, 'idle', poseFrame('idle', kind, n + i * 4), x, 24, 1, 1);
+            });
+        });
+    });
+
+    // inside: three ways to draw them
+    const MODES = [
+        { key: 'small', num: '1', name: 'Small', dims: '7 × 12', line: 'One and a half times today\'s height. Chunky, with a dark edge so they read against any wall.' },
+        { key: 'tall', num: '2', name: 'Tall', dims: '9 × 17', line: 'About twice today\'s height. Room for coats, hair, a tool in hand and a six-frame walk.' },
+        { key: 'lamplit', num: '3', name: 'Lamplit', dims: '9 × 17, in shadow', line: 'The tall figures as dark shapes, lit only on the side that faces the room lamp, in their own colour.' },
+    ];
+    const POSES = [['walk', 'Walk'], ['idle', 'Stand'], ['console', 'Work'], ['climb', 'Climb'], ['sit', 'Sit']];
+    let cutKind = 'A', sim = null, cutViews = {};
+    function rebuildCut(kind) {
+        cutKind = kind;
+        const view = buildCut(kind);
+        sim = makeSim(view.L);
+        for (let i = 0; i < 40; i++) stepSim(sim);                                             // start them mid-day, not all frozen at their first spot
+        Object.values(cutViews).forEach(v => { v.view = view; });
+        document.querySelectorAll('#hull-pick button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kind === kind)));
+    }
+    OPTS.forEach(opt => {
+        const b = el('button'); b.type = 'button'; b.dataset.kind = opt.key;
+        b.append(el('span', '', opt.key), document.createTextNode(opt.name));
+        b.addEventListener('click', () => { rebuildCut(opt.key); paintAll(clock * TICK_MS); });
+        $('hull-pick').appendChild(b);
+    });
+    MODES.forEach(mode => {
+        const box = el('div', 'opt' + (mode.key === 'tall' ? ' is-pick' : '')), h3 = el('h3');
+        h3.append(el('span', 'num', mode.num), document.createTextNode(mode.name), el('span', 'dim', mode.dims));
+        if (mode.key === 'tall') h3.appendChild(el('span', 'pick-tag', 'My pick'));
+        const body = el('div', 'opt-body'), cut = el('canvas', 'cut');
+        cut.width = CW; cut.height = CH;
+        cut.setAttribute('role', 'img'); cut.setAttribute('aria-label', `The ship's cutaway with the crew drawn ${mode.name.toLowerCase()}`);
+        const wrap = el('div', 'grid-wrap'), cols = el('div', 'grid-cols'), rows = el('div', 'grid-rows'), g = el('canvas');
+        POSES.forEach(([, label]) => cols.appendChild(el('span', '', label)));
+        CREW.forEach(c => rows.appendChild(el('span', '', c.name)));
+        g.width = 80; g.height = 120;
+        g.setAttribute('role', 'img'); g.setAttribute('aria-label', `Each of the five in each pose, drawn ${mode.name.toLowerCase()}`);
+        wrap.append(cols, rows, g);
+        body.append(cut, wrap);
+        box.append(h3, el('p', 'line', mode.line), body);
+        $('crew-opts').appendChild(box);
+        const cctx = cut.getContext('2d'), gctx = g.getContext('2d');
+        cutViews[mode.key] = addView(cut, t => paintCut(cctx, cutViews[mode.key].view, sim, t, mode.key));
+        addView(g, t => paintGrid(gctx, mode.key, Math.floor(t / TICK_MS)));
+    });
+    function paintGrid(ctx, mode, n) {
+        const f = framer(ctx, 80, 120), size = mode === 'small' ? 'small' : 'tall';
+        CREW.forEach((c, row) => POSES.forEach(([pose], col) => {
+            const x0 = col * 16, y0 = row * 24, fl = y0 + 20, cx = x0 + 8;
+            ctx.fillStyle = (row + col) % 2 ? '#0c1317' : '#0a1013'; ctx.fillRect(x0, y0, 16, 24);
+            ctx.fillStyle = R.HULL.hex[2]; ctx.fillRect(x0, fl + 1, 16, 1);
+            if (pose === 'climb') { ctx.fillStyle = R.HULL.hex[2]; ctx.fillRect(cx - 4, y0, 1, 24); ctx.fillRect(cx + 3, y0, 1, 24); for (let y = y0; y < y0 + 24; y += 4) ctx.fillRect(cx - 3, y, 6, 1); }
+            if (pose === 'console') { ctx.fillStyle = R.HULL.hex[3]; ctx.fillRect(cx + 2, fl - 5, 6, 1); ctx.fillStyle = R.HULL.hex[1]; ctx.fillRect(cx + 3, fl - 4, 4, 5); ctx.fillStyle = R.UI.hex[2]; ctx.fillRect(cx + 4, fl - 10, 3, 4); }
+            if (pose === 'sit') { ctx.fillStyle = R.HULL.hex[3]; ctx.fillRect(cx - 1, fl - 3, 3, 1); ctx.fillStyle = R.HULL.hex[1]; ctx.fillRect(cx, fl - 2, 1, 3); }
+            drawPerson(f, mode, c, pose, poseFrame(pose, size, n + row * 3), cx - (pose === 'console' ? 3 : 0), fl, 1, 1);
+        }));
+    }
+
+    // inside: who is who
+    CREW.forEach(c => {
+        const d = el('div'), who = el('div', 'who'), sw = el('span', 'sw');
+        sw.style.background = c.color;
+        who.append(sw, document.createTextNode(c.name), el('span', 'role', c.role));
+        d.append(who, el('p', '', c.note));
+        $('legend').appendChild(d);
+    });
+
+    rebuildCut('A');
+    let clock = 0;
+    function paintAll(t) { views.forEach(v => v.paint(t)); }
+    function tick() { clock++; stepSim(sim); const t = clock * TICK_MS; views.forEach(v => { if (v.visible) v.paint(t); }); }
+    paintAll(0);
+    const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setInterval(tick, reduced ? 1000 : TICK_MS);
+    // a hook for checking still frames when the window is hidden and timers are slowed (mockup only)
+    window.ShipStudy = { step(n = 1) { for (let i = 0; i < n; i++) tick(); return clock; }, paintAll, hull: k => { rebuildCut(k); paintAll(clock * TICK_MS); }, sim: () => sim };
+})();
+</script>
+</body>
+</html>

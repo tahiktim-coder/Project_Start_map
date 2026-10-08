@@ -50,7 +50,7 @@
                 + `<span>REPAIR ROOM</span><small>${quote.cost} salvage · you have ${state.salvage}${quote.notes ? ' · ' + quote.notes : ''}</small></button>`);
         }
         if (deckKey === 'cargo') out.push(`<button class="deck-action" data-act="cargo"><span>OPEN CARGO</span><small>${state.getCargoCount ? state.getCargoCount() : state.cargo.length} / ${state.getCargoLimit ? state.getCargoLimit() : 20} items</small></button>`);
-        if (deckKey === 'quarters') out.push(`<button class="deck-action" data-act="crew"><span>CREW MANIFEST</span><small>health, stress, rest</small></button>`);
+        if (deckKey === 'quarters') out.push(`<button class="deck-action" data-act="crew"><span>CREW MANIFEST</span><small>health and stress</small></button>`);
         if (deckKey === 'engineering') {
             out.push(`<button class="deck-action" data-act="fab" ${deck.status === 'DAMAGED' ? 'disabled' : ''}>`
                 + `<span>OPEN FABRICATOR</span><small>${deck.status === 'DAMAGED' ? 'offline until repaired' : state.upgrades.length + ' modules installed'}</small></button>`);

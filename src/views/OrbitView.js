@@ -284,11 +284,11 @@ class OrbitView {
         rightPanel.innerHTML = `
              <div class="command-deck" style="display: flex; flex-direction: column; gap: 15px; height: 100%;">
                 <div style="border-bottom: 2px solid var(--color-accent); padding-bottom: 5px; color: var(--color-accent);">COMMAND DECK</div>
-                <button class="cmd-btn ${planet.scanned ? 'cmd-done' : ''}" id="btn-scan" ${this.state.energy < 2 || planet.scanned ? 'disabled' : ''}>
+                <button class="cmd-btn ${planet.scanned ? 'cmd-done' : ''}" id="btn-scan" ${planet.scanned ? 'disabled' : ''}>
                     <div>DEEP SCAN</div>
-                    <div class="cost">${planet.scanned ? 'DONE' : '-2 ENERGY'}</div>
+                    <div class="cost">${planet.scanned ? 'DONE' : 'NO COST'}</div>
                 </button>
-                ${!planet.scanned && this.state.energy >= 2 && window.SignalTune ? '<button class="cmd-link" id="btn-scan-tune">or tune it by hand — a sharp lock gives +1 data</button>' : ''}
+                ${!planet.scanned && window.SignalTune ? '<button class="cmd-link" id="btn-scan-tune">or tune it by hand — a sharp lock gives +1 data</button>' : ''}
 
                 ${planet.isStation && !planet.stationInvestigated
                     ? `<button class="cmd-btn" id="btn-station" style="border-color: #74d99a; color: #74d99a;">
@@ -328,9 +328,9 @@ class OrbitView {
 
                 ${(() => {                                                          // one button for the team: to the site the scan found, or to the surface
                     const site = window.app && window.app.siteOf ? window.app.siteOf(planet) : null, isOpen = site && !planet[site.done] && planet.scanned;
-                    const cost = this.state.hasActiveTrait && this.state.hasActiveTrait('OBSESSED') ? '-10 ENERGY · -2 RATIONS' : '-5 ENERGY · -1 RATION';
+                    const cost = this.state.hasActiveTrait && this.state.hasActiveTrait('OBSESSED') ? 'A FULL DAY · -1 RATION' : 'NO COST';   // App.handleEvaAction
                     if (planet.isStructure || planet.isStation || planet.isAsteroidField) return '';
-                    return `<button class="cmd-btn ${planet.hasEva ? 'cmd-done' : isOpen ? 'cmd-site' : ''}" id="btn-eva" ${this.state.energy < 5 || planet.hasEva ? 'disabled' : ''}>
+                    return `<button class="cmd-btn ${planet.hasEva ? 'cmd-done' : isOpen ? 'cmd-site' : ''}" id="btn-eva" ${planet.hasEva ? 'disabled' : ''}>
                         <div>${planet.hasEva ? 'TEAM ALREADY WENT' : isOpen ? `SEND TEAM TO ${site.label}` : 'SEND TEAM DOWN'}</div>
                         <div class="cost">${planet.hasEva ? 'ONE TRIP PER STOP' : isOpen ? `${site.note} · ${cost}` : `${cost} · SEARCH THE SURFACE`}</div>
                     </button>`;

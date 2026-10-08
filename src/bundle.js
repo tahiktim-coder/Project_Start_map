@@ -157,7 +157,7 @@ class GameState {
         this.reliance = { auto: 0, manual: 0 }; // jobs handed to A.U.R.A. vs done by hand
         this.datedWrecks = [];     // wrecks dated with the disc: { hull, age, ly }, what DiscDating draws on its chart
         this._breachDone = false;  // sector 1's hole in the hull (Breach) happens once per run
-        this._paidWarps = 0;       // warps that cost energy, so the breach never comes on the first one
+        this._paidWarps = 0;       // warps to a new place (free courses too), so the breach never comes on the first one
 
         // --- Legacy aliases for systems that still reference old names ---
         // TODO: Remove these once all systems are updated
@@ -442,16 +442,36 @@ class GameState {
         }
     }
 
-    /** What warping to this place costs right now: bridge damage, burnt capacitors (this sector only), downloaded star charts. */
+    /**
+     * What warping to this place costs right now, the one price the map shows (docs/ECONOMY.md): 4-6 energy by distance,
+     * then bridge damage, burnt capacitors (this sector only) and charts found on the way. No energy comes back on arrival.
+     * Free: the orbit the ship is parked at, the light, and a story planet whose course a dated wreck gave us.
+     */
     getWarpCost(planet) {
-        if (this.lastVisitedSystem && this.lastVisitedSystem.id === planet.id) return 0; // orbit re-entry
+        if (this.isReentry(planet)) return 0;
         if (planet.isStructure || planet.type === 'STRUCTURE') return 0;               // the light pulls you in: never out of reach
+        if (planet.courseKnown) return 0;                                               // their last course (App.dateWreck)
         const BRIDGE_DAMAGE_FACTOR = 1.5, BURNT_CAPACITOR_COST = 5, STAR_CHART_SAVING = 2;
-        let cost = Math.floor((planet.fuelCost || 10) * (this.isDeckOperational('bridge') ? 1 : BRIDGE_DAMAGE_FACTOR));
+        let cost = Math.floor(this.warpDistanceCost(planet) * (this.isDeckOperational('bridge') ? 1 : BRIDGE_DAMAGE_FACTOR));
         if (this._damagedCapacitors === this.currentSector) cost += BURNT_CAPACITOR_COST;
         if (this._lighthouseBonus) cost -= STAR_CHART_SAVING;
         if (this._warpDiscount) cost -= Math.round(cost * Math.min(50, this._warpDiscount) / 100);   // charts and couplers found on the way, as a percentage off
         return Math.max(1, cost);
+    }
+
+    /** Back into the orbit the ship is parked at: no warp, so no energy and no stop. */
+    isReentry(planet) {
+        return !!(planet && this.lastVisitedSystem && this.lastVisitedSystem.id === planet.id);
+    }
+
+    /** A warp's price before damage and charts: the further across the map from where the ship is, the more it costs. */
+    warpDistanceCost(planet) {
+        const WARP_NEAR = 4, WARP_FAR = 6, MAP_DISTANCE_PER_STEP = 30;   // under 30 (in map widths %) costs 4, under 60 costs 5, else 6
+        const map = typeof NavView !== 'undefined' ? NavView : null;
+        const to = map && map.mapPlace(planet);
+        if (!to) return WARP_NEAR + 1;
+        const from = (this.lastVisitedSystem && map.mapPlace(this.lastVisitedSystem)) || map.SHIP_START;
+        return Math.min(WARP_FAR, WARP_NEAR + Math.floor(map.mapDistance(from, to) / MAP_DISTANCE_PER_STEP));
     }
 
     /** Who you sided with. Two of three moments gives you standing for that person's ending (docs/CANON.md §9). */
@@ -520,12 +540,11 @@ class GameState {
     }
 
     /**
-     * Consume 1 ration. Called on major actions (warp, EVA, sector jump).
-     * Handles fungus farm counter and starvation consequences.
-     * Returns true if rations were available (even if hitting 0).
+     * Time passes: called on each major action (warp, team trip, boarding, digging, a strange site, the sector jump).
+     * Nobody eats here: the crew eats on the jump (eatOnJump) and when a choice takes a day (docs/ECONOMY.md).
+     * Injuries heal, a catatonic crew member comes back, and the cultures in the hold grow.
      */
-    consumeRation() {
-        this.rations = Math.max(0, this.rations - 1);
+    passTime() {
         this.actionsTaken++;
 
         // Fungus farm: check if cargo has a Fungus Culture
@@ -542,13 +561,12 @@ class GameState {
             }
         }
 
-        // Symbiotic Culture: every 5 actions, save 1 ration (rations don't decrease)
+        // Symbiotic Culture: every 5 actions, 1 ration saved (it used to hand back the ration an action ate; actions eat nothing now)
         const hasSymbiotic = this.cargo.some(item => item.id === 'symbiotic_culture');
         if (hasSymbiotic && !cargoDamaged) {
             this.symbioticActionCounter = (this.symbioticActionCounter || 0) + 1;
             if (this.symbioticActionCounter >= 5) {
                 this.symbioticActionCounter = 0;
-                // Restore the ration that was just consumed
                 this.rations = Math.min(this.maxRations, this.rations + 1);
                 this.addLog("Symbiotic Culture: Metabolic efficiency bonus. Ration consumption reduced.");
             }
@@ -581,9 +599,20 @@ class GameState {
             });
         }
 
-        // Starvation warnings and consequences
+        this.emitUpdates();
+    }
+
+    /**
+     * The sector jump: the crew eats (RATIONS_PER_JUMP). The only place rations are eaten besides "a day" on a card.
+     * Short of food, stress climbs; on the third jump in a row with nothing to eat, someone dies.
+     */
+    eatOnJump() {
+        const before = this.rations;
+        this.rations = Math.max(0, this.rations - RATIONS_PER_JUMP);
+        const eaten = before - this.rations;
+        this.addLog(eaten > 0 ? `The crew ate ${eaten} ration${eaten === 1 ? '' : 's'} on the jump. ${this.rations} left.` : 'There was nothing to eat on the jump.');
+
         const livingCrew = this.crew.filter(c => c.status !== 'DEAD');
-        const rationPerCrew = livingCrew.length > 0 ? this.rations / livingCrew.length : 0;
 
         // Warning at 5 rations
         if (this.rations === 5) {
@@ -607,24 +636,24 @@ class GameState {
                 window.AuraSystem.tryComment('LOW_RESOURCES', this, true);
             }
         }
-        // No rations - 2 action grace period before death
+        // No rations - 2 jumps of grace before death
         if (this.rations === 0) {
             this._starvationCounter = (this._starvationCounter || 0) + 1;
 
             if (this._starvationCounter === 1) {
-                // First action without food - warning only
-                this.addLog(`🔴 CRITICAL: No food. Crew can survive 2 more actions without eating.`);
+                // First jump without food - warning only
+                this.addLog(`🔴 CRITICAL: No food left. The crew can survive two more jumps without eating.`);
                 livingCrew.forEach(c => {
                     c.stress = Math.min(3, (c.stress || 0) + 1);
                 });
             } else if (this._starvationCounter === 2) {
-                // Second action without food - max stress warning
-                this.addLog(`🔴 STARVATION: Crew weakening rapidly. One more action without food will be fatal.`);
+                // Second jump without food - max stress warning
+                this.addLog(`🔴 STARVATION: The crew is weakening fast. One more jump without food will kill someone.`);
                 livingCrew.forEach(c => {
                     c.stress = 3; // Max stress
                 });
             } else {
-                // Third+ action without food - someone dies
+                // Third+ jump without food - someone dies
                 const maxStressedCrew = livingCrew.filter(c => (c.stress || 0) >= 3);
                 const candidates = maxStressedCrew.length > 0 ? maxStressedCrew : livingCrew;
 
@@ -641,7 +670,7 @@ class GameState {
                     if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
                         window.AuraSystem.tryComment('CREW_DEATH', this, true);
                     }
-                    // Reset counter so next death takes another 3 actions
+                    // Reset counter so next death takes another 3 jumps
                     this._starvationCounter = 0;
                 }
             }
@@ -789,7 +818,7 @@ class GameState {
                 // Tutorial: first stress problem
                 if (!this._tutorialStressSeen) {
                     this._tutorialStressSeen = true;
-                    this.addLog("A.U.R.A.: Commander, crew stress levels are concerning. Rest cycles or calming activities may help.");
+                    this.addLog('A.U.R.A.: "Crew stress is high, Commander. They rest on each sector jump, if the crew quarters work."');
                 }
 
                 switch (c.personality) {
@@ -884,7 +913,7 @@ class GameState {
                 this.addLog(`${c.name} has shut himself in the cargo hold. He won't take orders until the next jump.`);
                 break;
 
-            case 'CURIOUS': // Mira — Obsessed: EVA costs double but extra loot
+            case 'CURIOUS': // Mira — Obsessed: a team trip takes a full day (a ration), but brings back more
                 c.trait = 'OBSESSED';
                 this.addLog(`Tech Mira has become dangerously obsessed. She demands extended EVA time regardless of risk.`);
                 c.stress = 2; // Reset after breakdown
@@ -955,9 +984,10 @@ const SECTOR_ARRIVAL_LINES = {
 };
 const RELIANCE_MIN_SAMPLES = 4; // A.U.R.A. only comments on who flies once there is a pattern to see
 const CARGO_LIMIT = 20, CARGO_RACK_BONUS = 4; // see GameState.getCargoLimit / enforceCargoLimit
-const WARP_REFUND_SCALE = 0.75; // arrival refunds used to hand back ~half of every warp; 1 = old behaviour, lower = energy matters more
 const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getStopsLeft
-const SECTOR_JUMP_BASE_COST = 20; // reference cost for grading a sector-jump burn
+const SECTOR_JUMP_BASE_COST = 8; // energy for a sector jump (double with engineering down); warps are 4-6 (GameState.getWarpCost)
+const DRIVE_BRACE_SAVING = 4;    // a braced drive (the hull-cracks campfire) takes this much off the next jump, once
+const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, besides "a day" on a card (GameState.eatOnJump)
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
 const SCRAPES_PER_BROKEN_DECK = 3; // flying the jump (Corridor): every third scrape breaks a deck
 // Our wrecks (docs/CANON.md §2): the further out, the higher the hull number. Index = sector. The callsign comes from the number.
@@ -1557,24 +1587,27 @@ class App {
             return;
         }
 
-        // Free warp if returning to the last visited system (simulating orbit re-entry)
+        // Free: back into the orbit we are parked at, the light, and a story planet on a dated wreck's last course
         const cost = this.state.getWarpCost(planet);
-        if (cost === 0 && (planet.isStructure || planet.type === 'STRUCTURE')) this.state.addLog('A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in."');
-        else if (cost === 0) this.state.addLog("Back into orbit. No energy needed.");
+        const isFinale = !!(planet.isStructure || planet.type === 'STRUCTURE');       // the end of the heading costs no stop and is never out of reach
+        const isReentry = this.state.isReentry(planet);
+        const isTrip = !isReentry && !isFinale;                                      // a new place: it uses a stop, even when the course is free
+        if (isFinale && cost === 0) this.state.addLog('A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in."');
+        else if (isReentry) this.state.addLog("Back into orbit. No energy needed.");
 
         // Out of stops: the window has closed on everything except where you already are
-        const isFinale = !!(planet.isStructure || planet.type === 'STRUCTURE');       // the end of the heading costs no stop and is never out of reach
-        if (cost > 0 && !isFinale && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
+        if (isTrip && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
             this.state.addLog('A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector."');
             return;
         }
 
         // Course plot: the player flies the burn, then we re-enter here with the result.
-        // Skipped for free re-entries, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
+        // Skipped for free warps, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
         if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost) {
             this._isInTransit = true;
             const plotOptions = this.getPlotOptions(planet.name, 'planet');
             plotOptions.burns = 1;
+            plotOptions.cost = cost;                                                   // so the plot says what comes back in energy, not in percent
             plotOptions.targetHtml = window.BodyRenderer ? window.BodyRenderer.body(planet, 64) : null;
             window.WarpPlot.play(plotOptions).then(result => {
                 this._isInTransit = false;
@@ -1588,9 +1621,9 @@ class App {
 
         if (this.state.consumeEnergy(cost)) {
             this._isInTransit = true;
-            const isBreach = this.isBreachDue(cost, isFinale);
-            if (cost > 0 && !isFinale) this.state._paidWarps = (this.state._paidWarps || 0) + 1;
-            if (cost > 0 && !isFinale && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
+            const isBreach = this.isBreachDue(isTrip);
+            if (isTrip) this.state._paidWarps = (this.state._paidWarps || 0) + 1;
+            if (isTrip && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
             this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 
@@ -1610,46 +1643,9 @@ class App {
             this.state.currentSystem = planet;
             this.state.lastVisitedSystem = planet;
 
-            // Consume 1 ration (major action)
-            this.state.consumeRation();
-
-            // AMBIENT ENERGY COLLECTION: Ship collectors absorb local radiation on arrival
-            // Returns a percentage of warp cost based on destination type
-            if (cost > 0) {
-                let returnPercent = 0.5; // Default 50%
-                let returnReason = 'solar radiation';
-
-                // Adjust based on planet type
-                if (planet.type === 'GAS_GIANT') {
-                    returnPercent = 0.75; // Gas giants emit lots of energy
-                    returnReason = 'atmospheric discharge';
-                } else if (['VOLCANIC', 'SHATTERED'].includes(planet.type)) {
-                    returnPercent = 0.65; // Geothermal/core energy
-                    returnReason = 'thermal emissions';
-                } else if (['CRYSTALLINE', 'SINGING'].includes(planet.type)) {
-                    returnPercent = 0.60; // Resonant energy
-                    returnReason = 'harmonic resonance';
-                } else if (['ROGUE', 'ICE_WORLD'].includes(planet.type)) {
-                    returnPercent = 0.35; // Cold, far from stars
-                    returnReason = 'minimal ambient radiation';
-                } else if (['VITAL', 'TERRAFORMED', 'OCEANIC'].includes(planet.type)) {
-                    returnPercent = 0.55; // Stable systems
-                    returnReason = 'stellar proximity';
-                } else if (['MECHA', 'GRAVEYARD'].includes(planet.type)) {
-                    returnPercent = 0.45; // Residual tech energy
-                    returnReason = 'residual power signatures';
-                }
-
-                // Some variance (±10%)
-                const variance = (Math.random() * 0.2) - 0.1;
-                returnPercent = Math.max(0.25, Math.min(0.80, returnPercent + variance));
-
-                const energyReturn = Math.floor(cost * returnPercent * WARP_REFUND_SCALE);
-                if (energyReturn > 0) {
-                    this.state.energy = Math.min(100, this.state.energy + energyReturn);
-                    this.state.addLog(`Collectors absorbed ${energyReturn} energy from ${returnReason}.`);
-                }
-            }
+            // Time passes (nobody eats on a warp: rations go on the sector jump). No energy comes back on arrival: the price was the price.
+            // Going back into the orbit we are parked at is no warp: no time passes, so free re-entries cannot farm the cultures or the scoop.
+            if (!isReentry) this.state.passTime();
 
             // UPGRADE: Autodoc — heals crew during transit (separate from quarters passive heal)
             if (this.state.upgrades.includes('autodoc')) {
@@ -1664,11 +1660,11 @@ class App {
                 if (healed) this.state.addLog("Autodoc: Crew injuries stabilized during transit.");
             }
 
-            // UPGRADE: Fuel Scoop — BONUS energy on top of ambient collection for gas giants
-            if (this.state.upgrades.includes('fuel_scoop') && (planet.type === 'GAS_GIANT' || planet.type === 'NEBULA')) {
-                const scoop = Math.floor(Math.random() * 8) + 8; // 8-15 bonus
+            // UPGRADE: Fuel Scoop — energy from a gas giant's atmosphere on arrival (Upgrades.js says 8-15)
+            if (!isReentry && this.state.upgrades.includes('fuel_scoop') && (planet.type === 'GAS_GIANT' || planet.type === 'NEBULA')) {
+                const scoop = Math.floor(Math.random() * 8) + 8; // 8-15
                 this.state.energy = Math.min(100, this.state.energy + scoop);
-                this.state.addLog(`Bussard Scoop: Harvested additional ${scoop} Energy from atmosphere.`);
+                this.state.addLog(`The fuel scoop took ${scoop} energy from the atmosphere.`);
             }
 
             // Dangerous planet stress: dangerLevel 2+ → +1 stress to a random crew member
@@ -1777,11 +1773,12 @@ class App {
     }
 
     /**
-     * Sector 1's hole in the hull is played once per run (Breach), on a warp that costs energy. Never the first warp of the game:
-     * that one belongs to the opening, and the head count plays when the ship first leaves orbit, before any second warp.
+     * Sector 1's hole in the hull is played once per run (Breach), on a warp to a new place (a free course counts; going back
+     * into orbit and the light do not). Never the first warp of the game: that one belongs to the opening, and the head count
+     * plays when the ship first leaves orbit, before any second warp.
      */
-    isBreachDue(cost, isFinale) {
-        const isEligible = this.state.currentSector === 1 && !this.state._breachDone && cost > 0 && !isFinale && (this.state._paidWarps || 0) >= 1;
+    isBreachDue(isTrip) {
+        const isEligible = this.state.currentSector === 1 && !this.state._breachDone && isTrip && (this.state._paidWarps || 0) >= 1;
         return isEligible && !!window.MiniHost && window.MiniHost.has('breach');
     }
 
@@ -1863,7 +1860,7 @@ class App {
         }
 
         this.state.addLog(`Starting docking procedure with ${station.name}...`);
-        this.state.consumeRation();
+        this.state.passTime();
 
         // Mark as investigated immediately to prevent re-clicking
         station.stationInvestigated = true;
@@ -1895,7 +1892,7 @@ class App {
         }
 
         this.state.addLog(`Entering ${field.name}. Mining systems online...`);
-        this.state.consumeRation();
+        this.state.passTime();
 
         // Mark as mined immediately to prevent re-clicking
         field.asteroidMined = true;
@@ -2105,48 +2102,47 @@ class App {
             this.state.addLog("BRIDGE OFFLINE: Remote scanning unavailable.");
             return;
         }
-        const hasBigDish = this.state.upgrades.includes('sensor_v2');                     // Sensor Array V2: scans are free and report air and gravity
-        if (hasBigDish || this.state.consumeEnergy(2)) {
-            const data = this.state.sectorNodes.find(p => p.id === planet.id);
-            if (data) {
-                data.remoteScanned = true;
-                if (hasBigDish) data.dishRevealed = true;
+        const hasBigDish = this.state.upgrades.includes('sensor_v2');                     // Sensor Array V2: scans also report air and gravity
+        // A scan from the map costs no energy (docs/ECONOMY.md)
+        const data = this.state.sectorNodes.find(p => p.id === planet.id);
+        if (data) {
+            data.remoteScanned = true;
+            if (hasBigDish) data.dishRevealed = true;
 
-                // S3 INTERFERENCE hook — may corrupt scan data (can show false resource levels)
-                const scanConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
-                if (scanConfig && scanConfig.hazard && scanConfig.hazard.onScan) {
-                    scanConfig.hazard.onScan(data, this.state);
-                }
-
-                // A.U.R.A. false scan override (adversarial action) — corrupts resource readings
-                if (this.state._auraFalseScan) {
-                    data._realResources = data._realResources || { ...data.resources };
-                    data.resources = {
-                        metals: Math.floor(Math.random() * 100),
-                        energy: Math.floor(Math.random() * 100)
-                    };
-                    data._scanCorrupted = true;
-                    this.state._auraFalseScan = false;
-                    this.state.addLog(`A.U.R.A.: "Scan complete, Commander. All readings normal." [READINGS UNRELIABLE]`);
-                }
-
-                // Build signal summary for log
-                const signals = [];
-                if (data.metrics?.hasLife || ['VITAL', 'BIO_MASS', 'SYMBIOTE_WORLD', 'SINGING'].includes(data.type)) signals.push('BIO');
-                if (data.metrics?.hasTech || ['MECHA', 'TERRAFORMED', 'MIRROR'].includes(data.type)) signals.push('TECH');
-                if (data.tags?.includes('WRECKAGE') || data.tags?.includes('EXODUS_WRECK')) signals.push('WRECKAGE');
-                if (data.tags?.includes('FAILED_COLONY')) signals.push('COLONY');
-
-                const signalStr = signals.length > 0 ? signals.join(', ') : 'none';
-                const metalLevel = data.resources?.metals >= 70 ? 'HIGH' : (data.resources?.metals >= 40 ? 'MODERATE' : 'LOW');
-                const energyLevel = data.resources?.energy >= 70 ? 'HIGH' : (data.resources?.energy >= 40 ? 'MODERATE' : 'LOW');
-
-                const dishStr = hasBigDish && data.metrics ? ` Air: ${data.atmosphere || 'unknown'}. Gravity: ${data.metrics.gravity != null ? data.metrics.gravity.toFixed(1) + ' G' : 'unknown'}.` : '';
-                this.state.addLog(`Long-range scan: ${planet.name}. Salvage: ${metalLevel}. Energy: ${energyLevel}. Signals: ${signalStr}.${dishStr}`);
-
-                // Force re-render of right panel
-                this.navView.handlePlanetSelect(data);
+            // S3 INTERFERENCE hook — may corrupt scan data (can show false resource levels)
+            const scanConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
+            if (scanConfig && scanConfig.hazard && scanConfig.hazard.onScan) {
+                scanConfig.hazard.onScan(data, this.state);
             }
+
+            // A.U.R.A. false scan override (adversarial action) — corrupts resource readings
+            if (this.state._auraFalseScan) {
+                data._realResources = data._realResources || { ...data.resources };
+                data.resources = {
+                    metals: Math.floor(Math.random() * 100),
+                    energy: Math.floor(Math.random() * 100)
+                };
+                data._scanCorrupted = true;
+                this.state._auraFalseScan = false;
+                this.state.addLog(`A.U.R.A.: "Scan complete, Commander. All readings normal." [READINGS UNRELIABLE]`);
+            }
+
+            // Build signal summary for log
+            const signals = [];
+            if (data.metrics?.hasLife || ['VITAL', 'BIO_MASS', 'SYMBIOTE_WORLD', 'SINGING'].includes(data.type)) signals.push('BIO');
+            if (data.metrics?.hasTech || ['MECHA', 'TERRAFORMED', 'MIRROR'].includes(data.type)) signals.push('TECH');
+            if (data.tags?.includes('WRECKAGE') || data.tags?.includes('EXODUS_WRECK')) signals.push('WRECKAGE');
+            if (data.tags?.includes('FAILED_COLONY')) signals.push('COLONY');
+
+            const signalStr = signals.length > 0 ? signals.join(', ') : 'none';
+            const metalLevel = data.resources?.metals >= 70 ? 'HIGH' : (data.resources?.metals >= 40 ? 'MODERATE' : 'LOW');
+            const energyLevel = data.resources?.energy >= 70 ? 'HIGH' : (data.resources?.energy >= 40 ? 'MODERATE' : 'LOW');
+
+            const dishStr = hasBigDish && data.metrics ? ` Air: ${data.atmosphere || 'unknown'}. Gravity: ${data.metrics.gravity != null ? data.metrics.gravity.toFixed(1) + ' G' : 'unknown'}.` : '';
+            this.state.addLog(`Long-range scan: ${planet.name}. Salvage: ${metalLevel}. Energy: ${energyLevel}. Signals: ${signalStr}.${dishStr}`);
+
+            // Force re-render of right panel
+            this.navView.handlePlanetSelect(data);
         }
     }
 
@@ -2226,10 +2222,10 @@ class App {
         this.state.emitUpdates();
     }
 
-    /** What the sector jump costs now: double with engineering down, a fifth off once with the drive reinforced (Jaxon's campfire). */
+    /** What the sector jump costs now: 8, double with engineering down, 4 less once with the drive braced (the hull-cracks campfire). */
     sectorJumpCost() {
         const base = this.state.isDeckOperational('engineering') ? SECTOR_JUMP_BASE_COST : SECTOR_JUMP_BASE_COST * 2;
-        return this.state._driveReinforced ? base - Math.floor(base * 0.2) : base;
+        return this.state._driveReinforced ? Math.max(0, base - DRIVE_BRACE_SAVING) : base;
     }
 
     handleSectorJump() {
@@ -2277,8 +2273,9 @@ class App {
         this._isInTransit = true;
         this.state.addLog("Starting Sector Jump...");
 
-        // Consume 1 ration (major action)
-        this.state.consumeRation();
+        // Time passes, and the crew eats: the jump is where rations go (docs/ECONOMY.md)
+        this.state.passTime();
+        this.state.eatOnJump();
 
         // Passive stress recovery on sector jump (if quarters operational)
         if (this.state.isDeckOperational('quarters')) {
@@ -2335,8 +2332,6 @@ class App {
         window.dispatchEvent(new CustomEvent('sector-entered', { detail: { sector: nextSector } }));
 
         // Special barks for sector entries
-        // The picture that closes the sector you just left: sector 3 gets the long one (the truth), the rest a five-second shot
-        if (window.StoryReel && !window.TEST_MODE && nextSector !== 3) window.StoryReel.play(`jump${nextSector}`);
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
             if (nextSector === 3) {
                 window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
@@ -2369,6 +2364,7 @@ class App {
         if (!window.WarpPlot) { onComplete(); return; }
         const nextSector = this.state.currentSector + 1;
         const plotOptions = this.getPlotOptions(`S${nextSector} —`, 'sector');
+        plotOptions.cost = SECTOR_JUMP_BASE_COST;                                    // what applyPlotResult grades against below
         plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         const relianceVoice = this.getRelianceVoice();
         if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
@@ -2548,7 +2544,7 @@ class App {
         this.state._boardedHulls = (this.state._boardedHulls || []).concat(shipName);
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) window.BarkSystem.tryBark('EXODUS_FOUND', this.state, { planet });
         this.state.addLog(`Exodus transponder locked. Deploying team to investigate...`);
-        this.state.consumeRation(); // Major action
+        this.state.passTime(); // Major action: time passes
         planet.exodusInvestigated = true; // marked at once, so it cannot be clicked twice
 
         const cutIn = selected.noHatch ? Promise.resolve() : this.cutIntoWreck(shipName);   // a crater has no hatch to cut
@@ -2624,7 +2620,7 @@ class App {
                 ? { speaker: 'Tech Mira', text: "The disc has a pulsar map. Match this fix to it, and we'll know when they died." }
                 : { speaker: 'A.U.R.A.', text: "The disc's pulsar map can date this star fix, Commander." }],
             choices: [
-                { text: 'Date this wreck with the disc', desc: isSomewhereToFind ? 'No cost. Shows when it died, and where its crew was going.' : 'No cost. Shows when it died.' },
+                { text: 'Date this wreck with the disc', desc: isSomewhereToFind ? 'No cost. Shows when it died, and where its crew was going. Their course is free to fly.' : 'No cost. Shows when it died.' },
                 { text: 'Not now', desc: 'You can still do it from the command deck while we are in orbit.' },
             ],
             onPick: idx => { if (idx === 0) this.dateWreck(planet); },
@@ -2645,7 +2641,11 @@ class App {
             planet.wreckDated = true;
             this.state.datedWrecks = (this.state.datedWrecks || []).concat({ hull: result.hull, age: result.age, ly: result.ly });
             this.state.addLog(`The disc dates ${planet.wreckName}: dead for ${result.age} years.`);
-            if (story) this.revealStoryPlanet(story, this.storyFoundLine(planet, story));
+            if (story) {
+                story.courseKnown = true;                                           // GameState.getWarpCost: the warp there costs nothing
+                this.revealStoryPlanet(story, this.storyFoundLine(planet, story));
+                this.state.addLog('A.U.R.A.: "We have their last course, Commander. Flying it costs no energy."');
+            }
             if (this.state.currentSystem === planet) this.orbitView.updateCommandDeck(planet);
             this.state.emitUpdates();
             this.autoSave();
@@ -2722,7 +2722,7 @@ class App {
         }
 
         this.state.addLog(`Colony ruins detected. Deploying investigation team...`);
-        this.state.consumeRation();
+        this.state.passTime();
 
         // Mark as investigated immediately to prevent re-clicking
         planet.colonyInvestigated = true;
@@ -2775,7 +2775,7 @@ class App {
         const shipName = selected.getName();
 
         this.state.addLog(`Wreck found: ${shipName}. Deploying investigation team...`);
-        this.state.consumeRation();
+        this.state.passTime();
 
         // Mark as investigated immediately to prevent re-clicking
         planet.derelictInvestigated = true;
@@ -2816,7 +2816,7 @@ class App {
             this.state.addLog("ERROR: Anomaly encounter data unavailable.");
             return;
         }
-        this.state.consumeRation(); // every investigation costs a ration, same as wrecks and stations
+        this.state.passTime(); // time passes, as at wrecks and stations (nobody eats: rations go on the jump)
 
         // Select by weight: only places this sector has reached (minSector), and never the same strange place twice in a run
         this.state._seenAnomalies = this.state._seenAnomalies || [];
@@ -2978,7 +2978,7 @@ Then you're through.`,
         }
 
         this.state.addLog(`Approaching ${poi.name}...`);
-        this.state.consumeRation(); // every investigation costs a ration, same as wrecks and stations
+        this.state.passTime(); // time passes, as at wrecks and stations (nobody eats: rations go on the jump)
 
         // Mark as investigated immediately to prevent re-clicking
         planet[investigatedKey] = true;
@@ -3501,33 +3501,31 @@ Then you're through.`,
     handleScanAction(isManual = false) {
         const planet = this.state.currentSystem;
 
-        // Special handling for THE STRUCTURE - scanning it is... different
+        // Special handling for THE STRUCTURE - scanning it is... different. Scans cost no energy (docs/ECONOMY.md).
         if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
-            if (this.state.consumeEnergy(2)) {
-                this.state.addLog("Deep Scan started...");
-                this.state.addLog("SCAN: Light, but no heat.");
-                this.state.addLog("SCAN: No mass and no surface that the instruments can find.");
-                this.state.addLog('A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star."');
+            this.state.addLog("Deep Scan started...");
+            this.state.addLog("SCAN: Light, but no heat.");
+            this.state.addLog("SCAN: No mass and no surface that the instruments can find.");
+            this.state.addLog('A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star."');
 
-                // Probe takes damage from scanning the light
-                if (this.state.probeIntegrity > 0) {
-                    this.state.probeIntegrity = Math.max(0, this.state.probeIntegrity - 30);
-                    if (this.state.probeIntegrity <= 0) {
-                        this.state.addLog("PROBE STATUS: lost. It went quiet near the light and did not come back.");
-                    } else {
-                        this.state.addLog(`PROBE STATUS: ${this.state.probeIntegrity}%. Part of its memory came back blank.`);
-                    }
+            // Probe takes damage from scanning the light
+            if (this.state.probeIntegrity > 0) {
+                this.state.probeIntegrity = Math.max(0, this.state.probeIntegrity - 30);
+                if (this.state.probeIntegrity <= 0) {
+                    this.state.addLog("PROBE STATUS: lost. It went quiet near the light and did not come back.");
+                } else {
+                    this.state.addLog(`PROBE STATUS: ${this.state.probeIntegrity}%. Part of its memory came back blank.`);
                 }
-
-                planet.scanned = true;
-                this.state.emitUpdates();
-                this.renderOrbit();
             }
+
+            planet.scanned = true;
+            this.state.emitUpdates();
+            this.renderOrbit();
             return;
         }
 
         // Tune the signal first; we re-enter here with the result (same pattern as the warp plot)
-        if (isManual && window.SignalTune && !this._tuneResult && planet && !planet.scanned && this.state.energy >= 2) {
+        if (isManual && window.SignalTune && !this._tuneResult && planet && !planet.scanned) {
             window.SignalTune.play({ targetName: planet.name, sector: this.state.currentSector }).then(result => {
                 this._tuneResult = result;
                 this.handleScanAction(true);
@@ -3538,104 +3536,103 @@ Then you're through.`,
         this._tuneResult = null;
         if (tune) this.noteReliance(!!tune.auto);
 
-        if (this.state.consumeEnergy(2)) {
-            this.state.addLog("Deep Scan started...");
-            if (tune && tune.grade === 'sharp' && !this.state.isDeckOperational('lab')) {
-                this.state.addLog("Sharp lock, but the laboratory is down: nobody can work the extra detail into data.");
-            } else if (tune && tune.grade === 'sharp') {
-                this.state.addColonyKnowledge(1, true);
-                this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
-            } else if (tune && tune.grade === 'weak') {
-                this.state.energy = Math.max(0, this.state.energy - 1);
-                this.state.addLog("Weak lock: the scan had to run twice. 1 extra energy spent.");
-            } else if (tune && tune.auto) {
-                this.state.addLog("A.U.R.A. tuned the scan. Adequate.");
-            }
-            planet.scanned = true;
+        // A deep scan costs no energy (docs/ECONOMY.md)
+        this.state.addLog("Deep Scan started...");
+        if (tune && tune.grade === 'sharp' && !this.state.isDeckOperational('lab')) {
+            this.state.addLog("Sharp lock, but the laboratory is down: nobody can work the extra detail into data.");
+        } else if (tune && tune.grade === 'sharp') {
+            this.state.addColonyKnowledge(1, true);
+            this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
+        } else if (tune && tune.grade === 'weak') {
+            this.state.energy = Math.max(0, this.state.energy - 1);
+            this.state.addLog("Weak lock: the scan had to run twice. 1 extra energy spent.");
+        } else if (tune && tune.auto) {
+            this.state.addLog("A.U.R.A. tuned the scan. Adequate.");
+        }
+        planet.scanned = true;
 
-            // S3+ deep scan hook — corrects corrupted data, reveals hidden tags
-            const deepScanConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
-            if (deepScanConfig && deepScanConfig.hazard && deepScanConfig.hazard.onDeepScan) {
-                deepScanConfig.hazard.onDeepScan(planet);
-            }
+        // S3+ deep scan hook — corrects corrupted data, reveals hidden tags
+        const deepScanConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
+        if (deepScanConfig && deepScanConfig.hazard && deepScanConfig.hazard.onDeepScan) {
+            deepScanConfig.hazard.onDeepScan(planet);
+        }
 
-            // Check if PREDATORY was just revealed
-            if (planet.tags && planet.tags.includes('PREDATORY')) {
-                this.state.addLog("⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior.");
-                this.state.addLog('A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part."');
-            }
+        // Check if PREDATORY was just revealed
+        if (planet.tags && planet.tags.includes('PREDATORY')) {
+            this.state.addLog("⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior.");
+            this.state.addLog('A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part."');
+        }
 
-            this.state.addLog("Detailed surface analysis complete. Resource data available.");
+        this.state.addLog("Detailed surface analysis complete. Resource data available.");
 
-            // === SIGNAL TYPE SCAN BONUSES ===
-            // Different signals provide different benefits when detected
+        // === SIGNAL TYPE SCAN BONUSES ===
+        // Different signals provide different benefits when detected
 
-            // ALIEN SIGNALS: high risk but data valuable
-            if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) {
-                this.state.addLog("⚡ OLD SIGNAL: a beacon on our own channel, still transmitting.");
-                this.state.addLog('A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it."');
-            }
+        // ALIEN SIGNALS: high risk but data valuable
+        if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) {
+            this.state.addLog("⚡ OLD SIGNAL: a beacon on our own channel, still transmitting.");
+            this.state.addLog('A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it."');
+        }
 
-            // ANCIENT RUINS: knowledge and reduced EVA risk
-            if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) {
-                this.state.addLog("📜 ANCIENT RUINS: Structural remnants detected. Archaeological value confirmed.");
-                // Small energy refund for ruins (ancient tech assists scanning)
-                this.state.energy = Math.min(100, this.state.energy + 1);
-                this.state.addLog("Ancient scanner arrays still partially functional. +1 Energy recovered.");
-            }
+        // ANCIENT RUINS: knowledge and reduced EVA risk
+        if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) {
+            this.state.addLog("📜 ANCIENT RUINS: Structural remnants detected. Archaeological value confirmed.");
+            // Small energy refund for ruins (ancient tech assists scanning)
+            this.state.energy = Math.min(100, this.state.energy + 1);
+            this.state.addLog("Ancient scanner arrays still partially functional. +1 Energy recovered.");
+        }
 
-            // BIOLOGICAL: life means potential food and lower danger
-            if (planet.metrics && planet.metrics.hasLife && !planet.tags?.includes('PREDATORY')) {
-                this.state.addLog("🌿 BIOLOGICAL SIGNATURES: Stable ecosystem detected. EVA conditions favorable.");
-            }
+        // BIOLOGICAL: life means potential food and lower danger
+        if (planet.metrics && planet.metrics.hasLife && !planet.tags?.includes('PREDATORY')) {
+            this.state.addLog("🌿 BIOLOGICAL SIGNATURES: Stable ecosystem detected. EVA conditions favorable.");
+        }
 
-            // TECHNOLOGICAL: salvage potential
-            if (planet.metrics && planet.metrics.hasTech) {
-                this.state.addLog("⚙ TECHNOLOGICAL SIGNATURES: Machine presence confirmed. High salvage potential.");
-            }
+        // TECHNOLOGICAL: salvage potential
+        if (planet.metrics && planet.metrics.hasTech) {
+            this.state.addLog("⚙ TECHNOLOGICAL SIGNATURES: Machine presence confirmed. High salvage potential.");
+        }
 
-            // DERELICT: ship salvage
-            if (planet.tags && planet.tags.includes('DERELICT')) {
-                this.state.addLog("🚀 DERELICT VESSEL: Non-Exodus ship wreckage detected. Investigate for salvage.");
-            }
+        // DERELICT: ship salvage
+        if (planet.tags && planet.tags.includes('DERELICT')) {
+            this.state.addLog("🚀 DERELICT VESSEL: Non-Exodus ship wreckage detected. Investigate for salvage.");
+        }
 
-            // Bark: crew reacts to scan results
-            if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
-                window.BarkSystem.tryBark('AFTER_SCAN', this.state, { planet });
-            }
+        // Bark: crew reacts to scan results
+        if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
+            window.BarkSystem.tryBark('AFTER_SCAN', this.state, { planet });
+        }
 
-            // A.U.R.A. scan commentary
-            if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
-                window.AuraSystem.tryComment('SCAN_COMPLETE', this.state);
+        // A.U.R.A. scan commentary
+        if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+            window.AuraSystem.tryComment('SCAN_COMPLETE', this.state);
 
-                // Additional commentary for high-viability colony sites
-                const colonyTypes = ['EDEN', 'VITAL', 'TERRAFORMED', 'OCEANIC'];
-                if (colonyTypes.includes(planet.type)) {
-                    setTimeout(() => {
-                        window.AuraSystem.tryComment('COLONY_SITE', this.state);
-                    }, 600);
-                }
-
-                // Discovery commentary for anomalies or unusual findings
-                if (planet.tags && (planet.tags.includes('ANOMALY') || planet.tags.includes('EXODUS_WRECK'))) {
-                    setTimeout(() => {
-                        window.AuraSystem.tryComment('DISCOVERY', this.state);
-                    }, 400);
-                }
+            // Additional commentary for high-viability colony sites
+            const colonyTypes = ['EDEN', 'VITAL', 'TERRAFORMED', 'OCEANIC'];
+            if (colonyTypes.includes(planet.type)) {
+                setTimeout(() => {
+                    window.AuraSystem.tryComment('COLONY_SITE', this.state);
+                }, 600);
             }
 
-            this.orbitView.updateCommandDeck(this.state.currentSystem);
-            this.renderOrbit();
+            // Discovery commentary for anomalies or unusual findings
+            if (planet.tags && (planet.tags.includes('ANOMALY') || planet.tags.includes('EXODUS_WRECK'))) {
+                setTimeout(() => {
+                    window.AuraSystem.tryComment('DISCOVERY', this.state);
+                }, 400);
+            }
+        }
 
-            // Check for distress signals after scan (small chance) - use queue; never in the last sector (docs/CANON.md §9)
-            if (typeof rollDistressSignal !== 'undefined' && this.state.currentSector < FINAL_SECTOR) {
-                const distress = rollDistressSignal(this.state, 'scan');
-                if (distress) {
-                    setTimeout(() => {
-                        this.state.addLog("⚠ INCOMING TRANSMISSION: Old distress signal detected...");
-                        this.queueModal('distress', distress);
-                    }, 1000);
-                }
+        this.orbitView.updateCommandDeck(this.state.currentSystem);
+        this.renderOrbit();
+
+        // Check for distress signals after scan (small chance) - use queue; never in the last sector (docs/CANON.md §9)
+        if (typeof rollDistressSignal !== 'undefined' && this.state.currentSector < FINAL_SECTOR) {
+            const distress = rollDistressSignal(this.state, 'scan');
+            if (distress) {
+                setTimeout(() => {
+                    this.state.addLog("⚠ INCOMING TRANSMISSION: Old distress signal detected...");
+                    this.queueModal('distress', distress);
+                }, 1000);
             }
         }
     }
@@ -3889,80 +3886,75 @@ Then you're through.`,
         const evaTeam = this._pickedEvaTeam || this.selectEvaTeam();
         this._pickedEvaTeam = null;
 
-        // OBSESSED (Mira stress 3): EVA costs double energy and double rations
+        // A team trip costs no energy (docs/ECONOMY.md). OBSESSED (Mira at stress 3) keeps the team out a full day, which costs a ration.
         const isObsessed = this.state.hasActiveTrait('OBSESSED');
-        const evaCost = isObsessed ? 10 : 5;
         const site = this.siteOf(planet), isSiteTrip = !!(site && !planet[site.done]);
 
-        if (this.state.consumeEnergy(evaCost)) {
-            const planet = this.state.currentSystem;
+        // Bark: crew reacts before EVA
+        if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
+            window.BarkSystem.tryBark('BEFORE_EVA', this.state, { planet });
+        }
 
-            // Bark: crew reacts before EVA
-            if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
-                window.BarkSystem.tryBark('BEFORE_EVA', this.state, { planet });
-            }
+        // Log the EVA team
+        this.state.addLog(`EVA team deployed: ${evaTeam[0].name} and ${evaTeam[1].name}.`);
 
-            // Log the EVA team
-            this.state.addLog(`EVA team deployed: ${evaTeam[0].name} and ${evaTeam[1].name}.`);
+        // Tutorial: first EVA
+        if (!this.state._tutorialEvaSeen) {
+            this.state._tutorialEvaSeen = true;
+            this.state.addLog('A.U.R.A.: "Team away, Commander. I have their vitals."');
+        }
 
-            // Tutorial: first EVA
-            if (!this.state._tutorialEvaSeen) {
-                this.state._tutorialEvaSeen = true;
-                this.state.addLog('A.U.R.A.: "Team away, Commander. I have their vitals."');
-            }
+        // A.U.R.A. commentary on EVA
+        if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+            window.AuraSystem.tryComment('EVA_DEPLOY', this.state);
+        }
 
-            // A.U.R.A. commentary on EVA
-            if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
-                window.AuraSystem.tryComment('EVA_DEPLOY', this.state);
-            }
+        // Time passes (a site trip's own story passes it). Nobody eats on a trip: rations go on the jump.
+        if (!isSiteTrip) this.state.passTime();
+        if (isObsessed) {
+            this.state.rations = Math.max(0, this.state.rations - 1);
+            this.state.addLog("Mira insists the team stays out for a full day. -1 Ration.");
+        }
 
-            // Consume rations (major action — double if obsessed); a site trip's ration is taken by the site itself
-            if (!isSiteTrip) this.state.consumeRation();
-            if (isObsessed) {
-                this.state.consumeRation();
-                this.state.addLog("Mira: Extended EVA window. Additional rations consumed.");
-            }
+        // Store EVA team for resolveEvaOutcome
+        this.currentEvaTeam = evaTeam;
 
-            // Store EVA team for resolveEvaOutcome
-            this.currentEvaTeam = evaTeam;
+        // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
+        const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
+        if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
+        const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
+        const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null, wreck: wreck && wreck.id })
+            : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
+        const afterDescent = goDown.then(landing => this.applyLanding(landing, evaTeam));
 
-            // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
-            const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
-            if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
-            const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
-            const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null, wreck: wreck && wreck.id })
-                : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
-            const afterDescent = goDown.then(landing => this.applyLanding(landing, evaTeam));
-
-            if (isSiteTrip) {                                                           // the team goes where the scan pointed: the site's own story
-                planet.hasEva = true;
-                this.orbitView.updateCommandDeck(planet);
-                afterDescent.then(() => site.run());
-                return;
-            }
-
-            // Special EDEN EVA — paradise world, unique peaceful encounter
-            if (planet.type === 'EDEN') {
-                planet.hasEva = true;
-                this.orbitView.updateCommandDeck(planet);
-                afterDescent.then(() => this.showEdenEvaModal(planet));
-                return;
-            }
-
-            // 2. Select Event
-            let potentialEvents = EVENTS.filter(e => e.trigger(planet));
-            if (potentialEvents.length === 0) potentialEvents = [EVENTS[EVENTS.length - 1]];
-
-            // Prefer type-specific events over the generic fallback
-            const specificEvents = potentialEvents.filter(e => e.id !== 'DISTRESS_BEACON');
-            const selectedEvent = specificEvents.length > 0
-                ? specificEvents[Math.floor(Math.random() * specificEvents.length)]
-                : potentialEvents[potentialEvents.length - 1];
-
+        if (isSiteTrip) {                                                           // the team goes where the scan pointed: the site's own story
             planet.hasEva = true;
             this.orbitView.updateCommandDeck(planet);
-            afterDescent.then(() => this.showEventModal(selectedEvent, planet));
+            afterDescent.then(() => site.run());
+            return;
         }
+
+        // Special EDEN EVA — paradise world, unique peaceful encounter
+        if (planet.type === 'EDEN') {
+            planet.hasEva = true;
+            this.orbitView.updateCommandDeck(planet);
+            afterDescent.then(() => this.showEdenEvaModal(planet));
+            return;
+        }
+
+        // 2. Select Event
+        let potentialEvents = EVENTS.filter(e => e.trigger(planet));
+        if (potentialEvents.length === 0) potentialEvents = [EVENTS[EVENTS.length - 1]];
+
+        // Prefer type-specific events over the generic fallback
+        const specificEvents = potentialEvents.filter(e => e.id !== 'DISTRESS_BEACON');
+        const selectedEvent = specificEvents.length > 0
+            ? specificEvents[Math.floor(Math.random() * specificEvents.length)]
+            : potentialEvents[potentialEvents.length - 1];
+
+        planet.hasEva = true;
+        this.orbitView.updateCommandDeck(planet);
+        afterDescent.then(() => this.showEventModal(selectedEvent, planet));
     }
 
     /** Consequences of the landing: a soft one makes the trip safer, a crash hurts someone before they step out. */
@@ -4629,8 +4621,7 @@ Then you're through.`,
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
 
-        const quartersOk = this.state.isDeckOperational('quarters');
-        const canRest = quartersOk && this.state.rations >= 1;
+        const quartersOk = this.state.isDeckOperational('quarters');   // no REST button: the crew rests on each sector jump (docs/ECONOMY.md)
 
         modal.innerHTML = `
             <div class="modal-content">
@@ -4642,8 +4633,6 @@ Then you're through.`,
             const color = c.status === 'DEAD' ? '#d85a4e' : isSedated ? '#c4d0c4' : isConfined ? '#e07a70' : (c.status === 'INJURED' ? '#d9a24a' : 'var(--color-primary)');
             const borderColor = c.status === 'DEAD' ? '#d85a4e' : isSedated ? '#c4d0c4' : isConfined ? '#e07a70' : 'var(--color-primary-dim)';
             const statusText = isSedated ? 'SEDATED' : isConfined ? 'CONFINED' : c.status;
-            const showRest = c.status !== 'DEAD' && !isSedated && !isConfined && (c.stress || 0) > 0 && quartersOk;
-            const restDisabled = !canRest;
             // Stress-based visual effects
             const stressLevel = c.stress || 0;
             const stressFilter = stressLevel >= 3 ? 'saturate(0.5) contrast(1.2) brightness(0.8)' :
@@ -4670,40 +4659,16 @@ Then you're through.`,
                                 <div class="crew-tags">${c.tags.filter(t => t !== 'SEDATED' && t !== 'CONFINED').join(' ')}${c.trait ? ` <span style="color:#d85a4e;">[${c.trait}]</span>` : ''}
                                     ${isSedated ? `<span style="color:#c4d0c4; font-weight:bold; margin-left:5px;">[SEDATED - ${c._sedatedUntilWarp || '?'} warps]</span>` : ''}
                                     ${isConfined ? `<span style="color:#e07a70; font-weight:bold; margin-left:5px;">[CONFINED TO QUARTERS]</span>` : ''}
-                                    ${showRest ? `<button class="rest-btn" data-idx="${idx}" style="
-                                        margin-left: 10px; padding: 2px 8px; font-size: 0.8em;
-                                        background: ${restDisabled ? '#333' : 'rgba(0,100,50,0.8)'};
-                                        color: ${restDisabled ? '#666' : '#74d99a'};
-                                        border: 1px solid ${restDisabled ? '#555' : '#74d99a'};
-                                        cursor: ${restDisabled ? 'not-allowed' : 'pointer'};
-                                        font-family: var(--font-mono);
-                                    " ${restDisabled ? 'disabled' : ''}>REST (-1 RATION, -1 STRESS)</button>` : ''}
                                 </div>
                             </div>
                         </div>
                     `;
         }).join('')}
                 </div>
-                ${!quartersOk ? '<div style="color:#d85a4e;font-size:0.8em;text-align:center;padding:10px;">CREW QUARTERS OFFLINE — Rest unavailable</div>' : ''}
+                ${!quartersOk ? '<div style="color:#d85a4e;font-size:0.8em;text-align:center;padding:10px;">CREW QUARTERS OFFLINE — nobody recovers from stress or injury until they are repaired</div>' : ''}
             </div>
         `;
         document.body.appendChild(modal);
-
-        // REST button handlers
-        modal.querySelectorAll('.rest-btn:not([disabled])').forEach(btn => {
-            btn.onclick = () => {
-                const idx = parseInt(btn.dataset.idx);
-                const c = this.state.crew[idx];
-                if (c && c.stress > 0 && this.state.rations >= 1) {
-                    this.state.rations = Math.max(0, this.state.rations - 1);
-                    c.stress = Math.max(0, c.stress - 1);
-                    this.state.addLog(`${c.name}: Rest cycle authorized. Stress reduced. (-1 Ration)`);
-                    this.state.emitUpdates();
-                    modal.remove();
-                    this.showCrewManifest(); // Refresh
-                }
-            };
-        });
 
         modal.querySelector('.close-modal').onclick = () => modal.remove();
         modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
@@ -5364,7 +5329,8 @@ Then you're through.`,
         nodes.forEach(planet => {
             if (planet.ghost || planet.storyHidden) return; // Skip ghost planets and faint contacts: neither can be warped to
             const cost = this.state.getWarpCost(planet);
-            const isLegal = cost === 0 || stopsLeft > 0 || window.TEST_MODE;           // with no stops left, only a free warp is possible
+            const isFinale = !!(planet.isStructure || planet.type === 'STRUCTURE');      // as in handleWarp: the light needs no stop
+            const isLegal = this.state.isReentry(planet) || isFinale || stopsLeft > 0 || window.TEST_MODE;   // with no stops left, only going back into orbit, or to the light
             if (isLegal && cost < cheapestCost) cheapestCost = cost;
         });
         if (this.state.currentSector < FINAL_SECTOR) return; // the jump is always a way out (on the reserve, if it must be)

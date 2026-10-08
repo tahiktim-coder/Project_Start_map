@@ -718,6 +718,16 @@
 
 @media (prefers-reduced-motion: reduce) { .nav-signal { animation: none; } }
 
+/* under a place's name on the map: what is there, free to see without a scan (NavView.siteLabelHtml) */
+.nav-site {
+    display: block;
+    margin-top: 2px;
+    color: var(--bone);
+    font-size: 0.85em;
+    letter-spacing: 0.14em;
+}
+.nav-site.is-done { color: var(--dim); }
+
 /* the sector's story planet before it is found: a faint contact with no name (NavView.contactHtml) */
 .nav-contact {
     position: absolute;

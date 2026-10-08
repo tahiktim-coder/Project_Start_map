@@ -218,7 +218,7 @@
                 overlay.classList.add('is-flying', 'is-' + grade);
                 sfx(grade === 'perfect' ? 'sfxDiscovery' : grade === 'bad' ? 'sfxWarn' : 'sfxWarp');
                 const info = GRADES[grade], line = pickLine(isAuto ? 'auto' : grade, opts.crew || []);
-                resultEl.innerHTML = `<strong style="color:${info.color}">${isAuto ? 'A.U.R.A. PLOT' : info.label}</strong><span>${info.effect}</span>`
+                resultEl.innerHTML = `<strong style="color:${info.color}">${isAuto ? 'A.U.R.A. PLOT' : info.label}</strong><span>${effectText(grade, opts.cost)}</span>`
                     + (line ? `<blockquote>${line.face ? `<img src="assets/crew/${esc(line.face)}.png" alt="">` : '<i>◈</i>'}<b>${esc(line.name)}</b> “${esc(line.text)}”</blockquote>` : '');
                 if (grade === 'bad' && window.app && window.app.screenShake) window.app.screenShake('light');
                 setTimeout(() => (opts.arrival ? arrive(isAuto) : finish(isAuto)), Math.max(FLIGHT_MS, RESULT_HOLD_MS));
@@ -268,6 +268,15 @@
     function energyDelta(grade, baseCost) {
         const info = GRADES[grade];
         return info ? Math.round(baseCost * info.refund) : 0;
+    }
+
+    /** What a grade does, said in energy when the caller passed the price (opts.cost), so the screen shows what is charged. */
+    function effectText(grade, cost) {
+        if (!(cost > 0)) return GRADES[grade].effect;
+        const delta = energyDelta(grade, cost);
+        if (delta > 0) return `${delta} energy comes back`;
+        if (delta < 0) return `${-delta} extra energy burned — hull shudders`;
+        return GRADES.rough.effect;
     }
 
     window.WarpPlot = { play, energyDelta };

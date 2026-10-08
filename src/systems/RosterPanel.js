@@ -1,6 +1,6 @@
 /* RosterPanel — the crew manifest and the cargo list in the shared card language.
-   crew(app): one row per person — face, job, where they are, how they are holding up, and a REST button
-   only when resting is actually possible. cargo(app): one card per item with a USE button only on
+   crew(app): one row per person — face, job, where they are, how they are holding up (no REST button: the crew
+   rests on each sector jump, docs/ECONOMY.md). cargo(app): one card per item with a USE button only on
    things that can be used. Both replace legacy modals in bundle.js, which stay as fallbacks. */
 
 (function () {
@@ -24,7 +24,7 @@
     }
 
     // ── crew ──
-    function personRow(member, index, canRest, cut) {
+    function personRow(member, cut) {
         const tags = member.tags || [], isDead = member.status === 'DEAD';
         const job = JOB[Object.keys(JOB).find(t => tags.includes(t))] || 'Crew';
         const held = tags.includes('SEDATED') ? 'sedated' : tags.includes('CONFINED') ? 'confined to quarters' : '';
@@ -33,8 +33,6 @@
         const where = isDead ? 'Stasis pod, cargo hold' : (cut ? ROOM[cut.stationOf(member)] : '');
         const state = window.PlainWords ? window.PlainWords.status(member) : (isDead ? 'dead' : held || member.status.toLowerCase());
         const pips = [0, 1, 2].map(i => `<i class="${i < stress ? 'is-on' : ''}"></i>`).join('');
-        const rest = (!isDead && !held && stress > 0)
-            ? `<button class="deck-action roster-rest" data-idx="${index}" ${canRest ? '' : 'disabled'}><span>REST</span><small>${canRest ? '1 ration · stress −1' : 'not possible right now'}</small></button>` : '';
         return `
             <li class="roster-person ${isDead ? 'is-dead' : ''} stress-${stress}">
                 <img src="assets/crew/${esc(member.portraitId || '')}.png" alt="" style="border-color:${color}">
@@ -47,30 +45,19 @@
                     <span class="roster-health is-${esc(state.split(' ')[0])}">${esc(state)}</span>
                     ${isDead ? '' : `<span class="roster-stress" title="stress">${pips}<small>${STRESS_WORD[stress]}</small></span>`}
                 </div>
-                ${rest}
             </li>`;
     }
 
     function crew(app) {
         const state = app.state, cut = window.ShipCutaway;
-        const isQuartersOk = state.isDeckOperational('quarters'), canRest = isQuartersOk && state.rations >= 1;
+        const isQuartersOk = state.isDeckOperational('quarters');
         const modal = open('roster-panel', 'The crew', `
             <header class="deck-panel-head"><h3>THE CREW</h3>
                 <span class="deck-panel-status">${state.crew.filter(c => c.status !== 'DEAD').length} OF ${state.crew.length} ALIVE</span>
                 <button class="deck-panel-close close-modal" aria-label="Close">✕</button></header>
-            ${isQuartersOk ? '' : '<p class="roster-note is-bad">Crew quarters are out of action — nobody can rest until they are repaired.</p>'}
+            ${isQuartersOk ? '<p class="roster-note">The crew rests on each sector jump. Stress goes down by one.</p>' : '<p class="roster-note is-bad">Crew quarters are out of action. Nobody rests on the jumps, and injuries do not heal, until they are repaired.</p>'}
             ${state._sleepers > 0 ? `<p class="roster-note">${state._sleepers} sleeper${state._sleepers === 1 ? '' : 's'} in the hold, in pods, from older hulls. They stay asleep until you decide otherwise.</p>` : ''}
-            <ul class="roster-list">${state.crew.map((m, i) => personRow(m, i, canRest, cut)).join('')}</ul>`);
-        modal.querySelectorAll('.roster-rest:not([disabled])').forEach(btn => btn.addEventListener('click', () => {
-            const member = state.crew[+btn.dataset.idx];
-            if (!member || !(member.stress > 0) || state.rations < 1) return;
-            state.rations -= 1;
-            member.stress -= 1;
-            state.addLog(`${member.name}: Rest cycle authorized. Stress reduced. (-1 Ration)`);
-            state.emitUpdates();
-            modal.remove();
-            crew(app);
-        }));
+            <ul class="roster-list">${state.crew.map(m => personRow(m, cut)).join('')}</ul>`);
     }
 
     // ── cargo ──
