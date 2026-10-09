@@ -48,7 +48,7 @@ The ship itself never stops moving. It drifts a few pixels and rolls slightly on
 2. **A disc.** It grows and swings out from the light toward our lane: a small dithered disc, haze-tinted, with its lit side toward the light.
 3. **The full world**, as big as it gets, as it reaches the lane beside us. Its name and tag appear beside it, as in v1 ("Titan-61 IV · Old transponder"). Our searchlight finds it: warm dust lights up as it drifts out along the beam from the bridge, and the lit edge of the world brightens (no cone, nothing that looks like the course line). The ship slows to half speed (the streaks shorten), so you have a calm ten to fifteen seconds to decide. A.U.R.A. speaks only when there is something to say, such as a beacon, a station or a contact.
 
-**Choosing.** Point at the world. Its rim brightens, and the Lander turns its nose a few degrees toward it while the warm course curve runs from the nose and fades before it reaches the world. A note shows the name, one plain line and the cost. **The cost is the gap you can see:** a world close to our lane costs 4 energy, one far off it costs 6. Pointing or a voice line never changes the speed: on the lane the ship never goes below its slow speed, and a world stays in reach until it slides past our tail, so it never becomes a reflex test and never turns back into floating. Take the pointer away and the nose swings back to the light. Click to pull in (next section).
+**Choosing.** Point at the world. Its rim brightens, and the Lander turns its nose a few degrees toward it. There is no line from the nose (removed 2026-10-09: the designer found it weird); once you click, the rim holds one step brighter until the burn flips. A note shows the name, one plain line and the cost. **The cost is the gap you can see:** a world close to our lane costs 4 energy, one far off it costs 6. Pointing or a voice line never changes the speed: on the lane the ship never goes below its slow speed, and a world stays in reach until it slides past our tail, so it never becomes a reflex test and never turns back into floating. Take the pointer away and the nose swings back to the light. Click to pull in (next section).
 
 **Passing.** Let a world go and it slides past our tail. It turns grey and cold, glides back along the wake to rest near the left edge at less than half its size, and stays there in sight for about 17 seconds before it slips away. Its name fades and it stops answering. The first time this happens in a sector, A.U.R.A. says so while the world is still on screen. Clicking a passed world gets "We passed it" once (not straight after her first line). Forward-only shows on screen: the worlds behind us are grey, the ones ahead are coloured glints.
 
@@ -115,7 +115,7 @@ One page, no build step, silent (sound only with `?sound=1`). The canvas is 640 
 | link | what it shows |
 |---|---|
 | `#s1` | Sector 1 from black. Space already streaming out of the light; the Lander burning at 35%; the light low on the right, with the worlds to come fanned out from it as tinted glints and tiny discs; the giant's limb low on the right. The title "The Graveyard" holds 3 s. Three voice lines. |
-| `#reach` | Platform Zeta comes up: glint, disc, full station. Its name shows; the searchlight finds it; the ship slows. The one-time hint. Pointing shows the nose turn, the curve and the note. |
+| `#reach` | Platform Zeta comes up: glint, disc, full station. Its name shows; the searchlight finds it; the ship slows. The one-time hint. Pointing shows the rim, the nose turn and the note. |
 | `#pass` | We let Platform Zeta go: it slides past the tail, greys out and rests, shrunk, near the left edge for about 17 s. A.U.R.A.'s first-time line while it is in sight. Clicking it right after says nothing more. |
 | `#orbit` | Titan-61 IV in reach, click: the course locks, Mira reacts, the burn flips, the camera pushes in to orbit. Send the team (the shuttle drops), the stockpile film, the star map page, dating; the contact ahead becomes Rhea-4 Minor. Leave orbit: the pull back, Titan slides behind. |
 | `#giant` | Mid-sector: the giant's cloud tops under the lane, the gold ring sweeping round behind us, small hulls caught in it. Skim fuel: the same push-in, toward its limb. The chip shows the real gain (+11, tanks full); its tag then says "Tanks filled here". |
@@ -247,3 +247,15 @@ Order: first the mockup (about 18 hours) for your verdict, then a sector 1 slice
 | `#jump` arrived with 81 energy and `#s2` with 92; Kryos still said "Gas giant · fuel" after skimming; the record opened on sector 2 | One scripted history (92 / 20 / 80 after the jump in both); visited tags say what we did; the record reads in order and opens at the latest page |
 
 **Not done, and why:** the giant's ring passes behind our lane rather than arching over the ship (drawing it in front needs a second, front ring layer; it can come with the real game's `SectorPaintings.js`). The far sky still slides very slightly sideways (0.02) rather than holding still; it is too slow to read as a second camera. The ship view's close frames are still the procedural hull with plating rather than the living ship's own painted exterior, which does not exist yet.
+
+## 7. Sky study (2026-10-09)
+
+The designer: "space a bit lost its epicness, just a dark background". `game-screen-v3/sky.js` adds a far sky behind v1's haze, dust
+and stars, switchable by URL: `?sky=a` far galaxies (a dim band of the galaxy's disc with a dark rift and star clouds, one small
+spiral you notice, a few small spirals and ellipticals, far smudges), `?sky=b` nebula (broad teal-black gas, rust-gold dust only where
+the false light reaches it, ice wisps, dark dust lanes that swallow the faint stars), `?sky=c` the deep (both, quieter, plus one
+enormous faint thing per sector: in sector 1 the night side of a vast planet across the top-left corner with only a hair-thin lit
+limb, hiding every star behind it; in sector 2 a huge faint spiral behind the rogue planet), `?sky=none` as before. No parameter
+means `c`. All of it is dithered colour ramps from the ink, seeded noise, painted once per sector, fixed to the sky so a small galaxy
+keeps its shape. Parallax, slowest first: far sky 0.005, the far planet 0.012, v1's haze 0.02, mid stars 0.1, worlds 1, streaks 2.
+Screenshots: the session scratchpad `audit/sky-compare.png`.
