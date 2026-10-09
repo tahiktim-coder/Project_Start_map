@@ -1,0 +1,105 @@
+<!doctype html>
+<!--
+  LAYOUT VARIANT A · "Side by side". A mockup; nothing in the game is changed.
+  The living ship and the journey in one picture: the Lander's tower on the left (about 40 % of the width, two or three
+  decks, the camera following whatever is happening), space and the light on the right. One canvas, one pixel size, one
+  sky: the hull's outside edge is the only divider, the travel view's space runs on behind the tower and shows through its
+  windows, and the light on the right lights the hull as it lights the worlds.
+  Click a person for one line. Click a world (its name shows when it is near) to stop there; "Back on course" to go on.
+  Files: variant-a/sim-a.js (the crew's day, a copy of crew-hires/ship-sim.js with routines timed to the flight),
+  variant-a/tower.js (ship-life's drawing), variant-a/travel.js (game-screen-v3's space and worlds), variant-a/main.js.
+  Loaded as they are: crew-hires/engine.js + the five crew files + ship-art.js + ship-rooms.js; game-screen-v3/paint.js + data.js.
+  STILLS: ?t=ms opens paused at that time · ?arrive=titan&at=41000&t=47000 a stop · &leave=ms leaving it · ?px=N pixel size
+          window.variantA.pause() / play() / step(ms) / setTime(ms) / arrive(id) / leave() / say(id) / state() / stats()
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Explain Lander</title>
+<meta name="description" content="Silent Exodus layout variant A: the living ship on the left and the journey toward the light on the right, as one picture.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* Words are "Graphite" (bone, grey, steel; sodium only for people and the light). The picture is "Deep field". */
+:root {
+    color-scheme: dark;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --ice: #9fd8e6; --warm: #f08c2e; --warm-br: #ffc27a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9);
+    --fast: 180ms; --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--ink); }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+p { margin: 0; }
+#view { position: fixed; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+#view.pointing { cursor: pointer; }
+.w { position: fixed; left: 0; top: 0; pointer-events: none; opacity: 0; transition: opacity 420ms var(--ease); text-shadow: var(--shadow); }
+.w.on { opacity: 1; }
+
+/* A.U.R.A.: on the travel side, low, like the ship's own voice */
+#voice { max-width: min(520px, 44vw); }
+#voice b { display: block; font: 500 14px/1.2 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ice); margin-bottom: 4px; }
+#voice span { font: 300 23px/1.35 var(--f-text); color: var(--text); }
+
+/* a world in reach: its name and one line, beside it */
+#note { display: grid; gap: 3px; white-space: nowrap; will-change: transform; }
+#note .name { font: 500 20px/1.15 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
+#note .line { font: 400 17px/1.35 var(--f-text); color: var(--dim); }
+#note .cost { font: 400 16px/1.4 var(--f-num); color: var(--ui); }
+#note .verb { font: 400 17px/1.3 var(--f-text); color: var(--warm); opacity: 0; transition: opacity var(--fast) var(--ease); }
+#note.hot .verb { opacity: 1; }
+#hint { font: 400 15px/1.3 var(--f-num); color: var(--dim); white-space: nowrap; will-change: transform; }
+
+/* stopped at a world */
+#orbit-head { display: grid; gap: 5px; }
+#orbit-head .name { font: 500 27px/1.1 var(--f-ui); letter-spacing: 0.03em; color: var(--text); }
+#orbit-head .line { font: 400 17px/1.35 var(--f-text); color: var(--dim); }
+#back { position: fixed; left: 0; top: 0; z-index: 3; padding: 6px 8px; background: none; border: 0; cursor: pointer; pointer-events: none;
+        font: 400 20px/1.2 var(--f-text); color: var(--text); text-shadow: var(--shadow); opacity: 0; transition: opacity 420ms var(--ease), color 140ms var(--ease); }
+#back.on { opacity: 1; pointer-events: auto; }
+#back:hover, #back:focus-visible { color: var(--warm); outline: none; }
+
+/* a line someone says, over their head (ship-life's) */
+.say { position: fixed; z-index: 2; max-width: 320px; padding: 7px 11px 8px; background: rgba(5, 7, 10, 0.82); border-left: 2px solid var(--who, #c9d1d6);
+       pointer-events: none; opacity: 0; transform: translate(-50%, calc(-100% + 4px)); transition: opacity var(--fast) var(--ease), transform var(--fast) var(--ease); }
+.say.on { opacity: 1; transform: translate(-50%, -100%); }
+.say.left { transform: translate(calc(-100% + 34px), calc(-100% + 4px)); }
+.say.left.on { transform: translate(calc(-100% + 34px), -100%); }
+.say.left::after { left: auto; right: 29px; }
+.say b { display: block; font: 600 12px/1.2 var(--f-ui); letter-spacing: 0.14em; text-transform: uppercase; color: var(--who, #c9d1d6); margin-bottom: 2px; }
+.say span { font-size: 16px; line-height: 1.4; color: #eceae2; }
+.say::after { content: ''; position: absolute; left: calc(50% - 5px); bottom: -6px; border: 5px solid transparent; border-bottom: 0; border-top-color: rgba(5, 7, 10, 0.82); }
+@media (prefers-reduced-motion: reduce) { .w, .say, #back, #note .verb { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="view" aria-label="The ship cut open on the left, its decks stacked like floors, with the crew living in them; on the right, space and a far light, with worlds coming up and sliding past"></canvas>
+<div class="w" id="voice" role="status" aria-live="polite"><b>A.U.R.A.</b><span></span></div>
+<div class="w" id="note"><p class="name"></p><p class="line"></p><p class="cost"></p><p class="verb">Stop here</p></div>
+<p class="w" id="hint">Click a world to stop there. Once we pass it, it's gone.</p>
+<div class="w" id="orbit-head"><p class="name"></p><p class="line"></p></div>
+<button type="button" id="back">Back on course</button>
+<div class="say" id="say" role="status" aria-live="polite"><b></b><span></span></div>
+
+<script src="../crew-hires/engine.js"></script>
+<script src="../crew-hires/cora.js"></script>
+<script src="../crew-hires/jaxon.js"></script>
+<script src="../crew-hires/aris.js"></script>
+<script src="../crew-hires/vance.js"></script>
+<script src="../crew-hires/mira.js"></script>
+<script src="../crew-hires/ship-art.js"></script>
+<script src="../crew-hires/ship-rooms.js"></script>
+<script src="../crew-hires/ship-reactor.js"></script>
+<script src="../game-screen-v3/paint.js?v=3"></script>
+<script src="../game-screen-v3/data.js?v=3"></script>
+<script src="../layouts/variant-a/sim-a.js"></script>
+<script src="../layouts/variant-a/tower.js"></script>
+<script src="../layouts/variant-a/travel.js"></script>
+<script src="lander-a-main.js"></script>
+</body>
+</html>
