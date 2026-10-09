@@ -320,7 +320,21 @@
         (room.lamps || []).filter(l => l.off).forEach(l => drawLampCage(p, l.x, false, l.low));
         const lights = lamps.map(l => lamp(l.x, (l.low ? l.low : 26) + 2, { reach: l.reach || 52, k: l.k || 1 })).concat(room.lights || []);
         lightPass(p, lights, { dim: look.dark ? 0.5 : 1 });
-        const out = { canvas: p.canvas(), lamps: lamps.map(l => ({ x: l.x, y: deckTop(i) + (l.low || 26), reach: l.reach || 52 })), fx: (room.fx || []).map(f => Object.assign({}, f, { y: f.y + deckTop(i) })) };
+        // A light that changes (the reactor's): the room asks for `glow` = { levels, lights(s) }, and gets the lit deck
+        // again with that light added at each step s = 1/levels … 1, kept as canvases on its 'core' fx (glow[0] is none).
+        let glow = null;
+        if (room.glow) {
+            glow = [null];
+            for (let j = 1; j <= room.glow.levels; j++) {
+                const q = painter(L.W, L.PITCH, deckTop(i));
+                q.data.set(p.data);
+                lightPass(q, room.glow.lights(j / room.glow.levels));
+                glow.push(q.canvas());
+            }
+        }
+        const fxList = (room.fx || []).slice().sort((a, b) => (b.kind === 'core') - (a.kind === 'core'));   // the core first: its lit copy covers the deck
+        const out = { canvas: p.canvas(), lamps: lamps.map(l => ({ x: l.x, y: deckTop(i) + (l.low || 26), reach: l.reach || 52 })),
+            fx: fxList.map(f => Object.assign({}, f, { y: f.y + deckTop(i) }, f.kind === 'core' && glow ? { glow } : {})) };
         deckCache.set(key, out);
         return out;
     }
