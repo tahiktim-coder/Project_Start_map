@@ -7,10 +7,16 @@
      ?sky=c     the deep: A and B together, quieter, plus one enormous faint thing per sector far behind (sector 1: the night
                 side of a vast planet across the top-left corner, only its thin lit limb showing; sector 2: a huge faint
                 spiral galaxy behind the rogue planet)
+     ?sky=d     star river (round two, sky2.js): the galaxy's band as a river of stars with dark rifts and a warm core,
+                star clouds and holes, warm and cold stars, clusters, galaxies of several shapes. No gas, no motion.
+     ?sky=e     gas and dust (sky2.js): D's stars, thinner, under one structured cloud per sector (filaments, a dark
+                cloud, a supernova shell, pillars, a ring nebula, dust streaming into the light)
+     ?sky=f     places (sky2.js): D and E quieter, plus far moons at different depths, the sector's one enormous thing,
+                and slow motion (a pulsar's beam, comets, tumbling fragments that glint, rare far flashes)
      ?sky=none  v1's space as it was
    House style (docs/ART_STYLE.md): ramps that all start at the ink, 8 x 8 Bayer dither, seeded noise, no gradients or blur,
    80-95 % dark. The dither is fixed to the sky (painted once per sector), so a small galaxy keeps its shape as it slides.
-     window.V3Sky = { mode, build(...), paintSpace(...), DEEP, THING } */
+     window.V3Sky = { mode, build(...), paintSpace(...), DEEP, THING, parts } */
 (function () {
     'use strict';
     const P = window.V3Paint;
@@ -20,7 +26,7 @@
     const MODE = (() => {
         let m = DEFAULT;
         try { m = (new URLSearchParams(location.search).get('sky') || DEFAULT).toLowerCase(); } catch (err) { m = DEFAULT; }
-        return ['a', 'b', 'c', 'none'].includes(m) ? m : DEFAULT;
+        return ['a', 'b', 'c', 'd', 'e', 'f', 'none'].includes(m) ? m : DEFAULT;
     })();
 
     const DEEP = 0.005, THING = 0.012, REACH_D = 10000;                // px of sky per px of flight; the farthest a sector runs
@@ -176,6 +182,7 @@
     /** The sky for one sector at one screen size. ox, oy: where the 640 x 360 stage sits on the canvas; light: stage px. */
     function build(W, H, ox, oy, n, light) {
         if (MODE === 'none') return null;
+        if (MODE === 'd' || MODE === 'e' || MODE === 'f') return window.V3Sky2 ? window.V3Sky2.build(W, H, ox, oy, n, light, MODE) : null;
         const extra = Math.ceil(REACH_D * DEEP) + 4, B = canvasBuf(W + extra, H), lx = ox + light[0], ly = oy + light[1];
         const sx = x => ox + x, sy = y => oy + y, seed = 100 + n * 37, deep = MODE === 'c';
         const out = { mode: MODE, B, extra, haze: MODE === 'a' ? 0.55 : MODE === 'b' ? 0 : 0.35, thing: null };
@@ -220,18 +227,21 @@
             else { D[o] = ink[0]; D[o + 1] = ink[1]; D[o + 2] = ink[2]; }
             D[o + 3] = 255;
         }
-        const bright = [];
+        const bright = [], keepN = sky.stripStars == null ? 1 : sky.stripStars;
         strip.stars.forEach(s => {
             const x = s.x - off, y = s.y; if (x < -2 || x > p.W + 2 || (keepAway && keepAway(x, y))) return;
+            if (keepN < 1 && s.mag < 0.87 && hash(s.x, s.y, 77) > keepN) return;          // round two's skies bring their own faint stars
             const e = (x >= 0 && x < p.W && y >= 0 && y < B.H) ? B.ext[y * B.W + x + offD] / 255 : 0;
             if (e > 0.85 || (e > 0.4 && s.mag < 0.87 + 0.1 * e)) return;                // the dark lanes swallow all but the brightest
-            if (s.mag > 0.978) { p.set(x, y, RP.STAR.rgb[4]); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => p.set(x + dx, y + dy, RP.STAR.rgb[2])); }
-            else if (s.mag > 0.87) p.set(x, y, RP.STAR.rgb[3]);
-            else p.set(x, y, RP.STAR.rgb[s.mag > 0.55 ? 2 : 1]);
+            const SR = sky.tint ? sky.tint(s.x, s.y) : RP.STAR;                          // round two: some stars warm, some cold
+            if (s.mag > 0.978) { p.set(x, y, SR.rgb[4]); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => p.set(x + dx, y + dy, SR.rgb[2])); }
+            else if (s.mag > 0.87) p.set(x, y, SR.rgb[3]);
+            else p.set(x, y, SR.rgb[s.mag > 0.55 ? 2 : 1]);
             if (s.mag > 0.87) bright.push({ x, y, mag: s.mag });
         });
         return bright;
     }
 
-    window.V3Sky = { mode: MODE, DEEP, THING, build, paintSpace };
+    window.V3Sky = { mode: MODE, DEEP, THING, build, paintSpace,
+        parts: { R, REACH_D, lumOf, band, galaxy, smudges, nebula, vastPlanet } };              // for sky2.js (round two)
 })();

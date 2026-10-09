@@ -123,7 +123,8 @@ canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: p
 <script src="game-screen/reading.js?v=20261008j"></script>
 <!-- v3: the picture recipes, the story, the ship view -->
 <script src="game-screen-v3/paint.js?v=3"></script>
-<script src="game-screen-v3/sky.js?v=1"></script>
+<script src="game-screen-v3/sky.js?v=2"></script>
+<script src="game-screen-v3/sky2.js?v=2"></script>
 <script src="game-screen-v3/data.js?v=3"></script>
 <script src="game-screen-v3/inside.js?v=2"></script>
 </head>
@@ -364,7 +365,7 @@ canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: p
         const key = `${n}:${G.W}x${G.H}`;
         if (arts.has(key)) return arts.get(key);
         const sec = DATA.SECTORS[n], lx = cvX(LIGHT[0]), ly = cvY(LIGHT[1]), halo = Math.max(sec.light.halo, 18);
-        const sky = window.V3Sky ? window.V3Sky.build(G.W, G.H, G.ox, G.oy, n, LIGHT) : null;          // the far sky (?sky=a|b|c|none), behind the haze
+        const sky = window.V3Sky ? window.V3Sky.build(G.W, G.H, G.ox, G.oy, n, LIGHT) : null;          // the far sky (?sky=a|b|c|d|e|f|none), behind the haze
         const strip = P.spaceStrip(G.W + STRIP_EXTRA, G.H, sec.seed, sec.dust, sec.haze * (sky ? sky.haze : 1), sec.stars);
         const lit = new Float32Array(G.W * G.H);
         for (let y = 0; y < G.H; y++) for (let x = 0; x < G.W; x++) lit[y * G.W + x] = Math.exp(-Math.hypot(x - lx, (y - ly) * 1.15) / (halo * 0.85 + 6));
@@ -472,6 +473,7 @@ canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: p
             } else c.drawImage(A.canvas, 0, 0);
             drawTiles(c, 1, S.mid.x, S.mid.y, !!roll);
             drawFarThing(c, A, roll);
+            if (A.sky && A.sky.live && !roll) A.sky.live(c, t, S.D);                                  // round two's far motion: a pulsar's beam, comets, glints, far flashes
             const tp = thingPos(A);
             if (tp) drawThing(c, A, tp);
             drawScenery(c, A);
