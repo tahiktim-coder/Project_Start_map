@@ -1,0 +1,87 @@
+<!doctype html>
+<!--
+  LAYOUT VARIANT C · "Deck strip" · a study page; nothing in the game is changed.
+  The journey fills the top of the screen (game-screen-v3's space, light and world); along the bottom runs one deck of the
+  Lander, cut open (crew-hires' living ship), always the deck where something is happening. One canvas, one pixel density.
+  Files: variant-c/flight.js (space and the world), variant-c/voyage-sim.js (the crew's plan), variant-c/lines.js (what
+  they say), variant-c/main.js (the strip, the camera, words, clicks). Loaded as they are, never edited:
+  ../crew-hires/engine.js + the five person files + ship-art.js + ship-rooms.js, ../game-screen-v3/paint.js + data.js.
+  DEBUG: window.variantC.pause() / play() / step(ms) / setTime(ms) / arrive(ms) / say(id) / stats() / people()
+         ?t=ms opens paused at t · ?arrive=ms stops at the world at that time · ?say=id@ms shows id's line from ms
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deck Strip Layout</title>
+<meta name="description" content="Silent Exodus layout study C: space and the journey across the top, one deck of the ship cut open along the bottom, with the crew living in it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* Words: "Graphite" from game-screen-v3 (bone, grey, steel; warm only for people). No boxes: the canvas darkens under
+   words with the dither grain, and a one-pixel ink edge on the letters does the rest. */
+:root {
+    color-scheme: dark;
+    --t: 1;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --fs-voice: calc(18px + 4px * var(--t)); --fs-who: calc(13px + 1px * var(--t));
+    --fs-name: calc(17px + 3px * var(--t)); --fs-line: calc(15px + 2px * var(--t)); --fs-hint: calc(13px + 1px * var(--t));
+    --shadow: 0 1px 0 #05070a, 1px 0 0 #05070a, -1px 0 0 #05070a, 0 -1px 0 #05070a;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--ink); }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+p { margin: 0; }
+#view { position: fixed; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+#view.is-pointing { cursor: pointer; }
+.w { position: fixed; left: 0; top: 0; pointer-events: none; text-shadow: var(--shadow); opacity: 0; transition: opacity 160ms var(--ease); will-change: transform, opacity; }
+.w.is-in { opacity: 1; }
+
+/* a voice: the name in the speaker's tone, then the line */
+.voice { display: grid; gap: 5px; width: max-content; max-width: calc(420px + 100px * var(--t)); }
+.voice .who { display: flex; align-items: baseline; gap: 10px; font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--warm)); }
+.voice .from { font: 400 var(--fs-who)/1 var(--f-text); letter-spacing: 0.02em; text-transform: none; color: var(--dim); }
+.voice .from:empty { display: none; }
+.voice .say { font: 400 var(--fs-voice)/1.36 var(--f-text); color: var(--text); text-wrap: balance; }
+
+/* a world we can stop at: its name, one line, what it costs */
+.note { display: grid; gap: 3px; text-align: right; justify-items: end; width: max-content; }
+.note p { white-space: nowrap; }
+.note .name { font: 500 var(--fs-name)/1.15 var(--f-ui); letter-spacing: 0.02em; color: var(--text); transition: color 140ms var(--ease); }
+.note .line { font: 400 var(--fs-line)/1.35 var(--f-text); color: var(--dim); }
+.note .hint { font: 400 var(--fs-hint)/1.4 var(--f-num); color: var(--ui); }
+.note.is-hot .name { color: var(--warm); }
+.note.is-right { text-align: left; justify-items: start; }
+.place { display: grid; gap: 4px; max-width: 340px; }
+.place .name { font: 500 calc(var(--fs-name) * 1.25)/1.1 var(--f-ui); letter-spacing: 0.03em; color: var(--text); }
+.place .line { font: 400 var(--fs-line)/1.35 var(--f-text); color: var(--dim); }
+@media (prefers-reduced-motion: reduce) { .w, .note .name { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="view" aria-label="Space ahead with the light and a passing world; along the bottom, one deck of the ship cut open with the crew inside"></canvas>
+<div class="w voice" id="voice" role="status" aria-live="polite"><p class="who"><span class="name"></span><span class="from"></span></p><p class="say"></p></div>
+<div class="w note" id="note"><p class="name">Titan-61 IV</p><p class="line">A dry world. A ship beacon is still running down there.</p><p class="hint">Click to stop here. Once we pass it, it's gone.</p></div>
+<div class="w place" id="place"><p class="name">Titan-61 IV</p><p class="line">A dry world. Hot by day, frozen at night.</p></div>
+
+<script src="../crew-hires/engine.js"></script>
+<script src="../crew-hires/cora.js"></script>
+<script src="../crew-hires/jaxon.js"></script>
+<script src="../crew-hires/aris.js"></script>
+<script src="../crew-hires/vance.js"></script>
+<script src="../crew-hires/mira.js"></script>
+<script src="../crew-hires/ship-art.js"></script>
+<script src="../crew-hires/ship-rooms.js"></script>
+<script src="../game-screen-v3/paint.js"></script>
+<script src="../game-screen-v3/data.js"></script>
+<script src="variant-c/voyage-sim.js"></script>
+<script src="variant-c/flight.js"></script>
+<script src="variant-c/lines.js"></script>
+<script src="variant-c/main.js"></script>
+</body>
+</html>
