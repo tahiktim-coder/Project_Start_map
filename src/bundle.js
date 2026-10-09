@@ -5,8 +5,10 @@
  */
 
 // --- TESTING MODE HELPER ---
-// When TEST_MODE is enabled, biases random rolls toward rare/interesting outcomes
-window.TEST_MODE = false;
+// When TEST_MODE is enabled, biases random rolls toward rare/interesting outcomes.
+// It exists only for testers: index.html?test=1 turns it on (and shows the TEST button). Players never see it.
+const IS_TEST_BUILD = new URLSearchParams(location.search).get('test') === '1';
+window.TEST_MODE = IS_TEST_BUILD;
 
 /**
  * Test-aware random function.
@@ -39,6 +41,11 @@ function testChance(chance, context = '') {
     return Math.random() < chance;
 }
 
+// The crew go by first names only (docs/GAME_FLOW.md step 0). Older saves still carry the titled names.
+const OLD_TITLED_NAMES = { 'Cmdr. Moon': 'Cora', 'Eng. Jaxon': 'Jaxon', 'Dr. Aris': 'Aris', 'Spc. Vance': 'Vance', 'Tech Mira': 'Mira' };
+const firstNameOf = name => OLD_TITLED_NAMES[name] || name;
+const withFirstNames = text => Object.entries(OLD_TITLED_NAMES).reduce((out, [old, first]) => out.split(old).join(first), String(text));
+
 // --- 1. DATA & GENERATORS ---
 
 class CrewGenerator {
@@ -48,7 +55,7 @@ class CrewGenerator {
             // Commander Cora Moon — the player's seat
             {
                 id: Date.now() + Math.random(),
-                name: 'Cmdr. Moon',
+                name: 'Cora',
                 realName: 'Cora Moon',
                 gender: 'F',
                 age: 36,
@@ -61,7 +68,7 @@ class CrewGenerator {
             // Jaxon — Engineer
             {
                 id: Date.now() + Math.random() + 1,
-                name: 'Eng. Jaxon',
+                name: 'Jaxon',
                 realName: 'Jaxon Mercer',
                 gender: 'M',
                 age: 42,
@@ -72,10 +79,10 @@ class CrewGenerator {
                 tags: ['ENGINEER'],
                 personality: 'PESSIMIST'
             },
-            // Dr. Aris — Medic
+            // Aris — Medic
             {
                 id: Date.now() + Math.random() + 2,
-                name: 'Dr. Aris',
+                name: 'Aris',
                 realName: 'Aris Novak',
                 gender: 'F',
                 age: 38,
@@ -89,7 +96,7 @@ class CrewGenerator {
             // Vance — Security
             {
                 id: Date.now() + Math.random() + 3,
-                name: 'Spc. Vance',
+                name: 'Vance',
                 realName: 'Kael Vance',
                 gender: 'M',
                 age: 45,
@@ -103,7 +110,7 @@ class CrewGenerator {
             // Mira — Specialist
             {
                 id: Date.now() + Math.random() + 4,
-                name: 'Tech Mira',
+                name: 'Mira',
                 realName: 'Mira Chen',
                 gender: 'F',
                 age: 29,
@@ -361,8 +368,8 @@ class GameState {
             this.lastVisitedSystem = nodeById(saveData.lastVisitedSystemId) || this.currentSystem;
             // Ship
             this.shipDecks = saveData.shipDecks;
-            // Crew
-            this.crew = saveData.crew;
+            // Crew (saves from before first names had "Eng. Jaxon" and the like: those become first names, in the log too)
+            this.crew = (saveData.crew || []).map(c => ({ ...c, name: firstNameOf(c.name) }));
             // Progress
             this.actionsTaken = saveData.actionsTaken;
             const pageIds = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).map(p => p.id);
@@ -399,7 +406,7 @@ class GameState {
             this._miraAuraSeen = saveData._miraAuraSeen || false;
             this._commanderDoubtSeen = saveData._commanderDoubtSeen || false;
             // Logs
-            this.logs = saveData.logs || [];
+            this.logs = (saveData.logs || []).map(line => (typeof line === 'string' ? withFirstNames(line) : line));
 
             this.gameOver = false;
             this.emitUpdates();
@@ -483,7 +490,7 @@ class GameState {
 
     /** The dead do not talk, and the commander is the player: neither gets a spoken line in the log. */
     isSilentSpeaker(message) {
-        const spoken = String(message).match(/^(Cmdr\.[^:]{0,24}|Commander|Eng\. Jaxon|Dr\. Aris|Spc\. Vance|Tech Mira|Jaxon|Aris|Vance|Mira):\s/);
+        const spoken = String(message).match(/^(Cora|Cmdr\.[^:]{0,24}|Commander|Jaxon|Aris|Vance|Mira):\s/);
         if (!spoken) return false;
         if (/^C/.test(spoken[1])) return true;
         const last = spoken[1].split(' ').pop().toLowerCase();
@@ -902,7 +909,7 @@ class GameState {
             case 'HUMANIST': // Aris — Goes catatonic
                 c.status = 'INJURED';
                 c.trait = 'CATATONIC';
-                this.addLog(`Dr. Aris has shut down. She stares at the wall and does not answer. Nobody can treat the wounded now.`);
+                this.addLog(`Aris has shut down. She stares at the wall and does not answer. Nobody can treat the wounded now.`);
                 // Stress stays high — she's catatonic, not recovering
                 break;
 
@@ -915,7 +922,7 @@ class GameState {
 
             case 'CURIOUS': // Mira — Obsessed: a team trip takes a full day (a ration), but brings back more
                 c.trait = 'OBSESSED';
-                this.addLog(`Tech Mira has become dangerously obsessed. She demands extended EVA time regardless of risk.`);
+                this.addLog(`Mira has become dangerously obsessed. She demands extended EVA time regardless of risk.`);
                 c.stress = 2; // Reset after breakdown
                 break;
         }
@@ -1100,15 +1107,27 @@ class App {
                     </button>
                 </div>
 
-                <!-- Audio indicator -->
+                ${hasSave ? `
+                <!-- Erasing the save is its own step, lower down: never a second click on NEW GAME (docs/GAME_FLOW.md 2.1).
+                     The row's space is always kept, so showing it moves nothing on screen. -->
+                <div id="erase-confirm" style="visibility: hidden; margin-top: 28px;">
+                    <div style="font-size: 0.95em; color: #c4d0c4; margin-bottom: 12px;">Erase the saved run?</div>
+                    <div style="display: flex; gap: 18px;">
+                        <button id="btn-erase-keep" style="padding: 8px 26px; background: transparent; border: 1px solid #5f9e7a; color: #9bf0bd; font-family: inherit; font-size: 0.95em; letter-spacing: 2px; cursor: pointer;">KEEP</button>
+                        <button id="btn-erase-yes" style="padding: 8px 26px; background: transparent; border: 1px solid #d85a4e; color: #e07a70; font-family: inherit; font-size: 0.95em; letter-spacing: 2px; cursor: pointer;">ERASE</button>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- Sound: the label always says the real mute state -->
                 <div style="margin-top: 30px; font-size: 0.75em; color: #556b5d;">
-                    <span id="audio-status">♪ AUDIO: ${audioIsOn ? 'ON' : 'OFF'}</span>
+                    <span id="audio-status">${this.soundLabel()}</span>
                     <button id="btn-toggle-audio" style="
                         margin-left: 15px; padding: 5px 15px;
                         background: transparent; border: 1px solid #3a4a40;
                         color: #6f8a78; font-size: 0.9em; font-family: inherit;
                         cursor: pointer;
-                    ">TOGGLE</button>
+                    ">${audioIsOn ? 'TURN OFF' : 'TURN ON'}</button>
                 </div>
 
             </div>
@@ -1140,14 +1159,7 @@ class App {
         addHoverEffect(continueBtn, '#74d99a');
 
         // New Game button
-        startBtn.onclick = () => {
-            // If save exists, confirm new game will overwrite
-            if (hasSave && startBtn.dataset.armed !== '1') { // first click arms, second click confirms
-                startBtn.dataset.armed = '1';
-                startBtn.textContent = 'ERASE SAVE AND START OVER?';
-                setTimeout(() => { startBtn.dataset.armed = ''; startBtn.textContent = 'NEW GAME'; }, 4000);
-                return;
-            }
+        const startNewGame = () => {
             if (hasSave) this.state.deleteSave();
             overlay.style.transition = 'opacity 1s';
             overlay.style.opacity = '0';
@@ -1156,6 +1168,19 @@ class App {
                 this.init(false); // false = new game
             }, 1000);
         };
+
+        // With a save, NEW GAME only opens the question lower down; clicking it again does nothing more.
+        const eraseRow = overlay.querySelector('#erase-confirm');
+        startBtn.onclick = () => {
+            if (!eraseRow) { startNewGame(); return; }
+            if (eraseRow.style.visibility === 'visible') return;
+            eraseRow.style.visibility = 'visible';
+            if (window.ChoiceGuard) window.ChoiceGuard.hold(eraseRow);
+        };
+        if (eraseRow) {
+            overlay.querySelector('#btn-erase-yes').onclick = startNewGame;
+            overlay.querySelector('#btn-erase-keep').onclick = () => { eraseRow.style.visibility = 'hidden'; };
+        }
 
         // Continue button (if exists)
         if (continueBtn) {
@@ -1173,16 +1198,30 @@ class App {
         const audioBtn = overlay.querySelector('#btn-toggle-audio');
         const audioStatus = overlay.querySelector('#audio-status');
         audioBtn.onclick = () => {
-            if (window.AudioSystem) {
-                if (window.AudioSystem.muted) {
-                    window.AudioSystem.unmute();
-                    audioStatus.textContent = '♪ AUDIO: ON';
-                } else {
-                    window.AudioSystem.mute();
-                    audioStatus.textContent = '♪ AUDIO: OFF';
-                }
-            }
+            if (!window.AudioSystem) return;
+            if (window.AudioSystem.muted) window.AudioSystem.unmute();
+            else window.AudioSystem.mute();
+            audioStatus.textContent = this.soundLabel();
+            audioBtn.textContent = window.AudioSystem.muted ? 'TURN ON' : 'TURN OFF';
+            this.syncSoundButton();
         };
+    }
+
+    /** "♪ SOUND: ON" or "♪ SOUND: OFF", read from the sound system itself, never assumed. */
+    soundLabel() {
+        const isOn = !!window.AudioSystem && !window.AudioSystem.muted;
+        return `♪ SOUND: ${isOn ? 'ON' : 'OFF'}`;
+    }
+
+    /** The header's sound button says the real mute state (it used to read "♪ AUDIO" whatever the state). */
+    syncSoundButton() {
+        const headerBtn = document.getElementById('btn-audio');
+        if (!headerBtn) return;
+        const isOn = !!window.AudioSystem && !window.AudioSystem.muted;
+        headerBtn.textContent = this.soundLabel();
+        headerBtn.style.opacity = isOn ? '1' : '0.5';
+        headerBtn.style.color = isOn ? 'var(--color-primary)' : 'var(--color-primary-dim)';
+        headerBtn.style.borderColor = isOn ? 'var(--color-primary)' : 'var(--color-primary-dim)';
     }
 
     init(loadSave = false) {
@@ -1197,20 +1236,18 @@ class App {
         if (btnAudio) {
             btnAudio.onclick = () => this.showAudioModal();
         }
+        this.syncSoundButton();
 
-        // Testing Mode Toggle
+        // Test mode exists only behind ?test=1: then the TEST button shows and toggles it. Players never see it.
         const btnTesting = document.getElementById('btn-testing');
-        if (btnTesting) {
-            btnTesting.onclick = () => {
-                window.TEST_MODE = !window.TEST_MODE;
+        if (btnTesting && !IS_TEST_BUILD) btnTesting.remove();
+        else if (btnTesting) {
+            const applyTestMode = (isToggle) => {
                 btnTesting.textContent = window.TEST_MODE ? "TEST MODE: ON" : "TEST MODE: OFF";
                 btnTesting.style.opacity = window.TEST_MODE ? "1" : "0.7";
                 btnTesting.style.borderColor = window.TEST_MODE ? "#d85a4e" : "#ff6600";
                 btnTesting.style.color = window.TEST_MODE ? "#d85a4e" : "#ff6600";
-                this.state.addLog(window.TEST_MODE
-                    ? "/// TESTING MODE ENABLED /// Rare outcomes favoured. Energy is free. Salvage, rations and probe topped up so everything can be built and tried."
-                    : "/// TESTING MODE DISABLED /// Normal probabilities restored.");
-                if (window.TEST_MODE) { // a tester should never be blocked by resources
+                if (window.TEST_MODE && isToggle) { // a tester should never be blocked by resources (the state is not built yet at load)
                     this.state.energy = 100;
                     this.state.salvage = this.state.maxSalvage;
                     this.state.rations = this.state.maxRations;
@@ -1218,6 +1255,15 @@ class App {
                     this.state.emitUpdates();
                 }
             };
+            btnTesting.hidden = false;
+            btnTesting.onclick = () => {
+                window.TEST_MODE = !window.TEST_MODE;
+                this.state.addLog(window.TEST_MODE
+                    ? "/// TESTING MODE ENABLED /// Rare outcomes favoured. Energy is free. Salvage, rations and probe topped up so everything can be built and tried."
+                    : "/// TESTING MODE DISABLED /// Normal probabilities restored.");
+                applyTestMode(true);
+            };
+            applyTestMode(false);
         }
 
         // Header Interactions
@@ -1407,9 +1453,9 @@ class App {
                 { speaker: 'A.U.R.A.', text: 'Good morning, Commander. All four crew are awake and well. The ship is in one piece.' },
                 { speaker: 'A.U.R.A.', text: 'Your orders have not changed. Find a planet people can live on, and settle it.' },
                 { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction. Eight went this way before us. We are the ninth.' },
-                { speaker: 'Eng. Jaxon', text: 'Eight ships ahead of us. I hope they left us a good planet.' },
-                { speaker: 'Spc. Vance', text: 'Eight ships, and not one of them ever sent a message home?' },
-                { speaker: 'A.U.R.A.', text: 'Space is very large, Specialist. There is an old ship beacon on the scanner. Probably one of the eight. I have marked it on your map.' },
+                { speaker: 'Jaxon', text: 'Eight ships ahead of us. I hope they left us a good planet.' },
+                { speaker: 'Vance', text: 'Eight ships, and not one of them ever sent a message home?' },
+                { speaker: 'A.U.R.A.', text: 'Space is very large, Vance. There is an old ship beacon on the scanner. Probably one of the eight. I have marked it on your map.' },
             ],
             choices: [{ text: 'Take command', desc: 'Six sectors ahead. A few stops in each, then you must jump on. Energy moves the ship. Rations feed the crew.' }],
             onPick: begin
@@ -1430,11 +1476,11 @@ class App {
             tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE', title: 'Head count',
             context: 'Back on the bridge, Vance is frowning at the crew screen.',
             dialogue: [
-                { speaker: 'Spc. Vance', text: 'There are five of us on this ship. She keeps saying four.' },
+                { speaker: 'Vance', text: 'There are five of us on this ship. She keeps saying four.' },
                 { speaker: 'A.U.R.A.', text: 'Four crew, Commander. All well.' },
-                { speaker: 'Spc. Vance', text: 'Then list them.' },
+                { speaker: 'Vance', text: 'Then list them.' },
                 { speaker: 'A.U.R.A.', text: `${names.join('. ')}. And you, Commander. Four crew.` },
-                { speaker: 'Eng. Jaxon', text: 'It is a glitch. She slept sixty years too. Let it go.' },
+                { speaker: 'Jaxon', text: 'It is a glitch. She slept sixty years too. Let it go.' },
             ],
             choices: [
                 { text: 'Let it go', desc: 'Jaxon is probably right. It is only a number.' },
@@ -1546,8 +1592,8 @@ class App {
         return new Promise(resolve => setTimeout(() => {
             const played = window.StoryReel ? window.StoryReel.play('uncut') : Promise.resolve();
             played.then(() => {
-                this.state.addLog('Spc. Vance: "That is not eight ships. That is hundreds."');
-                this.state.addLog('A.U.R.A.: "Old recordings degrade, Specialist. I would not read too much into it."');
+                this.state.addLog('Vance: "That is not eight ships. That is hundreds."');
+                this.state.addLog('A.U.R.A.: "Old recordings degrade, Vance. I would not read too much into it."');
                 this.state.emitUpdates();
                 resolve();
             });
@@ -1608,6 +1654,7 @@ class App {
             const plotOptions = this.getPlotOptions(planet.name, 'planet');
             plotOptions.burns = 1;
             plotOptions.cost = cost;                                                   // so the plot says what comes back in energy, not in percent
+            plotOptions.isFirstPlot = this.state.currentSector === 1 && (this.state._paidWarps || 0) === 0;   // the first warp: A.U.R.A. flies it, nothing graded
             plotOptions.targetHtml = window.BodyRenderer ? window.BodyRenderer.body(planet, 64) : null;
             window.WarpPlot.play(plotOptions).then(result => {
                 this._isInTransit = false;
@@ -1683,10 +1730,12 @@ class App {
             // Sector hazards during warp — delegated to SECTOR_CONFIG. Sector 1's first hole in the hull is played instead (Breach).
             const warpConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
             const hazardDone = isBreach ? this.playBreach() : Promise.resolve();
-            if (!isBreach && !isQuiet && warpConfig && warpConfig.hazard && warpConfig.hazard.onWarp) warpConfig.hazard.onWarp(this.state);
+            // Nothing random breaks before sector 1's scripted breach: the first hole in the hull is one the player sees happen
+            const isBeforeBreach = this.state.currentSector === 1 && !this.state._breachDone;
+            if (!isBreach && !isQuiet && !isBeforeBreach && warpConfig && warpConfig.hazard && warpConfig.hazard.onWarp) warpConfig.hazard.onWarp(this.state);
 
             // Ship malfunction check during warp (never on top of the breach: one emergency at a time)
-            if (typeof rollShipMalfunction !== 'undefined' && !isQuiet && !isBreach) {
+            if (typeof rollShipMalfunction !== 'undefined' && !isQuiet && !isBreach && !isBeforeBreach) {
                 const malfunction = rollShipMalfunction(this.state, 'warp');
                 if (malfunction) {
                     this.showShipMalfunctionModal(malfunction);
@@ -2181,6 +2230,7 @@ class App {
     /** Clean burns hand fuel back, bad ones burn extra; rough and A.U.R.A. plots change nothing. */
     applyPlotResult(result, baseCost) {
         if (!result || !window.WarpPlot) return;
+        if (result.isFirstPlot) return;                                           // A.U.R.A. flew the first one for you: no grade, no cost, not a choice
         this.noteReliance(!!result.auto);
         let delta = window.WarpPlot.energyDelta(result.grade, baseCost);
         if (delta < 0 && this.state.upgrades.includes('shield_core')) {
@@ -2235,6 +2285,51 @@ class App {
             return;
         }
         const jumpCost = this.sectorJumpCost();
+        if (this.state.energy < jumpCost && !window.TEST_MODE) { this.offerReserveJump(jumpCost); return; }
+        const leftBehind = this.whatIsLeftInSector();
+        if (leftBehind) { this.askBeforeJump(leftBehind); return; }
+        this.jumpNow(jumpCost);
+    }
+
+    /**
+     * What the jump would leave behind, in A.U.R.A.'s words, or null when nothing is left: a stop still to spend on a
+     * world we can reach, or the marked wreck / the story planet not boarded yet (and still reachable, or still hidden with a stop left).
+     */
+    whatIsLeftInSector() {
+        const state = this.state, stopsLeft = state.getStopsLeft();
+        const here = state.lastVisitedSystem;
+        const canReach = p => !p.ghost && !p.storyHidden && (state.isReentry(p) || stopsLeft > 0);
+        const isStoryWreck = p => (p.isFirstSignal || p.isStoryPlanet) && !p.exodusInvestigated;
+        const storyLeft = (state.sectorNodes || []).find(p => isStoryWreck(p) && canReach(p));
+        if (storyLeft) return storyLeft.isStoryPlanet
+            ? `We have not been down to ${storyLeft.name} yet, Commander. Their last course led there.`
+            : `The wreck I marked is still out there, Commander. Nobody has been aboard.`;
+        // A story planet still hidden is not lost while a stop is left: dating a wreck (or the last stop) puts it on the map
+        const hiddenStory = stopsLeft > 0 && (state.sectorNodes || []).find(p => p.isStoryPlanet && p.storyHidden && !p.exodusInvestigated);
+        if (hiddenStory) return 'The faint contact is still out there, Commander. One of our ships may be there.';
+        const worldsAhead = (state.sectorNodes || []).some(p => !p.ghost && !p.storyHidden && !(here && here.id === p.id)
+            && !(p.isStructure || p.type === 'STRUCTURE') && state.getWarpCost(p) <= state.energy);
+        if (stopsLeft > 0 && worldsAhead) return 'There are still worlds ahead, Commander. We have time for another stop.';
+        return null;
+    }
+
+    /** JUMP SECTOR clicked with something left: A.U.R.A. asks first (docs/GAME_FLOW.md 2.10). "Not yet" comes first, nearer the button. */
+    askBeforeJump(reason) {
+        if (!window.EncounterCard) { this.jumpNow(this.sectorJumpCost()); return; }
+        window.EncounterCard.open(this, {
+            tone: 'station', kicker: 'SECTOR JUMP', title: 'Jump now?', zIndex: 2800,
+            dialogue: [{ speaker: 'A.U.R.A.', text: `${reason} Jump anyway?` }],
+            choices: [
+                { text: 'Not yet', desc: 'Stay in this sector.' },
+                { text: 'Jump now', desc: 'Whatever is left here is gone for good.' },
+            ],
+            onPick: idx => { if (idx === 1) this.jumpNow(this.sectorJumpCost()); },
+        });
+    }
+
+    /** The jump itself, once it is paid for and nobody is asking any more. */
+    jumpNow(jumpCost) {
+        if (this._isInTransit) return;
         if (this.state.energy < jumpCost && !window.TEST_MODE) { this.offerReserveJump(jumpCost); return; }
         if (this.state._driveReinforced) {
             this.state._driveReinforced = false;                                    // single use
@@ -2617,7 +2712,7 @@ class App {
             tone: 'story', zIndex: 2600, kicker: 'THE DISC', title: 'Date this wreck',
             context: `The team brought back the last star fix of ${planet.wreckName}. It says where the ship was, and where it was going.`,
             dialogue: [isMiraAlive
-                ? { speaker: 'Tech Mira', text: "The disc has a pulsar map. Match this fix to it, and we'll know when they died." }
+                ? { speaker: 'Mira', text: "The disc has a pulsar map. Match this fix to it, and we'll know when they died." }
                 : { speaker: 'A.U.R.A.', text: "The disc's pulsar map can date this star fix, Commander." }],
             choices: [
                 { text: 'Date this wreck with the disc', desc: isSomewhereToFind ? 'No cost. Shows when it died, and where its crew was going. Their course is free to fly.' : 'No cost. Shows when it died.' },
@@ -3025,7 +3120,7 @@ Then you're through.`,
     }
 
     showStructureModal(encounter, planet) {
-        const SPEAKER_ROLE = { 'Eng. Jaxon': 'ENGINEER', 'Dr. Aris': 'MEDIC', 'Spc. Vance': 'SECURITY', 'Tech Mira': 'SPECIALIST' };
+        const SPEAKER_ROLE = { 'Jaxon': 'ENGINEER', 'Aris': 'MEDIC', 'Vance': 'SECURITY', 'Mira': 'SPECIALIST' };
         const isAlive = (speaker) => {
             const role = SPEAKER_ROLE[speaker];
             if (!role) return true;
@@ -3079,7 +3174,7 @@ Then you're through.`,
         let survivorRoster = livingCrew.map(c => {
             const tags = c.tags?.filter(t => !['LEADER', 'ENGINEER', 'MEDIC', 'SECURITY', 'SPECIALIST'].includes(t)) || [];
             const specialTag = tags.length > 0 ? ` [${tags[0]}]` : '';
-            return `<span style="color: #88cc88;">${c.realName || c.name}${specialTag}</span>`;
+            return `<span style="color: #88cc88;">${c.name}${specialTag}</span>`;
         }).join(' | ');
 
         // Build memorial for fallen
@@ -3087,7 +3182,7 @@ Then you're through.`,
         if (deadCrew.length > 0) {
             memorial = `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
                 <div style="color: #666; font-size: 0.75em; margin-bottom: 8px;">/// THOSE WHO DID NOT MAKE IT ///</div>
-                ${deadCrew.map(c => `<span style="color: #886666;">${c.realName || c.name}</span>`).join(' | ')}
+                ${deadCrew.map(c => `<span style="color: #886666;">${c.name}</span>`).join(' | ')}
             </div>`;
         }
 
@@ -3278,12 +3373,12 @@ Then you're through.`,
         modal.style.zIndex = '2500';
 
         const portraits = {
-            'Eng. Jaxon': 'M_2', 'Dr. Aris': 'F_3', 'Spc. Vance': 'M_4',
-            'Tech Mira': 'F_5', 'A.U.R.A.': null
+            'Jaxon': 'M_2', 'Aris': 'F_3', 'Vance': 'M_4',
+            'Mira': 'F_5', 'A.U.R.A.': null
         };
         const colors = {
-            'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
+            'Jaxon': '#f0a030', 'Aris': '#40c8ff', 'Vance': '#ff5050',
+            'Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
         };
 
         // Crew warning lines based on who's alive AND planet type
@@ -3356,10 +3451,10 @@ Then you're through.`,
         // Get planet-specific warnings or fall back to generic
         const specific = planetWarnings[pType] || null;
 
-        if (vance) warnings.push({ speaker: 'Spc. Vance', text: specific?.vance || "Commander, this sector is a graveyard. Colonizing here is suicide. We need to go deeper." });
-        if (aris) warnings.push({ speaker: 'Dr. Aris', text: specific?.aris || "The environmental data doesn't support long-term survival. Please, we can do better." });
-        if (jaxon) warnings.push({ speaker: 'Eng. Jaxon', text: specific?.jaxon || "Soil's wrong. Radiation's wrong. Nothing will grow here. This isn't the place." });
-        if (mira) warnings.push({ speaker: 'Tech Mira', text: specific?.mira || "My models show colony failure within 18 months at these readings. The deeper sectors have better candidates." });
+        if (vance) warnings.push({ speaker: 'Vance', text: specific?.vance || "Commander, this sector is a graveyard. Colonizing here is suicide. We need to go deeper." });
+        if (aris) warnings.push({ speaker: 'Aris', text: specific?.aris || "The environmental data doesn't support long-term survival. Please, we can do better." });
+        if (jaxon) warnings.push({ speaker: 'Jaxon', text: specific?.jaxon || "Soil's wrong. Radiation's wrong. Nothing will grow here. This isn't the place." });
+        if (mira) warnings.push({ speaker: 'Mira', text: specific?.mira || "My models show colony failure within 18 months at these readings. The deeper sectors have better candidates." });
 
         const viability = pType === 'VITAL' || pType === 'EDEN' || pType === 'TERRAFORMED' ? Math.floor(Math.random() * 20 + 40) : Math.floor(Math.random() * 8 + 2);
         warnings.push({ speaker: 'A.U.R.A.', text: `Colony report for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
@@ -3863,7 +3958,7 @@ Then you're through.`,
         if (this.state.hasActiveTrait('BLEEDING_HEART')) {
             const injured = livingCrew.filter(c => c.status === 'INJURED');
             if (injured.length > 0) {
-                this.state.addLog(`Dr. Aris: "Absolutely not. ${injured[0].name} needs treatment first. No one goes out there."`);
+                this.state.addLog(`Aris: "Absolutely not. ${injured[0].name} needs treatment first. No one goes out there."`);
                 return;
             }
         }
@@ -4181,7 +4276,7 @@ Then you're through.`,
                 targetCrew.status = 'INJURED';
                 if (predatoryAttack) {
                     logMsg = `CRITICAL: ${targetCrew.name} mauled by predatory organisms. Emergency rescue! `;
-                    this.state.addLog(`Dr. Aris: "The wounds are severe. Whatever attacked them knew where to bite."`);
+                    this.state.addLog(`Aris: "The wounds are severe. Whatever attacked them knew where to bite."`);
                 } else {
                     // Planet-type specific injury messages
                     const injuryMsgs = [
@@ -4386,15 +4481,12 @@ Then you're through.`,
 
         // Style crew dialogue — detect "Name: " patterns for crew barks
         const crewColors = {
-            'Eng. Jaxon': '#f0a030', 'Jaxon': '#f0a030',
-            'Dr. Aris': '#40c8ff', 'Aris': '#40c8ff',
-            'Spc. Vance': '#ff5050', 'Vance': '#ff5050',
-            'Tech Mira': '#d070ff', 'Mira': '#d070ff',
+            'Jaxon': '#f0a030', 'Aris': '#40c8ff', 'Vance': '#ff5050', 'Mira': '#d070ff',
             'A.U.R.A.': '#74d99a'
         };
 
         let styled = false;
-        // Check for Commander (dynamic name: "Cmdr. LastName:")
+        // Check for Commander (old saves wrote "Cmdr. LastName:"; the commander never speaks in the log now)
         if (msg.startsWith('Cmdr.')) {
             const colonIdx = msg.indexOf(':');
             if (colonIdx > 0) {
@@ -4654,7 +4746,7 @@ Then you're through.`,
                                 ${stressOverlay}
                             </div>
                             <div class="crew-details">
-                                <div class="crew-name">${c.realName || c.name} <span style="font-size:0.7em; opacity:0.7;">(${c.name})</span></div>
+                                <div class="crew-name">${c.name}</div>
                                 <div class="crew-meta" style="color: ${color}; opacity: 0.8;">AGE: ${c.age || 'N/A'} | STATUS: ${statusText} | STRESS: ${this.getStressBar(c.stress)}</div>
                                 <div class="crew-tags">${c.tags.filter(t => t !== 'SEDATED' && t !== 'CONFINED').join(' ')}${c.trait ? ` <span style="color:#d85a4e;">[${c.trait}]</span>` : ''}
                                     ${isSedated ? `<span style="color:#c4d0c4; font-weight:bold; margin-left:5px;">[SEDATED - ${c._sedatedUntilWarp || '?'} warps]</span>` : ''}
@@ -4763,7 +4855,7 @@ Then you're through.`,
                         <div class="crew-card status-dead clickable-revive" data-id="${c.id}" style="cursor: pointer; border: 1px solid #d9a24a;">
                             <div class="crew-icon">💀</div>
                             <div class="crew-details">
-                                <div class="crew-name">${c.realName}</div>
+                                <div class="crew-name">${c.name}</div>
                                 <div class="crew-meta">ID: ${c.id}</div>
                             </div>
                         </div>
@@ -4797,7 +4889,7 @@ Then you're through.`,
                 const arisAlive = this.state.crew.find(c => c.tags.includes('MEDIC') && c.status !== 'DEAD');
                 if (arisAlive) {
                     setTimeout(() => {
-                        this.state.addLog(`Dr. Aris: "The readings are stable but... the neural patterns are different. They're ${target.name}, but also... something else."`);
+                        this.state.addLog(`Aris: "The readings are stable but... the neural patterns are different. They're ${target.name}, but also... something else."`);
                     }, 500);
                 }
 
@@ -4826,12 +4918,28 @@ Then you're through.`,
             return;
         }
 
-        // A.U.R.A. colony commentary
-        if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
-            window.AuraSystem.tryComment('COLONY_ATTEMPT', this.state, true);
-        }
+        if (!planet.scanned && !window.TEST_MODE) { this._executeColony(planet); return; }   // A.U.R.A. refuses an unscanned world herself
+        this.askBeforeSettling(planet, () => {
+            // A.U.R.A. colony commentary
+            if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+                window.AuraSystem.tryComment('COLONY_ATTEMPT', this.state, true);
+            }
+            this._executeColony(planet);
+        });
+    }
 
-        this._executeColony(planet);
+    /** Settling ends the journey: never on one click (docs/GAME_FLOW.md 2.0). "Not yet" comes first, nearer the button. */
+    askBeforeSettling(planet, onSettle) {
+        if (!window.EncounterCard) { onSettle(); return; }
+        window.EncounterCard.open(this, {
+            tone: 'station', kicker: 'SETTLE', title: `Settle on ${planet.name}?`, zIndex: 2800,
+            dialogue: [{ speaker: 'A.U.R.A.', text: 'If we land for good, the journey ends here, Commander. Settle anyway?' }],
+            choices: [
+                { text: 'Not yet', desc: 'Stay in orbit.' },
+                { text: 'Settle here', desc: 'The journey ends on this world.' },
+            ],
+            onPick: idx => { if (idx === 1) onSettle(); },
+        });
     }
 
     _executeColony(planet, { isScanWaived = false } = {}) {
@@ -5247,7 +5355,7 @@ Then you're through.`,
                 const cause = c._deathCause || 'unknown causes';
                 const planet = c._deathPlanet || 'deep space';
                 return `<div style="margin: 5px 0; font-size: 0.85em;">
-                    <span style="color: #e07a70;">${c.realName || c.name}</span>
+                    <span style="color: #e07a70;">${c.name}</span>
                     <span style="color: #884444;"> - ${cause} at ${planet}</span>
                 </div>`;
             }).join('');
@@ -5498,20 +5606,13 @@ Then you're through.`,
         const toggleBtn = modal.querySelector('#audio-toggle-btn');
         const slider = modal.querySelector('#modal-volume-slider');
         const volDisplay = modal.querySelector('#volume-display');
-        const headerBtn = document.getElementById('btn-audio');
 
         toggleBtn.onclick = () => {
             if (window.AudioSystem) {
                 const isMuted = window.AudioSystem.toggleMute();
                 toggleBtn.querySelector('span').textContent = isMuted ? 'SOUND IS OFF' : 'SOUND IS ON';
                 toggleBtn.setAttribute('aria-pressed', String(!isMuted));
-                // Update header button
-                if (headerBtn) {
-                    headerBtn.textContent = isMuted ? "AUDIO: OFF" : "AUDIO: ON";
-                    headerBtn.style.opacity = isMuted ? "0.5" : "1";
-                    headerBtn.style.color = isMuted ? "var(--color-primary-dim)" : "var(--color-primary)";
-                    headerBtn.style.borderColor = isMuted ? "var(--color-primary-dim)" : "var(--color-primary)";
-                }
+                this.syncSoundButton();
             }
         };
 

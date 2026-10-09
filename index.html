@@ -39,23 +39,16 @@
                 <div class="res-item" title="Food. The crew eats 1 on each sector jump, and 1 when a choice takes a day."><label>RATIONS</label><span id="res-rations">20</span></div>
                 <div class="res-item" title="Notes from the dead colonies. A second chance for yours: 5% per point, up to 25%."><label>DATA</label><span id="res-knowledge">0</span></div>
             </div>
-            <!-- Testing Mode Button (Dev) - near Audio -->
-            <button id="btn-testing" class="clickable" style="
-                position: absolute; top: 8px; right: 110px;
+            <!-- Test mode: only with ?test=1 (bundle.js shows this then; players never see it) -->
+            <button id="btn-testing" class="clickable" hidden style="
+                position: absolute; top: 8px; right: 160px;
                 background: #000; border: 1px solid #ff6600;
                 color: #ff6600; font-family: var(--font-mono);
                 padding: 2px 10px; font-size: 0.8em; cursor: pointer; z-index: 100;
                 opacity: 0.7;
             ">TEST</button>
-            <!-- Art Mode Toggle (classic SVG / 1-bit dither) — wired in DitherCore.js -->
-            <button id="btn-art" class="clickable" style="
-                position: absolute; top: 8px; right: 175px;
-                background: #000; border: 1px solid var(--color-primary-dim);
-                color: var(--color-primary-dim); font-family: var(--font-mono);
-                padding: 2px 10px; font-size: 0.8em; cursor: pointer; z-index: 100;
-                opacity: 0.7;
-            ">ART</button>
-            <!-- Audio Toggle Button -->
+            <!-- No ART toggle: the dither art is the game's look (?art=classic still works for testing) -->
+            <!-- Sound button: its label is set from the real mute state (bundle.js syncSoundButton) -->
             <button id="btn-audio" class="clickable" style="
                 position: absolute;
                 top: 8px;
@@ -69,7 +62,7 @@
                 cursor: pointer;
                 z-index: 100;
                 opacity: 0.5;
-            ">♪ AUDIO</button>
+            ">♪ SOUND</button>
         </header>
 
         <!-- Left Panel: Ship Schematic -->
@@ -144,31 +137,32 @@
 
     <!-- Scripts -->
     <!-- Initialize global test mode flag (used by chance-based systems) -->
-    <script>window.TEST_MODE = false;</script>
-    <script src="src/data/Items.js?v=57"></script>
+    <script>window.TEST_MODE = new URLSearchParams(location.search).get('test') === '1';</script>
+    <script src="src/data/Items.js?v=58"></script>
     <script src="src/data/Upgrades.js?v=57"></script> <!-- New Upgrades -->
     <script src="src/data/Events.js?v=57"></script>
-    <script src="src/data/CampfireEvents.js?v=59"></script>
-    <script src="src/data/ExodusDerelicts.js?v=61"></script>
+    <script src="src/data/CampfireEvents.js?v=60"></script>
+    <script src="src/data/ExodusDerelicts.js?v=62"></script>
     <script src="src/data/LootTables.js?v=56"></script>
     <script src="src/data/SectorConfig.js?v=60"></script>
-    <script src="src/data/ExodusLogs.js?v=57"></script>
+    <script src="src/data/ExodusLogs.js?v=58"></script>
     <script src="src/data/StoryPlanets.js?v=2"></script>
-    <script src="src/data/FailedColonyEncounters.js?v=56"></script>
-    <script src="src/data/DerelictEncounters.js?v=56"></script>
-    <script src="src/data/AnomalyEncounters.js?v=58"></script>
-    <script src="src/data/LateGamePOIs.js?v=56"></script>
-    <script src="src/data/StructureEncounter.js?v=57"></script>
-    <script src="src/data/ShipEvents.js?v=56"></script>
-    <script src="src/data/SpaceStations.js?v=57"></script>
-    <script src="src/data/AsteroidFields.js?v=56"></script>
-    <script src="src/data/DistressSignals.js?v=58"></script>
-    <script src="src/data/CrewEvents.js?v=59"></script>
+    <script src="src/data/FailedColonyEncounters.js?v=57"></script>
+    <script src="src/data/DerelictEncounters.js?v=57"></script>
+    <script src="src/data/AnomalyEncounters.js?v=59"></script>
+    <script src="src/data/LateGamePOIs.js?v=57"></script>
+    <script src="src/data/StructureEncounter.js?v=58"></script>
+    <script src="src/data/ShipEvents.js?v=57"></script>
+    <script src="src/data/SpaceStations.js?v=58"></script>
+    <script src="src/data/AsteroidFields.js?v=57"></script>
+    <script src="src/data/DistressSignals.js?v=59"></script>
+    <script src="src/data/CrewEvents.js?v=60"></script>
     <script src="src/systems/FrameClock.js?v=1"></script>
     <script src="src/systems/PlainWords.js?v=1"></script>
+    <script src="src/systems/ChoiceGuard.js?v=1"></script> <!-- choices never under the cursor; pop-ups ignore clicks for 400 ms -->
     <script src="src/systems/BodyRenderer.js?v=38"></script>
-    <!-- Opt-in 1-bit dither art mode (?art=dither or the ART button); inert in classic mode -->
-    <script src="src/systems/dither/DitherCore.js?v=38"></script>
+    <!-- Dither art: the game's look (?art=classic switches it off for one load, for testing) -->
+    <script src="src/systems/dither/DitherCore.js?v=39"></script>
     <script src="src/systems/dither/DitherRecipes.js?v=38"></script>
     <script src="src/systems/dither/StructureArt.js?v=45"></script>
     <script src="src/systems/dither/DitherBodies.js?v=38"></script>
@@ -180,7 +174,7 @@
     <script src="src/systems/DockingGame.js?v=3"></script>
     <script src="src/systems/BoardingParty.js?v=40"></script>
     <script src="src/systems/SignalTune.js?v=38"></script>
-    <script src="src/systems/AwayTeam.js?v=47"></script>
+    <script src="src/systems/AwayTeam.js?v=48"></script>
     <script src="src/systems/LanderScene.js?v=59"></script>
     <script src="src/systems/LanderSites.js?v=3"></script>
     <script src="src/systems/LanderCrew.js?v=3"></script>
@@ -191,30 +185,30 @@
     <script src="src/systems/DiscDocument.js?v=45"></script>
     <script src="src/systems/FoundPage.js?v=51"></script>
     <script src="src/systems/StoryReel.js?v=54"></script>
-    <script src="src/systems/TheThrow.js?v=51"></script>
+    <script src="src/systems/TheThrow.js?v=52"></script>
     <script src="src/systems/SceneArt.js?v=2"></script>
-    <script src="src/systems/EncounterCard.js?v=58"></script>
-    <script src="src/systems/EndScreens.js?v=58"></script>
-    <script src="src/systems/RosterPanel.js?v=49"></script>
-    <script src="src/systems/WarpPlot.js?v=49"></script>
+    <script src="src/systems/EncounterCard.js?v=59"></script>
+    <script src="src/systems/EndScreens.js?v=59"></script>
+    <script src="src/systems/RosterPanel.js?v=50"></script>
+    <script src="src/systems/WarpPlot.js?v=50"></script>
     <script src="src/systems/ProbeSystem.js?v=39"></script>
     <script src="src/systems/AudioSystem.js?v=38"></script>
-    <script src="src/systems/EndingSystem.js?v=57"></script>
+    <script src="src/systems/EndingSystem.js?v=58"></script>
     <script src="src/systems/BarkSystem.js?v=59"></script>
-    <script src="src/systems/AuraSystem.js?v=51"></script>
-    <script src="src/systems/NarrativeModal.js?v=38"></script>
+    <script src="src/systems/AuraSystem.js?v=52"></script>
+    <script src="src/systems/NarrativeModal.js?v=39"></script>
     <script src="src/views/OrbitView.js?v=56"></script>
     <script src="src/generators/PlanetGenerator.js?v=40"></script>
     <script src="src/views/NavView.js?v=62"></script>
-    <script src="src/bundle.js?v=70"></script>
-    <script src="src/systems/MissionLog.js?v=40"></script>
+    <script src="src/bundle.js?v=72"></script>
+    <script src="src/systems/MissionLog.js?v=41"></script>
     <script src="src/systems/Coach.js?v=58"></script>
     <!-- Minigames: the Sim Bay sketches, played over the game by MiniHost (the four games are added one by one) -->
     <script src="src/systems/minigames/MiniLab.js?v=2"></script>
     <script src="src/systems/minigames/MiniShip.js?v=1"></script>
     <script src="src/systems/minigames/MiniHost.js?v=5"></script>
-    <script src="src/systems/minigames/Corridor.js?v=11"></script>
-    <script src="src/systems/minigames/Torch.js?v=6"></script>
+    <script src="src/systems/minigames/Corridor.js?v=12"></script>
+    <script src="src/systems/minigames/Torch.js?v=7"></script>
     <script src="src/systems/minigames/DiscDating.js?v=5"></script>
     <script src="src/systems/minigames/Breach.js?v=2"></script>
 </body>

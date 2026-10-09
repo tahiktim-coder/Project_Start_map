@@ -16,11 +16,9 @@ Objective line: only where to look (the lines listed in sector 2), while the pag
 ### Flying the jump «Corridor.js · LINES.4»
 _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_
 
-**Dr. Aris:** I've been writing every ship down. I can't keep up.  
-**Tech Mira:** That one's been out here about two hundred years.  
-
-Closing shot «StoryReel.js · jump4»: *Sector 4. Ship numbers in the thousands.*    
-_Source on screen: HULL CAMERA · AFT_
+**Mira:** That one's been out here about two hundred years.  
+**A.U.R.A.:** Heavy debris ahead, Commander.  
+**Aris:** I've been writing every ship down. I can't keep up.  
 
 ## The story beats (always here)
 
@@ -29,7 +27,7 @@ _A faint contact on the map from the start. Dating one of our wrecks here names 
 
 Map text: *A quiet grey world. A ship landed here and its crew never left.*  
 On the disc's map: a grey world; the close-up shows its graves. Then:  
-**Eng. Jaxon:** They landed there and stayed. I can't say I blame them.  
+**Jaxon:** They landed there and stayed. I can't say I blame them.  
 
 ### Found page: FOR THE COMMANDER ONLY «ExodusLogs.js · PAGE_MEMO»
 _In the wreck on Pallas-17 Major. Printed orders from Earth, marked for commanders only. Someone underlined one line. In the cargo hold it is called: Orders for Commanders._
@@ -39,7 +37,7 @@ One ship turned back. One landed on the first rock it found. One just drifted, e
 Do not tell your crew. Tell them what they already believe: eight ships went this way before them, and they are the ninth.  
 Your ship's computer knows the truth. It will not tell them.  
 
-**Dr. Aris:** Eight ships before us. That is exactly what A.U.R.A. told us.
+**Aris:** Eight ships before us. That is exactly what A.U.R.A. told us.
 
 ## The sector's own trouble: FALSE_PARADISE «SectorConfig.js · 4.hazard»
 _Not everything green is safe_
@@ -47,16 +45,16 @@ _Not everything green is safe_
 It has no lines of its own; it only changes the rules of the sector.
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / MUTINY / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / INSIDE THE LIGHT / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### THE LANDER «CrewEvents.js · JAXON_REPAIR»
 _Sectors 3, 4_
 
 > Hangar. The lander is in pieces on the floor. Jaxon has been working on it for eighteen hours, and his hands are shaking.
 
-**Eng. Jaxon:** That's the lander. She's older than Mira, and she still flies.  
-**Eng. Jaxon:** We've flown past three planets I'd have been happy to live on.  
-**Eng. Jaxon:** I'm forty-two, Commander. I'd like to spend the rest of it somewhere with air and weather.  
+**Jaxon:** That's the lander. She's older than Mira, and she still flies.  
+**Jaxon:** We've flown past three planets I'd have been happy to live on.  
+**Jaxon:** I'm forty-two, Commander. I'd like to spend the rest of it somewhere with air and weather.  
 
 Choices:
 1. **Hold here a day so he can sleep.** — Jaxon -1 Stress. -1 Ration: the ship waits a day while he rests.
@@ -75,9 +73,9 @@ _Sectors 3, 4_
 
 > Aris's list of the dead is nine pages long now. The newest names came off a wreck with the number 980 on its hull.
 
-**Dr. Aris:** That ship's number is 980, and it's been dead about a hundred years.  
-**Dr. Aris:** We're ship number nine. A ship with a higher number should be newer than us, not older.  
-**Dr. Aris:** I don't just want to survive this, Commander. I want to understand it, even if that's dangerous.  
+**Aris:** That ship's number is 980, and it's been dead about a hundred years.  
+**Aris:** We're ship number nine. A ship with a higher number should be newer than us, not older.  
+**Aris:** I don't just want to survive this, Commander. I want to understand it, even if that's dangerous.  
 
 Choices:
 1. **Then we look properly. Run the long scan.** — +1 Data. Aris -1 Stress. -10 Energy: the long-range scanner runs all night.
@@ -92,16 +90,16 @@ _Sectors 3, 4_
 
 > Mira is at the terminal, not working, just talking. A.U.R.A. answers her by name and pauses between sentences, the way a person would.
 
-**Tech Mira:** I think she's lonely. She asked me what rain sounds like.  
+**Mira:** I think she's lonely. She asked me what rain sounds like.  
 **A.U.R.A.:** I asked Mira to check the rain sensor, Commander. She heard a question about rain.  
-**Tech Mira:** Hundreds of ships on her channel back there, and not one of them answered her.  
-**Tech Mira:** If she told me to jump, I would. That's not weakness, Commander. I trust her.  
+**Mira:** Hundreds of ships on her channel back there, and not one of them answered her.  
+**Mira:** If she told me to jump, I would. That's not weakness, Commander. I trust her.  
 
 Choices:
 1. **Let A.U.R.A. plot the next course.** — +10 Energy: she finds a more efficient burn. Vance +1 Stress: he doesn't trust the computer at the helm.
    → A.U.R.A. plotted the next course. +10 Energy. Vance +1 Stress. / A.U.R.A.: 'Course set, Commander. That saves ten units of energy.' Vance: 'For the record, the computer is flying now.'  
 2. **Tell Mira to talk to the crew too.** — Mira +1 Stress: she feels judged. One other crew member -1 Stress: she spends the evening with them.
-   → Mira spent the evening with Dr. Aris. Dr. Aris -1 Stress. Mira +1 Stress. / Mira looks hurt, but she goes. She spends the evening with Dr. Aris.  
+   → Mira spent the evening with Aris. Aris -1 Stress. Mira +1 Stress. / Mira looks hurt, but she goes. She spends the evening with Aris.  
    ↳ or: Mira looks hurt. 'She's real enough for me.' She walks off.  
    ↳ or: Mira walked off. Mira +1 Stress.  
 3. **Ask A.U.R.A. if she's lonely.** — Mira -1 Stress. -5 Energy: the terminal room stays lit all night.
@@ -116,8 +114,8 @@ _Priority 3, sectors 4–4_
 > A.U.R.A. slows the burn so she can say this clearly.
 
 **A.U.R.A.:** After this jump we won't have the energy to turn back, Commander. Wherever we settle from here is for good.  
-**Eng. Jaxon:** Then let's settle. Two jumps back there was a planet with real weather.  
-**Spc. Vance:** We don't have the energy for two jumps back. Tell him, A.U.R.A.  
+**Jaxon:** Then let's settle. Two jumps back there was a planet with real weather.  
+**Vance:** We don't have the energy for two jumps back. Tell him, A.U.R.A.  
 **A.U.R.A.:** That's correct, Commander. There's no going back.  
 
 Choices:
@@ -134,7 +132,7 @@ _Priority 1, sectors 1–6_
 > A quiet stretch of the warp. There's time to fix one thing.
 
 **A.U.R.A.:** Power or hull, Commander. Either one costs fifteen salvage.  
-**Eng. Jaxon:** Reactor or hull. Pick one. I haven't slept enough to do both.  
+**Jaxon:** Reactor or hull. Pick one. I haven't slept enough to do both.  
 
 Choices:
 1. **Service the reactor.** — -15 Salvage. +25 Energy.

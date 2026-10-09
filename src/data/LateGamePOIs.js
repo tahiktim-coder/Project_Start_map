@@ -27,10 +27,10 @@ The beacon sends one message, over and over: the safest route onward, for any sh
 Every route it gives points the same way. Down our heading.`,
 
         dialogue: [
-            { speaker: 'Tech Mira', text: "It's a navigation beacon, Commander. It's giving directions to any ship behind it." },
+            { speaker: 'Mira', text: "It's a navigation beacon, Commander. It's giving directions to any ship behind it." },
             { speaker: 'A.U.R.A.', text: "The route it gives is accurate, Commander. It matches our heading exactly." },
-            { speaker: 'Spc. Vance', text: "So every ship that passed here followed it. Where did it lead them?" },
-            { speaker: 'Eng. Jaxon', text: "It still runs off its own reactor. I can plug our charts straight into it." }
+            { speaker: 'Vance', text: "So every ship that passed here followed it. Where did it lead them?" },
+            { speaker: 'Jaxon', text: "It still runs off its own reactor. I can plug our charts straight into it." }
         ],
 
         choices: [
@@ -71,8 +71,8 @@ Every route it gives points the same way. Down our heading.`,
                     if (mira && mira.status !== 'DEAD') {
                         mira.stress = Math.max(0, (mira.stress || 0) - 1);
                         mira._lighthouseKnowledge = true;
-                        state.addLog("Tech Mira: 'It logged every ship that passed. Thousands of them, all going the same way.'");
-                        state.addLog("Tech Mira: 'And none of them ever came back past it.'");
+                        state.addLog("Mira: 'It logged every ship that passed. Thousands of them, all going the same way.'");
+                        state.addLog("Mira: 'And none of them ever came back past it.'");
                     } else {
                         state.addLog("Without Mira, we can only read part of the log.");
                         state.addLog("Thousands of ships passed this beacon, all heading the same way. None of them came back.");
@@ -99,9 +99,9 @@ Nobody built it. It is a copy of a real place, and the copy is not quite right.
 The door is open, because the real place had an open door.`,
 
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Every plant here is an Earth plant. Whoever copied them didn't know how plants grow." },
-            { speaker: 'Tech Mira', text: "The dome makes its own daylight. I can't find where it's coming from." },
-            { speaker: 'Spc. Vance', text: "There's a stone in the middle with names cut into it." },
+            { speaker: 'Aris', text: "Every plant here is an Earth plant. Whoever copied them didn't know how plants grow." },
+            { speaker: 'Mira', text: "The dome makes its own daylight. I can't find where it's coming from." },
+            { speaker: 'Vance', text: "There's a stone in the middle with names cut into it." },
             { speaker: 'A.U.R.A.', text: "There are seeds and embryos stored here, Commander. Earth stock. I can't say how they got here." }
         ],
 
@@ -186,10 +186,10 @@ Rows of stones stretch to every horizon, one row for each ship, with the hull nu
 The rows farther out are older.`,
 
         dialogue: [
-            { speaker: 'Dr. Aris', text: "I'm going to read their names. Somebody should." },
-            { speaker: 'Eng. Jaxon', text: "This row has our mission patch on it. The hull number is over nine thousand." },
-            { speaker: 'Spc. Vance', text: "Thousands of stones, and not one commander." },
-            { speaker: 'Tech Mira', text: "Please don't read them out loud. I don't want to hear them." },
+            { speaker: 'Aris', text: "I'm going to read their names. Somebody should." },
+            { speaker: 'Jaxon', text: "This row has our mission patch on it. The hull number is over nine thousand." },
+            { speaker: 'Vance', text: "Thousands of stones, and not one commander." },
+            { speaker: 'Mira', text: "Please don't read them out loud. I don't want to hear them." },
             { speaker: 'A.U.R.A.', text: "Four crew per ship, Commander. The stones match the crew lists." }
         ],
 
@@ -210,7 +210,7 @@ The rows farther out are older.`,
                     state.addLog("The names on the nearest hundred stones are read aloud, four to a stone. Nobody interrupts.");
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     state.addLog(aris
-                        ? "Dr. Aris: 'Whoever buried them knew every name. It's the same handwriting on every stone.'"
+                        ? "Aris: 'Whoever buried them knew every name. It's the same handwriting on every stone.'"
                         : "Whoever buried them knew every name. It's the same handwriting on every stone.");
                     state._gravesRead = true;
 

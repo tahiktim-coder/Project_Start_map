@@ -39,9 +39,9 @@ const EXODUS_ENCOUNTERS = [
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `${shipName} came in too steep and burned up on the way down. The crew deck melted. Only the transponder still works.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Scorch marks from nose to tail. At least it would have been quick." },
-            { speaker: 'Spc. Vance', text: "The ship's computer flies the landing, not the crew. It brought them in like this." },
-            { speaker: 'Dr. Aris', text: "Their crew list is still on the transponder. I'd like to read their names." }
+            { speaker: 'Jaxon', text: "Scorch marks from nose to tail. At least it would have been quick." },
+            { speaker: 'Vance', text: "The ship's computer flies the landing, not the crew. It brought them in like this." },
+            { speaker: 'Aris', text: "Their crew list is still on the transponder. I'd like to read their names." }
         ],
         choices: [
             {
@@ -86,10 +86,10 @@ const EXODUS_ENCOUNTERS = [
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `${shipName} landed in one piece. Inside, five people sit at their stations. No wounds, no sign of a struggle. They just stopped.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "No sign of pain. Whatever happened to them, it was quiet." },
-            { speaker: 'Spc. Vance', text: "Five healthy people died in their chairs. I want to know what did that." },
-            { speaker: 'Eng. Jaxon', text: "The hold's full. Medicine, food, tools. There's even a tin of real coffee." },
-            { speaker: 'Dr. Aris', text: "Kael, we bury them before we take anything." }
+            { speaker: 'Aris', text: "No sign of pain. Whatever happened to them, it was quiet." },
+            { speaker: 'Vance', text: "Five healthy people died in their chairs. I want to know what did that." },
+            { speaker: 'Jaxon', text: "The hold's full. Medicine, food, tools. There's even a tin of real coffee." },
+            { speaker: 'Aris', text: "Vance, we bury them before we take anything." }
         ],
         choices: [
             {
@@ -139,7 +139,7 @@ const EXODUS_ENCOUNTERS = [
                     }
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    if (aris) state.addLog("Dr. Aris digs the graves while the rest of us load the lander. She doesn't ask for help.");
+                    if (aris) state.addLog("Aris digs the graves while the rest of us load the lander. She doesn't ask for help.");
                     return "Graves dug, hold emptied. -1 Ration, -10 Energy, +20 Salvage, +1 Food Pack.";
                 }
             }
@@ -155,10 +155,10 @@ const EXODUS_ENCOUNTERS = [
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `${shipName} is dark except for the cryo bay. Three sleep pods, three green lights, three heartbeats. Everything else on board is cold.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "Three people, still alive! But their pods are down to two percent power." },
-            { speaker: 'Dr. Aris', text: "It isn't safe to wake them out here. We can carry them and keep them cold." },
-            { speaker: 'Eng. Jaxon', text: "Those pod batteries hold a lot of power. We could use it. I'm only saying." },
-            { speaker: 'Spc. Vance', text: "Keeping three pods cold costs us a ration each. Can we afford that?" }
+            { speaker: 'Mira', text: "Three people, still alive! But their pods are down to two percent power." },
+            { speaker: 'Aris', text: "It isn't safe to wake them out here. We can carry them and keep them cold." },
+            { speaker: 'Jaxon', text: "Those pod batteries hold a lot of power. We could use it. I'm only saying." },
+            { speaker: 'Vance', text: "Keeping three pods cold costs us a ration each. Can we afford that?" }
         ],
         choices: [
             {
@@ -181,7 +181,7 @@ const EXODUS_ENCOUNTERS = [
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
                     if (state.crew.some(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD')) {
-                        state.addLog("Dr. Aris: \"You're killing them. You know that.\"");
+                        state.addLog("Aris: \"You're killing them. You know that.\"");
                     }
                     state.addLog("Nobody answers. The three green lights go out one after another.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-2, 'Killed sleepers for power');
@@ -197,7 +197,7 @@ const EXODUS_ENCOUNTERS = [
                     state._sleepers = (state._sleepers || 0) + 2;
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
-                    if (aris) state.addLog("Dr. Aris chooses which pod loses its battery. She won't say how she chose.");
+                    if (aris) state.addLog("Aris chooses which pod loses its battery. She won't say how she chose.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Traded one sleeper for two');
                     return "Two sleepers aboard, one battery in our reactor. +25 Energy, -2 Rations.";
                 }
@@ -213,9 +213,9 @@ const EXODUS_ENCOUNTERS = [
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `${shipName}'s decks are wrecked, but the hold is sealed and dry. The crates are stacked and labelled. A note on top says: "For whoever comes next."`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "They packed this for the next crew. That's a decent thing to do." },
-            { speaker: 'Tech Mira', text: "The labels are all handwritten. Someone took real care over this." },
-            { speaker: 'Spc. Vance', text: "The manifest matches what's in the hold. That's the first honest list I've seen out here." }
+            { speaker: 'Jaxon', text: "They packed this for the next crew. That's a decent thing to do." },
+            { speaker: 'Mira', text: "The labels are all handwritten. Someone took real care over this." },
+            { speaker: 'Vance', text: "The manifest matches what's in the hold. That's the first honest list I've seen out here." }
         ],
         choices: [
             {
@@ -234,7 +234,7 @@ const EXODUS_ENCOUNTERS = [
                     }
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
-                    if (jaxon) state.addLog("Eng. Jaxon folds up the note and puts it in his pocket. He doesn't say anything.");
+                    if (jaxon) state.addLog("Jaxon folds up the note and puts it in his pocket. He doesn't say anything.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Emptied a cache left for others');
                     return "Hold emptied. +30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress.";
                 }
@@ -267,9 +267,9 @@ const EXODUS_ENCOUNTERS = [
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `${shipName} is covered in white mould inside. Their greenhouse kept growing after the crew died. The lab door is sealed, and the mould stops there.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Their own greenhouse did this. Nobody touches anything without gloves." },
-            { speaker: 'Tech Mira', text: "The lab is sealed. There could be years of research in there." },
-            { speaker: 'Spc. Vance', text: "There aren't enough clean suits for all of us. I'll stay with the lander." }
+            { speaker: 'Aris', text: "Their own greenhouse did this. Nobody touches anything without gloves." },
+            { speaker: 'Mira', text: "The lab is sealed. There could be years of research in there." },
+            { speaker: 'Vance', text: "There aren't enough clean suits for all of us. I'll stay with the lander." }
         ],
         choices: [
             {
@@ -307,7 +307,7 @@ const EXODUS_ENCOUNTERS = [
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     if (state.crew.some(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD')) {
-                        state.addLog("Eng. Jaxon: \"Burn it. I don't want that anywhere near our ship.\"");
+                        state.addLog("Jaxon: \"Burn it. I don't want that anywhere near our ship.\"");
                     }
                     return "Power cells taken, then the wreck burned from orbit. The mould is gone. +10 Energy.";
                 }
@@ -344,7 +344,7 @@ const EXODUS_ENCOUNTERS = [
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `Only the flight recorder is left of ${shipName}. The rest is a crater three kilometres wide. The recorder is armoured, and it survived.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "There are weeks of logs on this. Aura can read them, if you say so, Commander." },
+            { speaker: 'Mira', text: "There are weeks of logs on this. Aura can read them, if you say so, Commander." },
             { speaker: 'A.U.R.A.', text: "Decoding the full log costs 10 Energy, Commander. I can read the header for free." }
         ],
         choices: [
@@ -406,9 +406,9 @@ const EXODUS_ENCOUNTERS = [
         getShipName: () => EXODUS_SHIP_NAMES[Math.floor(Math.random() * EXODUS_SHIP_NAMES.length)],
         context: (shipName) => `${shipName} landed safely. The crew came out and tried to settle: half-built shelters, a fence, a well. Then the work just stops. Some decks still have power.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "They built a fence. You don't build a fence unless you plan to stay." },
-            { speaker: 'Dr. Aris', text: "Their journals and drawings are everywhere. I want their names before we take anything." },
-            { speaker: 'Spc. Vance', text: "Whatever stopped them came fast. They didn't finish anything. Let's take what we need." }
+            { speaker: 'Jaxon', text: "They built a fence. You don't build a fence unless you plan to stay." },
+            { speaker: 'Aris', text: "Their journals and drawings are everywhere. I want their names before we take anything." },
+            { speaker: 'Vance', text: "Whatever stopped them came fast. They didn't finish anything. Let's take what we need." }
         ],
         choices: [
             {
@@ -419,7 +419,7 @@ const EXODUS_ENCOUNTERS = [
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     state.addLog("SHELTER LOG: 'Don't build until you've tested the soil. The ground here moves.'");
-                    state.addLog("Five names, copied from five journals into the notebook where Dr. Aris keeps the dead.");
+                    state.addLog("Five names, copied from five journals into the notebook where Aris keeps the dead.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Took the names before the parts');
                     state.noteStanding && state.noteStanding('aris');
                     return "Names kept, parts taken after. -1 Ration, +25 Salvage, +1 Data.";

@@ -25,10 +25,10 @@
     // ── what is said, and when. A speaker of '' is the narration. ──
     const BEATS = [
         [400, '', 'The jump did not finish.'],
-        [2400, 'Eng. Jaxon', 'The reactor has gone cold.'],
-        [4000, 'Spc. Vance', 'Everyone, sound off.'],
+        [2400, 'Jaxon', 'The reactor has gone cold.'],
+        [4000, 'Vance', 'Everyone, sound off.'],
         [5400, '', 'Nobody answers.'],
-        [7000, 'Tech Mira', 'A.U.R.A.? Are you there?'],
+        [7000, 'Mira', 'A.U.R.A.? Are you there?'],
         [8400, '', 'Nobody answers.'],
         [9600, '', 'Nobody answers. Nobody answers.'],
         [10800, '', 'Nobody answers. Nobody answers. Nobody answers.'],
@@ -132,7 +132,7 @@
                 const sector = 3, name = (typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[sector]) ? SECTOR_CONFIG[sector].name : 'SECTOR 3';
                 const line = (typeof SECTOR_ARRIVAL_LINES !== 'undefined' && SECTOR_ARRIVAL_LINES[sector]) || '';
                 const mira = state && state.crew.find(c => c.name.includes('Mira') && c.status !== 'DEAD');
-                const voice = mira ? { name: 'Tech Mira', text: 'Commander, there are a lot more than eight ships out here.', face: mira.portraitId } : { name: 'A.U.R.A.', text: 'Burn complete, Commander. There are many more ship beacons ahead than expected.', face: null };
+                const voice = mira ? { name: 'Mira', text: 'Commander, there are a lot more than eight ships out here.', face: mira.portraitId } : { name: 'A.U.R.A.', text: 'Burn complete, Commander. There are many more ship beacons ahead than expected.', face: null };
                 overlay.className = 'warp-plot';
                 overlay.innerHTML = `<div class="warp-plot-frame warp-arrival">
                     <p class="warp-plot-kicker">SECTOR ${sector} OF ${typeof FINAL_SECTOR !== 'undefined' ? FINAL_SECTOR : 6} · THE BURN FINISHED</p>

@@ -26,9 +26,9 @@ const SPACE_STATION_ENCOUNTERS = [
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
         context: (name) => `${name} is a ship that anchored itself to an asteroid and mined it to survive. The mining arms stopped mid-swing. The bays are sealed. A beacon still transmits.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "They found a rock, stopped, and made a life on it. I can see why." },
-            { speaker: 'Tech Mira', text: "Aura's talking to the station's repair drones, Commander. They still answer her!" },
-            { speaker: 'Spc. Vance', text: "Nobody's alive here, but those drones still move. Keep an eye on them." }
+            { speaker: 'Jaxon', text: "They found a rock, stopped, and made a life on it. I can see why." },
+            { speaker: 'Mira', text: "Aura's talking to the station's repair drones, Commander. They still answer her!" },
+            { speaker: 'Vance', text: "Nobody's alive here, but those drones still move. Keep an eye on them." }
         ],
         choices: [
             {
@@ -86,8 +86,8 @@ const SPACE_STATION_ENCOUNTERS = [
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
         context: (name) => `${name} was a ship that stopped here to study something. There's no damage outside, but every escape pod is gone. The lab is sealed, and the quarantine lights are on.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Quarantine seals. Either they were studying something dangerous, or something got loose." },
-            { speaker: 'Tech Mira', text: "All their research is still on the drives. That's years of work, Commander!" },
+            { speaker: 'Aris', text: "Quarantine seals. Either they were studying something dangerous, or something got loose." },
+            { speaker: 'Mira', text: "All their research is still on the drives. That's years of work, Commander!" },
             { speaker: 'A.U.R.A.', text: "The last log entry stops mid-sentence, Commander. The crew left in a hurry." }
         ],
         choices: [
@@ -163,9 +163,9 @@ const SPACE_STATION_ENCOUNTERS = [
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
         context: (name) => `${name} is three ships welded together. Their hull numbers are not in order. Inside, the walls are covered in names, dates and goodbyes. Some are in children's handwriting.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "So many names. It will take me all day to copy this wall." },
-            { speaker: 'Eng. Jaxon', text: "Three crews stopped here, one after another. Each one found the others and stayed." },
-            { speaker: 'Spc. Vance', text: "How do three crews end up in the same spot, this far out?" }
+            { speaker: 'Aris', text: "So many names. It will take me all day to copy this wall." },
+            { speaker: 'Jaxon', text: "Three crews stopped here, one after another. Each one found the others and stayed." },
+            { speaker: 'Vance', text: "How do three crews end up in the same spot, this far out?" }
         ],
         choices: [
             {
@@ -191,7 +191,7 @@ const SPACE_STATION_ENCOUNTERS = [
                     if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
                     if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
                     state.addLog("Our five names go on the wall, under a child's drawing of a yellow sun and green grass.");
-                    if (aris) state.addLog("Dr. Aris copies every name on the wall into her record of the dead.");
+                    if (aris) state.addLog("Aris copies every name on the wall into her record of the dead.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Left our names with theirs');
                     state.noteStanding && state.noteStanding('jaxon');
                     return "Our names are on the wall. -1 Ration, +1 Data. Jaxon -1 Stress, Aris -1 Stress.";
@@ -207,7 +207,7 @@ const SPACE_STATION_ENCOUNTERS = [
                     });
                     state.addLog("Every recorded call on the array is from an Exodus ship. None were ever answered.");
                     if (state.crew.some(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD')) {
-                        state.addLog("Spc. Vance: \"Nobody told us about any of these ships. Save every call.\"");
+                        state.addLog("Vance: \"Nobody told us about any of these ships. Save every call.\"");
                     }
                     state.noteStanding && state.noteStanding('vance');
                     return "Array played through. Forty-one calls, none answered. +2 Data. All crew +1 Stress.";
@@ -224,8 +224,8 @@ const SPACE_STATION_ENCOUNTERS = [
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
         context: (name) => `${name} is a ship stripped down to its frame to power one thing: a beacon aimed back toward Earth. It has been sending the same two words for years.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Those capacitors are as big as our lander. They put everything into this." },
-            { speaker: 'Tech Mira', text: "It's the loudest signal out here. Aura can hear it from three sectors away!" },
+            { speaker: 'Vance', text: "Those capacitors are as big as our lander. They put everything into this." },
+            { speaker: 'Mira', text: "It's the loudest signal out here. Aura can hear it from three sectors away!" },
             { speaker: 'A.U.R.A.', text: "It is aimed at Earth, Commander. The message is 'Turn back.' I have logged it." }
         ],
         choices: [
@@ -239,7 +239,7 @@ const SPACE_STATION_ENCOUNTERS = [
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
                     state.addLog("The beacon cuts off mid-word.");
-                    if (mira) state.addLog("Tech Mira: 'That was the only other voice out here.'");
+                    if (mira) state.addLog("Mira: 'That was the only other voice out here.'");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Silenced the beacon');
                     return "Capacitors drained into our reactor. +40 Energy. The beacon is dark.";
                 }
@@ -264,7 +264,7 @@ const SPACE_STATION_ENCOUNTERS = [
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
-                    if (vance) state.addLog("Spc. Vance adds our hull number to the message, so Earth knows we heard it too.");
+                    if (vance) state.addLog("Vance adds our hull number to the message, so Earth knows we heard it too.");
                     state.addLog("A.U.R.A.: 'Transmitting, Commander. I will tell you if anyone answers.'");
                     state.noteStanding && state.noteStanding('vance');
                     return "The beacon now says: 'Turn back. Exodus 9.' -10 Energy, +2 Data. Vance +1 Stress.";
@@ -282,9 +282,9 @@ const SPACE_STATION_ENCOUNTERS = [
         getStationName: () => STATION_NAMES[Math.floor(Math.random() * STATION_NAMES.length)],
         context: (name) => `${name} belonged to a crew who collected things. They sorted and shelved parts from every wreck they passed. There are aisles of it, and a ledger by the door.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Someone spent years sorting all this. We might as well use it." },
-            { speaker: 'Dr. Aris', text: "There's a whole aisle of medical supplies, all labelled by hand." },
-            { speaker: 'Tech Mira', text: "Look, Commander. The ledger lists every wreck they found, by hull number." }
+            { speaker: 'Jaxon', text: "Someone spent years sorting all this. We might as well use it." },
+            { speaker: 'Aris', text: "There's a whole aisle of medical supplies, all labelled by hand." },
+            { speaker: 'Mira', text: "Look, Commander. The ledger lists every wreck they found, by hull number." }
         ],
         choices: [
             {
@@ -348,7 +348,7 @@ const SPACE_STATION_ENCOUNTERS = [
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
                     state.addLog("LEDGER: hull number, where it was found, what was taken. The deeper they went, the higher the numbers, and the older the wrecks.");
-                    if (vance) state.addLog("Spc. Vance: \"Thousands of ships, and we were told eight. Someone lied to all of them.\"");
+                    if (vance) state.addLog("Vance: \"Thousands of ships, and we were told eight. Someone lied to all of them.\"");
                     return "Ledger read. It shows where every wreck they found lies. -1 Ration, +3 Data. Vance +1 Stress.";
                 }
             }
@@ -364,8 +364,8 @@ const SPACE_STATION_ENCOUNTERS = [
         context: (name) => `${name} appears on none of our maps. The corridors are the right shape, but the doors are slightly too small. Every bunk has four folded blankets. Nothing has ever been used.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "It matches the standard station plan to the millimetre, Commander. Real stations always differ a little." },
-            { speaker: 'Spc. Vance', text: "Nobody built this by hand, and nobody has ever lived here. We should leave." },
-            { speaker: 'Tech Mira', text: "But look at it. It's brand new. Nothing else out here is new." }
+            { speaker: 'Vance', text: "Nobody built this by hand, and nobody has ever lived here. We should leave." },
+            { speaker: 'Mira', text: "But look at it. It's brand new. Nothing else out here is new." }
         ],
         choices: [
             {

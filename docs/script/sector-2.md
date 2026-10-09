@@ -15,7 +15,7 @@ When the page is found or the stops run out (sectors 2 to 6):
 - No stops left. The only place left to go is the light. «Coach.js · line 66»
 - No stops left in this sector. JUMP SECTOR when you are ready — whatever you skipped is gone for good. «Coach.js · line 66»
 - Every page is found. Nothing here is random any more. Go to the light when you are ready. «Coach.js · line 68»
-- Nothing left to find in this sector. [stops left] [stop | stops] left: rest, repair, salvage, then JUMP SECTOR. «Coach.js · line 69»
+- Nothing left to find in this sector. [stops left] [stop | stops] left: repair, salvage, then JUMP SECTOR. «Coach.js · line 69»
 
 Added to the objective line, once (sectors 2 to 6), while the page is still out there:
 - Look on [name]. «Coach.js · line 36»
@@ -27,18 +27,17 @@ Added to the objective line, once (sectors 2 to 6), while the page is still out 
 ### Flying the jump «Corridor.js · LINES.2»
 _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_
 
-**Eng. Jaxon:** That's one of the eight.  
-**Dr. Aris:** Eight beacons. That's every ship they told us about.  
+**A.U.R.A.:** I'll count every beacon we hear, Commander.  
+**Jaxon:** That's one of the eight.  
+**A.U.R.A.:** Debris ahead, Commander.  
+**Aris:** Eight beacons. That's every ship they told us about.  
 
 #### A.U.R.A. on who has been flying «bundle.js · getRelianceVoice»
 _In the log after every jump from here on, once she has seen four or more burns and flights: one line if she flew most of them, the other if you did. She says nothing when this jump went against the pattern._
 
-- **A.U.R.A.:** You let me fly again, Commander. I am glad to. You should rest. «bundle.js · line 2187»
-- **A.U.R.A.:** You flew it yourself again, Commander. I am here when you want me. «bundle.js · line 2188»
+- **A.U.R.A.:** You let me fly again, Commander. I am glad to. You should rest. «bundle.js · line 2225»
+- **A.U.R.A.:** You flew it yourself again, Commander. I am here when you want me. «bundle.js · line 2226»
 
-
-Closing shot «StoryReel.js · jump2»: *Sector 2. One of the eight, drifting.*    
-_Source on screen: HULL CAMERA · AFT_
 
 ## The story beats (always here)
 
@@ -52,8 +51,8 @@ _Source on screen: RECOVERED TAPE · EXODUS PROGRAMME MASTER · UNCUT_
 *The tape ends there.*  
 
 - In the archive of [ship name]: a tape with our programme's seal. It is in your cargo now.
-- Spc. Vance: "That is not eight ships. That is hundreds."
-- A.U.R.A.: "Old recordings degrade, Specialist. I would not read too much into it."
+- Vance: "That is not eight ships. That is hundreds."
+- A.U.R.A.: "Old recordings degrade, Vance. I would not read too much into it."
 - A.U.R.A.: "That contact is too faint to plot a course to, Commander."
 - A.U.R.A.: "The drive fires, Commander. We do not move."
 - A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in."
@@ -62,13 +61,11 @@ _Source on screen: RECOVERED TAPE · EXODUS PROGRAMME MASTER · UNCUT_
 - A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector."
 - Warping to [planet name]...
 - A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander."
-- Collectors absorbed [energy return] energy from [return reason].
 - Autodoc: Crew injuries stabilized during transit.
-- Bussard Scoop: Harvested additional [scoop] Energy from atmosphere.
+- The fuel scoop took [scoop] energy from the atmosphere.
 - [name]: Unsettled by hostile readings.
 - [name] has recovered from sedation. Cleared for duty.
 - [name] is still kept asleep. [n] more jumps until he wakes.
-- The door to your quarters opens. Nobody says anything. You take the chair back.
 - Docking approach started. Station sensors detecting our arrival.
 - Entered debris field. Navigation systems active.
 - Approach complete. The light fills every window. It is not warm.
@@ -108,6 +105,7 @@ _Source on screen: RECOVERED TAPE · EXODUS PROGRAMME MASTER · UNCUT_
 - ERROR: Exodus encounter data unavailable.
 - Exodus transponder locked. Deploying team to investigate...
 - The disc dates [planet name]: dead for [age] years.
+- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy."
 - No colony ruins detected at this location.
 - Colony ruins already investigated.
 - ERROR: Colony encounter data unavailable.
@@ -184,18 +182,18 @@ _Source on screen: RECOVERED TAPE · EXODUS PROGRAMME MASTER · UNCUT_
 - STORAGE WARNING: Salvage capacity reached!
 - A.U.R.A.: "There is no ground to land on, Commander. There is only the light."
 - A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished."
-- Dr. Aris: "Absolutely not. [name] needs treatment first. No one goes out there."
+- Aris: "Absolutely not. [name] needs treatment first. No one goes out there."
 - MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge.
 - EVA team deployed: [name] and [name].
 - A.U.R.A.: "Team away, Commander. I have their vitals."
-- Mira: Extended EVA window. Additional rations consumed.
+- Mira insists the team stays out for a full day. -1 Ration.
 - The lander crosses to [site].
 - Soft landing on the marked spot. The team steps out steady.
 - Down safely, but well away from the marked spot. It is a long walk.
 - WARNING: The lander came down hard. [name] is INJURED before the hatch even opens.
 - ⚠ PREDATOR ALERT: Hostile organisms detected approaching EVA team!
 - The creatures didn't just kill — they hunted. [name] never had a chance.
-- Dr. Aris: "The wounds are severe. Whatever attacked them knew where to bite."
+- Aris: "The wounds are severe. Whatever attacked them knew where to bite."
 - [name] and [name] found a quiet place by the stream. The whole crew rotated through in shifts.
 - For the first time in months, everyone truly rested. All stress cleared. All injuries healed.
 - The fruit was unlike anything from Earth, but it tasted like coming home. +10 Rations.
@@ -204,17 +202,12 @@ _Source on screen: RECOVERED TAPE · EXODUS PROGRAMME MASTER · UNCUT_
 - Renewed purpose fills the crew. +20 Energy. All crew -1 stress.
 - [name]: "Commander... we're staying, aren't we?"
 - You nod. This is where the journey ends.
-- [name]: Rest cycle authorized. Stress reduced. (-1 Ration)
 - BIOLOGICAL INTEGRATION COMPLETE: [name] has returned.
 - [name]: "I can hear them... the others who joined. They're still there, in the mycelium."
 - NEURAL OVERRIDE COMPLETE: [name] has returned.
 - [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now."
-- Dr. Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else."
+- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else."
 - A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first."
-- You did not move. The crew took [name] down. He is locked up and kept asleep.
-- [name] cannot join away teams until he wakes.
-- You handed over the ship. You are locked in your quarters for [confined jumps] jumps.
-- The others watched you give way. It shook them.
 - FABRICATION COMPLETE: [name] installed.
 - MALFUNCTION RESOLVED: [result]
 
@@ -228,7 +221,7 @@ _A faint contact on the map from the start. Dating one of our wrecks here names 
 
 Map text: *A cold world with no sun. Rows of graves, and one of our ships beside them.*  
 On the disc's map: a grey world; the close-up shows its graves. Then:  
-**Dr. Aris:** Someone was left alive to bury them.  
+**Aris:** Someone was left alive to bury them.  
 
 ### Found page: EXODUS PROGRAMME · INTERNAL «ExodusLogs.js · PAGE_VAULT»
 _In the wreck on Dione-2 Prime. A printed memo from the Exodus programme on Earth, folded into a dead captain's pocket. In the cargo hold it is called: Memo from Earth._
@@ -239,7 +232,7 @@ It was reading out the gold disc we sent into space in 1977. The greeting. The t
 Nobody sent it that. Something out there has the disc, and it is reading it through our ship.  
 Keep building ships.  
 
-**Tech Mira:** Every ship's computer has a twin on Earth? Does ours?
+**Mira:** Every ship's computer has a twin on Earth? Does ours?
 
 ## If you try to settle a planet here
 
@@ -252,16 +245,16 @@ On a warp inside this sector:
 - [name]: "Nothing else is out here. It's starting to get to me." «SectorConfig.js · 2.hazard.onWarp»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / MUTINY / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / INSIDE THE LIGHT / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### JAXON'S PHOTO «CrewEvents.js · JAXON_PHOTO»
 _Sectors 1, 2_
 
 > Cargo bay, night shift. Jaxon is sitting on a crate with a photograph in his hands. He doesn't hear you come in.
 
-**Eng. Jaxon:** That's my daughter. She was eight when we left. She'd be older than I am now.  
-**Eng. Jaxon:** I record a letter to her after every jump. There's no way to send them.  
-**Eng. Jaxon:** When we find a planet we can live on, I want us to land and stay.  
+**Jaxon:** That's my daughter. She was eight when we left. She'd be older than I am now.  
+**Jaxon:** I record a letter to her after every jump. There's no way to send them.  
+**Jaxon:** When we find a planet we can live on, I want us to land and stay.  
 
 Choices:
 1. **Promise to stay on the first good planet.** — Jaxon -1 Stress. He will remember the promise.
@@ -276,9 +269,9 @@ _Sectors 1, 2_
 
 > Med bay. A sheet of paper is taped to the wall with the name of every dead crew member found so far. Aris is adding one.
 
-**Dr. Aris:** I write down everyone we find. Before we leave a wreck, I read their names out.  
-**Dr. Aris:** None of them died of anything I can diagnose. I want to know what killed them.  
-**Dr. Aris:** It takes a minute at each ship, Commander. I'd like to keep doing it.  
+**Aris:** I write down everyone we find. Before we leave a wreck, I read their names out.  
+**Aris:** None of them died of anything I can diagnose. I want to know what killed them.  
+**Aris:** It takes a minute at each ship, Commander. I'd like to keep doing it.  
 
 Choices:
 1. **Take the minute. At every ship.** — Aris -1 Stress. -1 Ration: the stops add up to a day's food.
@@ -293,9 +286,9 @@ _Sectors 1, 2_
 
 > Armory. Vance is cleaning his sidearm, laying each part out on the table in order.
 
-**Spc. Vance:** Before this, I worked security at the shipyard. Twelve years.  
-**Spc. Vance:** They said nine ships would fly this heading. I watched more than that being built in one year.  
-**Spc. Vance:** That's why I signed up. I wanted to see where the others went.  
+**Vance:** Before this, I worked security at the shipyard. Twelve years.  
+**Vance:** They said nine ships would fly this heading. I watched more than that being built in one year.  
+**Vance:** That's why I signed up. I wanted to see where the others went.  
 
 Choices:
 1. **Tell him you believe him.** — Vance -1 Stress. Mira +1 Stress: she'd rather the briefing were true.
@@ -310,8 +303,8 @@ _Sectors 1, 2_
 
 > Mira hasn't left the sensor console in hours. She's talking A.U.R.A. through the planet below, and A.U.R.A. is answering.
 
-**Tech Mira:** Look at the line where day turns to night. You can see the heat leaving the ground.  
-**Tech Mira:** A.U.R.A. found a ridge she thinks is worth landing on. She's usually right. Should we?  
+**Mira:** Look at the line where day turns to night. You can see the heat leaving the ground.  
+**Mira:** A.U.R.A. found a ridge she thinks is worth landing on. She's usually right. Should we?  
 **A.U.R.A.:** The ridge is seventy percent metal, Commander. I would land there.  
 
 Choices:

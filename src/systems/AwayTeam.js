@@ -43,7 +43,7 @@
             const chosen = new Set();
             const cards = eligible.map(m => `
                 <button class="boarding-pick away-pick" data-id="${esc(m.id)}" aria-pressed="false" style="border-left-color:${colorOf(m)}">
-                    <img src="assets/crew/${esc(m.portraitId)}.png" alt=""><b>${esc(m.realName || m.name)}</b>
+                    <img src="assets/crew/${esc(m.portraitId)}.png" alt=""><b>${esc(m.name)}</b>
                     <span>${esc(ABOUT[roleOf(m)] || '')}${m.stress >= 2 ? ' Already on edge.' : ''}</span>
                 </button>`).join('');
             const el = overlay('away-picker', `
@@ -138,9 +138,9 @@
                 const line = isLost ? `did not come back — ${m._deathCause || 'lost on the surface'}` : isHurt ? 'carried in, hurt' : 'back aboard';
                 return `<li class="${isLost ? 'is-lost' : isHurt ? 'is-hurt' : ''}">
                     <img src="assets/crew/${esc(m.portraitId)}.png" alt="" style="border-color:${colorOf(m)}">
-                    <div><b>${esc(m.realName || m.name)}</b><span>${esc(line)}</span></div></li>`;
+                    <div><b>${esc(m.name)}</b><span>${esc(line)}</span></div></li>`;
             }).join('');
-            const title = lost.length ? `${lost.map(m => m.realName || m.name).join(' and ')} did not come back` : hurt.length ? 'They made it back. Barely.' : 'Both back aboard';
+            const title = lost.length ? `${lost.map(m => m.name).join(' and ')} did not come back` : hurt.length ? 'They made it back. Barely.' : 'Both back aboard';
             const el = overlay('away-return ' + (lost.length ? 'is-loss' : hurt.length ? 'is-hurt' : ''), `
                 <p class="warp-plot-kicker">THE AIRLOCK CYCLES</p>
                 <h2 class="warp-plot-target">${esc(title)}</h2>

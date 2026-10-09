@@ -10,7 +10,7 @@
         const rows = dead.map(c => `
             <li>
                 ${c.portraitId ? `<img src="assets/crew/${esc(c.portraitId)}.png" alt="">` : ''}
-                <div><b>${esc(c.realName || c.name)}</b><span>${esc(c._deathCause || 'lost')} — ${esc(c._deathPlanet || 'deep space')}</span></div>
+                <div><b>${esc(c.name)}</b><span>${esc(c._deathCause || 'lost')} — ${esc(c._deathPlanet || 'deep space')}</span></div>
             </li>`).join('');
         return `<h4>IN THE STASIS PODS</h4><ul class="end-memorial">${rows}</ul>`;
     }
@@ -55,7 +55,7 @@
             if ((c.tags || []).includes('WRONG_PLACE_SURVIVOR')) marks.push('touched');
             return `<li class="${isDead ? 'is-dead' : ''}">
                 ${c.portraitId ? `<img src="assets/crew/${esc(c.portraitId)}.png" alt="">` : ''}
-                <div><b>${esc(c.realName || c.name)}</b><span>${isDead ? 'did not make it' : (marks.join(', ') || survivorNote || 'made it')}</span></div>
+                <div><b>${esc(c.name)}</b><span>${isDead ? 'did not make it' : (marks.join(', ') || survivorNote || 'made it')}</span></div>
             </li>`;
         }).join('')}</ul>`;
     }

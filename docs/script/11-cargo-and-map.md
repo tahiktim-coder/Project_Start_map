@@ -35,7 +35,7 @@ _Every item: its name, its description, and what using it says. The tape, the di
 - **FUNGUS_CULTURE · name** — Fungus Culture «Items.js · line 88»
 - **FUNGUS_CULTURE · desc** — A sealed tray of fungus that feeds on radiation and grows food. It gives +1 Ration every 3 major actions. «Items.js · line 89»
 - **WILD_HARVEST · name** — Wild Harvest «Items.js · line 94»
-- **WILD_HARVEST · desc** — Roots and fruit Dr. Aris has tested twice. Not tasty. Safe. «Items.js · line 95»
+- **WILD_HARVEST · desc** — Roots and fruit Aris has tested twice. Not tasty. Safe. «Items.js · line 95»
 - **WILD_HARVEST** — Cooked and shared. +2 Rations. «Items.js · line 96»
 - **STORM_CRYSTAL · name** — Storm Crystal «Items.js · line 99»
 - **STORM_CRYSTAL · desc** — A crystal formed by lightning. It hums in your hand, and the reactor can run on it. +20 Energy. «Items.js · line 100»
@@ -106,14 +106,14 @@ _Every item: its name, its description, and what using it says. The tape, the di
 
 ### Reading a found page again «bundle.js · pageItem»
 
-- You read it again. «bundle.js · line 1473»
+- You read it again. «bundle.js · line 1542»
 
 ## The fabricator «Upgrades.js · UPGRADES»
 _Each part: name, description, what it changes, where it shows on the ship._
 
 - **SENSOR_ARRAY_V2 · name** — Sensor Array V2 «Upgrades.js · line 7»
 - **SENSOR_ARRAY_V2 · desc** — A proper dish instead of the factory antenna. «Upgrades.js · line 9»
-- **SENSOR_ARRAY_V2 · effect** — Long-range scans cost nothing, and report air and gravity as well. «Upgrades.js · line 10»
+- **SENSOR_ARRAY_V2 · effect** — Long-range scans report air and gravity as well. «Upgrades.js · line 10»
 - **NANOFIBER_HULL · name** — Nanofiber Hull Plating «Upgrades.js · line 16»
 - **NANOFIBER_HULL · desc** — Carbon-lattice armour over the whole hull. «Upgrades.js · line 18»
 - **NANOFIBER_HULL · effect** — Probes take half damage. «Upgrades.js · line 19»
@@ -123,7 +123,7 @@ _Each part: name, description, what it changes, where it shows on the ship._
 - **AUTODOC_MEDBAY · effect** — Injured crew heal a little on every warp. «Upgrades.js · line 28»
 - **FUEL_SCOOP · name** — Bussard Fuel Scoop «Upgrades.js · line 34»
 - **FUEL_SCOOP · desc** — Magnetic funnels that drink hydrogen. «Upgrades.js · line 36»
-- **FUEL_SCOOP · effect** — Orbiting a gas giant refuels 5–10 energy. «Upgrades.js · line 37»
+- **FUEL_SCOOP · effect** — Arriving at a gas giant refuels 8–15 energy. «Upgrades.js · line 37»
 - **FUEL_SCOOP · mount** — Beside the nose «Upgrades.js · line 38»
 - **GYRO_FINS · name** — Gyro Stabiliser Fins «Upgrades.js · line 43»
 - **GYRO_FINS · desc** — Fins that hold the ship steady through a burn. «Upgrades.js · line 45»

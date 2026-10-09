@@ -92,7 +92,7 @@ const ITEMS = {
     // Food Pack (ration recovery)
     WILD_HARVEST: {
         id: 'wild_harvest', name: 'Wild Harvest', type: 'LIVING', value: 8,
-        desc: 'Roots and fruit Dr. Aris has tested twice. Not tasty. Safe.',
+        desc: 'Roots and fruit Aris has tested twice. Not tasty. Safe.',
         onUse: (state) => { state.rations = Math.min(state.maxRations, state.rations + 2); return "Cooked and shared. +2 Rations."; }
     },
     STORM_CRYSTAL: {

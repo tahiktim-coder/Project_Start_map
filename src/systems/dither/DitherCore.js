@@ -1,14 +1,14 @@
-/* DitherCore — shared pieces of the opt-in 1-bit ordered-dither art mode.
+/* DitherCore — shared pieces of the ordered-dither art (the game's look).
    Style reference: ART_STYLE_1BIT_DITHER.md. Two inks (INK / PAPER) plus one accent per object,
    accent only ever on pixels the dither already turned on.
-   Art mode is opt-in (`?art=dither`, or the ART header button) so the classic SVG look keeps working. */
+   Dither is the game's look. `?art=classic` turns it off for that one load, for testing only (nothing is remembered). */
 
 (function () {
     'use strict';
 
-    const MODE_KEY = 'psm-art-mode';
+    const MODE_KEY = 'psm-art-mode';   // no longer read or written: an old saved 'classic' must not stick to a player
     const MODES = ['classic', 'dither'];
-    const DEFAULT_MODE = 'dither'; // the look the game ships with; the ART button still switches to classic
+    const DEFAULT_MODE = 'dither'; // the look the game ships with; there is no ART toggle any more
     const INK = [11, 11, 13];
     const PAPER = [233, 230, 217];
     const ACCENT_MIX = 0.85; // how far a fully-accented pixel moves from its ramp colour to the accent
@@ -17,23 +17,14 @@
     // ── art mode ──
     function readMode() {
         const fromUrl = new URLSearchParams(location.search).get('art');
-        if (MODES.includes(fromUrl)) {
-            try { localStorage.setItem(MODE_KEY, fromUrl); } catch (e) { /* storage blocked: URL still wins for this load */ }
-            return fromUrl;
-        }
-        try {
-            const saved = localStorage.getItem(MODE_KEY);
-            return MODES.includes(saved) ? saved : DEFAULT_MODE;
-        } catch (e) {
-            return DEFAULT_MODE;
-        }
+        try { localStorage.removeItem(MODE_KEY); } catch (e) { /* storage blocked: nothing was saved either */ }
+        return MODES.includes(fromUrl) ? fromUrl : DEFAULT_MODE;
     }
     const mode = readMode();
     document.documentElement.dataset.art = mode; // dither.css keys off this
 
-    function setMode(next) {
+    function setMode(next) {   // testing only: reloads with ?art=next
         if (!MODES.includes(next)) return;
-        try { localStorage.setItem(MODE_KEY, next); } catch (e) { /* fall through to the URL param below */ }
         const url = new URL(location.href);
         url.searchParams.set('art', next);
         location.href = url.toString();
@@ -141,12 +132,6 @@
     function onTick(fn) {
         tickers.add(fn);
         if (tickers.size === 1 && !reduceMotion) requestAnimationFrame(loop);
-    }
-
-    const artButton = document.getElementById('btn-art');
-    if (artButton) {
-        artButton.textContent = mode === 'dither' ? 'ART: DITHER' : 'ART: CLASSIC';
-        artButton.addEventListener('click', () => setMode(mode === 'dither' ? 'classic' : 'dither'));
     }
 
     window.DitherCore = {

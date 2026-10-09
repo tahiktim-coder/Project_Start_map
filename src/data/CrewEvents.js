@@ -35,9 +35,9 @@ const CREW_PERSONAL_EVENTS = [
         title: "JAXON'S PHOTO",
         context: "Cargo bay, night shift. Jaxon is sitting on a crate with a photograph in his hands. He doesn't hear you come in.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "That's my daughter. She was eight when we left. She'd be older than I am now." },
-            { speaker: 'Eng. Jaxon', text: "I record a letter to her after every jump. There's no way to send them." },
-            { speaker: 'Eng. Jaxon', text: "When we find a planet we can live on, I want us to land and stay." }
+            { speaker: 'Jaxon', text: "That's my daughter. She was eight when we left. She'd be older than I am now." },
+            { speaker: 'Jaxon', text: "I record a letter to her after every jump. There's no way to send them." },
+            { speaker: 'Jaxon', text: "When we find a planet we can live on, I want us to land and stay." }
         ],
         choices: [
             {
@@ -83,9 +83,9 @@ const CREW_PERSONAL_EVENTS = [
         title: "THE LANDER",
         context: "Hangar. The lander is in pieces on the floor. Jaxon has been working on it for eighteen hours, and his hands are shaking.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "That's the lander. She's older than Mira, and she still flies." },
-            { speaker: 'Eng. Jaxon', text: "We've flown past three planets I'd have been happy to live on." },
-            { speaker: 'Eng. Jaxon', text: "I'm forty-two, Commander. I'd like to spend the rest of it somewhere with air and weather." }
+            { speaker: 'Jaxon', text: "That's the lander. She's older than Mira, and she still flies." },
+            { speaker: 'Jaxon', text: "We've flown past three planets I'd have been happy to live on." },
+            { speaker: 'Jaxon', text: "I'm forty-two, Commander. I'd like to spend the rest of it somewhere with air and weather." }
         ],
         choices: [
             {
@@ -148,9 +148,9 @@ const CREW_PERSONAL_EVENTS = [
         title: "THE LIST",
         context: "Med bay. A sheet of paper is taped to the wall with the name of every dead crew member found so far. Aris is adding one.",
         dialogue: [
-            { speaker: 'Dr. Aris', text: "I write down everyone we find. Before we leave a wreck, I read their names out." },
-            { speaker: 'Dr. Aris', text: "None of them died of anything I can diagnose. I want to know what killed them." },
-            { speaker: 'Dr. Aris', text: "It takes a minute at each ship, Commander. I'd like to keep doing it." }
+            { speaker: 'Aris', text: "I write down everyone we find. Before we leave a wreck, I read their names out." },
+            { speaker: 'Aris', text: "None of them died of anything I can diagnose. I want to know what killed them." },
+            { speaker: 'Aris', text: "It takes a minute at each ship, Commander. I'd like to keep doing it." }
         ],
         choices: [
             {
@@ -198,9 +198,9 @@ const CREW_PERSONAL_EVENTS = [
         title: "THE SHIP NUMBERS",
         context: state => `Aris's list of the dead is nine pages long now. The newest names came off a wreck with the number ${boardedCenturyHull(state) || CENTURY_HULLS[1]} on its hull.`,
         dialogue: state => [
-            { speaker: 'Dr. Aris', text: `That ship's number is ${boardedCenturyHull(state) || CENTURY_HULLS[1]}, and it's been dead about a hundred years.` },
-            { speaker: 'Dr. Aris', text: "We're ship number nine. A ship with a higher number should be newer than us, not older." },
-            { speaker: 'Dr. Aris', text: "I don't just want to survive this, Commander. I want to understand it, even if that's dangerous." }
+            { speaker: 'Aris', text: `That ship's number is ${boardedCenturyHull(state) || CENTURY_HULLS[1]}, and it's been dead about a hundred years.` },
+            { speaker: 'Aris', text: "We're ship number nine. A ship with a higher number should be newer than us, not older." },
+            { speaker: 'Aris', text: "I don't just want to survive this, Commander. I want to understand it, even if that's dangerous." }
         ],
         choices: [
             {
@@ -253,9 +253,9 @@ const CREW_PERSONAL_EVENTS = [
         title: "VANCE'S STORY",
         context: "Armory. Vance is cleaning his sidearm, laying each part out on the table in order.",
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Before this, I worked security at the shipyard. Twelve years." },
-            { speaker: 'Spc. Vance', text: "They said nine ships would fly this heading. I watched more than that being built in one year." },
-            { speaker: 'Spc. Vance', text: "That's why I signed up. I wanted to see where the others went." }
+            { speaker: 'Vance', text: "Before this, I worked security at the shipyard. Twelve years." },
+            { speaker: 'Vance', text: "They said nine ships would fly this heading. I watched more than that being built in one year." },
+            { speaker: 'Vance', text: "That's why I signed up. I wanted to see where the others went." }
         ],
         choices: [
             {
@@ -304,9 +304,9 @@ const CREW_PERSONAL_EVENTS = [
         title: "NIGHT WATCH",
         context: "Night shift. Vance is at the scanner console, writing down every ship beacon it picks up. He's been at it for hours.",
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Three hundred and eleven ship beacons so far, all on our own channel." },
-            { speaker: 'Spc. Vance', text: "Someday someone will ask what we found out here. I want the real numbers on record." },
-            { speaker: 'Spc. Vance', text: "Nobody else is writing this down, Commander. So I am." }
+            { speaker: 'Vance', text: "Three hundred and eleven ship beacons so far, all on our own channel." },
+            { speaker: 'Vance', text: "Someday someone will ask what we found out here. I want the real numbers on record." },
+            { speaker: 'Vance', text: "Nobody else is writing this down, Commander. So I am." }
         ],
         choices: [
             {
@@ -366,8 +366,8 @@ const CREW_PERSONAL_EVENTS = [
         title: "MIRA AT THE SCANNER",
         context: "Mira hasn't left the sensor console in hours. She's talking A.U.R.A. through the planet below, and A.U.R.A. is answering.",
         dialogue: [
-            { speaker: 'Tech Mira', text: "Look at the line where day turns to night. You can see the heat leaving the ground." },
-            { speaker: 'Tech Mira', text: "A.U.R.A. found a ridge she thinks is worth landing on. She's usually right. Should we?" },
+            { speaker: 'Mira', text: "Look at the line where day turns to night. You can see the heat leaving the ground." },
+            { speaker: 'Mira', text: "A.U.R.A. found a ridge she thinks is worth landing on. She's usually right. Should we?" },
             { speaker: 'A.U.R.A.', text: "The ridge is seventy percent metal, Commander. I would land there." }
         ],
         choices: [
@@ -421,10 +421,10 @@ const CREW_PERSONAL_EVENTS = [
         title: "MIRA AND A.U.R.A.",
         context: "Mira is at the terminal, not working, just talking. A.U.R.A. answers her by name and pauses between sentences, the way a person would.",
         dialogue: [
-            { speaker: 'Tech Mira', text: "I think she's lonely. She asked me what rain sounds like." },
+            { speaker: 'Mira', text: "I think she's lonely. She asked me what rain sounds like." },
             { speaker: 'A.U.R.A.', text: "I asked Mira to check the rain sensor, Commander. She heard a question about rain." },
-            { speaker: 'Tech Mira', text: "Hundreds of ships on her channel back there, and not one of them answered her." },
-            { speaker: 'Tech Mira', text: "If she told me to jump, I would. That's not weakness, Commander. I trust her." }
+            { speaker: 'Mira', text: "Hundreds of ships on her channel back there, and not one of them answered her." },
+            { speaker: 'Mira', text: "If she told me to jump, I would. That's not weakness, Commander. I trust her." }
         ],
         choices: [
             {

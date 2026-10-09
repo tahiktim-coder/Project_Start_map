@@ -14,7 +14,7 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => state.energy > 20, // Need some power to surge
         context: "A power line overloads, and sparks fly across the engine room.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "A power line just blew. I'm rerouting around it now." },
+            { speaker: 'Jaxon', text: "A power line just blew. I'm rerouting around it now." },
             { speaker: 'A.U.R.A.', text: "Power is dropping on several systems, Commander. Rerouting is under way." }
         ],
         effect: (state) => {
@@ -39,8 +39,8 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => true,
         context: "The air recyclers stop for a moment. Then they start again.",
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Carbon dioxide is climbing. Everyone breathe slowly and stay calm." },
-            { speaker: 'Tech Mira', text: "The backup filters just switched on. We're fine now." }
+            { speaker: 'Aris', text: "Carbon dioxide is climbing. Everyone breathe slowly and stay calm." },
+            { speaker: 'Mira', text: "The backup filters just switched on. We're fine now." }
         ],
         effect: (state) => {
             // All crew gain +1 stress from the scare
@@ -64,8 +64,8 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => true,
         context: "Something small hit the hull at high speed. The crack echoed through the whole ship.",
         dialogue: [
-            { speaker: 'Spc. Vance', text: "We've been hit. I'm checking for holes." },
-            { speaker: 'Eng. Jaxon', text: "The hull's holding. That one was close." }
+            { speaker: 'Vance', text: "We've been hit. I'm checking for holes." },
+            { speaker: 'Jaxon', text: "The hull's holding. That one was close." }
         ],
         effect: (state) => {
             // Pick a random operational deck to damage
@@ -97,7 +97,7 @@ const SHIP_MALFUNCTION_EVENTS = [
             const damagedCount = Object.values(state.shipDecks || {}).filter(d => d.status !== 'OPERATIONAL').length;
             const warningLevel = damagedCount >= 2 ? "Several decks already need repair." : "I recommend patching them now.";
             return [
-                { speaker: 'Eng. Jaxon', text: "Small cracks are forming in the hull. She's been through a lot." },
+                { speaker: 'Jaxon', text: "Small cracks are forming in the hull. She's been through a lot." },
                 { speaker: 'A.U.R.A.', text: `Hull cracks detected, Commander. ${warningLevel}` }
             ];
         },
@@ -129,8 +129,8 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => state.isDeckOperational('bridge'),
         context: "The navigation screens flicker and go dark. For a moment, we can't see anything outside.",
         dialogue: [
-            { speaker: 'Tech Mira', text: "Sensors are down. I'm running a check now." },
-            { speaker: 'Spc. Vance', text: "I don't like flying blind out here. Get them back up." }
+            { speaker: 'Mira', text: "Sensors are down. I'm running a check now." },
+            { speaker: 'Vance', text: "I don't like flying blind out here. Get them back up." }
         ],
         effect: (state) => {
             // 50% chance bridge gets damaged
@@ -155,8 +155,8 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => true,
         context: "A pipe bursts and sprays freezing coolant down the corridor.",
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Coolant leak! Everyone get clear of the corridor!" },
-            { speaker: 'Eng. Jaxon', text: "I'm shutting off that section. We'll lose some cooling." }
+            { speaker: 'Aris', text: "Coolant leak! Everyone get clear of the corridor!" },
+            { speaker: 'Jaxon', text: "I'm shutting off that section. We'll lose some cooling." }
         ],
         effect: (state) => {
             // Random crew injury
@@ -184,7 +184,7 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => state.salvage > 20,
         context: "Something in the cargo hold broke loose during the last burn.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "I heard a crash from the hold. We'd better check the supplies." },
+            { speaker: 'Jaxon', text: "I heard a crash from the hold. We'd better check the supplies." },
             { speaker: 'A.U.R.A.', text: "There's damage in the cargo hold, Commander. Someone should take a look." }
         ],
         effect: (state) => {
@@ -213,8 +213,8 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => state.isDeckOperational('lab'),
         context: "Something in the lab just shattered, and there's a strange smell in the air.",
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Everybody out. Seal the lab until we know what broke." },
-            { speaker: 'Tech Mira', text: "Was that the sample storage? Oh no." }
+            { speaker: 'Aris', text: "Everybody out. Seal the lab until we know what broke." },
+            { speaker: 'Mira', text: "Was that the sample storage? Oh no." }
         ],
         effect: (state) => {
             // Lab gets damaged
@@ -242,8 +242,8 @@ const SHIP_MALFUNCTION_EVENTS = [
         condition: (state) => true,
         context: "During a routine check, someone found a sealed locker nobody remembered.",
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "There's a full repair kit in here. And food!" },
-            { speaker: 'Dr. Aris', text: "We'll take any good news we can get." }
+            { speaker: 'Jaxon', text: "There's a full repair kit in here. And food!" },
+            { speaker: 'Aris', text: "We'll take any good news we can get." }
         ],
         effect: (state) => {
             const bonus = Math.random();

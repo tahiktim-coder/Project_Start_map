@@ -37,9 +37,9 @@ const CAMPFIRE_EVENTS = [
         title: "POWER SURGE",
         context: `Mid-warp, a power line overloads. Sparks fly across engineering.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "It's the capacitor bank, not the reactor. I can save it, or strip it for parts." },
+            { speaker: 'Jaxon', text: "It's the capacitor bank, not the reactor. I can save it, or strip it for parts." },
             { speaker: 'A.U.R.A.', text: "Saving it costs ten energy now, Commander. Stripping it makes every jump in the next sector cost five more." },
-            { speaker: 'Spc. Vance', text: "Five extra on every jump adds up fast. I'd pay the ten now." }
+            { speaker: 'Vance', text: "Five extra on every jump adds up fast. I'd pay the ten now." }
         ],
         choices: [
             {
@@ -69,8 +69,8 @@ const CAMPFIRE_EVENTS = [
         title: "A BEACON IN THE HOLD",
         context: `A ship beacon we salvaged has switched itself back on in the cargo hold. It's broadcasting its ship number on our channel.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "It's been dead for twenty years. It woke up because it picked up our signal." },
-            { speaker: 'Eng. Jaxon', text: "Keep it or throw it out, Commander. I'm not sleeping next to that noise." },
+            { speaker: 'Mira', text: "It's been dead for twenty years. It woke up because it picked up our signal." },
+            { speaker: 'Jaxon', text: "Keep it or throw it out, Commander. I'm not sleeping next to that noise." },
             { speaker: 'A.U.R.A.', text: "I can read its memory, Commander. There's a thirty percent chance it shorts out and drains our power." }
         ],
         choices: [
@@ -106,8 +106,8 @@ const CAMPFIRE_EVENTS = [
         dialogue: [
             { speaker: 'A.U.R.A.', text: "More beacons ahead, Commander, all earlier Exodus ships. They line up along our heading." },
             { speaker: 'A.U.R.A.', text: "I can fly us down that line. It's the most efficient route." },
-            { speaker: 'Tech Mira', text: "It's the route the others took. A.U.R.A. can fly it better than any of us." },
-            { speaker: 'Spc. Vance', text: "The others are dead. I don't want to fly the exact route that killed them." }
+            { speaker: 'Mira', text: "It's the route the others took. A.U.R.A. can fly it better than any of us." },
+            { speaker: 'Vance', text: "The others are dead. I don't want to fly the exact route that killed them." }
         ],
         choices: [
             {
@@ -143,9 +143,9 @@ const CAMPFIRE_EVENTS = [
         title: "THE SAME DREAM",
         context: `Three of the crew wake up at the same moment from the same dream: a huge room, then a tiny one, and a bright light on the wall.`,
         dialogue: [
-            { speaker: 'A.U.R.A.', text: "Three crew have raised heart rates, Commander. I can sedate them, or Dr. Aris can see them." },
-            { speaker: 'Dr. Aris', text: "Three people with the same dream isn't a coincidence. I want to write it all down." },
-            { speaker: 'Eng. Jaxon', text: "Leave mine out of it. It started as a good dream." }
+            { speaker: 'A.U.R.A.', text: "Three crew have raised heart rates, Commander. I can sedate them, or Aris can see them." },
+            { speaker: 'Aris', text: "Three people with the same dream isn't a coincidence. I want to write it all down." },
+            { speaker: 'Jaxon', text: "Leave mine out of it. It started as a good dream." }
         ],
         choices: [
             {
@@ -182,8 +182,8 @@ const CAMPFIRE_EVENTS = [
         context: `Alarms. The hull is cracking along its frame from all the jumps.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "Hull strength is at ninety-four percent, Commander. We can do a full repair, a quick patch, or nothing." },
-            { speaker: 'Eng. Jaxon', text: "The frame takes a beating every jump. It wasn't built for this many." },
-            { speaker: 'Spc. Vance', text: "Six percent lost in three jumps. We can't keep losing it that fast." }
+            { speaker: 'Jaxon', text: "The frame takes a beating every jump. It wasn't built for this many." },
+            { speaker: 'Vance', text: "Six percent lost in three jumps. We can't keep losing it that fast." }
         ],
         choices: [
             {
@@ -239,9 +239,9 @@ const CAMPFIRE_EVENTS = [
         context: `Mid-warp, A.U.R.A. asks a question in her ordinary voice.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "I'm required to ask this once, Commander. If reaching the end of this heading costs crew, do I continue?" },
-            { speaker: 'Tech Mira', text: "Answer her honestly. She'll do whatever you say." },
-            { speaker: 'Spc. Vance', text: "I want to know who put that question into her." },
-            { speaker: 'Dr. Aris', text: "Nobody from this crew ends up on my list. Nobody." }
+            { speaker: 'Mira', text: "Answer her honestly. She'll do whatever you say." },
+            { speaker: 'Vance', text: "I want to know who put that question into her." },
+            { speaker: 'Aris', text: "Nobody from this crew ends up on my list. Nobody." }
         ],
         choices: [
             {
@@ -280,7 +280,7 @@ const CAMPFIRE_EVENTS = [
                     const mira = state.crew.find(c => c.name.includes('Mira') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
                     state.addLog("A.U.R.A.: 'It's in my launch instructions, Commander. I'm to ask once, after the third sector, and record the answer.'");
-                    state.addLog("Spc. Vance: 'Record it where?' A.U.R.A.: 'I don't know, Commander. The instructions don't say.'");
+                    state.addLog("Vance: 'Record it where?' A.U.R.A.: 'I don't know, Commander. The instructions don't say.'");
                     return "The question was written into her before launch. She doesn't know who wrote it. +1 Data. Mira +1 Stress.";
                 }
             }
@@ -299,8 +299,8 @@ const CAMPFIRE_EVENTS = [
         context: `A.U.R.A. slows the burn so she can say this clearly.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "After this jump we won't have the energy to turn back, Commander. Wherever we settle from here is for good." },
-            { speaker: 'Eng. Jaxon', text: "Then let's settle. Two jumps back there was a planet with real weather." },
-            { speaker: 'Spc. Vance', text: "We don't have the energy for two jumps back. Tell him, A.U.R.A." },
+            { speaker: 'Jaxon', text: "Then let's settle. Two jumps back there was a planet with real weather." },
+            { speaker: 'Vance', text: "We don't have the energy for two jumps back. Tell him, A.U.R.A." },
             { speaker: 'A.U.R.A.', text: "That's correct, Commander. There's no going back." }
         ],
         choices: [
@@ -353,7 +353,7 @@ const CAMPFIRE_EVENTS = [
         context: `A.U.R.A. has flown the beacon line since sector 1. Mid-warp, the forward screen goes white for a second: a bright light, dead ahead.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "The forward sensors were overloaded for 1.4 seconds, Commander. I've logged the source as a star." },
-            { speaker: 'Tech Mira', text: "Every beacon we followed points straight at it. I don't know what it is." },
+            { speaker: 'Mira', text: "Every beacon we followed points straight at it. I don't know what it is." },
             { speaker: 'A.U.R.A.', text: "The line we've been flying ends there, Commander." }
         ],
         choices: [
@@ -388,9 +388,9 @@ const CAMPFIRE_EVENTS = [
         title: "THE LAST JUMP",
         context: `Every contact ahead is an Exodus beacon. Past them is a bright light.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Earth told us there were nine ships. Somebody back home knew about all of these." },
-            { speaker: 'Dr. Aris', text: "There are too many names to read. I'll read the ones we pass." },
-            { speaker: 'Tech Mira', text: "Our course runs straight into that light. I wish I knew what it was." },
+            { speaker: 'Vance', text: "Earth told us there were nine ships. Somebody back home knew about all of these." },
+            { speaker: 'Aris', text: "There are too many names to read. I'll read the ones we pass." },
+            { speaker: 'Mira', text: "Our course runs straight into that light. I wish I knew what it was." },
             { speaker: 'A.U.R.A.', text: "Bracing for the last jump, Commander. Tell me where you want the power." }
         ],
         choices: [
@@ -443,7 +443,7 @@ const CAMPFIRE_EVENTS = [
         context: `A quiet stretch of the warp. There's time to fix one thing.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "Power or hull, Commander. Either one costs fifteen salvage." },
-            { speaker: 'Eng. Jaxon', text: "Reactor or hull. Pick one. I haven't slept enough to do both." }
+            { speaker: 'Jaxon', text: "Reactor or hull. Pick one. I haven't slept enough to do both." }
         ],
         choices: [
             {

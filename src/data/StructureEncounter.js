@@ -18,10 +18,10 @@ const STRUCTURE_ENCOUNTER = {
         context: 'It fills every window. It looks like a sun, but it gives off no heat. Something is moving through the ship, room by room.',
         dialogue: [
             { speaker: 'A.U.R.A.', text: 'Five crew, Commander. All accounted for.' },
-            { speaker: 'Spc. Vance', text: 'Five. She has never said five before.' },
-            { speaker: 'Tech Mira', text: 'It is in my head. It is reading everything I know.' },
-            { speaker: 'Dr. Aris', text: 'It is reading all of us. Not you, Commander. It cannot find you.' },
-            { speaker: 'Eng. Jaxon', text: 'Then whatever we do here, you are the one who has to do it.' },
+            { speaker: 'Vance', text: 'Five. She has never said five before.' },
+            { speaker: 'Mira', text: 'It is in my head. It is reading everything I know.' },
+            { speaker: 'Aris', text: 'It is reading all of us. Not you, Commander. It cannot find you.' },
+            { speaker: 'Jaxon', text: 'Then whatever we do here, you are the one who has to do it.' },
         ],
     },
 

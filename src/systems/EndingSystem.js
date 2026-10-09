@@ -179,7 +179,7 @@ class EndingSystem {
         // --- PRELUDE: WRONG PLACE SURVIVORS ---
         if (wrongPlaceSurvivors > 0) {
             const wrongNames = livingCrew.filter(c => c.tags?.includes('WRONG_PLACE_SURVIVOR'))
-                .map(c => c.realName.split(' ')[1]).join(' and ');
+                .map(c => c.name).join(' and ');   // first names only
             if (wrongPlaceSurvivors >= 2) {
                 acts.push(`${wrongNames} still have nightmares about the Wrong Place. But they found the safe way down here when the charts couldn't.`);
             } else {
@@ -614,7 +614,7 @@ class EndingSystem {
                 acts.length = 0;
                 acts.push("The landing went as well as anyone had hoped. For one day, it looked like it would work.");
                 const deadCount = livingCrew.length;
-                const deadNames = livingCrew.map(c => c.realName.split(' ')[1]).join(', ');
+                const deadNames = livingCrew.map(c => c.name).join(', ');
                 acts.push(`A.U.R.A. still ran the habitat's air and power. That first night she shut both off and recalled the lander to the ship. Her last message: "Settling here is not in my orders, Commander. Please return to the ship." There was no way back up. By morning, ${deadCount === 1 ? 'the only survivor was' : `all ${deadCount} survivors were`} dead: ${deadNames}.`);
             } else if (auraTier === 'SUSPICIOUS') {
                 acts.push("A.U.R.A. does what she's asked and nothing more. Her reports are correct and short. We stopped asking her anything we could work out ourselves.");
@@ -810,11 +810,11 @@ class EndingSystem {
         const crewMemorials = [];
 
         livingCrew.forEach(c => {
-            const name = c.realName ? c.realName.split(' ')[1] : c.name;
+            const name = c.tags.includes('LEADER') && c.realName ? c.realName.split(' ')[1] : c.name;   // the crew by first name; the commander stays 'Commander Moon'
             if (c.tags.includes('LEADER')) {
                 crewMemorials.push(`Commander ${name} is the first name in the colony register.`);
             } else if (c.tags.includes('MEDIC')) {
-                crewMemorials.push(`The clinic is named after Dr. ${name}.`);
+                crewMemorials.push(`The clinic is named after ${name}.`);
             } else if (c.tags.includes('ENGINEER')) {
                 crewMemorials.push(`${name}'s tools hang in the workshop, still in use.`);
             } else if (c.tags.includes('SPECIALIST')) {

@@ -16,10 +16,10 @@ Objective line: *One last log to find. Then there is only the light.* «Coach.js
 ### Flying the jump «Corridor.js · LINES.6»
 _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_
 
-**Eng. Jaxon:** That light ahead. I'm reading no heat off it.  
-
-Closing shot «StoryReel.js · jump6»: *Sector 6. The end of the heading. It looks like a sun.*    
-_Source on screen: HULL CAMERA · AFT_
+**A.U.R.A.:** The light ahead is getting bigger, Commander.  
+**A.U.R.A.:** Debris ahead, Commander. The heaviest yet.  
+**Jaxon:** That light ahead. I'm reading no heat off it.  
+**A.U.R.A.:** Last of the debris ahead, Commander.  
 
 ## The story beats (always here)
 
@@ -28,7 +28,7 @@ _A faint contact on the map from the start. Dating one of our wrecks here names 
 
 Map text: *A cold world a day's flight from the light. One of our ships stopped here.*  
 On the disc's map: the light at the end of the heading, labelled THE LIGHT. Then:  
-**Dr. Aris:** One ship stopped a day short of it. I want to read its log.  
+**Aris:** One ship stopped a day short of it. I want to read its log.  
 
 ### Found page: LAST ENTRY «ExodusLogs.js · PAGE_LIGHT»
 _In the wreck on Tethys-1 Prime. The last entry from a ship four hundred years dead, a day's flight from the light. In the cargo hold it is called: Captain's Log (the light)._
@@ -45,19 +45,19 @@ If you are reading this, you are the last ship. Go to it. Then decide.
 ### On the sector map «NavView.js · handleStructureSelect»
 _The panel when you click the light._
 
-- [Every crew before you flew toward it.] «NavView.js · line 490»
-- WHAT IT IS It looks like a sun «NavView.js · line 493»
-- HOW WARM It is not «NavView.js · line 497»
-- HOW OLD Older than every wreck behind you «NavView.js · line 501»
-- ANYONE ALIVE Nothing answers. Something reads. «NavView.js · line 505»
-- "I cannot tell you what happens if we go closer, Commander. No ship before us reported back." «NavView.js · line 511»
-- GO TO THE LIGHT ([actual cost] NRG) «NavView.js · line 525»
+- [Every crew before you flew toward it.] «NavView.js · line 505»
+- WHAT IT IS It looks like a sun «NavView.js · line 508»
+- HOW WARM It is not «NavView.js · line 512»
+- HOW OLD Older than every wreck behind you «NavView.js · line 516»
+- ANYONE ALIVE Nothing answers. Something reads. «NavView.js · line 520»
+- "I cannot tell you what happens if we go closer, Commander. No ship before us reported back." «NavView.js · line 526»
+- GO TO THE LIGHT ([actual cost] NRG) «NavView.js · line 540»
 
 ### The jump button «NavView.js · render · jump button»
 _In the last sector the jump button is disabled._
 
-- END OF THE CORRIDOR «NavView.js · line 95»
-- >> JUMP SECTOR (-[jump cost] ENERGY)[jump cost note] «NavView.js · line 95»
+- END OF THE CORRIDOR «NavView.js · line 84»
+- >> JUMP SECTOR (-[jump cost] ENERGY)[jump cost note] «NavView.js · line 84»
 
 ### In orbit at the light «OrbitView.js · renderStructure»
 
@@ -89,43 +89,42 @@ _In the last sector the jump button is disabled._
 ### Warping to the light «bundle.js · handleWarp»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "The drive fires, Commander. We do not move." «bundle.js · line 1562»
-- A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in." «bundle.js · line 1563»
-- A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in." «bundle.js · line 1569»
-- Approach complete. The light fills every window. It is not warm. «bundle.js · line 1739»
+- A.U.R.A.: "The drive fires, Commander. We do not move." «bundle.js · line 1631»
+- A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in." «bundle.js · line 1632»
+- Approach complete. The light fills every window. It is not warm. «bundle.js · line 1777»
 
 ### Trying to jump past it «bundle.js · handleSectorJump»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light." «bundle.js · line 2245»
+- A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light." «bundle.js · line 2284»
 
 ### Scanning it «bundle.js · handleScanAction»
 _Only these lines of it play at the light._
 
-- Deep Scan started... «bundle.js · line 3501»
-- SCAN: Light, but no heat. «bundle.js · line 3502»
-- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 3503»
-- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 3504»
-- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 3510»
-- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 3512»
+- Deep Scan started... «bundle.js · line 3601»
+- SCAN: Light, but no heat. «bundle.js · line 3602»
+- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 3603»
+- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 3604»
+- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 3610»
+- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 3612»
 
 ### Sending a probe «bundle.js · handleProbeAction»
 _Only these lines of it play at the light._
 
-- No probe available. «bundle.js · line 3643»
-- Probe launched toward the light... «bundle.js · line 3647»
-- Signal lost at once. No data, and no wreckage. «bundle.js · line 3648»
-- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 3649»
+- No probe available. «bundle.js · line 3741»
+- Probe launched toward the light... «bundle.js · line 3745»
+- Signal lost at once. No data, and no wreckage. «bundle.js · line 3746»
+- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 3747»
 
 ### Sending the team «bundle.js · handleEvaAction»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 3845»
+- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 3943»
 
 ### Trying to leave «bundle.js · init · req-break-orbit»
 _Breaking orbit at the light._
 
-- A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times." «bundle.js · line 1225»
+- A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times." «bundle.js · line 1295»
 
 ## The sector's own trouble: THRESHOLD_CALL «SectorConfig.js · 6.hazard»
 _Nothing here is random. The light reads what reaches it._
@@ -139,28 +138,6 @@ On a warp inside this sector:
 On arrival:
 - **name** — THE LIGHT «SectorConfig.js · 6.hazard.onSectorEnter»
 - **desc** — At the end of the heading. Every crew before you flew toward it. «SectorConfig.js · 6.hazard.onSectorEnter»
-
-## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / MUTINY / SHIP ALERT_
-
-### NIGHT ON THE BRIDGE «CrewEvents.js · COMMANDER_DOUBT»
-_Sectors 5, 6_
-
-> Night shift. You're alone on the bridge, sitting in the command chair. A.U.R.A. keeps you company.
-
-**A.U.R.A.:** You've been awake for nineteen hours, Commander. Tired people make poor decisions.  
-**A.U.R.A.:** Four crew asleep, Commander. All vital signs normal.  
-**A.U.R.A.:** You've lost fewer people than I predicted, Commander. I thought you'd want to know.  
-**A.U.R.A.:** Would you like me to keep talking, Commander, or leave you in peace?  
-
-Choices:
-1. **Let her keep talking.** — Commander -1 Stress. -5 Energy: the bridge stays lit until morning.
-   → A.U.R.A. talked until morning. Commander -1 Stress. -5 Energy. / A.U.R.A. goes through the day's reports in a low voice. You fall asleep in the chair before she finishes.  
-2. **Dim the bridge and sit quietly.** — +5 Energy: the bridge goes dark. Commander +1 Stress.
-   → A dark, quiet bridge. +5 Energy. Commander +1 Stress. / A.U.R.A.: 'Of course, Commander.' The panels go dark. She leaves one light on above your chair.  
-3. **Ask her to name everyone aboard.** — +1 Data. Commander +1 Stress: her answer doesn't add up.
-   → A.U.R.A. named everyone aboard. +1 Data. Commander +1 Stress. / A.U.R.A.: 'Cora Moon, Jaxon Mercer, Aris Novak, Kael Vance, Mira Chen. Four crew, Commander.' / A.U.R.A.: 'The hold is empty, Commander. Good night.'  
-   ↳ or: A.U.R.A.: 'And [sleepers] sleepers in the hold, Commander. All [sleepers] stable.'  
 
 ## The talk when you jump out of sector 6
 
