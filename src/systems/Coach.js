@@ -42,6 +42,8 @@
         const here = state.currentSystem, sector = state.currentSector || 1;
         const isOverlayOpen = !!document.querySelector('.modal-overlay, .warp-plot, .mini-host, .story-reel, .throw-veil, #start-menu, .end-screen, #narrative-modal.active');
         if (isOverlayOpen) return '';
+        const isNew = !!(window.NEW_SCREEN && window.NewScreen);                          // the new screen (?new=1): no stop count, no map
+        if (isNew && !here) return '';                                                   // travel speaks for itself there (the bar is hidden)
         const stopsLeft = state.getStopsLeft ? state.getStopsLeft() : 1;
         const pageHere = (state.sectorNodes || []).find(p => p.hasPage && !p.exodusInvestigated);
         const tapeHere = (state.sectorNodes || []).find(p => p.hasTape && !p.exodusInvestigated);
@@ -56,11 +58,11 @@
                 if (!document.querySelector('.warp-btn')) return 'Click a planet on the map to look at it. You only get a few STOPS per sector, so you cannot visit them all.';
                 return 'LONG RANGE SCAN is free. INITIATE WARP costs the energy on the button and uses one STOP.';
             }
-            if (here.isStation) return here.stationInvestigated ? 'Nothing more here. BREAK ORBIT to go back to the map.' : 'BOARD STATION sends one person inside on a tank of air. A DEEP SCAN first shows the rooms.';
+            if (here.isStation) return here.stationInvestigated ? (isNew ? 'Nothing more here. LEAVE ORBIT to fly on.' : 'Nothing more here. BREAK ORBIT to go back to the map.') : 'BOARD STATION sends one person inside on a tank of air. A DEEP SCAN first shows the rooms.';
             if (!here.scanned) return 'DEEP SCAN first, to see what is down there. Tune it by hand for a chance at bonus data.';
             if (!here.hasEva && state.probeIntegrity > 0) return 'LAUNCH PROBE is the safe way to bring things back. SEND TEAM goes down to whatever the scan found — people can get hurt.';
             if (window.app && window.app.canDateWreck && window.app.canDateWreck(here)) return 'DATE THE WRECK lines its last star fix up with the disc. It shows where its crew was going.';
-            return 'Done here? BREAK ORBIT returns to the map. Click any room of the ship on the left to see who is in it.';
+            return isNew ? 'Done here? LEAVE ORBIT to fly on. Click any room of the ship on the left to see who is in it.' : 'Done here? BREAK ORBIT returns to the map. Click any room of the ship on the left to see who is in it.';
         }
         if (here) return '';                                                            // in orbit the command deck says what is possible; the bar stays quiet
         if (stopsLeft <= 0) return sector >= 6 ? 'No stops left. The only place left to go is the light.' : 'No stops left in this sector. JUMP SECTOR when you are ready — whatever you skipped is gone for good.';

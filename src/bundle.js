@@ -1004,6 +1004,9 @@ const REEL_HULLS = [7, 2207];   // the hulls the jump films show drifting (Story
 const WRECK_CALLSIGNS = ['PIONEER', 'COVENANT', 'SOJOURN', 'REQUIEM', 'LAZARUS', 'ICARUS', 'MERIDIAN', 'ORPHEUS', 'HALCYON', 'VESPER', 'TANTALUS', 'EMBER'];
 const CREW_ID_BY_TAG = { LEADER: 'you', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' }; // the minigames' names for the crew
 const crewIdOf = member => CREW_ID_BY_TAG[(member.tags || []).find(tag => CREW_ID_BY_TAG[tag])];
+/** The new screen (?new=1, docs/BUILD_A.md): travel is src/newscreen/'s full-screen view instead of the map. Off: today's game. */
+const isNewScreen = () => !!(window.NEW_SCREEN && window.NewScreen && window.NSRoute);   // a partial load falls back to today's map
+window.FINAL_SECTOR = FINAL_SECTOR;                                                  // the new screen reads it (one number, one place)
 /** A place a team can land, other than the sector's story planet (that one keeps its own wreck and page). */
 const isOrdinaryLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && !p.isStoryPlanet && p.type !== 'GAS_GIANT';
 
@@ -1616,7 +1619,22 @@ class App {
         else this.renderNav();
     }
 
-    handleWarp(planet) {
+    /** A phantom world (sector 3) dissolves when touched: gone from the sector, the log line, Mira's line. The map and the
+        new screen both call this. Returns false when it was not in the sector. */
+    dissolveGhost(ghost) {
+        const nodes = this.state.sectorNodes || [], idx = ghost ? nodes.findIndex(p => p.id === ghost.id) : -1;
+        if (idx === -1) return false;
+        nodes.splice(idx, 1);
+        this.state.addLog(`SIGNAL INTERFERENCE: ${ghost.name} was a phantom reading. The signal dissolves.`);
+        if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
+            const mira = this.state.crew.find(c => c.personality === 'CURIOUS' && c.status !== 'DEAD');
+            if (mira) setTimeout(() => this.state.addLog(`${mira.name}: "The readings just... vanished. The signal is playing games with our instruments."`), 300);
+        }
+        return true;
+    }
+
+    /** opts.flown: the new screen's flight already flew it (docs/BUILD_A.md §2), so no course plot. */
+    handleWarp(planet, opts = {}) {
         // The WARP button stays clickable for the 1s travel delay; a second click would charge
         // energy/rations and roll every hazard twice.
         if (this._isInTransit) return;
@@ -1642,14 +1660,14 @@ class App {
         else if (isReentry) this.state.addLog("Back into orbit. No energy needed.");
 
         // Out of stops: the window has closed on everything except where you already are
-        if (isTrip && !window.TEST_MODE && this.state.getStopsLeft() <= 0) {
+        if (isTrip && !window.TEST_MODE && !isNewScreen() && this.state.getStopsLeft() <= 0) {   // the new screen: the forks are the limit
             this.state.addLog('A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector."');
             return;
         }
 
         // Course plot: the player flies the burn, then we re-enter here with the result.
         // Skipped for free warps, unaffordable warps (consumeEnergy reports those) and TEST_MODE.
-        if (window.WarpPlot && !this._plotResult && cost > 0 && this.state.energy >= cost) {
+        if (window.WarpPlot && !opts.flown && !this._plotResult && cost > 0 && this.state.energy >= cost) {
             this._isInTransit = true;
             const plotOptions = this.getPlotOptions(planet.name, 'planet');
             plotOptions.burns = 1;
@@ -1670,7 +1688,7 @@ class App {
             this._isInTransit = true;
             const isBreach = this.isBreachDue(isTrip);
             if (isTrip) this.state._paidWarps = (this.state._paidWarps || 0) + 1;
-            if (isTrip && !window.TEST_MODE) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);
+            if (isTrip && !window.TEST_MODE && !isNewScreen()) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);   // the new screen: no stop count
             this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 
@@ -2296,18 +2314,19 @@ class App {
      * world we can reach, or the marked wreck / the story planet not boarded yet (and still reachable, or still hidden with a stop left).
      */
     whatIsLeftInSector() {
-        const state = this.state, stopsLeft = state.getStopsLeft();
+        const state = this.state, isNew = isNewScreen(), stopsLeft = isNew ? Infinity : state.getStopsLeft();   // the new screen: no stop count
         const here = state.lastVisitedSystem;
-        const canReach = p => !p.ghost && !p.storyHidden && (state.isReentry(p) || stopsLeft > 0);
+        const inReach = p => !(isNew && window.NSRoute.outOfReach(p));                  // the new screen: a world passed or visited is behind us
+        const canReach = p => !p.ghost && !p.storyHidden && inReach(p) && (state.isReentry(p) || stopsLeft > 0);
         const isStoryWreck = p => (p.isFirstSignal || p.isStoryPlanet) && !p.exodusInvestigated;
         const storyLeft = (state.sectorNodes || []).find(p => isStoryWreck(p) && canReach(p));
         if (storyLeft) return storyLeft.isStoryPlanet
             ? `We have not been down to ${storyLeft.name} yet, Commander. Their last course led there.`
             : `The wreck I marked is still out there, Commander. Nobody has been aboard.`;
         // A story planet still hidden is not lost while a stop is left: dating a wreck (or the last stop) puts it on the map
-        const hiddenStory = stopsLeft > 0 && (state.sectorNodes || []).find(p => p.isStoryPlanet && p.storyHidden && !p.exodusInvestigated);
+        const hiddenStory = stopsLeft > 0 && (state.sectorNodes || []).find(p => p.isStoryPlanet && p.storyHidden && !p.exodusInvestigated && inReach(p));
         if (hiddenStory) return 'The faint contact is still out there, Commander. One of our ships may be there.';
-        const worldsAhead = (state.sectorNodes || []).some(p => !p.ghost && !p.storyHidden && !(here && here.id === p.id)
+        const worldsAhead = (state.sectorNodes || []).some(p => !p.ghost && !p.storyHidden && inReach(p) && !(here && here.id === p.id)
             && !(p.isStructure || p.type === 'STRUCTURE') && state.getWarpCost(p) <= state.energy);
         if (stopsLeft > 0 && worldsAhead) return 'There are still worlds ahead, Commander. We have time for another stop.';
         return null;
@@ -2384,11 +2403,13 @@ class App {
 
         // The flight, then what the crew makes of it, then the campfire. Into sector 3 the burn stalls and the throw plays instead.
         const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
-        this.showWarpAnimation(() => {
+        const fly = () => this.showWarpAnimation(() => {
             const afterFlight = isThrow ? window.TheThrow.play(this)
                 : this.reactToSectorJump().then(() => new Promise(done => this.showCampfireEvent(done)));
             afterFlight.then(() => this.enterNextSector());
         }, isThrow);
+        if (isNewScreen() && !isThrow) window.NewScreen.playJump().then(fly);           // the new screen: the burn and the flash first
+        else fly();
     }
 
     /** The header line for a sector, named as SECTOR_CONFIG names it: "/// SECTOR 3: THE SIGNAL". */
@@ -2781,7 +2802,8 @@ class App {
     /** A page is never lost to a skipped minigame: back on the map with one stop left, A.U.R.A. names the story planet herself. */
     revealLateStoryPlanet() {
         const story = (this.state.sectorNodes || []).find(p => p.storyHidden);
-        if (!story || this.state.getStopsLeft() > 1) return;
+        const isEarly = isNewScreen() ? !window.NSRoute.onlyStoryLeft(this.state) : this.state.getStopsLeft() > 1;   // the new screen: when only it is left
+        if (!story || isEarly) return;
         this.revealStoryPlanet(story, `A.U.R.A.: "The faint contact is clear now, Commander. It is ${story.name}, and one of our ships is there."`);
     }
 
@@ -5272,6 +5294,7 @@ Then you're through.`,
 
         const mainView = document.getElementById('main-view');
         mainView.innerHTML = '';
+        if (isNewScreen()) { window.NewScreen.show(this); return; }                   // the new screen's travel view, not the map
         mainView.appendChild(this.navView.render(this.state.sectorNodes));
         const rightPanel = document.getElementById('tactical-display');
         if (rightPanel) rightPanel.innerHTML = '<div class="placeholder-grid">NO TARGET SELECTED</div>';
@@ -5293,9 +5316,10 @@ Then you're through.`,
 
         // Find cheapest warp cost (accounting for bridge damage)
         let cheapestCost = Infinity;
-        const stopsLeft = this.state.getStopsLeft ? this.state.getStopsLeft() : 1;
+        const isNew = isNewScreen(), stopsLeft = isNew ? Infinity : (this.state.getStopsLeft ? this.state.getStopsLeft() : 1);   // the new screen: no stop count
         nodes.forEach(planet => {
             if (planet.ghost || planet.storyHidden) return; // Skip ghost planets and faint contacts: neither can be warped to
+            if (isNew && window.NSRoute.outOfReach(planet)) return;                           // the new screen: behind us for good
             const cost = this.state.getWarpCost(planet);
             const isFinale = !!(planet.isStructure || planet.type === 'STRUCTURE');      // as in handleWarp: the light needs no stop
             const isLegal = this.state.isReentry(planet) || isFinale || stopsLeft > 0 || window.TEST_MODE;   // with no stops left, only going back into orbit, or to the light
@@ -5343,6 +5367,7 @@ Then you're through.`,
     }
 
     renderOrbit() {
+        if (isNewScreen()) window.NewScreen.hide();                                       // the new screen: today's orbit view, as now
         const here = this.state.currentSystem;                                             // only a jump that lands at random can end up here
         if (here && here.storyHidden) this.revealStoryPlanet(here, `The faint contact is ${here.name}. One of our ships is down there.`);
         const mainView = document.getElementById('main-view');

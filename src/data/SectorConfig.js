@@ -117,7 +117,7 @@ const SECTOR_CONFIG = {
                 if (_testChance(0.60)) {
                     const ghostNames = ['Echo-' + Math.floor(Math.random() * 99), 'Phantom-' + Math.floor(Math.random() * 99), 'Mirage-' + Math.floor(Math.random() * 99)];
                     const ghost = {
-                        id: 'ghost_' + Date.now(),
+                        id: 'ghost_' + Date.now() + '_' + planets.length + '_' + Math.floor(Math.random() * 1e6),   // unique even when two are made in one ms
                         name: ghostNames[Math.floor(Math.random() * ghostNames.length)],
                         type: ['VITAL', 'TERRAFORMED', 'OCEANIC'][Math.floor(Math.random() * 3)],
                         ghost: true,

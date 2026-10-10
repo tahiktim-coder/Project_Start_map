@@ -1,0 +1,50 @@
+/* ═══ Silent Exodus · new screen (?new=1) · newscreen.css ═══════════════════════════════════════════════════════════════
+   What it is: the travel view's page (#ns-root and its layers), the rules that hide today's map screen while travelling
+   (docs/BUILD_A.md §1), and the slice's word tokens (IBM Plex, "Graphite"), scoped to #ns-root so the rest of the game
+   keeps its own look. Loaded only when the switch is on. In orbit body.ns-travel is off and today's layout shows as now.
+   Source: the <style> of prototypes/slice/index.html and the voice of prototypes/screens/game-screen/reading.css. */
+
+/* ── travelling: the view is the screen; today's header, panels, log, Coach and map are out of sight ── */
+body.ns-travel .app-container { visibility: hidden; }
+body.ns-travel .coach { display: none !important; }
+
+/* ── the view: under every card (1000+), reel (5000) and minigame (6000) ── */
+#ns-root {
+    --t: 1; --px: 2px;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --danger: #e0453a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --fs-voice: calc(19px + 5px * var(--t)); --fs-who: calc(14px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t));
+    --fs-note-name: calc(17px + 3px * var(--t)); --fs-note-line: calc(15px + 2px * var(--t));
+    --fs-title: calc(34px + 12px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));
+    --shadow: 0 1px 0 #05070a;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+    position: fixed; inset: 0; z-index: 900; overflow: hidden; outline: none; touch-action: none;
+    background: var(--ink); color: var(--text); font: 400 15px/1.4 var(--f-text);
+    -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none;
+}
+#ns-root[hidden] { display: none; }
+#ns-root.is-pointing { cursor: pointer; }
+#ns-root canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+#ns-words, #ns-root .ns-layer { position: absolute; inset: 0; pointer-events: none; }
+#ns-root p { margin: 0; }
+
+/* ── a voice line: the first name over the quote, on the dither shade (Voice.js) ── */
+#ns-root .ns-voice {
+    position: absolute; left: 0; top: 0; display: grid; gap: 6px; width: max-content; max-width: min(var(--measure), calc(100vw - 32px));
+    text-shadow: var(--shadow); pointer-events: none; opacity: 0; transition: opacity 160ms var(--ease);
+}
+#ns-root .ns-voice.is-in { opacity: 1; }
+#ns-root .ns-who { display: flex; align-items: center; gap: 8px; font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--warm)); }
+#ns-root .ns-who .ns-ring { flex: none; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }
+#ns-root .ns-say { font: 400 var(--fs-voice)/1.36 var(--f-text); color: var(--text); text-wrap: balance; }
+#ns-root .tone-jaxon { --tone: #f08c2e; }
+#ns-root .tone-vance { --tone: #c4622a; }
+#ns-root .tone-aris { --tone: #ffc27a; }
+#ns-root .tone-mira { --tone: #e8836a; }
+#ns-root .tone-aura { --tone: var(--ui); }
+
+@media (prefers-reduced-motion: reduce) {
+    #ns-root .ns-voice { transition: none; }
+}
