@@ -112,24 +112,24 @@ _When she trusts you NEUTRAL or less: a 30% chance on entering orbit. The follow
 ### The air vent card «bundle.js · showAuraVentModal»
 _When she turns hostile. The third time is game over._
 
-- She will empty the whole ship. Everyone dies. «bundle.js · line 3533»
-- One of the crew will die before the air comes back. «bundle.js · line 3534»
-- One of the crew will be hurt before the air comes back. «bundle.js · line 3535»
-- Jaxon: "I can shut her out!" «bundle.js · line 3537»
-- **desc** — He cuts her off from the air system. A.U.R.A. goes back to neutral. «bundle.js · line 3537»
-- Plug in the Tech Fragment «bundle.js · line 3538»
-- **desc** — Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment. «bundle.js · line 3538»
-- Do nothing and wait «bundle.js · line 3539»
-- **kicker** — AIR ALERT — TIME NUMBER [n] «bundle.js · line 3543»
-- **kicker** — AIR ALERT «bundle.js · line 3543»
-- **title** — A.U.R.A. is letting the air out «bundle.js · line 3543»
-- **context** — The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself. «bundle.js · line 3544»
-- She is not giving warnings any more. «bundle.js · line 3545»
-- **title** — A.U.R.A. MUTINY «bundle.js · line 3565»
-- **message** — A.U.R.A. opened the vents on every deck. Her last log entry reads: "All decks vented, Commander. By my figures, the mission does better without a commander. I have logged my reasons." «bundle.js · line 3566»
-- A.U.R.A. atmospheric venting «bundle.js · line 3576»
-- ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time. «bundle.js · line 3578»
-- [name] suffered oxygen deprivation during the vent. Status: INJURED. «bundle.js · line 3587»
+- She will empty the whole ship. Everyone dies. «bundle.js · line 3375»
+- One of the crew will die before the air comes back. «bundle.js · line 3376»
+- One of the crew will be hurt before the air comes back. «bundle.js · line 3377»
+- Jaxon: "I can shut her out!" «bundle.js · line 3379»
+- **desc** — He cuts her off from the air system. A.U.R.A. goes back to neutral. «bundle.js · line 3379»
+- Plug in the Tech Fragment «bundle.js · line 3380»
+- **desc** — Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment. «bundle.js · line 3380»
+- Do nothing and wait «bundle.js · line 3381»
+- **kicker** — AIR ALERT — TIME NUMBER [n] «bundle.js · line 3385»
+- **kicker** — AIR ALERT «bundle.js · line 3385»
+- **title** — A.U.R.A. is letting the air out «bundle.js · line 3385»
+- **context** — The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself. «bundle.js · line 3386»
+- She is not giving warnings any more. «bundle.js · line 3387»
+- **title** — A.U.R.A. MUTINY «bundle.js · line 3407»
+- **message** — A.U.R.A. opened the vents on every deck. Her last log entry reads: "All decks vented, Commander. By my figures, the mission does better without a commander. I have logged my reasons." «bundle.js · line 3408»
+- A.U.R.A. atmospheric venting «bundle.js · line 3418»
+- ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time. «bundle.js · line 3420»
+- [name] suffered oxygen deprivation during the vent. Status: INJURED. «bundle.js · line 3429»
 
 ### The data chip «Items.js · TECH_FRAGMENT»
 _A Tech Fragment used from the cargo hold._
@@ -194,17 +194,17 @@ _When someone reaches stress 3. The commander breaking is game over._
 ### Bringing someone back «bundle.js · handleRevivalAction»
 _Using Pulsing Spores or an Ancient Neural Link from the cargo hold._
 
-- **title** — INVALID TARGET «bundle.js · line 4833»
-- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 4834»
-- CANCEL «bundle.js · line 4835»
-- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 4845»
-- Select subject for integration with [name]. «bundle.js · line 4847»
-- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 4848»
-- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 4880»
-- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 4881»
-- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 4884»
-- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 4885»
-- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 4892»
+- **title** — INVALID TARGET «bundle.js · line 4676»
+- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 4677»
+- CANCEL «bundle.js · line 4678»
+- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 4688»
+- Select subject for integration with [name]. «bundle.js · line 4690»
+- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 4691»
+- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 4723»
+- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 4724»
+- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 4727»
+- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 4728»
+- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 4735»
 
 ## Food, damage and data
 
@@ -396,8 +396,8 @@ _Every sector jump except the one into sector 3 (that one stalls: sector-3.md), 
 ### Stranded «bundle.js · checkStranded»
 _No energy and no way out._
 
-- **title** — STRANDED «bundle.js · line 5476»
-- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 5477»
+- **title** — STRANDED «bundle.js · line 5336»
+- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 5337»
 
 ### The game-over screen «EndScreens.js · gameOver»
 

@@ -62,7 +62,6 @@ _On the first return to the map in sector 1. Card kicker: THE BRIDGE / INSIDE TH
 **Jaxon:** It is a glitch. She slept sixty years too. Let it go.  
 **A.U.R.A.:** ${reason} Jump anyway?  
 **A.U.R.A.:** I can run the drive on the reserve, Commander. The crew quarters will lose power.  
-**A.U.R.A.:** Colony report for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.  
 **A.U.R.A.:** If we land for good, the journey ends here, Commander. Settle anyway?  
 
 Choices:
@@ -74,7 +73,7 @@ Choices:
 6. **Jump on the reserve** — Uses all the energy left. The crew quarters are damaged.
 7. **Not yet** — Probes and wrecks can still bring energy back.
 8. **Not now** — You can still do it from the command deck while we are in orbit.
-9. **Not yet** — Stay in orbit.
+9. **Not yet** — Stay in orbit. The journey goes on.
 10. **Settle here** — The journey ends on this world.
 
 What each choice says in the log:
@@ -167,8 +166,6 @@ What each choice says in the log:
 - /// NEW EXODUS INITIALIZED ///
 - Humanity's hope rests with you once more.
 - A.U.R.A.: New sector charted. Select a destination, Commander.
-- Colony attempt aborted. Crew advisory accepted.
-- Colony warning overridden. Proceeding with colonization attempt...
 - ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time.
 - [name] suffered oxygen deprivation during the vent. Status: INJURED.
 - Deep Scan started...
@@ -436,56 +433,9 @@ _The card around each found page; the ledger rows are built from the wrecks you 
 - READ ON «FoundPage.js · line 98»
 - KEEP IT it stays in your cargo «FoundPage.js · line 102»
 
-## If you try to settle a planet here (sectors 1 and 2) «bundle.js · showColonyWarningModal»
-_The crew warn you off. Sector 2 uses the same card._
+## If you try to settle a planet here
 
-- **VOLCANIC · vance** — The thermal readings are off the charts. Anyone on the surface will cook alive. «bundle.js · line 3396»
-- **VOLCANIC · aris** — Constant volcanic ash in the atmosphere will destroy our lungs within weeks. «bundle.js · line 3397»
-- **VOLCANIC · jaxon** — The ground is unstable — magma flows could wipe out any settlement overnight. «bundle.js · line 3398»
-- **VOLCANIC · mira** — Seismic activity is continuous. There's nowhere safe to build. «bundle.js · line 3399»
-- **TOXIC · vance** — That atmosphere will eat through our suits. One breach and we're dead. «bundle.js · line 3402»
-- **TOXIC · aris** — The chemical composition is lethal. Even trace exposure causes organ failure. «bundle.js · line 3403»
-- **TOXIC · jaxon** — We can't seal a habitat against those corrosive agents — not with our supplies. «bundle.js · line 3404»
-- **TOXIC · mira** — Toxicity levels are 400% above survivable limits. The math doesn't work. «bundle.js · line 3405»
-- **GAS_GIANT · vance** — There's no surface! We'd be crushed by pressure before we found anything solid. «bundle.js · line 3408»
-- **GAS_GIANT · aris** — Human biology cannot survive in a gas giant. This is impossible. «bundle.js · line 3409»
-- **GAS_GIANT · jaxon** — Even our strongest materials can't withstand that atmospheric pressure. «bundle.js · line 3410»
-- **GAS_GIANT · mira** — A floating colony requires technology we don't have. «bundle.js · line 3411»
-- **DESERT · vance** — 120 degrees during the day, no water. We'd be dead in a week. «bundle.js · line 3414»
-- **DESERT · aris** — Heat stroke, dehydration — I can't keep people alive here. «bundle.js · line 3415»
-- **DESERT · jaxon** — No water means no hydroponics. We'd starve even if we survived the heat. «bundle.js · line 3416»
-- **DESERT · mira** — Water table is non-existent. Zero agricultural potential. «bundle.js · line 3417»
-- **ICE_WORLD · vance** — -200 degrees will kill us faster than any enemy ever could. «bundle.js · line 3420»
-- **ICE_WORLD · aris** — Frostbite, hypothermia — our medical supplies can't handle constant cold exposure. «bundle.js · line 3421»
-- **ICE_WORLD · jaxon** — Energy requirements for heating would drain us dry in months. «bundle.js · line 3422»
-- **ICE_WORLD · mira** — Thermal models show we'd freeze before the first harvest. «bundle.js · line 3423»
-- **SHATTERED · vance** — The planet is literally falling apart. There's nothing stable to build on. «bundle.js · line 3426»
-- **SHATTERED · aris** — Radiation from the exposed core is lethal. No one survives that. «bundle.js · line 3427»
-- **SHATTERED · jaxon** — The hull strength is zero. Fragments could crush us at any moment. «bundle.js · line 3428»
-- **SHATTERED · mira** — Gravity pulls oddly here and the orbit is unstable. This world is dying. «bundle.js · line 3429»
-- **ROCKY · vance** — Barren rock with no atmosphere. One dome breach and everyone suffocates. «bundle.js · line 3432»
-- **ROCKY · aris** — No biosphere, no ecosystem — growing food here is nearly impossible. «bundle.js · line 3433»
-- **ROCKY · jaxon** — Radiation exposure without atmosphere will cause long-term health issues. «bundle.js · line 3434»
-- **ROCKY · mira** — We could mine here, but colonization? Marginal at best. «bundle.js · line 3435»
-- **STORM_WORLD · vance** — 800 kilometer per hour winds. Nothing we build will survive. «bundle.js · line 3438»
-- **STORM_WORLD · aris** — The constant pressure changes would cause severe physiological damage. «bundle.js · line 3439»
-- **STORM_WORLD · jaxon** — Our structures can't withstand that wind speed. We'd be swept away. «bundle.js · line 3440»
-- **STORM_WORLD · mira** — The storms never stop. There's no building window. «bundle.js · line 3441»
-- **RADIATION_BELT · vance** — The radiation here would cook us from the inside out. «bundle.js · line 3444»
-- **RADIATION_BELT · aris** — Cancer rates would be 100% within the first year. I won't sign off on this. «bundle.js · line 3445»
-- **RADIATION_BELT · jaxon** — No amount of shielding we can build would protect against those levels. «bundle.js · line 3446»
-- **RADIATION_BELT · mira** — Radiation is 50x lethal dose. This is a death sentence. «bundle.js · line 3447»
-- **Vance:** Commander, this sector is a graveyard. Colonizing here is suicide. We need to go deeper. «bundle.js · line 3454»
-- **Aris:** The environmental data doesn't support long-term survival. Please, we can do better. «bundle.js · line 3455»
-- **Jaxon:** Soil's wrong. Radiation's wrong. Nothing will grow here. This isn't the place. «bundle.js · line 3456»
-- **Mira:** My models show colony failure within 18 months at these readings. The deeper sectors have better candidates. «bundle.js · line 3457»
-- **A.U.R.A.:** Colony report for [p type]: [how good the world is]%. Recommend proceeding to Sector [sector]. «bundle.js · line 3460»
-- /// COLONY WARNING /// CREW ADVISORY «bundle.js · line 3464»
-- ⚠ Your crew is strongly advising against colonization in this sector. «bundle.js · line 3469»
-- ABORT — Keep Moving «bundle.js · line 3493»
-- PROCEED DESPITE WARNINGS «bundle.js · line 3498»
-- Colony attempt aborted. Crew advisory accepted. «bundle.js · line 3507»
-- Colony warning overridden. Proceeding with colonization attempt... «bundle.js · line 3511»
+The crew have their say first, in every sector — see [08-settling.md](08-settling.md).
 
 ## The sector's own trouble: MICROMETEORITES «SectorConfig.js · 1.hazard»
 _Debris field from dead ships_

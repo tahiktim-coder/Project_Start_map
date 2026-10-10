@@ -135,8 +135,6 @@ _Source on screen: RECOVERED TAPE · EXODUS PROGRAMME MASTER · UNCUT_
 - /// NEW EXODUS INITIALIZED ///
 - Humanity's hope rests with you once more.
 - A.U.R.A.: New sector charted. Select a destination, Commander.
-- Colony attempt aborted. Crew advisory accepted.
-- Colony warning overridden. Proceeding with colonization attempt...
 - ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time.
 - [name] suffered oxygen deprivation during the vent. Status: INJURED.
 - Deep Scan started...
@@ -236,7 +234,7 @@ Keep building ships.
 
 ## If you try to settle a planet here
 
-The same crew warning card as sector 1 — see [sector-1.md](sector-1.md).
+The crew have their say first, as in every sector — see [08-settling.md](08-settling.md).
 
 ## The sector's own trouble: ISOLATION «SectorConfig.js · 2.hazard»
 _The void between stars_

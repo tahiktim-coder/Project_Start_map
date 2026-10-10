@@ -3360,164 +3360,6 @@ Then you're through.`,
         });
     }
 
-    showColonyWarningModal(planet, onProceed) {
-        const config = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
-        if (!config || !config.colonyWarning || planet._colonyWarningShown) {
-            onProceed();
-            return;
-        }
-        planet._colonyWarningShown = true;
-
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2500';
-
-        const portraits = {
-            'Jaxon': 'M_2', 'Aris': 'F_3', 'Vance': 'M_4',
-            'Mira': 'F_5', 'A.U.R.A.': null
-        };
-        const colors = {
-            'Jaxon': '#f0a030', 'Aris': '#40c8ff', 'Vance': '#ff5050',
-            'Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
-        };
-
-        // Crew warning lines based on who's alive AND planet type
-        const warnings = [];
-        const living = this.state.crew.filter(c => c.status !== 'DEAD' && !c.tags.includes('LEADER'));
-        const jaxon = living.find(c => c.tags.includes('ENGINEER'));
-        const aris = living.find(c => c.tags.includes('MEDIC'));
-        const vance = living.find(c => c.tags.includes('SECURITY'));
-        const mira = living.find(c => c.tags.includes('SPECIALIST'));
-        const pType = planet.type || 'UNKNOWN';
-
-        // Planet-specific warnings
-        const planetWarnings = {
-            VOLCANIC: {
-                vance: "The thermal readings are off the charts. Anyone on the surface will cook alive.",
-                aris: "Constant volcanic ash in the atmosphere will destroy our lungs within weeks.",
-                jaxon: "The ground is unstable — magma flows could wipe out any settlement overnight.",
-                mira: "Seismic activity is continuous. There's nowhere safe to build."
-            },
-            TOXIC: {
-                vance: "That atmosphere will eat through our suits. One breach and we're dead.",
-                aris: "The chemical composition is lethal. Even trace exposure causes organ failure.",
-                jaxon: "We can't seal a habitat against those corrosive agents — not with our supplies.",
-                mira: "Toxicity levels are 400% above survivable limits. The math doesn't work."
-            },
-            GAS_GIANT: {
-                vance: "There's no surface! We'd be crushed by pressure before we found anything solid.",
-                aris: "Human biology cannot survive in a gas giant. This is impossible.",
-                jaxon: "Even our strongest materials can't withstand that atmospheric pressure.",
-                mira: "A floating colony requires technology we don't have."
-            },
-            DESERT: {
-                vance: "120 degrees during the day, no water. We'd be dead in a week.",
-                aris: "Heat stroke, dehydration — I can't keep people alive here.",
-                jaxon: "No water means no hydroponics. We'd starve even if we survived the heat.",
-                mira: "Water table is non-existent. Zero agricultural potential."
-            },
-            ICE_WORLD: {
-                vance: "-200 degrees will kill us faster than any enemy ever could.",
-                aris: "Frostbite, hypothermia — our medical supplies can't handle constant cold exposure.",
-                jaxon: "Energy requirements for heating would drain us dry in months.",
-                mira: "Thermal models show we'd freeze before the first harvest."
-            },
-            SHATTERED: {
-                vance: "The planet is literally falling apart. There's nothing stable to build on.",
-                aris: "Radiation from the exposed core is lethal. No one survives that.",
-                jaxon: "The hull strength is zero. Fragments could crush us at any moment.",
-                mira: "Gravity pulls oddly here and the orbit is unstable. This world is dying."
-            },
-            ROCKY: {
-                vance: "Barren rock with no atmosphere. One dome breach and everyone suffocates.",
-                aris: "No biosphere, no ecosystem — growing food here is nearly impossible.",
-                jaxon: "Radiation exposure without atmosphere will cause long-term health issues.",
-                mira: "We could mine here, but colonization? Marginal at best."
-            },
-            STORM_WORLD: {
-                vance: "800 kilometer per hour winds. Nothing we build will survive.",
-                aris: "The constant pressure changes would cause severe physiological damage.",
-                jaxon: "Our structures can't withstand that wind speed. We'd be swept away.",
-                mira: "The storms never stop. There's no building window."
-            },
-            RADIATION_BELT: {
-                vance: "The radiation here would cook us from the inside out.",
-                aris: "Cancer rates would be 100% within the first year. I won't sign off on this.",
-                jaxon: "No amount of shielding we can build would protect against those levels.",
-                mira: "Radiation is 50x lethal dose. This is a death sentence."
-            }
-        };
-
-        // Get planet-specific warnings or fall back to generic
-        const specific = planetWarnings[pType] || null;
-
-        if (vance) warnings.push({ speaker: 'Vance', text: specific?.vance || "Commander, this sector is a graveyard. Colonizing here is suicide. We need to go deeper." });
-        if (aris) warnings.push({ speaker: 'Aris', text: specific?.aris || "The environmental data doesn't support long-term survival. Please, we can do better." });
-        if (jaxon) warnings.push({ speaker: 'Jaxon', text: specific?.jaxon || "Soil's wrong. Radiation's wrong. Nothing will grow here. This isn't the place." });
-        if (mira) warnings.push({ speaker: 'Mira', text: specific?.mira || "My models show colony failure within 18 months at these readings. The deeper sectors have better candidates." });
-
-        const viability = pType === 'VITAL' || pType === 'EDEN' || pType === 'TERRAFORMED' ? Math.floor(Math.random() * 20 + 40) : Math.floor(Math.random() * 8 + 2);
-        warnings.push({ speaker: 'A.U.R.A.', text: `Colony report for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.` });
-
-        modal.innerHTML = `
-            <div class="modal-content" style="border-color: #d85a4e; max-width: 650px;">
-                <div class="modal-header" style="background: linear-gradient(90deg, #330000, #660000); color: #d85a4e; display: flex; justify-content: space-between;">
-                    <span>/// COLONY WARNING ///</span>
-                    <span style="opacity: 0.7;">CREW ADVISORY</span>
-                </div>
-                <div style="padding: 25px;">
-                    <div style="font-size: 0.95em; color: #e07a70; margin-bottom: 20px; line-height: 1.6; font-weight: bold;">
-                        ⚠ Your crew is strongly advising against colonization in this sector.
-                    </div>
-                    <div style="border-left: 2px solid #660000; padding-left: 15px; margin-bottom: 20px;">
-                        ${warnings.map(d => {
-                            const color = colors[d.speaker] || '#ffffff';
-                            const pId = portraits[d.speaker];
-                            const portraitHtml = pId
-                                ? `<img src="assets/crew/${pId}.png" style="width:28px;height:28px;border-radius:50%;border:1px solid ${color};object-fit:cover;vertical-align:middle;margin-right:6px;" onerror="this.style.display='none'">`
-                                : (d.speaker === 'A.U.R.A.' ? `<span style="display:inline-block;width:28px;height:28px;border-radius:50%;border:1px solid #74d99a;text-align:center;line-height:28px;font-size:12px;margin-right:6px;vertical-align:middle;background:#001a0a;">AI</span>` : '');
-                            return `<div style="margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
-                                <div style="flex-shrink: 0; padding-top: 2px;">${portraitHtml}</div>
-                                <div>
-                                    <span style="color:${color}; font-weight: bold;">${d.speaker}:</span>
-                                    <span style="color:${color}; opacity: 0.85; font-style: italic;"> "${d.text}"</span>
-                                </div>
-                            </div>`;
-                        }).join('')}
-                    </div>
-                    <div style="display: flex; gap: 15px; justify-content: flex-end;">
-                        <button class="colony-warn-abort" style="
-                            padding: 12px 25px; border: 1px solid var(--color-primary);
-                            background: rgba(0,40,0,0.8); color: var(--color-primary);
-                            cursor: pointer; font-family: var(--font-mono); font-weight: bold;
-                        ">ABORT — Keep Moving</button>
-                        <button class="colony-warn-proceed" style="
-                            padding: 12px 25px; border: 1px solid #d85a4e;
-                            background: rgba(60,0,0,0.8); color: #d85a4e;
-                            cursor: pointer; font-family: var(--font-mono); font-weight: bold;
-                        ">PROCEED DESPITE WARNINGS</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        modal.querySelector('.colony-warn-abort').onclick = () => {
-            this.state.addLog("Colony attempt aborted. Crew advisory accepted.");
-            modal.remove();
-        };
-        modal.querySelector('.colony-warn-proceed').onclick = () => {
-            this.state.addLog("Colony warning overridden. Proceeding with colonization attempt...");
-            // Ethics hit for ignoring crew
-            if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
-                window.AuraSystem.adjustEthics(-1, 'Ignored colony warning', this.state);
-            }
-            modal.remove();
-            onProceed();
-        };
-    }
-
     // ═══════════════════════════════════════════════════════════════
     // A.U.R.A. VENT WARNING — response modal
     // Escalates: 1st = injury, 2nd = death, 3rd+ = potential game over
@@ -4450,18 +4292,19 @@ Then you're through.`,
                         this.state.addLog("Renewed purpose fills the crew. +20 Energy. All crew -1 stress.");
                         break;
                     case 'settle':
-                        // End the journey - trigger colony ending immediately
-                        // Clear all stress and heal for the paradise ending
-                        this.state.crew.forEach(c => {
-                            if (c.status !== 'DEAD') {
-                                c.stress = 0;
-                                if (c.status === 'INJURED') c.status = 'HEALTHY';
-                            }
-                        });
-                        this.state.addLog(`${evaTeam[0].name}: "Commander... we're staying, aren't we?"`);
-                        this.state.addLog("You nod. This is where the journey ends.");
-                        // Trigger the colony ending
-                        this._executeColony(planet, { isScanWaived: true }); // they are standing on it
+                        // The crew have their say first; "Not yet" puts the team back in the meadow with the trip unspent
+                        this.askBeforeSettling(planet, () => {
+                            // Clear all stress and heal for the paradise ending
+                            this.state.crew.forEach(c => {
+                                if (c.status !== 'DEAD') {
+                                    c.stress = 0;
+                                    if (c.status === 'INJURED') c.status = 'HEALTHY';
+                                }
+                            });
+                            this.state.addLog(`${evaTeam[0].name}: "Commander... we're staying, aren't we?"`);
+                            this.state.addLog("You nod. This is where the journey ends.");
+                            this._executeColony(planet, { isScanWaived: true }); // they are standing on it
+                        }, () => this.showEdenEvaModal(planet));
                         return; // Don't continue to normal exit
                 }
 
@@ -4910,15 +4753,8 @@ Then you're through.`,
 
     handleColonyAction() {
         const planet = this.state.currentSystem;
-
-        // Colony warning in S1-S2 (crew advises against)
-        const colonyConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
-        if (colonyConfig && colonyConfig.colonyWarning && !planet._colonyWarningShown) {
-            this.showColonyWarningModal(planet, () => this._executeColony(planet));
-            return;
-        }
-
-        if (!planet.scanned && !window.TEST_MODE) { this._executeColony(planet); return; }   // A.U.R.A. refuses an unscanned world herself
+        if (!planet) return;
+        if (!planet.scanned && !window.TEST_MODE) { this._executeColony(planet); return; }   // A.U.R.A. refuses an unscanned world herself, before anyone talks
         this.askBeforeSettling(planet, () => {
             // A.U.R.A. colony commentary
             if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
@@ -4928,18 +4764,42 @@ Then you're through.`,
         });
     }
 
-    /** Settling ends the journey: never on one click (docs/GAME_FLOW.md 2.0). "Not yet" comes first, nearer the button. */
-    askBeforeSettling(planet, onSettle) {
-        if (!window.EncounterCard) { onSettle(); return; }
+    /**
+     * Settling ends the journey: never on one click (docs/GAME_FLOW.md 2.0). Every crew member who can speak says one line,
+     * then A.U.R.A. asks (src/data/SettleCouncil.js, docs/SETTLING.md). "Not yet" comes first, nearer the button.
+     * Every way of settling comes through here: the SETTLE button (handleColonyAction) and the paradise world (showEdenEvaModal).
+     */
+    askBeforeSettling(planet, onSettle, onStay) {
+        const council = this.settleCouncilFor(planet);
+        planet._settleCouncilHeard = true;   // asked again about this world, only A.U.R.A.'s question repeats
         window.EncounterCard.open(this, {
-            tone: 'station', kicker: 'SETTLE', title: `Settle on ${planet.name}?`, zIndex: 2800,
-            dialogue: [{ speaker: 'A.U.R.A.', text: 'If we land for good, the journey ends here, Commander. Settle anyway?' }],
-            choices: [
-                { text: 'Not yet', desc: 'Stay in orbit.' },
-                { text: 'Settle here', desc: 'The journey ends on this world.' },
-            ],
-            onPick: idx => { if (idx === 1) onSettle(); },
+            tone: 'station', kicker: council.kicker, title: council.title, zIndex: 2800,
+            dialogue: council.dialogue, choices: council.choices,
+            onPick: idx => {
+                if (idx !== 1) { if (onStay) onStay(); return; }
+                // Sectors 1-2 (SECTOR_CONFIG colonyWarning): settling this early goes against A.U.R.A.'s advice
+                const config = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
+                if (config && config.colonyWarning && typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+                    window.AuraSystem.adjustEthics(-1, 'Ignored colony warning', this.state);
+                }
+                onSettle();
+            },
         });
+    }
+
+    /** The council for this world. If SettleCouncil.js did not load, A.U.R.A. still asks the question on her own. */
+    settleCouncilFor(planet) {
+        try {
+            const viability = EndingSystem.getPlanetViability(planet, this.state);
+            return window.buildSettleCouncil(this.state, planet, { viability, isRepeat: !!planet._settleCouncilHeard });
+        } catch (e) {
+            console.error('Settle council could not be built; A.U.R.A. asks alone', e);
+            return {
+                kicker: 'SETTLE', title: `Settle on ${planet.name}?`,
+                dialogue: [{ speaker: 'A.U.R.A.', text: 'If we land for good, the journey ends here, Commander. Settle anyway?' }],
+                choices: [{ text: 'Not yet', desc: 'Stay in orbit. The journey goes on.' }, { text: 'Settle here', desc: 'The journey ends on this world.' }],
+            };
+        }
     }
 
     _executeColony(planet, { isScanWaived = false } = {}) {
