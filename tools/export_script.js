@@ -14,7 +14,7 @@ const read = rel => SOURCES[rel] || (SOURCES[rel] = fs.readFileSync(path.join(RO
 
 // ── load the data files the way the browser does: one shared global scope ──
 const DATA = ['SectorConfig', 'Items', 'ExodusLogs', 'StoryPlanets', 'Events', 'ExodusDerelicts', 'DerelictEncounters', 'SpaceStations', 'FailedColonyEncounters',
-    'AsteroidFields', 'DistressSignals', 'AnomalyEncounters', 'LateGamePOIs', 'ShipEvents', 'CrewEvents', 'CampfireEvents', 'StructureEncounter'];
+    'AsteroidFields', 'DistressSignals', 'AnomalyEncounters', 'LateGamePOIs', 'ShipEvents', 'CrewEvents', 'CampfireEvents', 'StructureEncounter', 'SettleCouncil'];
 const sandbox = { window: {}, document: { addEventListener() {}, querySelector() { return null; } }, console, Math, setTimeout() {}, CustomEvent: function () {} };
 sandbox.window.dispatchEvent = () => {};
 vm.createContext(sandbox);
@@ -475,9 +475,9 @@ function extrasMd(sector) {
         b.push(...textSection(2, 'The hole in the hull (the mini-game)', whole(`${MINI}Breach.js`), 'Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time.', isSaid));
         b.push(...textSection(3, 'In the log afterwards', bm('applyBreachResult'), ''));
         b.push(...textSection(3, 'How every found page is shown (all sectors)', whole('src/systems/FoundPage.js'), 'The card around each found page; the ledger rows are built from the wrecks you boarded (sector 5).'));
-        b.push(...textSection(2, 'If you try to settle a planet here (sectors 1 and 2)', bm('showColonyWarningModal'), 'The crew warn you off. Sector 2 uses the same card.'));
+        b.push('## If you try to settle a planet here', '', 'The crew have their say first, in every sector — see [08-settling.md](08-settling.md).', '');
     }
-    if (sector === 2) b.push('## If you try to settle a planet here', '', 'The same crew warning card as sector 1 — see [sector-1.md](sector-1.md).', '');
+    if (sector === 2) b.push('## If you try to settle a planet here', '', 'The crew have their say first, as in every sector — see [08-settling.md](08-settling.md).', '');
     if (sector === 3) {
         b.push(...textSection(2, 'A planet that is not there', between('src/views/NavView.js', /SIGNAL INTERFERENCE: /, /this\.handlePlanetSelect\(data\)/, 'phantom planet click'), 'The arrival can add a ghost planet (see the sector\'s own trouble, below). Clicking it:'));
         b.push(`## Never played: the corridor film${tag('StoryReel.js', 'corridor')}`, '_Written for this sector, but no code plays it._', reelSource('corridor'), '_Counter on screen: HULLS ON THIS HEADING_', '', ...reelCaptions('corridor'), '');
@@ -580,10 +580,47 @@ for (let sector = 1; sector <= 6; sector++) {
     write('07-finale.md', 'The finale — the light', b);
 }
 
+// the settle council: what the crew say before you settle, read from SettleCouncil.js (docs/SETTLING.md)
+function councilMd() {
+    const C = G('SETTLE_COUNCIL'), build = G('buildSettleCouncil'), FILE = 'SettleCouncil.js';
+    if (!C) return ['## Before you settle: the crew have their say', '', '_SettleCouncil.js did not load._', ''];
+    const NAME = { mira: 'Mira', jaxon: 'Jaxon', aris: 'Aris', vance: 'Vance' };
+    const SCAN = { good: 'a good world', marginal: 'a marginal world', bad: 'a bad world', any: 'any world' };
+    const BAND = { early: 'sectors 1-2', middle: 'sectors 3-4', late: 'sectors 5-6' };
+    const KNOWS = { doubt: 'after the uncut tape', truth: 'once a page explains it' };
+    const when = key => { const [band, knows] = key.split('.'); return BAND[band] + (knows ? `, ${KNOWS[knows]}` : ''); };
+    const b = ['## Before you settle: the crew have their say (every sector)',
+        '_Every way of settling (the SETTLE button, or "settle here" on a paradise world) opens this card first, one line at a time. Each crew member who can speak says one line, picked by the scan, the sector and what the crew know; then A.U.R.A. asks. Asked again about the same world, only her question repeats. See docs/SETTLING.md._', '',
+        `**Card:** ${C.kicker} · ${C.title}${tag(FILE, 'title')}`, '',
+        `${lineOf('A.U.R.A.', C.opening)} _(first, only when fewer than four crew can speak)_${tag(FILE, 'opening')}`,
+        `${lineOf('A.U.R.A.', C.closing)} _(last, every time)_${tag(FILE, 'closing')}`, '',
+        ...C.choices.map((c, i) => `- **${c.text}** — ${c.desc}${tag(FILE, `choices[${i}]`)}`), ''];
+    C.SPEAK_ORDER.forEach(person => {
+        b.push(`### ${NAME[person]}`);
+        Object.entries(C.lines[person]).forEach(([scan, table]) => {
+            b.push(`_On ${SCAN[scan]}:_`);
+            Object.entries(table).forEach(([key, text]) => b.push(`- ${when(key)}: ${lineOf(NAME[person], text)}${tag(FILE, `lines.${person}.${scan}.${key}`)}`));
+        });
+        if (C.unscanned && C.unscanned[person]) b.push(`- no deep scan (a paradise world the team walked onto): ${lineOf(NAME[person], C.unscanned[person])}${tag(FILE, `unscanned.${person}`)}`);
+        b.push(`- shut in the hold: ${lineOf(NAME[person], C.refusal[person])}${tag(FILE, `refusal.${person}`)}`, '');
+    });
+    if (typeof build !== 'function') return b;
+    const EXAMPLES = [['Sector 1, a good world, the whole crew', 1, 'EXCELLENT', []], ['Sector 4, a marginal world, before any page explains the numbers', 4, 'MARGINAL', []],
+        ['Sector 6, a good world, after the truth', 6, 'GOOD', ['PAGE_THROW']]];
+    b.push('### Three councils, as the player reads them');
+    EXAMPLES.forEach(([title, sector, viability, pages]) => {
+        const { state } = mockState(sector);
+        state.exodusLogsFound = pages;
+        b.push(`_${title}:_`, ...build(state, { name: '[planet]', scanned: true }, { viability }).dialogue.map(d => `- ${lineOf(d.speaker, d.text)}`), '');
+    });
+    return b;
+}
+
 // settling a planet: every colony ending, read straight from EndingSystem.js
 {
     const FILE = 'EndingSystem.js', lines = read('src/systems/EndingSystem.js').split('\n');
     const b = [HOW, '', '_What the player reads after choosing to settle. The game stitches several of these together: how the landing went, then lines about the crew, then what the colony became, then "fifty years later". The italic "when" line shows, in code, when the next lines are used._', ''];
+    b.push(...councilMd());
     b.push(...textSection(2, 'Pressing SETTLE HERE', bm('_executeColony'), 'A.U.R.A. refuses an unscanned world; otherwise the flight-recorder card comes up before the colony card.'));
     const HEADS = [[/static generateOutcome\(/, 'The second chance (from colony notes)'], [/static generateOutcomeRaw\(/, 'Before anything else: can this world work at all?'], [/static generateEpilogue\(/, 'Fifty years later']];
     const start = lines.findIndex(l => /static generateOutcome\(/.test(l));

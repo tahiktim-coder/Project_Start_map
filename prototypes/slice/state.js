@@ -40,6 +40,8 @@
         crisisOdds: 0.5, hazardOdds: 0.5,      // a signed crisis aboard fires about half the time (SHIP_GAMEPLAY §4); a team's site hazard, the same
         surge: 10,                             // "Let it run": -10 energy
         zetaCell: 12, erebusEnergy: 10, erebusSalvage: 20, day: 1,  // finds; "a day" is one ration
+        kryosLow: 70,                          // A.U.R.A. says Kryos fills the tanks only below this (fun playtest: not at 95)
+        deepSalvage: 20, scrapeOdds: 0.5,      // Kryos's low bands: wreck metal, and a ring stone scrapes the hull half the time (a new find, not a retune)
     });
     const DECKS = ['bridge', 'lab', 'quarters', 'medbay', 'hold', 'engineering'];
     const BROKEN = ['red', 'worse', 'fixing'];   // a deck in one of these does not work (patched works until the next crisis or scrape)

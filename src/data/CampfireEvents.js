@@ -458,6 +458,8 @@ const CAMPFIRE_EVENTS = [
             {
                 text: "Repair the hull.",
                 desc: "-15 Salvage. Repairs a damaged deck. If nothing is damaged, braces the drive: +4 Energy saved on the next sector jump.",
+                descNow: (state) => Object.values(state.shipDecks || {}).some(d => d.status === 'DAMAGED') ? "-15 Salvage. Repairs a damaged deck."
+                    : "-15 Salvage. Nothing is damaged, so Jaxon braces the drive: +4 Energy saved on the next sector jump.",
                 effect: (state) => {
                     state.salvage -= 15;
                     const damaged = Object.entries(state.shipDecks).find(([k, v]) => v.status === 'DAMAGED');

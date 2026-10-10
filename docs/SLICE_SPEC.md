@@ -31,9 +31,11 @@ on your own port and headless Chrome with its own profile (never port 8000, neve
 `G.hull`; positions on it are `u` (0 at the hull edge, 1 at the right edge) and `v` (0 top, 1 bottom); sizes are fractions of H.
 
 **The tower frame:** rows `[floorY(2) + 12 - H, floorY(2) + 12]`: the galley table at the bottom, the whole lab, the bridge
-from its windows down. It never moves by itself; the wheel scrolls it; it frames deck 2 only for the meal, and
-engineering while Jaxon's ask is open and Vance's talk is not (or once Aris has said "Jaxon's down at the drive"),
-playtest 1: the ask waited off the frame.
+from its roof down. With fewer art rows than that needs (1920 x 1080 at 2 px: 540 rows) the frame starts at `deckTop(0) - 8`
+instead, so the top deck is never cut (look playtest 2026-10-10); the galley's top half shows. The wheel stops at
+`TAIL0 + 24` (the engine bell never meets the outside Lander). The left-edge fade never covers a person. It never moves by itself; the wheel scrolls it; it frames deck 2 only for the meal.
+Because the galley is half cut at 1080, every sign and stress routine stands on the bridge or in the lab (§8.3), which
+every size shows (fun playtest 2026-10-10: Jaxon's ask was never seen, and Vance at the galley porthole was a head).
 
 **Layout D (a stop):** 640x360 at `G.bk = floor(min(W/640, H/360))`, centred (3 at 1080, 2 at 720).
 
@@ -61,11 +63,14 @@ All seven are visible from the first frame. At rest no words show at all. Nothin
 
 **The colours far away** (the designer: "mainly one colour, very tiny elements in interesting colours, like noir"). Build
 sky F with `V3Sky2.build(W, H, ox, oy, 1, light, 'f')` (the 640x360 recipe stage centred on the space side), then drop its
-`thing` in sector 1 (Kryos is the one enormous thing). Add an **accents** layer on the far-sky slide (0.005): six or seven
-specks, each at most 7 px across, in colours the rest of the frame never uses: a teal-green ring nebula, a rose-violet knot
-of gas, a deep red carbon star, a cold blue-white binary pair, a pale green comet far off, a slow cyan blink. Ramps start
-at the ink, dithered, at most a 1-px core above the middle of the ramp; never within 60 px of the light, a world or the
-Lander; under 0.3% of the space side's pixels. They are found, not shown.
+`thing` in sector 1 (Kryos is the one enormous thing). Add an **accents** layer on the far-sky slide (0.005): seven
+far colours the rest of the frame never uses, each a few dozen pixels at its own depth (look playtest 2026-10-10: the first
+set, at most 7 px, was never seen): a long faint violet veil deep in the far sky, a teal ring nebula with a lit shell, a
+rose-violet wisp of gas (about 40-80 px), a deep red carbon star in its own dust, a cold blue-white binary pair, a pale green
+comet with a tail, a slow cyan blink that is always a dim point. Ramps start at the ink, dithered, dull; never within 60 px
+of the light, a world or the Lander; well under 1% of the space side's pixels. Sector 2 gets its own four (a green veil, a
+crimson star, a teal ring, a rose knot). They are found, not shown. One world carries a hue of its own: Erebus a cold teal
+rim and haze; Titan a thicker dust haze. Rhea before it is named is a far disc a few pixels wide with the contact's pulse.
 
 ### 3.2 What each place is (script.js `PLACES`)
 
@@ -73,9 +78,9 @@ Lander; under 0.3% of the space side's pixels. They are found, not shown.
 |---|---|---|---|---|---|
 | zeta | 1 (or titan) | 5 | **Dock**: pick two; "Nobody aboard. They left the lights on." Carry their power cell (+12 energy, a day: -1 ration) or leave it | the bridge console sparks once | none |
 | titan | 1 (or zeta) | 5 | **Send the team**: pick two; torch on EXODUS-4's hatch; the stockpile; strip or marker on the radio; the disc drawing | A.U.R.A.: engineering has been surging | the surge, **half the time** (seeded) |
-| kryos | 2 (or erebus) | 5, then the skim +15 (cap 100) | **Skim fuel**, no team; the core floods | none | Breach on the pull-in (always: it is the second pull-in) |
+| kryos | 2 (or erebus) | 5, then the skim +15 (cap 100) | **Skim fuel**, no team; the core floods. Then Jaxon (or whoever is aboard): "The low bands are full of old wreck metal. Take her down?" **Skim the top**, or **Take her down** (+20 salvage; a ring stone scrapes the hull half the time: patches break and the hold, else the quarters or the med bay, seals off) | none | Breach on the pull-in (always: it is the second pull-in) |
 | erebus | 2 (or kryos) | 5 | **Answer the call**: pick two; a dark Exodus ship, beacon on backup power twenty years. A **hazard** half the time (§8.2). Answer it and switch it off (a day: -1 ration) or take their power cells (+10 energy, +20 salvage; Aris stress +1) | A.U.R.A.: the hull has been groaning since the rings | Breach (always) |
-| rhea | story | free once dated, else 5 | **Send the team**: pick two; EXODUS-6; a **hazard** half the time; the crew plate. If the disc was never found (the Zeta way), the drawing is here first | the hull, if it is the second pull-in (straight from Titan); else "engineering is still surging" if the surge has not come; else a pod in the hold blinks | Breach if due; else the surge, half the time |
+| rhea | story | free once dated, else 5 | **Send the team**: pick two; EXODUS-6; a **hazard** half the time; the crew plate. If the disc was never found (the Zeta way), the drawing is here first | the hull, if it is the second pull-in (straight from Titan); else "engineering is still surging" if the surge has not come; else A.U.R.A.: "Their ship is lying on a slope, Commander. It could shift." (the hazard below is the risk; fun playtest: the pick did nothing) | Breach if due; else the surge, half the time; else none aboard |
 | light | jump | 8 energy (x2 with engineering red), 5 rations | the jump: Corridor, the meal, sector 2 | | |
 
 Prices (ROUTE §4): every pull-in 5 (bridge red: 7); flying is free; switching target in flight is free; nothing is spent
@@ -92,18 +97,20 @@ the surge at Titan (and again at Rhea while it has not come) 0.5 (`ECON.crisisOd
 - **Point** at a world: rim one step brighter, our nose turns up to 6 degrees toward it, the note shows beside it (§8.1).
 - **Click:** the course locks, someone reacts (V3Data `react`), 1 s to cancel (Esc or a click on empty space); then the charge
   fires (§8.1) and we fly: 7 s to a fork world, 9 s to Rhea or the light. During the flight a click on the fork's other world
-  turns to it, free. A click on anything further on flies straight there; everything passed greys and slides off left.
+  turns to it, free. A click on anything further on flies straight there; everything passed slides to the left edge, in shadow.
 - **The camera** follows our Lander, which stays near its rest spot, banking toward the target, plume long. Recommended model:
   one pinhole camera; a layer at depth Z shows at `light + (rest - light) * m - X * (m - 1)` with `m = Z / (Z - C)`; the
   light never moves (m = 1); C and X ease so the target ends at (u 0.55, v 0.50) at radius 0.30 H. Then the dive (§7.3).
 - **The pair goes behind the giant or the rings, and you see it go.** Taking Titan dives under the rings: the ring's near
   arc (split from the `paintGiant` canvas with `V3Paint.GIANT`: ring pixels with w > 0) sweeps up across the frame and Zeta is
   behind it for at least 0.5 s, then gone. Taking Zeta climbs over: the arc sweeps down over Titan. Taking Kryos: the body
-  grows and its limb covers Erebus. Taking Erebus: we swing round the limb; Kryos slides past on the left and greys. If the
+  grows and its limb covers Erebus. Taking Erebus: we swing round the limb; Kryos slides past to the bottom-left corner, in shadow. If the
   physical model can't show it, a tuned path per pair is allowed; the acceptance is the picture, not the maths. Bake at most
   8 scale steps per flight (v3's push does the same).
 - **After a stop:** leaving plays the dive backwards, then the camera eases (4 s) to the next rest point: the visited world
-  slides past us to the left edge, grey (`RP.PASSED`), shrunk, rests about 15 s, slips away. The field ahead re-frames so the
+  slides past us to the left edge, shrunk, and stays there in shadow: darker and cooler, its own hue kept, lit only on the
+  far rim (never a flat grey, which reads as a disabled button). The giant settles low in the bottom-left corner with its
+  ring across it; the small ones line up above it. So the sector stays a place we are leaving (look playtest 2026-10-10). The field ahead re-frames so the
   remaining worlds spread over the space side. Its hover tag now says what we did (V3Data `doneTag`; Erebus "We answered it").
 - **The light** answers the pointer only after Rhea's stop (before that a click gets one A.U.R.A. line). It doubles over
   the sector. The jump: burn up 1.5 s, six stretch frames over 0.75 s, white-gold 0.4 s, then `jump:flash` (Corridor runs).
@@ -171,10 +178,10 @@ state and the clock, so a moment plus `?t=` is the same picture every time (mini
 | 5:20 | Point at Erebus. Click. Round the limb (7 s); Kryos slides past. D. Sign: the hull. Pick Vance and Aris. | |
 | 5:40 | Breach (about 60 s), while the team is down. | A deck goes red. |
 | 6:45 | The call: answer it. Leave. | The red deck: fix, patch or live with it. |
-| 7:05 | Click Rhea (free, 9 s). D. Sign: a pod blinks. Mira is in the med bay if hurt. Pick two. The crew plate. Leave. | |
+| 7:05 | Click Rhea (free, 9 s). D. Sign: their ship lies on a slope (the hazard below). Mira is in the med bay if hurt. Pick two. The crew plate. Leave. | |
 | 8:00 | "The jump is ready." Point at the light: the big charge. Click. | The ring spins up; the well floods. |
 | 8:10 | Corridor (about 60 s). | |
-| 9:10 | | The first meal: five bowls at the galley table (no count said). |
+| 9:10 | | The first meal: five bowls at the galley table (no count said), 10 s (fun playtest: 6 s did not register). |
 | 9:20 | Sector 2 fades in, still moving. End. | |
 
 Target: the first frame to the jump click at most 8:00; the whole run with Corridor and the arrival about 9:30. If the
@@ -188,6 +195,19 @@ stopwatch says more, the designer cuts (a world, never a scene). The other branc
 | careful, the same path | 1280x720, numbers | 8:59 | 10:16 | 10:32 |
 | fast (Zeta, Kryos, the undated contact; Space through everything) | 1280x720, numbers | 3:22 | 4:34 | |
 | fast, the same path | 1920x1080, felt | 3:20 | 4:32 | |
+
+**After the choice fixes (fun playtest, 2026-10-10), same scripts, 1920x1080, felt:** careful 8:39 to the jump click,
+sector 2 at 10:00, its lines end 10:16 (just before them: 8:45 / 10:02 / 10:18; Jaxon's ask is on the bridge, so no
+scrolling for him, and Jaxon on his day is not in the Breach; the slope line at Rhea and the 10 s meal add about 9 s).
+Fast 3:26 / 4:43 (before: 3:20 / 4:32; Kryos's question, the slope line and the meal).
+
+**Final check (2026-10-10), real clicks, no console errors or exceptions in any run:** careful (1920x1080, felt, seed 11)
+8:36 / 9:56 / 10:13; fast (1280x720, numbers, seed 5) 3:28 / 4:44; a third path (1366x768, felt, seed 3: Titan with
+Jaxon and Aris, the surge let run, strip, Kryos with the Breach on the pull-in, take her down, patch the red deck, date
+late, Rhea, A.U.R.A. flies) 7:29 / 8:48 / 9:04. Repeat runs under machine load ran up to 20 s longer. Three small fixes:
+the faint line before a voice hides while a world note, a red deck's chips or a pick line is up (41 and 46 words seen);
+a crew line at a stop keeps off the bodies on the bridge (asks sat on Cora and the lineup) and can use A.U.R.A.'s two
+places in the glass; a tower line clears the highest head on its floor (the meal line cut a standing head).
 
 Before the fixes the careful run was 9:08 / 10:25. The Titan stop is now 2:49 (was 3:09; the disc page is 4 steps,
 not 6). Still about 50 s over the jump target and 35 s over the whole-run target. Where the rest goes, for the
@@ -221,8 +241,9 @@ pointer and off every disc. Registers anchors `ship`, `sky`, `light`, `place:<id
 
 ### 7.2 ship.js
 `TowerA.draw(ctx, { t, camY, offX: G.offX, W, H, people, auraTalking })` over a cleared canvas. `people` = `ShipSimA.at('travel',
-t)` with overrides from the state: away (not drawn), hurt (not drawn: the med bay is off frame), Vance at the galley porthole
-(`EXTRA.port2`) while his sign is on, Jaxon's galley seat empty, Mira at the bench while the fix waits. Then the overlays:
+t)` with overrides from the state: away (not drawn), hurt (not drawn: the med bay is off frame), Vance under the lab porthole
+(`SPOT.labPort`) while his sign is on, Jaxon at the bridge conduit (`SPOT.conduit`, a hand on it) while his ask is open, Mira
+at the bench while the fix waits, the stress routines of §8.3. Then the overlays:
 the **conduit** (2 px up the inner face of the outer hull wall, x = `L.IR - 6`, every deck in view, ending in the bridge
 console), the beat, the charge (§8.1), red decks (§8.4), plates over the galley table (one per marker), the pages pinned
 above the bench, Aris's book on the table after a marker, five bowls at the meal. `ShipArt.reactor.set(energy)` on every
@@ -232,7 +253,10 @@ above the bench, Aris's book on the table after a marker, five bowls at the meal
 
 ### 7.3 stop.js
 **The dive in** (on `dive:start`): from `world.landerPose()`, push on our hull (1.0 s, eight steps: `V3Paint.hull` with
-`shapeL` at growing len, plating past len 300), a quarter turn nose-up, the plating fills the screen: `dive:plated`; then a
+`shapeL` at growing len, plating past len 300), a quarter turn nose-up in the middle of the space side, then three steps of our own hull filling the whole screen, tower
+and all: dark plating lit from the light's side, staggered seams, rivets, a doubler plate round the airlock and its lit
+port, the corners dark; each step pushes in on the port and the last is inside its ring (the outside Lander hides while
+stop.js draws it): `dive:plated`; then a
 0.6 s Bayer dissolve to the bridge: `stop:shown`. **Out**: the same backwards, then `stop:hidden`. **The bridge**:
 `BridgeArt.paint()` (a 720 x 336 room; frame it as variant-d/main.js does: 640 x 360, x offset -40, camera row `B.Y0`), people with `CrewEngine.draw` at `BridgeCrew.SPOTS` (Cora at the helm; the lineup at w1, w2, w3, wA),
 the world braking into the glass (lit from the front, diameter about 86% of the window's height; Kryos pushed in on its
@@ -255,7 +279,8 @@ below it dims by `cost / energy`. Free (Rhea dated): no charge; the console give
 in 0.4 s. `route:fired`: the charge leaves through the hull (the plume flares outside) and the conduit's base level drops.
 Kryos's skim: the conduit floods upward, the other way. Clicking the conduit: the nearest person's remark, never a number.
 - **felt** (default): no number anywhere on screen outside the minigames and the record. A.U.R.A. says it once per world, only
-  when it matters: Kryos when energy is below 100, Rhea undated ("A contact with no fix, Commander. I can't tell what it
+  when it matters: Kryos when energy is below 70 (fun playtest: not at 95; above that Jaxon says once "There's old wreck
+  metal down in Kryos's low bands. We could haul some up.", the full ship's reason to come), Rhea undated ("A contact with no fix, Commander. I can't tell what it
   is."), and if a price would leave only the jump ("After this we can only jump, Commander.").
 - **numbers**: the same, plus one line in the hover note in mono: "5 energy · 95 left", "no energy · their last course",
   "5 energy · fills the tanks", "8 energy · 5 rations". The switch is `?price=` and the MOCKUP menu.
@@ -280,22 +305,38 @@ and they walk back; with neither, one of the two comes back hurt (the med bay: o
 date). Two radio lines at most.
 
 ### 8.3 Signs and one ask
-Four stress-1 signs, all in the default tower frame, none announced: Vance's bridge seat empty and him at the galley
-porthole (a talk: VANCE'S STORY, two sides: "Tell him you believe him" / "Say they were for other headings"; backing counts
-toward his ending); Jaxon's galley seat empty at the meal and tools on the table (the ask: "Leave me off the next team. I
-want a day on the drive." Yes: he is not at the next pick and engineering can't surge this sector; No: he goes if picked,
-stress +1; not answered before the next stop: his way); Mira's bench lamp on while the fix waits; Aris's book on the galley
-table after a marker. A sign is a picture; clicking anyone else gets a free line (`ShipSimA.line`). Talks hold the journey.
+Four stress-1 signs, all in the default tower frame at every size (the bridge and the lab), none announced: Vance's bridge
+seat empty and him standing in the lab under its porthole (a talk: VANCE'S STORY, two sides: "Tell him you believe him" /
+"Say they were for other headings"; backing counts toward his ending); Jaxon on the bridge with a hand on the conduit, his
+toolbag on the floor beside him, his galley seat empty at the meal and tools on the galley table (the ask: "Leave me off
+the next team. I want a day on the drive." Chips "a calm drive · one hand fewer" / "he takes it badly". Yes: he is not at
+the next pick, engineering can't surge this sector, and if a Breach comes before his next pick he is inside the drive: not
+in the Breach, one hand fewer, and he says so; No: he goes if picked, stress +1; not answered before the next stop: his
+way, the same as yes); Mira's bench lamp on while the fix waits; Aris's book on the galley table after a marker. The 30 s
+nudge for the ask is Aris: "Jaxon wants a word, Commander. He didn't eat." A sign is a picture; clicking anyone else gets
+a free line (`ShipSimA.line`). Talks hold the journey.
+**Stress shows in what people do** (fun playtest: every moral cost was hidden). Anyone at stress 1 or more who has no sign,
+no bench and no meal to be at leaves their routine and stands alone on a seen deck until the jump's rest takes it back:
+Aris under the bridge's first window (after a strip or the cells), Mira under the lab porthole (after you believed Vance),
+Jaxon at the conduit with his hands down (refused), Vance under the lab porthole (other headings). Never a meter.
 
 ### 8.4 A red deck: fix, patch, or live with it
-A red deck: frost and a lamp out (breach), sparks (surge), on the deck's own picture. Click it: three chips. **Fix** (-20
+A red deck: frost and a lamp out (breach), sparks (surge), on the deck's own picture, and it reads red: a slow red emergency
+wash over the room, beating with a warning lamp that is a real fitting (a steel cage round a red lens), no meter, no outline. Click it: three chips. **Fix** (-20
 salvage; done during the next trip by whoever stays; Jaxon alone, otherwise both aboard and the next crisis goes
 unanswered; the deck shows "fixing" until then). **Patch** (5 salvage, now; it holds until the next crisis, scrape **or the
 jump**, which shakes every patch loose, then it breaks worse: two lamps out, and only a fix brings it back. Playtest 2:
-a free patch was always right). Engineering down dims the core a step (ship.js) and shortens the plume (world.js). **Live with it**: lab: no dating; hold: -2 rations at the jump; engineering:
+a free patch was always right). **Engineering down** (the surge shut, or a red engineering deck; fun playtest: "Shut the
+drive down" changed nothing you could see): the core dims a step and the conduit stutters; every seen deck runs a step
+darker and browns out in short dips every 2.9 s (ship.js); outside, the plume runs at half and coughs out on the same beat
+(world.js); and every flight to a world takes a quarter longer. **Live with it**: lab: no dating; hold: -2 rations at the jump; engineering:
 the jump costs double and the core dims a step; quarters: no rest at the jump; bridge: pull-ins cost 7.
 
 ## 9. The minigames (the real files; stop.js calls them; each holds the journey)
+
+They sit in the scene: while one is open the live picture (the bridge, the tower, the corridor) stays behind it, dithered
+down to about 45% (`canvas#shade`), and in the slice the host's own backdrop goes clear and its outer border steps back
+(slice CSS in script.js; `minigames.css` is not touched).
 
 | when | call | then |
 |---|---|---|
@@ -324,7 +365,8 @@ it); a voice under a page replaces the read lines; the film's faint previous lin
 word layers shows behind a minigame. All done from script.js (CSS and one DOM touch), reading.js unedited.
 **10.3 Shades.** `canvas#shade` (A's scale; D's while stopped) draws one dither
 shade per shade rect (game-screen-v3.html's `shadeSprite` recipe, about 20 lines). **10.4 Choices** appear away from the
-last click and ignore clicks for 400 ms. Keys: Space or Enter next line, 1 and 2 choose, Esc cancels, L the record.
+last click and ignore clicks for 400 ms. Their chips sit on one dark backing with a dot between two (fun playtest: "energy
+salvage" read as one phrase over the hull), and a loss chip is a brighter red (slice CSS; reading.css unedited). Keys: Space or Enter next line, 1 and 2 choose, Esc cancels, L the record.
 
 ## 11. The lines
 

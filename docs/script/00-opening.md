@@ -42,7 +42,6 @@ _Card kicker: EXODUS-9 · 61 YEARS OUT FROM EARTH / THE BRIDGE / INSIDE THE STAT
 **Jaxon:** It is a glitch. She slept sixty years too. Let it go.  
 **A.U.R.A.:** ${reason} Jump anyway?  
 **A.U.R.A.:** I can run the drive on the reserve, Commander. The crew quarters will lose power.  
-**A.U.R.A.:** Colony report for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.  
 **A.U.R.A.:** If we land for good, the journey ends here, Commander. Settle anyway?  
 
 Choice:
@@ -55,7 +54,7 @@ Choice:
 7. **Jump on the reserve** — Uses all the energy left. The crew quarters are damaged.
 8. **Not yet** — Probes and wrecks can still bring energy back.
 9. **Not now** — You can still do it from the command deck while we are in orbit.
-10. **Not yet** — Stay in orbit.
+10. **Not yet** — Stay in orbit. The journey goes on.
 11. **Settle here** — The journey ends on this world.
 
 Then in the log:
@@ -150,8 +149,6 @@ Then in the log:
 - /// NEW EXODUS INITIALIZED ///
 - Humanity's hope rests with you once more.
 - A.U.R.A.: New sector charted. Select a destination, Commander.
-- Colony attempt aborted. Crew advisory accepted.
-- Colony warning overridden. Proceeding with colonization attempt...
 - ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time.
 - [name] suffered oxygen deprivation during the vent. Status: INJURED.
 - Deep Scan started...

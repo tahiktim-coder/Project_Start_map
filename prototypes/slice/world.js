@@ -13,7 +13,7 @@
    The light never moves (m = 1). A flight eases the TARGET's on-screen place and size to the arrival framing and solves C and
    c from it, so every other place follows by its own depth. Sizes step in eight baked sizes per move (v3's push); places
    move smoothly. Tuned on top, as the spec allows: the fork pair's world slips behind the ring or the giant on its own path;
-   a world we pass glides to the left edge, greys, rests about 15 s, and slips under the tower.
+   a world we pass glides to the left edge and stays there in shadow (the giant low in the corner, its ring across it).
 
    window.Slice.mods.world = {
      init() · resize(G) · update(dt, t) · render(t) · pointer(type, e, ax, ay) → bool · goto(moment)
@@ -56,7 +56,7 @@
     const ARRIVE = { kryos: { u: 0.5, v: 0.6, r: 0.37 }, titan: { u: 0.44, v: 0.58, r: 0.27 } };   // the rest: the target at (0.55, 0.50), radius 0.30 H
     const STAGES = [null, { ref: 'kryos', m: 1.12, u: 0.62, v: 0.66 }, { ref: 'rhea', m: 1.8, u: 0.6, v: 0.34 }, { ref: 'rhea', m: 1.8, u: 0.6, v: 0.34 }];
     const NAMES = { erebus: { name: 'Erebus-40 Minor', tag: 'Distress call', doneTag: 'We answered it' } };
-    const FLY = { fork: 7000, far: 9000 }, PASS = { move: 4000, hold: 15000, slip: 3000 }, REFRAME = 4000, GROW = 1.19;
+    const FLY = { fork: 7000, far: 9000 }, PASS = { move: 4000 }, REFRAME = 4000, GROW = 1.19;
     const SPEED = { rest: 52, hold: 26, flight: 150, held: 18, burn: 420 }, DRATE = { rest: 10, flight: 70 };
     const ease = s => (s < 0.5 ? 4 * s * s * s : 1 - Math.pow(-2 * s + 2, 3) / 2), easeOut = s => 1 - (1 - s) ** 3;
     const stepE = e => Math.min(1, Math.floor(e * 8) / 7);
@@ -115,19 +115,20 @@
         return w > 0 && rho > P.GIANT.r0 && rho < P.GIANT.r1;
     }
 
-    // ── a world we pass: it glides to the left edge, greys, rests, slips under the tower ──
+    // ── a world we pass: it glides to the left edge and stays there in shadow, so the sector stays a place we are leaving
+    //    (look playtest, 2026-10-10: after Erebus the field emptied to the light and one dot; a passed world in flat grey read
+    //    as a disabled button). The giant settles low on the edge with its ring across the corner; the small ones line up. ──
     function passedMode(id, t, g0, modes) {
         const F = FIELD[id], giant = F.kind === 'giant', side = F.slot, H = G.H;
-        const busy = IDS.filter(o => o !== id && modes[o] && modes[o].m === 'passed' && FIELD[o].slot === side && t - modes[o].t0 < PASS.move + PASS.hold).length;
-        const rp = giant ? REST.kryos.r * 1.1 : Math.max(0.03 * H, Math.min(REST[id].r * 0.9, g0.r));
-        const xr = giant ? G.hull - 0.05 * rp : G.hull + rp + 0.03 * spW() + busy * (rp * 2.4 + 8);
-        const yr = giant ? H * 1.02 : side === 'top' ? Math.max(rp + 0.04 * H, 0.15 * H) : Math.min(H - rp - 0.04 * H, 0.86 * H);
-        return { m: 'passed', t0: t, g0: { x: g0.x, y: g0.y, r: g0.r }, rp, xr, yr, slip: (xr - G.hull) + rp * (giant ? 1.9 : 1.2) + 12 };
+        const busy = IDS.filter(o => o !== id && modes[o] && modes[o].m === 'passed' && FIELD[o].slot === side).length;
+        const rp = giant ? REST.kryos.r * 0.95 : Math.max(0.026 * H, Math.min(REST[id].r * 0.62, g0.r));
+        const xr = giant ? G.hull + 0.16 * spW() : G.hull + rp + 0.035 * spW() + busy * (rp * 2.6 + 10);
+        const yr = giant ? H + rp * 0.1 : side === 'top' ? Math.max(rp + 0.05 * H, 0.14 * H) : Math.min(H - rp - 0.08 * H, 0.76 * H);   // above the giant's corner, below our ship
+        return { m: 'passed', t0: t, g0: { x: g0.x, y: g0.y, r: g0.r }, rp, xr, yr };
     }
     function passedGeom(md, t) {
-        const s = t - md.t0, k = clamp01(s / PASS.move), e = ease(k), eq = ease(stepE(k)), slip = clamp01((s - PASS.move - PASS.hold) / PASS.slip);
-        if (slip >= 1) return null;
-        return { x: lerp(md.g0.x, md.xr, e) - ease(slip) * md.slip, y: lerp(md.g0.y, md.yr, e), r: Math.max(2, Math.round(md.g0.r * Math.pow(md.rp / md.g0.r, eq))), grey: Math.min(1, Math.floor(clamp01(s / 900) * 8) / 8) };
+        const s = t - md.t0, k = clamp01(s / PASS.move), e = ease(k), eq = ease(stepE(k));
+        return { x: lerp(md.g0.x, md.xr, e), y: lerp(md.g0.y, md.yr, e), r: Math.max(2, Math.round(md.g0.r * Math.pow(md.rp / md.g0.r, eq))), grey: Math.min(1, Math.floor(clamp01(s / 1600) * 8) / 8) };
     }
 
     /** Everything in the field at time t for a world state St: the one source for drawing, pointing, discs and pre-baking. */
@@ -135,7 +136,7 @@
         const cam = camAt(St, t), camQ = camAt(St, t, true), items = [], f = St.flight, e = f ? flightE(f, t) : 1;
         let gs = null;
         const km = St.modes.kryos;
-        if (km.m === 'passed') { const g = passedGeom(km, t); if (g) items.push(Object.assign({ id: 'kryos', kind: 'giant', part: 'all', layer: 6 + km.t0 * 1e-9, passed: true, clickable: true }, g)); }
+        if (km.m === 'passed') { const g = passedGeom(km, t); if (g) items.push(Object.assign({ id: 'kryos', kind: 'giant', part: 'all', layer: 5.9, passed: true, clickable: true }, g)); }   // the small passed ones stay in front of it
         else if (km.m !== 'gone') {
             const p = proj('kryos', cam), q = proj('kryos', camQ);
             if (p && q) {
@@ -178,7 +179,8 @@
             } else if (ORDER[o] <= ORDER[id]) modes[o] = passedMode(o, t, g, modes);
         });
         if (id !== 'light') modes[id] = { m: 'field' };
-        const g0 = id === 'light' ? null : drawnAt(id), dur = ORDER[id] >= 3 ? FLY.far : FLY.fork;
+        // engineering down: the flight takes a quarter longer (fun playtest: a broken drive was not felt on the journey)
+        const g0 = id === 'light' ? null : drawnAt(id), dur = (ORDER[id] >= 3 ? FLY.far : FLY.fork) * (id !== 'light' && Slice.broken && Slice.broken('engineering') ? 1.25 : 1);
         return Object.assign({}, St, { modes, cam, ease: null, held: null, flight: { id, t0: t, dur, g0, to: id === 'light' ? null : arriveFrame(id), cam0: cam, lift: [0, ((hide && hide.lift) || 0) * G.H] } });
     }
     function startFlight(id, t) { W = Object.assign(planFlight(W, id, t), { lock: null }); prebake(W, t); }
@@ -218,27 +220,40 @@
         for (let k = 1; k <= 8; k++) scene(St, t + d * k / 8).items.forEach(it => spriteFor(it, wasPlaying));
     }
     const litOf = id => { const p = REST[id]; return P.lightVector(p.x, p.y, LP[0], LP[1], (id === 'kryos' ? 0.258 : 0.5) * Math.hypot(LP[0] - p.x, LP[1] - p.y)); };
+    /** Each world keeps its own vibe, and one or two carry a colour of their own (look playtest): Erebus a cold teal rim and
+        haze, Titan a thicker dust haze. "grey" is the passed look: the same world in shadow, lit only on its far rim. */
+    const RIM = { erebus: { rim: P.ramp(INK, '#0a1a1a', '#14363a', '#22585c', '#3f8a88', '#7cc2b8'), atmo: P.ramp(INK, '#081616', '#0f2a2c', '#1a4446', '#2c6966'), w: 1.7 },
+        titan: { atmo: RP.DUST, w: 1.9 } };
+    const shadowL = L => P.norm3(L[0], L[1], -0.62);                                       // the light behind the world: a crescent on the far side
     function worldSprite(id, r, grey) {
-        const F = FIELD[id], L = litOf(id), w = Math.max(2, Math.round(r / 22)), half = r + w + 3, p = P.painter(half * 2, half * 2, false), rims = [];
-        P.sphere(p, { cx: half, cy: half, r, ramp: grey ? RP.PASSED : P.PLANET_RAMP[F.type], L, dim: grey ? 0.85 : 1, surface: P.surfaceFor(F.type, F.seed, L), rim: grey ? 0 : 0.12, ambient: 0.012, gain: 0.84, rims,
-            atmo: grey ? null : { ramp: F.type === 'desert' ? RP.DUST : RP.ICE, w } });
+        const F = FIELD[id], L0 = litOf(id), L = grey ? shadowL(L0) : L0, own = RIM[id] || {}, w = Math.max(2, Math.round(r / 22 * (own.w || 1))), half = r + w + 3, p = P.painter(half * 2, half * 2, false), rims = [];
+        P.sphere(p, { cx: half, cy: half, r, ramp: P.PLANET_RAMP[F.type], L, dim: grey ? 0.62 : 1, surface: P.surfaceFor(F.type, F.seed, L), rim: grey ? 0.2 : 0.12, rimRamp: own.rim, ambient: grey ? 0.006 : 0.012, gain: 0.84, rims,
+            atmo: { ramp: own.atmo || (F.type === 'desert' ? RP.DUST : RP.ICE), w } });
         if (id === 'titan' && !grey && r >= 60) { const k = r / 118, X = half - 0.6 * r, Y = half + 0.1 * r; p.line(X + 3 * k, Y + k, X + 16 * k, Y - 2 * k, (x, y) => p.solid(x, y, RP.STONE, 0.02)); }   // the furrow the wreck cut
         return { canvas: p.canvas(), half, rims: rims.map(([x, y, rr, lv]) => [x - half, y - half, rr, lv]) };
     }
+    /** In shadow: darker and cooler, the hue kept (never the flat grey of a disabled button). */
+    function shade(canvas, k) {
+        const g = canvas.getContext('2d'), img = g.getImageData(0, 0, canvas.width, canvas.height), d = img.data;
+        for (let i = 0; i < d.length; i += 4) if (d[i + 3]) { d[i] = d[i] * k[0]; d[i + 1] = d[i + 1] * k[1]; d[i + 2] = d[i + 2] * k[2]; }
+        g.putImageData(img, 0, 0); return canvas;
+    }
+    const SHADOW = [0.42, 0.48, 0.6];
     function stationSprite(r, grey) {
         const s = r / 24, half = Math.ceil(27 * s + 3), p = P.painter(half * 2, half * 2, false);
-        const win = P.drawStation(p, half, half, s, FIELD.zeta.seed, grey ? 0.85 : 1, grey ? { hull: RP.PASSED, panel: RP.PASSED } : null);
-        return { canvas: p.canvas(), half, win: [win[0] - half, win[1] - half], rims: [] };
+        const win = P.drawStation(p, half, half, s, FIELD.zeta.seed, grey ? 0.8 : 1, null);
+        const canvas = p.canvas(); if (grey) shade(canvas, SHADOW);
+        return { canvas, half, win: [win[0] - half, win[1] - half], rims: [] };
     }
     /** Kryos in two layers (SPEC §3.1): the body with the far ring, and the ring's near arc (w > 0), so a world can go between. */
     function giantSprite(R, grey) {
-        const half = Math.ceil(R * P.GIANT.r1 * 1.03) + 8, S = half * 2, p = P.painter(S, S, false), out = P.paintGiant(p, { cx: half, cy: half, R, L: litOf('kryos') });
+        const half = Math.ceil(R * P.GIANT.r1 * 1.03) + 8, S = half * 2, p = P.painter(S, S, false), out = P.paintGiant(p, { cx: half, cy: half, R, L: grey ? shadowL(litOf('kryos')) : litOf('kryos') });
         const ct = Math.cos(P.GIANT.tilt), sn = Math.sin(P.GIANT.tilt), open = P.GIANT.open, body = new ImageData(S, S), arc = new ImageData(S, S), d = p.data;
         for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
             const o = (y * S + x) * 4; if (!d[o + 3]) continue;
             const dx = x + 0.5 - half, dy = y + 0.5 - half, u = dx * ct + dy * sn, w = -dx * sn + dy * ct, rho = Math.hypot(u, w / open) / R;
             let c = [d[o], d[o + 1], d[o + 2]];
-            if (grey) c = RP.PASSED.rgb[level(RP.PASSED, Math.min(1, (c[0] * 77 + c[1] * 150 + c[2] * 29) / 256 / 200 * 1.2), x, y)];
+            if (grey) c = [c[0] * SHADOW[0], c[1] * SHADOW[1], c[2] * SHADOW[2]];              // in shadow: the gold kept, darker and cooler
             const dst = !grey && w > 0 && rho > P.GIANT.r0 - 0.03 && rho < P.GIANT.r1 + 0.03 ? arc : body;
             dst.data[o] = c[0]; dst.data[o + 1] = c[1]; dst.data[o + 2] = c[2]; dst.data[o + 3] = 255;
         }
@@ -291,34 +306,48 @@
 
     // ── the far sky: sky F, its enormous thing dropped, and the slice's own far colours (SPEC §3.1) ──
     function accentRamps() {
-        const all = Object.values(window.V3Sky2.RECIPES || {}).flatMap(r => r.accents || []), find = kind => (all.find(a => a.kind === kind) || {}).ramp;
-        return { ROSE: find('knot') || RP.DUST, CRIMSON: find('dwarf') || RP.RED, TEAL: (all.find(a => a.kind === 'star') || {}).ramp || RP.ICE, JADE: find('planetary') || RP.ICE,
-            COLD: P.ramp(INK, '#0f121c', '#22283c', '#454f70', '#8590b8', '#d4daf2'), CYAN: P.ramp(INK, '#051416', '#0b2a2d', '#134a4e', '#227479', '#4aa6aa') };
+        const ACC = (window.V3Sky2 && window.V3Sky2.ACC) || {};
+        return { ROSE: ACC.ROSE || RP.DUST, CRIMSON: ACC.CRIMSON || RP.RED, VERDIGRIS: ACC.VERDIGRIS || RP.ICE, JADE: ACC.JADE || RP.ICE, SLATE: ACC.SLATE || RP.PASSED,
+            TEAL: P.ramp(INK, '#07120f', '#0f2621', '#1b4239', '#2c6556', '#4a8f7c', '#86c2ad'),                     // the ring nebula's lit shell: verdigris, one step louder
+            COLD: P.ramp(INK, '#0f121c', '#22283c', '#454f70', '#8590b8', '#d4daf2'), CYAN: P.ramp(INK, '#051416', '#0b2a2d', '#134a4e', '#227479', '#4aa6aa', '#7cc8c8') };
     }
-    /** Six specks, found not shown: never within 60 px of the light, a world or our ship (u, v on the space side). */
-    function accentList() {
-        const R = accentRamps(), clear = 60 * G.dpr / G.k;
-        const list = [
-            { kind: 'planetary', u: 0.10, v: 0.12, r: 2.5, ramp: R.TEAL, depth: 0.8, live: 'pulse', period: 11000, seed: 31 },          // a teal-green ring nebula
-            { kind: 'knot', u: 0.52, v: 0.05, r: 2.6, tilt: -0.5, ramp: R.ROSE, depth: 0.7, live: 'pulse', period: 14000, seed: 3 },   // a rose-violet knot of gas
-            { kind: 'dwarf', u: 0.97, v: 0.08, r: 3, ramp: R.CRIMSON, depth: 1.3, live: 'flare', period: 23000, seed: 5 },              // a deep red carbon star
+    /** The far colours (look playtest, 2026-10-10: "noir with rare colour" read as all brown and grey). Still rare, still far,
+        dull: each is a few dozen pixels of one distinct hue at its own depth, and the eye can find it. Sizes are in the
+        360-row stage's pixels (times sc). Never within 60 px of the light, a world or our ship (sector 1); u, v on the space side. */
+    const FAR_COLOURS = {
+        1: R => [
+            { kind: 'veil', u: 0.30, v: 0.08, len: 150, wide: 7, tilt: 0.16, ramp: R.SLATE, depth: 0.3, gain: 1.15, seed: 61 },          // a long violet veil, deep in the far sky
+            { kind: 'planetary', u: 0.20, v: 0.30, r: 3.4, ramp: R.TEAL, depth: 0.8, live: 'pulse', period: 11000, gain: 1.45, seed: 31 },   // a teal ring nebula, its shell lit
+            { kind: 'knot', u: 0.55, v: 0.06, r: 7, tilt: -0.5, ramp: R.ROSE, depth: 0.7, live: 'pulse', period: 14000, gain: 1.25, seed: 3 },   // a rose-violet wisp of gas
+            { kind: 'dwarf', u: 0.97, v: 0.08, r: 4, ramp: R.CRIMSON, depth: 1.3, live: 'flare', period: 23000, gain: 1.3, seed: 5 },      // a deep red carbon star
             { kind: 'binary', u: 0.04, v: 0.40, sep: 2, ramp: R.COLD, ramp2: R.COLD, depth: 1.1, live: 'twinkle', period: 17000, seed: 11 },   // a cold blue-white pair
             { kind: 'comet', u: 0.47, v: 0.38, ramp: R.JADE, depth: 0.6 },                                                              // a pale green comet, far off
             { kind: 'blink', u: 0.06, v: 0.95, ramp: R.CYAN, depth: 0.9, period: 5200 },                                                // a slow cyan blink
-        ];
-        const near = (x, y) => Math.hypot(x - LP[0], y - LP[1]) < clear + 8 || Math.hypot(x - REST.lander.x, y - REST.lander.y) < clear + REST.lander.len / 2 ||
-            IDS.some(id => Math.hypot(x - REST[id].x, y - REST[id].y) < clear + REST[id].r * (id === 'kryos' ? 1.05 : 1));
-        return list.map(a => Object.assign({ ax: ax(a.u), ay: ay(a.v) }, a)).filter(a => !near(a.ax, a.ay));
+        ],
+        2: R => [
+            { kind: 'veil', u: 0.52, v: 0.30, len: 170, wide: 8, tilt: -0.22, ramp: R.JADE, depth: 0.3, gain: 1.1, seed: 71 },          // a faint green veil over the dark
+            { kind: 'dwarf', u: 0.24, v: 0.16, r: 4, ramp: R.CRIMSON, depth: 1.2, live: 'flare', period: 31000, gain: 1.3, seed: 21 },
+            { kind: 'planetary', u: 0.64, v: 0.10, r: 3, ramp: R.TEAL, depth: 0.8, live: 'pulse', period: 9000, gain: 1.4, seed: 23 },
+            { kind: 'knot', u: 0.08, v: 0.46, r: 6, tilt: 0.6, ramp: R.ROSE, depth: 0.6, live: 'pulse', period: 12000, gain: 1.15, seed: 25 },
+        ],
+    };
+    function accentList(n) {
+        const make = FAR_COLOURS[n]; if (!make) return null;
+        const R = accentRamps(), clear = 60 * G.dpr / G.k, sz = sc;
+        const near = (x, y) => n === 1 && (Math.hypot(x - LP[0], y - LP[1]) < clear + 8 || Math.hypot(x - REST.lander.x, y - REST.lander.y) < clear + REST.lander.len / 2 ||
+            IDS.some(id => Math.hypot(x - REST[id].x, y - REST[id].y) < clear + REST[id].r * (id === 'kryos' ? 1.05 : 1)));
+        return make(R).map(a => Object.assign({ ax: ax(a.u), ay: ay(a.v) }, a, a.r ? { r: a.r * sz } : {}, a.len ? { len: a.len * sz, wide: a.wide * sz } : {}))
+            .filter(a => a.kind === 'veil' || !near(a.ax, a.ay));
     }
     function buildArt(n) {
         const sec = DATA.SECTORS[n], ox = Math.round(G.hull + spW() / 2 - 320), oy = Math.round(G.H / 2 - 180), light = [LP[0] - ox, LP[1] - oy];
-        const acc = n === 1 ? accentList() : [], R1 = window.V3Sky2 && window.V3Sky2.RECIPES && window.V3Sky2.RECIPES[1];
+        const acc = accentList(n) || [], RN = window.V3Sky2 && window.V3Sky2.RECIPES && window.V3Sky2.RECIPES[n];
         let sky = null;
         if (window.V3Sky2) {
-            const keep = R1 && R1.accents;                                         // sky2's accents are swapped for the slice's own while it builds (restored at once)
-            if (n === 1 && R1) R1.accents = acc.filter(a => a.kind !== 'comet' && a.kind !== 'blink').map(a => Object.assign({}, a, { x: a.ax - ox, y: a.ay - oy }));
-            try { sky = window.V3Sky2.build(G.W, G.H, ox, oy, n, light, 'f'); } finally { if (n === 1 && R1) R1.accents = keep; }
-            if (sky) sky.thing = null;                                             // Kryos is sector 1's one enormous thing
+            const keep = RN && RN.accents;                                         // sky2's accents are swapped for the slice's own while it builds (restored at once)
+            if (acc.length && RN) RN.accents = acc.filter(a => a.kind !== 'comet' && a.kind !== 'blink').map(a => Object.assign({}, a, { x: a.ax - ox, y: a.ay - oy }));
+            try { sky = window.V3Sky2.build(G.W, G.H, ox, oy, n, light, 'f'); } finally { if (acc.length && RN) RN.accents = keep; }
+            if (sky) sky.thing = null;                                // Kryos is sector 1's one enormous thing
         }
         const strip = P.spaceStrip(G.W + 200, G.H, sec.seed, sec.dust, sec.haze * (sky ? sky.haze : 1), sec.stars), L = lightOf(n, 1), lit = new Float32Array(G.W * G.H);
         for (let y = 0; y < G.H; y++) for (let x = 0; x < G.W; x++) lit[y * G.W + x] = Math.exp(-Math.hypot(x - LP[0], (y - LP[1]) * 1.15) / (L.halo * 0.85 + 6));
@@ -326,11 +355,14 @@
         const own = acc.filter(a => a.kind === 'comet' || a.kind === 'blink').map(a => Object.assign({ sprite: a.kind === 'comet' ? cometSprite(a) : null }, a));
         return { n, sky, strip, lit, bp, canvas, g: canvas.getContext('2d'), key: null, bright: [], keep: L.halo * 0.9 + L.core + 8, own };
     }
+    /** The far comet: a pale jade head and a thin tail pointing away from the light, about 10 stage px long (look playtest:
+        the 13 px speck was never seen). */
     function cometSprite(a) {
-        const p = P.painter(13, 13, false), ang = Math.atan2(a.ay - LP[1], a.ax - LP[0]), dx = Math.cos(ang), dy = Math.sin(ang);   // the tail points away from the light
-        for (let k = 5; k >= 1; k--) p.tone(6 + dx * k, 6 + dy * k, a.ramp, 0.62 * (1 - k / 6.5));
-        p.tone(6, 6, a.ramp, 0.97); [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([x, y]) => p.tone(6 + x, 6 + y, a.ramp, 0.34));
-        return p.canvas();
+        const tail = Math.round(10 * sc), half = tail + 3, p = P.painter(half * 2, half * 2, false), ang = Math.atan2(a.ay - LP[1], a.ax - LP[0]), dx = Math.cos(ang), dy = Math.sin(ang);
+        for (let k = tail; k >= 1; k--) { const v = 0.85 * Math.pow(1 - k / (tail + 1), 1.2); p.tone(half + dx * k, half + dy * k, a.ramp, v); if (k < tail * 0.5) p.tone(half + dx * k - dy, half + dy * k + dx, a.ramp, v * 0.45); }
+        [[-1, 0], [1, 0], [0, 1], [0, -1]].forEach(([x, y]) => p.tone(half + x, half + y, a.ramp, 0.5));
+        p.tone(half, half, a.ramp, 1); p.tone(half + 1, half, a.ramp, 0.82);
+        const c = p.canvas(); c.half = half; return c;
     }
     function ensureBackdrop(A) {
         const off = Math.max(0, Math.min(200, Math.round(W.D * 0.02))), offD = A.sky ? Math.max(0, Math.min(A.sky.extra - 1, Math.round(W.D * window.V3Sky.DEEP))) : 0, key = off + ':' + offD;
@@ -367,7 +399,15 @@
         ctx.drawImage(g.canvas, 0, 0, w, h, X, Y, w, h);
     }
     function drawItem(f, it, t) {
-        if (it.id === 'rhea' && !isNamed()) { const x = Math.round(it.x), y = Math.round(it.y), sw = [0, 0.15, 0.3, 0.42, 0.42, 0.3, 0.15, 0.05][Math.floor(t / (TICK * 3)) % 8]; f.glow(x, y, Math.round(4 * sc), RP.ICE, 0.42 + sw * 0.5); P.contactBlip(f, x, y, t, true); return; }   // a slow cold pulse, no ring
+        if (it.id === 'rhea' && !isNamed()) {                                                // a far grey disc, lit on its edge, and the contact's slow cold pulse on it
+            // fun playtest: before dating it read as one cyan pixel among the stars. A faint world now (about 20 css px at 1080),
+            // and the pulse is slow and wide: a cold halo that swells over 4 s, in eight dithered steps, never a ring or a marker
+            const x = Math.round(it.x), y = Math.round(it.y), sw = [0, 0.12, 0.26, 0.4, 0.5, 0.4, 0.26, 0.12][Math.floor(t / 500) % 8], rr = Math.max(4, Math.round(3.6 * sc));
+            const sp = want('w:rhea-far', rr, () => worldSprite('rhea', rr, false), true);
+            f.glow(x, y, Math.round(rr + (5 + 6 * sw) * sc), RP.ICE, 0.24 + sw * 0.56); f.reset();
+            blit(sp.canvas, sp.half, x, y);
+            P.contactBlip(f, x + rr + 1, y - rr - 1, t, false); return;
+        }
         const sp = spriteFor(it);
         if (it.kind === 'giant') {
             if (it.part === 'arc') { if (sp.arc) blit(sp.arc, sp.half, it.x, it.y); return; }
@@ -400,12 +440,19 @@
     function poseAt(t) { const R = REST.lander, [dx, dy, da] = drift(t); return { x: R.x + dx, y: R.y + dy, len: R.len, angle: baseAngle() + W.bank + da }; }
     function plumeLevel(t) {
         const energy = Slice.state.res ? Slice.state.res.energy : 100, J = W.jump;
+        if (W.black) return 0.8;                                                           // in the corridor: a steady cruise
         if (J) return 1 + 2.4 * clamp01((t - J.t0) / 1500);
         let lvl = 0.25 + 0.75 * clamp01(energy / 100);
         if (W.flight) lvl *= 1.7; else if (W.lock) lvl *= 1.15; else if (W.held) lvl *= 0.5;
-        if (Slice.broken && Slice.broken('engineering')) lvl *= 0.65;                        // engineering down: a shorter, weaker plume
+        if (Slice.broken && Slice.broken('engineering')) lvl *= sputter(t);                  // engineering down: a short plume that coughs
         if (t >= W.flareT) lvl += 1.6 * Math.exp(-(t - W.flareT) / 350);
         return lvl;
+    }
+    /** Engineering down (fun playtest: "Shut the drive down" left the plume burning full): the plume runs at half and cuts out
+        for a beat or two every couple of seconds, on the same 2.9 s cycle as the brown-outs aboard (ship.js). */
+    function sputter(t) {
+        const k = t % 2900, n = Math.floor(t / 2900), dip = hash(n & 255, 7, 61) < 0.75;
+        return dip && (k < 90 || (k > 170 && k < 240)) ? 0.08 : 0.45;
     }
     function drawLander(f, t) {
         const pose = poseAt(t), sp = landerSprite(pose.len, pose.angle), cx = Math.round(pose.x), cy = Math.round(pose.y), s = pose.len / 48, lvl = plumeLevel(t);
@@ -480,14 +527,15 @@
         const dl = discsOf(sn);
         P.twinkle(f, A1.bright.filter(st => !dl.some(([x, y, r]) => Math.hypot(st.x - x, st.y - y) < r + 2)), t);
         f.reset();
-        const vp = vanishing(sn, t), sp = speedNow(t);
+        const vp = vanishing(sn, t), sp = speedNow(t), streaksFront = !!(W.flight || W.jump);   // at rest the streaks pass behind the worlds (look playtest: scratches on the giant)
         layerBack.clear(); flow(layerBack, FLOWS.motes, vp, sp); layerBack.draw(ctx, G.hull, 0);
+        if (!streaksFront) { layerFront.clear(); flow(layerFront, FLOWS.streaks, vp, sp); flow(layerFront, FLOWS.near, vp, sp); layerFront.draw(ctx, G.hull, 0); }
         sn.items.forEach(it => { drawItem(f, it, t); f.reset(); });
         const lockId = W.lock ? W.lock.id : null, hov = lockId || (W.flight ? null : W.hover);
         if (hov && hov !== 'light') sn.items.filter(i => i.id === hov && i.part !== 'arc' && !i.hiding).forEach(i => drawRims(f, i, lockId ? 2 : 1));
         if (hov === 'light' && W.lightOpen) { const r = lightOf(1, lightScale(t)), lx = Math.round(LP[0]), ly = Math.round(LP[1]); for (let d = Math.round(r.core + 2); d < r.core + 10 * sc; d++) { const v = 0.85 - (d - r.core) / (12 * sc); f.tone(lx - d, ly, RP.SUN, v); f.tone(lx, ly - d, RP.SUN, v); f.tone(lx, ly + d, RP.SUN, v); } }
-        drawLander(f, t);
-        layerFront.clear(); flow(layerFront, FLOWS.streaks, vp, sp); flow(layerFront, FLOWS.near, vp, sp); layerFront.draw(ctx, G.hull, 0);
+        if (!['dive-in', 'dive-out'].includes(Slice.state.mode)) drawLander(f, t);   // stop.js draws our ship while it dives
+        if (streaksFront) { layerFront.clear(); flow(layerFront, FLOWS.streaks, vp, sp); flow(layerFront, FLOWS.near, vp, sp); layerFront.draw(ctx, G.hull, 0); }
         drawNoteShade();
         if (W.jump) drawJump(t);
         if (W.opening) dimAll(1 - Math.floor(clamp01((t - W.opening.t0) / 1000) * 8) / 8);
@@ -496,15 +544,32 @@
         const off = A.sky ? Math.max(0, Math.min(A.sky.extra - 1, Math.round(W.D * window.V3Sky.DEEP))) : 0;
         A.own.forEach(a => {
             const x = Math.round(a.ax - off * a.depth), y = Math.round(a.ay);
-            if (a.sprite) { ctx.drawImage(a.sprite, x - 6, y - 6); return; }
-            const ph = (t + 1700) % a.period, on = ph < 375;                                 // the slow cyan blink: a point, then a short cross
-            f.px(x, y, a.ramp.hex[on ? 5 : 2]);
-            if (on) [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => f.px(x + dx, y + dy, a.ramp.hex[3]));
+            if (a.sprite) { ctx.drawImage(a.sprite, x - a.sprite.half, y - a.sprite.half); return; }
+            const ph = (t + 1700) % a.period, on = ph < 625, mid = !on && ph < 1000;          // the slow cyan blink: a dim point always, a cross and a breath when it fires
+            f.px(x, y, a.ramp.hex[on ? 6 : mid ? 4 : 3]); f.px(x + 1, y, a.ramp.hex[on ? 5 : 2]);
+            if (on || mid) [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(([dx, dy]) => f.px(x + dx * (dx > 0 ? 2 : 1), y + dy, a.ramp.hex[on ? 4 : 2]));
+            if (on) { [[2, 2], [-2, 2], [2, -2], [-2, -2], [0, 3], [0, -3], [-3, 0], [4, 0]].forEach(([dx, dy]) => f.px(x + dx, y + dy, a.ramp.hex[1])); }
         });
     }
-    function drawDark(f, t) {                                                                // after the flash: the corridor and the meal
-        ctx.fillStyle = INK; ctx.fillRect(0, 0, G.W, G.H);
+    /** After the flash: the corridor and the meal. Jump space is dark, but not empty (look playtest: the space side went pure
+        black and our ship vanished): a faint teal haze down the corridor, the far light a warm smudge at its end, slow
+        streaks, and our Lander still out there with the journey. */
+    let darkArt = null;
+    function corridorArt() {
+        if (darkArt) return darkArt;
+        const p = P.painter(G.W, G.H, true), reach = spW() * 0.42, L = REST.lander;
+        p.region(G.hull, 0, G.W, G.H, (x, y) => {
+            const dl = Math.hypot(x - LP[0], (y - LP[1]) * 1.6), along = clamp01((x - L.x) / (LP[0] - L.x + 1)), mid = lerp(L.y, LP[1], along), wall = Math.abs(Math.abs(y - mid) - lerp(G.H * 0.34, G.H * 0.04, along));
+            const haze = 0.32 * Math.exp(-dl / reach) * (0.6 + 0.6 * P.fbm(x / 23, y / 11, 91, 3)) + 0.16 * Math.exp(-wall / (5 * sc)) * along * (0.5 + P.fbm(x / 9, y / 4, 93, 2));
+            if (haze > 0.04) p.tone(x, y, RP.HAZE, haze);
+            const core = 0.42 * Math.exp(-dl / (9 * sc)); if (core > 0.05) p.tone(x, y, RP.SUN, core);
+        });
+        darkArt = p.canvas(); return darkArt;
+    }
+    function drawDark(f, t) {
+        ctx.drawImage(corridorArt(), 0, 0);
         layerFront.clear(); flow(layerFront, FLOWS.streaks, LP, 30); layerFront.draw(ctx, G.hull, 0);
+        drawLander(f, t);
     }
     function drawSector2(f, t) {
         if (!A2) A2 = buildArt(2);
@@ -585,7 +650,11 @@
         if (a <= 0) { title.hidden = true; return; }
         if (title.textContent !== text) title.textContent = text;
         title.hidden = false; title.style.opacity = String(Math.floor(clamp01(a) * 8) / 8);
-        const [cx, cy] = G.toCss(G.hull + spW() / 2, G.H * 0.2);
+        // in empty sky: the first of a few places whose box keeps clear of every world and the light (look playtest: the T sat on Zeta)
+        const k = G.k / G.dpr, hw = title.offsetWidth / k / 2 + 8, hh = title.offsetHeight / k / 2 + 8, ds = (W.sector === 1 ? discsOf(W.last || scene(W, t)) : []).concat([[LP[0], LP[1], 30 * sc]]);
+        const clear = ([x, y]) => !ds.some(([dx, dy, r]) => Math.hypot(Math.max(x - hw, Math.min(dx, x + hw)) - dx, Math.max(y - hh, Math.min(dy, y + hh)) - dy) < r);
+        const spots = [[0.5, 0.2], [0.6, 0.1], [0.45, 0.1], [0.62, 0.2], [0.5, 0.06]].map(([u, v]) => [G.hull + spW() * u, G.H * v]);
+        const [cx, cy] = G.toCss(...(spots.find(clear) || spots[0]));
         title.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px) translate(-50%, -50%)`;
     }
     function injectStyle() {
@@ -676,7 +745,7 @@
     function resize(g) {
         G = g; sc = G.H / 360;
         cv.width = G.W; cv.height = G.H; cv.style.width = (G.W * G.k / G.dpr) + 'px'; cv.style.height = (G.H * G.k / G.dpr) + 'px';
-        computeRest(); clearSprites(); patCache.length = 0; shadeCache.clear();
+        computeRest(); clearSprites(); patCache.length = 0; shadeCache.clear(); darkArt = null;
         layerBack = P.pixelLayer(spW(), G.H); layerFront = P.pixelLayer(spW(), G.H);
         A1 = buildArt(1); A2 = null;
         if (W.held && W.held !== 'light') W = Object.assign({}, W, { cam: camFor(W.held, arriveFrame(W.held).x, arriveFrame(W.held).y, arriveFrame(W.held).r) });
@@ -689,7 +758,6 @@
         W.flow += s * dt / 1000; W.D = Math.min(9800, W.D + (W.flight ? DRATE.flight : DRATE.rest) * dt / 1000);
         if (W.flight && t - W.flight.t0 >= W.flight.dur) arrive(t);
         if (W.ease && t - W.ease.t0 >= W.ease.dur) W = Object.assign({}, W, { cam: W.ease.to, ease: null });
-        IDS.forEach(id => { const md = W.modes[id]; if (md.m === 'passed' && t - md.t0 > PASS.move + PASS.hold + PASS.slip) W.modes = Object.assign({}, W.modes, { [id]: { m: 'gone' } }); });
         const named = isNamed(); if (named && !W.namedSeen) { W.namedSeen = true; W.namedT = W.gotoT === t ? -1e9 : t; }
         W.lightOpen = W.lightOpen || W.visited.has('rhea') || !!(Slice.state.flags && Slice.state.flags.light);
         // the nose turns toward what we point at (6 degrees), banks toward where we fly
@@ -717,15 +785,16 @@
         open: { opening: true }, fork1: { hover: 'titan' }, flight1: { fly: 'titan' },
         dive: AT_TITAN, pick: AT_TITAN, torch: AT_TITAN, surge: AT_TITAN, stockpile: AT_TITAN, 'page-disc': AT_TITAN,
         bench: { stage: 1, gone: ['zeta'], passed: { titan: -8000 }, visited: ['titan'] },
-        dating: { stage: 1, gone: ['zeta', 'titan'], visited: ['titan'] },
-        signs: { stage: 1, gone: ['zeta', 'titan'], visited: ['titan'], named: true },
-        fork2: { stage: 1, gone: ['zeta', 'titan'], visited: ['titan'], named: true, hover: 'erebus' },
-        erebus: { at: 'erebus', gone: ['zeta', 'titan'], passed: { kryos: -9000 }, visited: ['titan'], named: true },
-        reddeck: { stage: 2, gone: ['zeta', 'titan', 'kryos'], passed: { erebus: -9000 }, visited: ['titan', 'erebus'], named: true },
-        kryos: { at: 'kryos', gone: ['zeta', 'titan', 'erebus'], visited: ['titan'], named: true },
+        // a world we passed stays at the left edge in shadow; only the fork's other world, slipped behind the giant, is gone
+        dating: { stage: 1, gone: ['zeta'], passed: { titan: -60000 }, visited: ['titan'] },
+        signs: { stage: 1, gone: ['zeta'], passed: { titan: -60000 }, visited: ['titan'], named: true },
+        fork2: { stage: 1, gone: ['zeta'], passed: { titan: -60000 }, visited: ['titan'], named: true, hover: 'erebus' },
+        erebus: { at: 'erebus', gone: ['zeta'], passed: { titan: -90000, kryos: -9000 }, visited: ['titan'], named: true },
+        reddeck: { stage: 2, gone: ['zeta'], passed: { titan: -120000, kryos: -60000, erebus: -9000 }, visited: ['titan', 'erebus'], named: true },
+        kryos: { at: 'kryos', gone: ['zeta', 'erebus'], passed: { titan: -60000 }, visited: ['titan'], named: true },
         zeta: { at: 'zeta', gone: ['titan'] },
-        rhea: { at: 'rhea', gone: ['zeta', 'titan', 'kryos', 'erebus'], visited: ['titan', 'erebus'], named: true },
-        jump: { stage: 3, gone: ['zeta', 'titan', 'kryos', 'erebus'], passed: { rhea: -9000 }, visited: ['titan', 'erebus', 'rhea'], named: true, hover: 'light' },
+        rhea: { at: 'rhea', gone: ['zeta'], passed: { titan: -150000, kryos: -90000, erebus: -40000 }, visited: ['titan', 'erebus'], named: true },
+        jump: { stage: 3, gone: ['zeta'], passed: { titan: -180000, kryos: -120000, erebus: -70000, rhea: -9000 }, visited: ['titan', 'erebus', 'rhea'], named: true, hover: 'light' },
         corridor: { black: true }, meal: { black: true }, s2: { s2: true },
     };
     MOMENTS.breach = MOMENTS.erebus; MOMENTS.call = MOMENTS.erebus;

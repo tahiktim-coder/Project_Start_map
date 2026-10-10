@@ -22,6 +22,7 @@
         price: {   // A.U.R.A., once per world, only when the price matters (SPEC §8.1)
             kryos: [AURA, "We've used some fuel, Commander. Kryos can fill the tanks again."], contact: [AURA, "A contact with no fix, Commander. I can't tell what it is."],
             onlyJump: [AURA, 'After this we can only jump, Commander.'], fixLate: [AURA, "The fix isn't in yet, Commander."],
+            kryosMetal: ['Jaxon', "There's old wreck metal down in Kryos's low bands. We could haul some up."],   // a full ship's reason (fun playtest)
         },
         passed: [AURA, "We passed it, Commander. We can't turn back."],
         lightEarly: [AURA, "Not yet, Commander. There's still the contact ahead."], lightEarlyNamed: [AURA, 'Not yet, Commander. Rhea-4 Minor is still ahead.'],
@@ -33,7 +34,9 @@
         },
         // a sign is a risk, not a promise (playtest 2): the surge comes about half the time; the breach comes on the second pull-in
         sign: { surge: [AURA, 'Engineering has been surging since we woke, Commander.'], hull: [AURA, 'The hull has been groaning since the rings, Commander.'],
-            surgeAgain: [AURA, 'Engineering is still surging, Commander.'] },
+            surgeAgain: [AURA, 'Engineering is still surging, Commander.'],
+            // Rhea with nothing due aboard: the risk is down there (fun playtest: the pick did nothing). The hazard comes half the time
+            slope: [AURA, "Their ship is lying on a slope, Commander. It could shift."] },
         goodFor: {   // the pick: hover a person (about 12 words: down there, and aboard). Vague aboard, so the pick is a gamble, not a lookup
             jaxon: ['Jaxon', 'Down there I cut faster and strip more. Up here, the drive is mine.'],
             aris: ['Aris', 'Down there I bring the hurt back walking. Up here, the med bay.'],
@@ -69,7 +72,10 @@
             talk: ['Before this, I worked security at the shipyard. Twelve years.', 'They said nine ships would fly this heading. I watched more than that being built in one year.'],
             ask: "That's why I signed up. I wanted to see where the others went.", believed: 'Thanks.', other: "That's what I told myself too.",
         },
-        jaxon: { ask: 'Leave me off the next team. I want a day on the drive.', yes: "Thanks. She'll run better for it.", no: "Fine. I'll go if you pick me.", tools: ['Aris', "Jaxon's down at the drive. He didn't eat."] },
+        jaxon: { ask: 'Leave me off the next team. I want a day on the drive.', yes: "Thanks. She'll run better for it.", no: "Fine. I'll go if you pick me.", tools: ['Aris', "Jaxon wants a word, Commander. He didn't eat."],
+            inDrive: "I was inside the drive. I couldn't get out in time." },
+        // Kryos: one choice of its own after the skim (fun playtest: fork 2 was a free top-up)
+        kryos: { ask: 'The low bands are full of old wreck metal. Take her down?', clean: "We're out. The hold's full of good metal.", scrape: 'A ring stone hit us down there, Commander. {deck} is sealed off.' },
         bench: {
             none: 'Nothing on the bench yet.', late: "Their star fix isn't in yet. A.U.R.A. is still reading it.", lab: "The lab has no air. I can't work in there.",
             waiting: "Their star fix is on my bench. It won't take long to date.", done: 'The drawing is up. I keep looking at it.', hurt: [AURA, 'Mira is in the med bay, Commander.'],
@@ -116,7 +122,7 @@
         titan: { id: 'titan', fork: 1, pair: 'zeta', act: 'send', verb: 'Send the team', team: true, sign: 'surge', crisis: 'surge', wreck: 'EXODUS-4' },
         kryos: { id: 'kryos', fork: 2, pair: 'erebus', act: 'skim', verb: 'Skim fuel', team: false, sign: null, crisis: 'breach' },
         erebus: { id: 'erebus', fork: 2, pair: 'kryos', act: 'answer', verb: 'Answer the call', team: true, sign: 'hull', crisis: 'breach', wreck: 'EXODUS-7' },
-        rhea: { id: 'rhea', story: true, act: 'send', verb: 'Send the team', team: true, sign: 'pod', crisis: null, wreck: 'EXODUS-6' },
+        rhea: { id: 'rhea', story: true, act: 'send', verb: 'Send the team', team: true, sign: 'slope', crisis: null, wreck: 'EXODUS-6' },
         light: { id: 'light', jump: true },
     };
     const NAMED = {

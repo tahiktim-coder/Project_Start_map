@@ -52,6 +52,7 @@
                 if ((tower && ax < G.hull) || discs.some(([cx, cy, rr]) => Math.hypot(ax - cx, ay - cy) < rr + 2) || cssDiscs.some(([cx, cy, rr]) => Math.hypot(x - cx, y - cy) < rr + 4)) hits++;
             }
             let v = 0.02 + (hits ? 0.3 + 0.6 * hits / n : 0);
+            if (tower && r.x * dpr / k < G.hull - 2 && (r.x + r.w) * dpr / k > G.hull + 2) v += 1;   // never one line across the hull edge (look playtest, 720)
             const lastXY = api.lastXY();
             if (lastXY && lastXY[0] >= r.x - 12 && lastXY[0] <= r.x + r.w + 12 && lastXY[1] >= r.y - 12 && lastXY[1] <= r.y + r.h + 12) v += 0.5;
             if (r.x < 0 || r.y < 0 || r.x + r.w > innerWidth || r.y + r.h > innerHeight) v += 0.1;
@@ -165,15 +166,20 @@
             return (patternCanvases[Lv] = c);
         }
 
+        /** While a real minigame is open the live scene stays behind it, dithered down to about 45 % (look playtest: the
+            minigames were bordered boxes on near-black and the ship vanished). */
+        let veilAmt = 0;
+        const veil = a => { veilAmt = Math.max(0, Math.min(1, a || 0)); };
         function render(t) {
             if (!Slice.G.W) return;
             sizeShade();
             sg.clearRect(0, 0, shadeCv.width, shadeCv.height);
             if (film) drawFilm(t);
-            if (dimAmt > 0) { sg.fillStyle = pattern(dimAmt * 64); sg.fillRect(0, 0, shadeCv.width, shadeCv.height); }
+            const dimNow = Math.max(dimAmt, veilAmt);
+            if (dimNow > 0) { sg.fillStyle = pattern(dimNow * 64); sg.fillRect(0, 0, shadeCv.width, shadeCv.height); }
             if (shades.size) drawShades();
         }
         function clear() { shades.clear(); dimAmt = 0; film = null; document.body.classList.remove('slice-film', 'is-reading'); }
-        return { WorldAdapter, render, resize: () => { shadeKey = ''; }, playFilm, shades, clear, isStopped };
+        return { WorldAdapter, render, resize: () => { shadeKey = ''; }, playFilm, shades, clear, isStopped, veil };
     };
 })();

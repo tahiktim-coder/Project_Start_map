@@ -325,7 +325,7 @@ Choices:
 **A.U.R.A.:** The last log entry stops mid-sentence, Commander. The crew left in a hurry.  
 
 Choices:
-1. **Copy the research database** — -5 Energy. +1 Tech Item, or +3 Data if the drives hold nothing useful.
+1. **Copy the research database** — -5 Energy. +1 Tech Item.
    → Database copied. -5 Energy. Found: Old Data Store / Research drives copied. Found: Old Data Store  
    ↳ or: Research Station  
    ↳ or: Drives copied. -5 Energy, +3 Data.  
@@ -383,7 +383,7 @@ _Only from sector 4._
 **Mira:** Look, Commander. The ledger lists every wreck they found, by hull number.  
 
 Choices:
-1. **Search the deep shelves** — -5 Energy. +1 Valuable Item, or +35 Salvage if the good shelf is bare.
+1. **Search the deep shelves** — -5 Energy. +1 Valuable Item.
    → Deep shelves searched. -5 Energy. Found: Unknown Machine Part / Back shelf, top row, labelled in pencil: Unknown Machine Part  
    ↳ or: The deep shelves held raw metal. -5 Energy, +35 Salvage.  
 2. **Open the medical aisle** — -5 Energy. Heals one injured crew member. Otherwise +1 Medkit, or +3 Rations.
@@ -768,7 +768,7 @@ _THE FOLD can throw the ship here. A sector of copies; two ways out._
 ### Arriving «bundle.js · handleAnomalyTeleport»
 _The sector header, and the old names the code still has for sectors._
 
-- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5312»
+- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5172»
 
 ### In orbit «OrbitView.js · updateCommandDeck · wrong place»
 _The two buttons instead of BREAK ORBIT._
@@ -1083,9 +1083,9 @@ _Can turn up in: any sector (on warps and jumps, never on the approach to the li
 
 #### Card words: showShipMalfunctionModal «bundle.js · showShipMalfunctionModal»
 
-- **kicker** — SHIP ALERT «bundle.js · line 5564»
-- DEAL WITH IT «bundle.js · line 5566»
-- MALFUNCTION RESOLVED: [result] «bundle.js · line 5569»
+- **kicker** — SHIP ALERT «bundle.js · line 5424»
+- DEAL WITH IT «bundle.js · line 5426»
+- MALFUNCTION RESOLVED: [result] «bundle.js · line 5429»
 
 ### Power Surge «ShipEvents.js · POWER_SURGE»
 
