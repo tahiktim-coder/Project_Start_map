@@ -1,18 +1,20 @@
 <!doctype html>
 <!--
-  SILENT EXODUS · FILM 1 · THE LAUNCH (mockup, silent). Replaces the old briefing film (green dashes out of Earth).
-  A news broadcast from the launch yard at dusk: the crowd, flags and floodlights, the five crew on the podium, hull ten in its
-  scaffolding, the walk to the pad, the countdown, the launch, and the ship climbing into the dark until it is one point of light.
-  About 86 seconds. Nothing in the game or the other prototypes is changed; this page only LOADS their drawing code:
+  SILENT EXODUS · FILM 1 · THE LAUNCH (mockup). Replaces the old briefing film (green dashes out of Earth).
+  A news broadcast from the launch yard at dusk, six shots, about 42 seconds: the yard (eight scorched empty pads, hull nine
+  floodlit, hull ten in its scaffolding at the edge of frame), the crowd black against the sunset, the five crew on the podium in
+  their spots, the walk across the apron to the lift, ignition, and the long-lens climb into the last sun until the ship is one
+  point of light. Rework 2026-10-10: cut from 86 s; hull ten's own shot and the tiny-figure pad shot dropped; the podium, the
+  walk, the ignition and the climb redrawn; the wordless announcer, beeps and whistles removed from the sound. Nothing in the game or the other prototypes is changed; this page only LOADS their drawing code:
     ../screens/game-screen-v3/paint.js   V3Paint: the dither recipe, ramps, hull() + shapeL (the Lander), lightGlow, the pixel font
     ../screens/crew-hires/*.js           CrewEngine and the five people (their dress-uniform recolour is made here, at load)
   STILLS: ?t=ms opens paused at that moment · ?dress=0 shows their everyday suits · ?px=N forces the pixel size
           window.film.play() / pause() / step(ms) / setTime(ms) / state() / shots
   SKIP: a click, Esc, Enter or Space skips to the end.
   SOUND (optional, OFF by default): the "Sound off" button in the bottom-left corner turns it on; ?sound=1 starts with it on
-          (the browser still needs one click on the page). Made in code by film-sound.js, no audio files: the broadcast's room
-          tone, the crowd swelling and cheering and clapping, an announcer's muffled cadence without words, the countdown beeps,
-          the ignition's rumble and roar fading as the ship climbs to a point, then quiet. The score is launchScore() below.
+          (the browser still needs one click on the page). Made in code by film-sound.js, no audio files, and kept to two
+          things: a low crowd murmur that swells at the podium and under the launch, and the ignition's thump, rumble and roar
+          fading as the ship climbs to a point, then silence. No voice, no beeps. The score is launchScore() below.
   WORDS: every line on screen is in LINES below. Lines marked [placeholder] depend on the open story decisions (what the public
   was told) and are kept neutral until those are made.
 -->
@@ -119,7 +121,7 @@ body.is-over #again { display: block; }
     'use strict';
     const P = window.V3Paint, CE = window.CrewEngine;
     const { INK, RP, ramp, clamp01, smooth, lerp, hash, fbm, vnoise, seeded, threshold } = P;
-    const AW = 640, AH = 360, TICK = 125, DUR = 86000;
+    const AW = 640, AH = 360, TICK = 125, DUR = 42500;
     const q = new URLSearchParams(location.search);
     const $ = id => document.getElementById(id);
     const cv = $('art'), ctx = cv.getContext('2d', { alpha: false });
@@ -142,22 +144,20 @@ body.is-over #again { display: block; }
         WOOD: ramp(INK, '#1e140c', '#3a2616', '#5e3e22', '#8a5f34', '#b8864e'),
         SMOKE: ramp(INK, '#14181c', '#283038', '#46525c', '#7a8a94', '#b8c8d0', '#eef6f8'),
         WELD: ramp(INK, '#5a3010', '#c06a20', '#ffb050', '#fff0c0', '#ffffff'),
+        GOLD: ramp(INK, '#4a3410', '#8a6420', '#c49a3a', '#e8c66a', '#fff0b0'),
         RED: RP.RED, PLUME: RP.PLUME, HULL: RP.HULL, STAR: RP.STAR, GROUND: RP.GROUND, SUN: RP.SUN, AMBER: RP.AMBER,
     };
 
     // ════════════════════════════════════ the lines (every word on screen) ════════════════════════════════════
     // Plain words, one idea each (docs/STYLE.md). [placeholder] = depends on what the public was told; kept neutral.
     const LINES = [
-        { t0: 1600, t1: 9400, kicker: 'Live · The launch yard', line: 'Tonight the ninth Exodus ship leaves Earth.' },
-        { t0: 11000, t1: 19400, kicker: 'Live · The launch yard', line: 'Eight ships have gone ahead of it on the same heading.' },   // [placeholder] what the public knows of the first eight
-        { t0: 21600, t1: 35400, kicker: 'The crew of Exodus-9', line: 'They will sleep for sixty-one years.', names: 'Mira Chen · Jaxon Mercer · Cora Moon · Kael Vance · Aris Novak' },   // in stage order, left to right. [placeholder] five names on air: if the count question takes Cora off the official list, the strap shows four
-        { t0: 37400, t1: 43600, kicker: 'Live · The launch yard', line: 'Hull ten is still being built.' },   // [placeholder] whether the broadcast mentions the new drive (Jaxon's line in the game)
-        { t0: 45600, t1: 51800, kicker: 'Live · Pad nine', line: 'The crew are going up to the ship.' },   // the podium shows five people: if the count question makes one of them a stranger at launch, this film is where it shows
-        { t0: 72400, t1: 77600, kicker: 'Live · The launch yard', line: 'Exodus-9 is on its way.' },
+        { t0: 1200, t1: 6400, kicker: 'Live · The launch yard', line: 'Tonight the ninth Exodus ship leaves Earth.' },
+        { t0: 13000, t1: 19400, kicker: 'The crew of Exodus-9', line: 'They will sleep for sixty-one years.', names: 'Mira Chen · Jaxon Mercer · Cora Moon · Kael Vance · Aris Novak' },   // in stage order, left to right. [placeholder] five names on air: if the count question takes Cora off the official list, the strap shows four
+        { t0: 35400, t1: 39600, kicker: 'Live · The launch yard', line: 'Exodus-9 is on its way.' },
     ];
-    const COUNT = { t0: 52000, zero: 62000 };   // the countdown clock: T-10 at 52 s, lift-off at 62 s
-    const LIVE_ENDS = 78400;                     // the broadcast's graphics leave; only the ship and the dark remain
-    const FADE = [82500, 86000];
+    const COUNT = { t0: 26500, zero: 29500 };   // the clock shows only the last three seconds, on the ignition shot
+    const LIVE_ENDS = 40000;                     // the broadcast's graphics leave; only the ship and the dark remain
+    const FADE = [40400, 42500];
 
     // ════════════════════════════════════ shared drawing pieces ════════════════════════════════════
     /** A dusk sky into an opaque painter: night above, a warm band where the sun went down, long clouds lit from below. */
@@ -247,7 +247,7 @@ body.is-over #again { display: block; }
     // ── people in the crowd: a silhouette with a rim where the light comes from ──
     /** Paints one person from behind into painter p, as a near-black silhouette with a rim of light on the edges that face the
         light (heads brightest, shoulders less). kind: 0 plain, 1 arm up, 2 phone up, 3 child on shoulders. */
-    function crowdPerson(p, cx, base, s, seed, kind, toLight, rimV = 0.78) {
+    function crowdPerson(p, cx, base, s, seed, kind, toLight, rimV = 0.78, rr = R.CROWD) {
         const r = seeded(seed), hr = 3.0 * s * (0.86 + r() * 0.28), sh = 6.2 * s * (0.86 + r() * 0.3), headY = base - 8.6 * s - hr, lean = (r() - 0.5) * 1.6 * s;
         const hat = r() < 0.16, bun = !hat && r() < 0.22, hood = !hat && !bun && r() < 0.15, armSide = r() < 0.5 ? -1 : 1, kid = kind === 3;
         const shapes = [[cx + lean, headY, hr, hr * 1.14], [cx, base + 1.5 * s, sh, 8 * s], [cx + lean * 0.5, headY + hr + 1.2 * s, hr * 0.6, 2.4 * s]];
@@ -265,24 +265,31 @@ body.is-over #again { display: block; }
             let rim = 0;
             for (let k = 1; k <= thick; k++) if (!inside(x + lx * k, y + ly * k)) { rim = k; break; }
             const upper = y < headY + hr * 1.4 ? 1 : 0.62;
-            p.tone(x, y, R.CROWD, rim ? (rimV - (rim - 1) * 0.25) * upper : 0.025 + (fbm(x / 3, y / 3, seed, 2) - 0.5) * 0.05);
+            p.tone(x, y, rim ? rr : R.CROWD, rim ? (rimV - (rim - 1) * 0.25) * upper : 0.025 + (fbm(x / 3, y / 3, seed, 2) - 0.5) * 0.05);
         });
         if (kind === 2 && limbs.length) { const [, , x1, y1] = limbs[0]; p.region(x1 - 1.3 * s, y1 - 2.6 * s, x1 + 1.3 * s, y1 + 0.4 * s, (x, y) => p.tone(x, y, R.CROWD, 0.02)); }
         return limbs.length ? limbs[0] : null;
     }
     /** A packed band of crowd, back rows first; neighbours overlap so it reads as one mass with lit heads.
-        rows: [[baseY, scale, density, rimV]]. Returns raised hands (for flags and phones drawn on top). */
-    function crowdBand(p, rows, toLight, seed, x0 = 0, x1 = p.W) {
+        rows: [[baseY, scale, density, rimV]]; rr: the rim's ramp. Returns raised hands (for flags and phones drawn on top). */
+    function crowdBand(p, rows, toLight, seed, x0 = 0, x1 = p.W, rr = R.CROWD) {
         const hands = [];
         rows.forEach(([base, s, density, rimV], ri) => {
             const r = seeded(seed + ri * 31), count = Math.ceil((x1 - x0) / (7.4 * s) * density), gap = (x1 - x0) / count;
             for (let i = 0; i < count; i++) {
                 const x = x0 + (i + 0.15 + r() * 0.7) * gap, kindR = r(), kind = kindR < 0.09 ? 2 : kindR < 0.17 ? 1 : kindR < 0.2 && s > 0.6 ? 3 : 0;
-                const hand = crowdPerson(p, x, base + (r() - 0.5) * 4 * s, s, seed + ri * 977 + i, kind, toLight, rimV);
+                const hand = crowdPerson(p, x, base + (r() - 0.5) * 4 * s, s, seed + ri * 977 + i, kind, toLight, rimV, rr);
                 if (hand) hands.push({ x: hand[2], y: hand[3], s, kind });
             }
         });
         return hands;
+    }
+    /** The nearest crowd as one dark mass: the gaps between shoulders filled in black first, so only the heads and the shoulder
+        line catch the light (people packed together, never a row of separate bubbles). */
+    function crowdMass(p, rows, toLight, seed, x0, x1, rr) {
+        const [base, s] = rows[0];
+        p.region(x0, base + 3 * s, x1, p.H, (x, y) => p.solid(x, y, R.CROWD, 0.02 + (fbm(x / 5, y / 5, seed, 2) - 0.5) * 0.04));
+        return crowdBand(p, rows, toLight, seed, x0, x1, rr);
     }
     /** A waving flag, drawn every frame. The cloth ripples away from the pole; the emblem rides on it. */
     function flag(L, px, py, w, h, t, seed, pole = true) {
@@ -314,11 +321,11 @@ body.is-over #again { display: block; }
     const SHOTS = [];
     const shot = (o) => { SHOTS.push(o); return o; };
 
-    // 1 · THE YARD, WIDE (0-10 s): eight empty pads going back into the dusk, hull nine floodlit on the ninth, hull ten in its
+    // 1 · THE YARD, WIDE (0-7 s): eight empty pads going back into the dusk, hull nine floodlit on the ninth, hull ten in its
     //     scaffolding; the crowd along the fence in front. The camera drifts right, from the empty pads to the two hulls.
     const YARD = { W: 820, horizon: 232, gx: 420, ship: [566, 270], ten: [722, 274] };
     shot({
-        id: 'yard', t0: 0, t1: 10000, caption: 'The yard at dusk: eight empty pads, hull nine floodlit, hull ten in scaffolding.',
+        id: 'yard', t0: 0, t1: 7000, caption: 'The yard at dusk: eight empty pads, hull nine floodlit, hull ten in scaffolding.',
         build() {
             const p = P.painter(YARD.W, AH, true), Y = YARD;
             const stars = sky(p, Y.horizon, Y.gx, 1, 11);
@@ -350,7 +357,7 @@ body.is-over #again { display: block; }
             return { canvas: p.canvas(), stars, lights, hands, mastLamps: [[sx - 92, sb - 56], [sx + 70, sb - 53], [sx - 40, sb - 46]] };
         },
         draw(t, S) {
-            const pan = Math.round(160 * ease(clamp01(t / 10000)));
+            const pan = Math.round(150 * ease(clamp01(t / 7000)));
             ctx.drawImage(S.canvas, -pan, 0);
             const f = P.framer(ctx, AW, AH), L = P.pixelLayer(AW, AH), ts = step8(t);
             P.twinkle(f, S.stars, ts, pan);
@@ -373,12 +380,12 @@ body.is-over #again { display: block; }
         },
     });
 
-    // 2 · THE CROWD (10-20 s): closer, a packed crowd seen from behind, the heads black against the last of the sunset and the
+    // 2 · THE CROWD (7-12 s): closer, a packed crowd seen from behind, the heads black against the last of the sunset and the
     //     floodlit yard; three big programme flags, phones up, a child on someone's shoulders, paper confetti. Hull nine stands
     //     floodlit on the horizon above them.
     const CROWD = { W: 700, horizon: 196, ship: 470 };
     shot({
-        id: 'crowd', t0: 10000, t1: 20000, caption: 'The crowd, black against the sunset and the floodlit yard: flags, phones, a child on shoulders.',
+        id: 'crowd', t0: 7000, t1: 12000, caption: 'The crowd, black against the sunset and the floodlit yard: flags, phones, a child on shoulders.',
         build() {
             const p = P.painter(CROWD.W, AH, true), hz = CROWD.horizon, X = CROWD.ship;
             const stars = sky(p, hz, 250, 1, 23);
@@ -393,7 +400,7 @@ body.is-over #again { display: block; }
             return { canvas: p.canvas(), stars, hands, lamps: [[X - 70, hz - 37], [X + 64, hz - 38]], light: [X + 18, hz + 9 - 76 - 2] };
         },
         draw(t, S) {
-            const pan = Math.round(52 * ease(clamp01(t / 10000)));
+            const pan = Math.round(40 * ease(clamp01(t / 5000)));
             ctx.drawImage(S.canvas, -pan, 0);
             const f = P.framer(ctx, AW, AH), ts = step8(t), L = P.pixelLayer(AW, AH);
             P.twinkle(f, S.stars, ts, pan);
@@ -416,67 +423,123 @@ body.is-over #again { display: block; }
         },
     });
 
-    // 3 · THE PODIUM (20-36 s): the five on a stage in front of the programme's banner, under the lamps. Mira, Jaxon and Aris wave;
-    //     Vance does not; Cora stands with her hands behind her back. Flashes go off in the press pit.
+    // 3 · THE PODIUM (12-20 s): the five on an open stage at nightfall, under a truss of lamps. Each stands in the pool of its own
+    //     spot; behind them a dark backdrop with the ship's name, two programme banners, and between them, far off, hull nine
+    //     floodlit on its pad. Three layers drift at different speeds (sky, stage, the crowd's heads) so the stage has depth.
+    //     Mira, Jaxon and Aris wave; Vance does not; Cora stands with her hands behind her back. The press pit flashes.
+    const POD = { W: 680, floor: 280, back: 258, front: 290, skirt: 312, panel: [176, 120, 504], banners: [104, 524], ship: 600 };
     const CREW = [
-        { id: 'mira', x: 198, facing: 1, wave: 'big', seed: 1 }, { id: 'jaxon', x: 262, facing: 1, wave: 'small', seed: 2 },
-        { id: 'cora', x: 322, facing: 1, wave: null, seed: 3 }, { id: 'vance', x: 384, facing: -1, wave: null, seed: 4 },
+        { id: 'mira', x: 220, facing: 1, wave: 'big', seed: 1 }, { id: 'jaxon', x: 276, facing: 1, wave: 'small', seed: 2 },
+        { id: 'cora', x: 332, facing: 1, wave: null, seed: 3 }, { id: 'vance', x: 388, facing: -1, wave: null, seed: 4 },
         { id: 'aris', x: 444, facing: -1, wave: 'small', seed: 5 },
     ];
-    const STAGE_FLOOR = 274;
+    const POD_LAMPS = [140, ...CREW.map(c => c.x), 540];
     shot({
-        id: 'podium', t0: 20000, t1: 36000, caption: 'The podium: the five crew in dress uniform under the lamps; three of them wave.',
+        id: 'podium', t0: 12000, t1: 20000, caption: 'The podium: the five crew in dress uniform, each in their own spot; hull nine floodlit far behind.',
         build() {
-            const p = P.painter(AW, AH, true);
-            const stars = sky(p, 300, 320, 0.35, 31);
-            // the banner: navy cloth hung in folds, the emblem and the ship's name
-            p.region(64, 46, 576, 262, (x, y) => { const fold = 0.5 + 0.5 * Math.sin((x - 64) / 512 * Math.PI * 9), lamp = 0.18 * Math.exp(-((y - 46) / 90)); p.tone(x, y, R.FLAG, 0.2 + 0.16 * fold + lamp + (y > 258 ? -0.12 : 0) + (fbm(x / 8, y / 30, 3, 2) - 0.5) * 0.06); });
-            emblem((x, y, tip) => p.region(x, y, x + 1, y + 1, (a, b) => p.tone(a, b, R.CREAM, tip ? 0.9 : 0.6)), 306, 84, 30);
-            bigText(p, 'EXODUS-9', 320, 124, 4, R.CREAM, 0.74);
-            // the truss and its lamps, and their light falling on the stage
-            p.region(40, 24, 600, 30, (x, y) => p.tone(x, y, R.STEEL, y === 24 ? 0.5 : (x % 9 < 1 ? 0.4 : 0.22)));
-            const lamps = [84, 164, 244, 320, 396, 476, 556].map(x => [x, 33]);
-            lamps.forEach(([x, y], i) => { p.region(x - 4, y - 3, x + 4, y + 3, (a, b) => p.tone(a, b, R.STEEL, 0.3)); beam(p, x, y + 3, 200 + i * 40, STAGE_FLOOR - 4, 3, 30, R.FLOOD, 0.45, 0.26); });
-            // the stage, the bunting along its front, a lectern with two microphones
-            p.region(40, STAGE_FLOOR - 4, 600, STAGE_FLOOR + 18, (x, y) => p.tone(x, y, R.WOOD, (y === STAGE_FLOOR - 4 ? 0.72 : 0.46 - (y - STAGE_FLOOR) * 0.012) + ((x * 7 + Math.floor((y - 260) / 4) * 13) % 31 < 1 ? -0.14 : 0) + (fbm(x / 20, y / 2, 4, 2) - 0.5) * 0.1));
-            p.region(40, STAGE_FLOOR + 18, 600, AH, (x, y) => p.tone(x, y, R.FLAG, 0.12));
-            for (let x = 44; x < 596; x += 12) for (let k = 0; k < 6; k++) for (let j = -5 + k; j <= 5 - k; j++) p.tone(x + 6 + j, STAGE_FLOOR + 20 + k, (x / 12) % 2 ? R.CREAM : R.GLOW, (x / 12) % 2 ? 0.55 : 0.6);
-            p.region(112, STAGE_FLOOR - 34, 134, STAGE_FLOOR - 3, (x, y) => p.tone(x, y, R.WOOD, x < 116 ? 0.62 : 0.34));
-            p.region(108, STAGE_FLOOR - 38, 138, STAGE_FLOOR - 33, (x, y) => p.tone(x, y, R.WOOD, y === STAGE_FLOOR - 38 ? 0.8 : 0.5));
-            emblem((x, y) => p.tone(x, y, R.GLOW, 0.8), 122, STAGE_FLOOR - 22, 6);
-            [[118, -1], [128, 1]].forEach(([x, d]) => p.line(x, STAGE_FLOOR - 38, x + d * 4, STAGE_FLOOR - 48, (a, b) => p.tone(a, b, R.STEEL, 0.5)));
-            // flags on poles at the sides of the stage (still: no wind on stage)
-            return { canvas: p.canvas(), stars, lamps };
+            // far: the dusk, the yard, hull nine on its pad between the banners
+            const bg = P.painter(660, AH, true), hz = 236, SX = POD.ship;
+            const stars = sky(bg, hz, 470, 0.8, 31);
+            hills(bg, hz, 7);
+            ground(bg, hz, 8, (x, y) => 0.45 * Math.exp(-Math.hypot((x - SX) / 70, (y - hz - 4) / 8)));
+            const bgLamps = [];
+            [[552, hz + 5], [648, hz + 4]].forEach(([mx, mb]) => { steelBar(bg, mx, mb, mx, mb - 34, 0.36); beam(bg, mx, mb - 35, SX, hz - 20, 1.5, 12, R.FLOOD, 0.5, 0.36); bgLamps.push([mx, mb - 35]); });
+            standingLander(bg, { x: SX, base: hz + 6, len: 62 });
+            const shipLight = tower(bg, SX + 16, hz + 6, 66, 4, 0.5, 0.36);
+            bg.region(SX - 120, hz - 70, SX + 120, hz + 12, (x, y) => { const v = 0.4 * Math.exp(-Math.hypot((x - SX) / 90, (y - hz + 10) / 30)); if (v > 0.05) bg.cover(x, y, R.FLOOD, 0.3, v); });
+            // near: the stage, painted opaque where it is solid and see-through where the light is only in the air
+            const st = P.painter(POD.W, AH, false), [p0, pTop, p1] = POD.panel;
+            st.region(p0, pTop, p1, POD.back, (x, y) => {                                           // the backdrop: black cloth, scalloped by the lamps' spill
+                const fold = 0.5 + 0.5 * Math.sin((x - p0) / 4.6), spill = POD_LAMPS.reduce((s, lx) => s + Math.exp(-(((x - lx) / 16) ** 2) - (y - pTop) / 46), 0);
+                const behind = CREW.reduce((s, c) => s + Math.exp(-(((x - c.x) / 24) ** 2)), 0) * smooth(POD.back - 90, POD.back, y);
+                st.solid(x, y, R.FLAG, 0.05 + 0.06 * fold + 0.36 * spill * (0.7 + 0.3 * fold) + 0.3 * behind * (0.6 + 0.4 * fold) + (fbm(x / 6, y / 24, 3, 2) - 0.5) * 0.05 - (y > POD.back - 6 ? 0.04 : 0));
+            });
+            bigText(st, 'EXODUS-9', 332, 134, 3, R.GOLD, 0.62);
+            POD.banners.forEach((bx, bi) => {                                                       // two banners, gold edged, the emblem on each
+                const w = 52, cx = bx + w / 2;
+                st.region(bx, 50, bx + w, 260, (x, y) => {
+                    if (y > 244 + 10 * (1 - Math.abs(x + 0.5 - cx) / (w / 2))) return;
+                    const fold = 0.5 + 0.5 * Math.sin((x - bx) / 3.2 + bi), lit = Math.exp(-(y - 50) / 70);
+                    const edge = x === bx + 3 || x === bx + w - 4;
+                    if (edge && y > 54) st.solid(x, y, R.GOLD, 0.3 + 0.4 * lit); else st.solid(x, y, R.FLAG, 0.16 + 0.14 * fold + 0.42 * lit + (x === bx ? 0.1 : 0));
+                });
+                st.region(bx - 3, 47, bx + w + 3, 50, (x, y) => st.solid(x, y, R.STEEL, y === 47 ? 0.6 : 0.3));
+                emblem((x, y, tip) => st.solid(x, y, R.GOLD, tip ? 0.95 : 0.7), cx - 4, 98, 15);
+                for (let y = 140; y < 230; y += 9) st.region(bx + 10, y, bx + w - 10, y + 1, (x, yy) => st.solid(x, yy, R.FLAG, 0.12));   // the hem lines
+            });
+            for (let x = 56; x < 624; x++) { st.solid(x, 36, R.STEEL, 0.55); st.solid(x, 37, R.STEEL, 0.3); st.solid(x, 45, R.STEEL, 0.36); }   // the truss
+            for (let x = 56; x < 624; x += 12) { st.line(x, 37, x + 6, 45, (a, b) => st.solid(a, b, R.STEEL, 0.3)); st.line(x + 6, 45, x + 12, 37, (a, b) => st.solid(a, b, R.STEEL, 0.22)); }
+            [60, 612].forEach(lx => {
+                for (let y = 45; y < POD.front; y++) { st.solid(lx, y, R.STEEL, 0.48); st.solid(lx + 8, y, R.STEEL, 0.24); }
+                for (let y = 45; y < POD.front - 10; y += 10) { st.line(lx, y, lx + 8, y + 5, (a, b) => st.solid(a, b, R.STEEL, 0.3)); st.line(lx + 8, y + 5, lx, y + 10, (a, b) => st.solid(a, b, R.STEEL, 0.2)); }
+            });
+            POD_LAMPS.forEach(lx => {                                                               // the lamps, hung under the truss
+                st.line(lx, 45, lx, 48, (a, b) => st.solid(a, b, R.STEEL, 0.4));
+                st.region(lx - 3, 48, lx + 4, 55, (x, y) => st.solid(x, y, R.STEEL, x === lx - 3 ? 0.5 : 0.18));
+            });
+            CREW.forEach(c => beam(st, c.x, 56, c.x, POD.floor - 6, 4, 30, R.FLOOD, 0.55, 0.26));   // each spot straight down on its person
+            [[140, 130], [540, 550]].forEach(([lx, tx]) => beam(st, lx, 56, tx, 150, 2, 18, R.FLOOD, 0.45, 0.22));
+            for (let y = POD.back; y <= POD.front; y++) {                                           // the deck, in perspective: boards run away from us
+                const k = (y - POD.back) / (POD.front - POD.back), xl = lerp(96, 36, k), xr = lerp(584, 644, k);
+                for (let x = Math.ceil(xl); x < xr; x++) {
+                    const u = (x - 340) / (xr - 340), seam = (((u * 13) % 1) + 1) % 1 < 0.07 ? -0.12 : 0;
+                    const pool = CREW.reduce((s, c) => s + 0.5 * Math.exp(-(((x - c.x) / 19) ** 2) - ((y - POD.floor) / 6) ** 2), 0);
+                    st.solid(x, y, R.WOOD, y === POD.back ? 0.12 : y === POD.front ? 0.78 : 0.2 + 0.1 * k + pool + seam + (fbm(x / 14, y / 2, 4, 2) - 0.5) * 0.08);
+                }
+            }
+            CREW.forEach(c => st.ellipse(c.x, POD.floor + 1, 12, 2.2, (x, y) => st.solid(x, y, R.WOOD, 0.07)));
+            st.region(36, POD.front + 1, 644, POD.skirt, (x, y) => st.solid(x, y, R.FLAG, 0.07 + (y === POD.front + 1 ? 0.06 : 0)));
+            for (let x = 40; x < 640; x += 12) for (let k = 0; k < 6; k++) for (let j = -5 + k; j <= 5 - k; j++) st.solid(x + 6 + j, POD.front + 2 + k, (x / 12) % 2 ? R.CREAM : R.GOLD, (x / 12) % 2 ? 0.5 : 0.6);
+            st.region(150, POD.floor - 34, 172, POD.floor + 2, (x, y) => st.solid(x, y, R.WOOD, x < 154 ? 0.6 : 0.3));   // the lectern
+            st.region(146, POD.floor - 38, 176, POD.floor - 33, (x, y) => st.solid(x, y, R.WOOD, y === POD.floor - 38 ? 0.8 : 0.5));
+            emblem((x, y) => st.solid(x, y, R.GOLD, 0.8), 161, POD.floor - 20, 6);
+            [[156, -1], [166, 1]].forEach(([x, d]) => st.line(x, POD.floor - 38, x + d * 4, POD.floor - 48, (a, b) => st.solid(a, b, R.STEEL, 0.5)));
+            [26, 654].forEach(x => { for (let y = 62; y < POD.front; y++) { st.solid(x, y, R.STEEL, 0.46); st.solid(x + 1, y, R.STEEL, 0.2); } });
+            // nearest: the crowd's heads and the press pit's cameras, black against the stage, lit along the top
+            const fr = P.painter(720, AH, false);
+            const hands = crowdMass(fr, [[322, 1.7, 1.2, 0.52], [344, 2.3, 1.1, 0.62], [380, 3.2, 1.0, 0.72]], [0, -1], 900, -30, 750, R.CROWD);
+            [[60, 318], [628, 316]].forEach(([x, y]) => {
+                fr.region(x - 9, y - 7, x + 10, y + 5, (a, b) => fr.solid(a, b, R.CROWD, b === y - 7 ? 0.5 : 0.06));
+                fr.region(x + 10, y - 4, x + 16, y + 2, (a, b) => fr.solid(a, b, R.CROWD, a === x + 15 ? 0.4 : 0.1));
+                for (let k = 0; k < 44; k++) { fr.solid(x - k * 0.25, y + 5 + k, R.STEEL, 0.25); fr.solid(x + k * 0.25, y + 5 + k, R.STEEL, 0.25); }
+            });
+            const warm = document.createElement('canvas').getContext('2d');                         // bake every idle frame now, so the cut never stalls
+            CREW.forEach(c => [0, 750, 1550, 2450].forEach(ms => { CE.sprite(dressId(c.id), 'idle', CE.frameAt('idle', ms)); CE.draw(warm, dressId(c.id), 'idle', ms, 20, 60, { facing: c.facing, warm: 3, rim: -c.facing, seed: c.seed }); }));
+            return { bg: bg.canvas(), stage: st.canvas(), front: fr.canvas(), stars, shipLight, bgLamps, hands };
         },
         draw(t, S) {
-            ctx.drawImage(S.canvas, 0, 0);
-            const f = P.framer(ctx, AW, AH), ts = step8(t);
-            P.twinkle(f, S.stars, ts);
+            const e = ease(clamp01(t / 8000)), bgPan = Math.round(6 * e), stPan = Math.round(14 * e), frPan = Math.round(34 * e), ts = step8(t);
+            ctx.drawImage(S.bg, -bgPan, 0);
+            const f = P.framer(ctx, AW, AH);
+            P.twinkle(f, S.stars, ts, bgPan);
+            S.bgLamps.forEach(([x, y]) => { f.glow(x - bgPan, y, 4, R.FLOOD, 0.85); f.px(x - bgPan - 1, y, R.FLOOD.hex[5], 3, 1); });
+            blink(f, S.shipLight[0] - bgPan, S.shipLight[1], ts, 2000, 0, 0.45);
+            ctx.drawImage(S.stage, -stPan, 0);
+            POD_LAMPS.forEach(lx => { f.glow(lx - stPan, 56, 7, R.FLOOD, 0.95); f.px(lx - stPan - 2, 54, R.FLOOD.hex[5], 5, 2); });
             const L = P.pixelLayer(AW, AH);
-            [[22, 60, 34, 24, 1], [584, 60, 34, 24, 3]].forEach(([x, y, w, h, s]) => flag(L, x, y, w, h, t * 0.6, s));
+            [[26, 62, 36, 24, 1], [654, 62, 36, 24, 3]].forEach(([x, y, w, h, s]) => flag(L, x - stPan, y, w, h, t * 0.7, s, false));
             L.draw(ctx);
-            S.lamps.forEach(([x, y]) => { f.glow(x, y + 3, 7, R.FLOOD, 0.95); f.px(x - 2, y + 2, R.FLOOD.hex[5], 5, 2); });
-            CREW.forEach(c => drawCrew(c, t));
+            CREW.forEach(c => drawCrew(c, t, stPan));
             const C = P.pixelLayer(AW, AH);
-            for (let i = 0; i < 70; i++) {                                                     // paper confetti, falling through the lamps' light
-                const x = hash(i, 1, 43) * 660 - 10 + Math.sin(t / 700 + i) * 5, y = (hash(i, 2, 43) * 380 + t / 1000 * (10 + hash(i, 3, 43) * 12)) % 380 - 10;
-                C.tone(x, y, hash(i, 4, 43) > 0.4 ? R.CREAM : R.GLOW, 0.5 + 0.45 * (Math.sin(t / 150 + i * 1.7) * 0.5 + 0.5));
-                if (hash(i, 5, 43) > 0.6) C.tone(x + 1, y, hash(i, 4, 43) > 0.4 ? R.CREAM : R.GLOW, 0.4);
+            for (let i = 0; i < 44; i++) {                                                     // paper confetti, bright only where it falls through a spot
+                const x = hash(i, 1, 43) * 660 - 10 + Math.sin(t / 700 + i) * 5 - stPan, y = (hash(i, 2, 43) * 300 + t / 1000 * (9 + hash(i, 3, 43) * 9)) % 300 + 10;
+                const inSpot = CREW.some(c => Math.abs(x + stPan - c.x) < 6 + (y - 56) * 0.09), v = (inSpot ? 0.75 : 0.32) + 0.2 * Math.sin(t / 150 + i * 1.7);
+                C.tone(x, y, hash(i, 4, 43) > 0.4 ? R.CREAM : R.GOLD, v);
             }
             C.draw(ctx);
-            ctx.drawImage(crowdFront(), 0, Math.round(Math.sin(ts / 700) * 0.6));
+            const bob = Math.round(Math.sin(ts / 700) * 0.6);
+            ctx.drawImage(S.front, -frPan, bob);
             flashes(f, t, 30, [20, 300, 620, 356], 7);
-            flashes(f, t + 333, 12, [60, 200, 580, 240], 9);
         },
     });
     const dressId = id => (window.FILM_DRESS ? id + '-dress' : id);
-    /** One crew member on the stage: the far arm raised and waving behind the body first, then the person. */
-    function drawCrew(c, t) {
-        const ms = t + c.seed * 1300, id = dressId(c.id);
+    /** One crew member on the stage: the far arm raised and waving behind the body first, then the person, warm in the spot. */
+    function drawCrew(c, t, ox) {
+        const ms = t + c.seed * 1300, id = dressId(c.id), X = c.x - ox;
         const S = CE.sprite(id, 'idle', CE.frameAt('idle', ms));
-        const X = c.x, top = STAGE_FLOOR - S.origin.y, nx = X + (S.neck.x - S.origin.x) * c.facing, ny = top + S.neck.y;
+        const top = POD.floor - S.origin.y, nx = X + (S.neck.x - S.origin.x) * c.facing, ny = top + S.neck.y;
         if (c.wave) waveArm(c, nx - c.facing * 4, ny + 4, t);
-        CE.draw(ctx, id, 'idle', ms, X, STAGE_FLOOR, { facing: c.facing, warm: 2, rim: -c.facing, seed: c.seed });
+        CE.draw(ctx, id, 'idle', ms, X, POD.floor, { facing: c.facing, warm: 3, rim: -c.facing, seed: c.seed });
     }
     function waveArm(c, sx, sy, t) {
         const big = c.wave === 'big', k = Math.sin((t + c.seed * 400) / (big ? 230 : 320)), dark = window.FILM_DRESS ? ['#161d2e', '#2a3752', '#384866', '#5a6e92'] : ['#1a1f24', '#2a2f36', '#3a414a', '#4d5560'];
@@ -490,338 +553,378 @@ body.is-over #again { display: block; }
         ctx.fillStyle = skin[1]; ctx.fillRect(hxr - 1, hyr - 3, 3, 3); ctx.fillRect(hxr - 1 + (k > 0 ? 3 : -1), hyr - 2, 1, 2);
         ctx.fillStyle = window.FILM_DRESS ? '#c49a3a' : dark[3]; ctx.fillRect(hxr - 1, hyr + 1, 4, 1);   // the gold cuff
     }
-    let crowdFrontCanvas = null;
-    function crowdFront() {
-        if (crowdFrontCanvas) return crowdFrontCanvas;
-        const p = P.painter(AW, AH, false);
-        crowdBand(p, [[330, 1.5, 1, 0.66], [356, 2.1, 1, 0.72], [392, 2.8, 0.95, 0.8]], [0, -1], 900, -30, 670);
-        [[30, 320], [600, 318]].forEach(([x, y]) => { p.region(x - 7, y - 6, x + 9, y + 4, (a, b) => p.tone(a, b, R.CROWD, b === y - 6 ? 0.5 : 0.1)); p.region(x + 9, y - 3, x + 13, y + 1, (a, b) => p.tone(a, b, R.CROWD, 0.18)); for (let k = 0; k < 40; k++) { p.tone(x - k * 0.25, y + 4 + k, R.STEEL, 0.25); p.tone(x + k * 0.25, y + 4 + k, R.STEEL, 0.25); } });   // the press pit's cameras
-        crowdFrontCanvas = p.canvas();
-        return crowdFrontCanvas;
+    /** A person's shadow: their own shape, dithered dark, laid flat on the ground away from the light. Baked once per frame shape. */
+    const shadowCache = new WeakMap();
+    function shadowOf(S) {
+        if (shadowCache.has(S)) return shadowCache.get(S);
+        const c = document.createElement('canvas'); c.width = S.w; c.height = S.h;
+        const g = c.getContext('2d'), src = S.canvas.getContext('2d').getImageData(0, 0, S.w, S.h).data, img = g.createImageData(S.w, S.h);
+        for (let i = 0; i < S.w * S.h; i++) if (src[i * 4 + 3] > 0 && threshold(i % S.w, Math.floor(i / S.w)) < 0.86) { img.data[i * 4] = 8; img.data[i * 4 + 1] = 10; img.data[i * 4 + 2] = 12; img.data[i * 4 + 3] = 255; }
+        g.putImageData(img, 0, 0); shadowCache.set(S, c);
+        return c;
+    }
+    function castShadow(S, x, floorY, facing, kx, ky) {
+        ctx.save();
+        ctx.setTransform(facing, 0, kx, ky, Math.round(x) + (facing < 0 ? 1 : 0), Math.round(floorY));
+        ctx.drawImage(shadowOf(S), -S.origin.x, -S.origin.y);
+        ctx.restore();
     }
 
-    // 4 · HULL TEN (36-44 s): the camera tilts up hull ten inside its scaffolding: longer than ours, a second ring round the drive,
-    //     its top half still bare frames. Welders' sparks fall. A big 10 on the finished plates.
-    const TEN = { H: 560, x: 300, base: 540 };
+    // 4 · TO THE LIFT (20-26.5 s): low on the apron of pad nine. The bottom of hull nine fills the frame, floodlit from the left, its
+    //     top lost in the dark; the five walk across the concrete in their own long shadows to the lift cage at the foot of the
+    //     tower, where one warm lamp is lit. The vents under the ship already breathe. The camera keeps pace with them.
+    const WALK = { W: 700, hz: 226, X: 316, B: 296, len: 640, floor: 338, tower: 560, cage: [566, 612], order: ['cora', 'vance', 'mira', 'jaxon', 'aris'] };
+    const floodShape = (u, v, o) => { const l = P.shapeL(u, v, o); return l < 0 ? l : l * (0.36 + 0.64 * smooth(0.4, 0.97, u)) + 0.05 * smooth(0.9, 1, u); };
+    floodShape.span = P.shapeL.span;
     shot({
-        id: 'ten', t0: 36000, t1: 44000, caption: 'Hull ten, still being built: longer, a second ring round the drive, its top half bare frames.',
+        id: 'walk', t0: 20000, t1: 26500, caption: 'To the lift: under the floodlit hull, the five walk in their long shadows to the lift at the tower.',
         build() {
-            const p = P.painter(AW, TEN.H, true);
-            const stars = sky(p, 520, 520, 0.55, 41);
-            ground(p, 520, 12, (x, y) => 0.25 * Math.exp(-Math.abs(x - TEN.x) / 120));
-            p.region(0, 380, AW, 520, (x, y) => { const k = (y - 380) / 140, v = 0.32 * k * Math.exp(-Math.abs(x - TEN.x) / 200); if (v > 0.03) p.cover(x, y, R.FLOOD, 0.35, v); });
-            const len = 470, ht = len / 3.6;
-            const at = P.hull(p, { x: TEN.x, y: TEN.base - 10, len, ht, angle: -Math.PI / 2, flip: true, anchor: 1, seed: 21, ramp: R.STEEL, light: 0.95, built: 0.52, sun: 0.22, sunDir: [-1, 0] }, shapeTen);
-            bigText(p, '10', TEN.x - 6, TEN.base - 214, 7, R.STEEL, 0.08);
-            const sx0 = TEN.x - ht / 2 - 22, sx1 = TEN.x + ht / 2 + 22, lamps = [], decks = [];
-            for (let x = sx0; x <= sx1; x += 13) steelBar(p, x, TEN.base, x, 30, 0.26, 2);
-            for (let y = TEN.base - 18; y > 30; y -= 26) {
-                steelBar(p, sx0, y, sx1, y, 0.36, 2); decks.push(y);
-                p.region(sx0, y + 2, sx1, y + 4, (a, b) => p.tone(a, b, R.WOOD, 0.3));
-                if (hash(y, 1, 5) > 0.25) lamps.push([sx0 + 6 + Math.floor(hash(y, 2, 5) * (sx1 - sx0 - 12)), y + 6]);
+            const p = P.painter(WALK.W, AH, true), { hz, X, B } = WALK;
+            const stars = sky(p, hz, 60, 0.5, 51);
+            hills(p, hz, 14);
+            p.region(0, hz + 1, WALK.W, AH, (x, y) => {                                           // the apron: concrete slabs running away from us, the floodlight's pool
+                const d = Math.max(1, y - hz), z = 1000 / d, lane = (x - 350) * 60 / d;
+                const joint = (((lane % 40) + 40) % 40) < 60 / d || (z % 40) < 1000 / (d * d);
+                const pool = 0.5 * Math.exp(-Math.hypot((x - X) / 230, (y - B - 6) / 34)) + 0.22 * Math.exp(-Math.hypot((x - 380) / 300, (y - WALK.floor) / 22));
+                const far = smooth(hz, hz + 24, y), v = 0.08 + far * (0.12 + pool) + (fbm(x / 7, y / 2.2, 15, 3) - 0.5) * 0.12 - (joint && far > 0.5 ? 0.1 : 0);
+                p.tone(x, y, far > 0.4 ? R.CONC : R.GROUND, v);
+            });
+            const mastLamps = [];
+            [[46, 306, 214, 0.55], [676, 252, 112, 0.4]].forEach(([mx, mb, mh, v]) => {
+                steelBar(p, mx, mb, mx, mb - mh, v, 2);
+                p.region(mx - 6, mb - mh - 6, mx + 8, mb - mh, (a, b) => p.tone(a, b, R.STEEL, 0.3));
+                mastLamps.push([mx + 1, mb - mh - 3]);
+                beam(p, mx + 1, mb - mh - 2, X + (mx < X ? -20 : 40), B - 90, 3, 62, R.FLOOD, 0.5, mx < X ? 0.26 : 0.16);
+            });
+            const at = standingLander(p, { x: X, base: B, len: WALK.len, shape: floodShape, light: 0.95 });
+            bigText(p, '9', at(0.74, -0.08)[0], at(0.74, 0)[1] - 18, 5, R.HULL, 0.14);
+            // the tower: two legs, X-braces, platforms; the lift cage at its foot with one warm lamp inside
+            const T0 = WALK.tower, T1 = T0 + 58, base = WALK.floor - 10;
+            for (let y = base; y > -10; y--) { p.tone(T0, y, R.STEEL, 0.5); p.tone(T0 + 1, y, R.STEEL, 0.36); p.tone(T1, y, R.STEEL, 0.26); p.tone(T1 + 1, y, R.STEEL, 0.18); }
+            for (let y = base - 90; y > -40; y -= 30) { steelBar(p, T0, y, T1, y - 30, 0.3); steelBar(p, T1, y, T0, y - 30, 0.2); }
+            for (let y = base - 90; y > -10; y -= 60) p.region(T0 - 6, y, T1 + 8, y + 2, (a, b) => p.tone(a, b, R.STEEL, b === y ? 0.5 : 0.22));
+            const [c0, c1] = WALK.cage;
+            p.region(c0, base - 82, c1, base, (a, b) => p.tone(a, b, R.AMBER, 0.06 + 0.32 * Math.exp(-Math.hypot((a - (c0 + c1) / 2) / 26, (b - base + 76) / 40))));
+            p.region(c0 - 2, base - 86, c1 + 2, base - 82, (a, b) => p.tone(a, b, R.STEEL, 0.45));
+            p.region(c0 - 2, base, c1 + 2, base + 3, (a, b) => p.tone(a, b, R.STEEL, b === base ? 0.55 : 0.25));
+            for (let k = 0; k <= 1; k += 1 / 180) {                                                // a feed line from the tower to the hull, sagging
+                const x = lerp(T0, X + 98, k), y = lerp(150, 178, k) + 30 * Math.sin(Math.PI * k);
+                p.tone(x, y, R.STEEL, 0.4); p.tone(x, y + 1, R.STEEL, 0.16);
             }
-            for (let y = TEN.base - 18; y > 56; y -= 26) [sx0, sx1 - 13].forEach(x => steelBar(p, x, y, x + 13, y - 26, 0.2));   // braces at the sides only
-            tower(p, sx1 + 40, TEN.base, 520, 8, 1.1, 0.3);
-            steelBar(p, sx0 - 120, 24, sx1 + 60, 24, 0.42, 3);
-            p.line(TEN.x - 30, 27, TEN.x - 30, 80, (a, b) => p.tone(a, b, R.STEEL, 0.4));
-            const [kx, ky] = at(0.5, 0);
-            return { canvas: p.canvas(), stars, lamps, sparks: [[TEN.x - 18, 262], [TEN.x + 22, 210], [TEN.x - 4, 132]], mid: [kx, ky] };
+            WALK.order.forEach(id => ['walk', 'idle'].forEach(a => { for (let k = 0; k < CE.ACTIONS[a].frames; k++) shadowOf(CE.sprite(dressId(id), a, k, { warm: 1, rim: -1 })); }));   // bake every frame and shadow now, so the shot never stalls on its first steps
+            return { canvas: p.canvas(), stars, mastLamps, cageLamp: [(c0 + c1) / 2, base - 78], base, vents: steppedLayer() };
         },
         draw(t, S) {
-            const pan = Math.round(lerp(TEN.H - AH, 0, ease(clamp01(t / 8000)))), ts = step8(t);
-            ctx.drawImage(S.canvas, 0, -pan);
+            const pan = Math.round(60 * ease(clamp01(t / 6500))), ts = step8(t), { X, B } = WALK;
+            ctx.drawImage(S.canvas, -pan, 0);
             const f = P.framer(ctx, AW, AH);
-            P.twinkle(f, S.stars.map(s => ({ x: s.x, y: s.y - pan, mag: s.mag })), ts);
-            S.lamps.forEach(([x, y], i) => { f.glow(x, y - pan, 5, R.AMBER, 0.42); f.px(x - 1, y - pan, R.AMBER.hex[4], 3, 1); });
-            S.sparks.forEach(([x, y], i) => {                                                   // a welder's spark: a white point, drops falling from it
-                if (hash(i, Math.floor(ts / 375), 6) < 0.3) return;
-                f.glow(x, y - pan, 4, R.WELD, 0.9); f.px(x, y - pan, R.WELD.hex[4]);
-                for (let k = 0; k < 7; k++) { const age = ((t / 900) + hash(i, k, 8)) % 1; f.tone(x + (hash(i, k, 9) - 0.5) * 14 * age, y - pan + age * age * 60, R.WELD, 0.9 * (1 - age)); }
+            P.twinkle(f, S.stars, ts, pan);
+            S.mastLamps.forEach(([x, y]) => { f.glow(x - pan, y, 9, R.FLOOD, 0.95); f.px(x - pan - 4, y - 1, R.FLOOD.hex[5], 9, 3); });
+            S.vents.draw(ts, L => steamCloud(L, ventPuffs(ts, X, B + 4, 1.3, 24), { light: [-40, 60], heat: 0.55, reach: 460, ambient: 0.36, seed: 51, t: ts, edge: 0.18, soft: 0.6 }), -pan);   // the vents under the ship: slow white breath
+            // the five: walking at the engine's own pace, single file; the first stops in the cage, the next waits at its door
+            const stop = [589, 540, 500, 460, 420];
+            WALK.order.map((id, i) => {
+                const x = Math.min(stop[i], 330 - i * 40 + CE.ACTIONS.walk.move * t / CE.ACTIONS.walk.ms);
+                return { id: dressId(id), x, i, walking: x < stop[i] };
+            }).reverse().forEach(c => {
+                const action = c.walking ? 'walk' : 'idle', ms = t + c.i * 230, S = CE.sprite(c.id, action, CE.frameAt(action, ms), { warm: 1, rim: -1 });
+                castShadow(S, c.x - pan, WALK.floor, 1, -0.75, -0.17);
+                CE.draw(ctx, c.id, action, ms, c.x - pan, WALK.floor, { facing: 1, warm: 1, rim: -1, seed: c.i });
             });
+            const [c0, c1] = WALK.cage;                                                        // the cage's front mesh, over whoever is inside
+            for (let x = c0; x <= c1; x += 4) f.px(x - pan, S.base - 82, R.STEEL.hex[2], 1, 82);
+            for (let y = S.base - 80; y < S.base; y += 10) f.px(c0 - pan, y, R.STEEL.hex[2], c1 - c0 + 1, 1);
+            f.glow(S.cageLamp[0] - pan, S.cageLamp[1], 6, R.AMBER, 0.8); f.px(S.cageLamp[0] - pan - 2, S.cageLamp[1], R.AMBER.hex[4], 5, 1);
         },
     });
 
-    // 5 · PAD NINE (44-62 s): night has nearly come. Hull nine on its pad, floodlit; five small people walk across the apron to the
-    //     tower and ride the lift up to the arm. The countdown starts; vents breathe steam; the arm swings back.
-    const PAD = { x: 392, base: 300, len: 244, tower: 452 };
-    const WALKERS = [['#1b242b', '#1f2940'], ['#3a3530', '#1f2940'], ['#dfe9ee', '#1f2940'], ['#9a9fab', '#1f2940'], ['#c0443c', '#1f2940']];   // hair, coat, in podium order: Mira, Jaxon, Cora, Vance, Aris
+    // 5 · IGNITION (26.5-34 s): from the press stand. T-3 on the clock, the vents breathing; then the drive lights under the bell,
+    //     the flame hits the trench and steam rolls out both ways in great billows lit from inside, the whole yard and the tower
+    //     turn cold and bright, the heads in front go black against it, the picture shakes. The ship holds a moment on the fire,
+    //     then lifts, slowly at first.
+    const IGN = { X: 300, B: 268, len: 160, hz: 250, ign: 3000, hold: 1500 };
+    const ignRise = t => (t < IGN.ign + IGN.hold ? 0 : 1.7e-5 * (t - IGN.ign - IGN.hold) ** 2);
+    const drivenShape = (u, v, o) => { const l = P.shapeL(u, v, o); return l < 0 ? l : l * 0.62 + 0.55 * Math.exp(-(1 - u) * 5.5) * (0.65 + 0.35 * (1 - Math.abs(v))); };
+    drivenShape.span = P.shapeL.span;
     shot({
-        id: 'pad', t0: 44000, t1: 62000, caption: 'Pad nine at nightfall: the five walk to the tower and ride up; the countdown starts.',
+        id: 'ignition', t0: 26500, t1: 34000, caption: 'Ignition: steam rolls over the pad, the yard turns cold and bright, the ship holds on the fire, then climbs.',
         build() {
-            const p = P.painter(AW, AH, true), X = PAD.x, B = PAD.base;
-            const stars = sky(p, 288, 120, 0.42, 51);
-            hills(p, 288, 14);
-            ground(p, 288, 15, (x, y) => 0.5 * Math.exp(-Math.hypot((x - X) / 150, (y - B) / 26)));
-            p.ellipse(X, B + 2, 120, 16, (a, b, qq) => p.tone(a, b, R.CONC, 0.58 - qq * 0.34 + (fbm(a / 4, b / 2, 7, 2) - 0.5) * 0.12));
-            p.region(X - 14, B + 4, X + 14, B + 14, (a, b) => p.tone(a, b, R.CONC, 0.04));
-            [[X - 220, B + 6, 176], [X + 200, B + 4, 168], [X - 128, B + 30, 120]].forEach(([mx, mb, mh]) => { steelBar(p, mx, mb, mx, mb - mh, 0.42, 2); beam(p, mx, mb - mh - 2, X, B - 70, 3, 44, R.FLOOD, 0.5, 0.3); });
-            const at = standingLander(p, { x: X, base: B, len: PAD.len });
-            const top = tower(p, PAD.tower, B, 262, 12, 1.4, 0.45);
-            const [hx, hy] = at(0.235, 0.5);
-            const name = 'EXODUS-9';
-            for (let i = 0; i < name.length; i++) {                                              // the name down the hull, one letter under the other
-                P.pixelText(name[i], 0, 0, (gx, gy) => { const [x, y] = at(0.3 + i * 0.05, 0.02); p.region(x + gx * 2 - 3, y + gy * 2 - 5, x + gx * 2 - 1, y + gy * 2 - 3, (a, b) => p.tone(a, b, R.HULL, 0.14)); });
-            }
-            const lamps = [[X - 220, B - 172], [X + 200, B - 166], [X - 128, B - 92]];
-            return { canvas: p.canvas(), stars, lamps, arm: [hx, hy], top, at };
-        },
-        draw(t, S) {
-            ctx.drawImage(S.canvas, 0, 0);
-            const f = P.framer(ctx, AW, AH), ts = step8(t), X = PAD.x, B = PAD.base, T = t + 44000;
-            P.twinkle(f, S.stars, ts);
-            S.lamps.forEach(([x, y]) => { f.glow(x, y, 8, R.FLOOD, 0.95); f.px(x - 3, y - 1, R.FLOOD.hex[5], 7, 2); });
-            blink(f, S.top[0], S.top[1], ts, 1800, 0, 0.45);
-            // the arm to the hatch: out until T-4, then swinging back
-            const [hx, hy] = S.arm, swing = clamp01((T - (COUNT.zero - 4000)) / 2500), armEnd = lerp(hx + 1, PAD.tower, ease(swing));
-            for (let x = Math.round(armEnd); x < PAD.tower; x++) { f.px(x, Math.round(hy) - 1, R.STEEL.hex[3]); f.px(x, Math.round(hy), R.STEEL.hex[2]); f.px(x, Math.round(hy) + 2, R.STEEL.hex[1]); }
-            // the five walk to the tower (45.5-53 s), ride the lift (53-57 s), then the lift's lamp at the top
-            const walk = clamp01((T - 45500) / 7500), liftK = clamp01((T - 53200) / 3800), carY = lerp(B - 4, hy - 1, ease(liftK));
-            if (T < 53200) WALKERS.forEach(([hair, coat], i) => {
-                const x = Math.round(lerp(90 - i * 13, PAD.tower - 12 - i * 7, walk)), bob = walk < 1 ? (Math.floor(ts / 250 + i) % 2) : 0, y = B + 12 - bob;
-                f.px(x, y - 10, hair, 2, 2); f.px(x, y - 8, '#c8a080'); f.px(x - 1, y - 7, coat, 3, 5); f.px(x - 1, y - 2, '#0a0b0e', 1, 2); f.px(x + 1, y - 2, '#0a0b0e', 1, 2);
-                f.px(x - 1, y - 7, R.FLOOD.hex[2], 1, 4);
-            });
-            f.px(PAD.tower + 2, Math.round(carY) - 8, R.STEEL.hex[2], 9, 9);
-            if (T >= 53200 && T < 57400) { f.px(PAD.tower + 3, Math.round(carY) - 7, R.AMBER.hex[3], 7, 6); f.glow(PAD.tower + 6, Math.round(carY) - 4, 7, R.AMBER, 0.5); }
-            // the vents breathe from T-6
-            const vent = clamp01((T - (COUNT.zero - 6000)) / 6000);
-            if (vent > 0) {
-                const L = P.pixelLayer(AW, AH);
-                for (let i = 0; i < 70; i++) {
-                    const age = ((t / 1800) + hash(i, 1, 21)) % 1, side = hash(i, 2, 21) < 0.5 ? -1 : 1, r = 2 + age * 12 * vent;
-                    const cx = X + side * (10 + age * 70 * vent), cy = B - 4 - age * 18 - hash(i, 3, 21) * 6;
-                    for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y) / r; if (d < 1 && fbm((cx + x) / 4, (cy + y) / 4 - t / 900, 3, 2) > 0.42 + d * 0.3) L.tone(cx + x, cy + y, R.SMOKE, (0.75 - age * 0.5) * vent); }
-                }
-                L.draw(ctx);
-            }
-        },
-    });
-
-    // 6 · LIFT-OFF (62-71 s): the drive lights blue-white under the bell, the blast hits the pad and steam rolls out across it in
-    //     great billows lit from inside, the whole yard turns cold and bright, and the ship climbs; the camera tilts up after it.
-    const LIFT = { H: 760, x: 320, base: 700, len: 210, hold: 1800 };
-    const liftRise = t => (t < LIFT.hold ? 0 : 0.0000082 * (t - LIFT.hold) ** 2);   // still in the frame when the shot cuts
-    shot({
-        id: 'liftoff', t0: 62000, t1: 71000, caption: 'Lift-off: the blue drive lights, steam rolls over the pad, the camera tilts up after the ship.',
-        build() {
-            const X = LIFT.x, B = LIFT.base, mk = lit => {
-                const p = P.painter(AW, LIFT.H, true);
-                const stars = sky(p, 690, 200, 0.3, 61);
-                hills(p, 690, 16);
-                ground(p, 690, 17, (x, y) => (0.2 + 0.5 * lit) * Math.exp(-Math.hypot((x - X) / 240, (y - B) / 30)));
-                p.ellipse(X, B + 4, 140, 18, (a, b, qq) => p.tone(a, b, R.CONC, 0.5 + 0.2 * lit - qq * 0.3));
-                tower(p, X + 64, B, 230, 12, 1.4, 0.4 + 0.3 * lit);
-                tower(p, X - 236, B + 10, 120, 6, 0.9, 0.3 + 0.2 * lit);
-                if (lit) p.region(0, B - 300, AW, B + 60, (x, y) => { const v = lit * 0.42 * Math.exp(-Math.hypot((x - X) / 240, (y - B) / 90)); if (v > 0.05) p.cover(x, y, R.PLUME, 0.25 + v, v * 1.1); });   // the yard lit cold by the drive
-                return { canvas: p.canvas(), stars };
+            const { X, B, hz } = IGN;
+            const mk = lit => {
+                const p = P.painter(AW, AH, true);
+                const stars = sky(p, hz, 110, 0.45 * (1 - lit * 0.4), 61);
+                if (lit) p.region(0, 0, AW, hz + 1, (x, y) => {                                      // the drive's cold light on the low sky, fading into the night without grain
+                    const v = 0.44 * Math.exp(-Math.hypot((x - X) / 240, (y - B) / 80));
+                    if (smooth(0.05, 0.18, v) > threshold(x + 3, y + 5)) p.tone(x, y, R.PLUME, 0.06 + v);
+                });
+                hills(p, hz, 16);
+                ground(p, hz, 17, (x, y) => (0.24 + 0.55 * lit) * Math.exp(-Math.hypot((x - X) / (200 + 140 * lit), (y - B) / 26)));
+                p.ellipse(X, B + 4, 120, 13, (a, b, qq) => p.tone(a, b, R.CONC, 0.4 + 0.3 * lit - qq * 0.26 + (fbm(a / 4, b / 2, 7, 2) - 0.5) * 0.12));
+                [[X - 210, B + 8, 120], [X + 190, B + 6, 110]].forEach(([mx, mb, mh]) => { steelBar(p, mx, mb, mx, mb - mh, 0.36 + 0.3 * lit, 2); if (!lit) beam(p, mx, mb - mh - 2, X, B - 60, 2, 30, R.FLOOD, 0.5, 0.22); });
+                const top = tower(p, X + 46, B, 214, 13, 1.3, 0.38 + 0.4 * lit);
+                for (let y = B - 40; y > B - 200; y -= 52) steelBar(p, X + 30, y, X + 46, y, 0.35 + 0.3 * lit);   // the swung-back arms
+                return { canvas: p.canvas(), stars, top };
             };
-            const dark = mk(0), bright = mk(1);
-            const s = P.painter(150, 270, false);                                                 // the ship, baked once
-            standingLander(s, { x: 75, base: 262, len: LIFT.len });
-            return { dark, bright, ship: s.canvas() };
+            const ship = shape => { const s = P.painter(150, 200, false); standingLander(s, { x: 75, base: 192, len: IGN.len, shape }); return s.canvas(); };
+            const phones = [];
+            const heads = (rr, k) => { const p = P.painter(AW + 40, AH, false); const h = crowdMass(p, [[318, 1.9, 1.25, 0.5 * k], [342, 2.6, 1.15, 0.58 * k], [384, 3.7, 1.05, 0.64 * k]], [0.25, -1], 700, -30, AW + 60, rr); if (!phones.length) h.forEach(o => { if (o.kind === 2) phones.push([o.x, o.y]); }); return p.canvas(); };
+            const headsDark = heads(R.CROWD, 0.85), headsLit = heads(R.PLUME, 0.6);
+            return { dark: mk(0), bright: mk(1), shipFlood: ship(floodShape), shipLit: ship(drivenShape), headsDark, headsLit, phones, back: steppedLayer(), front: steppedLayer() };
         },
         draw(t, S) {
-            const X = LIFT.x, B = LIFT.base, rise = liftRise(t), pan = Math.round(Math.max(0, LIFT.H - AH - Math.max(0, rise - 40)));   // the camera tilts up with the ship once it clears the tower
-            const heat = clamp01(t / 700), base = heat > 0.5 ? S.bright : S.dark, ts = step8(t);
-            ctx.drawImage(base.canvas, 0, -pan);
+            const { X, B, ign } = IGN, ts = step8(t), heat = clamp01((t - ign) / 350), rise = ignRise(t), flick = [1, 0.92, 1.06, 0.96][Math.floor(ts / TICK) % 4];
+            const base = heat > 0.5 ? S.bright : S.dark;
+            ctx.drawImage(base.canvas, 0, 0);
             const f = P.framer(ctx, AW, AH);
-            P.twinkle(f, base.stars.map(st => ({ x: st.x, y: st.y - pan, mag: st.mag })), ts);
-            const by = B - rise - pan - 12, flick = [1, 0.9, 1.08, 0.95][Math.floor(ts / TICK) % 4];
-            const L = P.pixelLayer(AW, AH);
-            billows(L, t, X, B - pan, heat, false);
-            L.draw(ctx);
-            ctx.drawImage(S.ship, X - 75, Math.round(B - rise - pan) - 262);
-            const L2 = P.pixelLayer(AW, AH), plume = (t < LIFT.hold ? 30 + t / 25 : 110 + Math.min(260, rise * 0.7)) * heat * flick;
-            const padY = B - pan + 2;                                                           // the pad: the flame stops here and spreads
-            for (let d = 0; d < plume; d++) {                                                   // the drive: a white core in a blue sheath
-                if (by + 8 + d > padY) break;
-                const w = 9 * (1 - d / (plume * 1.5)) + d * 0.05 + (rise < 10 ? d * 0.12 : 0);
-                for (let k = -w; k <= w; k++) { const v = (1 - d / plume) ** 0.6 * (1 - (k / (w + 0.01)) ** 2); if (v > 0.04) L2.tone(X + k, by + 8 + d, R.PLUME, Math.min(1, 0.25 + v * 1.1)); }
+            P.twinkle(f, base.stars, ts);
+            if (heat < 0.5) { [[X - 210, B - 114], [X + 190, B - 106]].forEach(([x, y]) => { f.glow(x, y, 7, R.FLOOD, 0.95); f.px(x - 3, y, R.FLOOD.hex[5], 7, 2); }); }
+            blink(f, base.top[0], base.top[1], ts, 1800, 0, 0.45);
+            const by = Math.round(B - rise) - 8;                                                // the bell's mouth
+            const fireAt = [X, Math.min(B - 2, by + 14)], hf = heat * flick;
+            S.back.draw(ts, L => {                                                               // the steam behind the ship (and, before, the vents)
+                const puffs = t < ign + 500 ? ventPuffs(ts, X, B, 1.1, 12) : [];
+                if (t > ign) puffs.push(...ignitionPuffs(ts - ign, X, B, false));
+                steamCloud(L, puffs, { light: t > ign ? fireAt : [X - 220, B - 120], heat: t > ign ? hf : 0.5, reach: t > ign ? 170 : 320, ambient: t > ign ? 0.2 : 0.34, seed: 61, t: ts, soft: t > ign ? 0.16 : 0.6, edge: t > ign ? 0.34 : 0.18 });
+            });
+            ctx.drawImage(heat > 0.3 ? S.shipLit : S.shipFlood, X - 75, Math.round(B - rise) - 192);
+            if (t > ign) {
+                const L2 = P.pixelLayer(AW, AH), padY = B + 2, plume = (t < ign + IGN.hold ? 16 + (t - ign) / 30 : 66 + Math.min(240, rise * 0.8)) * heat * flick;
+                for (let d = 0; d < plume; d++) {                                               // the drive: a white core in a blue sheath
+                    if (by + d > padY) break;
+                    const w = 7 * (1 - d / (plume * 1.6)) + d * 0.06;
+                    for (let k = -w; k <= w; k++) { const v = (1 - d / plume) ** 0.6 * (1 - (k / (w + 0.01)) ** 2); if (v > 0.04) L2.tone(X + k, by + d, R.PLUME, Math.min(1, 0.3 + v * 1.1)); }
+                }
+                const gap = padY - by;
+                if (gap < plume + 10) {                                                          // the flame hits the trench and runs out along the ground
+                    const hit = clamp01(1 - gap / (plume + 10)) * heat, reach = 30 + 170 * hit;
+                    for (let k = -reach; k <= reach; k++) for (let j = 0; j < 3; j++) { const v = hit * (1 - Math.abs(k) / reach) ** 0.7 * (1 - j / 3); if (v > 0.06) L2.tone(X + k, padY - j, R.PLUME, Math.min(1, 0.3 + v)); }
+                }
+                L2.draw(ctx);
+                bloom(f, X, by + 2, 16, R.PLUME, heat);
+                f.px(X - 5, by, R.PLUME.hex[6], 11, 3);
+                S.front.draw(ts, L => steamCloud(L, ignitionPuffs(ts - ign, X, B, true), { light: fireAt, heat: hf, reach: 150, ambient: 0.18, seed: 62, t: ts }));
             }
-            const gap = padY - (by + 8);
-            if (gap < plume && padY < AH + 4) {                                                 // the flame hits the pad and runs out along it
-                const hit = (1 - gap / plume) * heat, reach = 30 + 150 * hit;
-                for (let k = -reach; k <= reach; k++) for (let j = 0; j < 4; j++) { const v = hit * (1 - Math.abs(k) / reach) ** 0.7 * (1 - j / 4); if (v > 0.06) L2.tone(X + k, padY - j, R.PLUME, Math.min(1, 0.3 + v)); }
-            }
-            billows(L2, t, X, B - pan, heat, true);
-            L2.draw(ctx);
-            f.glow(X, by + 8, 16, R.PLUME, heat);
-            f.px(X - 6, by + 6, R.PLUME.hex[6], 13, 4);
+            const hx = -20 - Math.round(8 * ease(clamp01(t / 7500)));
+            ctx.drawImage(heat > 0.5 ? S.headsLit : S.headsDark, hx, 0);
+            S.phones.forEach(([x, y], i) => { if (hash(i, Math.floor(ts / 500), 8) > 0.15) f.px(x + hx - 1, y - 2, R.CREAM.hex[hash(i, Math.floor(ts / 375), 4) > 0.4 ? 4 : 3], 3, 4); });
+            flashes(f, t, 16, [0, 300, AW, 356], 19);
+            const amp = t > ign ? 1.6 * heat * (1 - clamp01((t - ign - 1200) / 2600)) : 0;      // the picture shakes with the roar
+            if (amp > 0.3) { const sx = Math.round((hash(1, Math.floor(ts / TICK), 7) - 0.5) * 2 * amp), sy = Math.round((hash(2, Math.floor(ts / TICK), 7) - 0.5) * 2 * amp); if (sx || sy) ctx.drawImage(cv, sx, sy); }
         },
     });
-    /** Steam and smoke from the flame trench: round billows rolling out both ways and up, lit from inside by the drive.
-        front: the billows nearer than the ship (they cover its legs). Drawn per frame into a pixel layer. */
-    function billows(L, t, X, B, heat, front) {
-        const grow = clamp01(t / 2600), n = 64;
-        for (let i = 0; i < n; i++) {
-            if ((hash(i, 9, 33) < 0.42) !== front) continue;
-            const age = ((t / 3400) + hash(i, 1, 33)) % 1, side = hash(i, 2, 33) < 0.5 ? -1 : 1, lift = hash(i, 4, 33);
-            const r = (6 + age * 34 + lift * 10) * grow, cx = X + side * (14 + age * (240 + lift * 120)) * grow, cy = B - 6 - (age * 40 + lift * 60 * age) * grow;
-            if (r < 2 || cy + r < 0 || cy - r > AH || cx + r < 0 || cx - r > AW) continue;
-            const lx = (X - cx) / (Math.abs(X - cx) + 40), ly = 0.6;                          // light from the drive: toward the pad, and from below
-            for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
-                const d = Math.hypot(x, y) / r;
-                if (d > 1) continue;
-                if (d > 0.7 && vnoise((cx + x) / 5, (cy + y) / 5 + t / 1400, i) < (d - 0.7) / 0.3) continue;   // a lumpy edge
-                const lam = Math.max(0, (x / r) * lx + (y / r) * ly), near = Math.exp(-Math.hypot(cx + x - X, cy + y - B) / 150);
-                const v = (0.36 + 0.42 * lam + 0.4 * near * heat - (y / r) * -0.06) * (1 - age * 0.3);
-                L.tone(cx + x, cy + y, near * heat > 0.4 && lam > 0.35 ? R.PLUME : R.SMOKE, v);
-            }
+    /** A glow that only brightens: the faint outer steps are skipped, so it never rings a bright fire with dark pixels. */
+    function bloom(f, cx, cy, rad, r, peak) {
+        for (let y = -rad; y <= rad; y++) for (let x = -rad; x <= rad; x++) { const d = Math.hypot(x, y) / rad, v = peak * (1 - d) ** 1.5; if (d < 1 && v > 0.5) f.tone(cx + x, cy + y, r, v); }
+    }
+    // ── steam as one body ──
+    // Every puff is added into one density field (soft blobs that melt into each other), the edge is eaten by drifting noise,
+    // and each pixel is lit by how much steam lies between it and the light: the side facing the fire glows, the far side and the
+    // inside stay dark. So the mass reads as one rolling cloud lit from inside, never as separate balls. One ramp from the ink to
+    // white, so the light runs through it without a seam.
+    const STEAM = ramp(INK, '#11161b', '#1c242c', '#2b3640', '#3f4e5b', '#5a6f80', '#7f9aae', '#aecbdc', '#dcf0fa', '#ffffff');
+    const FIELD = new Float32Array(AW * AH);
+    /** puffs: [[cx, cy, rx, ry, weight]]. o: { light: [x, y], heat 0..1, reach (px the fire light carries), ambient, seed, t, edge }. */
+    function steamCloud(L, puffs, o) {
+        let bx0 = AW, by0 = AH, bx1 = -1, by1 = -1;
+        puffs.forEach(([cx, cy, rx, ry, w]) => {
+            const x0 = Math.max(0, Math.floor(cx - rx)), x1 = Math.min(AW - 1, Math.ceil(cx + rx)), y0 = Math.max(0, Math.floor(cy - ry)), y1 = Math.min(AH - 1, Math.ceil(cy + ry));
+            if (x0 > x1 || y0 > y1) return;
+            bx0 = Math.min(bx0, x0); by0 = Math.min(by0, y0); bx1 = Math.max(bx1, x1); by1 = Math.max(by1, y1);
+            for (let y = y0; y <= y1; y++) { const dy = (y + 0.5 - cy) / ry, dy2 = dy * dy; if (dy2 >= 1) continue; for (let x = x0; x <= x1; x++) { const dx = (x + 0.5 - cx) / rx, q = 1 - dx * dx - dy2; if (q > 0) FIELD[y * AW + x] += w * q * q; } }
+        });
+        if (bx1 < 0) return;
+        const at = (x, y) => { x = Math.round(x); y = Math.round(y); return x < bx0 || y < by0 || x > bx1 || y > by1 ? 0 : FIELD[y * AW + x]; };
+        const [lx, ly] = o.light, edge = o.edge || 0.34, amb = o.ambient == null ? 0.2 : o.ambient;
+        for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) {
+            const f0 = FIELD[y * AW + x];
+            if (f0 < 0.05) continue;
+            const n = fbm(x / 9, y / 6 - o.t / 1500, o.seed, 3), d = f0 + (n - 0.5) * 0.62;
+            if (d < edge) continue;
+            if (smooth(edge, edge + (o.soft || 0.16), d) < threshold(x + 1, y + 2)) continue;          // a soft, dithered edge (soft: see-through wisps)
+            const dx = lx - x, dy = ly - y, dist = Math.hypot(dx, dy) || 1, ux = dx / dist, uy = dy / dist;
+            const toward = at(x + ux * 5, y + uy * 5) + 0.5 * at(x + ux * 11, y + uy * 11);           // steam between this pixel and the fire
+            const gx = at(x + 2, y) - at(x - 2, y), gy = at(x, y + 2) - at(x, y - 2), gl = Math.hypot(gx, gy) || 1;
+            const face = clamp01(0.5 - 0.5 * (gx * ux + gy * uy) / gl);                                 // the billow's own surface, turned to the fire or away
+            const lit = clamp01(1.15 - 0.85 * toward) * (0.45 + 0.55 * face);
+            const sky = clamp01(1 - at(x, y - 4) * 1.4);                                                 // the tops catch a little of the sky
+            const fire = o.heat * Math.exp(-dist / o.reach);
+            L.tone(x, y, STEAM, amb + 0.08 * sky + (n - 0.5) * 0.1 + fire * lit * 0.95 + fire * 0.08);
         }
+        for (let y = by0; y <= by1; y++) FIELD.fill(0, y * AW + bx0, y * AW + bx1 + 1);
+    }
+    /** Steam drawn only when the eight-a-second tick changes, kept in its own layer (the house's stepped motion, and cheap). */
+    function steppedLayer() {
+        const L = P.pixelLayer(AW, AH); let key = null;
+        return { draw(k, paint, ox = 0) { if (k !== key) { key = k; L.clear(); paint(L); } L.draw(ctx, ox, 0); } };
+    }
+    /** The vents breathing before ignition: small slow puffs rising either side of the trench. */
+    function ventPuffs(t, X, B, s, spread) {
+        const out = [];
+        const vents = [-1.6, -1, 1, 1.5];                                                          // four vents, each a steady stream: puff after puff, so it rises as one wisp
+        vents.forEach((vx, vi) => {
+            for (let i = 0; i < 12; i++) {
+                const age = ((t / 3000) + i / 12 + vi * 0.29) % 1, r = (2.5 + age * 9) * s, sway = Math.sin(age * 4 + vi * 2 + t / 1700) * 3 * age * s;
+                out.push([X + vx * spread + Math.sign(vx) * age * 8 * s + sway, B - age * 38 * s, r * 1.15, r, 0.62 * (1 - age) ** 1.2]);
+            }
+        });
+        return out;
+    }
+    /** The ignition's steam: billows born one after another at the trench, rolling out both ways along the ground and climbing as
+        they go, over a low bank. front: the part nearer to us than the ship (drawn over its legs). */
+    function ignitionPuffs(t, X, B, front) {
+        const out = [], n = 90;
+        const bw = 290 * (1 - Math.exp(-t / 1400)), bh = 14 * (1 - Math.exp(-t / 900));
+        if (!front) for (let k = -1; k <= 1; k += 0.125) out.push([X + k * bw, B + 3, 34 + 10 * (1 - Math.abs(k)), bh * (1 - 0.5 * Math.abs(k)) + 2, 0.9]);   // the bank
+        for (let i = 0; i < n; i++) {
+            const born = (i / n) * 4200 + hash(i, 5, 33) * 140, age = (t - born) / 1000;
+            if (age <= 0) continue;
+            const toUs = hash(i, 3, 33);
+            if ((toUs > 0.62) !== front) continue;
+            const side = i % 2 ? 1 : -1, sp = 0.5 + 0.6 * hash(i, 1, 33), lift = hash(i, 4, 33), out1 = 1 - Math.exp(-age * 1.0);
+            const r = Math.min(46, (8 + 34 * (1 - Math.exp(-age * 0.9))) * (0.7 + 0.5 * hash(i, 2, 33))) * (front ? 0.7 : 1);
+            const cx = X + side * (10 + 270 * sp * out1), cy = B + 6 - r * 0.55 - age * 7 * lift - lift * 26 * out1 + (front ? 8 : 0);
+            out.push([cx, cy, r * 1.2, r, 0.95]);
+        }
+        return out;
     }
 
-    // 7 · INTO THE DARK (71-86 s): from far off, a long lens on the climb. The ship leans over toward its heading and shrinks; its
-    //     trail hangs over the horizon, its upper half still lit by a sun that has already set for the yard. The drive is the last
-    //     thing you can see: one point of light among the stars. The broadcast's graphics go; then black.
-    const CLIMB = { horizon: 338, from: [236, 322], to: [446, 82], fly: 10500 };
+    // 6 · INTO THE DARK (34-42.5 s): from far off, a long lens on the climb. The ship rises straight off the horizon, then pitches
+    //     over toward its heading and shrinks. Its trail spreads and drifts in the wind; low down it is in the earth's shadow, grey,
+    //     but higher up the sun has not yet set, so the trail and the exhaust behind the ship catch the last of it and open into a
+    //     gold fan. The drive is the last thing you can see: one point of light among the stars. The graphics go; then black.
+    const CLIMB = { horizon: 330, p0: [236, 326], p1: [244, 150], p2: [474, 62], fly: 6600, shadow: 250, yard: 236 };
     const climbCache = new Map();
     function climbSprite(len, angle) {
         const deg = Math.round(angle * 90 / Math.PI) * 2, key = len + ':' + deg;
         if (climbCache.has(key)) return climbCache.get(key);
         const ht = len / 3.15, half = Math.ceil(len / 2 + ht + 4), p = P.painter(half * 2, half * 2, false);
-        const at = P.hull(p, { x: half, y: half, len, ht, angle: deg * Math.PI / 180, flip: true, anchor: 0.5, seed: 9, flat: len < 90 }, P.shapeL);
+        const at = P.hull(p, { x: half, y: half, len, ht, angle: deg * Math.PI / 180, flip: true, anchor: 0.5, seed: 9, flat: len < 90, light: 0.7, sun: 0.85, sunDir: [-0.8, 0.6] }, P.shapeL);
         const bell = at(1, 0), out = { canvas: p.canvas(), half, bell: [bell[0] - half, bell[1] - half] };
         climbCache.set(key, out);
         return out;
     }
-    const climbAt = k => { const e = 1 - Math.pow(1 - k, 1.5), bend = Math.sin(e * Math.PI) * 26; return [lerp(CLIMB.from[0], CLIMB.to[0], e) - bend * 0.3, lerp(CLIMB.from[1], CLIMB.to[1], e) + bend * 0.2]; };
+    /** Where the ship is at k (0..1 of the flight) and which way it travels: up off the pad, then over (a gravity turn). */
+    function climbAt(k) {
+        const e = 1 - Math.pow(1 - k, 1.6), a = CLIMB.p0, b = CLIMB.p1, c = CLIMB.p2, m = 1 - e;
+        return { x: m * m * a[0] + 2 * m * e * b[0] + e * e * c[0], y: m * m * a[1] + 2 * m * e * b[1] + e * e * c[1],
+                 a: Math.atan2(2 * m * (b[1] - a[1]) + 2 * e * (c[1] - b[1]), 2 * m * (b[0] - a[0]) + 2 * e * (c[0] - b[0])) };
+    }
+    const sunlitAt = y => smooth(CLIMB.shadow + 26, CLIMB.shadow - 30, y);   // above the earth's shadow line the sun still reaches
     shot({
-        id: 'climb', t0: 71000, t1: 86000, caption: 'Into the dark: its trail hangs over the horizon; the ship shrinks to one point of light; black.',
+        id: 'climb', t0: 34000, t1: DUR, caption: 'Into the dark: the trail catches the last sun; the ship shrinks to one point of light among the stars; black.',
         build() {
-            const p = P.painter(AW, AH, true), hz = CLIMB.horizon;
-            p.region(0, 0, AW, hz, (x, y) => { const k = y / hz, gv = 0.55 * Math.pow(k, 5) + 0.25 * Math.exp(-Math.hypot((x - 120) / 220, (y - hz) / 30)); if (smooth(0.08, 0.3, gv) > threshold(x + 3, y + 5)) p.tone(x, y, R.GLOW, gv); else p.tone(x, y, R.NIGHT, 0.05 + 0.3 * Math.pow(k, 2)); });
-            const stars = P.keepVisible(p, P.scatterStars(p, 72, 820, (x, y) => y < hz - 30));
+            const p = P.painter(AW, AH, true), hz = CLIMB.horizon, Y = CLIMB.yard;
+            p.region(0, 0, AW, hz, (x, y) => {
+                const k = y / hz, gv = 0.62 * Math.pow(k, 5) + 0.36 * Math.exp(-Math.hypot((x - 90) / 230, (y - hz) / 34));
+                if (smooth(0.08, 0.3, gv) > threshold(x + 3, y + 5)) p.tone(x, y, R.GLOW, gv); else p.tone(x, y, R.NIGHT, 0.05 + 0.32 * Math.pow(k, 2));
+            });
+            p.region(0, hz - 74, AW, hz - 22, (x, y) => {                                         // long clouds low over the sunset, lit from below
+                const c = fbm(x / 80, y / 4.5, 5, 4) - 0.56;
+                if (c > 0) p.tone(x, y, R.CLOUD, 0.16 + 2.8 * c * (0.35 + Math.exp(-Math.abs(x - 90) / 220)) + (fbm(x / 7, y / 3, 6, 2) - 0.5) * 0.1);
+            });
+            const stars = P.keepVisible(p, P.scatterStars(p, 72, 820, (x, y) => y < hz - 70));
+            p.region(Y - 110, hz - 40, Y + 110, hz, (x, y) => {                                   // the yard far off, behind the hills: its floodlights in the haze
+                const v = 0.34 * Math.exp(-Math.hypot((x - Y) / 60, (y - hz) / 12));
+                if (smooth(0.04, 0.2, v) > threshold(x + 3, y + 5)) p.tone(x, y, R.FLOOD, 0.14 + v);
+            });
             p.region(0, hz, AW, AH, (x, y) => p.tone(x, y, R.HILL, 0.3 + (fbm(x / 6, y / 2, 3, 2) - 0.5) * 0.2));
-            for (let x = 0; x < AW; x++) { const top = hz - 2 - 5 * fbm(x / 50, 2, 4, 3); for (let y = Math.floor(top); y < hz; y++) p.tone(x, y, R.HILL, 0.4); }
-            const lights = [];                                                                     // the yard on the horizon, far off
-            for (let i = 0; i < 26; i++) { const r = seeded(500 + i); lights.push([150 + r() * 220, hz - 1 + Math.round(r() * 4), r()]); }
-            return { canvas: p.canvas(), stars, lights };
+            for (let x = 0; x < AW; x++) { const top = hz - 2 - 6 * fbm(x / 50, 2, 4, 3); for (let y = Math.floor(top); y < hz; y++) p.tone(x, y, R.HILL, 0.42); }
+            const lights = [];
+            for (let i = 0; i < 26; i++) lights.push([Y - 80 + hash(i, 1, 55) * 160, hz + 1 + Math.round(hash(i, 2, 55) * 4), hash(i, 3, 55)]);
+            return { canvas: p.canvas(), stars, lights, trail: steppedLayer() };
         },
         draw(t, S) {
             ctx.drawImage(S.canvas, 0, 0);
-            const f = P.framer(ctx, AW, AH), ts = step8(t), k = clamp01(t / CLIMB.fly), [x, y] = climbAt(k);
+            const f = P.framer(ctx, AW, AH), ts = step8(t), k = clamp01(t / CLIMB.fly), c = climbAt(k), dir = [Math.cos(c.a), Math.sin(c.a)];
             P.twinkle(f, S.stars, ts);
-            S.lights.forEach(([lx, ly, r], i) => f.px(lx, ly, (r > 0.8 ? R.FLOOD : R.AMBER).hex[hash(i, Math.floor(ts / 500), 3) > 0.2 ? 4 : 3]));
-            const L = P.pixelLayer(AW, AH);
-            for (let i = 0; i <= 320; i++) {                                                    // the trail: thin and bright near the ship, wide and faint lower down
-                const u = i / 320, kk = k * u, [px, py] = climbAt(kk), age = (k - kk) * CLIMB.fly / 1000;
-                if (py > CLIMB.horizon + 2) continue;
-                const drift = age * 2.6 * (1 - kk) + Math.sin(kk * 9) * age * 0.8, w = 1 + age * 1.9, sunlit = smooth(250, 110, py);
-                for (let j = -w; j <= w; j += 0.6) {
-                    const qx = px + drift + j * 0.9, qy = py + j * 0.4, e = 1 - Math.abs(j) / (w + 0.3), a = (0.9 - age * 0.05) * (0.3 + 0.7 * e);
-                    if (a <= threshold(Math.round(qx) + 1, Math.round(qy) + 2)) continue;
-                    if (j < 0 && sunlit > 0.25) L.tone(qx, qy, R.GLOW, 0.45 + 0.45 * sunlit * e);   // high up, the trail still catches the sun
-                    else L.tone(qx, qy, R.SMOKE, (0.42 + 0.3 * e) * (1 - age * 0.035));
-                }
-            }
-            L.draw(ctx);
-            const len = Math.round(56 * Math.pow(1 - k, 2.6)), angle = lerp(-Math.PI / 2 + 0.12, -0.95, k), dir = [Math.cos(angle), Math.sin(angle)];
+            S.lights.forEach(([lx, ly, r], i) => f.px(lx, ly, (r > 0.75 ? R.FLOOD : R.AMBER).hex[hash(i, Math.floor(ts / 500), 3) > 0.2 ? 4 : 3]));
+            S.trail.draw(ts, L => climbTrail(L, clamp01(ts / CLIMB.fly)));
+            const len = Math.round(40 * Math.pow(1 - k, 1.5));
             if (len >= 7) {
-                const sp = climbSprite(len, angle), bx = x + sp.bell[0], by = y + sp.bell[1];
-                ctx.drawImage(sp.canvas, Math.round(x - sp.half), Math.round(y - sp.half));
-                const pl = len * 0.9; for (let d = 0; d < pl; d++) { const w = Math.max(1, len / 16) * (1 - d / pl); for (let j = -w; j <= w; j++) f.tone(bx - dir[0] * d - dir[1] * j, by - dir[1] * d + dir[0] * j, R.PLUME, 1 - d / pl); }
-                f.glow(bx, by, Math.max(4, Math.round(len / 4)), R.PLUME, 0.95);
+                const sp = climbSprite(len, c.a), bx = c.x + sp.bell[0], by = c.y + sp.bell[1];
+                ctx.drawImage(sp.canvas, Math.round(c.x - sp.half), Math.round(c.y - sp.half));
+                const pl = len * 0.8; for (let d = 0; d < pl; d++) { const w = Math.max(1, len / 14) * (1 - d / pl); for (let j = -w; j <= w; j++) f.tone(bx - dir[0] * d - dir[1] * j, by - dir[1] * d + dir[0] * j, R.PLUME, 1 - d / pl); }
+                f.glow(bx, by, Math.max(3, Math.round(len / 7)), R.PLUME, 0.95);
             } else {                                                                              // one point of light
-                f.glow(x, y, 5, R.PLUME, 0.8 + 0.1 * Math.sin(t / 300));
-                f.px(x, y, R.PLUME.hex[6]);
-                if (Math.floor(ts / 500) % 3 === 0) { f.px(x - 2, y, R.PLUME.hex[4], 5, 1); f.px(x, y - 2, R.PLUME.hex[4], 1, 5); }
+                f.glow(c.x, c.y, 5, R.PLUME, 0.8 + 0.1 * Math.sin(t / 300));
+                f.px(c.x, c.y, R.PLUME.hex[6]);
+                if (Math.floor(ts / 500) % 3 === 0) { f.px(c.x - 2, c.y, R.PLUME.hex[4], 5, 1); f.px(c.x, c.y - 2, R.PLUME.hex[4], 1, 5); }
             }
         },
     });
+    /** The trail, eight times a second: smoke left along the path, older parts wider, drifting on the wind and frayed by noise.
+        In the earth's shadow it is cold grey; in the last sun it is gold, brighter on the side toward the sunset. Above the shadow
+        the exhaust behind the ship opens into a fan, lit gold. */
+    function climbTrail(L, k) {
+        const fly = CLIMB.fly / 1000, N = 300, sunX = 90;
+        for (let i = 0; i <= N; i++) {
+            const kk = k * i / N, q = climbAt(kk), age = (k - kk) * fly;
+            if (q.y > CLIMB.horizon - 1) continue;
+            const nx = -Math.sin(q.a), ny = Math.cos(q.a), sun = sunlitAt(q.y), sunSide = (sunX - q.x) * nx > 0 ? 1 : -1;
+            const wind = 1.6 * (smooth(300, 120, q.y) - 0.35), w = 1 + age * (1.8 + 2.2 * sun);     // the wind shears: low air one way, high air the other
+            const drift = age * age * wind + Math.sin(q.y / 23 + 1) * age * 1.3, young = Math.exp(-age / 1.1);
+            for (let j = -w; j <= w; j += 0.55) {
+                const x = q.x + nx * j + drift, y = q.y + ny * j, e = 1 - Math.abs(j) / (w + 0.4);
+                const n = fbm(x / 6 + age * 0.3, y / 6, 71, 2), a = (0.4 + 0.6 * young) * (0.25 + 0.75 * e) * (0.55 + 0.9 * (n - 0.3)) + 0.3 * young * e;
+                if (a <= threshold(Math.round(x) + 1, Math.round(y) + 2)) continue;
+                const toSun = clamp01(0.5 + 0.5 * sunSide * j / (w + 0.01));
+                if (sun > 0.25) L.tone(x, y, young * e > 0.55 ? R.CREAM : R.GLOW, (0.3 + 0.4 * sun * (0.5 + 0.5 * toSun)) * (0.7 + 0.3 * e) + 0.3 * young * e);
+                else L.tone(x, y, R.SMOKE, (0.26 + 0.22 * e + 0.25 * young * e) * (1 - age * 0.04));
+            }
+        }
+        const q = climbAt(k), sun = sunlitAt(q.y);                                                 // the fan: thin air, the exhaust spreads wide in the sun
+        if (sun < 0.05 || k > 0.995) return;
+        const back = q.a + Math.PI, spread = 0.12 + 0.5 * smooth(0.25, 0.9, k), reach = (24 + 70 * smooth(0.2, 0.9, k)) * sun;
+        for (let d = 3; d < reach; d += 0.6) for (let s = -spread; s <= spread; s += 0.9 / d) {
+            const a = back + s, x = q.x + Math.cos(a) * d, y = q.y + Math.sin(a) * d, off = Math.abs(s) / spread;
+            const al = (1 - d / reach) * (1 - off * off) * 0.75 * sun + (off > 0.82 ? 0.15 * (1 - d / reach) * sun : 0);
+            if (al <= threshold(Math.round(x) + 5, Math.round(y) + 3)) continue;
+            L.tone(x, y, d < 10 && off < 0.3 ? R.CREAM : R.GLOW, 0.4 + 0.5 * (1 - d / reach) * (1 - 0.5 * off));
+        }
+    }
 
     // ════════════════════════════════════ the sound (optional, off by default) ════════════════════════════════════
-    // film-sound.js builds none of this until the Sound button is turned on. It follows the film's clock: the crowd's level and
-    // brightness change on the cuts, the announcer speaks under each lower third, the beeps match the clock, and the roar drops
-    // to a distant one on the cut to the long lens and fades out as the ship becomes a point. After that, quiet.
+    // film-sound.js builds none of this until the Sound button is turned on. Only two things, both low: the crowd (a murmur that
+    // comes nearer on the crowd shots and swells at the podium, hushes at the countdown and rises again under the launch), and the
+    // launch itself (a deep thump, a rumble and a roar that drop to a distant one on the long lens and fade to nothing as the
+    // ship becomes a point). No voice, no beeps, no music. After the roar: silence to the end.
     /** Keyframes [[ms, value], ...] eased between, held at the ends. */
     const keys = pts => T => {
         if (T <= pts[0][0]) return pts[0][1];
         for (let i = 1; i < pts.length; i++) if (T <= pts[i][0]) { const [t0, v0] = pts[i - 1], [t1, v1] = pts[i], k = (T - t0) / (t1 - t0); return v0 + (v1 - v0) * k * k * (3 - 2 * k); }
         return pts[pts.length - 1][1];
     };
-    const CROWD_LVL = keys([[0, 0], [900, 0.3], [10000, 0.32], [10500, 0.55], [20000, 0.55], [20500, 0.6], [36000, 0.5], [36400, 0.2], [44000, 0.2], [44400, 0.35], [52000, 0.38], [61500, 0.5], [71000, 0.5], [71400, 0.3], [LIVE_ENDS, 0]]);
-    const CHEER_LVL = keys([[0, 0], [1000, 0.08], [10000, 0.1], [11500, 0.2], [14000, 0.55], [17500, 0.38], [20000, 0.3], [21200, 0.75], [24500, 0.5], [30000, 0.18], [36000, 0.15], [36400, 0.04], [44000, 0.04], [45500, 0.15], [47500, 0.45], [52000, 0.18], [61000, 0.14], [62300, 0.5], [65000, 0.9], [71000, 0.8], [71400, 0.35], [LIVE_ENDS, 0]]);
-    const CLAP_RATE = keys([[0, 0], [20000, 0], [20800, 70], [27000, 55], [31000, 12], [36000, 6], [36400, 0], [45500, 0], [46500, 40], [51500, 25], [52500, 0], [62500, 0], [64000, 30], [71000, 30], [71400, 8], [76000, 0]]);
-    const CROWD_TONE = { yard: 2200, crowd: 3800, podium: 4200, ten: 1100, pad: 1700, liftoff: 1300, climb: 700 };   // how near the crowd is, by shot
-    const shotIdAt = T => (SHOTS.find(o => T >= o.t0 && T < o.t1) || SHOTS[SHOTS.length - 1]).id;
-    /** The announcer: syllables in phrases with pauses, pitch falling through each phrase, a few stressed. No words. */
-    const VOWELS = [[730, 1090], [530, 1840], [400, 2000], [570, 840], [300, 870], [660, 1720], [490, 1350]];
-    function speech(t0, t1, seed, base) {
-        const r = seeded(seed), out = [];
-        let t = t0;
-        while (t < t1 - 400) {
-            let f = base * (1.06 + r() * 0.08);
-            const n = 4 + Math.floor(r() * 8);
-            for (let i = 0; i < n && t < t1 - 200; i++) {
-                const dur = 95 + r() * 170, stress = r() < 0.22, v = VOWELS[Math.floor(r() * VOWELS.length)];
-                out.push({ t, dur, f: f * (stress ? 1.13 : 1), F1: v[0], F2: v[1], amp: stress ? 1 : 0.62 + r() * 0.3 });
-                t += dur + 20 + r() * 70; f *= 0.982;
-            }
-            t += 260 + r() * 560;
-        }
-        return out;
-    }
-    const SYLLABLES = [
-        ...LINES.flatMap((l, i) => speech(l.t0 + 350, l.t1 - 450, 900 + i, 118)),
-        ...[5, 4, 3, 2, 1].map(k => ({ t: COUNT.zero - k * 1000 + 140, dur: 240, f: 126 + (5 - k) * 3, F1: 620, F2: 1500, amp: 1 })),   // he counts the last five
-        { t: COUNT.zero + 260, dur: 180, f: 150, F1: 500, F2: 1800, amp: 1 }, { t: COUNT.zero + 480, dur: 300, f: 142, F1: 700, F2: 1100, amp: 1 },
-    ];
+    const CROWD_LVL = keys([[0, 0], [900, 0.2], [7000, 0.22], [7300, 0.4], [12000, 0.4], [12400, 0.46], [13600, 0.7], [16500, 0.5], [20000, 0.44], [20300, 0.16], [26500, 0.16], [29400, 0.1], [30600, 0.24], [32600, 0.5], [34000, 0.46], [34300, 0.16], [37000, 0.04], [38500, 0]]);
+    const CROWD_TONE = keys([[0, 900], [7000, 900], [7300, 1400], [12000, 1400], [12400, 1500], [13600, 1800], [17000, 1500], [20000, 1500], [20300, 800], [29400, 800], [32600, 1400], [34000, 1400], [34300, 700]]);   // kept dark: a murmur, never a hiss
+    const CLIMB_AT = 34000;
     function launchScore(K) {
         const live = K.gain(0, K.out);                                                         // the whole score: closed when paused or over
-        // the broadcast: a room tone (soft hiss and air) and the announcer's channel, a voice through a tinny, far-off PA
-        const room = K.gain(0, live); K.loop('pink', K.filter('highpass', 140, 0.7, K.filter('lowpass', 5200, 0.7, room)));
-        const pa = K.gain(0, live), paLp = K.filter('lowpass', 1300, 0.9, pa), paHp = K.filter('highpass', 190, 0.7, paLp);
-        const slap = K.ac.createDelay(1); slap.delayTime.value = 0.13; const fb = K.gain(0.26, slap), slapLp = K.filter('lowpass', 900, 0.7, K.gain(0.35, live));
-        pa.connect(slap); slap.connect(fb); slap.connect(slapLp);                               // the PA's echo off the yard
-        const voice = K.gain(0, paHp), vsrc = K.osc('sawtooth', 120);
-        const F1 = K.filter('bandpass', 600, 6, voice), F2 = K.filter('bandpass', 1500, 8, K.gain(0.7, voice)), body = K.filter('lowpass', 320, 0.7, K.gain(0.25, voice));
-        vsrc.connect(F1); vsrc.connect(F2); vsrc.connect(body);
-        // the crowd: a murmur, a cheer on top, claps; one filter for how near the crowd is
-        const crowdTone = K.filter('lowpass', 2200, 0.7, live);
-        const crowd = K.gain(0, crowdTone); K.loop('pink', K.filter('bandpass', 420, 0.9, crowd)); K.loop('pink', K.filter('bandpass', 1050, 1.3, K.gain(0.8, crowd)));
-        const cheer = K.gain(0, crowdTone); K.loop('white', K.filter('bandpass', 1700, 0.9, cheer)); K.loop('white', K.filter('bandpass', 2600, 2, K.gain(0.6, cheer)));
-        const claps = K.gain(1, crowdTone);
-        // the pad: steam from the vents; the drive: a rumble, a roar, a crackle
-        const vent = K.gain(0, live); K.loop('white', K.filter('highpass', 2500, 0.7, vent));
-        const rumble = K.gain(0, live); K.loop('brown', K.filter('lowpass', 90, 0.9, rumble)); K.osc('sine', 33, K.gain(0.4, rumble));
-        const roar = K.gain(0, live), roarLp = K.filter('lowpass', 1700, 0.7, roar);
-        K.loop('pink', roarLp); K.loop('white', K.filter('bandpass', 520, 0.6, K.gain(0.5, roarLp)));
-        const crackle = K.filter('highpass', 500, 0.7, K.gain(1, roarLp));
-        const clapAcc = {}, crackAcc = {};
+        // the crowd: two bands of murmur, one filter for how near the crowd is
+        const crowdTone = K.filter('lowpass', 1200, 0.6, live);
+        const crowd = K.gain(0, crowdTone);
+        K.loop('pink', K.filter('bandpass', 320, 0.8, crowd)); K.loop('pink', K.filter('bandpass', 700, 1.1, K.gain(0.55, crowd)), 0.97);
+        // the launch: the vents' breath, a rumble you feel more than hear, a roar
+        const vent = K.gain(0, live); K.loop('white', K.filter('highpass', 2400, 0.7, K.filter('lowpass', 6000, 0.7, vent)));
+        const rumble = K.gain(0, live); K.loop('brown', K.filter('lowpass', 90, 0.9, rumble)); K.osc('sine', 33, K.gain(0.35, rumble));
+        const roar = K.gain(0, live), roarLp = K.filter('lowpass', 900, 0.7, roar);
+        K.loop('brown', roarLp, 1.4); K.loop('pink', K.filter('lowpass', 1300, 0.7, K.gain(0.45, roarLp)));
         const cues = [
-            ...SYLLABLES.map(s => [s.t, at => {
-                const d = s.dur / 1000;
-                voice.gain.setTargetAtTime(s.amp, at, 0.012); voice.gain.setTargetAtTime(0, at + d * 0.78, 0.025);
-                vsrc.frequency.setTargetAtTime(s.f, at, 0.03); vsrc.frequency.setTargetAtTime(s.f * 0.93, at + d / 2, 0.08);
-                F1.frequency.setTargetAtTime(s.F1, at, 0.025); F2.frequency.setTargetAtTime(s.F2, at, 0.025);
-            }]),
-            ...Array.from({ length: 10 }, (_, k) => [COUNT.t0 + k * 1000, at => K.tone({ at, f: 1000, dur: 0.13, gain: 0.09, attack: 0.004, to: live })]),   // T-10 .. T-1
-            ...[14600, 22300, 47200, 64800].map(t => [t, at => {                                // a whistle from the crowd
-                K.tone({ at, f: 1900, f2: 2700, dur: 0.42, gain: 0.03, attack: 0.05, to: crowdTone });
-                K.tone({ at: at + 0.45, f: 2700, f2: 1700, dur: 0.5, gain: 0.025, attack: 0.03, to: crowdTone });
-            }]),
             [COUNT.zero, at => {                                                                // ignition: a deep thump under the roar
-                K.tone({ at, f: 58, f2: 26, dur: 1.6, gain: 0.6, attack: 0.02, to: live });
-                K.burst({ at, dur: 1.2, kind: 'brown', type: 'lowpass', f: 700, f2: 120, gain: 0.6, attack: 0.03, to: live });
+                K.tone({ at, f: 58, f2: 26, dur: 1.8, gain: 0.55, attack: 0.02, to: live });
+                K.burst({ at, dur: 1.4, kind: 'brown', type: 'lowpass', f: 600, f2: 110, gain: 0.55, attack: 0.04, to: live });
             }],
         ];
         function update(T, dt, on) {
             K.set(live.gain, on ? 1 : 0, on ? 0.03 : 0.08);
-            const onAir = T < LIVE_ENDS ? smooth(0, 900, T) : 0;
-            K.set(room.gain, 0.12 * onAir, T < LIVE_ENDS ? 0.2 : 0.05);
-            K.set(pa.gain, T < LIVE_ENDS + 400 ? 2.6 : 0, 0.1);
-            K.set(crowd.gain, 2.2 * CROWD_LVL(T) * (1 + 0.1 * Math.sin(T / 730) + 0.07 * Math.sin(T / 290)), 0.08);
-            K.set(cheer.gain, 3 * CHEER_LVL(T) * (0.72 + 0.28 * Math.sin(T / 210) * Math.sin(T / 670 + 1)), 0.05);
-            K.set(crowdTone.frequency, CROWD_TONE[shotIdAt(T)] || 2000, 0.02);
-            if (dt > 0) K.grains(clapAcc, CLAP_RATE(T), dt, at => K.burst({ at, dur: 0.012 + 0.02 * Math.random(), kind: 'white', type: 'bandpass', f: 900 + 1700 * Math.random(), Q: 1.2, gain: 1 + 1.4 * Math.random(), attack: 0.002, to: claps }));
-            K.set(vent.gain, 0.14 * smooth(COUNT.zero - 6000, COUNT.zero, T) * (T < 71000 ? 1 : 0), T < 71000 ? 0.3 : 0.02);
-            const heat = clamp01((T - COUNT.zero) / 700), k = clamp01((T - 71000) / CLIMB.fly), far = T >= 71000;   // 71 s: the cut to the long lens
+            K.set(crowd.gain, 1.3 * CROWD_LVL(T) * (1 + 0.12 * Math.sin(T / 910) + 0.07 * Math.sin(T / 370)), 0.12);
+            K.set(crowdTone.frequency, CROWD_TONE(T), 0.08);
+            K.set(vent.gain, T < COUNT.zero ? 0.07 * smooth(COUNT.t0 - 6500, COUNT.t0, T) * (T < 20000 ? 0 : 1) : 0, 0.25);
+            const heat = clamp01((T - COUNT.zero) / 600), k = clamp01((T - CLIMB_AT) / 6200), far = T >= CLIMB_AT;
             const rum = T < COUNT.zero ? 0 : far ? 0.5 * (1 - k) ** 1.6 : heat;
-            const rr = T < COUNT.zero ? 0 : far ? 0.55 * (1 - k) ** 2 : heat * (1 - 0.15 * clamp01((T - 66000) / 5000));
-            K.set(rumble.gain, rum, 0.04);
-            K.set(roar.gain, 1.1 * rr, 0.04);
-            K.set(roarLp.frequency, far ? 140 + 650 * (1 - k) ** 1.5 : 1700, 0.03);
-            if (dt > 0) K.grains(crackAcc, 50 * (far ? 0.3 * (1 - k) ** 2 : heat), dt, at => K.burst({ at, dur: 0.006, kind: 'click', type: 'lowpass', f: 6000, gain: 0.25 + 0.6 * Math.random(), to: crackle }));
+            const rr = T < COUNT.zero ? 0 : far ? 0.5 * (1 - k) ** 2 : heat * (1 - 0.15 * clamp01((T - COUNT.zero - 2000) / 2500));
+            K.set(rumble.gain, rum, 0.06);
+            K.set(roar.gain, 1.0 * rr, 0.06);
+            K.set(roarLp.frequency, far ? 140 + 520 * (1 - k) ** 1.5 : 900, 0.05);
         }
         return { cues, update };
     }
