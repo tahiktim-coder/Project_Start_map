@@ -386,6 +386,84 @@
         };
     }
 
+    // ═══ rare colour (?sky=f, 2026-10-09): the designer's "noir with rare colour". The sky stays dark and muted; three to seven
+    //     tiny, very distant things per sector carry a dull but distinct colour that holds the eye. Each is a small dithered
+    //     sprite (a few px to a few dozen), fixed to the sky at its own depth (it slides a little faster or slower than the
+    //     sky as we fly), some twinkling or slowly pulsing at 8 fps. Never neon, never a big glow, no magenta/cyan bloom.
+    //     ?accents=0 turns them off (for before/after). ═══
+    const ACC = {
+        ROSE: ramp(INK, '#140b0e', '#2a161b', '#47252d', '#6a3a42', '#8f5a5e', '#b07d7b'),   // hydrogen glow, dusty: a far emission knot
+        VERDIGRIS: ramp(INK, '#08130f', '#11271f', '#1d4136', '#2e5f51', '#4b8271', '#7aa898'),   // weathered copper
+        SLATE: ramp(INK, '#0d0c14', '#191724', '#282538', '#3c3850', '#57516c', '#7b7590'),   // slate violet: a far galaxy, grey first
+        CRIMSON: ramp(INK, '#160606', '#2c0c0b', '#4a1512', '#6b2119', '#8c3424', '#a85138'),   // a red dwarf, a carbon star: deep, not hot
+        SULPHUR: ramp(INK, '#12110a', '#262412', '#433f1d', '#665f2b', '#8c8240', '#ada25e'),
+        AMBER: ramp(INK, '#150e07', '#2c1d0d', '#4a3014', '#6d471d', '#93622b', '#b48144'),
+        JADE: ramp(INK, '#0a110d', '#15241b', '#233a2c', '#365441', '#527359', '#7b977f'),   // a planetary nebula's oxygen, greyed
+    };
+    const ACCENTS_ON = (() => { try { return new URLSearchParams(location.search).get('accents') !== '0'; } catch (err) { return true; } })();
+    const DOT4 = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    /** One accent's painting at a given brightness (g, or [gA, gB] for a binary) into a small clear sprite. */
+    function paintAccent(o, g) {
+        const S = o.S, c = S / 2, p = P.painter(S, S, false), r = o.ramp;
+        const halo = (x, y, rp, v) => p.region(x - 3, y - 3, x + 4, y + 4, (hx, hy) => { const d = Math.hypot(hx - x, hy - y); if (d > 1.2 && d < 2.9) p.tone(hx, hy, rp, v * (1.25 - d / 2.9)); });   // a breath of its own colour, two px, so the hue reads
+        const star = (x, y, rp, v, cross) => { halo(x, y, rp, v * 0.24); p.tone(x, y, rp, v); if (cross) DOT4.forEach(([dx, dy]) => p.tone(x + dx, y + dy, rp, v * cross)); };
+        if (o.kind === 'star') star(c, c, r, 0.97 * g, o.cross == null ? 0.5 : o.cross);
+        else if (o.kind === 'binary') { star(c, c, r, 0.95 * g[0], 0.45); star(c + o.sep, c - 1, o.ramp2, 0.85 * g[1], o.sep > 3 ? 0.4 : 0); }
+        else if (o.kind === 'dwarf') {                                                      // a deep red point in a hint of its own dust
+            p.region(0, 0, S, S, (x, y) => { const d = Math.hypot(x + 0.5 - c, y + 0.5 - c); if (d > 1.2 && d < o.r) p.tone(x, y, r, 0.16 * g * (1 - d / o.r) * (0.5 + fbm(x / 2, y / 2, o.seed, 2))); });
+            star(c, c, r, 0.92 * g, 0.45 * Math.min(1.2, g));
+        } else if (o.kind === 'knot') {                                                     // a lumpy blob of glowing gas, two or three cores
+            const ca = Math.cos(o.tilt || 0), sa = Math.sin(o.tilt || 0);
+            p.region(0, 0, S, S, (x, y) => {
+                const dx = x + 0.5 - c, dy = y + 0.5 - c, u = dx * ca + dy * sa, w = (-dx * sa + dy * ca) * 1.6;
+                const q = Math.hypot(u + (fbm(x / 4, y / 4, o.seed, 2) - 0.5) * o.r * 0.8, w) / o.r;
+                const sub = Math.max(Math.exp(-((Math.hypot(u - o.r * 0.45, w - 1) / 1.6) ** 2)), Math.exp(-((Math.hypot(u + o.r * 0.5, w + 1.5) / 1.3) ** 2)) * 0.8);
+                p.tone(x, y, r, g * (0.5 * Math.exp(-q * q * 2.2) * (0.35 + 1.1 * fbm(x / 2.4, y / 2.4, o.seed + 3, 3)) + 0.42 * sub));
+            });
+        } else if (o.kind === 'wisp') {                                                     // a thin curved thread of gas, broken in places
+            for (let i = 0; i <= o.len * 3; i++) {
+                const s = i / (o.len * 3), a = (o.tilt || 0) + (s - 0.5) * o.bend, x = c + Math.cos(a) * o.rr - Math.cos(o.tilt || 0) * o.rr, y = c + Math.sin(a) * o.rr - Math.sin(o.tilt || 0) * o.rr;
+                const v = g * 0.62 * Math.sin(Math.PI * s) * smooth(0.3, 0.6, fbm(s * 7, 1, o.seed, 2) + 0.15);
+                p.tone(x, y, r, v); p.tone(x + (s > 0.5 ? 1 : 0), y + 1, r, v * 0.45);
+            }
+        } else if (o.kind === 'galaxy') galaxy({ put: (x, y, rp, v) => p.tone(x, y, rp, v) }, { x: c, y: c, r: o.r, tilt: o.tilt, incl: o.incl, arms: o.arms, wind: 2.3, bright: 0.75 * g, seed: o.seed, ramp: r });
+        else if (o.kind === 'planetary') {                                                  // a tiny shell, brighter on two sides, and its white dwarf
+            p.region(0, 0, S, S, (x, y) => {
+                const dx = x + 0.5 - c, dy = (y + 0.5 - c) * 1.15, d = Math.hypot(dx, dy), side = 0.55 + 0.45 * Math.abs(Math.cos(Math.atan2(dy, dx) - 0.7));
+                p.tone(x, y, r, g * (0.66 * Math.exp(-(((d - o.r) / 0.9) ** 2)) * side * (0.6 + 0.6 * fbm(x / 2, y / 2, o.seed, 2)) + (d < o.r ? 0.12 : 0)));
+            });
+            p.tone(c, c, ACC.SLATE, 0.6 + 0.2 * g);
+        }
+        return p.canvas();
+    }
+    /** How bright an accent is at time t (8 fps already): 1 is its resting look. */
+    function accentGain(o, t, i) {
+        const ph = (t + o.phase) % o.period;
+        if (o.live === 'pulse') return 0.78 + 0.22 * (0.5 + 0.5 * Math.sin(ph / o.period * Math.PI * 2));
+        if (o.live === 'twinkle') { const b = Math.floor(t / 250); const h = h32(b, i, o.seed); return h < 0.12 ? 0.62 : h > 0.93 ? 1.18 : 0.9; }
+        if (o.live === 'flare') return ph < 2500 ? 1 + 0.55 * Math.exp(-ph / 700) : 0.8;   // now and then a flare, a few seconds
+        return 1;
+    }
+    function accents(X, list) {
+        const out = X.out;
+        const items = list.map((a, i) => {
+            const S = a.S || (a.kind === 'galaxy' || a.kind === 'knot' || a.kind === 'wisp' ? Math.ceil((a.r || a.rr || 6) * 2.8) + 6 : a.kind === 'binary' ? 12 : a.kind === 'planetary' ? Math.ceil(a.r * 2.6) + 4 : a.kind === 'dwarf' ? Math.ceil(a.r * 2) + 4 : 6);
+            return Object.assign({ S: S + (S & 1), depth: 1, period: 9000, phase: h32(i, 3, a.seed || 1) * 20000, seed: 7 + i, frames: new Map() }, a, { x: X.sx(a.x), y: X.sy(a.y), i });
+        });
+        const step = v => Math.round(v * 16) / 16;                                         // a few brightness steps, each painted once
+        return (c, t, off, D) => items.forEach(o => {
+            const x = Math.round(o.x - off * o.depth), y = o.y, bi = y * X.B.W + Math.round(o.x - off * o.depth) + off;
+            if (out.thing && out.thing.covers(x, y, D)) return;                            // behind the vast planet
+            if (bi >= 0 && bi < X.B.block.length && X.B.block[bi]) return;                 // behind a far moon
+            let g;
+            if (o.kind === 'binary') { const ph = (t + o.phase) % o.period; g = [o.live === 'twinkle' ? accentGain(o, t, o.i) : 1, ph < 1600 ? 0.38 : 1]; }   // the pair eclipses now and then
+            else g = step(accentGain(o, t, o.i));
+            const key = String(g); let f = o.frames.get(key);
+            if (!f) { f = paintAccent(o, g); o.frames.set(key, f); }
+            c.drawImage(f, x - o.S / 2, y - o.S / 2);
+        });
+    }
+
     // ═══ the six places. Coordinates in stage pixels (640 x 360); the light is at (604, 158), our ship at (224, 196). ═══
     const RECIPES = {
         1: { name: 'the graveyard', haze: 0.3, wash: { ang: -0.42, gain: 0.5, w0: 150, w1: 420 },
@@ -401,6 +479,13 @@
             gas: (X, g) => { if (X.out.mode !== 'f') remnant(X, { x: -30, y: 380, R: 200, gain: 0.6 * g, seed: 71, side: -0.8 }); },   // in F the vast planet is enough; the shell is sector 3's
             place: X => { X.out.thing = vastPlanet(X.W + Math.ceil(REACH_D * SKY.THING) + 4, X.H, { cx: X.sx(-200), cy: X.sy(-900), Rr: 1020, lx: X.lx, ly: X.ly, seed: 61 }); },
             bodies: [{ x: 34, y: 262, r: 5, peak: 0.55, ramp: P.RP.GAS, bands: true, seed: 5, ring: { tilt: -0.35, open: 0.3 } }],
+            accents: [   // the graveyard: a dull rose knot above the giant's way, a red dwarf flaring by the planet's limb, a far violet spiral, an amber pair near the light, one verdigris star
+                { kind: 'knot', x: 392, y: 104, r: 8, tilt: -0.5, ramp: ACC.ROSE, depth: 0.7, live: 'pulse', period: 14000, seed: 3 },
+                { kind: 'dwarf', x: 262, y: 116, r: 4, ramp: ACC.CRIMSON, depth: 1.3, live: 'flare', period: 23000, seed: 5 },
+                { kind: 'galaxy', x: 586, y: 322, r: 7, tilt: 0.6, incl: 0.5, arms: 2, ramp: ACC.SLATE, depth: 0.45, seed: 9 },
+                { kind: 'binary', x: 486, y: 206, sep: 3, ramp: ACC.AMBER, ramp2: ACC.SULPHUR, depth: 1.1, live: 'twinkle', period: 17000, seed: 11 },
+                { kind: 'star', x: 520, y: 104, cross: 0.45, ramp: ACC.VERDIGRIS, depth: 0.9, live: 'twinkle', seed: 13 },
+            ],
             live: X => [glints(X, { n: 10, seed: 3, area: [240, 14, 590, 128], drift: 0.5, warm: 0.3 }), comet(X, { x0: 610, y0: 40, vx: -1.3, vy: 0.22, len: 34, curl: 0.35, period: 520000, seed: 9 }),
                 flashes(X, { every: 26000, chance: 0.75, seed: 4, area: [30, 120, 600, 340], ramp: C.WARM })] },
         2: { name: 'the dark void', haze: 0.15, wash: { ang: 0.3, gain: 0.45, w0: 250, w1: 40 },
@@ -411,6 +496,11 @@
             gas: (X, g) => { reflection(X, { x: 120, y: 236, r: 22, gain: 0.55 * g, seed: 21 }); },
             place: X => galaxy(X.hole ? Object.assign({}, X.B, { put: (x, y, r, v) => X.B.put(x, y, r, v * (1 - X.hole(x, y))) }) : X.B, { x: X.sx(350), y: X.sy(150), r: 185, tilt: -0.3, incl: 0.5, arms: 2, wind: 2.3, bright: 0.34, seed: 23, fall: 0.85, bulgeW: 0.5 }),
             bodies: [],
+            accents: [   // the dark void: almost nothing, so three small colours carry it
+                { kind: 'dwarf', x: 498, y: 254, r: 4, ramp: ACC.CRIMSON, depth: 1.2, live: 'flare', period: 31000, seed: 21 },
+                { kind: 'star', x: 300, y: 312, cross: 0.4, ramp: ACC.VERDIGRIS, depth: 0.8, live: 'twinkle', seed: 23 },
+                { kind: 'galaxy', x: 586, y: 26, r: 6, tilt: -0.4, incl: 0.35, arms: 2, ramp: ACC.SLATE, depth: 0.5, seed: 25 },
+            ],
             live: X => [glints(X, { n: 2, seed: 8, area: [80, 40, 560, 140], drift: 0.3, warm: 0 }), flashes(X, { every: 40000, chance: 0.6, seed: 6, area: [40, 30, 600, 330], ramp: C.COLD })] },
         3: { name: 'the signal', haze: 0.25, wash: { ang: 0.2, gain: 0.45, w0: 280, w1: 330 },
             band: { cx: 320, cy: 322, ang: -0.1, wide: 60, core: 19, peak: 0.52, bulge: [130, 80] }, density: 1.1, bandStars: 1, mix: [0.1, 0.3, 0.03], bright: 24,
@@ -419,6 +509,14 @@
             gas: (X, g) => { remnant(X, { x: 104, y: 86, R: 84, gain: 0.86 * g, seed: 75, side: 0.2, threads: 6 }); X.B.put(X.sx(104), X.sy(86), C.COLD, 0.8); },   // clear of our ship's path
             place: () => {},
             bodies: [{ x: 528, y: 300, r: 7, peak: 0.6, ramp: P.RP.ICE, seed: 9 }],
+            accents: [   // the signal: a jade planetary beside the shell, a sulphur point, a crimson dwarf, a rose wisp low in the band, a far violet edge-on
+                { kind: 'planetary', x: 274, y: 62, r: 3.5, ramp: ACC.JADE, depth: 0.8, live: 'pulse', period: 11000, seed: 31 },
+                { kind: 'star', x: 432, y: 118, cross: 0.4, ramp: ACC.SULPHUR, depth: 1.2, live: 'twinkle', seed: 33 },
+                { kind: 'dwarf', x: 34, y: 212, r: 4, ramp: ACC.CRIMSON, depth: 1.4, live: 'flare', period: 19000, seed: 35 },
+                { kind: 'wisp', x: 304, y: 280, rr: 14, len: 22, bend: 1.4, tilt: -1.9, ramp: ACC.ROSE, depth: 0.6, seed: 37 },
+                { kind: 'star', x: 592, y: 38, cross: 0.4, ramp: ACC.VERDIGRIS, depth: 0.7, live: 'pulse', period: 7000, seed: 39 },
+                { kind: 'galaxy', x: 152, y: 240, r: 8, tilt: 0.25, incl: 0.22, arms: 2, ramp: ACC.SLATE, depth: 0.4, seed: 41 },
+            ],
             live: X => [pulsar(X, { x: 104, y: 86, len: 44, period: 16000, tick: 1500, seed: 3 }), flashes(X, { every: 13000, chance: 0.85, seed: 5, area: [20, 20, 620, 150], ramp: C.COLD })] },
         4: { name: 'the garden', haze: 0.25, wash: { ang: -0.15, gain: 0.5, w0: 60, w1: 250 },
             band: { cx: 330, cy: 38, ang: 0.08, wide: 58, core: 18, peak: 0.5 }, density: 1.35, bandStars: 1, mix: [0.16, 0.32, 0.02], bright: 34,
@@ -428,6 +526,12 @@
                 cols: [[30, 150, 22, 0.28], [100, 100, 16, 0.34], [166, 60, 12, 0.4]] }),
             place: () => {},
             bodies: [{ x: 590, y: 318, r: 6, peak: 0.55, ramp: P.RP.DESERT, seed: 11 }],
+            accents: [   // the garden: a rose knot near the pillar tips, a sulphur point, a jade planetary, an amber pair
+                { kind: 'knot', x: 196, y: 108, r: 5, tilt: 0.7, ramp: ACC.ROSE, depth: 0.8, live: 'pulse', period: 12000, seed: 43 },
+                { kind: 'star', x: 424, y: 64, cross: 0.4, ramp: ACC.SULPHUR, depth: 1.1, live: 'twinkle', seed: 45 },
+                { kind: 'planetary', x: 520, y: 236, r: 3, ramp: ACC.JADE, depth: 0.7, seed: 47 },
+                { kind: 'binary', x: 338, y: 168, sep: 4, ramp: ACC.AMBER, ramp2: ACC.VERDIGRIS, depth: 1.2, period: 21000, seed: 49 },
+            ],
             live: X => [comet(X, { x0: 470, y0: 30, vx: -1.1, vy: 0.35, len: 34, curl: 0.4, period: 600000, seed: 12 }), flashes(X, { every: 34000, chance: 0.5, seed: 7, area: [300, 20, 620, 120], ramp: C.WARM })] },
         5: { name: 'the tally', haze: 0.25, wash: { ang: -0.35, gain: 0.45, w0: 330, w1: 230 },
             band: { cx: 330, cy: 74, ang: -0.32, wide: 64, core: 20, peak: 0.5, bulge: [190, 80] }, density: 1, bandStars: 1, mix: [0.14, 0.22, 0.04], bright: 24,
@@ -436,6 +540,15 @@
             gas: (X, g) => ringNebula(X, { x: 118, y: 96, R: 40, tilt: 0.5, incl: 0.74, gain: 0.58 * g, seed: 79 }),
             place: () => {},
             bodies: [{ x: 40, y: 296, r: 6, peak: 0.55, ramp: P.RP.STONE, seed: 13 }, { x: 62, y: 306, r: 6, peak: 0.55, ramp: P.RP.STONE, seed: 13 }],
+            accents: [   // the tally: an amber pair that eclipses, a jade planetary, a rose wisp, a violet face-on spiral, verdigris, crimson and sulphur points
+                { kind: 'binary', x: 300, y: 38, sep: 4, ramp: ACC.AMBER, ramp2: ACC.SULPHUR, depth: 1.1, period: 13000, seed: 51 },
+                { kind: 'planetary', x: 414, y: 232, r: 3, ramp: ACC.JADE, depth: 0.8, live: 'pulse', period: 9000, seed: 53 },
+                { kind: 'wisp', x: 246, y: 304, rr: 16, len: 26, bend: 1.2, tilt: 2.2, ramp: ACC.ROSE, depth: 0.6, seed: 55 },
+                { kind: 'galaxy', x: 380, y: 118, r: 8, tilt: 0.3, incl: 0.85, arms: 2, ramp: ACC.SLATE, depth: 0.4, seed: 57 },
+                { kind: 'star', x: 28, y: 240, cross: 0.45, ramp: ACC.VERDIGRIS, depth: 1.3, live: 'twinkle', seed: 59 },
+                { kind: 'dwarf', x: 436, y: 300, r: 3, ramp: ACC.CRIMSON, depth: 1.2, live: 'flare', period: 27000, seed: 61 },
+                { kind: 'star', x: 198, y: 28, cross: 0.35, ramp: ACC.SULPHUR, depth: 0.9, live: 'pulse', period: 8000, seed: 63 },
+            ],
             live: X => [flashes(X, { every: 22000, chance: 0.7, seed: 8, area: [20, 20, 620, 340], ramp: C.STAR }), glints(X, { n: 3, seed: 14, area: [300, 230, 620, 350], drift: 0.25, warm: 0 })] },
         6: { name: 'the light', haze: 0.25, wash: { ang: 0.1, gain: 0.45, w0: 120, w1: 220 },
             band: { cx: 300, cy: 302, ang: -0.2, wide: 60, core: 18, peak: 0.4 }, density: 1.2, bandStars: 0.9, mix: [0.3, 0.12, 0.05], bright: 26,
@@ -444,6 +557,12 @@
             gas: (X, g) => { lightRing(X, { R: 540, tilt: -0.22, open: 0.27, gain: 1.05 * g, seed: 81 }); streams(X, { k: 9, reach: 260, gain: 0.45 * g, seed: 83 }); },
             place: () => {},
             bodies: [],
+            accents: [   // the light: cold colours far from the warm ring
+                { kind: 'star', x: 118, y: 40, cross: 0.4, ramp: ACC.VERDIGRIS, depth: 1.1, live: 'twinkle', seed: 71 },
+                { kind: 'galaxy', x: 42, y: 300, r: 7, tilt: -0.6, incl: 0.45, arms: 2, ramp: ACC.SLATE, depth: 0.45, seed: 73 },
+                { kind: 'dwarf', x: 462, y: 326, r: 4, ramp: ACC.CRIMSON, depth: 1.3, live: 'flare', period: 25000, seed: 75 },
+                { kind: 'planetary', x: 252, y: 58, r: 3, ramp: ACC.JADE, depth: 0.7, live: 'pulse', period: 10000, seed: 77 },
+            ],
             live: X => [comet(X, { x0: 330, y0: 20, vx: 1.4, vy: 0.5, len: 36, curl: -0.3, period: 300000, seed: 15 }), comet(X, { x0: 210, y0: 345, vx: 1.6, vy: -0.75, len: 26, curl: 0.3, period: 260000, seed: 16 }),
                 flashes(X, { every: 18000, chance: 0.7, seed: 9, area: [200, 60, 560, 300], ramp: C.WARM })] },
     };
@@ -455,13 +574,13 @@
         const full = mode === 'd', gas = mode !== 'd', placed = mode === 'f';
         const out = { mode, B, extra, haze: mode === 'f' ? rec.haze : mode === 'e' ? rec.haze * 0.8 : rec.haze * 1.1, thing: null, stripStars: 0.45, live: null };
         X.out = out;
-        const mix = rec.mix;
+        const quiet = placed && ACCENTS_ON && rec.accents, mix = quiet ? rec.mix.map(m => m * 0.4) : rec.mix;   // noir: the field's own tints go quiet so the rare colours read
         out.tint = (x, y) => starRamp([mix[0] * 0.8, mix[1] * 0.8, mix[2]], h32(x, y, 909));
         if (rec.holes && mode !== 'd') X.hole = holes(X, mode === 'e' ? rec.holes.map(h => Object.assign({}, h, { rx: h.rx * 1.25, ry: h.ry * 1.2 })) : rec.holes);
         if (rec.holes && mode === 'd') X.hole = holes(X, rec.holes.slice(0, 1).map(h => Object.assign({}, h, { rx: h.rx * 0.6, ry: h.ry * 0.6 })));
         if (placed) rec.bodies.forEach(b => body(X, b));
         if (gas && rec.name === 'the garden') rec.gas(X, placed ? 0.85 : 1);                   // pillars are solid: before the stars
-        field(X, rec, full ? 1 : placed ? 0.9 : 0.62);
+        field(X, quiet ? Object.assign({}, rec, { mix }) : rec, full ? 1 : placed ? 0.9 : 0.62);
         (rec.clusters || []).forEach(c => cluster(X, c));
         rec.galaxies(X, full || placed ? 1 : 0.92);
         smudgeField(X, Math.round(rec.smudges * (full ? 1 : 0.7)), X.seed + 50);
@@ -469,8 +588,8 @@
         if (mode === 'e' && rec.wash) SK.nebula(B, Object.assign({ seed: X.seed + 200, lx: X.lx, ly: X.ly, reachL: 170 }, rec.wash, { w0: rec.wash.w0 + oy, w1: rec.wash.w1 + oy }));
         if (placed) {
             rec.place(X);
-            const parts = rec.live(X);
-            out.live = (c, t, D) => { const off = Math.max(0, Math.min(extra - 1, Math.round(D * SKY.DEEP))), tq = Math.floor(t / 125) * 125; c.save(); parts.forEach(fn => fn(c, tq, off)); c.restore(); };
+            const parts = rec.live(X).concat(ACCENTS_ON && rec.accents ? [accents(X, rec.accents)] : []);
+            out.live = (c, t, D) => { const off = Math.max(0, Math.min(extra - 1, Math.round(D * SKY.DEEP))), tq = Math.floor(t / 125) * 125; c.save(); parts.forEach(fn => fn(c, tq, off, D)); c.restore(); };
         }
         return out;
     }

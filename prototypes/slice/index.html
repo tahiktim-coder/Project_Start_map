@@ -1,0 +1,283 @@
+<!doctype html>
+<!--
+  SILENT EXODUS · SECTOR 1 SLICE · a playable prototype; nothing in the game is changed. Spec: docs/SLICE_SPEC.md.
+  Layout A while travelling (the living ship on the left, the journey on the right, our Lander small outside), layout D at a
+  stop (the bridge and its big window). Sector 1 is a field of worlds ahead around the ringed giant; click one to go there.
+  SILENT: no AudioSystem is loaded, so the real minigames stay silent too. Test with ?mute=1 anyway.
+  OWNERS: this page and its inline boot belong to the integrator. state.js + script.js: the state-and-script builder.
+          world.js: the world builder. ship.js: the ship builder. stop.js: the stop builder.
+  STILLS: ?m=moment opens at a MOCKUP moment · ?t=ms then runs the slice clock that far and pauses · ?price=felt|numbers
+          ?words=1 shows the word counter · ?px=N forces the art pixel size
+          window.slice.pause() / play() / step(ms) / setTime(ms) / goto(moment) / state() / words() / log()
+  MOCKUP ONLY (not the game): the corner menu (or the backtick key) and a held F (four times as fast).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Graveyard Slice</title>
+<meta name="description" content="Silent Exodus sector 1 slice: the living ship beside the journey, a field of worlds around the ringed giant, a stop on the bridge.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* Words are "Graphite"; the picture is "Deep field" (game-screen-v3/paint.js). The tokens are game-screen-v3.html's, so the
+   reused reading layer (game-screen/reading.css) looks as it does there. --t runs 0 at 1280 wide to 1 at 1920 (set by measure). */
+:root {
+    color-scheme: dark;
+    --t: 1; --px: 2px;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --danger: #e0453a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --fs-voice: calc(19px + 5px * var(--t)); --fs-who: calc(14px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t));
+    --fs-note-name: calc(17px + 3px * var(--t)); --fs-note-line: calc(15px + 2px * var(--t)); --fs-note-cost: calc(14px + 1px * var(--t));
+    --fs-chip: calc(14px + 2px * var(--t)); --fs-title: calc(34px + 12px * var(--t)); --fs-act: calc(17px + 3px * var(--t)); --fs-act-sub: calc(14px + 1px * var(--t));
+    --fs-tag: calc(14px + 1px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));
+    --shadow: 0 1px 0 #05070a;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+p { margin: 0; }
+button { font: inherit; color: inherit; }
+#stage { position: fixed; inset: 0; overflow: hidden; outline: none; touch-action: none; }
+#stage.is-pointing { cursor: pointer; }
+#stage canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+#dive, #bridge { display: none; }
+#words-root, .layer { position: absolute; inset: 0; pointer-events: none; }
+
+/* ── mockup controls: NOT part of the game. Shut, it is one small word in the corner. ── */
+#mockup { position: fixed; left: 8px; bottom: 8px; z-index: 50; font: 400 11px/1.3 var(--f-num); color: #6d747a; }
+#mockup > button { background: none; border: 1px dashed #2c3036; padding: 3px 6px; cursor: pointer; color: #6d747a; letter-spacing: 0.2em; }
+#mockup > button:hover, #mockup > button:focus-visible { color: #c9ccd0; outline: none; }
+#mockup .panel { margin-bottom: 6px; padding: 8px 10px 10px; background: rgba(10, 12, 15, 0.94); border: 1px dashed #2c3036; display: grid; gap: 2px;
+                 max-height: calc(100vh - 60px); overflow: auto; min-width: 260px; }
+#mockup .panel[hidden] { display: none; }
+#mockup .panel b { font: 500 10px/1.8 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: #6d747a; }
+#mockup .panel button { text-align: left; background: none; border: 0; padding: 3px 4px; cursor: pointer; font: 400 12px/1.2 var(--f-num); color: #9aa0a6; }
+#mockup .panel button:hover, #mockup .panel button:focus-visible { color: #fff; background: #1a1d21; outline: none; }
+#mockup .panel button[aria-pressed="true"] { color: #fff; }
+#mockup .row { display: flex; gap: 6px; }
+#word-count { position: fixed; right: 8px; bottom: 8px; z-index: 50; font: 400 11px/1.3 var(--f-num); color: #6d747a; border: 1px dashed #2c3036; padding: 3px 6px; }
+#word-count[hidden] { display: none; }
+#word-count.is-over { color: #e0453a; }
+</style>
+<link rel="stylesheet" href="../screens/game-screen/reading.css?v=20261008i">
+<link rel="stylesheet" href="../../src/systems/minigames/minigames.css?v=1">
+</head>
+<body>
+<div id="stage" tabindex="-1" aria-label="The ship beside the journey toward the light">
+    <canvas id="world" aria-hidden="true"></canvas>  <!-- world.js: space, the field of worlds, our Lander outside -->
+    <canvas id="ship" aria-hidden="true"></canvas>   <!-- ship.js: the tower, drawn over the left of the journey -->
+    <canvas id="dive" aria-hidden="true"></canvas>   <!-- stop.js: the push on our hull, the turn, the plating -->
+    <canvas id="bridge" aria-hidden="true"></canvas> <!-- stop.js: layout D, the bridge and its big window -->
+    <canvas id="shade" aria-hidden="true"></canvas>  <!-- script.js: the dither under words -->
+    <div id="words-root">
+        <div class="layer" id="world-words"></div>   <!-- world.js: the hover note (a name and a tag) -->
+        <div class="layer" id="ship-words"></div>    <!-- ship.js: a red deck's three chips -->
+        <div class="layer" id="stop-words"></div>    <!-- stop.js: the action word in the glass, Leave orbit -->
+        <div class="layer" id="reading" aria-live="polite"></div>   <!-- script.js via reading.js: voices, asks, film, pages, the record -->
+    </div>
+</div>
+<div id="mockup">
+    <div class="panel" id="mockup-panel" hidden>
+        <b>Mockup · moments</b>
+        <div id="mockup-moments" style="display:grid; gap:1px"></div>
+        <b>Prices</b>
+        <div class="row" id="mockup-price"></div>
+        <b>Words</b>
+        <div class="row"><button type="button" id="mockup-words" aria-pressed="false">count words on screen</button></div>
+    </div>
+    <button type="button" id="mockup-toggle" aria-expanded="false" aria-controls="mockup-panel">MOCKUP</button>
+</div>
+<p id="word-count" hidden></p>
+
+<script>
+/* Integrator: the tower (tower.js) and the bridge (stop.js) both read people's sprite pixels back for their hit tests, so a
+   small canvas (a person, a deck sprite) is made read-friendly from the start. Without this Chrome warns about repeated
+   readbacks. Big canvases (the screen layers, the minigame picture) keep the GPU path. */
+(function () {
+    const get = HTMLCanvasElement.prototype.getContext, SMALL = 200 * 200;
+    HTMLCanvasElement.prototype.getContext = function (type, opts) {
+        if (type === '2d' && this.width * this.height <= SMALL && !(opts && 'willReadFrequently' in opts)) opts = Object.assign({ willReadFrequently: true }, opts);
+        return get.call(this, type, opts);
+    };
+})();
+</script>
+<!-- the living ship (crew-hires), loaded as it is -->
+<script src="../screens/crew-hires/engine.js"></script>
+<script src="../screens/crew-hires/cora.js"></script>
+<script src="../screens/crew-hires/jaxon.js"></script>
+<script src="../screens/crew-hires/aris.js"></script>
+<script src="../screens/crew-hires/vance.js"></script>
+<script src="../screens/crew-hires/mira.js"></script>
+<script src="../screens/crew-hires/ship-art.js"></script>
+<script src="../screens/crew-hires/ship-rooms.js"></script>
+<script src="../screens/crew-hires/ship-reactor.js"></script>
+<script src="../screens/crew-hires/ship-sim.js"></script>
+<!-- the pictures and the skies of v3, loaded as they are -->
+<script src="../screens/game-screen-v3/paint.js?v=3"></script>
+<script src="../screens/game-screen-v3/sky.js?v=2"></script>
+<script src="../screens/game-screen-v3/sky2.js?v=2"></script>
+<script src="../screens/game-screen-v3/data.js?v=3"></script>
+<!-- layout A's tower and layout D's bridge, loaded as they are (not their pages' main.js) -->
+<script src="../screens/layouts/variant-a/sim-a.js"></script>
+<script src="../screens/layouts/variant-a/tower.js"></script>
+<script src="../screens/layouts/variant-d/bridge-art.js"></script>
+<script src="../screens/layouts/variant-d/crew-sim.js"></script>
+<!-- the reading layer (voices, film, pages, the record), loaded as it is -->
+<script src="../screens/game-screen/pages.js?v=20261008h"></script>
+<script src="../screens/game-screen/reading.js?v=20261008j"></script>
+<!-- the REAL minigames, the same files the game runs; silent here (no AudioSystem) -->
+<script src="../../src/systems/minigames/MiniLab.js?v=2"></script>
+<script src="../../src/systems/minigames/MiniShip.js?v=1"></script>
+<script src="../../src/systems/minigames/MiniHost.js?v=5"></script>
+<script src="../../src/systems/minigames/Torch.js"></script>
+<script src="../../src/systems/minigames/DiscDating.js?v=5"></script>
+<script src="../../src/systems/minigames/Corridor.js"></script>
+<script src="../../src/systems/minigames/Breach.js"></script>
+<!-- the slice -->
+<script src="state.js"></script>
+<script src="world.js"></script>
+<script src="ship.js"></script>
+<script src="stop.js"></script>
+<script src="script/lines.js"></script>
+<script src="script/shade.js"></script>
+<script src="script/moments.js"></script>
+<script src="script.js"></script>
+<script>
+/* The integrator's boot (docs/SLICE_SPEC.md §2, §4, §12): measure, the loop, input routing, the still hooks, the MOCKUP menu.
+   Modules never call each other's draw code; they talk on the bus. This file calls each module's init/resize/update/render. */
+(function () {
+    'use strict';
+    const Slice = window.Slice, q = Slice.q, $ = id => document.getElementById(id);
+    const ORDER = ['world', 'ship', 'stop', 'script'];                 // update and render order (back to front)
+    const mods = () => ORDER.map(n => Slice.mods[n]).filter(Boolean);
+    const each = (fn, ...args) => mods().forEach(m => { if (typeof m[fn] === 'function') { try { m[fn](...args); } catch (err) { console.error(`Slice: ${fn} failed`, err); } } });
+    const A = window.ShipArt, HULL_OUT = A.L.CX + A.L.HO + 9;           // the tower's outside edge, in its own art px (669)
+    const SPACE_MIN = 0.55, TOWER_SHARE = 0.42;
+
+    // ── the screen: whole device pixels per art pixel; space keeps at least 55 % of the width (SPEC §2) ──
+    function measure() {
+        const G = Slice.G, dpr = window.devicePixelRatio || 1, devW = Math.round(innerWidth * dpr), devH = Math.round(innerHeight * dpr);
+        G.dpr = dpr;
+        G.k = Number(q.get('px')) > 0 ? Math.round(Number(q.get('px'))) : Math.max(1, Math.floor(devH / 540));   // at least 540 art rows: the bridge, the lab and the galley table
+        G.W = Math.ceil(devW / G.k); G.H = Math.ceil(devH / G.k);
+        G.offX = Math.round(G.W * TOWER_SHARE) - HULL_OUT;
+        G.hull = G.offX + HULL_OUT + 1;
+        if (G.W - G.hull < SPACE_MIN * G.W) { G.hull = Math.floor((1 - SPACE_MIN) * G.W); G.offX = G.hull - HULL_OUT - 1; }
+        G.bk = Math.max(1, Math.floor(Math.min(devW / 640, devH / 360))); G.bW = 640; G.bH = 360;   // layout D's own scale
+        G.bLeft = Math.round((innerWidth - 640 * G.bk / dpr) / 2); G.bTop = Math.round((innerHeight - 360 * G.bk / dpr) / 2);
+        G.toArt = (cx, cy) => [Math.floor(cx * dpr / G.k), Math.floor(cy * dpr / G.k)];   // CSS px → layout A art px
+        G.toCss = (ax, ay) => [ax * G.k / dpr, ay * G.k / dpr];
+        const root = document.documentElement.style;
+        root.setProperty('--t', String(Math.max(0, Math.min(1, (innerWidth - 1280) / 640))));
+        root.setProperty('--px', (G.k / dpr) + 'px');
+        sizeShared($('shade'));
+        each('resize', G);
+        Slice.emit('resize', G);
+    }
+    /** canvas#shade is sized here; each module sizes its own canvases in resize(G). */
+    function sizeShared(c) {
+        const G = Slice.G; c.width = G.W; c.height = G.H;
+        c.style.width = (G.W * G.k / G.dpr) + 'px'; c.style.height = (G.H * G.k / G.dpr) + 'px';
+    }
+
+    // ── the loop: the slice clock advances only while playing; F held runs it four times as fast (mockup only) ──
+    let last = null, fast = false;
+    function frame(now) {
+        const dt = last == null ? 16 : Math.min(100, now - last); last = now;
+        const run = Slice.clock.playing ? dt * (fast ? 4 : 1) : 0;
+        tickBy(run);
+        requestAnimationFrame(frame);
+    }
+    function tickBy(ms) {
+        if (ms > 0) Slice.advance(ms);
+        Slice.emit('tick', { t: Slice.clock.t, dt: ms });
+        each('update', ms, Slice.clock.t);
+        each('render', Slice.clock.t);
+        showWords();
+    }
+
+    // ── input: one surface; the stop owns it while it is on screen; otherwise the tower side or the space side ──
+    const stage = $('stage');
+    function route(type, e) {
+        const s = Slice.state, G = Slice.G;
+        if (window.MiniHost && window.MiniHost.current) return;
+        if (['dive-in', 'stop', 'dive-out'].includes(s.mode)) { Slice.mods.stop && Slice.mods.stop.pointer(type, e, e.clientX, e.clientY); return; }
+        const [ax, ay] = G.toArt(e.clientX, e.clientY), m = ax < G.hull ? Slice.mods.ship : Slice.mods.world;
+        const used = m && m.pointer(type, e, ax, ay);
+        if (type === 'move') stage.classList.toggle('is-pointing', !!used);
+    }
+    stage.addEventListener('pointermove', e => route('move', e));
+    stage.addEventListener('pointerdown', e => route('down', e));
+    stage.addEventListener('pointerleave', e => route('leave', e));
+    stage.addEventListener('wheel', e => { const [ax] = Slice.G.toArt(e.clientX, e.clientY); if (ax < Slice.G.hull && Slice.mods.ship && Slice.mods.ship.pointer('wheel', e, ax, 0)) e.preventDefault(); }, { passive: false });
+    addEventListener('keydown', e => {
+        if (window.MiniHost && window.MiniHost.current) return;
+        if (e.key === '`') { toggleMockup(); return; }
+        if (e.key === 'f' || e.key === 'F') { fast = true; return; }
+        if (Slice.mods.script && Slice.mods.script.key(e)) e.preventDefault();
+    });
+    addEventListener('keyup', e => { if (e.key === 'f' || e.key === 'F') fast = false; });
+    let resizeTimer = 0;
+    addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(measure, 150); });
+
+    // ── stills: the page is a function of the moment and the clock ──
+    let moment = q.get('m') || 'open';
+    function goto(id) {
+        const price = Slice.state.price;                               // the price switch survives a jump between moments
+        moment = id; Slice.reset(); Slice.state.price = price; Slice.clock.t = 0;
+        each('goto', id);
+        Slice.emit('mockup:goto', { moment: id });
+        tickBy(0);
+    }
+    function step(ms = 125) { Slice.clock.playing = false; for (let left = ms; left > 0; left -= 125) tickBy(Math.min(125, left)); }
+    function setTime(ms) { if (ms < Slice.clock.t) goto(moment); step(Math.max(0, ms - Slice.clock.t)); }
+    window.slice = {
+        pause() { Slice.clock.playing = false; }, play() { Slice.clock.playing = true; },
+        step, setTime, goto,
+        state: () => JSON.parse(JSON.stringify(Object.assign({ t: Math.round(Slice.clock.t), moment }, Slice.state))),
+        words: () => (Slice.mods.script ? Slice.mods.script.words() : 0),
+        log: () => Slice.log.slice(),
+        geom: () => Object.assign({}, Slice.G),
+    };
+
+    // ── the MOCKUP corner menu (not the game) ──
+    const panel = $('mockup-panel'), toggle = $('mockup-toggle'), counter = $('word-count');
+    function toggleMockup(on) { const open = on == null ? panel.hidden : on; panel.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); }
+    toggle.addEventListener('click', () => toggleMockup());
+    Slice.MOMENTS.forEach(([id, label]) => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.m = id;
+        b.addEventListener('click', () => { goto(id); Slice.clock.playing = true; toggleMockup(false); });
+        $('mockup-moments').appendChild(b);
+    });
+    Slice.PRICE_MODES.forEach(mode => {
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = mode; b.dataset.price = mode;
+        b.addEventListener('click', () => { Slice.state.price = mode; Slice.emit('price:changed', { mode }); syncPrice(); });
+        $('mockup-price').appendChild(b);
+    });
+    function syncPrice() { document.querySelectorAll('#mockup-price button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.price === Slice.state.price))); }
+    let counting = q.get('words') === '1';
+    $('mockup-words').addEventListener('click', e => { counting = !counting; e.currentTarget.setAttribute('aria-pressed', String(counting)); });
+    function showWords() {
+        counter.hidden = !counting;
+        if (!counting) return;
+        const n = window.slice.words();
+        counter.textContent = n + ' words'; counter.classList.toggle('is-over', n > 40);
+    }
+
+    // ── start ──
+    each('init');
+    measure();
+    goto(moment);
+    syncPrice();
+    if (q.has('t')) step(Math.max(0, Number(q.get('t')) || 0));
+    requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
