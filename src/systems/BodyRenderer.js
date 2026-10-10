@@ -381,5 +381,6 @@
         return globe({ type: planet.type, size, seed, sel: o.sel, scanning: o.scanning });
     }
 
-    window.BodyRenderer = { body, globe, station, asteroid, seedFromId };
+    // palette(type) → { fam, cfg }: the colours a world of that type has in orbit (the new screen paints its travel picture from them)
+    window.BodyRenderer = { body, globe, station, asteroid, seedFromId, palette: resolveCfg };
 })();

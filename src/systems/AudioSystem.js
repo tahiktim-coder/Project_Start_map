@@ -165,6 +165,7 @@ class AudioSystem {
      * Crossfades from current music to the ethereal Heaven track
      */
     playHeavenMusic() {
+        if (this.muted) return;                                                    // muted: no track to start (and no autoplay warning)
         try {
             // Create new audio element for Heaven track
             const heavenMusic = new Audio('Music/Heaven.mp3');

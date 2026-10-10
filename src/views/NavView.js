@@ -216,23 +216,8 @@ class NavView {
                     node.style.opacity = '0';
                     setTimeout(() => node.remove(), 1000);
 
-                    // Remove from sector nodes
-                    if (this.state && this.state.sectorNodes) {
-                        const idx = this.state.sectorNodes.findIndex(p => p.id === data.id);
-                        if (idx !== -1) this.state.sectorNodes.splice(idx, 1);
-                    }
-
-                    // Log and bark
-                    if (this.state) {
-                        this.state.addLog(`SIGNAL INTERFERENCE: ${data.name} was a phantom reading. The signal dissolves.`);
-                        if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
-                            // Mira reacts to ghost planet
-                            const mira = this.state.crew.find(c => c.personality === 'CURIOUS' && c.status !== 'DEAD');
-                            if (mira) {
-                                setTimeout(() => this.state.addLog(`${mira.name}: "The readings just... vanished. The signal is playing games with our instruments."`), 300);
-                            }
-                        }
-                    }
+                    // Gone from the sector, the log line, Mira's line (App.dissolveGhost: the new screen uses it too)
+                    if (window.app && window.app.dissolveGhost) window.app.dissolveGhost(data);
 
                     // Show "INTERFERENCE" in the right panel
                     const rightPanel = document.getElementById('tactical-display');

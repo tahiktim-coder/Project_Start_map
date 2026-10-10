@@ -371,7 +371,7 @@ class OrbitView {
                         </button>
                        </div>`
                     : `<button class="cmd-btn danger" id="btn-leave" style="margin-top: 20px; border-top: 1px dashed var(--color-primary-dim); padding-top: 20px;">
-                        <div>BREAK ORBIT</div><div class="cost">RETURN TO MAP</div>
+                        ${window.NEW_SCREEN && window.NewScreen ? '<div>LEAVE ORBIT</div><div class="cost">FLY ON</div>' : '<div>BREAK ORBIT</div><div class="cost">RETURN TO MAP</div>'}
                        </button>`
                 }
 
