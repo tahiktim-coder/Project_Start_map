@@ -8,7 +8,11 @@
     ../screens/crew-hires/*.js           CrewEngine and the five people (their dress-uniform recolour is made here, at load)
   STILLS: ?t=ms opens paused at that moment · ?dress=0 shows their everyday suits · ?px=N forces the pixel size
           window.film.play() / pause() / step(ms) / setTime(ms) / state() / shots
-  SKIP: a click, Esc, Enter or Space skips to the end. No audio is loaded.
+  SKIP: a click, Esc, Enter or Space skips to the end.
+  SOUND (optional, OFF by default): the "Sound off" button in the bottom-left corner turns it on; ?sound=1 starts with it on
+          (the browser still needs one click on the page). Made in code by film-sound.js, no audio files: the broadcast's room
+          tone, the crowd swelling and cheering and clapping, an announcer's muffled cadence without words, the countdown beeps,
+          the ignition's rumble and roar fading as the ship climbs to a point, then quiet. The score is launchScore() below.
   WORDS: every line on screen is in LINES below. Lines marked [placeholder] depend on the open story decisions (what the public
   was told) and are kept neutral until those are made.
 -->
@@ -109,6 +113,7 @@ body.is-over #again { display: block; }
 <script src="../screens/crew-hires/aris.js"></script>
 <script src="../screens/crew-hires/vance.js"></script>
 <script src="../screens/crew-hires/mira.js"></script>
+<script src="film-sound.js"></script>
 <script>
 (function () {
     'use strict';
@@ -724,6 +729,104 @@ body.is-over #again { display: block; }
         },
     });
 
+    // ════════════════════════════════════ the sound (optional, off by default) ════════════════════════════════════
+    // film-sound.js builds none of this until the Sound button is turned on. It follows the film's clock: the crowd's level and
+    // brightness change on the cuts, the announcer speaks under each lower third, the beeps match the clock, and the roar drops
+    // to a distant one on the cut to the long lens and fades out as the ship becomes a point. After that, quiet.
+    /** Keyframes [[ms, value], ...] eased between, held at the ends. */
+    const keys = pts => T => {
+        if (T <= pts[0][0]) return pts[0][1];
+        for (let i = 1; i < pts.length; i++) if (T <= pts[i][0]) { const [t0, v0] = pts[i - 1], [t1, v1] = pts[i], k = (T - t0) / (t1 - t0); return v0 + (v1 - v0) * k * k * (3 - 2 * k); }
+        return pts[pts.length - 1][1];
+    };
+    const CROWD_LVL = keys([[0, 0], [900, 0.3], [10000, 0.32], [10500, 0.55], [20000, 0.55], [20500, 0.6], [36000, 0.5], [36400, 0.2], [44000, 0.2], [44400, 0.35], [52000, 0.38], [61500, 0.5], [71000, 0.5], [71400, 0.3], [LIVE_ENDS, 0]]);
+    const CHEER_LVL = keys([[0, 0], [1000, 0.08], [10000, 0.1], [11500, 0.2], [14000, 0.55], [17500, 0.38], [20000, 0.3], [21200, 0.75], [24500, 0.5], [30000, 0.18], [36000, 0.15], [36400, 0.04], [44000, 0.04], [45500, 0.15], [47500, 0.45], [52000, 0.18], [61000, 0.14], [62300, 0.5], [65000, 0.9], [71000, 0.8], [71400, 0.35], [LIVE_ENDS, 0]]);
+    const CLAP_RATE = keys([[0, 0], [20000, 0], [20800, 70], [27000, 55], [31000, 12], [36000, 6], [36400, 0], [45500, 0], [46500, 40], [51500, 25], [52500, 0], [62500, 0], [64000, 30], [71000, 30], [71400, 8], [76000, 0]]);
+    const CROWD_TONE = { yard: 2200, crowd: 3800, podium: 4200, ten: 1100, pad: 1700, liftoff: 1300, climb: 700 };   // how near the crowd is, by shot
+    const shotIdAt = T => (SHOTS.find(o => T >= o.t0 && T < o.t1) || SHOTS[SHOTS.length - 1]).id;
+    /** The announcer: syllables in phrases with pauses, pitch falling through each phrase, a few stressed. No words. */
+    const VOWELS = [[730, 1090], [530, 1840], [400, 2000], [570, 840], [300, 870], [660, 1720], [490, 1350]];
+    function speech(t0, t1, seed, base) {
+        const r = seeded(seed), out = [];
+        let t = t0;
+        while (t < t1 - 400) {
+            let f = base * (1.06 + r() * 0.08);
+            const n = 4 + Math.floor(r() * 8);
+            for (let i = 0; i < n && t < t1 - 200; i++) {
+                const dur = 95 + r() * 170, stress = r() < 0.22, v = VOWELS[Math.floor(r() * VOWELS.length)];
+                out.push({ t, dur, f: f * (stress ? 1.13 : 1), F1: v[0], F2: v[1], amp: stress ? 1 : 0.62 + r() * 0.3 });
+                t += dur + 20 + r() * 70; f *= 0.982;
+            }
+            t += 260 + r() * 560;
+        }
+        return out;
+    }
+    const SYLLABLES = [
+        ...LINES.flatMap((l, i) => speech(l.t0 + 350, l.t1 - 450, 900 + i, 118)),
+        ...[5, 4, 3, 2, 1].map(k => ({ t: COUNT.zero - k * 1000 + 140, dur: 240, f: 126 + (5 - k) * 3, F1: 620, F2: 1500, amp: 1 })),   // he counts the last five
+        { t: COUNT.zero + 260, dur: 180, f: 150, F1: 500, F2: 1800, amp: 1 }, { t: COUNT.zero + 480, dur: 300, f: 142, F1: 700, F2: 1100, amp: 1 },
+    ];
+    function launchScore(K) {
+        const live = K.gain(0, K.out);                                                         // the whole score: closed when paused or over
+        // the broadcast: a room tone (soft hiss and air) and the announcer's channel, a voice through a tinny, far-off PA
+        const room = K.gain(0, live); K.loop('pink', K.filter('highpass', 140, 0.7, K.filter('lowpass', 5200, 0.7, room)));
+        const pa = K.gain(0, live), paLp = K.filter('lowpass', 1300, 0.9, pa), paHp = K.filter('highpass', 190, 0.7, paLp);
+        const slap = K.ac.createDelay(1); slap.delayTime.value = 0.13; const fb = K.gain(0.26, slap), slapLp = K.filter('lowpass', 900, 0.7, K.gain(0.35, live));
+        pa.connect(slap); slap.connect(fb); slap.connect(slapLp);                               // the PA's echo off the yard
+        const voice = K.gain(0, paHp), vsrc = K.osc('sawtooth', 120);
+        const F1 = K.filter('bandpass', 600, 6, voice), F2 = K.filter('bandpass', 1500, 8, K.gain(0.7, voice)), body = K.filter('lowpass', 320, 0.7, K.gain(0.25, voice));
+        vsrc.connect(F1); vsrc.connect(F2); vsrc.connect(body);
+        // the crowd: a murmur, a cheer on top, claps; one filter for how near the crowd is
+        const crowdTone = K.filter('lowpass', 2200, 0.7, live);
+        const crowd = K.gain(0, crowdTone); K.loop('pink', K.filter('bandpass', 420, 0.9, crowd)); K.loop('pink', K.filter('bandpass', 1050, 1.3, K.gain(0.8, crowd)));
+        const cheer = K.gain(0, crowdTone); K.loop('white', K.filter('bandpass', 1700, 0.9, cheer)); K.loop('white', K.filter('bandpass', 2600, 2, K.gain(0.6, cheer)));
+        const claps = K.gain(1, crowdTone);
+        // the pad: steam from the vents; the drive: a rumble, a roar, a crackle
+        const vent = K.gain(0, live); K.loop('white', K.filter('highpass', 2500, 0.7, vent));
+        const rumble = K.gain(0, live); K.loop('brown', K.filter('lowpass', 90, 0.9, rumble)); K.osc('sine', 33, K.gain(0.4, rumble));
+        const roar = K.gain(0, live), roarLp = K.filter('lowpass', 1700, 0.7, roar);
+        K.loop('pink', roarLp); K.loop('white', K.filter('bandpass', 520, 0.6, K.gain(0.5, roarLp)));
+        const crackle = K.filter('highpass', 500, 0.7, K.gain(1, roarLp));
+        const clapAcc = {}, crackAcc = {};
+        const cues = [
+            ...SYLLABLES.map(s => [s.t, at => {
+                const d = s.dur / 1000;
+                voice.gain.setTargetAtTime(s.amp, at, 0.012); voice.gain.setTargetAtTime(0, at + d * 0.78, 0.025);
+                vsrc.frequency.setTargetAtTime(s.f, at, 0.03); vsrc.frequency.setTargetAtTime(s.f * 0.93, at + d / 2, 0.08);
+                F1.frequency.setTargetAtTime(s.F1, at, 0.025); F2.frequency.setTargetAtTime(s.F2, at, 0.025);
+            }]),
+            ...Array.from({ length: 10 }, (_, k) => [COUNT.t0 + k * 1000, at => K.tone({ at, f: 1000, dur: 0.13, gain: 0.09, attack: 0.004, to: live })]),   // T-10 .. T-1
+            ...[14600, 22300, 47200, 64800].map(t => [t, at => {                                // a whistle from the crowd
+                K.tone({ at, f: 1900, f2: 2700, dur: 0.42, gain: 0.03, attack: 0.05, to: crowdTone });
+                K.tone({ at: at + 0.45, f: 2700, f2: 1700, dur: 0.5, gain: 0.025, attack: 0.03, to: crowdTone });
+            }]),
+            [COUNT.zero, at => {                                                                // ignition: a deep thump under the roar
+                K.tone({ at, f: 58, f2: 26, dur: 1.6, gain: 0.6, attack: 0.02, to: live });
+                K.burst({ at, dur: 1.2, kind: 'brown', type: 'lowpass', f: 700, f2: 120, gain: 0.6, attack: 0.03, to: live });
+            }],
+        ];
+        function update(T, dt, on) {
+            K.set(live.gain, on ? 1 : 0, on ? 0.03 : 0.08);
+            const onAir = T < LIVE_ENDS ? smooth(0, 900, T) : 0;
+            K.set(room.gain, 0.12 * onAir, T < LIVE_ENDS ? 0.2 : 0.05);
+            K.set(pa.gain, T < LIVE_ENDS + 400 ? 2.6 : 0, 0.1);
+            K.set(crowd.gain, 2.2 * CROWD_LVL(T) * (1 + 0.1 * Math.sin(T / 730) + 0.07 * Math.sin(T / 290)), 0.08);
+            K.set(cheer.gain, 3 * CHEER_LVL(T) * (0.72 + 0.28 * Math.sin(T / 210) * Math.sin(T / 670 + 1)), 0.05);
+            K.set(crowdTone.frequency, CROWD_TONE[shotIdAt(T)] || 2000, 0.02);
+            if (dt > 0) K.grains(clapAcc, CLAP_RATE(T), dt, at => K.burst({ at, dur: 0.012 + 0.02 * Math.random(), kind: 'white', type: 'bandpass', f: 900 + 1700 * Math.random(), Q: 1.2, gain: 1 + 1.4 * Math.random(), attack: 0.002, to: claps }));
+            K.set(vent.gain, 0.14 * smooth(COUNT.zero - 6000, COUNT.zero, T) * (T < 71000 ? 1 : 0), T < 71000 ? 0.3 : 0.02);
+            const heat = clamp01((T - COUNT.zero) / 700), k = clamp01((T - 71000) / CLIMB.fly), far = T >= 71000;   // 71 s: the cut to the long lens
+            const rum = T < COUNT.zero ? 0 : far ? 0.5 * (1 - k) ** 1.6 : heat;
+            const rr = T < COUNT.zero ? 0 : far ? 0.55 * (1 - k) ** 2 : heat * (1 - 0.15 * clamp01((T - 66000) / 5000));
+            K.set(rumble.gain, rum, 0.04);
+            K.set(roar.gain, 1.1 * rr, 0.04);
+            K.set(roarLp.frequency, far ? 140 + 650 * (1 - k) ** 1.5 : 1700, 0.03);
+            if (dt > 0) K.grains(crackAcc, 50 * (far ? 0.3 * (1 - k) ** 2 : heat), dt, at => K.burst({ at, dur: 0.006, kind: 'click', type: 'lowpass', f: 6000, gain: 0.25 + 0.6 * Math.random(), to: crackle }));
+        }
+        return { cues, update };
+    }
+    const SOUND = window.FilmSound ? window.FilmSound.attach({ score: launchScore }) : { tick() {} };
+
     // ════════════════════════════════════ the player: clock, stills, overlays, skip ════════════════════════════════════
     let T = 0, playing = true, last = null, ended = false;
     const built = new Map();
@@ -734,6 +837,7 @@ body.is-over #again { display: block; }
         if (T < DUR) { try { s.draw(T - s.t0, stateOf(s)); } catch (err) { console.error('film: ' + s.id + ' failed', err); } }
         dim(T < 900 ? 1 - T / 900 : smooth(FADE[0], FADE[1], T));
         overlay();
+        SOUND.tick(T, playing && !ended);
     }
     /** Dither to black: amount 0..1, whole Bayer steps (the house fade, never a soft alpha). */
     const dimPat = new Map();

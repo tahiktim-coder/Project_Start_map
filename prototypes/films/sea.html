@@ -2,22 +2,30 @@
 <!--
   SILENT EXODUS · FILM 2 · THE SEA OF SHIPS (mockup, silent). The jump into sector 3, replacing the old "throw" sequence.
   The jump stalls; the stars shrink back to points; our Lander's drive coughs out and its decks go dark one by one until one
-  red lamp is left. Then, as if our eyes adjust, we see we are not alone: broken Exodus hulls of our own class hang all round
-  us, still and dead, every one pointing at the far light. The camera pulls back, and back, and back, until our ship is a red
-  dot and there is a sea of thousands of hulls, all on the same heading. One line from A.U.R.A.; the drive relights; white.
+  red lamp is left. Then, as if our eyes adjust, we see we are in a graveyard: wrecks of our own class all round us, snapped
+  in two, torn open to the frame, burnt black, plates peeled back, loose plating and girders drifting between them, a few with
+  a dead red beacon, and every one still pointing at the far light. The camera pulls back, and back, and back, until our ship
+  is a red dot in a sea of thousands of wrecks, all on the same heading. One line from A.U.R.A.; the drive relights; white.
   About 42 seconds. Nothing in the game or the other prototypes is changed; this page only LOADS
     ../screens/game-screen-v3/paint.js   V3Paint: the dither recipe, ramps, hull() + shapeL (the Lander), lightGlow, stars
+  The wrecks are painted here by paintWreck(): hull() from paint.js with the damage added (breaks with the frame left
+  standing, holes torn through to the ribs, burns, missing and peeled plates, bent girders, a dead beacon).
   STILLS: ?t=ms opens paused at that moment · ?words=0 drops the one line · ?newer=1 mixes in longer hulls of a newer kind
           (the spine's later ships; off by default, the designer asked for ships of our own class) · ?px=N forces the pixel size
           window.film.play() / pause() / step(ms) / setTime(ms) / state() / shots
-  SKIP: a click, Esc, Enter or Space skips to the end. No audio is loaded.
+  SKIP: a click, Esc, Enter or Space skips to the end.
+  SOUND (optional, OFF by default): the "Sound off" button in the bottom-left corner turns it on; ?sound=1 starts with it on
+          (the browser still needs one click on the page). Made in code by film-sound.js, no audio files: the jump winding
+          down, the drive coughing out, the decks shutting down one thunk at a time, near silence with a faint hull creak, a low
+          cold hum that rises as the camera pulls back, a soft tone on A.U.R.A.'s line, the drive relighting into the white.
+          The score is seaScore() below; it reads the same timeline (TL) as the picture.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sea of Ships</title>
-<meta name="description" content="Silent Exodus jump film mockup: the jump into sector 3 stalls, and the camera pulls back over a sea of dead Exodus ships.">
+<meta name="description" content="Silent Exodus jump film mockup: the jump into sector 3 stalls, and the camera pulls back over a graveyard of thousands of wrecked Exodus ships.">
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -49,7 +57,7 @@ body.is-over #again { display: block; }
 </style>
 </head>
 <body data-still="wait">
-<div id="frame" aria-label="Film: the jump into sector 3 stalls among thousands of dead Exodus ships">
+<div id="frame" aria-label="Film: the jump into sector 3 stalls in a graveyard of thousands of wrecked Exodus ships">
     <canvas id="art" aria-hidden="true"></canvas>
     <div class="gfx" id="voice" aria-live="polite"><p class="who"><i></i>A.U.R.A.</p><p class="say"></p></div>
     <div class="gfx" id="skip">Click to skip</div>
@@ -57,11 +65,12 @@ body.is-over #again { display: block; }
 <button type="button" id="again">Watch again</button>
 
 <script src="../screens/game-screen-v3/paint.js?v=3"></script>
+<script src="film-sound.js"></script>
 <script>
 (function () {
     'use strict';
     const P = window.V3Paint;
-    const { INK, RP, ramp, clamp01, smooth, lerp, hash, fbm, seeded, threshold, LANDER, DECK_U } = P;
+    const { INK, RP, ramp, clamp01, smooth, lerp, hash, vnoise, fbm, seeded, threshold, LANDER, DECK_U } = P;
     const AW = 640, AH = 360, TICK = 125, DUR = 42000;
     const q = new URLSearchParams(location.search);
     const $ = id => document.getElementById(id);
@@ -76,17 +85,19 @@ body.is-over #again { display: block; }
         cough: [2600, 4600],       // the drive coughs and goes out
         ports: [5000, 7600],       // the decks go dark one by one
         lamp: 7800,                // one red lamp left, blinking
-        reveal: [10200, 15200],    // the ships round us come out of the dark
+        reveal: [10200, 15200],    // the wrecks round us come out of the dark
         pull: [[15400, 21600, 3.7, 24], [22200, 28600, 24, 110], [29200, 36400, 110, 270]],   // three pulls back: [t0, t1, from, to] (distance in ship lengths)
         line: [37000, 41200],
         relight: 40400, white: [41200, 41600], end: DUR,
     };
     const LINE = 'The drive is back, Commander. The jump will finish.';   // the one line; ?words=0 drops it
 
-    // ═══ the camera: one pinhole, looking straight ahead; our ship stays at OUR on screen, the light at VP ═══
-    const F = 560, C0 = [320, 180], VP = [560, 72], OUR = [270, 252];
+    // ═══ the camera: one pinhole, looking straight ahead; our ship stays at OUR on screen (in the middle of it all), the light at VP ═══
+    const F = 560, C0 = [320, 180], VP = [560, 72], OUR = [296, 212], D0 = 3.7;
     const norm = v => { const n = Math.hypot(...v) || 1; return v.map(x => x / n); };
     const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    const madd = (a, ...terms) => terms.reduce((acc, [k, v]) => acc.map((x, i) => x + k * v[i]), a.slice());
     const HEAD = norm([(VP[0] - C0[0]) / F, (VP[1] - C0[1]) / F, 1]);        // the heading: toward the light
     const NRM = norm(cross([1, 0, 0], HEAD)), SIDE = norm(cross(HEAD, NRM));  // the sea's up, and across the heading
     const CAMDIR = [(OUR[0] - C0[0]) / F, (OUR[1] - C0[1]) / F, 1];
@@ -104,73 +115,277 @@ body.is-over #again { display: block; }
         return D;
     }
     const LEN_K = 0.92;          // a hull's length on screen is F / z times this (drawn side on, pointing at the light)
+    function project(p, D) {
+        const rx = p[0] + D * CAMDIR[0], ry = p[1] + D * CAMDIR[1], rz = p[2] + D * CAMDIR[2];
+        if (rz < 0.4) return null;
+        const n = Math.hypot(rx, ry, rz), along = (rx * HEAD[0] + ry * HEAD[1] + rz * HEAD[2]) / n, side = Math.sqrt(Math.max(0, 1 - along * along));
+        return { x: C0[0] + F * rx / rz, y: C0[1] + F * ry / rz, len: F / rz * LEN_K * (0.45 + 0.55 * Math.min(1, side / 0.6)), z: rz };   // seen nose-on, a hull looks shorter
+    }
+    /** Where to put a thing so that at the first look (D0) its centre is at screen x, y and a whole hull there is `len` pixels long. */
+    function placeOnScreen(x, y, len) {
+        let z = F * LEN_K / len, p = null;
+        for (let i = 0; i < 6; i++) {
+            p = [(x - C0[0]) * z / F - D0 * CAMDIR[0], (y - C0[1]) * z / F - D0 * CAMDIR[1], z - D0 * CAMDIR[2]];
+            const pr = project(p, D0); z *= pr.len / len;
+        }
+        return p;
+    }
 
-    // ═══ the sea: a few hand-placed hulls round us, then thousands, more of them the further out ═══
-    // Each: u along the heading (+ ahead), w across it (+ right), h off the sea's plane (+ up), in ship lengths. Placed (scratchpad
-    // inv.js) so that at the first look they frame us without covering us or the light: [screen x, y, length] in the comment.
-    const NEAR = [
-        { u: -1.39, w: -0.35, h: -0.02, yaw: 0.04, to: 0.55, roll: 0.05, holes: 0.66, light: 0.55 },   // 60,334,200 · the front half of a ship, close below us
-        { u: -1.24, w: -1.17, h: -0.04, yaw: -0.1, from: 0.6, roll: -0.5, light: 0.5 },               // -30,300,170 · its back half, turning away
-        { u: 1.92, w: -2.95, h: 0.65, yaw: 0.05, holes: 0.64 },                             // 120,118,80
-        { u: 4.71, w: 0.19, h: 0.46, yaw: -0.06 },                                          // 440,124,66
-        { u: 1.63, w: 1.74, h: -0.89, yaw: 0.03, from: 0.24, roll: 0.12 },                 // 548,322,110 · nose torn off
-        { u: 8.49, w: -3.71, h: -0.41, yaw: -0.04 },                                        // 300,142,40
-        { u: 8.66, w: 2.79, h: -1.35, yaw: 0.05, holes: 0.62 },                             // 612,206,48
-        { u: 5.46, w: -8.59, h: -1.89, yaw: 0.02 },                                         // 40,214,42
-        { u: 4.44, w: -0.16, h: -2.82, yaw: -0.08, holes: 0.65 },                           // 404,346,62
-        { u: 11.9, w: -9.29, h: -2.06, yaw: 0.06 },                                         // 190,172,28
-        { u: 18.5, w: -1.02, h: -3.35, yaw: -0.03 },                                        // 474,192,24
-        { u: 21.58, w: -6.63, h: -0.01, yaw: 0.02 },                                        // 362,98,20
-        { u: 19.28, w: -20.4, h: 1.57, yaw: -0.05, to: 0.6, roll: 0.3 },                   // 92,64,18
-    ];
-    // The sea: even in distance from us (about 6 hulls per ship length of distance), 40,000 in all, out to 7,000 lengths.
-    // What can be seen grows as the camera pulls back (SEEN, in camera distances): first the hulls round us, then hundreds,
-    // then thousands, fading into the dark toward the light.
-    const SEA_N = 40000, SEA_RHO = [15, 7000], SEEN = [3.6, 7.2];
-    const DUSTY = ramp(INK, '#141110', '#2a2420', '#4a3e34', '#6e5c4a', '#9a8268');
-    // Hulls of OUR class: our own hull ramp gone cold and grey, some rusted, some burnt. No bright red: they must read as Landers.
+    // ═══ the wrecks ═══
+    // Ramps: our hull ramp gone cold and grey; charred black; the old rust; the grey of a world we passed. No bright red: they
+    // must read as Landers, ours, dead. FAR is what a wreck is when it is two or three pixels: dim cold metal, never a spark.
     const DEAD = ramp(INK, '#0f1417', '#1b252a', '#2f3d43', '#55666c', '#8e9fa4');
-    const RAMPS = [DEAD, RP.RUST, DEAD, RP.PASSED, DUSTY, DEAD];
+    const BURNT = ramp(INK, '#09090a', '#131416', '#1d2023', '#2a2f33', '#3f4549');   // charcoal: soot, not rust
+    const FAR = ramp(INK, '#0f1418', '#182126', '#253238', '#384952', '#566a72');
+    const RAMPS = [DEAD, DEAD, RP.PASSED, BURNT, DEAD, RP.RUST, DEAD, BURNT];   // mostly our own grey; a little old rust
+    /** The damage a wreck carries, from its seed: torn (the threshold for holes, lower is worse), burn, plates gone, a beacon. */
+    function dmgFor(seed) { const h = k => hash(seed, k, 41); return { torn: 0.56 + h(1) * 0.1, burn: 0.2 + h(2) * 0.75, plates: 0.08 + h(3) * 0.26, beacon: h(4) < 0.14 }; }
+
+    // The graveyard round us at the first look, placed on screen: [x, y] is the centre of the piece, len the length a whole
+    // hull at that depth would be, from/to the piece of the hull that is left (0 nose .. 1 bell). Each broken hull's other
+    // half drifts nearby. Nothing covers us or the light.
+    const NEAR = [
+        { x: 72, y: 322, len: 300, from: 0, to: 0.47, yaw: 0.04, roll: 0.05, torn: 0.615, burn: 0.7, plates: 0.22 },        // the front half of a ship, close below-left
+        { x: 14, y: 236, len: 250, from: 0.53, to: 1, yaw: -0.1, roll: -0.62, torn: 0.62, burn: 0.95, plates: 0.16 },       // its engine half, tumbling away
+        { x: 122, y: 92, len: 132, from: 0, to: 1, yaw: 0.05, torn: 0.565, burn: 0.45, plates: 0.22, beacon: 2 },          // gutted down its side
+        { x: 486, y: 262, len: 122, from: 0.3, to: 1, yaw: -0.04, roll: 0.14, ri: 3, torn: 0.6, burn: 0.9, plates: 0.2, beacon: 0 },   // nose torn off, burnt black
+        { x: 560, y: 196, len: 122, from: 0, to: 0.27, yaw: 0, roll: 0.95, ri: 3, torn: 0.62, burn: 0.8 },               // its nose, drifting ahead
+        { x: 604, y: 352, len: 230, from: 0.04, to: 0.62, yaw: 0.03, roll: -0.08, torn: 0.61, burn: 0.6, plates: 0.24 },  // big, lower right
+        { x: 342, y: 64, len: 66, from: 0, to: 0.55, yaw: -0.06, roll: 0.06, ri: 2 },
+        { x: 284, y: 52, len: 66, from: 0.6, to: 1, yaw: 0.1, roll: -0.4, ri: 2 },
+        { x: 424, y: 128, len: 54, from: 0.42, to: 1, yaw: -0.05 },
+        { x: 240, y: 118, len: 42, from: 0, to: 1, yaw: 0.06, beacon: 2 },
+        { x: 40, y: 160, len: 48, from: 0, to: 0.66, yaw: 0.03, ri: 4 },
+        { x: 196, y: 334, len: 74, from: 0.38, to: 1, yaw: -0.08, roll: 0.25 },
+        { x: 382, y: 330, len: 58, from: 0, to: 1, yaw: 0.04, ri: 3 },
+        { x: 618, y: 132, len: 36, from: 0, to: 1, yaw: -0.05, beacon: 2 },
+        { x: 486, y: 40, len: 28, from: 0, to: 0.6, yaw: 0.02 },
+        { x: 182, y: 36, len: 30, from: 0, to: 1, yaw: 0.05, ri: 2 },
+        { x: 298, y: 140, len: 22, from: 0.35, to: 1, yaw: -0.1 },
+        { x: 520, y: 112, len: 19, from: 0, to: 1, yaw: 0.04 },
+        { x: 92, y: 214, len: 26, from: 0, to: 0.5, yaw: 0.08, ri: 4 },
+        { x: 418, y: 222, len: 17, from: 0, to: 1, yaw: -0.04 },
+        { x: 560, y: 300, len: 20, from: 0.5, to: 1, yaw: 0.2, roll: 0.6 },
+        { x: 30, y: 60, len: 21, from: 0, to: 1, yaw: 0 },
+        { x: 380, y: 26, len: 16, from: 0, to: 1, yaw: 0.04 },
+        { x: 156, y: 168, len: 15, from: 0.3, to: 1, yaw: -0.06 },
+        { x: 440, y: 186, len: 13, from: 0, to: 1, yaw: 0.02 },
+        { x: 600, y: 240, len: 14, from: 0, to: 0.6, yaw: -0.03 },
+    ];
+    // The sea: 90,000 hulls (broken ones in two pieces). Most are spread evenly within 700 ship lengths of us, in a thick layer
+    // above and below; the rest thin out to 7,000 lengths in a flatter sheet toward the light. What can be seen grows as the
+    // camera pulls back (SEEN, in camera distances): first the wrecks round us, then hundreds, then thousands.
+    // PASS: wrecks along the camera's way back. Each sits beside the path at a distance `d` from us and is `edge` pixels from
+    // our dot when the camera stops at one of the pulls' ends (24, 110 or 270 lengths), so as the camera pulls back they slide
+    // in from the edges of the frame, big and close, and at no stop do they cover us or the light. They keep every shot
+    // reading as wrecks from the foreground to the far field.
+    const SEA_N = 64000, SEA_RHO = [4, 7000], SEA_EVEN = [700, 0.7], SEEN = [3.6, 7.2];   // SEA_EVEN: [radius, share of hulls] spread evenly
+    const PASS = { n: [500, 700, 1300], stops: [24, 110, 270], edge: [40, 440], clear: 0.6 };
+    const at3 = (u, w, h) => [0, 1, 2].map(k => u * HEAD[k] + w * SIDE[k] + h * NRM[k]);
+    /** One hull into the list: whole (a quarter of them), or snapped in two with the halves drifting apart along the heading,
+        the engine half turning away; sometimes one half is gone. */
+    function addHull(list, base, r) {
+        if (r() < 0.25) { list.push(Object.assign(base, { from: 0, to: 1, anchor: 0.5 })); return; }
+        const p = base.p, cut = Math.round((0.3 + r() * 0.4) * 10) / 10, gap = 0.1 + r() * 0.5, drift = (r() - 0.5) * 0.7, keep = r();
+        const front = Object.assign({}, base, { from: 0, to: cut, anchor: cut / 2, p: madd(p, [0.5 - cut / 2 + gap / 2, HEAD]), broken: true });
+        const back = Object.assign({}, base, { from: cut, to: 1, anchor: (1 + cut) / 2, seed: base.seed + 1, roll: (r() - 0.5) * 1.4, broken: true,
+            p: madd(p, [0.5 - (1 + cut) / 2 - gap / 2, HEAD], [drift, SIDE], [drift * 0.4, NRM]) });
+        if (keep > 0.1) list.push(front);
+        if (keep < 0.9) list.push(back);
+    }
     function makeSea() {
         const r = seeded(4242), list = [];
-        NEAR.forEach((o, i) => list.push(Object.assign({ kind: 0, seed: 100 + i, ramp: RAMPS[i % RAMPS.length], holes: o.holes || 0, from: o.from || 0, to: o.to == null ? 1 : o.to, roll: o.roll || 0 }, o)));
+        NEAR.forEach((o, i) => {
+            const seed = 100 + i, d = dmgFor(seed);
+            list.push(Object.assign({ seed, ri: i % 2 ? 0 : 1, yaw: 0, roll: 0, near: true, p: placeOnScreen(o.x, o.y, o.len), anchor: (o.from + o.to) / 2,
+                dmg: { torn: o.torn || d.torn, burn: o.burn == null ? d.burn : o.burn, plates: o.plates == null ? d.plates : o.plates, beacon: o.beacon != null } }, o));
+        });
         const newer = q.get('newer') === '1', camRay = norm(CAMDIR).map(v => -v);
-        while (list.length < NEAR.length + SEA_N) {
-            const rho = SEA_RHO[0] + (SEA_RHO[1] - SEA_RHO[0]) * r(), th = r() * Math.PI * 2;
-            const u = rho * Math.cos(th), w = rho * Math.sin(th) * 1.15, h = (r() + r() + r() - 1.5) * (1.2 + 0.035 * rho);   // a sea: thin for its size
+        const baseAt = (p, rho) => ({ p, rho, fade: r(), yaw: (r() - 0.5) * 0.24, roll: (r() - 0.5) * 0.12, seed: Math.floor(r() * 997), ri: Math.floor(r() * RAMPS.length), kind: newer && rho > 20 && r() < 0.18 ? 1 : 0 });
+        let n = 0;
+        while (n < SEA_N) {
+            const rho = r() < SEA_EVEN[1] ? Math.max(SEA_RHO[0], SEA_EVEN[0] * Math.sqrt(r())) : SEA_EVEN[0] + (SEA_RHO[1] - SEA_EVEN[0]) * r(), th = r() * Math.PI * 2;
+            const u = rho * Math.cos(th), w = rho * Math.sin(th) * 1.15, h = (r() + r() + r() - 1.5) * (1.5 + 0.13 * Math.min(rho, 400));   // thick round us, flatter far off
             if (u < 0 && r() < 0.55) continue;                                                // fewer behind us than ahead
-            const p = [0, 1, 2].map(k => u * HEAD[k] + w * SIDE[k] + h * NRM[k]);
-            const dot = (p[0] * camRay[0] + p[1] * camRay[1] + p[2] * camRay[2]) / rho;
-            if (dot > 0.93) continue;                                                         // keep the camera's path back clear
-            const broken = r() < 0.22, cut = 0.3 + r() * 0.4;
-            list.push({ u, w, h, p, rho, fade: r(), yaw: (r() - 0.5) * 0.24, roll: broken ? (r() - 0.5) * 0.8 : 0, seed: Math.floor(r() * 997), ramp: RAMPS[Math.floor(r() * RAMPS.length)],
-                holes: r() < 0.45 ? 0.6 + r() * 0.08 : 0, from: broken && r() < 0.5 ? cut : 0, to: broken ? (r() < 0.5 ? cut : 1) : 1, kind: newer && rho > 20 && r() < 0.18 ? 1 : 0 });
+            if (rho > 60 && r() > 0.12 + 0.88 * smooth(0.36, 0.62, fbm(u / 420, w / 70 + h / 140, 77, 3))) continue;   // long drifts along the heading, gaps between
+            const p = at3(u, w, h);
+            if (dot(p, camRay) / rho > 0.985) continue;                                       // keep the camera's own path back clear
+            const first = project(p, D0);
+            if (first && first.len > 30 && first.x > -60 && first.x < AW + 60 && first.y > -60 && first.y < AH + 60) continue;   // the first look is composed by hand (NEAR)
+            n++;
+            addHull(list, baseAt(p, rho), r);
         }
-        list.forEach(s => { if (!s.p) s.p = [0, 1, 2].map(k => s.u * HEAD[k] + s.w * SIDE[k] + s.h * NRM[k]); if (s.rho == null) s.rho = Math.hypot(s.u, s.w, s.h); });
+        const lightAng = Math.atan2(VP[1] - OUR[1], VP[0] - OUR[0]), stops = PASS.stops;
+        stops.forEach((E, k) => {
+            for (let i = 0, tries = 0; i < PASS.n[k] && tries < 40000; tries++) {
+                const d = lerp(3, E * 0.95, r()), edge = lerp(PASS.edge[0], PASS.edge[1], r()), a = r() * Math.PI * 2;
+                if (Math.abs(Math.atan2(Math.sin(a - lightAng), Math.cos(a - lightAng))) < 0.22) continue;   // not across the light
+                const o = edge * (E - d) / F;
+                if (stops.some(D => D > d && F * o / (D - d) < Math.max(10, PASS.clear * F * LEN_K / (D - d)))) continue;   // not on top of our dot at a stop
+                i++;
+                const p = [-d * CAMDIR[0] + o * Math.cos(a), -d * CAMDIR[1] + o * Math.sin(a), -d * CAMDIR[2]];
+                addHull(list, Object.assign(baseAt(p, Math.hypot(...p)), { pass: true }), r);
+            }
+        });
+        list.forEach(s => { if (s.rho == null) s.rho = Math.hypot(...s.p); });
         return list;
     }
     const SEA = makeSea();
 
-    // ═══ hull sprites: baked on first use at whole sizes, cached ═══
+    // ═══ loose plating, girders and scraps drifting between them ═══
+    function makeDebris() {
+        const r = seeded(777), list = [];
+        const add = (c, spread, n, scale = 1) => {
+            for (let i = 0; i < n; i++) {
+                const k = r(), kind = k < 0.55 ? 0 : k < 0.85 ? 1 : 2;                        // a plate, a girder, a scrap
+                const p = madd(c, [(r() - 0.5) * 2 * spread, HEAD], [(r() - 0.5) * 2 * spread, SIDE], [(r() - 0.5) * spread, NRM]);
+                if (Math.hypot(...p) < 0.75) continue;                                       // not on top of us
+                list.push({ p, kind, r: scale * (kind === 1 ? 0.05 + 0.13 * r() : kind === 0 ? 0.025 + 0.07 * r() : 0.012 + 0.025 * r()),
+                    a0: r() * 6.283, spin: (r() - 0.5) * 0.7, vel: [0, 1, 2].map(() => (r() - 0.5) * 0.02), seed: Math.floor(r() * 997), lit: r() });
+            }
+        };
+        SEA.forEach(s => {
+            if (s.near) add(s.p, 0.25 + 0.5 * (s.to - s.from), Math.round(10 + 22 * (s.to - s.from) * (s.len > 60 ? 1 : 0.5)));
+            else if (s.pass || (s.broken && s.rho < 160)) add(s.p, 0.5, s.pass ? 3 : 2);
+        });
+        for (let i = 0; i < 2600; i++) { const rho = 1 + 90 * r() ** 1.4, th = r() * 6.283; add(at3(rho * Math.cos(th), rho * Math.sin(th), (r() - 0.5) * 2), 0.1, 1); }
+        return list;
+    }
+    const DEBRIS = makeDebris();
+
+    // ═══ painting a wreck: hull() from paint.js, with the damage ═══
+    /** o: { x, y, len, ht, angle, anchor, from, to, seed, ramp, dmg, sun, shape }. The nose points along `angle`.
+        Returns { beacon: [x, y] relative to o.x, o.y, or null }. */
+    function paintWreck(p, o) {
+        const { len, ht, from, to, anchor, seed, dmg } = o, R = o.ramp, shape = o.shape, c = Math.cos(o.angle), s = Math.sin(o.angle);
+        const at = (u, v) => { const a = -(u - anchor) * len, b = v * ht; return [o.x + a * c - b * s, o.y + a * s + b * c]; };
+        const uvOf = (x, y) => { const dx = x + 0.5 - o.x, dy = y + 0.5 - o.y; return [anchor - (dx * c + dy * s) / len, (-dx * s + dy * c) / ht]; };
+        const reach = Math.max(anchor - from, to - anchor) * len + ht * 0.7 + 2;
+        const tiny = len < 16, small = len < 40;
+        const ribP = Math.max(3, len * 0.04), ribW = Math.max(1, len / 150), lonW = Math.max(0.55, ht / 80), LON = [-0.4, -0.2, 0, 0.2, 0.4];
+        const isFrame = (pu, v) => (((pu % ribP) + ribP) % ribP) < ribW || LON.some(k => Math.abs(v - k) * ht < lonW);
+        const sU = Math.max(4, len * 0.1), sV = Math.max(2, ht * 0.42), skel = tiny ? 0 : Math.min(0.03 + 0.035 * hash(seed, 9, 5), 14 / len);
+        const pw = Math.max(4, len / 15), sun = [Math.cos(o.angle) * 1.5, Math.sin(o.angle) * 1.5];
+        const inside = (x, y) => { const [u, v] = uvOf(x, y); return u >= from && u <= to && shape(u, v, o) >= 0; };
+        p.region(o.x - reach, o.y - reach, o.x + reach, o.y + reach, (x, y) => {
+            const [u, v] = uvOf(x, y);
+            if (u < from - 0.12 || u > to + 0.12) return;
+            let l = shape(u, v, o);
+            if (l < 0) return;
+            const pu = u * len, pv = v * ht, jag = (vnoise(v * 7, u * 11, seed) - 0.5) * 0.15 + (vnoise(v * 21, 3, seed + 1) - 0.5) * 0.07;
+            let e = 9;
+            if (to < 1) e = Math.min(e, to + jag - u);
+            if (from > 0) e = Math.min(e, u - from + jag);
+            if (e < 0) return;
+            let r = R;
+            if (e < skel) {                                                                    // the break: only the frame is left standing
+                if (!isFrame(pu, v)) return;
+                p.solid(x, y, DEAD, (v < 0 ? 0.62 : 0.4) * (1 - 0.3 * u));
+                return;
+            }
+            const tm = fbm(pu / sU, pv / sV, seed + 3, 3) + (e < skel + 0.1 ? 0.07 : 0);       // torn worst near the break
+            if (tm > dmg.torn) {                                                               // torn open
+                if (!tiny && tm < dmg.torn + 0.022) l = v < 0.1 ? 0.8 : 0.55;                  // the ragged edge of the skin
+                else if (!tiny && isFrame(pu, v)) l = 0.44;                                    // ribs and longerons
+                else if (len < 48 || fbm(pu / sU, pv / sV, seed + 5, 2) < 0.52) { l = 0.05; r = BURNT; }   // the gutted inside (small: keep the hull's outline whole)
+                else return;                                                                   // straight through: space behind
+            } else {
+                const iu = Math.floor(pu / pw), iv = Math.floor((v + 0.6) * 3);
+                if (!tiny && hash(iu & 255, iv + 7, seed) < dmg.plates) l = isFrame(pu, v) ? 0.42 : 0.14;   // a plate gone: the frame under it
+                else if (!small && (((pu % pw) + pw) % pw) < 0.8) l -= 0.08;                   // plate seams
+                if (!small) l -= (fbm(pu / 9, pv / 6, seed, 3) - 0.45) * 0.4;
+                const bm = fbm(pu / Math.max(5, len * 0.08), pv / Math.max(2, ht * 0.35), seed + 11, 3) + 0.3 * (1 - smooth(0, 0.16, e - skel)) + 0.2 * smooth(dmg.torn - 0.1, dmg.torn, tm);
+                if (bm > 1.02 - dmg.burn * 0.5) { r = BURNT; l *= 0.65; }                      // burnt black
+            }
+            l *= 1 - 0.28 * clamp01(u);                                                        // lit from ahead: the tail is in shadow
+            if (o.sun && r !== BURNT && !inside(x + sun[0], y + sun[1]) && threshold(x, y) < o.sun) { p.solid(x, y, RP.SUN, 0.45 + 0.35 * o.sun); return; }
+            l *= 0.84;                                                                         // dead metal: no shine
+            if (small) { const top = r.hex.length - 1; p.solid(x, y, r, Math.round(clamp01(l) * top) / top); return; }
+            p.solid(x, y, r, l);
+        });
+        if (len < 22) return { beacon: null };
+        const rand = seeded(seed * 31 + 7), w = len > 160 ? 2 : 1;
+        const vdir = [-s, c], udir = [-c, -s];                                                  // +v across, +u toward the tail
+        const stroke = (x0, y0, x1, y1, rr, v) => p.line(x0, y0, x1, y1, (x, y) => { for (let k = 0; k < w; k++) p.solid(x + (k ? vdir[0] : 0), y + (k ? vdir[1] : 0), rr, v); });
+        // bent girders sticking out of each break
+        [[to < 1, to, 1], [from > 0, from, -1]].forEach(([isCut, cu, out]) => {
+            if (!isCut) return;
+            LON.forEach(k => {
+                if (rand() < 0.35) return;
+                const [x0, y0] = at(cu - out * 0.03, k), [x1, y1] = at(cu + out * (0.03 + 0.09 * rand()), k + (rand() - 0.5) * 0.5);
+                stroke(x0, y0, x1, y1, DEAD, k < 0 ? 0.6 : 0.42);
+            });
+        });
+        // plates peeled back from the skin, bent away from the light
+        const peel = len < 30 ? 1 : Math.round(dmg.plates * 12) + 1;
+        for (let i = 0; i < peel; i++) {
+            const u0 = from + (to - from) * (0.12 + 0.76 * rand()), side = rand() < 0.65 ? -1 : 1;
+            if (shape(u0, 0, o) < 0) continue;
+            const [bx, by] = at(u0, side * 0.47), Lp = ht * (0.14 + 0.3 * rand()), Wp = Math.max(1.5, len * (0.02 + 0.025 * rand())), lean = 0.3 + 0.8 * rand();
+            for (let a = 0; a <= Lp; a += 0.5) {
+                const bend = lean * (a / Lp) ** 1.5, dx = side * vdir[0] + bend * udir[0], dy = side * vdir[1] + bend * udir[1], dn = Math.hypot(dx, dy);
+                for (let b = 0; b <= Wp; b += 0.5) p.solid(bx + dx / dn * a + udir[0] * b, by + dy / dn * a + udir[1] * b, R === BURNT ? BURNT : DEAD, (side < 0 ? 0.66 : 0.36) - 0.22 * a / Lp + (b < 0.6 ? 0.12 : 0));
+            }
+        }
+        if (!dmg.beacon || from > LANDER.NOSE) return { beacon: null };
+        const [lx, ly] = at(LANDER.NOSE + 0.05, -0.5);
+        p.set(lx, ly, RP.RED.rgb[1]); if (len > 80) p.set(lx + 1, ly, RP.RED.rgb[1]);           // the beacon: a dead red lamp
+        return { beacon: [lx - o.x, ly - o.y] };
+    }
+
+    // ═══ sprites: baked on first use at whole sizes, cached ═══
     /** A newer, longer hull (the spine's later ships): longer decks, a second ring round the drive. Only with ?newer=1. */
     function shapeNew(u, v, o) { const l = P.shapeL(u, v, o); if (l < 0) return -1; return u > 0.79 && u < 0.83 ? l + 0.12 : l; }
-    const cache = new Map();
-    function hullSprite(len, deg, s, ours) {
-        const key = (ours ? 'o' + (s.dark ? 'd' : '') : s.seed + ':' + s.from + ':' + s.to + ':' + (s.light || 0)) + '|' + len + '|' + deg;
+    // While the film plays, baking is held to a budget per frame (BAKE_MS): a wreck whose size is not baked yet is drawn from
+    // the nearest size already baked, scaled with hard pixels, and the right size is baked on a later frame. Paused (a still,
+    // ?t=), everything is baked exactly.
+    const cache = new Map(), families = new Map(), BAKE_MS = 6;
+    let bakeLeft = Infinity;
+    function cached(key, make) {
         let sp = cache.get(key);
-        if (sp) return sp;
-        const ht = len / (s.kind === 1 ? 4.4 : 3.15), half = Math.ceil(len / 2 + ht + 3), p = P.painter(half * 2, half * 2, false), a = deg * Math.PI / 180;
-        const small = len < 26, sunDir = [-Math.cos(a), -Math.sin(a)];
-        const o = ours
-            ? { x: half, y: half, len, ht, angle: a, flip: true, seed: 9, anchor: 0.5, sun: s.dark ? 0.36 : len < 80 ? 0.24 : 0.3, sunDir: [Math.cos(a), Math.sin(a)], fade: 0.22, light: s.dark ? 0.3 : 1, flat: len < 130 }
-            : { x: half, y: half, len, ht, angle: a + s.roll, flip: true, seed: s.seed, anchor: 0.5, ramp: s.ramp, light: (s.light || 0.92) * (s.ramp === RP.WRUST ? 0.78 : 1), rust: !small, holes: small ? 0 : s.holes, from: s.from, to: s.to,
-                sun: len > 14 ? 0.22 : 0, sunDir: [Math.cos(a), Math.sin(a)], fade: 0.3, flat: len < 90 };
-        const at = P.hull(p, o, s.kind === 1 ? shapeNew : P.shapeL);
-        sp = { canvas: p.canvas(), half };
-        if (ours) { sp.ports = [0, 1, 2, 3, 4, 5].map(i => at(DECK_U(i) + 0.054, -0.32).map(v => v - half)); sp.lamp = at(LANDER.NOSE + 0.06, -0.52).map(v => v - half); sp.bell = at(1, 0).map(v => v - half); sp.skirt = [0.87, 0.9, 0.93].map(u => at(u, 0.6).map(v => v - half)); }
-        if (cache.size > 6000) cache.clear();
-        cache.set(key, sp);
+        if (!sp) {
+            if (cache.size > 9000) { let n = 0; for (const k of cache.keys()) { cache.delete(k); if (++n > 2500) break; } families.clear(); }   // drop the oldest
+            sp = make(); cache.set(key, sp);
+        }
         return sp;
+    }
+    /** A wreck's sprite at `len`, or the nearest baked size with the scale to draw it at: { sp, k }. */
+    function wreckSprite(len, deg, s) {
+        const small = len < 30 && !s.near, pseed = small ? 1 + (s.seed % 18) : s.seed;          // small ones share a few damage patterns, ramps and headings
+        const ri = small ? s.ri % 4 : s.ri;
+        if (small) deg = Math.round(deg / 6) * 6;
+        const fam = 'w' + pseed + ':' + s.from + ':' + s.to + ':' + ri + ':' + (s.kind || 0) + '|' + deg, key = fam + '|' + len;
+        const have = cache.get(key);
+        if (have) return { sp: have, k: 1 };
+        if (bakeLeft <= 0) {                                                                   // over budget: the nearest size baked, at this heading or the next one over
+            for (const dd of [0, -3, 3, -6, 6]) {
+                const f2 = fam.slice(0, fam.lastIndexOf('|') + 1) + (deg + dd), sizes = families.get(f2);
+                let best = 0;
+                if (sizes) for (const l of sizes) if (cache.has(f2 + '|' + l) && (!best || Math.abs(Math.log(l / len)) < Math.abs(Math.log(best / len)))) best = l;
+                if (best) return { sp: cache.get(f2 + '|' + best), k: len / best };
+            }
+        }
+        const t0 = performance.now(), sp = bakeWreck(len, deg, s, pseed, ri);
+        bakeLeft -= performance.now() - t0;
+        cache.set(key, sp);
+        if (!families.has(fam)) families.set(fam, new Set());
+        families.get(fam).add(len);
+        return { sp, k: 1 };
+    }
+    function bakeWreck(len, deg, s, pseed, ri) {
+        const ht = len / (s.kind === 1 ? 4.4 : 3.15), half = Math.ceil(len * 0.5 + ht + 4), p = P.painter(half * 2, half * 2, false);
+        const d0 = s.near ? s.dmg : dmgFor(pseed), k = clamp01((60 - len) / 50);   // the smaller, the gentler: the Lander's shape must still read
+        const dmg = { torn: d0.torn + 0.07 * k, burn: d0.burn, plates: d0.plates * (1 - 0.6 * k), beacon: d0.beacon };
+        const res = paintWreck(p, { x: half, y: half, len, ht, angle: deg * Math.PI / 180, anchor: s.anchor, from: s.from, to: s.to, seed: pseed, ramp: RAMPS[ri], dmg,
+            sun: len > 40 ? 0.2 : 0, shape: s.kind === 1 ? shapeNew : P.shapeL });
+        return { canvas: p.canvas(), half, beacon: res.beacon };
+    }
+    function ourSprite(len, deg, dark) {
+        return cached('o' + (dark ? 'd' : '') + '|' + len + '|' + deg, () => {
+            const ht = len / 3.15, half = Math.ceil(len / 2 + ht + 3), p = P.painter(half * 2, half * 2, false), a = deg * Math.PI / 180;
+            const at = P.hull(p, { x: half, y: half, len, ht, angle: a, flip: true, seed: 9, anchor: 0.5, sun: dark ? 0.36 : len < 80 ? 0.24 : 0.3, sunDir: [Math.cos(a), Math.sin(a)], fade: 0.22, light: dark ? 0.3 : 1, flat: len < 130 }, P.shapeL);
+            return { canvas: p.canvas(), half, ports: [0, 1, 2, 3, 4, 5].map(i => at(DECK_U(i) + 0.054, -0.32).map(v => v - half)), lamp: at(LANDER.NOSE + 0.06, -0.52).map(v => v - half), bell: at(1, 0).map(v => v - half) };
+        });
     }
     const quantLen = l => (l < 36 ? Math.round(l) : Math.round(Math.exp(Math.round(Math.log(l) * 30) / 30)));
     const quantDeg = a => Math.round(a * 60 / Math.PI) * 3;
@@ -184,71 +399,140 @@ body.is-over #again { display: block; }
             const v = Math.max(0, fbm(x / 80, y / 42, 31, 4) - 0.46) * 0.9, g = 0.22 * Math.exp(-Math.hypot(x - VP[0], (y - VP[1]) * 1.8) / 140);
             if (v + g > 0.03) p.tone(x, y, RP.HAZE, v + g);
         });
-        const stars = P.keepVisible(p, P.scatterStars(p, 33, 1500, (x, y) => Math.hypot(x - VP[0], y - VP[1]) > 26 && (y < VP[1] + 6 || hash(x, y, 4) < 0.35)));   // fewer stars below the sea's horizon, so the hulls read
+        const stars = P.keepVisible(p, P.scatterStars(p, 33, 1500, (x, y) => Math.hypot(x - VP[0], y - VP[1]) > 26 && (y < VP[1] + 6 || hash(x, y, 4) < 0.35)));   // fewer stars below the sea's horizon, so the wrecks read
         P.lightGlow(p, VP[0], VP[1], lt);
         BG = { canvas: p.canvas(), stars: stars.filter(s => s.mag > 0.9), all: stars };
         return BG;
     }
 
-    // ═══ drawing a frame ═══
+    // ═══ drawing the graveyard ═══
     const dead = document.createElement('canvas'); dead.width = AW; dead.height = AH;
     const dctx = dead.getContext('2d'); dctx.imageSmoothingEnabled = false;
-    function project(p, D) {
-        const rx = p[0] + D * CAMDIR[0], ry = p[1] + D * CAMDIR[1], rz = p[2] + D * CAMDIR[2];
-        if (rz < 0.4) return null;
-        const n = Math.hypot(rx, ry, rz), along = (rx * HEAD[0] + ry * HEAD[1] + rz * HEAD[2]) / n, side = Math.sqrt(Math.max(0, 1 - along * along));
-        return { x: C0[0] + F * rx / rz, y: C0[1] + F * ry / rz, len: F / rz * LEN_K * (0.45 + 0.55 * Math.min(1, side / 0.6)), z: rz };   // seen nose-on, a hull looks shorter
+    const glowAt = (x, y) => (Math.abs(x - VP[0]) > 160 || Math.abs(y - VP[1]) > 120 ? 0 : Math.exp(-Math.hypot(x - VP[0], (y - VP[1]) * 1.4) / 46));
+    const SIL = P.hexRgb('#05070a');
+    /** A wreck a few pixels long: a short hull, nose to the light, lit along its top; broken ones in a ragged piece, a hole torn
+        in the side, a scrap trailing off the break. Against the light's glow, black. */
+    function smallWreck(L, pr, s, ang, g) {
+        const ca = Math.cos(ang), sa = Math.sin(ang), n = Math.max(3, Math.round(pr.len * 1.1)), m = Math.max(2, Math.round(n * (s.to - s.from))), rows = pr.len >= 4 ? 2 : 1;
+        const R = RAMPS[s.ri] === BURNT ? BURNT : FAR, nosed = s.from === 0, d = dmgFor(1 + (s.seed % 18));
+        for (let i = 0; i < m; i++) for (let j = 0; j < rows; j++) {
+            const x = pr.x + (i - (m - 1) / 2) * ca - (j - (rows - 1) / 2) * sa, y = pr.y + (i - (m - 1) / 2) * sa + (j - (rows - 1) / 2) * ca;
+            if (g > 0.6) { L.set(x, y, SIL); continue; }
+            if (!nosed && i === m - 1 && j === 0) continue;                                   // the ragged break
+            if (s.to < 1 && i === 0 && j === rows - 1) continue;
+            if (m >= 4 && i === (s.seed % (m - 2)) + 1 && j === 0 && d.torn < 0.6) { L.tone(x, y, BURNT, 0.15); continue; }   // a hole in the side
+            L.tone(x, y, R, (j === 0 ? 0.6 : 0.36) + (i === m - 1 && nosed ? 0.18 : 0) + 0.1 * g);
+        }
+        if (s.broken && g <= 0.6) { const e = s.from > 0 ? (m + 1) / 2 : -(m + 1) / 2; L.tone(pr.x + e * ca + sa, pr.y + e * sa - ca, FAR, 0.4); }   // a scrap off the break
     }
-    const glowAt = (x, y) => Math.exp(-Math.hypot(x - VP[0], (y - VP[1]) * 1.4) / 46);
+    /** A wreck too far to see whole: a dash of dim metal on the heading, a gap where it broke, a darker tail. Never a spark.
+        Thousands of these a frame, so everything it needs is worked out once (prepFar). */
+    // The sea's hot fields, packed into typed arrays: the loop over every hull runs each frame, and the hulls are objects of
+    // many shapes, so reading them in that loop was most of the frame.
+    const SN = SEA.length, SX = new Float32Array(SN), SY = new Float32Array(SN), SZ = new Float32Array(SN), SDMIN = new Float32Array(SN);
+    const SCA = new Float32Array(SN), SSA = new Float32Array(SN), SJ = new Float32Array(SN), SGAP = new Int8Array(SN), SBURNT = new Uint8Array(SN), SNEAR = new Uint8Array(SN);
+    SEA.forEach((s, i) => {
+        const a = HEAD_ANG + s.yaw * 0.5;
+        let kf = 0.5; for (let k = 0, lo = 0, hi = 1; k < 20; k++) { kf = (lo + hi) / 2; if (smooth(0, 1, kf) < s.fade) lo = kf; else hi = kf; }   // when it comes out of the dark (SEEN)
+        SDMIN[i] = s.near || s.pass || s.rho <= 12 ? 0 : s.rho / (SEEN[1] - (SEEN[1] - SEEN[0]) * kf);
+        SX[i] = s.p[0]; SY[i] = s.p[1]; SZ[i] = s.p[2]; SCA[i] = Math.cos(a); SSA[i] = Math.sin(a); SJ[i] = hash(s.seed, 1, 3) * 0.08;
+        SGAP[i] = s.broken ? (s.from > 0 ? 2 : 0) : -1; SBURNT[i] = RAMPS[s.ri] === BURNT ? 1 : 0; SNEAR[i] = s.near ? 1 : 0;
+    });
+    function farWreck(L, x0, y0, len, i, g, fog) {
+        const m = len < 1.3 ? 2 : 3, ca = SCA[i], sa = SSA[i], R = SBURNT[i] ? BURNT : FAR;
+        for (let k = 0; k < m; k++) {
+            if (m === 3 && k === SGAP[i]) continue;
+            const x = x0 + (k - (m - 1) / 2) * ca, y = y0 + (k - (m - 1) / 2) * sa;
+            if (g > 0.6) { L.set(x, y, SIL); continue; }
+            L.tone(x, y, R, ((k === m - 1 ? 0.66 : 0.42) + SJ[i] + 0.15 * g) * fog);
+        }
+    }
+    /** Loose plating, girders and scraps, turning slowly as they drift; a plate flashes when it turns its face to the light.
+        A piece bigger than a pixel or two is drawn straight onto the picture in depth order, each pixel of its box once. */
+    function drawDebris(f, L, d, pr, t) {
+        const S = pr.len * d.r, g = glowAt(pr.x, pr.y);
+        if (S < 0.55) return;
+        if (S < 1.6) { if (g > 0.35) L.set(pr.x, pr.y, SIL); else L.tone(pr.x, pr.y, FAR, 0.3 + 0.2 * d.lit); return; }
+        const a = d.a0 + d.spin * t / 1000, ca = Math.cos(a), sa = Math.sin(a), face = Math.max(0, Math.cos(a * 2 + d.seed)), R = d.seed % 4 === 0 ? BURNT : DEAD;
+        // the piece in its own frame: i along it, k across; a girder is thin (with a truss when close), a plate half as wide
+        // as it is long, a scrap ragged
+        const len = d.kind === 2 ? S * 0.8 : S, wd = d.kind === 1 ? Math.max(1, Math.round(S / 12)) + (S > 14 ? 3 : 0) : d.kind === 0 ? Math.max(1, S * 0.45) : S * 0.7;
+        const reach = Math.ceil(Math.hypot(len, wd) / 2) + 1, cx = Math.round(pr.x), cy = Math.round(pr.y);
+        for (let y = -reach; y <= reach; y++) for (let x = -reach; x <= reach; x++) {
+            const i = x * ca + y * sa, k = -x * sa + y * ca;
+            if (Math.abs(i) > len / 2 + 0.3) continue;
+            let v;
+            if (d.kind === 1) {
+                const core = Math.max(1, Math.round(S / 12));
+                if (k >= -0.5 && k < core - 0.5) v = 0.42 + 0.2 * face;
+                else if (S > 14 && k >= core - 0.5 && k < core + 2.5 && ((i + len / 2) % 4) < 1) v = 0.3;
+                else continue;
+            } else {
+                if (Math.abs(k) > wd / 2 + 0.3) continue;
+                if (d.kind === 2 && hash(Math.round(i + 9), Math.round(k + 9), d.seed) < 0.3) continue;
+                v = (d.kind === 0 ? 0.26 + 0.5 * face : 0.22) + (k > wd / 2 - 0.8 ? 0.14 : 0);
+            }
+            f.tone(cx + x, cy + y, R, v);
+        }
+    }
+    const LAYER = P.pixelLayer(AW, AH);
     function drawSea(t, D) {
         dctx.clearRect(0, 0, AW, AH);
-        const L = P.pixelLayer(AW, AH), big = [];
-        const seen = [];
-        for (const s of SEA) {
-            const pr = project(s.p, D);
-            if (!pr || pr.x < -300 || pr.x > AW + 300 || pr.y < -200 || pr.y > AH + 200 || pr.len > 330) continue;
-            if (s.rho > 12 && s.fade > smooth(SEEN[1] * D, SEEN[0] * D, s.rho)) continue;   // too far off to make out yet
-            seen.push([pr, s]);
+        const L = LAYER, big = [], mid = [], f = P.framer(dctx, AW, AH), ours = F / D * LEN_K * 0.5;
+        const cx = D * CAMDIR[0], cy = D * CAMDIR[1], cz = D * CAMDIR[2];
+        L.clear();
+        const H0 = HEAD[0], H1 = HEAD[1], H2 = HEAD[2], X0 = C0[0], Y0 = C0[1];
+        for (let i = 0; i < SN; i++) {
+            if (D < SDMIN[i]) continue;                                                        // too far off to make out yet
+            const rz = SZ[i] + cz;
+            if (rz < 0.4) continue;
+            const iz = F / rz, rx = SX[i] + cx, ry = SY[i] + cy, x = X0 + rx * iz, y = Y0 + ry * iz;
+            if (x < -300 || x > AW + 300 || y < -200 || y > AH + 200) continue;
+            const n = Math.sqrt(rx * rx + ry * ry + rz * rz), along = (rx * H0 + ry * H1 + rz * H2) / n, side = Math.sqrt(Math.max(0, 1 - along * along));
+            const len = iz * LEN_K * (0.45 + 0.55 * Math.min(1, side / 0.6));                 // seen nose-on, a hull looks shorter
+            if (len > 460 || (len < 6.5 && (x < -4 || x > AW + 4 || y < -4 || y > AH + 4))) continue;
+            const near = SNEAR[i] === 1;
+            if (!near && Math.abs(x - VP[0]) < 9 + len * 0.6 && Math.abs(y - VP[1]) < 9 + len * 0.6) continue;   // keep the light clear
+            if (!near && rz < D && Math.hypot(x - OUR[0], y - OUR[1]) < ours + len * 0.45 + 0.8) continue;   // nothing in front of us hides us
+            const g = glowAt(x, y);
+            if (len < 0.45) { if (g > 0.6) L.set(x, y, SIL); else L.tone(x, y, FAR, (0.34 + 0.12 * g) * (1 - 0.45 * smooth(120, 1600, rz))); continue; }
+            if (len < 2.6) { farWreck(L, x, y, len, i, g, 1 - 0.45 * smooth(120, 1600, rz)); continue; }
+            (len < 6.5 ? mid : big).push([{ x, y, len, z: rz }, SEA[i], 0, 0]);
         }
-        seen.sort((a, b) => b[0].z - a[0].z);
-        for (const [pr, s] of seen) {
-            const ang = headingAt(pr.x, pr.y, s.yaw), ca = Math.cos(ang), sa = Math.sin(ang);
-            if (pr.len >= 7) { big.push([pr, s, ang]); continue; }
-            const g = glowAt(pr.x, pr.y);
-            if (pr.len < 0.42) {                                                                 // very far: one point, dark against the light's glow
-                if (g > 0.35) { L.set(pr.x, pr.y, P.hexRgb('#05070a')); continue; }
-                L.tone(pr.x, pr.y, DUSTY, 0.5 + hash(s.seed, 1, 3) * 0.25 + 0.2 * g);
-                continue;
-            }
-            if (pr.len < 2.6) {                                                                  // far: two or three pixels, nose to the light
-                const n = pr.len < 1.2 ? 2 : 3, glint = hash(s.seed + Math.floor(pr.x), Math.floor(t / 500), 11) > 0.985;
-                for (let i = 0; i < n; i++) { const x = pr.x + (i - n / 2) * ca, y = pr.y + (i - n / 2) * sa; if (g > 0.35) L.set(x, y, P.hexRgb('#05070a')); else L.tone(x, y, s.ramp === RP.PASSED ? RP.PASSED : DUSTY, (i === n - 1 ? 0.78 : 0.5) + hash(s.seed, 2, 3) * 0.14); }
-                if (glint && g < 0.35) L.tone(pr.x + (n / 2) * ca, pr.y + (n / 2) * sa, RP.SUN, 0.8);   // a hull catches the light
-                continue;
-            }
-            const n = Math.max(2, Math.round(pr.len * 1.15)), ht = Math.max(1, Math.round(pr.len / 3.4));   // nearer: a short hull, its nose lit
-            for (let i = 0; i < n; i++) for (let j = 0; j < ht; j++) {
-                const x = pr.x + (i - n / 2) * ca - (j - ht / 2) * sa * 0.9, y = pr.y + (i - n / 2) * sa + (j - ht / 2) * ca * 0.9;
-                if (s.to < 1 && i > n * s.to) continue; if (s.from > 0 && i < n * s.from) continue;
-                if (g > 0.4) { L.set(x, y, P.hexRgb('#0b0d10')); continue; }
-                L.tone(x, y, s.ramp === RP.PASSED ? RP.PASSED : DUSTY, (i >= n - 1 ? 0.8 : 0.52) - j * 0.14 + 0.15 * g);
-            }
+        const tk = t / 1000;
+        for (const d of DEBRIS) {
+            const rz = d.p[2] + d.vel[2] * tk + cz;
+            if (rz < 0.4) continue;
+            const iz = F / rz, x = C0[0] + (d.p[0] + d.vel[0] * tk + cx) * iz, y = C0[1] + (d.p[1] + d.vel[1] * tk + cy) * iz, S = iz * LEN_K * d.r;
+            if (S < 0.55 || S > 70 || x < -40 || x > AW + 40 || y < -40 || y > AH + 40 || (Math.abs(x - VP[0]) < 8 + S && Math.abs(y - VP[1]) < 8 + S)) continue;
+            const pr = { x, y, len: iz * LEN_K, z: rz };
+            if (S < 1.6) drawDebris(f, L, d, pr, t); else big.push([pr, d, 0, 1]);
         }
+        mid.sort((a, b) => b[0].z - a[0].z);
+        for (const [pr, s] of mid) smallWreck(L, pr, s, headingAt(pr.x, pr.y, s.yaw) + (pr.len >= 3 ? s.roll : 0), glowAt(pr.x, pr.y));
         L.draw(dctx);
-        for (const [pr, s, ang] of big) {
-            const sp = hullSprite(quantLen(pr.len), quantDeg(ang), s, false);
-            dctx.drawImage(sp.canvas, Math.round(pr.x - sp.half), Math.round(pr.y - sp.half));
+        big.sort((a, b) => b[0].z - a[0].z);
+        for (const [pr, s, , isDebris] of big) {
+            if (isDebris) { drawDebris(f, L, s, pr, t); continue; }
+            const ang = headingAt(pr.x, pr.y, s.yaw) + s.roll;
+            const { sp, k } = wreckSprite(quantLen(pr.len), quantDeg(ang), s), h = sp.half * k, x = Math.round(pr.x - h), y = Math.round(pr.y - h);
+            if (k === 1) dctx.drawImage(sp.canvas, x, y); else dctx.drawImage(sp.canvas, x, y, Math.round(sp.canvas.width * k), Math.round(sp.canvas.height * k));
+            if (sp.beacon && pr.len >= 14) {                                                   // a dead beacon, still ticking over now and then
+                const per = 2600 + (s.seed % 7) * 430, on = (t + s.seed * 137) % per < 160, bx = Math.round(pr.x + sp.beacon[0] * k), by = Math.round(pr.y + sp.beacon[1] * k);
+                if (on) { f.glow(bx, by, 2, RP.RED, 0.35); f.px(bx, by, RP.RED.hex[2]); }
+            }
         }
     }
+
     /** Our ship: lit and burning, then cold; its ports go out deck by deck; one red lamp. */
     function drawOurs(t, D) {
         const len = quantLen(F / D * LEN_K), deg = quantDeg(Math.atan2(VP[1] - OUR[1], VP[0] - OUR[0])), f = P.framer(ctx, AW, AH), ts = step8(t);
         if (len >= 7) {
-            const sp = hullSprite(len, deg, { seed: 9, from: 0, to: 1 }, true), cx = OUR[0], cy = OUR[1];
+            const sp = ourSprite(len, deg, false), cx = OUR[0], cy = OUR[1];
             ctx.drawImage(sp.canvas, cx - sp.half, cy - sp.half);
             const cold = smooth(TL.ports[0], TL.ports[1] + 800, t) * (1 - smooth(TL.relight, TL.relight + 700, t));   // the hull goes dark with its decks
             if (cold > 0) {
-                const dk = hullSprite(len, deg, { seed: 9, from: 0, to: 1, dark: true }, true), tmp = scratch(dk.canvas.width, dk.canvas.height), g = tmp.getContext('2d');
+                const dk = ourSprite(len, deg, true), tmp = scratch(dk.canvas.width, dk.canvas.height), g = tmp.getContext('2d');
                 g.clearRect(0, 0, tmp.width, tmp.height); g.drawImage(dk.canvas, 0, 0); ditherIn(g, cold, tmp.width, tmp.height);
                 ctx.drawImage(tmp, cx - dk.half, cy - dk.half);
             }
@@ -273,6 +557,12 @@ body.is-over #again { display: block; }
     }
     function redLamp(f, x, y, t, scale) {
         const on = ((t - TL.lamp) % 2200) < 900, r = Math.max(4, Math.round(3 + scale));
+        if (scale <= 1) {                                                                      // a dot: a small bright cross, no dark halo round it on the grey field
+            if (on) { f.px(x - 2, y, RP.RED.hex[2], 5, 1); f.px(x, y - 2, RP.RED.hex[2], 1, 5); f.px(x - 1, y - 1, RP.RED.hex[3], 3, 3); }
+            else { f.px(x - 1, y, RP.RED.hex[2], 3, 1); f.px(x, y - 1, RP.RED.hex[2], 1, 3); }
+            f.px(x, y, RP.RED.hex[on ? 4 : 3]);
+            return;
+        }
         if (on) { f.glow(x, y, r, RP.RED, 0.9); f.px(x, y, RP.RED.hex[4]); if (scale <= 1) f.px(x - 1, y, RP.RED.hex[3], 3, 1); }
         else { f.glow(x, y, 3, RP.RED, 0.55); f.px(x, y, RP.RED.hex[3]); }
     }
@@ -318,17 +608,95 @@ body.is-over #again { display: block; }
         if (t >= TL.white[0]) { dim(smooth(TL.white[0], TL.white[0] + 200, t), RP.SUN.hex[6]); dim(smooth(TL.white[1], TL.end, t)); }
     }
 
+    // ═══ the sound (optional, off by default; film-sound.js builds none of it until the Sound button is turned on) ═══
+    // Quiet throughout. It follows the film's clock and the same timeline as the picture: the jump's rush follows the stars'
+    // stretch, the drive stutters on the same 90 ms flicker as the plume, each deck's thunk lands as its porthole goes dark,
+    // and the cold hum rises with the camera's distance.
+    const PORT_OFF = [0, 1, 2, 3, 4, 5].map(i => TL.ports[0] + (5 - i) * (TL.ports[1] - TL.ports[0]) / 5);   // as in drawOurs
+    const COUGHS = [2700, 3080, 3420, 3800, 4180, 4520], CREAKS = [[8700, 420, 1.1], [12600, 560, 0.8], [18200, 360, 1.3], [26400, 480, 0.9], [33600, 330, 1.2]];
+    function seaScore(K) {
+        const end = K.gain(0, K.out);                                                        // the whole score: closed when paused, closes into the white
+        // the jump: a falling whine and a rush, winding down as the stars shrink back; back up into the white
+        const whineG = K.gain(0, end), whineLp = K.filter('lowpass', 900, 2.2, whineG), whine = K.osc('sawtooth', 300, whineLp);
+        const rushG = K.gain(0, end), rushF = K.filter('bandpass', 1800, 0.8, rushG); K.loop('pink', rushF);
+        // the drive: two low saws beating and a rumble
+        const drive = K.gain(0, end), driveLp = K.filter('lowpass', 240, 1.4, drive);
+        K.osc('sawtooth', 43, driveLp); K.osc('sawtooth', 43.7, driveLp); K.loop('brown', K.filter('lowpass', 170, 0.9, drive));
+        // the ship's systems: mains hum and air, a sixth of it gone with each deck
+        const sys = K.gain(0, end), sysLp = K.filter('lowpass', 700, 0.7, sys);
+        K.osc('sine', 120, K.gain(0.5, sysLp)); K.osc('triangle', 180.4, K.gain(0.18, sysLp)); K.loop('white', K.filter('bandpass', 2600, 0.6, K.gain(0.35, sys)));
+        // the cold hum outside: low partials, beating slowly, and a wind of pink noise; its filter opens as the camera pulls back
+        const hum = K.gain(0, end), humLp = K.filter('lowpass', 160, 0.8, hum);
+        [[36.7, 'sine', 0.5], [36.95, 'sine', 0.4], [55.1, 'sawtooth', 0.16], [55.5, 'sawtooth', 0.14], [110.3, 'sine', 0.12], [146.9, 'sine', 0.06]].forEach(([f, type, v]) => K.osc(type, f, K.gain(v, humLp)));
+        K.loop('pink', K.filter('bandpass', 210, 0.9, K.gain(1.6, humLp)));
+        const lowLp = (f) => K.filter('lowpass', f, 1, end);
+        /** A deck shutting down: a deep thunk, a relay's click, panned along the hull. */
+        const thunk = (at, i) => {
+            const j = 5 - i, p = K.pan(-0.45 + i * 0.18, end), f = 96 - j * 7;
+            K.tone({ at, f, f2: f * 0.42, dur: 0.5, gain: 0.5 - j * 0.03, attack: 0.004, to: p });
+            K.burst({ at, dur: 0.16, kind: 'brown', type: 'lowpass', f: 520, f2: 140, gain: 0.55, to: p });
+            K.burst({ at, dur: 0.035, kind: 'white', type: 'bandpass', f: 2300, Q: 2.5, gain: 0.08, to: p });
+        };
+        /** A hull creak: a stick-slip train of clicks through one ringing band, speeding up and slowing down. */
+        const creak = (at, f, len) => {
+            const bp = K.filter('bandpass', f, 11), g = K.gain(0.5, K.pan(Math.random() - 0.5, end)); bp.connect(g);
+            bp.frequency.setValueAtTime(f, at); bp.frequency.linearRampToValueAtTime(f * 0.82, at + len);
+            const n = Math.round(len * 40);
+            for (let i = 0, t = at; i < n; i++) {
+                const x = i / n, s = K.ac.createBufferSource(), cg = K.ac.createGain();
+                s.buffer = K.buffers.click; cg.gain.value = (0.3 + 0.7 * Math.sin(Math.PI * x)) * (0.55 + 0.45 * Math.random());
+                s.connect(cg); cg.connect(bp); s.start(t); t += 1 / (18 + 46 * Math.sin(Math.PI * x));
+            }
+        };
+        const chime = K.filter('lowpass', 2600, 0.7, end);
+        const cues = [
+            ...COUGHS.map((t, i) => [t, at => {
+                K.burst({ at, dur: 0.34, kind: 'brown', type: 'lowpass', f: 460, f2: 110, gain: 0.75 - i * 0.06, attack: 0.01, to: end });
+                K.tone({ at, f: 72, f2: 36, dur: 0.3, type: 'triangle', gain: 0.32 - i * 0.03, to: end });
+            }]),
+            [TL.cough[1], at => K.tone({ at, f: 52, f2: 21, dur: 1.8, type: 'sawtooth', gain: 0.28, attack: 0.02, to: lowLp(260) })],   // the drive dies away
+            ...PORT_OFF.map((t, i) => [t, at => thunk(at, i)]),
+            ...CREAKS.map(([t, f, len]) => [t, at => creak(at, f, len)]),
+            [TL.line[0] + 50, at => {                                                           // A.U.R.A.: a soft two-note tone
+                K.tone({ at, f: 659.3, dur: 2.8, gain: 0.06, attack: 0.04, to: chime });
+                K.tone({ at: at + 0.17, f: 987.8, dur: 2.4, gain: 0.038, attack: 0.04, to: chime });
+            }],
+            [TL.relight, at => {                                                                // the drive catches again
+                K.tone({ at, f: 40, f2: 72, dur: 1.1, type: 'triangle', gain: 0.3, attack: 0.05, to: end });
+                K.burst({ at, dur: 0.9, kind: 'brown', type: 'lowpass', f: 140, f2: 600, gain: 0.45, attack: 0.08, to: end });
+            }],
+        ];
+        function update(T, dt, live) {
+            K.set(end.gain, live ? 1 - smooth(TL.white[1], TL.end, T) : 0, live ? 0.04 : 0.08);
+            const stretch = Math.max(1 - smooth(TL.stall[0], TL.stall[1], T), smooth(TL.relight + 300, TL.white[0], T));   // as frameAt
+            K.set(whineG.gain, 0.14 * stretch ** 1.3, 0.04); K.set(whine.frequency, 55 + 340 * stretch ** 1.6, 0.05);
+            K.set(rushG.gain, 1.1 * stretch, 0.04); K.set(rushF.frequency, 260 + 2600 * stretch, 0.05);
+            const burn = 1 - smooth(TL.cough[0], TL.cough[1], T) + (T > TL.relight ? smooth(TL.relight, TL.relight + 500, T) * 1.6 : 0);   // as drawOurs
+            const cough = T > TL.cough[0] && T < TL.cough[1] ? (hash(Math.floor(T / 90), 3, 7) > 0.45 ? 1 : 0.1) : 1;
+            K.set(drive.gain, 0.42 * Math.min(1, burn * cough), 0.012);
+            const decks = PORT_OFF.filter(o => T < o).length, back = T > TL.relight + 300 ? 5 : 0;
+            K.set(sys.gain, 0.1 * Math.min(6, decks + back) / 6, 0.03);
+            const hk = clamp01(Math.log(distAt(T) / D0) / Math.log(TL.pull[2][3] / D0)), seen = smooth(TL.reveal[0] - 1500, TL.reveal[1], T);
+            K.set(hum.gain, seen * (0.08 + 0.34 * hk) * (1 + 0.12 * Math.sin(T / 1900)), 0.12);
+            K.set(humLp.frequency, 140 + 900 * hk ** 1.2, 0.12);
+        }
+        return { cues, update };
+    }
+    const SOUND = window.FilmSound ? window.FilmSound.attach({ score: seaScore }) : { tick() {} };
+
     // ═══ the player: clock, stills, the line, skip ═══
     let T = 0, playing = true, last = null, ended = false;
     const words = q.get('words') !== '0', voice = $('voice'), say = voice.querySelector('.say');
     say.textContent = LINE;
     function render() {
         ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH);
+        bakeLeft = playing ? BAKE_MS : Infinity;
         if (T < DUR) { try { frameAt(T); } catch (err) { console.error('film: frame failed', err); } }
         else { ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH); }
         const [a, b] = TL.line;
         voice.style.opacity = words && T >= a && T < b && !ended ? Math.min(1, (T - a) / 350, (b - T) / 350) : 0;
         $('skip').style.opacity = T < 4000 && playing && !ended ? 0.8 : 0;
+        SOUND.tick(T, playing && !ended);
     }
     function setTime(ms) { T = clamp01(ms / DUR) * DUR; ended = T >= DUR; document.body.classList.toggle('is-over', ended); render(); }
     function skip() { playing = false; setTime(DUR); }
@@ -352,13 +720,13 @@ body.is-over #again { display: block; }
     const SHOTS = [
         { id: 'stall', t0: 0, t1: 4600, caption: 'The jump stalls: the stretched stars shrink back to points; the drive coughs out.' },
         { id: 'dark', t0: 4600, t1: 10200, caption: 'Our decks go dark one by one. One red lamp is left.' },
-        { id: 'reveal', t0: 10200, t1: 15400, caption: 'As the eyes adjust: dead hulls of our own class all round us, still, all pointing at the light.' },
-        { id: 'pull', t0: 15400, t1: 36400, caption: 'The camera pulls back, and back, and back.' },
-        { id: 'sea', t0: 36400, t1: 42000, caption: 'Our ship is a red dot in a sea of thousands. A.U.R.A.: the drive is back. White.' },
+        { id: 'reveal', t0: 10200, t1: 15400, caption: 'As the eyes adjust: a graveyard. Wrecks of our own class all round us, snapped, gutted, burnt, all pointing at the light.' },
+        { id: 'pull', t0: 15400, t1: 36400, caption: 'The camera pulls back, and back, and back: dozens of wrecks, then hundreds, then thousands.' },
+        { id: 'sea', t0: 36400, t1: 42000, caption: 'Our ship is a red dot in a sea of wrecks. A.U.R.A.: the drive is back. White.' },
     ];
     window.film = {
         play() { playing = true; }, pause() { playing = false; }, step(ms) { playing = false; setTime(T + ms); }, setTime(ms) { playing = false; setTime(ms); },
-        duration: DUR, shots: SHOTS, line: LINE, ships: SEA.length,
+        duration: DUR, shots: SHOTS, line: LINE, ships: SEA.length, debris: DEBRIS.length,
         state: () => ({ t: Math.round(T), playing, ended, distance: +distAt(T).toFixed(2), cached: cache.size }),
     };
     fit();
