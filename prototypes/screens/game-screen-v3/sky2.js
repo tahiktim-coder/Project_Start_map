@@ -405,6 +405,17 @@
     /** One accent's painting at a given brightness (g, or [gA, gB] for a binary) into a small clear sprite. */
     function paintAccent(o, g) {
         const S = o.S, c = S / 2, p = P.painter(S, S, false), r = o.ramp;
+        if (o.gain) g = Array.isArray(g) ? g.map(v => v * o.gain) : g * o.gain;              // slice (2026-10-10): a far colour may be asked to read a little louder
+        if (o.kind === 'veil') {                                                            // a long, very faint band of coloured gas deep in the far sky
+            const ca = Math.cos(o.tilt || 0), sa = Math.sin(o.tilt || 0), hl = o.len / 2;
+            p.region(0, 0, S, S, (x, y) => {
+                const dx = x + 0.5 - c, dy = y + 0.5 - c, u = dx * ca + dy * sa, w = -dx * sa + dy * ca + (fbm(u / 9, 2, o.seed, 2) - 0.5) * o.wide * 1.6;
+                const along = 1 - smooth(hl * 0.45, hl, Math.abs(u)), across = Math.exp(-((w / o.wide) ** 2) * 1.6);
+                const v = g * 0.26 * along * across * (0.45 + 0.9 * fbm(x / 6, y / 3, o.seed + 1, 3));
+                if (v > 0.03) p.tone(x, y, r, v);
+            });
+            return p.canvas();
+        }
         const halo = (x, y, rp, v) => p.region(x - 3, y - 3, x + 4, y + 4, (hx, hy) => { const d = Math.hypot(hx - x, hy - y); if (d > 1.2 && d < 2.9) p.tone(hx, hy, rp, v * (1.25 - d / 2.9)); });   // a breath of its own colour, two px, so the hue reads
         const star = (x, y, rp, v, cross) => { halo(x, y, rp, v * 0.24); p.tone(x, y, rp, v); if (cross) DOT4.forEach(([dx, dy]) => p.tone(x + dx, y + dy, rp, v * cross)); };
         if (o.kind === 'star') star(c, c, r, 0.97 * g, o.cross == null ? 0.5 : o.cross);
@@ -447,7 +458,7 @@
     function accents(X, list) {
         const out = X.out;
         const items = list.map((a, i) => {
-            const S = a.S || (a.kind === 'galaxy' || a.kind === 'knot' || a.kind === 'wisp' ? Math.ceil((a.r || a.rr || 6) * 2.8) + 6 : a.kind === 'binary' ? 12 : a.kind === 'planetary' ? Math.ceil(a.r * 2.6) + 4 : a.kind === 'dwarf' ? Math.ceil(a.r * 2) + 4 : 6);
+            const S = a.S || (a.kind === 'veil' ? Math.ceil(a.len + a.wide * 4) + 4 : a.kind === 'galaxy' || a.kind === 'knot' || a.kind === 'wisp' ? Math.ceil((a.r || a.rr || 6) * 2.8) + 6 : a.kind === 'binary' ? 12 : a.kind === 'planetary' ? Math.ceil(a.r * 2.6) + 4 : a.kind === 'dwarf' ? Math.ceil(a.r * 2) + 4 : 6);
             return Object.assign({ S: S + (S & 1), depth: 1, period: 9000, phase: h32(i, 3, a.seed || 1) * 20000, seed: 7 + i, frames: new Map() }, a, { x: X.sx(a.x), y: X.sy(a.y), i });
         });
         const step = v => Math.round(v * 16) / 16;                                         // a few brightness steps, each painted once
@@ -594,5 +605,5 @@
         return out;
     }
 
-    window.V3Sky2 = { build, RECIPES };
+    window.V3Sky2 = { build, RECIPES, ACC };
 })();

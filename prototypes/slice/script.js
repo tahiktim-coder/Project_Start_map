@@ -25,8 +25,8 @@
    Listens: world:hover · world:click · opening:done · flight:switched · flight:arrived · jump:flash · stop:shown · stop:pick
            stop:act · stop:leave · stop:hidden · ship:click · deck:choice · meal:done · price:changed
    Fallbacks, so the run never sticks on a missing event: the opening starts its lines at 8 s without opening:done; a flight
-   lands 3 s after its time without flight:arrived; the jump flashes at 5 s without jump:flash; the meal ends at 12 s
-   without meal:done. The dive and the stop have no fallback: stop.js must answer dive:start with stop:shown. */
+   lands 3 s after its time without flight:arrived; the jump flashes at 5 s without jump:flash; the meal ends at 14 s
+   without meal:done (the bowls stay 10 s). The dive and the stop have no fallback: stop.js must answer dive:start with stop:shown. */
 (function () {
     'use strict';
     const Slice = window.Slice, DATA = window.V3Data, P = window.V3Paint, E = Slice.ECON;
@@ -175,7 +175,8 @@
         emit('price:preview', { id: hover, cost: pr.cost, free: pr.free, mode: s.price, line: pr.line, jump: pr.jump, rations: pr.rations });
         if (speaking) return;                                                            // A.U.R.A.'s price line, once per world, only when it matters
         const left = s.res.energy - pr.cost;
-        if (hover === 'kryos' && s.res.energy < E.cap.energy) sayOnce('price:kryos', LINES.price.kryos);
+        if (hover === 'kryos' && s.res.energy < E.kryosLow) sayOnce('price:kryos', LINES.price.kryos);   // fun playtest: not at 95
+        else if (hover === 'kryos' && aboard().includes('jaxon')) sayOnce('price:kryosMetal', LINES.price.kryosMetal);
         else if (hover === 'rhea' && !s.flags.dated && (s.flags.fixOn === 'late' || s.flags.fixOn === 'carried')) sayOnce('price:fixLate', LINES.price.fixLate);
         else if (hover === 'rhea' && !s.flags.dated) sayOnce('price:contact', LINES.price.contact);
         else if (!pr.jump && left < jumpCost() + E.pullIn) sayOnce('price:onlyJump:' + hover, LINES.price.onlyJump);
@@ -408,8 +409,13 @@
         s.flags.breachDone = true;
         breakPatched();
         sayLine(LINES.breach.announce[0], LINES.breach.announce[1], {}, () => {
-            const crew = ['aris', 'mira', 'vance', 'jaxon'].map(id => ({ id, alive: !s.team.includes(id), injured: s.crew[id].status === 'hurt' }));
-            minigame('breach', { crew, sector: 1 }).then(live(res => sayLines(applyBreach(res), next)));
+            const inDrive = s.flags.jaxonOff && s.crew.jaxon.status === 'well';            // his day on the drive: he is inside it (fun playtest: the day cost nothing)
+            const crew = ['aris', 'mira', 'vance', 'jaxon'].map(id => ({ id, alive: !s.team.includes(id) && !(id === 'jaxon' && inDrive), injured: s.crew[id].status === 'hurt' }));
+            minigame('breach', { crew, sector: 1 }).then(live(res => {
+                const out = applyBreach(res);
+                if (inDrive) { logRecord('Jaxon was inside the drive for his day. He could not help with the breach.'); out.unshift(['Jaxon', LINES.jaxon.inDrive]); }
+                sayLines(out, next);
+            }));
         });
     }
     function applyBreach(res) {
@@ -427,12 +433,27 @@
         out.push([AURA, `${both(hurt)} ${hurt.length > 1 ? 'are' : 'is'} hurt, Commander. In the med bay now.`]);
         return out;
     }
+    /** Kryos: the skim, then one choice of its own (fun playtest: a full ship had no reason to come). Skim the top, or take her
+        down into the low bands for wreck metal, where a ring stone scrapes the hull about half the time and a deck seals off. */
     function skim() {
         setPhase('site');
+        const s = st(), K = LINES.kryos, on = aboard(), who = on.includes('jaxon') ? 'jaxon' : on[0];
         const real = spend({ energy: E.skim }, 'skim', 'Skimmed fuel at Kryos-68 Prime.');
         setPlace('kryos', { did: 'skimmed' });
-        const full = st().res.energy >= E.cap.energy;
-        sayLines([full ? v1('kryos').orbit.steps[0].then : [AURA, "That's all this pass can give us, Commander."]], () => setPhase('leave', { gained: real.energy }));
+        const full = s.res.energy >= E.cap.energy, after = [full ? v1('kryos').orbit.steps[0].then : [AURA, "That's all this pass can give us, Commander."]];
+        const leave = () => setPhase('leave', { gained: real.energy });
+        if (!who) { sayLines(after, leave); return; }
+        sayLines(after, () => askLine(NAMES[who], K.ask, [
+            { verb: 'Skim the top', chips: [] },
+            { verb: 'Take her down', chips: [[chips('salvage', `+${E.deepSalvage} salvage`), 'gain'], [chips('a scrape, maybe', 'a scrape, half the time'), 'loss']] }], {}, i => {
+            if (i === 0) { logRecord('Stayed in the top clouds of Kryos-68 Prime.', { routine: true }); leave(); return; }
+            spend({ salvage: E.deepSalvage }, 'deep', 'Took her down into the low bands of Kryos-68 Prime for wreck metal.');
+            if (!Slice.chance('scrape:kryos', E.scrapeOdds)) { sayLines([[NAMES[who], K.clean]], leave); return; }
+            breakPatched();
+            const deck = ['hold', 'quarters', 'medbay'].find(d => s.decks[d] === 'ok');
+            if (deck) { setDeck(deck, 'red'); logRecord(`A ring stone scraped the hull in the low bands. ${TheDeck(deck)} is sealed off.`, { chips: [['scrape', 'loss']] }); }
+            sayLines([[AURA, K.scrape.replace('{deck}', theDeck(deck || 'hold'))]], leave);
+        }));
     }
     function site(id) {
         setPhase('site');
@@ -552,6 +573,7 @@
         const s = st();
         if (!stopRun || !p || p.id !== stopRun.id || s.mode !== 'stop') return;
         if (['away', 'site'].includes(stopRun.phase) && s.team.length) { if (!speaking) sayLine(LINES.stillDown[0], LINES.stillDown[1]); return; }
+        if (stopRun.phase === 'site' && PLACES[stopRun.id].act === 'skim') return;    // Kryos's question is still open (skim the top or go down)
         s.mode = 'dive-out';
         emit('dive:back', { id: stopRun.id });
         beat('dive:back');
@@ -660,7 +682,7 @@
     }
     function jaxonAsk() {
         const J = LINES.jaxon;
-        askLine('Jaxon', J.ask, [{ verb: 'Take the day', chips: [['he stays aboard', '']] }, { verb: 'I need you on the team', chips: [['he takes it badly', 'loss']] }], {}, i => {
+        askLine('Jaxon', J.ask, [{ verb: 'Take the day', chips: [['a calm drive', 'gain'], ['one hand fewer', 'loss']] }, { verb: 'I need you on the team', chips: [['he takes it badly', 'loss']] }], {}, i => {
             const s = st();
             if (i === 0) { setCrew('jaxon', { ask: 'granted', stress: s.crew.jaxon.stress - 1 }); s.flags.jaxonOff = true; s.flags.noSurge = true; logRecord('Jaxon asked for a day on the drive. You gave it to him.'); }
             else { setCrew('jaxon', { ask: 'refused', stress: s.crew.jaxon.stress + 1 }); logRecord('Jaxon asked for a day on the drive. You said no.'); }
@@ -764,7 +786,7 @@
         emit('meal:start', {});
         beat('meal');
         Slice.after(800, () => { if (st().mode === 'meal') sayLine(LINES.meal[0], LINES.meal[1]); });
-        mealTimer = Slice.after(12000, mealDone);
+        mealTimer = Slice.after(14000, mealDone);                                        // ship.js sends meal:done after the bowls' 10 s
     }
     function mealDone() {
         const s = st();
@@ -772,6 +794,7 @@
         if (s.mode !== 'meal') return;
         if (speaking) { mealTimer = Slice.after(300, mealDone); return; }               // playtest 2: Aris's line was still up over sector 2's black
         s.flags.bowls = false; s.mode = 'arrive'; s.sector = 2;
+        if (reading) reading.clear();                                                    // look playtest: a meal line stayed on sector 2's black
         emit('sector:arrive', { n: 2 });
         beat('sector:arrive');
         Slice.after(4200, () => sayLines(LINES.arriveS2.map(l => [l[0], l[1]])));
@@ -803,8 +826,21 @@
             // faint previous line gone, and the read lines step back when a voice speaks under the page. Nothing behind a minigame.
             + '#reading .page-view:has(.page-lines li + li) .read-hint, #reading .page-view:has(.page-after > *) .read-hint, #reading .page-kept, #reading .film-now .prev { display: none !important; }\n'
             + '#reading .page-lines li.is-read .num { visibility: hidden; }\n'
+            // final check: the faint line before a voice pushed the screen to 41 (a world note at the click) and 46 (a red deck's
+            // chips); while another layer has words up, only the line being said shows
+            + 'body:has(#world-words .w-note:not([hidden])) #reading .voice .prev, body:has(#ship-words .choice) #reading .voice .prev, body:has(#stop-words .sw-good.on) #reading .voice .prev { display: none !important; }\n'
             + '#reading .page-view:has(.page-after > *) .page-lines { display: none; }\n'
-            + 'body.slice-mini #world-words, body.slice-mini #ship-words, body.slice-mini #stop-words, body.slice-mini #reading { visibility: hidden; }';
+            + 'body.slice-mini #world-words, body.slice-mini #ship-words, body.slice-mini #stop-words, body.slice-mini #reading { visibility: hidden; }\n'
+            // look playtest: the real minigames sat as bordered boxes on near-black. In the slice the host's backdrop goes clear (the
+            // live scene shows round the picture, dithered down by canvas#shade) and its outer border steps back; minigames.css is untouched
+            + 'body.slice-mini .mini-host { background: transparent; }\n'
+            // fun playtest: two gain chips read as one phrase ("energy salvage") over the hull's dither, and the red chips were faint.
+            // The chips get one dark backing and a dot between them; the loss red is a step brighter. reading.css is untouched.
+            + '#reading .choice .chips, #ship-words .choice .chips { gap: 0; padding: 3px 8px; margin-left: 10px; background: rgba(5, 7, 10, 0.88); box-shadow: 0 0 10px 4px rgba(5, 7, 10, 0.7); border-radius: 2px; }\n'
+            + '#reading .choice .chips:empty, #ship-words .choice .chips:empty { display: none; }\n'
+            + '#reading .choice .chip + .chip::before, #ship-words .choice .chip + .chip::before { content: "\\00b7"; margin: 0 0.55em; color: var(--dim); }\n'
+            + '#reading .choice .chip.is-loss, #ship-words .choice .chip.is-loss { color: #ff6a55; }\n'
+            + 'body.slice-mini .mini-frame { border-color: transparent; background: rgba(5, 7, 10, 0.84); box-shadow: 0 0 0 1px rgba(201, 209, 214, 0.05), 0 20px 60px rgba(0, 0, 0, 0.5); }';
         document.head.appendChild(css);
         shade = Slice.ScriptShade({ st, now, live, beat, reading: () => reading, lastXY: () => lastXY });
         reading = window.GameReading ? window.GameReading.create(shade.WorldAdapter) : null;
@@ -819,8 +855,8 @@
         on('stop:shown', onStopShown); on('stop:pick', onPick); on('stop:act', onAct); on('stop:leave', onLeave); on('stop:hidden', onHidden);
         on('ship:click', onShipClick); on('deck:choice', onDeckChoice); on('meal:done', () => mealDone());
         on('price:changed', () => { previewing = null; preview(); });
-        on('minigame:start', () => document.body.classList.add('slice-mini'));
-        on('minigame:end', () => document.body.classList.remove('slice-mini'));
+        on('minigame:start', () => { document.body.classList.add('slice-mini'); shade.veil(0.55); });     // the scene stays behind it, dimmed (look playtest)
+        on('minigame:end', () => { document.body.classList.remove('slice-mini'); shade.veil(0); });
         addEventListener('pointerdown', e => { lastClick = now(); lastXY = [e.clientX, e.clientY]; }, { capture: true, passive: true });
     }
     function resize() { if (shade) shade.resize(); if (reading) reading.relayout(); }

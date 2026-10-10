@@ -5,8 +5,9 @@
    (ShipArt: decks, nose, tail, SPOTS), ship-rooms.js, ship-reactor.js (ShipArt.reactor.set), layouts/variant-a/sim-a.js
    (ShipSimA.at('travel', t): the crew's day) and tower.js (TowerA.draw(ctx, o), TowerA.hitPerson(ax, ay), TowerA.drawn).
    People are ShipSimA's poses with overrides from Slice.state (away: not drawn; hurt: in the med-bay bed, off frame; Vance
-   at the galley porthole while his sign is on; Jaxon down in engineering while his ask is open; Mira at her bench while
-   the fix waits; everyone at the table for the meal), passed to TowerA.draw as o.people.
+   under the lab porthole while his sign is on; Jaxon on the bridge, a hand on the conduit, his toolbag by him, while his
+   ask is open; Mira at her bench while the fix waits; everyone at the table for the meal; anyone at stress 1 or more off
+   their routine, standing alone on the bridge or in the lab), passed to TowerA.draw as o.people.
 
    window.Slice.mods.ship = {
      init()                      once: TowerA.warm() jobs (one a frame), the chips' layer
@@ -41,7 +42,15 @@
 
     // ── where things are, in the tower's own art px (deck-local rows: 0 = the deck's top, F = 190 the floor) ──
     const CONDUIT = { X: L.IR - 6, JY: A.floorY(0) - 40, JX: 601, EX: 580 };   // from the reactor's pipe, up the inner hull wall, left into the nav console
-    const SPOT = Object.assign({}, A.SPOTS, { port2: { deck: 2, x: 330, facing: 1 }, mealStand: { deck: 2, x: 546, facing: -1 } });
+    // fun playtest: at 1920 x 1080 the frame shows the bridge, the lab and the galley's top half, so the signs and the stress
+    // routines stand on the bridge and in the lab, where every size sees them (the galley porthole showed only Vance's head)
+    const SPOT = Object.assign({}, A.SPOTS, { port2: { deck: 2, x: 330, facing: 1 }, mealStand: { deck: 2, x: 546, facing: -1 },
+        labPort: { deck: 1, x: 298, facing: -1 },                       // under the lab porthole, back to the room
+        conduit: { deck: 0, x: 618, facing: 1 },                        // on the bridge, a hand on the drive's conduit
+        bridgeWin: { deck: 0, x: 316, facing: -1 } });                  // under the bridge's first window, away from the helm
+    /** Stress 1 shows as what people do (SHIP_GAMEPLAY §5; fun playtest: every moral cost was hidden): off their routine,
+        standing alone on a seen deck. Aris after a strip or the cells; Mira after you believed Vance; Jaxon refused. */
+    const ALONE = { aris: 'bridgeWin', mira: 'labPort', jaxon: 'conduit', vance: 'labPort' };   // Mira and Vance never share it: believing him stresses her and calms him
     const MEAL = { cora: 'seatR2', mira: 'seatR1', jaxon: 'seatL2', aris: 'seatL1', vance: 'mealStand' };
     /** Four seats, five people: Vance leans in the bunk-room doorway, unless someone's seat is empty (hurt or away). Integrator. */
     function seatOf(id, st) {
@@ -58,7 +67,7 @@
     const TABLE_Y = F - 42;                                             // the galley table's top (deck 2)
     const BEAT = { FULL: 1100, LOW: 1500, RISE: 0.9 };                  // ms per beat at 100 and 10 energy; pulse rows per ms
     const CHARGE = { SPEED: 0.12, SETTLE: 400 };                        // 120 rows a second; settles back in 0.4 s
-    const MEAL_DONE_MS = 6000, CHIP_GUARD_MS = 400, SLIDE_MS = 1200;
+    const MEAL_DONE_MS = 10000, CHIP_GUARD_MS = 400, SLIDE_MS = 1200;   // fun playtest: a 6 s meal did not register
 
     // ── this module's own picture state (never Slice.state) ──
     const V = {
@@ -87,10 +96,12 @@
         if (c.status === 'away') return null;
         if (c.status === 'hurt') return stay(p.id, 'patient', 'sleep', t, 'hurt');
         if (c.status === 'shut') return stay(p.id, 'holdWall', 'wall', t, 'shut');
-        if (p.id === 'vance' && vanceSign(st)) return stay('vance', 'port2', 'idle', t, 'sign');       // his bridge seat empty
-        if (p.id === 'jaxon' && jaxonSign(st)) return stay('jaxon', 'gauges', 'idle', t, 'sign');      // his galley seat empty, at the meal too
+        if (p.id === 'vance' && vanceSign(st)) return stay('vance', 'labPort', 'idle', t, 'sign');     // his bridge seat empty
+        if (p.id === 'jaxon' && jaxonSign(st)) return stay('jaxon', 'conduit', 'wall', t, 'sign');     // his toolbag on the bridge floor; his galley seat empty, at the meal too
         if (st.mode === 'meal') { const [seat, act] = seatOf(p.id, st); return stay(p.id, seat, act, t, 'meal'); }
         if (p.id === 'mira' && fixWaiting(st) && !['red', 'worse'].includes(st.decks.lab)) return Object.assign(stay('mira', 'bench', 'console', t, 'bench'), { screen: true });
+        const alone = c.stress >= 1 && ALONE[p.id];
+        if (alone && !['red', 'worse'].includes(st.decks[DECKS[SPOT[alone].deck]])) return stay(p.id, alone, 'idle', t, 'alone');
         // integrator: nobody stays in a sealed deck (red or worse: no air); they wait in the galley instead
         if (p.deck !== 2 && ['red', 'worse'].includes(st.decks[DECKS[p.deck]]) && !['walk', 'climb', 'carry'].includes(p.act)) { const [seat, act] = seatOf(p.id, st); return stay(p.id, seat, act, t, 'sealed'); }
         return p;
@@ -112,19 +123,17 @@
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     // The camera, the slide-in
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
-    const camBase = () => A.floorY(2) + 12 - Slice.G.H;                 // the galley table at the bottom (SPEC §2)
+    /** The galley table at the bottom (SPEC §2), but never a cut top deck: with fewer than ~720 art rows (1920 x 1080 at 2 px)
+        the frame opens on the roof and the whole bridge instead, as 720p and 1440p do (look playtest, 2026-10-10). */
+    const camBase = () => Math.min(A.floorY(2) + 12 - Slice.G.H, A.deckTop(0) - 8);
     const camMeal = () => A.deckTop(2) + L.PITCH / 2 - Slice.G.H / 2;   // deck 2 framed, for the meal only
-    const camClamp = y => clamp(y, 0, L.H - Slice.G.H);
-    /** Playtest 1: Jaxon's ask waited in engineering, off the frame, and nobody found it. Once Vance's talk is not open (or Aris
-        has said where Jaxon is), the tower eases down to frame engineering until the ask is answered; the wheel still wins. */
-    const camAsk = () => A.deckTop(5) + L.PITCH / 2 - Slice.G.H / 2 - 40;
-    function askOnFrame() {
-        const st = S();
-        return st.mode === 'travel' && st.crew.jaxon.ask === 'open' && st.crew.jaxon.status === 'well' && (st.crew.vance.moment !== 'open' || !!st.flags.said.jaxonTools);
-    }
+    /** The scroll stops above the engine bell: past it the tower's flared tail sat against the small outside Lander (two ships). */
+    const camClamp = y => clamp(y, 0, Math.min(L.H, L.TAIL0 + 24) - Slice.G.H);
+    /** Playtest 1 eased the tower down to engineering for Jaxon's ask; the fun playtest still missed it. His ask now waits on the
+        bridge (SPOT.conduit), in every frame, so the camera stays put. */
     function camTarget() {
         if (V.manual != null) return V.manual;
-        return Math.round(camClamp(S().mode === 'meal' ? camMeal() : askOnFrame() ? camAsk() : camBase()));
+        return Math.round(camClamp(S().mode === 'meal' ? camMeal() : camBase()));
     }
     function slideK(t) {
         if (t < V.slide.closedUntil) return 0;
@@ -247,6 +256,16 @@
             return p.canvas();
         });
     }
+    /** Jaxon's toolbag on the bridge floor beside him while his ask is open: a dark canvas bag, a wrench across it. */
+    function toolbag() {
+        return once('toolbag', () => {
+            const p = painter(24, 10, 0);
+            p.region(2, 3, 20, 10, (x, y) => p.tone(x, y, R.CRATE, y === 3 ? 0.5 : x === 2 || x === 19 ? 0.2 : 0.3 + (hash(x, y, 77) > 0.7 ? 0.05 : 0)));
+            p.region(8, 1, 14, 3, (x, y) => p.tone(x, y, R.CRATE, y === 1 ? 0.42 : 0.24));
+            p.line(3, 5, 21, 2, (x, y) => p.tone(x, y, R.STEEL, 0.66)); p.region(20, 1, 23, 4, (x, y) => p.tone(x, y, R.STEEL, x === 21 && y === 2 ? 0.1 : 0.56));
+            return p.canvas();
+        });
+    }
     /** A lamp gone out: the cage dark and its pool of light taken back, in dithered steps (drawn source-atop). */
     function darkCanvas(deck, lamps) {
         return once('dark' + deck + '|' + lamps.length, () => {
@@ -317,6 +336,7 @@
         if (deckVisible(2) && st.flags.plates > 0) ctx.drawImage(platesCanvas(Math.min(7, st.flags.plates)), sx(0), sy(G2 + 64));
         const book = st.flags.plates > 0, tools = jaxonSign(st);
         if (deckVisible(2) && (book || tools)) ctx.drawImage(tableThings(book, tools), sx(350), sy(G2 + TABLE_Y - 5));
+        if (deckVisible(0) && tools) ctx.drawImage(toolbag(), sx(588), sy(A.deckTop(0) + F - 10));
         if (deckVisible(1)) {
             const pages = (st.pinned || []).filter(id => id === 'disc' || id === 'plate');
             pages.forEach((id, k) => ctx.drawImage(pageCanvas(id), sx(k === 0 ? 486 : 430), sy(D1 + 94 + k)));
@@ -346,9 +366,29 @@
             if (surge || look === 'fixing') sparks(sx(hx), sy(top + hy), tick, look === 'fixing' ? R.AMBER : R.ICE, surge && look !== 'fixing');
             if (look === 'patched') return;
             const blink = look === 'worse' ? 500 : 1100, on = (t % blink) < blink * 0.5, [lx, ly] = RED_LAMP(i), X = sx(lx), Y = sy(top + ly), ramp = look === 'fixing' ? R.AMBER : R.RED;
-            if (on) { for (let dy = -4; dy <= 5; dy++) for (let dx = -4; dx <= 5; dx++) { const d = Math.hypot(dx - 0.5, dy - 0.5); if (d < 5) tone(X + dx, Y + dy, ramp, 0.34 * (1 - d / 5)); } px(X, Y, ramp.hex[ramp.hex.length - 2], 2, 2); }
-            else px(X, Y, ramp.hex[1], 2, 2);
+            // look playtest: a sealed deck must read red. The emergency light washes the room, a slow beat with the lamp
+            // (two steps, no meter, no outline); the lamp is a real fitting, a steel cage round a red lens.
+            if (look === 'red' || look === 'worse') {
+                ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.globalAlpha = on ? 0.62 : 0.46; ctx.fillStyle = '#d4402c';
+                ctx.fillRect(sx(L.IL), Math.max(0, sy(top)), L.IR - L.IL, Math.min(Slice.G.H, sy(top + F + 1)) - Math.max(0, sy(top))); ctx.restore(); cur = '';
+            }
+            for (let dx = -3; dx <= 4; dx++) { tone(X + dx, Y - 3, R.STEEL, 0.62); tone(X + dx, Y + 3, R.STEEL, 0.3); }
+            for (let dy = -2; dy <= 2; dy++) { tone(X - 3, Y + dy, R.STEEL, 0.5); tone(X + 4, Y + dy, R.STEEL, 0.36); }
+            if (on) {
+                for (let dy = -9; dy <= 10; dy++) for (let dx = -9; dx <= 10; dx++) { const d = Math.hypot(dx - 0.5, dy - 0.5); if (d > 3 && d < 10) tone(X + dx, Y + dy, ramp, 0.4 * (1 - d / 10)); }
+                px(X - 2, Y - 2, ramp.hex[ramp.hex.length - 3], 6, 5); px(X - 1, Y - 1, ramp.hex[ramp.hex.length - 2], 4, 3); px(X, Y - 1, ramp.hex[ramp.hex.length - 1], 2, 1);
+            } else { px(X - 2, Y - 2, ramp.hex[1], 6, 5); px(X - 1, Y - 1, ramp.hex[2], 2, 1); }
         });
+    }
+    /** Engineering down (the surge shut, a red engineering deck): every seen deck runs on less. The lamps sit a step lower and
+        brown out in short dips every few seconds (fun playtest: "Shut the drive down" changed nothing you could see). */
+    function brownOut(t) {
+        if (!Slice.broken('engineering')) return;
+        const cyc = 2900, k = t % cyc, n = Math.floor(t / cyc), dip = hash(n & 255, 7, 99) < 0.75;
+        let a = 0.16;
+        if (dip && k < 90) a = 0.5; else if (dip && k > 170 && k < 240) a = 0.38; else if (dip && k > 330 && k < 370 && hash(n & 255, 8, 99) < 0.5) a = 0.3;
+        ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.globalAlpha = a; ctx.fillStyle = INK;
+        ctx.fillRect(sx(L.IL), 0, L.IR - L.IL, Slice.G.H); ctx.restore(); cur = '';
     }
     function sparks(X, Y, tick, ramp, bursty) {
         if (bursty && (tick % 11) > 2) return;
@@ -479,7 +519,11 @@
         Slice.on('dive:start', () => { V.manual = null; hideChips(); });
         Slice.on('price:changed', () => { if (V.chips) showChips(V.chips.deck); });
         Slice.on('mockup:goto', p => sync(p && p.moment));
-        IDS.forEach(id => Slice.anchors.set('person:' + id, () => { const a = personAt(id); return a ? [{ x: a.x, y: a.y, side: 'above', align: 'center' }, { x: a.x + 20, y: a.y + 30, side: 'right' }] : []; }));
+        // a third place, left-aligned in the tower over the speaker's head: a long line stays inside the hull (look playtest: at 720
+        // Mira's line ran across the hull edge into space; shade.js's luma now refuses a box that straddles the edge)
+        // final check: at the meal Aris's line sat at the seated heads and cut through the head of the one standing beside them;
+        // the two 'above' places now clear the highest head on the speaker's floor
+        IDS.forEach(id => Slice.anchors.set('person:' + id, () => { const a = personAt(id); if (!a) return []; const y = rowTop(id, a.y); return [{ x: a.x, y, side: 'above', align: 'center' }, { x: a.x + 20, y: a.y + 30, side: 'right' }, { x: 20, y, side: 'above' }]; }));
         Slice.anchors.set('tower:bench', () => towerAnchor(1, 466, F - DESK - 46));
         Slice.anchors.set('tower:conduit', () => towerAnchor(0, CONDUIT.JX - 8, CONDUIT.JY - 26 - A.deckTop(0)));
         Slice.anchors.set('tower:galley', () => towerAnchor(2, 405, TABLE_Y - 70));
@@ -551,11 +595,30 @@
         cur = '';
         drawWalls(t);
         drawDamage(t);
+        brownOut(t);
         drawConduit(t);
         hullLight();
         V.cam = keep;
-        c.drawImage(vignette(G.H), 0, 0);
+        drawVignette(c, G, cam);
         drawChipShade();
+    }
+    /** The left-edge fade, but never over a person (look playtest: at the 1080 meal the left seat was a ghost in the checker):
+        the fade is cut out where a sprite's own pixels are, so the crew stand in front of it. */
+    let vigScratch = null;
+    function drawVignette(c, G, cam) {
+        const v = vignette(G.H), w = v.width, near = V.drawn.filter(d => Math.round(d.x) + V.offX - d.Sp.origin.x < w + 2);
+        if (!near.length) { c.drawImage(v, 0, 0); return; }
+        if (!vigScratch || vigScratch.height !== G.H) { vigScratch = document.createElement('canvas'); vigScratch.width = w; vigScratch.height = G.H; }
+        const g = vigScratch.getContext('2d');
+        g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, w, G.H); g.drawImage(v, 0, 0);
+        g.globalCompositeOperation = 'destination-out';
+        near.forEach(d => {
+            const Sp = d.Sp, X = Math.round(d.x) + V.offX, Y = Math.round(d.y) - cam - Sp.origin.y;
+            if (d.facing > 0) g.drawImage(Sp.canvas, X - Sp.origin.x, Y);
+            else { g.save(); g.translate(X + 1, 0); g.scale(-1, 1); g.drawImage(Sp.canvas, -Sp.origin.x, Y); g.restore(); }
+        });
+        g.globalCompositeOperation = 'source-over';
+        c.drawImage(vigScratch, 0, 0);
     }
     const auraTalking = () => !!document.querySelector('#reading .voice.tone-aura.is-in');
 
@@ -649,6 +712,11 @@
         return on;
     }
     function beat() { return V.beat.val; }
+    /** The highest head (CSS y) among the people standing or sitting on the same floor as this one. */
+    function rowTop(id, y) {
+        const me = V.drawn.find(p => p.id === id); if (!me) return y;
+        return V.drawn.filter(p => Math.abs(p.y - me.y) < 8).reduce((m, p) => { const q = personAt(p.id); return q ? Math.min(m, q.y) : m; }, y);
+    }
     function personAt(id) {
         const G = Slice.G, d = V.drawn.find(p => p.id === id);
         if (!d || !G.toCss) return null;

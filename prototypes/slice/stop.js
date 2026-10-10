@@ -17,7 +17,7 @@
      pointer(type, e, cx, cy)    while Slice.state.mode is 'dive-in' | 'stop' | 'dive-out'; CSS px; true if it used it
      goto(moment)                show the bridge at a MOCKUP moment's phase; it syncs again from Slice.state on 'mockup:goto'
      isOpen()                    → true while the dive or the bridge is on screen
-     discs()                     → [[x, y, r], ...] CSS px: the world in the glass (script.js keeps words off it)
+     discs()                     → [[x, y, r], ...] CSS px: the world in the glass and the people on the bridge (script.js keeps words off them)
      bands()                     → { top: { y, h }, bottom: { y, h } } CSS px: the film's black bands, for reading.playScene
      minigame(id, opts)          → Promise<result>: MiniHost.play with Slice.state.hold up while it is open
    }
@@ -106,11 +106,57 @@
         const lenEnd = Math.ceil(3.15 * 1.18 * Math.max(G.W, G.H * 1.2)), len0 = big ? Math.round(0.085 * G.H) : pose.len;
         const len = Math.exp(lerp(Math.log(Math.max(8, len0)), Math.log(lenEnd), Math.pow(s, 1.25)));
         const fx = pose.x + (0.5 - UF) * pose.len * Math.cos(pose.angle), fy = pose.y + (0.5 - UF) * pose.len * Math.sin(pose.angle);
-        return { x: lerp(fx, G.W / 2, a), y: lerp(fy, G.H / 2, a), len, ht: len / 3.15, angle: lerpAngle(pose.angle, -Math.PI / 2, a), flip: true, seed: 9, anchor: UF,
+        const cx = big ? G.W / 2 : G.hull + (G.W - G.hull) / 2;          // the small steps turn in the middle of the space side, clear of the tower
+        return { x: lerp(fx, cx, a), y: lerp(fy, G.H / 2, a), len, ht: len / 3.15, angle: lerpAngle(pose.angle, -Math.PI / 2, a), flip: true, seed: 9, anchor: UF,
             sun: len < 300 ? 0.24 : 0, sunDir: [0.94, -0.34], fade: len < 300 ? 0.22 : 0.08, flat: len < 130 };
     }
     const atOf = o => (u, v) => { const a = -(u - o.anchor) * o.len, b = v * o.ht, c = Math.cos(o.angle), s = Math.sin(o.angle); return [o.x + a * c - b * s, o.y + a * s + b * c]; };
+    /** The dive's last three steps (look playtest, 2026-10-10: the middle frame was a flat pale slab of square tiles that cut the
+        tower off, the brightest frame in the game). Now our own hull fills the screen, tower and all: dark plating lit from the
+        light's side, rows of plates whose seams do not line up, rivets, a doubler plate round the airlock with its lit port,
+        the corners going dark; each step pushes in on the port, and the last is inside its ring, where the bridge dissolves in.
+        Unit: the 360-row stage's pixel (sc); z: how far we are pushed in. Painted once per size, in idle bands. */
+    const PLATE = { zoom: [1, 3.1, 11], PH: 44, PW: 66, RO: 15, RI: 11, DOUBLER: 25, SEAM: 0.9 };
+    function platingStep(k) {
+        const G = Slice.G, u = G.H / 360, z = PLATE.zoom[k - 5], PX = G.W * 0.56, PY = G.H * 0.47, s = u * z;
+        const ph = PLATE.PH, pw = PLATE.PW, ramp = RP.HULL, warm = RP.AMBER;
+        const seamDist = (hx, hy) => {                                    // → [distance to the nearest seam, which side, plate id]
+            const ry = Math.floor((hy + ph * 0.37) / ph), y0 = ry * ph - ph * 0.37, dy0 = hy - y0, dy1 = y0 + ph - hy;
+            const shift = hash(ry & 255, 3, 41) * pw, hxs = hx + shift, c0 = Math.floor(hxs / pw), edge = n => n * pw + (hash(n & 255, ry & 255, 43) - 0.5) * pw * 0.5;
+            const c = hxs < edge(c0) ? c0 - 1 : hxs >= edge(c0 + 1) ? c0 + 1 : c0, dx0 = hxs - edge(c), dx1 = edge(c + 1) - hxs;
+            return { d: Math.min(dx0, dx1, dy0, dy1), horiz: Math.min(dy0, dy1) <= Math.min(dx0, dx1), below: dy0 < dy1, right: dx0 < dx1, id: ((c & 255) * 31 + (ry & 255)) & 255, ry, dy0, dx0, dx1 };
+        };
+        return pic(G.W, G.H, banded(G.W, G.H, 0, G.H, (bp, oy) => bp.region(0, 0, G.W, BAND, (x, y) => {
+            const Y = y + oy, hx = (x + 0.5 - PX) / s, hy = (Y + 0.5 - PY) / s, d = Math.hypot(hx, hy);
+            const ed = Math.max(Math.abs(x / G.W - 0.5), Math.abs(Y / G.H - 0.5)) * 2, vig = 1 - 0.62 * smooth(0.5, 1.02, ed);
+            if (d < PLATE.RI) {                                           // the port: warm light inside, brightest at its middle
+                const g = 1 - d / PLATE.RI, v = (k === 7 ? 0.2 : 0.3) * Math.pow(g, 0.6) + 0.06 * (P.fbm(hx / 3, hy / 3, 77, 2) - 0.5);
+                bp.solid(x, y, warm, v * (k === 7 ? 1 : vig)); return;
+            }
+            const lit = clamp01(0.5 + 0.42 * (hx * 0.94 - hy * 0.34) / 140);   // across the hull toward the light (right and a little up)
+            if (d < PLATE.RO) {                                           // the ring: steel, lit on the light's side, eight bolts
+                const a = Math.atan2(hy, hx), face = 0.5 + 0.5 * Math.cos(a + 0.35), bolt = Math.abs(((a / (Math.PI / 4)) % 1 + 1) % 1 - 0.5) < 0.09 && d > PLATE.RI + 1.2 && d < PLATE.RO - 1.2;
+                const v = (d < PLATE.RI + 0.8 ? 0.06 : 0.2 + 0.28 * face) + (bolt ? 0.16 : 0);
+                bp.solid(x, y, ramp, v * vig); return;
+            }
+            const sd = seamDist(hx, hy), plateV = (hash(sd.id, 7, 45) - 0.5) * 0.07 + (hash(sd.id, 9, 47) > 0.86 ? -0.05 : 0);
+            let v = 0.11 + 0.17 * lit + plateV + 0.07 * (P.fbm(hx / 18, hy / 9, 49, 3) - 0.5) + 0.04 * (P.fbm(hx / 2.5, hy / 2.5, 51, 2) - 0.5);
+            const seam = PLATE.SEAM, db = Math.abs(d - PLATE.DOUBLER);
+            if (db < seam) v = 0.035;                                     // the doubler plate round the airlock
+            else if (d < PLATE.DOUBLER) v += 0.04 + (db < seam * 2.2 && hy > -hx * 0.4 ? 0.06 : 0);
+            else if (sd.d < seam) v = 0.03;                               // a seam
+            else if (sd.d < seam * 2.4) v += (sd.horiz ? (sd.below ? 0.07 : -0.03) : (sd.right ? 0.05 : -0.025));   // its lit lip, toward the light
+            if (sd.horiz && d > PLATE.DOUBLER + 2) {                      // rivets along the horizontal seams
+                const ry = sd.below ? sd.dy0 : null, rx = ((hx + hash(sd.ry & 255, 5, 53) * 6) % 6 + 6) % 6;
+                if (ry != null && Math.abs(ry - 2.6) < 0.75 && Math.abs(rx - 3) < 0.75) v = (ry < 2.6 || rx > 3) ? 0.42 : 0.05;
+            }
+            const rd = Math.hypot(Math.abs(hx) - 19.5, hy) ;               // two small bolts in the doubler, either side
+            if (rd < 0.9 && d < PLATE.DOUBLER) v = 0.36;
+            bp.solid(x, y, ramp, Math.max(0.02, v) * vig);
+        })));
+    }
     function diveStep(k, pose) {
+        if (k >= 5) { const p = platingStep(k); p.len = Infinity; p.ports = null; return p; }
         const G = Slice.G, o = stepGeom(k, pose), at = atOf(o);
         const pts = [[0, -0.9], [0, 0.9], [1, -0.9], [1, 0.9]].map(([u, v]) => at(u, v)), ys = pts.map(q => q[1]);
         const p = pic(G.W, G.H, banded(G.W, G.H, Math.min(...ys) - 4, Math.max(...ys) + 4, (bp, oy) => P.hull(bp, Object.assign({}, o, { y: o.y - oy }), P.shapeL)));
@@ -535,15 +581,17 @@
         startDive('in', id);
         setStop({ id, phase: 'arrive', team: [], aboard: [] });
         settle('arrive');
-        gather(Slice.clock.t - 600, defaultEligible());                    // up the ladder during the dive: the lineup is forming as the bridge shows
+        gather(Slice.clock.t - 2600, defaultEligible());                   // up the ladder during the dive: the lineup is forming as the bridge shows
     }
-    /** Everyone who may go comes up to the window while the world brakes in (the lineup is there by the pick). */
+    /** Everyone who may go comes up to the window while the world brakes in (the lineup is there by the pick). The one with the
+        farthest spot climbs first and they come up 0.7 s apart, so nobody passes anyone and they never bunch at the ladder
+        (look playtest: three stood stacked at the hatch as the bridge showed). */
     function gather(t, ids) {
-        ids.forEach((id, i) => {
+        ids.slice().sort((a, b) => SPOT_X[b] - SPOT_X[a]).forEach((id, i) => {
             const last = lastOf(id);
             if (last && last.kind === 'stay' && last.x === SPOT_X[id]) return;
             const ps = poseOf(id, t);
-            if (ps && !ps.hidden) walkTo(id, t + 900 + i * 200, SPOT_X[id]); else enterTo(id, t + i * 350, SPOT_X[id]);
+            if (ps && !ps.hidden) walkTo(id, t + 900 + i * 200, SPOT_X[id]); else enterTo(id, t + i * 700, SPOT_X[id]);
         });
     }
     function onDiveBack(p) {
@@ -675,13 +723,16 @@
         const pt = (x, y, side, align) => { const [X, Y] = css(x, y); return { x: X, y: Y, side, align }; };
         // A.U.R.A. and the radio speak in the open sky of the left pane (the world fills the right); the grille is the fallback
         Slice.anchors.set('stop:aura', () => [pt(WIN.x0 + 12, WIN.y0 + 26, 'below'), pt(574, 122, 'left')]);
-        Slice.anchors.set('stop:glass', () => [pt(WIN.x0 + 12, WIN.y0 + 26, 'below'), pt(WIN.x0 + 12, WIN.y1 - 70, 'below')]);
+        // look playtest: the strip-or-marker ask sat on the wreck's nose during the film; the empty sky right of centre is a third place
+        Slice.anchors.set('stop:glass', () => [pt(WIN.x0 + 12, WIN.y0 + 26, 'below'), pt(WIN.x0 + 12, WIN.y1 - 70, 'below'), pt(290, WIN.y0 + 12, 'below')]);
         // integrator: the radio also offers the glass's open sky (left and right), so an ask during a film can keep off the wreck
         Slice.anchors.set('stop:radio', () => [pt(HELM + OFFX, F - 120, 'above', 'center'), pt(HELM + OFFX + 30, F - 100, 'right'), pt(574, 150, 'left'), pt(WIN.x0 + 12, WIN.y0 + 26, 'below')]);
         Slice.anchors.set('stop:site', () => { const g = worldGeom(Slice.clock.t), [sx, sy] = siteOf(g); return [pt(Math.max(WIN.x0 + 20, g.x - g.r - 12), sy, 'left'), pt(sx, Math.min(WIN.y1 - 10, g.y + g.r + 8), 'below', 'center')]; });
         ['cora'].concat(CREW).forEach(id => Slice.anchors.set('stop:person:' + id, () => {
             const d = S.drawn.find(q => q.id === id); if (!d) return [];
-            return [pt(d.X, d.Y + 2, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left')];
+            // final check: when all three beside the speaker land on a body or the world, A.U.R.A.'s two places in the open glass
+            // come next (the top left; right of centre when the last click, the action word, sits top left)
+            return [pt(d.X, d.Y + 2, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left'), pt(WIN.x0 + 12, WIN.y0 + 26, 'below'), pt(574, 122, 'left')];
         }));
     }
     // what the films show, in film px [x, y, r]: words keep off them while a film is up
@@ -692,7 +743,10 @@
         const t = Slice.clock.t, k = Slice.G.bk / Slice.G.dpr;
         if (filmMix(t) >= STEPS) return (FILM_DISCS[S.id] || FILM_DISCS.titan).map(([x, y, r]) => { const [X, Y] = css(FILM.x + x * FILM.k, FILM.y + y * FILM.k); return [X, Y, r * FILM.k * k]; });
         const g = worldGeom(t), [x, y] = css(g.x, g.y);
-        return [[x, y, g.r * k]];
+        // final check: an ask beside its speaker landed on the people next to them (Cora dissolved under the surge's question);
+        // the bodies on the bridge count too, below the heads, so a line can still sit just above whoever speaks
+        const bodies = S.drawn.flatMap(d => { const h = d.Sp.canvas.height; return [0.42, 0.72].map(f => { const [X, Y] = css(d.X, d.Y + h * f); return [X, Y, h * 0.2 * k]; }); });
+        return [[x, y, g.r * k]].concat(bodies);
     }
     function bands() {
         const [, t0] = css(0, 0), [, t1] = css(0, FILM.y), [, b0] = css(0, FILM.y + P.FILM_H * FILM.k), [, b1] = css(0, SH);
