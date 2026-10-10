@@ -611,6 +611,10 @@
     border-top-color: var(--enc);
 }
 
+/* .modal-content is a flex column: without this, a card near the window's height squeezes the talk (min-height wins over
+   its text) and the choices are drawn on top of the last line. Nothing shrinks; a card that truly cannot fit scrolls. */
+.enc-card > * { flex-shrink: 0; }
+
 .enc-head {
     padding: 20px 24px 6px;
 }
@@ -825,7 +829,6 @@
 }
 
 .enc-detail {
-    min-height: 3.2em;
     margin: 10px 0 0;
     padding: 0 24px;
     font-size: 0.84em;
@@ -835,6 +838,20 @@
 
 .enc-detail .is-gain { color: var(--green-br); }
 .enc-detail .is-loss { color: var(--red); }
+
+/* The list takes focus only so Enter cannot pick a choice unread: no ring for it. */
+.enc-decide:focus { outline: none; }
+
+/* Once the choices are open the talk no longer needs room for a longer next line. */
+.enc-card.is-deciding .enc-stage { min-height: 0; }
+
+/* Short windows (a 720p laptop): a slimmer picture and tighter gaps, so the card fits without scrolling. */
+@media (max-height: 820px) {
+    .enc-card .enc-art { aspect-ratio: 4 / 1; object-fit: cover; }
+    .enc-head { padding: 14px 24px 4px; }
+    .enc-context { margin-bottom: 12px; }
+    .enc-decide { margin-top: 10px; padding-top: 10px; }
+}
 
 @media (prefers-reduced-motion: reduce) {
     .enc-line.is-in, .enc-decide { animation: none; }

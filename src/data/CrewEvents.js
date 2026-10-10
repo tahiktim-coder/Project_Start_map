@@ -103,6 +103,7 @@ const CREW_PERSONAL_EVENTS = [
             {
                 text: "Help him put it back together.",
                 desc: "-5 Energy. Repairs a damaged deck, or +10 Salvage if nothing is broken.",
+                descNow: (state) => Object.values(state.shipDecks || {}).some(d => d.status === 'DAMAGED') ? "-5 Energy. Repairs a damaged deck." : "-5 Energy. Nothing is broken: +10 Salvage in spare parts.",
                 effect: (state, crew) => {
                     state._jaxonRepairSeen = true;
                     state.energy = Math.max(0, state.energy - 5);
@@ -120,6 +121,7 @@ const CREW_PERSONAL_EVENTS = [
             {
                 text: "Keep working. We need you.",
                 desc: "Repairs a damaged deck, or +15 Salvage if nothing is broken. Jaxon +1 Stress.",
+                descNow: (state) => Object.values(state.shipDecks || {}).some(d => d.status === 'DAMAGED') ? "Repairs a damaged deck. Jaxon +1 Stress." : "Nothing is broken: +15 Salvage in spare parts. Jaxon +1 Stress.",
                 effect: (state, crew) => {
                     crew.stress = Math.min(3, crew.stress + 1);
                     state._jaxonRepairSeen = true;

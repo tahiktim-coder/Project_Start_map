@@ -2072,7 +2072,7 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'crew', color, kicker: (crew.tags || []).includes('LEADER') ? 'A NIGHT ON THE BRIDGE' : `A MOMENT WITH ${String(crew.name || '').toUpperCase()}`, title: event.title,
             context: inState(event.context), dialogue: inState(event.dialogue),
-            choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c) })),
+            choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c), descNow: c.descNow })),
             onPick: (idx) => {
                 const result = event.choices[idx].effect(this.state, crew);
                 if (result) this.state.addLog(`CREW: ${result}`);

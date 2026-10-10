@@ -292,34 +292,133 @@
     };
 
     // ═══ OUR OWN SHIP — our ship facing us: same hull, same number. Five windows, four people waving, one seat empty. ═══
-    const MIRROR = { x: 312, y: 74, len: 300, ht: 46, windows: 5, winX: 196, winY: 62, winW: 16, winH: 13, winPitch: 22, blinkMs: 1500 };
+    const MIRROR = { x: 312, y: 74, len: 300, ht: 46, winX: 190, winY: 58, winW: 22, winH: 18, winPitch: 26, figX: 2, figY: 3, blinkMs: 1500 };
+    // Who sits in their windows, head and shoulders, 13 × 15 pixels, three-quarter like the crew sprites and lit from the
+    // upper left by their cabin lamp. Told apart by hair: Jaxon dark and slicked back, grey at the temples; Aris blue-black
+    // with magenta lights and her goggles pushed up; Vance grey spikes over a white ring collar; Mira black, tied back, one
+    // teal lock. The commander's seat is the empty one. Keys: a b c hair dark → light, x y the hair's own accent, 1 2 3 skin
+    // shadow → lit, e eyes, p q r suit shadow → lit, k collar or trim.
+    const SEATED = [
+        { keys: { a: '#161b21', b: '#2b323a', c: '#4f5b66', x: '#80878d', 1: '#77432c', 2: '#9e6243', 3: '#bb7d55', e: '#1e1410', u: '#8a5a40',
+            p: '#13181c', q: '#283037', r: '#47515a' }, sleeve: '#353e46', hand: '#bb7d55', rows: [
+            '....abbba....',
+            '...abcbbaa...',
+            '...x33332x...',
+            '...2e33e21...',
+            '...2333321...',
+            '...2333221...',
+            '...u33322u...',
+            '....uuuuu....',
+            '.....221.....',
+            '...rq232qp...',
+            '.rrrqqqqqqqp.',
+            'rrrrqqqqqqqpp',
+            'rrrqqqqqqqppp',
+            'rrqqqqqqqqppp',
+            'rqqqqqqqqqppp'] },
+        { keys: { a: '#0e0418', b: '#1f0f32', c: '#3a1442', x: '#8a2474', y: '#d04aa6', o: '#eedc9c', 1: '#8a3a34', 2: '#b85a44', 3: '#d8784c', e: '#1a0610',
+            p: '#16142e', q: '#2a2656', r: '#4a4488', k: '#c8701e' }, sleeve: '#2a2656', hand: '#d8784c', rows: [
+            '....abyba....',
+            '...aooaooa...',
+            '..ya33332a...',
+            '.xa3e33e2b...',
+            '.ab333332a...',
+            '.ya233321y...',
+            '.xa.2332.a...',
+            '..a..22..x...',
+            '.....221.....',
+            '...rrq2qqq...',
+            '.kkrqqqqqqkk.',
+            'kkkrqqqqqqkkk',
+            'rrrqqqqqqqppp',
+            'rrqqqqqqqqppp',
+            'rqqqqqqqqqppp'] },
+        { keys: { a: '#434755', b: '#787d8c', c: '#c2c5cd', x: '#eceef2', 1: '#74493f', 2: '#a87560', 3: '#cc9475', e: '#2b2830', u: '#8e7666',
+            k: '#4a4252', p: '#6b6e79', q: '#8f919a', r: '#cac8c1' }, sleeve: '#b3b4b6', hand: '#5a3c32', rows: [
+            '...c.b.c.b...',
+            '...bcbcacb...',
+            '...ax3333a...',
+            '...2e33e21...',
+            '...2333321...',
+            '...2333221...',
+            '....u332u....',
+            '....uuuu.....',
+            '..rrrk21krq..',
+            '.rrrrkkkrqqp.',
+            'rrrrrrrrqqqpp',
+            '.rrqqqqqqqpp.',
+            'rrqqqqqqqqppp',
+            'rqqqqqqqqqppp',
+            'rqqqqqqqqqppp'] },
+        { keys: { a: '#19131c', b: '#2d2534', c: '#4c4a64', x: '#176a6a', y: '#2fb0a6', 1: '#8e4e44', 2: '#bc7658', 3: '#d89a6c', e: '#140a0e',
+            p: '#62665a', q: '#a8ac9a', r: '#d8dcc8', k: '#e2c46a' }, sleeve: '#a8ac9a', hand: '#d89a6c', rows: [
+            '....abcba....',
+            '...abccbaa...',
+            '...ay33332...',
+            '.aaax3e3e2...',
+            '.aaa333332...',
+            '..a.333321...',
+            '.....2332....',
+            '......22.....',
+            '.....221.....',
+            '....rk1kq....',
+            '.rrrrkrkqqqp.',
+            'rrrrrkqkqqqpp',
+            'rrrrqkqkqqppp',
+            'rrrqqkqkqqppp',
+            'rrqqqkqkqqppp'] },
+        null,
+    ];
+    const EMPTY_SEAT = { keys: { p: '#1d2328', q: '#353e46', r: '#5a6670' }, rows: [
+        '.............', '.............',
+        '....rrrrq....',
+        '...rqqqqqp...',
+        '...rqqqqqp...',
+        '...qqqqqpp...',
+        '....pqqpp....',
+        '...rqqqqqp...',
+        '...rqqqqqp...',
+        '...rqqqqqp...',
+        '...qqqqqpp...',
+        'rrrrqqqqppqqq',
+        'qpppqqqqpppqp',
+        '.p..qqqqpp.p.',
+        '.p.pppppppp.p'] };
+    // the waving arm, in pixels from the figure's corner: the elbow out at shoulder height, the forearm swinging out and back,
+    // the hand always at least four pixels clear of the head
+    const WAVE = [
+        { arm: [[13, 10, 3, 2], [15, 5, 2, 5]], hand: [15, 3] },
+        { arm: [[13, 10, 3, 2], [15, 8, 2, 2], [16, 6, 2, 2]], hand: [17, 4] },
+        { arm: [[13, 10, 3, 2], [15, 5, 2, 5]], hand: [15, 3] },
+        { arm: [[13, 10, 3, 2], [15, 8, 2, 2], [14, 6, 2, 2]], hand: [14, 4] },
+    ];
+    function sprite(p, x0, y0, figure) {
+        const rgb = {}; Object.keys(figure.keys).forEach(k => { rgb[k] = hexRgb(figure.keys[k]); });
+        figure.rows.forEach((row, y) => [...row].forEach((ch, x) => { if (rgb[ch]) p.set(x0 + x, y0 + y, rgb[ch]); }));
+    }
     SCENES.ANOMALY_MIRROR = {
         build(p) {
             const stars = space(p, 29, 460);
             const theirs = drawHull(p, { x: MIRROR.x, y: MIRROR.y, len: MIRROR.len, ht: MIRROR.ht, ramp: HULL, seed: 9 });
             const ours = drawHull(p, { x: -66, y: 118, len: 330, ht: 60, flip: true, ramp: HULL, seed: 9, light: 0.55 });
-            const windows = [];
-            for (let k = 0; k < MIRROR.windows; k++) {
-                const wx = MIRROR.winX + k * MIRROR.winPitch, wy = MIRROR.winY, isEmpty = k === MIRROR.windows - 1;
+            const windows = SEATED.map((figure, k) => {
+                const wx = MIRROR.winX + k * MIRROR.winPitch, wy = MIRROR.winY;
                 p.region(wx - 1, wy - 1, wx + MIRROR.winW + 1, wy + MIRROR.winH + 1, (x, y) => p.tone(x, y, HULL, 0.12));
-                p.region(wx, wy, wx + MIRROR.winW, wy + MIRROR.winH, (x, y) => p.tone(x, y, AMBER, 0.86 - (y - wy) / MIRROR.winH * 0.3));
-                if (!isEmpty) {
-                    const cx = wx + MIRROR.winW / 2 - 1;
-                    p.ellipse(cx, wy + 4.5, 2.6, 2.8, (x, y) => p.tone(x, y, WOOD, 0.26));
-                    p.region(cx - 4, wy + 8, cx + 5, wy + MIRROR.winH, (x, y) => { if (!(y === wy + 8 && (x < cx - 3 || x > cx + 3))) p.tone(x, y, WOOD, 0.26); });
-                }
-                windows.push({ wx, wy, isEmpty });
-            }
-            text('EXODUS-9', 318, 81, 2, (x, y, k) => p.region(x, y, x + k, y + k, (a, b) => p.tone(a, b, HULL, 0.2)));
+                p.region(wx, wy, wx + MIRROR.winW, wy + MIRROR.winH, (x, y) => p.tone(x, y, AMBER, y === wy ? 0.8 : 0.5 - Math.max(0, y - wy - 9) * 0.025));  // a lamp along the ceiling, the cabin warm and dim below it
+                sprite(p, wx + MIRROR.figX, wy + MIRROR.figY, figure || EMPTY_SEAT);
+                return { x: wx + MIRROR.figX, y: wy + MIRROR.figY, figure };
+            });
+            text('EXODUS-9', 322, 81, 2, (x, y, k) => p.region(x, y, x + k, y + k, (a, b) => p.tone(a, b, HULL, 0.2)));
             return { stars: keepVisible(p, stars), windows, noses: [theirs(0.01, 0), ours(0.01, 0)] };
         },
         frame(f, t, s) {
             twinkle(f, s.stars, t);
-            s.windows.forEach((w, k) => {                                                     // they wave back
-                if (w.isEmpty) return;
-                const cx = w.wx + MIRROR.winW / 2 - 1, isUp = Math.floor(t / 420 + k * 1.7) % 2 === 0;
-                f.px(cx + 4, w.wy + (isUp ? 2 : 5), WOOD.hex[1], 1, isUp ? 7 : 4);
-                f.px(cx + 5, w.wy + (isUp ? 1 : 4), WOOD.hex[1], 2, 2);
+            const step = Math.floor(t / TICK_MS);
+            s.windows.forEach(({ x, y, figure }, k) => {                                      // they wave back, each to their own beat
+                if (!figure) return;
+                const pose = WAVE[Math.floor((step + k * 3) / (2 + (k % 2))) % WAVE.length];
+                pose.arm.forEach(([dx, dy, w, h]) => f.px(x + dx, y + dy, figure.sleeve, w, h));
+                f.px(x + pose.hand[0], y + pose.hand[1], figure.hand, 2, 2);
             });
             if (t % MIRROR.blinkMs < 400) s.noses.forEach(([x, y]) => { f.glow(x, y, 5, RED, 0.8); f.px(x - 1, y - 1, RED.hex[4], 2, 2); });
         },

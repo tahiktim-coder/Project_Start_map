@@ -119,6 +119,7 @@ const DERELICT_ENCOUNTERS = [
             {
                 text: "Open the medical bay",
                 desc: "-5 Energy. Heals one injured crew member. If nobody is hurt: +1 Revival Item.",
+                descNow: (state) => state.crew.some(c => c.status === 'INJURED') ? "-5 Energy. Heals one injured crew member." : "-5 Energy. Nobody is hurt: +1 Revival Item.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     const injured = state.crew.find(c => c.status === 'INJURED');

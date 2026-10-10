@@ -286,6 +286,9 @@ const ANOMALY_ENCOUNTERS = [
             {
                 text: "Trade supplies across",
                 desc: "-20 Salvage for +30 Energy. If we have under 20 Salvage: -30 Energy for +20 Salvage instead. Vance +1 Stress either way.",
+                descNow: (state) => state.salvage >= 20 ? "-20 Salvage for +30 Energy. Vance +1 Stress."
+                    : state.energy >= 30 ? "-30 Energy for +20 Salvage. Vance +1 Stress."
+                    : "We have nothing to trade: it takes 20 Salvage or 30 Energy.",
                 effect: (state) => {
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (state.salvage >= 20) {

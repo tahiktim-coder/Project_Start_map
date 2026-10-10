@@ -93,7 +93,7 @@ const SPACE_STATION_ENCOUNTERS = [
         choices: [
             {
                 text: "Copy the research database",
-                desc: "-5 Energy. +1 Tech Item, or +3 Data if the drives hold nothing useful.",
+                desc: "-5 Energy. +1 Tech Item.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     if (typeof ITEMS !== 'undefined') {
@@ -289,7 +289,7 @@ const SPACE_STATION_ENCOUNTERS = [
         choices: [
             {
                 text: "Search the deep shelves",
-                desc: "-5 Energy. +1 Valuable Item, or +35 Salvage if the good shelf is bare.",
+                desc: "-5 Energy. +1 Valuable Item.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     if (typeof ITEMS !== 'undefined') {
@@ -317,6 +317,7 @@ const SPACE_STATION_ENCOUNTERS = [
             {
                 text: "Open the medical aisle",
                 desc: "-5 Energy. Heals one injured crew member. Otherwise +1 Medkit, or +3 Rations.",
+                descNow: (state) => state.crew.some(c => c.status === 'INJURED') ? "-5 Energy. Heals one injured crew member." : "-5 Energy. Nobody is hurt: +1 Medkit.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     const injured = state.crew.filter(c => c.status === 'INJURED');
