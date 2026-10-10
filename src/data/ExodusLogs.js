@@ -30,7 +30,7 @@ const EXODUS_LOGS = [
             'Nobody sent it that. Something out there has the disc, and it is reading it through our ship.',
             'Keep building ships.',
         ],
-        after: { speaker: 'Tech Mira', text: 'Every ship\'s computer has a twin on Earth? Does ours?' },
+        after: { speaker: 'Mira', text: 'Every ship\'s computer has a twin on Earth? Does ours?' },
     },
     {
         id: 'PAGE_THROW', sector: 3, kind: 'log', type: 'EXODUS_LOG', value: 0, isKept: true,
@@ -42,7 +42,7 @@ const EXODUS_LOGS = [
             'I asked the ship how a ship built after us could have died before we were even born.',
             'It said we were not sent further than the others. We were sent less far back in time.',
         ],
-        after: { speaker: 'Eng. Jaxon', text: 'Back in time? That would explain the numbers.' },
+        after: { speaker: 'Jaxon', text: 'Back in time? That would explain the numbers.' },
     },
     {
         id: 'PAGE_MEMO', sector: 4, kind: 'paper', type: 'EXODUS_LOG', value: 0, isKept: true,
@@ -55,7 +55,7 @@ const EXODUS_LOGS = [
             'Do not tell your crew. Tell them what they already believe: eight ships went this way before them, and they are the ninth.',
             'Your ship\'s computer knows the truth. It will not tell them.',
         ],
-        after: { speaker: 'Dr. Aris', text: 'Eight ships before us. That is exactly what A.U.R.A. told us.' },
+        after: { speaker: 'Aris', text: 'Eight ships before us. That is exactly what A.U.R.A. told us.' },
     },
     {
         id: 'PAGE_LEDGER', sector: 5, kind: 'ledger', type: 'EXODUS_LOG', value: 0, isKept: true,

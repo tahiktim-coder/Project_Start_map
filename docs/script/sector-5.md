@@ -16,10 +16,10 @@ Objective line: only where to look (the lines listed in sector 2), while the pag
 ### Flying the jump «Corridor.js · LINES.5»
 _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_
 
-**Spc. Vance:** [number] thousand beacons. So where are all the ships?  
-
-Closing shot «StoryReel.js · jump5»: *Sector 5. A ship that looks exactly like yours.*    
-_Source on screen: HULL CAMERA · AFT_
+**A.U.R.A.:** That ship is exactly like ours, Commander.  
+**A.U.R.A.:** It turns when we turn, a quarter of a second late.  
+**A.U.R.A.:** More debris ahead. Heavier than before.  
+**Vance:** [number] thousand beacons. So where are all the ships?  
 
 ## The story beats (always here)
 
@@ -28,7 +28,7 @@ _A faint contact on the map from the start. Dating one of our wrecks here names 
 
 Map text: *A dark moon. Someone built a shelter here from the hull of one of our ships.*  
 On the disc's map: a moon with one lamp lit. Then:  
-**Tech Mira:** That lamp was set up by hand. Someone lived on that moon.  
+**Mira:** That lamp was set up by hand. Someone lived on that moon.  
 
 ### Found page: LAUNCH LEDGER «ExodusLogs.js · PAGE_LEDGER»
 _In the wreck on Iapetus-60 Minor. A printed list of every Exodus ship ever built, with the date it launched and the date it was lost. In the cargo hold it is called: Launch Ledger._
@@ -48,28 +48,6 @@ On a warp inside this sector:
 - ANOMALY: Cargo manifest shows [n] ration packs that weren't there before. Packaging is from Earth. Manufacturing date: tomorrow. «SectorConfig.js · 5.hazard.onWarp»
 - ANOMALY: [actual] salvage is gone from the hold. Where it was, there is only dust. «SectorConfig.js · 5.hazard.onWarp»
 
-## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / MUTINY / SHIP ALERT_
-
-### NIGHT ON THE BRIDGE «CrewEvents.js · COMMANDER_DOUBT»
-_Sectors 5, 6_
-
-> Night shift. You're alone on the bridge, sitting in the command chair. A.U.R.A. keeps you company.
-
-**A.U.R.A.:** You've been awake for nineteen hours, Commander. Tired people make poor decisions.  
-**A.U.R.A.:** Four crew asleep, Commander. All vital signs normal.  
-**A.U.R.A.:** You've lost fewer people than I predicted, Commander. I thought you'd want to know.  
-**A.U.R.A.:** Would you like me to keep talking, Commander, or leave you in peace?  
-
-Choices:
-1. **Let her keep talking.** — Commander -1 Stress. -5 Energy: the bridge stays lit until morning.
-   → A.U.R.A. talked until morning. Commander -1 Stress. -5 Energy. / A.U.R.A. goes through the day's reports in a low voice. You fall asleep in the chair before she finishes.  
-2. **Dim the bridge and sit quietly.** — +5 Energy: the bridge goes dark. Commander +1 Stress.
-   → A dark, quiet bridge. +5 Energy. Commander +1 Stress. / A.U.R.A.: 'Of course, Commander.' The panels go dark. She leaves one light on above your chair.  
-3. **Ask her to name everyone aboard.** — +1 Data. Commander +1 Stress: her answer doesn't add up.
-   → A.U.R.A. named everyone aboard. +1 Data. Commander +1 Stress. / A.U.R.A.: 'Cora Moon, Jaxon Mercer, Aris Novak, Kael Vance, Mira Chen. Four crew, Commander.' / A.U.R.A.: 'The hold is empty, Commander. Good night.'  
-   ↳ or: A.U.R.A.: 'And [sleepers] sleepers in the hold, Commander. All [sleepers] stable.'  
-
 ## The talk when you jump out of sector 5
 _One plays: the highest priority that applies._
 
@@ -79,7 +57,7 @@ _Priority 3, sectors 5–5_
 > A.U.R.A. has flown the beacon line since sector 1. Mid-warp, the forward screen goes white for a second: a bright light, dead ahead.
 
 **A.U.R.A.:** The forward sensors were overloaded for 1.4 seconds, Commander. I've logged the source as a star.  
-**Tech Mira:** Every beacon we followed points straight at it. I don't know what it is.  
+**Mira:** Every beacon we followed points straight at it. I don't know what it is.  
 **A.U.R.A.:** The line we've been flying ends there, Commander.  
 
 Choices:
@@ -93,9 +71,9 @@ _Priority 2, sectors 5–5_
 
 > Every contact ahead is an Exodus beacon. Past them is a bright light.
 
-**Spc. Vance:** Earth told us there were nine ships. Somebody back home knew about all of these.  
-**Dr. Aris:** There are too many names to read. I'll read the ones we pass.  
-**Tech Mira:** Our course runs straight into that light. I wish I knew what it was.  
+**Vance:** Earth told us there were nine ships. Somebody back home knew about all of these.  
+**Aris:** There are too many names to read. I'll read the ones we pass.  
+**Mira:** Our course runs straight into that light. I wish I knew what it was.  
 **A.U.R.A.:** Bracing for the last jump, Commander. Tell me where you want the power.  
 
 Choices:
@@ -113,7 +91,7 @@ _Priority 1, sectors 1–6_
 > A quiet stretch of the warp. There's time to fix one thing.
 
 **A.U.R.A.:** Power or hull, Commander. Either one costs fifteen salvage.  
-**Eng. Jaxon:** Reactor or hull. Pick one. I haven't slept enough to do both.  
+**Jaxon:** Reactor or hull. Pick one. I haven't slept enough to do both.  
 
 Choices:
 1. **Service the reactor.** — -15 Salvage. +25 Energy.

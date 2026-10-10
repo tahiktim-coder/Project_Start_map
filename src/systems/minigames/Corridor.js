@@ -383,6 +383,8 @@
         };
         const fogAt = (z, near, far) => clamp((z - near) / (far - near), 0, 1) ** 0.8;
         const sound = makeSound(), shipL = MiniShip.layout(8, 172, 36, 76);
+        const openedAt = performance.now(), SETTLE_MS = (window.ChoiceGuard && window.ChoiceGuard.LOCK_MS) || 400;
+        const isSettling = () => performance.now() - openedAt < SETTLE_MS;   // a second click on whatever opened this must not choose how to fly
         let mode = 'ready', here = from, leg = null, t = 0, phaseT = 0, clock = 0, whiteAt = -99, rowAt = 0, auraT = 0, saidAt = -99, isEndReady = false;
         let auto = false, cam = [0, 0], vel = [0, 0], look = [0, 0], roll = 0, jolt = 0, nearT = 0, threat = false;
         let pointer = null, aiming = false, pressed = false, th = 0, queue = [], nextLine = 0, pinged = SECTORS[from].heard, pingAt = -9, farStars = [];
@@ -889,7 +891,7 @@
         ui.canvas.onpointerdown = e => {
             if (e.button) return;                                                       // the main button (or a touch) only
             pointer = ui.toPixel(e); aiming = true;
-            if (mode === 'ready') { start(false); return; }                             // the click that starts the flight is not the throttle
+            if (mode === 'ready') { if (!isSettling()) start(false); return; }          // the click that starts the flight is not the throttle
             pressed = true;
             try { ui.canvas.setPointerCapture(e.pointerId); } catch (_) { /* capture is optional */ }
         };
@@ -902,7 +904,7 @@
             if (THROTTLE.includes(k) && mode !== 'ready' && !isRepeat && !(k === ' ' && isOnButton)) held.add(k);
             const isGo = k === ' ' || k === 'Enter';
             if (!isGo || isOnButton || isRepeat) return;                                // a focused button handles its own
-            if (mode === 'ready') start(false);
+            if (mode === 'ready') { if (!isSettling()) start(false); }
             else if (mode === 'done' && isEndReady && clock - rowAt > (k === 'Enter' ? 0.3 : 1)) end();   // only once A.U.R.A. is done
         });
 

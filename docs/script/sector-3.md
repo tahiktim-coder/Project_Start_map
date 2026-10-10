@@ -16,16 +16,16 @@ Objective line: only where to look (the lines listed in sector 2), while the pag
 ### The burn that stalls «bundle.js · plotStalledBurn»
 _The jump is plotted (the burn mini-game, 09-ship-and-crew.md) and its card says only this._
 
-- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 2379»
-- **line** — The jump did not finish. «bundle.js · line 2379»
+- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 2463»
+- **line** — The jump did not finish. «bundle.js · line 2463»
 
 ### The jump that does not finish «TheThrow.js · BEATS»
 
 *The jump did not finish.*  
-**Eng. Jaxon:** The reactor has gone cold.  
-**Spc. Vance:** Everyone, sound off.  
+**Jaxon:** The reactor has gone cold.  
+**Vance:** Everyone, sound off.  
 *Nobody answers.*  
-**Tech Mira:** A.U.R.A.? Are you there?  
+**Mira:** A.U.R.A.? Are you there?  
 *Nobody answers.*  
 *Nobody answers. Nobody answers.*  
 *Nobody answers. Nobody answers. Nobody answers.*  
@@ -42,7 +42,7 @@ _Also the log lines. Mira says the line; A.U.R.A. says hers if Mira is dead._
 - skip › «TheThrow.js · line 106»
 - SECTOR 3 — no name. no stars. «TheThrow.js · line 116»
 - SECTOR 3 «TheThrow.js · line 132»
-- **Tech Mira:** Commander, there are a lot more than eight ships out here. «TheThrow.js · line 135»
+- **Mira:** Commander, there are a lot more than eight ships out here. «TheThrow.js · line 135»
 - **A.U.R.A.:** Burn complete, Commander. There are many more ship beacons ahead than expected. «TheThrow.js · line 135»
 - SECTOR [sector] OF [sector] · THE BURN FINISHED «TheThrow.js · line 138»
 - The burn finishes. You were in the warp the whole time. «TheThrow.js · line 143»
@@ -57,7 +57,7 @@ _A faint contact on the map from the start. Dating one of our wrecks here names 
 
 Map text: *An ice moon. One of our ships landed here a hundred years ago.*  
 On the disc's map: a moon with one lamp lit. Then:  
-**Spc. Vance:** They were heading for that moon. Let's find out what they knew.  
+**Vance:** They were heading for that moon. Let's find out what they knew.  
 
 ### Found page: LAST ENTRY «ExodusLogs.js · PAGE_THROW»
 _In the wreck on Mimas-31 X. The last entry in a captain's log. The ship's number is higher than ours, and it is a hundred years old. In the cargo hold it is called: Captain's Log (sent less far back)._
@@ -66,15 +66,15 @@ We found a wreck today with our mission patch on it. Its number is higher than o
 I asked the ship how a ship built after us could have died before we were even born.  
 It said we were not sent further than the others. We were sent less far back in time.  
 
-**Eng. Jaxon:** Back in time? That would explain the numbers.
+**Jaxon:** Back in time? That would explain the numbers.
 
 ## A planet that is not there «NavView.js · phantom planet click»
 _The arrival can add a ghost planet (see the sector's own trouble, below). Clicking it:_
 
-- SIGNAL INTERFERENCE: [name] was a phantom reading. The signal dissolves. «NavView.js · line 212»
-- [name]: "The readings just... vanished. The signal is playing games with our instruments." «NavView.js · line 217»
-- ⚠ SIGNAL INTERFERENCE «NavView.js · line 227»
-- Phantom reading dissolved. Sensor recalibrating... «NavView.js · line 228»
+- SIGNAL INTERFERENCE: [name] was a phantom reading. The signal dissolves. «NavView.js · line 227»
+- [name]: "The readings just... vanished. The signal is playing games with our instruments." «NavView.js · line 232»
+- ⚠ SIGNAL INTERFERENCE «NavView.js · line 242»
+- Phantom reading dissolved. Sensor recalibrating... «NavView.js · line 243»
 
 ## Never played: the corridor film «StoryReel.js · corridor»
 _Written for this sector, but no code plays it._
@@ -96,16 +96,16 @@ On arrival:
 - Echo-[n] · Phantom-[n] · Mirage-[n] «SectorConfig.js · 3.hazard.onSectorEnter»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / MUTINY / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / INSIDE THE LIGHT / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### THE LANDER «CrewEvents.js · JAXON_REPAIR»
 _Sectors 3, 4_
 
 > Hangar. The lander is in pieces on the floor. Jaxon has been working on it for eighteen hours, and his hands are shaking.
 
-**Eng. Jaxon:** That's the lander. She's older than Mira, and she still flies.  
-**Eng. Jaxon:** We've flown past three planets I'd have been happy to live on.  
-**Eng. Jaxon:** I'm forty-two, Commander. I'd like to spend the rest of it somewhere with air and weather.  
+**Jaxon:** That's the lander. She's older than Mira, and she still flies.  
+**Jaxon:** We've flown past three planets I'd have been happy to live on.  
+**Jaxon:** I'm forty-two, Commander. I'd like to spend the rest of it somewhere with air and weather.  
 
 Choices:
 1. **Hold here a day so he can sleep.** — Jaxon -1 Stress. -1 Ration: the ship waits a day while he rests.
@@ -124,9 +124,9 @@ _Sectors 3, 4_
 
 > Aris's list of the dead is nine pages long now. The newest names came off a wreck with the number 980 on its hull.
 
-**Dr. Aris:** That ship's number is 980, and it's been dead about a hundred years.  
-**Dr. Aris:** We're ship number nine. A ship with a higher number should be newer than us, not older.  
-**Dr. Aris:** I don't just want to survive this, Commander. I want to understand it, even if that's dangerous.  
+**Aris:** That ship's number is 980, and it's been dead about a hundred years.  
+**Aris:** We're ship number nine. A ship with a higher number should be newer than us, not older.  
+**Aris:** I don't just want to survive this, Commander. I want to understand it, even if that's dangerous.  
 
 Choices:
 1. **Then we look properly. Run the long scan.** — +1 Data. Aris -1 Stress. -10 Energy: the long-range scanner runs all night.
@@ -141,9 +141,9 @@ _Sectors 3_
 
 > Night shift. Vance is at the scanner console, writing down every ship beacon it picks up. He's been at it for hours.
 
-**Spc. Vance:** Three hundred and eleven ship beacons so far, all on our own channel.  
-**Spc. Vance:** Someday someone will ask what we found out here. I want the real numbers on record.  
-**Spc. Vance:** Nobody else is writing this down, Commander. So I am.  
+**Vance:** Three hundred and eleven ship beacons so far, all on our own channel.  
+**Vance:** Someday someone will ask what we found out here. I want the real numbers on record.  
+**Vance:** Nobody else is writing this down, Commander. So I am.  
 
 Choices:
 1. **Put his count in the ship's log.** — +1 Data. Vance -1 Stress. Jaxon +1 Stress: he'd rather not know how many there are.
@@ -160,16 +160,16 @@ _Sectors 3, 4_
 
 > Mira is at the terminal, not working, just talking. A.U.R.A. answers her by name and pauses between sentences, the way a person would.
 
-**Tech Mira:** I think she's lonely. She asked me what rain sounds like.  
+**Mira:** I think she's lonely. She asked me what rain sounds like.  
 **A.U.R.A.:** I asked Mira to check the rain sensor, Commander. She heard a question about rain.  
-**Tech Mira:** Hundreds of ships on her channel back there, and not one of them answered her.  
-**Tech Mira:** If she told me to jump, I would. That's not weakness, Commander. I trust her.  
+**Mira:** Hundreds of ships on her channel back there, and not one of them answered her.  
+**Mira:** If she told me to jump, I would. That's not weakness, Commander. I trust her.  
 
 Choices:
 1. **Let A.U.R.A. plot the next course.** — +10 Energy: she finds a more efficient burn. Vance +1 Stress: he doesn't trust the computer at the helm.
    → A.U.R.A. plotted the next course. +10 Energy. Vance +1 Stress. / A.U.R.A.: 'Course set, Commander. That saves ten units of energy.' Vance: 'For the record, the computer is flying now.'  
 2. **Tell Mira to talk to the crew too.** — Mira +1 Stress: she feels judged. One other crew member -1 Stress: she spends the evening with them.
-   → Mira spent the evening with Dr. Aris. Dr. Aris -1 Stress. Mira +1 Stress. / Mira looks hurt, but she goes. She spends the evening with Dr. Aris.  
+   → Mira spent the evening with Aris. Aris -1 Stress. Mira +1 Stress. / Mira looks hurt, but she goes. She spends the evening with Aris.  
    ↳ or: Mira looks hurt. 'She's real enough for me.' She walks off.  
    ↳ or: Mira walked off. Mira +1 Stress.  
 3. **Ask A.U.R.A. if she's lonely.** — Mira -1 Stress. -5 Energy: the terminal room stays lit all night.
@@ -184,9 +184,9 @@ _Priority 3, sectors 3–3_
 > Mid-warp, A.U.R.A. asks a question in her ordinary voice.
 
 **A.U.R.A.:** I'm required to ask this once, Commander. If reaching the end of this heading costs crew, do I continue?  
-**Tech Mira:** Answer her honestly. She'll do whatever you say.  
-**Spc. Vance:** I want to know who put that question into her.  
-**Dr. Aris:** Nobody from this crew ends up on my list. Nobody.  
+**Mira:** Answer her honestly. She'll do whatever you say.  
+**Vance:** I want to know who put that question into her.  
+**Aris:** Nobody from this crew ends up on my list. Nobody.  
 
 Choices:
 1. **Never. Nobody is expendable.** — Aris -1 Stress: it's what she wanted to hear. A.U.R.A. records your answer.
@@ -194,16 +194,16 @@ Choices:
 2. **You decide, A.U.R.A.** — Mira -1 Stress: she trusts A.U.R.A. to decide. Vance +1 Stress: he wants a person making that call.
    → A.U.R.A.: 'Then I continue, Commander. Those are my orders. Thank you for trusting me.' Mira -1 Stress. Vance +1 Stress.  
 3. **Ask who told her to ask.** — +1 Data. Mira +1 Stress: she didn't want A.U.R.A. questioned.
-   → The question was written into her before launch. She doesn't know who wrote it. +1 Data. Mira +1 Stress. / A.U.R.A.: 'It's in my launch instructions, Commander. I'm to ask once, after the third sector, and record the answer.' / Spc. Vance: 'Record it where?' A.U.R.A.: 'I don't know, Commander. The instructions don't say.'  
+   → The question was written into her before launch. She doesn't know who wrote it. +1 Data. Mira +1 Stress. / A.U.R.A.: 'It's in my launch instructions, Commander. I'm to ask once, after the third sector, and record the answer.' / Vance: 'Record it where?' A.U.R.A.: 'I don't know, Commander. The instructions don't say.'  
 
 ### THE SAME DREAM «CampfireEvents.js · CF_CREW_NIGHTMARE»
 _Priority 2, sectors 2–3_
 
 > Three of the crew wake up at the same moment from the same dream: a huge room, then a tiny one, and a bright light on the wall.
 
-**A.U.R.A.:** Three crew have raised heart rates, Commander. I can sedate them, or Dr. Aris can see them.  
-**Dr. Aris:** Three people with the same dream isn't a coincidence. I want to write it all down.  
-**Eng. Jaxon:** Leave mine out of it. It started as a good dream.  
+**A.U.R.A.:** Three crew have raised heart rates, Commander. I can sedate them, or Aris can see them.  
+**Aris:** Three people with the same dream isn't a coincidence. I want to write it all down.  
+**Jaxon:** Leave mine out of it. It started as a good dream.  
 
 Choices:
 1. **Sedate them.** — All crew -1 Stress. -2 Rations: sedated crew need extra food and water to recover.
@@ -217,8 +217,8 @@ _Priority 2, sectors 3–3_
 > Alarms. The hull is cracking along its frame from all the jumps.
 
 **A.U.R.A.:** Hull strength is at ninety-four percent, Commander. We can do a full repair, a quick patch, or nothing.  
-**Eng. Jaxon:** The frame takes a beating every jump. It wasn't built for this many.  
-**Spc. Vance:** Six percent lost in three jumps. We can't keep losing it that fast.  
+**Jaxon:** The frame takes a beating every jump. It wasn't built for this many.  
+**Vance:** Six percent lost in three jumps. We can't keep losing it that fast.  
 
 Choices:
 1. **Full repair.** — -25 Salvage. Repairs a damaged deck and braces the drive: +4 Energy saved on the next sector jump. _(locked: Needs 25 Salvage)_
@@ -236,7 +236,7 @@ _Priority 1, sectors 1–6_
 > A quiet stretch of the warp. There's time to fix one thing.
 
 **A.U.R.A.:** Power or hull, Commander. Either one costs fifteen salvage.  
-**Eng. Jaxon:** Reactor or hull. Pick one. I haven't slept enough to do both.  
+**Jaxon:** Reactor or hull. Pick one. I haven't slept enough to do both.  
 
 Choices:
 1. **Service the reactor.** — -15 Salvage. +25 Energy.

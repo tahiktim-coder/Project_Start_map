@@ -12,10 +12,10 @@ const FAILED_COLONY_ENCOUNTERS = [
             return `Buildings on ${planetName}'s southern continent. A pressure dome, half collapsed. The garden inside has grown wild. Nothing moves.`;
         },
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Those are Earth plants. Somebody lived here, maybe for years." },
-            { speaker: 'Spc. Vance', text: "Whoever lived here is gone now. Keep your eyes open." },
-            { speaker: 'Tech Mira', text: "That dome is a newer design than ours, but it's far more rusted. How?" },
-            { speaker: 'Eng. Jaxon', text: "That's grass under the dome. Real grass." }
+            { speaker: 'Aris', text: "Those are Earth plants. Somebody lived here, maybe for years." },
+            { speaker: 'Vance', text: "Whoever lived here is gone now. Keep your eyes open." },
+            { speaker: 'Mira', text: "That dome is a newer design than ours, but it's far more rusted. How?" },
+            { speaker: 'Jaxon', text: "That's grass under the dome. Real grass." }
         ],
         choices: [
             {
@@ -45,7 +45,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                     }
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
-                    if (jaxon) state.addLog('Eng. Jaxon: "Good panels, sealed wiring. They built this to last." He goes quiet after that.');
+                    if (jaxon) state.addLog('Jaxon: "Good panels, sealed wiring. They built this to last." He goes quiet after that.');
                     return `Settlement stripped. +${salvage} Salvage, +1 Food Pack. Jaxon +1 Stress.`;
                 }
             },
@@ -78,7 +78,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                         if (c.status !== 'DEAD' && c.stress > 0) c.stress = Math.max(0, c.stress - 1);
                     });
                     if (state.crew.some(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD')) {
-                        state.addLog('Eng. Jaxon lies down on the grass. "This is all I want, Commander. A place like this."');
+                        state.addLog('Jaxon lies down on the grass. "This is all I want, Commander. A place like this."');
                     }
                     state.addLog('The grass has real roots. Nobody gets up for an hour.');
                     state.noteStanding && state.noteStanding('jaxon');
@@ -96,8 +96,8 @@ const FAILED_COLONY_ENCOUNTERS = [
             return `A settlement on ${planetName}. Streets, and buildings still standing. Around one central building, rings of grave markers. Hundreds of them.`;
         },
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Hundreds of graves, in date order. Someone kept burying them right to the end." },
-            { speaker: 'Eng. Jaxon', text: "The buildings are fine. Whatever killed them, it wasn't the weather." },
+            { speaker: 'Aris', text: "Hundreds of graves, in date order. Someone kept burying them right to the end." },
+            { speaker: 'Jaxon', text: "The buildings are fine. Whatever killed them, it wasn't the weather." },
             { speaker: 'A.U.R.A.', text: "Air samples show traces of a disease, Commander. The burials took place over eight months." }
         ],
         choices: [
@@ -125,7 +125,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     if (Math.random() < 0.40 && typeof ITEMS !== 'undefined' && ITEMS.FUNGUS_CULTURE) {
                         state.cargo.push({ ...ITEMS.FUNGUS_CULTURE, acquiredAt: 'Colony Site' });
-                        if (aris) state.addLog('Dr. Aris: "They were growing a culture in the lab. It\'s still alive. It outlived all of them."');
+                        if (aris) state.addLog('Aris: "They were growing a culture in the lab. It\'s still alive. It outlived all of them."');
                         return "Medical stores taken. +25 Salvage, +1 Fungus Culture. Aris +1 Stress.";
                     }
                     return "Medical stores taken. Most of it spoiled long ago. +25 Salvage. Aris +1 Stress.";
@@ -140,7 +140,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
                     state.addLog('Three hundred names, read from the outer ring inward. The last eighteen have no markers at all.');
-                    if (aris) state.addLog('Dr. Aris: "I have all your names now. You won\'t be forgotten."');
+                    if (aris) state.addLog('Aris: "I have all your names now. You won\'t be forgotten."');
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Read every grave');
                     state.noteStanding && state.noteStanding('aris');
                     return "Every marker read. -1 Ration, +2 Data. Aris -1 Stress.";
@@ -170,9 +170,9 @@ const FAILED_COLONY_ENCOUNTERS = [
             return `Two settlements on ${planetName}, forty kilometres apart. Both have walls. Blast marks and barricades in the streets. The colonists did this to each other.`;
         },
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Firing positions on both sides. Homemade guns. They fought each other." },
-            { speaker: 'Dr. Aris', text: "They came all this way together. How does it end like this?" },
-            { speaker: 'Eng. Jaxon', text: "Not enough food, and a fence down the middle. It happens every time." }
+            { speaker: 'Vance', text: "Firing positions on both sides. Homemade guns. They fought each other." },
+            { speaker: 'Aris', text: "They came all this way together. How does it end like this?" },
+            { speaker: 'Jaxon', text: "Not enough food, and a fence down the middle. It happens every time." }
         ],
         choices: [
             {
@@ -236,10 +236,10 @@ const FAILED_COLONY_ENCOUNTERS = [
             return `A whole settlement on ${planetName}, powered and lit. Beds made, tools laid out, four plates on every table. No people. Not even bones.`;
         },
         dialogue: [
-            { speaker: 'Tech Mira', text: "The power grid is still running. Solar panels to batteries. Nobody's touched a switch." },
-            { speaker: 'Spc. Vance', text: "Not one scuff on a chair or a plate. Nobody ever sat here." },
-            { speaker: 'Dr. Aris', text: "The grass in the garden has no roots. I pulled some, and it just lifted out." },
-            { speaker: 'Eng. Jaxon', text: "I don't like this. Any of it." }
+            { speaker: 'Mira', text: "The power grid is still running. Solar panels to batteries. Nobody's touched a switch." },
+            { speaker: 'Vance', text: "Not one scuff on a chair or a plate. Nobody ever sat here." },
+            { speaker: 'Aris', text: "The grass in the garden has no roots. I pulled some, and it just lifted out." },
+            { speaker: 'Jaxon', text: "I don't like this. Any of it." }
         ],
         choices: [
             {
@@ -287,7 +287,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                     state.energy = Math.max(0, state.energy - 10);
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) {
-                        state.addLog('Spc. Vance: "Everyone back to the lander. Now. Don\'t touch anything."');
+                        state.addLog('Vance: "Everyone back to the lander. Now. Don\'t touch anything."');
                         state.addLog('Nobody argues with him.');
                     }
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
@@ -316,10 +316,10 @@ const FAILED_COLONY_ENCOUNTERS = [
             return `Plants have taken over the settlement on ${planetName}. Vines cover every wall. The landing pad is a garden. A tree has grown through the radio mast.`;
         },
         dialogue: [
-            { speaker: 'Tech Mira', text: "Those vines grew straight through sealed metal. I didn't know plants could do that." },
-            { speaker: 'Dr. Aris', text: "Not over the buildings. Through them. Through the floors." },
-            { speaker: 'Spc. Vance', text: "And through the people?" },
-            { speaker: 'Dr. Aris', text: "I'd rather not say." }
+            { speaker: 'Mira', text: "Those vines grew straight through sealed metal. I didn't know plants could do that." },
+            { speaker: 'Aris', text: "Not over the buildings. Through them. Through the floors." },
+            { speaker: 'Vance', text: "And through the people?" },
+            { speaker: 'Aris', text: "I'd rather not say." }
         ],
         choices: [
             {

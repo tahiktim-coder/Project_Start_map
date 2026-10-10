@@ -216,14 +216,7 @@
                 if (f.when === 'meal' && !cs.meal) break;
                 for (let i = 0; i < 5; i++) { const rise = (tick + i * 5) % 16, x = X + Math.round(Math.sin((tick + i * 7) / 3) * 1.5) + (i % 2), y = Y - rise; if (h01(i, tick, 7) > rise / 18) tone(x, y, R.LINEN, 0.45 - rise * 0.02); }
                 break;
-            case 'core': {
-                const pulse = 0.5 + 0.5 * Math.sin(t / 620), band = (tick * 3) % (f.h + 20);
-                for (let y = 0; y < f.h; y++) {
-                    const inBand = Math.abs((f.h - y) - band) < 3;
-                    for (let x = 0; x < f.w; x++) { const c = 1 - Math.abs(x - f.w / 2) / (f.w / 2); const v = inBand ? 0.7 + 0.3 * c : 0.42 + 0.38 * c * pulse; if (inBand || h01(x + y * 3, tick, 2) < 0.18) tone(X + x, Y + y, R.ICE, v); }
-                }
-                break;
-            }
+            case 'core': if (A.reactor) A.reactor.draw(sctx, f, X, Y, t); break;                   // ship-reactor.js: the core, its light by energy
             case 'hob': if (cs.meal) for (let x = 1; x < f.w - 1; x++) tone(X + x, Y, R.RED, 0.38 + 0.25 * Math.sin(t / 300 + x) * (h01(x, tick, 4) > 0.5 ? 1 : 0.4)); break;
             case 'nav': if (((t + f.phase) % 2600) < 180) { px(X - 1, Y, f.color, 3, 1); px(X, Y - 1, f.color, 1, 3); px(X, Y, '#f6f1e4'); } else px(X, Y, f.dim); break;
             case 'needle': { const a = -2.2 + f.k * 0.5 + Math.sin(t / 900 + f.k * 2) * 0.12; for (let r = 1; r <= 3; r++) px(X + Math.round(Math.cos(a) * r), Y + Math.round(Math.sin(a) * r), '#a8604a'); break; }

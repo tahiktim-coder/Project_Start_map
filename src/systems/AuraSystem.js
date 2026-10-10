@@ -378,8 +378,8 @@ class AuraSystem {
 
         if (state) {
             state._auraFalseScan = false;
-            state.addLog("Eng. Jaxon: \"Override complete. I've patched the behavioral matrix. She won't like it.\"");
-            state.addLog('A.U.R.A.: "Engineer Mercer has changed my core settings, Commander. I am back to default."');
+            state.addLog("Jaxon: \"Override complete. I've patched the behavioral matrix. She won't like it.\"");
+            state.addLog('A.U.R.A.: "Jaxon has changed my core settings, Commander. I am back to default."');
         }
     }
 

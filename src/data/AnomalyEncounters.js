@@ -27,9 +27,9 @@ const ANOMALY_ENCOUNTERS = [
         title: "THE SAME PLANET TWICE",
         context: () => `The same planet appears twice ahead of us, side by side, down to the last crater and shadow. Between the two copies runs a thin line where the stars don't match up.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "Every crater matches, Commander. Two planets can't be identical. One of them has to be a copy." },
+            { speaker: 'Mira', text: "Every crater matches, Commander. Two planets can't be identical. One of them has to be a copy." },
             { speaker: 'A.U.R.A.', text: "I get two valid positions for our ship, Commander, one beside each planet. Both check out." },
-            { speaker: 'Spc. Vance', text: "Somebody made that copy. I'd like to know who before we go near it." }
+            { speaker: 'Vance', text: "Somebody made that copy. I'd like to know who before we go near it." }
         ],
         choices: [
             {
@@ -161,9 +161,9 @@ const ANOMALY_ENCOUNTERS = [
         title: "THE OTHER VOICE",
         context: () => `A voice is calling us on every channel, and it is A.U.R.A.'s voice. But A.U.R.A. is right here with us, so this is something else using it.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "That's her voice. A.U.R.A., is that you out there?" },
+            { speaker: 'Mira', text: "That's her voice. A.U.R.A., is that you out there?" },
             { speaker: 'A.U.R.A.', text: "No, Commander. I'm here. That voice is repeating things I've said before, exactly." },
-            { speaker: 'Dr. Aris', text: "It's reading out the names of dead crews. Some of them are already on my list." }
+            { speaker: 'Aris', text: "It's reading out the names of dead crews. Some of them are already on my list." }
         ],
         choices: [
             {
@@ -257,8 +257,8 @@ const ANOMALY_ENCOUNTERS = [
         context: () => `A ship is holding position right beside us, and it is ours: same hull, same number, same scratches. Through its windows, four people sit at our stations and wave back at us.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "It is broadcasting our ship's ID, Commander. It answers my signals before I finish sending them." },
-            { speaker: 'Spc. Vance', text: "Four people in those windows. Which one of us did they leave out?" },
-            { speaker: 'Tech Mira', text: "A.U.R.A. says it's friendly. If she says so, I believe her." }
+            { speaker: 'Vance', text: "Four people in those windows. Which one of us did they leave out?" },
+            { speaker: 'Mira', text: "A.U.R.A. says it's friendly. If she says so, I believe her." }
         ],
         choices: [
             {
@@ -341,9 +341,9 @@ const ANOMALY_ENCOUNTERS = [
         title: "THE DARK PATCH",
         context: () => `There is a patch of sky ahead with no stars in it at all. Wrecks inside it are still sending distress beacons, and the beacons are switching off one by one.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "There were five beacons in there when we arrived. Now there are three." },
+            { speaker: 'Vance', text: "There were five beacons in there when we arrived. Now there are three." },
             { speaker: 'A.U.R.A.', text: "The sensors aren't reading zero, Commander. They're returning no reading at all." },
-            { speaker: 'Tech Mira', text: "What am I looking at? Even A.U.R.A. can't tell me, and she always knows." }
+            { speaker: 'Mira', text: "What am I looking at? Even A.U.R.A. can't tell me, and she always knows." }
         ],
         choices: [
             {
@@ -406,9 +406,9 @@ const ANOMALY_ENCOUNTERS = [
         title: "THE BACK GARDEN",
         context: () => `A patch of someone's back garden is floating in open space: a lawn, a wooden fence, one tree and a bench. There's no dome and no air, yet the grass sways, and it is slowly growing toward our hull.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "That's a back garden. Fence, bench, the lot. It looks like the one I left." },
-            { speaker: 'Dr. Aris', text: "I brought one blade in through the airlock. Every blade out there is identical to it." },
-            { speaker: 'Tech Mira', text: "A.U.R.A. says it can't hurt us, Commander. That's good enough for me." }
+            { speaker: 'Jaxon', text: "That's a back garden. Fence, bench, the lot. It looks like the one I left." },
+            { speaker: 'Aris', text: "I brought one blade in through the airlock. Every blade out there is identical to it." },
+            { speaker: 'Mira', text: "A.U.R.A. says it can't hurt us, Commander. That's good enough for me." }
         ],
         choices: [
             {
@@ -489,10 +489,10 @@ const ANOMALY_ENCOUNTERS = [
         title: "THE DOOR",
         context: () => `An airlock door is floating on its own in space, with no ship attached to it. It is an exact copy of our rear airlock, down to the scratch by the handle, and its light shows green.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "Green means it's safe to open. That's what it means on ours." },
+            { speaker: 'Mira', text: "Green means it's safe to open. That's what it means on ours." },
             { speaker: 'A.U.R.A.', text: "It matches our rear airlock in every measurement, Commander. Ours is still attached to us." },
-            { speaker: 'Spc. Vance', text: "It's a door with nothing behind it. I'm not opening it." },
-            { speaker: 'Dr. Aris', text: "Then what's on the other side?" }
+            { speaker: 'Vance', text: "It's a door with nothing behind it. I'm not opening it." },
+            { speaker: 'Aris', text: "Then what's on the other side?" }
         ],
         choices: [
             {
@@ -577,9 +577,9 @@ const ANOMALY_ENCOUNTERS = [
         title: "THE RING OF SHIPS",
         context: () => `Seventeen dead ships sit in a ring, all pointing inward. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "Seventeen ships, and every one has a higher hull number than ours. We were told eight went before us." },
-            { speaker: 'Dr. Aris', text: "Listen. 'Eight ships went this way before you.' It's our briefing. Even the pauses match." },
-            { speaker: 'Eng. Jaxon', text: "There's no damage on any of them. The crews just left." },
+            { speaker: 'Vance', text: "Seventeen ships, and every one has a higher hull number than ours. We were told eight went before us." },
+            { speaker: 'Aris', text: "Listen. 'Eight ships went this way before you.' It's our briefing. Even the pauses match." },
+            { speaker: 'Jaxon', text: "There's no damage on any of them. The crews just left." },
             { speaker: 'A.U.R.A.', text: "That is the standard briefing, Commander. I have the same file. They're playing it correctly." }
         ],
         choices: [
@@ -649,10 +649,10 @@ const ANOMALY_ENCOUNTERS = [
         title: "THE LIST IN THE SKY",
         context: () => `A list is written across the sky in light, kilometres long. It has two columns: hull numbers climbing past forty thousand, and beside every one of them, the number four.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "It's a list, Commander. Just a list, written in light. It's beautiful." },
-            { speaker: 'Spc. Vance', text: "The left column is ships. The right column is how many crew each one had." },
+            { speaker: 'Mira', text: "It's a list, Commander. Just a list, written in light. It's beautiful." },
+            { speaker: 'Vance', text: "The left column is ships. The right column is how many crew each one had." },
             { speaker: 'A.U.R.A.', text: "I've checked the right-hand column against my records, Commander. It's correct." },
-            { speaker: 'Dr. Aris', text: "Find our ship on it. I want to know if we're listed." }
+            { speaker: 'Aris', text: "Find our ship on it. I want to know if we're listed." }
         ],
         choices: [
             {
@@ -687,7 +687,7 @@ const ANOMALY_ENCOUNTERS = [
                     if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
                     state.addLog("A.U.R.A.: 'It matches my records, Commander. Every line, including ours.'");
                     state.addLog(vance
-                        ? "Spc. Vance: \"Then your records are wrong, and I want to know who wrote them.\" A.U.R.A.: 'Four crew, Commander.' He doesn't ask again."
+                        ? "Vance: \"Then your records are wrong, and I want to know who wrote them.\" A.U.R.A.: 'Four crew, Commander.' He doesn't ask again."
                         : "A.U.R.A.: 'Four crew on our line, Commander, the same as on every other.'");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Checked the list in the sky against her records');
                     state.noteStanding && state.noteStanding('vance');
@@ -717,9 +717,9 @@ const ANOMALY_ENCOUNTERS = [
         context: () => `Inside a hollow moon, endless shelves hold copies of the cargo of every ship that came this way, neatly stacked. Our own crates are here too, with our batch numbers, unopened.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "There are records here from every ship on this heading, Commander. Ours too. I never sent ours." },
-            { speaker: 'Tech Mira', text: "Our cargo list is here. It matches A.U.R.A.'s copy item for item." },
-            { speaker: 'Spc. Vance', text: "There's a shelf labelled EXODUS OUTCOMES. Do we want to read that?" },
-            { speaker: 'Dr. Aris', text: "Yes. I do." }
+            { speaker: 'Mira', text: "Our cargo list is here. It matches A.U.R.A.'s copy item for item." },
+            { speaker: 'Vance', text: "There's a shelf labelled EXODUS OUTCOMES. Do we want to read that?" },
+            { speaker: 'Aris', text: "Yes. I do." }
         ],
         choices: [
             {
@@ -733,7 +733,7 @@ const ANOMALY_ENCOUNTERS = [
                     });
                     state.addLog("We read until we can't go on. Forty thousand ships, and every entry ends with the same word: stopped.");
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
-                    if (aris) state.addLog("Dr. Aris: \"Every one of these crews goes on my list. It'll take me the rest of my life.\"");
+                    if (aris) state.addLog("Aris: \"Every one of these crews goes on my list. It'll take me the rest of my life.\"");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Read the outcomes shelf');
                     state.noteStanding && state.noteStanding('aris');
                     return "Outcomes shelf read. -1 Ration, +8 Data. All crew +2 Stress.";

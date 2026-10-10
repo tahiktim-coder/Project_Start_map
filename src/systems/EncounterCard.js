@@ -12,12 +12,12 @@
     'use strict';
 
     const SPEAKER_COLORS = {
-        'Eng. Jaxon': '#f0a030', 'Dr. Aris': '#40c8ff', 'Spc. Vance': '#ff5050',
-        'Tech Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
+        'Jaxon': '#f0a030', 'Aris': '#40c8ff', 'Vance': '#ff5050',
+        'Mira': '#d070ff', 'A.U.R.A.': '#74d99a'
     };
     const TONES = { distress: '#d85a4e', alert: '#e08a3c', rock: '#d9a24a', station: '#74d99a', crew: '#c8c2b0', story: '#c8c2b0' };
     const SIGNAL_W = 280, SIGNAL_H = 36, SIGNAL_TICK_MS = 125;
-    const CONTEXT_SENTENCES = 2, SHORT_HINT_WORDS = 8;
+    const CONTEXT_SENTENCES = 2, SHORT_HINT_WORDS = 8, CARD_FLOOR_PX = 16;
     // "+15 Salvage", "-10% Energy", "+0-2 Stress"
     const REWARD_PATTERN = /([+\-−]\d+(?:-\d+)?%?\s+[A-Z][a-zA-Z]*(?:\s[A-Z][a-zA-Z]*)?)/g;
     const CHANCE_PATTERN = /(\d+%\s+(?:chance|risk))/gi;
@@ -157,11 +157,22 @@
         const pips = [...modal.querySelectorAll('.enc-pips i')];
         let index = -1, isPicked = false;
 
-        function showChoices() {
-            flowEl.hidden = true;
+        function showChoices(isOpening = false) {
+            const guard = window.ChoiceGuard;
+            const wasTalking = !isOpening && !flowEl.hidden && flowEl.getClientRects().length > 0;   // a card opened straight on its choices never showed NEXT
+            // Never under the cursor: remember where NEXT and the last press were, keep the card's top still,
+            // and leave NEXT's row in place (empty), so the choices open below it.
+            const avoid = guard ? [wasTalking ? guard.boxOf(nextEl, 6) : null, wasTalking ? guard.boxOf(el('.enc-skip'), 6) : null, guard.lastClickBox()] : [];
+            if (wasTalking) { pinTop(); flowEl.style.visibility = 'hidden'; } else flowEl.hidden = true;
             decideEl.hidden = false;
             el('.enc-choices').innerHTML = choicesHtml(app, cfg.choices);
-            modal.querySelectorAll('.enc-choice').forEach(btn => {
+            const choiceEls = [...modal.querySelectorAll('.enc-choice')];
+            if (guard) {
+                guard.keepClear(decideEl, choiceEls, avoid);
+                if (wasTalking) liftToFit(choiceEls, avoid);
+                guard.hold(decideEl);
+            }
+            choiceEls.forEach(btn => {
                 const choice = cfg.choices[parseInt(btn.dataset.idx, 10)];
                 const explain = () => { detailEl.innerHTML = markRewards(choice.desc); };
                 btn.addEventListener('mouseenter', explain);
@@ -174,8 +185,30 @@
                     cfg.onPick(parseInt(btn.dataset.idx, 10));
                 });
             });
-            const first = el('.enc-choice:not([disabled])');
-            if (first) first.focus({ preventScroll: true });
+            // Focus the choice list, not a choice: Enter pressed again after NEXT must not pick one unread. Tab reaches them.
+            decideEl.tabIndex = -1;
+            decideEl.focus({ preventScroll: true });
+        }
+
+        /** Holds the card's top where it is, so the choices grow the card downward instead of re-centring it under the cursor. */
+        function pinTop() {
+            const card = el('.enc-card'), top = Math.max(0, Math.round(card.getBoundingClientRect().top));
+            modal.style.alignItems = 'flex-start';
+            card.style.marginTop = `${top}px`;
+            card.style.maxHeight = `calc(100vh - ${top + CARD_FLOOR_PX}px)`;
+        }
+
+        /** A card too tall for the window moves up, but never so far that a choice slides back under NEXT's old place. */
+        function liftToFit(choiceEls, avoid) {
+            const card = el('.enc-card'), overflow = card.scrollHeight - card.clientHeight;
+            if (overflow <= 0 || !choiceEls.length) return;
+            const top = parseFloat(card.style.marginTop) || 0;
+            const firstTop = Math.min(...choiceEls.map(b => b.getBoundingClientRect().top));
+            const lowest = Math.max(-Infinity, ...avoid.filter(Boolean).map(box => box.bottom));
+            const clearance = Number.isFinite(lowest) ? firstTop - (lowest + CARD_FLOOR_PX) : Infinity;
+            const lift = Math.max(0, Math.min(overflow, top - CARD_FLOOR_PX, clearance));
+            card.style.marginTop = `${top - lift}px`;
+            card.style.maxHeight = `calc(100vh - ${top - lift + CARD_FLOOR_PX}px)`;
         }
 
         function advance() {
@@ -193,7 +226,7 @@
         const moreEl = el('.enc-more');
         if (moreEl) moreEl.addEventListener('click', () => { el('.enc-rest').hidden = false; moreEl.remove(); });
 
-        if (lines.length <= 1) { if (lines.length) { index = 0; lineEl.innerHTML = lineHtml(app, lines[0]); } showChoices(); }
+        if (lines.length <= 1) { if (lines.length) { index = 0; lineEl.innerHTML = lineHtml(app, lines[0]); } showChoices(true); }
         else { advance(); nextEl.focus({ preventScroll: true }); }
         return modal;
     }

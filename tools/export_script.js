@@ -24,11 +24,11 @@ const G = name => { try { return vm.runInContext(`typeof ${name} !== 'undefined'
 
 // ── a stand-in ship, so choice effects can be run to show what they say happened ──
 const CREW = () => [
-    { name: 'Cmdr. Moon', realName: 'Cora Moon', tags: ['LEADER'], status: 'HEALTHY', stress: 1 },
-    { name: 'Eng. Jaxon', realName: 'Jaxon Mercer', tags: ['ENGINEER'], status: 'HEALTHY', stress: 1 },
-    { name: 'Dr. Aris', realName: 'Aris Novak', tags: ['MEDIC'], status: 'HEALTHY', stress: 1 },
-    { name: 'Spc. Vance', realName: 'Kael Vance', tags: ['SECURITY'], status: 'HEALTHY', stress: 1 },
-    { name: 'Tech Mira', realName: 'Mira Chen', tags: ['SPECIALIST'], status: 'HEALTHY', stress: 1 },
+    { name: 'Cora', realName: 'Cora Moon', tags: ['LEADER'], status: 'HEALTHY', stress: 1 },
+    { name: 'Jaxon', realName: 'Jaxon Mercer', tags: ['ENGINEER'], status: 'HEALTHY', stress: 1 },
+    { name: 'Aris', realName: 'Aris Novak', tags: ['MEDIC'], status: 'HEALTHY', stress: 1 },
+    { name: 'Vance', realName: 'Kael Vance', tags: ['SECURITY'], status: 'HEALTHY', stress: 1 },
+    { name: 'Mira', realName: 'Mira Chen', tags: ['SPECIALIST'], status: 'HEALTHY', stress: 1 },
 ];
 function mockState(sector) {
     const logs = [], deck = label => ({ status: 'OPERATIONAL', label });
@@ -102,7 +102,7 @@ function placeholderFor(expr) {
     return words.length ? words[words.length - 1].replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase() : 'n';
 }
 const CODEY = /=>|\bfunction\b|var\(--|rgba?\(|#[0-9a-fA-F]{3,8}\b|\d(px|em|rem|vh|vw|ms|deg)\b|[{};]\s*$|^[\w-]+\s*:\s*\S+;|\b(document|window|this)\.[a-z]|\w\s*===?\s*\w|!==|&&|\|\||^[.#][\w-]|@keyframes|\.png\b|^use strict$|^\S*\.{3}\S*[a-z]\S*$|^\([a-z-]+:|\b(scale[XY]?|rotate|translate[XYZ]?|contrast|saturate|blur|brightness)\(|^[a-z-]+ [\d.]+m?s\b/;
-const NAMES = new Set(['Cmdr. Moon', 'Eng. Jaxon', 'Dr. Aris', 'Spc. Vance', 'Tech Mira', 'A.U.R.A.']);
+const NAMES = new Set(['Cora', 'Jaxon', 'Aris', 'Vance', 'Mira', 'A.U.R.A.']);   // the crew by first name only (docs/GAME_FLOW.md 2.0)
 function isText(s, loose) {
     const plain = s.replace(/\ue000[^\ue001]*\ue001/g, '').trim();
     if (!/[A-Za-z]{2}/.test(plain) || CODEY.test(s)) return false;
@@ -247,7 +247,7 @@ function lightRanges(piece) {
 }
 
 const HIDDEN_KEYS = /^(id|art|tone|color|icon|portraitId|reason)$/;   // values the player never reads
-const ROLE_SPEAKER = { ENGINEER: 'Eng. Jaxon', MEDIC: 'Dr. Aris', SECURITY: 'Spc. Vance', SPECIALIST: 'Tech Mira', AURA: 'A.U.R.A.', LEADER: 'Commander' };
+const ROLE_SPEAKER = { ENGINEER: 'Jaxon', MEDIC: 'Aris', SECURITY: 'Vance', SPECIALIST: 'Mira', AURA: 'A.U.R.A.', LEADER: 'Commander' };
 const STRUCTURAL = /^(choices|dialogue|beats|draw|style|text|speaker|detail)$/, LABEL_KEYS = /^(title|kicker|label|heading|close|button|name|word|text)$/;   // keys not worth printing; keys whose single word is still text
 /** Markdown bullets for every line of text in a piece of source, each tagged with the line it is on. */
 function bulletsOf(piece, keep = () => true) {
@@ -452,7 +452,7 @@ function hazardMd(sector) {
     return b;
 }
 const STORY_PLANETS = G('STORY_PLANETS') || [];
-const FULL_NAME = { Aris: 'Dr. Aris', Mira: 'Tech Mira', Vance: 'Spc. Vance', Jaxon: 'Eng. Jaxon' };
+const FULL_NAME = {};   // the game names the crew by first name only, as the story planets' lines already do
 const PLACE_SHOWN = { beacon: 'a moon with one lamp lit', graves: 'a grey world; the close-up shows its graves', light: 'the light at the end of the heading' };
 /** The sector's story planet (StoryPlanets.js): a faint contact until a dated wreck points at it; its wreck holds the page. */
 function storyPlanetMd(def) {
@@ -673,7 +673,7 @@ for (let sector = 1; sector <= 6; sector++) {
     b.push(...textSection(3, 'Never shown: lines nothing calls', talk, `${UNUSED.join(', ')}: no code triggers these.`, isUnused));
     b.push('## The crew under strain', '', ...textSection(3, 'The card around every crew moment', bm('showCrewPersonalEvent'), 'The moments themselves are in each sector file.'));
     b.push(...textSection(3, 'Stress', bm('applyStressTraits'), 'When someone reaches stress 2; the first time is a tutorial.'));
-    b.push(...textSection(3, 'Breakdowns', bm('triggerBreakdown'), 'When someone reaches stress 3. The commander breaking is game over.'), ...textSection(3, 'Mutiny', bm('showMutinyEvent'), 'Vance at stress 3.'));
+    b.push(...textSection(3, 'Breakdowns', bm('triggerBreakdown'), 'When someone reaches stress 3. The commander breaking is game over.'));   // Vance's gun scene was cut (2026-10-07): his breakdown is in triggerBreakdown
     b.push(...textSection(3, 'Bringing someone back', bm('handleRevivalAction'), 'Using Pulsing Spores or an Ancient Neural Link from the cargo hold.'));
     b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('eatOnJump'), 'The crew eats one ration on each sector jump.'), ...textSection(3, 'Deck damage', bm('damageDeck'), 'The first time is a tutorial.'));
     b.push(...textSection(3, 'What the data adds up to', bm('addColonyKnowledge'), 'At 1, 3 and 5 data.'));

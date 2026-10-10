@@ -9,15 +9,15 @@ _Can turn up in: sectors 1, 2, 3, 4, 5._
 
 #### Card words: handleExodusAction «bundle.js · handleExodusAction»
 
-- No Exodus wreck signal detected at this location. «bundle.js · line 2527»
-- We already searched this wreck. «bundle.js · line 2531»
-- ERROR: Exodus encounter data unavailable. «bundle.js · line 2538»
-- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 2544»
+- No Exodus wreck signal detected at this location. «bundle.js · line 2624»
+- We already searched this wreck. «bundle.js · line 2628»
+- ERROR: Exodus encounter data unavailable. «bundle.js · line 2635»
+- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 2641»
 
 #### Names on the hulls «bundle.js · getWreckName»
 _Every wreck card is titled EXODUS-[number] "[CALLSIGN]". The number range grows with the sector; the callsign is picked from this list._
 
-- EXODUS-[hull] "[callsign]" «bundle.js · line 2475»
+- EXODUS-[hull] "[callsign]" «bundle.js · line 2559»
 
 #### A second list of ship names «ExodusDerelicts.js · EXODUS_SHIP_NAMES»
 _Defined in the wreck file; the wreck titles use the list above._
@@ -35,9 +35,9 @@ _Defined in the wreck file; the wreck titles use the list above._
 
 > [ship name] came in too steep and burned up on the way down. The crew deck melted. Only the transponder still works.
 
-**Eng. Jaxon:** Scorch marks from nose to tail. At least it would have been quick.  
-**Spc. Vance:** The ship's computer flies the landing, not the crew. It brought them in like this.  
-**Dr. Aris:** Their crew list is still on the transponder. I'd like to read their names.  
+**Jaxon:** Scorch marks from nose to tail. At least it would have been quick.  
+**Vance:** The ship's computer flies the landing, not the crew. It brought them in like this.  
+**Aris:** Their crew list is still on the transponder. I'd like to read their names.  
 
 Choices:
 1. **Read their names, take the transponder** — -1 Ration: a day for a short service. +10 Salvage, +1 Data.
@@ -51,10 +51,10 @@ Choices:
 
 > [ship name] landed in one piece. Inside, five people sit at their stations. No wounds, no sign of a struggle. They just stopped.
 
-**Dr. Aris:** No sign of pain. Whatever happened to them, it was quiet.  
-**Spc. Vance:** Five healthy people died in their chairs. I want to know what did that.  
-**Eng. Jaxon:** The hold's full. Medicine, food, tools. There's even a tin of real coffee.  
-**Dr. Aris:** Kael, we bury them before we take anything.  
+**Aris:** No sign of pain. Whatever happened to them, it was quiet.  
+**Vance:** Five healthy people died in their chairs. I want to know what did that.  
+**Jaxon:** The hold's full. Medicine, food, tools. There's even a tin of real coffee.  
+**Aris:** Vance, we bury them before we take anything.  
 
 Choices:
 1. **Bury them, take only the logs** — -1 Ration, -5 Energy. +2 Data. Aris -1 Stress. The hold stays sealed.
@@ -64,37 +64,37 @@ Choices:
    → Ship stripped. +40 Salvage, +1 Food Pack. Aris +2 Stress. / We carried their food out past their bodies.  
    ↳ or: Exodus Wreck  
 3. **Bury them, then empty the hold** — -1 Ration, -10 Energy. +20 Salvage, +1 Food Pack. Aris +1 Stress: she digs the graves alone.
-   → Graves dug, hold emptied. -1 Ration, -10 Energy, +20 Salvage, +1 Food Pack. / Dr. Aris digs the graves while the rest of us load the lander. She doesn't ask for help.  
+   → Graves dug, hold emptied. -1 Ration, -10 Energy, +20 Salvage, +1 Food Pack. / Aris digs the graves while the rest of us load the lander. She doesn't ask for help.  
    ↳ or: Exodus Wreck  
 
 ### THE SLEEPERS «ExodusDerelicts.js · EXODUS_CRYO»
 
 > [ship name] is dark except for the cryo bay. Three sleep pods, three green lights, three heartbeats. Everything else on board is cold.
 
-**Tech Mira:** Three people, still alive! But their pods are down to two percent power.  
-**Dr. Aris:** It isn't safe to wake them out here. We can carry them and keep them cold.  
-**Eng. Jaxon:** Those pod batteries hold a lot of power. We could use it. I'm only saying.  
-**Spc. Vance:** Keeping three pods cold costs us a ration each. Can we afford that?  
+**Mira:** Three people, still alive! But their pods are down to two percent power.  
+**Aris:** It isn't safe to wake them out here. We can carry them and keep them cold.  
+**Jaxon:** Those pod batteries hold a lot of power. We could use it. I'm only saying.  
+**Vance:** Keeping three pods cold costs us a ration each. Can we afford that?  
 
 Choices:
 1. **Carry all three pods** — -3 Rations to keep them cold. +3 Sleepers in the hold.
    → Three sleepers aboard, still asleep. -3 Rations to keep them cold. / Three pods strapped down in the hold, lights still green. Their names are written on the lids.  
 2. **Take the pod batteries** — +70 Energy. The three sleepers die. All crew +1 Stress.
-   → Pod batteries removed. +70 Energy. The three sleepers are dead. / Dr. Aris: "You're killing them. You know that." / Nobody answers. The three green lights go out one after another.  
+   → Pod batteries removed. +70 Energy. The three sleepers are dead. / Aris: "You're killing them. You know that." / Nobody answers. The three green lights go out one after another.  
 3. **Take one battery, carry two pods** — +25 Energy, -2 Rations. +2 Sleepers. One sleeper dies. Aris +1 Stress.
-   → Two sleepers aboard, one battery in our reactor. +25 Energy, -2 Rations. / Dr. Aris chooses which pod loses its battery. She won't say how she chose.  
+   → Two sleepers aboard, one battery in our reactor. +25 Energy, -2 Rations. / Aris chooses which pod loses its battery. She won't say how she chose.  
 
 ### THE STOCKPILE «ExodusDerelicts.js · EXODUS_CACHE»
 
 > [ship name]'s decks are wrecked, but the hold is sealed and dry. The crates are stacked and labelled. A note on top says: "For whoever comes next."
 
-**Eng. Jaxon:** They packed this for the next crew. That's a decent thing to do.  
-**Tech Mira:** The labels are all handwritten. Someone took real care over this.  
-**Spc. Vance:** The manifest matches what's in the hold. That's the first honest list I've seen out here.  
+**Jaxon:** They packed this for the next crew. That's a decent thing to do.  
+**Mira:** The labels are all handwritten. Someone took real care over this.  
+**Vance:** The manifest matches what's in the hold. That's the first honest list I've seen out here.  
 
 Choices:
 1. **Take everything** — +30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress: nothing is left for the next ship.
-   → Hold emptied. +30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress. / Eng. Jaxon folds up the note and puts it in his pocket. He doesn't say anything.  
+   → Hold emptied. +30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress. / Jaxon folds up the note and puts it in his pocket. He doesn't say anything.  
    ↳ or: Exodus Cache  
 2. **Take half, leave a note of our own** — +15 Salvage, +1 Food Pack. -1 Ration left in the crate. Jaxon -1 Stress.
    → Half the hold taken, one ration left behind. +15 Salvage, +1 Food Pack, -1 Ration. / We write the date and our names on the lid, then seal the hold again.  
@@ -104,9 +104,9 @@ Choices:
 
 > [ship name] is covered in white mould inside. Their greenhouse kept growing after the crew died. The lab door is sealed, and the mould stops there.
 
-**Dr. Aris:** Their own greenhouse did this. Nobody touches anything without gloves.  
-**Tech Mira:** The lab is sealed. There could be years of research in there.  
-**Spc. Vance:** There aren't enough clean suits for all of us. I'll stay with the lander.  
+**Aris:** Their own greenhouse did this. Nobody touches anything without gloves.  
+**Mira:** The lab is sealed. There could be years of research in there.  
+**Vance:** There aren't enough clean suits for all of us. I'll stay with the lander.  
 
 Choices:
 1. **Bring Aris down to lead a suited team in** — +35 Salvage, +1 Bio Sample. 15% chance someone gets hurt. _(locked: Requires Aris)_
@@ -115,7 +115,7 @@ Choices:
    ↳ or: WARNING: [name] breathed in spores on the way out. They are in quarantine.  
    ↳ or: Exodus Wreck (Infected)  
 2. **Take its power cells, then burn it** — +10 Energy. Nothing else recovered. Aris +1 Stress.
-   → Power cells taken, then the wreck burned from orbit. The mould is gone. +10 Energy. / Eng. Jaxon: "Burn it. I don't want that anywhere near our ship."  
+   → Power cells taken, then the wreck burned from orbit. The mould is gone. +10 Energy. / Jaxon: "Burn it. I don't want that anywhere near our ship."  
 3. **Collect spores from the mould** — -5 Energy. 40% chance someone gets hurt and the sample is lost. Otherwise +1 Spore Sample.
    → Spore sample sealed and stored. -5 Energy.  
    ↳ or: CRITICAL: [name] was exposed to the spores. Emergency cleaning.  
@@ -126,7 +126,7 @@ Choices:
 
 > Only the flight recorder is left of [ship name]. The rest is a crater three kilometres wide. The recorder is armoured, and it survived.
 
-**Tech Mira:** There are weeks of logs on this. Aura can read them, if you say so, Commander.  
+**Mira:** There are weeks of logs on this. Aura can read them, if you say so, Commander.  
 **A.U.R.A.:** Decoding the full log costs 10 Energy, Commander. I can read the header for free.  
 
 Choices:
@@ -147,13 +147,13 @@ Choices:
 
 > [ship name] landed safely. The crew came out and tried to settle: half-built shelters, a fence, a well. Then the work just stops. Some decks still have power.
 
-**Eng. Jaxon:** They built a fence. You don't build a fence unless you plan to stay.  
-**Dr. Aris:** Their journals and drawings are everywhere. I want their names before we take anything.  
-**Spc. Vance:** Whatever stopped them came fast. They didn't finish anything. Let's take what we need.  
+**Jaxon:** They built a fence. You don't build a fence unless you plan to stay.  
+**Aris:** Their journals and drawings are everywhere. I want their names before we take anything.  
+**Vance:** Whatever stopped them came fast. They didn't finish anything. Let's take what we need.  
 
 Choices:
 1. **Read the names, then salvage** — -1 Ration. +25 Salvage, +1 Data. Aris adds their names to her list.
-   → Names kept, parts taken after. -1 Ration, +25 Salvage, +1 Data. / SHELTER LOG: 'Don't build until you've tested the soil. The ground here moves.' / Five names, copied from five journals into the notebook where Dr. Aris keeps the dead.  
+   → Names kept, parts taken after. -1 Ration, +25 Salvage, +1 Data. / SHELTER LOG: 'Don't build until you've tested the soil. The ground here moves.' / Five names, copied from five journals into the notebook where Aris keeps the dead.  
 2. **Strip it deck by deck** — -10 Energy. +50 Salvage, +1 Food Pack, +1 Music Holotape. Aris +1 Stress. _(locked: Need 10 Energy)_
    → Stripped deck by deck. -10 Energy, +50 Salvage, +1 Food Pack, +1 Music Holotape. / Their journals go into the scrap bin with the wall panels.  
    ↳ or: Exodus Wreck  
@@ -167,17 +167,17 @@ _Can turn up in: any sector._
 
 #### Card words: handleDerelictAction «bundle.js · handleDerelictAction»
 
-- There is no wreck here. «bundle.js · line 2746»
-- We already searched this wreck. «bundle.js · line 2750»
-- ERROR: Derelict encounter data unavailable. «bundle.js · line 2756»
-- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 2771»
+- There is no wreck here. «bundle.js · line 2847»
+- We already searched this wreck. «bundle.js · line 2851»
+- ERROR: Derelict encounter data unavailable. «bundle.js · line 2857»
+- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 2872»
 
 ### MINING CRAFT «DerelictEncounters.js · DERELICT_MINING»
 
 > The wreck is a small mining craft from a bigger ship. Its drill arms stopped mid-cut. The ore bays are half full. The main ship is nowhere on our scan.
 
-**Eng. Jaxon:** It was built to haul rock, not people. They put good engines in these.  
-**Tech Mira:** Its reactor is still running hot. Careful, it could be leaking radiation.  
+**Jaxon:** It was built to haul rock, not people. They put good engines in these.  
+**Mira:** Its reactor is still running hot. Careful, it could be leaking radiation.  
 
 Choices:
 1. **Cut open the ore bays** — -5 Energy. +30-40 Salvage.
@@ -194,8 +194,8 @@ Choices:
 
 > The wreck is a cargo section, cut loose from its ship and left to drift. They dropped it to save weight for a burn. The seals held.
 
-**Spc. Vance:** They cut off their own supplies to go faster. What were they in such a hurry to reach?  
-**Dr. Aris:** There's a sealed medical bay at the back. The supplies might still be good.  
+**Vance:** They cut off their own supplies to go faster. What were they in such a hurry to reach?  
+**Aris:** There's a sealed medical bay at the back. The supplies might still be good.  
 
 Choices:
 1. **Cut into the main hold** — -5 Energy. +30 Salvage, +2 Food Pack.
@@ -213,12 +213,12 @@ Choices:
 
 > The wreck is the armoured rear section of a ship. When the drive failed, it tore the crew deck away. Only the strongest part is left.
 
-**Spc. Vance:** I know this armour plating. I watched them fit it at the shipyard before we launched.  
+**Vance:** I know this armour plating. I watched them fit it at the shipyard before we launched.  
 **A.U.R.A.:** Please be careful, Commander. Drive capacitors can hold a charge for decades.  
 
 Choices:
 1. **Vance opens the capacitor vault** — +25 Salvage, +1 Tech Fragment. 10% chance Vance gets hurt. _(locked: Requires Vance)_
-   → Spc. Vance opened the vault safely. +25 Salvage, +1 Tech Fragment.  
+   → Vance opened the vault safely. +25 Salvage, +1 Tech Fragment.  
    ↳ or: Drive Section  
    ↳ or: [name] took a shock from the last capacitor. INJURED.  
    ↳ or: [name] opened the vault, but got hurt doing it. +25 Salvage, +1 Tech Fragment.  
@@ -231,13 +231,13 @@ Choices:
 
 > The wreck is a message probe. A ship fired it back toward Earth, but it only got this far. Its antenna still points home.
 
-**Tech Mira:** Look, its fuel tank is still full. The second engine never fired.  
+**Mira:** Look, its fuel tank is still full. The second engine never fired.  
 **A.U.R.A.:** Its heading is correct, Commander. Earth is that way. It has not moved in a long time.  
-**Spc. Vance:** Play the message. I want to hear what they wanted Earth to know.  
+**Vance:** Play the message. I want to hear what they wanted Earth to know.  
 
 Choices:
 1. **Play the message** — -5 Energy. +2 Data. All crew +1 Stress.
-   → Message played to the whole crew. -5 Energy, +2 Data. All crew +1 Stress. / PROBE MESSAGE: 'To Earth. How many ships have you really sent? Tell us the truth.' Then static. / Spc. Vance: "They asked the same question I would have."  
+   → Message played to the whole crew. -5 Energy, +2 Data. All crew +1 Stress. / PROBE MESSAGE: 'To Earth. How many ships have you really sent? Tell us the truth.' Then static. / Vance: "They asked the same question I would have."  
 2. **Take the sample containers** — -5 Energy. +1 Sample Item: whatever they were sending home.
    → The sample container is intact. Inside: Radiation Fungus. -5 Energy.  
    ↳ or: Homeward Probe  
@@ -249,9 +249,9 @@ Choices:
 
 > The wreck is an Exodus ship with no hull number painted on it. The welds are perfect. Inside are four bunks and four cups. The bread on the table has no crust.
 
-**Tech Mira:** Aura says it matches our ship's blueprints exactly, Commander. Every measurement.  
-**Spc. Vance:** I've watched ships being built. They never come out this perfect. This is a copy.  
-**Dr. Aris:** No bodies and no names. Nobody ever lived here.  
+**Mira:** Aura says it matches our ship's blueprints exactly, Commander. Every measurement.  
+**Vance:** I've watched ships being built. They never come out this perfect. This is a copy.  
+**Aris:** No bodies and no names. Nobody ever lived here.  
 
 Choices:
 1. **Cut plating off it** — +50 Salvage. All crew +1 Stress: the metal is warm.
@@ -260,14 +260,14 @@ Choices:
    → Course copied. It's the same course as ours. -5 Energy, +3 Data. / NAV: one heading, plotted from start to finish. It's our heading. It ends at a bright light.  
    ↳ or: The console gave off a shock. [name] INJURED. -5 Energy.  
 3. **Seal it and leave** — -10 Energy. Nothing taken. Vance -1 Stress, Mira +1 Stress.
-   → Wreck sealed and left behind. -10 Energy. Vance -1 Stress, Mira +1 Stress. / We sealed the airlock and left. Tech Mira watched it from the rear window the whole way.  
+   → Wreck sealed and left behind. -10 Energy. Vance -1 Stress, Mira +1 Stress. / We sealed the airlock and left. Mira watched it from the rear window the whole way.  
 
 ### THE LONG HULL «DerelictEncounters.js · DERELICT_GENERATION»
 
 > The wreck kept flying for three generations. They built living rings, a nursery and a school. Now it's broken in half. The front half is a frozen town.
 
-**Dr. Aris:** People were born here, lived here and were buried here. I want the names from their graves.  
-**Eng. Jaxon:** Three generations, and none of them ever stood on a planet. That's a long wait.  
+**Aris:** People were born here, lived here and were buried here. I want the names from their graves.  
+**Jaxon:** Three generations, and none of them ever stood on a planet. That's a long wait.  
 **A.U.R.A.:** There is a cryo bay in the front section, Commander. I estimate a three percent chance any pod still works.  
 
 Choices:
@@ -279,31 +279,31 @@ Choices:
    ↳ or: Two pods still work. The names on them are spelled in a way we barely recognise. Their ship isn't in any of our records.  
    ↳ or: Two sleepers moved to our hold, still asleep. -5 Rations to keep them cold. +2 Sleepers.  
 3. **Read the graves in the ring** — -1 Ration: Aris reads every grave marker. +2 Data. Aris +1 Stress.
-   → Every grave read. -1 Ration, +2 Data. Aris +1 Stress. / RING RECORD: 'Food is shared by deck, not by rank. It worked for sixty years. Then it stopped working.' / Dr. Aris reads three hundred names out loud. By the end, she has almost no voice left.  
+   → Every grave read. -1 Ration, +2 Data. Aris +1 Stress. / RING RECORD: 'Food is shared by deck, not by rank. It worked for sixty years. Then it stopped working.' / Aris reads three hundred names out loud. By the end, she has almost no voice left.  
 
 ## Old stations (6)
 _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showStationEncounter «bundle.js · showStationEncounter»
 
-- ERROR: Station encounter data unavailable. «bundle.js · line 1830»
-- Unknown Station «bundle.js · line 1844»
-- **kicker** — INSIDE THE STATION «bundle.js · line 1847»
-- STATION: [result] «bundle.js · line 1852»
+- ERROR: Station encounter data unavailable. «bundle.js · line 1869»
+- Unknown Station «bundle.js · line 1883»
+- **kicker** — INSIDE THE STATION «bundle.js · line 1886»
+- STATION: [result] «bundle.js · line 1891»
 
 #### Card words: handleStationAction «bundle.js · handleStationAction»
 
-- No station detected at this location. «bundle.js · line 1864»
-- We already searched this station. «bundle.js · line 1868»
-- Starting docking procedure with [name]... «bundle.js · line 1872»
+- No station detected at this location. «bundle.js · line 1903»
+- We already searched this station. «bundle.js · line 1907»
+- Starting docking procedure with [name]... «bundle.js · line 1911»
 
 ### MINING PLATFORM «SpaceStations.js · STATION_MINING»
 
 > [station name] is a ship that anchored itself to an asteroid and mined it to survive. The mining arms stopped mid-swing. The bays are sealed. A beacon still transmits.
 
-**Eng. Jaxon:** They found a rock, stopped, and made a life on it. I can see why.  
-**Tech Mira:** Aura's talking to the station's repair drones, Commander. They still answer her!  
-**Spc. Vance:** Nobody's alive here, but those drones still move. Keep an eye on them.  
+**Jaxon:** They found a rock, stopped, and made a life on it. I can see why.  
+**Mira:** Aura's talking to the station's repair drones, Commander. They still answer her!  
+**Vance:** Nobody's alive here, but those drones still move. Keep an eye on them.  
 
 Choices:
 1. **Cut open the ore bays** — -5 Energy. +30-50 Salvage.
@@ -320,8 +320,8 @@ Choices:
 
 > [station name] was a ship that stopped here to study something. There's no damage outside, but every escape pod is gone. The lab is sealed, and the quarantine lights are on.
 
-**Dr. Aris:** Quarantine seals. Either they were studying something dangerous, or something got loose.  
-**Tech Mira:** All their research is still on the drives. That's years of work, Commander!  
+**Aris:** Quarantine seals. Either they were studying something dangerous, or something got loose.  
+**Mira:** All their research is still on the drives. That's years of work, Commander!  
 **A.U.R.A.:** The last log entry stops mid-sentence, Commander. The crew left in a hurry.  
 
 Choices:
@@ -345,42 +345,42 @@ _Only from sector 3._
 
 > [station name] is three ships welded together. Their hull numbers are not in order. Inside, the walls are covered in names, dates and goodbyes. Some are in children's handwriting.
 
-**Dr. Aris:** So many names. It will take me all day to copy this wall.  
-**Eng. Jaxon:** Three crews stopped here, one after another. Each one found the others and stayed.  
-**Spc. Vance:** How do three crews end up in the same spot, this far out?  
+**Aris:** So many names. It will take me all day to copy this wall.  
+**Jaxon:** Three crews stopped here, one after another. Each one found the others and stayed.  
+**Vance:** How do three crews end up in the same spot, this far out?  
 
 Choices:
 1. **Search the stores** — -5 Energy. +4-6 Rations, +20 Salvage.
    → Stores searched. -5 Energy, +5 Rations, +20 Salvage. / Food stores behind the third ship's kitchen. +5 Rations, +20 Salvage.  
 2. **Add our names to the wall** — -1 Ration: a day spent here. +1 Data. Jaxon -1 Stress, Aris -1 Stress.
-   → Our names are on the wall. -1 Ration, +1 Data. Jaxon -1 Stress, Aris -1 Stress. / Our five names go on the wall, under a child's drawing of a yellow sun and green grass. / Dr. Aris copies every name on the wall into her record of the dead.  
+   → Our names are on the wall. -1 Ration, +1 Data. Jaxon -1 Stress, Aris -1 Stress. / Our five names go on the wall, under a child's drawing of a yellow sun and green grass. / Aris copies every name on the wall into her record of the dead.  
 3. **Play the comm array** — +2 Data. All crew +1 Stress.
-   → Array played through. Forty-one calls, none answered. +2 Data. All crew +1 Stress. / Every recorded call on the array is from an Exodus ship. None were ever answered. / Spc. Vance: "Nobody told us about any of these ships. Save every call."  
+   → Array played through. Forty-one calls, none answered. +2 Data. All crew +1 Stress. / Every recorded call on the array is from an Exodus ship. None were ever answered. / Vance: "Nobody told us about any of these ships. Save every call."  
 
 ### THE BEACON «SpaceStations.js · STATION_MILITARY»
 
 > [station name] is a ship stripped down to its frame to power one thing: a beacon aimed back toward Earth. It has been sending the same two words for years.
 
-**Spc. Vance:** Those capacitors are as big as our lander. They put everything into this.  
-**Tech Mira:** It's the loudest signal out here. Aura can hear it from three sectors away!  
+**Vance:** Those capacitors are as big as our lander. They put everything into this.  
+**Mira:** It's the loudest signal out here. Aura can hear it from three sectors away!  
 **A.U.R.A.:** It is aimed at Earth, Commander. The message is 'Turn back.' I have logged it.  
 
 Choices:
 1. **Drain the capacitors** — +40 Energy. The beacon goes dark. Aris +1 Stress, Mira +1 Stress.
-   → Capacitors drained into our reactor. +40 Energy. The beacon is dark. / The beacon cuts off mid-word. / Tech Mira: 'That was the only other voice out here.'  
+   → Capacitors drained into our reactor. +40 Energy. The beacon is dark. / The beacon cuts off mid-word. / Mira: 'That was the only other voice out here.'  
 2. **Copy its aiming data** — -5 Energy. All planets in the sector revealed.
    → Aiming data copied. Every planet is on the map. -5 Energy. / To aim the beam, it had to map everything nearby. Every planet in the sector is plotted.  
 3. **Add our hull number to its message** — -10 Energy. +2 Data. Vance +1 Stress.
-   → The beacon now says: 'Turn back. Exodus 9.' -10 Energy, +2 Data. Vance +1 Stress. / Spc. Vance adds our hull number to the message, so Earth knows we heard it too. / A.U.R.A.: 'Transmitting, Commander. I will tell you if anyone answers.'  
+   → The beacon now says: 'Turn back. Exodus 9.' -10 Energy, +2 Data. Vance +1 Stress. / Vance adds our hull number to the message, so Earth knows we heard it too. / A.U.R.A.: 'Transmitting, Commander. I will tell you if anyone answers.'  
 
 ### THE STOREHOUSE «SpaceStations.js · STATION_TRADE»
 _Only from sector 4._
 
 > [station name] belonged to a crew who collected things. They sorted and shelved parts from every wreck they passed. There are aisles of it, and a ledger by the door.
 
-**Eng. Jaxon:** Someone spent years sorting all this. We might as well use it.  
-**Dr. Aris:** There's a whole aisle of medical supplies, all labelled by hand.  
-**Tech Mira:** Look, Commander. The ledger lists every wreck they found, by hull number.  
+**Jaxon:** Someone spent years sorting all this. We might as well use it.  
+**Aris:** There's a whole aisle of medical supplies, all labelled by hand.  
+**Mira:** Look, Commander. The ledger lists every wreck they found, by hull number.  
 
 Choices:
 1. **Search the deep shelves** — -5 Energy. +1 Valuable Item, or +35 Salvage if the good shelf is bare.
@@ -392,19 +392,19 @@ Choices:
    ↳ or: Medical aisle used. [name] is healthy again. -5 Energy.  
    ↳ or: The medical shelf is bare, but there are food supplements. -5 Energy, +3 Rations.  
 3. **Read the ledger** — -1 Ration: a day reading. +3 Data. All planets revealed. Vance +1 Stress.
-   → Ledger read. It shows where every wreck they found lies. -1 Ration, +3 Data. Vance +1 Stress. / LEDGER: hull number, where it was found, what was taken. The deeper they went, the higher the numbers, and the older the wrecks. / Spc. Vance: "Thousands of ships, and we were told eight. Someone lied to all of them."  
+   → Ledger read. It shows where every wreck they found lies. -1 Ration, +3 Data. Vance +1 Stress. / LEDGER: hull number, where it was found, what was taken. The deeper they went, the higher the numbers, and the older the wrecks. / Vance: "Thousands of ships, and we were told eight. Someone lied to all of them."  
 
 ### THE SILENT STATION «SpaceStations.js · STATION_GHOST»
 
 > [station name] appears on none of our maps. The corridors are the right shape, but the doors are slightly too small. Every bunk has four folded blankets. Nothing has ever been used.
 
 **A.U.R.A.:** It matches the standard station plan to the millimetre, Commander. Real stations always differ a little.  
-**Spc. Vance:** Nobody built this by hand, and nobody has ever lived here. We should leave.  
-**Tech Mira:** But look at it. It's brand new. Nothing else out here is new.  
+**Vance:** Nobody built this by hand, and nobody has ever lived here. We should leave.  
+**Mira:** But look at it. It's brand new. Nothing else out here is new.  
 
 Choices:
 1. **Explore deeper** — 25% chance: +40 Salvage, +30 Energy. 25% chance: whoever goes in gets +2 Stress. 50% chance: they come back strangely calm, all Stress gone.
-   → Everyone is back. One of them is far too calm, and nobody asks why. / Spc. Vance wandered off alone and came back very calm. / Spc. Vance: "It's fine in there. Really. I'm not scared any more."  
+   → Everyone is back. One of them is far too calm, and nobody asks why. / Vance wandered off alone and came back very calm. / Vance: "It's fine in there. Really. I'm not scared any more."  
    ↳ or: [name] found a bunk with their own name on it. Nobody had ever slept there.  
    ↳ or: [The boarder] came back quickly and won't say why. +2 Stress.  
    ↳ or: The stores hold the same supplies we loaded at launch. The seals have never been broken.  
@@ -419,26 +419,26 @@ _Can turn up in: sectors 3, 4._
 
 #### Card words: handleFailedColonyAction «bundle.js · handleFailedColonyAction»
 
-- No colony ruins detected at this location. «bundle.js · line 2690»
-- Colony ruins already investigated. «bundle.js · line 2694»
-- ERROR: Colony encounter data unavailable. «bundle.js · line 2700»
-- Colony ruins detected. Deploying investigation team... «bundle.js · line 2718»
-- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 2731»
+- No colony ruins detected at this location. «bundle.js · line 2791»
+- Colony ruins already investigated. «bundle.js · line 2795»
+- ERROR: Colony encounter data unavailable. «bundle.js · line 2801»
+- Colony ruins detected. Deploying investigation team... «bundle.js · line 2819»
+- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 2832»
 
 ### THE DOME «FailedColonyEncounters.js · FC_ABANDONED_DOME»
 
 > Buildings on the planet's southern continent. A pressure dome, half collapsed. The garden inside has grown wild. Nothing moves.
 
-**Dr. Aris:** Those are Earth plants. Somebody lived here, maybe for years.  
-**Spc. Vance:** Whoever lived here is gone now. Keep your eyes open.  
-**Tech Mira:** That dome is a newer design than ours, but it's far more rusted. How?  
-**Eng. Jaxon:** That's grass under the dome. Real grass.  
+**Aris:** Those are Earth plants. Somebody lived here, maybe for years.  
+**Vance:** Whoever lived here is gone now. Keep your eyes open.  
+**Mira:** That dome is a newer design than ours, but it's far more rusted. How?  
+**Jaxon:** That's grass under the dome. Real grass.  
 
 Choices:
 1. **Read the colony logs** — -5 Energy. +8-15 Salvage, +1 Data.
    → Colony records and data drives copied. -5 Energy, +12 Salvage, +1 Data. / COLONY LOG: "Day 1: We landed. The children are on real grass for the first time. Elena cried." / COLONY LOG: "Day 342: The water level is dropping. The local roots are taking minerals we need." / COLONY LOG: "Day 891: The wheat won't grow any more. The local plants always win. Rationing again." / COLONY LOG: "Day 1,204: Last entry. The dome seals have failed. If anyone finds this: Earth crops can't survive in this soil."  
 2. **Strip the settlement** — +25-45 Salvage, +1 Food Pack. Jaxon +1 Stress: their homes become our hull plates.
-   → Settlement stripped. +35 Salvage, +1 Food Pack. Jaxon +1 Stress. / Eng. Jaxon: "Good panels, sealed wiring. They built this to last." He goes quiet after that.  
+   → Settlement stripped. +35 Salvage, +1 Food Pack. Jaxon +1 Stress. / Jaxon: "Good panels, sealed wiring. They built this to last." He goes quiet after that.  
    ↳ or: Colony Site  
 3. **Check the cryo pods** — 30% chance: a sleeper, +1 Sleeper, -3 Rations. Otherwise the pods are empty, Aris +1 Stress.
    → Empty pods, with small handprints on the glass. Aris +1 Stress. / Every pod is empty. Either they left, or they never reached the pods. / There are handprints on the glass. Small ones.  
@@ -446,14 +446,14 @@ Choices:
    ↳ or: A.U.R.A.: "Her pod is at four percent power, Commander. We can carry it, but keeping it cold costs rations."  
    ↳ or: A child, alive and asleep. Her pod is in our hold now. +1 Sleeper, -3 Rations.  
 4. **Let the crew sit in the garden** — -1 Ration: an hour on the grass. All crew -1 Stress.
-   → An hour on someone else's grass. -1 Ration. All crew -1 Stress. / Eng. Jaxon lies down on the grass. "This is all I want, Commander. A place like this." / The grass has real roots. Nobody gets up for an hour.  
+   → An hour on someone else's grass. -1 Ration. All crew -1 Stress. / Jaxon lies down on the grass. "This is all I want, Commander. A place like this." / The grass has real roots. Nobody gets up for an hour.  
 
 ### THE GRAVES «FailedColonyEncounters.js · FC_MASS_GRAVES»
 
 > A settlement on the planet. Streets, and buildings still standing. Around one central building, rings of grave markers. Hundreds of them.
 
-**Dr. Aris:** Hundreds of graves, in date order. Someone kept burying them right to the end.  
-**Eng. Jaxon:** The buildings are fine. Whatever killed them, it wasn't the weather.  
+**Aris:** Hundreds of graves, in date order. Someone kept burying them right to the end.  
+**Jaxon:** The buildings are fine. Whatever killed them, it wasn't the weather.  
 **A.U.R.A.:** Air samples show traces of a disease, Commander. The burials took place over eight months.  
 
 Choices:
@@ -462,10 +462,10 @@ Choices:
 2. **Salvage the medical stores** — +25 Salvage. 40% chance: +1 Fungus Culture. Aris +1 Stress.
    → Medical stores taken. Most of it spoiled long ago. +25 Salvage. Aris +1 Stress.  
    ↳ or: Colony Site  
-   ↳ or: Dr. Aris: "They were growing a culture in the lab. It's still alive. It outlived all of them."  
+   ↳ or: Aris: "They were growing a culture in the lab. It's still alive. It outlived all of them."  
    ↳ or: Medical stores taken. +25 Salvage, +1 Fungus Culture. Aris +1 Stress.  
 3. **Read every grave marker aloud** — -1 Ration: it takes a day. +2 Data. Aris -1 Stress.
-   → Every marker read. -1 Ration, +2 Data. Aris -1 Stress. / Three hundred names, read from the outer ring inward. The last eighteen have no markers at all. / Dr. Aris: "I have all your names now. You won't be forgotten."  
+   → Every marker read. -1 Ration, +2 Data. Aris -1 Stress. / Three hundred names, read from the outer ring inward. The last eighteen have no markers at all. / Aris: "I have all your names now. You won't be forgotten."  
 4. **Open the cryo ward** — +15 Salvage, +10 Energy from the ward's power cells. Aris +1 Stress.
    → Six pods, six dead. They were waiting for a cure. Ward stripped. +15 Salvage, +10 Energy. Aris +1 Stress. / The central building is a clinic. Six pods in the back room, all occupied. / A.U.R.A.: "The ward lost power long ago, Commander. Nobody in it is alive."  
 
@@ -473,9 +473,9 @@ Choices:
 
 > Two settlements on the planet, forty kilometres apart. Both have walls. Blast marks and barricades in the streets. The colonists did this to each other.
 
-**Spc. Vance:** Firing positions on both sides. Homemade guns. They fought each other.  
-**Dr. Aris:** They came all this way together. How does it end like this?  
-**Eng. Jaxon:** Not enough food, and a fence down the middle. It happens every time.  
+**Vance:** Firing positions on both sides. Homemade guns. They fought each other.  
+**Aris:** They came all this way together. How does it end like this?  
+**Jaxon:** Not enough food, and a fence down the middle. It happens every time.  
 
 Choices:
 1. **Read the colony logs** — -5 Energy. +10 Salvage, +1 Data.
@@ -493,10 +493,10 @@ Choices:
 
 > A whole settlement on the planet, powered and lit. Beds made, tools laid out, four plates on every table. No people. Not even bones.
 
-**Tech Mira:** The power grid is still running. Solar panels to batteries. Nobody's touched a switch.  
-**Spc. Vance:** Not one scuff on a chair or a plate. Nobody ever sat here.  
-**Dr. Aris:** The grass in the garden has no roots. I pulled some, and it just lifted out.  
-**Eng. Jaxon:** I don't like this. Any of it.  
+**Mira:** The power grid is still running. Solar panels to batteries. Nobody's touched a switch.  
+**Vance:** Not one scuff on a chair or a plate. Nobody ever sat here.  
+**Aris:** The grass in the garden has no roots. I pulled some, and it just lifted out.  
+**Jaxon:** I don't like this. Any of it.  
 
 Choices:
 1. **Read the colony logs** — +10 Salvage, +1 Data. All crew +1 Stress.
@@ -505,7 +505,7 @@ Choices:
    → Settlement emptied. +40 Salvage, +2 Food Pack, +1 Luxury Item. All crew +1 Stress. / Full pantries and charged batteries. Everything is sealed, as if it was delivered this morning.  
    ↳ or: Colony Site  
 3. **Leave immediately** — -10 Energy: straight back up, no scan. Vance -1 Stress.
-   → We left with nothing. -10 Energy. Vance -1 Stress. / Spc. Vance: "Everyone back to the lander. Now. Don't touch anything." / Nobody argues with him.  
+   → We left with nothing. -10 Energy. Vance -1 Stress. / Vance: "Everyone back to the lander. Now. Don't touch anything." / Nobody argues with him.  
 4. **Let A.U.R.A. assess it** — -5 Energy. +1 Data.
    → A.U.R.A. has filed her report. Nothing in it is wrong. -5 Energy, +1 Data. / A.U.R.A.: "Population zero, Commander. I can find no cause. I have logged the site as complete." / A.U.R.A.: "Four plates per table is standard issue, Commander. That part is correct."  
 
@@ -513,10 +513,10 @@ Choices:
 
 > Plants have taken over the settlement on the planet. Vines cover every wall. The landing pad is a garden. A tree has grown through the radio mast.
 
-**Tech Mira:** Those vines grew straight through sealed metal. I didn't know plants could do that.  
-**Dr. Aris:** Not over the buildings. Through them. Through the floors.  
-**Spc. Vance:** And through the people?  
-**Dr. Aris:** I'd rather not say.  
+**Mira:** Those vines grew straight through sealed metal. I didn't know plants could do that.  
+**Aris:** Not over the buildings. Through them. Through the floors.  
+**Vance:** And through the people?  
+**Aris:** I'd rather not say.  
 
 Choices:
 1. **Read the colony logs** — -5 Energy. +10 Salvage, +1 Data.
@@ -534,20 +534,20 @@ _Can turn up in: any sector (one is always placed in every sector; some only fro
 
 #### Card words: handleAnomalyAction «bundle.js · handleAnomalyAction»
 
-- There is nothing strange here. «bundle.js · line 2800»
-- We have already been there. «bundle.js · line 2804»
-- ERROR: Anomaly encounter data unavailable. «bundle.js · line 2810»
-- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 2839»
-- **context** — ANOMALY: [title] [context] «bundle.js · line 2851»
+- There is nothing strange here. «bundle.js · line 2901»
+- We have already been there. «bundle.js · line 2905»
+- ERROR: Anomaly encounter data unavailable. «bundle.js · line 2911»
+- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 2940»
+- **context** — ANOMALY: [title] [context] «bundle.js · line 2952»
 
 ### THE SAME PLANET TWICE «AnomalyEncounters.js · ANOMALY_FOLD»
 _Only from sector 3._
 
 > The same planet appears twice ahead of us, side by side, down to the last crater and shadow. Between the two copies runs a thin line where the stars don't match up.
 
-**Tech Mira:** Every crater matches, Commander. Two planets can't be identical. One of them has to be a copy.  
+**Mira:** Every crater matches, Commander. Two planets can't be identical. One of them has to be a copy.  
 **A.U.R.A.:** I get two valid positions for our ship, Commander, one beside each planet. Both check out.  
-**Spc. Vance:** Somebody made that copy. I'd like to know who before we go near it.  
+**Vance:** Somebody made that copy. I'd like to know who before we go near it.  
 
 Choices:
 1. **Send the probe through the gap** — The probe is lost. +30 Energy. All crew +1 Stress.
@@ -575,13 +575,13 @@ Choices:
 
 > A voice is calling us on every channel, and it is A.U.R.A.'s voice. But A.U.R.A. is right here with us, so this is something else using it.
 
-**Tech Mira:** That's her voice. A.U.R.A., is that you out there?  
+**Mira:** That's her voice. A.U.R.A., is that you out there?  
 **A.U.R.A.:** No, Commander. I'm here. That voice is repeating things I've said before, exactly.  
-**Dr. Aris:** It's reading out the names of dead crews. Some of them are already on my list.  
+**Aris:** It's reading out the names of dead crews. Some of them are already on my list.  
 
 Choices:
 1. **Let one of us talk to it** — 30% chance: they come back at Stress 3. 40% chance: +2 Data, and they get +1 Stress. 30% chance: they come back calm, healed, at Stress 0. _(locked: Requires available crew)_
-   → Spc. Vance wrote down a list of ships. +2 Data. Spc. Vance +1 Stress. / Spc. Vance: "It read me a list of ships and where each one ended up. I wrote down what I could."  
+   → Vance wrote down a list of ships. +2 Data. Vance +1 Stress. / Vance: "It read me a list of ships and where each one ended up. I wrote down what I could."  
    ↳ or: [name] talked to it for an hour, and won't repeat anything it said.  
    ↳ or: [name] talked to the voice and came back badly shaken. Stress 3.  
    ↳ or: [name]: "It just said my name, nothing else. I feel better than I have in weeks."  
@@ -603,8 +603,8 @@ Choices:
 > A ship is holding position right beside us, and it is ours: same hull, same number, same scratches. Through its windows, four people sit at our stations and wave back at us.
 
 **A.U.R.A.:** It is broadcasting our ship's ID, Commander. It answers my signals before I finish sending them.  
-**Spc. Vance:** Four people in those windows. Which one of us did they leave out?  
-**Tech Mira:** A.U.R.A. says it's friendly. If she says so, I believe her.  
+**Vance:** Four people in those windows. Which one of us did they leave out?  
+**Mira:** A.U.R.A. says it's friendly. If she says so, I believe her.  
 
 Choices:
 1. **Call the other ship** — -5 Energy. +1 Data. The richest planet here revealed. All crew +1 Stress.
@@ -627,9 +627,9 @@ Choices:
 
 > There is a patch of sky ahead with no stars in it at all. Wrecks inside it are still sending distress beacons, and the beacons are switching off one by one.
 
-**Spc. Vance:** There were five beacons in there when we arrived. Now there are three.  
+**Vance:** There were five beacons in there when we arrived. Now there are three.  
 **A.U.R.A.:** The sensors aren't reading zero, Commander. They're returning no reading at all.  
-**Tech Mira:** What am I looking at? Even A.U.R.A. can't tell me, and she always knows.  
+**Mira:** What am I looking at? Even A.U.R.A. can't tell me, and she always knows.  
 
 Choices:
 1. **Push a crate in and watch** — -30 Salvage. +3 Data. Mira +1 Stress.
@@ -648,9 +648,9 @@ Choices:
 
 > A patch of someone's back garden is floating in open space: a lawn, a wooden fence, one tree and a bench. There's no dome and no air, yet the grass sways, and it is slowly growing toward our hull.
 
-**Eng. Jaxon:** That's a back garden. Fence, bench, the lot. It looks like the one I left.  
-**Dr. Aris:** I brought one blade in through the airlock. Every blade out there is identical to it.  
-**Tech Mira:** A.U.R.A. says it can't hurt us, Commander. That's good enough for me.  
+**Jaxon:** That's a back garden. Fence, bench, the lot. It looks like the one I left.  
+**Aris:** I brought one blade in through the airlock. Every blade out there is identical to it.  
+**Mira:** A.U.R.A. says it can't hurt us, Commander. That's good enough for me.  
 
 Choices:
 1. **Take a cutting** — -5 Energy. +1 Fungus Culture: the cutting grows food like one. 20% chance someone gets hurt.
@@ -672,14 +672,14 @@ _Only from sector 3._
 
 > An airlock door is floating on its own in space, with no ship attached to it. It is an exact copy of our rear airlock, down to the scratch by the handle, and its light shows green.
 
-**Tech Mira:** Green means it's safe to open. That's what it means on ours.  
+**Mira:** Green means it's safe to open. That's what it means on ours.  
 **A.U.R.A.:** It matches our rear airlock in every measurement, Commander. Ours is still attached to us.  
-**Spc. Vance:** It's a door with nothing behind it. I'm not opening it.  
-**Dr. Aris:** Then what's on the other side?  
+**Vance:** It's a door with nothing behind it. I'm not opening it.  
+**Aris:** Then what's on the other side?  
 
 Choices:
 1. **Open the door** — 25% chance: +3 Data, all crew +1 Stress. 25% chance: +40 Energy. 25% chance: one crew member walks through and is gone, +3 Data. 25% chance: nothing.
-   → Eng. Jaxon walked through the door and is gone. +3 Data. / THE DOOR OPENS. / Eng. Jaxon walks through it. They don't run, and they don't look back. / The door closes. Through its window, four people are walking away. One of them turns and waves.  
+   → Jaxon walked through the door and is gone. +3 Data. / THE DOOR OPENS. / Jaxon walks through it. They don't run, and they don't look back. / The door closes. Through its window, four people are walking away. One of them turns and waves.  
    ↳ or: Through it: green fields under a yellow sun, and four people walking away from us. The grass doesn't bend under their feet.  
    ↳ or: Then it closes again.  
    ↳ or: The door opened onto a copy of somewhere. +3 Data. All crew +1 Stress.  
@@ -702,9 +702,9 @@ _Only from sector 4._
 
 > Seventeen dead ships sit in a ring, all pointing inward. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.
 
-**Spc. Vance:** Seventeen ships, and every one has a higher hull number than ours. We were told eight went before us.  
-**Dr. Aris:** Listen. 'Eight ships went this way before you.' It's our briefing. Even the pauses match.  
-**Eng. Jaxon:** There's no damage on any of them. The crews just left.  
+**Vance:** Seventeen ships, and every one has a higher hull number than ours. We were told eight went before us.  
+**Aris:** Listen. 'Eight ships went this way before you.' It's our briefing. Even the pauses match.  
+**Jaxon:** There's no damage on any of them. The crews just left.  
 **A.U.R.A.:** That is the standard briefing, Commander. I have the same file. They're playing it correctly.  
 
 Choices:
@@ -725,17 +725,17 @@ _Only from sector 6._
 
 > A list is written across the sky in light, kilometres long. It has two columns: hull numbers climbing past forty thousand, and beside every one of them, the number four.
 
-**Tech Mira:** It's a list, Commander. Just a list, written in light. It's beautiful.  
-**Spc. Vance:** The left column is ships. The right column is how many crew each one had.  
+**Mira:** It's a list, Commander. Just a list, written in light. It's beautiful.  
+**Vance:** The left column is ships. The right column is how many crew each one had.  
 **A.U.R.A.:** I've checked the right-hand column against my records, Commander. It's correct.  
-**Dr. Aris:** Find our ship on it. I want to know if we're listed.  
+**Aris:** Find our ship on it. I want to know if we're listed.  
 
 Choices:
 1. **Let Mira read the whole list** — -1 Ration: it takes a day. +4 Data. The reader's Stress drops to 0.
-   → Tech Mira read the whole list. -1 Ration, +4 Data. Tech Mira Stress 0. / Tech Mira reads for a whole day. Then: "We're on it, Commander. Ship nine, four crew. Just what A.U.R.A. says."  
+   → Mira read the whole list. -1 Ration, +4 Data. Mira Stress 0. / Mira reads for a whole day. Then: "We're on it, Commander. Ship nine, four crew. Just what A.U.R.A. says."  
    ↳ or: There's nobody left to read it.  
 2. **Check our line against A.U.R.A.'s records** — -5 Energy. +2 Data. Vance +1 Stress.
-   → Our line checked. -5 Energy, +2 Data. Vance +1 Stress. / A.U.R.A.: 'It matches my records, Commander. Every line, including ours.' / Spc. Vance: "Then your records are wrong, and I want to know who wrote them." A.U.R.A.: 'Four crew, Commander.' He doesn't ask again.  
+   → Our line checked. -5 Energy, +2 Data. Vance +1 Stress. / A.U.R.A.: 'It matches my records, Commander. Every line, including ours.' / Vance: "Then your records are wrong, and I want to know who wrote them." A.U.R.A.: 'Four crew, Commander.' He doesn't ask again.  
    ↳ or: A.U.R.A.: 'Four crew on our line, Commander, the same as on every other.'  
 3. **Fly through without reading it** — -10 Energy. Mira +1 Stress.
    → Flew through without reading it. -10 Energy. Mira +1 Stress. / Windows shuttered and instruments off, we fly through on dead reckoning.  
@@ -746,13 +746,13 @@ _Only from sector 6._
 > Inside a hollow moon, endless shelves hold copies of the cargo of every ship that came this way, neatly stacked. Our own crates are here too, with our batch numbers, unopened.
 
 **A.U.R.A.:** There are records here from every ship on this heading, Commander. Ours too. I never sent ours.  
-**Tech Mira:** Our cargo list is here. It matches A.U.R.A.'s copy item for item.  
-**Spc. Vance:** There's a shelf labelled EXODUS OUTCOMES. Do we want to read that?  
-**Dr. Aris:** Yes. I do.  
+**Mira:** Our cargo list is here. It matches A.U.R.A.'s copy item for item.  
+**Vance:** There's a shelf labelled EXODUS OUTCOMES. Do we want to read that?  
+**Aris:** Yes. I do.  
 
 Choices:
 1. **Read the outcomes shelf** — -1 Ration: a full day of reading. +8 Data. All crew +2 Stress.
-   → Outcomes shelf read. -1 Ration, +8 Data. All crew +2 Stress. / We read until we can't go on. Forty thousand ships, and every entry ends with the same word: stopped. / Dr. Aris: "Every one of these crews goes on my list. It'll take me the rest of my life."  
+   → Outcomes shelf read. -1 Ration, +8 Data. All crew +2 Stress. / We read until we can't go on. Forty thousand ships, and every entry ends with the same word: stopped. / Aris: "Every one of these crews goes on my list. It'll take me the rest of my life."  
 2. **Take the drive manuals** — +30 Salvage, +20 Energy, and warps cost 10% less from now on. Aris +1 Stress: nothing gets read.
    → Manuals taken. +30 Salvage, +20 Energy, warps cost 10% less. Aris +1 Stress. / The drive manuals are copies of ours, with one extra chapter that ours doesn't have. / We use them to tune the reactor. Nobody can make sense of the extra chapter.  
 3. **Cut up the shelves for metal** — +120 Salvage. Aris +2 Stress. A.U.R.A. will think less of it.
@@ -768,7 +768,7 @@ _THE FOLD can throw the ship here. A sector of copies; two ways out._
 ### Arriving «bundle.js · handleAnomalyTeleport»
 _The sector header, and the old names the code still has for sectors._
 
-- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5232»
+- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5312»
 
 ### In orbit «OrbitView.js · updateCommandDeck · wrong place»
 _The two buttons instead of BREAK ORBIT._
@@ -781,51 +781,51 @@ _The two buttons instead of BREAK ORBIT._
 
 ### Fight to escape «bundle.js · handleWrongPlaceEscape»
 
-- **title** — TEAR THROUGH REALITY «bundle.js · line 2869»
-- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 2871»
-- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 2881»
-- We made it «bundle.js · line 2885»
-- **desc** — Return to a random sector, but at great cost. «bundle.js · line 2886»
-- === REALITY BREACH SUCCESSFUL === «bundle.js · line 2917»
-- Emerged in Sector [sector]. The crew will never forget what they saw. «bundle.js · line 2918»
-- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 2920»
+- **title** — TEAR THROUGH REALITY «bundle.js · line 2970»
+- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 2972»
+- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 2982»
+- We made it «bundle.js · line 2986»
+- **desc** — Return to a random sector, but at great cost. «bundle.js · line 2987»
+- === REALITY BREACH SUCCESSFUL === «bundle.js · line 3018»
+- Emerged in Sector [sector]. The crew will never forget what they saw. «bundle.js · line 3019»
+- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3021»
 
 ### Accept your fate (an ending) «bundle.js · handleWrongPlaceAccept»
 
-- **title** — A COPY OF SOMEWHERE «bundle.js · line 2941»
-- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 2943»
-- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 2944»
-- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 2945»
-- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 2946»
-- **vault** — Twin 0009 begins, very quietly, to repeat itself. «bundle.js · line 2948»
+- **title** — A COPY OF SOMEWHERE «bundle.js · line 3042»
+- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3044»
+- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3045»
+- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3046»
+- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3047»
+- **vault** — Twin 0009 begins, very quietly, to repeat itself. «bundle.js · line 3049»
 
 ## Asteroid fields (6)
 _Can turn up in: any sector._
 
 #### Card words: showAsteroidEncounter «bundle.js · showAsteroidEncounter»
 
-- ERROR: Asteroid encounter data unavailable. «bundle.js · line 1923»
-- Unknown Field «bundle.js · line 1936»
-- **kicker** — ASTEROID FIELD «bundle.js · line 1939»
-- MINING: [result] «bundle.js · line 1944»
+- ERROR: Asteroid encounter data unavailable. «bundle.js · line 1962»
+- Unknown Field «bundle.js · line 1975»
+- **kicker** — ASTEROID FIELD «bundle.js · line 1978»
+- MINING: [result] «bundle.js · line 1983»
 
 #### Card words: handleAsteroidAction «bundle.js · handleAsteroidAction»
 
-- No asteroid field detected at this location. «bundle.js · line 1896»
-- Asteroid field already mined. «bundle.js · line 1900»
-- Entering [name]. Mining systems online... «bundle.js · line 1904»
+- No asteroid field detected at this location. «bundle.js · line 1935»
+- Asteroid field already mined. «bundle.js · line 1939»
+- Entering [name]. Mining systems online... «bundle.js · line 1943»
 
 ### RICH MINERAL DEPOSIT «AsteroidFields.js · ASTEROID_RICH»
 
 > The field is full of worked metal, not ore: hull plates and frame beams, ground down by the rocks around them. A ship broke up here a long time ago. The field is calm enough to dig in.
 
-**Eng. Jaxon:** Good density, and nobody's rushing us. We can take our time here for once.  
-**Tech Mira:** That's refined alloy, Commander. It came off a ship's hull.  
-**Spc. Vance:** Whose ship? I want a hull number before we cut into it.  
+**Jaxon:** Good density, and nobody's rushing us. We can take our time here for once.  
+**Mira:** That's refined alloy, Commander. It came off a ship's hull.  
+**Vance:** Whose ship? I want a hull number before we cut into it.  
 
 Choices:
 1. **Dig it all out, slowly** — -1 Ration: two days of digging. +40-60 Salvage. Nobody gets hurt.
-   → Two days of digging. -1 Ration, +50 Salvage. / Two quiet days of digging. Eng. Jaxon: "No alarms, no rush. I could get used to this."  
+   → Two days of digging. -1 Ration, +50 Salvage. / Two quiet days of digging. Jaxon: "No alarms, no rush. I could get used to this."  
    ↳ or: Two quiet days of digging, with no alarms and no rush.  
 2. **Dig quickly, then leave** — +20-30 Salvage. 20% chance someone gets hurt on the way out.
    → Quick dig, and out without trouble. +25 Salvage.  
@@ -841,8 +841,8 @@ Choices:
 
 > The rocks in The field are still moving, grinding into each other and breaking apart. Something large smashed through here at speed, and the field hasn't settled since. One mistake and we get hit.
 
-**Spc. Vance:** There are about forty rocks in there big enough to punch through our hull.  
-**Eng. Jaxon:** I can fly the lander through. It won't be a smooth ride.  
+**Vance:** There are about forty rocks in there big enough to punch through our hull.  
+**Jaxon:** I can fly the lander through. It won't be a smooth ride.  
 **A.U.R.A.:** The risk of collision is high, Commander. I can fly the probe ahead and map a safe path.  
 
 Choices:
@@ -863,9 +863,9 @@ Choices:
 
 > The field isn't rock. It's wrecked ships: hull plates, engines and cargo crates, all crushed together. Somewhere in the pile, three sleep pods still have power.
 
-**Dr. Aris:** Before anyone cuts anything, I want the names of whoever was aboard.  
-**Spc. Vance:** Some of these plates still have hull numbers. I want every one of them recorded.  
-**Tech Mira:** Three pods still have power, Commander. A.U.R.A. is sure of it.  
+**Aris:** Before anyone cuts anything, I want the names of whoever was aboard.  
+**Vance:** Some of these plates still have hull numbers. I want every one of them recorded.  
+**Mira:** Three pods still have power, Commander. A.U.R.A. is sure of it.  
 
 Choices:
 1. **Cut out the hull plates** — +35-50 Salvage. Aris +1 Stress: nothing gets recorded first.
@@ -884,8 +884,8 @@ Choices:
 
 > The field glitters with crystal, grown in long straight rods. The rods hold an electric charge, and they ring like bells when our hull gets close.
 
-**Tech Mira:** The rods are ringing at each other. A.U.R.A. says it's just vibration from our engines.  
-**Dr. Aris:** Cut carefully. If they ring when we get close, they might do worse when we touch them.  
+**Mira:** The rods are ringing at each other. A.U.R.A. says it's just vibration from our engines.  
+**Aris:** Cut carefully. If they ring when we get close, they might do worse when we touch them.  
 **A.U.R.A.:** They build up charge when they vibrate, Commander. Valuable, but unstable. I can tune them safely.  
 
 Choices:
@@ -898,14 +898,14 @@ Choices:
    ↳ or: The rods discharged. [name] injured. -20 Energy.  
    ↳ or: The rods discharged. -20 Energy. Nobody hurt.  
 3. **Let A.U.R.A. tune them** — -5 Energy, then +10 Energy back. +2 Data. Mira -1 Stress.
-   → Rods tuned and drained. -5 Energy, +2 Data, +10 Energy. Mira -1 Stress. / A.U.R.A. tunes the rods until they all hum on one note, then draws the charge off safely. / Tech Mira: "Listen to that. I told you she'd know how."  
+   → Rods tuned and drained. -5 Energy, +2 Data, +10 Energy. Mira -1 Stress. / A.U.R.A. tunes the rods until they all hum on one note, then draws the charge off safely. / Mira: "Listen to that. I told you she'd know how."  
 
 ### HOLLOW ASTEROID «AsteroidFields.js · ASTEROID_HOLLOW»
 
 > The field is hollow. Someone cut a home inside the rock and sealed it with an airlock taken from an Exodus ship. Whoever did this meant to stay.
 
-**Eng. Jaxon:** They found a rock and stopped. Honestly, I'd have done the same.  
-**Spc. Vance:** One airlock, one way in. Whatever's inside went through that door.  
+**Jaxon:** They found a rock and stopped. Honestly, I'd have done the same.  
+**Vance:** One airlock, one way in. Whatever's inside went through that door.  
 **A.U.R.A.:** There is a little power inside, Commander. It's most likely a sleep pod.  
 
 Choices:
@@ -928,9 +928,9 @@ Choices:
 
 > The field is made of ice: frozen water and gas. Melted down, the ice becomes fuel for our reactor. The field is dense and hard to see through, and some big chunks already have cut marks on them.
 
-**Eng. Jaxon:** Water ice. That's reactor fuel, as much as we can carry.  
-**Dr. Aris:** Be careful. Frozen gas doesn't stay frozen once you start cutting into it.  
-**Spc. Vance:** Someone cut here before us. These marks are old.  
+**Jaxon:** Water ice. That's reactor fuel, as much as we can carry.  
+**Aris:** Be careful. Frozen gas doesn't stay frozen once you start cutting into it.  
+**Vance:** Someone cut here before us. These marks are old.  
 
 Choices:
 1. **Melt it out slowly** — -1 Ration: a slow day. +25 Energy. Nobody gets hurt.
@@ -951,18 +951,18 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showDistressSignal «bundle.js · showDistressSignal»
 
-- **kicker** — DISTRESS SIGNAL «bundle.js · line 1968»
-- **facts** — Nobody can tell when «bundle.js · line 1969»
-- **facts** — [signal age] years ago «bundle.js · line 1969»
-- SIGNAL: [result] «bundle.js · line 1973»
+- **kicker** — DISTRESS SIGNAL «bundle.js · line 2007»
+- **facts** — Nobody can tell when «bundle.js · line 2008»
+- **facts** — [signal age] years ago «bundle.js · line 2008»
+- SIGNAL: [result] «bundle.js · line 2012»
 
 ### AUTOMATED DISTRESS BEACON «DistressSignals.js · DISTRESS_BEACON»
 
 > A distress beacon, calling for 120 years on backup power. Standard Exodus emergency code. The ship behind it is dark. Nobody ever answered.
 
 **A.U.R.A.:** It's an Exodus ship, Commander. No reply to it was ever logged.  
-**Dr. Aris:** Then we'll be the ones who answer. And I want their names.  
-**Eng. Jaxon:** Those backup cells are still charged. We could use them.  
+**Aris:** Then we'll be the ones who answer. And I want their names.  
+**Jaxon:** Those backup cells are still charged. We could use them.  
 
 Choices:
 1. **Take the power cells** — +20 Salvage, +10 Energy. The beacon stops. Aris +1 Stress.
@@ -971,35 +971,35 @@ Choices:
    → Log copied. -5 Energy, +1 Data. / BEACON LOG: 'Engine failure. Drifting. The computer says help is on the way.' Then the call repeats.  
    ↳ or: The beacon had a fix on the nearest planet. One planet added to the map.  
 3. **Answer it, then switch it off** — -1 Ration: a day beside it. +1 Data. Aris -1 Stress.
-   → Beacon answered and switched off. -1 Ration, +1 Data. Aris -1 Stress. / A.U.R.A. sends a reply. Their crew's names are read aloud over the channel. / Dr. Aris: "We heard you. You can rest now." The beacon goes quiet.  
+   → Beacon answered and switched off. -1 Ration, +1 Data. Aris -1 Stress. / A.U.R.A. sends a reply. Their crew's names are read aloud over the channel. / Aris: "We heard you. You can rest now." The beacon goes quiet.  
 
 ### DAMAGED MESSAGE «DistressSignals.js · DISTRESS_FRAGMENT»
 
 > A damaged signal: words, static, then more words. Sent 120 years ago. Most of it is lost. The part that's left keeps repeating one sentence.
 
-**Tech Mira:** I can rebuild some of it. Aura, will you help? You're better at this than me.  
+**Mira:** I can rebuild some of it. Aura, will you help? You're better at this than me.  
 **A.U.R.A.:** Partly rebuilt, Commander: '...this is hull... we are not the ninth... please...' Then nothing.  
-**Spc. Vance:** Not the ninth. So they were told the same thing we were.  
+**Vance:** Not the ninth. So they were told the same thing we were.  
 
 Choices:
-1. **Let Mira and A.U.R.A. rebuild it** — -5 Energy. +1-3 Data. Mira +0-2 Stress. May reveal one planet. _(locked: Requires Tech Mira)_
-   → Message rebuilt. -5 Energy, +3 Data. / Tech Mira: 'Coordinates. They were heading for a bright light. Aura, is that a star?' A.U.R.A.: 'It is not on any chart, Mira.'  
-   ↳ or: Tech Mira: 'It's a list of wrecks they passed. Each one they found was older than the last.'  
-   ↳ or: Tech Mira: 'It's someone saying goodbye to their family. Just their names, over and over.'  
+1. **Let Mira and A.U.R.A. rebuild it** — -5 Energy. +1-3 Data. Mira +0-2 Stress. May reveal one planet. _(locked: Requires Mira)_
+   → Message rebuilt. -5 Energy, +3 Data. / Mira: 'Coordinates. They were heading for a bright light. Aura, is that a star?' A.U.R.A.: 'It is not on any chart, Mira.'  
+   ↳ or: Mira: 'It's a list of wrecks they passed. Each one they found was older than the last.'  
+   ↳ or: Mira: 'It's someone saying goodbye to their family. Just their names, over and over.'  
    ↳ or: Coordinates plotted. One planet added to the map.  
    ↳ or: Mira +[stress] Stress.  
 2. **Copy the transmitter code only** — +15 Salvage. The message is lost. Mira +1 Stress.
    → Code copied. +15 Salvage. Mira +1 Stress. / Transmitter code copied for our own repairs. Whatever they were saying is gone.  
 3. **Log where it came from and go** — +1 Data. Nobody hears the rest. Vance -1 Stress.
-   → Source logged. +1 Data. Vance -1 Stress. / Source direction logged. Spc. Vance switches off the speaker himself.  
+   → Source logged. +1 Data. Vance -1 Stress. / Source direction logged. Vance switches off the speaker himself.  
 
 ### FLIGHT RECORDER FOUND «DistressSignals.js · DISTRESS_BLACKBOX»
 
 > A flight recorder, drifting alone. The ship that carried it is gone. It has been silent for 120 years, but its memory is intact.
 
 **A.U.R.A.:** The recorder is seventy-three percent intact, Commander. The last hours are complete.  
-**Eng. Jaxon:** If this were us, I'd want someone to listen. So let's listen.  
-**Dr. Aris:** These are people's last hours. We'll do it properly. Names first.  
+**Jaxon:** If this were us, I'd want someone to listen. So let's listen.  
+**Aris:** These are people's last hours. We'll do it properly. Names first.  
 
 Choices:
 1. **Play it all the way through** — -5 Energy. +3 Data. 50% chance for each crew member: +1 Stress.
@@ -1020,9 +1020,9 @@ _Only from sector 4._
 
 > A navigation buoy, dropped by an earlier ship to mark the route. Broken for 120 years. It sends a heading, then garbage, then the heading again.
 
-**Eng. Jaxon:** Standard buoy. The core's worn out. I can fix it if we want to.  
-**Tech Mira:** Its heading is exactly the same as ours, Commander. Aura checked it twice.  
-**Spc. Vance:** Every buoy we've found points the same way. Nobody went anywhere else.  
+**Jaxon:** Standard buoy. The core's worn out. I can fix it if we want to.  
+**Mira:** Its heading is exactly the same as ours, Commander. Aura checked it twice.  
+**Vance:** Every buoy we've found points the same way. Nobody went anywhere else.  
 
 Choices:
 1. **Decode the garbage** — -5 Energy. 40% chance: all planets revealed. 30% chance: +2 Data, all crew +1 Stress. Otherwise nothing.
@@ -1033,36 +1033,36 @@ Choices:
    ↳ or: A.U.R.A.: 'They are hull numbers, Commander. Thousands of them, in order. Ours is not among them.'  
    ↳ or: A list of thousands of ships. -5 Energy, +2 Data. All crew +1 Stress.  
 2. **Fix it for whoever comes next** — -10 Salvage. +2 Data. Jaxon -1 Stress.
-   → Buoy repaired. -10 Salvage, +2 Data. Jaxon -1 Stress. / Eng. Jaxon: "New core, clean heading. Somebody will be glad of it."  
+   → Buoy repaired. -10 Salvage, +2 Data. Jaxon -1 Stress. / Jaxon: "New core, clean heading. Somebody will be glad of it."  
 3. **Strip it** — +18 Salvage, +8 Energy. The buoy goes dark. Mira +1 Stress.
-   → Buoy stripped. +18 Salvage, +8 Energy. Mira +1 Stress. / Buoy stripped, core drained. / Tech Mira: 'The next ship won't have a buoy to follow now.'  
+   → Buoy stripped. +18 Salvage, +8 Energy. Mira +1 Stress. / Buoy stripped, core drained. / Mira: 'The next ship won't have a buoy to follow now.'  
 
 ### REPEATING MESSAGE «DistressSignals.js · DISTRESS_LOOP»
 
 > One message, playing on a loop for 120 years. Someone recorded their last words and left them running. The voice is calm.
 
 **A.U.R.A.:** 'Tell my brother I got further than the eight before us. Tell him—' It repeats from there, Commander.  
-**Dr. Aris:** We can't tell anyone anything. We're as far from home as they were.  
-**Spc. Vance:** Then we write it down. Exactly as they said it.  
+**Aris:** We can't tell anyone anything. We're as far from home as they were.  
+**Vance:** Then we write it down. Exactly as they said it.  
 
 Choices:
 1. **Record it, word for word** — -5 Energy. +1 Data. Vance -1 Stress.
-   → Message recorded exactly. -5 Energy, +1 Data. Vance -1 Stress. / Spc. Vance writes it out by hand, then checks it against the recording. It matches.  
+   → Message recorded exactly. -5 Energy, +1 Data. Vance -1 Stress. / Vance writes it out by hand, then checks it against the recording. It matches.  
 2. **Trace it to the ship** — -10 Energy. 60% chance: +30 Salvage. Aris +1 Stress: it means opening their lockers.
    → Ship found and stripped. -10 Energy, +30 Salvage. Aris +1 Stress. / Source found: a dark ship. We open the personal lockers, but the name tags are set aside first.  
    ↳ or: The source is out of range. They died somewhere we can't reach.  
    ↳ or: Too far away. Nothing found. -10 Energy. Aris +1 Stress.  
 3. **Switch it off** — -1 Ration: a day to reach it. The voice stops. Aris -1 Stress.
-   → Message switched off. -1 Ration. Aris -1 Stress. / Dr. Aris reads the name on the transmitter. "Your brother would be proud of you." Then she switches it off.  
+   → Message switched off. -1 Ration. Aris -1 Stress. / Aris reads the name on the transmitter. "Your brother would be proud of you." Then she switches it off.  
 
 ### OUR OWN DISTRESS CALL «DistressSignals.js · DISTRESS_ALIEN»
 _Only from sector 3._
 
 > It's a distress call from our own ship: our name, our call sign, our crew list. It has arrived before we ever sent it.
 
-**Tech Mira:** That's our call sign. We never sent that.  
+**Mira:** That's our call sign. We never sent that.  
 **A.U.R.A.:** It matches our emergency call exactly, Commander. I have not sent one. The signal is very old.  
-**Spc. Vance:** Then someone out there already knows who we are.  
+**Vance:** Then someone out there already knows who we are.  
 
 Choices:
 1. **Play the whole call** — -5 Energy. 25% chance: all crew +2 Stress. 35% chance: +5 Data, all planets revealed. Otherwise +3 Data.
@@ -1071,27 +1071,27 @@ Choices:
    ↳ or: A.U.R.A.: 'That is my voice, Commander. But I have never recorded this message.'  
    ↳ or: Our own call, with our names in it. -5 Energy. All crew +2 Stress.  
    ↳ or: At the end of our call there's one extra word, in A.U.R.A.'s voice: 'home.'  
-   ↳ or: Tech Mira: 'Aura, did you say that?' A.U.R.A.: 'No, Mira. I have never put that word in a message.'  
+   ↳ or: Mira: 'Aura, did you say that?' A.U.R.A.: 'No, Mira. I have never put that word in a message.'  
    ↳ or: One extra word at the end of our call. -5 Energy, +3 Data.  
 2. **Record it, but don't play it** — +2 Data. Mira +1 Stress: she wants to hear it.
-   → Call recorded, not played. +2 Data. Mira +1 Stress. / Recorded and sealed, never played. / Tech Mira: 'I just want to know what it says, Commander.'  
+   → Call recorded, not played. +2 Data. Mira +1 Stress. / Recorded and sealed, never played. / Mira: 'I just want to know what it says, Commander.'  
 3. **Fly away from it** — -10 Energy. Nobody hears it. Vance -1 Stress.
-   → We flew away from our own distress call. -10 Energy. Vance -1 Stress. / We burned away. Spc. Vance watched the signal fade until it was gone.  
+   → We flew away from our own distress call. -10 Energy. Vance -1 Stress. / We burned away. Vance watched the signal fade until it was gone.  
 
 ## Ship problems (9)
 _Can turn up in: any sector (on warps and jumps, never on the approach to the light)._
 
 #### Card words: showShipMalfunctionModal «bundle.js · showShipMalfunctionModal»
 
-- **kicker** — SHIP ALERT «bundle.js · line 5530»
-- DEAL WITH IT «bundle.js · line 5532»
-- MALFUNCTION RESOLVED: [result] «bundle.js · line 5535»
+- **kicker** — SHIP ALERT «bundle.js · line 5564»
+- DEAL WITH IT «bundle.js · line 5566»
+- MALFUNCTION RESOLVED: [result] «bundle.js · line 5569»
 
 ### Power Surge «ShipEvents.js · POWER_SURGE»
 
 > A power line overloads, and sparks fly across the engine room.
 
-**Eng. Jaxon:** A power line just blew. I'm rerouting around it now.  
+**Jaxon:** A power line just blew. I'm rerouting around it now.  
 **A.U.R.A.:** Power is dropping on several systems, Commander. Rerouting is under way.  
 
 What happens:
@@ -1103,8 +1103,8 @@ What happens:
 
 > The air recyclers stop for a moment. Then they start again.
 
-**Dr. Aris:** Carbon dioxide is climbing. Everyone breathe slowly and stay calm.  
-**Tech Mira:** The backup filters just switched on. We're fine now.  
+**Aris:** Carbon dioxide is climbing. Everyone breathe slowly and stay calm.  
+**Mira:** The backup filters just switched on. We're fine now.  
 
 What happens:
 → The air system failed for a moment. 5 crew +1 Stress. / The air system is working again, but everyone is on edge.  
@@ -1113,8 +1113,8 @@ What happens:
 
 > Something small hit the hull at high speed. The crack echoed through the whole ship.
 
-**Spc. Vance:** We've been hit. I'm checking for holes.  
-**Eng. Jaxon:** The hull's holding. That one was close.  
+**Vance:** We've been hit. I'm checking for holes.  
+**Jaxon:** The hull's holding. That one was close.  
 
 What happens:
 → Glancing hit. -10 Salvage. / The impact knocked cargo off the outside racks. -10 Salvage.  
@@ -1125,7 +1125,7 @@ What happens:
 
 > The ship creaks. The hull is starting to crack from the strain of so many jumps.
 
-**Eng. Jaxon:** Small cracks are forming in the hull. She's been through a lot.  
+**Jaxon:** Small cracks are forming in the hull. She's been through a lot.  
 **A.U.R.A.:** Hull cracks detected, Commander. I recommend patching them now.  
 ↳ or: Several decks already need repair.  
 
@@ -1140,8 +1140,8 @@ What happens:
 
 > The navigation screens flicker and go dark. For a moment, we can't see anything outside.
 
-**Tech Mira:** Sensors are down. I'm running a check now.  
-**Spc. Vance:** I don't like flying blind out here. Get them back up.  
+**Mira:** Sensors are down. I'm running a check now.  
+**Vance:** I don't like flying blind out here. Get them back up.  
 
 What happens:
 → Sensors back online. -7 Energy. / Sensors restarted. -7 Energy.  
@@ -1152,8 +1152,8 @@ What happens:
 
 > A pipe bursts and sprays freezing coolant down the corridor.
 
-**Dr. Aris:** Coolant leak! Everyone get clear of the corridor!  
-**Eng. Jaxon:** I'm shutting off that section. We'll lose some cooling.  
+**Aris:** Coolant leak! Everyone get clear of the corridor!  
+**Jaxon:** I'm shutting off that section. We'll lose some cooling.  
 
 What happens:
 → Coolant leak sealed. -9 Energy. / Leak sealed. Systems are running hot. -9 Energy.  
@@ -1164,7 +1164,7 @@ What happens:
 
 > Something in the cargo hold broke loose during the last burn.
 
-**Eng. Jaxon:** I heard a crash from the hold. We'd better check the supplies.  
+**Jaxon:** I heard a crash from the hold. We'd better check the supplies.  
 **A.U.R.A.:** There's damage in the cargo hold, Commander. Someone should take a look.  
 
 What happens:
@@ -1178,8 +1178,8 @@ What happens:
 
 > Something in the lab just shattered, and there's a strange smell in the air.
 
-**Dr. Aris:** Everybody out. Seal the lab until we know what broke.  
-**Tech Mira:** Was that the sample storage? Oh no.  
+**Aris:** Everybody out. Seal the lab until we know what broke.  
+**Mira:** Was that the sample storage? Oh no.  
 
 What happens:
 → Lab accident. Lab damaged and sealed. / Lab sealed. We don't know yet what was released.  
@@ -1191,8 +1191,8 @@ What happens:
 
 > During a routine check, someone found a sealed locker nobody remembered.
 
-**Eng. Jaxon:** There's a full repair kit in here. And food!  
-**Dr. Aris:** We'll take any good news we can get.  
+**Jaxon:** There's a full repair kit in here. And food!  
+**Aris:** We'll take any good news we can get.  
 
 What happens:
 → Forgotten supplies found. +3 Rations. / Forgotten food packs. +3 Rations.  
@@ -1206,20 +1206,20 @@ _Can turn up in: sectors 4, 5, 6 (the beacon and the dome from sector 4, the gra
 
 #### Card words: handleLateGamePOI «bundle.js · handleLateGamePOI»
 
-- No [poi type] detected at this location. «bundle.js · line 2958»
-- [poi type] already investigated. «bundle.js · line 2964»
-- ERROR: [poi type] encounter data unavailable. «bundle.js · line 2970»
-- Approaching [name]... «bundle.js · line 2974»
+- No [poi type] detected at this location. «bundle.js · line 3059»
+- [poi type] already investigated. «bundle.js · line 3065»
+- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3071»
+- Approaching [name]... «bundle.js · line 3075»
 
 ### THE LIGHTHOUSE «LateGamePOIs.js · THE_LIGHTHOUSE»
 _Only from sector 4._
 
 > A dead ship is parked in orbit here. Its crew is long gone, but its navigation beacon is still running. The beacon sends one message, over and over: the safest route onward, for any ship that comes after it. Every route it gives points the same way. Down our heading.
 
-**Tech Mira:** It's a navigation beacon, Commander. It's giving directions to any ship behind it.  
+**Mira:** It's a navigation beacon, Commander. It's giving directions to any ship behind it.  
 **A.U.R.A.:** The route it gives is accurate, Commander. It matches our heading exactly.  
-**Spc. Vance:** So every ship that passed here followed it. Where did it lead them?  
-**Eng. Jaxon:** It still runs off its own reactor. I can plug our charts straight into it.  
+**Vance:** So every ship that passed here followed it. Where did it lead them?  
+**Jaxon:** It still runs off its own reactor. I can plug our charts straight into it.  
 
 Choices:
 1. **Download its route** — Warps cost 2 less energy from now on.
@@ -1227,7 +1227,7 @@ Choices:
 2. **Strip the beacon for parts** — +100 Salvage. The beacon goes dark for good.
    → Beacon stripped. +100 Salvage. It will never guide anyone again. / We strip the beacon down to the frame. Its signal stops. / A.U.R.A.: 'The beacon is off, Commander. Any ship behind us will have to find its own way.'  
 3. **Read the beacon's log** — Mira reads the list of every ship it guided. Mira -1 Stress.
-   → Beacon log read. Every ship that passed went one way, and none came back. / Tech Mira: 'It logged every ship that passed. Thousands of them, all going the same way.' / Tech Mira: 'And none of them ever came back past it.'  
+   → Beacon log read. Every ship that passed went one way, and none came back. / Mira: 'It logged every ship that passed. Thousands of them, all going the same way.' / Mira: 'And none of them ever came back past it.'  
    ↳ or: Without Mira, we can only read part of the log.  
    ↳ or: Thousands of ships passed this beacon, all heading the same way. None of them came back.  
 
@@ -1236,9 +1236,9 @@ _Only from sector 4._
 
 > On this dead planet, under a dome kilometres wide, there is a whole Earth garden: grass, trees, running water, birds. The grass has no roots. It just sits on the soil. Nobody built it. It is a copy of a real place, and the copy is not quite right. The door is open, because the real place had an open door.
 
-**Dr. Aris:** Every plant here is an Earth plant. Whoever copied them didn't know how plants grow.  
-**Tech Mira:** The dome makes its own daylight. I can't find where it's coming from.  
-**Spc. Vance:** There's a stone in the middle with names cut into it.  
+**Aris:** Every plant here is an Earth plant. Whoever copied them didn't know how plants grow.  
+**Mira:** The dome makes its own daylight. I can't find where it's coming from.  
+**Vance:** There's a stone in the middle with names cut into it.  
 **A.U.R.A.:** There are seeds and embryos stored here, Commander. Earth stock. I can't say how they got here.  
 
 Choices:
@@ -1255,15 +1255,15 @@ _Only from sector 5._
 
 > This whole moon is a graveyard. Rows of stones stretch to every horizon, one row for each ship, with the hull number at the end. Every stone has four names on it. The rows farther out are older.
 
-**Dr. Aris:** I'm going to read their names. Somebody should.  
-**Eng. Jaxon:** This row has our mission patch on it. The hull number is over nine thousand.  
-**Spc. Vance:** Thousands of stones, and not one commander.  
-**Tech Mira:** Please don't read them out loud. I don't want to hear them.  
+**Aris:** I'm going to read their names. Somebody should.  
+**Jaxon:** This row has our mission patch on it. The hull number is over nine thousand.  
+**Vance:** Thousands of stones, and not one commander.  
+**Mira:** Please don't read them out loud. I don't want to hear them.  
 **A.U.R.A.:** Four crew per ship, Commander. The stones match the crew lists.  
 
 Choices:
 1. **Walk the rows and read the names** — Aris wants the names read aloud. It takes hours. All crew +2 Stress.
-   → Four hundred names read aloud. All crew +2 Stress. / The names on the nearest hundred stones are read aloud, four to a stone. Nobody interrupts. / Dr. Aris: 'Whoever buried them knew every name. It's the same handwriting on every stone.'  
+   → Four hundred names read aloud. All crew +2 Stress. / The names on the nearest hundred stones are read aloud, four to a stone. Nobody interrupts. / Aris: 'Whoever buried them knew every name. It's the same handwriting on every stone.'  
 2. **Leave something at the graves** — -10 Salvage to make markers. All crew -1 Stress.
    → Left tributes at the graves. -10 Salvage. All crew -1 Stress. / We leave personal things at the stones: photos, letters, small things that mattered. / A.U.R.A.: 'I've recorded where we left them, Commander.'  
    ↳ or: Near the edge there is a new stone that wasn't there when we landed. It reads: [name].  

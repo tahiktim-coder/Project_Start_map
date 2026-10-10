@@ -24,10 +24,8 @@
 
     const SPEAKERS = { // who can talk in the log: colour and a fallback face for entries written before the game state exists
         'A.U.R.A.': { color: '#74d99a' },
-        'Eng. Jaxon': { color: '#f0a030', face: 'M_2' }, 'Jaxon': { color: '#f0a030', face: 'M_2' },
-        'Dr. Aris': { color: '#40c8ff', face: 'F_3' }, 'Aris': { color: '#40c8ff', face: 'F_3' },
-        'Spc. Vance': { color: '#ff5050', face: 'M_4' }, 'Vance': { color: '#ff5050', face: 'M_4' },
-        'Tech Mira': { color: '#d070ff', face: 'F_5' }, 'Mira': { color: '#d070ff', face: 'F_5' },
+        'Jaxon': { color: '#f0a030', face: 'M_2' }, 'Aris': { color: '#40c8ff', face: 'F_3' },
+        'Vance': { color: '#ff5050', face: 'M_4' }, 'Mira': { color: '#d070ff', face: 'F_5' },
     };
     const SPEECH = new RegExp(`^(${Object.keys(SPEAKERS).map(n => n.replace(/\./g, '\\.')).join('|')}):\\s*([\\s\\S]+)$`);
     const REWARD = /,?\s*(?:and\s+)?([+\-−]\d+(?:-\d+)?%?\s+(?:Colony Knowledge|Salvage|Energy|Rations?|Data|Stress|Probe Integrity))\b/gi;

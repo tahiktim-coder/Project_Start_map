@@ -6,7 +6,9 @@
      mixed → ROUGH (nothing) · mostly missed → BAD (−25%, the ship shudders)
    Windows narrow with sector depth, a damaged bridge and a frayed commander.
    A.U.R.A. will always plot it for you — safely, mediocrely. That offer is part of the story.
-   play(opts) → Promise<{ grade: 'perfect'|'clean'|'rough'|'bad', auto: boolean }> */
+   The game's first warp (opts.isFirstPlot) is gentle: A.U.R.A. flies it while you watch, nothing is graded or charged,
+   and Jaxon says you try next time.
+   play(opts) → Promise<{ grade: 'perfect'|'clean'|'rough'|'bad'|'first', auto: boolean, isFirstPlot: boolean }> */
 
 (function () {
     'use strict';
@@ -17,7 +19,7 @@
     const STAGES = [{ win: 1, period: 1 }, { win: 0.85, period: 0.78 }, { win: 0.7, period: 0.6 }]; // multipliers per burn
     const BASE_WINDOW = 0.17, WINDOW_PER_SECTOR = 0.015, MIN_WINDOW = 0.05, ROUGH_FACTOR = 2.6;
     const BASE_PERIOD_MS = 1700, PERIOD_PER_SECTOR = 100, MIN_PERIOD_MS = 620;
-    const LOCK_PAUSE_MS = 420, FLIGHT_MS = 1500, RESULT_HOLD_MS = 1900;
+    const LOCK_PAUSE_MS = 420, FLIGHT_MS = 1500, RESULT_HOLD_MS = 1900, FIRST_PLOT_WATCH_MS = 2600, FIRST_PLOT_HOLD_MS = 3200;
     const INK = '#06070a', GREEN = '#74d99a', GREEN_DIM = '#2f5a48', AMBER = '#d9a24a', RED = '#d85a4e', BONE = '#c4d0c4';
     const LOCK = { clean: { points: 2, color: GREEN, word: 'CLEAN' }, rough: { points: 1, color: AMBER, word: 'ROUGH' }, bad: { points: 0, color: RED, word: 'MISSED' } };
     const GRADES = {
@@ -25,6 +27,7 @@
         clean: { label: 'CLEAN PLOT', effect: '15% of the fuel comes back', color: GREEN, refund: 0.15 },
         rough: { label: 'ROUGH PLOT', effect: 'normal fuel cost', color: AMBER, refund: 0 },
         bad: { label: 'BAD PLOT', effect: '25% extra fuel burned — hull shudders', color: RED, refund: -0.25 },
+        first: { label: 'COURSE SET', effect: 'A.U.R.A. flew this one.', color: GREEN, refund: 0 },   // no grade on the first warp
     };
     const LINES = {
         perfect: [['ENGINEER', "Three for three. I didn't feel a thing."], ['SPECIALIST', 'That was beautiful. Do that every time.'], ['AURA', 'A perfect burn, Commander. I could not have done better.']],
@@ -32,6 +35,7 @@
         rough: [['SECURITY', "We're in one piece. I'll take it."], ['MEDIC', 'Bit of a lurch. Everyone breathe.'], ['AURA', 'We are on course, Commander.']],
         bad: [['ENGINEER', "That's going to cost us. The drive didn't like that."], ['MEDIC', 'Is everyone all right? That was ugly.'], ['SECURITY', 'Warn me next time you do that.']],
         auto: [['AURA', 'Course plotted, Commander. You can rest.'], ['AURA', 'I will take it from here, Commander.']],
+        first: [['ENGINEER', 'Next time, you try. Stop the marker inside the bright window.']],
     };
     const sfx = (name, ...args) => { const audio = window.AudioSystem; if (audio && typeof audio[name] === 'function') audio[name](...args); }; // silent when muted
     const LOCK_TONE = { clean: [880, 'sine', 0.14], rough: [440, 'triangle', 0.14], bad: [150, 'sawtooth', 0.22] };
@@ -74,7 +78,7 @@
 
     function pickLine(kind, crew) {
         const alive = tag => crew.find(c => c.status !== 'DEAD' && (c.tags || []).includes(tag));
-        const options = LINES[kind].map(([who, text]) => (who === 'AURA' ? { name: 'A.U.R.A.', text, face: null } : (alive(who) ? { name: alive(who).name, text, face: alive(who).portraitId } : null))).filter(Boolean);
+        const options = (kind === 'first' && !alive('ENGINEER') ? [['AURA', 'Next time, you fly it, Commander.']] : LINES[kind]).map(([who, text]) => (who === 'AURA' ? { name: 'A.U.R.A.', text, face: null } : (alive(who) ? { name: alive(who).name, text, face: alive(who).portraitId } : null))).filter(Boolean);
         return options[Math.floor(Math.random() * options.length)] || null;
     }
 
@@ -93,12 +97,14 @@
                     <div class="warp-plot-callout" aria-hidden="true"></div>
                 </div>
                 <ol class="warp-plot-pips" aria-label="Burns" style="grid-template-columns: repeat(${burnsOf(opts)}, 1fr)">${STAGES.slice(0, burnsOf(opts)).map((_, i) => `<li><span>BURN ${i + 1}</span></li>`).join('')}</ol>
-                <p class="warp-plot-hint">${opts.mode === 'station'
+                <p class="warp-plot-hint">${opts.isFirstPlot
+                    ? 'A.U.R.A.: "I will fly the first one, Commander. Watch the marker and the bright window."'
+                    : opts.mode === 'station'
                     ? 'The port is still turning. Lock the burn as the window lines up: clean docks first time, a miss scrapes the hull and costs extra.'
                     : burnsOf(opts) === 1
                     ? 'One burn. Lock it inside the bright window: clean gives fuel back, a miss costs extra.'
                     : 'A long jump: three burns, each faster. Lock every one inside the bright window — all three clean gives the most fuel back.'}</p>
-                <div class="warp-plot-buttons">
+                <div class="warp-plot-buttons"${opts.isFirstPlot ? ' style="display: none"' : ''}>
                     <button class="warp-plot-engage">LOCK BURN <kbd>SPACE</kbd></button>
                     <button class="warp-plot-auto">LET A.U.R.A. PLOT IT</button>
                 </div>
@@ -182,7 +188,8 @@
             document.body.appendChild(overlay);
             pips[0].classList.add('is-current');
             if (reduceMotion) { engage.disabled = true; engage.textContent = 'MANUAL PLOT NEEDS MOTION'; }
-            (reduceMotion ? auto : engage).focus();
+            if (opts.isFirstPlot) { engage.disabled = true; auto.disabled = true; setTimeout(() => fly('first', true), FIRST_PLOT_WATCH_MS); }
+            else (reduceMotion ? auto : engage).focus();
 
             function showCallout(text, color) {
                 callout.textContent = text;
@@ -213,15 +220,18 @@
             function fly(grade, isAuto) {
                 if (s.grade) return;
                 s.grade = grade;
+                if (grade === 'first') s.pos = s.diff.center;                 // A.U.R.A. stops the marker in the middle of the window
                 s.flightStart = performance.now();
                 engage.disabled = true; auto.disabled = true;
                 overlay.classList.add('is-flying', 'is-' + grade);
                 sfx(grade === 'perfect' ? 'sfxDiscovery' : grade === 'bad' ? 'sfxWarn' : 'sfxWarp');
-                const info = GRADES[grade], line = pickLine(isAuto ? 'auto' : grade, opts.crew || []);
-                resultEl.innerHTML = `<strong style="color:${info.color}">${isAuto ? 'A.U.R.A. PLOT' : info.label}</strong><span>${effectText(grade, opts.cost)}</span>`
+                const info = GRADES[grade], line = pickLine(grade === 'first' ? 'first' : isAuto ? 'auto' : grade, opts.crew || []);
+                const label = grade === 'first' ? info.label : isAuto ? 'A.U.R.A. PLOT' : info.label;
+                resultEl.innerHTML = `<strong style="color:${info.color}">${label}</strong><span>${effectText(grade, opts.cost)}</span>`
                     + (line ? `<blockquote>${line.face ? `<img src="assets/crew/${esc(line.face)}.png" alt="">` : '<i>◈</i>'}<b>${esc(line.name)}</b> “${esc(line.text)}”</blockquote>` : '');
                 if (grade === 'bad' && window.app && window.app.screenShake) window.app.screenShake('light');
-                setTimeout(() => (opts.arrival ? arrive(isAuto) : finish(isAuto)), Math.max(FLIGHT_MS, RESULT_HOLD_MS));
+                const holdMs = grade === 'first' ? FIRST_PLOT_HOLD_MS : Math.max(FLIGHT_MS, RESULT_HOLD_MS);   // time to read Jaxon's line
+                setTimeout(() => (opts.arrival ? arrive(isAuto) : finish(isAuto)), holdMs);
             }
 
             // Sector jumps end on a title card: where you are, how old the wrecks are, what the crew makes of it.
@@ -245,7 +255,7 @@
                 isDone = true;
                 (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(raf);
                 overlay.classList.add('is-leaving');
-                setTimeout(() => { overlay.remove(); resolve({ grade: s.grade, auto: isAuto }); }, 350);
+                setTimeout(() => { overlay.remove(); resolve({ grade: s.grade, auto: isAuto, isFirstPlot: !!opts.isFirstPlot }); }, 350);
             }
 
             function frame(now) {
@@ -272,7 +282,7 @@
 
     /** What a grade does, said in energy when the caller passed the price (opts.cost), so the screen shows what is charged. */
     function effectText(grade, cost) {
-        if (!(cost > 0)) return GRADES[grade].effect;
+        if (!(cost > 0) || grade === 'first') return GRADES[grade].effect;
         const delta = energyDelta(grade, cost);
         if (delta > 0) return `${delta} energy comes back`;
         if (delta < 0) return `${-delta} extra energy burned — hull shudders`;

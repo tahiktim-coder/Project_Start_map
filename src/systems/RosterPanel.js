@@ -37,7 +37,7 @@
             <li class="roster-person ${isDead ? 'is-dead' : ''} stress-${stress}">
                 <img src="assets/crew/${esc(member.portraitId || '')}.png" alt="" style="border-color:${color}">
                 <div class="roster-who">
-                    <b>${esc(member.realName || member.name)}</b>
+                    <b>${esc(member.name)}</b>
                     <span>${job}, ${esc(member.age || '?')} · ${esc(where)}</span>
                     ${member.trait ? `<em>${esc(String(member.trait).toLowerCase())}</em>` : ''}
                 </div>

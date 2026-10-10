@@ -7,20 +7,20 @@ _What the player reads after choosing to settle. The game stitches several of th
 ## Pressing SETTLE HERE «bundle.js · _executeColony»
 _A.U.R.A. refuses an unscanned world; otherwise the flight-recorder card comes up before the colony card._
 
-- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 4867»
-- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 4914»
-- AVG STRESS «bundle.js · line 4926»
-- COLONY RATING «bundle.js · line 4934»
-- [YES | NO] «bundle.js · line 4955»
-- Type: [type] | Sector [sector] «bundle.js · line 4973»
-- CREW MODIFICATIONS «bundle.js · line 4976»
-- Symbiotes: [symbiotes] «bundle.js · line 4978»
-- Cyborgs: [cyborgs] «bundle.js · line 4979»
-- Touched: [wrong place] «bundle.js · line 4980»
-- COLONY DESIGNATION «bundle.js · line 4988»
-- FINAL CREW ROSTER «bundle.js · line 5000»
-- EXODUS PROGRAM RECORD #[n] «bundle.js · line 5017»
-- REBOOT SIMULATION «bundle.js · line 5022»
+- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 4947»
+- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 4994»
+- AVG STRESS «bundle.js · line 5006»
+- COLONY RATING «bundle.js · line 5014»
+- [YES | NO] «bundle.js · line 5035»
+- Type: [type] | Sector [sector] «bundle.js · line 5053»
+- CREW MODIFICATIONS «bundle.js · line 5056»
+- Symbiotes: [symbiotes] «bundle.js · line 5058»
+- Cyborgs: [cyborgs] «bundle.js · line 5059»
+- Touched: [wrong place] «bundle.js · line 5060»
+- COLONY DESIGNATION «bundle.js · line 5068»
+- FINAL CREW ROSTER «bundle.js · line 5080»
+- EXODUS PROGRAM RECORD #[n] «bundle.js · line 5097»
+- REBOOT SIMULATION «bundle.js · line 5102»
 
 ## The second chance (from colony notes)
 
@@ -617,7 +617,7 @@ _when: c.tags.includes('LEADER')_
 - Commander [name] is the first name in the colony register. «EndingSystem.js · line 815»
 
 _when: c.tags.includes('MEDIC')_
-- The clinic is named after Dr. [name]. «EndingSystem.js · line 817»
+- The clinic is named after [name]. «EndingSystem.js · line 817»
 
 _when: c.tags.includes('ENGINEER')_
 - [name]'s tools hang in the workshop, still in use. «EndingSystem.js · line 819»

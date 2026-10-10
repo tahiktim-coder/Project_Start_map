@@ -485,7 +485,7 @@
         lights.push(lamp(cx, F - 64, { reach: 26, k: 0.75, tint: ICE_T, up: 1 }));
     }
 
-    // 6 · engineering: the drive's core in a drum through the floor, the control desk, the tool wall, pipes
+    // 6 · engineering: the reactor (ship-reactor.js paints it and draws its light), the control desk, the tool wall, pipes
     ROOMS[5] = (p, look) => {
         const fx = [], lights = [];
         overhead(p, 5, { tray: false });
@@ -496,20 +496,8 @@
             p.region(vx, 22, vx + 5, F, (x, y) => p.tone(x, y, R.STEEL, [0.16, 0.3, 0.44, 0.3, 0.14][x - vx]));
             p.ellipse(vx + 2.5, F - 110, 6, 6, (x, y, q) => p.tone(x, y, R.STEEL, q > 0.55 ? 0.5 : q > 0.3 ? 0.12 : 0.62));
         }
-        // the drum
-        const x0 = 404, x1 = 524, dc = (x0 + x1) / 2;
-        p.region(x0, 22, x1, L.PITCH, (x, y) => {
-            const narrow = y >= F ? 26 : 0; if (x < x0 + narrow || x >= x1 - narrow) return;
-            const u = (x + 0.5 - dc) / ((x1 - x0) / 2 - narrow);
-            let v = 0.18 + 0.34 * clamp01(u * 0.7 + 0.45) - (Math.abs(u) > 0.94 ? 0.1 : 0);
-            if ((y - 22) % 32 < 3 && y < F) v += [0.22, 0.1, -0.06][(y - 22) % 32];
-            p.tone(x, y, R.STEEL, v);
-        });
-        p.region(452, 52, 476, F - 40, (x, y) => p.tone(x, y, R.ICE, 0.35 + 0.4 * (1 - Math.abs(x - 464) / 12)));
-        p.region(450, 50, 478, 52, (x, y) => p.tone(x, y, R.STEEL, 0.6)); p.region(450, F - 40, 478, F - 38, (x, y) => p.tone(x, y, R.STEEL, 0.3));
-        fx.push({ kind: 'core', x: 452, y: 52, w: 24, h: F - 92 });
-        lights.push(lamp(464, F - 110, { reach: 70, k: 0.6, tint: ICE_T, up: 1 }));
-        for (let k = 0; k < 3; k++) { const gx = 410 + k * 12, gy = F - 106; p.ellipse(gx, gy, 4.5, 4.5, (x, y, q) => p.tone(x, y, R.LINEN, q > 0.6 ? 0.3 : 0.62)); fx.push({ kind: 'needle', x: gx, y: gy, k }); }
+        const RX = A.reactor;                                                                         // ship-reactor.js: the heart of the ship
+        if (RX) { RX.paint(p); fx.push(RX.fx()); }
         duct(p, 356, 384, F - 150);
         p.region(560, 30, 564, 36, (x, y) => p.tone(x, y, R.STEEL, 0.5));
         for (let y = 36; y < F - 120; y += 3) p.region(561, y, 563, y + 2, (x, yy) => p.tone(x, yy, R.STEEL, 0.4));
@@ -532,7 +520,7 @@
         mug(p, 243, F - DESK - 3);                                                                  // Jaxon's mug, his jacket, his notes
         jacket(p, 222, 64, R.WOOL, 0.42);
         clipboard(p, 300, 78);
-        return { lamps: [{ x: 200, k: 0.9 }, { x: 610, k: 0.8 }], fx, lights };
+        return { lamps: [{ x: 200, k: 0.9 }, { x: 610, k: 0.8 }], fx, lights, glow: RX ? RX.glow : null };
     };
 
     // ── where people go ─────────────────────────────────────────────────────────────────────────────────────────

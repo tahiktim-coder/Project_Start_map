@@ -13,10 +13,10 @@ Map text: *Wreckage drifts past the viewport. The graveyard of humanity's first 
 Objective lines (the tip above the log, one at a time, whichever fits what you are doing):
 - No stops left in this sector. Press JUMP SECTOR to move on — whatever you skipped is gone for good. «Coach.js · line 51»
 - An old ship beacon is marked on the map at [name]. Click it, warp there, scan, then send the team to the wreck. «Coach.js · line 53»
-- [name] is on the map now. One of our ships is there. Warp to it and send the team. «Coach.js · line 54»
+- [name] is on the map now. One of our ships is there. [Their course is free to fly. | Warp to it and send the team.] «Coach.js · line 54»
 - This sector's page is found. Use your [last stop | [stops left] stops] to look around, or JUMP SECTOR. «Coach.js · line 55»
 - Click a planet on the map to look at it. You only get a few STOPS per sector, so you cannot visit them all. «Coach.js · line 56»
-- LONG RANGE SCAN shows what is there for 2 energy. INITIATE WARP flies there and uses one STOP. «Coach.js · line 57»
+- LONG RANGE SCAN is free. INITIATE WARP costs the energy on the button and uses one STOP. «Coach.js · line 57»
 - Nothing more here. BREAK ORBIT to go back to the map. «Coach.js · line 59»
 - BOARD STATION sends one person inside on a tank of air. A DEEP SCAN first shows the rooms. «Coach.js · line 59»
 - DEEP SCAN first, to see what is down there. Tune it by hand for a chance at bonus data. «Coach.js · line 60»
@@ -29,7 +29,7 @@ Objective lines (the tip above the log, one at a time, whichever fits what you a
 ### The marked beacon — the first wreck «bundle.js · findDiscDrawing»
 _The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), always a whole ship, so the team cuts its hatch first (10-away-team.md). It is named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_
 
-- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 2496»
+- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 2580»
 
 #### The drawing of the gold disc «DiscDocument.js · NOTES»
 _A card with the drawing. Point at each label to read its note._
@@ -51,25 +51,31 @@ In the cargo hold afterwards:
 - **DISC_DRAWING** — You unfold the page. «Items.js · line 111»
 
 ### Head count «bundle.js · showCountScene»
-_On the first return to the map in sector 1. Card kicker: THE BRIDGE / INSIDE THE STATION / ASTEROID FIELD / DISTRESS SIGNAL / A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / MUTINY / SHIP ALERT_
+_On the first return to the map in sector 1. Card kicker: THE BRIDGE / INSIDE THE STATION / ASTEROID FIELD / DISTRESS SIGNAL / A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / INSIDE THE LIGHT / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 > Back on the bridge, Vance is frowning at the crew screen.
 
-**Spc. Vance:** There are five of us on this ship. She keeps saying four.  
+**Vance:** There are five of us on this ship. She keeps saying four.  
 **A.U.R.A.:** Four crew, Commander. All well.  
-**Spc. Vance:** Then list them.  
+**Vance:** Then list them.  
 **A.U.R.A.:** Jaxon Mercer. Aris Novak. Kael Vance. Mira Chen. And you, Commander. Four crew.  
-**Eng. Jaxon:** It is a glitch. She slept sixty years too. Let it go.  
+**Jaxon:** It is a glitch. She slept sixty years too. Let it go.  
+**A.U.R.A.:** ${reason} Jump anyway?  
 **A.U.R.A.:** I can run the drive on the reserve, Commander. The crew quarters will lose power.  
 **A.U.R.A.:** Colony report for ${pType}: ${viability}%. Recommend proceeding to Sector ${Math.min(6, this.state.currentSector + 1)}.  
+**A.U.R.A.:** If we land for good, the journey ends here, Commander. Settle anyway?  
 
 Choices:
 1. **Let it go** — Jaxon is probably right. It is only a number.
 2. **Ask her why** — Vance wants an answer.
 3. **Read the printed crew list** — There is a paper copy in the bridge locker.
-4. **Jump on the reserve** — Uses all the energy left. The crew quarters are damaged.
-5. **Not yet** — Probes and wrecks can still bring energy back.
-6. **Not now** — You can still do it from the command deck while we are in orbit.
+4. **Not yet** — Stay in this sector.
+5. **Jump now** — Whatever is left here is gone for good.
+6. **Jump on the reserve** — Uses all the energy left. The crew quarters are damaged.
+7. **Not yet** — Probes and wrecks can still bring energy back.
+8. **Not now** — You can still do it from the command deck while we are in orbit.
+9. **Not yet** — Stay in orbit.
+10. **Settle here** — The journey ends on this world.
 
 What each choice says in the log:
 - A.U.R.A.: "Thank you, Commander."
@@ -77,8 +83,8 @@ What each choice says in the log:
 - The printed crew list has five names: Cora Moon, Jaxon Mercer, Aris Novak, Kael Vance, Mira Chen.
 - In [ship name]: [desc]
 - In the archive of [ship name]: a tape with our programme's seal. It is in your cargo now.
-- Spc. Vance: "That is not eight ships. That is hundreds."
-- A.U.R.A.: "Old recordings degrade, Specialist. I would not read too much into it."
+- Vance: "That is not eight ships. That is hundreds."
+- A.U.R.A.: "Old recordings degrade, Vance. I would not read too much into it."
 - A.U.R.A.: "That contact is too faint to plot a course to, Commander."
 - A.U.R.A.: "The drive fires, Commander. We do not move."
 - A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in."
@@ -87,13 +93,11 @@ What each choice says in the log:
 - A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector."
 - Warping to [planet name]...
 - A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander."
-- Collectors absorbed [energy return] energy from [return reason].
 - Autodoc: Crew injuries stabilized during transit.
-- Bussard Scoop: Harvested additional [scoop] Energy from atmosphere.
+- The fuel scoop took [scoop] energy from the atmosphere.
 - [name]: Unsettled by hostile readings.
 - [name] has recovered from sedation. Cleared for duty.
 - [name] is still kept asleep. [n] more jumps until he wakes.
-- The door to your quarters opens. Nobody says anything. You take the chair back.
 - Docking approach started. Station sensors detecting our arrival.
 - Entered debris field. Navigation systems active.
 - Approach complete. The light fills every window. It is not warm.
@@ -133,6 +137,7 @@ What each choice says in the log:
 - ERROR: Exodus encounter data unavailable.
 - Exodus transponder locked. Deploying team to investigate...
 - The disc dates [planet name]: dead for [age] years.
+- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy."
 - No colony ruins detected at this location.
 - Colony ruins already investigated.
 - ERROR: Colony encounter data unavailable.
@@ -209,18 +214,18 @@ What each choice says in the log:
 - STORAGE WARNING: Salvage capacity reached!
 - A.U.R.A.: "There is no ground to land on, Commander. There is only the light."
 - A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished."
-- Dr. Aris: "Absolutely not. [name] needs treatment first. No one goes out there."
+- Aris: "Absolutely not. [name] needs treatment first. No one goes out there."
 - MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge.
 - EVA team deployed: [name] and [name].
 - A.U.R.A.: "Team away, Commander. I have their vitals."
-- Mira: Extended EVA window. Additional rations consumed.
+- Mira insists the team stays out for a full day. -1 Ration.
 - The lander crosses to [site].
 - Soft landing on the marked spot. The team steps out steady.
 - Down safely, but well away from the marked spot. It is a long walk.
 - WARNING: The lander came down hard. [name] is INJURED before the hatch even opens.
 - ⚠ PREDATOR ALERT: Hostile organisms detected approaching EVA team!
 - The creatures didn't just kill — they hunted. [name] never had a chance.
-- Dr. Aris: "The wounds are severe. Whatever attacked them knew where to bite."
+- Aris: "The wounds are severe. Whatever attacked them knew where to bite."
 - [name] and [name] found a quiet place by the stream. The whole crew rotated through in shifts.
 - For the first time in months, everyone truly rested. All stress cleared. All injuries healed.
 - The fruit was unlike anything from Earth, but it tasted like coming home. +10 Rations.
@@ -229,17 +234,12 @@ What each choice says in the log:
 - Renewed purpose fills the crew. +20 Energy. All crew -1 stress.
 - [name]: "Commander... we're staying, aren't we?"
 - You nod. This is where the journey ends.
-- [name]: Rest cycle authorized. Stress reduced. (-1 Ration)
 - BIOLOGICAL INTEGRATION COMPLETE: [name] has returned.
 - [name]: "I can hear them... the others who joined. They're still there, in the mycelium."
 - NEURAL OVERRIDE COMPLETE: [name] has returned.
 - [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now."
-- Dr. Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else."
+- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else."
 - A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first."
-- You did not move. The crew took [name] down. He is locked up and kept asleep.
-- [name] cannot join away teams until he wakes.
-- You handed over the ship. You are locked in your quarters for [confined jumps] jumps.
-- The others watched you give way. It shook them.
 - FABRICATION COMPLETE: [name] installed.
 - MALFUNCTION RESOLVED: [result]
 
@@ -248,7 +248,7 @@ _A faint contact on the map from the start. Dating one of our wrecks here names 
 
 Map text: *A small grey moon. One of our ships came down on it. Its emergency lamp still flashes.*  
 On the disc's map: a moon with one lamp lit. Then:  
-**Tech Mira:** They saw a lamp on that moon and went to help. They never got there.  
+**Mira:** They saw a lamp on that moon and went to help. They never got there.  
 
 ### Found page: THE CREW PLATE «ExodusLogs.js · PAGE_PLATE»
 _In the wreck on Rhea-4 Minor. A metal plate from beside the airlock of a dead ship. Four names, and a blank space for a fifth. In the cargo hold it is called: Crew Plate._
@@ -265,23 +265,23 @@ _Offered after any of our wrecks once the disc drawing is in cargo, and on the c
 ### The faint contact on the map «NavView.js · handleContactSelect»
 _The story planet before it is named: a faint dot labelled UNIDENTIFIED. Clicking it:_
 
-- UNIDENTIFIED CONTACT «NavView.js · line 141»
-- A faint contact. The scanner cannot get a fix on it. «NavView.js · line 142»
-- NO FIX — NO COURSE «NavView.js · line 143»
+- UNIDENTIFIED CONTACT «NavView.js · line 156»
+- A faint contact. The scanner cannot get a fix on it. «NavView.js · line 157»
+- NO FIX — NO COURSE «NavView.js · line 158»
 
 ### The offer «bundle.js · offerDiscDating»
 _A card after the wreck. Mira asks; A.U.R.A. if Mira is dead._
 
-- **kicker** — THE DISC «bundle.js · line 2615»
-- **title** — Date this wreck «bundle.js · line 2615»
-- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 2616»
-- **Tech Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 2618»
-- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 2619»
-- Date this wreck with the disc «bundle.js · line 2621»
-- **desc** — No cost. Shows when it died, and where its crew was going. «bundle.js · line 2621»
-- **desc** — No cost. Shows when it died. «bundle.js · line 2621»
-- Not now «bundle.js · line 2622»
-- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 2622»
+- **kicker** — THE DISC «bundle.js · line 2712»
+- **title** — Date this wreck «bundle.js · line 2712»
+- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 2713»
+- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 2715»
+- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 2716»
+- Date this wreck with the disc «bundle.js · line 2718»
+- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 2718»
+- **desc** — No cost. Shows when it died. «bundle.js · line 2718»
+- Not now «bundle.js · line 2719»
+- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 2719»
 
 ### Dating it (the mini-game) «DiscDating.js · DiscDating»
 _The reactions by depth play the first time a wreck that deep is dated; after that A.U.R.A. says the age._
@@ -335,15 +335,16 @@ _The reactions by depth play the first time a wreck that deep is dated; after th
 
 ### In the log afterwards «bundle.js · dateWreck»
 
-- The disc dates [planet name]: dead for [age] years. «bundle.js · line 2641»
+- The disc dates [planet name]: dead for [age] years. «bundle.js · line 2738»
+- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 2742»
 
-- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 2669»
-- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 2670»
+- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 2770»
+- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 2771»
 
 ### When nobody dated a wreck «bundle.js · revealLateStoryPlanet»
 _Back on the map with one stop left._
 
-- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 2684»
+- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 2785»
 
 ## The hole in the hull (the mini-game) «Breach.js · Breach»
 _Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time._
@@ -416,9 +417,9 @@ _Once per run, on a warp in sector 1 that costs energy, never the first. It take
 
 ### In the log afterwards «bundle.js · applyBreachResult»
 
-- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 1806»
-- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 1807»
-- [name] was caught in the breach and is injured. «bundle.js · line 1811»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 1845»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 1846»
+- [name] was caught in the breach and is injured. «bundle.js · line 1850»
 
 ### How every found page is shown (all sectors) «FoundPage.js · FoundPage»
 _The card around each found page; the ledger rows are built from the wrecks you boarded (sector 5)._
@@ -438,53 +439,53 @@ _The card around each found page; the ledger rows are built from the wrecks you 
 ## If you try to settle a planet here (sectors 1 and 2) «bundle.js · showColonyWarningModal»
 _The crew warn you off. Sector 2 uses the same card._
 
-- **VOLCANIC · vance** — The thermal readings are off the charts. Anyone on the surface will cook alive. «bundle.js · line 3295»
-- **VOLCANIC · aris** — Constant volcanic ash in the atmosphere will destroy our lungs within weeks. «bundle.js · line 3296»
-- **VOLCANIC · jaxon** — The ground is unstable — magma flows could wipe out any settlement overnight. «bundle.js · line 3297»
-- **VOLCANIC · mira** — Seismic activity is continuous. There's nowhere safe to build. «bundle.js · line 3298»
-- **TOXIC · vance** — That atmosphere will eat through our suits. One breach and we're dead. «bundle.js · line 3301»
-- **TOXIC · aris** — The chemical composition is lethal. Even trace exposure causes organ failure. «bundle.js · line 3302»
-- **TOXIC · jaxon** — We can't seal a habitat against those corrosive agents — not with our supplies. «bundle.js · line 3303»
-- **TOXIC · mira** — Toxicity levels are 400% above survivable limits. The math doesn't work. «bundle.js · line 3304»
-- **GAS_GIANT · vance** — There's no surface! We'd be crushed by pressure before we found anything solid. «bundle.js · line 3307»
-- **GAS_GIANT · aris** — Human biology cannot survive in a gas giant. This is impossible. «bundle.js · line 3308»
-- **GAS_GIANT · jaxon** — Even our strongest materials can't withstand that atmospheric pressure. «bundle.js · line 3309»
-- **GAS_GIANT · mira** — A floating colony requires technology we don't have. «bundle.js · line 3310»
-- **DESERT · vance** — 120 degrees during the day, no water. We'd be dead in a week. «bundle.js · line 3313»
-- **DESERT · aris** — Heat stroke, dehydration — I can't keep people alive here. «bundle.js · line 3314»
-- **DESERT · jaxon** — No water means no hydroponics. We'd starve even if we survived the heat. «bundle.js · line 3315»
-- **DESERT · mira** — Water table is non-existent. Zero agricultural potential. «bundle.js · line 3316»
-- **ICE_WORLD · vance** — -200 degrees will kill us faster than any enemy ever could. «bundle.js · line 3319»
-- **ICE_WORLD · aris** — Frostbite, hypothermia — our medical supplies can't handle constant cold exposure. «bundle.js · line 3320»
-- **ICE_WORLD · jaxon** — Energy requirements for heating would drain us dry in months. «bundle.js · line 3321»
-- **ICE_WORLD · mira** — Thermal models show we'd freeze before the first harvest. «bundle.js · line 3322»
-- **SHATTERED · vance** — The planet is literally falling apart. There's nothing stable to build on. «bundle.js · line 3325»
-- **SHATTERED · aris** — Radiation from the exposed core is lethal. No one survives that. «bundle.js · line 3326»
-- **SHATTERED · jaxon** — The hull strength is zero. Fragments could crush us at any moment. «bundle.js · line 3327»
-- **SHATTERED · mira** — Gravity pulls oddly here and the orbit is unstable. This world is dying. «bundle.js · line 3328»
-- **ROCKY · vance** — Barren rock with no atmosphere. One dome breach and everyone suffocates. «bundle.js · line 3331»
-- **ROCKY · aris** — No biosphere, no ecosystem — growing food here is nearly impossible. «bundle.js · line 3332»
-- **ROCKY · jaxon** — Radiation exposure without atmosphere will cause long-term health issues. «bundle.js · line 3333»
-- **ROCKY · mira** — We could mine here, but colonization? Marginal at best. «bundle.js · line 3334»
-- **STORM_WORLD · vance** — 800 kilometer per hour winds. Nothing we build will survive. «bundle.js · line 3337»
-- **STORM_WORLD · aris** — The constant pressure changes would cause severe physiological damage. «bundle.js · line 3338»
-- **STORM_WORLD · jaxon** — Our structures can't withstand that wind speed. We'd be swept away. «bundle.js · line 3339»
-- **STORM_WORLD · mira** — The storms never stop. There's no building window. «bundle.js · line 3340»
-- **RADIATION_BELT · vance** — The radiation here would cook us from the inside out. «bundle.js · line 3343»
-- **RADIATION_BELT · aris** — Cancer rates would be 100% within the first year. I won't sign off on this. «bundle.js · line 3344»
-- **RADIATION_BELT · jaxon** — No amount of shielding we can build would protect against those levels. «bundle.js · line 3345»
-- **RADIATION_BELT · mira** — Radiation is 50x lethal dose. This is a death sentence. «bundle.js · line 3346»
-- **Spc. Vance:** Commander, this sector is a graveyard. Colonizing here is suicide. We need to go deeper. «bundle.js · line 3353»
-- **Dr. Aris:** The environmental data doesn't support long-term survival. Please, we can do better. «bundle.js · line 3354»
-- **Eng. Jaxon:** Soil's wrong. Radiation's wrong. Nothing will grow here. This isn't the place. «bundle.js · line 3355»
-- **Tech Mira:** My models show colony failure within 18 months at these readings. The deeper sectors have better candidates. «bundle.js · line 3356»
-- **A.U.R.A.:** Colony report for [p type]: [how good the world is]%. Recommend proceeding to Sector [sector]. «bundle.js · line 3359»
-- /// COLONY WARNING /// CREW ADVISORY «bundle.js · line 3363»
-- ⚠ Your crew is strongly advising against colonization in this sector. «bundle.js · line 3368»
-- ABORT — Keep Moving «bundle.js · line 3392»
-- PROCEED DESPITE WARNINGS «bundle.js · line 3397»
-- Colony attempt aborted. Crew advisory accepted. «bundle.js · line 3406»
-- Colony warning overridden. Proceeding with colonization attempt... «bundle.js · line 3410»
+- **VOLCANIC · vance** — The thermal readings are off the charts. Anyone on the surface will cook alive. «bundle.js · line 3396»
+- **VOLCANIC · aris** — Constant volcanic ash in the atmosphere will destroy our lungs within weeks. «bundle.js · line 3397»
+- **VOLCANIC · jaxon** — The ground is unstable — magma flows could wipe out any settlement overnight. «bundle.js · line 3398»
+- **VOLCANIC · mira** — Seismic activity is continuous. There's nowhere safe to build. «bundle.js · line 3399»
+- **TOXIC · vance** — That atmosphere will eat through our suits. One breach and we're dead. «bundle.js · line 3402»
+- **TOXIC · aris** — The chemical composition is lethal. Even trace exposure causes organ failure. «bundle.js · line 3403»
+- **TOXIC · jaxon** — We can't seal a habitat against those corrosive agents — not with our supplies. «bundle.js · line 3404»
+- **TOXIC · mira** — Toxicity levels are 400% above survivable limits. The math doesn't work. «bundle.js · line 3405»
+- **GAS_GIANT · vance** — There's no surface! We'd be crushed by pressure before we found anything solid. «bundle.js · line 3408»
+- **GAS_GIANT · aris** — Human biology cannot survive in a gas giant. This is impossible. «bundle.js · line 3409»
+- **GAS_GIANT · jaxon** — Even our strongest materials can't withstand that atmospheric pressure. «bundle.js · line 3410»
+- **GAS_GIANT · mira** — A floating colony requires technology we don't have. «bundle.js · line 3411»
+- **DESERT · vance** — 120 degrees during the day, no water. We'd be dead in a week. «bundle.js · line 3414»
+- **DESERT · aris** — Heat stroke, dehydration — I can't keep people alive here. «bundle.js · line 3415»
+- **DESERT · jaxon** — No water means no hydroponics. We'd starve even if we survived the heat. «bundle.js · line 3416»
+- **DESERT · mira** — Water table is non-existent. Zero agricultural potential. «bundle.js · line 3417»
+- **ICE_WORLD · vance** — -200 degrees will kill us faster than any enemy ever could. «bundle.js · line 3420»
+- **ICE_WORLD · aris** — Frostbite, hypothermia — our medical supplies can't handle constant cold exposure. «bundle.js · line 3421»
+- **ICE_WORLD · jaxon** — Energy requirements for heating would drain us dry in months. «bundle.js · line 3422»
+- **ICE_WORLD · mira** — Thermal models show we'd freeze before the first harvest. «bundle.js · line 3423»
+- **SHATTERED · vance** — The planet is literally falling apart. There's nothing stable to build on. «bundle.js · line 3426»
+- **SHATTERED · aris** — Radiation from the exposed core is lethal. No one survives that. «bundle.js · line 3427»
+- **SHATTERED · jaxon** — The hull strength is zero. Fragments could crush us at any moment. «bundle.js · line 3428»
+- **SHATTERED · mira** — Gravity pulls oddly here and the orbit is unstable. This world is dying. «bundle.js · line 3429»
+- **ROCKY · vance** — Barren rock with no atmosphere. One dome breach and everyone suffocates. «bundle.js · line 3432»
+- **ROCKY · aris** — No biosphere, no ecosystem — growing food here is nearly impossible. «bundle.js · line 3433»
+- **ROCKY · jaxon** — Radiation exposure without atmosphere will cause long-term health issues. «bundle.js · line 3434»
+- **ROCKY · mira** — We could mine here, but colonization? Marginal at best. «bundle.js · line 3435»
+- **STORM_WORLD · vance** — 800 kilometer per hour winds. Nothing we build will survive. «bundle.js · line 3438»
+- **STORM_WORLD · aris** — The constant pressure changes would cause severe physiological damage. «bundle.js · line 3439»
+- **STORM_WORLD · jaxon** — Our structures can't withstand that wind speed. We'd be swept away. «bundle.js · line 3440»
+- **STORM_WORLD · mira** — The storms never stop. There's no building window. «bundle.js · line 3441»
+- **RADIATION_BELT · vance** — The radiation here would cook us from the inside out. «bundle.js · line 3444»
+- **RADIATION_BELT · aris** — Cancer rates would be 100% within the first year. I won't sign off on this. «bundle.js · line 3445»
+- **RADIATION_BELT · jaxon** — No amount of shielding we can build would protect against those levels. «bundle.js · line 3446»
+- **RADIATION_BELT · mira** — Radiation is 50x lethal dose. This is a death sentence. «bundle.js · line 3447»
+- **Vance:** Commander, this sector is a graveyard. Colonizing here is suicide. We need to go deeper. «bundle.js · line 3454»
+- **Aris:** The environmental data doesn't support long-term survival. Please, we can do better. «bundle.js · line 3455»
+- **Jaxon:** Soil's wrong. Radiation's wrong. Nothing will grow here. This isn't the place. «bundle.js · line 3456»
+- **Mira:** My models show colony failure within 18 months at these readings. The deeper sectors have better candidates. «bundle.js · line 3457»
+- **A.U.R.A.:** Colony report for [p type]: [how good the world is]%. Recommend proceeding to Sector [sector]. «bundle.js · line 3460»
+- /// COLONY WARNING /// CREW ADVISORY «bundle.js · line 3464»
+- ⚠ Your crew is strongly advising against colonization in this sector. «bundle.js · line 3469»
+- ABORT — Keep Moving «bundle.js · line 3493»
+- PROCEED DESPITE WARNINGS «bundle.js · line 3498»
+- Colony attempt aborted. Crew advisory accepted. «bundle.js · line 3507»
+- Colony warning overridden. Proceeding with colonization attempt... «bundle.js · line 3511»
 
 ## The sector's own trouble: MICROMETEORITES «SectorConfig.js · 1.hazard»
 _Debris field from dead ships_
@@ -493,16 +494,16 @@ On a warp inside this sector:
 - WARNING: Micrometeorite impact detected! [deck] sustained damage. «SectorConfig.js · 1.hazard.onWarp»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / MUTINY / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / INSIDE THE LIGHT / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### JAXON'S PHOTO «CrewEvents.js · JAXON_PHOTO»
 _Sectors 1, 2_
 
 > Cargo bay, night shift. Jaxon is sitting on a crate with a photograph in his hands. He doesn't hear you come in.
 
-**Eng. Jaxon:** That's my daughter. She was eight when we left. She'd be older than I am now.  
-**Eng. Jaxon:** I record a letter to her after every jump. There's no way to send them.  
-**Eng. Jaxon:** When we find a planet we can live on, I want us to land and stay.  
+**Jaxon:** That's my daughter. She was eight when we left. She'd be older than I am now.  
+**Jaxon:** I record a letter to her after every jump. There's no way to send them.  
+**Jaxon:** When we find a planet we can live on, I want us to land and stay.  
 
 Choices:
 1. **Promise to stay on the first good planet.** — Jaxon -1 Stress. He will remember the promise.
@@ -517,9 +518,9 @@ _Sectors 1, 2_
 
 > Med bay. A sheet of paper is taped to the wall with the name of every dead crew member found so far. Aris is adding one.
 
-**Dr. Aris:** I write down everyone we find. Before we leave a wreck, I read their names out.  
-**Dr. Aris:** None of them died of anything I can diagnose. I want to know what killed them.  
-**Dr. Aris:** It takes a minute at each ship, Commander. I'd like to keep doing it.  
+**Aris:** I write down everyone we find. Before we leave a wreck, I read their names out.  
+**Aris:** None of them died of anything I can diagnose. I want to know what killed them.  
+**Aris:** It takes a minute at each ship, Commander. I'd like to keep doing it.  
 
 Choices:
 1. **Take the minute. At every ship.** — Aris -1 Stress. -1 Ration: the stops add up to a day's food.
@@ -534,9 +535,9 @@ _Sectors 1, 2_
 
 > Armory. Vance is cleaning his sidearm, laying each part out on the table in order.
 
-**Spc. Vance:** Before this, I worked security at the shipyard. Twelve years.  
-**Spc. Vance:** They said nine ships would fly this heading. I watched more than that being built in one year.  
-**Spc. Vance:** That's why I signed up. I wanted to see where the others went.  
+**Vance:** Before this, I worked security at the shipyard. Twelve years.  
+**Vance:** They said nine ships would fly this heading. I watched more than that being built in one year.  
+**Vance:** That's why I signed up. I wanted to see where the others went.  
 
 Choices:
 1. **Tell him you believe him.** — Vance -1 Stress. Mira +1 Stress: she'd rather the briefing were true.
@@ -551,8 +552,8 @@ _Sectors 1, 2_
 
 > Mira hasn't left the sensor console in hours. She's talking A.U.R.A. through the planet below, and A.U.R.A. is answering.
 
-**Tech Mira:** Look at the line where day turns to night. You can see the heat leaving the ground.  
-**Tech Mira:** A.U.R.A. found a ridge she thinks is worth landing on. She's usually right. Should we?  
+**Mira:** Look at the line where day turns to night. You can see the heat leaving the ground.  
+**Mira:** A.U.R.A. found a ridge she thinks is worth landing on. She's usually right. Should we?  
 **A.U.R.A.:** The ridge is seventy percent metal, Commander. I would land there.  
 
 Choices:
@@ -575,8 +576,8 @@ _Priority 3, sectors 1–1_
 
 **A.U.R.A.:** More beacons ahead, Commander, all earlier Exodus ships. They line up along our heading.  
 **A.U.R.A.:** I can fly us down that line. It's the most efficient route.  
-**Tech Mira:** It's the route the others took. A.U.R.A. can fly it better than any of us.  
-**Spc. Vance:** The others are dead. I don't want to fly the exact route that killed them.  
+**Mira:** It's the route the others took. A.U.R.A. can fly it better than any of us.  
+**Vance:** The others are dead. I don't want to fly the exact route that killed them.  
 
 Choices:
 1. **Hold our own course.** — -15 Energy: flying by hand costs more. Vance agrees with you.
@@ -589,9 +590,9 @@ _Priority 2, sectors 1–1_
 
 > Mid-warp, a power line overloads. Sparks fly across engineering.
 
-**Eng. Jaxon:** It's the capacitor bank, not the reactor. I can save it, or strip it for parts.  
+**Jaxon:** It's the capacitor bank, not the reactor. I can save it, or strip it for parts.  
 **A.U.R.A.:** Saving it costs ten energy now, Commander. Stripping it makes every jump in the next sector cost five more.  
-**Spc. Vance:** Five extra on every jump adds up fast. I'd pay the ten now.  
+**Vance:** Five extra on every jump adds up fast. I'd pay the ten now.  
 
 Choices:
 1. **Reroute power and save it.** — -10 Energy. Nothing else is lost.
@@ -604,8 +605,8 @@ _Priority 2, sectors 1–2_
 
 > A ship beacon we salvaged has switched itself back on in the cargo hold. It's broadcasting its ship number on our channel.
 
-**Tech Mira:** It's been dead for twenty years. It woke up because it picked up our signal.  
-**Eng. Jaxon:** Keep it or throw it out, Commander. I'm not sleeping next to that noise.  
+**Mira:** It's been dead for twenty years. It woke up because it picked up our signal.  
+**Jaxon:** Keep it or throw it out, Commander. I'm not sleeping next to that noise.  
 **A.U.R.A.:** I can read its memory, Commander. There's a thirty percent chance it shorts out and drains our power.  
 
 Choices:
@@ -621,7 +622,7 @@ _Priority 1, sectors 1–6_
 > A quiet stretch of the warp. There's time to fix one thing.
 
 **A.U.R.A.:** Power or hull, Commander. Either one costs fifteen salvage.  
-**Eng. Jaxon:** Reactor or hull. Pick one. I haven't slept enough to do both.  
+**Jaxon:** Reactor or hull. Pick one. I haven't slept enough to do both.  
 
 Choices:
 1. **Service the reactor.** — -15 Salvage. +25 Energy.

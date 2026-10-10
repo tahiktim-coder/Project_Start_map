@@ -21,9 +21,9 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         title: "RICH MINERAL DEPOSIT",
         context: (name) => `${name} is full of worked metal, not ore: hull plates and frame beams, ground down by the rocks around them. A ship broke up here a long time ago. The field is calm enough to dig in.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Good density, and nobody's rushing us. We can take our time here for once." },
-            { speaker: 'Tech Mira', text: "That's refined alloy, Commander. It came off a ship's hull." },
-            { speaker: 'Spc. Vance', text: "Whose ship? I want a hull number before we cut into it." }
+            { speaker: 'Jaxon', text: "Good density, and nobody's rushing us. We can take our time here for once." },
+            { speaker: 'Mira', text: "That's refined alloy, Commander. It came off a ship's hull." },
+            { speaker: 'Vance', text: "Whose ship? I want a hull number before we cut into it." }
         ],
         choices: [
             {
@@ -35,7 +35,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     state.addLog(jaxon
-                        ? "Two quiet days of digging. Eng. Jaxon: \"No alarms, no rush. I could get used to this.\""
+                        ? "Two quiet days of digging. Jaxon: \"No alarms, no rush. I could get used to this.\""
                         : "Two quiet days of digging, with no alarms and no rush.");
                     state.noteStanding && state.noteStanding('jaxon');
                     return `Two days of digging. -1 Ration, +${salvage} Salvage.`;
@@ -88,8 +88,8 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         title: "UNSTABLE DEBRIS FIELD",
         context: (name) => `The rocks in ${name} are still moving, grinding into each other and breaking apart. Something large smashed through here at speed, and the field hasn't settled since. One mistake and we get hit.`,
         dialogue: [
-            { speaker: 'Spc. Vance', text: "There are about forty rocks in there big enough to punch through our hull." },
-            { speaker: 'Eng. Jaxon', text: "I can fly the lander through. It won't be a smooth ride." },
+            { speaker: 'Vance', text: "There are about forty rocks in there big enough to punch through our hull." },
+            { speaker: 'Jaxon', text: "I can fly the lander through. It won't be a smooth ride." },
             { speaker: 'A.U.R.A.', text: "The risk of collision is high, Commander. I can fly the probe ahead and map a safe path." }
         ],
         choices: [
@@ -154,9 +154,9 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         title: "WRECKED SHIPS",
         context: (name) => `${name} isn't rock. It's wrecked ships: hull plates, engines and cargo crates, all crushed together. Somewhere in the pile, three sleep pods still have power.`,
         dialogue: [
-            { speaker: 'Dr. Aris', text: "Before anyone cuts anything, I want the names of whoever was aboard." },
-            { speaker: 'Spc. Vance', text: "Some of these plates still have hull numbers. I want every one of them recorded." },
-            { speaker: 'Tech Mira', text: "Three pods still have power, Commander. A.U.R.A. is sure of it." }
+            { speaker: 'Aris', text: "Before anyone cuts anything, I want the names of whoever was aboard." },
+            { speaker: 'Vance', text: "Some of these plates still have hull numbers. I want every one of them recorded." },
+            { speaker: 'Mira', text: "Three pods still have power, Commander. A.U.R.A. is sure of it." }
         ],
         choices: [
             {
@@ -218,8 +218,8 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         title: "CRYSTAL FORMATION",
         context: (name) => `${name} glitters with crystal, grown in long straight rods. The rods hold an electric charge, and they ring like bells when our hull gets close.`,
         dialogue: [
-            { speaker: 'Tech Mira', text: "The rods are ringing at each other. A.U.R.A. says it's just vibration from our engines." },
-            { speaker: 'Dr. Aris', text: "Cut carefully. If they ring when we get close, they might do worse when we touch them." },
+            { speaker: 'Mira', text: "The rods are ringing at each other. A.U.R.A. says it's just vibration from our engines." },
+            { speaker: 'Aris', text: "Cut carefully. If they ring when we get close, they might do worse when we touch them." },
             { speaker: 'A.U.R.A.', text: "They build up charge when they vibrate, Commander. Valuable, but unstable. I can tune them safely." }
         ],
         choices: [
@@ -266,7 +266,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                     if (mira) mira.stress = Math.max(0, (mira.stress || 0) - 1);
                     state.energy = Math.min(100, state.energy + 10);
                     state.addLog("A.U.R.A. tunes the rods until they all hum on one note, then draws the charge off safely.");
-                    if (mira) state.addLog("Tech Mira: \"Listen to that. I told you she'd know how.\"");
+                    if (mira) state.addLog("Mira: \"Listen to that. I told you she'd know how.\"");
                     state.noteStanding && state.noteStanding('mira');
                     return "Rods tuned and drained. -5 Energy, +2 Data, +10 Energy. Mira -1 Stress.";
                 }
@@ -281,8 +281,8 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         title: "HOLLOW ASTEROID",
         context: (name) => `${name} is hollow. Someone cut a home inside the rock and sealed it with an airlock taken from an Exodus ship. Whoever did this meant to stay.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "They found a rock and stopped. Honestly, I'd have done the same." },
-            { speaker: 'Spc. Vance', text: "One airlock, one way in. Whatever's inside went through that door." },
+            { speaker: 'Jaxon', text: "They found a rock and stopped. Honestly, I'd have done the same." },
+            { speaker: 'Vance', text: "One airlock, one way in. Whatever's inside went through that door." },
             { speaker: 'A.U.R.A.', text: "There is a little power inside, Commander. It's most likely a sleep pod." }
         ],
         choices: [
@@ -351,9 +351,9 @@ const ASTEROID_FIELD_ENCOUNTERS = [
         title: "ICE ASTEROID FIELD",
         context: (name) => `${name} is made of ice: frozen water and gas. Melted down, the ice becomes fuel for our reactor. The field is dense and hard to see through, and some big chunks already have cut marks on them.`,
         dialogue: [
-            { speaker: 'Eng. Jaxon', text: "Water ice. That's reactor fuel, as much as we can carry." },
-            { speaker: 'Dr. Aris', text: "Be careful. Frozen gas doesn't stay frozen once you start cutting into it." },
-            { speaker: 'Spc. Vance', text: "Someone cut here before us. These marks are old." }
+            { speaker: 'Jaxon', text: "Water ice. That's reactor fuel, as much as we can carry." },
+            { speaker: 'Aris', text: "Be careful. Frozen gas doesn't stay frozen once you start cutting into it." },
+            { speaker: 'Vance', text: "Someone cut here before us. These marks are old." }
         ],
         choices: [
             {

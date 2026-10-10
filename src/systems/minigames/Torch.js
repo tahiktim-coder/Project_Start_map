@@ -18,7 +18,7 @@
            hull: 'EXODUS-6'         named in the first line; the game's getWreckName() ('EXODUS-4 "LAZARUS"') is fine, the number is painted
            sector: 1..6             how long the wreck has been dead (docs/CANON.md §2); deadFor: 'twenty years' overrides it
            cutter: 'Jaxon'          coaches the cut and can take the torch; pass a living crew member ('Vance' if Jaxon is dead);
-                                    a full crew name ('Eng. Jaxon') is shortened to its last word
+                                    a titled name from an old save ('Eng. Jaxon') is shortened to its last word
            spotter: 'Vance' }       says the other lines; pass a living crew member (may be the same as cutter)
    result, hatch: { opened: true, fuelLeft: 0..1 in the last tank, scars, warps, tanks: tanks used, bySelf: false if handed over }
    result, disc:  { destroyed: true, figuresScorched: the torch touched the two figures, fuelLeft, tanks } */
@@ -110,7 +110,7 @@
     // ── what is said: the wreck and the speakers come from the game ──
     const DEAD_FOR = ['twenty years', 'twenty years', 'a hundred years', 'two hundred years', 'three hundred years', 'four hundred years'];   // by sector
     const named = (v, fallback) => (typeof v === 'string' && v.trim() ? v.trim() : fallback);
-    const shortName = (v, fallback) => named(v, fallback).split(' ').pop();   // 'Eng. Jaxon' → 'Jaxon', as the mission log shortens names
+    const shortName = (v, fallback) => named(v, fallback).split(' ').pop();   // 'Eng. Jaxon' (an old save) → 'Jaxon', as the mission log shortens names
     function readOpts(opts) {
         const o = opts || {}, sector = MiniLab.clamp(Math.round(Number(o.sector) || 1), 1, DEAD_FOR.length);
         return { mode: o.mode === 'disc' ? 'disc' : 'hatch', hull: named(o.hull, 'EXODUS-6'), deadFor: named(o.deadFor, DEAD_FOR[sector - 1]),
