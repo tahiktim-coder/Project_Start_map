@@ -1,0 +1,799 @@
+<!doctype html>
+<!--
+  SILENT EXODUS · FILM 1 · THE LAUNCH (mockup, silent). Replaces the old briefing film (green dashes out of Earth).
+  A news broadcast from the launch yard at dusk: the crowd, flags and floodlights, the five crew on the podium, hull ten in its
+  scaffolding, the walk to the pad, the countdown, the launch, and the ship climbing into the dark until it is one point of light.
+  About 86 seconds. Nothing in the game or the other prototypes is changed; this page only LOADS their drawing code:
+    ../screens/game-screen-v3/paint.js   V3Paint: the dither recipe, ramps, hull() + shapeL (the Lander), lightGlow, the pixel font
+    ../screens/crew-hires/*.js           CrewEngine and the five people (their dress-uniform recolour is made here, at load)
+  STILLS: ?t=ms opens paused at that moment · ?dress=0 shows their everyday suits · ?px=N forces the pixel size
+          window.film.play() / pause() / step(ms) / setTime(ms) / state() / shots
+  SKIP: a click, Esc, Enter or Space skips to the end. No audio is loaded.
+  WORDS: every line on screen is in LINES below. Lines marked [placeholder] depend on the open story decisions (what the public
+  was told) and are kept neutral until those are made.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Launch</title>
+<meta name="description" content="Silent Exodus opening film mockup: the launch of hull nine, as a live broadcast from the launch yard.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    color-scheme: dark;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --warm: #f08c2e; --live: #e0453a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --u: 3px;   /* CSS px per art px, set by fit() */
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; cursor: pointer; }
+#frame { position: absolute; overflow: hidden; }
+#art { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+.gfx { position: absolute; pointer-events: none; will-change: opacity; }
+/* the broadcast's own graphics: plain, small, out of the way */
+#bug-live { left: calc(var(--u) * 14); top: calc(var(--u) * 12); display: flex; align-items: center; gap: calc(var(--u) * 2.4);
+            font: 600 calc(var(--u) * 5.2)/1 var(--f-ui); letter-spacing: 0.2em; color: var(--text); text-shadow: 0 1px 0 var(--ink); }
+#bug-live i { width: calc(var(--u) * 2.6); height: calc(var(--u) * 2.6); border-radius: 50%; background: var(--live); box-shadow: 0 0 calc(var(--u) * 3) rgba(224, 69, 58, 0.6); }
+#bug-live i.off { opacity: 0.25; }
+#bug-net { right: calc(var(--u) * 14); top: calc(var(--u) * 12); text-align: right; font: 500 calc(var(--u) * 4.4)/1.25 var(--f-ui);
+           letter-spacing: 0.24em; text-transform: uppercase; color: rgba(228, 228, 224, 0.72); text-shadow: 0 1px 0 var(--ink); }
+#clock { right: calc(var(--u) * 14); top: calc(var(--u) * 24); font: 500 calc(var(--u) * 9)/1 var(--f-num); letter-spacing: 0.04em;
+         color: var(--text); text-shadow: 0 1px 0 var(--ink), 0 0 calc(var(--u) * 6) rgba(5, 7, 10, 0.8); }
+#clock small { font: 500 calc(var(--u) * 4.4)/1 var(--f-ui); letter-spacing: 0.22em; color: var(--dim); margin-right: calc(var(--u) * 2); vertical-align: middle; }
+#lt { left: calc(var(--u) * 14); bottom: calc(var(--u) * 16); max-width: calc(var(--u) * 330); padding: calc(var(--u) * 3.4) calc(var(--u) * 6) calc(var(--u) * 3.8) calc(var(--u) * 6);
+      background: linear-gradient(90deg, rgba(5, 7, 10, 0.9), rgba(5, 7, 10, 0.72)); border-left: calc(var(--u) * 1.2) solid var(--warm); }
+#lt .kicker { margin: 0 0 calc(var(--u) * 1.4); font: 500 calc(var(--u) * 4.2)/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--dim); }
+#lt .line { margin: 0; font: 400 calc(var(--u) * 7.4)/1.25 var(--f-text); color: var(--text); }
+#lt .names { margin: calc(var(--u) * 1.2) 0 0; font: 400 calc(var(--u) * 5.6)/1.3 var(--f-text); color: rgba(228, 228, 224, 0.86); }
+#skip { right: calc(var(--u) * 10); bottom: calc(var(--u) * 8); font: 400 calc(var(--u) * 4)/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--faint); }
+#again { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; background: none; border: 1px dashed #2c3036;
+         color: #8b8d90; font: 500 13px/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; }
+#again:hover, #again:focus-visible { color: #fff; outline: none; }
+body.is-over #again { display: block; }
+</style>
+</head>
+<body data-still="wait">
+<div id="frame" aria-label="Film: the launch of Exodus-9, as a live broadcast">
+    <canvas id="art" aria-hidden="true"></canvas>
+    <div class="gfx" id="bug-live"><i></i><span>LIVE</span></div>
+    <div class="gfx" id="bug-net">Exodus Programme<br>Launch Yard</div>
+    <div class="gfx" id="clock"></div>
+    <div class="gfx" id="lt" aria-live="polite"><p class="kicker"></p><p class="line"></p><p class="names"></p></div>
+    <div class="gfx" id="skip">Click to skip</div>
+</div>
+<button type="button" id="again">Watch again</button>
+
+<script src="../screens/game-screen-v3/paint.js?v=3"></script>
+<script src="../screens/crew-hires/engine.js"></script>
+<script>
+/* Dress uniform for the launch: every person is registered twice, as themselves and as '<id>-dress' with the same head, hair,
+   skin and build, and the suit recoloured to the programme's navy and gold. Done by wrapping register() before the person files
+   load; CrewEngine itself is not changed. ?dress=0 skips it. */
+(function () {
+    const E0 = window.CrewEngine, INK = E0.INK;
+    const DRESS = [INK, '#0e1320', '#161d2e', '#1f2940', '#2a3752', '#384866', '#4b5e80'];
+    const DARK = [INK, '#0b0e16', '#11161f', '#181e2a', '#212836', '#2c3444'];
+    const GOLD = [INK, '#4a3410', '#8a6420', '#c49a3a', '#e8c66a', '#fff0b0'];
+    const BOOT = [INK, '#0a0b0e', '#13151a', '#1d2027', '#2a2e37', '#3c414c'];
+    const GLOVE = [INK, '#3a3c40', '#6a6c70', '#a8aaa8', '#d8d8d2', '#f2f2ea'];
+    const MAP = {
+        cora: { suit: DRESS, pad: DRESS, trim: GOLD, boot: BOOT },
+        jaxon: { suit: DRESS, pant: DARK, cuff: GOLD, boot: BOOT },
+        aris: { suit: DRESS, rust: DRESS, navy: DARK, band: DARK, cream: GOLD, boot: BOOT },
+        vance: { suit: DRESS, dark: DARK, pack: DARK, glove: GLOVE, boot: BOOT },
+        mira: { suit: DRESS, belt: DARK, boot: BOOT },
+    };
+    const wantsDress = new URLSearchParams(location.search).get('dress') !== '0';
+    window.CrewEngine = Object.freeze(Object.assign({}, E0, {
+        register(person) {
+            E0.register(person);
+            const m = MAP[person.id];
+            if (!wantsDress || !m) return;
+            const ramps = Object.assign({}, person.ramps, m), tex = Object.assign({}, person.tex, { suit: 0.05 });
+            const build = Object.assign({}, person.build, { pack: false });
+            E0.register(Object.assign({}, person, { id: person.id + '-dress', ramps, tex, build }));
+        },
+    }));
+    window.FILM_DRESS = wantsDress;
+})();
+</script>
+<script src="../screens/crew-hires/cora.js"></script>
+<script src="../screens/crew-hires/jaxon.js"></script>
+<script src="../screens/crew-hires/aris.js"></script>
+<script src="../screens/crew-hires/vance.js"></script>
+<script src="../screens/crew-hires/mira.js"></script>
+<script>
+(function () {
+    'use strict';
+    const P = window.V3Paint, CE = window.CrewEngine;
+    const { INK, RP, ramp, clamp01, smooth, lerp, hash, fbm, vnoise, seeded, threshold } = P;
+    const AW = 640, AH = 360, TICK = 125, DUR = 86000;
+    const q = new URLSearchParams(location.search);
+    const $ = id => document.getElementById(id);
+    const cv = $('art'), ctx = cv.getContext('2d', { alpha: false });
+    cv.width = AW; cv.height = AH; ctx.imageSmoothingEnabled = false;
+    const ease = k => k * k * (3 - 2 * k);
+    const step8 = t => Math.floor(t / TICK) * TICK;           // the moving details step eight times a second
+
+    // ── colour ramps for the yard (each starts at the shared ink) ──
+    const R = {
+        NIGHT: ramp(INK, '#0a1016', '#111b24', '#1a2a36', '#26394a', '#36506a'),
+        GLOW: ramp(INK, '#1a1210', '#3a2216', '#6e3a1e', '#b0602a', '#e89a48', '#ffd08a'),
+        CLOUD: ramp(INK, '#16121a', '#2a1e24', '#4a2e2a', '#7a4630', '#b87040', '#e8a860'),
+        HILL: ramp(INK, '#0b0d11', '#12161c', '#1a2028', '#232b35'),
+        CONC: ramp(INK, '#141618', '#25282a', '#3b3f40', '#5d6160', '#8c8f8a', '#c4c6bc'),
+        STEEL: ramp(INK, '#11161a', '#1f272d', '#323d44', '#56646c', '#8a9aa0', '#c6d2d2'),
+        CROWD: ramp(INK, '#0d0a09', '#1a120e', '#2c1e15', '#58391f', '#a06a36', '#e8b070'),
+        FLAG: ramp(INK, '#0e1626', '#18243c', '#243656', '#344c74', '#4a6694'),
+        CREAM: ramp(INK, '#3a3226', '#7a6a50', '#c4b08a', '#f0e2c0', '#fffaf0'),
+        FLOOD: ramp(INK, '#2a2418', '#5a4a30', '#a08a5a', '#e8d6a0', '#fff6dc'),
+        WOOD: ramp(INK, '#1e140c', '#3a2616', '#5e3e22', '#8a5f34', '#b8864e'),
+        SMOKE: ramp(INK, '#14181c', '#283038', '#46525c', '#7a8a94', '#b8c8d0', '#eef6f8'),
+        WELD: ramp(INK, '#5a3010', '#c06a20', '#ffb050', '#fff0c0', '#ffffff'),
+        RED: RP.RED, PLUME: RP.PLUME, HULL: RP.HULL, STAR: RP.STAR, GROUND: RP.GROUND, SUN: RP.SUN, AMBER: RP.AMBER,
+    };
+
+    // ════════════════════════════════════ the lines (every word on screen) ════════════════════════════════════
+    // Plain words, one idea each (docs/STYLE.md). [placeholder] = depends on what the public was told; kept neutral.
+    const LINES = [
+        { t0: 1600, t1: 9400, kicker: 'Live · The launch yard', line: 'Tonight the ninth Exodus ship leaves Earth.' },
+        { t0: 11000, t1: 19400, kicker: 'Live · The launch yard', line: 'Eight ships have gone ahead of it on the same heading.' },   // [placeholder] what the public knows of the first eight
+        { t0: 21600, t1: 35400, kicker: 'The crew of Exodus-9', line: 'They will sleep for sixty-one years.', names: 'Mira Chen · Jaxon Mercer · Cora Moon · Kael Vance · Aris Novak' },   // in stage order, left to right. [placeholder] five names on air: if the count question takes Cora off the official list, the strap shows four
+        { t0: 37400, t1: 43600, kicker: 'Live · The launch yard', line: 'Hull ten is still being built.' },   // [placeholder] whether the broadcast mentions the new drive (Jaxon's line in the game)
+        { t0: 45600, t1: 51800, kicker: 'Live · Pad nine', line: 'The crew are going up to the ship.' },   // the podium shows five people: if the count question makes one of them a stranger at launch, this film is where it shows
+        { t0: 72400, t1: 77600, kicker: 'Live · The launch yard', line: 'Exodus-9 is on its way.' },
+    ];
+    const COUNT = { t0: 52000, zero: 62000 };   // the countdown clock: T-10 at 52 s, lift-off at 62 s
+    const LIVE_ENDS = 78400;                     // the broadcast's graphics leave; only the ship and the dark remain
+    const FADE = [82500, 86000];
+
+    // ════════════════════════════════════ shared drawing pieces ════════════════════════════════════
+    /** A dusk sky into an opaque painter: night above, a warm band where the sun went down, long clouds lit from below. */
+    function sky(p, horizon, gx, glow, seed) {
+        p.region(0, 0, p.W, horizon + 1, (x, y) => {
+            const k = y / horizon, vn = 0.07 + 0.55 * Math.pow(k, 1.7);
+            const gv = glow * (0.95 * Math.pow(k, 3.4) + 0.62 * Math.exp(-Math.hypot((x - gx) / 190, (y - horizon) / 34)));
+            let c = fbm(x / 120, y / 6.5, seed, 4) - 0.56;                               // long thin clouds
+            c *= smooth(0.25, 0.5, k) * (1 - smooth(0.86, 0.98, k));
+            if (c > 0) { const lit = 0.18 + 2.6 * c * (0.3 + glow * Math.exp(-Math.abs(x - gx) / 260)) * (0.4 + 0.8 * k); p.tone(x, y, R.CLOUD, lit + (fbm(x / 9, y / 3, seed + 2, 2) - 0.5) * 0.12); return; }
+            if (smooth(0.1, 0.42, gv) > threshold(x + 3, y + 5)) p.tone(x, y, R.GLOW, gv); else p.tone(x, y, R.NIGHT, vn);
+        });
+        return P.keepVisible(p, P.scatterStars(p, seed + 5, Math.round(p.W * horizon / 260), (x, y) => y < horizon * 0.5));
+    }
+    function hills(p, horizon, seed) {
+        for (let x = 0; x < p.W; x++) {
+            const far = horizon - 5 - 12 * fbm(x / 90, 0.5, seed, 3), near = horizon - 1 - 6 * fbm(x / 40, 3.5, seed + 1, 3);
+            for (let y = Math.floor(far); y <= horizon; y++) p.tone(x, y, y >= near ? R.HILL : R.NIGHT, y >= near ? 0.55 : 0.32);
+        }
+    }
+    function ground(p, horizon, seed, lit) {
+        p.region(0, horizon + 1, p.W, p.H, (x, y) => p.tone(x, y, R.GROUND, 0.1 + 0.28 * Math.exp(-(y - horizon) / 9) + (lit ? lit(x, y) : 0) + (fbm(x / 6, y / 2.2, seed, 3) - 0.5) * 0.18));
+    }
+    /** A see-through cone of light: the pixels fall on the ramp, only some of them are drawn (cover). */
+    function beam(p, x0, y0, x1, y1, w0, w1, r, v, a) {
+        const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0)), dx = (x1 - x0) / n, dy = (y1 - y0) / n, nx = -dy, ny = dx;
+        for (let i = 0; i <= n; i++) {
+            const k = i / n, w = lerp(w0, w1, k), fall = (1 - k) * (1 - k);
+            for (let j = -w; j <= w; j += 0.7) { const e = 1 - Math.abs(j) / (w + 0.01); p.cover(x0 + dx * i + nx * j, y0 + dy * i + ny * j, r, v * (0.5 + 0.5 * fall), a * e * (0.3 + 0.7 * fall)); }
+        }
+    }
+    /** Pixel-font words at a whole-number scale, centred on cx. */
+    function bigText(p, str, cx, y, k, r, v) {
+        const x0 = Math.round(cx - P.pixelTextWidth(str) * k / 2);
+        P.pixelText(str, 0, 0, (gx, gy) => p.region(x0 + gx * k, y + gy * k, x0 + gx * k + k, y + gy * k + k, (a, b) => p.tone(a, b, r, v)));
+    }
+    const steelBar = (p, x0, y0, x1, y1, v, w = 1) => p.line(x0, y0, x1, y1, (x, y) => p.region(x, y, x + w, y + 1, (a, b) => p.tone(a, b, R.STEEL, a === x ? v : v * 0.6)));
+    /** A lattice service tower: two legs, cross braces, a platform on top. s = scale. Lit from the left. */
+    function tower(p, x, base, h, w, s, v = 0.4) {
+        steelBar(p, x, base, x, base - h, v + 0.12, s > 0.7 ? 2 : 1); steelBar(p, x + w, base, x + w, base - h, v * 0.7, s > 0.7 ? 2 : 1);
+        const stepY = Math.max(4, 7 * s);
+        for (let y = base; y > base - h + stepY; y -= stepY) { steelBar(p, x, y, x + w, y - stepY, v * 0.55); steelBar(p, x, y - stepY, x + w, y - stepY, v * 0.75); }
+        p.region(x - 2 * s, base - h - 2 * s, x + w + 2 * s + 1, base - h, (a, b) => p.tone(a, b, R.STEEL, b === Math.floor(base - h - 2 * s) ? 0.7 : 0.35));
+        return [Math.round(x + w / 2), Math.round(base - h - 3 * s)];      // where its aviation light sits
+    }
+    /** An empty launch pad, seen low and from the front: a concrete apron, its centre burnt black, a flame trench. */
+    function emptyPad(p, x, y, s, seed) {
+        p.ellipse(x, y, 30 * s, 5.2 * s, (a, b, qq) => p.tone(a, b, R.CONC, 0.36 - qq * 0.12 + (b < y ? 0.06 : 0) + (fbm(a / 3, b / 2, seed, 2) - 0.5) * 0.14));
+        p.ellipse(x, y - 0.4 * s, 12 * s, 2.3 * s, (a, b, qq) => { if (fbm(a / 2.4, b / 1.6, seed + 4, 2) < 0.62 + qq * 0.3) p.tone(a, b, R.CONC, 0.04); });
+        p.region(x - 5 * s, y + 2 * s, x + 5 * s, y + 4.6 * s, (a, b) => p.tone(a, b, R.CONC, 0.03));
+        return tower(p, x + 16 * s, y - 1, 74 * s, 6 * s, s, 0.3);
+    }
+    /** Our Lander standing on its tail, legs out. o: x, base (the ground under the bell), len; returns at(u, v). */
+    function standingLander(p, o) {
+        const len = o.len, ht = len / 3.15, x = o.x, base = o.base, bell = base - Math.round(len * 0.05);
+        const at = P.hull(p, { x, y: bell, len, ht, angle: -Math.PI / 2, flip: true, anchor: 1, seed: 9, ramp: o.ramp || R.HULL,
+            sun: o.sun || 0, sunDir: o.sunDir || [-1, 0], light: o.light, flat: len < 90 }, o.shape || P.shapeL);
+        [-1, 1].forEach(side => {                                                                 // the legs, down and out
+            const [lx, ly] = at(0.9, side * 0.6), fx = x + side * ht * 0.95, w = Math.max(1, Math.round(len / 70));
+            p.line(lx, ly, fx, base - 1, (a, b) => p.region(a, b, a + w, b + 1, (c, d) => p.tone(c, d, R.HULL, side < 0 ? 0.62 : 0.3)));
+            p.region(fx - 2 * w, base - 1, fx + 2 * w + 1, base + 1, (c, d) => p.tone(c, d, R.HULL, side < 0 ? 0.55 : 0.3));
+        });
+        return at;
+    }
+    /** Hull ten's shape: the Lander's, longer in the decks, a second ring round the drive, the top half still bare frames. */
+    function shapeTen(u, v, o) {
+        const l = P.shapeL(u, v, o);
+        if (l < 0) return -1;
+        const pu = u * o.len, built = o.built == null ? 0.48 : o.built;
+        if (u > 0.79 && u < 0.83) return l + 0.12;                                               // the new drive's collar
+        if (u > built) return l;
+        const rib = (pu % 9) < 1.4, edge = Math.abs(Math.abs(v) - 0.47) * o.ht < 1.1, spine = Math.abs(v + 0.1) * o.ht < 0.8;
+        if (rib || edge || spine) return l * 0.85;
+        const strip = Math.floor((v + 1) * o.ht / 6), plate = built - 0.07 * hash(strip, 5, 3);      // plates going on in whole strips: a stepped top edge
+        if (u > plate) return (u - plate) * o.len < 1.2 ? l * 0.55 : l - 0.05;
+        return -1;                                                                                // open: the sky shows through
+    }
+    /** The programme emblem: the star map from the gold disc (lines out from one point, one long line). [placeholder: it is only
+        drawn because the opening storyboard B suggested it; drop it if the 2029 message is cut.] */
+    const EMBLEM = Array.from({ length: 14 }, (_, i) => { const r = seeded(77 + i); return [i / 14 * Math.PI * 2 + r() * 0.3, 0.42 + r() * 0.58]; });
+    function emblem(set, cx, cy, rad) {
+        EMBLEM.forEach(([a, l]) => { const n = Math.round(rad * l); for (let k = 2; k <= n; k++) set(cx + Math.cos(a) * k, cy + Math.sin(a) * k * 0.92, k === n); });
+        for (let k = 2; k <= rad * 1.25; k++) set(cx + k, cy, false);
+        set(cx, cy, true);
+    }
+
+    // ── people in the crowd: a silhouette with a rim where the light comes from ──
+    /** Paints one person from behind into painter p, as a near-black silhouette with a rim of light on the edges that face the
+        light (heads brightest, shoulders less). kind: 0 plain, 1 arm up, 2 phone up, 3 child on shoulders. */
+    function crowdPerson(p, cx, base, s, seed, kind, toLight, rimV = 0.78) {
+        const r = seeded(seed), hr = 3.0 * s * (0.86 + r() * 0.28), sh = 6.2 * s * (0.86 + r() * 0.3), headY = base - 8.6 * s - hr, lean = (r() - 0.5) * 1.6 * s;
+        const hat = r() < 0.16, bun = !hat && r() < 0.22, hood = !hat && !bun && r() < 0.15, armSide = r() < 0.5 ? -1 : 1, kid = kind === 3;
+        const shapes = [[cx + lean, headY, hr, hr * 1.14], [cx, base + 1.5 * s, sh, 8 * s], [cx + lean * 0.5, headY + hr + 1.2 * s, hr * 0.6, 2.4 * s]];
+        if (hat) shapes.push([cx + lean, headY - hr * 0.5, hr * 1.45, hr * 0.38], [cx + lean, headY - hr * 0.8, hr * 0.9, hr * 0.5]);
+        if (bun) shapes.push([cx + lean + hr * 0.3, headY - hr * 0.95, hr * 0.42, hr * 0.42]);
+        if (hood) shapes.push([cx + lean, headY + hr * 0.2, hr * 1.25, hr * 1.2]);
+        if (kid) shapes.push([cx + lean, headY - hr * 2.1, hr * 0.78, hr * 0.84], [cx + lean, headY - hr * 0.95, hr * 1.25, hr * 0.85]);
+        const limbs = [];
+        if (kind === 1 || kind === 2) { const ax = cx + armSide * sh * 0.62, hy = headY - hr * (2.1 + r() * 1.3); limbs.push([ax, base - 5 * s, ax + armSide * 1.2 * s, hy, Math.max(0.8, 1.15 * s)]); }
+        const inside = (x, y) => shapes.some(([ex, ey, rx, ry]) => ((x + 0.5 - ex) / rx) ** 2 + ((y + 0.5 - ey) / ry) ** 2 < 1) ||
+            limbs.some(([x0, y0, x1, y1, w]) => { const t = clamp01(((x - x0) * (x1 - x0) + (y - y0) * (y1 - y0)) / ((x1 - x0) ** 2 + (y1 - y0) ** 2)); return Math.hypot(x - (x0 + (x1 - x0) * t), y - (y0 + (y1 - y0) * t)) < w; });
+        const [lx, ly] = toLight, top = Math.floor(headY - hr * (kid ? 3.2 : 2) - (limbs.length ? 4 * hr : 0) - 2), thick = s > 1.4 ? 2 : 1;
+        p.region(cx - sh - 3 * s - 2, top, cx + sh + 3 * s + 2, base + 10 * s, (x, y) => {
+            if (!inside(x, y)) return;
+            let rim = 0;
+            for (let k = 1; k <= thick; k++) if (!inside(x + lx * k, y + ly * k)) { rim = k; break; }
+            const upper = y < headY + hr * 1.4 ? 1 : 0.62;
+            p.tone(x, y, R.CROWD, rim ? (rimV - (rim - 1) * 0.25) * upper : 0.025 + (fbm(x / 3, y / 3, seed, 2) - 0.5) * 0.05);
+        });
+        if (kind === 2 && limbs.length) { const [, , x1, y1] = limbs[0]; p.region(x1 - 1.3 * s, y1 - 2.6 * s, x1 + 1.3 * s, y1 + 0.4 * s, (x, y) => p.tone(x, y, R.CROWD, 0.02)); }
+        return limbs.length ? limbs[0] : null;
+    }
+    /** A packed band of crowd, back rows first; neighbours overlap so it reads as one mass with lit heads.
+        rows: [[baseY, scale, density, rimV]]. Returns raised hands (for flags and phones drawn on top). */
+    function crowdBand(p, rows, toLight, seed, x0 = 0, x1 = p.W) {
+        const hands = [];
+        rows.forEach(([base, s, density, rimV], ri) => {
+            const r = seeded(seed + ri * 31), count = Math.ceil((x1 - x0) / (7.4 * s) * density), gap = (x1 - x0) / count;
+            for (let i = 0; i < count; i++) {
+                const x = x0 + (i + 0.15 + r() * 0.7) * gap, kindR = r(), kind = kindR < 0.09 ? 2 : kindR < 0.17 ? 1 : kindR < 0.2 && s > 0.6 ? 3 : 0;
+                const hand = crowdPerson(p, x, base + (r() - 0.5) * 4 * s, s, seed + ri * 977 + i, kind, toLight, rimV);
+                if (hand) hands.push({ x: hand[2], y: hand[3], s, kind });
+            }
+        });
+        return hands;
+    }
+    /** A waving flag, drawn every frame. The cloth ripples away from the pole; the emblem rides on it. */
+    function flag(L, px, py, w, h, t, seed, pole = true) {
+        if (pole) for (let y = py - 1; y < py + h * 2.6; y++) L.tone(px, y, R.STEEL, 0.5);
+        const ph = t / 380 + seed;
+        for (let x = 0; x < w; x++) {
+            const k = x / w, off = Math.sin(k * 5.2 - ph) * h * 0.16 * k, slope = Math.cos(k * 5.2 - ph) * k;
+            for (let y = 0; y < h; y++) {
+                const gx = px + 1 + x, gy = py + y + off, e = (x === w - 1 || y === 0) ? 0.06 : 0;
+                L.tone(gx, gy, R.FLAG, 0.42 + slope * 0.32 + e);
+            }
+        }
+        if (w >= 14) { const rad = Math.round(h * 0.34); emblem((x, y, tip) => { const k = (x - px - 1) / w; L.tone(x, y + Math.sin(k * 5.2 - ph) * h * 0.16 * k, R.CREAM, tip ? 0.9 : 0.66); }, px + 1 + Math.round(w * 0.38), py + Math.round(h / 2), rad); }
+    }
+    /** A camera flash: a white star, gone in two ticks. */
+    function flashes(f, t, n, box, seed) {
+        const st = Math.floor(t / TICK);
+        for (let i = 0; i < n; i++) {
+            if (hash(i, st, seed) < 0.93) continue;
+            const x = box[0] + hash(i, st + 1, seed) * (box[2] - box[0]), y = box[1] + hash(i, st + 2, seed) * (box[3] - box[1]);
+            f.glow(x, y, 6, R.CREAM, 0.75); f.px(x - 2, y, R.CREAM.hex[4], 5, 1); f.px(x, y - 2, R.CREAM.hex[4], 1, 5);
+        }
+    }
+    function blink(f, x, y, t, period, phase, on = 0.35) {
+        if (((t + phase) % period) / period < on) { f.glow(x, y, 3, R.RED, 0.7); f.px(x, y, R.RED.hex[4]); } else f.px(x, y, R.RED.hex[2]);
+    }
+
+    // ════════════════════════════════════ the shots ════════════════════════════════════
+    const SHOTS = [];
+    const shot = (o) => { SHOTS.push(o); return o; };
+
+    // 1 · THE YARD, WIDE (0-10 s): eight empty pads going back into the dusk, hull nine floodlit on the ninth, hull ten in its
+    //     scaffolding; the crowd along the fence in front. The camera drifts right, from the empty pads to the two hulls.
+    const YARD = { W: 820, horizon: 232, gx: 420, ship: [566, 270], ten: [722, 274] };
+    shot({
+        id: 'yard', t0: 0, t1: 10000, caption: 'The yard at dusk: eight empty pads, hull nine floodlit, hull ten in scaffolding.',
+        build() {
+            const p = P.painter(YARD.W, AH, true), Y = YARD;
+            const stars = sky(p, Y.horizon, Y.gx, 1, 11);
+            hills(p, Y.horizon, 3);
+            const pools = [[Y.ship[0] - 4, Y.ship[1], 90, 0.22], [Y.ten[0], Y.ten[1], 70, 0.12]];
+            ground(p, Y.horizon, 5, (x, y) => pools.reduce((s, [px, py, r, v]) => s + v * Math.exp(-Math.hypot((x - px) / r, (y - py) / (r * 0.18))), 0) + 0.2 * smooth(268, 300, y) * (0.6 + 0.4 * fbm(x / 40, 1, 6, 2)));
+            const lights = [];
+            for (let i = 0; i < 8; i++) { const k = i / 7, s = lerp(0.36, 0.8, k * k); lights.push(emptyPad(p, lerp(36, 470, Math.pow(k, 1.25)), lerp(240, 264, k * k), s, 40 + i)); }
+            // hull ten, inside its scaffolding, a crane over it
+            const [tx, tb] = Y.ten;
+            P.hull(p, { x: tx, y: tb - 8, len: 168, ht: 168 / 3.6, angle: -Math.PI / 2, flip: true, anchor: 1, seed: 21, ramp: R.STEEL, light: 0.85, built: 0.5, sun: 0.18, sunDir: [-1, 0] }, shapeTen);
+            for (let x = tx - 34; x <= tx + 34; x += 8.5) steelBar(p, x, tb, x, tb - 150, 0.24);
+            for (let y = tb - 10; y > tb - 150; y -= 11) steelBar(p, tx - 34, y, tx + 34, y, 0.3);
+            tower(p, tx + 52, tb, 196, 5, 0.8, 0.28);
+            steelBar(p, tx - 48, tb - 196, tx + 62, tb - 196, 0.4, 2);
+            p.line(tx - 10, tb - 195, tx - 10, tb - 166, (a, b) => p.tone(a, b, R.STEEL, 0.3));
+            // hull nine: floodlit, its tower and arms, three light masts and their beams
+            const [sx, sb] = Y.ship;
+            p.ellipse(sx, sb, 40, 6.5, (a, b, qq) => p.tone(a, b, R.CONC, 0.62 - qq * 0.3 + (fbm(a / 3, b / 2, 4, 2) - 0.5) * 0.12));
+            [[sx - 92, sb - 2], [sx + 70, sb + 1], [sx - 40, sb + 8]].forEach(([mx, mb]) => { steelBar(p, mx, mb, mx, mb - 54, 0.4); beam(p, mx, mb - 55, sx, sb - 60, 2, 26, R.FLOOD, 0.5, 0.42); });
+            const at = standingLander(p, { x: sx, base: sb, len: 124 });
+            lights.push(tower(p, sx + 30, sb, 132, 6, 1, 0.42));
+            [0.3, 0.62].forEach(u => { const [hx, hy] = at(u, 0.5); steelBar(p, hx, hy, sx + 30, hy, 0.45); });
+            P.pixelText('9', sx - 4, sb - 52, (a, b) => p.tone(a, b, R.HULL, 0.16));
+            // the fence and the crowd behind it, backlit by the yard
+            for (let x = 0; x < Y.W; x += 7) for (let y = 286; y < 304; y++) p.tone(x, y, R.STEEL, 0.18);
+            for (let x = 0; x < Y.W; x++) { p.tone(x, 288, R.STEEL, 0.16); p.tone(x, 296, R.STEEL, 0.16); }
+            const hands = crowdBand(p, [[308, 0.6, 1, 0.5], [322, 0.76, 1, 0.58], [339, 0.96, 1, 0.66], [360, 1.22, 1, 0.74]], [0, -1], 300);
+            return { canvas: p.canvas(), stars, lights, hands, mastLamps: [[sx - 92, sb - 56], [sx + 70, sb - 53], [sx - 40, sb - 46]] };
+        },
+        draw(t, S) {
+            const pan = Math.round(160 * ease(clamp01(t / 10000)));
+            ctx.drawImage(S.canvas, -pan, 0);
+            const f = P.framer(ctx, AW, AH), L = P.pixelLayer(AW, AH), ts = step8(t);
+            P.twinkle(f, S.stars, ts, pan);
+            [[YARD.ship[0] - 20, YARD.ship[1] - 6, 0.5], [YARD.ship[0] + 46, YARD.ship[1] - 4, -0.4]].forEach(([bx, by, ph], i) => {   // searchlights sweeping
+                const a = -Math.PI / 2 + Math.sin(t / 3400 + ph * 3) * 0.42 + ph * 0.25, len = 330, ca = Math.cos(a), sa = Math.sin(a);
+                for (let d = 6; d < len; d += 1) {
+                    const w = 1.5 + d * 0.075, fall = 1 - d / len, cx = bx - pan + ca * d, cy = by + sa * d;
+                    for (let k = -w; k <= w; k += 0.7) { const x = Math.round(cx - sa * k), y = Math.round(cy + ca * k), core = 1 - Math.abs(k) / (w + 0.5); if (0.4 * fall * (0.35 + 0.65 * core) > threshold(x + 2, y + 1)) L.tone(x, y, R.SMOKE, 0.3 + 0.36 * core * fall); }
+                }
+            });
+            L.draw(ctx);
+            S.mastLamps.forEach(([x, y]) => { f.glow(x - pan, y, 6, R.FLOOD, 0.9); f.px(x - pan - 2, y - 1, R.FLOOD.hex[5], 5, 2); });
+            S.lights.forEach(([x, y], i) => blink(f, x - pan, y, ts, 2000, i * 97, i === 8 ? 0.5 : 0.2));
+            for (let i = 0; i < 9; i++) { const x = YARD.ten[0] - 30 + (i % 3) * 30 - pan, y = YARD.ten[1] - 30 - Math.floor(i / 3) * 40; if (hash(i, Math.floor(ts / 250), 3) > 0.15) f.px(x, y, R.AMBER.hex[3], 2, 1); }
+            if (hash(1, Math.floor(ts / TICK), 9) > 0.6) { const x = YARD.ten[0] - 8 - pan, y = YARD.ten[1] - 120; f.glow(x, y, 4, R.WELD, 0.9); f.px(x, y, R.WELD.hex[4]); }
+            const W8 = P.pixelLayer(AW, AH);
+            S.hands.forEach((h, i) => { if (h.kind === 1 && i % 3 === 0) flag(W8, h.x - pan, h.y - 6 * h.s, Math.round(9 * h.s), Math.round(6 * h.s), t + i * 300, i, false); });
+            W8.draw(ctx);
+            S.hands.forEach((h, i) => { if (h.kind === 2) f.px(h.x - pan - 1, h.y - 2, R.CREAM.hex[hash(i, Math.floor(ts / 500), 4) > 0.5 ? 4 : 3], 2, 2); });
+        },
+    });
+
+    // 2 · THE CROWD (10-20 s): closer, a packed crowd seen from behind, the heads black against the last of the sunset and the
+    //     floodlit yard; three big programme flags, phones up, a child on someone's shoulders, paper confetti. Hull nine stands
+    //     floodlit on the horizon above them.
+    const CROWD = { W: 700, horizon: 196, ship: 470 };
+    shot({
+        id: 'crowd', t0: 10000, t1: 20000, caption: 'The crowd, black against the sunset and the floodlit yard: flags, phones, a child on shoulders.',
+        build() {
+            const p = P.painter(CROWD.W, AH, true), hz = CROWD.horizon, X = CROWD.ship;
+            const stars = sky(p, hz, 250, 1, 23);
+            hills(p, hz, 8);
+            ground(p, hz, 9, (x, y) => 0.55 * Math.exp(-Math.hypot((x - X) / 150, (y - hz - 6) / 12)) + 0.18 * Math.exp(-(y - hz) / 30));
+            for (let i = 0; i < 7; i++) emptyPad(p, 40 + i * 52, hz + 3 + i * 0.4, 0.34, 60 + i);
+            [[X - 70, hz + 8], [X + 64, hz + 7]].forEach(([mx, mb]) => { steelBar(p, mx, mb, mx, mb - 44, 0.4); beam(p, mx, mb - 45, X, hz - 20, 2, 16, R.FLOOD, 0.5, 0.4); });
+            standingLander(p, { x: X, base: hz + 9, len: 70 });
+            tower(p, X + 18, hz + 9, 76, 4, 0.6, 0.38);
+            p.region(0, hz - 50, CROWD.W, hz + 60, (x, y) => { const v = 0.42 * Math.exp(-Math.hypot((x - X) / 170, (y - hz) / 34)); if (v > 0.04) p.cover(x, y, R.FLOOD, 0.32, v); });   // haze over the yard
+            const hands = crowdBand(p, [[hz + 24, 0.6, 1.1, 0.58], [hz + 40, 0.82, 1.05, 0.64], [hz + 66, 1.12, 1, 0.7], [hz + 104, 1.6, 0.95, 0.76], [hz + 168, 2.5, 0.85, 0.82], [hz + 236, 3.6, 0.75, 0.86]], [0.6, -1], 500, -20, CROWD.W + 20);
+            return { canvas: p.canvas(), stars, hands, lamps: [[X - 70, hz - 37], [X + 64, hz - 38]], light: [X + 18, hz + 9 - 76 - 2] };
+        },
+        draw(t, S) {
+            const pan = Math.round(52 * ease(clamp01(t / 10000)));
+            ctx.drawImage(S.canvas, -pan, 0);
+            const f = P.framer(ctx, AW, AH), ts = step8(t), L = P.pixelLayer(AW, AH);
+            P.twinkle(f, S.stars, ts, pan);
+            S.lamps.forEach(([x, y]) => { f.glow(x - pan, y, 5, R.FLOOD, 0.9); f.px(x - pan - 2, y, R.FLOOD.hex[5], 4, 1); });
+            blink(f, S.light[0] - pan, S.light[1], ts, 2000, 0, 0.5);
+            [[120, 150, 46, 30, 0], [344, 132, 54, 34, 2], [588, 158, 42, 28, 4]].forEach(([x, y, w, h, sd]) => flag(L, x - pan, y, w, h, t, sd));
+            S.hands.forEach((h, i) => { if (h.kind === 1 && h.s < 1.2 && i % 2) flag(L, h.x - pan, h.y - 7 * h.s, Math.round(12 * h.s), Math.round(8 * h.s), t + i * 211, i, false); });
+            for (let i = 0; i < 52; i++) {                                                     // paper confetti, drifting down through the light
+                const x = (hash(i, 1, 41) * 760 + Math.sin(t / 900 + i) * 6) - pan, y = (hash(i, 2, 41) * 400 + t / 1000 * (8 + hash(i, 3, 41) * 10)) % 380 - 10;
+                L.tone(x, y, hash(i, 4, 41) > 0.5 ? R.CREAM : R.FLOOD, 0.45 + 0.5 * (Math.sin(t / 160 + i) * 0.5 + 0.5));
+            }
+            L.draw(ctx);
+            S.hands.forEach((h, i) => {
+                if (h.kind !== 2) return;
+                const v = hash(i, Math.floor(ts / 375), 4) > 0.4 ? 4 : 3, w = Math.max(2, Math.round(2.6 * h.s)), hh = Math.max(2, Math.round(3.4 * h.s));
+                f.px(h.x - pan - w / 2, h.y - 2.6 * h.s, R.CREAM.hex[v], w, hh);
+                if (h.s > 1.2) f.glow(h.x - pan, h.y - h.s, Math.round(4 * h.s), R.CREAM, 0.35);
+            });
+            flashes(f, t, 26, [0, 210, AW, 330], 13);
+        },
+    });
+
+    // 3 · THE PODIUM (20-36 s): the five on a stage in front of the programme's banner, under the lamps. Mira, Jaxon and Aris wave;
+    //     Vance does not; Cora stands with her hands behind her back. Flashes go off in the press pit.
+    const CREW = [
+        { id: 'mira', x: 198, facing: 1, wave: 'big', seed: 1 }, { id: 'jaxon', x: 262, facing: 1, wave: 'small', seed: 2 },
+        { id: 'cora', x: 322, facing: 1, wave: null, seed: 3 }, { id: 'vance', x: 384, facing: -1, wave: null, seed: 4 },
+        { id: 'aris', x: 444, facing: -1, wave: 'small', seed: 5 },
+    ];
+    const STAGE_FLOOR = 274;
+    shot({
+        id: 'podium', t0: 20000, t1: 36000, caption: 'The podium: the five crew in dress uniform under the lamps; three of them wave.',
+        build() {
+            const p = P.painter(AW, AH, true);
+            const stars = sky(p, 300, 320, 0.35, 31);
+            // the banner: navy cloth hung in folds, the emblem and the ship's name
+            p.region(64, 46, 576, 262, (x, y) => { const fold = 0.5 + 0.5 * Math.sin((x - 64) / 512 * Math.PI * 9), lamp = 0.18 * Math.exp(-((y - 46) / 90)); p.tone(x, y, R.FLAG, 0.2 + 0.16 * fold + lamp + (y > 258 ? -0.12 : 0) + (fbm(x / 8, y / 30, 3, 2) - 0.5) * 0.06); });
+            emblem((x, y, tip) => p.region(x, y, x + 1, y + 1, (a, b) => p.tone(a, b, R.CREAM, tip ? 0.9 : 0.6)), 306, 84, 30);
+            bigText(p, 'EXODUS-9', 320, 124, 4, R.CREAM, 0.74);
+            // the truss and its lamps, and their light falling on the stage
+            p.region(40, 24, 600, 30, (x, y) => p.tone(x, y, R.STEEL, y === 24 ? 0.5 : (x % 9 < 1 ? 0.4 : 0.22)));
+            const lamps = [84, 164, 244, 320, 396, 476, 556].map(x => [x, 33]);
+            lamps.forEach(([x, y], i) => { p.region(x - 4, y - 3, x + 4, y + 3, (a, b) => p.tone(a, b, R.STEEL, 0.3)); beam(p, x, y + 3, 200 + i * 40, STAGE_FLOOR - 4, 3, 30, R.FLOOD, 0.45, 0.26); });
+            // the stage, the bunting along its front, a lectern with two microphones
+            p.region(40, STAGE_FLOOR - 4, 600, STAGE_FLOOR + 18, (x, y) => p.tone(x, y, R.WOOD, (y === STAGE_FLOOR - 4 ? 0.72 : 0.46 - (y - STAGE_FLOOR) * 0.012) + ((x * 7 + Math.floor((y - 260) / 4) * 13) % 31 < 1 ? -0.14 : 0) + (fbm(x / 20, y / 2, 4, 2) - 0.5) * 0.1));
+            p.region(40, STAGE_FLOOR + 18, 600, AH, (x, y) => p.tone(x, y, R.FLAG, 0.12));
+            for (let x = 44; x < 596; x += 12) for (let k = 0; k < 6; k++) for (let j = -5 + k; j <= 5 - k; j++) p.tone(x + 6 + j, STAGE_FLOOR + 20 + k, (x / 12) % 2 ? R.CREAM : R.GLOW, (x / 12) % 2 ? 0.55 : 0.6);
+            p.region(112, STAGE_FLOOR - 34, 134, STAGE_FLOOR - 3, (x, y) => p.tone(x, y, R.WOOD, x < 116 ? 0.62 : 0.34));
+            p.region(108, STAGE_FLOOR - 38, 138, STAGE_FLOOR - 33, (x, y) => p.tone(x, y, R.WOOD, y === STAGE_FLOOR - 38 ? 0.8 : 0.5));
+            emblem((x, y) => p.tone(x, y, R.GLOW, 0.8), 122, STAGE_FLOOR - 22, 6);
+            [[118, -1], [128, 1]].forEach(([x, d]) => p.line(x, STAGE_FLOOR - 38, x + d * 4, STAGE_FLOOR - 48, (a, b) => p.tone(a, b, R.STEEL, 0.5)));
+            // flags on poles at the sides of the stage (still: no wind on stage)
+            return { canvas: p.canvas(), stars, lamps };
+        },
+        draw(t, S) {
+            ctx.drawImage(S.canvas, 0, 0);
+            const f = P.framer(ctx, AW, AH), ts = step8(t);
+            P.twinkle(f, S.stars, ts);
+            const L = P.pixelLayer(AW, AH);
+            [[22, 60, 34, 24, 1], [584, 60, 34, 24, 3]].forEach(([x, y, w, h, s]) => flag(L, x, y, w, h, t * 0.6, s));
+            L.draw(ctx);
+            S.lamps.forEach(([x, y]) => { f.glow(x, y + 3, 7, R.FLOOD, 0.95); f.px(x - 2, y + 2, R.FLOOD.hex[5], 5, 2); });
+            CREW.forEach(c => drawCrew(c, t));
+            const C = P.pixelLayer(AW, AH);
+            for (let i = 0; i < 70; i++) {                                                     // paper confetti, falling through the lamps' light
+                const x = hash(i, 1, 43) * 660 - 10 + Math.sin(t / 700 + i) * 5, y = (hash(i, 2, 43) * 380 + t / 1000 * (10 + hash(i, 3, 43) * 12)) % 380 - 10;
+                C.tone(x, y, hash(i, 4, 43) > 0.4 ? R.CREAM : R.GLOW, 0.5 + 0.45 * (Math.sin(t / 150 + i * 1.7) * 0.5 + 0.5));
+                if (hash(i, 5, 43) > 0.6) C.tone(x + 1, y, hash(i, 4, 43) > 0.4 ? R.CREAM : R.GLOW, 0.4);
+            }
+            C.draw(ctx);
+            ctx.drawImage(crowdFront(), 0, Math.round(Math.sin(ts / 700) * 0.6));
+            flashes(f, t, 30, [20, 300, 620, 356], 7);
+            flashes(f, t + 333, 12, [60, 200, 580, 240], 9);
+        },
+    });
+    const dressId = id => (window.FILM_DRESS ? id + '-dress' : id);
+    /** One crew member on the stage: the far arm raised and waving behind the body first, then the person. */
+    function drawCrew(c, t) {
+        const ms = t + c.seed * 1300, id = dressId(c.id);
+        const S = CE.sprite(id, 'idle', CE.frameAt('idle', ms));
+        const X = c.x, top = STAGE_FLOOR - S.origin.y, nx = X + (S.neck.x - S.origin.x) * c.facing, ny = top + S.neck.y;
+        if (c.wave) waveArm(c, nx - c.facing * 4, ny + 4, t);
+        CE.draw(ctx, id, 'idle', ms, X, STAGE_FLOOR, { facing: c.facing, warm: 2, rim: -c.facing, seed: c.seed });
+    }
+    function waveArm(c, sx, sy, t) {
+        const big = c.wave === 'big', k = Math.sin((t + c.seed * 400) / (big ? 230 : 320)), dark = window.FILM_DRESS ? ['#161d2e', '#2a3752', '#384866', '#5a6e92'] : ['#1a1f24', '#2a2f36', '#3a414a', '#4d5560'];
+        const ex = sx - c.facing * 8, ey = sy - 4, hx = ex - c.facing * 1 + k * (big ? 3.5 : 2), hy = ey - 14 + Math.abs(k);
+        const seg = (x0, y0, x1, y1, w, col) => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0)); ctx.fillStyle = col; for (let i = 0; i <= n; i++) ctx.fillRect(Math.round(x0 + (x1 - x0) * i / n - w / 2), Math.round(y0 + (y1 - y0) * i / n), w, 1); };
+        seg(sx, sy, ex, ey, 4, dark[1]); seg(sx, sy - 2, ex, ey - 2, 1, dark[3]);
+        seg(ex, ey, hx, hy + 2, 3, dark[1]); seg(ex - c.facing, ey, hx - c.facing, hy + 2, 1, dark[2]); seg(ex + c.facing, ey, hx + c.facing, hy + 2, 1, dark[0]);
+        const skin = { mira: ['#975749', '#d99f70'], jaxon: ['#5e3520', '#93583a'], aris: ['#b04a40', '#d8784c'] }[c.id] || ['#7a4a30', '#c8a080'];
+        const hxr = Math.round(hx), hyr = Math.round(hy);
+        ctx.fillStyle = skin[0]; ctx.fillRect(hxr - 1, hyr - 3, 4, 4);
+        ctx.fillStyle = skin[1]; ctx.fillRect(hxr - 1, hyr - 3, 3, 3); ctx.fillRect(hxr - 1 + (k > 0 ? 3 : -1), hyr - 2, 1, 2);
+        ctx.fillStyle = window.FILM_DRESS ? '#c49a3a' : dark[3]; ctx.fillRect(hxr - 1, hyr + 1, 4, 1);   // the gold cuff
+    }
+    let crowdFrontCanvas = null;
+    function crowdFront() {
+        if (crowdFrontCanvas) return crowdFrontCanvas;
+        const p = P.painter(AW, AH, false);
+        crowdBand(p, [[330, 1.5, 1, 0.66], [356, 2.1, 1, 0.72], [392, 2.8, 0.95, 0.8]], [0, -1], 900, -30, 670);
+        [[30, 320], [600, 318]].forEach(([x, y]) => { p.region(x - 7, y - 6, x + 9, y + 4, (a, b) => p.tone(a, b, R.CROWD, b === y - 6 ? 0.5 : 0.1)); p.region(x + 9, y - 3, x + 13, y + 1, (a, b) => p.tone(a, b, R.CROWD, 0.18)); for (let k = 0; k < 40; k++) { p.tone(x - k * 0.25, y + 4 + k, R.STEEL, 0.25); p.tone(x + k * 0.25, y + 4 + k, R.STEEL, 0.25); } });   // the press pit's cameras
+        crowdFrontCanvas = p.canvas();
+        return crowdFrontCanvas;
+    }
+
+    // 4 · HULL TEN (36-44 s): the camera tilts up hull ten inside its scaffolding: longer than ours, a second ring round the drive,
+    //     its top half still bare frames. Welders' sparks fall. A big 10 on the finished plates.
+    const TEN = { H: 560, x: 300, base: 540 };
+    shot({
+        id: 'ten', t0: 36000, t1: 44000, caption: 'Hull ten, still being built: longer, a second ring round the drive, its top half bare frames.',
+        build() {
+            const p = P.painter(AW, TEN.H, true);
+            const stars = sky(p, 520, 520, 0.55, 41);
+            ground(p, 520, 12, (x, y) => 0.25 * Math.exp(-Math.abs(x - TEN.x) / 120));
+            p.region(0, 380, AW, 520, (x, y) => { const k = (y - 380) / 140, v = 0.32 * k * Math.exp(-Math.abs(x - TEN.x) / 200); if (v > 0.03) p.cover(x, y, R.FLOOD, 0.35, v); });
+            const len = 470, ht = len / 3.6;
+            const at = P.hull(p, { x: TEN.x, y: TEN.base - 10, len, ht, angle: -Math.PI / 2, flip: true, anchor: 1, seed: 21, ramp: R.STEEL, light: 0.95, built: 0.52, sun: 0.22, sunDir: [-1, 0] }, shapeTen);
+            bigText(p, '10', TEN.x - 6, TEN.base - 214, 7, R.STEEL, 0.08);
+            const sx0 = TEN.x - ht / 2 - 22, sx1 = TEN.x + ht / 2 + 22, lamps = [], decks = [];
+            for (let x = sx0; x <= sx1; x += 13) steelBar(p, x, TEN.base, x, 30, 0.26, 2);
+            for (let y = TEN.base - 18; y > 30; y -= 26) {
+                steelBar(p, sx0, y, sx1, y, 0.36, 2); decks.push(y);
+                p.region(sx0, y + 2, sx1, y + 4, (a, b) => p.tone(a, b, R.WOOD, 0.3));
+                if (hash(y, 1, 5) > 0.25) lamps.push([sx0 + 6 + Math.floor(hash(y, 2, 5) * (sx1 - sx0 - 12)), y + 6]);
+            }
+            for (let y = TEN.base - 18; y > 56; y -= 26) [sx0, sx1 - 13].forEach(x => steelBar(p, x, y, x + 13, y - 26, 0.2));   // braces at the sides only
+            tower(p, sx1 + 40, TEN.base, 520, 8, 1.1, 0.3);
+            steelBar(p, sx0 - 120, 24, sx1 + 60, 24, 0.42, 3);
+            p.line(TEN.x - 30, 27, TEN.x - 30, 80, (a, b) => p.tone(a, b, R.STEEL, 0.4));
+            const [kx, ky] = at(0.5, 0);
+            return { canvas: p.canvas(), stars, lamps, sparks: [[TEN.x - 18, 262], [TEN.x + 22, 210], [TEN.x - 4, 132]], mid: [kx, ky] };
+        },
+        draw(t, S) {
+            const pan = Math.round(lerp(TEN.H - AH, 0, ease(clamp01(t / 8000)))), ts = step8(t);
+            ctx.drawImage(S.canvas, 0, -pan);
+            const f = P.framer(ctx, AW, AH);
+            P.twinkle(f, S.stars.map(s => ({ x: s.x, y: s.y - pan, mag: s.mag })), ts);
+            S.lamps.forEach(([x, y], i) => { f.glow(x, y - pan, 5, R.AMBER, 0.42); f.px(x - 1, y - pan, R.AMBER.hex[4], 3, 1); });
+            S.sparks.forEach(([x, y], i) => {                                                   // a welder's spark: a white point, drops falling from it
+                if (hash(i, Math.floor(ts / 375), 6) < 0.3) return;
+                f.glow(x, y - pan, 4, R.WELD, 0.9); f.px(x, y - pan, R.WELD.hex[4]);
+                for (let k = 0; k < 7; k++) { const age = ((t / 900) + hash(i, k, 8)) % 1; f.tone(x + (hash(i, k, 9) - 0.5) * 14 * age, y - pan + age * age * 60, R.WELD, 0.9 * (1 - age)); }
+            });
+        },
+    });
+
+    // 5 · PAD NINE (44-62 s): night has nearly come. Hull nine on its pad, floodlit; five small people walk across the apron to the
+    //     tower and ride the lift up to the arm. The countdown starts; vents breathe steam; the arm swings back.
+    const PAD = { x: 392, base: 300, len: 244, tower: 452 };
+    const WALKERS = [['#1b242b', '#1f2940'], ['#3a3530', '#1f2940'], ['#dfe9ee', '#1f2940'], ['#9a9fab', '#1f2940'], ['#c0443c', '#1f2940']];   // hair, coat, in podium order: Mira, Jaxon, Cora, Vance, Aris
+    shot({
+        id: 'pad', t0: 44000, t1: 62000, caption: 'Pad nine at nightfall: the five walk to the tower and ride up; the countdown starts.',
+        build() {
+            const p = P.painter(AW, AH, true), X = PAD.x, B = PAD.base;
+            const stars = sky(p, 288, 120, 0.42, 51);
+            hills(p, 288, 14);
+            ground(p, 288, 15, (x, y) => 0.5 * Math.exp(-Math.hypot((x - X) / 150, (y - B) / 26)));
+            p.ellipse(X, B + 2, 120, 16, (a, b, qq) => p.tone(a, b, R.CONC, 0.58 - qq * 0.34 + (fbm(a / 4, b / 2, 7, 2) - 0.5) * 0.12));
+            p.region(X - 14, B + 4, X + 14, B + 14, (a, b) => p.tone(a, b, R.CONC, 0.04));
+            [[X - 220, B + 6, 176], [X + 200, B + 4, 168], [X - 128, B + 30, 120]].forEach(([mx, mb, mh]) => { steelBar(p, mx, mb, mx, mb - mh, 0.42, 2); beam(p, mx, mb - mh - 2, X, B - 70, 3, 44, R.FLOOD, 0.5, 0.3); });
+            const at = standingLander(p, { x: X, base: B, len: PAD.len });
+            const top = tower(p, PAD.tower, B, 262, 12, 1.4, 0.45);
+            const [hx, hy] = at(0.235, 0.5);
+            const name = 'EXODUS-9';
+            for (let i = 0; i < name.length; i++) {                                              // the name down the hull, one letter under the other
+                P.pixelText(name[i], 0, 0, (gx, gy) => { const [x, y] = at(0.3 + i * 0.05, 0.02); p.region(x + gx * 2 - 3, y + gy * 2 - 5, x + gx * 2 - 1, y + gy * 2 - 3, (a, b) => p.tone(a, b, R.HULL, 0.14)); });
+            }
+            const lamps = [[X - 220, B - 172], [X + 200, B - 166], [X - 128, B - 92]];
+            return { canvas: p.canvas(), stars, lamps, arm: [hx, hy], top, at };
+        },
+        draw(t, S) {
+            ctx.drawImage(S.canvas, 0, 0);
+            const f = P.framer(ctx, AW, AH), ts = step8(t), X = PAD.x, B = PAD.base, T = t + 44000;
+            P.twinkle(f, S.stars, ts);
+            S.lamps.forEach(([x, y]) => { f.glow(x, y, 8, R.FLOOD, 0.95); f.px(x - 3, y - 1, R.FLOOD.hex[5], 7, 2); });
+            blink(f, S.top[0], S.top[1], ts, 1800, 0, 0.45);
+            // the arm to the hatch: out until T-4, then swinging back
+            const [hx, hy] = S.arm, swing = clamp01((T - (COUNT.zero - 4000)) / 2500), armEnd = lerp(hx + 1, PAD.tower, ease(swing));
+            for (let x = Math.round(armEnd); x < PAD.tower; x++) { f.px(x, Math.round(hy) - 1, R.STEEL.hex[3]); f.px(x, Math.round(hy), R.STEEL.hex[2]); f.px(x, Math.round(hy) + 2, R.STEEL.hex[1]); }
+            // the five walk to the tower (45.5-53 s), ride the lift (53-57 s), then the lift's lamp at the top
+            const walk = clamp01((T - 45500) / 7500), liftK = clamp01((T - 53200) / 3800), carY = lerp(B - 4, hy - 1, ease(liftK));
+            if (T < 53200) WALKERS.forEach(([hair, coat], i) => {
+                const x = Math.round(lerp(90 - i * 13, PAD.tower - 12 - i * 7, walk)), bob = walk < 1 ? (Math.floor(ts / 250 + i) % 2) : 0, y = B + 12 - bob;
+                f.px(x, y - 10, hair, 2, 2); f.px(x, y - 8, '#c8a080'); f.px(x - 1, y - 7, coat, 3, 5); f.px(x - 1, y - 2, '#0a0b0e', 1, 2); f.px(x + 1, y - 2, '#0a0b0e', 1, 2);
+                f.px(x - 1, y - 7, R.FLOOD.hex[2], 1, 4);
+            });
+            f.px(PAD.tower + 2, Math.round(carY) - 8, R.STEEL.hex[2], 9, 9);
+            if (T >= 53200 && T < 57400) { f.px(PAD.tower + 3, Math.round(carY) - 7, R.AMBER.hex[3], 7, 6); f.glow(PAD.tower + 6, Math.round(carY) - 4, 7, R.AMBER, 0.5); }
+            // the vents breathe from T-6
+            const vent = clamp01((T - (COUNT.zero - 6000)) / 6000);
+            if (vent > 0) {
+                const L = P.pixelLayer(AW, AH);
+                for (let i = 0; i < 70; i++) {
+                    const age = ((t / 1800) + hash(i, 1, 21)) % 1, side = hash(i, 2, 21) < 0.5 ? -1 : 1, r = 2 + age * 12 * vent;
+                    const cx = X + side * (10 + age * 70 * vent), cy = B - 4 - age * 18 - hash(i, 3, 21) * 6;
+                    for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) { const d = Math.hypot(x, y) / r; if (d < 1 && fbm((cx + x) / 4, (cy + y) / 4 - t / 900, 3, 2) > 0.42 + d * 0.3) L.tone(cx + x, cy + y, R.SMOKE, (0.75 - age * 0.5) * vent); }
+                }
+                L.draw(ctx);
+            }
+        },
+    });
+
+    // 6 · LIFT-OFF (62-71 s): the drive lights blue-white under the bell, the blast hits the pad and steam rolls out across it in
+    //     great billows lit from inside, the whole yard turns cold and bright, and the ship climbs; the camera tilts up after it.
+    const LIFT = { H: 760, x: 320, base: 700, len: 210, hold: 1800 };
+    const liftRise = t => (t < LIFT.hold ? 0 : 0.0000082 * (t - LIFT.hold) ** 2);   // still in the frame when the shot cuts
+    shot({
+        id: 'liftoff', t0: 62000, t1: 71000, caption: 'Lift-off: the blue drive lights, steam rolls over the pad, the camera tilts up after the ship.',
+        build() {
+            const X = LIFT.x, B = LIFT.base, mk = lit => {
+                const p = P.painter(AW, LIFT.H, true);
+                const stars = sky(p, 690, 200, 0.3, 61);
+                hills(p, 690, 16);
+                ground(p, 690, 17, (x, y) => (0.2 + 0.5 * lit) * Math.exp(-Math.hypot((x - X) / 240, (y - B) / 30)));
+                p.ellipse(X, B + 4, 140, 18, (a, b, qq) => p.tone(a, b, R.CONC, 0.5 + 0.2 * lit - qq * 0.3));
+                tower(p, X + 64, B, 230, 12, 1.4, 0.4 + 0.3 * lit);
+                tower(p, X - 236, B + 10, 120, 6, 0.9, 0.3 + 0.2 * lit);
+                if (lit) p.region(0, B - 300, AW, B + 60, (x, y) => { const v = lit * 0.42 * Math.exp(-Math.hypot((x - X) / 240, (y - B) / 90)); if (v > 0.05) p.cover(x, y, R.PLUME, 0.25 + v, v * 1.1); });   // the yard lit cold by the drive
+                return { canvas: p.canvas(), stars };
+            };
+            const dark = mk(0), bright = mk(1);
+            const s = P.painter(150, 270, false);                                                 // the ship, baked once
+            standingLander(s, { x: 75, base: 262, len: LIFT.len });
+            return { dark, bright, ship: s.canvas() };
+        },
+        draw(t, S) {
+            const X = LIFT.x, B = LIFT.base, rise = liftRise(t), pan = Math.round(Math.max(0, LIFT.H - AH - Math.max(0, rise - 40)));   // the camera tilts up with the ship once it clears the tower
+            const heat = clamp01(t / 700), base = heat > 0.5 ? S.bright : S.dark, ts = step8(t);
+            ctx.drawImage(base.canvas, 0, -pan);
+            const f = P.framer(ctx, AW, AH);
+            P.twinkle(f, base.stars.map(st => ({ x: st.x, y: st.y - pan, mag: st.mag })), ts);
+            const by = B - rise - pan - 12, flick = [1, 0.9, 1.08, 0.95][Math.floor(ts / TICK) % 4];
+            const L = P.pixelLayer(AW, AH);
+            billows(L, t, X, B - pan, heat, false);
+            L.draw(ctx);
+            ctx.drawImage(S.ship, X - 75, Math.round(B - rise - pan) - 262);
+            const L2 = P.pixelLayer(AW, AH), plume = (t < LIFT.hold ? 30 + t / 25 : 110 + Math.min(260, rise * 0.7)) * heat * flick;
+            const padY = B - pan + 2;                                                           // the pad: the flame stops here and spreads
+            for (let d = 0; d < plume; d++) {                                                   // the drive: a white core in a blue sheath
+                if (by + 8 + d > padY) break;
+                const w = 9 * (1 - d / (plume * 1.5)) + d * 0.05 + (rise < 10 ? d * 0.12 : 0);
+                for (let k = -w; k <= w; k++) { const v = (1 - d / plume) ** 0.6 * (1 - (k / (w + 0.01)) ** 2); if (v > 0.04) L2.tone(X + k, by + 8 + d, R.PLUME, Math.min(1, 0.25 + v * 1.1)); }
+            }
+            const gap = padY - (by + 8);
+            if (gap < plume && padY < AH + 4) {                                                 // the flame hits the pad and runs out along it
+                const hit = (1 - gap / plume) * heat, reach = 30 + 150 * hit;
+                for (let k = -reach; k <= reach; k++) for (let j = 0; j < 4; j++) { const v = hit * (1 - Math.abs(k) / reach) ** 0.7 * (1 - j / 4); if (v > 0.06) L2.tone(X + k, padY - j, R.PLUME, Math.min(1, 0.3 + v)); }
+            }
+            billows(L2, t, X, B - pan, heat, true);
+            L2.draw(ctx);
+            f.glow(X, by + 8, 16, R.PLUME, heat);
+            f.px(X - 6, by + 6, R.PLUME.hex[6], 13, 4);
+        },
+    });
+    /** Steam and smoke from the flame trench: round billows rolling out both ways and up, lit from inside by the drive.
+        front: the billows nearer than the ship (they cover its legs). Drawn per frame into a pixel layer. */
+    function billows(L, t, X, B, heat, front) {
+        const grow = clamp01(t / 2600), n = 64;
+        for (let i = 0; i < n; i++) {
+            if ((hash(i, 9, 33) < 0.42) !== front) continue;
+            const age = ((t / 3400) + hash(i, 1, 33)) % 1, side = hash(i, 2, 33) < 0.5 ? -1 : 1, lift = hash(i, 4, 33);
+            const r = (6 + age * 34 + lift * 10) * grow, cx = X + side * (14 + age * (240 + lift * 120)) * grow, cy = B - 6 - (age * 40 + lift * 60 * age) * grow;
+            if (r < 2 || cy + r < 0 || cy - r > AH || cx + r < 0 || cx - r > AW) continue;
+            const lx = (X - cx) / (Math.abs(X - cx) + 40), ly = 0.6;                          // light from the drive: toward the pad, and from below
+            for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+                const d = Math.hypot(x, y) / r;
+                if (d > 1) continue;
+                if (d > 0.7 && vnoise((cx + x) / 5, (cy + y) / 5 + t / 1400, i) < (d - 0.7) / 0.3) continue;   // a lumpy edge
+                const lam = Math.max(0, (x / r) * lx + (y / r) * ly), near = Math.exp(-Math.hypot(cx + x - X, cy + y - B) / 150);
+                const v = (0.36 + 0.42 * lam + 0.4 * near * heat - (y / r) * -0.06) * (1 - age * 0.3);
+                L.tone(cx + x, cy + y, near * heat > 0.4 && lam > 0.35 ? R.PLUME : R.SMOKE, v);
+            }
+        }
+    }
+
+    // 7 · INTO THE DARK (71-86 s): from far off, a long lens on the climb. The ship leans over toward its heading and shrinks; its
+    //     trail hangs over the horizon, its upper half still lit by a sun that has already set for the yard. The drive is the last
+    //     thing you can see: one point of light among the stars. The broadcast's graphics go; then black.
+    const CLIMB = { horizon: 338, from: [236, 322], to: [446, 82], fly: 10500 };
+    const climbCache = new Map();
+    function climbSprite(len, angle) {
+        const deg = Math.round(angle * 90 / Math.PI) * 2, key = len + ':' + deg;
+        if (climbCache.has(key)) return climbCache.get(key);
+        const ht = len / 3.15, half = Math.ceil(len / 2 + ht + 4), p = P.painter(half * 2, half * 2, false);
+        const at = P.hull(p, { x: half, y: half, len, ht, angle: deg * Math.PI / 180, flip: true, anchor: 0.5, seed: 9, flat: len < 90 }, P.shapeL);
+        const bell = at(1, 0), out = { canvas: p.canvas(), half, bell: [bell[0] - half, bell[1] - half] };
+        climbCache.set(key, out);
+        return out;
+    }
+    const climbAt = k => { const e = 1 - Math.pow(1 - k, 1.5), bend = Math.sin(e * Math.PI) * 26; return [lerp(CLIMB.from[0], CLIMB.to[0], e) - bend * 0.3, lerp(CLIMB.from[1], CLIMB.to[1], e) + bend * 0.2]; };
+    shot({
+        id: 'climb', t0: 71000, t1: 86000, caption: 'Into the dark: its trail hangs over the horizon; the ship shrinks to one point of light; black.',
+        build() {
+            const p = P.painter(AW, AH, true), hz = CLIMB.horizon;
+            p.region(0, 0, AW, hz, (x, y) => { const k = y / hz, gv = 0.55 * Math.pow(k, 5) + 0.25 * Math.exp(-Math.hypot((x - 120) / 220, (y - hz) / 30)); if (smooth(0.08, 0.3, gv) > threshold(x + 3, y + 5)) p.tone(x, y, R.GLOW, gv); else p.tone(x, y, R.NIGHT, 0.05 + 0.3 * Math.pow(k, 2)); });
+            const stars = P.keepVisible(p, P.scatterStars(p, 72, 820, (x, y) => y < hz - 30));
+            p.region(0, hz, AW, AH, (x, y) => p.tone(x, y, R.HILL, 0.3 + (fbm(x / 6, y / 2, 3, 2) - 0.5) * 0.2));
+            for (let x = 0; x < AW; x++) { const top = hz - 2 - 5 * fbm(x / 50, 2, 4, 3); for (let y = Math.floor(top); y < hz; y++) p.tone(x, y, R.HILL, 0.4); }
+            const lights = [];                                                                     // the yard on the horizon, far off
+            for (let i = 0; i < 26; i++) { const r = seeded(500 + i); lights.push([150 + r() * 220, hz - 1 + Math.round(r() * 4), r()]); }
+            return { canvas: p.canvas(), stars, lights };
+        },
+        draw(t, S) {
+            ctx.drawImage(S.canvas, 0, 0);
+            const f = P.framer(ctx, AW, AH), ts = step8(t), k = clamp01(t / CLIMB.fly), [x, y] = climbAt(k);
+            P.twinkle(f, S.stars, ts);
+            S.lights.forEach(([lx, ly, r], i) => f.px(lx, ly, (r > 0.8 ? R.FLOOD : R.AMBER).hex[hash(i, Math.floor(ts / 500), 3) > 0.2 ? 4 : 3]));
+            const L = P.pixelLayer(AW, AH);
+            for (let i = 0; i <= 320; i++) {                                                    // the trail: thin and bright near the ship, wide and faint lower down
+                const u = i / 320, kk = k * u, [px, py] = climbAt(kk), age = (k - kk) * CLIMB.fly / 1000;
+                if (py > CLIMB.horizon + 2) continue;
+                const drift = age * 2.6 * (1 - kk) + Math.sin(kk * 9) * age * 0.8, w = 1 + age * 1.9, sunlit = smooth(250, 110, py);
+                for (let j = -w; j <= w; j += 0.6) {
+                    const qx = px + drift + j * 0.9, qy = py + j * 0.4, e = 1 - Math.abs(j) / (w + 0.3), a = (0.9 - age * 0.05) * (0.3 + 0.7 * e);
+                    if (a <= threshold(Math.round(qx) + 1, Math.round(qy) + 2)) continue;
+                    if (j < 0 && sunlit > 0.25) L.tone(qx, qy, R.GLOW, 0.45 + 0.45 * sunlit * e);   // high up, the trail still catches the sun
+                    else L.tone(qx, qy, R.SMOKE, (0.42 + 0.3 * e) * (1 - age * 0.035));
+                }
+            }
+            L.draw(ctx);
+            const len = Math.round(56 * Math.pow(1 - k, 2.6)), angle = lerp(-Math.PI / 2 + 0.12, -0.95, k), dir = [Math.cos(angle), Math.sin(angle)];
+            if (len >= 7) {
+                const sp = climbSprite(len, angle), bx = x + sp.bell[0], by = y + sp.bell[1];
+                ctx.drawImage(sp.canvas, Math.round(x - sp.half), Math.round(y - sp.half));
+                const pl = len * 0.9; for (let d = 0; d < pl; d++) { const w = Math.max(1, len / 16) * (1 - d / pl); for (let j = -w; j <= w; j++) f.tone(bx - dir[0] * d - dir[1] * j, by - dir[1] * d + dir[0] * j, R.PLUME, 1 - d / pl); }
+                f.glow(bx, by, Math.max(4, Math.round(len / 4)), R.PLUME, 0.95);
+            } else {                                                                              // one point of light
+                f.glow(x, y, 5, R.PLUME, 0.8 + 0.1 * Math.sin(t / 300));
+                f.px(x, y, R.PLUME.hex[6]);
+                if (Math.floor(ts / 500) % 3 === 0) { f.px(x - 2, y, R.PLUME.hex[4], 5, 1); f.px(x, y - 2, R.PLUME.hex[4], 1, 5); }
+            }
+        },
+    });
+
+    // ════════════════════════════════════ the player: clock, stills, overlays, skip ════════════════════════════════════
+    let T = 0, playing = true, last = null, ended = false;
+    const built = new Map();
+    const stateOf = s => { if (!built.has(s.id)) built.set(s.id, s.build()); return built.get(s.id); };
+    function render() {
+        const s = SHOTS.find(o => T >= o.t0 && T < o.t1) || SHOTS[SHOTS.length - 1];
+        ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH);
+        if (T < DUR) { try { s.draw(T - s.t0, stateOf(s)); } catch (err) { console.error('film: ' + s.id + ' failed', err); } }
+        dim(T < 900 ? 1 - T / 900 : smooth(FADE[0], FADE[1], T));
+        overlay();
+    }
+    /** Dither to black: amount 0..1, whole Bayer steps (the house fade, never a soft alpha). */
+    const dimPat = new Map();
+    function dim(a) {
+        const n = Math.round(clamp01(a) * 8); if (!n) return;
+        if (n >= 8) { ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH); return; }
+        if (!dimPat.has(n)) { const c = document.createElement('canvas'); c.width = c.height = 8; const g = c.getContext('2d'); g.fillStyle = INK; for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (threshold(x, y) < n / 8) g.fillRect(x, y, 1, 1); dimPat.set(n, ctx.createPattern(c, 'repeat')); }
+        ctx.fillStyle = dimPat.get(n); ctx.fillRect(0, 0, AW, AH);
+    }
+    const lt = $('lt'), ltK = lt.querySelector('.kicker'), ltL = lt.querySelector('.line'), ltN = lt.querySelector('.names');
+    let shownLine = null;
+    function overlay() {
+        const live = T < LIVE_ENDS && !ended, a = T < 600 ? 0 : 1;
+        $('bug-live').style.opacity = $('bug-net').style.opacity = live ? a : 0;
+        $('bug-live').querySelector('i').classList.toggle('off', Math.floor(T / 900) % 2 === 1);
+        const L = LINES.find(l => T >= l.t0 && T < l.t1);
+        if (L !== shownLine) { shownLine = L; if (L) { ltK.textContent = L.kicker; ltL.textContent = L.line; ltN.textContent = L.names || ''; ltN.hidden = !L.names; } }
+        lt.style.opacity = L ? Math.min(1, (T - L.t0) / 350, (L.t1 - T) / 350) : 0;
+        const c = $('clock');
+        if (T >= COUNT.t0 && T < COUNT.zero + 2600 && !ended) {
+            const left = Math.max(0, Math.ceil((COUNT.zero - T) / 1000));
+            c.innerHTML = '<small>' + (T < COUNT.zero ? 'T minus' : 'Lift-off') + '</small>00:' + String(left).padStart(2, '0');
+            c.style.opacity = 1;
+        } else c.style.opacity = 0;
+        $('skip').style.opacity = T < 4000 && playing && !ended ? 0.8 : 0;
+    }
+    function setTime(ms) { T = clamp01(ms / DUR) * DUR; ended = T >= DUR; document.body.classList.toggle('is-over', ended); render(); }
+    function stepBy(ms) { playing = false; setTime(T + ms); }
+    function skip() { playing = false; setTime(DUR); }
+    function loop(now) {
+        const dt = last == null ? 16 : Math.min(100, now - last); last = now;
+        if (playing && !ended) { T += dt; if (T >= DUR) { T = DUR; ended = true; document.body.classList.add('is-over'); } }
+        render();
+        requestAnimationFrame(loop);
+    }
+    function fit() {
+        const dpr = window.devicePixelRatio || 1, forced = Number(q.get('px'));
+        const k = forced > 0 ? forced : Math.max(1, Math.floor(Math.min(innerWidth * dpr / AW, innerHeight * dpr / AH)));
+        const w = AW * k / dpr, h = AH * k / dpr, fr = $('frame');
+        Object.assign(fr.style, { width: w + 'px', height: h + 'px', left: Math.round((innerWidth - w) / 2) + 'px', top: Math.round((innerHeight - h) / 2) + 'px' });
+        document.documentElement.style.setProperty('--u', (k / dpr) + 'px');
+    }
+    addEventListener('resize', fit);
+    addEventListener('pointerdown', e => { if (e.target.id === 'again') return; if (!ended) skip(); });
+    addEventListener('keydown', e => { if (['Escape', 'Enter', ' '].includes(e.key)) { e.preventDefault(); if (!ended) skip(); } });
+    $('again').addEventListener('click', () => { ended = false; document.body.classList.remove('is-over'); setTime(0); playing = true; });
+    window.film = {
+        play() { playing = true; }, pause() { playing = false; }, step: stepBy, setTime(ms) { playing = false; setTime(ms); }, duration: DUR,
+        shots: SHOTS.map(s => ({ id: s.id, t0: s.t0, t1: s.t1, caption: s.caption })), lines: LINES,
+        state: () => ({ t: Math.round(T), playing, ended, shot: (SHOTS.find(o => T >= o.t0 && T < o.t1) || {}).id }),
+        prebuild() { SHOTS.forEach(stateOf); },
+    };
+    fit();
+    // build the first shot now and the rest in the background, one per idle slot, so the cuts never stall
+    stateOf(SHOTS[0]);
+    let nextBuild = 1;
+    (function buildMore() { if (nextBuild >= SHOTS.length) { document.body.dataset.still = 'ready'; return; } stateOf(SHOTS[nextBuild++]); setTimeout(buildMore, 30); })();
+    if (q.has('t')) { playing = false; window.film.prebuild(); setTime(Number(q.get('t')) || 0); }
+    requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

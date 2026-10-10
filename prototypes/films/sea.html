@@ -1,0 +1,372 @@
+<!doctype html>
+<!--
+  SILENT EXODUS · FILM 2 · THE SEA OF SHIPS (mockup, silent). The jump into sector 3, replacing the old "throw" sequence.
+  The jump stalls; the stars shrink back to points; our Lander's drive coughs out and its decks go dark one by one until one
+  red lamp is left. Then, as if our eyes adjust, we see we are not alone: broken Exodus hulls of our own class hang all round
+  us, still and dead, every one pointing at the far light. The camera pulls back, and back, and back, until our ship is a red
+  dot and there is a sea of thousands of hulls, all on the same heading. One line from A.U.R.A.; the drive relights; white.
+  About 42 seconds. Nothing in the game or the other prototypes is changed; this page only LOADS
+    ../screens/game-screen-v3/paint.js   V3Paint: the dither recipe, ramps, hull() + shapeL (the Lander), lightGlow, stars
+  STILLS: ?t=ms opens paused at that moment · ?words=0 drops the one line · ?newer=1 mixes in longer hulls of a newer kind
+          (the spine's later ships; off by default, the designer asked for ships of our own class) · ?px=N forces the pixel size
+          window.film.play() / pause() / step(ms) / setTime(ms) / state() / shots
+  SKIP: a click, Esc, Enter or Space skips to the end. No audio is loaded.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sea of Ships</title>
+<meta name="description" content="Silent Exodus jump film mockup: the jump into sector 3 stalls, and the camera pulls back over a sea of dead Exodus ships.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+    color-scheme: dark;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --u: 3px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; cursor: pointer; }
+#frame { position: absolute; overflow: hidden; }
+#art { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+.gfx { position: absolute; pointer-events: none; }
+/* one voice, as the slice's reading layer shows it: the name small and spaced, the line plain */
+#voice { left: calc(var(--u) * 40); bottom: calc(var(--u) * 46); max-width: calc(var(--u) * 210); text-shadow: 0 1px 0 var(--ink), 0 0 calc(var(--u) * 5) rgba(5, 7, 10, 0.9); }
+#voice .who { display: flex; align-items: center; gap: calc(var(--u) * 2.4); margin: 0 0 calc(var(--u) * 2); font: 500 calc(var(--u) * 4.8)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: #c9d1d6; }
+#voice .who i { width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }
+#voice .say { margin: 0; font: 400 calc(var(--u) * 7.8)/1.36 var(--f-text); color: var(--text); }
+#skip { right: calc(var(--u) * 10); bottom: calc(var(--u) * 8); font: 400 calc(var(--u) * 4)/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--faint); }
+#again { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; background: none; border: 1px dashed #2c3036;
+         color: #8b8d90; font: 500 13px/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; padding: 10px 16px; cursor: pointer; }
+#again:hover, #again:focus-visible { color: #fff; outline: none; }
+body.is-over #again { display: block; }
+</style>
+</head>
+<body data-still="wait">
+<div id="frame" aria-label="Film: the jump into sector 3 stalls among thousands of dead Exodus ships">
+    <canvas id="art" aria-hidden="true"></canvas>
+    <div class="gfx" id="voice" aria-live="polite"><p class="who"><i></i>A.U.R.A.</p><p class="say"></p></div>
+    <div class="gfx" id="skip">Click to skip</div>
+</div>
+<button type="button" id="again">Watch again</button>
+
+<script src="../screens/game-screen-v3/paint.js?v=3"></script>
+<script>
+(function () {
+    'use strict';
+    const P = window.V3Paint;
+    const { INK, RP, ramp, clamp01, smooth, lerp, hash, fbm, seeded, threshold, LANDER, DECK_U } = P;
+    const AW = 640, AH = 360, TICK = 125, DUR = 42000;
+    const q = new URLSearchParams(location.search);
+    const $ = id => document.getElementById(id);
+    const cv = $('art'), ctx = cv.getContext('2d', { alpha: false });
+    cv.width = AW; cv.height = AH; ctx.imageSmoothingEnabled = false;
+    const ease = k => k * k * (3 - 2 * k);
+    const step8 = t => Math.floor(t / TICK) * TICK;
+
+    // ═══ the timeline ═══
+    const TL = {
+        stall: [0, 3600],          // the stretched stars shrink back to points: the jump has stopped
+        cough: [2600, 4600],       // the drive coughs and goes out
+        ports: [5000, 7600],       // the decks go dark one by one
+        lamp: 7800,                // one red lamp left, blinking
+        reveal: [10200, 15200],    // the ships round us come out of the dark
+        pull: [[15400, 21600, 3.7, 24], [22200, 28600, 24, 110], [29200, 36400, 110, 270]],   // three pulls back: [t0, t1, from, to] (distance in ship lengths)
+        line: [37000, 41200],
+        relight: 40400, white: [41200, 41600], end: DUR,
+    };
+    const LINE = 'The drive is back, Commander. The jump will finish.';   // the one line; ?words=0 drops it
+
+    // ═══ the camera: one pinhole, looking straight ahead; our ship stays at OUR on screen, the light at VP ═══
+    const F = 560, C0 = [320, 180], VP = [560, 72], OUR = [270, 252];
+    const norm = v => { const n = Math.hypot(...v) || 1; return v.map(x => x / n); };
+    const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    const HEAD = norm([(VP[0] - C0[0]) / F, (VP[1] - C0[1]) / F, 1]);        // the heading: toward the light
+    const NRM = norm(cross([1, 0, 0], HEAD)), SIDE = norm(cross(HEAD, NRM));  // the sea's up, and across the heading
+    const CAMDIR = [(OUR[0] - C0[0]) / F, (OUR[1] - C0[1]) / F, 1];
+    // Every hull is drawn on ONE screen heading (ours, toward the light), with only a hint of perspective. True perspective made
+    // them fan out from the light like a burst, and the point of the shot is that they are all going the same way.
+    const HEAD_ANG = Math.atan2(VP[1] - OUR[1], VP[0] - OUR[0]);
+    function headingAt(x, y, yaw) {
+        let da = Math.atan2(VP[1] - y, VP[0] - x) - HEAD_ANG;
+        da = Math.atan2(Math.sin(da), Math.cos(da));
+        return HEAD_ANG + Math.max(-0.8, Math.min(0.8, da)) * 0.18 + yaw * 0.5;
+    }
+    function distAt(t) {
+        let D = TL.pull[0][2];
+        for (const [t0, t1, a, b] of TL.pull) { if (t >= t1) D = b; else if (t > t0) { D = Math.exp(lerp(Math.log(a), Math.log(b), ease((t - t0) / (t1 - t0)))); break; } }
+        return D;
+    }
+    const LEN_K = 0.92;          // a hull's length on screen is F / z times this (drawn side on, pointing at the light)
+
+    // ═══ the sea: a few hand-placed hulls round us, then thousands, more of them the further out ═══
+    // Each: u along the heading (+ ahead), w across it (+ right), h off the sea's plane (+ up), in ship lengths. Placed (scratchpad
+    // inv.js) so that at the first look they frame us without covering us or the light: [screen x, y, length] in the comment.
+    const NEAR = [
+        { u: -1.39, w: -0.35, h: -0.02, yaw: 0.04, to: 0.55, roll: 0.05, holes: 0.66, light: 0.55 },   // 60,334,200 · the front half of a ship, close below us
+        { u: -1.24, w: -1.17, h: -0.04, yaw: -0.1, from: 0.6, roll: -0.5, light: 0.5 },               // -30,300,170 · its back half, turning away
+        { u: 1.92, w: -2.95, h: 0.65, yaw: 0.05, holes: 0.64 },                             // 120,118,80
+        { u: 4.71, w: 0.19, h: 0.46, yaw: -0.06 },                                          // 440,124,66
+        { u: 1.63, w: 1.74, h: -0.89, yaw: 0.03, from: 0.24, roll: 0.12 },                 // 548,322,110 · nose torn off
+        { u: 8.49, w: -3.71, h: -0.41, yaw: -0.04 },                                        // 300,142,40
+        { u: 8.66, w: 2.79, h: -1.35, yaw: 0.05, holes: 0.62 },                             // 612,206,48
+        { u: 5.46, w: -8.59, h: -1.89, yaw: 0.02 },                                         // 40,214,42
+        { u: 4.44, w: -0.16, h: -2.82, yaw: -0.08, holes: 0.65 },                           // 404,346,62
+        { u: 11.9, w: -9.29, h: -2.06, yaw: 0.06 },                                         // 190,172,28
+        { u: 18.5, w: -1.02, h: -3.35, yaw: -0.03 },                                        // 474,192,24
+        { u: 21.58, w: -6.63, h: -0.01, yaw: 0.02 },                                        // 362,98,20
+        { u: 19.28, w: -20.4, h: 1.57, yaw: -0.05, to: 0.6, roll: 0.3 },                   // 92,64,18
+    ];
+    // The sea: even in distance from us (about 6 hulls per ship length of distance), 40,000 in all, out to 7,000 lengths.
+    // What can be seen grows as the camera pulls back (SEEN, in camera distances): first the hulls round us, then hundreds,
+    // then thousands, fading into the dark toward the light.
+    const SEA_N = 40000, SEA_RHO = [15, 7000], SEEN = [3.6, 7.2];
+    const DUSTY = ramp(INK, '#141110', '#2a2420', '#4a3e34', '#6e5c4a', '#9a8268');
+    // Hulls of OUR class: our own hull ramp gone cold and grey, some rusted, some burnt. No bright red: they must read as Landers.
+    const DEAD = ramp(INK, '#0f1417', '#1b252a', '#2f3d43', '#55666c', '#8e9fa4');
+    const RAMPS = [DEAD, RP.RUST, DEAD, RP.PASSED, DUSTY, DEAD];
+    function makeSea() {
+        const r = seeded(4242), list = [];
+        NEAR.forEach((o, i) => list.push(Object.assign({ kind: 0, seed: 100 + i, ramp: RAMPS[i % RAMPS.length], holes: o.holes || 0, from: o.from || 0, to: o.to == null ? 1 : o.to, roll: o.roll || 0 }, o)));
+        const newer = q.get('newer') === '1', camRay = norm(CAMDIR).map(v => -v);
+        while (list.length < NEAR.length + SEA_N) {
+            const rho = SEA_RHO[0] + (SEA_RHO[1] - SEA_RHO[0]) * r(), th = r() * Math.PI * 2;
+            const u = rho * Math.cos(th), w = rho * Math.sin(th) * 1.15, h = (r() + r() + r() - 1.5) * (1.2 + 0.035 * rho);   // a sea: thin for its size
+            if (u < 0 && r() < 0.55) continue;                                                // fewer behind us than ahead
+            const p = [0, 1, 2].map(k => u * HEAD[k] + w * SIDE[k] + h * NRM[k]);
+            const dot = (p[0] * camRay[0] + p[1] * camRay[1] + p[2] * camRay[2]) / rho;
+            if (dot > 0.93) continue;                                                         // keep the camera's path back clear
+            const broken = r() < 0.22, cut = 0.3 + r() * 0.4;
+            list.push({ u, w, h, p, rho, fade: r(), yaw: (r() - 0.5) * 0.24, roll: broken ? (r() - 0.5) * 0.8 : 0, seed: Math.floor(r() * 997), ramp: RAMPS[Math.floor(r() * RAMPS.length)],
+                holes: r() < 0.45 ? 0.6 + r() * 0.08 : 0, from: broken && r() < 0.5 ? cut : 0, to: broken ? (r() < 0.5 ? cut : 1) : 1, kind: newer && rho > 20 && r() < 0.18 ? 1 : 0 });
+        }
+        list.forEach(s => { if (!s.p) s.p = [0, 1, 2].map(k => s.u * HEAD[k] + s.w * SIDE[k] + s.h * NRM[k]); if (s.rho == null) s.rho = Math.hypot(s.u, s.w, s.h); });
+        return list;
+    }
+    const SEA = makeSea();
+
+    // ═══ hull sprites: baked on first use at whole sizes, cached ═══
+    /** A newer, longer hull (the spine's later ships): longer decks, a second ring round the drive. Only with ?newer=1. */
+    function shapeNew(u, v, o) { const l = P.shapeL(u, v, o); if (l < 0) return -1; return u > 0.79 && u < 0.83 ? l + 0.12 : l; }
+    const cache = new Map();
+    function hullSprite(len, deg, s, ours) {
+        const key = (ours ? 'o' + (s.dark ? 'd' : '') : s.seed + ':' + s.from + ':' + s.to + ':' + (s.light || 0)) + '|' + len + '|' + deg;
+        let sp = cache.get(key);
+        if (sp) return sp;
+        const ht = len / (s.kind === 1 ? 4.4 : 3.15), half = Math.ceil(len / 2 + ht + 3), p = P.painter(half * 2, half * 2, false), a = deg * Math.PI / 180;
+        const small = len < 26, sunDir = [-Math.cos(a), -Math.sin(a)];
+        const o = ours
+            ? { x: half, y: half, len, ht, angle: a, flip: true, seed: 9, anchor: 0.5, sun: s.dark ? 0.36 : len < 80 ? 0.24 : 0.3, sunDir: [Math.cos(a), Math.sin(a)], fade: 0.22, light: s.dark ? 0.3 : 1, flat: len < 130 }
+            : { x: half, y: half, len, ht, angle: a + s.roll, flip: true, seed: s.seed, anchor: 0.5, ramp: s.ramp, light: (s.light || 0.92) * (s.ramp === RP.WRUST ? 0.78 : 1), rust: !small, holes: small ? 0 : s.holes, from: s.from, to: s.to,
+                sun: len > 14 ? 0.22 : 0, sunDir: [Math.cos(a), Math.sin(a)], fade: 0.3, flat: len < 90 };
+        const at = P.hull(p, o, s.kind === 1 ? shapeNew : P.shapeL);
+        sp = { canvas: p.canvas(), half };
+        if (ours) { sp.ports = [0, 1, 2, 3, 4, 5].map(i => at(DECK_U(i) + 0.054, -0.32).map(v => v - half)); sp.lamp = at(LANDER.NOSE + 0.06, -0.52).map(v => v - half); sp.bell = at(1, 0).map(v => v - half); sp.skirt = [0.87, 0.9, 0.93].map(u => at(u, 0.6).map(v => v - half)); }
+        if (cache.size > 6000) cache.clear();
+        cache.set(key, sp);
+        return sp;
+    }
+    const quantLen = l => (l < 36 ? Math.round(l) : Math.round(Math.exp(Math.round(Math.log(l) * 30) / 30)));
+    const quantDeg = a => Math.round(a * 60 / Math.PI) * 3;
+
+    // ═══ the far background: space, haze, stars and the light, painted once ═══
+    let BG = null;
+    function background() {
+        if (BG) return BG;
+        const p = P.painter(AW, AH, true), lt = { core: 3.2, halo: 26, strength: 0.95, spikes: 30 };
+        p.region(0, 0, AW, AH, (x, y) => {
+            const v = Math.max(0, fbm(x / 80, y / 42, 31, 4) - 0.46) * 0.9, g = 0.22 * Math.exp(-Math.hypot(x - VP[0], (y - VP[1]) * 1.8) / 140);
+            if (v + g > 0.03) p.tone(x, y, RP.HAZE, v + g);
+        });
+        const stars = P.keepVisible(p, P.scatterStars(p, 33, 1500, (x, y) => Math.hypot(x - VP[0], y - VP[1]) > 26 && (y < VP[1] + 6 || hash(x, y, 4) < 0.35)));   // fewer stars below the sea's horizon, so the hulls read
+        P.lightGlow(p, VP[0], VP[1], lt);
+        BG = { canvas: p.canvas(), stars: stars.filter(s => s.mag > 0.9), all: stars };
+        return BG;
+    }
+
+    // ═══ drawing a frame ═══
+    const dead = document.createElement('canvas'); dead.width = AW; dead.height = AH;
+    const dctx = dead.getContext('2d'); dctx.imageSmoothingEnabled = false;
+    function project(p, D) {
+        const rx = p[0] + D * CAMDIR[0], ry = p[1] + D * CAMDIR[1], rz = p[2] + D * CAMDIR[2];
+        if (rz < 0.4) return null;
+        const n = Math.hypot(rx, ry, rz), along = (rx * HEAD[0] + ry * HEAD[1] + rz * HEAD[2]) / n, side = Math.sqrt(Math.max(0, 1 - along * along));
+        return { x: C0[0] + F * rx / rz, y: C0[1] + F * ry / rz, len: F / rz * LEN_K * (0.45 + 0.55 * Math.min(1, side / 0.6)), z: rz };   // seen nose-on, a hull looks shorter
+    }
+    const glowAt = (x, y) => Math.exp(-Math.hypot(x - VP[0], (y - VP[1]) * 1.4) / 46);
+    function drawSea(t, D) {
+        dctx.clearRect(0, 0, AW, AH);
+        const L = P.pixelLayer(AW, AH), big = [];
+        const seen = [];
+        for (const s of SEA) {
+            const pr = project(s.p, D);
+            if (!pr || pr.x < -300 || pr.x > AW + 300 || pr.y < -200 || pr.y > AH + 200 || pr.len > 330) continue;
+            if (s.rho > 12 && s.fade > smooth(SEEN[1] * D, SEEN[0] * D, s.rho)) continue;   // too far off to make out yet
+            seen.push([pr, s]);
+        }
+        seen.sort((a, b) => b[0].z - a[0].z);
+        for (const [pr, s] of seen) {
+            const ang = headingAt(pr.x, pr.y, s.yaw), ca = Math.cos(ang), sa = Math.sin(ang);
+            if (pr.len >= 7) { big.push([pr, s, ang]); continue; }
+            const g = glowAt(pr.x, pr.y);
+            if (pr.len < 0.42) {                                                                 // very far: one point, dark against the light's glow
+                if (g > 0.35) { L.set(pr.x, pr.y, P.hexRgb('#05070a')); continue; }
+                L.tone(pr.x, pr.y, DUSTY, 0.5 + hash(s.seed, 1, 3) * 0.25 + 0.2 * g);
+                continue;
+            }
+            if (pr.len < 2.6) {                                                                  // far: two or three pixels, nose to the light
+                const n = pr.len < 1.2 ? 2 : 3, glint = hash(s.seed + Math.floor(pr.x), Math.floor(t / 500), 11) > 0.985;
+                for (let i = 0; i < n; i++) { const x = pr.x + (i - n / 2) * ca, y = pr.y + (i - n / 2) * sa; if (g > 0.35) L.set(x, y, P.hexRgb('#05070a')); else L.tone(x, y, s.ramp === RP.PASSED ? RP.PASSED : DUSTY, (i === n - 1 ? 0.78 : 0.5) + hash(s.seed, 2, 3) * 0.14); }
+                if (glint && g < 0.35) L.tone(pr.x + (n / 2) * ca, pr.y + (n / 2) * sa, RP.SUN, 0.8);   // a hull catches the light
+                continue;
+            }
+            const n = Math.max(2, Math.round(pr.len * 1.15)), ht = Math.max(1, Math.round(pr.len / 3.4));   // nearer: a short hull, its nose lit
+            for (let i = 0; i < n; i++) for (let j = 0; j < ht; j++) {
+                const x = pr.x + (i - n / 2) * ca - (j - ht / 2) * sa * 0.9, y = pr.y + (i - n / 2) * sa + (j - ht / 2) * ca * 0.9;
+                if (s.to < 1 && i > n * s.to) continue; if (s.from > 0 && i < n * s.from) continue;
+                if (g > 0.4) { L.set(x, y, P.hexRgb('#0b0d10')); continue; }
+                L.tone(x, y, s.ramp === RP.PASSED ? RP.PASSED : DUSTY, (i >= n - 1 ? 0.8 : 0.52) - j * 0.14 + 0.15 * g);
+            }
+        }
+        L.draw(dctx);
+        for (const [pr, s, ang] of big) {
+            const sp = hullSprite(quantLen(pr.len), quantDeg(ang), s, false);
+            dctx.drawImage(sp.canvas, Math.round(pr.x - sp.half), Math.round(pr.y - sp.half));
+        }
+    }
+    /** Our ship: lit and burning, then cold; its ports go out deck by deck; one red lamp. */
+    function drawOurs(t, D) {
+        const len = quantLen(F / D * LEN_K), deg = quantDeg(Math.atan2(VP[1] - OUR[1], VP[0] - OUR[0])), f = P.framer(ctx, AW, AH), ts = step8(t);
+        if (len >= 7) {
+            const sp = hullSprite(len, deg, { seed: 9, from: 0, to: 1 }, true), cx = OUR[0], cy = OUR[1];
+            ctx.drawImage(sp.canvas, cx - sp.half, cy - sp.half);
+            const cold = smooth(TL.ports[0], TL.ports[1] + 800, t) * (1 - smooth(TL.relight, TL.relight + 700, t));   // the hull goes dark with its decks
+            if (cold > 0) {
+                const dk = hullSprite(len, deg, { seed: 9, from: 0, to: 1, dark: true }, true), tmp = scratch(dk.canvas.width, dk.canvas.height), g = tmp.getContext('2d');
+                g.clearRect(0, 0, tmp.width, tmp.height); g.drawImage(dk.canvas, 0, 0); ditherIn(g, cold, tmp.width, tmp.height);
+                ctx.drawImage(tmp, cx - dk.half, cy - dk.half);
+            }
+            const burn = 1 - smooth(TL.cough[0], TL.cough[1], t) + (t > TL.relight ? smooth(TL.relight, TL.relight + 500, t) * 1.6 : 0);
+            const cough = t > TL.cough[0] && t < TL.cough[1] ? (hash(Math.floor(t / 90), 3, 7) > 0.45 ? 1 : 0.1) : 1;
+            if (burn * cough > 0.02) {
+                const a = deg * Math.PI / 180, ca = Math.cos(a), sa = Math.sin(a), s = len / 48, [bx, by] = sp.bell, lvl = burn * cough * 1.4, fl = [1, 0.75, 1.15, 0.9][Math.floor(ts / TICK) % 4];
+                const pl = (6 + 20 * lvl) * s * fl, w0 = Math.max(1, 1.8 * s);
+                for (let d = 0; d < pl; d++) { const hw = w0 * (1 - (d / pl) * 0.6); for (let k = -Math.ceil(hw); k <= Math.ceil(hw); k++) { const u = Math.abs(k) / (hw + 0.01), v = (1 - d / pl) ** 0.8 * (1 - u * u); if (v > 0.06) f.tone(cx + bx - ca * d - sa * k, cy + by - sa * d + ca * k, RP.PLUME, v); } }
+            }
+            sp.ports.forEach(([px, py], i) => {                                                 // a lit porthole per deck, going out one by one
+                const off = TL.ports[0] + (5 - i) * (TL.ports[1] - TL.ports[0]) / 5, on = t < off || (t > TL.relight + 300 && hash(i, 1, 2) > 0.2);
+                if (on) f.px(cx + px, cy + py, RP.AMBER.hex[i === 0 ? 4 : 3]); else if (t < off + 300) f.px(cx + px, cy + py, RP.AMBER.hex[1]);
+            });
+            if (t > TL.lamp) redLamp(f, cx + sp.lamp[0], cy + sp.lamp[1], t, len / 12);
+        } else {                                                                                 // a dot: the red lamp is how you find us
+            const k = clamp01((len - 1) / 6);
+            if (k > 0.3) f.px(OUR[0] - 1, OUR[1], RP.HULL.hex[2], 3, 1);
+            redLamp(f, OUR[0], OUR[1] - (k > 0.3 ? 1 : 0), t, 1);
+            if (t > TL.relight) { const v = smooth(TL.relight, TL.relight + 600, t); f.glow(OUR[0] - 2, OUR[1] + 1, 4, RP.PLUME, v); f.px(OUR[0] - 2, OUR[1] + 1, RP.PLUME.hex[5]); }
+        }
+    }
+    function redLamp(f, x, y, t, scale) {
+        const on = ((t - TL.lamp) % 2200) < 900, r = Math.max(4, Math.round(3 + scale));
+        if (on) { f.glow(x, y, r, RP.RED, 0.9); f.px(x, y, RP.RED.hex[4]); if (scale <= 1) f.px(x - 1, y, RP.RED.hex[3], 3, 1); }
+        else { f.glow(x, y, 3, RP.RED, 0.55); f.px(x, y, RP.RED.hex[3]); }
+    }
+    /** The jump: every star pulled out into a streak toward the light; the streaks shrink back as the jump stalls. */
+    function drawStreaks(t, k) {
+        if (k <= 0.01) return;
+        const L = P.pixelLayer(AW, AH);
+        background().all.forEach(st => {
+            const dx = VP[0] - st.x, dy = VP[1] - st.y, d = Math.hypot(dx, dy) || 1, len = Math.min(d - 4, k * k * (40 + d * 0.5) * (0.5 + st.mag));
+            for (let i = 0; i < len; i++) L.tone(st.x - dx / d * i * 0.4 + dx / d * i, st.y - dy / d * i * 0.4 + dy / d * i, RP.STAR, (0.4 + 0.55 * st.mag) * (1 - i / len));
+        });
+        L.draw(ctx);
+    }
+    /** Fade a layer in with the house dither: only the pixels whose Bayer threshold is under `amount` survive. */
+    const holePat = new Map();
+    const scratches = new Map();
+    function scratch(w, h) { const k = w + 'x' + h; if (!scratches.has(k)) { const c = document.createElement('canvas'); c.width = w; c.height = h; scratches.set(k, c); } return scratches.get(k); }
+    function ditherIn(c2, amount, w = AW, h = AH) {
+        const n = Math.round(clamp01(amount) * 16);
+        if (n >= 16) return;
+        if (!holePat.has(n)) { const c = document.createElement('canvas'); c.width = c.height = 8; const g = c.getContext('2d'); g.fillStyle = '#000'; for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (threshold(x, y) >= n / 16) g.fillRect(x, y, 1, 1); holePat.set(n, c2.createPattern(c, 'repeat')); }
+        c2.save(); c2.globalCompositeOperation = 'destination-out'; c2.fillStyle = holePat.get(n); c2.fillRect(0, 0, w, h); c2.restore();
+    }
+    const dimPat = new Map();
+    function dim(a, colour = INK) {
+        const n = Math.round(clamp01(a) * 8); if (!n) return;
+        if (n >= 8) { ctx.fillStyle = colour; ctx.fillRect(0, 0, AW, AH); return; }
+        const key = colour + n;
+        if (!dimPat.has(key)) { const c = document.createElement('canvas'); c.width = c.height = 8; const g = c.getContext('2d'); g.fillStyle = colour; for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (threshold(x, y) < n / 8) g.fillRect(x, y, 1, 1); dimPat.set(key, ctx.createPattern(c, 'repeat')); }
+        ctx.fillStyle = dimPat.get(key); ctx.fillRect(0, 0, AW, AH);
+    }
+
+    function frameAt(t) {
+        const B = background(), f = P.framer(ctx, AW, AH), ts = step8(t), D = distAt(t);
+        ctx.drawImage(B.canvas, 0, 0);
+        const stretch = Math.max(1 - smooth(TL.stall[0], TL.stall[1], t), smooth(TL.relight + 300, TL.white[0], t));
+        if (stretch < 0.5) P.twinkle(f, B.stars, ts);
+        drawStreaks(t, stretch);
+        const seen = smooth(TL.reveal[0], TL.reveal[1], t);
+        if (seen > 0) { drawSea(t, D); ditherIn(dctx, seen); ctx.drawImage(dead, 0, 0); }
+        drawOurs(t, D);
+        if (t < 600) dim(1 - t / 600);
+        if (t >= TL.white[0]) { dim(smooth(TL.white[0], TL.white[0] + 200, t), RP.SUN.hex[6]); dim(smooth(TL.white[1], TL.end, t)); }
+    }
+
+    // ═══ the player: clock, stills, the line, skip ═══
+    let T = 0, playing = true, last = null, ended = false;
+    const words = q.get('words') !== '0', voice = $('voice'), say = voice.querySelector('.say');
+    say.textContent = LINE;
+    function render() {
+        ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH);
+        if (T < DUR) { try { frameAt(T); } catch (err) { console.error('film: frame failed', err); } }
+        else { ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH); }
+        const [a, b] = TL.line;
+        voice.style.opacity = words && T >= a && T < b && !ended ? Math.min(1, (T - a) / 350, (b - T) / 350) : 0;
+        $('skip').style.opacity = T < 4000 && playing && !ended ? 0.8 : 0;
+    }
+    function setTime(ms) { T = clamp01(ms / DUR) * DUR; ended = T >= DUR; document.body.classList.toggle('is-over', ended); render(); }
+    function skip() { playing = false; setTime(DUR); }
+    function loop(now) {
+        const dt = last == null ? 16 : Math.min(100, now - last); last = now;
+        if (playing && !ended) { T += dt; if (T >= DUR) { T = DUR; ended = true; document.body.classList.add('is-over'); } }
+        render();
+        requestAnimationFrame(loop);
+    }
+    function fit() {
+        const dpr = window.devicePixelRatio || 1, forced = Number(q.get('px'));
+        const k = forced > 0 ? forced : Math.max(1, Math.floor(Math.min(innerWidth * dpr / AW, innerHeight * dpr / AH)));
+        const w = AW * k / dpr, h = AH * k / dpr, fr = $('frame');
+        Object.assign(fr.style, { width: w + 'px', height: h + 'px', left: Math.round((innerWidth - w) / 2) + 'px', top: Math.round((innerHeight - h) / 2) + 'px' });
+        document.documentElement.style.setProperty('--u', (k / dpr) + 'px');
+    }
+    addEventListener('resize', fit);
+    addEventListener('pointerdown', e => { if (e.target.id === 'again') return; if (!ended) skip(); });
+    addEventListener('keydown', e => { if (['Escape', 'Enter', ' '].includes(e.key)) { e.preventDefault(); if (!ended) skip(); } });
+    $('again').addEventListener('click', () => { ended = false; document.body.classList.remove('is-over'); setTime(0); playing = true; });
+    const SHOTS = [
+        { id: 'stall', t0: 0, t1: 4600, caption: 'The jump stalls: the stretched stars shrink back to points; the drive coughs out.' },
+        { id: 'dark', t0: 4600, t1: 10200, caption: 'Our decks go dark one by one. One red lamp is left.' },
+        { id: 'reveal', t0: 10200, t1: 15400, caption: 'As the eyes adjust: dead hulls of our own class all round us, still, all pointing at the light.' },
+        { id: 'pull', t0: 15400, t1: 36400, caption: 'The camera pulls back, and back, and back.' },
+        { id: 'sea', t0: 36400, t1: 42000, caption: 'Our ship is a red dot in a sea of thousands. A.U.R.A.: the drive is back. White.' },
+    ];
+    window.film = {
+        play() { playing = true; }, pause() { playing = false; }, step(ms) { playing = false; setTime(T + ms); }, setTime(ms) { playing = false; setTime(ms); },
+        duration: DUR, shots: SHOTS, line: LINE, ships: SEA.length,
+        state: () => ({ t: Math.round(T), playing, ended, distance: +distAt(T).toFixed(2), cached: cache.size }),
+    };
+    fit();
+    background();
+    document.body.dataset.still = 'ready';
+    if (q.has('t')) { playing = false; setTime(Number(q.get('t')) || 0); }
+    requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
