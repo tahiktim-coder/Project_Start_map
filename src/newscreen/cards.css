@@ -119,6 +119,13 @@ html.ns-on .modal-overlay .enc-chips { gap: 4px 14px; }
 html.ns-on .modal-overlay .enc-chips i { padding: 0; border: 0; border-radius: 0; font: 400 14px/1.3 var(--f-num); color: var(--ui); }
 html.ns-on .modal-overlay .enc-chips .is-gain { color: var(--warm); border: 0; }
 html.ns-on .modal-overlay .enc-chips .is-loss { color: var(--loss); border: 0; }
+/* long tags wrap inside the card instead of pushing it sideways (the ending card scrolled sideways, its reasons cut off) */
+html.ns-on .modal-overlay .enc-choice > span:first-child { flex: 1 1 14em; min-width: 0; }
+html.ns-on .modal-overlay .enc-chips { flex: 0 1 auto; min-width: 0; max-width: 100%; }
+html.ns-on .modal-overlay .enc-chips i { white-space: normal; overflow-wrap: anywhere; }
+html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips { flex-basis: 100%; }                  /* why it is closed: its own quiet line under the words */
+html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips i { font: 400 14px/1.4 var(--f-text); color: #c98a7c; }
+html.ns-on .modal-overlay .modal-content, html.ns-on .modal-overlay .enc-card { overflow-x: hidden; }
 html.ns-on .modal-overlay .enc-detail { margin: 12px 0 0; padding: 0 28px; font: 400 15px/1.55 var(--f-text); color: #b9bdc0; }
 html.ns-on .modal-overlay .enc-detail .is-gain { color: var(--warm); }
 html.ns-on .modal-overlay .enc-detail .is-loss { color: var(--loss); }
