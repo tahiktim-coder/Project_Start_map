@@ -3889,7 +3889,9 @@ Then you're through.`,
 
         // A team trip costs no energy (docs/ECONOMY.md). OBSESSED (Mira at stress 3) keeps the team out a full day, which costs a ration.
         const isObsessed = this.state.hasActiveTrait('OBSESSED');
-        const site = this.siteOf(planet), isSiteTrip = !!(site && !planet[site.done]);
+        const siteHere = this.siteOf(planet);
+        const site = isNewScreen() && siteHere && siteHere.tag === 'ANOMALY' ? null : siteHere;   // the new screen: the ship flies to the strange site itself ("Fly closer")
+        const isSiteTrip = !!(site && !planet[site.done]);
 
         // Bark: crew reacts before EVA
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {

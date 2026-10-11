@@ -6,7 +6,7 @@
    Source: the <style> of prototypes/slice/index.html and the voice of prototypes/screens/game-screen/reading.css. */
 
 /* ── travelling: the view is the screen; today's header, panels, log, Coach and map are out of sight ── */
-body.ns-travel .app-container { visibility: hidden; }
+body.ns-travel .app-container { visibility: hidden; }   /* before it, from the first paint: index.html <head> hides it under html.ns-on */
 body.ns-travel .coach { display: none !important; }
 
 /* ── the view: under every card (1000+), reel (5000) and minigame (6000) ── */
