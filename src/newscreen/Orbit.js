@@ -113,24 +113,24 @@
     function actions(app) {
         const s = app && app.state, n = s && s.currentSystem;
         if (!n) return [];
-        const out = [], add = (key, words, near, run, team) => out.push({ key, words, near, team: !!team, run });
+        const out = [], add = (key, words, near, run, team, sub) => out.push({ key, words, near, team: !!team, run, sub: sub || '' });   // sub: what it gives or costs, in a few words
         if ((n.isStructure || n.type === 'STRUCTURE') && !n.structureApproached) add('light', 'Go into the light', 'world', () => app.handleStructureAction());
         if (n._isWrongPlace) {
             add('escape', 'Fight to escape', 'under', () => window.dispatchEvent(new CustomEvent('req-wrong-escape')));
             add('accept', 'Accept it', 'under', () => window.dispatchEvent(new CustomEvent('req-wrong-accept')));
             return out;
         }
-        if (n.isStation && !n.stationInvestigated) add('dock', 'Dock', 'station', () => app.handleStationAction());
-        if (n.isAsteroidField && !n.asteroidMined) add('mine', 'Mine it', 'field', () => app.handleAsteroidAction());
+        if (n.isStation && !n.stationInvestigated) add('dock', 'Dock', 'station', () => app.handleStationAction(), false, 'search the station');
+        if (n.isAsteroidField && !n.asteroidMined) add('mine', 'Mine it', 'field', () => app.handleAsteroidAction(), false, 'for salvage');
         const scoop = (s.upgrades || []).includes('fuel_scoop');                             // the scoop took its fill on arrival: no skim on top
-        if (n.type === 'GAS_GIANT' && !n.nsSkimmed && !scoop && s.energy < 100) add('skim', 'Skim fuel', 'giant', () => skim(app, n));   // full tanks: nothing to skim
-        if (isPlanet(n) && !n.scanned) add('scan', 'Scan', 'world', () => app.handleScanAction(false));
-        if (isPlanet(n) && strangeSite(app, n) && !trip) add('strange', 'Fly closer', 'site', () => app.handleAnomalyAction());   // never while a team is down
+        if (n.type === 'GAS_GIANT' && !n.nsSkimmed && !scoop && s.energy < 100) add('skim', 'Refuel', 'giant', () => skim(app, n), false, `+${Math.min(SKIM_ENERGY, 100 - s.energy)} energy`);   // full tanks: nothing to skim
+        if (isPlanet(n) && !n.scanned) add('scan', 'Scan', 'world', () => app.handleScanAction(false), false, "what's down there");
+        if (isPlanet(n) && strangeSite(app, n) && !trip) add('strange', 'Fly closer', 'site', () => app.handleAnomalyAction(), false, 'something here is wrong');   // never while a team is down
         if (hasTeamAction(n) && evaCrew(app).length >= 2 && !trip && !arisRefuses(app)) add('team', 'Send the team', teamSite(app, n) ? 'site' : 'world', null, true);
         if (!call && n._nsCall) call = savedCall(n);                                         // a call that waited through a reload
-        if (call) add('call', 'Answer the call', 'call', () => answer(app));
-        if (canDate(app, n)) add('date', 'Date the wreck', alive(byRole(s, 'SPECIALIST')) ? 'mira' : 'aura', () => app.dateWreck(n));
-        if (isPlanet(n) && n.type !== 'GAS_GIANT' && (n.scanned || window.TEST_MODE)) add('settle', 'Settle here', 'under', () => app.handleColonyAction());
+        if (call) add('call', 'Answer the call', 'call', () => answer(app), false, 'someone needs help');
+        if (canDate(app, n)) add('date', 'Date the wreck', alive(byRole(s, 'SPECIALIST')) ? 'mira' : 'aura', () => app.dateWreck(n), false, 'where they went');
+        if (isPlanet(n) && n.type !== 'GAS_GIANT' && (n.scanned || window.TEST_MODE)) add('settle', 'Settle here', 'under', () => app.handleColonyAction(), false, 'ends the journey');
         return out;
     }
     function act(app, key, ids) {
@@ -140,12 +140,12 @@
         try { a.run(); } catch (err) { console.error(`NSOrbit: ${key} failed`, err); return false; }
         return true;
     }
-    /** The skim (ECONOMY.md): the only new number at a stop. Once per gas giant. */
+    /** Refuel (ECONOMY.md's skim): hydrogen scooped from a gas giant's cloud tops. The only new number at a stop. Once per gas giant. */
     function skim(app, n) {
         const s = app.state, got = Math.min(SKIM_ENERGY, Math.max(0, 100 - s.energy));
         n.nsSkimmed = true;
         s.energy = Math.min(100, s.energy + SKIM_ENERGY);
-        log(s, `Skimmed fuel at ${n.name}. +${got} energy.`);
+        log(s, aura(`Hydrogen from the cloud tops, Commander. +${got} energy.`));
         emit('stop:skim', { id: n.id });
         s.emitUpdates();
         if (typeof app.autoSave === 'function') app.autoSave();

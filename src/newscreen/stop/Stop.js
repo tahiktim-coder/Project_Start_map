@@ -335,7 +335,7 @@
         const L0 = settled && !busy ? layout(t) : { out: [] }, items = [];
         L0.out.forEach(o => {
             const a = o.a, team = !!a.team, faint = team && S.picked.length < 2;
-            items.push({ o, words: a.words, sub: team ? teamSub() : '', faint });
+            items.push({ o, words: a.words, sub: team ? teamSub() : (a.sub || ''), faint });
         });
         const leaveOn = settled && !busy && !isWrongPlace();
         budget -= leaveOn ? 2 : 0;
@@ -367,7 +367,7 @@
             put(el, true, x, y);
         });
         W.leave.classList.toggle('is-hot', S.hot === 'leave');
-        const [lx, ly] = css(553, WIN.y1 + 12); put(W.leave, leaveOn, lx - (W.leave.offsetWidth || 0) / 2, ly);
+        const [lx, ly] = css(WIN.x1 - 24, WIN.y1 - 40); put(W.leave, leaveOn, lx - (W.leave.offsetWidth || 0), ly);   // always low right in the window, level with the row of words on the left
         if (good) {
             setText(W.good.querySelector('b'), NAMES[d.id]); setText(W.good.querySelector('span'), good); W.good.style.setProperty('--who', TONE[d.id]);
             const k = unit(), w = W.good.offsetWidth || 280, h = W.good.offsetHeight || 48, dc = GL.disc(t, S.shownAt);

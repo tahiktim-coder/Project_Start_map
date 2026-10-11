@@ -203,6 +203,9 @@
 
 .mini-btn.is-hold::before { content: '\25CB'; font-size: 12px; } /* ○: press and hold */
 .mini-btn.is-primary::before { color: var(--mg-amber); }
+/* the way on (Continue, Set course): a real button, so it reads as the next step and not as one more line of talk */
+.mini-btn.is-primary { padding: 9px 20px 9px 16px; border: 1px solid rgba(240, 140, 46, 0.55); border-radius: 2px; background: rgba(240, 140, 46, 0.08); }
+.mini-btn.is-primary:hover:not([disabled]), .mini-btn.is-primary:focus-visible { border-color: var(--mg-amber); background: rgba(240, 140, 46, 0.16); }
 
 .mini-btn:hover:not([disabled]), .mini-btn:focus-visible { color: var(--mg-amber); transform: translateX(3px); }
 .mini-btn:hover:not([disabled])::before, .mini-btn:focus-visible::before { color: var(--mg-amber); }
