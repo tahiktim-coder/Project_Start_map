@@ -758,18 +758,24 @@ class GameState {
     /**
      * Repair a specific deck.
      */
+    /** What repairing a deck costs now: its price, -30% with Jaxon (Engineer) alive, +50% while engineering is down. */
+    repairCostOf(deckKey) {
+        const deck = this.shipDecks[deckKey];
+        if (!deck) return 0;
+        let cost = deck.repairCost;
+        const jaxonAlive = this.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD');
+        if (jaxonAlive) cost = Math.floor(cost * 0.7);
+        if (deckKey !== 'engineering' && this.shipDecks.engineering.status === 'DAMAGED') {
+            cost = Math.floor(cost * 1.5);
+        }
+        return cost;
+    }
+
     repairDeck(deckKey) {
         const deck = this.shipDecks[deckKey];
         if (!deck || deck.status === 'OPERATIONAL') return false;
 
-        let cost = deck.repairCost;
-        // Jaxon (Engineer) alive: -30% repair cost
-        const jaxonAlive = this.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD');
-        if (jaxonAlive) cost = Math.floor(cost * 0.7);
-        // Engineering damaged: +50% cost
-        if (deckKey !== 'engineering' && this.shipDecks.engineering.status === 'DAMAGED') {
-            cost = Math.floor(cost * 1.5);
-        }
+        const cost = this.repairCostOf(deckKey);
 
         if (this.salvage >= cost) {
             this.salvage -= cost;
@@ -1004,6 +1010,22 @@ const REEL_HULLS = [7, 2207];   // the hulls the jump films show drifting (Story
 const WRECK_CALLSIGNS = ['PIONEER', 'COVENANT', 'SOJOURN', 'REQUIEM', 'LAZARUS', 'ICARUS', 'MERIDIAN', 'ORPHEUS', 'HALCYON', 'VESPER', 'TANTALUS', 'EMBER'];
 const CREW_ID_BY_TAG = { LEADER: 'you', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' }; // the minigames' names for the crew
 const crewIdOf = member => CREW_ID_BY_TAG[(member.tags || []).find(tag => CREW_ID_BY_TAG[tag])];
+/** The wake-up talk, one copy: today's "Good morning, Commander" card builds from it, and so does the new screen's talk
+    (start/Wake.js). mapNote and rules[1] belong to the card only (the new screen has no map and no stop count). */
+const OPENING_TALK = Object.freeze({
+    context: 'Cold air and bright lights. After sixty-one years asleep, the ship has woken all five of you.',
+    dialogue: Object.freeze([
+        { speaker: 'A.U.R.A.', text: 'Good morning, Commander. All four crew are awake and well. The ship is in one piece.' },
+        { speaker: 'A.U.R.A.', text: 'Your orders have not changed. Find a planet people can live on, and settle it.' },
+        { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction. Eight went this way before us. We are the ninth.' },
+        { speaker: 'Jaxon', text: 'Eight ships ahead of us. I hope they left us a good planet.' },
+        { speaker: 'Vance', text: 'Eight ships, and not one of them ever sent a message home?' },
+        { speaker: 'A.U.R.A.', text: 'Space is very large, Vance. There is an old ship beacon on the scanner. Probably one of the eight.' },
+    ]),
+    mapNote: 'I have marked it on your map.',
+    rules: Object.freeze(['Six sectors ahead.', 'A few stops in each, then you must jump on.', 'Energy moves the ship. Rations feed the crew.']),
+});
+window.OPENING_TALK = OPENING_TALK;
 /** The new screen (?new=1, docs/BUILD_A.md): travel is src/newscreen/'s full-screen view instead of the map. Off: today's game. */
 const isNewScreen = () => !!(window.NEW_SCREEN && window.NewScreen && window.NSRoute);   // a partial load falls back to today's map
 window.FINAL_SECTOR = FINAL_SECTOR;                                                  // the new screen reads it (one number, one place)
@@ -1015,6 +1037,10 @@ class App {
         this.state = GameState.getInstance();
         this.navView = new NavView(this.state);
         this.orbitView = new OrbitView(this.state);
+        if (isNewScreen()) {                                                               // the new screen: the bridge replaces the command deck (no stale copy in the page)
+            const updateDeck = this.orbitView.updateCommandDeck.bind(this.orbitView);
+            this.orbitView.updateCommandDeck = planet => { if (!window.NewScreen.mods.stop) updateDeck(planet); };
+        }
 
         // Modal queue to prevent stacking
         this._modalQueue = [];
@@ -1136,7 +1162,14 @@ class App {
             </div>
         `;
 
+        const nsTitle = isNewScreen() && window.NSTitle ? window.NSTitle : null;              // the new screen: the new title, today's ids and logic
+        if (nsTitle) {
+            overlay.className = 'ns-title';
+            overlay.style.cssText = 'position: fixed; inset: 0; z-index: 10000;';
+            overlay.innerHTML = nsTitle.markup({ hasSave, saveInfo, soundLabel: this.soundLabel(), audioIsOn });
+        }
         document.body.appendChild(overlay);
+        if (nsTitle) { try { nsTitle.mount(overlay); } catch (err) { console.error('The new title could not start its picture', err); } }
 
         // Button hover effects helper
         const addHoverEffect = (btn, baseColor = '#74d99a') => {
@@ -1158,8 +1191,10 @@ class App {
         const startBtn = overlay.querySelector('#btn-start-game');
         const continueBtn = overlay.querySelector('#btn-continue-game');
 
-        addHoverEffect(startBtn, hasSave ? '#5f9e7a' : '#74d99a');
-        addHoverEffect(continueBtn, '#74d99a');
+        if (!nsTitle) {                                                                    // the new title has its own hover
+            addHoverEffect(startBtn, hasSave ? '#5f9e7a' : '#74d99a');
+            addHoverEffect(continueBtn, '#74d99a');
+        }
 
         // New Game button
         const startNewGame = () => {
@@ -1355,7 +1390,7 @@ class App {
      * Auto-save the game (called after significant actions)
      */
     autoSave() {
-        if (this.state.saveGame()) {
+        if (this.state.saveGame() && !isNewScreen()) {                                       // the new screen: saved quietly, no green pill
             // Subtle save indicator
             const indicator = document.createElement('div');
             indicator.style.cssText = `
@@ -1447,20 +1482,19 @@ class App {
             this.state.addLog("An old ship beacon is marked on the map. Click it to take a look.");
             this.renderNav();
         };
+        if (isNewScreen() && window.NSWake) {                                              // the new screen: the launch film, then the talk beside each speaker
+            const wake = () => { window.NSWake.start(this); this.renderNav(); };
+            const film = window.TEST_MODE ? Promise.resolve() : window.NSLaunch ? window.NSLaunch.play() : window.StoryReel ? window.StoryReel.play('program') : Promise.resolve();
+            film.then(wake, err => { console.error(err); wake(); });
+            return;
+        }
         if (!window.EncounterCard) { begin(); return; }
         const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('program') : Promise.resolve(); // what the crew was told, as a picture
         reel.then(() => window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3500, kicker: 'EXODUS-9 · 61 YEARS OUT FROM EARTH', title: 'Good morning, Commander',
-            context: 'Cold air and bright lights. After sixty-one years asleep, the ship has woken all five of you.',
-            dialogue: [
-                { speaker: 'A.U.R.A.', text: 'Good morning, Commander. All four crew are awake and well. The ship is in one piece.' },
-                { speaker: 'A.U.R.A.', text: 'Your orders have not changed. Find a planet people can live on, and settle it.' },
-                { speaker: 'A.U.R.A.', text: 'Earth is sending ships in every direction. Eight went this way before us. We are the ninth.' },
-                { speaker: 'Jaxon', text: 'Eight ships ahead of us. I hope they left us a good planet.' },
-                { speaker: 'Vance', text: 'Eight ships, and not one of them ever sent a message home?' },
-                { speaker: 'A.U.R.A.', text: 'Space is very large, Vance. There is an old ship beacon on the scanner. Probably one of the eight. I have marked it on your map.' },
-            ],
-            choices: [{ text: 'Take command', desc: 'Six sectors ahead. A few stops in each, then you must jump on. Energy moves the ship. Rations feed the crew.' }],
+            context: OPENING_TALK.context,
+            dialogue: OPENING_TALK.dialogue.map((line, i, all) => ({ speaker: line.speaker, text: i === all.length - 1 ? `${line.text} ${OPENING_TALK.mapNote}` : line.text })),
+            choices: [{ text: 'Take command', desc: OPENING_TALK.rules.join(' ') }],
             onPick: begin
         }));
     }
@@ -1686,7 +1720,7 @@ class App {
 
         if (this.state.consumeEnergy(cost)) {
             this._isInTransit = true;
-            const isBreach = this.isBreachDue(isTrip);
+            const isBreach = this.isBreachDue(isTrip) && !(isNewScreen() && window.NSOrbit);   // the new screen: it comes at the stop (NSOrbit), never in flight
             if (isTrip) this.state._paidWarps = (this.state._paidWarps || 0) + 1;
             if (isTrip && !window.TEST_MODE && !isNewScreen()) this.state.stopsLeft = Math.max(0, this.state.getStopsLeft() - 1);   // the new screen: no stop count
             this.applyPlotResult(plotResult, cost);
@@ -1753,7 +1787,7 @@ class App {
             if (!isBreach && !isQuiet && !isBeforeBreach && warpConfig && warpConfig.hazard && warpConfig.hazard.onWarp) warpConfig.hazard.onWarp(this.state);
 
             // Ship malfunction check during warp (never on top of the breach: one emergency at a time)
-            if (typeof rollShipMalfunction !== 'undefined' && !isQuiet && !isBreach && !isBeforeBreach) {
+            if (typeof rollShipMalfunction !== 'undefined' && !isQuiet && !isBreach && !isBeforeBreach && !isNewScreen()) {   // the new screen: the crisis aboard instead
                 const malfunction = rollShipMalfunction(this.state, 'warp');
                 if (malfunction) {
                     this.showShipMalfunctionModal(malfunction);
@@ -1811,6 +1845,7 @@ class App {
                     const distress = rollDistressSignal(this.state, 'warp');
                     if (distress) {
                         setTimeout(() => {
+                            if (isNewScreen() && window.NSOrbit) { window.NSOrbit.offerCall(this, distress); return; }   // the new screen: it waits on the bridge
                             this.state.addLog("⚠ INCOMING TRANSMISSION: Old distress signal detected...");
                             this.queueModal('distress', distress);
                         }, 1500);
@@ -1826,14 +1861,15 @@ class App {
     /** The crew and A.U.R.A. react to the new orbit. Not at the light: nothing random happens there. */
     reactToOrbit(planet, isFinale) {
         const barks = typeof BarkSystem !== 'undefined' ? window.BarkSystem : null;
+        const isSigned = isNewScreen() && window.NSOrbit && window.NSOrbit.signed(this);   // the new screen: A.U.R.A. warns here, so no "all clear"
         if (barks && !isFinale) {
             barks.checkPlanetBarks(this.state, planet);
-            setTimeout(() => barks.tryBark('ENTER_ORBIT', this.state, { planet }), 50);     // if no special bark fired
+            if (!isSigned) setTimeout(() => barks.tryBark('ENTER_ORBIT', this.state, { planet }), 50);     // if no special bark fired
             setTimeout(() => barks.checkResourceBarks(this.state), 600);
         }
         const aura = typeof AuraSystem !== 'undefined' ? window.AuraSystem : null;
         if (!aura || isFinale) return;
-        aura.tryComment('ENTER_ORBIT', this.state);
+        if (!isSigned) aura.tryComment('ENTER_ORBIT', this.state);
         aura.checkAdversarialAction(this.state);
         if (aura.triggerPremonition(this.state)) this.state.addLog(`[A.U.R.A.'s reading was right.]`);
         aura.generatePremonition(this.state);                                                // maybe a new one for the next action
@@ -1849,10 +1885,11 @@ class App {
         return isEligible && !!window.MiniHost && window.MiniHost.has('breach');
     }
 
-    /** Seal the breach. Resolves once it is over and what it cost is applied (it never rejects: the warp must still arrive). */
-    playBreach() {
+    /** Seal the breach. Resolves once it is over and what it cost is applied (it never rejects: the warp must still arrive).
+        away: crew who are not aboard (the new screen's team on the ground); nobody else is ever away. */
+    playBreach(away = []) {
         this.state._breachDone = true;
-        const crew = this.state.crew.map(c => ({ id: crewIdOf(c), alive: c.status !== 'DEAD', injured: c.status === 'INJURED' })).filter(c => c.id);
+        const crew = this.state.crew.map(c => ({ id: crewIdOf(c), alive: c.status !== 'DEAD' && !away.includes(c), injured: c.status === 'INJURED' })).filter(c => c.id);
         return window.MiniHost.play('breach', { crew, sector: 1 }).then(result => this.applyBreachResult(result), err => console.error(err));
     }
 
@@ -2386,6 +2423,7 @@ class App {
     startSectorJump() {
         this._isInTransit = true;
         this.state.addLog("Starting Sector Jump...");
+        if (isNewScreen() && window.NSOrbit) window.NSOrbit.breakPatched(this.state);      // the new screen: a patched deck breaks again on the jump
 
         // Time passes, and the crew eats: the jump is where rations go (docs/ECONOMY.md)
         this.state.passTime();
@@ -2536,7 +2574,10 @@ class App {
 
         // Use narrative modal system if available for immersive experience
         if (window.NarrativeModal) {
-            const sectorHeader = `[whisper]S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}[/whisper]`;
+            const plainName = name => String(name || '').toLowerCase().replace(/(^|\s)([a-z])/g, (m, a, b) => a + b.toUpperCase()).replace(/^The /, 'the ');
+            const sectorHeader = isNewScreen()                                                 // the new screen: plain words, no code-like caps
+                ? `[whisper]Into ${plainName(SECTOR_NAMES[toSector] || 'the dark')}[/whisper]`
+                : `[whisper]S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}[/whisper]`;
             this.showNarrativeEncounter({
                 title: event.title,
                 speaker: 'NARRATOR',
@@ -2726,6 +2767,7 @@ class App {
 
     /** After one of our wrecks: offer to date it with the disc. Turned down, it stays on the command deck while in orbit. */
     offerDiscDating(planet) {
+        if (isNewScreen() && window.NSOrbit) { window.NSOrbit.fixIn(this, planet); return; }   // the new screen: dated from the bridge or Mira's bench
         if (!this.canDateWreck(planet) || !window.EncounterCard) return;
         const isSomewhereToFind = (this.state.sectorNodes || []).some(p => p.storyHidden);
         const isMiraAlive = this.state.crew.some(c => (c.tags || []).includes('SPECIALIST') && c.status !== 'DEAD');
@@ -3884,7 +3926,8 @@ Then you're through.`,
         const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
         const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null, wreck: wreck && wreck.id })
             : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
-        const afterDescent = goDown.then(landing => this.applyLanding(landing, evaTeam));
+        const landed = goDown.then(landing => this.applyLanding(landing, evaTeam));
+        const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam)) : landed;   // the new screen: the crisis aboard while they are down
 
         if (isSiteTrip) {                                                           // the team goes where the scan pointed: the site's own story
             planet.hasEva = true;
@@ -3988,6 +4031,11 @@ Then you're through.`,
             signalModifiers.push({ type: this._landingRiskMod < 0 ? 'SOFT LANDING' : 'HARD LANDING', mod: this._landingRiskMod, color: this._landingRiskMod < 0 ? '#74d99a' : '#d85a4e' });
             this._landingRiskMod = 0;
         }
+        if (this._nsScanMod && isNewScreen()) {                                            // the new screen: Mira stayed aboard and scanned the ground
+            riskBase += this._nsScanMod;
+            signalModifiers.push({ type: 'MIRA SCANNED IT', mod: this._nsScanMod, color: '#74d99a' });
+            this._nsScanMod = 0;
+        }
 
         // Clamp risk base to reasonable range
         riskBase = Math.max(0, Math.min(50, riskBase));
@@ -4001,7 +4049,7 @@ Then you're through.`,
         const PLAIN_SIGNAL = {
             'BIOLOGICAL': 'Living things here are calm', 'ALIEN SIGNAL': 'Unknown signal nearby', 'ANCIENT RUINS': 'Old ruins, still solid',
             'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here',
-            'SOFT LANDING': 'You put them down gently', 'HARD LANDING': 'The landing shook them up'
+            'SOFT LANDING': 'You put them down gently', 'HARD LANDING': 'The landing shook them up', 'MIRA SCANNED IT': 'Mira scanned the ground'
         };
         const signalModDisplay = signalModifiers.length > 0
             ? signalModifiers.map(s => `<span style="color: ${s.color};">${PLAIN_SIGNAL[s.type] || s.type}: ${Math.abs(s.mod)}% ${s.mod > 0 ? 'more dangerous' : 'safer'}</span>`).join(' · ')
@@ -4256,7 +4304,8 @@ Then you're through.`,
         this.autoSave();
 
         // The airlock opens again: faces first, numbers second
-        if (window.AwayTeam && evaTeam.length) window.AwayTeam.returned(this, evaTeam, logMsg);
+        if (window.AwayTeam && evaTeam.length && !isNewScreen()) window.AwayTeam.returned(this, evaTeam, logMsg);   // the new screen: the shuttle comes home instead
+        else if (isNewScreen() && window.NSOrbit) window.NSOrbit.tripOver();
     }
 
     /**
@@ -4333,6 +4382,7 @@ Then you're through.`,
                 planet.hasEva = true;
                 this.orbitView.updateCommandDeck(planet);
                 this.state.emitUpdates();
+                if (isNewScreen() && window.NSOrbit) window.NSOrbit.tripOver();            // the new screen: the paradise trip is over
             }
         });
     }
@@ -5367,11 +5417,14 @@ Then you're through.`,
     }
 
     renderOrbit() {
-        if (isNewScreen()) window.NewScreen.hide();                                       // the new screen: today's orbit view, as now
         const here = this.state.currentSystem;                                             // only a jump that lands at random can end up here
         if (here && here.storyHidden) this.revealStoryPlanet(here, `The faint contact is ${here.name}. One of our ships is down there.`);
         const mainView = document.getElementById('main-view');
         mainView.innerHTML = '';
+        if (isNewScreen()) {                                                               // the new screen: the bridge, not today's orbit view
+            if (window.NewScreen.stop(this)) return;
+            window.NewScreen.hide();                                                       // no stop module: today's orbit view, as in checkpoint A
+        }
         mainView.appendChild(this.orbitView.render());
     }
 
@@ -5448,7 +5501,7 @@ Then you're through.`,
         return new Promise(resolve => window.EncounterCard.open(this, {
             tone: 'alert', kicker: 'SHIP ALERT', title: event.title, zIndex: 2800,
             context: event.context, dialogue,
-            choices: [{ text: 'DEAL WITH IT' }],
+            choices: [{ text: isNewScreen() ? 'Deal with it' : 'DEAL WITH IT' }],
             onPick: () => {
                 const result = event.effect(this.state);
                 if (result) this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);

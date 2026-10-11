@@ -25,7 +25,7 @@
      discsOf(scene) → [[x, y, r]]   every round thing on screen (art px)
      nextBand(W) → the first band still ahead
    An entry: { id, node, slot, band, side, kind: 'world'|'station'|'giant'|'rocks'|'ghost', look, type, seed, Z, r, s,
-               rides, onLimb, layer, story, beacon: [bx, by, period] | null, scenery, rim }
+               rides, onLimb, layer, story, beacon: [bx, by, period] | null, scenery, rim, reach (NSWorlds.reach: radii) }
 */
 (function () {
     'use strict';
@@ -130,6 +130,7 @@
                 story: !!nd.isStoryPlanet, scenery: false,
                 beacon: wreck ? [-0.6 + 0.3 * ((h >> 8) % 5) / 4, -0.5 + ((h >> 12) % 7) / 10, 1500 + (h >> 4) % 900] : null };
             if (kind === 'station' && !S.s) e.s = S.r / 24;
+            e.reach = (kind === 'world' || kind === 'ghost') && window.NSWorlds ? window.NSWorlds.reach(nd, n, nd.type) : 1;   // rings and moons stay inside the picture
             E.set(e.id, e); IDS.push(e.id);
         });
         if (n === 1 && !IDS.some(id => E.get(id).kind === 'giant')) {      // sector 1 without a gas giant: the giant is scenery only
@@ -198,8 +199,8 @@
     function passedMode(id, t, g0, modes) {
         const e = E.get(id), giant = e.kind === 'giant', H = G.H;
         const busy = IDS.filter(o => o !== id && modes[o] && modes[o].m === 'passed' && E.get(o).kind !== 'giant' && E.get(o).side === e.side).length;
-        const rp = giant ? REST[id].r * 0.95 : Math.max(0.026 * H, Math.min(REST[id].r * 0.62, g0.r)), col = busy % 3, row = Math.floor(busy / 3), step = rp * 2.4 + 8;
-        const xr = giant ? G.hull + 0.16 * spW() : G.hull + rp + 0.035 * spW() + col * (rp * 2.6 + 10);
+        const rp = giant ? REST[id].r * 0.95 : Math.max(0.026 * H, Math.min(REST[id].r * 0.62, g0.r)), col = busy % 3, row = Math.floor(busy / 3), reach = Math.min(1.8, e.reach || 1), step = rp * 2.4 + 8;
+        const xr = giant ? G.hull + 0.16 * spW() : G.hull + rp * reach + 0.035 * spW() + col * (rp * 1.3 * (1 + reach) + 10);
         const yr = giant ? H + rp * 0.1 : e.side === 'top' ? Math.max(rp + 0.05 * H, 0.14 * H) + row * step : Math.min(H - rp - 0.08 * H, 0.76 * H) - row * step;
         return { m: 'passed', t0: t, g0: { x: g0.x, y: g0.y, r: g0.r }, rp, xr, yr };
     }
@@ -213,7 +214,7 @@
         return { sector: n, at: 0, cam: IDENT, modes: Object.fromEntries(IDS.map(id => [id, { m: 'field' }])), flight: null, ease: null, held: null, lock: null,
             hover: null, visited: new Set(), opening: null, jump: null, black: false, D: 0, flow: 0, flareT: -1e9, bank: 0, pointer: null, last: null, before: null };
     }
-    const GHOST_FADE = [0, 0, 0.125, 0.375, 0.625, 0.75, 0.5, 0.25];
+    const GHOST_FADE = [0, 0, 0.125, 0.375, 0.625, 0.75, 0.5, 0.25], GHOST_SLOW = [0, 0, 0, 0.125, 0.25, 0.375, 0.25, 0.125];
     function scene(St, t) {
         const cam = camAt(St, t), camQ = camAt(St, t, true), items = [], f = St.flight, e = f ? flightE(f, t) : 1;
         let gs = null;
@@ -244,6 +245,7 @@
             } else if (md.m === 'hiding') return;
             if (md.m === 'fading') { it.fade = Math.min(1, Math.floor(clamp01((t - md.t0) / 1200) * 8) / 8); it.clickable = false; if (it.fade >= 1) return; }
             else if (en.kind === 'ghost') it.fade = GHOST_FADE[Math.floor(t / 420) % 8];
+            else if (en.type === 'GHOST_WORLD') it.fade = GHOST_SLOW[Math.floor(t / 700) % 8];   // a ghost world dithers in and out, gently
             items.push(it);
         });
         items.sort((a, b) => a.layer - b.layer);
@@ -309,7 +311,7 @@
         if (!St.flight && !St.held && !St.ease) out.cam = stageCam(at, modes);
         return out;
     }
-    function discsOf(sn) { return sn.items.filter(i => i.part !== 'arc' && !(i.fade >= 1)).map(i => [i.x, i.y, i.kind === 'station' ? i.r * 1.1 : i.r + 3]); }
+    function discsOf(sn) { return sn.items.filter(i => i.part !== 'arc' && !(i.fade >= 1)).map(i => [i.x, i.y, i.kind === 'station' ? i.r * 1.1 : i.r * ((E.get(i.id) || {}).reach || 1) + 3]); }
 
     window.NSField = Object.freeze({
         SLOTS, setup, build, blank, sync, scene, planFlight, land, leave, stageCam, arriveCam, arriveFrame, flightE, passedGeom, discsOf, nextBand, behindGiant, mixCam,

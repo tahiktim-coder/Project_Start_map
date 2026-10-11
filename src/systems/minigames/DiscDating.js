@@ -14,7 +14,13 @@
            crew:    optional: the game's crew list; lines of crew whose status is 'DEAD' are never said
            names:   optional: other planets on the game's sector map; the sketch's planets wear these names (up to three) }
    result: { dated: true, hull, age, ly } after Continue (push it onto plotted for next time), or { dated: false } after "Not now"
-   DiscDating.ageOf(hull) and DiscDating.lyOf(hull, sector) give the same date without playing (docs/CANON.md §2). */
+   DiscDating.ageOf(hull) and DiscDating.lyOf(hull, sector) give the same date without playing (docs/CANON.md §2).
+
+   THE LOOK (2026-10-11): the travel view's. Drawn at density 1.5 (720 × 405 art pixels) with its recipes (MiniPaint, the
+   minigames' copy of src/newscreen/art/Paint.js): its deep-field sky, an old-gold disc cut like a record, the sector map's
+   worlds lit from the end of the heading, our Lander flying with its drive lit, the wreck broken in two with its red
+   beacon, the light as the false sun. Words are MiniHost readouts (ui.note): few, small, quiet. The rules, the controls,
+   the timing, the lines and the result are unchanged; they still think in 480 × 270 picture units. */
 (function () {
     'use strict';
 
@@ -47,7 +53,8 @@
 
     const MiniLab = window.MiniLab, MiniHost = window.MiniHost;
     if (!MiniLab || !MiniHost) return;
-    const C = MiniLab.C, W = MiniLab.W, H = MiniLab.H, { clamp, lerp, mix } = MiniLab;
+    const C = MiniLab.C, W = MiniLab.W, H = MiniLab.H, { clamp, lerp } = MiniLab;
+    const DENSITY = 1.5, D = DENSITY, AW = Math.round(W * D), AH = Math.round(H * D);   // 720 × 405 art pixels, as the travel view
 
     const CX = 160, CY = 134, R = 112, MIN_R = 18;                      // the disc; marks never crowd its centre
     const PAD = { x: 334, y: 50, w: 128, h: 112 }, BIG = { x: 92, y: 58, w: 300, h: 160 };   // the chart, and opened up at the end
@@ -55,7 +62,7 @@
     const EASE = 12, RESCALE = 6, FRESH = 0.3, HOLD_DELAY = 0.35, HOLD_EVERY = 0.06, HOLD_FAST_AFTER = 1.1;
     const FLASH = 0.8, LINE_GAP = 2.6, TO_MAP = 2.2, READY_AFTER = 1.2, WIPE = 0.75, ZOOM = 0.9, TREND = 1.3, REACH = 1.8, END_ZOOM = 1.5;
     const T_LINE = 0.8, LINE_DUR = 1.5, T_FOUND = 2.3, T_PORT = 2.9, T_AURA = 3.6, BEND = 0.9, FADE = 0.7;   // the map's beats (s)
-    const IR = 34, PORT = [434, 218], TEXT_X = 392, GLOW_MAP = 62, GLOW_END = 30, GLOW_FRAMES = 12, BREATH = 4;
+    const IR = 34, PORT = [434, 218], TEXT_X = 392, GLOW_MAP = 62, GLOW_END = 30, BREATH = 4;
 
     // Fourteen pulsars: angle (degrees), line length, notch as a fraction of the length (round two's numbers, × 1.5).
     const PULSARS = [
@@ -115,13 +122,6 @@
     ];
     const START = [0, 224], HEADING_END = [480, 46], US_AT = 0.1, WRECK_AT = 0.19, BAND = 70;
 
-    const RAMP = {
-        rock: () => C.hull,
-        grey: () => [C.void, C.deep, C.dusk, mix(C.haze, C.textDim, 0.25), mix(C.textDim, C.haze, 0.3), C.textDim, mix(C.textDim, C.text, 0.5)],
-        gas: () => [C.void, C.nebA, C.dusk, C.haze, C.mist, mix(C.mist, C.text, 0.35)],
-        gold: () => [0.9, 0.74, 0.56, 0.34].map(k => mix(C.warm, C.void, k)).concat(C.warm, mix(C.warm, C.light, 0.55), C.light),
-        glow: () => [null, mix(C.lightHalo, C.void, 0.74), mix(C.lightHalo, C.void, 0.45), C.lightHalo, mix(C.lightHalo, C.light, 0.55), C.light],
-    };
 
     // ── reading opts (the game's side of the contract) ──
     const hullName = hull => Math.round(hull).toLocaleString('en-US');      // 30211 → "30,211"
@@ -178,39 +178,91 @@
         };
     }
 
-    // ── small helpers ──
+    // ── small helpers. Everything below draws in ART pixels (AW × AH): the rules above stay in picture units ──
     const smooth = t => t * t * (3 - 2 * t), two = n => String(n).padStart(2, '0');
-    const makeCanvas = (w = W, h = H) => Object.assign(document.createElement('canvas'), { width: w, height: h });
-    const px = (c, x, y, color) => { c.fillStyle = color; c.fillRect(Math.round(x), Math.round(y), 1, 1); };
-    const right = (c, str, x, y, color, scale = 1) => MiniLab.text(c, str, x - MiniLab.textWidth(str, scale), y, color, scale);
-    const centre = (c, str, x, y, color, scale = 1) => MiniLab.text(c, str, Math.round(x - MiniLab.textWidth(str, scale) / 2), y, color, scale);
-    /** Ramp index for `tone` at (x, y), dithered between the two nearest stops (index 0 can mean "leave it clear"). */
-    const stop = (ramp, tone, x, y) => { const top = ramp.length - 1, pos = clamp(tone, 0, 1) * top, lo = Math.floor(pos); return Math.min(top, (pos - lo) > MiniLab.bayer(x, y) ? lo + 1 : lo); };
+    const A = v => v * D;                                                   // picture units → art pixels
+    const makeCanvas = (w = AW, h = AH) => Object.assign(document.createElement('canvas'), { width: w, height: h });
+    const on = (x, y, tone) => tone >= 1 || tone > MiniLab.bayer8(x & 7, y & 7);
+    /** One art pixel (or a w × h block) at art (x, y). */
+    const fill = (g, x, y, color, w = 1, h = 1) => { g.fillStyle = color; g.fillRect(Math.round(x), Math.round(y), w, h); };
+    /** Every pixel of a straight line between two art points (Bresenham): the disc's grooves and the fix's lines use the
+        same one, so a line in place lies exactly on its groove. */
+    function raster(x0, y0, x1, y1, cb) {
+        let x = Math.round(x0), y = Math.round(y0);
+        const bx = Math.round(x1), by = Math.round(y1), dx = Math.abs(bx - x), dy = -Math.abs(by - y), sx = x < bx ? 1 : -1, sy = y < by ? 1 : -1;
+        let err = dx + dy;
+        for (let guard = 0; guard < 4000; guard++) {
+            cb(x, y);
+            if (x === bx && y === by) return;
+            const e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x += sx; }
+            if (e2 <= dx) { err += dx; y += sy; }
+        }
+    }
+    const aline = (g, x0, y0, x1, y1, color, tone = 1) => { g.fillStyle = color; raster(x0, y0, x1, y1, (x, y) => { if (on(x, y, tone)) g.fillRect(x, y, 1, 1); }); };
+    function aring(g, cx, cy, r, color, tone = 1) {
+        g.fillStyle = color;
+        const steps = Math.max(16, Math.ceil(r * 7));
+        for (let i = 0; i < steps; i++) {
+            const a = (i / steps) * Math.PI * 2, x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r);
+            if (on(x, y, tone)) g.fillRect(x, y, 1, 1);
+        }
+    }
+    /** A dithered disc; `tone` is a number or a function of the distance 0..1 from the centre. */
+    function adisc(g, cx, cy, r, tone, color) {
+        const toneAt = typeof tone === 'function' ? tone : () => tone;
+        g.fillStyle = color;
+        for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++) for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
+            const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / r;
+            if (d <= 1 && on(x, y, toneAt(d))) g.fillRect(x, y, 1, 1);
+        }
+    }
     function segDist(x, y, x0, y0, x1, y1) {
         const vx = x1 - x0, vy = y1 - y0, l2 = vx * vx + vy * vy, t = l2 ? clamp(((x - x0) * vx + (y - y0) * vy) / l2, 0, 1) : 0;
         return Math.hypot(x - (x0 + vx * t), y - (y0 + vy * t));
     }
-    /** A short bar across a disc line at angle `a`, `pos` px from the centre, running `from`..`to` px across it. */
-    function bar(c, a, pos, from, to, color) {
-        const dx = Math.cos(a), dy = Math.sin(a);
-        for (let o = from; o <= to; o++) px(c, CX + dx * pos - dy * o, CY + dy * pos + dx * o, color);
-    }
-    /** A lit sphere. Every body is lit from the end of the heading, up and to the right. `fade` < 1 brings it in from the dark. */
-    function planet(c, x, y, r, ramp, fade = 1, banded = false) {
-        for (let py = Math.max(0, Math.floor(y - r)); py <= Math.min(c.canvas.height - 1, Math.ceil(y + r)); py++) {
-            for (let qx = Math.max(0, Math.floor(x - r)); qx <= Math.min(c.canvas.width - 1, Math.ceil(x + r)); qx++) {
-                const dx = (qx - x) / r, dy = (py - y) / r, d2 = dx * dx + dy * dy;
-                if (d2 > 1) continue;
-                let tone = 0.04 + 0.92 * Math.pow(Math.max(0, dx * 0.62 - dy * 0.42 + Math.sqrt(1 - d2) * 0.66), 1.3);
-                if (banded) tone *= 0.8 + 0.2 * Math.sin(dy * r * 0.9 + Math.sin(dx * 3) * 1.2);
-                const k = stop(ramp, tone * fade, qx, py);
-                if (fade === 1 || k > 0) px(c, qx, py, ramp[k]);   // fading in: the silhouette arrives with the light
-            }
-        }
+    const ACX = A(CX), ACY = A(CY), AR = A(R);                               // the disc, in art pixels
+    const LIGHT = [Math.SQRT1_2, -Math.SQRT1_2];                             // every body is lit from up and to the right: the end of the heading
+    const HEAD_ANGLE = Math.atan2(HEADING_END[1] - START[1], HEADING_END[0] - START[0]);
+    /** A short bar across a disc line at angle `a`, `pos` units from the centre, running `from`..`to` units across it. */
+    function bar(g, a, pos, from, to, color) {
+        const dx = Math.cos(a), dy = Math.sin(a), x0 = ACX + dx * A(pos), y0 = ACY + dy * A(pos);
+        g.fillStyle = color;
+        for (let o = Math.round(A(from)); o <= Math.round(A(to)); o++) g.fillRect(Math.round(x0 - dy * o), Math.round(y0 + dx * o), 1, 1);
     }
 
-    // ── the disc: gold, engraved, painted once ──
-    // The two figures, as capsules [x0, y0, x1, y1, radius] standing on (0, 0). He raises a hand; she stands beside him.
+    // ── the travel view's recipes (MiniPaint, the minigames' copy of the travel view's Paint.js; NSPaint is the same) ──
+    function recipes() {
+        const P = window.MiniPaint || window.NSPaint;
+        if (!P) throw new Error('DiscDating needs MiniPaint (src/systems/minigames/art/MiniPaint.js, loaded by MiniLab.js)');
+        const { ramp, INK, RP } = P;
+        return {
+            P, RP, INK, ink: P.hexRgb(INK),
+            // the disc: old gold, darker than a coin, the light running across it as on a record
+            GOLD: ramp(INK, '#1a1209', '#33240f', '#563c17', '#7e5a22', '#a97b33', '#d3a24e', '#f0cd84', '#fff0c8'),
+            // the sector map's worlds, as the travel view paints them
+            WORLD: { rock: [RP.STONE, 'rock', RP.ICE], grey: [RP.MOON, 'rock', RP.ICE], gas: [RP.GAS, 'gas', RP.DUST] },
+        };
+    }
+
+    // ── the sky: the travel view's deep field (teal haze, rust-gold dust where the far light reaches, its stars) ──
+    /** Paints space into the opaque painter p. o: { seed, dust, haze, stars, light: [x, y] art, keep(x, y) → no star }. */
+    function paintSky(K, p, o) {
+        const strip = K.P.spaceStrip(p.W, p.H, o.seed, o.dust, o.haze, o.stars), lit = new Float32Array(p.W * p.H), [lx, ly] = o.light;
+        for (let y = 0; y < p.H; y++) for (let x = 0; x < p.W; x++) lit[y * p.W + x] = 0.25 + 0.9 * Math.exp(-Math.hypot(x - lx, (y - ly) * 1.2) / (p.W * 0.42));
+        K.P.paintSpace(p, strip, 0, lit, o.keep);
+    }
+    /** The chart's ground: space fades to ink around it (no stars posing as data), dithered at the edge. b in units. */
+    function clearChart(K, p, b) {
+        const x0 = A(b.x - 26), y0 = A(b.y - 18), x1 = A(b.x + b.w + 10), y1 = A(b.y + b.h + 16), F = 16;
+        p.region(x0 - F, y0 - F, x1 + F, y1 + F, (x, y) => {
+            const e = Math.min(x - x0, x1 - x, y - y0, y1 - y), k = e >= 0 ? 1 : 1 + e / F;
+            if (k > K.P.threshold(x, y)) p.set(x, y, K.ink);
+        });
+    }
+
+    // ── the disc: old gold, engraved, painted once ──
+    // The two figures, as capsules [x0, y0, x1, y1, radius] standing on (0, 0) (units). He raises a hand; she stands beside him.
     const MAN = [[0, -30.5, 0, -30.5, 3.3], [0, -27, 0, -25, 1.3], [-4.6, -23, 4.6, -23, 1.7], [-1.9, -22, -1.6, -14, 2.6],
         [1.9, -22, 1.6, -14, 2.6], [-5, -23, -8, -27.5, 1.1], [-8, -27.5, -8.4, -33.5, 1], [5, -23, 6, -15, 1.1], [6, -15, 6.3, -11.5, 0.9],
         [-1.9, -14, -2.4, -1, 1.5], [1.9, -14, 2.4, -1, 1.5], [-2.4, -0.6, -4.6, -0.6, 0.8], [2.4, -0.6, 4.6, -0.6, 0.8]];
@@ -219,88 +271,126 @@
         [-4.1, -22, -5, -14, 1], [-5, -14, -5.2, -11, 0.9], [4.1, -22, 5, -14, 1], [5, -14, 5.2, -11, 0.9],
         [-1.6, -12, -1.7, -1, 1.4], [1.6, -12, 1.5, -1, 1.4], [-1.7, -0.6, -3.1, -0.6, 0.7], [1.5, -0.6, 2.9, -0.6, 0.7]];
     const FIGURES = [[MAN, CX + 20, CY + 93], [WOMAN, CX + 37, CY + 91]];   // in the gap between the 61° and 92° lines
+    const GROOVE = 0.1, WALL = 0.62;                                          // a cut's dark floor, and its lit far wall
 
+    /** The face: a record's fine grooves, tarnish, the light running across it in two wedges, a bevelled rim. */
+    function paintFace(K, p, boost) {
+        const G = K.GOLD, { fbm } = K.P, sheenAt = Math.atan2(LIGHT[1], LIGHT[0]);
+        p.region(ACX - AR - 1, ACY - AR - 1, ACX + AR + 1, ACY + AR + 1, (x, y) => {
+            const dx = x + 0.5 - ACX, dy = y + 0.5 - ACY, r = Math.hypot(dx, dy);
+            if (r > AR) return;
+            let v = 0.28 + boost + 0.34 * Math.pow(Math.abs(Math.cos(Math.atan2(dy, dx) - sheenAt)), 9) * (0.25 + 0.75 * r / AR);
+            v += (fbm(x / 22, y / 22, 77, 3) - 0.5) * 0.14;                                   // tarnish
+            if (Math.floor(r) % 2 === 0) v -= 0.04;                                           // the fine grooves
+            const facing = (dx * LIGHT[0] + dy * LIGHT[1]) / (r || 1);
+            if (r > AR - 3) v = 0.48 + boost + 0.44 * Math.max(0, facing) - 0.26 * Math.max(0, -facing);   // the rim, bevelled to the light
+            else if ((r > AR - 17 && r < AR - 14) || (r > 21 && r < 25)) v -= 0.15;             // the edge band and the hub
+            else if ((r >= AR - 14 && r < AR - 13) || (r >= 25 && r < 26)) v += 0.08;           // their lit lips
+            p.solid(x, y, G, v);
+        });
+    }
+    /** The fourteen pulsar lines, cut into the face, each with its notch. */
+    function paintGrooves(K, p, boost) {
+        const G = K.GOLD;
+        PULSARS.forEach(q => {
+            const ex = ACX + Math.cos(q.a) * A(q.len), ey = ACY + Math.sin(q.a) * A(q.len);
+            let nx = -Math.sin(q.a), ny = Math.cos(q.a);
+            if (nx * LIGHT[0] + ny * LIGHT[1] > 0) { nx = -nx; ny = -ny; }                    // the far wall catches the light
+            const wx = Math.round(nx), wy = Math.round(ny);
+            raster(ACX + wx, ACY + wy, ex + wx, ey + wy, (x, y) => p.solid(x, y, G, WALL + boost));
+            raster(ACX, ACY, ex, ey, (x, y) => p.solid(x, y, G, GROOVE + boost));
+            const dx = Math.cos(q.a), dy = Math.sin(q.a);
+            [[0, GROOVE], [1, WALL]].forEach(([k, v]) => [[-6, -3], [3, 6]].forEach(([o0, o1]) => {    // the notch
+                for (let o = o0; o <= o1; o++) p.solid(Math.round(ACX + dx * (A(q.notch) + k) - dy * o), Math.round(ACY + dy * (A(q.notch) + k) + dx * o), G, v + boost);
+            }));
+        });
+    }
+    /** The man and the woman, and the year, engraved: a dark floor, a shadowed near edge, a lit far wall. */
+    function paintFigures(K, p, boost) {
+        const G = K.GOLD;
+        FIGURES.forEach(([parts, fx, fy]) => {
+            const inside = (x, y) => parts.some(([x0, y0, x1, y1, r]) => segDist((x + 0.5) / D - fx, (y + 0.5) / D - fy, x0, y0, x1, y1) <= r);
+            p.region(A(fx - 11), A(fy - 37), A(fx + 10), A(fy + 2), (x, y) => {
+                if (!inside(x, y)) return;
+                const litWall = !inside(x - 1, y) || !inside(x, y + 1), nearWall = !inside(x + 1, y) || !inside(x, y - 1);
+                p.solid(x, y, G, (litWall ? WALL : nearWall ? GROOVE : 0.2) + boost);
+            });
+        });
+        const cut = new Set(), tx = Math.round(A(CX - 50)), ty = Math.round(A(CY - 90));   // the year, cut in two-pixel strokes
+        K.P.pixelText('1977', 0, 0, (gx, gy) => [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([a, b]) => cut.add((tx + gx * 2 + a) + ',' + (ty + gy * 2 + b))));
+        cut.forEach(k => {
+            const [x, y] = k.split(',').map(Number);
+            p.solid(x, y, G, (cut.has((x - 1) + ',' + y) && cut.has(x + ',' + (y + 1)) ? 0.2 : GROOVE) + boost);
+            if (!cut.has((x - 1) + ',' + y)) p.solid(x - 1, y, G, WALL + boost);   // the lit wall on the far side
+        });
+    }
     /** The disc. `boost` brightens the whole face: the lock's flash is the same disc, catching the light. */
-    function paintDisc(b, boost = 0) {
-        const G = RAMP.gold(), groove = mix(C.warm, C.void, 0.86), hollow = mix(C.warm, C.void, 0.64), glint = mix(C.warm, C.light, 0.35);
-        if (!boost) MiniLab.disc(b, CX, CY, R + 8, d => (d * (R + 8) > R + 1 ? 0.2 * (1 - (d * (R + 8) - R) / 8) : 0), mix(C.lightHalo, C.void, 0.55));
-        if (!boost) MiniLab.disc(b, CX, CY, R + 2, 1, C.void);
-        for (let y = CY - R; y <= CY + R; y++) for (let x = CX - R; x <= CX + R; x++) {
-            const dx = x - CX, dy = y - CY, r = Math.hypot(dx, dy);
-            if (r > R) continue;
-            let tone = 0.3 + boost + 0.24 * Math.pow(Math.abs(Math.cos(Math.atan2(dy, dx) - 0.8)), 8) * (0.35 + 0.65 * r / R);   // light across a record
-            if (Math.round(r) % 3 === 0) tone -= 0.05;                          // fine grooves
-            if (r > R - 2) tone = 0.72 + boost + 0.22 * Math.max(0, -(dx + dy) / (r * 1.42));   // the rim, brightest at the top left
-            else if ((r > R - 10 && r < R - 8) || (r > 14 && r < 16)) tone -= 0.12;   // the edge band and the hub
-            px(b, x, y, G[stop(G, tone, x, y)]);
-        }
-        PULSARS.forEach(p => {
-            const ex = CX + Math.cos(p.a) * p.len, ey = CY + Math.sin(p.a) * p.len, nx = Math.round(-Math.sin(p.a)), ny = Math.round(Math.cos(p.a));
-            MiniLab.line(b, CX + nx, CY + ny, ex + nx, ey + ny, glint, 0.5);
-            MiniLab.line(b, CX, CY, ex, ey, groove);
-            [[0, groove], [1, glint]].forEach(([k, col]) => { bar(b, p.a, p.notch + k, -4, -2, col); bar(b, p.a, p.notch + k, 2, 4, col); });   // the notch
+    function paintDisc(K, p, boost = 0) {
+        if (!boost) p.region(ACX - AR - 14, ACY - AR - 14, ACX + AR + 14, ACY + AR + 14, (x, y) => {   // a faint warm breath of light around the rim
+            const d = Math.hypot(x + 0.5 - ACX, y + 0.5 - ACY) - AR;
+            if (d > 0 && d < 14) p.add(x, y, K.RP.AMBER, 0.2 * Math.pow(1 - d / 14, 2) * (0.6 + 0.4 * Math.max(0, ((x - ACX) * LIGHT[0] + (y - ACY) * LIGHT[1]) / (AR + d))));
         });
-        FIGURES.forEach(([parts, fx, fy]) => {              // engraved: a dark hollow, a groove at its edge, the cut's lit wall
-            const inside = (x, y) => parts.some(([x0, y0, x1, y1, r]) => segDist(x - fx, y - fy, x0, y0, x1, y1) <= r);
-            for (let y = fy - 37; y <= fy + 1; y++) for (let x = fx - 11; x <= fx + 9; x++) {
-                if (inside(x, y)) px(b, x, y, !inside(x + 1, y) || !inside(x - 1, y) || !inside(x, y + 1) || !inside(x, y - 1) ? groove : hollow);
-                else if ((inside(x - 1, y) || inside(x, y - 1)) && MiniLab.on(x, y, 0.6)) px(b, x, y, mix(C.warm, C.light, 0.4));
-            }
-        });
-        MiniLab.text(b, '1977', CX - 50, CY - 90, groove);
-        MiniLab.ring(b, CX, CY, 2, C.light);
-        px(b, CX, CY, C.light);
+        paintFace(K, p, boost);
+        paintGrooves(K, p, boost);
+        paintFigures(K, p, boost);
+        p.ellipse(ACX, ACY, 3.5, 3.5, (x, y) => p.solid(x, y, K.GOLD, 0.08));               // the spindle hole
+        p.set(Math.round(ACX), Math.round(ACY), K.GOLD.rgb[8]);
     }
 
-    /** The light at the end, breathing: cached frames of a warm glow `r` px across. */
-    function buildGlow(r) {
-        const ramp = RAMP.glow(), n = Math.ceil(r) * 2 + 2;
-        return Array.from({ length: GLOW_FRAMES }, (_, i) => {
-            const bright = 0.74 + 0.26 * (0.5 + 0.5 * Math.sin((i / GLOW_FRAMES) * Math.PI * 2)), c = makeCanvas(n, n), b = c.getContext('2d');
-            for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-                const d = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / r, k = d < 1 ? stop(ramp, d < 0.16 ? 1 : Math.pow(1 - d, 1.7) * bright, x, y) : 0;
-                if (k) px(b, x, y, ramp[k]);
+    /** The light at the end, as the travel view paints its false sun: baked per size step and breath. `radius` in units. */
+    function makeGlows(K) {
+        const cache = new Map();
+        return (radius, k, breath) => {
+            const step = Math.max(1, Math.round(clamp(k, 0, 1) * 12)), key = radius + ':' + step + ':' + breath;
+            if (!cache.has(key)) {
+                const r = A(radius) * step / 12, o = { core: Math.max(1.2, r * 0.12), halo: r * 0.5, strength: 1, spikes: Math.max(2, r * 0.16) };
+                const reach = Math.ceil(o.halo * 3.2 + o.core + 8), p = K.P.painter(reach * 2 + 2, reach * 2 + 2, false);
+                K.P.lightGlow(p, reach + 1, reach + 1, o, 0.9 + 0.1 * Math.sin((breath / 4) * Math.PI * 2));
+                cache.set(key, { canvas: p.canvas(), half: reach + 1 });
             }
-            return c;
-        });
+            return cache.get(key);
+        };
     }
 
     // ── the close-up portholes ──
-    const BEACON = [47, 31];                                // the lamp on the beacon's moon, in the porthole's own pixels
-    function paintBeaconMoon(b, n) {                        // a gas giant low in the sky, the moon's cratered limb, a mast with a lamp
-        planet(b, 12, 10, 24, RAMP.gas(), 1, true);
-        for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-            const d = Math.hypot(x - 44, y - 106);
-            if (d > 70) continue;
-            let tone = 0.16 + 0.42 * Math.exp(-(70 - d) / 9) * (0.55 + 0.45 * x / n);
-            [[20, 52, 6], [53, 58, 4], [33, 44, 3]].forEach(([cx, cy, cr]) => { const e = Math.hypot(x - cx, (y - cy) * 1.8); tone += e < cr - 0.6 ? -0.07 : e < cr + 0.6 ? 0.1 : 0; });
-            px(b, x, y, C.hull[stop(C.hull, tone, x, y)]);
-        }
-        for (let k = 1; k <= 4; k++) px(b, BEACON[0], BEACON[1] + k, C.hull[4]);
-        px(b, BEACON[0] - 1, BEACON[1] + 4, C.hull[3]); px(b, BEACON[0] + 1, BEACON[1] + 4, C.hull[3]);
+    const BEACON = [47, 31];                                // the lamp on the beacon's moon, in the porthole's own units
+    const PORT_L = [0.62, -0.5, 0.6];                       // the porthole's light: up and to the right, a little from the front
+    function paintBeaconMoon(K, p) {                        // a gas giant low in the sky, the moon's cratered limb, a mast with a lamp
+        const { P, RP } = K, L = P.norm3(...PORT_L);
+        P.sphere(p, { cx: A(12), cy: A(10), r: A(24), ramp: RP.GAS, L, surface: P.surfaceFor('gas', 7, L), ambient: 0.012, gain: 0.9, rim: 0.2 });
+        P.sphere(p, { cx: A(44), cy: A(106), r: A(70), ramp: RP.MOON, L, surface: P.surfaceFor('rock', 31, L), ambient: 0.02, gain: 0.78, rim: 0.12, rimRamp: RP.MOON });
+        const bx = Math.round(A(BEACON[0])), by = Math.round(A(BEACON[1]));
+        for (let k = 1; k <= 6; k++) p.solid(bx, by + k, RP.HULL, k < 2 ? 0.75 : 0.6);       // the mast
+        [[-1, 6], [1, 6], [-2, 7], [2, 7]].forEach(([dx, dy]) => p.solid(bx + dx, by + dy, RP.HULL, 0.45));
     }
-    function paintGraves(b, n, rnd) {                       // a grey plain, and rows of stones out to the horizon
-        const G = RAMP.grey(), horizon = x => 29 + Math.pow(x - IR, 2) / 300;
-        for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (y >= horizon(x)) px(b, x, y, G[stop(G, 0.2 + 0.38 * Math.min(1, (y - horizon(x)) / 36), x, y)]);
-        for (let x = 0; x < n; x++) px(b, x, horizon(x), C.hull[3]);
+    function paintGraves(K, p, n) {                         // a grey plain, and rows of stones out to the horizon
+        const { P, RP } = K, horizon = x => A(29 + Math.pow(x / D - IR, 2) / 300), L = P.norm3(...PORT_L);
+        P.sphere(p, { cx: A(15), cy: A(11), r: A(7), ramp: RP.PASSED, L, surface: P.surfaceFor('rock', 5, L), ambient: 0.01 });
+        p.region(0, 0, n, n, (x, y) => {
+            const h = horizon(x);
+            if (y < h) return;
+            p.solid(x, y, RP.GROUND, y - h < 1 ? 0.44 : 0.14 + 0.36 * Math.min(1, (y - h) / A(36)) + (P.fbm(x / 9, y / 4, 13, 3) - 0.5) * 0.18);
+        });
+        const rnd = MiniLab.rng(17);
         for (let k = 0; k < 9; k++) {                       // nearer rows are bigger, and the nearest stones have arms
-            const y = Math.round(31 + k * 2.2 + k * k * 0.5), tall = 1 + Math.floor(k / 2), wide = k > 4 ? 2 : 1, gap = 3 + k * 1.2;
-            for (let x = (k % 2) * gap / 2 + rnd() * 2; x < n && y <= n - 2; x += gap) {
-                const sx = Math.round(x);
-                b.fillStyle = C.textDim; b.fillRect(sx, y - tall, wide, tall);
-                if (k > 5) b.fillRect(sx - 1, y - tall + 1, wide + 2, 1);
-                px(b, sx, y - tall, mix(C.textDim, C.text, 0.5)); px(b, sx + wide, y, C.void);
+            const y = Math.round(A(31 + k * 2.2 + k * k * 0.5)), wide = Math.max(1, Math.round(1 + k * 0.45)), gap = A(3 + k * 1.2), near = k / 8;
+            for (let x = (k % 2) * gap / 2 + rnd() * 3; x < n && y <= n - 2; x += gap) {
+                const sx = Math.round(x + (rnd() - 0.5) * k * 0.6), tall = Math.round(1.5 + k * 1.05 + (k > 3 ? rnd() * 2 : 0)), top = y - tall;
+                if (rnd() < 0.1) continue;                  // a gap in the row
+                for (let q = 1; q <= wide + 1 + Math.floor(k / 3); q++) p.solid(sx - q, y, RP.GROUND, 0.05);   // its shadow, away from the light
+                p.region(sx, top, sx + wide, y, (a, b) => p.solid(a, b, RP.STONE, (a === sx && wide > 1 ? 0.36 : 0.56) + 0.14 * near));
+                if (k > 5) { const arm = Math.max(1, Math.round(wide * 0.6)), ay = top + Math.round(tall * 0.28); p.region(sx - arm, ay, sx + wide + arm, ay + Math.max(1, Math.round(wide / 2)), (a, b) => p.solid(a, b, RP.STONE, 0.6 + 0.14 * near)); }
+                p.region(sx, top, sx + wide, top + 1, (a, b) => p.solid(a, b, RP.STONE, 0.9));   // the lit top
             }
         }
     }
-    function buildInset(kind) {
-        const n = IR * 2 + 1, c = makeCanvas(n, n), b = c.getContext('2d'), rnd = MiniLab.rng(kind === 'beacon' ? 29 : 17);
-        b.fillStyle = C.void; b.fillRect(0, 0, n, n);
-        for (let i = 0; i < 22; i++) px(b, Math.floor(rnd() * n), Math.floor(rnd() * n * 0.45), rnd() < 0.3 ? C.star : C.textDim);
-        if (kind === 'beacon') paintBeaconMoon(b, n);
-        else paintGraves(b, n, rnd);
-        for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) if (Math.hypot(x - IR, y - IR) > IR + 0.3) b.clearRect(x, y, 1, 1);
-        return c;
+    function buildInset(K, kind) {
+        const n = Math.round(A(IR * 2)) + 1, c = (n - 1) / 2, p = K.P.painter(n, n, true);
+        K.P.scatterStars(p, kind === 'beacon' ? 29 : 17, 70, (x, y) => y < n * 0.45);
+        if (kind === 'beacon') paintBeaconMoon(K, p);
+        else paintGraves(K, p, n);
+        p.region(0, 0, n, n, (x, y) => { if (Math.hypot(x - c, y - c) > c + 0.3) p.clear(x, y); });
+        return p.canvas();
     }
 
     // ── the sector map ──
@@ -314,37 +404,57 @@
         if (!Array.isArray(names) || !names.length) return M;
         return { ...M, planets: M.planets.slice(0, names.length).map((p, k) => [String(names[k]).toUpperCase(), ...p.slice(1)]) };
     }
-    /** A point on the heading: `along` 0..1 from the lower left, `off` px to one side. On a 'light' map the band narrows into it. */
+    /** A point on the heading: `along` 0..1 from the lower left, `off` units to one side. On a 'light' map the band narrows into it. */
     function headingPoint(M, along, off = 0) {
         const ex = M.end[0] - START[0], ey = M.end[1] - START[1], len = Math.hypot(ex, ey), keep = M.final ? 0.4 + 0.6 * Math.pow(1 - along, 0.8) : 1;
         return { x: START[0] + ex * along - (ey / len) * off * keep, y: START[1] + ey * along + (ex / len) * off * keep };
     }
-    function buildMap(M, w) {
-        const c = makeCanvas(), b = c.getContext('2d'), rnd = MiniLab.rng(M.seed), blinkers = [];
-        b.fillStyle = C.void; b.fillRect(0, 0, W, H);
-        MiniLab.nebula(b, M.seed, 0.32);
-        MiniLab.stars(b, M.seed + 7, 130);
-        if (M.hint > 1) MiniLab.disc(b, 474, 48, 2.5, 0.55, C.lightHalo);       // far off, at the end of the heading, something warm
-        if (M.hint) px(b, 474, 48, M.hint > 1 ? C.light : C.lightHalo);
-        M.planets.forEach(([name, x, y, r, kind]) => { planet(b, x, y, r, RAMP[kind](), 1, kind === 'gas'); centre(b, name, x, y + r + 5, C.textDim); });
+    /** A world on the map, lit from the end of the heading as in the travel view. dim < 1 brings it in from the dark. */
+    function paintWorld(K, p, M, x, y, r, kind, seed, dim = 1, rims) {
+        const [ramp, surface, atmo] = K.WORLD[kind] || K.WORLD.rock, cx = A(x), cy = A(y);
+        const L = K.P.lightVector(cx, cy, A(M.end[0]), A(M.end[1]), AW * 0.35);
+        K.P.sphere(p, { cx, cy, r: A(r), ramp, L, surface: K.P.surfaceFor(surface, seed, L), dim, rim: 0.22, ambient: 0.014, gain: 0.86, atmo: { ramp: atmo, w: Math.max(1.5, A(r) / 9) }, rims });
+    }
+    /** A small hull lying in the band: our own Lander's shape, dead. */
+    function paintHull(K, p, x, y, len, angle, o = {}) {
+        const ht = len / 3.15;
+        return K.P.hull(p, { x, y, len, ht, angle, flip: true, anchor: 0.5, seed: o.seed || 3, ramp: o.ramp || K.RP.HULL, light: o.light == null ? 0.55 : o.light,
+            rust: o.rust, holes: o.holes, from: o.from, to: o.to, flat: len < 24 }, K.P.shapeL);
+    }
+    function buildMap(K, M, w) {
+        const p = K.P.painter(AW, AH, true), rnd = MiniLab.rng(M.seed), blinkers = [];
+        paintSky(K, p, { seed: M.seed % 9973, dust: 0.11, haze: 0.9, stars: 1.1, light: [A(M.end[0]), A(M.end[1])] });
+        if (M.hint > 1) K.P.lightGlow(p, A(474), A(48), { core: 1.2, halo: 4.5, strength: 0.75, spikes: 4 });   // far off, at the end of the heading, something warm
+        else if (M.hint) p.set(Math.round(A(474)), Math.round(A(48)), K.RP.SUN.rgb[4]);
+        M.planets.forEach(([, x, y, r, kind], k) => paintWorld(K, p, M, x, y, r, kind, M.seed + k * 7));
         for (let i = 0; i < M.pips; i++) {                  // dead transponders, still in the band; a few still blink
-            const along = M.final ? Math.pow(rnd(), 0.6) : rnd(), p = headingPoint(M, along, (rnd() - 0.5) * rnd() * BAND), x = Math.round(p.x), y = Math.round(p.y);
+            const along = M.final ? Math.pow(rnd(), 0.6) : rnd(), q = headingPoint(M, along, (rnd() - 0.5) * rnd() * BAND), x = Math.round(A(q.x)), y = Math.round(A(q.y));
             const mid = rnd() < 0.3, big = rnd() < 0.3, blink = rnd() < 0.08, period = 5 + rnd() * 7, phase = rnd() * 12;
-            if (M.final && Math.hypot(x - M.end[0], y - M.end[1]) < GLOW_MAP * 0.55) continue;
+            if (M.final && Math.hypot(q.x - M.end[0], q.y - M.end[1]) < GLOW_MAP * 0.55) continue;
             if (blink) blinkers.push({ x, y, period, phase });
-            else { b.fillStyle = mid ? C.textDim : mix(C.uiDim, C.textDim, 0.35); b.fillRect(x, y, big ? 2 : 1, 1); }
+            else { const c = K.RP.HULL.rgb[mid ? 3 : 2]; p.set(x, y, c); if (big) p.set(x + 1, y, c); }
         }
         for (let i = 0; i < M.hulls; i++) {                 // the handful of hulls close enough to see
-            const p = headingPoint(M, 0.3 + rnd() * 0.62, (rnd() - 0.5) * BAND * 0.7), len = 3 + Math.floor(rnd() * 4), x = Math.round(p.x), y = Math.round(p.y);
-            b.fillStyle = C.void; b.fillRect(x, y, len, 2);
-            b.fillStyle = C.hull[3]; b.fillRect(x + 1, y - 1, len - 2, 1);
+            const q = headingPoint(M, 0.3 + rnd() * 0.62, (rnd() - 0.5) * BAND * 0.7), len = A(4 + rnd() * 4);
+            paintHull(K, p, A(q.x), A(q.y), len, HEAD_ANGLE + (rnd() - 0.5) * 1.6, { seed: 5 + i, rust: true, light: 0.45 + rnd() * 0.2 });
         }
-        const wreck = headingPoint(M, WRECK_AT, -4), x = Math.round(wreck.x), y = Math.round(wreck.y);
-        b.fillStyle = C.void; b.fillRect(x - 4, y - 1, 8, 3);
-        b.fillStyle = C.hull[4]; b.fillRect(x - 3, y - 2, 3, 1); b.fillRect(x + 1, y - 2, 2, 1);   // one edge catches light; it is broken
-        MiniLab.text(b, 'EXODUS-' + w.num, x + 7, y + 3, C.textDim);
-        MiniLab.text(b, w.age + ' YEARS', x + 7, y + 10, C.uiDim);
-        return { canvas: c, blinkers, us: headingPoint(M, US_AT), wreck };
+        const wreck = headingPoint(M, WRECK_AT, -4), seed = (w.hull % 89) + 2;   // this wreck: broken in two, rust where the paint went
+        const at = paintHull(K, p, A(wreck.x - 2), A(wreck.y), A(16), HEAD_ANGLE + 0.5, { seed, ramp: K.RP.WRUST, light: 1, rust: true, holes: 0.66, to: 0.6 });
+        paintHull(K, p, A(wreck.x + 9), A(wreck.y + 4), A(16), HEAD_ANGLE + 1.0, { seed: seed + 1, ramp: K.RP.WRUST, light: 0.85, rust: true, from: 0.68 });
+        return { canvas: p.canvas(), blinkers, us: headingPoint(M, US_AT), wreck, beacon: at(0.3, -0.45) };
+    }
+    /** The place on the map, painted once per step of its arrival (it comes out of the dark): sprites with their lit rims. */
+    function buildPlace(K, M) {
+        const D0 = M.dest, bodies = D0.kind === 'beacon' ? [[D0.giant[0], D0.giant[1], D0.giant[2], 'gas'], [D0.x, D0.y, 4, 'grey']] : D0.kind === 'graves' ? [[D0.x, D0.y, D0.r, 'grey']] : [];
+        if (!bodies.length) return null;
+        const x0 = Math.floor(A(Math.min(...bodies.map(b => b[0] - b[2])) - 4)), y0 = Math.floor(A(Math.min(...bodies.map(b => b[1] - b[2])) - 4));
+        const x1 = Math.ceil(A(Math.max(...bodies.map(b => b[0] + b[2])) + 4)), y1 = Math.ceil(A(Math.max(...bodies.map(b => b[1] + b[2])) + 4));
+        const frames = [0.25, 0.5, 0.75, 1].map(dim => {
+            const p = K.P.painter(x1 - x0, y1 - y0, false), rims = [];
+            bodies.forEach(([x, y, r, kind], k) => paintWorld(K, p, { end: [M.end[0] - x0 / D, M.end[1] - y0 / D] }, x - x0 / D, y - y0 / D, r, kind, 61 + k, dim, k === bodies.length - 1 ? rims : null));
+            return { canvas: p.canvas(), rims };
+        });
+        return { x: x0, y: y0, frames };
     }
 
     // ── sound: quiet, and only when the game's sound is on ──
@@ -378,30 +488,51 @@
         const wreck = readWreck(opts.wreck), plotted = readPlotted(opts.plotted), reward = readReward(opts.reward), canSpeak = readCrew(opts.crew);
         const range = rangeFor(plotted.concat(wreck)), endRange = { y: range.y * END_ZOOM, l: range.l * END_ZOOM };
         const talk = talkFor(wreck, plotted, canSpeak), M = reward && withNames(mapFor(wreck.sector, reward.kind), opts.names);
-        const smoothing = ctx.imageSmoothingEnabled, sky = makeCanvas(), bg = makeCanvas(), bright = makeCanvas(), cv = ui.canvas;
+        const K = recipes(), RP = K.RP, cv = ui.canvas, art = fn => MiniLab.inArt(ctx, fn), glowOf = makeGlows(K);
+        const smoothing = ctx.imageSmoothingEnabled;
         ctx.imageSmoothingEnabled = false;
-        [[sky, 0], [bg, 0.32]].forEach(([c, neb]) => {     // the ending's sky has no nebula, so the opened chart is not a hole in one
-            const b = c.getContext('2d');
-            b.fillStyle = C.void; b.fillRect(0, 0, W, H);
-            if (neb) MiniLab.nebula(b, 1977, neb);
-            MiniLab.stars(b, 1977, 140);
-        });
-        paintDisc(bg.getContext('2d'));
-        paintDisc(bright.getContext('2d'), 0.42);          // the same disc catching the light, for the lock's flash
+        const SKY = { seed: 1977, dust: 0.1, haze: 0.85, stars: 1, light: [AW + 40, -30] };
+        const bg = (() => {                                 // space, the chart's clear ground, the disc
+            const p = K.P.painter(AW, AH, true);
+            paintSky(K, p, { ...SKY, keep: (x, y) => Math.hypot(x - ACX, y - ACY) < AR + 2 });
+            clearChart(K, p, PAD);
+            paintDisc(K, p);
+            return p.canvas();
+        })();
+        const bright = (() => { const p = K.P.painter(AW, AH, false); paintDisc(K, p, 0.42); return p.canvas(); })();   // the same disc catching the light
+        let sky = null;                                     // the ending's sky: no dust, so the opened chart is not a hole in it
+        const skyEnd = () => sky || (sky = (() => { const p = K.P.painter(AW, AH, true); paintSky(K, p, { ...SKY, dust: 0, haze: 0.5 }); clearChart(K, p, BIG); return p.canvas(); })());
 
-        const insets = {}, glows = {}, beaconLit = () => clock % 1.6 < 0.5;
-        let map = null;
-        const mapView = () => map || (map = buildMap(M, wreck));
-        const insetOf = kind => insets[kind] || (insets[kind] = buildInset(kind));
-        const glowFrame = r => (glows[r] || (glows[r] = buildGlow(r)))[Math.floor(((clock % BREATH) / BREATH) * GLOW_FRAMES)];
-        let mode = 'date', s = null, m = null, wipe = null, held = null, canContinue = false, endT = 0, gen = 0, clock = 0, lastCount = 99, lastTick = 0;
+        // the readouts: few, small, quiet words over the picture (MiniHost's ui.note), set fresh each frame
+        const shownNotes = new Map();
+        let wantNotes = new Map();
+        const note = (id, text, o) => { wantNotes.set(id, [String(text), o]); };
+        function flushNotes() {
+            if (typeof ui.note !== 'function') { wantNotes = new Map(); return; }
+            if (wipe) wantNotes = new Map();                // while the view re-plots, no words
+            wantNotes.forEach(([text, o], id) => {
+                const key = text + '|' + o.x + '|' + o.y + '|' + o.align + '|' + o.tone + '|' + o.size;
+                if (shownNotes.get(id) !== key) { ui.note(id, text, o); shownNotes.set(id, key); }
+            });
+            [...shownNotes.keys()].filter(id => !wantNotes.has(id)).forEach(id => { ui.note(id, null); shownNotes.delete(id); });
+            wantNotes = new Map();
+        }
+
+        const insets = {}, beaconLit = () => clock % 1.6 < 0.5;
+        let map = null, place;
+        const mapView = () => map || (map = buildMap(K, M, wreck));
+        const placeView = () => (place === undefined ? (place = buildPlace(K, M)) : place);
+        const insetOf = kind => insets[kind] || (insets[kind] = buildInset(K, kind));
+        const breath = () => Math.floor(((clock % BREATH) / BREATH) * 4);
+        let mode = 'date', s = null, m = null, wipe = null, held = null, canContinue = false, endT = 0, gen = 0, clock = 0, lastCount = 99, lastTick = 0, hover = false;
         let view = { ...rangeFor(plotted.length ? plotted : [wreck]) }, points = plotted, queue = [];   // view: the chart's range, zooming out to this wreck's
         const later = (sec, fn) => { const g = gen; queue = queue.concat({ at: clock + sec, fn: () => g === gen && fn() }); };
         const sayLater = (sec, [who, line]) => canSpeak(who) && later(sec, () => ui.say(who, line));   // the dead say nothing
         const busy = () => mode !== 'date' || !s || s.locked, fresh = () => clock - s.born < FRESH;
-        const toChart = (b, yr, ly) => ({ x: Math.round(b.x + (yr / view.y) * b.w), y: Math.round(b.y + b.h - (ly / view.l) * b.h) });
-        const onPad = p => p.x >= PAD.x - 6 && p.x <= PAD.x + PAD.w + 6 && p.y >= PAD.y - 6 && p.y <= PAD.y + PAD.h + 6;
-        const nearPlace = p => Math.hypot(p.x - M.dest.x, p.y - M.dest.y) < M.dest.r + 14;
+        /** A chart point in art pixels, in the chart box b (units). */
+        const toChart = (b, yr, ly) => ({ x: Math.round(A(b.x + (yr / view.y) * b.w)), y: Math.round(A(b.y + b.h - (ly / view.l) * b.h)) });
+        const onPad = q => q.x >= PAD.x - 6 && q.x <= PAD.x + PAD.w + 6 && q.y >= PAD.y - 6 && q.y <= PAD.y + PAD.h + 6;
+        const nearPlace = q => Math.hypot(q.x - M.dest.x, q.y - M.dest.y) < M.dest.r + 14;
         const setReady = () => { m = { ...m, ready: true }; showButtons(); };
         const close = () => ui.finish({ dated: true, hull: wreck.hull, age: wreck.age, ly: wreck.ly });
 
@@ -426,7 +557,7 @@
             else later(lastLine + READY_AFTER, () => { canContinue = true; showButtons(); });
         }
         function openMap() {
-            mapView(); startWipe();                         // built before the snapshot: the nebula takes a moment
+            mapView(); placeView(); startWipe();            // built before the snapshot: the sky takes a moment
             mode = 'map'; m = { t: 0, set: false, setAt: 0, canSet: false, ready: false };
             showButtons();
             later(T_FOUND, SOUND.found);
@@ -443,7 +574,7 @@
         }
         function openEnd() {                                // back to the chart: the line through every wreck runs on to the light
             const t = ZOOM + TREND + REACH + 0.5;
-            startWipe(); mode = 'end'; endT = 0; canContinue = false;
+            skyEnd(); startWipe(); mode = 'end'; endT = 0; canContinue = false;
             showButtons();
             later(ZOOM + TREND, SOUND.light); sayLater(t, END[0]);
             later(t + LINE_GAP, () => { ui.say(END[1][0], END[1][1]); canContinue = true; showButtons(); });
@@ -461,7 +592,7 @@
             s = { ...s, moved: true, v: { y: clamp(Math.round(y), 0, range.y), l: clamp(Math.round(l), 0, range.l) } };
         }
         const nudge = (dy, dl) => setPad(s.v.y + dy, s.v.l + dl);
-        const padAt = p => setPad(((p.x - PAD.x) / PAD.w) * view.y, ((PAD.y + PAD.h - p.y) / PAD.h) * view.l);
+        const padAt = q => setPad(((q.x - PAD.x) / PAD.w) * view.y, ((PAD.y + PAD.h - q.y) / PAD.h) * view.l);
         function release() {
             if (!s || !s.dragging) return;
             const near = (v, want, span) => Math.abs(v - want) <= Math.max(SNAP, span * SNAP_FRAC);
@@ -478,193 +609,220 @@
             })).concat({ label: 'Not now', quiet: true, onClick: () => ui.finish({ dated: false }) }));
         }
 
-        // ── drawing: the disc and the chart ──
-        function drawFix() {                                // the wreck's fourteen lines and marks over the disc; counts those in place
-            const white = s.flash > FLASH * 0.55, base = ctx.globalAlpha, a0 = s.flash / FLASH;
+        // ── drawing: the disc and the chart (g: the canvas in art pixels) ──
+        function drawFix(g) {                               // the wreck's fourteen lines and marks over the disc; counts those in place
+            const white = s.flash > FLASH * 0.55, base = g.globalAlpha, a0 = s.flash / FLASH;
             let lines = 0, marks = 0;
-            ctx.drawImage(bg, 0, 0);
-            if (s.flash > 0) { ctx.globalAlpha = base * Math.pow(a0, 2.2); ctx.drawImage(bright, 0, 0); ctx.globalAlpha = base; }   // the gold catches the light
-            PULSARS.forEach((p, j) => {
-                const off = s.swings[j] * (s.d.l - wreck.ly), a = p.a + off, want = p.notch + s.rates[j] * (s.d.y - wreck.age), at = clamp(want, MIN_R, p.len);
-                const lineOn = Math.abs(off) < ANGLE_TOL, markOn = Math.abs(want - p.notch) < MARK_TOL, far = want !== at, reach = markOn ? 4 : far ? 1 : 2;
+            g.drawImage(bg, 0, 0);
+            if (s.flash > 0) { g.globalAlpha = base * Math.pow(a0, 2.2); g.drawImage(bright, 0, 0); g.globalAlpha = base; }   // the gold catches the light
+            PULSARS.forEach((q, j) => {
+                const off = s.swings[j] * (s.d.l - wreck.ly), a = q.a + off, want = q.notch + s.rates[j] * (s.d.y - wreck.age), at = clamp(want, MIN_R, q.len);
+                const lineOn = Math.abs(off) < ANGLE_TOL, markOn = Math.abs(want - q.notch) < MARK_TOL, far = want !== at, reach = markOn ? 4 : far ? 1 : 2;
                 lines += lineOn ? 1 : 0; marks += markOn ? 1 : 0;
-                MiniLab.line(ctx, CX, CY, CX + Math.cos(a) * p.len, CY + Math.sin(a) * p.len, white ? C.star : lineOn ? C.uiBright : C.ui, lineOn ? 1 : 0.6);
-                bar(ctx, a, at, -reach, reach, far ? C.textDim : markOn && !white ? C.uiBright : C.star);   // the mark; dim while the years are far out
+                aline(g, ACX, ACY, ACX + Math.cos(lineOn ? q.a : a) * A(q.len), ACY + Math.sin(lineOn ? q.a : a) * A(q.len), white ? C.star : lineOn ? C.uiBright : C.ui, lineOn ? 1 : 0.55);
+                bar(g, a, at, -reach, reach, far ? RP.HULL.hex[3] : markOn && !white ? C.uiBright : C.star);   // the mark; dim while the years are far out
+                if (markOn) bar(g, a, at + 1 / D, -reach, reach, white ? C.star : C.ui);
             });
-            px(ctx, CX, CY, C.star);
+            fill(g, ACX, ACY, C.star);
             if (s.flash > 0) {                              // a ring runs out from the centre
-                MiniLab.ring(ctx, CX, CY, (1 - a0) * (R + 26) + 4, C.uiBright, Math.min(1, a0 * 1.6));
-                MiniLab.ring(ctx, CX, CY, Math.max(1, (1 - a0) * (R + 26) - 6), C.ui, a0 * 0.8);
+                aring(g, ACX, ACY, A((1 - a0) * (R + 26) + 4), C.uiBright, Math.min(1, a0 * 1.6));
+                aring(g, ACX, ACY, Math.max(1, A((1 - a0) * (R + 26) - 6)), C.ui, a0 * 0.8);
             }
             return { lines, marks };
         }
-        function drawTrend(b, o, opts) {                    // the ending's line: from us through this wreck, then on to the light at the edge
+        function drawTrend(g, b, o, opts) {                 // the ending's line: from us through this wreck, then on to the light at the edge
             if (opts.reach > 0) {
                 const k = Math.min(view.y / wreck.age, view.l / wreck.ly), from = toChart(b, wreck.age, wreck.ly), edge = toChart(b, wreck.age * k, wreck.ly * k);
-                const grow = smooth(clamp((opts.reach - 0.45) / 0.55, 0, 1)), t = smooth(Math.min(1, opts.reach * 1.25)), f = glowFrame(GLOW_END), sw = Math.round(f.width * (0.25 + 0.75 * grow));
-                if (grow > 0) ctx.drawImage(f, Math.round(edge.x - sw / 2), Math.round(edge.y - sw / 2), sw, sw);
-                MiniLab.line(ctx, from.x, from.y, lerp(from.x, edge.x, t), lerp(from.y, edge.y, t), C.lightHalo, 0.75);
+                const grow = smooth(clamp((opts.reach - 0.45) / 0.55, 0, 1)), t = smooth(Math.min(1, opts.reach * 1.25));
+                if (grow > 0) { const f = glowOf(GLOW_END, 0.25 + 0.75 * grow, breath()); g.drawImage(f.canvas, edge.x - f.half, edge.y - f.half); }
+                aline(g, from.x, from.y, lerp(from.x, edge.x, t), lerp(from.y, edge.y, t), RP.SUN.hex[4], 0.75);
             }
-            if (opts.trend > 0) { const q = toChart(b, wreck.age * opts.trend, wreck.ly * opts.trend); MiniLab.line(ctx, o.x, o.y, q.x, q.y, C.ui); }
+            if (opts.trend > 0) { const q = toChart(b, wreck.age * opts.trend, wreck.ly * opts.trend); aline(g, o.x, o.y, q.x, q.y, C.ui); }
         }
-        function drawChart(b, opts) {                       // opts.cursor: the point you move; opts.trend / opts.reach (0..1): the ending's line
-            const o = toChart(b, 0, 0), top = toChart(b, view.y, view.l), c = opts.cursor && toChart(b, s.d.y, s.d.l);
-            ctx.fillStyle = C.void; ctx.fillRect(o.x - 22, top.y - 14, top.x - o.x + 28, o.y - top.y + 26);   // no stars posing as data
-            for (let i = 1; i < 5; i++) for (let j = 1; j < 4; j++) px(ctx, b.x + (b.w * i) / 5, b.y + (b.h * j) / 4, C.line2);
-            drawTrend(b, o, opts);
-            if (c) { MiniLab.line(ctx, c.x, top.y, c.x, o.y - 1, C.line2); MiniLab.line(ctx, o.x + 1, c.y, top.x, c.y, C.line2); }
-            MiniLab.line(ctx, o.x, o.y, top.x, o.y, C.textDim); MiniLab.line(ctx, o.x, top.y, o.x, o.y, C.textDim);
-            MiniLab.text(ctx, 'LY DOWN THE HEADING', o.x, top.y - 10, C.textDim); right(ctx, String(Math.round(view.l)), o.x - 4, top.y, C.textDim);
-            MiniLab.text(ctx, '0', o.x - 1, o.y + 4, C.textDim); centre(ctx, 'YEARS DEAD', (o.x + top.x) / 2, o.y + 4, C.textDim);
-            right(ctx, String(Math.round(view.y)), top.x, o.y + 4, C.textDim);
-            MiniLab.disc(ctx, o.x + 1, o.y - 1, 2, 1, C.ui); right(ctx, 'US', o.x - 7, o.y - 3, C.ui);   // us: alive, and where we started
-            points.forEach(wk => {
-                const p = toChart(b, wk.age, wk.ly), tw = MiniLab.textWidth(wk.num), lx = p.x + 5 + tw > top.x ? p.x - 5 - tw : p.x + 5;
-                ctx.fillStyle = C.void; ctx.fillRect(lx - 1, p.y - 8, tw + 2, 7);
-                MiniLab.text(ctx, wk.num, lx, p.y - 7, C.textDim); MiniLab.disc(ctx, p.x, p.y, 2, 1, C.text);
+        function drawChart(g, b, opts) {                    // opts.cursor: the point you move; opts.trend / opts.reach (0..1): the ending's line
+            const o = toChart(b, 0, 0), top = toChart(b, view.y, view.l), c = opts.cursor && toChart(b, s.d.y, s.d.l), u = v => v / D;
+            for (let i = 1; i < 5; i++) for (let j = 1; j < 4; j++) fill(g, A(b.x + (b.w * i) / 5), A(b.y + (b.h * j) / 4), RP.UI.hex[2]);
+            drawTrend(g, b, o, opts);
+            if (c) { aline(g, c.x, top.y, c.x, o.y - 1, RP.UI.hex[2], 0.6); aline(g, o.x + 1, c.y, top.x, c.y, RP.UI.hex[2], 0.6); }
+            aline(g, o.x, o.y, top.x, o.y, RP.HULL.hex[3]); aline(g, o.x, top.y, o.x, o.y, RP.HULL.hex[3]);
+            note('c-ly', 'LY DOWN THE HEADING', { x: u(o.x), y: u(top.y) - 13 });
+            note('c-lmax', String(Math.round(view.l)), { x: u(o.x) - 4, y: u(top.y) - 3, align: 'right' });
+            note('c-0', '0', { x: u(o.x) - 1, y: u(o.y) + 3 });
+            note('c-yd', 'YEARS DEAD', { x: (u(o.x) + u(top.x)) / 2, y: u(o.y) + 3, align: 'center' });
+            note('c-ymax', String(Math.round(view.y)), { x: u(top.x), y: u(o.y) + 3, align: 'right' });
+            adisc(g, o.x + 0.5, o.y + 0.5, 3.2, 1, C.ui); note('c-us', 'US', { x: u(o.x) - 6, y: u(o.y) - 3, align: 'right', tone: 'ui' });   // us: alive, and where we started
+            points.forEach((wk, i) => {
+                const q = toChart(b, wk.age, wk.ly), right = q.x / D + 5 + wk.num.length * 2.6 > u(top.x);
+                adisc(g, q.x + 0.5, q.y + 0.5, 2.6, 1, C.text); fill(g, q.x, q.y, C.star);
+                note('c-p' + i, wk.num, { x: u(q.x) + (right ? -4 : 4), y: u(q.y) - 10, align: right ? 'right' : 'left' });
             });
             if (!c) return;
             const col = s.locked || s.dragging ? C.uiBright : C.ui;
-            MiniLab.ring(ctx, c.x, c.y, 4, col); px(ctx, c.x, c.y, col);
-            if (s.locked && s.flash > 0) MiniLab.ring(ctx, c.x, c.y, 4 + (1 - s.flash / FLASH) * 12, C.uiBright, s.flash / FLASH);
-            if (!s.moved && !s.locked && Math.floor(clock * 2) % 2) MiniLab.ring(ctx, c.x, c.y, 7, C.uiBright);   // this is the thing you move
+            aring(g, c.x, c.y, A(4), col); fill(g, c.x, c.y, col);
+            if (s.locked && s.flash > 0) aring(g, c.x, c.y, A(4 + (1 - s.flash / FLASH) * 12), C.uiBright, s.flash / FLASH);
+            if (!s.moved && !s.locked && Math.floor(clock * 2) % 2) aring(g, c.x, c.y, A(7), C.uiBright, 0.7);   // this is the thing you move
         }
-        function drawHud(lines, marks) {
-            MiniLab.text(ctx, 'EXODUS', 10, 10, C.textDim); MiniLab.text(ctx, wreck.num, 10, 18, C.text, 3); MiniLab.text(ctx, 'SECTOR ' + wreck.sector, 10, 38, C.textDim);
-            // each counter sits on the row of the axis that moves it; MARKS in the marks' white, LINES in the lines' colour
-            [['YEARS', s.v.y, 'MARKS', marks, C.star, 182], ['LY', s.v.l, 'LINES', lines, C.ui, 198]].forEach(([axis, v, what, n, col, y]) => {
-                MiniLab.text(ctx, axis, 306, y, C.textDim, 2);
-                right(ctx, String(v), 376, y, s.locked ? C.uiBright : C.text, 2);
-                MiniLab.text(ctx, what, 386, y, n === 14 ? C.uiBright : mix(col, C.void, 0.3), 2);
-                right(ctx, two(n) + '/14', W - 10, y, n === 14 ? C.uiBright : C.text, 2);
+        function drawHud(lines, marks) {                    // the wreck, and the two counts the player needs, in small quiet words
+            const nb = ' ';
+            note('h-hull', 'EXODUS' + nb + wreck.num, { x: 10, y: 8, tone: 'text', size: 'm' });
+            note('h-sector', 'SECTOR' + nb + wreck.sector, { x: 10, y: 20 });
+            [['YEARS', s.v.y, 'MARKS', marks, 178], ['LY', s.v.l, 'LINES', lines, 189]].forEach(([axis, v, what, n, y]) => {
+                note('h-' + axis, axis.padEnd(6, nb) + String(v).padStart(4, nb), { x: PAD.x - 22, y, tone: s.locked ? 'ui' : 'text' });
+                note('h-' + what, what + nb + two(n) + '/14', { x: W - 10, y, align: 'right', tone: n === 14 ? 'ui' : 'dim' });
             });
-            if (s.locked) right(ctx, 'DATED', W - 10, 10, C.uiBright, 2);
+            if (s.locked) note('h-dated', 'DATED', { x: W - 10, y: 8, align: 'right', tone: 'ui', size: 'm' });
         }
-        function renderDate() {
-            const { lines, marks } = drawFix(), count = lines + marks;
-            drawChart(PAD, { cursor: true }); drawHud(lines, marks);
+        function renderDate(g) {
+            const { lines, marks } = drawFix(g), count = lines + marks;
+            drawChart(g, PAD, { cursor: true }); drawHud(lines, marks);
             if (count > lastCount && !s.locked && clock - lastTick > 0.06) { SOUND.tick(count); lastTick = clock; }
             lastCount = count;
         }
-        function renderEnd() {                              // the disc fades and the chart the player filled in opens up past it
+        function renderEnd(g) {                             // the disc fades and the chart the player filled in opens up past it
             const e = smooth(clamp(endT / ZOOM, 0, 1));
-            ctx.drawImage(sky, 0, 0);
-            if (e < 1) { ctx.globalAlpha = 1 - e; drawFix(); ctx.globalAlpha = 1; }
+            g.drawImage(skyEnd(), 0, 0);
+            if (e < 1) { g.globalAlpha = 1 - e; drawFix(g); g.globalAlpha = 1; }
             view = { y: lerp(range.y, endRange.y, e), l: lerp(range.l, endRange.l, e) };
             const b = { x: lerp(PAD.x, BIG.x, e), y: lerp(PAD.y, BIG.y, e), w: lerp(PAD.w, BIG.w, e), h: lerp(PAD.h, BIG.h, e) };
-            drawChart(b, { trend: clamp((endT - ZOOM) / TREND, 0, 1), reach: clamp((endT - ZOOM - TREND) / REACH, 0, 1) });
+            drawChart(g, b, { trend: clamp((endT - ZOOM) / TREND, 0, 1), reach: clamp((endT - ZOOM - TREND) / REACH, 0, 1) });
         }
 
         // ── drawing: the sector map ──
-        function drawRoute(P) {                             // our course in warm dashes: down the heading, or bent through the place
-            const us = P.us, end = { x: M.end[0], y: M.end[1] }, D = M.dest, vx = end.x - us.x, vy = end.y - us.y;
-            const t = ((D.x - us.x) * vx + (D.y - us.y) * vy) / (vx * vx + vy * vy), bend = m.set ? smooth(clamp((m.t - m.setAt) / BEND, 0, 1)) : 0;
-            const pts = M.final ? [us, end] : [us, { x: lerp(us.x + vx * t, D.x, bend), y: lerp(us.y + vy * t, D.y, bend) }, end];
+        function drawRoute(g, V) {                          // our course in warm dashes: down the heading, or bent through the place
+            const us = { x: A(V.us.x), y: A(V.us.y) }, end = { x: A(M.end[0]), y: A(M.end[1]) }, Dp = { x: A(M.dest.x), y: A(M.dest.y) }, vx = end.x - us.x, vy = end.y - us.y;
+            const t = ((Dp.x - us.x) * vx + (Dp.y - us.y) * vy) / (vx * vx + vy * vy), bend = m.set ? smooth(clamp((m.t - m.setAt) / BEND, 0, 1)) : 0;
+            const pts = M.final ? [us, end] : [us, { x: lerp(us.x + vx * t, Dp.x, bend), y: lerp(us.y + vy * t, Dp.y, bend) }, end];
             const lens = pts.slice(1).map((q, k) => Math.hypot(q.x - pts[k].x, q.y - pts[k].y));
             let run = 0, left = (M.final ? smooth(clamp((m.t - T_LINE - LINE_DUR) / 0.9, 0, 1)) : 1) * lens.reduce((a, q) => a + q, 0);   // to the light: ours traces theirs
             lens.forEach((len, k) => {
                 const a = pts[k], q = pts[k + 1];
                 for (let d = 0; d < Math.min(len, left); d++) {
-                    const x = a.x + ((q.x - a.x) * d) / len, y = a.y + ((q.y - a.y) * d) / len, phase = (((run + d - clock * 30) % 9) + 9) % 9;
-                    if (phase > 4 || Math.hypot(x - us.x, y - us.y) < 6 || (M.final && Math.hypot(x - end.x, y - end.y) < 10)) continue;
-                    px(ctx, x, y, phase > 3 ? C.warmBright : C.warm);
+                    const x = a.x + ((q.x - a.x) * d) / len, y = a.y + ((q.y - a.y) * d) / len, phase = (((run + d - clock * 45) % 14) + 14) % 14;
+                    if (phase > 7 || Math.hypot(x - us.x, y - us.y) < A(11) || (M.final && Math.hypot(x - end.x, y - end.y) < A(10))) continue;
+                    fill(g, x, y, phase > 5.5 ? RP.AMBER.hex[4] : RP.AMBER.hex[3]);
                 }
                 run += len; left -= len;
             });
         }
-        function drawWreckCourse(P) {                       // where the dead crew was steering; it fades once our course takes it over
-            const g = smooth(clamp((m.t - T_LINE) / LINE_DUR, 0, 1)), fadeAt = m.set ? m.setAt + BEND : M.final ? T_LINE + LINE_DUR + 0.9 : Infinity;
-            const shade = 0.6 * (1 - clamp((m.t - fadeAt) / FADE, 0, 1)), a = P.wreck, D = M.dest, dx = D.x - a.x, dy = D.y - a.y, d = Math.hypot(dx, dy);
-            if (g <= 0 || shade <= 0) return;
-            const len = (d - (M.final ? 12 : D.r + 3) - 6) * g, sx = a.x + (dx / d) * 6, sy = a.y + (dy / d) * 6, tx = sx + (dx / d) * len, ty = sy + (dy / d) * len;
-            MiniLab.line(ctx, sx, sy, tx, ty, C.ui, shade);
-            if (g < 1) { ctx.fillStyle = C.uiBright; ctx.fillRect(Math.round(tx) - 1, Math.round(ty) - 1, 2, 2); }
+        function drawWreckCourse(g, V) {                    // where the dead crew was steering; it fades once our course takes it over
+            const gr = smooth(clamp((m.t - T_LINE) / LINE_DUR, 0, 1)), fadeAt = m.set ? m.setAt + BEND : M.final ? T_LINE + LINE_DUR + 0.9 : Infinity;
+            const shade = 0.6 * (1 - clamp((m.t - fadeAt) / FADE, 0, 1)), a = V.wreck, Dd = M.dest, dx = Dd.x - a.x, dy = Dd.y - a.y, d = Math.hypot(dx, dy);
+            if (gr <= 0 || shade <= 0) return;
+            const len = (d - (M.final ? 12 : Dd.r + 3) - 6) * gr, sx = a.x + (dx / d) * 6, sy = a.y + (dy / d) * 6, tx = sx + (dx / d) * len, ty = sy + (dy / d) * len;
+            aline(g, A(sx), A(sy), A(tx), A(ty), C.ui, shade);
+            if (gr < 1) fill(g, A(tx) - 1, A(ty) - 1, C.uiBright, 2, 2);
         }
-        function drawLight() {                              // the light at the end, small until their course reaches it
-            const D = M.dest, f = glowFrame(GLOW_MAP), sw = Math.round(f.width * (0.35 + 0.65 * smooth(clamp((m.t - T_FOUND) / 0.8, 0, 1))));
-            ctx.drawImage(f, Math.round(D.x - sw / 2), Math.round(D.y - sw / 2), sw, sw);
-            for (let k = 0; k < 3 && sw >= f.width * 0.95; k++) {   // small dark hulls drift across its face
-                const hx = D.x - 30 + ((clock * 1.2 + k * 23) % 60), hy = D.y - 12 + k * 11;
-                if (Math.hypot(hx - D.x, hy - D.y) < GLOW_MAP * 0.62) { ctx.fillStyle = C.void; ctx.fillRect(Math.round(hx), Math.round(hy), 5 - k, 2); }
+        function drawLight(g) {                             // the light at the end, small until their course reaches it
+            const Dd = M.dest, grow = smooth(clamp((m.t - T_FOUND) / 0.8, 0, 1)), f = glowOf(GLOW_MAP, 0.35 + 0.65 * grow, breath());
+            g.drawImage(f.canvas, Math.round(A(Dd.x)) - f.half, Math.round(A(Dd.y)) - f.half);
+            for (let k = 0; k < 3 && grow >= 0.95; k++) {   // small dark hulls drift across its face
+                const hx = Dd.x - 30 + ((clock * 1.2 + k * 23) % 60), hy = Dd.y - 12 + k * 11;
+                if (Math.hypot(hx - Dd.x, hy - Dd.y) < GLOW_MAP * 0.62) { fill(g, A(hx), A(hy), RP.HULL.hex[1], Math.round(A(5 - k)), 2); fill(g, A(hx) + 1, A(hy), K.INK, Math.round(A(5 - k)) - 2, 1); }
             }
         }
-        function drawPlace() {                              // the place appears, brackets close on it, and it is named like every planet here
-            const D = M.dest, f = smooth(clamp((m.t - T_FOUND) / 0.8, 0, 1)), fb = clamp((m.t - T_FOUND) / 0.6, 0, 1), lit = beaconLit() && f === 1;
+        function drawPlace(g) {                             // the place comes out of the dark, brackets close on it, and it is named
+            const Dd = M.dest, f = smooth(clamp((m.t - T_FOUND) / 0.8, 0, 1)), fb = clamp((m.t - T_FOUND) / 0.6, 0, 1), lit = beaconLit() && f === 1, pl = placeView();
             if (f <= 0) return;
-            if (D.kind === 'graves') planet(ctx, D.x, D.y, D.r, RAMP.grey(), f);
-            if (D.kind === 'beacon') {                      // the beacon is a person's lamp, so it is warm
-                planet(ctx, D.giant[0], D.giant[1], D.giant[2], RAMP.gas(), f, true); planet(ctx, D.x, D.y, 4, C.hull, f);
-                if (lit) MiniLab.disc(ctx, D.x + 1, D.y - 4, 2.5, d => 0.55 * (1 - d), C.warm);
-                if (f === 1) px(ctx, D.x + 1, D.y - 4, lit ? C.warmBright : mix(C.warm, C.void, 0.45));
+            if (pl) {
+                const fr = pl.frames[Math.min(3, Math.ceil(f * 4) - 1)];
+                g.drawImage(fr.canvas, pl.x, pl.y);
+                if (hover && f === 1) fr.rims.forEach(([x, y, r, lv]) => fill(g, pl.x + x, pl.y + y, r.hex[Math.min(r.hex.length - 1, lv + 2)]));   // pointed at: its lit edge brightens
             }
-            const hs = Math.round(lerp(34, D.r + 5, smooth(fb))), col = fb < 1 ? C.uiBright : C.ui;
-            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { for (let k = 0; k <= 4; k++) { px(ctx, D.x + sx * (hs - k), D.y + sy * hs, col); px(ctx, D.x + sx * hs, D.y + sy * (hs - k), col); } });
-            if (fb === 1 && !M.final) centre(ctx, reward.name.toUpperCase(), D.x, D.y - D.r - 14, C.text);
-        }
-        function drawPorthole() {                           // a close look at the place, opening beside the words
-            const g = clamp((m.t - T_PORT) / 0.35, 0, 1), [ix, iy] = PORT, kind = M.dest.kind;
-            if (M.final || g <= 0) return;
-            if (g < 1) MiniLab.disc(ctx, ix, iy, IR * g, 1, C.void);
-            else {
-                const bx = ix - IR + BEACON[0], by = iy - IR + BEACON[1], lit = beaconLit(), open = clamp((m.t - T_PORT - 0.35) / 0.45, 0, 1);
-                ctx.drawImage(insetOf(kind), ix - IR, iy - IR);
-                if (kind === 'beacon' && lit) MiniLab.disc(ctx, bx, by, 4, d => 0.6 * (1 - d), C.warm);
-                if (kind === 'beacon') px(ctx, bx, by, lit ? C.warmBright : mix(C.warm, C.void, 0.4));
-                if (open < 1) MiniLab.disc(ctx, ix, iy, IR, 1 - open, C.void);
+            if (Dd.kind === 'beacon') {                     // the beacon is a person's lamp, so it is warm
+                const bx = A(Dd.x + 1), by = A(Dd.y - 4);
+                if (lit) adisc(g, bx + 0.5, by + 0.5, 4.5, d => 0.6 * (1 - d), RP.AMBER.hex[3]);
+                if (f === 1) fill(g, bx, by, lit ? RP.AMBER.hex[5] : RP.AMBER.hex[2]);
             }
-            MiniLab.ring(ctx, ix, iy, IR * g + 1, C.line2); MiniLab.ring(ctx, ix, iy, IR * g + 2, C.hull[3], 0.6);
-        }
-        function drawPanel() {                              // what the fix says, in words
-            const f = m.t - T_FOUND, x = M.final ? W - 10 : TEXT_X, y = PORT[1] - 14;
-            if (f < 0.3) return;
-            const name = reward.name.toUpperCase(), sub = 'WHERE EXODUS-' + wreck.num + ' WAS GOING';
-            const wide = Math.max(MiniLab.textWidth(sub), MiniLab.textWidth(name, 2), MiniLab.textWidth(M.dest.readout));
-            MiniLab.shade(ctx, x - wide - 3, y - 3, wide + 6, 35, 0.7, C.void);   // keep the stars off the words
-            right(ctx, sub, x, y, C.textDim);
-            MiniLab.text(ctx, name.slice(0, Math.floor((f - 0.3) / 0.05)), x - MiniLab.textWidth(name, 2), y + 9, C.text, 2);
-            if (m.t >= T_AURA) right(ctx, M.dest.readout, x, y + 25, C.ui);
-            drawPorthole();
-        }
-        function renderMap() {
-            const P = mapView(), x = Math.round(P.us.x), y = Math.round(P.us.y), grow = (clock % 2.2) / 2.2;
-            ctx.drawImage(P.canvas, 0, 0);
-            P.blinkers.forEach(b => {                       // a few dead beacons still flash, slowly and out of step
-                const lit = (clock + b.phase) % b.period < 0.22;
-                ctx.fillStyle = lit ? C.uiBright : C.uiDim; ctx.fillRect(b.x, b.y, lit ? 2 : 1, lit ? 2 : 1);
+            const hs = A(lerp(34, Dd.r + 5, smooth(fb))), col = fb < 1 || hover ? C.uiBright : RP.UI.hex[3], cx = Math.round(A(Dd.x)), cy = Math.round(A(Dd.y)), arm = Math.round(A(3));
+            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => {
+                const x = Math.round(cx + sx * hs), y = Math.round(cy + sy * hs);
+                aline(g, x, y, x - sx * arm, y, col); aline(g, x, y, x, y - sy * arm, col);
             });
-            if (M.final) drawLight();
-            drawWreckCourse(P); drawRoute(P); drawPlace();
-            MiniLab.ring(ctx, x, y, 3 + grow * 10, grow < 0.5 ? C.ui : C.uiDim, 1 - grow * 0.6);   // our marker, as the main map shows it
-            ctx.fillStyle = C.uiBright; ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x, y - 1, 1, 3);
-            MiniLab.text(ctx, 'EXODUS-9', x - 14, y + 8, C.ui);
-            drawPanel();
-            MiniLab.text(ctx, 'SECTOR ' + wreck.sector, 10, 10, C.textDim, 2);
-            if (m.set) right(ctx, 'COURSE SET', W - 10, 10, C.warm, 2);
+            if (fb === 1 && !M.final) note('m-place', reward.name.toUpperCase(), { x: Dd.x, y: Dd.y - Dd.r - 17, align: 'center', tone: hover ? 'warm' : 'text' });
         }
-        function drawWipe(dt) {                             // the view re-plots behind a scan line
+        function drawPorthole(g) {                          // a close look at the place, opening beside the words
+            const gr = clamp((m.t - T_PORT) / 0.35, 0, 1), kind = M.dest.kind, ix = A(PORT[0]), iy = A(PORT[1]), ir = A(IR);
+            if (M.final || gr <= 0) return;
+            if (gr < 1) adisc(g, ix, iy, ir * gr, 1, K.INK);
+            else {
+                const inset = insetOf(kind), half = (inset.width - 1) / 2, bx = Math.round(ix - half + A(BEACON[0])), by = Math.round(iy - half + A(BEACON[1])), lit = beaconLit();
+                const open = clamp((m.t - T_PORT - 0.35) / 0.45, 0, 1);
+                g.drawImage(inset, Math.round(ix - half), Math.round(iy - half));
+                if (kind === 'beacon' && lit) adisc(g, bx + 0.5, by + 0.5, 6, d => 0.6 * (1 - d), RP.AMBER.hex[3]);
+                if (kind === 'beacon') { fill(g, bx, by, lit ? RP.AMBER.hex[5] : RP.AMBER.hex[2]); if (lit) fill(g, bx - 1, by, RP.AMBER.hex[4], 3, 1); }
+                if (open < 1) adisc(g, ix, iy, ir, 1 - open, K.INK);
+            }
+            aring(g, ix, iy, ir * gr + 1, RP.HULL.hex[3]); aring(g, ix, iy, ir * gr + 2.5, RP.HULL.hex[2], 0.7);
+        }
+        function drawPanel(g) {                             // what the fix says, in words
+            const f = m.t - T_FOUND, x = M.final ? W - 10 : TEXT_X, y = PORT[1] - 16;
+            if (f < 0.3) return;
+            const name = reward.name.toUpperCase();
+            note('m-sub', 'WHERE EXODUS-' + wreck.num + ' WAS GOING', { x, y, align: 'right' });
+            note('m-name', name.slice(0, Math.floor((f - 0.3) / 0.05)) || ' ', { x, y: y + 6, align: 'right', tone: 'text', size: 'm' });
+            if (m.t >= T_AURA) note('m-read', M.dest.readout, { x, y: y + 15, align: 'right', tone: 'ui' });
+            drawPorthole(g);
+        }
+        /** Our Lander on the heading, its drive lit, as the travel view flies it. */
+        let ours = null;
+        function drawUs(g, V) {
+            if (!ours) {
+                const len = Math.round(A(15)), ht = len / 3.15, half = Math.ceil(len / 2 + ht + 8), p = K.P.painter(half * 2, half * 2, false);
+                const at = K.P.hull(p, { x: half, y: half, len, ht, angle: HEAD_ANGLE, flip: true, seed: 9, anchor: 0.5, sun: 0.3, sunDir: LIGHT, fade: 0.2, flat: true }, K.P.shapeL);
+                const rel = q => [q[0] - half, q[1] - half];
+                ours = { canvas: p.canvas(), half, bell: rel(at(1.0, 0)), ports: [1, 3, 4].map(i => rel(at(K.P.DECK_U(i) + 0.054, -0.32))), len };
+            }
+            const x = Math.round(A(V.us.x)), y = Math.round(A(V.us.y)), ca = Math.cos(HEAD_ANGLE), sa = Math.sin(HEAD_ANGLE), fr = K.P.framer(g, AW, AH), flick = Math.floor(clock * 8) % 4;
+            const bx = x + ours.bell[0], by = y + ours.bell[1], plume = (5 + 9 * [1, 0.75, 1.15, 0.9][flick]) * ours.len / 22;
+            for (let d = 0; d < plume; d++) { const hw = 1.6 * (1 - d / plume * 0.6); for (let k = -Math.ceil(hw); k <= Math.ceil(hw); k++) { const v = (1 - d / plume) ** 0.8 * (1 - (k / (hw + 0.01)) ** 2); if (v > 0.06) fr.tone(bx - ca * d - sa * k, by - sa * d + ca * k, RP.PLUME, v); } }
+            g.drawImage(ours.canvas, x - ours.half, y - ours.half);
+            ours.ports.forEach(([px, py], i) => fill(g, x + px, y + py, RP.AMBER.hex[i === 0 ? 4 : 3]));   // people aboard: the ports are lit
+            note('m-us', 'EXODUS-9', { x: V.us.x - 8, y: V.us.y + 7, tone: 'ui' });
+        }
+        function renderMap(g) {
+            const V = mapView();
+            g.drawImage(V.canvas, 0, 0);
+            V.blinkers.forEach(b => {                       // a few dead beacons still flash, slowly and out of step
+                const lit = (clock + b.phase) % b.period < 0.22;
+                fill(g, b.x, b.y, lit ? C.uiBright : RP.UI.hex[2]);
+                if (lit) { fill(g, b.x - 1, b.y, RP.UI.hex[3], 3, 1); fill(g, b.x, b.y - 1, RP.UI.hex[3], 1, 3); fill(g, b.x, b.y, C.uiBright); }
+            });
+            const wb = V.beacon, red = clock % 2.4 < 0.3;   // the wreck's own beacon: still blinking red
+            if (red) { adisc(g, wb[0] + 0.5, wb[1] + 0.5, 3.5, d => 0.55 * (1 - d), RP.RED.hex[2]); fill(g, wb[0], wb[1], RP.RED.hex[4]); } else fill(g, wb[0], wb[1], RP.RED.hex[2]);
+            note('m-wreck', 'EXODUS-' + wreck.num, { x: V.wreck.x + 9, y: V.wreck.y - 2 });
+            note('m-age', wreck.age + ' YEARS', { x: V.wreck.x + 9, y: V.wreck.y + 4 });
+            M.planets.forEach(([name, x, y, r], k) => note('m-planet' + k, name, { x, y: y + r + 3, align: 'center' }));
+            if (M.final) drawLight(g);
+            drawWreckCourse(g, V); drawRoute(g, V); drawPlace(g); drawUs(g, V);
+            drawPanel(g);
+            note('m-sector', 'SECTOR ' + wreck.sector, { x: 10, y: 8, size: 'm' });
+            if (m.set) note('m-set', 'COURSE SET', { x: W - 10, y: 8, align: 'right', tone: 'warm', size: 'm' });
+        }
+        function drawWipe(g, dt) {                          // the view re-plots behind a scan line
             wipe = { ...wipe, t: wipe.t + dt };
-            const k = clamp(wipe.t / WIPE, 0, 1), x = Math.round(smooth(k) * (W + 16)) - 8, sx = Math.max(0, x);
-            if (sx < W) ctx.drawImage(wipe.snap, sx, 0, W - sx, H, sx, 0, W - sx, H);
-            MiniLab.shade(ctx, x - 14, 0, 14, H, 0.22, C.uiDim);
-            ctx.fillStyle = C.ui; ctx.fillRect(x, 0, 1, H);
+            const k = clamp(wipe.t / WIPE, 0, 1), x = Math.round(smooth(k) * (AW + 24)) - 12, sx = Math.max(0, x);
+            if (sx < AW) g.drawImage(wipe.snap, sx, 0, AW - sx, AH, sx, 0, AW - sx, AH);
+            for (let y = 0; y < AH; y++) for (let k2 = 1; k2 <= 21; k2++) if (on(x - k2, y, 0.3 * (1 - k2 / 22))) fill(g, x - k2, y, RP.UI.hex[3]);
+            fill(g, x, 0, C.ui, 1, AH);
             if (k >= 1) wipe = null;
         }
 
         // ── input ──
         cv.onpointerdown = e => {
-            const p = ui.toPixel(e);
-            if (mode === 'map') { if (m.canSet && nearPlace(p)) advance(); return; }
-            if (!onPad(p) || busy() || fresh()) return;
+            const q = ui.toPixel(e);
+            if (mode === 'map') { if (m.canSet && nearPlace(q)) advance(); return; }
+            if (!onPad(q) || busy() || fresh()) return;
             s = { ...s, dragging: true };
             try { cv.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
-            padAt(p);
+            padAt(q);
         };
         cv.onpointermove = e => {
-            const p = ui.toPixel(e);
-            if (mode === 'map') { cv.style.cursor = m.canSet && nearPlace(p) ? 'pointer' : 'default'; return; }
-            cv.style.cursor = (onPad(p) && !busy()) || (s && s.dragging) ? 'crosshair' : 'default';
-            if (s && s.dragging) { if (e.buttons) padAt(p); else release(); }
+            const q = ui.toPixel(e);
+            if (mode === 'map') { hover = m.canSet && nearPlace(q); cv.style.cursor = hover ? 'pointer' : 'default'; return; }
+            cv.style.cursor = (onPad(q) && !busy()) || (s && s.dragging) ? 'crosshair' : 'default';
+            if (s && s.dragging) { if (e.buttons) padAt(q); else release(); }
         };
+        cv.onpointerleave = () => { hover = false; };
         cv.onpointerup = release;
         MiniLab.onKey((k, e) => {
             if (k === ' ' || k === 'Enter') {
@@ -690,26 +848,33 @@
             view = Math.abs(view.y / range.y - 1) < 0.01 ? { ...range } : { y: zoom(view.y, range.y), l: zoom(view.l, range.l) };
             if (!s.locked && s.v.y === wreck.age && s.v.l === wreck.ly && Math.abs(s.d.y - s.v.y) < 0.02 && Math.abs(s.d.l - s.v.l) < 0.02) lock();
         }
+        function frame(dt) {
+            art(g => {
+                if (mode === 'map') { m = { ...m, t: m.t + dt }; renderMap(g); }
+                else if (mode === 'end') { endT += dt; renderEnd(g); }
+                else { stepDate(dt); renderDate(g); }
+                if (wipe) drawWipe(g, dt);
+            });
+            flushNotes();
+        }
 
         MiniLab.loop(dt => {
             clock += dt;
             const due = queue.filter(q => q.at <= clock);
             if (due.length) { queue = queue.filter(q => q.at > clock); due.forEach(q => q.fn()); }
-            if (mode === 'map') { m = { ...m, t: m.t + dt }; renderMap(); }
-            else if (mode === 'end') { endT += dt; renderEnd(); }
-            else { stepDate(dt); renderDate(); }
-            if (wipe) drawWipe(dt);
+            frame(dt);
         }, 30);
 
         startDating();
-        renderDate();
-        return () => { cv.style.cursor = ''; ctx.imageSmoothingEnabled = smoothing; held = null; queue = []; wipe = null; gen++; };
+        frame(0);
+        return () => { cv.style.cursor = ''; ctx.imageSmoothingEnabled = smoothing; held = null; queue = []; wipe = null; gen++; if (typeof ui.clearNotes === 'function') ui.clearNotes(); };
     }
 
     MiniHost.register({
         id: 'disc',
         title: 'Date it with the disc',
         kicker: 'Star fix',
+        density: DENSITY,
         mount,
         /** TEST_MODE: dated at once. Opts the game should never send resolve as not dated, with the reason in the console. */
         autoResult(opts = {}) {

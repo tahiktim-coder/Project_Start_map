@@ -59,36 +59,24 @@
 
     const litOf = id => { const p = F.rest(id), LP = LPx(), e = F.entry(id); return P.lightVector(p.x, p.y, LP[0], LP[1], (e && e.kind === 'giant' ? 0.258 : 0.5) * Math.hypot(LP[0] - p.x, LP[1] - p.y)); };
     const shadowL = L => P.norm3(L[0], L[1], -0.62);                                  // the light behind the world: a crescent on the far side
-    /** One source per world: the colours the orbit view gives that type (the dither art's own ramp when the dither art is
-        on, else BodyRenderer's SVG palette), laid on the travel view's dither: the world you click is the world you arrive
-        at. Without either: the travel view's own five recipes. */
-    const SURFACE = { GAS: 'gas', ICE: 'ice', OCEAN: 'ice', VERDANT: 'desert', DESERT: 'desert', ROCK: 'rock', LAVA: 'rock', TOXIC: 'gas' };
-    const mixHex = (a, b, k) => { const x = P.hexRgb(a), y = P.hexRgb(b); return '#' + x.map((v, i) => Math.round(v + (y[i] - v) * k).toString(16).padStart(2, '0')).join(''); };
-    const palettes = new Map();
-    function paletteOf(e) {
-        if (palettes.has(e.type)) return palettes.get(e.type);
-        const BR = window.BodyRendererClassic || window.BodyRenderer, pc = BR && typeof BR.palette === 'function' && e.type ? BR.palette(e.type) : null;
-        const DC = window.DitherCore, DR = window.DitherRecipes, dr = DC && DC.isOn && DR && DR.TYPES && e.type ? DR.TYPES[e.type] : null;
-        const hex = rgb => '#' + rgb.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
-        let out = { ramp: P.PLANET_RAMP[e.look] || RP.STONE, atmo: null, surface: e.look };
-        if (dr && Array.isArray(dr.ramp) && dr.ramp.length >= 4) {                       // the orbit's dither ramp: night, shadow .. highlight
-            const stops = dr.ramp.slice(1).map(hex);
-            out = { ramp: P.ramp(INK, ...stops), atmo: P.ramp(INK, ...stops.slice(0, 3)), surface: (pc && SURFACE[pc.fam]) || e.look };
-        } else if (pc && pc.cfg && pc.cfg.c0) {
-            const c = pc.cfg, top = pc.fam === 'GAS' && c.band ? c.band : mixHex(c.c0, c.br || c.c0, 0.45);
-            out = { ramp: P.ramp(INK, c.c2, mixHex(c.c2, c.c1, 0.5), c.c1, mixHex(c.c1, c.c0, 0.5), c.c0, top), atmo: P.ramp(INK, c.c2, c.c1, c.c0, c.col || c.c0), surface: SURFACE[pc.fam] || e.look };
-        }
-        palettes.set(e.type, out);
-        return out;
-    }
+    /** One source per world: the colours the orbit view gives that type, and its character (art/Worlds.js: one surface
+        from its type, at most one companion from its story or seed, stranger sector by sector). */
+    const W0 = window.NSWorlds;
     const RIMS = { teal: { rim: P.ramp(INK, '#0a1a1a', '#14363a', '#22585c', '#3f8a88', '#7cc2b8'), atmo: P.ramp(INK, '#081616', '#0f2a2c', '#1a4446', '#2c6966'), w: 1.7 },
         dust: { atmo: RP.DUST, w: 1.9 } };
+    const paletteOf = e => (W0 ? W0.palette(e.type) : { ramp: P.PLANET_RAMP[e.look] || RP.STONE, atmo: null, surface: e.look });
     function worldSprite(e, r, grey) {
-        const L0 = litOf(e.id), L = grey ? shadowL(L0) : L0, own = RIMS[e.rim] || {}, w = Math.max(2, Math.round(r / 22 * (own.w || 1))), half = r + w + 3, p = P.painter(half * 2, half * 2, false), rims = [];
+        const L0 = litOf(e.id), L = grey ? shadowL(L0) : L0;
+        if (W0) {
+            const reach = W0.reach(e.node, F.sector(), e.type), half = Math.ceil(r * reach) + Math.max(2, Math.round(r / 22 * 3.2)) + 3, p = P.painter(half * 2, half * 2, false);
+            const out = W0.paint(p, { cx: half, cy: half, r, node: e.node, type: e.type, seed: e.seed, sector: F.sector(), L, grey });
+            if (e.node && e.node.isFirstSignal && !grey && r >= 60) { const k = r / 118, X = half - 0.6 * r, Y = half + 0.1 * r; p.line(X + 3 * k, Y + k, X + 16 * k, Y - 2 * k, (x, y) => p.solid(x, y, RP.STONE, 0.02)); }   // the furrow the wreck cut
+            return { canvas: p.canvas(), half, rims: out.rims.map(([x, y, rr, lv]) => [x - half, y - half, rr, lv]) };
+        }
+        const own = RIMS[e.rim] || {}, w = Math.max(2, Math.round(r / 22 * (own.w || 1))), half = r + w + 3, p = P.painter(half * 2, half * 2, false), rims = [];   // without Worlds.js: checkpoint A's plain sphere
         const pal = paletteOf(e);
         P.sphere(p, { cx: half, cy: half, r, ramp: pal.ramp, L, dim: grey ? 0.62 : 1, surface: P.surfaceFor(pal.surface, e.seed, L), rim: grey ? 0.2 : 0.12, rimRamp: own.rim,
             ambient: grey ? 0.006 : 0.012, gain: 0.84, rims, atmo: { ramp: own.atmo || pal.atmo || (e.look === 'desert' ? RP.DUST : RP.ICE), w } });
-        if (e.node && e.node.isFirstSignal && !grey && r >= 60) { const k = r / 118, X = half - 0.6 * r, Y = half + 0.1 * r; p.line(X + 3 * k, Y + k, X + 16 * k, Y - 2 * k, (x, y) => p.solid(x, y, RP.STONE, 0.02)); }   // the furrow the wreck cut
         return { canvas: p.canvas(), half, rims: rims.map(([x, y, rr, lv]) => [x - half, y - half, rr, lv]) };
     }
     /** In shadow: darker and cooler, the hue kept (never the flat grey of a disabled button). */
@@ -303,6 +291,7 @@
         if (it.grey >= 1 || (it.hiding || 0) > 0.2 || it.fade >= 0.5) return;
         const x = Math.round(it.x), y = Math.round(it.y);
         if (e.kind === 'station') { if (sp.win) f.px(x + sp.win[0], y + sp.win[1], RP.AMBER.hex[4], it.r > 40 ? 2 : 1, 1); return; }   // its one window, lit, steady
+        if (W0 && (e.kind === 'world' || e.kind === 'ghost') && !(it.fade > 0)) { W0.live(f, e.node, x, y, it.r, t, { L: litOf(e.id), sector: F.sector(), type: e.type, seed: e.seed }); f.reset(); }
         const B = e.beacon; if (!B || it.r < 8) return;
         const X = x + Math.round(B[0] * it.r), Y = y + Math.round(B[1] * it.r), ph = Math.floor((t % B[2]) / TICK);
         if (ph < 3) { f.glow(X, Y, it.r > 40 ? 7 : 4, RP.RED, 0.9); f.px(X, Y, RP.RED.hex[4], it.r > 40 ? 2 : 1, it.r > 40 ? 2 : 1); }   // one of our wrecks: the red beacon blinks
@@ -333,6 +322,26 @@
         near: { n: 30, seed: 47, rate: 0.0027, tail: 0.13, ramp: 'STAR', v: 1.05, wide: 0.5 } };
     const FLOW_LN = Math.log(900 / 22);
     let layerBack = null, layerFront = null;
+    /** Space streaming past touches a few thousand scattered pixels a frame: kept as runs per colour and drawn with fillRect,
+        instead of clearing and uploading a whole-screen pixel buffer twice a frame (that cost 4-9 ms at 1080p once the
+        space side grew to three quarters of the width, BUILD_B §8). Same API as NSPaint.pixelLayer. */
+    function dotLayer(W, H) {
+        const byHex = new Map(), seen = new Uint8Array(W * H), touched = [];
+        const set = (x, y, hex) => {
+            x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= W || y >= H) return;
+            const i = y * W + x; if (seen[i]) return; seen[i] = 1; touched.push(i);
+            let list = byHex.get(hex); if (!list) { list = []; byHex.set(hex, list); } list.push(i);
+        };
+        const tone = (x, y, r, v) => { const xi = Math.round(x), yi = Math.round(y), k = P.level(r, v, xi, yi); if (k > 0) set(xi, yi, r.hex[k]); };
+        const clear = () => { for (let j = 0; j < touched.length; j++) seen[touched[j]] = 0; touched.length = 0; byHex.forEach(l => { l.length = 0; }); };
+        const draw = (c, x0 = 0, y0 = 0) => byHex.forEach((list, hex) => {
+            if (!list.length) return;
+            const path = new Path2D();                                                  // one fill per colour, not one per pixel
+            for (let j = 0; j < list.length; j++) { const i = list[j]; path.rect(x0 + i % W, y0 + ((i / W) | 0), 1, 1); }
+            c.fillStyle = hex; c.fill(path);
+        });
+        return { W, H, tone, clear, draw };
+    }
     function flowInto(L, o, vp, speed, flowPos) {
         const LP = LPx(), spW = G.W - G.hull, ramp0 = RP[o.ramp], tailPh = Math.min(0.12, speed * o.rate * o.tail), n = Math.round(o.n * Math.min(1.6, spW * G.H / (640 * 360))), d0 = 22 * sc;
         for (let i = 0; i < n; i++) {
@@ -395,7 +404,7 @@
 
     function setup(g, c) {
         G = g; ctx = c; sc = G.H / 360; clear();
-        layerBack = P.pixelLayer(G.W - G.hull, G.H); layerFront = P.pixelLayer(G.W - G.hull, G.H);
+        layerBack = dotLayer(G.W - G.hull, G.H); layerFront = dotLayer(G.W - G.hull, G.H);
     }
 
     window.NSPictures = Object.freeze({
