@@ -8,10 +8,11 @@
    worse or fixing in the real game yet). Load after TowerArt.js, before Tower.js. No state of its own but caches.
 
    window.NSTowerMarks (frozen)
-     draw(ctx, v)            v = { t, G, offX, cam, decks: { bridge … engineering: 'ok' | 'red' }, engDown, E (0..100, eased),
-                             beat: { val, onsets: [ms] }, flood: { kind: 'jump' | 'fill', t0 } | null, sunY (art row) }
-                             red decks, brown-out, conduit, hull light, in that order
-     vignette(ctx, v, drawn) the left-edge fade; drawn = TowerArt.drawn (the people are cut out of it)
+     draw(ctx, v)            v = { t, G: { W, H } (the canvas drawn into), offX, cam, decks: { bridge … engineering: 'ok' |
+                             'red' }, engDown, E (0..100, eased), beat: { val, onsets: [ms] }, flood: { kind: 'jump' | 'fill',
+                             t0 } | null, sunY (canvas row), fix: { x, y } tower px | null (a star fix waiting on Mira's bench) }
+                             red decks, brown-out, conduit, hull light, the fix, in that order
+     vignette(ctx, v, drawn) the left-edge fade (unused since the whole tower fits, BUILD_B §8; kept for a cut hull)
      floodDone(v) → bool     true once v.flood has run its 1.8 s
      BEAT                    { FULL: 1100, LOW: 1500, RISE } ms per beat at 100 and at 10 energy; pulse rows per ms
      DECKS                   ['bridge', 'lab', 'quarters', 'medbay', 'hold', 'engineering'] (deck index order)
@@ -84,9 +85,28 @@
     }
 
     // ── drawing helpers (canvas px; tone dithers in tower space so the pattern stays put while the camera moves) ──
-    let ctx = null, cur = '', V = null;
+    let ctx = null, cur = '', V = null, strip = null, stripCache = null;
     const px = (x, y, hex, w = 1, h = 1) => { if (hex !== cur) { ctx.fillStyle = hex; cur = hex; } ctx.fillRect(x, y, w, h); };
-    const tone = (x, y, r, v) => { if (v <= 0) return; const k = level(r, v, x - V.offX, y + V.cam); if (k > 0) px(x, y, r.hex[k]); };
+    /** The conduit and the hull light touch thousands of single pixels a frame: inside the strip (a narrow band down the
+        right wall) they go into one pixel buffer, drawn once (fillRect per pixel cost about 6 ms a frame at full height). */
+    function stripPx(x, y, rgb) {
+        const S = strip, xi = x - S.x0;
+        if (xi < 0 || xi >= S.w || y < 0 || y >= S.h) return false;
+        const o = (y * S.w + xi) * 4, d = S.d; d[o] = rgb[0]; d[o + 1] = rgb[1]; d[o + 2] = rgb[2]; d[o + 3] = 255;
+        return true;
+    }
+    const tone = (x, y, r, v) => { if (v <= 0) return; const k = level(r, v, x - V.offX, y + V.cam); if (k > 0 && !(strip && stripPx(x, y, r.rgb[k]))) px(x, y, r.hex[k]); };
+    function stripOf(W, H, x0, x1) {
+        const w = Math.max(1, x1 - x0);
+        if (!stripCache || stripCache.w !== w || stripCache.h !== H) {
+            const c = document.createElement('canvas'); c.width = w; c.height = H;
+            const g = c.getContext('2d'), img = g.createImageData(w, H);
+            stripCache = { c, g, img, d: img.data, d32: new Uint32Array(img.data.buffer), w, h: H, x0 };
+        }
+        stripCache.x0 = x0; stripCache.d32.fill(0);
+        strip = stripCache;
+        return strip;
+    }
     const sx = wx => wx + V.offX, sy = wy => wy - V.cam;
     const deckVisible = i => { const top = A.deckTop(i) - V.cam; return top + L.PITCH > 0 && top < V.G.H; };
     const engRed = () => V.decks.engineering === 'red';
@@ -126,7 +146,7 @@
             ctx.restore(); cur = '';
             if (surge) sparks(sx(HOLE[i][0]), sy(top + HOLE[i][1]), tick);
             const on = (t % BLINK_MS) < BLINK_MS * 0.5, [lx, ly] = RED_LAMP(i), X = sx(lx), Y = sy(top + ly), ramp = R.RED;
-            redWash(sx(L.IL), Math.max(0, sy(top)), L.IR - L.IL, Math.min(V.G.H, sy(top + F + 1)), on ? 0.62 : 0.46);
+            redWash(sx(L.IL), Math.max(0, sy(top)), L.IR - L.IL, Math.min(V.G.H, sy(top + F + 1)), on ? 0.78 : 0.58);   // reads as red at the fitted size
             for (let dx = -3; dx <= 4; dx++) { tone(X + dx, Y - 3, R.STEEL, 0.62); tone(X + dx, Y + 3, R.STEEL, 0.3); }
             for (let dy = -2; dy <= 2; dy++) { tone(X - 3, Y + dy, R.STEEL, 0.5); tone(X + 4, Y + dy, R.STEEL, 0.36); }
             const n = ramp.hex.length;
@@ -206,12 +226,29 @@
         }
     }
 
+    /** The star fix on Mira's bench: a small dark slate with a warm light blinking slowly on it (only while it waits). */
+    function drawFix(t, at) {
+        const X = sx(at.x), Y = sy(at.y), on = (t % 1600) < 700;
+        for (let dx = -6; dx <= 6; dx++) { tone(X + dx, Y - 3, R.STEEL, 0.5); tone(X + dx, Y + 2, R.STEEL, 0.22); }
+        for (let dy = -2; dy <= 1; dy++) for (let dx = -6; dx <= 6; dx++) tone(X + dx, Y + dy, R.STEEL, 0.14);
+        const S = P.RP.AMBER, n = S.hex.length;
+        if (on) { for (let dy = -6; dy <= 6; dy++) for (let dx = -6; dx <= 6; dx++) { const d = Math.hypot(dx, dy); if (d > 1.5 && d < 6.5) tone(X + 3 + dx, Y - 1 + dy, S, 0.34 * (1 - d / 6.5)); } px(X + 2, Y - 1, S.hex[n - 2], 2, 1); px(X + 3, Y - 1, S.hex[n - 1]); }
+        else px(X + 2, Y - 1, S.hex[2], 2, 1);
+        for (let dx = -4; dx <= 0; dx += 2) px(X + dx, Y, R.STEEL.hex[5]);   // the drawing's faint lines
+    }
+
     function draw(c, v) {
         ctx = c; V = v; cur = '';
         drawDamage(v.t);
         brownOut(v.t);
+        const x0 = Math.max(0, sx(CONDUIT.JX - 8)), x1 = Math.min(v.G.W, sx(L.CX + L.HO + 12));
+        stripOf(v.G.W, v.G.H, x0, x1);
         drawConduit(v.t);
         hullLight();
+        strip.g.putImageData(strip.img, 0, 0);
+        ctx.drawImage(strip.c, strip.x0, 0);
+        strip = null;
+        if (v.fix) drawFix(v.t, v.fix);
         ctx = null; V = null;
     }
 

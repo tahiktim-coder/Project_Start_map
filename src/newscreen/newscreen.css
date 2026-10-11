@@ -1,7 +1,8 @@
 /* ═══ Silent Exodus · new screen (?new=1) · newscreen.css ═══════════════════════════════════════════════════════════════
-   What it is: the travel view's page (#ns-root and its layers), the rules that hide today's map screen while travelling
-   (docs/BUILD_A.md §1), and the slice's word tokens (IBM Plex, "Graphite"), scoped to #ns-root so the rest of the game
-   keeps its own look. Loaded only when the switch is on. In orbit body.ns-travel is off and today's layout shows as now.
+   What it is: the new screen's page (#ns-root and its layers, which show by mode: docs/BUILD_B.md §1), the rules that hide
+   today's map and orbit screens (docs/BUILD_A.md §1), and the slice's word tokens (IBM Plex, "Graphite"), scoped to
+   #ns-root so the rest of the game keeps its own look. Loaded only when the switch is on. body.ns-travel stays on in orbit
+   too (the bridge is the orbit screen now); only a missing stop module falls back to today's orbit layout.
    Source: the <style> of prototypes/slice/index.html and the voice of prototypes/screens/game-screen/reading.css. */
 
 /* ── travelling: the view is the screen; today's header, panels, log, Coach and map are out of sight ── */
@@ -28,6 +29,11 @@ body.ns-travel .coach { display: none !important; }
 #ns-root.is-pointing { cursor: pointer; }
 #ns-root canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
 #ns-words, #ns-root .ns-layer { position: absolute; inset: 0; pointer-events: none; }
+
+/* ── the modes (docs/BUILD_B.md §1): travel and the tower out of sight on the bridge; the dive and the bridge only at a stop ── */
+#ns-root[data-mode="stop"] #ns-world, #ns-root[data-mode="stop"] #ns-ship,
+#ns-root[data-mode="stop"] #ns-world-words, #ns-root[data-mode="stop"] #ns-ship-words { visibility: hidden; }
+#ns-root[data-mode="travel"] #ns-dive, #ns-root[data-mode="travel"] #ns-bridge, #ns-root[data-mode="travel"] #ns-stop-words { visibility: hidden; }
 #ns-root p { margin: 0; }
 
 /* ── a voice line: the first name over the quote, on the dither shade (Voice.js) ── */
@@ -39,6 +45,9 @@ body.ns-travel .coach { display: none !important; }
 #ns-root .ns-who { display: flex; align-items: center; gap: 8px; font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--warm)); }
 #ns-root .ns-who .ns-ring { flex: none; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }
 #ns-root .ns-say { font: 400 var(--fs-voice)/1.36 var(--f-text); color: var(--text); text-wrap: balance; }
+/* a card that turned up on its own waits, unseen, until the picture has been looked at (NewScreen.holding) */
+html.ns-on .modal-overlay.ns-held { visibility: hidden !important; pointer-events: none !important; }
+#ns-root .ns-voice.is-narr .ns-say { font-style: italic; color: #c9cccd; }   /* narration: no speaker, the scene itself */
 #ns-root .tone-jaxon { --tone: #f08c2e; }
 #ns-root .tone-vance { --tone: #c4622a; }
 #ns-root .tone-aris { --tone: #ffc27a; }

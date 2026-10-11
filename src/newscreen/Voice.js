@@ -5,14 +5,21 @@
    with the dither grain (canvas#ns-shade), never over a world or our Lander. Every other log line stays in the log,
    readable in orbit (docs/BUILD_A.md §6). One line at a time, a queue of three (the oldest dropped); hidden while a
    hover note is up; nothing while a card, a page or a minigame is up (a line waits then, and only shown, unblocked time
-   ages it). A line logged while the view was hidden, in the moment before it shows (the story world revealed as we
+   ages it; a logged line still waiting 15 s later, by the clock, is dropped: it was news before a minigame, a trip, a long
+   card, and is old now). A line logged while the view was hidden, in the moment before it shows (the story world revealed as we
    leave orbit, A.U.R.A.'s thanks after a card), is kept and said once the view is up.
+   On the bridge (any mode but 'travel', docs/BUILD_B.md §2) a speaker stands beside 'stop:person:<id>', A.U.R.A. at
+   'stop:aura'; and since the log is hidden there, a log line that reports a result (it starts "STATION:", "MINING:",
+   "SIGNAL:", "MALFUNCTION RESOLVED:", "REPAIR COMPLETE:", or holds a signed number of energy, salvage, rations or data)
+   is said by A.U.R.A., without its prefix (never a line that names one of the crew: that is their own news, not a result).
+   Narration (say({ narration: true, text })): a line with no speaker, by our Lander (the bridge: A.U.R.A.'s place), no name.
    Source: the shade recipe of prototypes/slice/script/shade.js (v3's shadeSprite) and the voice of
    prototypes/screens/game-screen/reading.js (pin: the darkest of the anchor's places wins).
    Registers itself with NewScreen as 'voice'. Reads NSPaint. Writes nothing to the game.
 
    NewScreen.mods.voice: { init, resize, update, render, pointer,
-     say({ id, who, text, anchor })   a line now: it cuts the line on screen; not logged
+     say({ id, who, text, anchor, narration }) → Promise   a line now: it cuts the line on screen; not logged. Resolves
+                                      when the line leaves the screen (or is dropped), so a talk can say lines one by one
      sayLine(message)                 the same from a log-style line ('A.U.R.A.: "..."'); the caller logs it (a refusal)
      speaking() → 'aura' | id | null  who is talking now (the tower's speaker glows for A.U.R.A.)
      current() → { who, line } | null }
@@ -24,7 +31,10 @@
 
     const SPEAKERS = { 'A.U.R.A.': 'aura', Jaxon: 'jaxon', Aris: 'aris', Vance: 'vance', Mira: 'mira' };
     const LINE_RE = /^(A\.U\.R\.A\.|Jaxon|Aris|Vance|Mira):\s*(.+)$/;
-    const QUEUE_MAX = 3, STALE_MS = 9000, HIDDEN_KEEP_MS = 2500, HIDDEN_MAX = 2, EDGE = 16, SHADE_PAD = 14, MOVE_RESAMPLE = 18, FALLBACK = { x: 0.72, y: 0.14 };
+    const RESULT_RE = /^(STATION|MINING|SIGNAL|MALFUNCTION RESOLVED|REPAIR COMPLETE):\s*(.+)$/;
+    const SIGNED_RE = /[+\-\u2212]\s?\d+\s*(energy|salvage|rations?|data)\b/i;
+    const CREW_RE = /\b(Jaxon|Aris|Vance|Mira|Cora)\b/;
+    const QUEUE_MAX = 3, STALE_MS = 9000, WALL_MS = 15000, HIDDEN_KEEP_MS = 2500, HIDDEN_MAX = 2, EDGE = 16, SHADE_PAD = 14, MOVE_RESAMPLE = 18, FALLBACK = { x: 0.72, y: 0.14 };
     const wordsIn = s => (String(s).trim().match(/\S+/g) || []).length;
     const readMs = line => Math.max(3200, wordsIn(line) * 300 + 1600);
 
@@ -38,22 +48,39 @@
         const line = m[2].trim().replace(/^["“]\s*/, '').replace(/\s*["”]$/, '').trim();
         return line ? { who: m[1], id: SPEAKERS[m[1]], line } : null;
     }
+    /** On the bridge: the shell's mode is anything but travel (without mode(), the stop's own isOpen). */
+    function onBridge() {
+        if (typeof NS.mode === 'function') { try { return NS.mode() !== 'travel'; } catch (err) { return false; } }
+        const s = NS.mods.stop;
+        return !!(s && typeof s.isOpen === 'function' && s.isOpen());
+    }
+    /** "MINING: We pulled 20 salvage from the field." → A.U.R.A. says "We pulled 20 salvage from the field." (bridge only) */
+    function resultLine(message) {
+        const m = String(message || '').trim();
+        if (!m || LINE_RE.test(m)) return null;
+        const r = RESULT_RE.exec(m);
+        if (r) return r[2].trim() ? { who: 'A.U.R.A.', id: 'aura', line: r[2].trim() } : null;
+        if (!SIGNED_RE.test(m) || CREW_RE.test(m)) return null;
+        const line = m.replace(/^[A-Z][A-Z .'-]{2,}:\s*/, '').trim();
+        return line ? { who: 'A.U.R.A.', id: 'aura', line } : null;
+    }
     function onLog(e) {
-        const v = parse(e && e.detail && e.detail.message);
+        const msg = e && e.detail && e.detail.message;
+        const v = parse(msg) || (NS.isShown() && onBridge() ? resultLine(msg) : null);
         if (!v) return;
         if (!NS.isShown()) {                                                             // kept a moment: the view may be about to show
             early = early.concat([Object.assign(v, { at: performance.now() })]).slice(-HIDDEN_MAX);
             return;
         }
         if ((cur && cur.line === v.line) || queue.some(q => q.line === v.line)) return;
-        queue.push(Object.assign(v, { age: 0 }));
-        while (queue.length > QUEUE_MAX) queue.shift();
+        queue.push(Object.assign(v, { age: 0, at: performance.now() }));
+        while (queue.length > QUEUE_MAX) settle(queue.shift());
     }
     /** show() was just called: the lines logged in the moment before it join the queue (older ones were orbit talk). */
     function onShowing() {
         const now = performance.now();
         early.filter(q => now - q.at < HIDDEN_KEEP_MS).forEach(q => {
-            if (!queue.some(o => o.line === q.line)) queue.push({ who: q.who, id: q.id, line: q.line, age: 0 });
+            if (!queue.some(o => o.line === q.line)) queue.push({ who: q.who, id: q.id, line: q.line, age: 0, at: q.at });
         });
         while (queue.length > QUEUE_MAX) queue.shift();
         early = [];
@@ -65,18 +92,29 @@
     }
     /** A line said now, not through the log (a person clicked): it goes first and cuts the one on screen. */
     function sayNow(o) {
-        if (!o || !o.text || !NS.isShown()) return;
-        const who = o.who || (o.id === 'aura' ? 'A.U.R.A.' : String(o.id || '').replace(/^./, c => c.toUpperCase()));
-        const id = SPEAKERS[who] || o.id || 'aura';
-        queue = queue.filter(q => q.line !== o.text);
-        queue.unshift({ who, id, line: String(o.text).replace(/^["“]\s*/, '').replace(/\s*["”]$/, ''), anchor: o.anchor || null, age: 0 });
-        while (queue.length > QUEUE_MAX) queue.pop();
-        end();
+        if (!o || !o.text || !NS.isShown()) return Promise.resolve(false);
+        const who = o.narration ? '' : o.who || (o.id === 'aura' ? 'A.U.R.A.' : String(o.id || '').replace(/^./, c => c.toUpperCase()));
+        const id = o.narration ? 'narr' : SPEAKERS[who] || o.id || 'aura';
+        const line = String(o.text).replace(/^["“]\s*/, '').replace(/\s*["”]$/, '');
+        return new Promise(resolve => {
+            queue.filter(q => q.line === line).forEach(settle);
+            queue = queue.filter(q => q.line !== line);
+            queue.unshift({ who, id, line, anchor: o.anchor || null, age: 0, done: resolve });
+            while (queue.length > QUEUE_MAX) settle(queue.pop());
+            end();
+        });
+    }
+    /** A line leaves (said, cut or dropped): whoever waits on it goes on. */
+    function settle(q) {
+        if (!q || typeof q.done !== 'function') return;
+        const d = q.done; q.done = null;
+        try { d(true); } catch (err) { console.error('NewScreen voice: a waiting talk failed', err); }
     }
 
     // ── where the words go: the anchor's places, kept inside the window; the darkest wins ──
     function anchorList(id, anchor) {
-        const tries = (anchor ? [anchor] : []).concat(id === 'aura' ? ['ship'] : ['person:' + id, 'ship']);
+        const own = onBridge() ? (id === 'aura' || id === 'narr' ? ['stop:aura'] : ['stop:person:' + id, 'stop:aura']) : (id === 'aura' || id === 'narr' ? ['ship'] : ['person:' + id, 'ship']);
+        const tries = (anchor ? [anchor] : []).concat(own);
         for (const n of tries) {
             const f = NS.anchors.get(n);
             if (!f) continue;
@@ -97,8 +135,15 @@
     }
     /** Round things on screen now, in art px: worlds, our Lander. Travel offers them if it can. */
     function discs() {
-        const t = NS.mods.travel;
+        const t = NS.mods.travel, st = NS.mods.stop;
         let list = [];
+        if (onBridge()) {                                                                 // the bridge: its world and its people, CSS px → art px
+            try {
+                const f = NS.G.dpr / NS.G.k;
+                list = st && typeof st.discs === 'function' ? (st.discs() || []).map(([x, y, r]) => [x * f, y * f, r * f]) : [];
+            } catch (err) { list = []; }
+            return list;
+        }
         try {
             if (t && typeof t.discs === 'function') list = (t.discs() || []).slice();
             const lp = t && typeof t.landerPose === 'function' ? t.landerPose() : null;
@@ -107,6 +152,11 @@
         return list;
     }
     /** How busy the picture is under a CSS box: a world, our Lander, the hull edge, off screen. */
+    /** The bridge's words on screen now (CSS rects): a line keeps off them. */
+    function wordRects() {
+        const layer = document.getElementById('ns-stop-words');
+        return layer ? [...layer.querySelectorAll('.sw.on')].map(el => el.getBoundingClientRect()) : [];
+    }
     function busy(r, ds) {
         const G = NS.G, f = G.dpr / G.k;
         let hits = 0, n = 0;
@@ -116,7 +166,8 @@
             if (ds.some(([cx, cy, rr]) => Math.hypot(ax - cx, ay - cy) < rr + 2)) hits++;
         }
         let v = hits / n;
-        if (r.x * f < G.hull - 2 && (r.x + r.w) * f > G.hull + 2) v += 1;              // never one line across the hull edge
+        if (!onBridge() && r.x * f < G.hull - 2 && (r.x + r.w) * f > G.hull + 2) v += 1;   // never one line across the hull edge
+        if (onBridge() && wordRects().some(w => r.x < w.right + 10 && r.x + r.w > w.left - 10 && r.y < w.bottom + 6 && r.y + r.h > w.top - 6)) v += 1;     // never over an action word
         if (r.x < 0 || r.y < 0 || r.x + r.w > innerWidth || r.y + r.h > innerHeight) v += 0.1;
         return v;
     }
@@ -141,20 +192,21 @@
     // ── one line on screen ──
     function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
     function start(v) {
-        const box = el('div', 'ns-voice tone-' + v.id), who = el('p', 'ns-who');
+        const box = el('div', 'ns-voice tone-' + v.id + (v.id === 'narr' ? ' is-narr' : '')), who = el('p', 'ns-who');
         if (v.id === 'aura') who.append(el('span', 'ns-ring'));
         who.append(document.createTextNode(v.who));
-        box.append(who, el('p', 'ns-say', v.line));
+        if (v.id === 'narr') box.append(el('p', 'ns-say', v.line)); else box.append(who, el('p', 'ns-say', v.line));   // narration: no name over it
         layer.append(box);
-        cur = { id: v.id, who: v.who, line: v.line, anchor: v.anchor || null, el: box, w: box.offsetWidth, h: box.offsetHeight, left: readMs(v.line), pick: null, pos: null, sampledAt: null, strength: 0.66 };
+        cur = { id: v.id, who: v.who, line: v.line, anchor: v.anchor || null, done: v.done || null, el: box, w: box.offsetWidth, h: box.offsetHeight, left: readMs(v.line), pick: null, pos: null, sampledAt: null, strength: 0.66 };
         place(cur);
         void box.offsetWidth;
         box.classList.add('is-in');
     }
-    function end() { if (cur) { cur.el.remove(); cur = null; } }
+    function end() { if (cur) { const c = cur; cur = null; c.el.remove(); settle(c); } }
 
     /** Is a hover note up on the space side? (Travel's words layer has something visible in it.) */
     function isNoteUp() {
+        if (onBridge()) { const st = NS.mods.stop; try { return !!(st && st.noteUp && st.noteUp()); } catch (err) { return false; } }
         const t = NS.mods.travel;
         if (t && typeof t.noteUp === 'function') { try { return !!t.noteUp(); } catch (err) { return false; } }
         const words = document.getElementById('ns-world-words');
@@ -197,8 +249,9 @@
         init() {
             cv = document.getElementById('ns-shade'); g = cv.getContext('2d'); layer = document.getElementById('ns-voice');
             addEventListener('log-updated', onLog);
-            NS.bus.on('hidden', () => { end(); queue = []; });
+            NS.bus.on('hidden', () => { end(); queue.forEach(settle); queue = []; });
             NS.bus.on('showing', onShowing);
+            NS.bus.on('dive:start', () => { queue.forEach(settle); queue = []; });   // the flight's talk is over: the bridge starts fresh
         },
         resize(G) { NS.sizeCanvas(cv); if (cur) { cur.w = cur.el.offsetWidth; cur.h = cur.el.offsetHeight; cur.pick = null; cur.pos = null; } },
         update(dt) {
@@ -210,7 +263,9 @@
             }
             queue.forEach(q => { q.age += dt; });                                         // only shown, unblocked time ages a waiting line
             if (!cur) {
-                queue = queue.filter(q => q.age < STALE_MS);
+                const now = performance.now(), old = q => q.age >= STALE_MS || (!q.done && q.at && now - q.at > WALL_MS);   // a line someone waits on is never dropped for age
+                queue.filter(old).forEach(settle);
+                queue = queue.filter(q => !old(q));
                 const next = queue.shift();
                 if (next) start(next);
             }
