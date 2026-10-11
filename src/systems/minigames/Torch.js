@@ -12,6 +12,11 @@
    SOUND (only while the game's sound is on): a hiss that brightens with heat, spits while metal is really cut, ticks of cooling
    metal, a groan as the last of the seam holds; then a clunk, a rush of air, a long ring and a soft thud as the hatch drifts off.
    On the disc a finer hiss, and one bell when the last line goes.
+   LOOK (2026-10-11, the travel view's world; the rules, timings, words and results unchanged): 720 × 405 art pixels (density
+   1.5). The wreck is our own hull class seen close: plated, riveted, a porthole, rust by how long it has been dead, the sector's
+   own sky and light over its edge. Our clamp lamp lights the hatch; Jaxon (the cutter) floats by it in his suit on a tether,
+   and when he takes the torch he works the seam from beside it. The disc is pressed gold drifting into a close false sun.
+   The readouts are MiniHost notes in IBM Plex: one by the torch, a few quiet ones in the corner.
 
    const result = await MiniHost.play('torch', opts)
    opts: { mode: 'hatch' | 'disc'  (default 'hatch')
@@ -91,6 +96,7 @@
 
     // ── THE DISC: the same fourteen lines as the dating sketch, closer ──
     const DX = 236, DY = 136, DR = 122, CUT_NEAR = 7, CUT_FAR = 42, ON_LINE = 1.6, SWEEP = 6, FINAL_SWEEP = 2.4;   // a line is cut between NEAR and FAR; sweep seconds
+    const SWEEP_HALF = 18;                                       // the sweep's soft band of light, half its width (picture units; drawing only)
     const SUN = { x: 548, y: 112, r: 104, halo: 330 };       // the light itself, just off the right edge
     const LINES = [[-176, 70, 0.62], [-151, 46, 0.55], [-129, 60, 0.72], [-104, 38, 0.60], [-83, 66, 0.45], [-58, 52, 0.70], [-36, 32, 0.66],
         [-11, 64, 0.50], [12, 42, 0.74], [35, 58, 0.58], [61, 36, 0.52], [92, 68, 0.64], [124, 48, 0.68], [153, 56, 0.48]]
@@ -114,7 +120,7 @@
     function readOpts(opts) {
         const o = opts || {}, sector = MiniLab.clamp(Math.round(Number(o.sector) || 1), 1, DEAD_FOR.length);
         return { mode: o.mode === 'disc' ? 'disc' : 'hatch', hull: named(o.hull, 'EXODUS-6'), deadFor: named(o.deadFor, DEAD_FOR[sector - 1]),
-            cutter: shortName(o.cutter, 'Jaxon'), spotter: shortName(o.spotter, 'Vance') };
+            cutter: shortName(o.cutter, 'Jaxon'), spotter: shortName(o.spotter, 'Vance'), sector };   // sector: the sky and the rust
     }
     const sayLines = ({ hull, deadFor, cutter, spotter }) => ({
         hatch: [['', `${hull}. Dead about ${deadFor}. The hatch has no power, so it won't open.`],
@@ -240,115 +246,310 @@
         };
     }
 
-    // ── the pictures, painted once per palette ──
+    // ── the pictures (2026-10-11: the travel view's world). Painted once in ART pixels, 1.5 to a unit (720 × 405), with the
+    //    travel view's recipes (MiniLab.paint = art/MiniPaint.js) and its 8 × 8 grain. The rules above stay in units: an art
+    //    pixel's centre is ((ax + 0.5) / d − 0.5) in the same index space the seam, the heat grid and the cuts use. ──
+    const DENSITY = 1.5, INK = '#05070a';
     const hash = (a, b) => { const h = Math.imul(a, 374761393) + Math.imul(b, 668265263) | 0, k = Math.imul(h ^ (h >>> 13), 1274126177); return ((k ^ (k >>> 16)) >>> 0) / 4294967296; };
-    function paint(fn) { const c = document.createElement('canvas'); c.width = W; c.height = H; fn(c.getContext('2d')); return c; }
-    function eachPixel(fn, x0 = 0, y0 = 0, x1 = W - 1, y1 = H - 1) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) fn(x, y); }
-    function paintWorn(b, str, x, y, scale, color, keep) {      // old paint: the pixel font with flakes missing
-        const g = Object.assign(document.createElement('canvas'), { width: W, height: 5 * scale }).getContext('2d', { willReadFrequently: true });
-        MiniLab.text(g, str, 0, 0, '#fff', scale);
-        const data = g.getImageData(0, 0, W, 5 * scale).data;
-        b.fillStyle = color;
-        for (let py = 0; py < 5 * scale; py++) for (let px = 0; px < MiniLab.textWidth(str, scale); px++) if (data[(py * W + px) * 4 + 3] && hash(px, py + 50) <= keep) b.fillRect(x + px, y + py, 1, 1);
+    // the travel view's sector skies (src/newscreen/travel/SectorLooks.js), copied so the default game has them too
+    const LOOKS = {
+        1: { seed: 11, dust: 0.12, haze: 1, stars: 1, light: { core: 2, halo: 14, spikes: 5 } },
+        2: { seed: 22, dust: 0.08, haze: 0.6, stars: 1.6, light: { core: 5, halo: 34, spikes: 7 } },
+        3: { seed: 33, dust: 0.1, haze: 0.9, stars: 1.2, light: { core: 7, halo: 40, spikes: 8 } },
+        4: { seed: 44, dust: 0.14, haze: 1, stars: 1.3, light: { core: 9, halo: 48, spikes: 9 } },
+        5: { seed: 55, dust: 0.1, haze: 0.8, stars: 1.1, light: { core: 11, halo: 58, spikes: 10 } },
+        6: { seed: 66, dust: 0.16, haze: 1.1, stars: 1, light: { core: 15, halo: 80, spikes: 12 } },
+    };
+    const DISC_SKY = { seed: 77, dust: 0.1, haze: 0.8, stars: 1.1 };
+    const RUST_BY_SECTOR = [0.1, 0.16, 0.28, 0.4, 0.5, 0.6];      // the longer a wreck has been dead, the more of it has rusted
+    const LAMP = { x: 247, y: 209, aimX: 318, aimY: 128 };          // our work lamp, clamped to the hull, aimed at the hatch
+    const PORT = { x: 66, y: 168, r: 10, glass: 7.2 };               // one of the wreck's portholes: the Lander has one per deck
+    const NAME_AT = { x: 30, y: 92 };
+    let RAMPS = null;
+    function ramps() {                                           // the materials, made once MiniPaint is there
+        if (RAMPS) return RAMPS;
+        const P = window.MiniPaint, RP = P.RP, warmed = c => MiniLab.mix(c, '#e8964a', 0.16);
+        RAMPS = {
+            HULL: RP.HULL, RUST: RP.RUST, SUN: RP.SUN, AMBER: RP.AMBER, ICE: RP.ICE,
+            LIT: P.ramp(...RP.HULL.hex.map((c, i) => (i ? warmed(c) : c))),                 // the hull where our lamp falls
+            PAINT: P.ramp(INK, '#1d272c', '#3c4a50', '#6d7c80', '#a9b4b5', '#d6dcda'),     // the hull number, old white paint
+            GOLD: P.ramp(INK, '#1a1008', '#2f1d0c', '#4e3014', '#74481d', '#9c6428', '#c88a3e', '#e9b467', '#f7d9a0', '#fff3dc'),
+            COPPER: P.ramp(INK, '#2a1408', '#5a2c12', '#9a5426', '#d08850', '#f2c08a'),     // the torch's nozzle
+            RUBBER: P.ramp(INK, '#0e1316', '#1a2226', '#2a3439', '#3f4c52', '#5d6c72'),     // its grip
+            GLASS: P.ramp(INK, '#070c10', '#0c1a20', '#16303a', '#33606e', '#7fb3c2', '#d6eef4'),
+        };
+        return RAMPS;
     }
-    const isRivet = (x, y, row) => Math.abs(sdf(x, y)) > 4 && (
-        ([0, 1].some(k => Math.abs(y - edgeY(k, x)) === 4) && x % 9 === 4) || (JOINTS[row].some(j => Math.abs(x - j) === 4) && y % 9 === 4));
-    function hullTone(x, y) {                                    // 0..1 on the hull ramp, or -1 above its edge (space)
-        const top = horizon(x);
-        if (y < top) return -1;
-        if (y === top) return 0.7;                               // its edge, lit by the sky
-        const row = rowOf(x, y), joints = JOINTS[row], left = joints.filter(j => x > j).length;
-        const ptop = row === 0 ? top : edgeY(row - 1, x), pbot = row < 2 ? edgeY(row, x) : H, fy = (y - ptop) / Math.max(1, pbot - ptop);
-        const lamp = Math.max(0, 1 - Math.hypot(x - 318, (y - 128) * 1.15) / 235), sky = Math.exp(-(y - top) / 15);   // our work lamp on the hatch; the sky's cool sheen
-        const band = x * 0.45 + y - 236, sheen = 0.12 * Math.exp(-((band / 30) ** 2)) + 0.08 * Math.exp(-(((band - 46) / 5) ** 2));   // the nebula, reflected across the plates
-        const g = 0.12 + 0.36 * lamp * lamp + 0.32 * sky + sheen + (hash(row, left) - 0.5) * 0.08 + (hash(y, Math.floor(x / 23)) - 0.5) * 0.025 + 0.07 * (0.5 - fy) - 0.06 * (y / H);
-        if ([0, 1].some(k => y === edgeY(k, x)) || joints.includes(x)) return 0.03;   // plate joints
-        if ([0, 1].some(k => y === edgeY(k, x) + 1) || joints.includes(x - 1)) return g + 0.09;   // and their lit lip
-        return isRivet(x, y, row) ? 0.6 + 0.2 * lamp : isRivet(x - 1, y - 1, row) ? 0.04 : g;   // rivets and their shadows
+    const sizeOf = d => ({ AW: Math.round(W * d), AH: Math.round(H * d) });
+    /** Every art pixel whose centre lies inside the index-space box: fn(ax, ay, fx, fy). */
+    function eachArt(d, x0, y0, x1, y1, fn) {
+        const { AW, AH } = sizeOf(d);
+        const ax0 = Math.max(0, Math.ceil((x0 + 0.5) * d - 0.5)), ax1 = Math.min(AW - 1, Math.floor((x1 + 0.5) * d - 0.5));
+        const ay0 = Math.max(0, Math.ceil((y0 + 0.5) * d - 0.5)), ay1 = Math.min(AH - 1, Math.floor((y1 + 0.5) * d - 0.5));
+        for (let ay = ay0; ay <= ay1; ay++) for (let ax = ax0; ax <= ax1; ax++) fn(ax, ay, (ax + 0.5) / d - 0.5, (ay + 0.5) / d - 0.5);
     }
-    function hatchTone(x, y, g) {                                // the door inside the seam: its lip, a pressed panel, the handle recess, four bolts
-        const d = sdf(x, y);
-        if (d > 0.5) return g;
-        if (d >= -0.5) return 0.02;
-        if (d >= -1.6) return g + 0.1;
-        if (Math.abs(d + 8) < 0.5) return 0.05;
-        if (Math.abs(d + 9) < 0.5) return g + 0.07;
-        const hx = x - (HB.cx + HB.hw - 22), hy = y - (HB.cy - 3), bx = Math.abs(x - HB.cx) - (HB.hw - 14), by = Math.abs(y - HB.cy) - (HB.hh - 14);
-        if (hx >= 0 && hx <= 10 && hy >= 0 && hy <= 6) return hy === 6 ? 0.44 : hx === 0 || hx === 10 || hy === 0 ? 0.04 : 0.12;
-        if (bx >= 0 && bx <= 1 && by >= 0 && by <= 1) return bx + by === 0 ? 0.62 : 0.4;
-        return g - (d < -9 ? 0.02 : 0);
+    /** The sector's own sky (the travel view's spaceStrip and paintSpace), lit by the light at (lx, ly) in art pixels. */
+    function paintSky(p, look, L, lx, ly) {
+        const P = window.MiniPaint, strip = P.spaceStrip(p.W, p.H, look.seed, look.dust, look.haze, look.stars), lit = new Float32Array(p.W * p.H);
+        for (let y = 0; y < p.H; y++) for (let x = 0; x < p.W; x++) lit[y * p.W + x] = Math.exp(-Math.hypot(x - lx, (y - ly) * 1.15) / (L.halo * 0.85 + 6));
+        const keep = L.halo * 0.9 + L.core + 8;
+        P.paintSpace(p, strip, 0, lit, (x, y) => Math.hypot(x - lx, y - ly) < keep);
+    }
+    const horizonF = x => 14 + 26 * bend(x), edgeF = (k, x) => EDGES[k][0] + EDGES[k][1] * bend(x);
+    const rowAt = (x, y) => (y < edgeF(0, x) ? 0 : y < edgeF(1, x) ? 1 : 2);
+    function rivetNear(x, y, row) {                              // the nearest rivet: along the plate joints, every 9 units, 4 off the joint
+        let best = null;
+        const take = (cx, cy) => { const dd = Math.hypot(x - cx, y - cy); if (dd < 2.6 && Math.abs(sdf(cx, cy)) > 4 && (!best || dd < best.d)) best = { d: dd, dx: x - cx, dy: y - cy }; };
+        [0, 1].forEach(k => { const cx = 9 * Math.round((x - 4) / 9) + 4; take(cx, edgeF(k, cx) - 4); take(cx, edgeF(k, cx) + 4); });
+        JOINTS[row].forEach(j => { const cy = 9 * Math.round((y - 4) / 9) + 4; take(j - 4, cy); take(j + 4, cy); });
+        return best;
+    }
+    /** The wreck's plating at one point: 0..1 on the hull ramp (−1 is space above its edge). */
+    function plateTone(x, y, hp, rustAmt, ax, ay) {
+        const P = window.MiniPaint, t = y - horizonF(x);
+        if (t < -hp) return { v: -1 };
+        const lampD = Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15), lamp = Math.max(0, 1 - lampD / 235);
+        if (t < hp) return { v: 0.66 + 0.2 * (x / W), lamp };    // its edge, lit by the far light
+        if (t < 3 * hp) return { v: 0.44 + 0.1 * (x / W), lamp };
+        const row = rowAt(x, y), joints = JOINTS[row], left = joints.filter(j => x > j).length;
+        const ptop = row === 0 ? horizonF(x) : edgeF(row - 1, x), pbot = row < 2 ? edgeF(row, x) : H, fy = (y - ptop) / Math.max(1, pbot - ptop);
+        const sky = Math.exp(-t / 15), band = x * 0.45 + y - 236, sheen = 0.12 * Math.exp(-((band / 30) ** 2)) + 0.08 * Math.exp(-(((band - 46) / 5) ** 2));   // the dust lane, reflected
+        let v = 0.12 + 0.36 * lamp * lamp + 0.32 * sky + sheen + (hash(row, left) - 0.5) * 0.08 + 0.07 * (0.5 - fy) - 0.06 * (y / H);
+        v += (P.fbm(x / 34, y / 20, 31, 3) - 0.5) * 0.12 + (P.vnoise(x / 9, y * 0.9, 32) - 0.5) * 0.035;   // grime, and the grain of the plate
+        for (let k = 0; k < 2; k++) { const dy = y - edgeF(k, x); if (Math.abs(dy) < hp) return { v: 0.03, lamp }; if (dy >= hp && dy < 3 * hp) v += 0.09; }   // plate joints and their lit lip
+        for (const j of joints) { const dx = x - j; if (Math.abs(dx) < hp) return { v: 0.03, lamp }; if (dx >= hp && dx < 3 * hp) v += 0.09; }
+        const rv = rivetNear(x, y, row);
+        if (rv && rv.d < 0.95) { const nx = rv.dx / 0.95, ny = rv.dy / 0.95; return { v: 0.2 + 0.3 * MiniLab.clamp(0.6 * nx - 0.8 * ny + 0.35, 0, 1) + 0.18 * lamp + 0.4 * sky * 0.5, lamp }; }
+        if (rv && Math.hypot(rv.dx + 0.7, rv.dy - 0.7) < 0.95) return { v: Math.max(0.03, v - 0.1), lamp };   // its shadow, down and to the left
+        let rust = (P.fbm(x / 22, y / 12, 41, 4) - (0.8 - rustAmt * 0.26)) * 14 > P.threshold(ax, ay);
+        if (rv && rv.dy > 1 && Math.abs(rv.dx) < 0.6 && hash(Math.round(x - rv.dx), Math.round(y - rv.dy)) < rustAmt * 1.6 && rv.dy < 2 + 9 * P.vnoise(x, y / 6, 43) * (1 - (rv.dy - 1) / 3) && P.threshold(ax, ay) < 0.8 - rv.dy / 4) rust = true;   // rust runs down from the rivets
+        if (P.hash(ax, ay, 44) < 0.004) v -= 0.12;               // pits from micrometeorites
+        return { v, lamp, rust };
+    }
+    function doorTone(x, y, v, hp) {                             // the door inside the seam: its lip, a pressed panel, the handle recess, four bolts
+        const dd = sdf(x, y);
+        if (dd > 0.5) return v;
+        if (dd >= -0.5) return 0.02;
+        if (dd >= -1.6) return v + 0.1;
+        const g = dd + 8;
+        if (Math.abs(g) < hp) return 0.05;
+        if (g < -hp && g >= -3 * hp) return v + 0.07;
+        const hx = x - (HB.cx + HB.hw - 22), hy = y - (HB.cy - 3);
+        if (hx >= -0.5 && hx <= 10.5 && hy >= -0.5 && hy <= 6.5) {
+            if (hy > 5.6) return 0.46;                           // the recess: its lit lower lip, its shadowed walls, the grip bar inside
+            if (hx < 0.4 || hx > 9.6 || hy < 0.4) return 0.04;
+            if (hy > 2 && hy < 3.6 && hx > 1.6 && hx < 8.4) return hy < 2.7 ? 0.62 : 0.4;
+            return 0.12;
+        }
+        const bx = Math.abs(x - HB.cx) - 28.5, by = Math.abs(y - HB.cy) - 37.5, br = Math.hypot(bx, by);
+        if (br < 1.4) return 0.32 + 0.4 * MiniLab.clamp(0.6 * bx * Math.sign(x - HB.cx) - 0.8 * by * Math.sign(y - HB.cy) + 0.4, 0, 1);
+        if (Math.hypot(bx + 0.7 * Math.sign(x - HB.cx), by - 0.7 * Math.sign(y - HB.cy)) < 1.4) return 0.05;
+        return v - (dd < -9 ? 0.03 : 0) + (dd < -9 ? (window.MiniPaint.vnoise(x * 1.4, y / 9, 47) - 0.5) * 0.04 : 0);
     }
     const NAME_ROOM = 240;                                       // the wreck's name fits between the left edge and the hatch
     const hullNumber = hull => hull.split('"')[0].trim() || hull;   // 'EXODUS-4 "LAZARUS"' is painted as EXODUS-4, as on the sketch
-    function paintHull(b, hull) {
-        b.fillStyle = C.void; b.fillRect(0, 0, W, H);
-        MiniLab.nebula(b, 6, 0.45); MiniLab.stars(b, 61, 150);
-        MiniLab.disc(b, FAR_LIGHT.x, FAR_LIGHT.y, 6, d => 0.35 * (1 - d), C.lightHalo);
-        const rnd = MiniLab.rng(6), pits = new Set(Array.from({ length: 320 }, () => Math.floor(rnd() * W * H))), lit = C.hull.map(c => MiniLab.mix(c, C.warm, 0.16));
-        eachPixel((x, y) => {
-            const g = hullTone(x, y), lamp = Math.max(0, 1 - Math.hypot(x - 318, (y - 128) * 1.15) / 150);
-            if (g < 0) return;                                   // where our own lamp falls the metal is a little warmer; pits from micrometeorites
-            b.fillStyle = MiniLab.pick(MiniLab.on(x, y, 0.7 * lamp * lamp) ? lit : C.hull, hatchTone(x, y, g - (pits.has(y * W + x) ? 0.08 : 0)), x, y); b.fillRect(x, y, 1, 1);
+    function stencil(p, str, ax0, ay0, cell, gap, toneAt) {      // old paint in the travel view's pixel font, flaking
+        window.MiniPaint.pixelText(str, 0, 0, (gx, gy) => {
+            for (let yy = 0; yy < cell - gap; yy++) for (let xx = 0; xx < cell - gap; xx++) { const ax = ax0 + gx * cell + xx, ay = ay0 + gy * cell + yy, v = toneAt(ax, ay); if (v) p.solid(ax, ay, v[0], v[1]); }
         });
-        [[70, 168, 196, 150], [372, 236, 468, 222], [150, 66, 236, 58]].forEach(([x0, y0, x1, y1]) => MiniLab.line(b, x0, y0, x1, y1, C.hull[3], 0.45));   // old scrapes
-        [[118, 236], [428, 96], [214, 74]].forEach(([x, y]) => { MiniLab.ring(b, x, y, 2, C.hull[4], 0.6); MiniLab.dot(b, x + 1, y + 1, C.hull[0]); MiniLab.dot(b, x, y, C.hull[0]); });   // small craters
-        const name = hullNumber(hull), scale = [4, 3, 2].find(k => MiniLab.textWidth(name, k) <= NAME_ROOM) || 1;
-        paintWorn(b, name, 30, 92, scale, MiniLab.mix(C.textDim, C.hull[2], 0.3), 0.8);
-        paintWorn(b, 'RESCUE', HB.cx - Math.round(MiniLab.textWidth('RESCUE') / 2), HB.cy - HB.hh - 10, 1, MiniLab.mix(C.warm, C.hull[2], 0.4), 1);
-        MiniLab.dot(b, FAR_LIGHT.x, FAR_LIGHT.y, C.light); PLUS.forEach(([ox, oy]) => MiniLab.dot(b, FAR_LIGHT.x + ox, FAR_LIGHT.y + oy, C.lightHalo));
     }
-    function paintHole(b) {                                      // behind the hatch: a dead corridor, lit only by our lamp
-        eachPixel((x, y) => {
-            const d = sdf(x, y), qx = Math.abs(x - VP.x) / HB.hw, qy = Math.abs(y - VP.y) / HB.hh, q = Math.max(qx, qy);   // q: 1 at the hole, 0 far away
-            if (d > 0.5) return;
-            let g = -1;
-            if (d > -4) g = (x - HB.cx) / HB.hw + (y - HB.cy) / HB.hh > 0.2 ? 0.22 + 0.14 * (d + 4) / 4.5 : 0.03;   // the plate's cut edge
-            else if (q > 0.3) {
-                g = 0.02 + 0.24 * ((q - 0.3) / 0.7) ** 2 + (qx > qy ? 0 : y > VP.y ? 0.05 : -0.03);   // walls fade into the dark; the floor a little lit
-                if ([0.42, 0.56, 0.76].some(r => Math.abs(q - r) < 0.011)) g -= 0.05;   // the corridor's ribs
-                else if (Math.abs(qx - qy) < 0.014) g += 0.05;  // its corners catch the light
+    function paintHull(o, d) {
+        const P = window.MiniPaint, RR = ramps(), { AW, AH } = sizeOf(d), p = P.painter(AW, AH, true), hp = 0.5 / d;
+        const look = LOOKS[o.sector] || LOOKS[1], k = AH / 360, L = { core: look.light.core * k, halo: look.light.halo * k, strength: 1, spikes: look.light.spikes * k };
+        const lx = (FAR_LIGHT.x + 0.5) * d, ly = (FAR_LIGHT.y + 0.5) * d, rustAmt = RUST_BY_SECTOR[o.sector - 1] || 0.2;
+        paintSky(p, look, L, lx, ly);
+        P.lightGlow(p, lx, ly, L, 1);                            // the light at the end of the heading, just past the hull's edge
+        eachArt(d, -1, -1, W, H, (ax, ay, x, y) => {
+            const pt = plateTone(x, y, hp, rustAmt, ax, ay);
+            if (pt.v < 0) return;
+            const pool = Math.max(0, 1 - Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15) / 150), v = doorTone(x, y, pt.v, hp);
+            const ramp = pt.rust && v === pt.v ? RR.RUST : P.threshold(ax, ay) < 0.7 * pool * pool ? RR.LIT : RR.HULL;   // our lamp warms the metal a little
+            p.solid(ax, ay, ramp, ramp === RR.RUST ? 0.1 + v * 1.25 : v);
+        });
+        [[70, 168, 196, 150], [372, 236, 468, 222], [150, 66, 236, 58]].forEach(([x0, y0, x1, y1]) =>   // old scrapes
+            p.line((x0 + 0.5) * d, (y0 + 0.5) * d, (x1 + 0.5) * d, (y1 + 0.5) * d, (x, y) => { if (P.threshold(x, y) < 0.45) p.solid(x, y, RR.HULL, 0.5); }));
+        [[118, 236], [428, 96], [214, 74]].forEach(([cx, cy]) => eachArt(d, cx - 4, cy - 4, cx + 4, cy + 4, (ax, ay, x, y) => {   // small craters
+            const r = Math.hypot(x - cx, y - cy);
+            if (r < 1.6) p.solid(ax, ay, RR.HULL, 0.06 + 0.1 * MiniLab.clamp(x - cx - (y - cy), 0, 1));
+            else if (r < 2.6) p.solid(ax, ay, RR.HULL, 0.42 + 0.2 * MiniLab.clamp(((x - cx) - (y - cy)) / 2.6, -1, 1));
+        }));
+        paintPorthole(p, d, RR);
+        // the hull number: a thin worn stencil (strokes two or three art pixels wide), flaking in patches, with rust
+        // run down from it; a little bigger than the RESCUE paint, never the old blocky letters
+        const name = hullNumber(o.hull), tw = P.pixelTextWidth(name), cell = [3, 2].find(c => tw * c <= NAME_ROOM * d * 0.6) || 2;
+        const nx0 = Math.round((NAME_AT.x + 0.5) * d), ny0 = Math.round((NAME_AT.y + 0.5) * d), painted = new Map();
+        stencil(p, name, nx0, ny0, cell, 0, (ax, ay) => {
+            if (P.fbm(ax / 6, ay / 6, 51, 3) < 0.31 || P.hash(ax, ay, 52) < 0.06) return null;   // flaked off
+            painted.set(ax, Math.max(painted.get(ax) || 0, ay));
+            const x = (ax + 0.5) / d - 0.5, y = (ay + 0.5) / d - 0.5, lamp = Math.max(0, 1 - Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15) / 235);
+            return [RR.PAINT, 0.36 + 0.28 * lamp + (P.vnoise(ax / 3, ay / 3, 53) - 0.5) * 0.18];
+        });
+        painted.forEach((bottom, ax) => {                        // rust runs down from the paint's lower edges
+            if (P.hash(ax, 7, 56) > 0.22) return;
+            const run = Math.round((3 + P.hash(ax, 9, 57) * 9) * d);
+            for (let k = 1; k <= run; k++) if (P.threshold(ax, bottom + k) < 0.85 - k / run * 0.7) p.solid(ax, bottom + k, RR.RUST, 0.62 - 0.32 * k / run);
+        });
+        const rw = P.pixelTextWidth('RESCUE') * 2;
+        stencil(p, 'RESCUE', Math.round((HB.cx + 0.5) * d - rw / 2), Math.round((HB.cy - HB.hh - 10 + 0.5) * d), 2, 0, (ax, ay) =>
+            (P.hash(ax, ay, 54) < 0.1 ? null : [RR.AMBER, 0.42 + (P.vnoise(ax / 2, ay / 2, 55) - 0.5) * 0.2]));
+        paintLamp(p, d, RR);
+        return p.canvas();
+    }
+    function paintPorthole(p, d, RR) {                           // dark glass in a bolted ring, the sky caught in it
+        const P = window.MiniPaint;
+        eachArt(d, PORT.x - PORT.r - 2, PORT.y - PORT.r - 2, PORT.x + PORT.r + 2, PORT.y + PORT.r + 2, (ax, ay, x, y) => {
+            const dx = x - PORT.x, dy = y - PORT.y, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+            if (r > PORT.r + 1.2) return;
+            if (r > PORT.r) { if (dx - dy < 0) p.solid(ax, ay, RR.HULL, 0.04); return; }   // the ring's shadow on the hull
+            if (r > PORT.glass) {
+                const n = (r - PORT.glass) / (PORT.r - PORT.glass), lit = MiniLab.clamp((dx * 0.6 - dy * 0.8) / r, -1, 1);
+                const bolt = Math.abs(((a / (Math.PI / 4)) % 1 + 1) % 1 - 0.5) > 0.42 && Math.abs(n - 0.5) < 0.3;
+                p.solid(ax, ay, RR.HULL, bolt ? 0.62 : 0.26 + 0.24 * lit * (1 - Math.abs(n - 0.5)) + (n < 0.2 ? -0.12 : 0));
+                return;
             }
-            b.fillStyle = g < 0 ? C.void : MiniLab.pick(C.hull, g, x, y); b.fillRect(x, y, 1, 1);
-        }, ...HATCH_BOX);
+            const g = r / PORT.glass, shade = dx + dy < -PORT.glass * 0.6 ? 0 : 0.06;   // the frame shadows the top-left of the glass
+            let v = 0.1 + shade + 0.12 * g * g + (P.fbm(x / 3, y / 3, 57, 2) - 0.5) * 0.06;
+            const arc = Math.abs(r - PORT.glass * 0.72) < 0.7 && a > -1.25 && a < -0.15;   // the far light's sky, a thin bright arc
+            if (arc) v = 0.62; else if (Math.hypot(dx - 2.6, dy + 3.2) < 1) v = 0.9;
+            p.solid(ax, ay, RR.GLASS, v);
+        });
     }
-    const paintLid = hullBg => b => {                            // the cut-out door, to drift away: a mask of the door, then the hull drawn into it
-        b.fillStyle = '#000'; eachPixel((x, y) => { if (sdf(x, y) <= -0.5) b.fillRect(x, y, 1, 1); }, ...HATCH_BOX);
-        b.globalCompositeOperation = 'source-in'; b.drawImage(hullBg, 0, 0);
-    };
-    const paintLidShadow = b => { b.fillStyle = C.void; eachPixel((x, y) => { if (sdf(x, y) <= -0.5 && MiniLab.on(x, y, 0.6)) b.fillRect(x, y, 1, 1); }, ...HATCH_BOX); };
-    function paintDiscScene(b) {
-        b.fillStyle = C.void; b.fillRect(0, 0, W, H);
-        MiniLab.nebula(b, 1977, 0.3); MiniLab.stars(b, 14, 120);
-        const edge = SUN.r / (SUN.r + 16);                       // the light the disc is drifting into
-        MiniLab.disc(b, SUN.x, SUN.y, SUN.halo, d => 0.45 * Math.pow(1 - d, 2.6), C.lightHalo);
-        MiniLab.disc(b, SUN.x, SUN.y, SUN.r + 64, d => 0.7 * Math.pow(1 - d, 1.6), C.light);
-        MiniLab.disc(b, SUN.x, SUN.y, SUN.r + 16, d => (d < edge ? 1 : (1 - d) / (1 - edge)), C.light);
-        const GOLD = [C.void, MiniLab.mix(C.lightHalo, C.void, 0.84), MiniLab.mix(C.lightHalo, C.void, 0.66), MiniLab.mix(C.lightHalo, C.void, 0.42), C.lightHalo, C.light];
-        eachPixel((x, y) => {
+    function paintLamp(p, d, RR) {                               // a clamp lamp on a magnetic foot, its lens towards the hatch
+        const ang = Math.atan2(LAMP.aimY - LAMP.y, LAMP.aimX - LAMP.x), c = Math.cos(ang), sn = Math.sin(ang), S = 1.4;
+        const lx = (LAMP.x + c * 5 * S + 0.5) * d, ly = (LAMP.y + sn * 5 * S + 0.5) * d, R0 = 22;   // first a soft warm halo round the lens
+        p.region(lx - R0, ly - R0, lx + R0, ly + R0, (x, y) => { const r = Math.hypot(x + 0.5 - lx, y + 0.5 - ly) / R0; if (r < 1) p.add(x, y, RR.SUN, 0.4 * (1 - r) ** 2.4); });
+        eachArt(d, LAMP.x - 10, LAMP.y - 10, LAMP.x + 10, LAMP.y + 12, (ax, ay, x, y) => {
+            const fy = (y - LAMP.y) / S, fx = (x - LAMP.x) / S;
+            if (fy > 4 && fy < 6 && Math.abs(fx + 1) < 4.5) return p.solid(ax, ay, RR.HULL, fy < 4.7 ? 0.6 : 0.2);   // the foot
+            if (Math.abs(fx + 1) < 0.6 && fy > 1 && fy <= 4) return p.solid(ax, ay, RR.HULL, 0.42);   // its stem
+            const u = fx * c + fy * sn, v = -fx * sn + fy * c;   // along the lamp, across it
+            if (Math.abs(u) > 4.4 || Math.abs(v) > 2.5) return;
+            if (Math.abs(u) > 3.8 || Math.abs(v) > 1.9) return p.solid(ax, ay, RR.HULL, 0.03);
+            if (u > 3) return p.solid(ax, ay, RR.SUN, 0.95 - 0.1 * Math.abs(v));   // the lens, lit
+            p.solid(ax, ay, RR.HULL, 0.22 + 0.36 * MiniLab.clamp(-v / 1.9 + 0.3, 0, 1) - (Math.abs(u % 1.4) < 0.3 ? 0.08 : 0));
+        });
+    }
+    function paintHole(d) {                                      // behind the hatch: a dead corridor, lit only by our lamp
+        const RR = ramps(), P = window.MiniPaint, { AW, AH } = sizeOf(d), p = P.painter(AW, AH, false), hp = 0.5 / d;
+        eachArt(d, ...HATCH_BOX, (ax, ay, x, y) => {
+            const dd = sdf(x, y);
+            if (dd > 0.5) return;
+            const qx = Math.abs(x - VP.x) / HB.hw, qy = Math.abs(y - VP.y) / HB.hh, q = Math.max(qx, qy);   // q: 1 at the hole, 0 far away
+            if (dd > -4) return p.solid(ax, ay, RR.HULL, (x - HB.cx) / HB.hw + (y - HB.cy) / HB.hh > 0.2 ? 0.24 + 0.14 * (dd + 4) / 4.5 : 0.04);   // the plate's cut edge
+            if (q <= 0.3) { if (q > 0.3 - 2 * hp / HB.hw) p.solid(ax, ay, RR.HULL, 0.05); else p.set(ax, ay, [5, 7, 10]); return; }   // the far end, black
+            const floor = y > VP.y && qy > qx, z = 1 / q;
+            let v = 0.02 + 0.24 * ((q - 0.3) / 0.7) ** 2 + (qx > qy ? 0 : y > VP.y ? 0.05 : -0.03);   // the walls fade into the dark; the floor a little lit
+            if ([0.42, 0.56, 0.76].some(r => Math.abs(q - r) < 0.008)) v -= 0.05;   // the corridor's ribs
+            else if ([0.42, 0.56, 0.76].some(r => q - r >= 0.008 && q - r < 0.02)) v += 0.04;
+            else if (Math.abs(qx - qy) < 0.012) v += 0.05;      // its corners catch the light
+            if (floor && (z * 5) % 1 < 0.16) v += 0.035;         // the floor grating
+            if (!floor && qx > qy && Math.abs(y - (VP.y - HB.hh * q * 0.55)) < 0.6 * q) v += 0.04;   // a cable run along the wall
+            v += (P.fbm(x / 6, y / 6, 61, 2) - 0.5) * 0.05 * q;
+            p.solid(ax, ay, P.threshold(ax, ay) < 0.5 * q * q ? RR.LIT : RR.HULL, v);
+        });
+        return p.canvas();
+    }
+    function paintLid(hullBg, d) {                               // the cut-out door, to drift away: a mask of the door, then the hull drawn into it
+        const { AW, AH } = sizeOf(d), lid = Object.assign(document.createElement('canvas'), { width: AW, height: AH }), shadow = Object.assign(document.createElement('canvas'), { width: AW, height: AH });
+        const lg = lid.getContext('2d'), sg = shadow.getContext('2d');
+        lg.fillStyle = '#000'; sg.fillStyle = INK;
+        eachArt(d, ...HATCH_BOX, (ax, ay, x, y) => {
+            if (sdf(x, y) > -0.5) return;
+            lg.fillRect(ax, ay, 1, 1);
+            if (MiniLab.on(ax, ay, 0.6)) sg.fillRect(ax, ay, 1, 1);
+        });
+        lg.globalCompositeOperation = 'source-in'; lg.drawImage(hullBg, 0, 0);
+        return { lid, lidShadow: shadow };
+    }
+    function paintSun(p, sx, sy, R, RR) {                        // the false sun, close: a white-gold face, a warm limb, a long soft glow and a thin streak
+        const reach = R * 3.6;
+        p.region(sx - reach, sy - reach, sx + reach, sy + reach, (x, y) => {
+            const dx = x + 0.5 - sx, dy = (y + 0.5 - sy) * 1.04, r = Math.hypot(dx, dy);
+            if (r < R) return p.tone(x, y, RR.SUN, 1.02 - 0.2 * (r / R) ** 8);
+            const e = r - R;
+            let v = 0.9 * Math.exp(-e / (R * 0.07)) + 0.42 * Math.exp(-e / (R * 0.32)) + 0.2 * Math.exp(-e / (R * 1.1));
+            if (Math.abs(dy) < 0.8) v += 0.3 * Math.exp(-Math.abs(dx) / (R * 1.3));
+            v *= 1 - window.MiniPaint.smooth(reach * 0.6, reach, r);
+            if (v > 0.004) p.add(x, y, RR.SUN, v);
+        });
+    }
+    function paintDiscScene(d) {
+        const P = window.MiniPaint, RR = ramps(), { AW, AH } = sizeOf(d), p = P.painter(AW, AH, true);
+        const sx = (SUN.x + 0.5) * d, sy = (SUN.y + 0.5) * d;
+        paintSky(p, DISC_SKY, { core: SUN.r * d, halo: 80 * d }, sx, sy);
+        paintSun(p, sx, sy, (SUN.r + 8) * d, RR);                // the light the disc is drifting into: the warmest thing there is
+        eachArt(d, DX - DR - 2, DY - DR - 2, DX + DR + 2, DY + DR + 2, (ax, ay, x, y) => {
             const r = Math.hypot(x - DX, y - DY), lit = MiniLab.clamp(0.5 + 0.5 * (x - DX) / DR, 0, 1), a = Math.atan2(y - DY, x - DX);
-            if (r > DR + 0.5) return;
-            let g = 0.18 + 0.32 * Math.pow(lit, 1.7) + 0.18 * Math.pow(Math.abs(Math.cos(a + 0.35)), 16);   // lit from the right; a pressed disc catches light in two wedges
-            if (r > 26 && r < DR - 4 && Math.round(r) % 3 === 0) g += 0.06;   // grooves
-            if (r > 24 && r <= 26) g -= 0.07;                    // the label's edge
-            if (r > DR - 2.5) g = 0.48 + 0.42 * lit;             // the rim, bright on the side facing the light
-            b.fillStyle = MiniLab.pick(GOLD, g, x, y); b.fillRect(x, y, 1, 1);
-        }, DX - DR - 1, DY - DR - 1, DX + DR + 1, DY + DR + 1);
-        MiniLab.ring(b, DX, DY, DR + 1, C.lightHalo, 0.25);
-        LINES.forEach(l => { const o = l.uy > 0 ? -1 : 1; MiniLab.line(b, DX + l.uy * o, DY - l.ux * o, DX + l.ux * l.len + l.uy * o, DY + l.uy * l.len - l.ux * o, GOLD[1]); });   // each line's engraved shadow
+            if (r > DR + 1.2) return;
+            if (r > DR + 0.4) { if (x > DX) p.add(ax, ay, RR.SUN, 0.32 * lit); return; }   // the light caught round its edge
+            const wedge = Math.abs(Math.cos(a + 0.35));
+            let g = 0.16 + 0.34 * Math.pow(lit, 1.7) + 0.2 * Math.pow(wedge, 16) + 0.05 * Math.pow(wedge, 3);   // lit from the right; a pressed disc catches light in two wedges
+            if (r > 26 && r < DR - 4) g += (Math.floor(r * d) % 2 ? 0.035 : -0.015) + 0.02 * Math.sin(r * 0.83);   // grooves
+            else if (r <= 24) g = 0.2 + 0.26 * lit + (P.fbm(x / 5, y / 5, 71, 2) - 0.5) * 0.06;   // the label, matte
+            if (r > 24 && r <= 26) g -= 0.08;                    // the label's edge
+            if (r > DR - 2.5) g = 0.46 + 0.44 * lit - (r > DR - 0.3 && x < DX ? 0.2 : 0);   // the rim, bright on the side facing the light
+            p.solid(ax, ay, RR.GOLD, g);
+        });
+        LINES.forEach(l => {                                     // each line's engraved shadow, one art pixel to the dark side
+            const o = l.uy > 0 ? -1 : 1, x0 = (DX + 0.5) * d + l.uy * o, y0 = (DY + 0.5) * d - l.ux * o;
+            p.line(x0, y0, x0 + l.ux * l.len * d, y0 + l.uy * l.len * d, (x, y) => p.solid(x, y, RR.GOLD, 0.1));
+        });
+        return p.canvas();
     }
-    function paintScene(o) {                                     // only the pictures this part needs
-        if (o.mode === 'disc') return { discBg: paint(paintDiscScene) };
-        const hullBg = paint(b => paintHull(b, o.hull));
-        return { hullBg, hole: paint(paintHole), lid: paint(paintLid(hullBg)), lidShadow: paint(paintLidShadow) };
+    function paintScene(o, d) {                                  // only the pictures this part needs
+        if (o.mode === 'disc') return { discBg: paintDiscScene(d) };
+        const hullBg = paintHull(o, d);
+        return Object.assign({ hullBg, hole: paintHole(d) }, paintLid(hullBg, d));
+    }
+
+    /** A layer of art pixels drawn fresh every frame (the burns, the sparks, the torch): written into one buffer, drawn once. */
+    function makeLayer(w, h) {
+        const c = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = c.getContext('2d');
+        const img = g.createImageData(w, h), u32 = new Uint32Array(img.data.buffer), packed = new Map();
+        const pack = hex => {
+            let v = packed.get(hex);
+            if (v === undefined) { const n = parseInt(hex.slice(1), 16); v = (0xff000000 | ((n & 0xff) << 16) | (n & 0xff00) | ((n >> 16) & 0xff)) >>> 0; packed.set(hex, v); }
+            return v;
+        };
+        let x0 = w, y0 = h, x1 = -1, y1 = -1;                       // the box written since the last clear: only it is cleared and drawn
+        const set = (x, y, hex) => {
+            x = Math.floor(x); y = Math.floor(y);
+            if (!hex || x < 0 || y < 0 || x >= w || y >= h) return;
+            u32[y * w + x] = pack(hex);
+            if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+        };
+        return {
+            w, h, set,
+            pick(x, y, ramp, v) { x = Math.floor(x); y = Math.floor(y); set(x, y, MiniLab.pick(ramp.hex || ramp, v, x, y)); },   // ramp: a MiniPaint ramp or a hex array
+            line(x0, y0, x1, y1, color, tone = 1) {                  // one art pixel wide
+                let ax = Math.round(x0), ay = Math.round(y0);
+                const bx = Math.round(x1), by = Math.round(y1), dx = Math.abs(bx - ax), dy = -Math.abs(by - ay), sx = ax < bx ? 1 : -1, sy = ay < by ? 1 : -1;
+                let err = dx + dy;
+                for (let guard = 0; guard < 4000; guard++) {
+                    if (tone >= 1 || MiniLab.on(ax, ay, tone)) set(ax, ay, color);
+                    if (ax === bx && ay === by) break;
+                    const e2 = 2 * err;
+                    if (e2 >= dy) { err += dy; ax += sx; }
+                    if (e2 <= dx) { err += dx; ay += sy; }
+                }
+            },
+            clear() { for (let y = y0; y <= y1; y++) u32.fill(0, y * w + x0, y * w + x1 + 1); x0 = w; y0 = h; x1 = -1; y1 = -1; },
+            draw(ctx) {
+                if (x1 < x0) return;
+                const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+                g.putImageData(img, 0, 0, x0, y0, bw, bh); ctx.drawImage(c, x0, y0, bw, bh, x0, y0, bw, bh);
+            },
+        };
     }
 
     function mount(ctx, ui, opts) {
         const HEATING = [C.hurt[2], C.hurt[3], C.danger, C.warm, C.warmBright], GLOW = [C.hurt[2], C.hurt[3], C.warm, C.warmBright];   // metal under the flame: dull → red → orange; the plate heating
         const KERF = [C.void, C.hurt[2], C.hurt[3], C.danger, C.warm, C.warmBright, C.star];   // a cut: white-hot while the flame is on it, then cooling to a dark slot
         const TEMPER = MiniLab.mix(C.warm, C.hull[2], 0.45), CUT_LINE = MiniLab.mix(C.lightHalo, C.void, 0.62), DIM_GOLD = MiniLab.mix(C.lightHalo, C.void, 0.55);
-        const SCORCH = MiniLab.mix(C.warm, C.hull[1], 0.62), HOSE = [MiniLab.mix(C.warm, C.void, 0.74), MiniLab.mix(C.warm, C.void, 0.5)];   // a cut's tempered edge; the suit's hose
+        const SCORCH = MiniLab.mix(C.warm, C.hull[1], 0.62), HOSE = [MiniLab.mix(C.warm, C.void, 0.82), MiniLab.mix(C.warm, C.void, 0.66), MiniLab.mix(C.warm, C.void, 0.45)];   // a cut's tempered edge; the suit's hose
         const setup = readOpts(opts), SAY = sayLines(setup), snd = makeSound();
-        const { hullBg, hole, lid, lidShadow, discBg } = paintScene(setup);
+        const d = (ui.art && ui.art.d) || MiniLab.density || 1, { AW, AH } = sizeOf(d);
+        const { hullBg, hole, lid, lidShadow, discBg } = paintScene(setup, d);
         let s = null, clock = 0, ptrFire = false, aim = null;
         const clampTip = (x, y) => ({ x: MiniLab.clamp(x, 2, W - 3), y: MiniLab.clamp(y, 2, H - 3) });
         const cellOf = p => MiniLab.clamp(Math.floor((p.y + 0.5) / CELL), 0, GH - 1) * GW + MiniLab.clamp(Math.floor((p.x + 0.5) / CELL), 0, GW - 1);
@@ -620,171 +821,325 @@
             script([SAY.done, s.figTouched ? SAY.marked : SAY.clean], 0, () => { s.phase = 'end'; showButtons(); });
         }
 
-        // ── drawing ──
-        function markColor(i, x, y) {                            // the metal's heat, read at a glance
-            const d = s.depth[i], age = clock - s.lastT[i];
-            if (d >= 1) return MiniLab.pick(KERF, Math.exp(-age / KERF_COOL), x, y);   // cut through: white while the flame is on it, then warm, red, a dark slot
-            if (s.part === 'hatch' && !NEAR_SEAM[i]) return d > 0.12 && MiniLab.on(x, y, 0.2 + 0.5 * d) ? SCORCH : null;   // thick plate: a faint scorch, no glow
-            const glow = d * Math.exp(-age / HEAT_SHOW);
+        // ── drawing, in art pixels: the still picture, then two layers drawn fresh each frame (under and over the drifting lid) ──
+        const under = makeLayer(AW, AH), over = makeLayer(AW, AH), R = ramps();
+        const A = v => Math.floor((v + 0.5) * d);                // an index-space position → the art pixel it falls in
+        const art = fn => MiniLab.inArt(ctx, fn);
+        function udot(L, x, y, col) {                            // one picture unit, as MiniLab.dot: the art pixels of unit pixel (x, y)
+            const ux = Math.round(x), uy = Math.round(y);
+            for (let ay = Math.floor(uy * d + 0.5); ay < Math.floor((uy + 1) * d + 0.5); ay++) for (let ax = Math.floor(ux * d + 0.5); ax < Math.floor((ux + 1) * d + 0.5); ax++) L.set(ax, ay, col);
+        }
+        function ring(L, x, y, r, col, tone) {                   // a circle one art pixel wide about index-space (x, y)
+            const cx = (x + 0.5) * d, cy = (y + 0.5) * d, ar = r * d, n = Math.ceil(ar * 7);
+            for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2, px = Math.floor(cx + Math.cos(a) * ar), py = Math.floor(cy + Math.sin(a) * ar); if (MiniLab.on(px, py, tone)) L.set(px, py, col); }
+        }
+
+        // the cuts, in art pixels: each unit the flame has touched spreads over the art pixels round it, read between units
+        const artSeen = new Uint8Array(AW * AH);
+        let artMarks = [], marksDone = 0, marksOf = null;
+        function syncMarks() {
+            if (marksOf !== s.marks) { marksOf = s.marks; marksDone = 0; artMarks = []; artSeen.fill(0); }
+            for (; marksDone < s.marks.length; marksDone++) {
+                const i = s.marks[marksDone], x = i % W, y = (i - x) / W;
+                const ax0 = Math.max(0, Math.ceil((x - 0.5) * d - 0.5)), ax1 = Math.min(AW - 1, Math.floor((x + 1.5) * d - 0.5 - 1e-6));
+                const ay0 = Math.max(0, Math.ceil((y - 0.5) * d - 0.5)), ay1 = Math.min(AH - 1, Math.floor((y + 1.5) * d - 0.5 - 1e-6));
+                for (let ay = ay0; ay <= ay1; ay++) for (let ax = ax0; ax <= ax1; ax++) { const k = ay * AW + ax; if (!artSeen[k]) { artSeen[k] = 1; artMarks.push(k); } }
+            }
+        }
+        function sampleMark(ax, ay) {                            // depth between the four nearest units; the newest touch of them; the plate there
+            const fx = (ax + 0.5) / d - 0.5, fy = (ay + 0.5) / d - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+            let depth = 0, last = -99;
+            for (let k = 0; k < 4; k++) {
+                const x = MiniLab.clamp(x0 + (k & 1), 0, W - 1), y = MiniLab.clamp(y0 + (k >> 1), 0, H - 1), i = y * W + x, w = (k & 1 ? tx : 1 - tx) * (k >> 1 ? ty : 1 - ty);
+                depth += s.depth[i] * w;
+                if (s.depth[i] > 0 && s.lastT[i] > last) last = s.lastT[i];
+            }
+            const near = MiniLab.clamp(Math.round(fy), 0, H - 1) * W + MiniLab.clamp(Math.round(fx), 0, W - 1);
+            return { depth, age: clock - last, near, fx, fy };
+        }
+        function markColor(m, x, y) {                            // the metal's heat, read at a glance (x, y: the art pixel, for the grain)
+            const dd = m.depth;
+            if (dd >= 1) return MiniLab.pick(KERF, Math.exp(-m.age / KERF_COOL), x, y);   // cut through: white while the flame is on it, then warm, red, a dark slot
+            if (s.part === 'hatch' && !NEAR_SEAM[m.near]) return dd > 0.12 && MiniLab.on(x, y, 0.2 + 0.5 * dd) ? SCORCH : null;   // thick plate: a faint scorch, no glow
+            const glow = dd * Math.exp(-m.age / HEAT_SHOW);
             if (glow > 0.08) return MiniLab.pick(HEATING, glow, x, y);   // heating: dull, red, orange; it fades if the flame moves on too soon
-            if (d <= 0.3) return null;
+            if (dd <= 0.3) return null;
             return s.part === 'hatch' ? (MiniLab.on(x, y, 0.5) ? SCORCH : C.hull[1]) : CUT_LINE;   // where it never went through: a scorch, the cut's tempered edge
         }
-        function drawBurns(opened) {                             // warps, the plate's glow, the kerf
+        function drawBurns(L, opened) {                          // warps, the plate's glow, the kerf
             const disc = s.part === 'disc';
             s.warps.forEach(w => {                               // a buckled dimple, tempered warm inside and cool outside
-                MiniLab.ring(ctx, w.x, w.y, 3, disc ? DIM_GOLD : TEMPER, 0.55); MiniLab.ring(ctx, w.x, w.y, 5, disc ? DIM_GOLD : C.mist, 0.4);
-                MiniLab.dot(ctx, w.x - 1, w.y - 1, disc ? C.lightHalo : C.hull[4]); MiniLab.dot(ctx, w.x + 1, w.y + 1, C.void);
+                ring(L, w.x, w.y, 3, disc ? DIM_GOLD : TEMPER, 0.55); ring(L, w.x, w.y, 4.2, disc ? DIM_GOLD : TEMPER, 0.3); ring(L, w.x, w.y, 5, disc ? DIM_GOLD : C.mist, 0.4);
+                L.set(A(w.x - 1.2), A(w.y - 1.2), disc ? C.lightHalo : C.hull[4]); L.set(A(w.x + 1), A(w.y + 1), C.void); L.set(A(w.x + 1.6), A(w.y + 1), C.void);
             });
-            for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {
-                const v = s.heat[gy * GW + gx], x0 = gx * CELL, y0 = gy * CELL, density = Math.min(1, (v - 0.18) * 1.4), tone = MiniLab.clamp((v - 0.18) / 0.82, 0, 1);
-                if (v < 0.18 || (opened && sdf(x0 + 1, y0 + 1) <= 0.5)) continue;
-                for (let y = y0; y < y0 + CELL; y++) for (let x = x0; x < x0 + CELL; x++) if (MiniLab.on(x, y, density)) { ctx.fillStyle = MiniLab.pick(GLOW, tone, x, y); ctx.fillRect(x, y, 1, 1); }
+            for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) {   // the plate's heat, read smoothly between the cells
+                const c = gy * GW + gx, v = s.heat[c];
+                if (v < 0.18 && (gx === 0 || s.heat[c - 1] < 0.18) && (gx === GW - 1 || s.heat[c + 1] < 0.18) && (gy === 0 || s.heat[c - GW] < 0.18) && (gy === GH - 1 || s.heat[c + GW] < 0.18)) continue;
+                const ax0 = Math.floor(gx * CELL * d), ax1 = Math.floor((gx + 1) * CELL * d), ay0 = Math.floor(gy * CELL * d), ay1 = Math.floor((gy + 1) * CELL * d);
+                for (let ay = ay0; ay < ay1; ay++) for (let ax = ax0; ax < ax1; ax++) {
+                    const hv = heatBetween((ax + 0.5) / d, (ay + 0.5) / d);
+                    if (hv < 0.18 || (opened && sdf((ax + 0.5) / d - 0.5, (ay + 0.5) / d - 0.5) <= 0.5)) continue;
+                    if (MiniLab.on(ax, ay, Math.min(1, (hv - 0.18) * 1.4))) L.set(ax, ay, MiniLab.pick(GLOW, MiniLab.clamp((hv - 0.18) / 0.82, 0, 1), ax, ay));
+                }
             }
-            s.marks.forEach(i => {
-                const x = i % W, y = (i - x) / W, col = opened && sdf(x, y) <= 0.5 ? null : markColor(i, x, y);
-                if (col) { ctx.fillStyle = col; ctx.fillRect(x, y, 1, 1); }
-            });
+            syncMarks();
+            for (let n = 0; n < artMarks.length; n++) {
+                const k = artMarks[n], ax = k % AW, ay = (k - ax) / AW, m = sampleMark(ax, ay);
+                if (opened && sdf(m.fx, m.fy) <= 0.5) continue;
+                const col = markColor(m, ax, ay);
+                if (col) L.set(ax, ay, col);
+            }
         }
-        function drawSparks() {
+        function heatBetween(ux, uy) {                           // the heat grid at a point in units, read between cell centres
+            const cx = ux / CELL - 0.5, cy = uy / CELL - 0.5, x0 = Math.floor(cx), y0 = Math.floor(cy), tx = cx - x0, ty = cy - y0;
+            const at = (x, y) => s.heat[MiniLab.clamp(y, 0, GH - 1) * GW + MiniLab.clamp(x, 0, GW - 1)];
+            return (at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx) * (1 - ty) + (at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx) * ty;
+        }
+        function drawSparks(L) {
             s.sparks.forEach(p => {
-                if (p.dust) return MiniLab.dot(ctx, p.x, p.y, p.life > 0.9 ? C.textDim : C.mist);
-                const k = p.ice ? 0.03 : 0.025;                  // a short streak behind each
-                if (p.ice || p.life > 0.25) MiniLab.dot(ctx, p.x - p.vx * k, p.y - p.vy * k, p.ice ? C.uiDim : C.warm);
-                MiniLab.dot(ctx, p.x, p.y, p.ice ? (p.life > 0.7 ? C.star : C.uiBright) : p.life > 0.3 ? C.warmBright : p.life > 0.12 ? C.warm : C.hurt[3]);
+                const x = (p.x + 0.5) * d, y = (p.y + 0.5) * d;
+                if (p.dust) return L.set(x, y, p.life > 0.9 ? C.textDim : C.mist);
+                const k = (p.ice ? 0.03 : 0.025) * d;            // a short streak behind each
+                if (p.ice || p.life > 0.25) L.line(x - p.vx * k, y - p.vy * k, x, y, p.ice ? C.uiDim : C.warm);
+                L.set(x, y, p.ice ? (p.life > 0.7 ? C.star : C.uiBright) : p.life > 0.3 ? C.warmBright : p.life > 0.12 ? C.warm : C.hurt[3]);
             });
         }
-        function reticle(x, y) {                                 // the aim, and the pointer: four short ticks, outlined so they stand out on gold and bright plate
-            const col = s.phase === 'cut' && paused() ? (Math.floor(clock * 4) % 2 ? C.danger : C.hurt[3]) : C.ui;
-            PLUS.forEach(([ox, oy]) => [4, 5, 6].forEach(k => {
-                MiniLab.dot(ctx, x + ox * k + oy, y + oy * k + ox, C.void); MiniLab.dot(ctx, x + ox * k - oy, y + oy * k - ox, C.void); MiniLab.dot(ctx, x + ox * k, y + oy * k, col);
-            }));
-            if (!s.firing) { PLUS.forEach(([ox, oy]) => MiniLab.dot(ctx, x + ox, y + oy, C.void)); MiniLab.dot(ctx, x, y, C.uiBright); }   // the exact point the flame will touch
+        function reticle(L, x, y) {                              // the aim, and the pointer: four short ticks, outlined so they stand out on gold and bright plate
+            const col = s.phase === 'cut' && paused() ? (Math.floor(clock * 4) % 2 ? C.danger : C.hurt[3]) : C.ui, cx = A(x), cy = A(y);
+            PLUS.forEach(([ox, oy]) => { for (let k = Math.round(4 * d); k <= Math.round(6.4 * d); k++) { L.set(cx + ox * k + oy, cy + oy * k + ox, C.void); L.set(cx + ox * k - oy, cy + oy * k - ox, C.void); } });
+            PLUS.forEach(([ox, oy]) => { for (let k = Math.round(4 * d); k <= Math.round(6.4 * d); k++) L.set(cx + ox * k, cy + oy * k, col); });
+            if (!s.firing) { PLUS.forEach(([ox, oy]) => L.set(cx + ox, cy + oy, C.void)); L.set(cx, cy, C.uiBright); }   // the exact point the flame will touch
         }
-        function drawFlameLight() {                              // under the burns: the flame lights the metal round it, more as the metal glows
+        function drawFlameLight(L) {                             // under the burns: the flame lights the metal round it, more as the metal glows
             if (!s.firing) return;
-            MiniLab.disc(ctx, Math.round(s.tip.x), Math.round(s.tip.y), 15, d => (0.1 + 0.2 * s.glow) * (1 - d) * (1 - d), C.warm);
-        }
-        function drawTorch() {                                   // nozzle, body and hose, held just off the metal; when the job is done it is pulled back
-            const away = s.phase === 'cut' || s.phase === 'dry' ? 0 : 300 * Math.min(1, s.openT / 0.6) ** 2;
-            const x = Math.round(s.tip.x + TU.x * away), y = Math.round(s.tip.y + TU.y * away), at = (k, o = 0) => [x + TU.x * (k + STANDOFF) + TN.x * o, y + TU.y * (k + STANDOFF) + TN.y * o];
-            const [hx, hy] = at(29), mx = hx + 14, my = hy + 24, ex = hx + 30, ey = H + 8;   // the hose sags off the bottom of the picture
-            for (let t = 0; t <= 1; t += 0.006) {
-                const u = 1 - t, px = u * u * hx + 2 * u * t * mx + t * t * ex, py = u * u * hy + 2 * u * t * my + t * t * ey;
-                MiniLab.dot(ctx, px - 1, py + 1, C.void); MiniLab.dot(ctx, px, py, HOSE[0]); MiniLab.dot(ctx, px + 1, py, HOSE[1]);
+            const cx = (s.tip.x + 0.5) * d, cy = (s.tip.y + 0.5) * d, r = 15 * d, peak = 0.1 + 0.2 * s.glow;
+            for (let ay = Math.floor(cy - r); ay <= cy + r; ay++) for (let ax = Math.floor(cx - r); ax <= cx + r; ax++) {
+                const q = Math.hypot(ax + 0.5 - cx, ay + 0.5 - cy) / r;
+                if (q < 1 && MiniLab.on(ax, ay, peak * (1 - q) * (1 - q))) L.set(ax, ay, C.warm);
             }
-            [1, 0].forEach(edge => { for (let k = 0; k <= 29; k += 0.5) for (let o = -3.5; o <= 3.5; o += 0.5) {   // a dark outline, then the body: lit along one side, a ribbed grip
-                const r = k < 7 ? 0.9 : k < 9 ? 1.6 : 2.5;
-                if (Math.abs(o) > r + edge) continue;
-                const g = 0.3 + 0.42 * o / r + (o / r > 0.4 && o / r < 0.8 ? 0.16 : 0) + (k < 2 ? 0.25 : 0) + (k > 18 && Math.floor(k) % 3 === 0 ? -0.16 : 0) + (k > 9.5 && k < 11 ? 0.2 : 0);
-                MiniLab.dot(ctx, ...at(k, o), edge ? C.void : MiniLab.pick(C.hull, g, Math.round(k), Math.round(o)));
-            } });
-            MiniLab.dot(ctx, ...at(14, 2), s.phase === 'cut' && paused() ? C.danger : s.firing ? C.uiBright : C.uiDim);   // the ready light
-            if (away > 0) return;
-            if (s.firing) for (let k = 1; k <= STANDOFF; k += 0.5) MiniLab.dot(ctx, x + TU.x * k, y + TU.y * k, k < 2 ? C.star : C.uiBright);   // the flame: a thin blue-white jet; the metal shows its own heat
-            reticle(x, y);
         }
+        const TOOL_R = k => (k < 6 ? 0.75 + 0.06 * k : k < 7.2 ? 1.45 : k < 9.4 ? 1.2 : k < 11.4 ? 2.05 : k < 28.4 ? 2.5 : 2.5 - (k - 28.4) * 1.6);
+        /** The torch: nozzle, valve, ribbed grip and hose, held STANDOFF off the metal along U from the tip; `away` pulls it back.
+            hoseTo: where the hose goes (off the bottom of the picture for you, to Jaxon's pack when he has it). */
+        function drawTool(L, tip, U, away, hoseTo) {
+            const n1 = { x: U.y, y: -U.x }, N = n1.x - n1.y >= 0 ? n1 : { x: -n1.x, y: -n1.y };   // its lit side: towards the light, up and right
+            const bx = tip.x + U.x * (away + STANDOFF), by = tip.y + U.y * (away + STANDOFF), at = (k, o = 0) => [bx + U.x * k + N.x * o, by + U.y * k + N.y * o];
+            const [hx, hy] = at(29), [ex, ey] = hoseTo(hx, hy), mx = (hx + ex) / 2 + 6, my = Math.max(hy, ey) + 18;   // the hose sags
+            for (let t = 0; t <= 1; t += 0.004) {
+                const u = 1 - t, px = u * u * hx + 2 * u * t * mx + t * t * ex, py = u * u * hy + 2 * u * t * my + t * t * ey;
+                const tx = 2 * u * (mx - hx) + 2 * t * (ex - mx), ty = 2 * u * (my - hy) + 2 * t * (ey - my), tl = Math.hypot(tx, ty) || 1, qx = ty / tl, qy = -tx / tl, lit = qx - qy >= 0 ? 1 : -1;
+                const cx = (px + 0.5) * d, cy = (py + 0.5) * d;
+                L.set(cx - qx * lit * 1.6, cy - qy * lit * 1.6, C.void); L.set(cx - qx * lit * 0.6, cy - qy * lit * 0.6, HOSE[0]);
+                L.set(cx + qx * lit * 0.4, cy + qy * lit * 0.4, HOSE[1]); L.set(cx + qx * lit * 1.3, cy + qy * lit * 1.3, HOSE[2]);
+            }
+            const xs = [at(-1, -3.5), at(-1, 3.5), at(30, -3.5), at(30, 3.5)].map(q => q[0]), ys = [at(-1, -3.5), at(-1, 3.5), at(30, -3.5), at(30, 3.5)].map(q => q[1]);
+            eachArt(d, Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys), (ax, ay, fx, fy) => {
+                const rx = fx - bx, ry = fy - by, k = rx * U.x + ry * U.y, o = rx * N.x + ry * N.y;
+                if (k < -0.7 || k > 29.6) return;
+                const r = Math.max(0.5, TOOL_R(Math.max(0, k))), ao = Math.abs(o);
+                if (ao > r + 0.75) return;
+                if (ao > r || k < -0.1) return L.set(ax, ay, C.void);   // a dark outline round it
+                const n = o / r, nz = Math.sqrt(Math.max(0, 1 - n * n));
+                let lum = 0.08 + 0.64 * Math.max(0, 0.72 * n + 0.6 * nz) + (n > 0.38 && n < 0.72 ? 0.14 : 0), ramp = R.HULL;
+                if (k < 6) { ramp = R.COPPER; lum += k < 0.8 ? 0.22 : 0; }             // the copper nozzle, its mouth hot
+                else if (k < 7.2) lum += 0.12;                                         // a bright ring
+                else if (k >= 9.4 && k < 11.4) lum += 0.06;                            // the valve block
+                else if (k >= 11.4 && k < 28.4) { ramp = R.RUBBER; if (k > 13 && (k - 13) % 2.2 < 0.6) lum -= 0.3; }   // the ribbed grip
+                L.pick(ax, ay, ramp, MiniLab.clamp(lum, 0, 1));
+            });
+            const [rlx, rly] = at(10.4, 1.4);                    // the ready light, on the valve block
+            const rc = s.phase === 'cut' && paused() ? C.danger : s.firing ? C.uiBright : C.uiDim;
+            L.set(A(rlx), A(rly), rc); L.set(A(rlx) + 1, A(rly), rc);
+            if (away > 0) return;
+            if (s.firing) for (let k = 0.3; k <= STANDOFF; k += 0.2) {   // the flame: a thin blue-white jet; the metal shows its own heat
+                const fx = (tip.x + U.x * k + 0.5) * d, fy = (tip.y + U.y * k + 0.5) * d;
+                L.set(fx, fy, k < 1.6 ? C.star : C.uiBright);
+                if (k > 1 && k < 2.6) L.set(fx + N.x, fy + N.y, R.ICE.hex[4]);
+            }
+        }
+        const TU_DIR = { x: TU.x, y: TU.y }, offBottom = (hx, hy) => [hx + 30, H + 10];
+        function drawTorch(L) {                                  // yours, held just off the metal; when the job is done it is pulled back
+            if (s.auto) return;
+            const away = s.phase === 'cut' || s.phase === 'dry' ? 0 : 300 * Math.min(1, s.openT / 0.6) ** 2;
+            drawTool(L, s.tip, TU_DIR, away, offBottom);
+            if (away === 0) reticle(L, s.tip.x, s.tip.y);
+        }
+
+        // ── Jaxon (the cutter), in his suit: by our lamp, tethered; when he takes the torch he works the seam from beside it ──
+        const JAX_H = 64, JAX_IDLE = { x: 205, y: 250 }, JAX_REACH = 27;   // units: his height; his feet by the lamp; hands to the tip
+        const cutterId = window.MiniCrew ? window.MiniCrew.idOf(setup.cutter) || 'jaxon' : 'jaxon';
+        let jax = { x: JAX_IDLE.x, y: JAX_IDLE.y, facing: 1, side: -1, working: false }, lastDraw = 0;
+        const handsOf = j => ({ x: j.x + j.facing * 0.33 * JAX_H, y: j.y - 0.7 * JAX_H });
+        function moveJaxon(dt) {
+            const working = !!s.auto && (s.phase === 'cut' || s.phase === 'dry');
+            let want = { x: JAX_IDLE.x, y: JAX_IDLE.y, facing: 1 };
+            if (working) {                                       // hands beside the tip, out from the seam, on the side he is working from
+                if (s.tip.x < HB.cx - 10) jax.side = -1; else if (s.tip.x > HB.cx + 10) jax.side = 1;
+                const n = normal(s.tip.x, s.tip.y), wx = n.x * 0.6 + jax.side * 0.8, wy = n.y * 0.6 + 0.35, wl = Math.hypot(wx, wy) || 1;
+                const hx = s.tip.x + (wx / wl) * JAX_REACH, hy = s.tip.y + (wy / wl) * JAX_REACH, facing = s.tip.x >= hx ? 1 : -1;
+                want = { x: hx - facing * 0.33 * JAX_H, y: hy + 0.7 * JAX_H, facing };
+            }
+            const k = 1 - Math.exp(-dt * (working ? 6 : 2.5));
+            jax = { ...jax, x: jax.x + (want.x - jax.x) * k, y: jax.y + (want.y - jax.y) * k, facing: want.facing, working };
+        }
+        function drawTether(L) {                                 // his line to the lamp's foot, slack
+            const MC = window.MiniCrew;
+            if (!MC || s.part !== 'hatch') return;
+            const bob = jax.working ? 0 : Math.round(Math.sin(Math.floor(clock * 8) / 8 * 0.9) * 2 * d) / d;
+            const x0 = jax.x - jax.facing * 0.1 * JAX_H, y0 = jax.y - 0.5 * JAX_H + bob, x1 = LAMP.x - 3, y1 = LAMP.y + 5, mx = (x0 + x1) / 2, my = Math.max(y0, y1) + 10;
+            for (let t = 0; t <= 1; t += 0.01) { const u = 1 - t; L.set((u * u * x0 + 2 * u * t * mx + t * t * x1 + 0.5) * d, (u * u * y0 + 2 * u * t * my + t * t * y1 + 0.5) * d, t % 0.04 < 0.02 ? C.hull[3] : C.hull[2]); }
+        }
+        function drawJaxon() {
+            const MC = window.MiniCrew;
+            if (!MC || s.part !== 'hatch') return;
+            const bob = jax.working ? 0 : Math.round(Math.sin(Math.floor(clock * 8) / 8 * 0.9) * 2 * d) / d;   // he drifts on his line, eight steps a second
+            const warm = MiniLab.clamp(1 - Math.hypot(jax.x - LAMP.aimX, jax.y - 30 - LAMP.aimY) / 200, 0, 1);
+            MC.small(ctx, cutterId, jax.x, jax.y + bob, { h: JAX_H, pose: jax.working ? 'reach' : 'float', facing: jax.facing, light: 1, warm: 0.25 + 0.5 * warm, dim: 0.25 });
+        }
+        function drawJaxonTorch(L) {                             // the torch in his hands, its hose to his pack
+            if (!s.auto || !jax.working) return;
+            const hd = handsOf(jax), ux = hd.x - s.tip.x, uy = hd.y - s.tip.y, ul = Math.hypot(ux, uy) || 1;
+            drawTool(L, s.tip, { x: ux / ul, y: uy / ul }, 0, () => [jax.x - jax.facing * 0.13 * JAX_H, jax.y - 0.6 * JAX_H]);
+        }
+
+        // ── the readouts: by the torch, one short line; and a few quiet ones in the corner (MiniHost notes, IBM Plex) ──
+        const shown = new Map();
+        function note(id, text, o) {                             // only touch the page when a readout changes
+            const key = text == null ? null : [text, o.x, o.y, o.tone, o.align, o.size].join('|');
+            if (shown.get(id) === key) return;
+            shown.set(id, key);
+            if (ui.note) ui.note(id, text, o);
+        }
+        function unitsPerPx() { const r = cv.getBoundingClientRect(); return r.width > 0 ? W / r.width : 0.5; }
         const growing = () => clock - s.progT < READOUT_FOR;
         function tipLabel() {                                    // one short readout by the torch, or none: what is wrong, what to do, how far
             if (!canSteer()) return null;
-            if (paused()) return Math.floor(clock * 3) % 3 ? [['COOLING'], C.danger] : null;
-            if (s.firing && s.strayT >= STRAY_AFTER) return [['OFF THE LINE'], C.text];
-            if (!taught[s.part]) { const hints = HINTS[s.part]; return [hints[Math.min(hints.length - 1, s.cut > 0 ? 1 : 0)], C.uiBright]; }
-            if (s.firing && s.fastT > FAST_AFTER) return [['SLOW DOWN'], C.warmBright];
-            if (s.firing && s.idleT > IDLE_AFTER) return [['MOVE ON'], C.warmBright];
-            if (growing()) return [[s.part === 'hatch' ? seamPercent() + '%' : s.progText], C.uiBright];
+            if (paused()) return Math.floor(clock * 3) % 3 ? [['COOLING'], 'danger'] : null;
+            if (s.firing && s.strayT >= STRAY_AFTER) return [['OFF THE LINE'], 'text'];
+            if (!taught[s.part]) { const hints = HINTS[s.part]; return [hints[Math.min(hints.length - 1, s.cut > 0 ? 1 : 0)], 'ui']; }
+            if (s.firing && s.fastT > FAST_AFTER) return [['SLOW DOWN'], 'warm'];
+            if (s.firing && s.idleT > IDLE_AFTER) return [['MOVE ON'], 'warm'];
+            if (growing()) return [[s.part === 'hatch' ? seamPercent() + '%' : s.progText], 'ui'];
             return null;
         }
+        const TIP_PX = 16, TIP_LINE = 1.25, NOTE_PX = 13, NOTE_LINE = 1.3, CHAR_EM = 0.62;   // the note font (minigames.css): px, line height, a Plex Mono character
         function drawTipLabel() {                                // up and to the left of the tip: clear of the torch, and of the seam running through the tip
-            const label = tipLabel();
-            if (!label) return;
-            const [lines, col] = label, sc = LABEL_SCALE, lh = 6 * sc, w = Math.max(...lines.map(l => MiniLab.textWidth(l, sc))), h = lines.length * lh - sc;
-            const x = Math.round(s.tip.x), y = Math.round(s.tip.y);
-            const lx = MiniLab.clamp(x - LABEL_GAP - w < 3 ? x + LABEL_GAP : x - LABEL_GAP - w, 3, W - 3 - w), ly = MiniLab.clamp(y - LABEL_GAP - h < 3 ? y + LABEL_GAP : y - LABEL_GAP - h, 3, H - 3 - h);
-            MiniLab.shade(ctx, lx - 3, ly - 3, w + 6, h + 6, 0.85, C.void);
-            lines.forEach((l, k) => MiniLab.text(ctx, l, lx, ly + k * lh, col, sc));
+            const label = tipLabel(), upx = unitsPerPx();
+            if (!label) { note('tip0', null, {}); note('tip1', null, {}); return; }
+            const [lines, tone] = label, lh = TIP_PX * TIP_LINE * upx, w = Math.max(...lines.map(l => l.length)) * TIP_PX * CHAR_EM * upx, h = lines.length * lh;
+            const x = s.tip.x + 0.5, y = s.tip.y + 0.5, left = x - LABEL_GAP - w >= 3, up = y - LABEL_GAP - h >= 3;
+            const lx = left ? x - LABEL_GAP : Math.min(x + LABEL_GAP, W - 3 - w), ly = MiniLab.clamp(up ? y - LABEL_GAP - h : y + LABEL_GAP, 3, H - 3 - h);
+            [0, 1].forEach(k => note('tip' + k, lines[k] == null ? null : lines[k], { x: lx, y: ly + k * lh, align: left ? 'right' : 'left', tone, size: 'm' }));
         }
         const seamPercent = () => Math.min(100, Math.floor((100 * s.cut) / (SEAM.length * TEAR)));   // the hatch tears free at TEAR: that is 100%
-        function bar(x, y, label, v, col, note) {
-            MiniLab.text(ctx, label, x, y, C.textDim, 2);
-            MiniLab.shade(ctx, x + 38, y + 2, 66, 6, 0.3, C.uiDim);
-            if (v > 0) MiniLab.shade(ctx, x + 38, y + 2, Math.max(1, Math.round(66 * Math.min(1, v))), 6, 1, col);
-            if (note) MiniLab.text(ctx, note, x + 110, y, col, 2);
+        function readout(rows, fromTop) {                        // [id, text or null, tone]: stacked in the corner, the empty ones left out
+            const lh = NOTE_PX * NOTE_LINE * unitsPerPx(), live = rows.filter(r => r[1] != null);
+            rows.filter(r => r[1] == null).forEach(r => note(r[0], null, {}));
+            live.forEach(([id, text, tone], k) => note(id, text, { x: 8, y: fromTop ? 8 + k * lh : H - 8 - (live.length - k) * lh, tone }));
         }
-        function hud(x, y, rows) {                               // fuel and heat, then this part's own rows: [label or text, value, colour, scale, note after a bar]
-            const h = heatAt(s.tip), wide = rows.some(r => r[4]);
-            MiniLab.shade(ctx, x - 6, y - 6, wide ? 148 : 116, 48 + rows.length * 14, 0.82, C.void);
-            bar(x, y, 'FUEL', s.fuel, s.fuel < 0.2 ? C.danger : C.ui);
-            bar(x, y + 14, 'HEAT', h, h >= WARN ? C.danger : h > 0.5 ? C.warm : C.ui);
-            rows.forEach(([label, v, col, scale, note], k) => (v === null ? MiniLab.text(ctx, label, x, y + 29 + k * 14, col, scale) : bar(x, y + 28 + k * 14, label, v, col, note)));
-            if (s.phase === 'cut' && paused() && Math.floor(clock * 3) % 2) MiniLab.text(ctx, 'COOLING', x, y + 30 + rows.length * 14, C.danger, 2);
+        function heatRow() {                                     // the metal's heat under the torch, while there is any
+            const h = heatAt(s.tip), cooling = s.phase === 'cut' && paused();
+            if (h < 0.1 && !cooling) return ['heat', null];
+            return ['heat', 'HEAT ' + Math.min(100, Math.round(h * 100)) + '%' + (cooling && Math.floor(clock * 3) % 2 ? '   COOLING' : ''), h >= WARN || cooling ? 'danger' : h > 0.5 ? 'warm' : 'dim'];
         }
-        function drawSeamGuide(f) {                              // the suit marks what is still to cut, in its own cool colour; near the end it blinks
-            const march = Math.floor(clock * 6), blink = f >= 0.85 && Math.floor(clock * 3) % 2, col = C.ui;
-            SEAM.forEach((i, k) => {
-                const x = i % W, y = (i - x) / W;
-                if (s.seamCut[k]) return;
-                if (blink) { PLUS.forEach(([ox, oy]) => MiniLab.dot(ctx, x + ox, y + oy, C.ui)); MiniLab.dot(ctx, x, y, C.uiBright); } else if ((x + y + march) % 6 < 3) MiniLab.dot(ctx, x, y, col);
+        const fuelRow = () => ['fuel', 'FUEL ' + Math.round(s.fuel * 100) + '%', s.fuel < 0.2 ? 'danger' : 'dim'];
+        function drawSeamGuide(L, f) {                           // the suit marks what is still to cut, in its own cool colour; near the end it blinks
+            const march = Math.floor(clock * 6), blink = f >= 0.85 && Math.floor(clock * 3) % 2;
+            if (blink) GUIDE.forEach(g => { if (!s.seamCut[g.k]) PLUS.forEach(([ox, oy]) => L.set(g.ax + ox, g.ay + oy, C.ui)); });
+            GUIDE.forEach(g => {
+                if (s.seamCut[g.k]) return;
+                if (blink) L.set(g.ax, g.ay, C.uiBright); else if ((g.j + march) % 6 < 3) L.set(g.ax, g.ay, C.ui);
             });
         }
-        function drawLid(t) {                                    // it pops, hangs, knocks the rim, then drifts out towards us
+        const GUIDE = [];                                        // the seam as a fine line of art pixels, each tied to its seam pixel and its step round the path
+        if (setup.mode === 'hatch') eachArt(d, ...HATCH_BOX, (ax, ay, x, y) => {
+            if (Math.abs(sdf(x, y)) > 0.55 / d) return;
+            let k = -1, kd = 9;
+            for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) { const q = SEAM_AT[(Math.round(y) + oy) * W + Math.round(x) + ox], dd = Math.hypot(Math.round(x) + ox - x, Math.round(y) + oy - y); if (q >= 0 && dd < kd) { k = q; kd = dd; } }
+            if (k < 0) return;
+            let j = 0, jd = 1e9;
+            PATH.forEach((p, n) => { const dd = (p.x - x) ** 2 + (p.y - y) ** 2; if (dd < jd) { jd = dd; j = n; } });
+            GUIDE.push({ ax, ay, k, j });
+        });
+        function drawLid(g, t) {                                 // it pops, hangs, knocks the rim, then drifts out towards us
             const p = Math.sin(Math.min(1, t / 0.18) * Math.PI / 2), u = Math.max(0, t - 0.18), v = Math.max(0, t - THUD_AT);
-            const k = 1 + 0.05 * p + 0.012 * u + 0.07 * v, lift = Math.round(2 + 30 * (k - 1));
-            ctx.save(); ctx.imageSmoothingEnabled = false;
-            ctx.translate(Math.round(HB.cx + 4 * p + 4 * u + 10 * v + 3 * v * v), Math.round(HB.cy - 3 * p - 1.5 * u - 4 * v));
-            ctx.rotate(0.012 * u + 0.05 * v + 0.03 * Math.min(1, v * 6)); ctx.scale(k, k);
-            ctx.drawImage(lidShadow, -HB.cx + lift, -HB.cy + lift); ctx.drawImage(lid, -HB.cx, -HB.cy);   // lifting off, it casts a shadow
-            ctx.restore();
+            const k = 1 + 0.05 * p + 0.012 * u + 0.07 * v, lift = 2 + 30 * (k - 1), ox = (HB.cx + 0.5) * d, oy = (HB.cy + 0.5) * d;
+            g.save(); g.imageSmoothingEnabled = false;
+            g.translate(Math.round(ox + (4 * p + 4 * u + 10 * v + 3 * v * v) * d), Math.round(oy + (-3 * p - 1.5 * u - 4 * v) * d));
+            g.rotate(0.012 * u + 0.05 * v + 0.03 * Math.min(1, v * 6)); g.scale(k, k);
+            g.drawImage(lidShadow, -ox + Math.round(lift * d), -oy + Math.round(lift * d)); g.drawImage(lid, -ox, -oy);   // lifting off, it casts a shadow
+            g.restore();
         }
-        function drawGlint() {                                   // one glint on the corridor floor: our lamp, caught by something
-            const ph = (clock * 0.6) % 1, arm = ph < 0.08 ? 3 : ph < 0.2 ? 2 : ph < 0.3 ? 1 : 0;
-            MiniLab.dot(ctx, GLINT.x, GLINT.y, arm ? C.star : C.warm);
-            for (let k = 1; k <= arm; k++) PLUS.forEach(([ox, oy]) => MiniLab.dot(ctx, GLINT.x + ox * k, GLINT.y + oy * k, k === 1 ? C.warmBright : C.warm));
+        function drawGlint(L) {                                  // one glint on the corridor floor: our lamp, caught by something
+            const ph = (clock * 0.6) % 1, arm = ph < 0.08 ? 3 : ph < 0.2 ? 2 : ph < 0.3 ? 1 : 0, gx = A(GLINT.x), gy = A(GLINT.y);
+            L.set(gx, gy, arm ? C.star : C.warm);
+            for (let k = 1; k <= Math.round(arm * d); k++) PLUS.forEach(([ox, oy]) => L.set(gx + ox * k, gy + oy * k, k <= d ? C.warmBright : C.warm));
         }
         function renderHatch() {
             const opened = s.phase === 'open' || s.phase === 'end', f = opened ? 1 : s.cut / SEAM.length;
             const jolt = opened && s.openT < 0.45 ? Math.round(2.4 * (1 - s.openT / 0.45)) : 0;   // the crack shakes the picture, then settles
-            ctx.fillStyle = C.void; ctx.fillRect(0, 0, W, H);
-            ctx.setTransform(1, 0, 0, 1, jolt * (Math.random() < 0.5 ? -1 : 1), jolt * (Math.random() < 0.5 ? -1 : 1));
-            ctx.drawImage(hullBg, 0, 0);
-            if (opened) { ctx.drawImage(hole, 0, 0); if (s.openT > 2.6) drawGlint(); }
+            moveJaxon(Math.min(0.1, clock - lastDraw)); lastDraw = clock;
+            ctx.setTransform(d, 0, 0, d, 0, 0);
+            art(g => { g.fillStyle = C.void; g.fillRect(0, 0, AW, AH); });
+            ctx.setTransform(d, 0, 0, d, Math.round(jolt * d * (Math.random() < 0.5 ? -1 : 1)), Math.round(jolt * d * (Math.random() < 0.5 ? -1 : 1)));
+            under.clear(); over.clear();
+            art(g => { g.drawImage(hullBg, 0, 0); if (opened) g.drawImage(hole, 0, 0); });
+            if (opened && s.openT > 2.6) drawGlint(under);
             if (opened && s.openT < 0.4) SEAM.forEach(i => {      // the last air flashing out of the seam as ice
                 const x = i % W, y = (i - x) / W, k = 1 - s.openT / 0.4;
-                MiniLab.shade(ctx, x - 1, y - 1, 3, 3, 0.45 * k, C.uiBright); MiniLab.shade(ctx, x, y, 1, 1, k, C.star);
+                for (let ay = A(y - 1); ay <= A(y + 1); ay++) for (let ax = A(x - 1); ax <= A(x + 1); ax++) if (MiniLab.on(ax, ay, 0.45 * k)) under.set(ax, ay, C.uiBright);
+                if (MiniLab.on(A(x), A(y), k)) udot(under, x, y, C.star);
             });
-            drawFlameLight(); drawBurns(opened);
-            if (!opened) drawSeamGuide(f);
-            if (opened && s.openT < 10) drawLid(s.openT);
-            drawSparks(); drawTorch();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            drawFlameLight(under); drawBurns(under, opened);
+            if (!opened) drawSeamGuide(under, f);
+            drawTether(under);
+            art(g => under.draw(g));
+            if (opened && s.openT < 10) art(g => drawLid(g, s.openT));
+            drawJaxon();
+            drawJaxonTorch(over); drawSparks(over); drawTorch(over);
+            art(g => over.draw(g));
+            ctx.setTransform(d, 0, 0, d, 0, 0);
             drawTipLabel();
-            const pct = opened ? 100 : seamPercent();             // the readout moves as the seam frees, and flashes while it does
-            hud(12, 198, [['SEAM', pct / 100, pct >= 100 || growing() ? C.uiBright : C.text, null, pct + '%'], ['SCARS ' + s.scars + '   WARPS ' + s.warps.length, null, C.textDim, 1]]);
+            const pct = opened ? 100 : seamPercent();             // the readout moves as the seam frees
+            readout([fuelRow(), heatRow(), ['seam', 'SEAM ' + pct + '%', pct >= 100 || growing() ? 'ui' : 'text'],
+                ['marks', s.scars || s.warps.length ? 'SCARS ' + s.scars + '   WARPS ' + s.warps.length : null, 'dim']], false);
         }
         function renderDisc() {
-            ctx.drawImage(discBg, 0, 0);
-            const bx = DX - DR - 8 + s.sweep * (2 * DR + 16), lit = s.phase === 'closing' ? 0.55 : 0.32;   // the light's sweep, reading
-            for (let x = Math.ceil(bx - 7); x <= bx + 7; x++) {
-                const half = Math.sqrt(Math.max(0, DR * DR - (x - DX) * (x - DX)));
-                if (half > 0) MiniLab.shade(ctx, x, DY - half, 1, half * 2, lit * (1 - Math.abs(x - bx) / 7), C.light);
+            ctx.setTransform(d, 0, 0, d, 0, 0);
+            under.clear(); over.clear();
+            art(g => g.drawImage(discBg, 0, 0));
+            const bx = DX - DR - 8 + s.sweep * (2 * DR + 16), lit = s.phase === 'closing' ? 0.5 : 0.3;   // the light's sweep, reading: a soft band of light moving across the gold
+            for (let ax = Math.ceil((bx - SWEEP_HALF + 0.5) * d); ax <= (bx + SWEEP_HALF + 0.5) * d; ax++) {
+                const x = (ax + 0.5) / d - 0.5, half = Math.sqrt(Math.max(0, DR * DR - (x - DX) * (x - DX)));
+                if (half <= 0) continue;
+                const band = lit * Math.exp(-(((x - bx) / (SWEEP_HALF * 0.45)) ** 2)) * window.MiniPaint.smooth(0, 16, half), base = 0.16 + 0.34 * Math.pow(MiniLab.clamp(0.5 + 0.5 * (x - DX) / DR, 0, 1), 1.7);
+                if (band < 0.03) continue;
+                for (let ay = A(DY - half); ay <= A(DY + half); ay++) {   // brighter steps of the disc's own gold, never a flat colour: it only ever lifts the metal
+                    const y = (ay + 0.5) / d - 0.5, edge = window.MiniPaint.smooth(0, 6, half - Math.abs(y - DY)), k = window.MiniPaint.level(R.GOLD, base + band * edge, ax, ay);
+                    if (k > window.MiniPaint.level(R.GOLD, base, ax, ay)) under.set(ax, ay, R.GOLD.hex[k]);
+                }
             }
             const glint = x => (Math.abs(x - bx) < 1.5 ? C.star : C.light);
             LINES.forEach((l, j) => {
                 const ex = DX + l.ux * l.len, ey = DY + l.uy * l.len, t = s.cutT[j], col = t !== null ? C.light : C.lightHalo;
-                if (t !== null && clock - t > 0.35) return MiniLab.line(ctx, DX, DY, ex, ey, CUT_LINE, 0.6);   // cut: a dead line, nothing to read
-                MiniLab.line(ctx, DX, DY, ex, ey, col);              // just cut, it flashes
-                [-4, -3, 3, 4].forEach(o => MiniLab.dot(ctx, DX + l.ux * l.notch - l.uy * o, DY + l.uy * l.notch + l.ux * o, col));
-                if (t === null) for (let d = 0; d <= l.len; d += 0.5) { const x = DX + l.ux * d; if (Math.abs(x - bx) < 4) MiniLab.dot(ctx, x, DY + l.uy * d, glint(x)); }
+                if (t !== null && clock - t > 0.35) return under.line(A(DX), A(DY), A(ex), A(ey), CUT_LINE, 0.6);   // cut: a dead line, nothing to read
+                under.line(A(DX), A(DY), A(ex), A(ey), col);         // just cut, it flashes
+                [-4, -3, 3, 4].forEach(o => under.set(A(DX + l.ux * l.notch - l.uy * o), A(DY + l.uy * l.notch + l.ux * o), col));
+                if (t === null) for (let dd = 0; dd <= l.len; dd += 0.5 / d) { const x = DX + l.ux * dd; if (Math.abs(x - bx) < 4) under.set(A(x), A(DY + l.uy * dd), glint(x)); }
             });
-            FIG_PX.forEach(p => MiniLab.dot(ctx, p.x, p.y, Math.abs(p.x - bx) < 4 ? glint(p.x) : C.lightHalo));
-            if (!s.centre) { MiniLab.dot(ctx, DX, DY, C.light); PLUS.forEach(([ox, oy]) => MiniLab.dot(ctx, DX + ox, DY + oy, C.lightHalo)); }
-            if (s.phase === 'cut') for (let k = 0, m = Math.floor(clock * 6); k < 240; k++) if ((k + m) % 7 < 3) {   // the suit marks where a cut counts
-                const a = (k / 240) * Math.PI * 2;
-                MiniLab.dot(ctx, DX + Math.cos(a) * CUT_FAR, DY + Math.sin(a) * CUT_FAR, C.ui);
+            FIG_PX.forEach(p => udot(under, p.x, p.y, Math.abs(p.x - bx) < 4 ? glint(p.x) : C.lightHalo));
+            if (!s.centre) { udot(under, DX, DY, C.light); PLUS.forEach(([ox, oy]) => under.set(A(DX) + ox * 2, A(DY) + oy * 2, C.lightHalo)); }
+            if (s.phase === 'cut') for (let k = 0, m = Math.floor(clock * 6); k < 360; k++) if ((Math.floor(k * 240 / 360) + m) % 7 < 3) {   // the suit marks where a cut counts
+                const a = (k / 360) * Math.PI * 2;
+                under.set(A(DX + Math.cos(a) * CUT_FAR), A(DY + Math.sin(a) * CUT_FAR), C.ui);
             }
-            drawFlameLight(); drawBurns(false); drawSparks(); drawTorch(); drawTipLabel();
+            drawFlameLight(under); drawBurns(under, false);
+            drawSparks(over); drawTorch(over);
+            art(g => { under.draw(g); over.draw(g); });
+            drawTipLabel();
             const n = s.cutT.filter(v => v !== null).length;
-            hud(12, 12, [['LINES ' + String(n).padStart(2, '0') + '/14', null, n === 14 || growing() ? C.uiBright : C.text, 2], ['CENTRE ' + (s.centre ? 'CUT' : '--'), null, s.centre ? C.uiBright : C.text, 2]]);
+            readout([fuelRow(), heatRow(), ['lines', 'LINES ' + String(n).padStart(2, '0') + '/14', n === 14 || growing() ? 'ui' : 'text'],
+                ['centre', 'CENTRE ' + (s.centre ? 'CUT' : '--'), s.centre ? 'ui' : 'text']], true);
         }
 
         // ── input ──
@@ -817,6 +1172,7 @@
 
     MiniHost.register({
         id: 'torch', kicker: 'EVA', title: 'The cutting torch',
+        density: DENSITY,                                        // 720 × 405 art pixels: the travel view's grain
         mount,
         autoResult(opts) {                                       // TEST_MODE: the crew member cut it
             return readOpts(opts).mode === 'disc'

@@ -1,10 +1,22 @@
-/* minigames.css — the frame MiniHost.js opens over the game.
-   The game's frame language (thin line border, a 2px accent rule on top, spaced-caps kicker, the picture, one line of
-   dialogue, a row of buttons), coloured from the minigame palette: MiniHost sets the --mg-* tokens from MiniLab.C.
+/* minigames.css — the frame MiniHost.js opens over the game, in the travel view's look (2026-10-11).
+   No box, no panel, no accent rule: the game dims behind, the picture floats on it, a quiet header above (or none), the
+   last line said under it as a voice (prototypes/screens/game-screen/reading.css: the name in the speaker's colour with
+   its ring, the line in IBM Plex Sans, the line before it faint), the choices as plain words that warm when pointed at.
+   Readouts the player needs sit over the picture as small mono text (ui.note). Words are "Graphite"; the picture's own
+   colours come from the minigame palette (MiniHost sets --mg-* from MiniLab.C).
    z-index 6000: above the game's full-screen overlays (warp plot, lander, docking, story reel: 5000; toasts: 4500),
    below the save notice (9999) and the title menu, end screens and narrative modal (10000). */
 
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
 .mini-host {
+    --mg-ink: #05070a; --mg-words: #e4e4e0; --mg-quiet: #8b8d90; --mg-faint: #5a6168; --mg-steel: #c9d1d6;
+    --mg-amber: #f08c2e; --mg-amber-br: #ffc27a; --mg-red: #e0453a;
+    --mg-f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --mg-f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --mg-f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --mg-shadow: 0 1px 0 #05070a;
+    --mg-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
     position: fixed;
     inset: 0;
     z-index: 6000;
@@ -12,10 +24,12 @@
     place-items: center;
     padding: 16px; /* MARGIN in MiniHost.js */
     overflow: auto;
-    background: rgba(4, 6, 8, 0.94);
-    background: color-mix(in srgb, var(--mg-void) 95%, transparent);
-    color: var(--mg-text);
-    font: 14px/1.5 var(--font-mono);
+    background: rgba(5, 7, 10, 0.95); /* the screen behind is only a faint shape: the old cutaway or the tower never shows through */
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    color: var(--mg-words);
+    font: 400 15px/1.4 var(--mg-f-text);
+    -webkit-font-smoothing: antialiased;
     animation: mini-host-in 250ms ease-out;
     transition: opacity 300ms; /* LEAVE_MS in MiniHost.js */
 }
@@ -25,38 +39,37 @@
 @keyframes mini-host-in { from { opacity: 0; } }
 
 .mini-frame {
-    width: min-content; /* as wide as the picture; text wraps to it */
+    width: min-content; /* as wide as the picture; words wrap to it */
     display: grid;
-    gap: 10px;
-    padding: 12px 16px 14px;
-    border: 1px solid var(--mg-line2);
-    border-top: 2px solid var(--mg-ui);
-    background: linear-gradient(180deg, var(--mg-deep), var(--mg-void));
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+    gap: 12px;
 }
 
-.mini-head { display: grid; gap: 2px; }
+/* ── the header: one quiet line above the picture's left edge ── */
+.mini-head { display: flex; align-items: baseline; gap: 16px; min-height: 26px; padding: 0 2px; text-shadow: var(--mg-shadow); }
+.mini-head.is-hidden { visibility: hidden; }
 
 .mini-kicker {
     margin: 0;
-    font: 600 0.72em/1.4 var(--font-display);
-    letter-spacing: 0.3em;
+    font: 500 12px/1 var(--mg-f-ui);
+    letter-spacing: 0.24em;
     text-transform: uppercase;
-    color: var(--mg-dim);
+    color: var(--mg-quiet);
+    white-space: nowrap;
 }
 
 .mini-title {
     margin: 0;
-    font: 600 1.45em/1.2 var(--font-display);
-    letter-spacing: 0.12em;
-    color: var(--mg-ui-br);
+    font: 300 22px/1.1 var(--mg-f-text);
+    letter-spacing: 0.06em;
+    color: var(--mg-words);
+    white-space: nowrap;
 }
 
-/* the picture: sized by MiniHost (whole device pixels per picture pixel where it can), never smoothed */
+/* ── the picture: sized by MiniHost (whole device pixels per art pixel where it can), never smoothed ── */
 .mini-screen {
     position: relative;
-    box-shadow: 0 0 0 1px var(--mg-line2);
     background: var(--mg-void);
+    box-shadow: 0 0 0 1px rgba(201, 209, 214, 0.07), 0 30px 90px rgba(0, 0, 0, 0.6);
 }
 
 .mini-canvas {
@@ -68,102 +81,145 @@
 
 .mini-canvas:focus { outline: none; } /* keys reach the minigame wherever focus sits in the frame, so the picture needs no ring */
 
-.mini-screen::after { /* scanlines */
-    content: '';
+/* readouts over the picture (ui.note): few, small, quiet */
+.mini-notes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+.mini-note {
     position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(180deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px);
+    margin: 0;
+    font: 400 13px/1.2 var(--mg-f-num);
+    letter-spacing: 0.02em;
+    color: var(--mg-quiet);
+    text-shadow: var(--mg-shadow), 0 0 6px rgba(5, 7, 10, 0.9);
+    white-space: nowrap;
 }
 
-/* the dialogue: one line at a time, the one before it faint above */
+.mini-note.is-m { font-size: 16px; }
+.mini-note.is-right { transform: translateX(-100%); }
+.mini-note.is-center { transform: translateX(-50%); }
+.mini-note.is-text { color: var(--mg-words); }
+.mini-note.is-ui { color: var(--mg-steel); }
+.mini-note.is-warm { color: var(--mg-amber-br); }
+.mini-note.is-danger { color: var(--mg-red); }
+
+/* ── the voice: the name over the line, the line before it faint above (reading.css .voice) ── */
 .mini-talk {
     contain: inline-size; /* a long line wraps; it never widens the frame past the picture */
-    min-height: 82px;
+    min-height: 98px;
     display: grid;
-    grid-template-columns: 120px 1fr;
     align-content: start;
-    gap: 2px 14px;
-    padding: 8px 12px;
-    background: var(--mg-dusk);
-    border: 1px solid var(--mg-line);
+    gap: 6px;
+    padding: 2px 2px 0;
+    text-shadow: var(--mg-shadow);
 }
 
 .mini-talk p { margin: 0; }
 
 .mini-prev {
-    grid-column: 1 / -1;
-    height: 18px;
+    min-height: 19px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    font-size: 12px;
-    color: var(--mg-dim);
-    opacity: 0.6;
+    font: 400 15px/1.3 var(--mg-f-text);
+    color: var(--mg-words);
+    opacity: 0.42;
 }
+
+.mini-prev b {
+    margin-right: 0.6em;
+    font: 500 13px/1 var(--mg-f-ui);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--tone, var(--mg-amber));
+}
+
+.mini-prev.is-narr { font-family: var(--mg-f-num); font-size: 14px; }
 
 .mini-who {
-    font: 600 11px/2 var(--font-display);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 15px;
+    font: 500 14px/1 var(--mg-f-ui);
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--mg-warm);
+    color: var(--tone, var(--mg-amber));
 }
 
-.mini-who.is-aura { color: var(--mg-ui); }
-.mini-who.is-note { color: var(--mg-dim); }
+.mini-who .mini-ring { flex: none; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }
+.mini-who.is-empty .mini-ring, .mini-who.is-note .mini-ring { display: none; }
 
 .mini-line {
-    max-width: 68ch;
-    font-size: 15px;
-    line-height: 1.55;
-    color: var(--mg-text);
+    max-width: 62ch;
+    font: 400 20px/1.36 var(--mg-f-text);
+    color: var(--mg-words);
+    text-wrap: balance;
 }
 
-.mini-line.is-note { color: var(--mg-dim); font-style: italic; }
+.mini-line.is-note { max-width: 86ch; font: 400 15px/1.6 var(--mg-f-num); color: #c7c9c6; }
 
-/* the buttons: the game's button shapes in the minigame palette */
+/* the speakers' colours (reading.css): people warm, A.U.R.A. steel */
+.mini-host .tone-cora { --tone: #f2e2c4; }
+.mini-host .tone-jaxon { --tone: #f08c2e; }
+.mini-host .tone-vance { --tone: #c4622a; }
+.mini-host .tone-aris { --tone: #ffc27a; }
+.mini-host .tone-mira { --tone: #e8836a; }
+.mini-host .tone-aura { --tone: var(--mg-steel); }
+
+/* ── the choices: plain words, a small mark before each; pointed at, they warm and step in ── */
 .mini-buttons {
-    min-height: 40px;
+    min-height: 36px;
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    align-items: baseline;
+    gap: 4px 30px;
+    padding: 0 2px;
 }
 
 .mini-btn {
-    padding: 11px 18px;
-    border: 1px solid var(--mg-line2);
-    border-radius: 3px;
-    background: transparent;
-    color: var(--mg-text);
-    font: 600 0.86em/1.2 var(--font-display);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 6px 0;
+    border: 0;
+    background: none;
+    color: var(--mg-words);
+    font: 400 18px/1.25 var(--mg-f-text);
+    letter-spacing: 0.01em;
+    text-shadow: var(--mg-shadow);
     white-space: nowrap;
     cursor: pointer;
     touch-action: none;
     user-select: none;
-    transition: background 150ms, border-color 150ms, color 150ms, transform 150ms;
+    transition: color 140ms var(--mg-ease), transform 140ms var(--mg-ease);
 }
 
-.mini-btn:hover:not([disabled]) { border-color: var(--mg-ui); color: var(--mg-ui-br); transform: translateY(-1px); }
-.mini-btn:focus-visible { outline: 1px solid var(--mg-ui-br); outline-offset: 2px; }
-.mini-btn:active:not([disabled]),
-.mini-btn.is-held { background: color-mix(in srgb, var(--mg-ui) 14%, transparent); border-color: var(--mg-ui); transform: none; }
+.mini-btn::before {
+    content: '\203A'; /* › */
+    font: 400 15px/1 var(--mg-f-num);
+    color: var(--mg-faint);
+    transition: color 140ms var(--mg-ease);
+}
 
-.mini-btn.is-primary { background: var(--mg-ui); border-color: var(--mg-ui); color: var(--mg-void); }
-.mini-btn.is-primary:hover:not([disabled]) { background: var(--mg-ui-br); border-color: var(--mg-ui-br); color: var(--mg-void); }
-.mini-btn.is-primary:active:not([disabled]),
-.mini-btn.is-primary.is-held { background: var(--mg-ui-dim); color: var(--mg-ui-br); }
+.mini-btn.is-hold::before { content: '\25CB'; font-size: 12px; } /* ○: press and hold */
+.mini-btn.is-primary::before { color: var(--mg-amber); }
 
-.mini-btn.is-quiet { color: var(--mg-dim); }
-.mini-btn[disabled] { opacity: 0.35; cursor: default; border-style: dashed; }
+.mini-btn:hover:not([disabled]), .mini-btn:focus-visible { color: var(--mg-amber); transform: translateX(3px); }
+.mini-btn:hover:not([disabled])::before, .mini-btn:focus-visible::before { color: var(--mg-amber); }
+.mini-btn:focus-visible { outline: none; text-decoration: underline 1px; text-underline-offset: 5px; }
+.mini-btn:active:not([disabled]), .mini-btn.is-held { color: var(--mg-amber-br); transform: none; }
+.mini-btn.is-held::before { content: '\25CF'; color: var(--mg-amber-br); } /* ●: held */
+
+.mini-btn.is-quiet { color: var(--mg-quiet); }
+.mini-btn[disabled] { color: var(--mg-faint); cursor: default; }
+.mini-btn[disabled]::before { color: #33373e; }
 
 @media (max-width: 640px) {
-    .mini-talk { grid-template-columns: 1fr; }
+    .mini-line { font-size: 17px; }
+    .mini-btn { font-size: 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .mini-host { animation: none; transition: none; }
-    .mini-screen::after { display: none; }
-    .mini-btn { transition: none; }
+    .mini-btn, .mini-btn::before { transition: none; }
 }
