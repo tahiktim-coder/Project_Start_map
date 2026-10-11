@@ -59,6 +59,7 @@
     const ORDER = ['travel', 'tower', 'stop', 'voice'];
     const OUTSIDE = new Set(['travel', 'dive-in', 'dive-out']);                          // travel and the tower are drawn only then
     const BLOCKERS = '.modal-overlay:not(.ns-held), .story-reel, .mini-host, .warp-plot, .throw-veil, .end-screen, #start-menu, #narrative-modal.active, .ns-film';
+    const COVERS = '.ns-film, #start-menu, .story-reel, .end-screen';   // opaque over the whole screen: nothing under them is drawn (a stale frame would show when they go)
     const CREW_BY_TAG = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
 
     // ── the bus ──
@@ -202,7 +203,8 @@
             const o = orbit();
             if (o && typeof o.tick === 'function') { try { o.tick(dt, frameBlocked); } catch (err) { console.error('NewScreen: NSOrbit.tick failed', err); } }
             each('update', dt, clock.t);
-            if (!frameBlocked || jumping || frameN % BLOCKED_RENDER_EVERY === 0) each('render', clock.t);
+            const covered = frameBlocked && !jumping && !!document.querySelector(COVERS);
+            if (!covered && (!frameBlocked || jumping || frameN % BLOCKED_RENDER_EVERY === 0)) each('render', clock.t);
         } finally { inFrame = false; }
         frameId = window.FrameClock ? window.FrameClock.request(frame) : requestAnimationFrame(frame);
     }

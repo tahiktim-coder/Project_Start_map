@@ -91,11 +91,14 @@
         const site = app && typeof app.siteOf === 'function' ? app.siteOf(node) : null;
         return site && !node[site.done] ? site : null;
     }
+    /** The strange site (a gap, a door...) is the ship's to fly to, not the team's: some of its choices move the whole ship. */
+    const strangeSite = (app, node) => { const site = siteOpen(app, node); return site && site.tag === 'ANOMALY' ? site : null; };
+    function teamSite(app, node) { const site = siteOpen(app, node); return site && site.tag !== 'ANOMALY' ? site : null; }
     /** A team trip is still to take here (counting nobody: who is fit is asked when the bridge is up). */
     function hasTeamAction(planet) {
         const n = planet, app = window.app;
         if (!isPlanet(n) || n.hasEva || n.ghost) return false;
-        return n.type !== 'GAS_GIANT' || !!siteOpen(app, n);                                 // a giant has no ground, unless a site is in orbit
+        return n.type !== 'GAS_GIANT' || !!teamSite(app, n);                                 // a giant has no ground, unless a site is in orbit
     }
     function canDate(app, node) {
         if (!app || !node || typeof app.canDateWreck !== 'function' || !app.canDateWreck(node)) return false;
@@ -122,7 +125,8 @@
         const scoop = (s.upgrades || []).includes('fuel_scoop');                             // the scoop took its fill on arrival: no skim on top
         if (n.type === 'GAS_GIANT' && !n.nsSkimmed && !scoop && s.energy < 100) add('skim', 'Skim fuel', 'giant', () => skim(app, n));   // full tanks: nothing to skim
         if (isPlanet(n) && !n.scanned) add('scan', 'Scan', 'world', () => app.handleScanAction(false));
-        if (hasTeamAction(n) && evaCrew(app).length >= 2 && !trip && !arisRefuses(app)) add('team', 'Send the team', siteOpen(app, n) ? 'site' : 'world', null, true);
+        if (isPlanet(n) && strangeSite(app, n) && !trip) add('strange', 'Fly closer', 'site', () => app.handleAnomalyAction());   // never while a team is down
+        if (hasTeamAction(n) && evaCrew(app).length >= 2 && !trip && !arisRefuses(app)) add('team', 'Send the team', teamSite(app, n) ? 'site' : 'world', null, true);
         if (!call && n._nsCall) call = savedCall(n);                                         // a call that waited through a reload
         if (call) add('call', 'Answer the call', 'call', () => answer(app));
         if (canDate(app, n)) add('date', 'Date the wreck', alive(byRole(s, 'SPECIALIST')) ? 'mira' : 'aura', () => app.dateWreck(n));

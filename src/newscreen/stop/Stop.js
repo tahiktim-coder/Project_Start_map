@@ -40,7 +40,7 @@
         mira: 'Down there I bring their star fix back. Up here, I scan the site.',
     };
     const SEND_MS = 2400, SHUTTLE_MS = 2200, GUARD_MS = 400, READ_MS = 250, MAX_LIT = 4, MAX_WORDS = 40, GATHER_LEAD = 2600;
-    const WORTH = ['light', 'escape', 'accept', 'call', 'date', 'team', 'dock', 'mine', 'settle', 'scan', 'skim'];   // more than 4: these first
+    const WORTH = ['light', 'escape', 'accept', 'call', 'strange', 'date', 'team', 'dock', 'mine', 'settle', 'scan', 'skim'];   // more than 4: these first
     const NEAR_WORLD = ['world', 'station', 'field', 'giant', 'site', 'light'];
     const wordsIn = s => (String(s || '').trim().match(/\S+/g) || []).length;
 

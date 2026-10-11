@@ -30,7 +30,7 @@
     --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --danger: #ff5468;
     --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; --f-text: 'IBM Plex Sans', system-ui, sans-serif; --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
     font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none;
-    animation: ns-title-in 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+    animation: ns-title-in 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
 @keyframes ns-title-in { from { opacity: 0; } }
 #start-menu.ns-title p { margin: 0; }
 #start-menu.ns-title .ns-title-art { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
