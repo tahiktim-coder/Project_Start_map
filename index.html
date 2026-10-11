@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="warp.css?v=10">
     <link rel="stylesheet" href="log.css?v=6">
     <link rel="stylesheet" href="theme.css?v=60">
-    <link rel="stylesheet" href="src/systems/minigames/minigames.css?v=1">
+    <link rel="stylesheet" href="src/systems/minigames/minigames.css?v=2">
 </head>
 
 <body>
@@ -32,6 +32,7 @@
                 on = sessionStorage.getItem('se-new-screen') === '1';
             } catch (err) { /* storage blocked: only ?new=1 itself turns it on */ }
             window.NEW_SCREEN = on;
+            if (on) document.documentElement.classList.add('ns-on');   // the cards' new look (src/newscreen/cards.css) is scoped under html.ns-on
         })();
     </script>
     <div class="app-container">
@@ -189,10 +190,10 @@
     <script src="src/systems/BoardingParty.js?v=40"></script>
     <script src="src/systems/SignalTune.js?v=38"></script>
     <script src="src/systems/AwayTeam.js?v=48"></script>
-    <script src="src/systems/LanderScene.js?v=59"></script>
-    <script src="src/systems/LanderSites.js?v=3"></script>
-    <script src="src/systems/LanderCrew.js?v=3"></script>
-    <script src="src/systems/LanderGame.js?v=57"></script>
+    <script src="src/systems/LanderScene.js?v=60"></script>
+    <script src="src/systems/LanderSites.js?v=4"></script>
+    <script src="src/systems/LanderCrew.js?v=4"></script>
+    <script src="src/systems/LanderGame.js?v=58"></script>
     <script src="src/systems/NavVista.js?v=45"></script>
     <script src="src/systems/ItemIcons.js?v=39"></script>
     <script src="src/systems/OrbitVista.js?v=4"></script>
@@ -214,30 +215,34 @@
     <script src="src/views/OrbitView.js?v=57"></script>
     <script src="src/generators/PlanetGenerator.js?v=40"></script>
     <script src="src/views/NavView.js?v=63"></script>
-    <script src="src/bundle.js?v=76"></script>
+    <script src="src/bundle.js?v=79"></script>
     <script src="src/systems/MissionLog.js?v=41"></script>
     <script src="src/systems/Coach.js?v=59"></script>
     <!-- Minigames: the Sim Bay sketches, played over the game by MiniHost (the four games are added one by one) -->
-    <script src="src/systems/minigames/MiniLab.js?v=2"></script>
-    <script src="src/systems/minigames/MiniShip.js?v=1"></script>
-    <script src="src/systems/minigames/MiniHost.js?v=5"></script>
-    <script src="src/systems/minigames/Corridor.js?v=12"></script>
-    <script src="src/systems/minigames/Torch.js?v=7"></script>
-    <script src="src/systems/minigames/DiscDating.js?v=5"></script>
-    <script src="src/systems/minigames/Breach.js?v=2"></script>
-    <!-- The new screen's files load only with the switch on (docs/BUILD_A.md §3, in this order); off, not one request. -->
+    <script src="src/systems/minigames/MiniLab.js?v=3"></script>
+    <script src="src/systems/minigames/MiniShip.js?v=2"></script>
+    <script src="src/systems/minigames/MiniHost.js?v=6"></script>
+    <script src="src/systems/minigames/Corridor.js?v=13"></script>
+    <script src="src/systems/minigames/Torch.js?v=8"></script>
+    <script src="src/systems/minigames/DiscDating.js?v=6"></script>
+    <script src="src/systems/minigames/Breach.js?v=3"></script>
+    <!-- The new screen's files load only with the switch on (docs/BUILD_A.md §3, docs/BUILD_B.md §10, in this order); off, not one request. -->
     <script>
         if (window.NEW_SCREEN) (function () {
             var files = [
-                'art/Paint.js?v=2', 'art/Sky.js?v=1', 'art/Sky2.js?v=1',
-                'crew/CrewEngine.js?v=1', 'crew/Cora.js?v=1', 'crew/Jaxon.js?v=1', 'crew/Aris.js?v=1', 'crew/Vance.js?v=1', 'crew/Mira.js?v=1',
+                'art/Paint.js?v=2', 'art/Sky.js?v=1', 'art/Sky2.js?v=1', 'art/Worlds.js?v=3',
+                'crew/CrewEngine.js?v=1', 'start/Dress.js?v=2',
+                'crew/Cora.js?v=1', 'crew/Jaxon.js?v=1', 'crew/Aris.js?v=1', 'crew/Vance.js?v=1', 'crew/Mira.js?v=1',
                 'ship/ShipArt.js?v=1', 'ship/ShipRooms.js?v=1', 'ship/ShipReactor.js?v=1', 'ship/ShipRoutine.js?v=1', 'ship/TowerArt.js?v=1',
-                'NewScreen.js?v=2', 'Route.js?v=2', 'Voice.js?v=2',
-                'travel/SectorLooks.js?v=1', 'travel/Field.js?v=1', 'travel/Pictures.js?v=3', 'travel/Travel.js?v=2',
-                'tower/TowerMarks.js?v=1', 'tower/Tower.js?v=2'
+                'NewScreen.js?v=5', 'Route.js?v=2', 'Orbit.js?v=3', 'Voice.js?v=5',
+                'travel/SectorLooks.js?v=2', 'travel/Field.js?v=3', 'travel/Pictures.js?v=5', 'travel/Travel.js?v=3',
+                'tower/TowerMarks.js?v=4', 'tower/Tower.js?v=5',
+                'stop/BridgeArt.js?v=1', 'stop/Dive.js?v=2', 'stop/Glass.js?v=2', 'stop/Stop.js?v=3',
+                'start/FilmSound.js?v=2', 'start/LaunchArt.js?v=2', 'start/LaunchFilm.js?v=2', 'start/Title.js?v=2', 'start/Wake.js?v=3'
             ];
             var html = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap">'
-                + '<link rel="stylesheet" href="src/newscreen/newscreen.css?v=1">';
+                + '<link rel="stylesheet" href="src/newscreen/newscreen.css?v=3">'
+                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=3">';
             for (var i = 0; i < files.length; i++) html += '<script src="src/newscreen/' + files[i] + '"><\/script>';
             document.write(html);
         })();
