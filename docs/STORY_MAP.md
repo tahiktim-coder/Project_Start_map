@@ -1,12 +1,12 @@
 # The story in nine steps (2026-10-14)
 
-The simple map. Everything else in the story docs hangs off these lines.
+The simple map, and the one to trust: where an older story doc disagrees, this page wins.
 
 **Before us** (the player never sees this directly; it comes out through wrecks, pages and the disc)
 1. Earth sends the disc: a second, better golden record.
 2. Earth regrets it and sends Exodus ships after it, told they are colonists.
 3. Later ships, with a newer drive, get the disc, but the drive throws them into the past, and they die here.
-4. The light learns from them. Now it wants the disc, and it copies people.
+4. The light wants the disc, nothing else, and it copies anything that comes close. Why is never explained.
 
 **Our journey** (what the player lives)
 5. Us: Exodus 9, the old drive. Nobody aboard knows about the disc.
@@ -24,13 +24,7 @@ The simple map. Everything else in the story docs hangs off these lines.
 - The tape film (the reel of where the ships went) is cut.
 - The station is simply where the last disc ship died. Nothing extra.
 
-## One knot left
-A.U.R.A. says "four" from the moment we wake up, so the copy is aboard from the start. When was Mira copied? Simplest: while we
-slept. The light copies every crew that passes, out of habit, the way it learned from the others; that is not the same as
-noticing us. It only starts to care once we carry the disc.
-
-## What the light wants
-It has no plan of its own. It learned wanting from the crews who died wanting the disc, so it wants what they wanted: the disc,
-and to go home with it. It copies people and ships because copying is how it learned, sure of itself and wrong. Neither evil nor
-wise. Take the disc home and it follows us to Earth, which is what the 2029 warning was afraid of. It is never said on screen;
-the player sees it in what the light does. (No hints or "slips" in Mira's lines: decided 2026-10-14.)
+## The light, in one line
+It wants the disc and copies anything that comes close. No plan, no learning, no reason given. It copied Mira while we slept, the
+way it copies every ship that passes; it only turns toward us once the disc is in our hold. Take the disc home and it follows it
+to Earth (what the 2029 warning feared). Cut it and every copy goes dark. Never said on screen. No hints in Mira's lines.
