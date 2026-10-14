@@ -28,3 +28,9 @@ The simple map. Everything else in the story docs hangs off these lines.
 A.U.R.A. says "four" from the moment we wake up, so the copy is aboard from the start. When was Mira copied? Simplest: while we
 slept. The light copies every crew that passes, out of habit, the way it learned from the others; that is not the same as
 noticing us. It only starts to care once we carry the disc.
+
+## What the light wants
+It has no plan of its own. It learned wanting from the crews who died wanting the disc, so it wants what they wanted: the disc,
+and to go home with it. It copies people and ships because copying is how it learned, sure of itself and wrong. Neither evil nor
+wise. Take the disc home and it follows us to Earth, which is what the 2029 warning was afraid of. It is never said on screen;
+the player sees it in what the light does. (No hints or "slips" in Mira's lines: decided 2026-10-14.)
