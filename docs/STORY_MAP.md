@@ -6,13 +6,13 @@ The simple map, and the one to trust: where an older story doc disagrees, this p
 1. Earth sends the disc: a second, better golden record.
 2. Earth regrets it and sends Exodus ships after it, told they are colonists.
 3. Later ships, with a newer drive, get the disc, but the drive throws them into the past, and they die here.
-4. The light wants the disc, nothing else, and it copies anything that comes close. Why is never explained.
+4. Beside the light waits Eden, a perfect world that is a trap. It wants the disc; the light tries to save the people it catches.
 
 **Our journey** (what the player lives)
 5. Us: Exodus 9, the old drive. Nobody aboard knows about the disc.
 6. We date the dead ships with the disc's star map (sectors 1-4).
 7. We find the disc in the last ship that carried it (sector 5).
-8. The light notices us: a twin ship flies beside us, exactly like ours.
+8. Eden notices us once we carry the disc: a twin ship (its copy) flies beside us.
 9. At the light, you choose: cut the disc, or take it home.
 
 ## Decided (2026-10-14)
@@ -24,7 +24,15 @@ The simple map, and the one to trust: where an older story doc disagrees, this p
 - The tape film (the reel of where the ships went) is cut.
 - The station is simply where the last disc ship died. Nothing extra.
 
-## The light, in one line (UNDER REVIEW: the designer finds it boring; new twists are being pitched)
-It wants the disc and copies anything that comes close. No plan, no learning, no reason given. It only turns toward us once the disc
-is in our hold. Take the disc home and it follows it
-to Earth (what the 2029 warning feared). Cut it and every copy goes dark. Never said on screen. No hints in Mira's lines.
+## The world (decided 2026-10-14)
+**What the player sees and feels**
+- The light looks frightening (it fills the window, it gives no heat). It is the good one: it gathers the lost and gives them peace.
+- Eden looks perfect (green, Earth-like, beside the light). It is the trap: it lures crews to stay, copies things (the twin ship),
+  and its "wrong place" is where the strange teleport throws us. Eden should feel a little too perfect, never explained.
+- The disc is the map to Earth. The trap wants it, because Earth means more people to keep. That is why Earth regretted sending it.
+
+**Only we know (never shown in the game)**
+- Long ago someone reached the light and wished to go home. Granting that wish tore time (why later ships are thrown into the past)
+  and let the trap in. The light has been trying to make up for it since, saving whoever it can.
+
+**Still to decide:** exactly what the final choice is (the light, Eden, the disc) and what the player sees at the end.
