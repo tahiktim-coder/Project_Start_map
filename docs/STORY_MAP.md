@@ -36,3 +36,15 @@ The simple map, and the one to trust: where an older story doc disagrees, this p
   and let the trap in. The light has been trying to make up for it since, saving whoever it can.
 
 **Still to decide:** exactly what the final choice is (the light, Eden, the disc) and what the player sees at the end.
+
+## Why we fly toward the light from the start
+Our orders: follow the course the eight ships before us took to "the new world". That course ends at the light, so from the first
+minute it is the bright star at the end of our heading, and the crew think it is the new home's sun. The disc went that way, which
+is why every Exodus course points there.
+
+## Time (writers only)
+- Years: the disc is sent (year not decided) -> 2029 the warning arrives -> Exodus 1-8 launch (years not decided) -> 2281 we launch
+  -> later ships launch after us -> 2342 we wake. Later ships are thrown into the past and die here before we arrive. Exodus 1's
+  wish sent them home too early: they are the 2029 warning (the loop).
+- The light stands outside our time. For us the tear "just happened"; for the light it has always been happening, all at once,
+  so the loop has no "first". Never explained in the game; time dilation is not explained either (revisit only if play needs it).
