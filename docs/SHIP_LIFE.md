@@ -119,3 +119,11 @@ to**. At the end, **the window at the light**, which reads all four.
 - Aris's book as a quiz.
 - Asking A.U.R.A. to find a call: that becomes one more find.
 - Any rule that the light sees one person's wanting: that is new story.
+
+## Decisions (2026-10-14)
+
+- **Who you show it to:** keep it light. No deep "who knows what" tracking: a find can be shown to one person or the table, they
+  react, and that is it. Scope stays small.
+- **Strip or names:** no.
+- **The window at the light:** not decided yet. Endings stay as they are until then.
+- **One evening (click the crew)** and **supper at the jump:** no objection; one evening is built first.
