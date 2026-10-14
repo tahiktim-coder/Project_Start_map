@@ -93,6 +93,7 @@
         tend:    { frames: 4, ms: 280, head: 'down', hipX: -10, hands: 91 },
         carry:   { frames: 8, ms: 130, move: 3, head: 'front' },
         wall:    { frames: 4, ms: 1300, head: 'down', reach: 18 },
+        wave:    { frames: 4, ms: 240, head: 'front' },
     });
 
     // ── small helpers ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -213,6 +214,12 @@
         idle(P, b, A, f) {
             P.breath = [0, 0.5, 1, 0.5][f]; P.headDy = f === 2 ? -1 : 0;
             P.feet = [v2(HIPX + b.stanceX[0], ANKLE), v2(HIPX + b.stanceX[1], ANKLE)];
+        },
+        /** Standing, the far hand raised beside the head and swaying: a wave with the body's own arm (never a third one). */
+        wave(P, b, A, f) {
+            P.breath = [0, 0.5, 1, 0.5][f];
+            P.feet = [v2(HIPX + b.stanceX[0], ANKLE), v2(HIPX + b.stanceX[1], ANKLE)];
+            P.hands = { target: [null, v2(HIPX + b.shX[1] + 14 + [-2, 0, 2, 0][f], HIPY + b.shY - (b.upper + b.lower) * 0.66)] };   // out to the side, above the shoulder
         },
         walk(P, b, A, f) { gait(P, b, A, f, false); },
         carry(P, b, A, f) { gait(P, b, A, f, true); },

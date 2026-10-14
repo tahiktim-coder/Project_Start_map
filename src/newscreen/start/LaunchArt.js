@@ -404,7 +404,7 @@
                     for (let k = 0; k < 44; k++) { fr.solid(x - k * 0.25, y + 5 + k, R.STEEL, 0.25); fr.solid(x + k * 0.25, y + 5 + k, R.STEEL, 0.25); }
                 });
                 const warm = document.createElement('canvas').getContext('2d');                         // bake every idle frame now, so the cut never stalls
-                CREW.forEach(c => [0, 750, 1550, 2450].forEach(ms => { CE.sprite(dressId(c.id), 'idle', CE.frameAt('idle', ms)); CE.draw(warm, dressId(c.id), 'idle', ms, 20, 60, { facing: c.facing, warm: 3, rim: -c.facing, seed: c.seed }); }));
+                CREW.forEach(c => [0, 750, 1550, 2450].forEach(ms => { const a = c.wave ? 'wave' : 'idle'; CE.sprite(dressId(c.id), a, CE.frameAt(a, ms)); CE.draw(warm, dressId(c.id), a, ms, 20, 60, { facing: c.facing, warm: 3, rim: -c.facing, seed: c.seed }); }));
                 return { bg: bg.canvas(), stage: st.canvas(), front: fr.canvas(), stars, shipLight, bgLamps, hands };
             },
             draw(t, S) {
@@ -433,25 +433,10 @@
             },
         });
         const dressId = id => (window.NS_DRESS ? id + '-dress' : id);
-        /** One crew member on the stage: the far arm raised and waving behind the body first, then the person, warm in the spot. */
+        /** One crew member on the stage, warm in the spot; the ones who wave raise their own far arm (CrewEngine 'wave'). */
         function drawCrew(c, t, ox) {
-            const ms = t + c.seed * 1300, id = dressId(c.id), X = c.x - ox;
-            const S = CE.sprite(id, 'idle', CE.frameAt('idle', ms));
-            const top = POD.floor - S.origin.y, nx = X + (S.neck.x - S.origin.x) * c.facing, ny = top + S.neck.y;
-            if (c.wave) waveArm(c, nx - c.facing * 4, ny + 4, t);
-            CE.draw(ctx, id, 'idle', ms, X, POD.floor, { facing: c.facing, warm: 3, rim: -c.facing, seed: c.seed });
-        }
-        function waveArm(c, sx, sy, t) {
-            const big = c.wave === 'big', k = Math.sin((t + c.seed * 400) / (big ? 230 : 320)), dark = window.NS_DRESS ? ['#161d2e', '#2a3752', '#384866', '#5a6e92'] : ['#1a1f24', '#2a2f36', '#3a414a', '#4d5560'];
-            const ex = sx - c.facing * 8, ey = sy - 4, hx = ex - c.facing * 1 + k * (big ? 3.5 : 2), hy = ey - 14 + Math.abs(k);
-            const seg = (x0, y0, x1, y1, w, col) => { const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0)); ctx.fillStyle = col; for (let i = 0; i <= n; i++) ctx.fillRect(Math.round(x0 + (x1 - x0) * i / n - w / 2), Math.round(y0 + (y1 - y0) * i / n), w, 1); };
-            seg(sx, sy, ex, ey, 4, dark[1]); seg(sx, sy - 2, ex, ey - 2, 1, dark[3]);
-            seg(ex, ey, hx, hy + 2, 3, dark[1]); seg(ex - c.facing, ey, hx - c.facing, hy + 2, 1, dark[2]); seg(ex + c.facing, ey, hx + c.facing, hy + 2, 1, dark[0]);
-            const skin = { mira: ['#975749', '#d99f70'], jaxon: ['#5e3520', '#93583a'], aris: ['#b04a40', '#d8784c'] }[c.id] || ['#7a4a30', '#c8a080'];
-            const hxr = Math.round(hx), hyr = Math.round(hy);
-            ctx.fillStyle = skin[0]; ctx.fillRect(hxr - 1, hyr - 3, 4, 4);
-            ctx.fillStyle = skin[1]; ctx.fillRect(hxr - 1, hyr - 3, 3, 3); ctx.fillRect(hxr - 1 + (k > 0 ? 3 : -1), hyr - 2, 1, 2);
-            ctx.fillStyle = window.NS_DRESS ? '#c49a3a' : dark[3]; ctx.fillRect(hxr - 1, hyr + 1, 4, 1);   // the gold cuff
+            const ms = t + c.seed * 1300, id = dressId(c.id), X = c.x - ox, act = c.wave ? 'wave' : 'idle';
+            CE.draw(ctx, id, act, c.wave === 'big' ? ms * 1.3 : ms, X, POD.floor, { facing: c.facing, warm: 3, rim: -c.facing, seed: c.seed });
         }
         /** A person's shadow: their own shape, dithered dark, laid flat on the ground away from the light. Baked once per frame shape. */
         const shadowCache = new WeakMap();
