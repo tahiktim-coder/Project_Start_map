@@ -18,11 +18,20 @@
    Registers itself with NewScreen as 'voice'. Reads NSPaint. Writes nothing to the game.
 
    NewScreen.mods.voice: { init, resize, update, render, pointer,
-     say({ id, who, text, anchor, narration }) → Promise   a line now: it cuts the line on screen; not logged. Resolves
-                                      when the line leaves the screen (or is dropped), so a talk can say lines one by one
+     say({ id, who, text, anchor, narration, keep }) → Promise<bool>   a line now: it cuts the line on screen; not logged.
+                                      Resolves when the line leaves the screen (or is dropped), so a talk can say lines one
+                                      by one: true when it was seen (on screen, unhidden, KEEP_MS or its whole time), false
+                                      when it never got there. keep: a later say() never cuts it before KEEP_MS (a story
+                                      world named: the talk after it waits that long)
      sayLine(message)                 the same from a log-style line ('A.U.R.A.: "..."'); the caller logs it (a refusal)
      speaking() → 'aura' | id | null  who is talking now (the tower's speaker glows for A.U.R.A.)
-     current() → { who, line } | null }
+     current() → { who, line } | null
+     once(key, text, still?) → Promise<bool>  A.U.R.A. says text once a run (an action's first showing, a number's first
+                                      change): next after the line on screen (never cutting it), ahead of waiting log lines;
+                                      false when said before. still(): asked as the line's turn comes; false drops it
+                                      unsaid and unmarked (the action it explains has gone again). What has been said
+                                      is kept in the game's own saved record of A.U.R.A. (state.reliance.nsTold, saved as is)
+     told(key) → bool }
 */
 (function () {
     'use strict';
@@ -35,6 +44,7 @@
     const SIGNED_RE = /[+\-\u2212]\s?\d+\s*(energy|salvage|rations?|data)\b/i;
     const CREW_RE = /\b(Jaxon|Aris|Vance|Mira|Cora)\b/;
     const QUEUE_MAX = 3, STALE_MS = 9000, WALL_MS = 15000, HIDDEN_KEEP_MS = 2500, HIDDEN_MAX = 2, EDGE = 16, SHADE_PAD = 14, MOVE_RESAMPLE = 18, FALLBACK = { x: 0.72, y: 0.14 };
+    const KEEP_MS = 3000, TEACH_EXTRA = 1;                                                    // a kept line's least time seen; room for one teaching line over the queue
     const wordsIn = s => (String(s).trim().match(/\S+/g) || []).length;
     const readMs = line => Math.max(3200, wordsIn(line) * 300 + 1600);
 
@@ -99,16 +109,48 @@
         return new Promise(resolve => {
             queue.filter(q => q.line === line).forEach(settle);
             queue = queue.filter(q => q.line !== line);
-            queue.unshift({ who, id, line, anchor: o.anchor || null, age: 0, done: resolve });
+            queue.unshift({ who, id, line, anchor: o.anchor || null, keep: !!o.keep, age: 0, done: resolve });
             while (queue.length > QUEUE_MAX) settle(queue.pop());
-            end();
+            if (cur && cur.keep && cur.seen < KEEP_MS) cur.left = Math.min(cur.left, KEEP_MS - cur.seen);   // a kept line finishes its least time first
+            else end();
         });
     }
-    /** A line leaves (said, cut or dropped): whoever waits on it goes on. */
+    /** What A.U.R.A. has said once this run: a list in state.reliance (GameState saves that object whole; a new run starts
+        a new one). null when there is no game. */
+    function toldList() {
+        const s = NS.game && typeof NS.game.state === 'function' ? NS.game.state() : null;
+        if (!s) return null;
+        if (!s.reliance) s.reliance = { auto: 0, manual: 0 };
+        if (!Array.isArray(s.reliance.nsTold)) s.reliance.nsTold = [];
+        return s.reliance.nsTold;
+    }
+    function told(key) { const list = toldList(); return !!list && list.includes(key); }
+    /** A.U.R.A. says it once a run: next after the line on screen (a teaching line never cuts one), ahead of the log
+        lines still waiting (they are older news), behind other lines someone waits on (a talk said in order). */
+    function once(key, text, still) {
+        const list = toldList();
+        if (!list || !key || !text || list.includes(key) || !NS.isShown()) return Promise.resolve(false);
+        list.push(key);
+        const line = String(text).trim();
+        return new Promise(resolve => {
+            const at = queue.filter(q => typeof q.done === 'function').length;
+            queue.splice(at, 0, { who: 'A.U.R.A.', id: 'aura', line, anchor: null, age: 0, done: resolve, key, still: typeof still === 'function' ? still : null });
+            while (queue.length > QUEUE_MAX + TEACH_EXTRA) { const old = queue.findIndex(q => typeof q.done !== 'function'); settle(queue.splice(old < 0 ? queue.length - 1 : old, 1)[0]); }   // the oldest log line goes
+        });
+    }
+    /** A teaching line whose turn has come: is what it explains still there? If not, it goes unsaid and unmarked. */
+    function stillTrue(q) {
+        if (!q.still) return true;
+        let ok = false;
+        try { ok = !!q.still(); } catch (err) { ok = false; }
+        if (!ok) { const list = toldList(); if (list && q.key) { const i = list.indexOf(q.key); if (i >= 0) list.splice(i, 1); } settle(q); }
+        return ok;
+    }
+    /** A line leaves (said, cut or dropped): whoever waits on it goes on (told whether it was seen). */
     function settle(q) {
         if (!q || typeof q.done !== 'function') return;
         const d = q.done; q.done = null;
-        try { d(true); } catch (err) { console.error('NewScreen voice: a waiting talk failed', err); }
+        try { d(!!q.seen && q.seen >= Math.min(KEEP_MS, readMs(q.line))); } catch (err) { console.error('NewScreen voice: a waiting talk failed', err); }
     }
 
     // ── where the words go: the anchor's places, kept inside the window; the darkest wins ──
@@ -197,7 +239,7 @@
         who.append(document.createTextNode(v.who));
         if (v.id === 'narr') box.append(el('p', 'ns-say', v.line)); else box.append(who, el('p', 'ns-say', v.line));   // narration: no name over it
         layer.append(box);
-        cur = { id: v.id, who: v.who, line: v.line, anchor: v.anchor || null, done: v.done || null, el: box, w: box.offsetWidth, h: box.offsetHeight, left: readMs(v.line), pick: null, pos: null, sampledAt: null, strength: 0.66 };
+        cur = { id: v.id, who: v.who, line: v.line, anchor: v.anchor || null, done: v.done || null, keep: !!v.keep, seen: 0, el: box, w: box.offsetWidth, h: box.offsetHeight, left: readMs(v.line), pick: null, pos: null, sampledAt: null, strength: 0.66 };
         place(cur);
         void box.offsetWidth;
         box.classList.add('is-in');
@@ -258,7 +300,8 @@
             if (NS.blocked()) { if (cur) cur.el.style.visibility = 'hidden'; return; }
             noteUp = isNoteUp();
             if (cur) {
-                cur.left -= dt;
+                if (!noteUp || !cur.keep) cur.left -= dt;                                 // a kept line waits out a hover note
+                if (!noteUp) cur.seen += dt;                                              // seen: on screen, not hidden by a hover note
                 if (cur.left <= 0) end();
             }
             queue.forEach(q => { q.age += dt; });                                         // only shown, unblocked time ages a waiting line
@@ -266,7 +309,8 @@
                 const now = performance.now(), old = q => q.age >= STALE_MS || (!q.done && q.at && now - q.at > WALL_MS);   // a line someone waits on is never dropped for age
                 queue.filter(old).forEach(settle);
                 queue = queue.filter(q => !old(q));
-                const next = queue.shift();
+                let next = queue.shift();
+                while (next && !stillTrue(next)) next = queue.shift();
                 if (next) start(next);
             }
             if (cur) { cur.el.style.visibility = noteUp ? 'hidden' : ''; place(cur); }
@@ -281,6 +325,8 @@
         speaking: () => (cur && !noteUp && !NS.blocked() ? cur.id : null),
         say: sayNow,
         sayLine,
+        once,
+        told,
     };
     NS.register('voice', mod);
 })();

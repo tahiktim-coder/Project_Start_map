@@ -6,6 +6,11 @@
    team"; the two walk to the hatch, the shuttle drops to the site, then the real game runs the trip (LanderGame, the
    Torch, the cards). When they are back the shuttle comes up and they climb back. "Leave orbit" plays the dive backwards.
    Every action calls the REAL game through NewScreen.flow (Orbit.js): costs, events, rewards and saves are today's.
+   The first time each action (and "Leave orbit") shows, A.U.R.A. says once what it does (NSOrbit.TELL), one at a time,
+   the one pointed at first. "Settle here" (it ends the game) is drawn cool, never warm; once nothing but it is left,
+   "Leave orbit" grows warm and as large as an action. While a person is pointed at, the sub-lines hide but keep their
+   room, so nothing moves under the pointer. The ship's stock (NSStock: energy, rations, salvage) stands as small lit numbers on the wall
+   left of the window. A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
    Source: prototypes/slice/stop.js §5-12 (people plans, compose, words, the pick, anchors, discs), without its films,
    MOCKUP moments and slice places (docs/BUILD_B.md §2). Draws ONLY into canvas#ns-dive, canvas#ns-bridge and the word
    layer #ns-stop-words. Loaded only when the new-screen switch is on, after stop/BridgeArt, stop/Dive, stop/Glass.
@@ -39,7 +44,7 @@
         vance: 'Down there I take the hit for the other one. Up here, I keep people safe.',
         mira: 'Down there I bring their star fix back. Up here, I scan the site.',
     };
-    const SEND_MS = 2400, SHUTTLE_MS = 2200, GUARD_MS = 400, READ_MS = 250, MAX_LIT = 4, MAX_WORDS = 40, GATHER_LEAD = 2600;
+    const SEND_MS = 2400, SHUTTLE_MS = 2200, GUARD_MS = 400, READ_MS = 250, MAX_LIT = 4, MAX_WORDS = 40, GATHER_LEAD = 2600, TELL_AFTER_MS = 1500;
     const WORTH = ['light', 'escape', 'accept', 'call', 'strange', 'date', 'team', 'dock', 'mine', 'settle', 'scan', 'skim'];   // more than 4: these first
     const NEAR_WORLD = ['world', 'station', 'field', 'giant', 'site', 'light'];
     const wordsIn = s => (String(s || '').trim().match(/\S+/g) || []).length;
@@ -54,7 +59,8 @@
         picked: [], hover: null, hot: null, clickAt: 0,
         send: null,          // { ids, t0, fired } between the click and flow.act
         trip: null,          // { ids } while the team is down
-        words: null, wordShown: new Map(), decks: null,
+        words: null, wordShown: new Map(), keyShown: new Map(), decks: null,   // keyShown: action key → when it came on screen
+        stock: null, telling: false,   // the bridge's readouts (NSStock.board); A.U.R.A. is saying an action's line
     };
     let room = null, art = null, actx = null, diveC = null, bridgeC = null, dctx = null, bctx = null, layer = null, fxList = [];
     const t0 = () => NS.clock.t;
@@ -277,9 +283,11 @@
 #ns-stop-words .sw-act b { font: 500 var(--fs-act)/1.15 var(--f-ui); letter-spacing: .02em; color: var(--warm); }
 #ns-stop-words .sw-act span { font: 400 var(--fs-act-sub)/1.3 var(--f-text); color: var(--dim); }
 #ns-stop-words .sw-act span:empty { display: none; }
-#ns-stop-words .sw-act.is-faint b { color: var(--dim); }
+#ns-stop-words .sw-act.is-hushed span { visibility: hidden; }
+#ns-stop-words .sw-act.is-end b { color: var(--ui); }
 #ns-stop-words .sw-act.is-hot b { color: var(--warm-br); }
 #ns-stop-words .sw-leave { font: 400 var(--fs-act-sub)/1.2 var(--f-text); color: var(--ui); }
+#ns-stop-words .sw-leave.is-next { font: 500 var(--fs-act)/1.15 var(--f-ui); letter-spacing: .02em; color: var(--warm); }
 #ns-stop-words .sw-leave.is-hot { color: var(--warm-br); }
 #ns-stop-words .sw-good { white-space: normal; max-width: calc(260px + 60px * var(--t, 1)); padding-left: 9px; border-left: 2px solid var(--who, #c9d1d6);
     font: 400 var(--fs-note-line)/1.35 var(--f-text); color: #eceae2; }
@@ -290,6 +298,7 @@
         const mk = (cls, html) => { const e = document.createElement('div'); e.className = 'sw ' + cls; e.innerHTML = html; layer.appendChild(e); return e; };
         S.words = { name: mk('sw-name', ''), acts: [0, 1, 2, 3].map(() => mk('sw-act', '<b></b><span></span>')), leave: mk('sw-leave', 'Leave orbit'), good: mk('sw-good', '<b></b><span></span>') };
         S.words.acts.forEach(el => { el.dataset.key = ''; });
+        S.stock = window.NSStock ? window.NSStock.board(layer) : null;
     }
     const setText = (el, text) => { if (el && el.textContent !== text) el.textContent = text; };
     function put(el, on, x, y) {
@@ -298,7 +307,7 @@
         el.classList.toggle('on', !!on);
         if (on) { el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; if (!was) S.wordShown.set(el, performance.now()); }
     }
-    function hideWords() { if (!S.words) return; [S.words.name, S.words.leave, S.words.good].concat(S.words.acts).forEach(el => put(el, false)); }
+    function hideWords() { S.keyShown.clear(); if (!S.words) return; [S.words.name, S.words.leave, S.words.good].concat(S.words.acts).forEach(el => put(el, false)); if (S.stock) S.stock.hide(); }
     const titleCase = s => (s && s === s.toUpperCase() && /[A-Z]/.test(s) ? s.toLowerCase().replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase()) : s);
     function teamSub() {
         if (S.picked.length < 2) return 'Choose two at the window';
@@ -319,7 +328,10 @@
         const mira = S.drawn.find(d => d.id === 'mira');
         shown.filter(a => !worldStack.includes(a)).forEach(a => {
             if (a.near === 'call' || a.near === 'glass') { const [cx, cy] = GL.callAt(), [x, yy] = css(cx + 10, cy - 8); out.push({ a, x, y: yy, align: 'left' }); }
-            else if (a.near === 'mira' && mira && mira.X > WIN.x0) { const [x, yy] = css(mira.X, mira.Y - 12); out.push({ a, x, y: yy, align: 'center' }); }
+            else if (a.near === 'mira' && mira && mira.X > WIN.x0) {                 // over where she is going, not where she is: the words never chase a walker
+                const last = lastOf('mira'), mx = last && last.kind === 'stay' ? Math.round(last.x) + OFFX : mira.X, [x, yy] = css(mx, mira.Y - 12);
+                out.push({ a, x, y: yy, align: 'center' });
+            }
             else if (a.near === 'under') { const [x, yy] = css(WIN.x0 + 24, WIN.y1 - 40); out.push({ a, x, y: yy, align: 'row' }); }   // no world word: a row in the open sky, low left
             else { const [x, yy] = css(470, WIN.y1 + 12); out.push({ a, x, y: yy, align: 'center' }); }   // 'aura' and anything else: under the window
         });
@@ -334,29 +346,36 @@
         // what each act word says now
         const L0 = settled && !busy ? layout(t) : { out: [] }, items = [];
         L0.out.forEach(o => {
-            const a = o.a, team = !!a.team, faint = team && S.picked.length < 2;
-            items.push({ o, words: a.words, sub: team ? teamSub() : (a.sub || ''), faint });
+            const a = o.a, team = !!a.team;
+            items.push({ o, words: a.words, sub: team ? teamSub() : (a.sub || ''), end: a.key === 'settle' });   // the end of the journey never pulls the eye
         });
         const leaveOn = settled && !busy && !isWrongPlace();
-        budget -= leaveOn ? 2 : 0;
+        budget -= (leaveOn ? 2 : 0) + (settled && S.stock ? 3 : 0);
+        if (S.stock && settled && !NS.blocked()) placeStock(); else if (S.stock) S.stock.hide();   // never over a card or a minigame
         items.forEach(it => { budget -= wordsIn(it.words); });
         const d = hovering && S.drawn.find(q => q.id === S.hover), good = d ? GOOD[d.id] : null;
         if (good) budget -= wordsIn(good) + 1;
-        items.forEach(it => { if (!hovering && it.sub && budget - wordsIn(it.sub) >= 0) budget -= wordsIn(it.sub); else it.sub = ''; });
+        // a sub-line keeps its room while a person is pointed at (hidden, not removed): nothing under the pointer moves
+        items.forEach(it => { if (it.sub && (hovering || budget - wordsIn(it.sub) >= 0)) { if (!hovering) budget -= wordsIn(it.sub); } else it.sub = ''; });
         const nameText = S.node ? titleCase(S.node.name || '') : '';
         const nameOn = settled && !hovering && nameText && budget - wordsIn(nameText) >= 0;
         setText(W.name, nameText);
         const [nx, ny] = css(WIN.x0 + 10, WIN.y0 + 8); put(W.name, nameOn, nx, ny);
         // the act words: right-aligned stacks beside the world, the others where they belong
         let stackY = null, rowX = null;
+        const keysNow = new Set(items.map(it => it.o.a.key)), at = performance.now();
+        [...S.keyShown.keys()].forEach(k => { if (!keysNow.has(k)) S.keyShown.delete(k); });
+        keysNow.forEach(k => { if (!S.keyShown.has(k)) S.keyShown.set(k, at); });
         W.acts.forEach((el, i) => {
             const it = items[i];
             if (!it) { put(el, false); el.dataset.key = ''; return; }
-            const a = it.o.a;
-            setText(el.querySelector('b'), a.words); setText(el.querySelector('span'), it.sub);
+            const a = it.o.a, span = el.querySelector('span');
+            if (!hovering || el.dataset.key !== a.key || (!!span.textContent === !!it.sub)) setText(span, it.sub);   // pointing at a person: a sub-line never comes or goes
+            setText(el.querySelector('b'), a.words);
             el.dataset.key = a.key;
-            el.classList.toggle('is-faint', it.faint);
-            el.classList.toggle('is-hot', S.hot === a.key && !it.faint);
+            el.classList.toggle('is-hushed', hovering);
+            el.classList.toggle('is-end', it.end);
+            el.classList.toggle('is-hot', S.hot === a.key);
             el.classList.toggle('at-left', it.o.align === 'left');
             const w = el.offsetWidth || 120, h = el.offsetHeight || 24;
             let x = it.o.x, y = it.o.y;
@@ -367,6 +386,7 @@
             put(el, true, x, y);
         });
         W.leave.classList.toggle('is-hot', S.hot === 'leave');
+        W.leave.classList.toggle('is-next', leaveOn && !S.trip && !items.some(it => !it.end));   // nothing left here but settling: Leave orbit is the next step, and looks it
         const [lx, ly] = css(WIN.x1 - 24, WIN.y1 - 40); put(W.leave, leaveOn, lx - (W.leave.offsetWidth || 0), ly);   // always low right in the window, level with the row of words on the left
         if (good) {
             setText(W.good.querySelector('b'), NAMES[d.id]); setText(W.good.querySelector('span'), good); W.good.style.setProperty('--who', TONE[d.id]);
@@ -381,6 +401,28 @@
             }
             put(W.good, true, Math.max(16, gx), Math.max(16, gy));
         } else put(W.good, false);
+        if (settled && !busy) explain();
+    }
+    /** The ship's stock on the wall left of the window, one under another, right-aligned to the window's frame. */
+    function placeStock() {
+        const [x, y] = css(WIN.x0 - 10, WIN.y0 + 30), gap = 10 * unit();
+        window.NSStock.KEYS.forEach((k, i) => S.stock.put(k, x, y + i * gap, 'right'));
+    }
+    /** A.U.R.A. says once a run what an action on screen does (NSOrbit.TELL): one line at a time, the one pointed at first.
+        Only an action that has stayed on screen a moment (TELL_AFTER_MS), and only while it is still there when its turn
+        comes: one that showed and went again is explained the next time it shows. */
+    function explain() {
+        const v = NS.mods.voice, tell = (window.NSOrbit && window.NSOrbit.TELL) || {};
+        if (S.telling || !v || typeof v.once !== 'function' || typeof v.told !== 'function') return;
+        const now = performance.now(), since = (m, k) => now - (m.get(k) || now) >= TELL_AFTER_MS;
+        const shown = S.words.acts.filter(el => el.dataset.key && el.classList.contains('on') && since(S.keyShown, el.dataset.key)).map(el => el.dataset.key);
+        if (S.words.leave.classList.contains('on') && since(S.wordShown, S.words.leave)) shown.push('leave');
+        const key = (S.hot && shown.includes(S.hot) ? [S.hot] : []).concat(shown).find(k => tell[k] && !v.told('act:' + k));
+        if (!key) return;
+        S.telling = true;
+        const done = () => { S.telling = false; };
+        const still = () => S.open && !S.dive && (key === 'leave' ? S.words.leave.classList.contains('on') : S.words.acts.some(el => el.dataset.key === key && el.classList.contains('on')));
+        v.once('act:' + key, tell[key], still).then(done, err => { done(); console.error('NewScreen stop: the voice failed', err); });
     }
 
     // ═══ 5. the bus ═══
@@ -591,7 +633,7 @@
         const who = picking() ? personAtPx(ax, ay) : null, pickable = who && S.lineup.includes(who) ? who : null;
         if (type === 'move') {
             S.hot = act ? act.dataset.key : onLeave ? 'leave' : null; S.hover = pickable;
-            const on = !!(act && !act.classList.contains('is-faint')) || onLeave || !!pickable;
+            const on = !!act || onLeave || !!pickable;
             setPointing(on); return on;
         }
         if (type !== 'down') return false;
@@ -656,6 +698,12 @@
     }
 
     // ═══ setup ═══
+    /** A card that turns up while the bridge is up (asked or not) takes no click for 400 ms: a click meant for the bridge
+        never lands on it. A card the shell holds back gets the same again when it is let go. */
+    function guardCards(list) {
+        if (!(S.open || S.dive) || !window.ChoiceGuard) return;
+        list.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1 && n.classList.contains('modal-overlay')) window.ChoiceGuard.hold(n); }));
+    }
     function canvasNamed(id, before) {
         let c = document.getElementById(id);
         if (c) return c;
@@ -684,6 +732,7 @@
         NS.bus.on('hidden', () => { if (S.open || S.dive) close(false); });
         NS.bus.on('stop:close', () => { if (S.open || S.dive) close(false); });
         NS.bus.on('stop:skim', () => GL.skim(t0()));
+        new MutationObserver(guardCards).observe(document.body, { childList: true });
         D.later(D.pic(1, 1, [() => mask(0), () => { A.deck(1); }]));
     }
     function resize(G) {

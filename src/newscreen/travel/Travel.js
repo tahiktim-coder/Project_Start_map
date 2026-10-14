@@ -3,7 +3,8 @@
    NSRoute), our Lander flying with its plume, space streaming past, pointing a world (its name and one line, no numbers),
    a click with one second to cancel, the flight (the fork's other world slipping behind the giant or passing), the
    arrival handed to the real game, leaving a world (it glides to the left edge in shadow), the light, the jump's burn and
-   flash, the corridor's dark, and the next sector arriving from black with its title.
+   flash, the corridor's dark, and the next sector arriving from black with its title. The story worlds still to do (our
+   wrecks, the world their last course led to) wear a warm ring, say why in their note, and A.U.R.A. names each once.
    Source: prototypes/slice/world.js §5-9 (render, words, pointing, the module's life). The slice's script.js lock and
    cancel (route:go, route:cancel, route:fired) live here now; the real game's rules come through NewScreen.flow.
    Draws ONLY into canvas#ns-world and #ns-world-words. Pictures: travel/Pictures.js; places and moves: travel/Field.js;
@@ -76,6 +77,44 @@
     }
     const keepModes = modes => Object.fromEntries(Object.entries(modes || {}).filter(([id]) => F.has(id)));
 
+    // ── the story worlds: each still ahead and not boarded wears a warm ring (Pictures), its note says why it matters, and
+    //    A.U.R.A. names it once when it is first in sight (the first signal is named by the shell's first hint) ──
+    const STORY_TAGS = { signal: 'One of our ships. Send the team aboard', wreck: 'One of our ships. Send the team aboard', course: 'Their last course led here' };
+    const STORY_LINES = {
+        wreck: name => `A.U.R.A.: "One of our ships is calling from ${name}, Commander."`,
+        course: name => `A.U.R.A.: "Their last course ends at ${name}, Commander."`,
+    };
+    const SAY_GAP_MS = 7000, QUIET_FIRST_MS = 9000, QUIET_MS = 2500;
+    let lastSaid = -1e9, quietUntil = 0;
+    const naming = new Set(), namedLog = new Set();                                    // node ids being said now; node ids already in the log
+    /** What the story still waits for on this world: 'signal' (the first wreck), 'wreck' (one of our ships; the tape's too),
+        'course' (the story world, once a dated wreck names it), or null: boarded, behind us, or nothing there. */
+    function storyKind(nd) {
+        if (!nd || nd.exodusInvestigated || nd.ghost || !nd.nsRoute || nd.nsRoute.status !== 'ahead') return null;
+        if (nd.isStoryPlanet) return nd.storyHidden ? null : 'course';
+        if (nd.isFirstSignal) return 'signal';
+        return (nd.tags || []).includes('EXODUS_WRECK') ? 'wreck' : null;
+    }
+    /** The wake-up talk is still going (start/Wake.js): a story world waits until it is over. */
+    function talking() { const w = window.NSWake; try { return !!(w && typeof w.pending === 'function' && w.pending()); } catch (err) { return false; } }
+    /** At rest, the view up in this sector, nobody talking, no note up, the wake-up talk over: the first story world in sight
+        that has not been named yet is named, one at a time. It is marked said only once it was seen on screen (a line cut
+        or dropped is said again later); a later line never cuts it before Voice's KEEP_MS. */
+    function announce(t) {
+        if (t < quietUntil || t - lastSaid < SAY_GAP_MS || W.flight || W.lock || W.held || W.opening || W.jump || W.black || W.ease || noteWasUp || blocked()) return;
+        const ns = NS(), v = ns && ns.mods && ns.mods.voice, st = ns && ns.app && ns.app.state;
+        if (!st || typeof st.addLog !== 'function' || !v || typeof v.say !== 'function' || !ns.isShown() || shownSector !== sectorNow() || naming.size || talking()) return;
+        try { if (typeof v.current === 'function' && v.current()) return; } catch (err) { return; }
+        const id = F.ids().find(i => { const e = F.entry(i), k = e && storyKind(e.node); return k && STORY_LINES[k] && !e.node.nsSaid && placeAt(i).shown; });
+        if (!id) return;
+        const nd = F.entry(id).node, line = STORY_LINES[storyKind(nd)](nd.name), text = line.replace(/^A\.U\.R\.A\.:\s*/, '');
+        lastSaid = t; naming.add(id);
+        let said = null;
+        try { said = v.say({ id: 'aura', who: 'A.U.R.A.', text, keep: true }); } catch (err) { console.error('NewScreen travel: naming a story world failed', err); }
+        if (!namedLog.has(id)) { namedLog.add(id); st.addLog(line); }                 // the log keeps it once (Voice skips the line it is saying)
+        Promise.resolve(said).then(seen => { if (seen) nd.nsSaid = true; }, () => {}).then(() => { naming.delete(id); });   // on the node: saved with the sector, never said twice
+    }
+
     // ═══ 2. the light, our ship, speed ═══
     const lostCount = () => F.ids().filter(id => { const m = (W.modes[id] || {}).m, e = F.entry(id); return !e.scenery && (m === 'passed' || m === 'gone'); }).length;
     function lightScale(t) {
@@ -137,7 +176,10 @@
         const vp = vanishing(sn, t), sp = speedNow(t), front = !!(W.flight || W.jump);  // at rest the streaks pass behind the worlds
         PIC.stream('back', vp, sp, W.flow);
         if (!front) PIC.stream('front', vp, sp, W.flow);
-        sn.items.forEach(it => { const s = story.get(it.id); PIC.item(f, it, t, s ? { hidden: s.hidden, resolvedAt: s.resolvedAt } : null); f.reset(); });
+        sn.items.forEach(it => {
+            const s = story.get(it.id), e = F.entry(it.id);
+            PIC.item(f, it, t, { hidden: !!(s && s.hidden), resolvedAt: s ? s.resolvedAt : null, mark: !!(e && storyKind(e.node)) }); f.reset();
+        });
         const lockId = W.lock ? (W.lock.id === F.light().node ? 'light' : W.lock.id) : null, hov = lockId || (W.flight ? null : W.hover);
         if (hov && hov !== 'light' && !(story.get(hov) || {}).hidden) sn.items.filter(i => i.id === hov && i.part !== 'arc' && !i.hiding && !i.passed).forEach(i => PIC.rims(f, i, lockId ? 2 : 1));
         if (hov === 'light') { const r = PIC.lightOf(W.sector, lightScale(t)), lx = Math.round(l.x), ly = Math.round(l.y); for (let d = Math.round(r.core + 2); d < r.core + 10 * sc; d++) { const v = 0.85 - (d - r.core) / (12 * sc); f.tone(lx - d, ly, P.RP.SUN, v); f.tone(lx, ly - d, P.RP.SUN, v); f.tone(lx, ly + d, P.RP.SUN, v); } }
@@ -160,7 +202,8 @@
         const e = F.entry(id), nd = e && e.node; if (!nd) return null;
         const status = (nd.nsRoute || {}).status, md = W.modes[id] || {};
         if (nd.isStoryPlanet && nd.storyHidden) return { name: 'A faint contact', tag: 'No fix on it yet' };
-        const tags = nd.tags || [];
+        const tags = nd.tags || [], kind = storyKind(nd);
+        if (kind && !W.visited.has(id) && md.m !== 'passed') return { name: nd.name || '', tag: STORY_TAGS[kind], story: true };
         const tag = status === 'visited' || W.visited.has(id) ? 'We stopped here'
             : status === 'passed' || status === 'gone' || md.m === 'passed' ? 'We passed it'
             : nd.isFirstSignal ? 'An old ship beacon'
@@ -178,7 +221,7 @@
         if (!up) { note.hidden = true; noteRect = null; W.noteKey = ''; return; }
         const w = placeWords(id); if (!w) { note.hidden = true; noteRect = null; return; }
         const key = [id, w.name, w.tag].join('|');
-        if (key !== W.noteKey) { note.replaceChildren(mk('p', 'name', w.name), mk('p', 'tag', w.tag)); W.noteKey = key; W.noteSide = null; }
+        if (key !== W.noteKey) { note.replaceChildren(mk('p', 'name', w.name), mk('p', 'tag', w.tag)); note.classList.toggle('is-story', !!w.story); W.noteKey = key; W.noteSide = null; }
         note.hidden = false;
         const l = F.light(), k = G.k / G.dpr, nw = note.offsetWidth / k, nh = note.offsetHeight / k, e = F.entry(id), giant = e && e.kind === 'giant';
         const gap = giant ? 10 : g.r + 8 * sc, ds = F.discsOf(W.last || F.scene(W, t));                    // its own disc too: never words over a world
@@ -221,6 +264,7 @@
 #ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name, 19px)/1.15 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.02em; color: var(--text, #e4e4e0); text-shadow: var(--shadow, 0 1px 0 #05070a); }
 #ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-shadow: var(--shadow, 0 1px 0 #05070a); }
 #ns-world-words .nst-note.is-left { text-align: right; justify-items: end; }
+#ns-world-words .nst-note.is-story .tag { color: var(--warm-br, #ffc27a); }
 #ns-world-words .nst-flash { position: absolute; inset: 0; pointer-events: none; }
 #ns-world-words .nst-flash[hidden] { display: none; }
 #ns-world-words .nst-title { position: absolute; left: 0; top: 0; margin: 0; font: 300 var(--fs-title, 44px)/1 var(--f-text, 'IBM Plex Sans', sans-serif); letter-spacing: 0.2em; color: var(--text, #e4e4e0); white-space: nowrap; text-shadow: var(--shadow, 0 1px 0 #05070a); pointer-events: none; }`;
@@ -322,7 +366,7 @@
     // ═══ 6. the module's life ═══
     function onShown(p) {
         const t = now(), n = (p && p.sector) || sectorNow();
-        shownSector = n;
+        shownSector = n; quietUntil = t + (p && p.first ? QUIET_FIRST_MS : QUIET_MS);   // the title and the first hint go first
         refresh(t, true);
         if (n !== W.sector || (p && p.first)) {
             F.reset(); PIC.clear(); refresh(t, true);
@@ -369,6 +413,7 @@
         if (W.hover && !interactive(t)) setHover(null);
         else if ((W.ease || W.flight) && W.pointer && interactive(t)) setHover(hitTest(W.pointer[0], W.pointer[1], t));
         updateNote(t);
+        announce(t);
         updateFlash(t);
         if (dt > 0) PIC.bakeOne();
     }

@@ -15,7 +15,7 @@
      art(n) → A                     the sector's backdrop (cached per sector at this size); backdrop(A, D, t) draws it
      glow(n, k, t) → { canvas, x, y } · preglow(n, kMax) · lightOf(n, k)   the light's glow at scale k (it grows as worlds
                                     fall behind), drawn at x, y; preglow queues the sizes a sector can reach
-     item(f, it, t, o) · rims(f, it, up)   one field item (o: { hidden, resolvedAt }); its lit rim when pointed at
+     item(f, it, t, o) · rims(f, it, up)   one field item (o: { hidden, resolvedAt, mark }); its lit rim when pointed at
      prebake(items) · bakeOne()     ask for the sizes a move will need; bake one in an idle frame
      lander(f, t, pose, lvl, on, beat)     our Lander outside: pose { x, y, len, angle }, plume level, ports lit, reactor beat
      stream(which, vp, speed, flowPos, front)   space streaming past; which: 'back' | 'front'
@@ -264,7 +264,8 @@
     }
 
     // ═══ 4. one item of the field ═══
-    /** o: { hidden: the story world is still a faint contact, resolvedAt: when it resolved (the contact's last blip) } */
+    /** o: { hidden: the story world is still a faint contact, resolvedAt: when it resolved (the contact's last blip),
+            mark: the story still waits on it (its warm ring) } */
     function item(f, it, t, o) {
         const e = F.entry(it.id); if (!e) return;
         if (o && o.hidden) {                                                            // a far grey disc, lit on its edge, and the contact's slow cold pulse on it
@@ -285,6 +286,7 @@
             if (it.part === 'all' && sp.arc) blit(sp.arc, sp.half, it.x, it.y);
             return;
         }
+        if (o && o.mark) storyRing(f, it, t);
         if (it.grey > 0 && it.grey < 1) { const c0 = spriteFor(it, false, 0); blit(c0.canvas, c0.half, it.x, it.y); blit(sp.canvas, sp.half, it.x, it.y, { mask: it.grey }); }
         else blit(sp.canvas, sp.half, it.x, it.y, { cut: it.cut, fade: it.fade });
         if (o && o.resolvedAt != null && t - o.resolvedAt < 900) P.contactBlip(f, Math.round(it.x), Math.round(it.y), t, true);   // the contact resolves into the world
@@ -296,6 +298,23 @@
         const X = x + Math.round(B[0] * it.r), Y = y + Math.round(B[1] * it.r), ph = Math.floor((t % B[2]) / TICK);
         if (ph < 3) { f.glow(X, Y, it.r > 40 ? 7 : 4, RP.RED, 0.9); f.px(X, Y, RP.RED.hex[4], it.r > 40 ? 2 : 1, it.r > 40 ? 2 : 1); }   // one of our wrecks: the red beacon blinks
         else f.px(X, Y, RP.RED.hex[2]);
+    }
+    /** A world the story still waits on: a warm glow in the light's colours breathing slowly on its edge, and a thin ring
+        that leaves it now and then and fades as it widens (a call, in steps), all under the world so only the part outside
+        it shows. Gone once it greys, hides behind the giant or fades. */
+    const RING = [0, 0.14, 0.32, 0.5, 0.6, 0.5, 0.32, 0.14], PING_MS = 3600;
+    function storyRing(f, it, t) {
+        if (it.grey > 0 || it.passed || (it.hiding || 0) > 0.2 || it.fade >= 0.5) return;
+        const x = Math.round(it.x), y = Math.round(it.y), sw = RING[Math.floor(t / 450) % 8], r0 = it.r + 1, k = Math.min(1.6, Math.sqrt(it.r / (20 * sc)));
+        const w = Math.max(3, (3 + 5 * sw) * sc * k), peak = 0.3 + 0.45 * sw;
+        const step = Math.floor((t % PING_MS) / PING_MS * 8) / 8, pr = r0 + (4 + 18 * step) * sc * k, th = Math.max(1.2, 1.3 * sc), pv = 0.75 * (1 - step);
+        const R = Math.ceil(Math.max(r0 + w, pr + th));
+        for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+            const d = Math.hypot(dx, dy); if (d < r0 - 1 || d > R) continue;
+            const v = Math.max(d <= r0 + w ? peak * Math.pow(1 - (d - r0) / w, 1.6) : 0, Math.abs(d - pr) < th ? pv * (1 - Math.abs(d - pr) / th) : 0);
+            if (v > 0.04) f.tone(x + dx, y + dy, RP.SUN, v);
+        }
+        f.reset();
     }
     function rims(f, it, up) {
         const sp = spriteFor(it); if (!sp || !sp.rims) return;
