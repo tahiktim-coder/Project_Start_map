@@ -19,6 +19,9 @@
      Pointing at a red deck names it ("Engine room, broken" over "Fix, patch or live with it"); the first time a deck goes
      red, A.U.R.A. says once, in travel, that it can be clicked.
    - A new sector: closed until 'opening:done' (5 s at most), then it slides in (1.2 s).
+   - The ship's stock (NSStock, below): energy by the reactor, rations over the galley table, salvage over the hold's
+     crates, as small lit numbers in #ns-ship-words. A change flashes (warm up, red down, the difference beside it for
+     1.6 s); the first change of each, A.U.R.A. says once what it is for. Stop.js shows the same three on the bridge wall.
    Source: prototypes/slice/ship.js (minus the price charge, signs, asks, meal, plates and pages).
    Load after the art files and TowerMarks.js, and after NewScreen.js (it registers itself as 'tower').
 
@@ -36,6 +39,15 @@
      debug() → { fit, k, dark, E, decks, crew, people: [{ id, deck, x, act, say }], chips }
    }
    Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' 'jump:flash'.
+
+   window.NSStock (frozen): the ship's stock, read from the real game (never written)
+     KEYS                        ['energy', 'rations', 'salvage']
+     tick()                      reads the numbers; a change starts its flash (and the first time, A.U.R.A.'s line). The
+                                 tower's update calls it every frame; a hidden view's return reads afresh (no flash). A
+                                 change made out of sight (a card or minigame up, the dive) is held until the numbers
+                                 are in view again, so its flash is seen; the numbers hide under a card or a minigame
+     board(layer) → { put(key, x, y, align), hide() }   three readouts in a word layer; put places one at CSS px (x, y
+                                 its top-left, or top-right with align 'right') and shows it
    Anchors: 'person:<id>' for the five, 'tower:deck:<name>' for the six decks (CSS px, [] when not in view).
    Uses, if present: NewScreen.mode() (only 'travel' takes clicks), NewScreen.mods.voice.speaking() → 'aura' | id | null
    (the computer's speaker glows while A.U.R.A. talks), NewScreen.flow.{ person(id), bench(), datable(), deckChoices(key),
@@ -82,7 +94,7 @@
         E: null, Eshown: 100, coreSet: null, flood: null,
         real: { crew: {}, decks: {}, engDown: false, datable: false }, readAt: -1e9, dirty: true,
         tendX: null, hover: null, chips: null, words: null, quality: 'high', scaleN: 0, scaleMs: 0,
-        tag: null, toldRed: new Set(), tellRed: null,
+        tag: null, toldRed: new Set(), tellRed: null, stock: null,
     };
     let NS = null;
     const G = () => (NS && NS.G) || {};
@@ -255,7 +267,7 @@
         V.jobs = TW.warm();
         const bus = NS.bus;
         bus.on('shown', p => onShown(p || {}));
-        bus.on('hidden', () => hideChips());
+        bus.on('hidden', () => { hideChips(); ST.state = null; });          // the view back later: the stock is read afresh, no flash
         bus.on('hud', () => { V.dirty = true; });
         bus.on('opening:done', () => openTower(now()));
         bus.on('jump:burn', () => { V.flood = { kind: 'jump', t0: now() }; hideChips(); });
@@ -307,6 +319,8 @@
         if (V.chips && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.chips.deck] !== 'red')) hideChips();
         if (V.tag && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.tag.deck] !== 'red' || V.chips)) hideTag();
         tellRed();
+        if (modeNow() !== 'travel' || V.dark || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame
+        stockTick();
     }
     function render(t) {
         const c = V.ctx, o = V.offCtx, f = V.fit;
@@ -330,6 +344,7 @@
         const s0 = performance.now();
         c.drawImage(V.off, 0, 0, OFF_W, ROWS, V.slideX, f.tY0, OFF_W * f.ts, ROWS * f.ts);
         watchScale(performance.now() - s0);
+        placeStock(k >= 1 && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
     }
     /** 'high' scaling where it is cheap (a GPU canvas); a machine where it costs over 3 ms a frame on average gets 'low'
         (bilinear: at these scales the two look nearly the same, checked at 1080p and 720p). */
@@ -467,6 +482,96 @@
         document.head.appendChild(st);
     }
 
+    // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // The ship's stock: small lit numbers beside the rooms they belong to (here) and on the bridge wall (Stop.js)
+    // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const STOCK_KEYS = Object.freeze(['energy', 'rations', 'salvage']);
+    const STOCK_TELL = {
+        energy: 'Energy runs the drive. Every flight costs some, Commander.',
+        rations: 'Rations feed the crew. We eat on every jump, Commander.',
+        salvage: 'Salvage fixes the ship. Mining and wrecks bring more, Commander.',
+    };
+    const STOCK_LOW = { energy: 20, rations: 4, salvage: -1 };               // at or under: the number burns amber
+    const STOCK_FLASH_MS = 1600, STOCK_SETTLE_MS = 1300;
+    // where each sits in the tower (tower art px, top-left): by the reactor's top, over the galley table, over the crates
+    const STOCK_AT = { energy: { deck: 5, x: 498, y: 50 }, rations: { deck: 2, x: 424, y: 38 }, salvage: { deck: 4, x: 500, y: 44 } };
+    const ST = { state: null, val: {}, flash: {}, seenAt: null };                     // seenAt: since when the numbers have been in view
+    function stockTick() {
+        const s = call('state', null);
+        if (!s) return;
+        const now = { energy: Math.round(energy()), rations: Math.round(Number(s.rations) || 0), salvage: Math.round(Number(s.salvage) || 0) };
+        if (s !== ST.state) { ST.state = s; ST.val = now; ST.flash = {}; return; }        // a new run, or the view back: read afresh
+        if (!stockSeen()) { ST.seenAt = null; return; }                                   // out of sight (a card, a minigame, the dive): the change waits to be seen
+        if (ST.seenAt == null) ST.seenAt = performance.now();
+        if (performance.now() - ST.seenAt < STOCK_SETTLE_MS) return;                      // in view a moment first: a follow-up card often opens just after one closes
+        STOCK_KEYS.forEach(k => {
+            const d = now[k] - ST.val[k];
+            if (!d) return;
+            ST.val = Object.assign({}, ST.val, { [k]: now[k] });
+            ST.flash = Object.assign({}, ST.flash, { [k]: { at: performance.now(), d } });
+            const v = NS.mods && NS.mods.voice;
+            if (v && typeof v.once === 'function') v.once('stock:' + k, STOCK_TELL[k]).catch(err => console.error('NSStock: the voice failed', err));
+        });
+    }
+    /** Are the numbers in view now (the tower's or the bridge wall's, nothing over them)? */
+    function stockSeen() {
+        if (NS.blocked && NS.blocked()) return false;
+        return !!document.querySelector('#ns-root .nss.on');
+    }
+    function stockStyle() {
+        if (document.getElementById('ns-stock-style')) return;
+        const st = document.createElement('style'); st.id = 'ns-stock-style';
+        st.textContent = `#ns-root .nss { position: absolute; left: 0; top: 0; display: flex; align-items: baseline; gap: 0.4em; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 400ms var(--ease, ease); }
+#ns-root .nss.on { opacity: 1; }
+#ns-root .nss b { font: 400 calc(15px + 2px * var(--t, 1))/1 var(--f-num, monospace); color: var(--ui, #c9d1d6); text-shadow: 0 0 6px rgba(201, 209, 214, 0.45), 0 1px 0 #05070a; transition: color 300ms var(--ease, ease); }
+#ns-root .nss span { font: 400 calc(12px + 1px * var(--t, 1))/1 var(--f-text, sans-serif); color: var(--dim, #8b8d90); text-shadow: 0 1px 0 #05070a, 0 0 4px #05070a; }
+#ns-root .nss i { position: absolute; left: 100%; margin-left: 0.4em; font: 400 calc(12px + 1px * var(--t, 1))/1 var(--f-num, monospace); font-style: normal; opacity: 0; transition: opacity 200ms var(--ease, ease); }
+#ns-root .nss.is-low b { color: var(--warm, #f08c2e); text-shadow: 0 0 6px rgba(240, 140, 46, 0.5), 0 1px 0 #05070a; }
+#ns-root .nss.is-up b, #ns-root .nss.is-up i { color: var(--warm-br, #ffc27a); text-shadow: 0 0 9px rgba(255, 194, 122, 0.8), 0 1px 0 #05070a; }
+#ns-root .nss.is-down b, #ns-root .nss.is-down i { color: #ff7a6a; text-shadow: 0 0 9px rgba(255, 90, 70, 0.8), 0 1px 0 #05070a; }
+#ns-root .nss.is-up i, #ns-root .nss.is-down i { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #ns-root .nss, #ns-root .nss b, #ns-root .nss i { transition: none; } }`;
+        document.head.appendChild(st);
+    }
+    /** Three readouts in a word layer. Each frame put() writes only what changed (text, class, place). */
+    function stockBoard(layer) {
+        stockStyle();
+        const items = {};
+        STOCK_KEYS.forEach(k => {
+            const el = document.createElement('div'), b = document.createElement('b'), w = document.createElement('span'), i = document.createElement('i');
+            el.className = 'nss'; el.dataset.stock = k; w.textContent = k;
+            el.append(b, w, i); layer.append(el);
+            items[k] = { el, b, i, text: '', cls: '', pos: '', w: 0 };
+        });
+        function paint(it, k) {
+            const v = ST.val[k], f = ST.flash[k], fresh = f && performance.now() - f.at < STOCK_FLASH_MS;
+            const text = v == null ? '' : String(v), delta = fresh ? (f.d > 0 ? '+' : '−') + Math.abs(f.d) : '';
+            const cls = (fresh ? (f.d > 0 ? ' is-up' : ' is-down') : '') + (v != null && v <= STOCK_LOW[k] ? ' is-low' : '');
+            if (it.text !== text) { it.b.textContent = text; it.text = text; it.w = 0; }
+            if (delta && it.i.textContent !== delta) it.i.textContent = delta;     // kept after the flash, faded out
+            if (it.cls !== cls) { ['is-up', 'is-down', 'is-low'].forEach(c => it.el.classList.toggle(c, cls.includes(c))); it.cls = cls; }
+        }
+        return {
+            put(k, x, y, align) {
+                const it = items[k];
+                if (!it) return;
+                paint(it, k);
+                if (!it.w) it.w = it.el.offsetWidth;
+                const pos = `translate(${Math.round(align === 'right' ? x - it.w : x)}px, ${Math.round(y)}px)`;
+                if (it.pos !== pos) { it.el.style.transform = pos; it.pos = pos; }
+                it.el.classList.add('on');
+            },
+            hide() { STOCK_KEYS.forEach(k => items[k].el.classList.remove('on')); },
+        };
+    }
+    /** The tower's own three, beside their rooms (only in travel, the tower in, not in the dark of a jump). */
+    function placeStock(show) {
+        if (!V.stock) { const layer = wordsLayer(); if (!layer) return; V.stock = stockBoard(layer); }
+        if (!show) { V.stock.hide(); return; }
+        STOCK_KEYS.forEach(k => { const a = STOCK_AT[k], [x, y] = toCss(a.x, A.deckTop(a.deck) + a.y); V.stock.put(k, x, y); });
+    }
+    window.NSStock = Object.freeze({ KEYS: STOCK_KEYS, tick: stockTick, board: stockBoard });
+
     // ── what others read ──
     function occupied() {
         const on = [false, false, false, false, false, false];
@@ -492,7 +597,7 @@
     function debug() {
         return { fit: fit(), quality: V.quality, k: slideK(now()), dark: V.dark, E: V.E, decks: Object.assign({}, V.real.decks), datable: V.real.datable,
             crew: JSON.parse(JSON.stringify(V.real.crew)), people: V.people.map(p => ({ id: p.id, deck: p.deck, x: p.x, act: p.act, say: p.say })),
-            chips: V.chips ? V.chips.deck : null };
+            chips: V.chips ? V.chips.deck : null, stock: Object.assign({}, ST.val) };
     }
 
     const mod = Object.freeze({ init, resize, update, render, pointer, occupied, beat, personAt, fit, debug });

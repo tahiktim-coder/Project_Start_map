@@ -6,7 +6,8 @@
    tower), then the rules from its choice (minus the stop count: the new screen has none), by A.U.R.A. Each is logged as
    today's card lines would be. The sixth line has no "I have marked it on your map" (no map any more). The talk waits
    until the tower has slid in; a line waits while a card or a minigame is up; if the player sets a course while the talk
-   runs, the line on screen finishes and the rest are not said. Then the shell's first hint (NewScreen.hint), once.
+   runs, the line on screen finishes and the rest are not said; a jump (or any arrival in another sector) ends it too.
+   Then the shell's first hint (NewScreen.hint), once.
    Source: bundle.js's OPENING_TALK (window.OPENING_TALK, the one copy the card also builds from; unchanged words,
    docs/STYLE.md), the one-at-a-time talk of prototypes/slice/script.js (sayLines, startOpening, cutOpening).
    Loaded only when the new-screen switch is on. Needs NewScreen (its bus, voice and state).
@@ -41,6 +42,9 @@
     function cut() { if (run && !run.cut) { run.cut = true; run.onCut(); } }
     NS.bus.on('flow:go', cut);                                                                // a course set: the line now finishes, the rest are not said
     NS.bus.on('hidden', cut);
+    NS.bus.on('jump:burn', cut);                                                              // a jump straight away: the talk is about a sector we are leaving
+    /** The sector we woke in is behind us (a jump before the talk was over, by any path): the rest is stale, never said. */
+    const moved = r => { const s = r.app && r.app.state; return !!s && s.currentSector !== r.sector; };
 
     const after = ms => new Promise(r => setTimeout(r, ms));
     /** Resolves once fn() is true, checked every POLL_MS; or false if the talk was cut first. */
@@ -95,6 +99,7 @@
             const [who, text] = r.lines[r.i];
             if (who && !alive(r.app, who)) continue;
             if (!(await until(free))) return;
+            if (moved(r)) { cut(); return; }
             await sayOne(r.app, who, text);
             if (r.cut) return;
             await after(GAP_MS);
@@ -103,7 +108,7 @@
 
     function start(app) {
         if (run || !app || !app.state) return;
-        const r = run = { app, lines: linesOf(), i: 0, cut: false, cutP: null, onCut: null };
+        const r = run = { app, lines: linesOf(), i: 0, cut: false, cutP: null, onCut: null, sector: app.state.currentSector || 1 };
         r.cutP = new Promise(resolve => { r.onCut = resolve; });
         talk(r).catch(err => console.error('NSWake: the talk failed', err)).then(() => {
             const wasCut = r.cut;

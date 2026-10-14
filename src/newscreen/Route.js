@@ -17,7 +17,8 @@
        light: { id, band, node }           the light: id 'light' in sectors 1-5 (the jump, not a node); in sector 6 the
                                            STRUCTURE node's id (it is also in worlds, slot 'light')
      }
-     slots: sector 1 'fork1-bottom' 'fork1-top' 'fork2-giant' 'fork2-limb' 'fork2-top';  sectors 2-6 'first' (the one
+     slots: sector 1 'fork1-bottom' (the marked wreck, alone in the first band) 'fork1-top' (a spare world, alone in the
+            second; only when the giant's fork is full) 'fork2-giant' 'fork2-limb' 'fork2-top';  sectors 2-6 'first' (the one
             world before the fork: the tape wreck in sector 2), 'fork-top' 'fork-bottom';  then 'single-1', 'single-2', ...
             (one band each; past 4 Travel lays them on a fallback arc), 'story', and in sector 6 'light'
      canGo(state, id) → { ok, say, kind }  kind: 'world' | 'ghost' | 'contact' | 'light' | 'passed' | 'cost' | 'none';
@@ -25,6 +26,7 @@
      arrive(state, id)                     we pulled in at id: it is 'visited', its fork mate 'gone', anything ahead in a
                                            nearer band 'passed'
      outOfReach(node) → bool               a planned node we can no longer go to (not 'ahead')
+     ahead(state, node) → bool             a node of this sector still in front of us (planned, 'ahead', past where we are)
      onlyStoryLeft(state) → bool           nothing but the story world (and the light) is left ahead that we can afford
      A fresh plan on a sector already played (a save from the default game, loaded with ?new=1 on) marks where we have
      been: the orbit we are parked at, a wreck boarded, a station searched; the rest follows as if we had flown there.
@@ -41,6 +43,7 @@
     });
     const isStructure = n => !!(n && (n.isStructure || n.type === 'STRUCTURE'));
     const isGiant = n => n && n.type === 'GAS_GIANT';
+    const isLandable = n => !!n && !n.isStation && n.type !== 'STATION' && !n.isAsteroidField && !n.ghost && !isGiant(n) && !isStructure(n);
     const byMapX = (a, b) => ((a.mapData && a.mapData.x) || 0) - ((b.mapData && b.mapData.x) || 0) || String(a.id).localeCompare(String(b.id));
     const nodesOf = state => (state && Array.isArray(state.sectorNodes) ? state.sectorNodes : []);
 
@@ -61,10 +64,11 @@
         let band = 0;
         const put = (node, slot) => { if (node) node.nsRoute = { sector, band, slot, status: 'ahead' }; };
         const fork = (a, slotA, b, slotB) => { if (!a && !b) return; band++; put(a, slotA); put(b, slotB); };
-        if (sector === 1) {
-            const one = firstNode || pool.shift() || null;
-            fork(one, 'fork1-bottom', take(n => n.isStation || n.type === 'STATION') || pool.shift() || null, 'fork1-top');
-            if (giant) fork(giant, 'fork2-giant', pool.shift() || null, 'fork2-limb');
+        if (sector === 1) {                                                          // the marked wreck alone first: no fork can lose it,
+            const one = firstNode || take(isLandable) || pool.shift() || null;       // and the first stop shows the scan, the team, the disc
+            if (one) { band++; put(one, 'fork1-bottom'); }
+            if (pool.length > (giant ? 1 : 2)) { band++; put(take(isLandable) || pool.shift(), 'fork1-top'); }   // a spare world next; a station later
+            if (giant) fork(giant, 'fork2-giant', take(isLandable) || pool.shift() || null, 'fork2-limb');
             else fork(pool.shift() || null, 'fork2-top', pool.shift() || null, 'fork2-limb');
         }
         let singles = 0;
@@ -165,11 +169,16 @@
     }
 
     const outOfReach = node => !!(node && node.nsRoute && node.nsRoute.status !== 'ahead');
+    function ahead(state, node) {
+        if (!state || !node) return false;
+        const at = plan(state).at, r = node.nsRoute;                                 // plan first: a node that turned up late gets its band
+        return !!(r && r.sector === state.currentSector && r.status === 'ahead' && r.band > at);
+    }
 
     function onlyStoryLeft(state) {
         const p = plan(state), affordable = n => window.TEST_MODE || typeof state.getWarpCost !== 'function' || state.getWarpCost(n) <= state.energy;
         return !p.worlds.some(w => w.status === 'ahead' && w.band > p.at && !w.node.isStoryPlanet && !w.node.ghost && w.slot !== 'light' && affordable(w.node));
     }
 
-    window.NSRoute = Object.freeze({ plan, canGo, arrive, outOfReach, onlyStoryLeft, find, LINES });
+    window.NSRoute = Object.freeze({ plan, canGo, arrive, outOfReach, ahead, onlyStoryLeft, find, LINES });
 })();

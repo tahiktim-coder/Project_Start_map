@@ -54,6 +54,11 @@
         engineering: { who: 'jaxon' },
     };
     const CALL = "It's in here with me. I can hear it, but I can't see it.";   // the patcher, when the hole is in their own deck
+    // how to find the hole: the new screen (?new=1) says plainly that you click it, and nudges sooner; today's game is unchanged
+    const NEW = !!window.NEW_SCREEN;
+    const FIND_LINE = NEW ? 'Look in each deck. The dust drifts to the hole. Click the hole and I go.' : 'Look in each deck. The dust will drift toward the hole.';
+    const NUDGE_LINE = NEW ? "Click where the dust goes, Commander. I'll go there." : "Show me where the dust is going and I'll go.";
+    const NUDGE_BY = NEW ? 16 : 32;
     const HURT = { mira: ['aris', "Mira's hurt. I'm going down to her."], vance: ['aris', "Vance is hurt. I'm going down to him."], jaxon: ['vance', "Jaxon's hurt. I'm going to him."],
         'jaxon,mira': ['aris', "Mira and Jaxon are both hurt. I'm going to them."], 'jaxon,vance': ['aris', "Vance and Jaxon are both hurt. I'm going to them."] };
     const IS_HURT = { aris: 'Aris is hurt.', mira: "Mira's hurt.", vance: 'Vance is hurt.', jaxon: "Jaxon's hurt." }, HER = { aris: 'her', mira: 'her', vance: 'him', jaxon: 'him' };
@@ -897,7 +902,7 @@
             ui.say('A.U.R.A.', "Impact, Commander. The ship is losing air. I can't tell from which deck.");
             talkWait = 3.4;
             if (!patcher) return;
-            patcherSays(live(() => (g.marked || g.view === g.leak ? '' : 'Look in each deck. The dust will drift toward the hole.')));
+            patcherSays(live(() => (g.marked || g.view === g.leak ? '' : FIND_LINE)));
             setCrew(patcher, { path: [{ x: LADDER + 16, y: crewById(patcher).y }] });   // they wait at the foot of the ladder, ready to climb
         }
 
@@ -928,7 +933,7 @@
             if (isSealed(g.leak) && left() < 12 && g.patch <= 0 && flag('low')) say('A.U.R.A.', live(() => (g.patch <= 0 ? `About ${secs()} seconds of air left in ${THE[g.key]}, Commander.` : '')), true);
             const inside = crew.find(f => f.id !== 'you' && f.id !== patcher && deckAt(f.y) === g.leak && !f.hurt);
             if (inside && isSealed(g.leak) && left() < 7 && g.patch < 0.5 && flag('ears')) say(inside.name, 'My ears hurt. Please hurry.', true);
-            if (!g.marked && since > 32 && flag('nudge')) patcherSays(live(() => (g.marked ? '' : "Show me where the dust is going and I'll go.")));
+            if (!g.marked && since > NUDGE_BY && flag('nudge')) patcherSays(live(() => (g.marked ? '' : NUDGE_LINE)));
         }
 
         // ── people: walk to the ladder, climb, cycle a shut hatch (the patcher) or be stopped by it (anyone else) ──

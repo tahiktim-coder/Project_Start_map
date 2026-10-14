@@ -1511,7 +1511,7 @@ class App {
         const names = [['Jaxon', 'Jaxon Mercer'], ['Aris', 'Aris Novak'], ['Vance', 'Kael Vance'], ['Mira', 'Mira Chen']].filter(([first]) => alive(first)).map(([, full]) => full);
         window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE', title: 'Head count',
-            context: 'Back on the bridge, Vance is frowning at the crew screen.',
+            context: isNewScreen() ? 'Vance is frowning at the crew screen.' : 'Back on the bridge, Vance is frowning at the crew screen.',   // the new screen opens it in travel, off the bridge
             dialogue: [
                 { speaker: 'Vance', text: 'There are five of us on this ship. She keeps saying four.' },
                 { speaker: 'A.U.R.A.', text: 'Four crew, Commander. All well.' },
@@ -1734,8 +1734,8 @@ class App {
                 }, 500);
             }
 
-            // A.U.R.A. commentary on warp initiation
-            if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+            // A.U.R.A. commentary on warp initiation (not when the new screen has already flown us there: it would be said on arrival)
+            if (typeof AuraSystem !== 'undefined' && window.AuraSystem && !opts.flown) {
                 window.AuraSystem.tryComment('WARP_START', this.state);
             }
 
@@ -2351,6 +2351,7 @@ class App {
      * world we can reach, or the marked wreck / the story planet not boarded yet (and still reachable, or still hidden with a stop left).
      */
     whatIsLeftInSector() {
+        if (isNewScreen() && window.NSRoute) return this.leftBehindNewScreen();
         const state = this.state, isNew = isNewScreen(), stopsLeft = isNew ? Infinity : state.getStopsLeft();   // the new screen: no stop count
         const here = state.lastVisitedSystem;
         const inReach = p => !(isNew && window.NSRoute.outOfReach(p));                  // the new screen: a world passed or visited is behind us
@@ -2369,9 +2370,51 @@ class App {
         return null;
     }
 
-    /** JUMP SECTOR clicked with something left: A.U.R.A. asks first (docs/GAME_FLOW.md 2.10). "Not yet" comes first, nearer the button. */
+    /**
+     * The new screen: what the jump would leave behind that is still in front of us, named by one of the crew, or null.
+     * The story first (the world their last course led to, our wrecks nobody has boarded, the faint contact), at most two
+     * things in one or two short lines; then any world we could still stop at. Returns { speaker, text }.
+     */
+    leftBehindNewScreen() {
+        const state = this.state, nodes = state.sectorNodes || [], ahead = p => !p.ghost && window.NSRoute.ahead(state, p);
+        const open = p => !p.exodusInvestigated && ahead(p);
+        const course = nodes.find(p => p.isStoryPlanet && !p.storyHidden && open(p));
+        const wrecks = nodes.filter(p => !p.isStoryPlanet && (p.tags || []).includes('EXODUS_WRECK') && open(p));
+        const contact = nodes.find(p => p.isStoryPlanet && p.storyHidden && open(p));
+        const names = list => (list.length > 2 ? `${list[0].name}, ${list[1].name} and more` : list.map(p => p.name).join(' and '));
+        const said = [
+            course && { who: 'Vance', text: `We haven't been down to ${course.name}, where their last course led.` },
+            wrecks.length && { who: 'Aris', text: `Nobody has been aboard the ${wrecks.length > 1 ? 'wrecks' : 'wreck'} on ${names(wrecks)} yet.` },
+            contact && { who: 'Mira', text: "We never found out what that faint contact was." },
+        ].filter(Boolean).slice(0, 2);
+        const isStop = p => !p.storyHidden && !(p.isStructure || p.type === 'STRUCTURE') && state.getWarpCost(p) <= state.energy;
+        if (!said.length && nodes.some(p => ahead(p) && isStop(p))) said.push({ who: 'Jaxon', text: "There are still worlds ahead we haven't seen. One of them could be the place to stop." });
+        if (!said.length) return null;
+        return { speaker: this.ableSpeaker(said[0].who), text: said.map(s => s.text).join(' ') };
+    }
+
+    /** Who can say a line now: the one asked for if awake and free, else the next of the crew who is, else A.U.R.A. */
+    ableSpeaker(first) {
+        const able = name => this.state.crew.some(c => c.name === name && c.status !== 'DEAD' && !(c.tags || []).some(t => t === 'CONFINED' || t === 'SEDATED'));
+        return [first, 'Aris', 'Mira', 'Jaxon', 'Vance'].find(able) || 'A.U.R.A.';
+    }
+
+    /** JUMP SECTOR clicked with something left: A.U.R.A. asks first (docs/GAME_FLOW.md 2.10). "Not yet" comes first, nearer the button.
+        reason: her words (a string), or on the new screen { speaker, text }: one of the crew names what is left, "Go anyway". */
     askBeforeJump(reason) {
         if (!window.EncounterCard) { this.jumpNow(this.sectorJumpCost()); return; }
+        if (reason && typeof reason === 'object') {
+            window.EncounterCard.open(this, {
+                tone: 'station', kicker: 'SECTOR JUMP', title: 'Jump now?', zIndex: 2800,
+                dialogue: [{ speaker: reason.speaker, text: reason.text }],
+                choices: [
+                    { text: 'Not yet', desc: 'Stay in this sector.' },
+                    { text: 'Go anyway', desc: 'Whatever is left here is gone for good.' },
+                ],
+                onPick: idx => { if (idx === 1) this.jumpNow(this.sectorJumpCost()); },
+            });
+            return;
+        }
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'SECTOR JUMP', title: 'Jump now?', zIndex: 2800,
             dialogue: [{ speaker: 'A.U.R.A.', text: `${reason} Jump anyway?` }],

@@ -24,7 +24,11 @@
      breakPatched(state)           every patched deck breaks again (a crisis aboard, the sector jump)
      deckChoices(state, deck) → [{ key: 'fix' | 'patch' | 'live', words, note }]   deck: the tower's name (hold = cargo)
      deckChoose(app, deck, i | key) → bool
-     debug() → { trip, call, quiet }
+     TELL                          { key: line }  what A.U.R.A. says once a run when an action first shows (Stop.js), and 'leave'
+     debug() → { trip, call, breach, held }
+   Crew moments (App.queueModal('crew', ...), the "A MOMENT WITH ..." cards bundle rolls 2 s after a warp) are held here
+   while we arrive, sit on the bridge or pick the team: they open in travel, once it is calm (the view up and no card for
+   2.5 s, no click for 1.2 s), under ChoiceGuard's 400 ms hold. One waits at a time (a later roll is let go). A moment whose person died meanwhile is dropped.
    Bus (NewScreen.bus): emits 'trip:down' { ids, aboard }, 'trip:back' { ids, failed? }, 'stop:skim' { id }.
 */
 (function () {
@@ -36,6 +40,7 @@
     const DECK_KEY = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', hold: 'cargo', cargo: 'cargo', engineering: 'engineering' };
     const DECK_WORD = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', cargo: 'hold', engineering: 'engine room' };
     const NOT_CRISES = new Set(['LUCKY_FIND']);                                              // a find is not a crisis
+    const CALM_SHOWN_MS = 2500, CALM_CLICK_MS = 1200;                                        // a held crew moment opens only after both
     const aura = text => `A.U.R.A.: "${text}"`;
     const SIGN = {
         BREACH: "The hull's been groaning since the last scrape.", HULL_STRESS: "The hull's been groaning since the last scrape.",
@@ -58,6 +63,20 @@
         fixOnBench: 'Mira: "The star fix is on my bench."',
         fixReady: aura('The star fix is ready to date, Commander.'),
     };
+
+    // what A.U.R.A. says once a run when an action first shows on the bridge (plain, 15 words at most)
+    const TELL = Object.freeze({
+        scan: 'Scan shows what is down there. It costs nothing, Commander.',
+        team: 'Click two people at the window, then Send the team. Down there is risky.',
+        skim: 'Refuel scoops gas from the clouds. Free energy, once per giant.',
+        date: 'Date the wreck to learn where its crew went. It costs nothing.',
+        strange: 'Fly closer takes the whole ship in. Something here is wrong.',
+        dock: 'Dock and we search the station. It may hold salvage, Commander.',
+        mine: 'Mine it and we cut salvage from the rocks. Salvage fixes the ship.',
+        call: 'Answer the call to hear who needs help. If we leave, it is lost.',
+        settle: 'Settle here ends the journey. We stay on this world for good.',
+        leave: 'Leave orbit takes us back out. Then pick the next world.',
+    });
 
     let trip = null, call = null, fixWait = 0, pendingBreach = null;
     const pairSaid = new Set(), arisSaid = new Set();
@@ -103,6 +122,7 @@
     function canDate(app, node) {
         if (!app || !node || typeof app.canDateWreck !== 'function' || !app.canDateWreck(node)) return false;
         const fix = node._nsFix, s = app.state;
+        if (fix == null && trip && trip.node === node.id) return false;                     // the team is still at this wreck: fixIn decides when it can be dated
         return fix == null || fix === 'now' || (typeof fix === 'number' && ((s && s._paidWarps) || 0) > fix);
     }
     function datable(state) {
@@ -124,7 +144,7 @@
         if (n.isAsteroidField && !n.asteroidMined) add('mine', 'Mine it', 'field', () => app.handleAsteroidAction(), false, 'for salvage');
         const scoop = (s.upgrades || []).includes('fuel_scoop');                             // the scoop took its fill on arrival: no skim on top
         if (n.type === 'GAS_GIANT' && !n.nsSkimmed && !scoop && s.energy < 100) add('skim', 'Refuel', 'giant', () => skim(app, n), false, `+${Math.min(SKIM_ENERGY, 100 - s.energy)} energy`);   // full tanks: nothing to skim
-        if (isPlanet(n) && !n.scanned) add('scan', 'Scan', 'world', () => app.handleScanAction(false), false, "what's down there");
+        if (isPlanet(n) && !n.scanned) add('scan', 'Scan', 'world', () => scan(app, n), false, "what's down there");
         if (isPlanet(n) && strangeSite(app, n) && !trip) add('strange', 'Fly closer', 'site', () => app.handleAnomalyAction(), false, 'something here is wrong');   // never while a team is down
         if (hasTeamAction(n) && evaCrew(app).length >= 2 && !trip && !arisRefuses(app)) add('team', 'Send the team', teamSite(app, n) ? 'site' : 'world', null, true);
         if (!call && n._nsCall) call = savedCall(n);                                         // a call that waited through a reload
@@ -132,6 +152,26 @@
         if (canDate(app, n)) add('date', 'Date the wreck', alive(byRole(s, 'SPECIALIST')) ? 'mira' : 'aura', () => app.dateWreck(n), false, 'where they went');
         if (isPlanet(n) && n.type !== 'GAS_GIANT' && (n.scanned || window.TEST_MODE)) add('settle', 'Settle here', 'under', () => app.handleColonyAction(), false, 'ends the journey');
         return out;
+    }
+    /** Scan (the game's own handleScanAction), then A.U.R.A. says what is down there in one plain line, at once: the air,
+        the heat, life, and whether we could live there. Logged too. */
+    function scan(app, n) {
+        app.handleScanAction(false);
+        if (!n.scanned) return;
+        const line = scanLine(n), ns = NS(), v = ns && ns.mods && ns.mods.voice;
+        if (v && typeof v.say === 'function') { try { v.say({ id: 'aura', who: 'A.U.R.A.', text: line, keep: true }); } catch (err) { console.error('NSOrbit: the scan line failed', err); } }
+        log(app.state, aura(line));
+    }
+    const AIR = { BREATHABLE: 'Air we can breathe', THIN: 'Thin air', TOXIC: 'Poison air', CORROSIVE: 'Air that burns', NONE: 'No air' };
+    function scanLine(n) {
+        const m = n.metrics || {}, temp = Number(m.temp), grav = Number(m.gravity), tags = n.tags || [];
+        const air = AIR[n.atmosphere] || 'Air I cannot read';
+        const heat = !Number.isFinite(temp) ? '' : temp < -20 ? 'freezing' : temp > 45 ? 'burning hot' : 'mild';
+        const pull = Number.isFinite(grav) && grav > 1.5 ? 'heavy' : '';
+        const life = m.hasLife ? 'life down there' : 'no life';
+        const livable = n.atmosphere === 'BREATHABLE' && heat === 'mild' && !pull && !tags.includes('PREDATORY');
+        const verdict = tags.includes('PREDATORY') ? 'Something down there hunts.' : livable ? 'We could live here.' : 'A hard place to live.';
+        return `Scan done. ${[air, heat, pull, life].filter(Boolean).join(', ')}. ${verdict}`;
     }
     function act(app, key, ids) {
         const a = actions(app).find(x => x.key === key);
@@ -295,6 +335,9 @@
     function tick(dt, blocked) {
         const app = window.app, ns = NS();
         if (!app || !app.state) return;
+        holdMoments(app);
+        if (blocked) moments.calmFrom = performance.now();                                    // a card just closed is not calm yet
+        else if (moments.held.length && calm(app, blocked)) releaseMoment(app);
         const waiting = !!((app._modalQueue && app._modalQueue.length) || app._modalActive);   // a card still queued: the story goes on
         if (trip && !blocked && !waiting) {
             if (trip.downDone) { trip.quiet += dt; if (trip.quiet >= (trip.over ? TRIP_OVER_MS : TRIP_QUIET_MS)) tripDone(app); }   // the quiet time is only the safety net
@@ -313,6 +356,41 @@
             n._nsFixSaid = true;
             log(app.state, alive(byRole(app.state, 'SPECIALIST')) ? LINES.fixOnBench : LINES.fixReady);
         }
+    }
+
+    // ── crew moments wait for a calm moment in travel (never on arrival, on the bridge or during the pick) ──
+    const moments = { app: null, held: [], calmFrom: 0, lastDown: -1e9, hooked: false };
+    /** App.queueModal, wrapped once per App: a crew moment is kept here; every other card goes through as before. */
+    function holdMoments(app) {
+        if (!app || moments.app === app || typeof app.queueModal !== 'function') return;
+        const real = app.queueModal;
+        moments.app = app; moments.held = [];
+        app.queueModal = function (type, data) {
+            if (type === 'crew' && data) { if (!moments.held.length) moments.held = [data]; return; }   // one waits; a later roll is let go (it may come again)
+            return real.call(this, type, data);
+        };
+        app.queueModal.nsReal = real;
+        if (moments.hooked) return;
+        moments.hooked = true;
+        const ns = NS(), calmAgain = () => { moments.calmFrom = performance.now(); };
+        if (ns && ns.bus) ['showing', 'shown', 'hidden', 'mode', 'jump:burn', 'opening:done', 'trip:down', 'trip:back'].forEach(n => ns.bus.on(n, calmAgain));
+        document.addEventListener('pointerdown', () => { moments.lastDown = performance.now(); }, true);
+    }
+    /** Travel, the view up a while, no click just now, no card anywhere, nothing queued in the game. */
+    function calm(app, blocked) {
+        const ns = NS(), now = performance.now();
+        return !!ns && !blocked && ns.isShown() && ns.mode() === 'travel' && !app._isInTransit && !app._modalActive
+            && !(app._modalQueue && app._modalQueue.length) && !document.querySelector('.modal-overlay')
+            && now - moments.calmFrom >= CALM_SHOWN_MS && now - moments.lastDown >= CALM_CLICK_MS;
+    }
+    /** One held moment opens (its person still alive), under ChoiceGuard's hold: the click that follows is never swallowed. */
+    function releaseMoment(app) {
+        const ev = moments.held[0];
+        moments.held = moments.held.slice(1);
+        if (!ev.targetCrew || ev.targetCrew.status === 'DEAD' || !(app.state.crew || []).includes(ev.targetCrew)) return;
+        const before = new Set(document.querySelectorAll('.modal-overlay'));
+        try { app.queueModal.nsReal.call(app, 'crew', ev); } catch (err) { console.error('NSOrbit: the crew moment failed', err); return; }
+        document.querySelectorAll('.modal-overlay').forEach(el => { if (!before.has(el) && window.ChoiceGuard) window.ChoiceGuard.hold(el); });
     }
 
     // ── leaving orbit ──
@@ -387,8 +465,8 @@
 
     window.NSOrbit = Object.freeze({
         actions, act, eligible, hasTeamAction, opened, signed, beforeLeave, whileDown, tripOver, tick, offerCall, fixIn, canDate, datable,
-        breakPatched, deckChoices, deckChoose, sign,
+        breakPatched, deckChoices, deckChoose, sign, TELL,
         trip: () => (trip ? { ids: trip.ids.slice(), aboard: trip.aboard.slice() } : null),
-        debug: () => ({ trip: trip ? { ids: trip.ids, downDone: trip.downDone, over: !!trip.over, quiet: Math.round(trip.quiet) } : null, call: call ? call.title || true : null, breach: pendingBreach ? Math.round(pendingBreach.wait) : null }),
+        debug: () => ({ trip: trip ? { ids: trip.ids, downDone: trip.downDone, over: !!trip.over, quiet: Math.round(trip.quiet) } : null, call: call ? call.title || true : null, breach: pendingBreach ? Math.round(pendingBreach.wait) : null, held: moments.held.map(e => e.id || e.title) }),
     });
 })();
