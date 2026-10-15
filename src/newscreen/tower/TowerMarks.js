@@ -10,7 +10,9 @@
    window.NSTowerMarks (frozen)
      draw(ctx, v)            v = { t, G: { W, H } (the canvas drawn into), offX, cam, decks: { bridge … engineering: 'ok' |
                              'red' }, engDown, E (0..100, eased), beat: { val, onsets: [ms] }, flood: { kind: 'jump' | 'fill',
-                             t0 } | null, sunY (canvas row), fix: { x, y } tower px | null (a star fix waiting on Mira's bench) }
+                             t0 } | null, sunY (canvas row), fix: { x, y } tower px | null (a star fix waiting on Mira's bench),
+                             flick: { [deck]: ms } (optional: a hit just now, the deck's red wash stutters for 360 ms),
+                             reduced (optional: reduced motion, the stutter is one steady wash) }
                              red decks, brown-out, conduit, hull light, the fix, in that order
      vignette(ctx, v, drawn) the left-edge fade (unused since the whole tower fits, BUILD_B §8; kept for a cut hull)
      floodDone(v) → bool     true once v.flood has run its 1.8 s
@@ -37,6 +39,7 @@
     const RED_LAMP = i => [626, i === 0 ? 100 : 30];                    // the bridge's top is above the frame
     const BEAT = Object.freeze({ FULL: 1100, LOW: 1500, RISE: 0.9 });
     const FLOOD_MS = 1800, BROWN_CYCLE = 2900, BLINK_MS = 1100, RED_WASH = '#d4402c';
+    const FLICK = Object.freeze({ MS: 360, STEP: 45, ON: 0.6, STEADY: 0.35 });   // a deck's red light stuttering after a hit
 
     // ── still pieces, painted once (house recipe: ramps from the ink, Bayer dither) ──
     const cache = new Map();
@@ -135,18 +138,29 @@
         ctx.save(); ctx.globalCompositeOperation = 'source-atop'; ctx.drawImage(washCv, 0, 0, w, h, x, y0, w, h); ctx.restore(); cur = '';
     }
     /** A red deck: a lamp out and frost round the hole (sparks in engineering), the red wash beating with a caged lamp. */
+    /** The red wash stuttering just after a hit (v.flick[deck] = when): on and off every 45 ms at 0.6; reduced motion, one
+        steady 0.35. null when the deck is not stuttering now. */
+    function flickAlpha(name, t) {
+        const t0 = V.flick && V.flick[name], age = t0 == null ? -1 : t - t0;
+        if (age < 0 || age >= FLICK.MS) return null;
+        if (V.reduced) return FLICK.STEADY;
+        return Math.floor(age / FLICK.STEP) % 2 === 0 ? FLICK.ON : 0;
+    }
     function drawDamage(t) {
         const tick = Math.floor(t / 125);
         DECKS.forEach((name, i) => {
-            if (V.decks[name] !== 'red' || !deckVisible(i)) return;
-            const top = A.deckTop(i), surge = i === 5;
+            const red = V.decks[name] === 'red', fa = flickAlpha(name, t);
+            if ((!red && fa == null) || !deckVisible(i)) return;
+            const top = A.deckTop(i), surge = i === 5, y0 = Math.max(0, sy(top)), y1 = Math.min(V.G.H, sy(top + F + 1));
+            if (!red) { if (fa > 0) redWash(sx(L.IL), y0, L.IR - L.IL, y1, fa); return; }    // a hit on a deck that held: the stutter only
             ctx.save(); ctx.globalCompositeOperation = 'source-atop';
             ctx.drawImage(darkCanvas(i, LAMPS[i].slice(0, 1)), sx(0), sy(top));
             if (!surge) ctx.drawImage(frostCanvas(i), sx(HOLE[i][0] - 48), sy(top + HOLE[i][1] - 48));
             ctx.restore(); cur = '';
             if (surge) sparks(sx(HOLE[i][0]), sy(top + HOLE[i][1]), tick);
             const on = (t % BLINK_MS) < BLINK_MS * 0.5, [lx, ly] = RED_LAMP(i), X = sx(lx), Y = sy(top + ly), ramp = R.RED;
-            redWash(sx(L.IL), Math.max(0, sy(top)), L.IR - L.IL, Math.min(V.G.H, sy(top + F + 1)), on ? 0.78 : 0.58);   // reads as red at the fitted size
+            const wash = fa != null ? fa : on ? 0.78 : 0.58;                  // reads as red at the fitted size
+            if (wash > 0) redWash(sx(L.IL), y0, L.IR - L.IL, y1, wash);
             for (let dx = -3; dx <= 4; dx++) { tone(X + dx, Y - 3, R.STEEL, 0.62); tone(X + dx, Y + 3, R.STEEL, 0.3); }
             for (let dy = -2; dy <= 2; dy++) { tone(X - 3, Y + dy, R.STEEL, 0.5); tone(X + 4, Y + dy, R.STEEL, 0.36); }
             const n = ramp.hex.length;

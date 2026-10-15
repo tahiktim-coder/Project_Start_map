@@ -47,8 +47,8 @@
     const gapFor = s => clamp(GAP.base + GAP.word * s.split(/\s+/).length, GAP.min, GAP.max);
     // the throttle: the course comes up to BOOST times faster (held all the way, a flight takes about 58% of the time) and the
     // world streams past up to FEEL times faster; it opens over BOOST_UP s and eases back over BOOST_DOWN s. Near full it pushes
-    // the view wider by PUSH and shakes it a little.
-    const BOOST = 1.75, FEEL = 2.2, BOOST_UP = 0.8, BOOST_DOWN = 0.6, PUSH = 0.07, SHAKE_AT = 0.85;
+    // the view wider by PUSH and trembles a little (FEEL_SHAKE below).
+    const BOOST = 1.75, FEEL = 2.2, BOOST_UP = 0.8, BOOST_DOWN = 0.6, PUSH = 0.07;
     const AIM_GAIN = 3.2, AIM_REACH = [200, 100];               // the pointer: how keenly the ship goes where it points; px from the middle to the box edge
     // the flight's shape, in shares of the course: the hulls far apart, the debris in waves [middle, half-width, share] that
     // build and ease, with empty space before, between and after
@@ -58,6 +58,12 @@
     const TWIN = { from: 0.4, to: 0.62, side: 4.6, up: -0.6, z: 6, behind: -6, lag: 0.25, settled: 0.3, look: 0.5, slip: 0.35 };
     // the end: the light, the cruise, when A.U.R.A. starts her report, and how long after its last line the way on shows
     const DONE_SUN = 1.12, DONE_MUL = 0.25, REPORT_DELAY = 1.6, CONTINUE_BEAT = 1.2;
+    // the feel of the flight (window.Juice): trauma per moment, the push into the seat (zoom kick), the hit-stop, the rattle
+    const FEEL_SHAKE = { max: [10, 7], roll: 0.012, decay: 1.6, hz: 9 };
+    const TRAUMA = { start: 0.25, jump: 0.55, drop: 0.5, open: 0.4, full: 0.3, scrape: 0.7, through: 0.3 };
+    const KICK = { drop: 0.04, open: 0.035, up: 0.12, down: 0.5 }, OPEN_AT = 0.05, OPEN_GAP = 1, FULL_AT = 0.85;
+    const HIT_STOP = 0.06, RATTLE = 0.4, STUTTER = 0.3, STUTTER_STEP = 0.05, STUTTER_DIM = 0.55, BREATH = 0.012, PLUME_SETTLE = 1.2;
+    const easeOut3 = x => 1 - (1 - x) ** 3, easeInOut = x => (x < 0.5 ? 4 * x * x * x : 1 - (-2 * x + 2) ** 3 / 2);
     // EXODUS class, as MiniShip draws it: half-length in course units, then in half-lengths: half-width, decks, stern
     const HULL_L = 1.8, HW = 0.33, DECKS = [0.624, 0.323, 0.022, -0.278, -0.579], STERN = -0.8;
     const M_PLATE = 1, M_SEAM = 2, M_WINDOW = 3, M_INSIDE = 4, M_BELL = 5;
@@ -967,6 +973,11 @@
         const g = { heard: SECTORS[from].heard, heardAt: -9, seen: 0, hits: 0, damaged: startDamage(opts.damaged), hitRooms: [], nums: [], r: MiniLab.rng((Math.random() * 4294967295) >>> 0) };
         const view = { cr: 1, sr: 0, zm: 1, lx: 0, ly: 0, ox: 0, oy: 0, sunX: CX, sunY: CY, sunR: 0 };
         const taps = new Map(), STEER = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'd'], THROTTLE = [' ', 'w', 'Shift'];
+        // the feel (window.Juice, optional): a shake on trauma², a push into the seat, a hit-stop and a rattle on a scrape
+        const J = window.Juice, shaker = J ? J.shaker(FEEL_SHAKE) : null, isReduced = () => !!(J && J.reduced());
+        let shake = { dx: 0, dy: 0, rot: 0 }, kick = { at: -99, zoom: 0 }, stopUntil = -99, hitAt = -99, openKickAt = -99, endPlume = 0;
+        const addTrauma = a => { if (shaker) shaker.add(a); };
+        const pushKick = zoom => { kick = { at: clock, zoom: zoom * (isReduced() ? 0.5 : 1) }; };
 
         // the sky: the sector's place (skyOf), fixed at infinity, so it only pans and tilts; dust in depth; streaks close by
         function seedSky(sector) {
@@ -990,14 +1001,16 @@
             auto = on; say('A.U.R.A.', on ? 'I have the ship, Commander.' : 'You have the ship, Commander.', 2);
             row([{ label: on ? 'Take the stick' : 'Let A.U.R.A. fly', primary: on, onClick: () => setAuto(!auto) }]);
         }
-        function start(isAuto) { mode = 'jump'; phaseT = 0; sound.jump(); setAuto(isAuto); }
+        function start(isAuto) { mode = 'jump'; phaseT = 0; sound.jump(); setAuto(isAuto); addTrauma(TRAUMA.start); pushKick(0); }
         function arrive() {   // the flash clears on the new sector
             whiteAt = clock; seedSky(to);
             leg = makeLeg(to, g.r, g.heard, living, avoid); t = 0; mode = 'run';
+            addTrauma(TRAUMA.drop); pushKick(KICK.drop);
         }
         /** Through: the ship cruises on into the light while A.U.R.A. reports, one line at a time. Only after her last line
             does the way on show, so a quick click (or a tap of Space for the throttle) cannot cut her off. */
         function reachEnd() {
+            endPlume = plumeNow(); addTrauma(TRAUMA.through);
             mode = 'done'; phaseT = 0;
             const crew = headCount(aboard), tell = { crew: crew === told.crew ? '' : crew, count: !leg.lines.some(l => l.done && l.heard === g.heard), briefing: !told.briefing };
             report(to, g.heard, g.nums, g.hits, g.hitRooms, tell).forEach(line => queue.push({ who: 'A.U.R.A.', line: () => line }));
@@ -1063,6 +1076,8 @@
         function scrape() {                                                              // every perBreak-th scrape turns a room of the ship inset red
             const free = DECK_KEYS.filter(k => !g.damaged[k]);
             g.hits++; jolt = 0.45; sound.scrape();
+            addTrauma(TRAUMA.scrape); hitAt = clock;
+            if (clock >= stopUntil) stopUntil = clock + HIT_STOP;                       // one hit-stop at a time
             if (!free.length || g.hits % perBreak) return;
             const room = free[Math.floor(g.r() * free.length)];
             g.damaged = { ...g.damaged, [room]: true };
@@ -1135,8 +1150,34 @@
             if (mode === 'jump') return 1 + (phaseT / JUMP_TIME) ** 2 * 12;
             return mode === 'ready' ? 0.3 : DONE_MUL + (1 - DONE_MUL) * Math.exp(-phaseT / 0.8);
         }
-        function update(dt) {
-            clock += dt; jolt = Math.max(0, jolt - dt); nearT = Math.max(0, nearT - dt);
+        /** The shake for this frame: rumbles held while the jump burns and at full throttle; a kick when the throttle opens. */
+        function feel(dtReal, prevTh) {
+            if (mode === 'jump') shaker.floor(TRAUMA.jump * (phaseT / JUMP_TIME) ** 2);
+            if (th > FULL_AT) shaker.floor(TRAUMA.full * (th - FULL_AT) / (1 - FULL_AT));
+            if (mode === 'run' && prevTh < OPEN_AT && th >= OPEN_AT && clock - openKickAt >= OPEN_GAP) { openKickAt = clock; addTrauma(TRAUMA.open); pushKick(KICK.open); }
+            shake = shaker.tick(dtReal);
+        }
+        /** The push into the seat: 0 → 1 in 120 ms (ease-out), back to 0 over 500 ms (ease-in-out). */
+        function kickNow() {
+            const age = clock - kick.at;
+            if (age < 0 || age >= KICK.up + KICK.down) return 0;
+            return age < KICK.up ? easeOut3(age / KICK.up) : 1 - easeInOut((age - KICK.up) / KICK.down);
+        }
+        /** Our drive: brighter and longer as the throttle opens (and in the jump), flaring on a push; once through it dies down. */
+        function plumeNow() {
+            if (mode === 'done') return lerp(endPlume, 0.15, easeOut3(Math.min(1, phaseT / PLUME_SETTLE)));
+            const b = Math.max(smooth(th), mode === 'jump' ? phaseT / JUMP_TIME : 0);
+            return Math.min(1.4, 0.2 + 0.8 * b + 0.5 * kickNow());
+        }
+        function update(dtReal) {
+            const frameStart = clock;
+            clock += dtReal; jolt = Math.max(0, jolt - dtReal); nearT = Math.max(0, nearT - dtReal);
+            const dt = frameStart < stopUntil ? 0 : dtReal, prevTh = th;                // a hit-stop: the flight holds still for two frames
+            const mul = simulate(dt);
+            if (shaker) feel(dtReal, prevTh);
+            return mul;
+        }
+        function simulate(dt) {
             if (queue.length && clock >= nextLine) { const q = queue.shift(), s = q.line(); say(q.who, s, q.gap || gapFor(s)); }
             if (mode === 'done' && !isEndReady && !queue.length && phaseT > REPORT_DELAY && clock - saidAt > CONTINUE_BEAT) showContinue();
             const ctl = input();
@@ -1159,10 +1200,10 @@
         }
 
         // ── drawing: the camera and the sky. Everything below draws in ART pixels (AW × AH); the flight above is in units ──
-        function setView() {   // the bank, where the camera looks, the push and shake of speed, a jolt after a scrape; the false sun sits dead ahead
-            const b = smooth(th), shake = Math.max(0, (b - SHAKE_AT) / (1 - SHAKE_AT)) * 2.4 + 12 * jolt, rnd = () => Math.round((Math.random() - 0.5) * shake);
-            view.cr = Math.cos(roll); view.sr = Math.sin(roll); view.zm = 1 - PUSH * b; view.lx = look[0] * F; view.ly = look[1] * F;
-            view.ox = shake > 0 ? rnd() : 0; view.oy = shake > 0 ? Math.round(rnd() * 0.75) : 0;
+        function setView() {   // the bank, where the camera looks, the push of speed and into the seat, the shake; the false sun sits dead ahead
+            const b = smooth(th), r = roll + shake.rot, breath = mode === 'done' ? 1 + BREATH * Math.sin(Math.PI * Math.min(1, phaseT / 0.9)) : 1;
+            view.cr = Math.cos(r); view.sr = Math.sin(r); view.zm = (1 - PUSH * b - kick.zoom * kickNow()) * breath; view.lx = look[0] * F; view.ly = look[1] * F;
+            view.ox = Math.round(shake.dx * D) / D; view.oy = Math.round(shake.dy * D) / D;   // whole art pixels
             [view.sunX, view.sunY] = sky(0, 0);
         }
         /** A direction at infinity (in units at depth F) → art pixels; and a point in the world → art pixels. */
@@ -1491,7 +1532,7 @@
 
         // ── drawing: what the pilot sees besides the view ──
         function drawBox() {   // our own size where things cross us: corner marks, turning with the bank
-            const isWarn = jolt > 0 || (threat && Math.floor(clock * 8) % 2);
+            const isWarn = jolt > 0 || (threat && (isReduced() || Math.floor(clock * 8) % 2));   // reduced motion: steady, no blink
             const r = isWarn ? R.RED : R.UI, v = isWarn ? 0.75 : nearT > 0 ? 1 : 0.6;
             const c = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([kx, ky]) => proj(cam[0] + kx * SHIP_R[0], cam[1] + ky * SHIP_R[1], ZHIT));
             c.forEach((p, k) => [c[(k + 1) % 4], c[(k + 3) % 4]].forEach(q => {
@@ -1512,9 +1553,10 @@
                 const q = ((x - ix) / rx) ** 2 + ((y - iy) / ry) ** 2;
                 if (q < 1) mixPx(x, y, ink, 0.85 * (1 - q) ** 0.6, 6);                 // the space behind our own ship goes quiet
             }
-            if (jolt > 0) for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {      // a scrape: the edges flash
+            const edge = jolt * 1.5 * (isReduced() ? 0.5 : 1);
+            if (jolt > 0) for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {      // a scrape: the edges flash (half as strong with reduced motion)
                 const e = Math.min(x, y, AW - 1 - x, AH - 1 - y) / D;
-                if (e < 9) { const v = jolt * 1.5 * (1 - e / 9); if (v > BAY8[((y & 7) << 3) | (x & 7)]) buf[y * AW + x] = R.RED.c32[level(R.RED, 0.45 + 0.4 * v, x, y)]; }
+                if (e < 9) { const v = edge * (1 - e / 9); if (v > BAY8[((y & 7) << 3) | (x & 7)]) buf[y * AW + x] = R.RED.c32[level(R.RED, 0.45 + 0.4 * v, x, y)]; }
             }
             // the jump: stars stretch, then one short white-gold flash from the light that clears as the next sector opens
             const white = mode === 'jump' ? clamp((phaseT - JUMP_TIME + 0.3) / 0.25, 0, 1) : clamp(1 - (clock - whiteAt) / 0.45, 0, 1);
@@ -1553,6 +1595,19 @@
             note('how', mode === 'ready' ? 'USE THE MOUSE OR THE ARROWS' : null, { x: CX, y: 192, align: 'center', tone: 'dim', size: 'm' });
             note('faster', mode === 'run' && !auto && !throttleTaught && clock - whiteAt > 1.2 ? 'HOLD TO GO FASTER' : null, { x: 50, y: 246, tone: 'ui' });
         }
+        /** Our ship in the corner, its drive burning longer and brighter as the throttle opens. A scrape rattles the hull for
+            RATTLE s (on the shaker's own noise) and its lights stutter for STUTTER s; reduced motion: half the rattle, no stutter. */
+        function drawOurShip() {
+            const age = clock - hitAt, isHit = !!J && age >= 0 && age < RATTLE, isCalm = isReduced();
+            const fade = isHit ? (1 - age / RATTLE) * 2 * D * (isCalm ? 0.5 : 1) : 0;
+            const rx = Math.round(fade * (isHit ? J.noise(clock, 1.3, FEEL_SHAKE.hz) : 0)), ry = Math.round(fade * (isHit ? J.noise(clock, 4.2, FEEL_SHAKE.hz) : 0));
+            const isDark = isHit && !isCalm && age < STUTTER && Math.floor(age / STUTTER_STEP) % 2 === 0;
+            const opts = { damaged: g.damaged, labels: false, plume: plumeNow(), dim: isDark ? Object.fromEntries(shipL.rooms.map(r => [r.key, STUTTER_DIM])) : undefined };
+            if (!rx && !ry) { MiniShip.draw(ctx, shipL, clock * 1000, opts); return; }
+            const m = ctx.getTransform();
+            ctx.setTransform(m.a, m.b, m.c, m.d, m.e + rx, m.f + ry);                   // whole art pixels, under the picture's scale
+            try { MiniShip.draw(ctx, shipL, clock * 1000, opts); } finally { ctx.setTransform(m); }
+        }
         function render(mul) {   // far to near: the sky, its stars and slow motion, the light, wrecks and debris, dust; then the instruments
             setView(); depth.fill(1e9);
             const S = skyOf(here), amt = sunAmount();
@@ -1565,8 +1620,7 @@
             if (mode === 'ready' || mode === 'run') drawBox();
             drawOverlays();
             ctx.putImageData(img, 0, 0);
-            const b = Math.max(smooth(th), mode === 'jump' ? phaseT / JUMP_TIME : 0);   // our drive burns longer and brighter as the throttle opens
-            MiniShip.draw(ctx, shipL, clock * 1000, { damaged: g.damaged, labels: false, plume: 0.2 + 0.8 * b });
+            drawOurShip();
             drawTags(tags);
             drawHud();
         }

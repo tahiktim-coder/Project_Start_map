@@ -17,10 +17,11 @@
      landerPose()   → { x, y, len, angle } art px: our ship now
      discs()        → [[x, y, r]] art px of every round thing on screen
      noteUp()       → true while a hover note is showing (the voice waits)
-     debugState()   → { sector, mode, at, hover, lock, flight, modes }
+     debugState()   → { sector, mode, at, hover, lock, flight, modes, feel: { trauma, off, push, plume } }
    }
    Uses:    NewScreen.{ register, bus, anchors, clock, game.{ sector, energy, broken, route }, flow.{ click, canGo, refuse, go,
-            arrive }, blocked, isShown, app, mods.tower.{ occupied, beat } (optional) }
+            arrive }, blocked, isShown, app, mods.tower.{ occupied, beat } (optional) }; if present, window.Juice (the shake)
+            and window.NSTower.{ jolt, speed } (the tower feels the go, the landing and the speed)
    Listens: 'shown' { sector, first, from } · 'hidden' · 'hud' · 'refresh' · 'jump:burn'
    The hover note goes on a click and stays away until the pointer really moves (a refusal is then seen at once); in a
    flight what is under a still pointer is worked out again every frame. The jump's white-gold flash washes the whole
@@ -123,15 +124,25 @@
     }
     function drift(t) { return [Math.round(2 * Math.sin(t / 3100)), Math.round(2.6 * Math.sin(t / 2300 + 1)), 0.035 * Math.sin(t / 2700 + 2)]; }
     const baseAngle = () => { const L = F.lander(), l = F.light(); return Math.atan2(l.y - L.y, l.x - L.x); };
-    function poseAt(t) { const R = F.lander(), [dx, dy, da] = drift(t); return { x: R.x + dx, y: R.y + dy, len: R.len, angle: baseAngle() + W.bank + da }; }
-    /** The plume follows the real energy: 0.25 + 0.75 x energy / 100; x1.7 in flight; a flare on go; it coughs with the drive down. */
-    function plumeLevel(t) {
+    function poseAt(t) {
+        const R = F.lander(), [dx, dy, da] = drift(t), a = baseAngle(), o = pushAt(t);
+        return { x: R.x + dx + Math.cos(a) * o, y: R.y + dy + Math.sin(a) * o, len: R.len, angle: a + W.bank + da };
+    }
+    /** The plume before smoothing: 0.25 + 0.75 x energy / 100; x1.7 in flight; spooling up through the lock; x0.5 held. */
+    function plumeBase(t) {
         if (W.black) return 0.8;
         if (W.jump) return 1 + 2.4 * clamp01((t - W.jump.t0) / 1500);
         let lvl = 0.25 + 0.75 * clamp01(energyNow() / 100);
-        if (W.flight) lvl *= 1.7; else if (W.lock) lvl *= 1.15; else if (W.held) lvl *= 0.5;
+        if (W.flight) lvl *= 1.7; else if (W.lock) lvl *= lerp(1, FEEL.lockPlume, clamp01((t - W.lock.t0) / LOCK_MS)); else if (W.held) lvl *= 0.5;
+        return lvl;
+    }
+    /** The plume follows the real energy, smoothed (it flares up fast and dies down slowly); a flare on go; it coughs with
+        the drive down (after the smoothing, so the cough stays sharp). */
+    function plumeLevel(t) {
+        if (W.black || W.jump) return FX.plume == null ? plumeBase(t) : FX.plume;
+        let lvl = FX.plume == null ? plumeBase(t) : FX.plume;
         if (broken('engineering')) lvl *= sputter(t);
-        if (t >= W.flareT) lvl += 1.6 * Math.exp(-(t - W.flareT) / 350);
+        if (t >= W.flareT) lvl += FEEL.flare * Math.exp(-(t - W.flareT) / FEEL.flareMs);
         return lvl;
     }
     function sputter(t) {                                                             // on the same 2.9 s cycle as the brown-outs aboard
@@ -156,9 +167,66 @@
         return [lerp(LP[0], it.x, k), lerp(LP[1], it.y, k)];
     }
 
+    // ── the feel (picture only: the course, its clicks and its timing are untouched). The ship draws back through the lock,
+    //    surges forward on go, sits a little back at speed (more room ahead), bumps on landing; space shakes on go, on
+    //    landing and through the jump's burn (window.Juice, if loaded); the tower beside us feels it (window.NSTower). ──
+    const FEEL = { lockBack: 2, surge: 5, lead: 6, land: 3, surgeIn: 140, surgeOut: 700, landIn: 120, landOut: 330, cancel: 250,
+        lockPlume: 1.35, flare: 2.0, flareMs: 450, plumeUp: 120, plumeDown: 600,
+        fireKick: 0.8, landKick: 0.5, burnFloor: 0.65, towerFire: 0.75, towerLand: 0.45 };
+    const FX = { shake: null, off: null, plume: null, fireT: null, landT: null, relax: null };   // the module's own picture state
+    const easeOut = k => 1 - Math.pow(1 - clamp01(k), 3);
+    const easeIn = k => clamp01(k) * clamp01(k);
+    function reduced() { const J = window.Juice; try { return !!(J && typeof J.reduced === 'function' && J.reduced()); } catch (err) { return false; } }
+    function shaker() {
+        const J = window.Juice;
+        if (!FX.shake && G && J && typeof J.shaker === 'function') FX.shake = J.shaker({ max: [4 * sc, 3 * sc], roll: 0, decay: 1.4, hz: 9 });
+        return FX.shake;
+    }
+    function kick(a) { const s = shaker(); if (s) s.add(a); }
+    function tower(fn, v) { const T = window.NSTower; if (!T || typeof T[fn] !== 'function') return; try { T[fn](v); } catch (err) { console.error(`NewScreen travel: NSTower.${fn} failed`, err); } }
+    const speed01 = t => clamp01((speedNow(t) - SPEED.rest) / (SPEED.flight - SPEED.rest));
+    /** How far the ship sits along its heading now (art px; + ahead), before reduced motion. */
+    function pushRaw(t) {
+        if (W.lock) return -FEEL.lockBack * sc * easeIn((t - W.lock.t0) / LOCK_MS);
+        let o = 0;
+        if (W.flight) {
+            const age = FX.fireT == null ? 1e9 : t - FX.fireT, lead = -FEEL.lead * sc * speed01(t), top = FEEL.surge * sc;
+            o = age < FEEL.surgeIn ? lerp(-FEEL.lockBack * sc, top, easeOut(age / FEEL.surgeIn))
+                : age < FEEL.surgeIn + FEEL.surgeOut ? lerp(top, lead, ease((age - FEEL.surgeIn) / FEEL.surgeOut)) : lead;
+        } else if (FX.landT != null && t - FX.landT < FEEL.landIn + FEEL.landOut) {
+            const age = t - FX.landT;
+            o = FEEL.land * sc * (age < FEEL.landIn ? easeOut(age / FEEL.landIn) : 1 - ease((age - FEEL.landIn) / FEEL.landOut));
+        }
+        if (FX.relax && t - FX.relax.t0 < FEEL.cancel) o += FX.relax.from * (1 - easeOut((t - FX.relax.t0) / FEEL.cancel));
+        return o;
+    }
+    function pushAt(t) { return G ? pushRaw(t) * (reduced() ? 0.5 : 1) : 0; }
+    /** The lock let go without a flight (cancelled, refused, hidden): the ship eases back from where it was. */
+    function relaxFrom(t) { FX.relax = { t0: t, from: W.lock ? -FEEL.lockBack * sc * easeIn((t - W.lock.t0) / LOCK_MS) : 0 }; }
+    function onFired(t) { FX.fireT = t; FX.relax = null; kick(FEEL.fireKick); tower('jolt', FEEL.towerFire); }
+    function onLanded(t) { FX.landT = t; FX.fireT = null; kick(FEEL.landKick); tower('jolt', FEEL.towerLand); }
+    /** Once a frame: the burn's rumble, the tower told how hard we fly, the shake stepped, the plume smoothed. */
+    function stepFeel(dt, t) {
+        const s = shaker();
+        if (W.jump && !W.black) {
+            if (s) s.floor(FEEL.burnFloor * Math.pow(clamp01((t - W.jump.t0) / JUMP.white), 2));
+            tower('speed', 1);
+        } else tower('speed', W.flight ? speed01(t) : 0);
+        FX.off = s ? s.tick(dt / 1000) : null;
+        const want = plumeBase(t);
+        if (FX.plume == null) FX.plume = want;
+        else FX.plume += (want - FX.plume) * (1 - Math.exp(-dt / (want > FX.plume ? FEEL.plumeUp : FEEL.plumeDown)));
+    }
+
     // ═══ 3. drawing ═══
+    /** Space shakes as one picture: the whole frame moved by whole art px over ink (hit tests and notes stay put). */
     function render(t) {
         if (!G || !ctx) return;
+        const sh = FX.off, dx = sh ? Math.round(sh.dx) : 0, dy = sh ? Math.round(sh.dy) : 0;
+        if (dx || dy) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = P.INK; ctx.fillRect(0, 0, G.W, G.H); ctx.setTransform(1, 0, 0, 1, dx, dy); }
+        try { drawScene(t); } finally { if (dx || dy) ctx.setTransform(1, 0, 0, 1, 0, 0); }
+    }
+    function drawScene(t) {
         ctx.imageSmoothingEnabled = false;
         const f = P.framer(ctx, G.W, G.H), pose = poseAt(t), tb = towerBits(t);
         if (!W.black && shownSector !== sectorNow()) { PIC.dimAll(1); return; }       // before a sector's first show (under the briefing): black
@@ -327,11 +395,12 @@
         W = Object.assign({}, W, { lock: { id, t0: t } });
         PIC.prebake(prebakeItems(F.planFlight(W, id, t + LOCK_MS, broken('engineering')), t + LOCK_MS));
     }
-    function cancelLock() { if (W.lock) W = Object.assign({}, W, { lock: null }); }
+    function cancelLock() { if (W.lock) { relaxFrom(now()); W = Object.assign({}, W, { lock: null }); } }
     function fire(t) {
         const id = W.lock.id;
-        if (refused(ask('go', id))) { W = Object.assign({}, W, { lock: null }); return; }   // flow.go speaks why not
+        if (refused(ask('go', id))) { relaxFrom(t); W = Object.assign({}, W, { lock: null }); return; }   // flow.go speaks why not
         W = Object.assign(F.planFlight(W, id, t, broken('engineering')), { flareT: t });
+        onFired(t);
         PIC.prebake(prebakeItems(W, t));
     }
     /** The game did not pull in (flow.arrive said no): back to the field as it was before the flight. */
@@ -385,7 +454,7 @@
             PIC.prebake(prebakeItems(W, t));
         } else if (W.held) W = F.sync(Object.assign({}, W, { held: null, ease: { t0: t, dur: 2000, from: W.cam, to: F.stageCam(W.at, W.modes) } }), t);
     }
-    function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null }); if (note) note.hidden = true; noteRect = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; PIC.setLive(false); }
+    function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null }); FX.relax = null; FX.landT = null; if (note) note.hidden = true; noteRect = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; PIC.setLive(false); }
     function update(dt, t) {
         if (!G) return;
         PIC.setLive(true);
@@ -395,9 +464,11 @@
         if (W.lock && t - W.lock.t0 >= LOCK_MS && !blocked()) fire(t);                // a card up: the course waits for it
         if (W.flight && t - W.flight.t0 >= W.flight.dur && !blocked()) {              // the flight lands (once no card is up): the real game pulls in
             const id = W.flight.id; W = F.land(W);
+            onLanded(t);
             if (ask('arrive', id) === false) undoArrival(t);
         }
         if (W.ease && t - W.ease.t0 >= W.ease.dur) W = Object.assign({}, W, { cam: W.ease.to, ease: null });
+        stepFeel(dt, t);
         const tgt = W.flight ? (W.flight.light ? 'light' : W.flight.id) : W.lock ? (W.lock.id === F.light().node ? 'light' : W.lock.id) : W.hover, sn = W.last;
         const it = tgt && tgt !== 'light' && sn && sn.items.find(i => i.id === tgt && i.part !== 'arc');
         let wantB = 0;
@@ -418,7 +489,7 @@
         if (dt > 0) PIC.bakeOne();
     }
     function resize(g) {
-        G = g; sc = G.H / 360;
+        G = g; sc = G.H / 360; FX.shake = null;                                       // the shake's reach is in art px: made again at this size
         ensureDom();
         cv.width = G.W; cv.height = G.H; cv.style.width = (G.W * G.k / G.dpr) + 'px'; cv.style.height = (G.H * G.k / G.dpr) + 'px';
         F.setup(G); PIC.setup(G, ctx); A = null;
@@ -479,7 +550,8 @@
     function debugState() {
         const mode = W.black ? 'corridor' : W.jump ? 'jump' : W.flight ? 'flight' : W.lock ? 'lock' : W.held ? 'held' : W.opening ? 'opening' : 'rest';
         return { sector: W.sector, mode, at: W.at, hover: W.hover, lock: W.lock ? W.lock.id : null, flight: W.flight ? W.flight.id : null, held: W.held,
-            modes: Object.fromEntries(Object.entries(W.modes).map(([id, m]) => [id, m.m])), slots: Object.fromEntries(F.ids().map(id => [id, F.entry(id).slot + '/' + F.entry(id).band])), light: F.light().node };
+            modes: Object.fromEntries(Object.entries(W.modes).map(([id, m]) => [id, m.m])), slots: Object.fromEntries(F.ids().map(id => [id, F.entry(id).slot + '/' + F.entry(id).band])), light: F.light().node,
+            feel: { trauma: FX.shake ? FX.shake.level() : null, off: FX.off ? [Math.round(FX.off.dx), Math.round(FX.off.dy)] : null, push: pushAt(now()), plume: plumeLevel(now()) } };
     }
 
     const MOD = { init, resize, update, render, pointer, key, placeAt, placeCss, landerPose, discs, noteUp: () => noteWasUp, debugState };

@@ -362,7 +362,7 @@
         return { W, H, tone, clear, draw };
     }
     function flowInto(L, o, vp, speed, flowPos) {
-        const LP = LPx(), spW = G.W - G.hull, ramp0 = RP[o.ramp], tailPh = Math.min(0.12, speed * o.rate * o.tail), n = Math.round(o.n * Math.min(1.6, spW * G.H / (640 * 360))), d0 = 22 * sc;
+        const LP = LPx(), spW = G.W - G.hull, ramp0 = RP[o.ramp], tailPh = Math.min(0.16, speed * o.rate * o.tail * (1 + 0.8 * clamp01((speed - 52) / 98))), n = Math.round(o.n * Math.min(1.6, spW * G.H / (640 * 360))), d0 = 22 * sc;
         for (let i = 0; i < n; i++) {
             const ph = hash(i, 1, o.seed) + hash(i, 7, o.seed) / 256 + flowPos * o.rate, cyc = Math.floor(ph), u = ph - cyc;
             const th = (hash(i + cyc * 13, 2, o.seed) + hash(i, cyc & 255, o.seed + 1) / 256) * Math.PI * 2, dx = Math.cos(th), dy = Math.sin(th);

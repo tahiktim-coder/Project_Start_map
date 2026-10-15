@@ -38,7 +38,8 @@
                                  device px); wDev is the tower's width on screen
      debug() → { fit, k, dark, E, decks, crew, people: [{ id, deck, x, act, say }], chips }
    }
-   Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' 'jump:flash'.
+   Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' (a rumble building to the flash) 'jump:flash'.
+   Uses, if present: window.Juice (the tremor; without it nothing shakes).
 
    window.NSStock (frozen): the ship's stock, read from the real game (never written)
      KEYS                        ['energy', 'rations', 'salvage']
@@ -48,6 +49,12 @@
                                  are in view again, so its flash is seen; the numbers hide under a card or a minigame
      board(layer) → { put(key, x, y, align), hide() }   three readouts in a word layer; put places one at CSS px (x, y
                                  its top-left, or top-right with align 'right') and shows it
+   window.NSTower (frozen): the ship feels the flight (picture only; ignored while the tower is closed, sliding or dark)
+     jolt(s)                     s 0..1: the tremor's trauma += s; at 0.3 or more the standing crew's knees give
+     speed(k)                    k 0..1: how hard we fly now, called every frame (eased, tau 400 ms; no calls: back to 0
+                                 within a second); the reactor beats up to 30 % faster
+     hit(deck)                   a deck name (DECKS): trauma += 0.5 and that deck's red light stutters for 360 ms. The
+                                 tower calls it itself for a deck newly red, on the first frame it is in view
    Anchors: 'person:<id>' for the five, 'tower:deck:<name>' for the six decks (CSS px, [] when not in view).
    Uses, if present: NewScreen.mode() (only 'travel' takes clicks), NewScreen.mods.voice.speaking() → 'aura' | id | null
    (the computer's speaker glows while A.U.R.A. talks), NewScreen.flow.{ person(id), bench(), datable(), deckChoices(key),
@@ -95,6 +102,7 @@
         real: { crew: {}, decks: {}, engDown: false, datable: false }, readAt: -1e9, dirty: true,
         tendX: null, hover: null, chips: null, words: null, quality: 'high', scaleN: 0, scaleMs: 0,
         tag: null, toldRed: new Set(), tellRed: null, stock: null,
+        shake: null, tremor: null, spd: 0, spdIn: 0, spdAt: -1e9, braceT: null, flick: {}, burnT0: null, newRed: new Set(), readOnce: false,
     };
     let NS = null;
     const G = () => (NS && NS.G) || {};
@@ -128,6 +136,8 @@
         DECKS.forEach(k => { decks[k] = raw[k] === 'red' ? 'red' : 'ok'; });
         const was = (V.real && V.real.decks) || {};
         DECKS.forEach(k => { if (decks[k] === 'red' && was[k] !== 'red' && GAME_KEY[k] && !V.toldRed.has(k)) { V.toldRed.add(k); V.tellRed = k; } });
+        if (V.readOnce) DECKS.forEach(k => { if (decks[k] === 'red' && was[k] !== 'red') V.newRed.add(k); else if (decks[k] !== 'red') V.newRed.delete(k); });   // felt when first seen
+        if (call('state', null)) V.readOnce = true;                           // a deck red from before the first real read is no news
         V.real = { crew, decks, engDown: decks.engineering === 'red', datable: datable() };
         V.readAt = t; V.dirty = false;
     }
@@ -227,7 +237,8 @@
     function openTower(t) { if (t < V.slide.closedUntil) V.slide = { closedUntil: t, start: t }; }
 
     function stepBeat(dt, t) {
-        const E = V.Eshown, period = MK.BEAT.FULL + (MK.BEAT.LOW - MK.BEAT.FULL) * clamp((100 - E) / 90, 0, 1), b = V.beat;
+        const E = V.Eshown, b = V.beat;
+        const period = (MK.BEAT.FULL + (MK.BEAT.LOW - MK.BEAT.FULL) * clamp((100 - E) / 90, 0, 1)) * (1 - FEEL.beatAtSpeed * V.spd);   // faster in flight
         b.phase += dt / period;
         while (b.phase >= 1) {
             b.phase -= 1; b.n += 1;
@@ -252,6 +263,62 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // The ship feels the flight (window.NSTower): a tremor on the go, the landing and the jump's burn; the reactor beating
+    // faster at speed; a red deck's lights stuttering when it is first seen broken; the crew's knees giving on a jolt.
+    // Picture only. Calls are ignored while the tower is closed, sliding or dark (nothing is queued).
+    // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const FEEL = Object.freeze({ beatAtSpeed: 0.3, speedTau: 400, speedStale: 150, burnFloor: 0.6, burnMs: 2250,
+        hitKick: 0.5, braceMin: 0.3, braceDip: 3, braceIn: 80, braceOut: 250, flickMs: 360 });
+    const STANDING = { idle: 1, console: 1, walk: 1, carry: 1, wall: 1, wave: 1, tend: 1 };
+    const reduced = () => { const J = window.Juice; try { return !!(J && typeof J.reduced === 'function' && J.reduced()); } catch (err) { return false; } };
+    function shaker() {
+        const J = window.Juice;
+        if (!V.shake && J && typeof J.shaker === 'function') V.shake = J.shaker({ max: [12, 6], roll: 0, decay: 1.8, hz: 10 });
+        return V.shake;
+    }
+    /** The tower in view: open, slid in, not in the jump's dark. */
+    const feels = () => !!V.fit && !V.dark && slideK(now()) >= 1;
+    function jolt(s) {
+        const a = clamp(Number(s) || 0, 0, 1), sh = shaker();
+        if (!a || !feels()) return;
+        if (sh) sh.add(a);
+        if (a >= FEEL.braceMin) V.braceT = now();
+    }
+    function speed(k) {
+        if (!feels()) return;
+        V.spdIn = clamp(Number(k) || 0, 0, 1); V.spdAt = now();
+    }
+    function hitDeck(deck) {
+        if (!DECKS.includes(deck) || !feels()) return;
+        const sh = shaker(), t = now();
+        if (sh) sh.add(FEEL.hitKick);
+        V.braceT = t;
+        V.flick = Object.assign({}, V.flick, { [deck]: t });
+    }
+    /** Once a frame: the speed eased (no calls: back to 0 within a second), the burn's rumble, the tremor stepped, a deck
+        newly red felt on the first frame the tower is in view. */
+    function stepFeel(dt, t) {
+        const want = t - V.spdAt < FEEL.speedStale && feels() ? V.spdIn : 0;
+        V.spd += (want - V.spd) * (dt > 0 ? 1 - Math.exp(-dt / FEEL.speedTau) : 0);
+        const sh = shaker();
+        if (sh && V.burnT0 != null && !V.dark) sh.floor(FEEL.burnFloor * Math.pow(clamp((t - V.burnT0) / FEEL.burnMs, 0, 1), 2));
+        V.tremor = sh ? sh.tick(dt / 1000) : null;
+        if (V.newRed.size && feels() && modeNow() === 'travel' && !(NS.blocked && NS.blocked())) {
+            const list = [...V.newRed]; V.newRed = new Set();
+            list.forEach(k => { if (V.real.decks[k] === 'red') hitDeck(k); });
+        }
+        if (Object.values(V.flick).some(t0 => t - t0 > FEEL.flickMs || t < t0)) V.flick = Object.fromEntries(Object.entries(V.flick).filter(([, t0]) => t - t0 <= FEEL.flickMs && t >= t0));
+    }
+    /** The knees give: standing people dip a few tower px, 0 → 1 in 80 ms, back over 250 ms; copies, never the routine's own. */
+    function braced(list, t) {
+        const age = V.braceT == null ? 1e9 : t - V.braceT;
+        if (age < 0 || age >= FEEL.braceIn + FEEL.braceOut) return list;
+        const k = age < FEEL.braceIn ? ease(age / FEEL.braceIn) : 1 - ease((age - FEEL.braceIn) / FEEL.braceOut);
+        const dip = FEEL.braceDip * k * (reduced() ? 0.5 : 1);
+        return list.map(p => (STANDING[p.act] ? Object.assign({}, p, { y: p.y + dip }) : p));
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     // The module
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     function canvas() {
@@ -270,8 +337,8 @@
         bus.on('hidden', () => { hideChips(); ST.state = null; });          // the view back later: the stock is read afresh, no flash
         bus.on('hud', () => { V.dirty = true; });
         bus.on('opening:done', () => openTower(now()));
-        bus.on('jump:burn', () => { V.flood = { kind: 'jump', t0: now() }; hideChips(); });
-        bus.on('jump:flash', () => { V.dark = true; });
+        bus.on('jump:burn', () => { V.flood = { kind: 'jump', t0: now() }; V.burnT0 = now(); hideChips(); });
+        bus.on('jump:flash', () => { V.dark = true; V.burnT0 = null; });
         IDS.forEach(id => NS.anchors.set('person:' + id, () => {
             const a = personAt(id);
             if (!a) return [];
@@ -286,6 +353,7 @@
         const t = now();
         V.dirty = true;
         V.dark = false;
+        V.burnT0 = null;
         if (p.first) closeTower(t, OPEN_FALLBACK_MS);                       // a new sector: from black, the title; then the tower
     }
     function deckAnchor(i) {
@@ -312,6 +380,7 @@
         if (!g.H || !V.fit) return;
         if (V.dirty || t - V.readAt > READ_MS || t < V.readAt) readReal(t);
         stepEnergy(dt, t);
+        stepFeel(dt, t);
         stepBeat(dt, t);
         if (V.flood && MK.floodDone({ t, flood: V.flood })) V.flood = null;
         if (V.slide.start != null && t >= V.slide.start + SLIDE_MS) V.slide = { closedUntil: 0, start: null };
@@ -333,16 +402,16 @@
         o.setTransform(1, 0, 0, 1, 0, 0);
         o.clearRect(0, 0, OFF_W, ROWS);
         o.imageSmoothingEnabled = false;
-        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: V.people, auraTalking: auraTalking() });
+        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: braced(V.people, t), auraTalking: auraTalking() });
         V.drawn = TW.drawn.slice();
         const sunY = (0.4 * f.devH - f.tY0) / f.ts;                       // level with the light (Field's light sits at 40 % of the height)
         const view = { t, G: { W: OFF_W, H: ROWS }, offX: -f.tLeft, cam: f.tTop, decks: V.real.decks, engDown: V.real.engDown, E: V.Eshown, beat: V.beat,
-            flood: V.flood, sunY, fix: V.real.datable ? SLATE : null };
+            flood: V.flood, sunY, fix: V.real.datable ? SLATE : null, flick: V.flick, reduced: reduced() };
         MK.draw(o, view);
         c.imageSmoothingEnabled = true;
         c.imageSmoothingQuality = V.quality;
-        const s0 = performance.now();
-        c.drawImage(V.off, 0, 0, OFF_W, ROWS, V.slideX, f.tY0, OFF_W * f.ts, ROWS * f.ts);
+        const s0 = performance.now(), sh = V.tremor;                          // the tremor: smooth-scaled, so not rounded
+        c.drawImage(V.off, 0, 0, OFF_W, ROWS, V.slideX + (sh ? sh.dx * f.ts : 0), f.tY0 + (sh ? sh.dy * f.ts : 0), OFF_W * f.ts, ROWS * f.ts);
         watchScale(performance.now() - s0);
         placeStock(k >= 1 && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
     }
@@ -597,8 +666,10 @@
     function debug() {
         return { fit: fit(), quality: V.quality, k: slideK(now()), dark: V.dark, E: V.E, decks: Object.assign({}, V.real.decks), datable: V.real.datable,
             crew: JSON.parse(JSON.stringify(V.real.crew)), people: V.people.map(p => ({ id: p.id, deck: p.deck, x: p.x, act: p.act, say: p.say })),
-            chips: V.chips ? V.chips.deck : null, stock: Object.assign({}, ST.val) };
+            chips: V.chips ? V.chips.deck : null, stock: Object.assign({}, ST.val),
+            feel: { trauma: V.shake ? V.shake.level() : null, speed: V.spd, flick: Object.keys(V.flick), off: V.tremor ? { dx: V.tremor.dx, dy: V.tremor.dy } : null } };
     }
+    window.NSTower = Object.freeze({ jolt, speed, hit: hitDeck });
 
     const mod = Object.freeze({ init, resize, update, render, pointer, occupied, beat, personAt, fit, debug });
     function attach() {
