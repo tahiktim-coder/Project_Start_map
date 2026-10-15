@@ -1,0 +1,96 @@
+<!doctype html>
+<!--
+  SILENT EXODUS · PLAY IDEAS · EDEN'S WALK · a playable mock of one minigame idea; nothing in the game is changed.
+  Two of the crew walk across a lovely meadow on Eden. Some things are slightly wrong. Click what looks wrong; every false
+  alarm (a normal thing pointed at) makes them trust the place more. Enough doubt and they go back to the ship; too little,
+  and they want to stay.
+  Files: eden-walk-art.js (the pictures, painted once with the game's MiniPaint), eden-walk.js (the play). The words use the
+  slice's reading layer (reading.css), as the other ideas do.
+  Reused as they are: src/systems/minigames/MiniLab.js, which loads art/MiniPaint.js (the travel view's Paint.js),
+  art/MiniPeople.js and art/MiniCrew.js (the crew-hires people in their EVA suits).
+  SILENT: no AudioSystem is loaded and nothing here makes sound.
+  Test hooks: ?speed=N (the clock N times as fast), window.edenWalk.state() / targets() / pointFor(id) / start().
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eden's Walk</title>
+<meta name="description" content="Silent Exodus play idea: two of the crew walk across a perfect meadow on Eden, and the player decides whether to look closely.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* The slice's tokens (prototypes/slice/index.html), so the reused reading layer (reading.css) looks as it does there and
+   as it does on the other ideas' pages. --t runs 0 at 1280 wide to 1 at 1920 (set by eden-walk.js). */
+:root {
+    color-scheme: dark;
+    --t: 1; --px: 3px;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --danger: #e0453a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --fs-voice: calc(19px + 5px * var(--t)); --fs-who: calc(14px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t));
+    --fs-note-cost: calc(14px + 1px * var(--t)); --fs-title: calc(34px + 12px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));
+    --shadow: 0 1px 0 #05070a;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+p, h1, ol { margin: 0; }
+button { font: inherit; color: inherit; }
+#stage { position: fixed; inset: 0; overflow: hidden; outline: none; }
+#stage.is-pointing { cursor: pointer; }
+#scene { position: absolute; display: block; image-rendering: pixelated; image-rendering: crisp-edges; outline: none; }
+
+/* the start sits in the sky, top left; the voice and the way out sit low on the left, over the dark grass. No boxes: the
+   picture darkens toward them in fine dithered steps (eden-walk-art.js veils) */
+#spot { position: absolute; left: max(16px, 6vw); top: 8vh; width: var(--measure); max-width: calc(100vw - 32px); }
+.block { display: grid; gap: 10px; text-shadow: var(--shadow); }
+.block[hidden], .choices[hidden] { display: none; }
+.title { font: 600 var(--fs-title)/1 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
+.kicker { font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+.block .say { max-width: 30em; }
+.choices a.choice { color: inherit; text-decoration: none; }
+#talk { position: absolute; left: max(16px, 6vw); bottom: 7vh; width: var(--measure); max-width: calc(100vw - 32px); display: grid; gap: 10px; }
+#talk .voice { position: relative; }
+</style>
+<link rel="stylesheet" href="../screens/game-screen/reading.css?v=20261008i">
+</head>
+<body>
+<main id="stage" tabindex="-1" aria-label="A meadow on Eden. Two of the crew walk across it.">
+    <canvas id="scene" aria-hidden="true"></canvas>
+
+    <div id="spot">
+        <section class="block" id="start">
+            <p class="kicker">Play idea</p>
+            <h1 class="title">Eden's Walk</h1>
+            <p class="say">Jaxon and Aris walk across a perfect meadow. Click what looks wrong. False alarms make them trust it more.</p>
+            <p class="read-hint">Click to look. Keys: arrows, then Enter.</p>
+            <ol class="choices">
+                <li><button type="button" class="choice" data-act="start"><span class="n">1</span><span class="verb">Start</span><span class="chips"></span></button></li>
+                <li><a class="choice" href="index.html"><span class="n">2</span><span class="verb">All ideas</span><span class="chips"></span></a></li>
+            </ol>
+        </section>
+    </div>
+
+    <div id="talk">
+        <div class="voice" id="voice" aria-live="polite">
+            <p class="who" id="voice-who"><span class="ring" aria-hidden="true"></span><span id="voice-name"></span></p>
+            <p class="say" id="voice-line"></p>
+        </div>
+        <ol class="choices" id="end" hidden>
+            <li><button type="button" class="choice" data-act="start" id="again"><span class="n">1</span><span class="verb">Play again</span><span class="chips"></span></button></li>
+            <li><a class="choice" href="index.html"><span class="n">2</span><span class="verb">All ideas</span><span class="chips"></span></a></li>
+        </ol>
+    </div>
+</main>
+
+<!-- the game's own minigame kit; it writes in art/MiniPaint.js, art/MiniPeople.js and art/MiniCrew.js right after itself -->
+<script src="../../src/systems/minigames/MiniLab.js?v=2"></script>
+<script src="eden-walk-art.js"></script>
+<script src="eden-walk.js"></script>
+</body>
+</html>
