@@ -1,0 +1,109 @@
+<!doctype html>
+<!--
+  SILENT EXODUS · PLAY IDEAS · THE LAST APPROACH: flying into the light as an act of trust. A standalone mock of one minigame
+  idea; nothing in the game is changed. The play is in last-approach.js. NO SOUND: no AudioSystem is loaded and nothing here
+  makes any. The art is the game's own, loaded by relative path so it works on GitHub Pages too.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Last Approach</title>
+<meta name="description" content="Silent Exodus play idea: hold the Lander on course into the light while the ship and the crew beg you to turn back.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* The slice's tokens (prototypes/slice/index.html), so the reused reading layer (reading.css) looks as it does there.
+   --t runs 0 at 1280 wide to 1 at 1920; --px is one art pixel (both set by last-approach.js). */
+:root {
+    color-scheme: dark;
+    --t: 1; --px: 3px;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --danger: #e0453a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --fs-voice: calc(19px + 5px * var(--t)); --fs-who: calc(14px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t));
+    --fs-note-cost: calc(14px + 1px * var(--t)); --fs-title: calc(34px + 12px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));
+    --shadow: 0 1px 0 #05070a;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+p, h1, ol { margin: 0; }
+button { font: inherit; color: inherit; }
+#stage { position: fixed; inset: 0; overflow: hidden; outline: none; touch-action: none; cursor: crosshair; }
+#stage canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* the words sit in the dark sky, top left; no boxes (the canvas darkens under them with the dither grain) */
+#spot { position: absolute; left: max(16px, 6vw); top: 8vh; width: var(--measure); max-width: calc(100vw - 32px); cursor: default; }
+#spot .voice { position: relative; }
+.block { display: grid; gap: 10px; text-shadow: var(--shadow); }
+.block[hidden], .choices[hidden] { display: none; }
+.title { font: 600 var(--fs-title)/1 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
+.kicker { font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+.block .say { max-width: 30em; }
+.choices a.choice { color: inherit; text-decoration: none; }
+#after { margin-top: 14px; }
+/* a voice: the speaker's portrait (or A.U.R.A.'s ring) beside the name and the line */
+#voice .film-line { grid-template-columns: var(--face) minmax(0, 1fr); }
+#voice .face { border-radius: 0; filter: saturate(0.9); }
+#voice .face[hidden], #voice .face-ring[hidden], #voice .who .ring[hidden] { display: none; }
+#voice .film-line.is-narr { grid-template-columns: minmax(0, 1fr); }
+/* a wider line than the slice's (it sits beside a portrait), wrapped only where it must */
+#voice { max-width: min(calc(600px + 200px * var(--t)), calc(100vw - 32px)); }
+#voice .say { text-wrap: pretty; }
+/* the one word that is always there while you fly: low on the right, out of the light's way */
+#turn { position: absolute; right: max(16px, 6vw); bottom: 9vh; margin: 0; cursor: default; }
+#turn[hidden] { display: none; }
+</style>
+<link rel="stylesheet" href="../screens/game-screen/reading.css?v=20261008i">
+</head>
+<body>
+<div id="stage" tabindex="-1" aria-label="Our Lander flying into a growing light">
+    <canvas id="view" aria-hidden="true"></canvas>
+    <div id="spot">
+        <section class="block" id="intro">
+            <p class="kicker">Play idea</p>
+            <h1 class="title">The Last Approach</h1>
+            <p class="say">Fly the Lander into the light. Everything will tell you to turn back.</p>
+            <p class="read-hint">Keep the light in the middle: mouse or arrow keys.</p>
+            <ol class="choices">
+                <li><button type="button" class="choice" data-act="start"><span class="n">1</span><span class="verb">Start</span><span class="chips"></span></button></li>
+                <li><a class="choice" href="index.html"><span class="n">2</span><span class="verb">All ideas</span><span class="chips"></span></a></li>
+            </ol>
+        </section>
+        <div class="voice" id="voice" aria-live="polite">
+            <div class="film-line">
+                <img class="face" id="face" alt="" hidden>
+                <div class="text">
+                    <p class="who" id="who"><span class="ring" id="who-ring" hidden></span><span id="who-name"></span></p>
+                    <p class="say" id="line"></p>
+                </div>
+            </div>
+        </div>
+        <ol class="choices" id="after" hidden>
+            <li><button type="button" class="choice" data-act="start"><span class="n">1</span><span class="verb">Play again</span><span class="chips"></span></button></li>
+            <li><a class="choice" href="index.html"><span class="n">2</span><span class="verb">All ideas</span><span class="chips"></span></a></li>
+        </ol>
+    </div>
+    <ol class="choices" id="turn" hidden>
+        <li><button type="button" class="choice" data-act="turn"><span class="n">T</span><span class="verb">Turn back</span><span class="chips"></span></button></li>
+    </ol>
+</div>
+
+<!-- the travel view's picture recipes, skies and worlds (src/newscreen/art), loaded as they are; BodyRenderer only lends
+     Worlds.js the orbit's colours, so Eden is the game's own green -->
+<script src="../../src/systems/BodyRenderer.js"></script>
+<script src="../../src/newscreen/art/Paint.js"></script>
+<script src="../../src/newscreen/art/Sky.js"></script>
+<script src="../../src/newscreen/art/Sky2.js"></script>
+<script src="../../src/newscreen/art/Worlds.js"></script>
+<!-- the minigames' kit (it writes in art/MiniPaint, MiniPeople, MiniCrew) and our Lander; silent: no AudioSystem here -->
+<script src="../../src/systems/minigames/MiniLab.js?v=2"></script>
+<script src="../../src/systems/minigames/MiniShip.js?v=1"></script>
+<script src="last-approach.js"></script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!doctype html>
+<!--
+  SILENT EXODUS · PLAY IDEAS · the list: one entry per mock idea, each a link to its own page. Nothing in the game is changed.
+  The picture is the travel view's own (NSPaint, NSSky, NSSky2) with our Lander (MiniShip.lander) flying toward the light,
+  loaded by relative path so it works on GitHub Pages too. The words are plain links: the list works even if the art does not.
+  NO SOUND: no AudioSystem is loaded, so nothing here can make any.
+  Keys: 1 to 4 open an idea; the arrows move between them; Enter opens. Test hook: ?sky=N paints sector N's sky (default 1).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Play Ideas</title>
+<meta name="description" content="Silent Exodus: playable mock versions of four new minigame ideas. Nothing here is in the game yet.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* The slice's tokens (prototypes/slice/index.html), so the reused reading layer (reading.css) looks as it does there.
+   --t runs 0 at 1280 wide to 1 at 1920 (set by the script below). */
+:root {
+    color-scheme: dark;
+    --t: 1; --px: 3px;
+    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --danger: #e0453a;
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --fs-voice: calc(19px + 5px * var(--t)); --fs-who: calc(14px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t));
+    --fs-note-cost: calc(14px + 1px * var(--t)); --fs-title: calc(34px + 12px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));
+    --fs-desc: calc(15px + 2px * var(--t));
+    --shadow: 0 1px 0 #05070a, 0 0 10px rgba(5, 7, 10, 0.8);
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; }
+body { color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+p, h1, ol { margin: 0; }
+#stage { position: fixed; inset: 0; overflow: hidden; }
+#stage canvas { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+
+/* the words sit in the dark sky, top left, clear of the Lander and the light; no boxes */
+#spot { position: absolute; left: max(16px, 6vw); top: 9vh; width: var(--measure); max-width: calc(100vw - 32px); display: grid; gap: 12px; text-shadow: var(--shadow); }
+.title { font: 600 var(--fs-title)/1 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
+#spot > .say { max-width: 26em; color: #c7c9c6; }
+
+/* each idea is a numbered choice (reading.css): its name, and under it one plain line of what you do */
+.ideas { margin-top: calc(14px + 8px * var(--t)); row-gap: calc(6px + 6px * var(--t)); }
+.ideas .choice { color: inherit; text-decoration: none; padding: 4px 0; }
+.ideas .desc { grid-column: 2 / -1; margin-top: 3px; font: 400 var(--fs-desc)/1.3 var(--f-text); color: var(--dim); transition: color 140ms var(--ease); }
+.ideas .choice:hover .desc, .ideas .choice:focus-visible .desc { color: var(--text); }
+
+@media (prefers-reduced-motion: reduce) {
+    .ideas .desc { transition: none; }
+}
+</style>
+<link rel="stylesheet" href="../screens/game-screen/reading.css?v=20261008i">
+</head>
+<body>
+<div id="stage" aria-label="Our Lander flying through space toward the light">
+    <canvas id="view" aria-hidden="true"></canvas>
+    <main id="spot">
+        <h1 class="title">Play ideas</h1>
+        <p class="say">Mock versions of new ideas. Nothing here is in the game yet.</p>
+        <ol class="choices ideas" id="ideas">
+            <li><a class="choice" href="cloud-scoop.html"><span class="n">1</span><span class="verb">Cloud Scoop</span><span class="chips"></span><span class="desc">Skim a gas giant for fuel.</span></a></li>
+            <li><a class="choice" href="eden-walk.html"><span class="n">2</span><span class="verb">Eden's Walk</span><span class="chips"></span><span class="desc">Find what's wrong in a perfect meadow.</span></a></li>
+            <li><a class="choice" href="twin-shadow.html"><span class="n">3</span><span class="verb">Twin Shadow</span><span class="chips"></span><span class="desc">Shake off the ship copying ours.</span></a></li>
+            <li><a class="choice" href="last-approach.html"><span class="n">4</span><span class="verb">The Last Approach</span><span class="chips"></span><span class="desc">Keep flying into the light.</span></a></li>
+        </ol>
+    </main>
+</div>
+
+<!-- the travel view's picture recipes and skies (src/newscreen/art), loaded as they are -->
+<script src="../../src/newscreen/art/Paint.js"></script>
+<script src="../../src/newscreen/art/Sky.js"></script>
+<script src="../../src/newscreen/art/Sky2.js"></script>
+<!-- the minigames' kit (it writes in art/MiniPaint, MiniPeople, MiniCrew) and our Lander; silent: no AudioSystem here -->
+<script src="../../src/systems/minigames/MiniLab.js?v=2"></script>
+<script src="../../src/systems/minigames/MiniShip.js?v=1"></script>
+<script>
+/* The list's keys, then its picture. The keys come first so the list works even if the art fails to load. */
+(function () {
+    'use strict';
+    const links = Array.from(document.querySelectorAll('#ideas .choice'));
+
+    // 1 to 4 open an idea; up and down move between them (Enter on a focused link opens it, as links do)
+    document.addEventListener('keydown', e => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        const n = Number(e.key);
+        if (n >= 1 && n <= links.length) { e.preventDefault(); location.href = links[n - 1].href; return; }
+        if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+        e.preventDefault();
+        const at = links.indexOf(document.activeElement), step = e.key === 'ArrowDown' ? 1 : -1;
+        const next = at < 0 ? (step > 0 ? 0 : links.length - 1) : (at + step + links.length) % links.length;
+        links[next].focus();
+    });
+})();
+
+(function () {
+    'use strict';
+    const P = window.NSPaint, SKY = window.NSSky, SKY2 = window.NSSky2, SHIP = window.MiniShip;
+    if (!P || !SHIP) { console.warn('Play ideas: the art did not load; the list still works.'); return; }
+    const { INK, RP, threshold, seeded, clamp01, hexRgb } = P;
+
+    // ── the picture: a sector's sky with its false sun to the right, our Lander flying toward it ──
+    const url = new URLSearchParams(location.search);
+    const SECTOR = Math.max(1, Math.min(6, Number(url.get('sky')) || 1));
+    // SectorLooks.js's numbers per sector (src/newscreen/travel/SectorLooks.js; not loaded: it needs the travel view)
+    const LOOKS = {
+        1: { seed: 11, dust: 0.12, haze: 1, stars: 1, light: { core: 2, halo: 14, strength: 1, spikes: 5 } },
+        2: { seed: 22, dust: 0.08, haze: 0.6, stars: 1.6, light: { core: 5, halo: 34, strength: 1, spikes: 7 } },
+        3: { seed: 33, dust: 0.1, haze: 0.9, stars: 1.2, light: { core: 7, halo: 40, strength: 1, spikes: 8 } },
+        4: { seed: 44, dust: 0.14, haze: 1, stars: 1.3, light: { core: 9, halo: 48, strength: 1, spikes: 9 } },
+        5: { seed: 55, dust: 0.1, haze: 0.8, stars: 1.1, light: { core: 11, halo: 58, strength: 1, spikes: 10 } },
+        6: { seed: 66, dust: 0.16, haze: 1.1, stars: 1, light: { core: 15, halo: 80, strength: 1, spikes: 12 } },
+    };
+    const LOOK = LOOKS[SECTOR];
+    const LIGHT_AT = [0.88, 0.38], SHIP_AT = [0.6, 0.6];    // shares of the picture: the false sun; our Lander's middle
+    const SHIP_LEN = 72;                                     // art px at 640 wide: big enough to show its windows (as Cloud Scoop's)
+    const SUN_DIR = [0.95, -0.35];                           // the light is ahead and a little above: the hull's warm rim
+    const FPS = 30, MOTES = 40;                              // the corridor's rate; dust streaking past, so we read as moving
+    const SHADE_PAD = 10;                                    // art px of grain round the words
+
+    const stage = document.getElementById('stage'), canvas = document.getElementById('view'), spot = document.getElementById('spot');
+    const ctx = canvas.getContext('2d');
+    let G = null;
+
+    /** A whole number of screen pixels per art pixel (3 at 1080 high, 2 at 720), so the dither stays crisp. */
+    function measure() {
+        const px = Math.max(1, Math.round(window.innerHeight / 360)), W = Math.ceil(window.innerWidth / px), H = Math.ceil(window.innerHeight / px);
+        document.documentElement.style.setProperty('--t', clamp01((window.innerWidth - 1280) / 640).toFixed(3));
+        document.documentElement.style.setProperty('--px', px + 'px');
+        return { px, W, H };
+    }
+
+    /** The still backdrop: the sector's sky F, the space strip over it and the false sun, painted once per size. */
+    function buildBackdrop(W, H) {
+        const LP = [Math.round(W * LIGHT_AT[0]), Math.round(H * LIGHT_AT[1])], ox = Math.round(W / 2 - 320), oy = Math.round(H / 2 - 180);
+        let sky = null;
+        try { sky = SKY2 ? SKY2.build(W, H, ox, oy, SECTOR, [LP[0] - ox, LP[1] - oy], 'f') : null; } catch (e) { console.warn('Play ideas: no sky F', e); }
+        const strip = P.spaceStrip(W + 4, H, LOOK.seed, LOOK.dust, LOOK.haze * (sky ? sky.haze : 1), LOOK.stars), lit = new Float32Array(W * H);
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) lit[y * W + x] = Math.exp(-Math.hypot(x - LP[0], (y - LP[1]) * 1.15) / (LOOK.light.halo * 0.85 + 6));
+        const bp = P.painter(W, H, true), reach = LOOK.light.halo * 0.9 + LOOK.light.core + 8;
+        const keep = (x, y) => Math.hypot(x - LP[0], y - LP[1]) < reach;
+        const bright = sky && SKY ? SKY.paintSpace(bp, strip, 0, lit, keep, sky, 0) : P.paintSpace(bp, strip, 0, lit, keep);
+        P.lightGlow(bp, LP[0], LP[1], LOOK.light, 1);
+        return { bp, sky, LP, stars: P.keepVisible(bp, bright) };
+    }
+
+    /** Under the words the picture darkens with the grain (reading.css's rule), in dithered steps, never a screen door.
+        Baked into the still backdrop: the words do not move. Returns the shaded box (art px), kept quiet while it runs. */
+    function shadeUnderWords(bp, px) {
+        const r = spot.getBoundingClientRect(), ink = hexRgb(INK), STEPS = 6;
+        const x0 = Math.floor(r.left / px) - SHADE_PAD, x1 = Math.ceil(r.right / px) + SHADE_PAD;
+        const y0 = Math.floor(r.top / px) - SHADE_PAD, y1 = Math.ceil(r.bottom / px) + SHADE_PAD;
+        for (let y = Math.max(0, y0); y < Math.min(bp.H, y1); y++) for (let x = Math.max(0, x0); x < Math.min(bp.W, x1); x++) {
+            const o = (y * bp.W + x) * 4, d = bp.data, lum = (d[o] * 0.3 + d[o + 1] * 0.59 + d[o + 2] * 0.11) / 255;
+            if (lum <= 0.06) continue;                                         // already dark enough to read on
+            const edge = clamp01(Math.min(x - x0, x1 - 1 - x, y - y0, y1 - 1 - y) / SHADE_PAD);
+            const a = Math.min(0.9, (lum - 0.06) * 3) * edge, q = Math.floor(a * STEPS + threshold(x, y)) / STEPS;
+            for (let k = 0; k < 3; k++) d[o + k] = Math.round(d[o + k] + (ink[k] - d[o + k]) * q);
+        }
+        return { x0, x1, y0, y1 };
+    }
+
+    function build() {
+        const { px, W, H } = measure(), K = W / 640;
+        canvas.width = W; canvas.height = H;
+        canvas.style.width = W * px + 'px'; canvas.style.height = H * px + 'px';
+        ctx.imageSmoothingEnabled = false;
+        const back = buildBackdrop(W, H);
+        const quiet = shadeUnderWords(back.bp, px), isQuiet = (x, y) => x >= quiet.x0 && x < quiet.x1 && y >= quiet.y0 && y < quiet.y1;
+        const rand = seeded(LOOK.seed + 9);
+        // no star twinkles between the words
+        G = { px, W, H, K, LP: back.LP, sky: back.sky, stars: back.stars.filter(st => !isQuiet(st.x, st.y)), back: back.bp.canvas(), isQuiet,
+            len: Math.round(SHIP_LEN * K), shipX: Math.round(W * SHIP_AT[0]), shipY: Math.round(H * SHIP_AT[1]),
+            // most dust far and slow, a few near and fast (Corridor.js's motes, side on, as in twin-shadow.js)
+            motes: Array.from({ length: MOTES }, (_, i) => ({ x: rand() * W, y: rand() * H, near: i < 7, v: i < 7 ? 1.6 + rand() * 0.8 : 0.12 + rand() * 0.35 })),
+            rand };
+    }
+
+    /** Dust streaking past: far specks slow and dim; near ones longer. Near the light it catches the light. */
+    function drawMotes(f) {
+        G.motes.forEach(m => {
+            if (G.isQuiet(m.x, m.y)) return;                        // the dust passes behind the words, not through them
+            const len = Math.max(1, Math.round(m.v * 1.6 * G.K)), lit = Math.exp(-Math.hypot(m.x - G.LP[0], m.y - G.LP[1]) / (90 * G.K));
+            const ramp = lit > 0.35 ? RP.SUN : m.near ? RP.STAR : RP.HAZE, v = m.near ? 0.55 : 0.85;
+            f.tone(m.x, m.y, ramp, v * (lit > 0.35 ? 0.4 + 0.6 * lit : 1), len, 1);
+        });
+    }
+
+    function draw(ms) {
+        const { W, H } = G, tq = Math.floor(ms / P.TICK) * P.TICK, secs = ms / 1000;   // the sky's moving bits step at 8 a second
+        const fr = () => P.framer(ctx, W, H);                       // a fresh one per use: each caches its fill colour
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.drawImage(G.back, 0, 0);
+        if (G.sky && G.sky.live) G.sky.live(ctx, tq, 0);
+        P.twinkle(fr(), G.stars, ms);
+        drawMotes(fr());
+        // our Lander, nose to the light, a slow float; the drive burns steady with the plume's own flicker
+        const bob = Math.round(Math.sin(secs * 0.7) * 2 * G.K), tilt = Math.sin(secs * 0.7 + 1.2) * 0.02;
+        SHIP.lander(ctx, { x: G.shipX, y: G.shipY + bob, len: G.len, angle: tilt, flip: true, plume: 0.5, t: ms, sunDir: SUN_DIR });
+    }
+
+    let last = 0, lastDraw = -1e9;
+    function frame(ms) {
+        requestAnimationFrame(frame);
+        const dt = last ? Math.min(0.05, (ms - last) / 1000) : 0.016;
+        last = ms;
+        G.motes.forEach(m => { m.x -= 60 * G.K * m.v * dt; if (m.x < -8) { m.x = G.W + 4 + G.rand() * 20; m.y = G.rand() * G.H; } });
+        if (ms - lastDraw < 1000 / FPS - 2) return;                  // the travel view's rate, and easy on the laptop
+        lastDraw = ms;
+        draw(ms);
+    }
+
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(build, 200); });
+    build();
+    // the words' size changes when the fonts arrive: shade under them again then
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(build).catch(e => console.warn('Play ideas: fonts', e));
+    requestAnimationFrame(frame);
+    stage.dataset.ready = '1';
+})();
+</script>
+</body>
+</html>
