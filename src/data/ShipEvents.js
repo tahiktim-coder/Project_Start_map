@@ -252,13 +252,18 @@ const SHIP_MALFUNCTION_EVENTS = [
                 state.addLog("Forgotten repair supplies. +20 Salvage.");
                 return "Forgotten supplies found. +20 Salvage.";
             } else if (bonus < 0.7) {
-                state.rations = Math.min(state.maxRations, state.rations + 3);
-                state.addLog("Forgotten food packs. +3 Rations.");
-                return "Forgotten supplies found. +3 Rations.";
+                const top = Number.isFinite(state.maxRations) ? state.maxRations : Infinity;
+                const got = Math.max(0, Math.min(3, top - state.rations));                // the stores top out: say what fits
+                state.rations += got;
+                const said = got ? `+${got} Ration${got === 1 ? '' : 's'}` : 'Rations already full';
+                state.addLog(`Forgotten rations in the locker. ${said}.`);
+                return `Forgotten supplies found. ${said}.`;
             } else {
-                state.energy = Math.min(100, state.energy + 15);
-                state.addLog("Forgotten spare power cells. +15 Energy.");
-                return "Forgotten supplies found. +15 Energy.";
+                const got = Math.max(0, Math.min(15, 100 - Math.round(state.energy)));     // energy tops out at 100
+                state.energy = Math.min(100, state.energy + got);
+                const said = got ? `+${got} Energy` : 'Energy already full';
+                state.addLog(`Forgotten spare power cells. ${said}.`);
+                return `Forgotten supplies found. ${said}.`;
             }
         }
     }

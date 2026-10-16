@@ -126,8 +126,8 @@ const ITEMS = {
         onUse: (state) => { state._colonyKnowledge = (state._colonyKnowledge || 0) + 2; return "Hours of study, and a few answers. +2 Data."; }
     },
     FOOD_PACK: {
-        id: 'food_pack', name: 'Sealed Food Pack', type: 'CONSUMABLE', value: 10,
-        desc: 'Vacuum-sealed food from an earlier ship. Still safe to eat. +3 Rations.',
+        id: 'food_pack', name: 'Sealed Rations', type: 'CONSUMABLE', value: 10,   // the id stays (saves); the player reads "rations"
+        desc: 'Vacuum-sealed rations from an earlier ship. Still safe to eat. +3 Rations.',
         onUse: (state) => { state.rations = Math.min(state.maxRations, state.rations + 3); return "Opened and shared out. +3 Rations."; }
     },
     // Luxury Item (stress reducer)

@@ -36,6 +36,7 @@
     const NS = () => window.NewScreen;
     const CREW_BY_TAG = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
     const SKIM_ENERGY = 15, PATCH_COST = 5, TRIP_QUIET_MS = 3500, TRIP_OVER_MS = 600, TRIP_LOST_MS = 20000, FIX_CHECK_MS = 500;
+    const TREAT_WAIT_MS = 9000;                                                              // the trip's story waits at most this long for the treat line
     const BREACH_WAIT_MS = 5000;                                                             // a breach at a stop with no trip: the bridge is seen first
     const DECK_KEY = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', hold: 'cargo', cargo: 'cargo', engineering: 'engineering' };
     const DECK_WORD = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', cargo: 'hold', engineering: 'engine room' };
@@ -56,8 +57,8 @@
         unanswered: 'We left the call unanswered.',
         jaxonSurge: 'Power surge in engineering. Jaxon fixed it at no cost.',
         jaxonSays: 'Jaxon: "Got it. The drive\'s calm."',
-        vancePulled: 'Vance: "I pulled them out before it sealed."',
-        arisTreated: 'Aris: "I\'ve treated them. No lasting harm."',
+        vancePulled: names => `I got ${names} out in time. No lasting harm.`,             // said by the one who treats them (treat)
+        arisTreated: names => `I've treated ${names}. No lasting harm.`,
         miraScanned: 'Mira: "I\'ve scanned the ground. Go round the soft part."',
         arisTeam: 'Aris strapped them up. They walked back.',
         fixOnBench: 'Mira: "The star fix is on my bench."',
@@ -301,14 +302,28 @@
             }
         }
         return run.then(() => {
-            if (crisis) {
-                const hurtNow = s.crew.filter(m => m.status === 'INJURED' && !members.includes(m) && !hurtBefore.has(idOf(m)));
-                if (hurtNow.length && crisis === 'BREACH' && aboardWell('SECURITY')) { heal(hurtNow); log(s, LINES.vancePulled); }
-                else if (hurtNow.length && aboardWell('MEDIC')) { heal(hurtNow); log(s, LINES.arisTreated); }
-            }
+            if (!crisis) return null;
+            const hurtNow = s.crew.filter(m => m.status === 'INJURED' && !members.includes(m) && !hurtBefore.has(idOf(m)));
+            const vance = crisis === 'BREACH' ? aboardWell('SECURITY') : null, healer = hurtNow.length ? vance || aboardWell('MEDIC') : null;
+            return healer ? treat(app, healer, hurtNow, (healer === vance ? LINES.vancePulled : LINES.arisTreated)(hurtNow.map(m => m.name).join(' and '))) : null;
+        }).then(() => {
             if (aboardWell('SPECIALIST')) { app._nsScanMod = -10; log(s, LINES.miraScanned); }
             s.emitUpdates();
         }).catch(err => console.error('NSOrbit: the crisis aboard failed', err)).then(() => { if (trip) trip.downDone = true; });
+    }
+    /** Someone aboard treats the crew a crisis hurt, in the open (2026-10-16: the heal was silent, its line lost behind the
+        trip's card, so the player saw an injury vanish). The line is said now on the bridge, by the healer, and logged; the
+        hurt are well; the trip's story (its card) waits until the line has left the screen (TREAT_WAIT_MS at most). With
+        no voice to say it on screen nobody is healed: they stay hurt, in the med bay, where the tower shows them. */
+    function treat(app, healer, hurt, text) {
+        const s = app.state, ns = NS(), v = ns && ns.mods && ns.mods.voice;
+        if (!v || typeof v.say !== 'function' || !ns.isShown()) return Promise.resolve();
+        let said = null;
+        try { said = v.say({ id: idOf(healer), who: healer.name, text, keep: true }); } catch (err) { console.error('NSOrbit: the treat line failed', err); return Promise.resolve(); }
+        heal(hurt);
+        log(s, `${healer.name}: "${text}"`);                                              // the log keeps it (the voice skips the line it is saying)
+        s.emitUpdates();
+        return Promise.race([Promise.resolve(said).catch(() => false), new Promise(r => setTimeout(r, TREAT_WAIT_MS))]);
     }
     /** The trip's story has ended (the end of resolveEvaOutcome, the wreck's finds, the paradise card): home in a moment. */
     function tripOver() { if (trip) trip.over = true; }

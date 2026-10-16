@@ -12,7 +12,12 @@
    'stop:aura'; and since the log is hidden there, a log line that reports a result (it starts "STATION:", "MINING:",
    "SIGNAL:", "MALFUNCTION RESOLVED:", "REPAIR COMPLETE:", or holds a signed number of energy, salvage, rations or data)
    is said by A.U.R.A., without its prefix (never a line that names one of the crew: that is their own news, not a result).
+   What is said of a log line is plain speech (the log keeps the line whole): a line that opens with someone's words in
+   quotes says only those words (A.U.R.A.: 'Thank you, Commander.' +10 Energy. → Thank you, Commander.); the ship's
+   numbers read as words ("+10 Energy" → "plus 10 energy"; the lit numbers show them too); a stress tally is not said.
    Narration (say({ narration: true, text })): a line with no speaker, by our Lander (the bridge: A.U.R.A.'s place), no name.
+   It belongs to the moment it describes: once a course is set (or the jump burns) a narration line fades out and one still
+   waiting is dropped.
    Source: the shade recipe of prototypes/slice/script/shade.js (v3's shadeSprite) and the voice of
    prototypes/screens/game-screen/reading.js (pin: the darkest of the anchor's places wins).
    Registers itself with NewScreen as 'voice'. Reads NSPaint. Writes nothing to the game.
@@ -45,17 +50,55 @@
     const CREW_RE = /\b(Jaxon|Aris|Vance|Mira|Cora)\b/;
     const QUEUE_MAX = 3, STALE_MS = 9000, WALL_MS = 15000, HIDDEN_KEEP_MS = 2500, HIDDEN_MAX = 2, EDGE = 16, SHADE_PAD = 14, MOVE_RESAMPLE = 18, FALLBACK = { x: 0.72, y: 0.14 };
     const KEEP_MS = 3000, TEACH_EXTRA = 1;                                                    // a kept line's least time seen; room for one teaching line over the queue
+    const FADE_MS = 700;                                                                      // a narration line fading out once a course is set
     const wordsIn = s => (String(s).trim().match(/\S+/g) || []).length;
     const readMs = line => Math.max(3200, wordsIn(line) * 300 + 1600);
 
     let cv = null, g = null, layer = null, queue = [], cur = null, noteUp = false, early = [];
     const sprites = new Map();
 
+    // ── what is said aloud of a log line: plain speech (the log keeps the whole line) ──
+    const CLOSERS = { '"': '"”', '“': '”"', "'": "'’", '‘': "’'" };
+    /** The words someone says in a line that opens with a quote ('Thank you.' +10 Energy. → Thank you.), or null. A closing
+        quote ends a word and is followed by a space, punctuation or the end; a single quote also follows a stop or a comma,
+        so an apostrophe (It's, It'll) never ends it. */
+    function quoted(body) {
+        const closers = CLOSERS[body[0]], single = body[0] === "'" || body[0] === '‘';
+        if (!closers) return null;
+        for (let i = 1; i < body.length; i++) {
+            if (!closers.includes(body[i])) continue;
+            const before = body[i - 1], after = body[i + 1];
+            if (/\s/.test(before) || !(after === undefined || /[\s,.;:!?)]/.test(after))) continue;
+            if (single && !/[.!?,…—–-]/.test(before)) continue;
+            return body.slice(1, i).trim() || null;
+        }
+        return null;
+    }
+    const STRESS_RE = /(?:\b(?:All crew|Both|Commander|Cora|Jaxon|Aris|Vance|Mira|\d+ crew)\s+)?[+\-−]\d+\s+Stress\b/g;   // a tally, not speech
+    const SIGNED_WORDS_RE = /(^|[^\w%])([+\-−])\s?(\d+)\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?|energy|salvage|rations?|data)\b(?!\s*%)/g;
+    /** "+10 Energy" → "plus 10 energy" (a sentence's first word capitalised); stress tallies dropped; the punctuation tidied. */
+    function plainNumbers(text) {
+        return String(text)
+            .replace(STRESS_RE, '')
+            .replace(SIGNED_WORDS_RE, (m, pre, sign, n, what) => `${pre}${sign === '+' ? 'plus' : 'minus'} ${n} ${what.toLowerCase()}`)
+            .replace(/\(\s*[,;]?\s*\)/g, '').replace(/[,;]\s*\)/g, ')').replace(/\s+([,.;!?)])/g, '$1')
+            .replace(/[,;]+(?=[.!?])/g, '').replace(/([.!?])[,;]+/g, '$1').replace(/(?<!\.)\.\.(?!\.)/g, '.')
+            .replace(/^(?:[\s,;]|\.(?!\.))+/, '').replace(/\s{2,}/g, ' ')
+            .replace(/(^|[.!?]\s+)(plus|minus)\b/g, (m, a, w) => a + w[0].toUpperCase() + w.slice(1))
+            .trim();
+    }
+    /** The spoken form of what follows "Name:" (or a result's prefix): someone's quoted words, else the line, in plain speech. */
+    function spoken(body) {
+        const text = String(body || '').trim();
+        const said = quoted(text) || text.replace(/^["“]\s*/, '').replace(/\s*["”]$/, '');
+        return plainNumbers(said);
+    }
+
     /** "Jaxon: \"The drive's holding.\"" → { who: 'Jaxon', id: 'jaxon', line: "The drive's holding." } */
     function parse(message) {
         const m = LINE_RE.exec(String(message || '').trim());
         if (!m) return null;
-        const line = m[2].trim().replace(/^["“]\s*/, '').replace(/\s*["”]$/, '').trim();
+        const line = spoken(m[2]);
         return line ? { who: m[1], id: SPEAKERS[m[1]], line } : null;
     }
     /** On the bridge: the shell's mode is anything but travel (without mode(), the stop's own isOpen). */
@@ -69,9 +112,9 @@
         const m = String(message || '').trim();
         if (!m || LINE_RE.test(m)) return null;
         const r = RESULT_RE.exec(m);
-        if (r) return r[2].trim() ? { who: 'A.U.R.A.', id: 'aura', line: r[2].trim() } : null;
+        if (r) { const said = spoken(r[2]); return said ? { who: 'A.U.R.A.', id: 'aura', line: said } : null; }
         if (!SIGNED_RE.test(m) || CREW_RE.test(m)) return null;
-        const line = m.replace(/^[A-Z][A-Z .'-]{2,}:\s*/, '').trim();
+        const line = spoken(m.replace(/^[A-Z][A-Z .'-]{2,}:\s*/, ''));
         return line ? { who: 'A.U.R.A.', id: 'aura', line } : null;
     }
     function onLog(e) {
@@ -245,6 +288,17 @@
         box.classList.add('is-in');
     }
     function end() { if (cur) { const c = cur; cur = null; c.el.remove(); settle(c); } }
+    /** A course is set (or the jump burns): the scene a narration line describes is over. The line on screen fades out over
+        FADE_MS (its shade with it), and a narration line still waiting is dropped. A spoken line is left to finish. */
+    function fadeNarration() {
+        queue.filter(q => q.id === 'narr').forEach(settle);
+        queue = queue.filter(q => q.id !== 'narr');
+        if (!cur || cur.id !== 'narr' || cur.fading) return;
+        const left = Math.max(1, Math.min(cur.left, FADE_MS));                          // shorter if the line was ending anyway
+        cur.left = left; cur.fading = left;                                              // fading: the fade's whole length
+        cur.el.style.transition = `opacity ${Math.round(left)}ms ease-out`;
+        cur.el.classList.remove('is-in');
+    }
 
     /** Is a hover note up on the space side? (Travel's words layer has something visible in it.) */
     function isNoteUp() {
@@ -278,7 +332,8 @@
         if (!cur || !cur.pos || noteUp) return;
         const G = NS.G, f = G.dpr / G.k, r = cur.pos;
         const x0 = Math.floor(r.x * f), y0 = Math.floor(r.y * f), w = Math.max(1, Math.ceil((r.x + cur.w) * f) - x0), hgt = Math.max(1, Math.ceil((r.y + cur.h) * f) - y0);
-        const strength = Math.round(cur.strength * 20), sx = x0 - SHADE_PAD, sy = y0 - SHADE_PAD;
+        const fade = cur.fading ? Math.max(0, cur.left / cur.fading) : 1;                // a fading narration line: its shade goes with it
+        const strength = Math.round(cur.strength * fade * 20), sx = x0 - SHADE_PAD, sy = y0 - SHADE_PAD;
         if (strength > 0) g.drawImage(shadeSprite(w, hgt, sx & 7, sy & 7, strength), sx, sy);
         const ds = discs();                                                                // never shade over a world or our Lander
         if (!ds.length) return;
@@ -294,13 +349,15 @@
             NS.bus.on('hidden', () => { end(); queue.forEach(settle); queue = []; });
             NS.bus.on('showing', onShowing);
             NS.bus.on('dive:start', () => { queue.forEach(settle); queue = []; });   // the flight's talk is over: the bridge starts fresh
+            NS.bus.on('flow:go', fadeNarration);                                     // a course set: the wake-up scene is over
+            NS.bus.on('jump:burn', fadeNarration);
         },
         resize(G) { NS.sizeCanvas(cv); if (cur) { cur.w = cur.el.offsetWidth; cur.h = cur.el.offsetHeight; cur.pick = null; cur.pos = null; } },
         update(dt) {
             if (NS.blocked()) { if (cur) cur.el.style.visibility = 'hidden'; return; }
             noteUp = isNoteUp();
             if (cur) {
-                if (!noteUp || !cur.keep) cur.left -= dt;                                 // a kept line waits out a hover note
+                if (!noteUp || !cur.keep || cur.fading) cur.left -= dt;                   // a kept line waits out a hover note
                 if (!noteUp) cur.seen += dt;                                              // seen: on screen, not hidden by a hover note
                 if (cur.left <= 0) end();
             }

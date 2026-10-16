@@ -35,7 +35,8 @@
     const RESULT_HOLD_MS = 1700, MAX_STEP = 0.033, SKIP_AFTER_MS = 500, SKIP_KEYS = ['Enter', 'Escape'];
     const INK = '#06070a', BONE = '#c4d0c4', AMBER = '#d9a24a', RED = '#d85a4e', GREEN = '#74d99a', DIM = '#2f5a48';
     const LOW_FUEL = 25, LOW_FUEL_BEEP_MS = 900, THRUST_SOUND_MS = 120;
-    const DOCKED_TEXT = 'Docked under the ship. Touch a control to let go.', AUTO_TEXT = 'A.U.R.A. has the stick. She is flying to the marked spot.';
+    // what the player reads before the drop (the hint and DOCKED_TEXT together): 25 words at most, the controls first (2026-10-16)
+    const DOCKED_TEXT = 'Docked. Touch a control to let go.', AUTO_TEXT = 'A.U.R.A. has the stick. She is flying to the marked spot.';
     const MARK_BLINK_MS = 420, MARK_ROOM = 4;                                                // the marked spot's beacons, and how much room a stretch needs to be marked
     const GRADES = {
         soft: { label: 'SOFT LANDING', effect: 'the team steps out fresh — the trip is safer', color: GREEN, riskMod: -8 },
@@ -478,7 +479,7 @@
                 <div><dt>MARK</dt><dd class="lander-mark">—</dd></div>
             </dl>
             <div class="lx-talk lx-result" aria-live="polite"><p class="lx-who is-empty"><span class="lx-ring" aria-hidden="true"></span><span class="lx-name"></span></p><p class="lx-line is-note"></p></div>
-            <p class="lx-hint">Hold <kbd>←</kbd> / <kbd>→</kbd> (or <kbd>A</kbd> / <kbd>D</kbd>) to push left and right. Hold both to brake. A.U.R.A. has marked a safe spot${site ? ' next to the site' : ''} — the <b>blinking markers</b>. Put it down there, <b>slowly</b>. The line under the lander goes green over flat ground.</p>
+            <p class="lx-hint">Hold <kbd>←</kbd> or <kbd>→</kbd> (<kbd>A</kbd>, <kbd>D</kbd>) to push, both to brake. Land <b>slowly</b> between the <b>blinking lights</b>.</p>
             <div class="lx-buttons">
                 <button class="lx-btn is-hold lander-hold" data-key="left">Push left</button>
                 <button class="lx-btn is-hold lander-hold" data-key="right">Push right</button>

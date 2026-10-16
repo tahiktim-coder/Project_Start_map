@@ -55,11 +55,12 @@
     }
 
     /** The far colours of sectors 1 and 2 (slice world.js FAR_COLOURS): rare, far, dull; each a few dozen pixels of one hue.
-        Sizes are in the 360-row stage's pixels; u, v on the space side. */
+        Sizes are in the 360-row stage's pixels; u, v on the space side. The planetary nebulae are soft (NSSky2 paints them
+        as a broken puff): a clean bright ring with a dot in it was taken for a contact marker (playtest, 2026-10-16). */
     const FAR = {
         1: R => [
             { kind: 'veil', u: 0.30, v: 0.08, len: 150, wide: 7, tilt: 0.16, ramp: R.SLATE, depth: 0.3, gain: 1.15, seed: 61 },
-            { kind: 'planetary', u: 0.20, v: 0.30, r: 3.4, ramp: R.TEAL, depth: 0.8, live: 'pulse', period: 11000, gain: 1.45, seed: 31 },
+            { kind: 'planetary', soft: true, u: 0.20, v: 0.30, r: 3.4, ramp: R.TEAL, depth: 0.8, live: 'pulse', period: 11000, gain: 1, seed: 31 },   // soft: a clean ring read as a contact to click
             { kind: 'knot', u: 0.55, v: 0.06, r: 7, tilt: -0.5, ramp: R.ROSE, depth: 0.7, live: 'pulse', period: 14000, gain: 1.25, seed: 3 },
             { kind: 'dwarf', u: 0.97, v: 0.08, r: 4, ramp: R.CRIMSON, depth: 1.3, live: 'flare', period: 23000, gain: 1.3, seed: 5 },
             { kind: 'binary', u: 0.04, v: 0.40, sep: 2, ramp: R.COLD, ramp2: R.COLD, depth: 1.1, live: 'twinkle', period: 17000, seed: 11 },
@@ -69,7 +70,7 @@
         2: R => [
             { kind: 'veil', u: 0.52, v: 0.30, len: 170, wide: 8, tilt: -0.22, ramp: R.JADE, depth: 0.3, gain: 1.1, seed: 71 },
             { kind: 'dwarf', u: 0.24, v: 0.16, r: 4, ramp: R.CRIMSON, depth: 1.2, live: 'flare', period: 31000, gain: 1.3, seed: 21 },
-            { kind: 'planetary', u: 0.64, v: 0.10, r: 3, ramp: R.TEAL, depth: 0.8, live: 'pulse', period: 9000, gain: 1.4, seed: 23 },
+            { kind: 'planetary', soft: true, u: 0.64, v: 0.10, r: 3, ramp: R.TEAL, depth: 0.8, live: 'pulse', period: 9000, gain: 1, seed: 23 },
             { kind: 'knot', u: 0.08, v: 0.46, r: 6, tilt: 0.6, ramp: R.ROSE, depth: 0.6, live: 'pulse', period: 12000, gain: 1.15, seed: 25 },
         ],
     };

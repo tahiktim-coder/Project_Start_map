@@ -6,6 +6,7 @@
 (function () {
     'use strict';
     const SIZE = 300, C = SIZE / 2, R = 140, TICK_MS = 100;
+    const BACKDROP_GUARD_MS = 1200;                                  // a click beside the page puts it away only once it has been up this long
     const GOLD = ['#140d03', '#4a3510', '#8a6a22', '#d9a24a', '#ffe6a0'], ETCH = '#2a1c06', ETCH_LIT = '#fff4d0', READER = '#8844ff';
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
@@ -84,6 +85,9 @@
                 <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>${o.close}</span><small>${o.closeNote}</small></button></div>
             </section>`;
         document.body.appendChild(overlay);
+        // it opens just after a card's choice: FOLD IT AWAY never lands under that click (a double click would put it away unread)
+        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.disc-doc-card'), overlay.querySelectorAll('.disc-doc-close'));
+        const openedAt = performance.now();
         return new Promise(resolve => {
         const ctx = overlay.querySelector('canvas').getContext('2d'), textEl = overlay.querySelector('.disc-doc-text');
         const marks = buildEtching(), startedAt = performance.now();
@@ -104,7 +108,7 @@
         draw(ctx, marks, 0, focus);
         const close = () => { overlay.remove(); resolve(); };
         overlay.querySelector('.disc-doc-close').addEventListener('click', close);
-        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        overlay.addEventListener('click', e => { if (e.target === overlay && performance.now() - openedAt > BACKDROP_GUARD_MS) close(); });
         overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
         if (app && app.state) app.state._hasSeenDisc = true;
         });

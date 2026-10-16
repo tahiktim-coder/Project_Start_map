@@ -445,7 +445,15 @@
                 p.tone(x, y, r, v); p.tone(x + (s > 0.5 ? 1 : 0), y + 1, r, v * 0.45);
             }
         } else if (o.kind === 'galaxy') galaxy({ put: (x, y, rp, v) => p.tone(x, y, rp, v) }, { x: c, y: c, r: o.r, tilt: o.tilt, incl: o.incl, arms: o.arms, wind: 2.3, bright: 0.75 * g, seed: o.seed, ramp: r });
-        else if (o.kind === 'planetary') {                                                  // a tiny shell, brighter on two sides, and its white dwarf
+        else if (o.kind === 'planetary' && o.soft) {                                        // soft: a faint, broken puff of gas, lopsided, no clean ring and
+            p.region(0, 0, S, S, (x, y) => {                                                // no bright centre, so it never reads as a marker to click (2026-10-16)
+                const dx = x + 0.5 - c, dy = (y + 0.5 - c) * 1.3, d = Math.hypot(dx, dy), ang = Math.atan2(dy, dx);
+                const gaps = smooth(0.32, 0.68, fbm(Math.cos(ang) * 1.4 + 5, Math.sin(ang) * 1.4 + 5, o.seed + 7, 2));   // the shell breaks up along its way round
+                const lop = 0.55 + 0.45 * Math.cos(ang - 2.2), shell = Math.exp(-(((d - o.r * 0.85) / (o.r * 0.55 + 0.6)) ** 2));
+                const fill = d < o.r ? 0.12 * (1 - d / o.r) : 0, grain = 0.5 + 0.7 * fbm(x / 2.2, y / 2.2, o.seed, 3);
+                p.tone(x, y, r, g * (0.5 * shell * lop * (0.3 + 0.7 * gaps) + fill) * grain);
+            });
+        } else if (o.kind === 'planetary') {                                                // a tiny shell, brighter on two sides, and its white dwarf
             p.region(0, 0, S, S, (x, y) => {
                 const dx = x + 0.5 - c, dy = (y + 0.5 - c) * 1.15, d = Math.hypot(dx, dy), side = 0.55 + 0.45 * Math.abs(Math.cos(Math.atan2(dy, dx) - 0.7));
                 p.tone(x, y, r, g * (0.66 * Math.exp(-(((d - o.r) / 0.9) ** 2)) * side * (0.6 + 0.6 * fbm(x / 2, y / 2, o.seed, 2)) + (d < o.r ? 0.12 : 0)));
@@ -465,7 +473,7 @@
     function accents(X, list) {
         const out = X.out;
         const items = list.map((a, i) => {
-            const S = a.S || (a.kind === 'veil' ? Math.ceil(a.len + a.wide * 4) + 4 : a.kind === 'galaxy' || a.kind === 'knot' || a.kind === 'wisp' ? Math.ceil((a.r || a.rr || 6) * 2.8) + 6 : a.kind === 'binary' ? 12 : a.kind === 'planetary' ? Math.ceil(a.r * 2.6) + 4 : a.kind === 'dwarf' ? Math.ceil(a.r * 2) + 4 : 6);
+            const S = a.S || (a.kind === 'veil' ? Math.ceil(a.len + a.wide * 4) + 4 : a.kind === 'galaxy' || a.kind === 'knot' || a.kind === 'wisp' ? Math.ceil((a.r || a.rr || 6) * 2.8) + 6 : a.kind === 'binary' ? 12 : a.kind === 'planetary' ? Math.ceil(a.r * (a.soft ? 4.2 : 2.6)) + 4 : a.kind === 'dwarf' ? Math.ceil(a.r * 2) + 4 : 6);
             return Object.assign({ S: S + (S & 1), depth: 1, period: 9000, phase: h32(i, 3, a.seed || 1) * 20000, seed: 7 + i, frames: new Map() }, a, { x: X.sx(a.x), y: X.sy(a.y), i });
         });
         const step = v => Math.round(v * 16) / 16;                                         // a few brightness steps, each painted once

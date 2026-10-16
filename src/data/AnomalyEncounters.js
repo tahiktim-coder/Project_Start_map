@@ -200,7 +200,7 @@ const ANOMALY_ENCOUNTERS = [
             },
             {
                 text: "Have A.U.R.A. answer it",
-                desc: "-5 Energy. Then one of four, 25% chance each: +20 Salvage and +2 Food Pack, but all crew +1 Stress; every planet here revealed; nothing; or all crew +1 Stress.",
+                desc: "-5 Energy. Then one of four, 25% chance each: +20 Salvage and +2 Sealed Rations, but all crew +1 Stress; every planet here revealed; nothing; or all crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     const roll = window.TEST_MODE ? 0.1 : Math.random();
@@ -215,7 +215,7 @@ const ANOMALY_ENCOUNTERS = [
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
                         state.addLog("An hour after she answers, a supply crate drifts up to our airlock. It's one of ours, with our batch numbers, still sealed.");
-                        return "One of our own crates came back. -5 Energy, +20 Salvage, +2 Food Pack. All crew +1 Stress.";
+                        return "One of our own crates came back. -5 Energy, +20 Salvage, +2 Sealed Rations. All crew +1 Stress.";
                     } else if (roll < 0.5) {
                         state.sectorNodes?.forEach(p => {
                             p.remoteScanned = true;

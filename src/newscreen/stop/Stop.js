@@ -9,7 +9,7 @@
    The first time each action (and "Leave orbit") shows, A.U.R.A. says once what it does (NSOrbit.TELL), one at a time,
    the one pointed at first. "Settle here" (it ends the game) is drawn cool, never warm; once nothing but it is left,
    "Leave orbit" grows warm and as large as an action. While a person is pointed at, the sub-lines hide but keep their
-   room, so nothing moves under the pointer. The ship's stock (NSStock: energy, rations, salvage) stands as small lit numbers on the wall
+   room, so nothing moves under the pointer. The ship's stock (NSStock: energy, rations, salvage, data) stands as small lit numbers on the wall
    left of the window. A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
    Source: prototypes/slice/stop.js §5-12 (people plans, compose, words, the pick, anchors, discs), without its films,
    MOCKUP moments and slice places (docs/BUILD_B.md §2). Draws ONLY into canvas#ns-dive, canvas#ns-bridge and the word
@@ -350,7 +350,7 @@
             items.push({ o, words: a.words, sub: team ? teamSub() : (a.sub || ''), end: a.key === 'settle' });   // the end of the journey never pulls the eye
         });
         const leaveOn = settled && !busy && !isWrongPlace();
-        budget -= (leaveOn ? 2 : 0) + (settled && S.stock ? 3 : 0);
+        budget -= (leaveOn ? 2 : 0) + (settled && S.stock ? window.NSStock.KEYS.length : 0);
         if (S.stock && settled && !NS.blocked()) placeStock(); else if (S.stock) S.stock.hide();   // never over a card or a minigame
         items.forEach(it => { budget -= wordsIn(it.words); });
         const d = hovering && S.drawn.find(q => q.id === S.hover), good = d ? GOOD[d.id] : null;

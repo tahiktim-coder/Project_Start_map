@@ -20,8 +20,9 @@
      red, A.U.R.A. says once, in travel, that it can be clicked.
    - A new sector: closed until 'opening:done' (5 s at most), then it slides in (1.2 s).
    - The ship's stock (NSStock, below): energy by the reactor, rations over the galley table, salvage over the hold's
-     crates, as small lit numbers in #ns-ship-words. A change flashes (warm up, red down, the difference beside it for
-     1.6 s); the first change of each, A.U.R.A. says once what it is for. Stop.js shows the same three on the bridge wall.
+     crates, data in the lab, as small lit numbers in #ns-ship-words. A change flashes (warm up, red down, the difference
+     beside it for 1.6 s); the first change of each, A.U.R.A. says once what it is for. Stop.js shows the same four on the
+     bridge wall.
    Source: prototypes/slice/ship.js (minus the price charge, signs, asks, meal, plates and pages).
    Load after the art files and TowerMarks.js, and after NewScreen.js (it registers itself as 'tower').
 
@@ -42,12 +43,12 @@
    Uses, if present: window.Juice (the tremor; without it nothing shakes).
 
    window.NSStock (frozen): the ship's stock, read from the real game (never written)
-     KEYS                        ['energy', 'rations', 'salvage']
+     KEYS                        ['energy', 'rations', 'salvage', 'data']   (data: GameState._colonyKnowledge, "+1 Data")
      tick()                      reads the numbers; a change starts its flash (and the first time, A.U.R.A.'s line). The
                                  tower's update calls it every frame; a hidden view's return reads afresh (no flash). A
                                  change made out of sight (a card or minigame up, the dive) is held until the numbers
                                  are in view again, so its flash is seen; the numbers hide under a card or a minigame
-     board(layer) → { put(key, x, y, align), hide() }   three readouts in a word layer; put places one at CSS px (x, y
+     board(layer) → { put(key, x, y, align), hide() }   the readouts in a word layer; put places one at CSS px (x, y
                                  its top-left, or top-right with align 'right') and shows it
    window.NSTower (frozen): the ship feels the flight (picture only; ignored while the tower is closed, sliding or dark)
      jolt(s)                     s 0..1: the tremor's trauma += s; at 0.3 or more the standing crew's knees give
@@ -554,21 +555,24 @@
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     // The ship's stock: small lit numbers beside the rooms they belong to (here) and on the bridge wall (Stop.js)
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
-    const STOCK_KEYS = Object.freeze(['energy', 'rations', 'salvage']);
+    const STOCK_KEYS = Object.freeze(['energy', 'rations', 'salvage', 'data']);
     const STOCK_TELL = {
         energy: 'Energy runs the drive. Every flight costs some, Commander.',
         rations: 'Rations feed the crew. We eat on every jump, Commander.',
         salvage: 'Salvage fixes the ship. Mining and wrecks bring more, Commander.',
+        data: 'Data is what we learn on the way. It helps our colony survive, Commander.',
     };
-    const STOCK_LOW = { energy: 20, rations: 4, salvage: -1 };               // at or under: the number burns amber
+    const STOCK_LOW = { energy: 20, rations: 4, salvage: -1, data: -1 };     // at or under: the number burns amber
     const STOCK_FLASH_MS = 1600, STOCK_SETTLE_MS = 1300;
-    // where each sits in the tower (tower art px, top-left): by the reactor's top, over the galley table, over the crates
-    const STOCK_AT = { energy: { deck: 5, x: 498, y: 50 }, rations: { deck: 2, x: 424, y: 38 }, salvage: { deck: 4, x: 500, y: 44 } };
+    // where each sits in the tower (tower art px, top-left; align 'right': top-right): by the reactor's top, over the galley
+    // table, over the crates, in the lab over its cabinet (right-aligned to the lab's wall, so a longer number grows inward)
+    const STOCK_AT = { energy: { deck: 5, x: 498, y: 50 }, rations: { deck: 2, x: 424, y: 38 }, salvage: { deck: 4, x: 500, y: 44 }, data: { deck: 1, x: 638, y: 38, align: 'right' } };
     const ST = { state: null, val: {}, flash: {}, seenAt: null };                     // seenAt: since when the numbers have been in view
     function stockTick() {
         const s = call('state', null);
         if (!s) return;
-        const now = { energy: Math.round(energy()), rations: Math.round(Number(s.rations) || 0), salvage: Math.round(Number(s.salvage) || 0) };
+        const now = { energy: Math.round(energy()), rations: Math.round(Number(s.rations) || 0), salvage: Math.round(Number(s.salvage) || 0),
+            data: Math.round(Number(s._colonyKnowledge) || 0) };                          // data: what the crew has learned (GameState._colonyKnowledge)
         if (s !== ST.state) { ST.state = s; ST.val = now; ST.flash = {}; return; }        // a new run, or the view back: read afresh
         if (!stockSeen()) { ST.seenAt = null; return; }                                   // out of sight (a card, a minigame, the dive): the change waits to be seen
         if (ST.seenAt == null) ST.seenAt = performance.now();
@@ -602,7 +606,7 @@
 @media (prefers-reduced-motion: reduce) { #ns-root .nss, #ns-root .nss b, #ns-root .nss i { transition: none; } }`;
         document.head.appendChild(st);
     }
-    /** Three readouts in a word layer. Each frame put() writes only what changed (text, class, place). */
+    /** The readouts (one per STOCK_KEYS) in a word layer. Each frame put() writes only what changed (text, class, place). */
     function stockBoard(layer) {
         stockStyle();
         const items = {};
@@ -633,11 +637,11 @@
             hide() { STOCK_KEYS.forEach(k => items[k].el.classList.remove('on')); },
         };
     }
-    /** The tower's own three, beside their rooms (only in travel, the tower in, not in the dark of a jump). */
+    /** The tower's own readouts, beside their rooms (only in travel, the tower in, not in the dark of a jump). */
     function placeStock(show) {
         if (!V.stock) { const layer = wordsLayer(); if (!layer) return; V.stock = stockBoard(layer); }
         if (!show) { V.stock.hide(); return; }
-        STOCK_KEYS.forEach(k => { const a = STOCK_AT[k], [x, y] = toCss(a.x, A.deckTop(a.deck) + a.y); V.stock.put(k, x, y); });
+        STOCK_KEYS.forEach(k => { const a = STOCK_AT[k], [x, y] = toCss(a.x, A.deckTop(a.deck) + a.y); V.stock.put(k, x, y, a.align); });
     }
     window.NSStock = Object.freeze({ KEYS: STOCK_KEYS, tick: stockTick, board: stockBoard });
 

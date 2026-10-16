@@ -72,14 +72,14 @@ const DERELICT_ENCOUNTERS = [
             },
             {
                 text: "Check the crew bunks",
-                desc: "+10 Salvage, +1 Data. 40% chance: +1 Food Pack.",
+                desc: "+10 Salvage, +1 Data. 40% chance: +1 Sealed Rations.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     state.addLog("Personal lockers by the bunks. The crew's names are copied off the doors.");
                     if (Math.random() < 0.4 && typeof ITEMS !== 'undefined' && ITEMS.FOOD_PACK) {
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Mining Tender' });
-                        return "Bunks searched and names copied. +10 Salvage, +1 Data, +1 Food Pack.";
+                        return "Bunks searched and names copied. +10 Salvage, +1 Data, +1 Sealed Rations.";
                     }
                     return "Bunks searched and names copied. +10 Salvage, +1 Data.";
                 }
@@ -105,7 +105,7 @@ const DERELICT_ENCOUNTERS = [
         choices: [
             {
                 text: "Cut into the main hold",
-                desc: "-5 Energy. +30 Salvage, +2 Food Pack.",
+                desc: "-5 Energy. +30 Salvage, +2 Sealed Rations.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
@@ -113,7 +113,7 @@ const DERELICT_ENCOUNTERS = [
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Dropped Hold' });
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Dropped Hold' });
                     }
-                    return "Hold opened. The colony supplies are still sealed. -5 Energy, +30 Salvage, +2 Food Pack.";
+                    return "Hold opened. The colony supplies are still sealed. -5 Energy, +30 Salvage, +2 Sealed Rations.";
                 }
             },
             {
@@ -360,7 +360,7 @@ const DERELICT_ENCOUNTERS = [
         choices: [
             {
                 text: "Search the living rings",
-                desc: "-1 Ration: a day inside. +35 Salvage, +3 Food Pack, +1 Music Holotape.",
+                desc: "-1 Ration: a day inside. +35 Salvage, +3 Sealed Rations, +1 Music Holotape.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 35);
@@ -375,7 +375,7 @@ const DERELICT_ENCOUNTERS = [
                         }
                     }
                     state.addLog("RING LOG: 'The children born this year have never seen the stars. They think the wall paintings are windows.'");
-                    return "Rings searched. -1 Ration, +35 Salvage, +3 Food Pack, +1 Music Holotape.";
+                    return "Rings searched. -1 Ration, +35 Salvage, +3 Sealed Rations, +1 Music Holotape.";
                 }
             },
             {

@@ -13,6 +13,7 @@
     const METAL = ['#0b0d10', '#2a2d2a', '#5c6058', '#8f8a7a', '#c4d0c4'], PAPER = ['#141108', '#5a4a2a', '#a08a5a', '#d8c8a0', '#f4ecd6'];
     const SCREEN_BG = '#05070a', SCREEN_INK = '#2f5a48', SCREEN_LIT = '#74d99a', READER = '#8844ff';
     const LEDGER_FILL_ROWS = 9, LEDGER_YEAR0 = 2281;           // filler rows around the player's own wrecks; the programme's first keel
+    const BACKDROP_GUARD_MS = 1200;                             // a click beside the page puts it away only once it has been up this long
 
     const KICKER = { plate: 'A CAST PLATE · BESIDE THE AIRLOCK', paper: 'A PRINTED PAGE · EARTH LETTERHEAD', log: 'THE LAST ENTRY · CAPTAIN\'S LOG', ledger: 'BOUND PRINTOUT · EVERY HULL EVER LAID' };
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -102,11 +103,14 @@
                 <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>KEEP IT</span><small>it stays in your cargo</small></button></div>
             </section>`;
         document.body.appendChild(overlay);
+        const openedAt = performance.now();
         const items = [...overlay.querySelectorAll('.found-page-text li')], after = overlay.querySelector('.found-page-after');
         const speakerIsDead = page.after && state && state.isSilentSpeaker && page.after.speaker !== 'A.U.R.A.' && state.isSilentSpeaker(`${page.after.speaker}: `);
         const hasAfter = !!(page.after && !speakerIsDead);
         if (hasAfter) after.innerHTML = `<b>${esc(page.after.speaker)}</b>${esc(page.after.text)}`;   // in place from the start: the card never grows
         else after.remove();
+        // it opens just after a card's choice: KEEP IT never lands under that click (a double click would put it away unread)
+        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.found-page-card'), overlay.querySelectorAll('.disc-doc-close'));
         let shown = 0, isDone = false;
         const reveal = () => {
             if (shown < items.length) { const li = items[shown++]; li.style.visibility = ''; li.classList.add('is-in'); }
@@ -130,7 +134,7 @@
         return new Promise(resolve => {
             const close = () => { overlay.remove(); if (state && state.emitUpdates) state.emitUpdates(); resolve(); };
             overlay.querySelector('.disc-doc-close').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            overlay.addEventListener('click', e => { if (e.target === overlay && performance.now() - openedAt > BACKDROP_GUARD_MS) close(); });
         });
     }
 

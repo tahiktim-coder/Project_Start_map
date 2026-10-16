@@ -292,19 +292,43 @@
         if (key !== W.noteKey) { note.replaceChildren(mk('p', 'name', w.name), mk('p', 'tag', w.tag)); note.classList.toggle('is-story', !!w.story); W.noteKey = key; W.noteSide = null; }
         note.hidden = false;
         const l = F.light(), k = G.k / G.dpr, nw = note.offsetWidth / k, nh = note.offsetHeight / k, e = F.entry(id), giant = e && e.kind === 'giant';
-        const gap = giant ? 10 : g.r + 8 * sc, ds = F.discsOf(W.last || F.scene(W, t));                    // its own disc too: never words over a world
+        const gap = g.r + (giant ? 10 : 8 * sc), ds = noteDiscs(W.last || F.scene(W, t));   // beside the world's edge, a giant's too: never words over a world
         if (id !== 'light') ds.push([l.x, l.y, 26 * sc]);                                 // off the light's glare too
-        const box = side => side === 'right' ? [g.x + gap, g.y - nh / 2] : side === 'left' ? [g.x - gap - nw, g.y - nh / 2] : side === 'above' ? [g.x - nw / 2, g.y - (giant ? g.r : 0) - gap - nh] : [g.x - nw / 2, g.y + gap];
-        const ok = ([x, y]) => x >= G.hull + 6 && x + nw <= G.W - 6 && y >= 6 && y + nh <= G.H - 6 && !ds.some(([cx, cy, r]) => { const qx = Math.max(x, Math.min(cx, x + nw)), qy = Math.max(y, Math.min(cy, y + nh)); return Math.hypot(qx - cx, qy - cy) < r; });
+        const box = side => side === 'right' ? [g.x + gap, g.y - nh / 2] : side === 'left' ? [g.x - gap - nw, g.y - nh / 2] : side === 'above' ? [g.x - nw / 2, g.y - gap - nh] : [g.x - nw / 2, g.y + gap];
+        const onWorld = ([x, y]) => ds.some(([cx, cy, r]) => { const qx = Math.max(x, Math.min(cx, x + nw)), qy = Math.max(y, Math.min(cy, y + nh)); return Math.hypot(qx - cx, qy - cy) < r; });
+        const inView = ([x, y]) => x >= G.hull + 6 && x + nw <= G.W - 6 && y >= 6 && y + nh <= G.H - 6;
+        const ok = b => inView(b) && !onWorld(b);
         const ptr = W.pointer || [g.x, g.y], sides = ['right', 'left', 'above', 'below'].map(s => ({ s, b: box(s) })).filter(c => ok(c.b));
         sides.sort((a, b) => Math.hypot(b.b[0] + nw / 2 - ptr[0], b.b[1] + nh / 2 - ptr[1]) - Math.hypot(a.b[0] + nw / 2 - ptr[0], a.b[1] + nh / 2 - ptr[1]));   // away from the pointer
         let pick = sides.find(c => c.s === W.noteSide) || sides[0];
+        if (!pick) pick = openSky(ptr, nw, nh, ok);                                     // a world filling the view (a giant up close): the nearest clear sky
         if (!pick) { const b = box(g.x > G.hull + (G.W - G.hull) / 2 ? 'left' : 'right'); pick = { s: 'x', b: [Math.max(G.hull + 6, Math.min(G.W - nw - 6, b[0])), Math.max(6, Math.min(G.H - nh - 6, b[1]))] }; }
         W.noteSide = pick.s;
         note.classList.toggle('is-left', pick.s === 'left');
         const [cx, cy] = G.toCss(pick.b[0], pick.b[1]);
         note.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
-        noteRect = { x: Math.round(pick.b[0]), y: Math.round(pick.b[1]), w: Math.ceil(nw), h: Math.ceil(nh) };
+        noteRect = { x: Math.round(pick.b[0]), y: Math.round(pick.b[1]), w: Math.ceil(nw), h: Math.ceil(nh), dense: onWorld(pick.b) };   // still over a world: a darker shade
+    }
+    /** Every round thing the words keep off: the worlds (F.discsOf) and a giant's ring, as a chain of small discs along it. */
+    function noteDiscs(sn) {
+        const ds = F.discsOf(sn), GI = P.GIANT, ct = Math.cos(GI.tilt), st = Math.sin(GI.tilt), mid = (GI.r0 + GI.r1) / 2;
+        sn.items.filter(i => i.kind === 'giant' && i.part !== 'arc' && !(i.fade >= 1)).forEach(i => {
+            const band = (GI.r1 - GI.r0) / 2 * i.r + 3;
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 14) {
+                const u = mid * i.r * Math.cos(a), w = mid * i.r * GI.open * Math.sin(a);
+                ds.push([i.x + u * ct - w * st, i.y + u * st + w * ct, band]);
+            }
+        });
+        return ds;
+    }
+    /** The clear piece of sky nearest the pointer for a note nw x nh (art px), in rings around it; null when there is none. */
+    function openSky(ptr, nw, nh, ok) {
+        let best = null, bestD = Infinity;
+        for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) {
+            const b = [ptr[0] + i * (nw / 2 + 6) - nw / 2, ptr[1] + j * (nh + 6) - nh / 2], d = Math.hypot(i * (nw / 2 + 6), j * (nh + 6));
+            if (d < bestD && ok(b)) { best = { s: 'sky', b }; bestD = d; }
+        }
+        return best;
     }
     /** The white-gold flash over the whole screen (the tower too), in warm steps, then the corridor's dark. */
     function updateFlash(t) {
@@ -329,8 +353,8 @@
         const st = mk('style'); st.id = 'ns-travel-style';
         st.textContent = `#ns-world-words .nst-note { position: absolute; left: 0; top: 0; display: grid; gap: 3px; max-width: 22em; pointer-events: none; }
 #ns-world-words .nst-note[hidden], #ns-world-words .nst-title[hidden] { display: none; }
-#ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name, 19px)/1.15 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.02em; color: var(--text, #e4e4e0); text-shadow: var(--shadow, 0 1px 0 #05070a); }
-#ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-shadow: var(--shadow, 0 1px 0 #05070a); }
+#ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name, 19px)/1.15 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.02em; color: var(--text, #e4e4e0); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
+#ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
 #ns-world-words .nst-note.is-left { text-align: right; justify-items: end; }
 #ns-world-words .nst-note.is-story .tag { color: var(--warm-br, #ffc27a); }
 #ns-world-words .nst-flash { position: absolute; inset: 0; pointer-events: none; }

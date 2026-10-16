@@ -17,6 +17,12 @@
  */
 
 const THROW_LOG_SECTOR = 4;   // the flight recorder's captain's log (thrown back in time) only after the sector 3 page
+const ONE_BATTERY_ENERGY = 25; // one sleeper pod's battery (THE SLEEPERS)
+/** What one pod battery gives now, in words: energy tops out at 100, so near full it is less than the battery holds. */
+const oneBatteryWords = (state) => {
+    const fits = Math.max(0, Math.min(ONE_BATTERY_ENERGY, 100 - Math.round(state.energy)));
+    return fits > 0 ? `+${fits} Energy` : 'Energy already full';
+};
 
 const EXODUS_SHIP_NAMES = [
     '"PIONEER"',
@@ -114,7 +120,7 @@ const EXODUS_ENCOUNTERS = [
             },
             {
                 text: "Strip the ship",
-                desc: "+40 Salvage, +1 Food Pack. Aris +2 Stress. Nobody gets buried.",
+                desc: "+40 Salvage, +1 Sealed Rations. Aris +2 Stress. Nobody gets buried.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
                     if (typeof ITEMS !== 'undefined' && ITEMS.FOOD_PACK) {
@@ -124,12 +130,12 @@ const EXODUS_ENCOUNTERS = [
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 2);
                     state.addLog("We carried their food out past their bodies.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-2, 'Stripped a crew still in their chairs');
-                    return "Ship stripped. +40 Salvage, +1 Food Pack. Aris +2 Stress.";
+                    return "Ship stripped. +40 Salvage, +1 Sealed Rations. Aris +2 Stress.";
                 }
             },
             {
                 text: "Bury them, then empty the hold",
-                desc: "-1 Ration, -10 Energy. +20 Salvage, +1 Food Pack. Aris +1 Stress: she digs the graves alone.",
+                desc: "-1 Ration, -10 Energy. +20 Salvage, +1 Sealed Rations. Aris +1 Stress: she digs the graves alone.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.energy = Math.max(0, state.energy - 10);
@@ -140,7 +146,7 @@ const EXODUS_ENCOUNTERS = [
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     if (aris) state.addLog("Aris digs the graves while the rest of us load the lander. She doesn't ask for help.");
-                    return "Graves dug, hold emptied. -1 Ration, -10 Energy, +20 Salvage, +1 Food Pack.";
+                    return "Graves dug, hold emptied. -1 Ration, -10 Energy, +20 Salvage, +1 Sealed Rations.";
                 }
             }
         ]
@@ -191,15 +197,18 @@ const EXODUS_ENCOUNTERS = [
             {
                 text: "Take one battery, carry two pods",
                 desc: "+25 Energy, -2 Rations. +2 Sleepers. One sleeper dies. Aris +1 Stress.",
+                // energy tops out at 100: the chip and the result say what fits now, not the battery's full 25
+                descNow: (state) => `${oneBatteryWords(state)}, -2 Rations. +2 Sleepers. One sleeper dies. Aris +1 Stress.`,
                 effect: (state) => {
-                    state.energy = Math.min(100, state.energy + 25);
+                    const gained = oneBatteryWords(state);
+                    state.energy = Math.min(100, state.energy + ONE_BATTERY_ENERGY);
                     state.rations = Math.max(0, state.rations - 2);
                     state._sleepers = (state._sleepers || 0) + 2;
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     if (aris) state.addLog("Aris chooses which pod loses its battery. She won't say how she chose.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Traded one sleeper for two');
-                    return "Two sleepers aboard, one battery in our reactor. +25 Energy, -2 Rations.";
+                    return `Two sleepers aboard, one battery in our reactor. ${gained}, -2 Rations.`;
                 }
             }
         ]
@@ -220,7 +229,7 @@ const EXODUS_ENCOUNTERS = [
         choices: [
             {
                 text: "Take everything",
-                desc: "+30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress: nothing is left for the next ship.",
+                desc: "+30 Salvage, +2 Sealed Rations, +1 Luxury Item. Jaxon +1 Stress: nothing is left for the next ship.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
                     if (typeof ITEMS !== 'undefined') {
@@ -236,12 +245,12 @@ const EXODUS_ENCOUNTERS = [
                     if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
                     if (jaxon) state.addLog("Jaxon folds up the note and puts it in his pocket. He doesn't say anything.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Emptied a cache left for others');
-                    return "Hold emptied. +30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress.";
+                    return "Hold emptied. +30 Salvage, +2 Sealed Rations, +1 Luxury Item. Jaxon +1 Stress.";
                 }
             },
             {
                 text: "Take half, leave a note of our own",
-                desc: "+15 Salvage, +1 Food Pack. -1 Ration left in the crate. Jaxon -1 Stress.",
+                desc: "+15 Salvage, +1 Sealed Rations. -1 Ration left in the crate. Jaxon -1 Stress.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state.rations = Math.max(0, state.rations - 1);
@@ -253,7 +262,7 @@ const EXODUS_ENCOUNTERS = [
                     state.addLog("We write the date and our names on the lid, then seal the hold again.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Left something for whoever comes next');
                     state.noteStanding && state.noteStanding('jaxon');
-                    return "Half the hold taken, one ration left behind. +15 Salvage, +1 Food Pack, -1 Ration.";
+                    return "Half the hold taken, one ration left behind. +15 Salvage, +1 Sealed Rations, -1 Ration.";
                 }
             }
         ]
@@ -427,7 +436,7 @@ const EXODUS_ENCOUNTERS = [
             },
             {
                 text: "Strip it deck by deck",
-                desc: "-10 Energy. +50 Salvage, +1 Food Pack, +1 Music Holotape. Aris +1 Stress.",
+                desc: "-10 Energy. +50 Salvage, +1 Sealed Rations, +1 Music Holotape. Aris +1 Stress.",
                 requires: (state) => state.energy >= 10,
                 requiresLabel: "Need 10 Energy",
                 effect: (state) => {
@@ -441,7 +450,7 @@ const EXODUS_ENCOUNTERS = [
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     state.addLog("Their journals go into the scrap bin with the wall panels.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(-1, 'Stripped a settlement without the names');
-                    return "Stripped deck by deck. -10 Energy, +50 Salvage, +1 Food Pack, +1 Music Holotape.";
+                    return "Stripped deck by deck. -10 Energy, +50 Salvage, +1 Sealed Rations, +1 Music Holotape.";
                 }
             },
             {

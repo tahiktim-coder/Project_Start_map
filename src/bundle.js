@@ -1942,7 +1942,7 @@ class App {
             facts: [['WHERE', stationName]],
             context: selected.context(stationName), dialogue: selected.dialogue, choices: selected.choices,
             onPick: (idx) => {
-                const result = selected.choices[idx].effect(this.state);
+                const result = window.EncounterCard.apply(selected.choices[idx], this.state);   // the result says what really fitted
                 if (result) this.state.addLog(`STATION: ${result}`);
                 this.state.emitUpdates(); // already marked as investigated in handleStationAction
             }
@@ -2034,7 +2034,7 @@ class App {
             facts: [['WHERE', fieldName]],
             context: selected.context(fieldName), dialogue: selected.dialogue, choices: selected.choices,
             onPick: (idx) => {
-                const result = selected.choices[idx].effect(this.state);
+                const result = window.EncounterCard.apply(selected.choices[idx], this.state);
                 if (result) this.state.addLog(`MINING: ${result}`);
                 this.state.emitUpdates(); // already marked as mined in handleAsteroidAction
             }
@@ -2063,7 +2063,7 @@ class App {
             facts: [['SENT', signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `${signalAge} years ago`]],
             context: encounter.context(signalAge), dialogue: encounter.dialogue, choices: encounter.choices,
             onPick: (idx) => {
-                const result = encounter.choices[idx].effect(this.state);
+                const result = window.EncounterCard.apply(encounter.choices[idx], this.state);
                 if (result) this.state.addLog(`SIGNAL: ${result}`);
                 this.state.emitUpdates();
                 this._modalActive = false;
@@ -2129,7 +2129,7 @@ class App {
             context: inState(event.context), dialogue: inState(event.dialogue),
             choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c), descNow: c.descNow })),
             onPick: (idx) => {
-                const result = event.choices[idx].effect(this.state, crew);
+                const result = window.EncounterCard.apply(event.choices[idx], this.state, crew);
                 if (result) this.state.addLog(`CREW: ${result}`);
                 this.state.emitUpdates();
                 this.autoSave();                     // each moment happens once a run: a reload must not bring it back
@@ -3459,7 +3459,7 @@ Then you're through.`,
             context: raw.replace(HIGHLIGHT, '').replace(WHISPER, ''),
             dialogue: config.dialogue, choices,
             onPick: (idx) => {
-                const resultMsg = config.choices[idx].effect(this.state);
+                const resultMsg = window.EncounterCard.apply(config.choices[idx], this.state);   // the result says what really fitted
                 if (resultMsg) this.state.addLog(resultMsg);
                 if (config.onChoiceMade) config.onChoiceMade(idx, resultMsg);
                 this.state.emitUpdates();
@@ -4102,10 +4102,13 @@ Then you're through.`,
 
         // Card layout: what the team found, what the scan says, then one button per option with its real odds
         const REWARD_WORDS = { METALS: '+40 to 79 salvage', METALS_HIGH: '+60 to 119 salvage', ENERGY: '+30 to 49 energy', NOTHING: 'nothing' };
+        const energyRoom = Math.max(0, 100 - Math.round(this.state.energy));                // energy tops out at 100: say what fits
+        const energyWords = energyRoom <= 0 ? 'energy already full' : energyRoom < 30 ? `+${energyRoom} energy` : energyRoom < 49 ? `+30 to ${energyRoom} energy` : REWARD_WORDS.ENERGY;
         const rewardWords = (choice) => {
             const r = choice.reward || {};
             if (r.type === 'ITEM') return `an item${r.tags && r.tags.length ? ' · ' + String(r.tags[0]).toLowerCase() : ''}`;
-            return REWARD_WORDS[r.val] || (r.type === 'RESOURCE' ? REWARD_WORDS.ENERGY : 'nothing');
+            const isEnergy = r.type === 'RESOURCE' && r.val !== 'NOTHING' && !String(r.val || '').includes('METALS');   // resolveEvaOutcome's own rule
+            return isEnergy ? energyWords : REWARD_WORDS[r.val] || 'nothing';
         };
         const evaChoice = (choice, idx) => {
             const totalRisk = Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
@@ -4137,6 +4140,8 @@ Then you're through.`,
         `;
 
         document.body.appendChild(modal);
+        // it opens just after a click (the landing, the breach): no choice lands under it, so a second click picks nothing unread
+        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(modal.querySelector('.eva-panel'), modal.querySelectorAll('.choice-btn'));
 
         modal.querySelectorAll('.choice-btn:not([disabled])').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -4326,8 +4331,9 @@ Then you're through.`,
                     logMsg += " (Storage Cap Reached)";
                 }
             } else {
+                const got = Math.max(0, Math.min(amount, 100 - Math.round(this.state.energy)));   // energy tops out at 100: say what fitted
                 this.state.energy = Math.min(100, this.state.energy + amount);
-                logMsg += `Siphoned ${amount} Energy.`;
+                logMsg += got ? `Siphoned ${got} Energy.` : 'Energy was already full.';
             }
         } else if (choice.reward.type === 'ITEM') {
             const item = this.getProbeItem(this.state.currentSystem);
@@ -5548,7 +5554,7 @@ Then you're through.`,
             context: event.context, dialogue,
             choices: [{ text: isNewScreen() ? 'Deal with it' : 'DEAL WITH IT' }],
             onPick: () => {
-                const result = event.effect(this.state);
+                const result = window.EncounterCard.apply(event, this.state);
                 if (result) this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
                 this.state.emitUpdates();
                 resolve();

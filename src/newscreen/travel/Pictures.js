@@ -407,15 +407,16 @@
         }
         ctx.drawImage(darkArt, 0, 0);
     }
-    /** The picture darkens softly under the hover note (game-screen-v3's shadeSprite, simpler). rect in art px. */
+    /** The picture darkens softly under the hover note (game-screen-v3's shadeSprite, simpler). rect in art px; rect.dense:
+        the note could not keep off a world (a giant up close), so the shade is darker there and the stripes do not show through. */
     function shade(r) {
         if (!r) return;
-        const pad = 10, key = r.w + 'x' + r.h;
+        const pad = 10, cover = r.dense ? 0.94 : 0.66, key = r.w + 'x' + r.h + (r.dense ? 'd' : '');
         let c = shadeCache.get(key);
         if (!c) {
             const Wd = r.w + pad * 2, Hd = r.h + pad * 2, p = P.painter(Wd, Hd, false), ink = P.hexRgb(INK), hw = r.w / 2, hh = r.h / 2, round = Math.min(hw, hh);
             p.region(0, 0, Wd, Hd, (x, y) => { const qx = Math.abs(x + 0.5 - pad - hw) - (hw - round), qy = Math.abs(y + 0.5 - pad - hh) - (hh - round), sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - round + (P.fbm(x / 7, y / 4, 17, 2) - 0.5) * 10;
-                if (0.66 * (1 - smooth(-8, pad, sd)) > threshold(x, y)) p.set(x, y, ink); });
+                if (cover * (1 - smooth(-8, pad, sd)) > threshold(x, y)) p.set(x, y, ink); });
             c = p.canvas(); if (shadeCache.size > 60) shadeCache.clear(); shadeCache.set(key, c);
         }
         ctx.drawImage(c, r.x - pad, r.y - pad);
