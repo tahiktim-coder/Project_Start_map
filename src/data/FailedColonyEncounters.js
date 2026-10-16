@@ -148,7 +148,7 @@ const FAILED_COLONY_ENCOUNTERS = [
             },
             {
                 text: "Open the cryo ward",
-                desc: "+15 Salvage, +10 Energy from the ward's power cells. Aris +1 Stress.",
+                desc: "+15 Salvage. The ward's power cells: +10 Energy. Aris +1 Stress.",
                 effect: function(state) {
                     state.addLog('The central building is a clinic. Six pods in the back room, all occupied.');
                     state.addLog('A.U.R.A.: "The ward lost power long ago, Commander. Nobody in it is alive."');

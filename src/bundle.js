@@ -4394,25 +4394,29 @@ Then you're through.`,
                         this.state.addLog(`${evaTeam[0].name} and ${evaTeam[1].name} found a quiet place by the stream. The whole crew rotated through in shifts.`);
                         this.state.addLog("For the first time in months, everyone truly rested. All stress cleared. All injuries healed.");
                         break;
-                    case 'gather':
-                        this.state.rations = Math.min(this.state.maxRations, this.state.rations + 10);
-                        this.state.addLog("The fruit was unlike anything from Earth, but it tasted like coming home. +10 Rations.");
+                    case 'gather': {
+                        const got = Math.min(10, Math.max(0, this.state.maxRations - this.state.rations));   // what fits: the chip says the same (EncounterCard.capGains)
+                        this.state.rations += got;
+                        this.state.addLog(`The fruit was unlike anything from Earth, but it tasted like coming home. ${got > 0 ? `+${got} Rations.` : 'Rations already full.'}`);
                         break;
+                    }
                     case 'explore':
                         this.state.salvage = Math.min(this.state.maxSalvage, this.state.salvage + 50);
                         planet._colonyMarked = true;
                         this.state.addLog("The valley stretches for kilometers. Clean soil, fresh water, gentle climate. This could be home. +50 Salvage. Colony site marked.");
                         break;
-                    case 'remember':
-                        this.state.energy = Math.min(100, this.state.energy + 20);
+                    case 'remember': {
+                        const got = Math.min(20, Math.max(0, 100 - this.state.energy));                         // what fits under 100
+                        this.state.energy += got;
                         this.state.crew.forEach(c => {
                             if (c.status !== 'DEAD') {
                                 c.stress = Math.max(0, (c.stress || 0) - 1);
                             }
                         });
                         this.state.addLog(`${evaTeam[0].name}: "This is why we left Earth. This is what we're looking for."`);
-                        this.state.addLog("Renewed purpose fills the crew. +20 Energy. All crew -1 stress.");
+                        this.state.addLog(`Renewed purpose fills the crew. ${got > 0 ? `+${got} Energy.` : 'Energy already full.'} All crew -1 Stress.`);
                         break;
+                    }
                     case 'settle':
                         // The crew have their say first; "Not yet" puts the team back in the meadow with the trip unspent
                         this.askBeforeSettling(planet, () => {

@@ -265,7 +265,7 @@ const DERELICT_ENCOUNTERS = [
             },
             {
                 text: "Salvage the probe",
-                desc: "+20 Salvage, +15 Energy from its fuel. Aris +1 Stress: the message is never heard.",
+                desc: "+20 Salvage. Its fuel: +15 Energy. Aris +1 Stress: the message is never heard.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                     state.energy = Math.min(100, state.energy + 15);

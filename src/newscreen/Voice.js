@@ -74,7 +74,7 @@
         }
         return null;
     }
-    const STRESS_RE = /(?:\b(?:All crew|Both|Commander|Cora|Jaxon|Aris|Vance|Mira|\d+ crew)\s+)?[+\-−]\d+\s+Stress\b/g;   // a tally, not speech
+    const STRESS_RE = /(?:\b(?:All crew|Both|Commander|Cora|Jaxon|Aris|Vance|Mira|\d+ crew)\s+)?[+\-−]\d+\s+Stress\b/gi;   // a tally, not speech (any case: "-1 stress" too)
     const SIGNED_WORDS_RE = /(^|[^\w%])([+\-−])\s?(\d+)\s+([A-Z][a-z]+(?:\s[A-Z][a-z]+)?|energy|salvage|rations?|data)\b(?!\s*%)/g;
     /** "+10 Energy" → "plus 10 energy" (a sentence's first word capitalised); stress tallies dropped; the punctuation tidied. */
     function plainNumbers(text) {
@@ -296,7 +296,8 @@
         if (!cur || cur.id !== 'narr' || cur.fading) return;
         const left = Math.max(1, Math.min(cur.left, FADE_MS));                          // shorter if the line was ending anyway
         cur.left = left; cur.fading = left;                                              // fading: the fade's whole length
-        cur.el.style.transition = `opacity ${Math.round(left)}ms ease-out`;
+        const isReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        cur.el.style.transition = isReduced ? 'none' : `opacity ${Math.round(left)}ms ease-out`;   // reduced motion: gone, no fade
         cur.el.classList.remove('is-in');
     }
 
@@ -332,7 +333,7 @@
         if (!cur || !cur.pos || noteUp) return;
         const G = NS.G, f = G.dpr / G.k, r = cur.pos;
         const x0 = Math.floor(r.x * f), y0 = Math.floor(r.y * f), w = Math.max(1, Math.ceil((r.x + cur.w) * f) - x0), hgt = Math.max(1, Math.ceil((r.y + cur.h) * f) - y0);
-        const fade = cur.fading ? Math.max(0, cur.left / cur.fading) : 1;                // a fading narration line: its shade goes with it
+        const fade = cur.fading ? Math.round(Math.max(0, cur.left / cur.fading) * 6) / 6 : 1;   // a fading narration line: its shade goes with it (6 steps: few sprites)
         const strength = Math.round(cur.strength * fade * 20), sx = x0 - SHADE_PAD, sy = y0 - SHADE_PAD;
         if (strength > 0) g.drawImage(shadeSprite(w, hgt, sx & 7, sy & 7, strength), sx, sy);
         const ds = discs();                                                                // never shade over a world or our Lander

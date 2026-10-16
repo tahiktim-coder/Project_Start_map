@@ -285,7 +285,7 @@ const ANOMALY_ENCOUNTERS = [
             },
             {
                 text: "Trade supplies across",
-                desc: "-20 Salvage for +30 Energy. If we have under 20 Salvage: -30 Energy for +20 Salvage instead. Vance +1 Stress either way.",
+                desc: "-20 Salvage. +30 Energy. If we have under 20 Salvage: -30 Energy, +20 Salvage instead. Vance +1 Stress either way.",
                 descNow: (state) => state.salvage >= 20 ? "-20 Salvage for +30 Energy. Vance +1 Stress."
                     : state.energy >= 30 ? "-30 Energy for +20 Salvage. Vance +1 Stress."
                     : "We have nothing to trade: it takes 20 Salvage or 30 Energy.",
@@ -470,7 +470,7 @@ const ANOMALY_ENCOUNTERS = [
             },
             {
                 text: "Burn it",
-                desc: "+10 Energy from the fire. Jaxon +1 Stress, Aris +1 Stress.",
+                desc: "The fire feeds the reactor: +10 Energy. Jaxon +1 Stress, Aris +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 10);
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
