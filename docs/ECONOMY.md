@@ -1,5 +1,14 @@
 # The economy (2026-10-07)
 
+> **The new look's numbers (2026-10-17, in the game).** Under `?new=1` every number that differs lives in `NEW_LOOK_ECONOMY`
+> (src/bundle.js), each with its reason: start 100 energy and 24 rations; a warp 5-8 by distance; the sector jump 6 (doubled with
+> engineering down); Refuel at a gas giant +20; a plain landing's energy find 8-12; no card choice gives more than 20 energy; every
+> living person eats one ration at the supper after a jump; sealed rations open at once (+2 each). Two rules: a story world can
+> always be reached (on the reserve if need be), and food that runs short means one person goes without supper, never a death.
+> Measured: no story page lost in 3,000 model runs (was up to 90%); careful players skip extras from sector 3 on. Open: card choices
+> still move energy more than the route does (a card pass is due). The tables below describe the default game as it was.
+
+
 **Status:** a proposal. The "First aid" block of section 5 is in the game (2026-10-07); nothing else is. Sections 1 and 2
 describe the code as it was before that, from `src/bundle.js`, `src/data/*` and `src/systems/*`, not from the older design docs.
 

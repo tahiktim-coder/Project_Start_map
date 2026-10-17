@@ -44,8 +44,9 @@ to**. At the end, **the window at the light**, which reads all four.
   stress 2, they also miss the next trip.
 - *Brings out:* A.U.R.A.'s one wrong number, felt with nobody explaining it. Vance gives first. Aris notices.
 - *Pays off:* hunger pulls toward Eden. At the light, A.U.R.A. sets five bowls the moment she says "five crew".
-- *Size:* about 8 hours, but only after the food plan (5 a jump, start 25). Today food never bites: `RATIONS_PER_JUMP` is 1
-  (`bundle.js:1003`). This replaces the "five bowls" meal in SHIP_GAMEPLAY §8 and §10. When the shelf is full, the
+- *Built (2026-10-17):* supper after a jump is in the new look (tower/Supper.js): food is one ration per living person per
+  jump (start 24); when it runs short Vance offers to go without, or you choose who does. No bowl count is shown (the "four
+  crew" meaning is undecided). This replaces the "five bowls" meal in SHIP_GAMEPLAY §8 and §10. When the shelf is full, the
   fifth jar is a single click.
 
 **3. Strip or names (at a wreck)**
