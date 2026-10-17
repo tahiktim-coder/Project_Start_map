@@ -1,75 +1,67 @@
 /* ═══ Silent Exodus · new screen (?new=1) · stop/Stop.js: a stop, on the bridge ════════════════════════════════════════
    What it is: arriving at a world, the view dives through our hull onto the bridge (layout D): the world fills the big
-   window, Cora is at the helm, Mira at her console, and whoever may go down stands at the window. What we can do here
-   is a few words beside what it acts on ("Scan" beside the world, "Answer the call" beside the blink in the sky, "Date
-   the wreck" over Mira); "Leave orbit" under the window. A team trip: click two people at the window, then "Send the
-   team"; the two walk to the hatch, the shuttle drops to the site, then the real game runs the trip (LanderGame, the
+   window, Cora is at the helm, Mira at her console, and whoever may go down comes up the ladder to the window. What we can
+   do here is shown as designed tags on the window glass, each tied by a thin thread to what it acts on (stop/Words.js:
+   "Scan" by the world's limb, "Dock" to the station's port, "Answer the call" to the blink in the sky...); "Leave orbit"
+   is a lit key on Cora's console. A team trip: once the bridge has been seen a moment, the crew put the best two forward
+   for this world (NSOrbit.propose) and those two walk from the window to the hatch and stand by it, facing the window,
+   each with their name and why over them; the "GO DOWN" tag stands over the hatch. A click on someone at the hatch sends
+   them back to the window (a place opens: the tag says "one more"); a click on someone at the window puts them in the open
+   place, or in the place of whoever joined last. Only two fit: both go, nobody changes. "GO DOWN": the two climb down the
+   hatch, THEN the shuttle drops to the site (a click hurries it), then the real game runs the trip (LanderGame, the
    Torch, the cards). When they are back the shuttle comes up and they climb back. "Leave orbit" plays the dive backwards.
    Every action calls the REAL game through NewScreen.flow (Orbit.js): costs, events, rewards and saves are today's.
-   The first time each action (and "Leave orbit") shows, A.U.R.A. says once what it does (NSOrbit.TELL), one at a time,
-   the one pointed at first. "Settle here" (it ends the game) is drawn cool, never warm; once nothing but it is left,
-   "Leave orbit" grows warm and as large as an action. While a person is pointed at, the sub-lines hide but keep their
-   room, so nothing moves under the pointer. The note over them says what they are good for, and under it what the ship
-   loses while they are down at this stop (NSOrbit.holdLoss). Anyone too weak from a missed supper is left out of the
-   lineup and stands by the ladder; pointing at them says why. The ship's stock (NSStock: energy, rations, salvage, data) stands as small lit numbers on the wall
-   left of the window. The world's name sits in the window's corner; under it, quietly, what our scans read of it (Scan.js:
-   two short lines of tags, while the words on screen allow). A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
-   Source: prototypes/slice/stop.js §5-12 (people plans, compose, words, the pick, anchors, discs), without its films,
-   MOCKUP moments and slice places (docs/BUILD_B.md §2). Draws ONLY into canvas#ns-dive, canvas#ns-bridge and the word
-   layer #ns-stop-words. Loaded only when the new-screen switch is on, after stop/BridgeArt, stop/Dive, stop/Glass.
+   Anyone too weak from a missed supper is not put forward and stands apart, by the suit locker; pointing says why.
+   A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
+   Source: prototypes/slice/stop.js §5-12 (people plans, compose, the pick, anchors, discs), without its films, MOCKUP
+   moments and slice places (docs/BUILD_B.md §2). Draws ONLY into canvas#ns-dive, canvas#ns-bridge and (through
+   stop/Words.js) the word layer #ns-stop-words. Loaded only when the new-screen switch is on, after stop/BridgeArt,
+   stop/Dive, stop/Glass, stop/TagArt, stop/Tags and stop/Words.
 
    NewScreen.mods.stop = { init, resize, update, render, pointer, isOpen, discs, noteUp, debug }
      pointer(type, e)       the shell routes every pointer event here while its mode is not 'travel'; CSS px from e
      isOpen() → bool        the dive or the bridge is on screen
      discs() → [[x, y, r]]  CSS px: the world in the glass and the people on the bridge (words keep off them)
-     noteUp() → bool        a person's "good for" line is up (the voice steps back meanwhile)
+     noteUp() → bool        a person's note is up (the voice steps back meanwhile)
    Listens: 'dive:start' { id }  'dive:cancel'  'stop:open' { id, dived }  'stop:refresh'  'dive:back'  'trip:down' { ids }
             'trip:back'  'flow:go' { id } (bakes ahead)  'hidden'
    Emits:   'dive:plated' { dir }  'stop:shown' { id }  'stop:hidden' { id }  'stop:pick' { ids }
-   Calls:   NewScreen.flow.actions() → [{ key, words, near, team, run }], .act(key, ids), .eligible() → ids, .leave()
+   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave()
    Anchors (CSS px, while open): 'stop:person:<id>', 'stop:aura', 'stop:glass', 'stop:site'
 */
 (function () {
     'use strict';
     const NS = window.NewScreen, P = window.NSPaint, A = window.ShipArt, BA = window.NSBridgeArt, CE = window.CrewEngine;
-    const D = window.NSDive, GL = window.NSGlass;
-    if (!NS || !NS.on || !P || !A || !BA || !CE || !D || !GL) return;
+    const D = window.NSDive, GL = window.NSGlass, WORDS = window.NSStopWords, TA = window.NSTagArt;
+    if (!NS || !NS.on || !P || !A || !BA || !CE || !D || !GL || !WORDS) return;
     const { INK, RP, threshold } = P, L = A.L, B = BA.B, R = A.R;
     const SW = GL.SW, SH = GL.SH, OFFX = GL.OFFX, WIN = GL.WIN, F = B.F, STEPS = D.STEPS, PUSH = D.PUSH, DISSOLVE = D.DISSOLVE;
-    const SPOT_X = { jaxon: 214, aris: 254, vance: 290, mira: 326 };      // layout D's window spots (fixed per person)
+    const SPOT_X = { jaxon: 228, aris: 262, vance: 296, mira: 330 };      // layout D's window spots (fixed per person), clear of the hatch's two
+    const HATCH_X = [124, 172];                                           // the two put forward stand here, by the hatch, facing the window
+    const ASIDE = [{ x: 600, facing: -1 }, { x: 574, facing: -1 }];       // too weak from a missed supper: apart, by the suit locker
     const HELM = 360, NAV = 488, HATCH = L.LX, WALK = CE.ACTIONS.walk, CLIMB = CE.ACTIONS.climb;
     const NAMES = { cora: 'Cora', jaxon: 'Jaxon', aris: 'Aris', vance: 'Vance', mira: 'Mira' };
     const TONE = { cora: '#c9d1d6', jaxon: '#f08c2e', aris: '#ffc27a', vance: '#c4622a', mira: '#e8836a' };   // as the voice lines
     const CREW = ['jaxon', 'aris', 'vance', 'mira'];
-    const GOOD = {                                                        // the pick: hover a person (what they do down there, and aboard)
-        jaxon: 'Down there I fly the lander. Up here, the drive is mine.',
-        aris: 'Down there I bring the hurt back walking. Up here, the med bay.',
-        vance: 'Down there I take the hit for the other one. Up here, I keep people safe.',
-        mira: 'Down there I bring their star fix back. Up here, I scan the site.',
-    };
-    // under it, what the ship loses while they are down at this stop (NSOrbit.holdLoss, whileDown's own rules)
-    const WEAK_LINE = "I went without supper. I'm too weak to go down this time.";   // too weak for this trip (GameState.serveSupper)
-    const ASIDE_X = [130, 148];                                           // the too-weak stand by the ladder, apart from the window
-    const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, GUARD_MS = 400, READ_MS = 250, MAX_LIT = 4, MAX_WORDS = 40, GATHER_LEAD = 2600, TELL_AFTER_MS = 1500;
-    const WORTH = ['light', 'escape', 'accept', 'call', 'strange', 'date', 'team', 'dock', 'mine', 'settle', 'scan', 'skim'];   // more than 4: these first
-    const NEAR_WORLD = ['world', 'station', 'field', 'giant', 'site', 'light'];
-    const wordsIn = s => (String(s || '').trim().match(/\S+/g) || []).length;
+    const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, READ_MS = 250, GATHER_LEAD = 2600, PROPOSE_AFTER = 450, CLICK_GAP = 300;
 
     // ── the stop's own state (none of it is game state) ──
+    const freshPick = () => ({ slots: [null, null], order: [], why: {}, manual: false, key: '', from: Infinity });
     const S = {
         dive: null,          // NSDive dive while the push runs: { dir, t0, open, dissolveAt, plated, done }
         open: false, fadeAt: null, shownAt: -1e9, shownSent: false,
         id: null, node: null,
         plans: {}, drawn: [], atWindow: new Set(),
-        actions: [], readAt: -1e9, lineup: [], aside: [],   // aside: too weak from a missed supper, by the ladder while the lineup forms
-        picked: [], hover: null, hot: null, clickAt: 0,
+        actions: [], readAt: -1e9, lineup: [], aside: [],   // lineup: fit to go (at the window or the hatch); aside: too weak, apart
+        apart: [],           // who has stood apart this stop: they stay there (by the suit locker) until we leave
+        pick: freshPick(),   // slots: who stands at the hatch's two places; order: as they joined; why: id → why they go
+        hover: null, hot: null, hotAt: 0, clickAt: 0,
         send: null,          // { ids, t0, fireAt, fired, skipped } between the click and flow.act
         drop: null,          // { at }: the shuttle leaves when the team has climbed down the hatch
         trip: null,          // { ids } while the team is down
-        words: null, wordShown: new Map(), keyShown: new Map(), decks: null,   // keyShown: action key → when it came on screen
-        stock: null, telling: false,   // the bridge's readouts (NSStock.board); A.U.R.A. is saying an action's line
+        decks: null,
     };
-    let room = null, art = null, actx = null, diveC = null, bridgeC = null, dctx = null, bctx = null, layer = null, fxList = [];
+    let room = null, art = null, actx = null, diveC = null, bridgeC = null, dctx = null, bctx = null, fxList = [], W = null;
     const t0 = () => NS.clock.t;
     const crewMap = () => { const m = {}; try { NS.game.crew().forEach(c => { m[c.id] = c.status; }); } catch (err) { /* no game yet */ } return m; };
     let crewNow = {};
@@ -133,16 +125,18 @@
         const k = Math.floor(lt / CLIMB.ms), dy = Math.min(Math.abs(s.y1 - s.y0), k * CLIMB.rise);
         return { x: HATCH, y: s.y0 + Math.sign(s.y1 - s.y0) * dy, act: 'climb', facing: 1, ms: (k % CLIMB.frames) * CLIMB.ms + 1, climbing: true };
     }
-    /** Where everyone should be now: Cora at the helm; whoever may go at the window while a team action waits (and they stay
-        there for the rest of the stop); Mira at her console otherwise; the team away; the hurt, the confined and the dead
-        are not on the bridge. */
+    /** Where everyone should be now: Cora at the helm; the two put forward at the hatch; whoever else may go at the window
+        while a team action waits (and they stay there for the rest of the stop); the too weak apart; Mira at her console
+        otherwise; the team away; the hurt, the confined and the dead are not on the bridge. */
     function desired() {
         const away = S.trip ? S.trip.ids : S.send ? S.send.ids : [], out = { cora: crewOf('cora') === 'dead' ? null : { x: HELM, act: 'console', facing: 1 } };
         CREW.forEach(id => {
             if (crewOf(id) !== 'well' || away.includes(id)) { out[id] = null; return; }
+            const slot = S.lineup.includes(id) ? S.pick.slots.indexOf(id) : -1;
+            if (slot >= 0) { out[id] = { x: HATCH_X[slot], act: 'idle', facing: 1 }; return; }
             if (S.lineup.includes(id) || S.atWindow.has(id)) { out[id] = { x: SPOT_X[id], act: 'idle', facing: 1 }; return; }
-            const k = S.aside.indexOf(id);
-            if (k >= 0) { out[id] = { x: ASIDE_X[Math.min(k, ASIDE_X.length - 1)], act: 'idle', facing: 1 }; return; }
+            const k = S.lineup.includes(id) ? -1 : S.apart.indexOf(id);
+            if (k >= 0) { const a = ASIDE[Math.min(k, ASIDE.length - 1)]; out[id] = { x: a.x, act: 'idle', facing: a.facing }; return; }
             out[id] = id === 'mira' ? { x: NAV, act: 'console', facing: 1 } : null;
         });
         return out;
@@ -159,14 +153,62 @@
                 else if (last && last.kind !== 'gone') exitDown(id, t);
                 return;
             }
-            if (last && last.kind === 'stay' && last.x === w.x && last.act === w.act) return;
+            if (last && last.kind === 'stay' && last.x === w.x && last.act === w.act && last.facing === w.facing) return;
             if (settle) { stayPlan(id, w.x, w.act, w.facing); return; }
             if (seen) walkTo(id, t, w.x, w.act, w.facing); else entering.push([id, w]);
         });
         entering.sort((a, b) => b[1].x - a[1].x).forEach(([id, w], i) => enterTo(id, t + i * 700, w.x, w.act, w.facing));
     }
 
-    // ═══ 2. one frame of the bridge ═══
+    // ═══ 2. the team at the hatch: who the crew put forward, and the player's changes ═══
+    const team = () => S.pick.slots.filter(Boolean);
+    /** Standing at their place by the hatch now (their name and why show only then: words never chase a walker). */
+    function arrived(id) {
+        const k = S.pick.slots.indexOf(id), last = lastOf(id);
+        if (k < 0 || !last || last.kind !== 'stay' || last.x !== HATCH_X[k]) return false;
+        const p = poseOf(id, t0());
+        return !!p && !p.hidden && p.act === 'idle' && p.x === HATCH_X[k];
+    }
+    /** The crew put two forward (NSOrbit.propose) once the bridge has been seen a moment; they walk from the window to the
+        hatch. Asked again when what we know changes (a scan, someone hurt), unless the player has changed who goes. */
+    function proposeNow(t) {
+        if (!S.lineup.length || S.send || S.trip || t < S.pick.from) return;
+        let p = null;
+        try { p = NS.flow && typeof NS.flow.propose === 'function' ? NS.flow.propose() : null; } catch (err) { console.error('NewScreen stop: the proposal failed', err); }
+        if (p && p.why) S.pick.why = p.why;
+        if (S.pick.manual && S.lineup.length !== 2) return;            // the player's choice stands (only two fit: both go, whatever was picked)
+        const ids = S.lineup.length === 2 ? S.lineup.slice() : (p && Array.isArray(p.ids) ? p.ids : []).filter(id => S.lineup.includes(id)).slice(0, 2);
+        if (ids.length < 2) return;
+        const key = ids.slice().sort().join('+');
+        if (key === S.pick.key && ids.every(id => S.pick.slots.includes(id))) return;   // the same two, both still at the hatch
+        S.pick.key = key;
+        const keep = S.pick.slots.map(id => (id && ids.includes(id) ? id : null));
+        const add = ids.filter(id => !keep.includes(id)).sort((a, b) => SPOT_X[a] - SPOT_X[b]);   // the one further left takes the left place: nobody passes anyone
+        S.pick.slots = keep.map(id => id || add.shift() || null);
+        S.pick.order = ids.slice();
+        reconcile(t);
+    }
+    /** A click on someone fit to go: at the hatch, they step back to the window (a place opens); at the window, they take the
+        open place, or the place of whoever joined last. Only two fit: nobody changes. */
+    function pickPerson(id, t) {
+        if (S.lineup.length <= 2 || !S.lineup.includes(id)) return false;
+        const slots = S.pick.slots.slice(), at = slots.indexOf(id);
+        let order = S.pick.order.filter(q => slots.includes(q));
+        if (at >= 0) { slots[at] = null; order = order.filter(q => q !== id); }
+        else {
+            let k = slots.indexOf(null);
+            if (k < 0) { const last = order[order.length - 1] || slots[1]; k = slots.indexOf(last); order = order.filter(q => q !== last); }
+            slots[k] = id; order = order.concat(id);
+        }
+        S.pick.slots = slots; S.pick.order = order; S.pick.manual = true;
+        reconcile(t);
+        emit('stop:pick', { ids: slots.filter(Boolean) });
+        return true;
+    }
+    /** Who joined the hatch last (a click at the window takes their place when no place is open). */
+    const joinedLast = () => { const o = S.pick.order.filter(id => S.pick.slots.includes(id)); return o[o.length - 1] || null; };
+
+    // ═══ 3. one frame of the bridge ═══
     function drawSides(c, t) {
         [[0, 0.002, 0], [1, 0.006, 137]].forEach(([layer0, drift, ox]) => {
             const T = A.stars(layer0), n = T.size, oy = ((Math.round(t * drift) % n) + n) % n;
@@ -189,21 +231,24 @@
         const near = room.lamps.reduce((a, b) => (Math.abs(b.x - x) < Math.abs(a.x - x) ? b : a));
         return Math.round(3 * Math.exp(-Math.abs(near.x - x) / 55));
     }
-    function floorGlow(c, x, y, peak) {                                   // a warm pool of light under someone chosen (or pointed at)
+    function floorGlow(c, x, y, peak) {                                   // a warm pool of light under someone at the hatch (or pointed at)
         const f = P.framer(c, SW, SH);
         for (let dy = -3; dy <= 2; dy++) for (let dx = -22; dx <= 22; dx++) { const d = Math.hypot(dx / 22, dy / 3.2); if (d < 1) f.tone(x + dx, y + dy, RP.AMBER, peak * (1 - d) ** 1.4); }
     }
     const picking = () => !S.send && !S.trip && S.lineup.length >= 2 && hasTeamAction();
+    /** The hatch stands open for the team: a warm light from the lab below rises out of it (stronger once both are there). */
+    const hatchGlow = (c, k) => { if (TA) TA.hatchLight(c, HATCH + OFFX, F, k); };
     function drawPeople(c, t) {
         S.drawn = [];
-        const list = ['cora'].concat(CREW).map(id => ({ id, p: poseOf(id, t) })).filter(o => o.p && !o.p.hidden);
+        const pk = picking(), list = ['cora'].concat(CREW).map(id => ({ id, p: poseOf(id, t) })).filter(o => o.p && !o.p.hidden);
         list.sort((a, b) => (a.p.climbing ? -1 : 0) - (b.p.climbing ? -1 : 0) || a.p.x - b.p.x).forEach(({ id, p }) => {
-            const pk = picking(), picked = pk && S.picked.includes(id), hot = pk && S.hover === id && S.lineup.includes(id);   // the too-weak are never lit as a pick
+            const ready = pk && arrived(id), hot = pk && S.hover === id && (S.lineup.includes(id) || S.aside.includes(id));
             const still = p.act === 'idle' || p.act === 'console', ms = still ? p.ms + (CREW.indexOf(id) + 1) * 977 : p.ms;
             const blink = ((ms + (CREW.indexOf(id) + 2) * 1700) % 4300) < 140;
-            const Sp = CE.sprite(id, p.act, CE.frameAt(p.act, ms), { blink, warm: picked ? 3 : hot ? Math.max(2, lightFor(p.x)) : lightFor(p.x), rim: p.facing, screen: p.act === 'console' });
-            const X = Math.round(p.x) + OFFX, Y = Math.round(p.y) + (picked ? 3 : 0) - Sp.origin.y;
-            if (picked || hot) floorGlow(c, X, Math.round(p.y) + (picked ? 3 : 0), picked ? 0.5 : 0.28);
+            const lit = hot && S.lineup.includes(id) ? 3 : ready ? Math.max(2, lightFor(p.x)) : lightFor(p.x);
+            const Sp = CE.sprite(id, p.act, CE.frameAt(p.act, ms), { blink, warm: lit, rim: p.facing, screen: p.act === 'console' });
+            const X = Math.round(p.x) + OFFX, Y = Math.round(p.y) - Sp.origin.y;
+            if (ready || (hot && S.lineup.includes(id))) floorGlow(c, X, Math.round(p.y), hot ? 0.5 : 0.34);
             if (p.facing > 0) c.drawImage(Sp.canvas, X - Sp.origin.x, Y); else { c.save(); c.translate(X + 1, 0); c.scale(-1, 1); c.drawImage(Sp.canvas, -Sp.origin.x, Y); c.restore(); }
             S.drawn.push({ id, Sp, X, Y, facing: p.facing });
         });
@@ -218,19 +263,25 @@
         });
         return masks[Math.max(0, Math.min(STEPS - 1, j))];
     }
-    function composeBridge(t) {
+    /** The bridge, back to front: the sky in the glass (and what a pointed-at tag shows on it), the room, the threads to
+        what each tag acts on, the people, damage, then the tags' own pixels (shade, brackets, icons, the helm key). */
+    function composeBridge(t, words) {
         const c = actx;
         c.imageSmoothingEnabled = false;
         c.globalCompositeOperation = 'source-over';
         c.fillStyle = INK; c.fillRect(0, 0, SW, SH);
         drawSides(c, t);
         GL.draw(c, t, { shownAt: S.shownAt, call: S.actions.some(a => a.key === 'call') });
+        if (words) W.glass(c, t, words);
         c.drawImage(room.canvas, OFFX, 0);
         c.globalCompositeOperation = 'lighter'; c.drawImage(room.glass, 0, 0); c.globalCompositeOperation = 'source-over';
         c.drawImage(A.deck(1).canvas, OFFX, B.H);
         drawFx(P.framer(c, SW, SH), t);
+        if (picking() && team().length) hatchGlow(c, team().length === 2 && team().every(arrived) ? 1 : 0.55);
+        if (words) W.threads(c, t, words);
         drawPeople(c, t);
         drawDamage(c, t);
+        if (words) W.tags(c, t, words);
     }
     /** A broken deck shows here too: the bridge (or the lab under it) under a dithered red wash; engineering down, the lights
         brown out for a moment every 2.9 s. The choice (fix, patch, live with it) is the tower's, in travel. */
@@ -254,7 +305,7 @@
     }
     const speaking = () => { const v = NS.mods.voice; try { return v && v.speaking ? v.speaking() : null; } catch (err) { return null; } };
 
-    // ═══ 3. what we can do here: the game's own list (Orbit.js), read every 250 ms ═══
+    // ═══ 4. what we can do here: the game's own list (Orbit.js), read every 250 ms ═══
     /** flow.actions() once the bridge is up; while it dissolves in (the shell still says 'dive-in') the same list straight
         from NSOrbit, read only, so the lineup can form during the dive. */
     function readList() {
@@ -269,216 +320,26 @@
         try { list = readList() || []; } catch (err) { console.error('NewScreen stop: the actions failed', err); list = []; }
         try { elig = (NS.flow && typeof NS.flow.eligible === 'function' ? NS.flow.eligible() : []) || []; } catch (err) { elig = []; }
         S.actions = list.filter(a => a && a.key && a.words);
-        const team = S.actions.some(a => a.team);
-        S.lineup = team && !S.send && !S.trip ? elig.filter(id => CREW.includes(id)) : [];
+        const team0 = S.actions.some(a => a.team);
+        S.lineup = team0 && !S.send && !S.trip ? elig.filter(id => CREW.includes(id)) : [];
         let weak = [];
         try { weak = (NS.flow && typeof NS.flow.weak === 'function' ? NS.flow.weak() : []) || []; } catch (err) { weak = []; }
         S.aside = S.lineup.length ? weak.filter(id => CREW.includes(id) && !S.lineup.includes(id)) : [];
-        S.picked = S.picked.filter(id => S.lineup.includes(id));
+        S.aside.forEach(id => { if (!S.apart.includes(id)) S.apart = S.apart.concat(id); });
+        S.pick.slots = S.pick.slots.map(id => (id && S.lineup.includes(id) ? id : null));   // someone no longer fit leaves their place
+        S.pick.order = S.pick.order.filter(id => S.pick.slots.includes(id));
         crewNow = crewMap();
         try { S.decks = NS.game.decks(); } catch (err) { S.decks = null; }
+        if (S.open && !S.dive) proposeNow(t);
     }
     const hasTeamAction = () => S.actions.some(a => a.team);
     const isWrongPlace = () => S.actions.some(a => a.key === 'escape' || a.key === 'accept') || !!(S.node && S.node._isWrongPlace);
-    const both = ids => ids.map(id => NAMES[id] || id).join(' and ');
-
-    // ═══ 4. words in #ns-stop-words: the name in a corner, each action beside what it acts on, "Leave orbit" under ═══
-    function makeWords() {
-        layer = document.getElementById('ns-stop-words');
-        if (!layer) {                                                     // the shell makes it (BUILD_B §1); a fallback keeps the order
-            const words = document.getElementById('ns-words'), voice = document.getElementById('ns-voice');
-            layer = document.createElement('div'); layer.className = 'ns-layer'; layer.id = 'ns-stop-words';
-            if (words) words.insertBefore(layer, voice || null);
-        }
-        if (!document.getElementById('ns-stop-style')) {
-            const st = document.createElement('style');
-            st.id = 'ns-stop-style';
-            st.textContent = `#ns-stop-words { --fs-act: calc(17px + 3px * var(--t, 1)); --fs-act-sub: calc(14px + 1px * var(--t, 1)); }
-#ns-stop-words .sw { position: absolute; left: 0; top: 0; margin: 0; opacity: 0; white-space: nowrap; pointer-events: none;
-    transition: opacity 420ms var(--ease), color 140ms var(--ease); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5,7,10,.9), 0 0 2px #05070a; }
-#ns-stop-words .sw.on { opacity: 1; }
-#ns-stop-words .sw-name { font: 500 var(--fs-note-name)/1.15 var(--f-ui); letter-spacing: .02em; color: var(--dim); }
-#ns-stop-words .sw-facts { display: grid; gap: 1px; font: 400 var(--fs-act-sub)/1.3 var(--f-text); color: var(--dim); }
-#ns-stop-words .sw-facts span:empty { display: none; }
-#ns-stop-words .sw-act { display: grid; gap: 2px; justify-items: end; text-align: right; }
-#ns-stop-words .sw-act.at-left { justify-items: start; text-align: left; }
-#ns-stop-words .sw-act b { font: 500 var(--fs-act)/1.15 var(--f-ui); letter-spacing: .02em; color: var(--warm); }
-#ns-stop-words .sw-act span { font: 400 var(--fs-act-sub)/1.3 var(--f-text); color: var(--dim); }
-#ns-stop-words .sw-act span:empty { display: none; }
-#ns-stop-words .sw-act.is-hushed span { visibility: hidden; }
-#ns-stop-words .sw-act.is-end b { color: var(--ui); }
-#ns-stop-words .sw-act.is-hot b { color: var(--warm-br); }
-#ns-stop-words .sw-leave { font: 400 var(--fs-act-sub)/1.2 var(--f-text); color: var(--ui); }
-#ns-stop-words .sw-leave.is-next { font: 500 var(--fs-act)/1.15 var(--f-ui); letter-spacing: .02em; color: var(--warm); }
-#ns-stop-words .sw-leave.is-hot { color: var(--warm-br); }
-#ns-stop-words .sw-good { white-space: normal; max-width: calc(260px + 60px * var(--t, 1)); padding-left: 9px; border-left: 2px solid var(--who, #c9d1d6);
-    font: 400 var(--fs-note-line)/1.35 var(--f-text); color: #eceae2; }
-#ns-stop-words .sw-good b { display: block; margin-bottom: 2px; font: 600 var(--fs-who)/1.2 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--who, #c9d1d6); }
-#ns-stop-words .sw-good i { display: block; margin-top: 5px; font: 400 calc(var(--fs-note-line) - 1px)/1.3 var(--f-text); font-style: normal; color: var(--ui); }
-#ns-stop-words .sw-good i:empty { display: none; }
-@media (prefers-reduced-motion: reduce) { #ns-stop-words .sw { transition: none; } }`;
-            document.head.appendChild(st);
-        }
-        const mk = (cls, html) => { const e = document.createElement('div'); e.className = 'sw ' + cls; e.innerHTML = html; layer.appendChild(e); return e; };
-        S.words = { name: mk('sw-name', ''), facts: mk('sw-facts', '<span></span><span></span>'), acts: [0, 1, 2, 3].map(() => mk('sw-act', '<b></b><span></span>')), leave: mk('sw-leave', 'Leave orbit'), good: mk('sw-good', '<b></b><span></span><i></i>') };
-        S.words.acts.forEach(el => { el.dataset.key = ''; });
-        S.stock = window.NSStock ? window.NSStock.board(layer) : null;
-    }
-    const setText = (el, text) => { if (el && el.textContent !== text) el.textContent = text; };
-    function put(el, on, x, y) {
-        if (!el) return;
-        const was = el.classList.contains('on');
-        el.classList.toggle('on', !!on);
-        if (on) { el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; if (!was) S.wordShown.set(el, performance.now()); }
-    }
-    function hideWords() { S.keyShown.clear(); if (!S.words) return; [S.words.name, S.words.facts, S.words.leave, S.words.good].concat(S.words.acts).forEach(el => put(el, false)); if (S.stock) S.stock.hide(); }
-    /** What our scans read of this world, as two short lines (Scan.js through flow.facts): under its name, quiet. */
-    function factLines() {
-        let f = null;
-        try { f = NS.flow && typeof NS.flow.facts === 'function' && S.id ? NS.flow.facts(S.id) : null; } catch (err) { console.error('NewScreen stop: the scan facts failed', err); }
-        return f && window.NSScan ? window.NSScan.lines(f, true) : [];
-    }
-    const titleCase = s => (s && s === s.toUpperCase() && /[A-Z]/.test(s) ? s.toLowerCase().replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase()) : s);
-    function teamSub() {
-        if (S.picked.length < 2) return 'Choose two at the window';
-        return both(S.picked) + ' take the shuttle';
-    }
-    /** The action shown now (up to MAX_LIT) with where each goes. The ones beside the world stack under each other. */
-    function layout(t) {
-        const g = GL.geom(t, S.shownAt), k = unit(), site = GL.site(t, S.shownAt), kind = g.kind;
-        const rank = a => { const i = WORTH.indexOf(a.key); return i < 0 ? WORTH.length : i; };
-        const best = S.actions.slice().sort((a, b) => rank(a) - rank(b)).slice(0, MAX_LIT);
-        const shown = S.actions.filter(a => best.includes(a)), out = [];             // the rest wait their turn (one goes, the next shows)
-        const disc = GL.disc(t, S.shownAt) || [g.x, g.y, g.r];
-        let edge = kind === 'giant' ? site[0] + 40 : disc[0] - disc[2] - 12, top = kind === 'giant' ? WIN.y0 + 70 : site[1] - 12;
-        edge = Math.max(WIN.x0 + 40, edge);
-        const worldStack = shown.filter(a => NEAR_WORLD.includes(a.near) || (a.near === 'under' && !isWrongPlace()));
-        const [ex, ey] = css(edge, top);
-        worldStack.forEach(a => out.push({ a, x: ex, y: ey, align: 'right' }));   // stacked under each other in placeWords
-        const mira = S.drawn.find(d => d.id === 'mira');
-        shown.filter(a => !worldStack.includes(a)).forEach(a => {
-            if (a.near === 'call' || a.near === 'glass') { const [cx, cy] = GL.callAt(), [x, yy] = css(cx + 10, cy - 8); out.push({ a, x, y: yy, align: 'left' }); }
-            else if (a.near === 'mira' && mira && mira.X > WIN.x0) {                 // over where she is going, not where she is: the words never chase a walker
-                const last = lastOf('mira'), mx = last && last.kind === 'stay' ? Math.round(last.x) + OFFX : mira.X, [x, yy] = css(mx, mira.Y - 12);
-                out.push({ a, x, y: yy, align: 'center' });
-            }
-            else if (a.near === 'under') { const [x, yy] = css(WIN.x0 + 24, WIN.y1 - 40); out.push({ a, x, y: yy, align: 'row' }); }   // no world word: a row in the open sky, low left
-            else { const [x, yy] = css(470, WIN.y1 + 12); out.push({ a, x, y: yy, align: 'center' }); }   // 'aura' and anything else: under the window
-        });
-        return { out, k, top: ey };
-    }
-    function placeWords(t) {
-        const W = S.words; if (!W) return;
-        const settled = GL.settled(t, S.shownAt), busy = !!S.send;
-        const hovering = picking() && !!S.hover;                         // the hover line speaks: the corner name and the sub-lines step back
-        const voice = NS.mods.voice && NS.mods.voice.current ? NS.mods.voice.current() : null;
-        let budget = MAX_WORDS - (voice ? wordsIn(voice.who) + wordsIn(voice.line) : 0);
-        // what each act word says now
-        const L0 = settled && !busy ? layout(t) : { out: [] }, items = [];
-        L0.out.forEach(o => {
-            const a = o.a, team = !!a.team;
-            items.push({ o, words: a.words, sub: team ? teamSub() : (a.sub || ''), end: a.key === 'settle' });   // the end of the journey never pulls the eye
-        });
-        const leaveOn = settled && !busy && !isWrongPlace();
-        budget -= (leaveOn ? 2 : 0) + (settled && S.stock ? window.NSStock.KEYS.length : 0);
-        if (S.stock && settled && !NS.blocked()) placeStock(); else if (S.stock) S.stock.hide();   // never over a card or a minigame
-        items.forEach(it => { budget -= wordsIn(it.words); });
-        const d = hovering && S.drawn.find(q => q.id === S.hover), good = d ? noteFor(d.id) : null;
-        if (good) budget -= wordsIn(good.line) + wordsIn(good.loss) + 1;
-        // what our scans read (the tags under the name) is worth more than a sub-line: the name and the tags take their room first
-        const nameText = S.node ? titleCase(S.node.name || '') : '';
-        const facts = settled && !hovering && nameText ? factLines() : [];
-        const factCost = facts.length ? wordsIn(nameText) + wordsIn(facts.join(' ').replace(/·/g, '')) : 0;
-        const factsOn = factCost > 0 && budget - factCost >= 0;
-        if (factsOn) budget -= factCost;
-        // a sub-line keeps its room while a person is pointed at (hidden, not removed): nothing under the pointer moves
-        items.forEach(it => { if (it.sub && (hovering || budget - wordsIn(it.sub) >= 0)) { if (!hovering) budget -= wordsIn(it.sub); } else it.sub = ''; });
-        const nameOn = settled && !hovering && nameText && (factsOn || budget - wordsIn(nameText) >= 0);
-        setText(W.name, nameText);
-        const [nx, ny] = css(WIN.x0 + 10, WIN.y0 + 8); put(W.name, nameOn, nx, ny);
-        const spans = W.facts.querySelectorAll('span');
-        spans.forEach((sp, i) => setText(sp, factsOn ? facts[i] || '' : ''));
-        put(W.facts, factsOn, nx, ny + (W.name.offsetHeight || 22) + 3);
-        // the act words: right-aligned stacks beside the world, the others where they belong
-        let stackY = null, rowX = null;
-        const keysNow = new Set(items.map(it => it.o.a.key)), at = performance.now();
-        [...S.keyShown.keys()].forEach(k => { if (!keysNow.has(k)) S.keyShown.delete(k); });
-        keysNow.forEach(k => { if (!S.keyShown.has(k)) S.keyShown.set(k, at); });
-        W.acts.forEach((el, i) => {
-            const it = items[i];
-            if (!it) { put(el, false); el.dataset.key = ''; return; }
-            const a = it.o.a, span = el.querySelector('span');
-            if (!hovering || el.dataset.key !== a.key || (!!span.textContent === !!it.sub)) setText(span, it.sub);   // pointing at a person: a sub-line never comes or goes
-            setText(el.querySelector('b'), a.words);
-            el.dataset.key = a.key;
-            el.classList.toggle('is-hushed', hovering);
-            el.classList.toggle('is-end', it.end);
-            el.classList.toggle('is-hot', S.hot === a.key);
-            el.classList.toggle('at-left', it.o.align === 'left');
-            const w = el.offsetWidth || 120, h = el.offsetHeight || 24;
-            let x = it.o.x, y = it.o.y;
-            if (it.o.align === 'right') { if (stackY == null) stackY = y; y = stackY; stackY += h + 8; x -= w; }
-            else if (it.o.align === 'center') { x -= w / 2; y -= h; }
-            else if (it.o.align === 'row') { if (rowX == null) rowX = x; x = rowX; rowX += w + 28; }
-            x = Math.max(16, Math.min(innerWidth - w - 16, x)); y = Math.max(16, Math.min(innerHeight - h - 16, y));
-            put(el, true, x, y);
-        });
-        W.leave.classList.toggle('is-hot', S.hot === 'leave');
-        W.leave.classList.toggle('is-next', leaveOn && !S.trip && !items.some(it => !it.end));   // nothing left here but settling: Leave orbit is the next step, and looks it
-        const [lx, ly] = css(WIN.x1 - 24, WIN.y1 - 40); put(W.leave, leaveOn, lx - (W.leave.offsetWidth || 0), ly);   // always low right in the window, level with the row of words on the left
-        if (good) {
-            setText(W.good.querySelector('b'), NAMES[d.id]); setText(W.good.querySelector('span'), good.line); setText(W.good.querySelector('i'), good.loss);
-            W.good.style.setProperty('--who', TONE[d.id]);
-            const k = unit(), w = W.good.offsetWidth || 280, h = W.good.offsetHeight || 48, dc = GL.disc(t, S.shownAt);
-            let [gx, gy] = css(d.X, d.Y - 8); gx -= w / 2; gy -= h;
-            if (dc) {
-                const [cx, cy] = css(dc[0], dc[1]), r = dc[2] * k + 10;
-                const hits = x => { const qx = Math.max(x, Math.min(cx, x + w)), qy = Math.max(gy, Math.min(cy, gy + h)); return Math.hypot(qx - cx, qy - cy) < r; };
-                const [minX] = css(WIN.x0 + 4, 0);
-                while (hits(gx) && gx > minX) gx -= 8;
-                gx = Math.max(minX, gx);
-            }
-            put(W.good, true, Math.max(16, gx), Math.max(16, gy));
-        } else put(W.good, false);
-        if (settled && !busy) explain();
-    }
-    /** The note over someone pointed at while the team is picked: what they are good for, and under it what the ship loses
-        while they are down, with whoever the click would pair them with (NSOrbit.holdLoss); too weak to go, why. */
-    function noteFor(id) {
-        if (S.aside.includes(id)) return { line: WEAK_LINE, loss: '' };
-        if (!GOOD[id]) return null;
-        const others = S.picked.includes(id) ? S.picked.filter(p => p !== id) : S.picked.slice(-1);   // a click keeps the last pick
-        let loss = '';
-        try { loss = (NS.flow && typeof NS.flow.holdLoss === 'function' ? NS.flow.holdLoss(id, others) : '') || ''; } catch (err) { console.error('NewScreen stop: holdLoss failed', err); }
-        return { line: GOOD[id], loss };
-    }
-    /** The ship's stock on the wall left of the window, one under another, right-aligned to the window's frame. */
-    function placeStock() {
-        const [x, y] = css(WIN.x0 - 10, WIN.y0 + 30), gap = 10 * unit();
-        window.NSStock.KEYS.forEach((k, i) => S.stock.put(k, x, y + i * gap, 'right'));
-    }
-    /** A.U.R.A. says once a run what an action on screen does (NSOrbit.TELL): one line at a time, the one pointed at first.
-        Only an action that has stayed on screen a moment (TELL_AFTER_MS), and only while it is still there when its turn
-        comes: one that showed and went again is explained the next time it shows. */
-    function explain() {
-        const v = NS.mods.voice, tell = (window.NSOrbit && window.NSOrbit.TELL) || {};
-        if (S.telling || !v || typeof v.once !== 'function' || typeof v.told !== 'function') return;
-        const now = performance.now(), since = (m, k) => now - (m.get(k) || now) >= TELL_AFTER_MS;
-        const shown = S.words.acts.filter(el => el.dataset.key && el.classList.contains('on') && since(S.keyShown, el.dataset.key)).map(el => el.dataset.key);
-        if (S.words.leave.classList.contains('on') && since(S.wordShown, S.words.leave)) shown.push('leave');
-        const key = (S.hot && shown.includes(S.hot) ? [S.hot] : []).concat(shown).find(k => tell[k] && !v.told('act:' + k));
-        if (!key) return;
-        S.telling = true;
-        const done = () => { S.telling = false; };
-        const still = () => S.open && !S.dive && (key === 'leave' ? S.words.leave.classList.contains('on') : S.words.acts.some(el => el.dataset.key === key && el.classList.contains('on')));
-        v.once('act:' + key, tell[key], still).then(done, err => { done(); console.error('NewScreen stop: the voice failed', err); });
-    }
 
     // ═══ 5. the bus ═══
     const nodeOf = id => { try { const s = NS.game.state(); return (window.NSRoute && window.NSRoute.find(s, id)) || (s && s.currentSystem && s.currentSystem.id === id ? s.currentSystem : null); } catch (err) { return null; } };
     const currentNode = () => { try { const s = NS.game.state(); return s ? s.currentSystem : null; } catch (err) { return null; } };
     function freshStop(id, node) {
-        S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.aside = []; S.picked = [];
+        S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.pick = freshPick();
         S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9;
         GL.shuttle(null);
         GL.place(node);
@@ -532,19 +393,20 @@
         try { pose = tw && tw.landerPose ? tw.landerPose() : null; } catch (err) { pose = null; }
         S.dive = Object.assign(D.start('out', pose, t0()), { id: S.id });
         S.hover = null; S.hot = null;
-        hideWords();
+        W.hide();
     }
     /** The team goes down: from our own click (we already walked them out), or from the game alone. */
     function onTripDown(p) {
-        const t = t0(), ids = (p && Array.isArray(p.ids) ? p.ids : (S.send && S.send.ids) || S.picked).filter(id => CREW.includes(id));
+        const t = t0(), ids = (p && Array.isArray(p.ids) ? p.ids : (S.send && S.send.ids) || team()).filter(id => CREW.includes(id));
         if (S.trip) return;
         S.trip = { ids: ids.slice() };
         if (!S.send) sendOff(ids, t, 400);                              // the game sent them without our click: walk them out now
-        S.send = null; S.picked = []; S.lineup = []; S.aside = [];
+        S.send = null; S.pick = freshPick(); S.lineup = []; S.aside = [];
     }
-    function onTripBack() {
+    function onTripBack(p) {
         const t = t0(), ids = S.trip ? S.trip.ids : [];
         S.trip = null; S.send = null;
+        if (p && p.failed) S.pick = Object.assign(freshPick(), { from: t + PROPOSE_AFTER * 4 });   // the game would not take them: they come back up, and two step forward again
         GL.shuttle('up', t + 300, SHUTTLE_MS + 200);
         crewNow = crewMap();
         ids.forEach((id, i) => { if (crewOf(id) === 'well') { S.atWindow.add(id); enterTo(id, t + SHUTTLE_MS + 700 + i * 700, SPOT_X[id], 'idle', 1); } });
@@ -565,7 +427,7 @@
                 const m = typeof NS.mode === 'function' ? NS.mode() : null;
                 if (m === 'travel' && el > PUSH + 200) close(false);          // the shell went back to travel without telling us
             } else {
-                if (!d.plated && el >= DISSOLVE) { d.plated = true; S.open = false; hideWords(); registerAnchors(false); emit('dive:plated', { dir: 'out' }); }
+                if (!d.plated && el >= DISSOLVE) { d.plated = true; S.open = false; W.hide(); registerAnchors(false); emit('dive:plated', { dir: 'out' }); }
                 if (!d.done && el >= DISSOLVE + PUSH) { d.done = true; close(true); }
             }
         }
@@ -577,18 +439,19 @@
     function shown() {
         if (S.shownSent) return;
         S.shownSent = true;
+        S.pick.from = t0() + PROPOSE_AFTER;                              // the crew step forward once the bridge has been seen a moment
         registerAnchors(true);
         emit('stop:shown', { id: S.id });
     }
     function close(tell) {
         const id = S.id;
-        S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.picked = []; S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null;
-        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = [];
+        S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.pick = freshPick(); S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null;
+        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = []; S.apart = [];
         GL.shuttle(null); GL.place(null);
-        registerAnchors(false); hideWords(); setPointing(false);
+        registerAnchors(false); W.hide(); setPointing(false);
         if (tell) emit('stop:hidden', { id });
     }
-    /** "Send the team": they climbed down the hatch and the shuttle reached the world; the real trip begins. */
+    /** "GO DOWN": they climbed down the hatch and the shuttle reached the world; the real trip begins. */
     function fireSend() {
         const s = S.send; s.fired = true;
         const ids = s.ids.slice();
@@ -600,7 +463,7 @@
         if (!S.trip && S.send === s) {                                   // the game did not take them (refused): they come back up, and we hear why
             const v = NS.mods.voice, talking = v && v.current ? v.current() : null;
             if (!went && !talking) say('The team stays aboard for now, Commander.');
-            S.send = null; S.drop = null; const t = t0();
+            S.send = null; S.drop = null; S.pick = Object.assign(freshPick(), { from: t0() + PROPOSE_AFTER * 4 }); const t = t0();
             ids.forEach((id, i) => { if (crewOf(id) === 'well') enterTo(id, t + 300 + i * 600, SPOT_X[id], 'idle', 1); });
             GL.shuttle('up', t, SHUTTLE_MS);
         }
@@ -612,7 +475,7 @@
     function render(t) {
         if (!room) return;
         const d = S.dive, G = NS.G;
-        if (!d && !S.open) { vis(diveC, false); vis(bridgeC, false); hideWords(); inked = false; return; }
+        if (!d && !S.open) { vis(diveC, false); vis(bridgeC, false); W.hide(); inked = false; return; }
         let j = STEPS;                                                    // how much of the bridge shows (Bayer steps)
         if (d) {
             const el = t - d.t0;
@@ -624,14 +487,16 @@
             if (!inked) { dctx.globalCompositeOperation = 'source-over'; dctx.fillStyle = INK; dctx.fillRect(0, 0, G.W, G.H); inked = true; }
             if (S.fadeAt != null) j = Math.min(STEPS, 1 + Math.floor((t - S.fadeAt) / (DISSOLVE / STEPS)));
         }
-        if (j <= 0) { vis(bridgeC, false); hideWords(); return; }
-        composeBridge(t);
+        if (j <= 0) { vis(bridgeC, false); W.hide(); return; }
+        const words = j >= STEPS && !(d && d.dir === 'out') ? W.layout(t) : null;   // the tags only once the bridge is whole
+        composeBridge(t, words);
         if (j < STEPS) { actx.globalCompositeOperation = 'destination-in'; actx.drawImage(mask(j - 1), 0, 0); actx.globalCompositeOperation = 'source-over'; }
         bctx.clearRect(0, 0, geo.CW, geo.CH);
         drawMargins(t, j);
         bctx.drawImage(art, geo.ox, geo.oy);
         vis(bridgeC, true);
-        if (j < STEPS || (d && d.dir === 'out')) hideWords(); else placeWords(t);
+        if (words) W.apply(t, words); else W.hide();
+        repoint();
     }
 
     /** Beside the bridge (a window wider than 16:9): the same drifting stars as the frame's own edges, dissolving in with it.
@@ -664,36 +529,33 @@
         }
         return null;
     }
-    function inside(el, cx, cy, pad = 8) {
-        if (!el || !el.classList.contains('on')) return false;
-        const r = el.getBoundingClientRect();
-        return cx >= r.left - pad && cx <= r.right + pad && cy >= r.top - pad && cy <= r.bottom + pad;
-    }
     function setPointing(on) { const root = document.getElementById('ns-root'); if (root) root.classList.toggle('is-pointing', !!on); }
-    const fresh = el => performance.now() - (S.wordShown.get(el) || 0) < GUARD_MS;     // a newly shown word ignores clicks
+    function setHot(key) { if (key !== S.hot) { S.hot = key; S.hotAt = t0(); } }
+    let ptr = null;                                                       // where the pointer last was (CSS px): people walk under a still pointer
+    /** What is under the pointer: a tag, the helm key, a name over someone at the hatch, or a person. */
+    function under(cx, cy) {
+        const [ax, ay] = toFrame(cx, cy), hit = W.hit(cx, cy);
+        const who = picking() ? (hit && hit.kind === 'who' ? hit.id : personAtPx(ax, ay)) : null;
+        const fit = who && S.lineup.includes(who) ? who : null, weak = who && S.aside.includes(who) ? who : null;   // too weak to go: pointing says why, a click does nothing
+        const actKey = hit && hit.kind === 'act' ? hit.key : null, onLeave = !!(hit && hit.kind === 'leave');
+        return { fit, weak, actKey, onLeave, on: !!actKey || onLeave || (!!fit && S.lineup.length > 2) };
+    }
+    function pointAt(u) { setHot(u.actKey || (u.onLeave ? 'leave' : null)); S.hover = u.actKey || u.onLeave ? null : u.fit || u.weak; setPointing(u.on); return u.on; }
+    /** Each frame: what is under a still pointer now (someone walked off, or onto it). */
+    function repoint() { if (ptr && S.open && !S.dive && !S.send && !NS.blocked()) pointAt(under(ptr.x, ptr.y)); }
     function pointer(type, e) {
-        if (!S.open || S.dive || S.fadeAt != null && t0() - S.fadeAt < DISSOLVE || NS.blocked()) { if (type === 'move' || type === 'leave') { S.hover = null; S.hot = null; setPointing(false); } return false; }
-        const t = t0(), cx = e.clientX, cy = e.clientY, [ax, ay] = toFrame(cx, cy), W = S.words;
-        if (type === 'leave') { S.hover = null; S.hot = null; setPointing(false); return false; }
+        ptr = type === 'leave' ? null : { x: e.clientX, y: e.clientY };
+        if (!S.open || S.dive || S.fadeAt != null && t0() - S.fadeAt < DISSOLVE || NS.blocked()) { if (type === 'move' || type === 'leave') { S.hover = null; setHot(null); setPointing(false); } return false; }
+        const t = t0(), cx = e.clientX, cy = e.clientY;
+        if (type === 'leave') { S.hover = null; setHot(null); setPointing(false); return false; }
         if (S.send) { setPointing(false); if (type === 'down') skipSend(t); return type === 'down'; }   // the team is leaving: a click hurries it
-        const act = W.acts.find(el => el.dataset.key && inside(el, cx, cy)), onLeave = inside(W.leave, cx, cy);
-        const who = picking() ? personAtPx(ax, ay) : null, pickable = who && S.lineup.includes(who) ? who : null;
-        const aside = who && S.aside.includes(who) ? who : null;           // too weak to go: pointing says why, a click does nothing
-        if (type === 'move') {
-            S.hot = act ? act.dataset.key : onLeave ? 'leave' : null; S.hover = pickable || aside;
-            const on = !!act || onLeave || !!pickable;
-            setPointing(on); return on;
-        }
+        const u = under(cx, cy), { fit, actKey, onLeave } = u;
+        if (type === 'move') return pointAt(u);
         if (type !== 'down') return false;
-        if (t - S.clickAt < 300) return true;
-        if (onLeave && !fresh(W.leave)) { S.clickAt = t; leave(); return true; }
-        if (act && !fresh(act)) { S.clickAt = t; doAct(act.dataset.key, t); return true; }
-        if (pickable) {
-            S.picked = S.picked.includes(pickable) ? S.picked.filter(id => id !== pickable) : S.picked.concat(pickable).slice(-2);
-            if (S.picked.length === 2) { S.words.acts.forEach(el => { if (el.dataset.key === 'team') S.wordShown.set(el, performance.now()); }); }
-            emit('stop:pick', { ids: S.picked.slice() });
-            return true;
-        }
+        if (t - S.clickAt < CLICK_GAP) return true;
+        if (onLeave && !W.fresh('leave')) { S.clickAt = t; leave(); return true; }
+        if (actKey && !W.fresh(actKey)) { S.clickAt = t; doAct(actKey, t); return true; }
+        if (fit) { S.clickAt = t; return pickPerson(fit, t); }
         return false;
     }
     function say(text) { const v = NS.mods.voice; if (v && v.say) { try { v.say({ id: 'aura', who: 'A.U.R.A.', text }); } catch (err) { console.error('NewScreen stop: voice failed', err); } } }
@@ -701,10 +563,10 @@
         const a = S.actions.find(q => q.key === key);
         if (!a) return;
         if (a.team) {
-            if (S.picked.length < 2) { say('Choose two to go, Commander.'); return; }
-            const ids = S.picked.slice();
+            const ids = team();
+            if (ids.length < 2) { say(ids.length ? 'We need one more at the hatch, Commander.' : 'We need two at the hatch, Commander.'); return; }
             S.send = { ids, t0: t, fired: false, skipped: false, fireAt: sendOff(ids, t, 350) + SHUTTLE_MS };   // the trip begins once the shuttle is down
-            S.hover = null; S.hot = null; setPointing(false);
+            S.hover = null; setHot(null); setPointing(false);
             return;
         }
         if (key === 'skim') GL.skim(t);
@@ -724,7 +586,7 @@
         s.fireAt = t + SHUTTLE_MS;
     }
     function leave() {
-        S.hover = null; S.hot = null; setPointing(false);
+        S.hover = null; setHot(null); setPointing(false);
         try {
             if (NS.flow && typeof NS.flow.leave === 'function') NS.flow.leave();
             else emit('dive:back', { id: S.id });
@@ -736,14 +598,14 @@
         const names = ['stop:aura', 'stop:glass', 'stop:site'].concat(['cora'].concat(CREW).map(id => 'stop:person:' + id));
         if (!on) { names.forEach(n => NS.anchors.delete(n)); return; }
         const pt = (x, y, side, align) => { const [X, Y] = css(x, y); return { x: X, y: Y, side, align }; };
-        const skyY = () => WIN.y0 + 26 + (S.words && S.words.facts.classList.contains('on') ? Math.ceil((S.words.facts.offsetHeight + 4) / unit()) : 0);   // under the name, and under the scan's tags when they show
+        const skyY = () => W.skyY();                                      // under the glass's title (and its scan chips, when they show)
         // A.U.R.A. speaks in the open sky of the glass's left (the world fills the right); the grille is the fallback
-        NS.anchors.set('stop:aura', () => [pt(WIN.x0 + 12, skyY(), 'below'), pt(WIN.x0 + 12, WIN.y1 - 70, 'below'), pt(574, 122, 'left')]);
-        NS.anchors.set('stop:glass', () => [pt(WIN.x0 + 12, skyY(), 'below'), pt(WIN.x0 + 12, WIN.y1 - 70, 'below'), pt(290, WIN.y0 + 12, 'below')]);
+        NS.anchors.set('stop:aura', () => [pt(WIN.x0 + 10, skyY(), 'below'), pt(WIN.x0 + 10, WIN.y1 - 70, 'below'), pt(574, 122, 'left')]);
+        NS.anchors.set('stop:glass', () => [pt(WIN.x0 + 10, skyY(), 'below'), pt(WIN.x0 + 10, WIN.y1 - 70, 'below'), pt(290, WIN.y0 + 12, 'below')]);
         NS.anchors.set('stop:site', () => { const t = t0(), g = GL.geom(t, S.shownAt), [sx, sy] = GL.site(t, S.shownAt); return [pt(Math.max(WIN.x0 + 20, g.x - g.r - 12), sy, 'left'), pt(sx, Math.min(WIN.y1 - 10, g.y + g.r + 8), 'below', 'center')]; });
         ['cora'].concat(CREW).forEach(id => NS.anchors.set('stop:person:' + id, () => {
             const d = S.drawn.find(q => q.id === id); if (!d) return [];
-            return [pt(d.X, d.Y + 2, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left'), pt(WIN.x0 + 12, skyY(), 'below'), pt(574, 122, 'left')];
+            return [pt(d.X, d.Y + 2, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left'), pt(WIN.x0 + 10, skyY(), 'below'), pt(574, 122, 'left')];
         }));
     }
     function discs() {
@@ -769,6 +631,15 @@
         root.insertBefore(c, document.getElementById(before) || document.getElementById('ns-words') || null);
         return c;
     }
+    function wordsLayer() {
+        let layer = document.getElementById('ns-stop-words');
+        if (!layer) {                                                     // the shell makes it (BUILD_B §1); a fallback keeps the order
+            const words = document.getElementById('ns-words'), voice = document.getElementById('ns-voice');
+            layer = document.createElement('div'); layer.className = 'ns-layer'; layer.id = 'ns-stop-words';
+            if (words) words.insertBefore(layer, voice || null);
+        }
+        return layer;
+    }
     function init() {
         room = BA.paint();
         fxList = room.fx;
@@ -777,7 +648,12 @@
         if (diveC && bridgeC && diveC.nextSibling !== bridgeC) diveC.parentNode.insertBefore(diveC, bridgeC);
         dctx = diveC.getContext('2d'); bctx = bridgeC.getContext('2d');
         vis(diveC, false); vis(bridgeC, false);
-        makeWords();
+        W = WORDS.create({
+            S, css: (x, y) => css(x, y), unit: () => unit(), t0, poseOf, picking, team, arrived, joinedLast, isWrongPlace,
+            proposed: () => !!(S.pick.key || S.pick.manual || t0() > S.pick.from + 1500),   // the crew have stepped forward (or should have)
+            sprite: id => CE.sprite(id, 'idle', 0, {}), NAMES, TONE, CREW, OFFX, F, HATCH: HATCH + OFFX, NAV: NAV + OFFX, HELM: HELM + OFFX,
+        });
+        W.init(wordsLayer());
         NS.bus.on('dive:start', onDiveStart);
         NS.bus.on('dive:cancel', onDiveCancel);
         NS.bus.on('stop:open', onStopOpen);
@@ -803,12 +679,13 @@
     const isOpen = () => !!(S.dive || S.open);
     const debug = () => ({
         open: S.open, dive: S.dive ? { dir: S.dive.dir, open: !!S.dive.open, plated: !!S.dive.plated } : null, id: S.id, shown: S.shownSent,
-        actions: S.actions.map(a => ({ key: a.key, words: a.words, near: a.near, team: !!a.team })), lineup: S.lineup.slice(), aside: S.aside.slice(), picked: S.picked.slice(), hover: S.hover,
+        actions: S.actions.map(a => ({ key: a.key, words: a.words, near: a.near, team: !!a.team })), lineup: S.lineup.slice(), aside: S.aside.slice(),
+        hatch: S.pick.slots.slice(), picked: team(), arrived: team().filter(arrived), why: Object.assign({}, S.pick.why), manual: S.pick.manual, joinedLast: joinedLast(), hover: S.hover, hot: S.hot,
         send: S.send ? S.send.ids.slice() : null, trip: S.trip ? S.trip.ids.slice() : null, drawn: S.drawn.map(d => d.id), glass: GL.current(), atWindow: [...S.atWindow], t: Math.round(t0()),
         plans: Object.fromEntries(Object.entries(S.plans).map(([k, v]) => [k, v.map(q => q.kind + '@' + Math.round(q.t0) + (q.x != null ? ':' + q.x : ''))])),
-        words: S.words ? [S.words.name, S.words.facts, S.words.leave, S.words.good].concat(S.words.acts).filter(el => el.classList.contains('on')).map(el => ({ text: el.textContent, rect: (r => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)])(el.getBoundingClientRect()) })) : [],
+        words: W ? W.debug() : [],
         people: S.drawn.map(d => { const [x, y] = css(d.X, d.Y + d.Sp.h * 0.5); return { id: d.id, x: Math.round(x), y: Math.round(y) }; }),
     });
 
-    NS.register('stop', { init, resize, update, render, pointer, isOpen, discs, noteUp: () => !!(S.words && S.words.good.classList.contains('on')), debug });
+    NS.register('stop', { init, resize, update, render, pointer, isOpen, discs, noteUp: () => !!(W && W.noteUp()), debug });
 })();

@@ -19,6 +19,7 @@
      site(t, shownAt) → [x, y]         the landing site (the shuttle goes there; "Send the team" sits beside it)
      callAt() → [x, y]                 the blink of a waiting call, frame px
      shuttle(dir, t, dur)              'down' | 'up' | null;  shuttleState() → { dir, t0, dur } | null
+     route(t, shownAt, n) → [[x, y]]   the shuttle's way down from its clamp to the site, n + 1 points (frame px)
      skim(t)                           the stream for a few seconds
      draw(ctx, t, { shownAt, call })   the glass into the frame canvas (clipped to the window)
      disc(t, shownAt) → [x, y, r]      the world's disc, frame px (words keep off it)
@@ -236,6 +237,12 @@
         shuttleSprites.set(key, out); return out;
     }
     function shuttle(dir, t, dur) { sh = dir ? { dir, t0: t, dur: dur || 2400 } : null; }
+    /** The shuttle's way down from its clamp to the site, as n + 1 points along the curve it flies (the team's preview). */
+    function route(t, shownAt, n) {
+        const s = siteOf(geom(t, shownAt)), out = [];
+        for (let i = 0; i <= n; i++) { const e = i / n, bend = Math.sin(e * Math.PI) * 26; out.push([lerp(DOCK[0], s[0], e) + bend * 0.3, lerp(DOCK[1], s[1], e) - bend]); }
+        return out;
+    }
     function shuttlePos(t, g) {
         if (!sh) return null;
         const u = clamp01((t - sh.t0) / sh.dur), e = smooth(0, 1, u), s = siteOf(g);
@@ -296,7 +303,7 @@
     D.later(D.pic(1, 1, [() => backdrop(0), () => lightNow()]));
 
     window.NSGlass = Object.freeze({
-        SW, SH, OFFX, WIN, LIGHT, place, prepare, geom, settled, disc, draw, shuttle, kindOf,
+        SW, SH, OFFX, WIN, LIGHT, place, prepare, geom, settled, disc, draw, shuttle, kindOf, route,
         site: (t, shownAt) => site(t, shownAt), callAt: () => CALL.slice(), shuttleState: () => (sh ? Object.assign({}, sh) : null),
         skim: t => { skimAt = t; }, current: () => (cur ? { id: cur.id, kind: cur.kind } : null),
     });
