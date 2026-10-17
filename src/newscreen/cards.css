@@ -126,7 +126,10 @@ html.ns-on .modal-overlay .enc-chips i { white-space: normal; overflow-wrap: any
 html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips { flex-basis: 100%; }                  /* why it is closed: its own quiet line under the words */
 html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips i { font: 400 14px/1.4 var(--f-text); color: #c98a7c; }
 html.ns-on .modal-overlay .modal-content, html.ns-on .modal-overlay .enc-card { overflow-x: hidden; }
-html.ns-on .modal-overlay .enc-detail { margin: 12px 0 0; padding: 0 28px; font: 400 15px/1.55 var(--f-text); color: #b9bdc0; }
+/* the note on the choice you point at: under a hairline, quieter than the choices, and it names its choice */
+html.ns-on .modal-overlay .enc-detail { margin: 10px 28px 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.08); font: italic 400 14px/1.5 var(--f-text); color: #9a9fa3; }
+html.ns-on .modal-overlay .enc-detail:empty { border-top-color: transparent; }
+html.ns-on .modal-overlay .enc-detail-of { margin-right: 8px; font: 500 12px/1.5 var(--f-num); letter-spacing: .08em; text-transform: uppercase; color: var(--warm); }
 html.ns-on .modal-overlay .enc-detail .is-gain { color: var(--warm); }
 html.ns-on .modal-overlay .enc-detail .is-loss { color: var(--loss); }
 
@@ -153,7 +156,7 @@ html.ns-on .modal-overlay .found-plate-names { font: 500 14px/1.3 var(--f-ui); l
 html.ns-on .modal-overlay .found-plate-names li { border-left: 0; padding: 3px 0; }
 html.ns-on .modal-overlay .found-plate-names li i { color: var(--warm); }
 
-/* the page's own buttons (READ ON, KEEP IT, FOLD IT AWAY): words with a quiet note on the right */
+/* the page's own buttons (KEEP IT, PUT IT AWAY): words with a quiet note on the right */
 html.ns-on .modal-overlay .disc-doc-card .deck-panel-actions { padding: 0 20px; }
 html.ns-on .modal-overlay .disc-doc-card .deck-action {
     padding: 11px 8px; background: none; border: 0; border-radius: 0;

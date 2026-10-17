@@ -285,6 +285,8 @@
         let index = -1, isPicked = false;
         const descs = cfg.choices.map(c => descOf(c, app && app.state));          // the branch that applies now, read when the card opens
         const details = descs.map(detailOf);
+        // the note under the list names the choice it belongs to, so it never reads as one more choice
+        const detailHtml = i => details[i] ? `<b class="enc-detail-of">${esc(String(cfg.choices[i].text || '').replace(/<[^>]*>/g, '').replace(MARKUP, ''))}</b> ${markRewards(details[i])}` : '';
 
         function showChoices(isOpening = false) {
             const guard = window.ChoiceGuard;
@@ -303,7 +305,7 @@
             choiceEls.forEach(btn => {
                 const idx = parseInt(btn.dataset.idx, 10);
                 if (details.some(Boolean)) {
-                    const explain = () => { detailEl.innerHTML = markRewards(details[idx]); };
+                    const explain = () => { detailEl.innerHTML = detailHtml(idx); };
                     btn.addEventListener('mouseenter', explain);
                     btn.addEventListener('focus', explain);
                 }
@@ -323,7 +325,7 @@
         /** The choices are built once, when the card opens, so the card can make room for them before the talk starts. */
         function renderChoices() {
             el('.enc-choices').innerHTML = choicesHtml(app, cfg.choices, descs);
-            reserveDetail(details);
+            reserveDetail(details.map((d, i) => detailHtml(i)));
         }
 
         /**
@@ -344,11 +346,11 @@
          * The line under the list says only what the chips do not. When no choice has more to say it is gone;
          * otherwise it keeps the height of the longest one, so pointing at a choice never changes the card's size.
          */
-        function reserveDetail(texts) {
-            detailEl.hidden = !texts.some(Boolean);
+        function reserveDetail(htmls) {
+            detailEl.hidden = !htmls.some(Boolean);
             detailEl.style.minHeight = '';
             if (detailEl.hidden) return;
-            const tallest = Math.max(...texts.map(text => { detailEl.innerHTML = markRewards(text); return detailEl.offsetHeight; }));
+            const tallest = Math.max(...htmls.map(html => { detailEl.innerHTML = html; return detailEl.offsetHeight; }));
             detailEl.innerHTML = '';
             detailEl.style.minHeight = `${tallest}px`;
         }

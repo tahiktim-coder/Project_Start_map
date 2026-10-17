@@ -50,7 +50,7 @@
     // under it, what the ship loses while they are down at this stop (NSOrbit.holdLoss, whileDown's own rules)
     const WEAK_LINE = "I went without supper. I'm too weak to go down this time.";   // too weak for this trip (GameState.serveSupper)
     const ASIDE_X = [130, 148];                                           // the too-weak stand by the ladder, apart from the window
-    const SEND_MS = 2400, SHUTTLE_MS = 2200, GUARD_MS = 400, READ_MS = 250, MAX_LIT = 4, MAX_WORDS = 40, GATHER_LEAD = 2600, TELL_AFTER_MS = 1500;
+    const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, GUARD_MS = 400, READ_MS = 250, MAX_LIT = 4, MAX_WORDS = 40, GATHER_LEAD = 2600, TELL_AFTER_MS = 1500;
     const WORTH = ['light', 'escape', 'accept', 'call', 'strange', 'date', 'team', 'dock', 'mine', 'settle', 'scan', 'skim'];   // more than 4: these first
     const NEAR_WORLD = ['world', 'station', 'field', 'giant', 'site', 'light'];
     const wordsIn = s => (String(s || '').trim().match(/\S+/g) || []).length;
@@ -63,7 +63,8 @@
         plans: {}, drawn: [], atWindow: new Set(),
         actions: [], readAt: -1e9, lineup: [], aside: [],   // aside: too weak from a missed supper, by the ladder while the lineup forms
         picked: [], hover: null, hot: null, clickAt: 0,
-        send: null,          // { ids, t0, fired } between the click and flow.act
+        send: null,          // { ids, t0, fireAt, fired, skipped } between the click and flow.act
+        drop: null,          // { at }: the shuttle leaves when the team has climbed down the hatch
         trip: null,          // { ids } while the team is down
         words: null, wordShown: new Map(), keyShown: new Map(), decks: null,   // keyShown: action key → when it came on screen
         stock: null, telling: false,   // the bridge's readouts (NSStock.board); A.U.R.A. is saying an action's line
@@ -109,11 +110,19 @@
         const pl = S.plans[id], rows = 64, tc = t + (rows / CLIMB.rise) * CLIMB.ms, n = Math.ceil(Math.abs(x - HATCH) / WALK.move), tw = tc + n * WALK.ms;
         pl.push({ kind: 'climb', y0: F + rows, y1: F, t0: t, t1: tc }, { kind: 'walk', x0: HATCH, x1: x, t0: tc, t1: tw }, { kind: 'stay', x, act, facing, t0: tw, t1: Infinity });
     }
-    function exitDown(id, t) {
+    function exitDown(id, t) {                                            // returns when they are gone down the hatch
         const from = cut(id, t), pl = S.plans[id];
-        if (!from || from.hidden) { hidePlan(id); return; }
+        if (!from || from.hidden) { hidePlan(id); return t; }
         const n = Math.ceil(Math.abs(from.x - HATCH) / WALK.move), tw = t + n * WALK.ms, tc = tw + (64 / CLIMB.rise) * CLIMB.ms;
         pl.push({ kind: 'walk', x0: from.x, x1: HATCH, t0: t, t1: tw }, { kind: 'climb', y0: F, y1: F + 64, t0: tw, t1: tc }, { kind: 'gone', t0: tc, t1: Infinity });
+        return tc;
+    }
+    /** The team leaves the bridge: both walk to the hatch and climb down, and only then does the shuttle drop toward the
+        world. Returns when the shuttle starts down. */
+    function sendOff(ids, t, gap) {
+        const gone = ids.reduce((last, id, i) => Math.max(last, exitDown(id, t + 150 + i * gap)), t);
+        S.drop = { at: gone + SHUTTLE_GAP };
+        return S.drop.at;
     }
     function poseOf(id, t) {
         const pl = S.plans[id]; if (!pl || !pl.length) return null;
@@ -470,7 +479,7 @@
     const currentNode = () => { try { const s = NS.game.state(); return s ? s.currentSystem : null; } catch (err) { return null; } };
     function freshStop(id, node) {
         S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.aside = []; S.picked = [];
-        S.hover = null; S.hot = null; S.send = null; S.trip = null; S.shownSent = false; S.readAt = -1e9;
+        S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9;
         GL.shuttle(null);
         GL.place(node);
         crewNow = crewMap();
@@ -530,10 +539,7 @@
         const t = t0(), ids = (p && Array.isArray(p.ids) ? p.ids : (S.send && S.send.ids) || S.picked).filter(id => CREW.includes(id));
         if (S.trip) return;
         S.trip = { ids: ids.slice() };
-        if (!S.send) {                                                   // the game sent them without our click: walk them out now
-            ids.forEach((id, i) => exitDown(id, t + i * 400));
-            GL.shuttle('down', t + 300, SHUTTLE_MS);
-        }
+        if (!S.send) sendOff(ids, t, 400);                              // the game sent them without our click: walk them out now
         S.send = null; S.picked = []; S.lineup = []; S.aside = [];
     }
     function onTripBack() {
@@ -564,7 +570,8 @@
             }
         }
         if (S.open && !S.dive && S.fadeAt != null && t - S.fadeAt >= DISSOLVE && !S.shownSent) shown();
-        if (S.send && !S.send.fired && t - S.send.t0 >= SEND_MS && !NS.blocked()) fireSend();   // a card came up meanwhile: they wait at the hatch
+        if (S.drop && t >= S.drop.at) { GL.shuttle('down', S.drop.at, SHUTTLE_MS); S.drop = null; }   // the team is down the hatch: the shuttle goes
+        if (S.send && !S.send.fired && t >= S.send.fireAt && !NS.blocked()) fireSend();   // a card came up meanwhile: they wait below
         if ((S.open || S.dive) && t - S.readAt >= READ_MS && S.id && !(S.dive && !S.dive.open && S.dive.dir === 'in')) { readActions(t); if (S.open && !(S.dive && S.dive.dir === 'out')) reconcile(t); }
     }
     function shown() {
@@ -575,13 +582,13 @@
     }
     function close(tell) {
         const id = S.id;
-        S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.picked = []; S.hover = null; S.hot = null; S.send = null; S.trip = null;
+        S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.picked = []; S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null;
         S.shownSent = false; S.actions = []; S.lineup = []; S.aside = [];
         GL.shuttle(null); GL.place(null);
         registerAnchors(false); hideWords(); setPointing(false);
         if (tell) emit('stop:hidden', { id });
     }
-    /** "Send the team": the 2.4 s are up (they walked to the hatch, the shuttle unclamped); the real trip begins. */
+    /** "Send the team": they climbed down the hatch and the shuttle reached the world; the real trip begins. */
     function fireSend() {
         const s = S.send; s.fired = true;
         const ids = s.ids.slice();
@@ -593,7 +600,7 @@
         if (!S.trip && S.send === s) {                                   // the game did not take them (refused): they come back up, and we hear why
             const v = NS.mods.voice, talking = v && v.current ? v.current() : null;
             if (!went && !talking) say('The team stays aboard for now, Commander.');
-            S.send = null; const t = t0();
+            S.send = null; S.drop = null; const t = t0();
             ids.forEach((id, i) => { if (crewOf(id) === 'well') enterTo(id, t + 300 + i * 600, SPOT_X[id], 'idle', 1); });
             GL.shuttle('up', t, SHUTTLE_MS);
         }
@@ -668,7 +675,7 @@
         if (!S.open || S.dive || S.fadeAt != null && t0() - S.fadeAt < DISSOLVE || NS.blocked()) { if (type === 'move' || type === 'leave') { S.hover = null; S.hot = null; setPointing(false); } return false; }
         const t = t0(), cx = e.clientX, cy = e.clientY, [ax, ay] = toFrame(cx, cy), W = S.words;
         if (type === 'leave') { S.hover = null; S.hot = null; setPointing(false); return false; }
-        if (S.send) { setPointing(false); return type === 'down'; }        // the shuttle is unclamping: clicks wait
+        if (S.send) { setPointing(false); if (type === 'down') skipSend(t); return type === 'down'; }   // the team is leaving: a click hurries it
         const act = W.acts.find(el => el.dataset.key && inside(el, cx, cy)), onLeave = inside(W.leave, cx, cy);
         const who = picking() ? personAtPx(ax, ay) : null, pickable = who && S.lineup.includes(who) ? who : null;
         const aside = who && S.aside.includes(who) ? who : null;           // too weak to go: pointing says why, a click does nothing
@@ -695,9 +702,8 @@
         if (!a) return;
         if (a.team) {
             if (S.picked.length < 2) { say('Choose two to go, Commander.'); return; }
-            S.send = { ids: S.picked.slice(), t0: t, fired: false };
-            S.send.ids.forEach((id, i) => exitDown(id, t + 150 + i * 350));
-            GL.shuttle('down', t + 200, SHUTTLE_MS);
+            const ids = S.picked.slice();
+            S.send = { ids, t0: t, fired: false, skipped: false, fireAt: sendOff(ids, t, 350) + SHUTTLE_MS };   // the trip begins once the shuttle is down
             S.hover = null; S.hot = null; setPointing(false);
             return;
         }
@@ -707,6 +713,15 @@
             if (NS.flow && typeof NS.flow.act === 'function') NS.flow.act(key);
             else if (typeof a.run === 'function') a.run();
         } catch (err) { console.error(`NewScreen stop: the action "${key}" failed`, err); }
+    }
+    /** A click while the team is still walking out: they are down the hatch at once and the shuttle leaves now. */
+    function skipSend(t) {
+        const s = S.send;
+        if (!s || s.fired || s.skipped || !S.drop) return;               // the shuttle is already on its way down
+        s.skipped = true;
+        s.ids.forEach(hidePlan);
+        S.drop = { at: t };
+        s.fireAt = t + SHUTTLE_MS;
     }
     function leave() {
         S.hover = null; S.hot = null; setPointing(false);
