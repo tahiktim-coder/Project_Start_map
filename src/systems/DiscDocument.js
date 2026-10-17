@@ -24,7 +24,7 @@
         { key: 'disc', label: 'THE DISC', region: [C, C, R], text: 'Gold, cut by a machine. Every mark on our drawing is here, in the metal.' },
         ...NOTES.filter(n => n.key === 'map' || n.key === 'figures'),
     ];
-    const DRAWING = { kicker: 'FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK', title: 'The disc', aura: 'An old curiosity, Commander. I would not spend time on it.', close: 'FOLD IT AWAY', closeNote: 'it stays in your cargo' };
+    const DRAWING = { kicker: 'FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK', title: 'The disc', aura: 'An old curiosity, Commander. I would not spend time on it.', close: 'KEEP IT', closeNote: 'it stays in your cargo' };
     const REAL = { kicker: 'THE DISC ITSELF · NOW IN OUR HOLD', title: 'The disc', aura: 'I have logged it as cargo, Commander. It changes nothing about our course.', close: 'PUT IT AWAY', closeNote: 'it stays in your cargo' };
 
     function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
@@ -94,7 +94,7 @@
                 <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>${o.close}</span><small>${o.closeNote}</small></button></div>
             </section>`;
         document.body.appendChild(overlay);
-        // it opens just after a card's choice: FOLD IT AWAY never lands under that click (a double click would put it away unread)
+        // it opens just after a card's choice: KEEP IT never lands under that click (a double click would put it away unread)
         if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.disc-doc-card'), overlay.querySelectorAll('.disc-doc-close'));
         const openedAt = performance.now();
         return new Promise(resolve => {
