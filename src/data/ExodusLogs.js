@@ -5,6 +5,8 @@
 //              'disc' is not a page: the real disc, shown by its own card (App.showDiscFound) and DiscDocument
 //   lines      what is written
 //   after      one spoken line when the page is read, from whoever aboard would say something (skipped if they are dead)
+//   letterhead, stamp   a printed page only: printed at its top, and stamped across it in red (the new look shows them on the paper)
+//   underlined          a printed page only: the line someone underlined by hand (its index in lines)
 //   card       the disc only: the find's card (context, the choice, and one line from whichever of the team is listed first)
 
 const EXODUS_LOGS = [
@@ -25,6 +27,7 @@ const EXODUS_LOGS = [
         name: 'Memo from Earth',
         desc: 'A printed memo from the Exodus programme on Earth, folded into a dead captain\'s pocket.',
         logTitle: 'EXODUS PROGRAMME · INTERNAL',
+        letterhead: 'EXODUS PROGRAMME', stamp: 'INTERNAL',
         lines: [
             'Every Exodus ship\'s computer has a twin here on Earth. The two stay linked, however far apart they are.',
             'At 03:14 the twin of the first ship started talking in a voice that was not its own.',
@@ -51,6 +54,7 @@ const EXODUS_LOGS = [
         name: 'Orders for Commanders',
         desc: 'Printed orders from Earth, marked for commanders only. Someone underlined one line.',
         logTitle: 'FOR THE COMMANDER ONLY',
+        letterhead: 'EXODUS PROGRAMME', stamp: 'FOR THE COMMANDER ONLY', underlined: 2,
         lines: [
             'We told the first crews the truth. They stopped flying within a week.',
             'One ship turned back. One landed on the first rock it found. One just drifted, everyone awake and nobody flying it.',
