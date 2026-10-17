@@ -156,6 +156,8 @@ class GameState {
         this.maxSalvage = 300;
         this.rations = 20;         // Time pressure / food supply (cap 30)
         this.maxRations = 30;
+        if (isNewScreen()) { this.energy = NEW_LOOK_ECONOMY.START_ENERGY; this.rations = NEW_LOOK_ECONOMY.START_RATIONS; }   // the new look's own start
+        this._nsSupper = null;     // the new look: a supper due after a sector jump (App.startSectorJump → GameState.serveSupper)
 
         // --- Per-run counters (a new run must not inherit the last one's) ---
         this.stopsLeft = null;     // recomputed for the sector by getStopsLeft()
@@ -263,6 +265,7 @@ class GameState {
             datedWrecks: this.datedWrecks || [],
             _breachDone: !!this._breachDone,
             _paidWarps: this._paidWarps || 0,
+            _nsSupper: this._nsSupper || null,     // the new look: a supper still due after the jump (eaten after a reload too)
             aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
             // Navigation
             currentSector: this.currentSector,
@@ -356,6 +359,7 @@ class GameState {
             this.datedWrecks = saveData.datedWrecks || [];            // saves from before the disc dating have none
             this._breachDone = !!saveData._breachDone;
             this._paidWarps = saveData._paidWarps || 0;
+            this._nsSupper = saveData._nsSupper || null;
             if (saveData.aura && window.AuraSystem) {
                 window.AuraSystem.ethicsScore = saveData.aura.ethicsScore || 0;
                 window.AuraSystem.warningCount = saveData.aura.warningCount || 0;
@@ -450,7 +454,7 @@ class GameState {
     }
 
     /**
-     * What warping to this place costs right now, the one price the map shows (docs/ECONOMY.md): 4-6 energy by distance,
+     * What warping to this place costs right now, the one price the map shows (docs/ECONOMY.md): 4-6 energy by distance (5-8 in the new look),
      * then bridge damage, burnt capacitors (this sector only) and charts found on the way. No energy comes back on arrival.
      * Free: the orbit the ship is parked at, the light, and a story planet whose course a dated wreck gave us.
      */
@@ -473,7 +477,8 @@ class GameState {
 
     /** A warp's price before damage and charts: the further across the map from where the ship is, the more it costs. */
     warpDistanceCost(planet) {
-        const WARP_NEAR = 4, WARP_FAR = 6, MAP_DISTANCE_PER_STEP = 30;   // under 30 (in map widths %) costs 4, under 60 costs 5, else 6
+        const isNew = isNewScreen(), WARP_NEAR = isNew ? NEW_LOOK_ECONOMY.WARP_NEAR : 4, WARP_FAR = isNew ? NEW_LOOK_ECONOMY.WARP_FAR : 6;
+        const MAP_DISTANCE_PER_STEP = 30;   // every 30 (in map widths %) costs one more, up to WARP_FAR: 4, 5, 6 (the new look: 5 to 8)
         const map = typeof NavView !== 'undefined' ? NavView : null;
         const to = map && map.mapPlace(planet);
         if (!to) return WARP_NEAR + 1;
@@ -687,6 +692,51 @@ class GameState {
         }
 
         this.emitUpdates(); // emitUpdates() calls checkLoseConditions()
+    }
+
+    /** The new look: what the supper after a jump needs, one ration for each living person (NEW_LOOK_ECONOMY.RATIONS_PER_PERSON). */
+    supperNeed() {
+        return this.crew.filter(c => c.status !== 'DEAD').length * NEW_LOOK_ECONOMY.RATIONS_PER_PERSON;
+    }
+
+    /**
+     * The new look's supper after a sector jump (docs/SHIP_LIFE.md "2. Supper at the jump"; the scene is
+     * src/newscreen/tower/Supper.js). Everyone living eats; with too few rations A.U.R.A. cuts the portions, everything left is
+     * eaten, and one person goes without: `without`, the player's pick. They take +1 stress and get no rest this jump; if
+     * they are hurt or already at stress 2 they are too weak for the next team trip instead (_nsWeak, read by NSOrbit), and
+     * their stress does not climb past where it was, so a missed supper never sets off a breakdown. Everyone else rests if
+     * the crew quarters work. That is the floor: nobody starves, however short the food. Returns { ate, short, left }.
+     */
+    serveSupper(without) {
+        const need = this.supperNeed(), ate = Math.min(this.rations, need), short = ate < need;
+        const skip = short && without && without.status !== 'DEAD' && this.crew.includes(without) ? without : null;
+        const rests = this.isDeckOperational('quarters');
+        this.rations -= ate;
+        this._nsSupper = null;
+        this.crew.forEach(c => { delete c._nsWeak; });                                  // last supper's weakness is over
+        this.crew.forEach(c => { if (c.status !== 'DEAD' && c !== skip && rests && c.stress > 0) c.stress--; });
+        if (skip) {
+            const was = skip.stress || 0;
+            if (skip.status === 'INJURED' || was >= 2) skip._nsWeak = true;
+            skip.stress = Math.min(skip._nsWeak ? Math.max(2, was) : 3, was + 1);
+        }
+        this.addLog(short ? `A.U.R.A. cut the portions.${skip ? ` ${skip.name} went without supper.` : ''} ${this.rations} rations left.`
+            : `The crew ate ${ate} rations at supper. ${this.rations} left.`);
+        if (rests) this.addLog('Crew Quarters: Rest cycle complete. Stress levels reduced.');
+        this.emitUpdates();
+        return { ate, short, left: this.rations };
+    }
+
+    /** The new look has no hold to open things from: sealed rations put in the cargo are opened at once
+        (NEW_LOOK_ECONOMY.FOOD_PACK_RATIONS each, up to the store's size). quiet: a card's own result line says it
+        (EncounterCard.apply); anything else gets its own log line. */
+    openFoodPacks(quiet) {
+        const packs = (this.cargo || []).filter(item => item && item.id === 'food_pack').length;
+        if (!packs) return;
+        this.cargo = this.cargo.filter(item => !(item && item.id === 'food_pack'));
+        const got = Math.max(0, Math.min(packs * NEW_LOOK_ECONOMY.FOOD_PACK_RATIONS, this.maxRations - this.rations));
+        this.rations += got;
+        if (!quiet) this.addLog(got ? `Sealed rations opened and put in the galley. +${got} Rations.` : 'Sealed rations opened. The galley is already full.');
     }
 
     /**
@@ -976,6 +1026,7 @@ class GameState {
     }
 
     emitUpdates() {
+        if (isNewScreen()) this.openFoodPacks();
         this.enforceCargoLimit();
         this.applyStressTraits();
         this.checkLoseConditions();
@@ -1001,6 +1052,31 @@ const MIN_STOPS_PER_SECTOR = 2, MAX_STOPS_PER_SECTOR = 3; // see GameState.getSt
 const SECTOR_JUMP_BASE_COST = 8; // energy for a sector jump (double with engineering down); warps are 4-6 (GameState.getWarpCost)
 const DRIVE_BRACE_SAVING = 4;    // a braced drive (the hull-cracks campfire) takes this much off the next jump, once
 const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, besides "a day" on a card (GameState.eatOnJump)
+/**
+ * The new look's economy (?new=1 only; measured with scripted runs and tuned 2026-10-17; the old failure it answers is
+ * docs/ECONOMY.md §1-2). Every number the new look spends or gives differently from the default game is here, with why. The
+ * default game keeps the numbers above and its own card amounts.
+ * The new screen's files read it as window.NEW_LOOK_ECONOMY. Two rules go with it, with no number: a story world (one of our
+ * wrecks nobody has boarded, or the sector's story planet) can always be reached, on the reserve if need be (App.isStoryStop),
+ * and food that runs short means one person goes without supper, never a death (GameState.serveSupper).
+ */
+const NEW_LOOK_ECONOMY = Object.freeze({
+    START_ENERGY: 100,       // a full tank (the cap stays 100)
+    WARP_NEAR: 5,            // a warp costs 5 to 8 by distance on the map (was 4 to 6): each extra world is a real price, so a
+    WARP_FAR: 8,             //   careful player cannot take every world the route offers; the dated story world stays free
+    JUMP: 6,                 // the sector jump, doubled with engineering down (was 8): every run pays five, so the story path
+                             //   (a wreck and a jump a sector) costs a little less than before while each extra costs more
+    SKIM: 20,                // "Refuel" at a gas giant, once per giant (was 15): about three warps, so the giant can pay for a stop
+    EVA_ENERGY_MIN: 8,       // what a plain landing's energy find brings (was 30 to 49: one landing paid for six warps, so
+    EVA_ENERGY_MAX: 12,      //   energy never got tight for anyone who landed on bare worlds)
+    CARD_ENERGY_MAX: 20,     // no single card choice gives more energy than this (was up to 70); its chips say what it really gives
+    START_RATIONS: 24,       // all but the last supper with everyone alive (was 20, eaten one a jump): it runs short at a jump or
+                             //   two for a careful crew that takes days for people, unless it finds food on the way
+    RATIONS_PER_PERSON: 1,   // each living person eats one ration at the supper after a jump (five with everyone alive; was 1 in all)
+    FOOD_PACK_RATIONS: 2,    // sealed rations found on a card are opened at once (the new look has no hold to open them from):
+                             //   "+2 Sealed Rations" is +4, a little under one supper, so a find helps but does not end the hunger
+});
+window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
 const SCRAPES_PER_BROKEN_DECK = 3; // flying the jump (Corridor): every third scrape breaks a deck
 // Our wrecks (docs/CANON.md §2): the further out, the higher the hull number. Index = sector. The callsign comes from the number.
@@ -1718,7 +1794,10 @@ class App {
         const plotResult = this._plotResult;
         this._plotResult = null;
 
-        if (this.state.consumeEnergy(cost)) {
+        // The new look's floor: a story world short of energy is flown on the reserve, as the reserve jump is (docs/STORY_MAP.md)
+        const isOnReserve = isNewScreen() && !window.TEST_MODE && cost > this.state.energy && this.isStoryStop(planet);
+        if (isOnReserve) this.flyOnReserve();
+        if (isOnReserve || this.state.consumeEnergy(cost)) {
             this._isInTransit = true;
             const isBreach = this.isBreachDue(isTrip) && !(isNewScreen() && window.NSOrbit);   // the new screen: it comes at the stop (NSOrbit), never in flight
             if (isTrip) this.state._paidWarps = (this.state._paidWarps || 0) + 1;
@@ -2329,7 +2408,8 @@ class App {
 
     /** What the sector jump costs now: 8, double with engineering down, 4 less once with the drive braced (the hull-cracks campfire). */
     sectorJumpCost() {
-        const base = this.state.isDeckOperational('engineering') ? SECTOR_JUMP_BASE_COST : SECTOR_JUMP_BASE_COST * 2;
+        const jump = isNewScreen() ? NEW_LOOK_ECONOMY.JUMP : SECTOR_JUMP_BASE_COST;
+        const base = this.state.isDeckOperational('engineering') ? jump : jump * 2;
         return this.state._driveReinforced ? Math.max(0, base - DRIVE_BRACE_SAVING) : base;
     }
 
@@ -2462,18 +2542,40 @@ class App {
         });
     }
 
+    /** A story world (the new look's floor, docs/STORY_MAP.md): one of our wrecks nobody has boarded yet, or the sector's
+        story planet once it is on the map. NSRoute.canGo and handleWarp never refuse one for energy. */
+    isStoryStop(planet) {
+        const isWreck = !!planet && (planet.tags || []).includes('EXODUS_WRECK') && !planet.exodusInvestigated;
+        return !!planet && !planet.storyHidden && !planet.ghost && (planet.isStoryPlanet || isWreck);
+    }
+
+    /** The new look: a story world flown on the reserve. Every bit of energy left goes, and the crew quarters lose power
+        (unless two decks are down already: a third could end the run, and the story world must stay reachable). */
+    flyOnReserve() {
+        const decksDown = Object.values(this.state.shipDecks).filter(d => d.status === 'DAMAGED').length;
+        const losesPower = this.state.isDeckOperational('quarters') && decksDown < 2;
+        this.state.energy = 0;
+        this.state.addLog(losesPower ? 'A.U.R.A.: "We are flying on the reserve, Commander. The crew quarters will lose power."'
+            : 'A.U.R.A.: "We are flying on the reserve, Commander."');
+        if (losesPower) this.state.damageDeck('quarters', 'The drive ran on the reserve. The crew quarters have lost power.');
+        this.state.emitUpdates();
+    }
+
     /** The sector jump, paid for: the flight, the crew, the campfire, then the new sector. */
     startSectorJump() {
         this._isInTransit = true;
         this.state.addLog("Starting Sector Jump...");
         if (isNewScreen() && window.NSOrbit) window.NSOrbit.breakPatched(this.state);      // the new screen: a patched deck breaks again on the jump
 
-        // Time passes, and the crew eats: the jump is where rations go (docs/ECONOMY.md)
+        // Time passes, and the crew eats: the jump is where rations go (docs/ECONOMY.md). The new look: they eat, and rest, at the
+        // supper after the jump, in the ship (src/newscreen/tower/Supper.js, GameState.serveSupper).
         this.state.passTime();
-        this.state.eatOnJump();
+        const isSupperLater = isNewScreen() && !!window.NSSupper;
+        if (isSupperLater) { window.NSSupper.settle(); this.state._nsSupper = { sector: this.state.currentSector + 1 }; }   // a supper still due is eaten first
+        else this.state.eatOnJump();
 
         // Passive stress recovery on sector jump (if quarters operational)
-        if (this.state.isDeckOperational('quarters')) {
+        if (!isSupperLater && this.state.isDeckOperational('quarters')) {
             this.state.crew.forEach(c => {
                 if (c.status !== 'DEAD' && c.stress > 0) {
                     c.stress--;
@@ -2561,12 +2663,13 @@ class App {
         if (!window.WarpPlot) { onComplete(); return; }
         const nextSector = this.state.currentSector + 1;
         const plotOptions = this.getPlotOptions(`S${nextSector} —`, 'sector');
-        plotOptions.cost = SECTOR_JUMP_BASE_COST;                                    // what applyPlotResult grades against below
+        const jumpBase = isNewScreen() ? NEW_LOOK_ECONOMY.JUMP : SECTOR_JUMP_BASE_COST;
+        plotOptions.cost = jumpBase;                                                 // what applyPlotResult grades against below
         plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         const relianceVoice = this.getRelianceVoice();
         if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
         window.WarpPlot.play(plotOptions).then(result => {
-            this.applyPlotResult(result, SECTOR_JUMP_BASE_COST);
+            this.applyPlotResult(result, jumpBase);
             onComplete();
         });
     }
@@ -2831,7 +2934,9 @@ class App {
     /** Date the wreck (DiscDating). The chart keeps the date, and the sector's hidden story planet is found. */
     dateWreck(planet) {
         if (!this.canDateWreck(planet)) return;
-        const story = (this.state.sectorNodes || []).find(p => p.storyHidden);
+        const nodes = this.state.sectorNodes || [];
+        const story = nodes.find(p => p.storyHidden)                                            // the new look: A.U.R.A. may have named it already (short of
+            || (isNewScreen() ? nodes.find(p => p.isStoryPlanet && !p.courseKnown && !p.exodusInvestigated) : null);   // energy): the course is still theirs, and free
         const opts = {
             wreck: { hull: planet.wreckHull, sector: this.state.currentSector },
             plotted: this.state.datedWrecks || [], reward: story ? this.storyReward(story) : null, crew: this.state.crew,
@@ -4024,6 +4129,11 @@ Then you're through.`,
         }
     }
 
+    /** What a plain landing's energy find brings, [lowest, highest]: 30 to 49 (the new look: NEW_LOOK_ECONOMY's EVA_ENERGY). */
+    evaEnergyRange() {
+        return isNewScreen() ? [NEW_LOOK_ECONOMY.EVA_ENERGY_MIN, NEW_LOOK_ECONOMY.EVA_ENERGY_MAX] : [30, 49];
+    }
+
     showEventModal(event, planet) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -4101,9 +4211,10 @@ Then you're through.`,
             : '';
 
         // Card layout: what the team found, what the scan says, then one button per option with its real odds
-        const REWARD_WORDS = { METALS: '+40 to 79 salvage', METALS_HIGH: '+60 to 119 salvage', ENERGY: '+30 to 49 energy', NOTHING: 'nothing' };
+        const [EVA_LO, EVA_HI] = this.evaEnergyRange();
+        const REWARD_WORDS = { METALS: '+40 to 79 salvage', METALS_HIGH: '+60 to 119 salvage', ENERGY: `+${EVA_LO} to ${EVA_HI} energy`, NOTHING: 'nothing' };
         const energyRoom = Math.max(0, 100 - Math.round(this.state.energy));                // energy tops out at 100: say what fits
-        const energyWords = energyRoom <= 0 ? 'energy already full' : energyRoom < 30 ? `+${energyRoom} energy` : energyRoom < 49 ? `+30 to ${energyRoom} energy` : REWARD_WORDS.ENERGY;
+        const energyWords = energyRoom <= 0 ? 'energy already full' : energyRoom < EVA_LO ? `+${energyRoom} energy` : energyRoom < EVA_HI ? `+${EVA_LO} to ${energyRoom} energy` : REWARD_WORDS.ENERGY;
         const rewardWords = (choice) => {
             const r = choice.reward || {};
             if (r.type === 'ITEM') return `an item${r.tags && r.tags.length ? ' · ' + String(r.tags[0]).toLowerCase() : ''}`;
@@ -4316,7 +4427,7 @@ Then you're through.`,
             let amount = 0;
             if (choice.reward.val === 'METALS') amount = 40 + Math.floor(Math.random() * 40);
             else if (choice.reward.val === 'METALS_HIGH') amount = 60 + Math.floor(Math.random() * 60);
-            else amount = 30 + Math.floor(Math.random() * 20); // Energy
+            else { const [lo, hi] = this.evaEnergyRange(); amount = lo + Math.floor(Math.random() * (hi - lo + 1)); }   // Energy
 
             if (isObsessed) {
                 amount = Math.floor(amount * 1.5);

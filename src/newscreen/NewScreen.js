@@ -26,11 +26,13 @@
                              render(t), pointer(type, e, x, y) → bool (type 'move' | 'down' | 'leave' | 'wheel'), key?(e) }.
                              travel and tower get art px; stop gets CSS px (e.clientX, e.clientY), as in the slice.
      mods                    { travel, tower, stop, voice } as registered
-     game                    read-only, the real state: energy(), sector(), crew(), decks(), broken(deck), route(), state()
+     game                    read-only, the real state: energy(), sector(), crew() ([{ id, status, stress, hurt, weak }]),
+                             decks(), broken(deck), route(), state()
      flow                    what the modules call (the real game does the rest):
        click, canGo, refuse, go, arrive, light, contact, ghost   travel (BUILD_A §4)
        actions() → [{ key, words, near, team, run() }]          what this stop offers now (NSOrbit.actions)
        act(key, ids?) → bool  run one (ids: the two picked for 'team');  eligible() → ids fit to go
+       weak() → ids too weak from a missed supper for this trip;  holdLoss(id, picked) → what the ship loses while id is down
        leave() → Promise<bool>  Leave orbit (the dive back out, or refused with a line)
        trip() → { ids, aboard } | null   who is down now;  sign() → { kind, comes } | null   this stop's crisis sign
        person(id, say?)       a person in the tower clicked: their line, said beside them (not logged: saves keep 20 lines)
@@ -256,7 +258,7 @@
                 const tags = c.tags || [], tag = Object.keys(CREW_BY_TAG).find(t => tags.includes(t));
                 const hurt = c.status === 'INJURED';
                 const status = c.status === 'DEAD' ? 'dead' : tags.includes('CONFINED') ? 'confined' : tags.includes('SEDATED') ? 'asleep' : hurt ? 'hurt' : 'well';
-                return { id: tag ? CREW_BY_TAG[tag] : String(c.name || '').toLowerCase(), status, stress: c.stress || 0, hurt };
+                return { id: tag ? CREW_BY_TAG[tag] : String(c.name || '').toLowerCase(), status, stress: c.stress || 0, hurt, weak: !!c._nsWeak };
             });
         },
         decks() {
@@ -338,6 +340,8 @@
             return !!ask('act', a, key, ids);
         },
         eligible: () => ask('eligible', theApp()) || [],
+        weak: () => ask('weak', theApp()) || [],
+        holdLoss: (id, picked) => ask('holdLoss', theApp(), id, picked) || '',
         trip: () => ask('trip') || null,
         sign: () => { const s = st(), n = s && s.currentSystem; return (n && n._nsCrisis) || null; },
         leave() {

@@ -9,7 +9,9 @@
    The first time each action (and "Leave orbit") shows, A.U.R.A. says once what it does (NSOrbit.TELL), one at a time,
    the one pointed at first. "Settle here" (it ends the game) is drawn cool, never warm; once nothing but it is left,
    "Leave orbit" grows warm and as large as an action. While a person is pointed at, the sub-lines hide but keep their
-   room, so nothing moves under the pointer. The ship's stock (NSStock: energy, rations, salvage, data) stands as small lit numbers on the wall
+   room, so nothing moves under the pointer. The note over them says what they are good for, and under it what the ship
+   loses while they are down at this stop (NSOrbit.holdLoss). Anyone too weak from a missed supper is left out of the
+   lineup and stands by the ladder; pointing at them says why. The ship's stock (NSStock: energy, rations, salvage, data) stands as small lit numbers on the wall
    left of the window. A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
    Source: prototypes/slice/stop.js §5-12 (people plans, compose, words, the pick, anchors, discs), without its films,
    MOCKUP moments and slice places (docs/BUILD_B.md §2). Draws ONLY into canvas#ns-dive, canvas#ns-bridge and the word
@@ -44,6 +46,9 @@
         vance: 'Down there I take the hit for the other one. Up here, I keep people safe.',
         mira: 'Down there I bring their star fix back. Up here, I scan the site.',
     };
+    // under it, what the ship loses while they are down at this stop (NSOrbit.holdLoss, whileDown's own rules)
+    const WEAK_LINE = "I went without supper. I'm too weak to go down this time.";   // too weak for this trip (GameState.serveSupper)
+    const ASIDE_X = [130, 148];                                           // the too-weak stand by the ladder, apart from the window
     const SEND_MS = 2400, SHUTTLE_MS = 2200, GUARD_MS = 400, READ_MS = 250, MAX_LIT = 4, MAX_WORDS = 40, GATHER_LEAD = 2600, TELL_AFTER_MS = 1500;
     const WORTH = ['light', 'escape', 'accept', 'call', 'strange', 'date', 'team', 'dock', 'mine', 'settle', 'scan', 'skim'];   // more than 4: these first
     const NEAR_WORLD = ['world', 'station', 'field', 'giant', 'site', 'light'];
@@ -55,7 +60,7 @@
         open: false, fadeAt: null, shownAt: -1e9, shownSent: false,
         id: null, node: null,
         plans: {}, drawn: [], atWindow: new Set(),
-        actions: [], readAt: -1e9, lineup: [],
+        actions: [], readAt: -1e9, lineup: [], aside: [],   // aside: too weak from a missed supper, by the ladder while the lineup forms
         picked: [], hover: null, hot: null, clickAt: 0,
         send: null,          // { ids, t0, fired } between the click and flow.act
         trip: null,          // { ids } while the team is down
@@ -126,6 +131,8 @@
         CREW.forEach(id => {
             if (crewOf(id) !== 'well' || away.includes(id)) { out[id] = null; return; }
             if (S.lineup.includes(id) || S.atWindow.has(id)) { out[id] = { x: SPOT_X[id], act: 'idle', facing: 1 }; return; }
+            const k = S.aside.indexOf(id);
+            if (k >= 0) { out[id] = { x: ASIDE_X[Math.min(k, ASIDE_X.length - 1)], act: 'idle', facing: 1 }; return; }
             out[id] = id === 'mira' ? { x: NAV, act: 'console', facing: 1 } : null;
         });
         return out;
@@ -181,7 +188,7 @@
         S.drawn = [];
         const list = ['cora'].concat(CREW).map(id => ({ id, p: poseOf(id, t) })).filter(o => o.p && !o.p.hidden);
         list.sort((a, b) => (a.p.climbing ? -1 : 0) - (b.p.climbing ? -1 : 0) || a.p.x - b.p.x).forEach(({ id, p }) => {
-            const pk = picking(), picked = pk && S.picked.includes(id), hot = pk && S.hover === id;
+            const pk = picking(), picked = pk && S.picked.includes(id), hot = pk && S.hover === id && S.lineup.includes(id);   // the too-weak are never lit as a pick
             const still = p.act === 'idle' || p.act === 'console', ms = still ? p.ms + (CREW.indexOf(id) + 1) * 977 : p.ms;
             const blink = ((ms + (CREW.indexOf(id) + 2) * 1700) % 4300) < 140;
             const Sp = CE.sprite(id, p.act, CE.frameAt(p.act, ms), { blink, warm: picked ? 3 : hot ? Math.max(2, lightFor(p.x)) : lightFor(p.x), rim: p.facing, screen: p.act === 'console' });
@@ -254,6 +261,9 @@
         S.actions = list.filter(a => a && a.key && a.words);
         const team = S.actions.some(a => a.team);
         S.lineup = team && !S.send && !S.trip ? elig.filter(id => CREW.includes(id)) : [];
+        let weak = [];
+        try { weak = (NS.flow && typeof NS.flow.weak === 'function' ? NS.flow.weak() : []) || []; } catch (err) { weak = []; }
+        S.aside = S.lineup.length ? weak.filter(id => CREW.includes(id) && !S.lineup.includes(id)) : [];
         S.picked = S.picked.filter(id => S.lineup.includes(id));
         crewNow = crewMap();
         try { S.decks = NS.game.decks(); } catch (err) { S.decks = null; }
@@ -292,11 +302,13 @@
 #ns-stop-words .sw-good { white-space: normal; max-width: calc(260px + 60px * var(--t, 1)); padding-left: 9px; border-left: 2px solid var(--who, #c9d1d6);
     font: 400 var(--fs-note-line)/1.35 var(--f-text); color: #eceae2; }
 #ns-stop-words .sw-good b { display: block; margin-bottom: 2px; font: 600 var(--fs-who)/1.2 var(--f-ui); letter-spacing: .14em; text-transform: uppercase; color: var(--who, #c9d1d6); }
+#ns-stop-words .sw-good i { display: block; margin-top: 5px; font: 400 calc(var(--fs-note-line) - 1px)/1.3 var(--f-text); font-style: normal; color: var(--ui); }
+#ns-stop-words .sw-good i:empty { display: none; }
 @media (prefers-reduced-motion: reduce) { #ns-stop-words .sw { transition: none; } }`;
             document.head.appendChild(st);
         }
         const mk = (cls, html) => { const e = document.createElement('div'); e.className = 'sw ' + cls; e.innerHTML = html; layer.appendChild(e); return e; };
-        S.words = { name: mk('sw-name', ''), acts: [0, 1, 2, 3].map(() => mk('sw-act', '<b></b><span></span>')), leave: mk('sw-leave', 'Leave orbit'), good: mk('sw-good', '<b></b><span></span>') };
+        S.words = { name: mk('sw-name', ''), acts: [0, 1, 2, 3].map(() => mk('sw-act', '<b></b><span></span>')), leave: mk('sw-leave', 'Leave orbit'), good: mk('sw-good', '<b></b><span></span><i></i>') };
         S.words.acts.forEach(el => { el.dataset.key = ''; });
         S.stock = window.NSStock ? window.NSStock.board(layer) : null;
     }
@@ -353,8 +365,8 @@
         budget -= (leaveOn ? 2 : 0) + (settled && S.stock ? window.NSStock.KEYS.length : 0);
         if (S.stock && settled && !NS.blocked()) placeStock(); else if (S.stock) S.stock.hide();   // never over a card or a minigame
         items.forEach(it => { budget -= wordsIn(it.words); });
-        const d = hovering && S.drawn.find(q => q.id === S.hover), good = d ? GOOD[d.id] : null;
-        if (good) budget -= wordsIn(good) + 1;
+        const d = hovering && S.drawn.find(q => q.id === S.hover), good = d ? noteFor(d.id) : null;
+        if (good) budget -= wordsIn(good.line) + wordsIn(good.loss) + 1;
         // a sub-line keeps its room while a person is pointed at (hidden, not removed): nothing under the pointer moves
         items.forEach(it => { if (it.sub && (hovering || budget - wordsIn(it.sub) >= 0)) { if (!hovering) budget -= wordsIn(it.sub); } else it.sub = ''; });
         const nameText = S.node ? titleCase(S.node.name || '') : '';
@@ -389,7 +401,8 @@
         W.leave.classList.toggle('is-next', leaveOn && !S.trip && !items.some(it => !it.end));   // nothing left here but settling: Leave orbit is the next step, and looks it
         const [lx, ly] = css(WIN.x1 - 24, WIN.y1 - 40); put(W.leave, leaveOn, lx - (W.leave.offsetWidth || 0), ly);   // always low right in the window, level with the row of words on the left
         if (good) {
-            setText(W.good.querySelector('b'), NAMES[d.id]); setText(W.good.querySelector('span'), good); W.good.style.setProperty('--who', TONE[d.id]);
+            setText(W.good.querySelector('b'), NAMES[d.id]); setText(W.good.querySelector('span'), good.line); setText(W.good.querySelector('i'), good.loss);
+            W.good.style.setProperty('--who', TONE[d.id]);
             const k = unit(), w = W.good.offsetWidth || 280, h = W.good.offsetHeight || 48, dc = GL.disc(t, S.shownAt);
             let [gx, gy] = css(d.X, d.Y - 8); gx -= w / 2; gy -= h;
             if (dc) {
@@ -402,6 +415,16 @@
             put(W.good, true, Math.max(16, gx), Math.max(16, gy));
         } else put(W.good, false);
         if (settled && !busy) explain();
+    }
+    /** The note over someone pointed at while the team is picked: what they are good for, and under it what the ship loses
+        while they are down, with whoever the click would pair them with (NSOrbit.holdLoss); too weak to go, why. */
+    function noteFor(id) {
+        if (S.aside.includes(id)) return { line: WEAK_LINE, loss: '' };
+        if (!GOOD[id]) return null;
+        const others = S.picked.includes(id) ? S.picked.filter(p => p !== id) : S.picked.slice(-1);   // a click keeps the last pick
+        let loss = '';
+        try { loss = (NS.flow && typeof NS.flow.holdLoss === 'function' ? NS.flow.holdLoss(id, others) : '') || ''; } catch (err) { console.error('NewScreen stop: holdLoss failed', err); }
+        return { line: GOOD[id], loss };
     }
     /** The ship's stock on the wall left of the window, one under another, right-aligned to the window's frame. */
     function placeStock() {
@@ -429,7 +452,7 @@
     const nodeOf = id => { try { const s = NS.game.state(); return (window.NSRoute && window.NSRoute.find(s, id)) || (s && s.currentSystem && s.currentSystem.id === id ? s.currentSystem : null); } catch (err) { return null; } };
     const currentNode = () => { try { const s = NS.game.state(); return s ? s.currentSystem : null; } catch (err) { return null; } };
     function freshStop(id, node) {
-        S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.picked = [];
+        S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.aside = []; S.picked = [];
         S.hover = null; S.hot = null; S.send = null; S.trip = null; S.shownSent = false; S.readAt = -1e9;
         GL.shuttle(null);
         GL.place(node);
@@ -494,7 +517,7 @@
             ids.forEach((id, i) => exitDown(id, t + i * 400));
             GL.shuttle('down', t + 300, SHUTTLE_MS);
         }
-        S.send = null; S.picked = []; S.lineup = [];
+        S.send = null; S.picked = []; S.lineup = []; S.aside = [];
     }
     function onTripBack() {
         const t = t0(), ids = S.trip ? S.trip.ids : [];
@@ -536,7 +559,7 @@
     function close(tell) {
         const id = S.id;
         S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.picked = []; S.hover = null; S.hot = null; S.send = null; S.trip = null;
-        S.shownSent = false; S.actions = []; S.lineup = [];
+        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = [];
         GL.shuttle(null); GL.place(null);
         registerAnchors(false); hideWords(); setPointing(false);
         if (tell) emit('stop:hidden', { id });
@@ -631,8 +654,9 @@
         if (S.send) { setPointing(false); return type === 'down'; }        // the shuttle is unclamping: clicks wait
         const act = W.acts.find(el => el.dataset.key && inside(el, cx, cy)), onLeave = inside(W.leave, cx, cy);
         const who = picking() ? personAtPx(ax, ay) : null, pickable = who && S.lineup.includes(who) ? who : null;
+        const aside = who && S.aside.includes(who) ? who : null;           // too weak to go: pointing says why, a click does nothing
         if (type === 'move') {
-            S.hot = act ? act.dataset.key : onLeave ? 'leave' : null; S.hover = pickable;
+            S.hot = act ? act.dataset.key : onLeave ? 'leave' : null; S.hover = pickable || aside;
             const on = !!act || onLeave || !!pickable;
             setPointing(on); return on;
         }
@@ -746,7 +770,7 @@
     const isOpen = () => !!(S.dive || S.open);
     const debug = () => ({
         open: S.open, dive: S.dive ? { dir: S.dive.dir, open: !!S.dive.open, plated: !!S.dive.plated } : null, id: S.id, shown: S.shownSent,
-        actions: S.actions.map(a => ({ key: a.key, words: a.words, near: a.near, team: !!a.team })), lineup: S.lineup.slice(), picked: S.picked.slice(),
+        actions: S.actions.map(a => ({ key: a.key, words: a.words, near: a.near, team: !!a.team })), lineup: S.lineup.slice(), aside: S.aside.slice(), picked: S.picked.slice(), hover: S.hover,
         send: S.send ? S.send.ids.slice() : null, trip: S.trip ? S.trip.ids.slice() : null, drawn: S.drawn.map(d => d.id), glass: GL.current(), atWindow: [...S.atWindow], t: Math.round(t0()),
         plans: Object.fromEntries(Object.entries(S.plans).map(([k, v]) => [k, v.map(q => q.kind + '@' + Math.round(q.t0) + (q.x != null ? ':' + q.x : ''))])),
         words: S.words ? [S.words.name, S.words.leave, S.words.good].concat(S.words.acts).filter(el => el.classList.contains('on')).map(el => ({ text: el.textContent, rect: (r => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)])(el.getBoundingClientRect()) })) : [],

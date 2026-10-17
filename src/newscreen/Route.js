@@ -22,7 +22,8 @@
             world before the fork: the tape wreck in sector 2), 'fork-top' 'fork-bottom';  then 'single-1', 'single-2', ...
             (one band each; past 4 Travel lays them on a fallback arc), 'story', and in sector 6 'light'
      canGo(state, id) → { ok, say, kind }  kind: 'world' | 'ghost' | 'contact' | 'light' | 'passed' | 'cost' | 'none';
-                                           say: the one line A.U.R.A. says when it is no (null when ok). Pure: says nothing
+                                           say: the one line A.U.R.A. says when it is no (null when ok). Pure: says nothing.
+                                           A story world (App.isStoryStop) is never 'cost': short of energy, it is flown on the reserve
      arrive(state, id)                     we pulled in at id: it is 'visited', its fork mate 'gone', anything ahead in a
                                            nearer band 'passed'
      outOfReach(node) → bool               a planned node we can no longer go to (not 'ahead')
@@ -151,7 +152,8 @@
         if (r.status !== 'ahead' || r.band <= p.at) return { ok: false, say: LINES.passed, kind: 'passed' };
         if (node.ghost) return { ok: true, say: null, kind: 'ghost' };
         const cost = typeof state.getWarpCost === 'function' ? state.getWarpCost(node) : 0;
-        if (cost > state.energy && !window.TEST_MODE) return { ok: false, say: LINES.cost, kind: 'cost' };
+        const isStory = !!(window.app && typeof window.app.isStoryStop === 'function' && window.app.isStoryStop(node));   // flown on the reserve if need be
+        if (cost > state.energy && !window.TEST_MODE && !isStory) return { ok: false, say: LINES.cost, kind: 'cost' };
         return { ok: true, say: null, kind: 'world' };
     }
 

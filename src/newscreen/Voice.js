@@ -242,6 +242,11 @@
         const layer = document.getElementById('ns-stop-words');
         return layer ? [...layer.querySelectorAll('.sw.on')].map(el => el.getBoundingClientRect()) : [];
     }
+    /** The ship's own choices in travel (a red deck's, supper's "Accept"), CSS rects: a line keeps off them too. */
+    function chipRects() {
+        const layer = document.getElementById('ns-ship-words');
+        return layer ? [...layer.querySelectorAll('.nsk-chips')].map(el => el.getBoundingClientRect()).filter(r => r.width && r.height) : [];
+    }
     function busy(r, ds) {
         const G = NS.G, f = G.dpr / G.k;
         let hits = 0, n = 0;
@@ -253,6 +258,7 @@
         let v = hits / n;
         if (!onBridge() && r.x * f < G.hull - 2 && (r.x + r.w) * f > G.hull + 2) v += 1;   // never one line across the hull edge
         if (onBridge() && wordRects().some(w => r.x < w.right + 10 && r.x + r.w > w.left - 10 && r.y < w.bottom + 6 && r.y + r.h > w.top - 6)) v += 1;     // never over an action word
+        if (!onBridge() && chipRects().some(w => r.x < w.right + 10 && r.x + r.w > w.left - 10 && r.y < w.bottom + 6 && r.y + r.h > w.top - 6)) v += 1;   // nor over the ship's choices
         if (r.x < 0 || r.y < 0 || r.x + r.w > innerWidth || r.y + r.h > innerHeight) v += 0.1;
         return v;
     }
@@ -260,8 +266,9 @@
         const boxes = anchorList(c.id, c.anchor).map(a => boxAt(a, c.w, c.h));
         if (!boxes.length) return;
         let pick = c.pick != null && c.pick < boxes.length ? c.pick : null;
-        const b0 = boxes[pick == null ? 0 : pick];
-        if (pick == null || !c.sampledAt || Math.hypot(c.sampledAt.x - b0.x, c.sampledAt.y - b0.y) > MOVE_RESAMPLE) {
+        const b0 = boxes[pick == null ? 0 : pick], chips = onBridge() ? 0 : chipRects().length;   // a choice that came or went in the ship: look again
+        if (pick == null || !c.sampledAt || Math.hypot(c.sampledAt.x - b0.x, c.sampledAt.y - b0.y) > MOVE_RESAMPLE || chips !== c.chips) {
+            c.chips = chips;
             const ds = discs(), score = boxes.map(b => busy(b, ds));
             let best = 0;
             score.forEach((v, i) => { if (v < score[best] - 0.004) best = i; });

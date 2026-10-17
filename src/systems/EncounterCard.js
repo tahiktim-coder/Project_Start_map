@@ -42,15 +42,28 @@
         { key: 'rations', re: /(^|[^\d.])([+\-−])(\d+)(\s+Rations?)\b/g, top: s => Number(s.maxRations), full: 'Rations already full' },
     ];
     const stockOf = (state, key) => Math.round(Number(state[key]) || 0);
+    // The new look (?new=1): no single choice gives more energy than NEW_LOOK_ECONOMY.CARD_ENERGY_MAX (bundle.js), and sealed
+    // rations are opened at once (FOOD_PACK_RATIONS each); the chips and the result line say so. The default game: neither.
+    const newLook = () => (window.NEW_SCREEN && window.NewScreen && window.NSRoute && window.NEW_LOOK_ECONOMY) || null;   // bundle.js isNewScreen()'s own test
+    const ENERGY_RANGED = /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Energy)\b/g;   // the new look also cuts a range ("+50-70 Energy")
+    const PACKS = /\+(\d+) Sealed Rations\b/g;
+    /** How high a choice's gain may take a stock that stands at `start`: its own top, and in the new look no more than
+        CARD_ENERGY_MAX of energy above where it started. */
+    function topOf(st, state, start) {
+        const top = st.top(state), look = newLook();
+        return st.key === 'energy' && look ? Math.min(top, start + look.CARD_ENERGY_MAX) : top;
+    }
     /**
      * A text's own energy (or rations) numbers replayed in order from `start`: a cost first leaves room for a gain after
      * it, and a gain is cut to what fits under the top ("+25 Energy" with room for 5 reads "+5 Energy"; with no room, the
-     * stock's "already full"). Returns { text, end, cut }. Ranges ("+25-45") and percentages are left alone.
+     * stock's "already full"). Returns { text, end, cut }. Ranges ("+25-45") and percentages are left alone (the new look
+     * cuts an energy range too, by its highest number).
      */
     function fitStock(text, stock, start, top) {
         let v = start, cut = false;
-        const out = String(text).replace(stock.re, (m, pre, sign, n, unit) => {
-            const k = parseInt(n, 10);
+        const ranged = stock.key === 'energy' && !!newLook();
+        const out = String(text).replace(ranged ? ENERGY_RANGED : stock.re, (m, pre, sign, n, ...rest) => {
+            const unit = ranged ? rest[1] : rest[0], k = parseInt((ranged && rest[0]) || n, 10);
             if (sign !== '+') { v = Math.max(0, v - k); return m; }
             const got = Math.max(0, Math.min(k, top - v));
             v += got;
@@ -63,10 +76,11 @@
     /** A choice's words as they stand now: a gain of energy or rations says what fits (a card never promises more). */
     function capGains(desc, state) {
         if (!state || !desc) return desc;
-        return STOCKS.reduce((text, st) => {
-            const top = st.top(state);
-            return Number.isFinite(top) ? fitStock(text, st, stockOf(state, st.key), top).text : text;
-        }, String(desc));
+        const look = newLook(), text = look ? String(desc).replace(PACKS, (m, n) => `+${Number(n) * look.FOOD_PACK_RATIONS} Rations`) : String(desc);
+        return STOCKS.reduce((out, st) => {
+            const start = stockOf(state, st.key), top = topOf(st, state, start);
+            return Number.isFinite(top) ? fitStock(out, st, start, top).text : out;
+        }, text);
     }
     /**
      * Runs a choice's effect (choice.effect(state, ...args)) and returns its result line as it really went: a gain of
@@ -74,11 +88,17 @@
      * from the ship's numbers before lands where the ship is now; otherwise the line is left as the effect wrote it.
      */
     function apply(choice, state, ...args) {
-        const before = STOCKS.map(st => stockOf(state, st.key));
-        const text = choice.effect(state, ...args);
+        const before = STOCKS.map(st => stockOf(state, st.key)), tops = STOCKS.map((st, i) => topOf(st, state, before[i]));
+        const look = newLook();
+        let text = choice.effect(state, ...args);
+        if (look) {
+            STOCKS.forEach((st, i) => { if (st.key === 'energy' && Number(state.energy) > tops[i]) state.energy = tops[i]; });
+            if (typeof state.openFoodPacks === 'function') state.openFoodPacks(true);           // opened now, so the line below says what fitted
+            if (typeof text === 'string') text = text.replace(PACKS, (m, n) => `+${Number(n) * look.FOOD_PACK_RATIONS} Rations`);
+        }
         if (typeof text !== 'string' || !text) return text;
         return STOCKS.reduce((out, st, i) => {
-            const top = st.top(state);
+            const top = tops[i];
             if (!Number.isFinite(top)) return out;
             const r = fitStock(out, st, before[i], top);
             return r.cut && r.end === stockOf(state, st.key) ? r.text : out;

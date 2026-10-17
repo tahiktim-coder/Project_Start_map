@@ -81,6 +81,12 @@
     // ── the story worlds: each still ahead and not boarded wears a warm ring (Pictures), its note says why it matters, and
     //    A.U.R.A. names it once when it is first in sight (the first signal is named by the shell's first hint) ──
     const STORY_TAGS = { signal: 'One of our ships. Send the team aboard', wreck: 'One of our ships. Send the team aboard', course: 'Their last course led here' };
+    const RESERVE_TAG = 'We can only reach it on the reserve';                       // a story world never refused for energy (App.isStoryStop): said before the click
+    /** Short of energy for this story world: the flight there runs on the reserve (bundle.js App.flyOnReserve). */
+    function onReserve(nd) {
+        const ns = NS(), st = ns && ns.app && ns.app.state;
+        try { return !!st && !window.TEST_MODE && typeof st.getWarpCost === 'function' && st.getWarpCost(nd) > st.energy; } catch (err) { return false; }
+    }
     const STORY_LINES = {
         wreck: name => `A.U.R.A.: "One of our ships is calling from ${name}, Commander."`,
         course: name => `A.U.R.A.: "Their last course ends at ${name}, Commander."`,
@@ -105,6 +111,8 @@
         if (t < quietUntil || t - lastSaid < SAY_GAP_MS || W.flight || W.lock || W.held || W.opening || W.jump || W.black || W.ease || noteWasUp || blocked()) return;
         const ns = NS(), v = ns && ns.mods && ns.mods.voice, st = ns && ns.app && ns.app.state;
         if (!st || typeof st.addLog !== 'function' || !v || typeof v.say !== 'function' || !ns.isShown() || shownSector !== sectorNow() || naming.size || talking()) return;
+        const sup = window.NSSupper;
+        if (sup && typeof sup.busy === 'function' && sup.busy()) return;                    // supper after the jump first (tower/Supper.js)
         try { if (typeof v.current === 'function' && v.current()) return; } catch (err) { return; }
         const id = F.ids().find(i => { const e = F.entry(i), k = e && storyKind(e.node); return k && STORY_LINES[k] && !e.node.nsSaid && placeAt(i).shown; });
         if (!id) return;
@@ -271,7 +279,7 @@
         const status = (nd.nsRoute || {}).status, md = W.modes[id] || {};
         if (nd.isStoryPlanet && nd.storyHidden) return { name: 'A faint contact', tag: 'No fix on it yet' };
         const tags = nd.tags || [], kind = storyKind(nd);
-        if (kind && !W.visited.has(id) && md.m !== 'passed') return { name: nd.name || '', tag: STORY_TAGS[kind], story: true };
+        if (kind && !W.visited.has(id) && md.m !== 'passed') return { name: nd.name || '', tag: onReserve(nd) ? RESERVE_TAG : STORY_TAGS[kind], story: true };
         const tag = status === 'visited' || W.visited.has(id) ? 'We stopped here'
             : status === 'passed' || status === 'gone' || md.m === 'passed' ? 'We passed it'
             : nd.isFirstSignal ? 'An old ship beacon'

@@ -67,7 +67,7 @@ const DERELICT_ENCOUNTERS = [
                     }
                     const energyGain = Math.floor(Math.random() * 21) + 50;
                     state.energy = Math.min(100, state.energy + energyGain);
-                    return `Its reactor power moved into ours. +${energyGain} Energy, +${energyGain - 10} after the cost.`;
+                    return `Its reactor power moved into ours. -10 Energy, +${energyGain} Energy.`;   // cost, then gain: EncounterCard.apply replays both
                 }
             },
             {

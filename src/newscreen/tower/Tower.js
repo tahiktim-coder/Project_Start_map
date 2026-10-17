@@ -10,7 +10,11 @@
      their own bunk, asleep); asleep (sedated) in the med bay bed when no one hurt has it, else in their bunk; confined
      standing still at their bunk in the quarters; nobody stays on a red deck (they wait at the galley table, or in the
      med bay when the quarters are red); Aris tends whoever is in the med bay bed while she is in there; Mira works at her
-     bench while a star fix waits there (NSOrbit.datable).
+     bench while a star fix waits there (NSOrbit.datable); too weak from a missed supper, they stay seated at the galley
+     table (Vance on his bunk) until the next team trip has gone.
+   - Supper after a jump (tower/Supper.js, which this module drives): while it is due the crew's day is held at its meal,
+     everyone at the galley table (set while the tower is out of sight); short of food, pointing at someone says
+     "<name> goes without" and a click picks them.
    - The reactor follows the real energy (ShipArt.reactor.set; a step lower with engineering red); the beat runs 1.1 s at
      100, 1.5 s at 10, a missed beat in four below 25; the conduit carries it up to the bridge (TowerMarks).
    - Red decks from NewScreen.game.decks(); engineering red browns the ship out every 2.9 s.
@@ -92,6 +96,10 @@
         vance: { deck: 3, x: 470, facing: -1 }, mira: { deck: 3, x: 346, facing: 1 } };   // the quarters red too: they wait in the med bay
     const MEAL_STAND = { deck: 2, x: 548, facing: -1 };
     const spot = name => (name === 'mealStand' ? MEAL_STAND : S[name]);
+    // Supper after a jump (tower/Supper.js): the crew's day is held at its meal, everyone at the galley table, while it is due.
+    const SUPPER_AT = 128000;                                              // ms into ShipRoutine's lap: all five at the table (they get up at 140 s)
+    // too weak from a missed supper (GameState.serveSupper): they stay seated at the table; Vance, who eats standing, lies on his bunk
+    const WEAK = { jaxon: ['seatL2', 'sit'], aris: ['seatL1', 'sit'], mira: ['seatR1', 'sit'], vance: ['bedVance', 'sleep'] };
 
     // ── the module's own picture state (never game state) ──
     const V = {
@@ -104,6 +112,7 @@
         tendX: null, hover: null, chips: null, words: null, quality: 'high', scaleN: 0, scaleMs: 0,
         tag: null, toldRed: new Set(), tellRed: null, stock: null,
         shake: null, tremor: null, spd: 0, spdIn: 0, spdAt: -1e9, braceT: null, flick: {}, burnT0: null, newRed: new Set(), readOnce: false,
+        routine: { off: 0, held: null },   // the crew's day runs at t + off; held: kept at that moment (supper)
     };
     let NS = null;
     const G = () => (NS && NS.G) || {};
@@ -132,7 +141,7 @@
     }
     function readReal(t) {
         const list = call('crew', []) || [], crew = {};
-        list.forEach(c => { if (c && IDS.includes(c.id)) crew[c.id] = { status: c.status || 'well', stress: c.stress || 0 }; });
+        list.forEach(c => { if (c && IDS.includes(c.id)) crew[c.id] = { status: c.status || 'well', stress: c.stress || 0, weak: !!c.weak }; });
         const raw = call('decks', {}) || {}, decks = {};
         DECKS.forEach(k => { decks[k] = raw[k] === 'red' ? 'red' : 'ok'; });
         const was = (V.real && V.real.decks) || {};
@@ -177,6 +186,7 @@
         if (c.status === 'hurt') return p.id === bed ? stay(p.id, S.patient, 'sleep', t, 'hurt:bed') : stay(p.id, S[BUNK[p.id]], 'sleep', t, 'hurt:bunk');
         if (c.status === 'asleep') return p.id === bed ? stay(p.id, S.patient, 'sleep', t, 'asleep:bed') : stay(p.id, S[BUNK[p.id]], 'sleep', t, 'asleep');
         if (c.status === 'confined') return stay(p.id, CONFINE[p.id], 'idle', t, 'confined');
+        if (c.weak && V.routine.held == null && WEAK[p.id] && !isRed(2)) { const [name, act] = WEAK[p.id]; return stay(p.id, spot(name), act, t, 'weak'); }
         if (p.id === 'mira' && V.real.datable && !isRed(1)) return Object.assign(stay('mira', S.bench, 'console', t, 'bench'), { screen: true });
         if (MOVING[p.act]) return p;                                       // passing through is fine, even a red deck
         if (p.id === 'aris' && bed && bed !== 'aris' && p.deck === 3 && !isRed(3)) return stay('aris', tendSpot(), 'tend', t, 'tend');
@@ -197,9 +207,22 @@
         return has('hurt') || has('asleep') || null;
     }
     function peopleNow(t) {
-        const bed = bedOf(), moved = new Set();
-        const list = SIM.at('travel', t).map(p => { const o = override(p, t, bed); if (o !== p) moved.add(p.id); return o; }).filter(Boolean);
+        const bed = bedOf(), moved = new Set(), held = V.routine.held;
+        const day = SIM.at('travel', held != null ? held : t + V.routine.off)
+            .map(p => (held != null && !MOVING[p.act] && p.act !== 'climb' ? Object.assign({}, p, { ms: t }) : p));   // held: still alive, not a statue
+        const list = day.map(p => { const o = override(p, t, bed); if (o !== p) moved.add(p.id); return o; }).filter(Boolean);
         return unstack(list, moved);
+    }
+    /** Supper after a jump (tower/Supper.js): while it is due, the crew's day is held at its meal, everyone at the galley
+        table; it is set there only while the tower is out of sight (the jump's dark, a new sector's opening), so nobody jumps.
+        Once served, the day runs on from the meal: they finish eating and get up. The scene starts once they are seated. */
+    function stepSupper(dt, t, inView) {
+        const SUP = window.NSSupper;
+        if (!SUP) return;
+        const due = SUP.pending();
+        if (due && V.routine.held == null && !inView) V.routine.held = SUPPER_AT;
+        else if (!due && V.routine.held != null) { V.routine.off = V.routine.held - t; V.routine.held = null; }
+        try { SUP.tick(dt, inView && V.routine.held != null); } catch (err) { console.error('Tower: the supper failed', err); }
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -385,9 +408,11 @@
         stepBeat(dt, t);
         if (V.flood && MK.floodDone({ t, flood: V.flood })) V.flood = null;
         if (V.slide.start != null && t >= V.slide.start + SLIDE_MS) V.slide = { closedUntil: 0, start: null };
+        stepSupper(dt, t, slideK(t) >= 1 && !V.dark && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
         V.people = peopleNow(t);
         if (V.chips && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.chips.deck] !== 'red')) hideChips();
-        if (V.tag && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.tag.deck] !== 'red' || V.chips)) hideTag();
+        const tagGone = V.tag && (V.tag.who ? !(window.NSSupper && window.NSSupper.choosing()) : V.real.decks[V.tag.deck] !== 'red');
+        if (V.tag && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || tagGone || V.chips)) hideTag();
         tellRed();
         if (modeNow() !== 'travel' || V.dark || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame
         stockTick();
@@ -454,6 +479,13 @@
         if (type === 'wheel') return false;                                // the whole tower is in view: nothing to scroll
         if (type === 'leave' || V.dark || slideK(t) < 1 || modeNow() !== 'travel') { V.hover = null; hideTag(); return false; }
         const h = hit(e);
+        const SUP = window.NSSupper, who = h && (h.what === 'person' || h.what === 'bench') && IDS.includes(h.id) ? h.id : null;
+        if (who && SUP && SUP.choosing()) {                                // supper, short of food: pointing names who goes without, a click picks them
+            const tag = SUP.tagFor(who);
+            if (type === 'move') { V.hover = h; if (tag) showTag('quarters', e, tag); else hideTag(); return !!tag; }
+            if (type === 'down') { hideTag(); return SUP.pick(who); }
+            return false;
+        }
         if (type === 'move') { V.hover = h; if (h && h.what === 'deck' && !V.chips) showTag(h.id, e); else hideTag(); return !!h; }
         if (type === 'down') hideTag();
         if (type !== 'down') return false;
@@ -509,22 +541,33 @@
         flowCall('deckChoose', key, i);
     }
     function hideChips() { if (V.chips) { V.chips.el.remove(); V.chips = null; } }
-    /** Pointing at a red deck: its name and what can be done, beside it (the same place the choices will take). */
-    function showTag(deck, e) {
+    /** Pointing at a red deck: its name and what can be done, beside it (the same place the choices will take). At supper,
+        pointing at someone: who goes without (who: { verb, note } from NSSupper.tagFor), beside the galley. */
+    function showTag(deck, e, who) {
         const layer = wordsLayer();
         if (!layer) return;
-        if (!V.tag || V.tag.deck !== deck) {
+        const key = who ? 'who:' + who.verb : deck;
+        if (!V.tag || V.tag.key !== key) {
             hideTag();
             const el = document.createElement('div'), b = document.createElement('span'), n = document.createElement('span');
-            el.className = 'nsk-chips nsk-tag'; b.className = 'nsk-verb'; n.className = 'nsk-note';
-            b.textContent = `${DECK_WORD[deck] || 'This deck'}, broken`; n.textContent = 'Fix, patch or live with it';
+            el.className = 'nsk-chips nsk-tag' + (who ? ' is-who' : ''); b.className = 'nsk-verb'; n.className = 'nsk-note';
+            b.textContent = who ? who.verb : `${DECK_WORD[deck] || 'This deck'}, broken`; n.textContent = who ? who.note : 'Fix, patch or live with it';
             el.append(b, n); layer.append(el);
-            V.tag = { el, deck };
+            V.tag = { el, deck, key, who: !!who };
             void el.offsetWidth; el.classList.add('is-in');
         }
+        if (who) { placeWho(V.tag.el); return; }
         const keep = V.chips; V.chips = V.tag; placeChips(deck, e); V.chips = keep;            // placed as the choices would be
     }
     function hideTag() { if (V.tag) { V.tag.el.remove(); V.tag = null; } }
+    /** Supper: "<name> goes without" over space right of the hull, under the "Accept" chip (else level with the galley), so it
+        never covers the one speaking at the table. */
+    function placeWho(el) {
+        const f = V.fit, chip = document.querySelector('#ns-ship-words .nss-supper'), r = chip && chip.getBoundingClientRect();
+        const [, cy] = toCss(0, A.deckTop(2) + F * 0.5), x = r && r.width ? r.left : (f.wDev + V.slideX) / f.dpr + 20;
+        const y = clamp(r && r.height ? r.bottom + 10 : cy, 16, innerHeight - (el.offsetHeight || 30) - 16);
+        el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    }
     /** Beside the deck, on the side of the tower away from the pointer (over space when the pointer is near the hull edge). */
     function placeChips(deck, e) {
         const el = V.chips.el, w = el.offsetWidth, h = el.offsetHeight, f = V.fit, i = DECKS.indexOf(deck);
@@ -548,6 +591,8 @@
 #ns-ship-words .nsk-choice:focus-visible { outline: none; }
 #ns-ship-words .nsk-tag { display: grid; gap: 4px; pointer-events: none; }
 #ns-ship-words .nsk-tag .nsk-verb { color: #ff7a6a; }
+#ns-ship-words .nsk-tag.is-who { grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 8px; }
+#ns-ship-words .nsk-tag.is-who .nsk-verb { color: var(--warm-br, #ffc27a); }
 @media (prefers-reduced-motion: reduce) { #ns-ship-words .nsk-chips, #ns-ship-words .nsk-verb { transition: none; } }`;
         document.head.appendChild(st);
     }
