@@ -17,6 +17,8 @@ Objective line: *One last log to find. Then there is only the light.* «Coach.js
 _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_
 
 **A.U.R.A.:** The light ahead is getting bigger, Commander.  
+**A.U.R.A.:** That ship is exactly like ours, Commander.  
+**A.U.R.A.:** It turns when we turn, a quarter of a second late.  
 **A.U.R.A.:** Debris ahead, Commander. The heaviest yet.  
 **Jaxon:** That light ahead. I'm reading no heat off it.  
 **A.U.R.A.:** Last of the debris ahead, Commander.  
@@ -45,13 +47,13 @@ If you are reading this, you are the last ship. Go to it. Then decide.
 ### On the sector map «NavView.js · handleStructureSelect»
 _The panel when you click the light._
 
-- [Every crew before you flew toward it.] «NavView.js · line 505»
-- WHAT IT IS It looks like a sun «NavView.js · line 508»
-- HOW WARM It is not «NavView.js · line 512»
-- HOW OLD Older than every wreck behind you «NavView.js · line 516»
-- ANYONE ALIVE Nothing answers. Something reads. «NavView.js · line 520»
-- "I cannot tell you what happens if we go closer, Commander. No ship before us reported back." «NavView.js · line 526»
-- GO TO THE LIGHT ([actual cost] NRG) «NavView.js · line 540»
+- [Every crew before you flew toward it.] «NavView.js · line 490»
+- WHAT IT IS It looks like a sun «NavView.js · line 493»
+- HOW WARM It is not «NavView.js · line 497»
+- HOW OLD Older than every wreck behind you «NavView.js · line 501»
+- ANYONE ALIVE Nothing answers. Something reads. «NavView.js · line 505»
+- "I cannot tell you what happens if we go closer, Commander. No ship before us reported back." «NavView.js · line 511»
+- GO TO THE LIGHT ([actual cost] NRG) «NavView.js · line 525»
 
 ### The jump button «NavView.js · render · jump button»
 _In the last sector the jump button is disabled._
@@ -89,42 +91,42 @@ _In the last sector the jump button is disabled._
 ### Warping to the light «bundle.js · handleWarp»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "The drive fires, Commander. We do not move." «bundle.js · line 1631»
-- A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in." «bundle.js · line 1632»
-- Approach complete. The light fills every window. It is not warm. «bundle.js · line 1777»
+- A.U.R.A.: "The drive fires, Commander. We do not move." «bundle.js · line 1763»
+- A.U.R.A.: "I have checked it three times. From here we can only go in, or turn back to Eden." «bundle.js · line 1764»
+- Approach complete. The light fills every window. It is not warm. «bundle.js · line 1912»
 
 ### Trying to jump past it «bundle.js · handleSectorJump»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light." «bundle.js · line 2284»
+- A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light." «bundle.js · line 2424»
 
 ### Scanning it «bundle.js · handleScanAction»
 _Only these lines of it play at the light._
 
-- Deep Scan started... «bundle.js · line 3443»
-- SCAN: Light, but no heat. «bundle.js · line 3444»
-- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 3445»
-- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 3446»
-- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 3452»
-- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 3454»
+- Deep Scan started... «bundle.js · line 3676»
+- SCAN: Light, but no heat. «bundle.js · line 3677»
+- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 3678»
+- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 3679»
+- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 3685»
+- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 3687»
 
 ### Sending a probe «bundle.js · handleProbeAction»
 _Only these lines of it play at the light._
 
-- No probe available. «bundle.js · line 3583»
-- Probe launched toward the light... «bundle.js · line 3587»
-- Signal lost at once. No data, and no wreckage. «bundle.js · line 3588»
-- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 3589»
+- No probe available. «bundle.js · line 3820»
+- Probe launched toward the light... «bundle.js · line 3824»
+- Signal lost at once. No data, and no wreckage. «bundle.js · line 3825»
+- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 3826»
 
 ### Sending the team «bundle.js · handleEvaAction»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 3785»
+- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 4022»
 
 ### Trying to leave «bundle.js · init · req-break-orbit»
 _Breaking orbit at the light._
 
-- A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times." «bundle.js · line 1295»
+- A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times." «bundle.js · line 1421»
 
 ## The sector's own trouble: THRESHOLD_CALL «SectorConfig.js · 6.hazard»
 _Nothing here is random. The light reads what reaches it._

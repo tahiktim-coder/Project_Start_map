@@ -16,8 +16,8 @@ Objective line: only where to look (the lines listed in sector 2), while the pag
 ### The burn that stalls «bundle.js · plotStalledBurn»
 _The jump is plotted (the burn mini-game, 09-ship-and-crew.md) and its card says only this._
 
-- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 2463»
-- **line** — The jump did not finish. «bundle.js · line 2463»
+- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 2672»
+- **line** — The jump did not finish. «bundle.js · line 2672»
 
 ### The jump that does not finish «TheThrow.js · BEATS»
 
@@ -71,20 +71,7 @@ It said we were not sent further than the others. We were sent less far back in 
 ## A planet that is not there «NavView.js · phantom planet click»
 _The arrival can add a ghost planet (see the sector's own trouble, below). Clicking it:_
 
-- SIGNAL INTERFERENCE: [name] was a phantom reading. The signal dissolves. «NavView.js · line 227»
-- [name]: "The readings just... vanished. The signal is playing games with our instruments." «NavView.js · line 232»
-- ⚠ SIGNAL INTERFERENCE «NavView.js · line 242»
-- Phantom reading dissolved. Sensor recalibrating... «NavView.js · line 243»
-
-## Never played: the corridor film «StoryReel.js · corridor»
-_Written for this sector, but no code plays it._
-_Source on screen: BRIDGE DISPLAY · THE FILM, WITH EVERY TRANSPONDER WE CAN HEAR_
-_Counter on screen: HULLS ON THIS HEADING_
-
-*Mira puts the briefing film back up.*  
-*Then she lays the real signals over it.*  
-*They were not sent everywhere. They were all sent this way.*  
-*All of them. Toward one thing.*  
+_(no text)_
 
 ## The sector's own trouble: INTERFERENCE «SectorConfig.js · 3.hazard»
 _Hundreds of dead transponders on the scan band scramble readings_
@@ -96,7 +83,7 @@ On arrival:
 - Echo-[n] · Phantom-[n] · Mirage-[n] «SectorConfig.js · 3.hazard.onSectorEnter»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / INSIDE THE LIGHT · THE DISC, BEING READ / INSIDE THE LIGHT / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### THE LANDER «CrewEvents.js · JAXON_REPAIR»
 _Sectors 3, 4_
