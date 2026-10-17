@@ -566,24 +566,35 @@ for (let sector = 1; sector <= 6; sector++) {
 
 // the finale
 {
-    const fin = G('STRUCTURE_ENCOUNTER'), modal = bm('showStructureModal'), b = [HOW, ''];
+    const fin = G('STRUCTURE_ENCOUNTER'), b = [HOW, ''], FILE = 'StructureEncounter.js';
     b.push(...textSection(2, 'Going in', bm('handleStructureAction'), 'Pressing GO INTO THE LIGHT.'));
     b.push(`## The light${tag('StoryReel.js', 'light')}`, reelSource('light'), '', ...reelCaptions('light'), '');
     const view = (fin && fin.disc && fin.disc.view) || {};
-    b.push(`## Our disc, from the hold${tag('StructureEncounter.js', 'disc.view')}`, '_Only if the team brought the disc aboard in sector 5: the disc page again, as the real object (its notes in sector-5.md), with these words around it:_', '',
+    b.push(`## Our disc, from the hold${tag(FILE, 'disc.view')}`, '_Only the first time, and only if the team brought the disc aboard in sector 5: the disc page again, as the real object (its notes in sector-5.md), with these words around it:_', '',
         `- ${clean(view.kicker)}`, `- ${lineOf('A.U.R.A.', view.aura)}`, `- ${clean(view.close)} — ${clean(view.closeNote)}`, '');
-    if (fin) {
-        b.push(`## ${fin.approach.title}${tag('StructureEncounter.js', 'approach')}`, fin.approach.kicker ? `_Card kicker: ${clean(fin.approach.kicker)}_` : '', '', `> ${clean(fin.approach.context)}`, '', ...fin.approach.dialogue.map(d => lineOf(d.speaker, d.text) + '  '), '', '## The choice', '');
-        b.push('_A locked choice shows its reason with this added:_', ...bulletsOf(modal, t => /backed them/.test(t.text)), '');
-        fin.choices.forEach(c => {
-            b.push(`### ${c.text}${tag('StructureEncounter.js', c.id)}`, `_${clean(c.desc)}_${c.requiresLabel ? `  \nLocked when: ${c.requiresLabel}` : ''}${c.needsDisc && fin.disc ? `  \nClosed without the disc: ${fin.disc.missing}` : ''}`, '');
-            const r = c.effect({ _sleepers: 3 });
-            b.push(`**${r.title}**`, '', ...[].concat(r.text).map(t => `${clean(t)}  `), '');
+    if (fin && fin.council && fin.endings) {
+        const C = fin.council, who = id => (id === 'aura' ? 'A.U.R.A.' : id.charAt(0).toUpperCase() + id.slice(1));
+        const WHEN = { hasDisc: 'the disc is aboard', edenVisited: 'a team walked on Eden', walkedEden: 'they walked on Eden themselves', wentWithout: 'they went without supper at least once',
+            sentMost: 'sent down three times or more, more than anyone', lostSomeone: 'a crewmate died ({lost} is the name)' };
+        b.push(`## ${fin.approach.title}: the crew have their say${tag(FILE, 'approach')}`, fin.approach.kicker ? `_Card kicker: ${clean(fin.approach.kicker)}_` : '', '', `> ${clean(fin.approach.context)}`, '',
+            ...fin.approach.dialogue.map(d => lineOf(d.speaker, d.text) + '  '), '',
+            '_Then each crew member who can speak, in this order, says the first of their lines that fits the run (nothing is locked by it):_', '');
+        C.speakOrder.forEach(id => C.lines[id].forEach((l, i) => b.push(`${lineOf(who(id), l.text)} _(${l.when ? `when ${WHEN[l.when] || l.when}` : 'otherwise'})_${tag(FILE, `council.lines.${id}[${i}]`)}  `)));
+        b.push('', `_Asked again after "Not yet":_ ${lineOf(C.again.speaker, C.again.text)}${tag(FILE, 'council.again')}`, '', '## The choice', '',
+            ...C.choices.map((c, i) => `- **${c.text}** — ${clean(c.desc)}${tag(FILE, `council.choices[${i}]`)}`), '');
+        Object.entries(fin.endings).forEach(([door, e]) => {
+            b.push(`## ${e.title}${tag(FILE, `endings.${door}`)}`, '');
+            if (e.flight) b.push('_The flight in (the new look; the lines of the dead are skipped):_', '', ...e.flight.map(l => lineOf(who(l.who), l.say) + '  '),
+                `${lineOf(who(e.hold.who), e.hold.say)} _(the ship slows; the commander chooses "${clean(e.keepGoing)}")_`, '');
+            if (e.turn) b.push('_Turning back from the light (the new look; not when you settled on Eden itself):_', '', lineOf(who(e.turn.who), e.turn.say), '');
+            b.push('_The closing line (the new look), said by the first of them who is alive:_', '', ...e.closing.map(l => lineOf(who(l.who), l.say) + '  '), '');
+            if (e.discLine) b.push(`_The last words, only with the disc aboard:_ ${lineOf(null, e.discLine)}`, '');
+            b.push(`_The end card: **${clean(e.title)}**, then three lines:_`, '', ...Object.entries(e.card).map(([k, t]) => `- ${clean(t)} _(${k})_`), '');
         });
     }
-    b.push(...textSection(2, 'The ending card', block('src/systems/EndScreens.js', /function endingHtml/), 'The kicker shows the ending\'s code name (for example BREAK_MAP) as it is.'));
+    b.push(...textSection(2, 'The ending card (the default game)', block('src/systems/EndScreens.js', /function endingHtml/), 'The kicker shows the ending\'s code name (for example INTO_THE_LIGHT) as it is.'));
     b.push(...textSection(3, 'Who made it', block('src/systems/EndScreens.js', /function rosterHtml/), 'The crew list on the ending and colony cards.'));
-    b.push(...textSection(3, 'In the log', bm('showEndingScreen'), 'The last three lines sit after a return in the code and never print.'));
+    b.push(...textSection(3, 'In the log', bm('recordEnding'), 'Once per run, when the journey ends.'));
     write('07-finale.md', 'The finale — the light', b);
 }
 

@@ -245,6 +245,7 @@ class GameState {
      * Save current game state to localStorage
      */
     saveGame() {
+        if (this.gameOver) return false;                                                // a finished run is never saved again
         const saveData = {
             version: 2,
             timestamp: Date.now(),
@@ -382,7 +383,7 @@ class GameState {
             this.exodusLogsFound = (saveData.exodusLogsFound || []).filter(id => pageIds.includes(id)); // old saves counted eight logs by number
             this.hasDisc = !!saveData.hasDisc;
             this._boardedHulls = saveData._boardedHulls || [];
-            this._standing = saveData._standing || ((saveData.version || 1) < 2 ? { vance: 2, aris: 2, jaxon: 2, mira: 2 } : null); // a save from before standing existed keeps every ending open
+            this._standing = saveData._standing || null;
             this._countSceneSeen = !!saveData._countSceneSeen;
             this._tutorialWarpSeen = !!saveData._tutorialWarpSeen;
             this._tutorialEvaSeen = !!saveData._tutorialEvaSeen;
@@ -489,12 +490,11 @@ class GameState {
         return Math.min(WARP_FAR, WARP_NEAR + Math.floor(map.mapDistance(from, to) / MAP_DISTANCE_PER_STEP));
     }
 
-    /** Who you sided with. Two of three moments gives you standing for that person's ending (docs/CANON.md §9). */
+    /** Who you sided with, kept with the run. Nothing is locked by it: the ending is two open doors (StructureEncounter.js). */
     noteStanding(who, delta) {
         this._standing = this._standing || { vance: 0, aris: 0, jaxon: 0, mira: 0 };
         this._standing[who] = (this._standing[who] || 0) + (delta == null ? 1 : delta);
     }
-    hasStanding(who, needed) { return ((this._standing || {})[who] || 0) >= (needed == null ? 2 : needed); }
 
     /** The dead do not talk, and the commander is the player: neither gets a spoken line in the log. */
     isSilentSpeaker(message) {
@@ -722,6 +722,7 @@ class GameState {
             const was = skip.stress || 0;
             if (skip.status === 'INJURED' || was >= 2) skip._nsWeak = true;
             skip.stress = Math.min(skip._nsWeak ? Math.max(2, was) : 3, was + 1);
+            skip._wentWithout = (skip._wentWithout || 0) + 1;                                // remembered: the crew may say so at the light
         }
         this.addLog(short ? `A.U.R.A. cut the portions.${skip ? ` ${skip.name} went without supper.` : ''} ${this.rations} rations left.`
             : `The crew ate ${ate} rations at supper. ${this.rations} left.`);
@@ -1760,7 +1761,7 @@ class App {
         if (currentPlanet && (currentPlanet.isStructure || currentPlanet.type === 'STRUCTURE')) {
             if (planet && planet.id === currentPlanet.id) { this.renderOrbit(); return; }   // "approach" while already there: just show it
             this.state.addLog('A.U.R.A.: "The drive fires, Commander. We do not move."');
-            this.state.addLog('A.U.R.A.: "I have checked it three times. There is only one way from here, and it is in."');
+            this.state.addLog('A.U.R.A.: "I have checked it three times. From here we can only go in, or turn back to Eden."');   // the two doors (StructureEncounter.js)
             return;
         }
 
@@ -3319,55 +3320,82 @@ Then you're through.`,
         }
 
         const encounter = (typeof STRUCTURE_ENCOUNTER !== 'undefined') ? STRUCTURE_ENCOUNTER : null;
-        if (!encounter) {
+        if (!encounter || typeof window.buildLightCouncil !== 'function') {
             this.state.addLog("ERROR: Structure encounter data unavailable.");
             return;
         }
 
-        this.state.addLog("Going into the light.");
-
-        // Show the approach modal with cinematic text
         this.showStructureModal(encounter, planet);
     }
 
+    /**
+     * At the light (docs/STORY_MAP.md step 9). The first time, the light fills the window (StoryReel) and our disc comes out
+     * of the hold if we found it. Then the crew have their say at the window (StructureEncounter.js buildLightCouncil) and the
+     * commander picks "Not yet" (back to the view, nothing spent: asked again, A.U.R.A. alone), "Into the light" or "Back to
+     * Eden". Nothing is locked and nothing here is random.
+     */
     showStructureModal(encounter, planet) {
-        const SPEAKER_ROLE = { 'Jaxon': 'ENGINEER', 'Aris': 'MEDIC', 'Vance': 'SECURITY', 'Mira': 'SPECIALIST' };
-        const isAlive = (speaker) => {
-            const role = SPEAKER_ROLE[speaker];
-            if (!role) return true;
-            const member = this.state.crew.find(c => c.tags.includes(role));
-            return !!member && member.status !== 'DEAD';
-        };
-        const a = encounter.approach, disc = encounter.disc || {};
-        // the light (a picture), then our own disc from the hold if we found it, then the choice; nothing here is random
-        const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('light') : Promise.resolve();
-        const ourDisc = () => (this.state.hasDisc && window.DiscDocument ? window.DiscDocument.open(this, { real: true, ...disc.view }) : Promise.resolve());
-        reel.then(ourDisc).then(() => window.EncounterCard.open(this, {
-            color: '#ffd27a', kicker: a.kicker, title: a.title, zIndex: 3000, context: a.context,
-            dialogue: a.dialogue.filter(d => isAlive(d.speaker)),
-            choices: encounter.choices.map(c => {
-                if (c.needsDisc && !this.state.hasDisc) return { text: c.text, desc: c.desc, requires: () => false, requiresLabel: disc.missing };   // nothing to cut
-                const had = c.who ? ((this.state._standing || {})[c.who] || 0) : null;
-                const label = c.who && typeof STANDING_NEEDED !== 'undefined' ? `${c.requiresLabel} (you backed them ${Math.min(had, STANDING_NEEDED)} of the ${STANDING_NEEDED} times it takes)` : c.requiresLabel;
-                return { text: c.text, desc: c.desc, requires: c.requires, requiresLabel: label };
-            }),
-            onPick: (idx) => {
-                const choice = encounter.choices[idx];
-                planet.structureApproached = true;
-                this.playEndingByHand(choice).then(() => this.showEndingScreen(choice.effect(this.state)));
-            }
-        }));
+        if (this._lightCardOpen) return;                                                 // a second click while it opens: one council
+        this._lightCardOpen = true;
+        const isFirst = !planet._lightCouncilHeard, disc = encounter.disc || {};
+        const reel = isFirst && window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('light') : Promise.resolve();
+        const ourDisc = () => (isFirst && this.state.hasDisc && window.DiscDocument ? window.DiscDocument.open(this, { real: true, ...disc.view }) : Promise.resolve());
+        reel.then(ourDisc).then(() => {
+            const council = window.buildLightCouncil(this.state, { isRepeat: !isFirst });
+            planet._lightCouncilHeard = true;
+            window.EncounterCard.open(this, {
+                color: '#ffd27a', kicker: council.kicker, title: council.title, zIndex: 3000, context: council.context,
+                dialogue: council.dialogue, choices: council.choices,
+                onPick: idx => {
+                    this._lightCardOpen = false;
+                    const door = council.doors[idx];
+                    if (!door) return;                                                   // "Not yet": back to the window, nothing spent
+                    if (this.endJourney(door, 'light')) planet.structureApproached = true;
+                },
+            });
+        }).catch(err => { this._lightCardOpen = false; console.error('The light could not open', err); });
     }
 
-    /** Destroying the map is done by hand: the commander cuts our disc, from the hold (Torch, disc mode). Every other ending goes straight to its screen. */
-    playEndingByHand(choice) {
-        if (choice.id !== 'BREAK_MAP' || !window.MiniHost || !window.MiniHost.has('torch')) return Promise.resolve();
-        return window.MiniHost.play('torch', { mode: 'disc', kicker: 'AT THE LIGHT', title: 'The disc' }).catch(err => console.error(err));
+    /**
+     * The journey ends through one of the two doors (StructureEncounter.js lightEndingFor): door 'LIGHT' or 'EDEN'; from
+     * 'light' (the choice at the light) or 'eden' (settled on Eden itself). Once per run; false if it could not start. From here
+     * nothing saves (GameState.saveGame skips a finished run). The new look plays the ending's scene (src/newscreen/end/
+     * Ending.js) and drops the save when its end card shows, so a reload during the scene comes back to the light, before the
+     * choice; the default game shows the same lines on its end screen at once.
+     */
+    endJourney(door, from) {
+        if (this._journeyEnded) return false;
+        let ending;
+        try { ending = window.lightEndingFor(door, this.state); } catch (err) { console.error('The ending could not be built', err); return false; }
+        this._journeyEnded = true;
+        const asScreen = () => ({ ending: ending.ending, title: ending.title.toUpperCase(), text: ending.text });
+        this.state.gameOver = true;                                                      // nothing else ends the run over its ending
+        this.state.addLog(door === 'LIGHT' ? 'Going into the light.' : from === 'light' ? 'Turning back to Eden.' : 'We are staying on Eden.');
+        if (isNewScreen() && window.NSEnding) {
+            window.NSEnding.play(this, ending, { from }).then(() => this.recordEnding(ending), err => {
+                console.error('The ending scene failed; the end screen instead', err);
+                this.showEndingScreen(asScreen());
+            });
+            return true;
+        }
+        this.showEndingScreen(asScreen());
+        return true;
+    }
+
+    /** The journey is over: the save goes (a new game starts fresh) and the log says which ending. Once per run. */
+    recordEnding(result) {
+        if (this._endingRecorded) return;
+        this._endingRecorded = true;
+        this.state.deleteSave();
+        this.state.addLog("===================================");
+        this.state.addLog(`ENDING ACHIEVED: ${result.title}`);
+        this.state.addLog("===================================");
+        this.state.addLog("The journey of the Exodus-9 has concluded.");
     }
 
     showEndingScreen(result) {
-        // Delete save file - journey is complete
-        this.state.deleteSave();
+        // Delete the save and log the ending - journey is complete
+        this.recordEnding(result);
 
         // This is the GAME ENDING screen
         const modal = document.createElement('div');
@@ -3484,12 +3512,6 @@ Then you're through.`,
             modal.innerHTML = window.EndScreens.endingHtml(this.state, result, cleanText);
         }
         document.body.appendChild(modal);
-
-        // Add ending log
-        this.state.addLog("===================================");
-        this.state.addLog(`ENDING ACHIEVED: ${result.title}`);
-        this.state.addLog("===================================");
-        this.state.addLog("The journey of the Exodus-9 has concluded.");
 
         // New game button
         const newGameBtn = modal.querySelector('#btn-new-game');
@@ -4072,6 +4094,10 @@ Then you're through.`,
 
         // Store EVA team for resolveEvaOutcome
         this.currentEvaTeam = evaTeam;
+        evaTeam.forEach(c => {                                                       // remembered: the crew may say so at the light
+            c._tripsDown = (c._tripsDown || 0) + 1;
+            if (planet.isEden || planet.type === 'EDEN') c._walkedEden = true;
+        });
 
         // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
         const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
@@ -4485,7 +4511,8 @@ Then you're through.`,
 
     /**
      * Eden (the one world beside the light, SectorConfig 6 eden): the team's card on the surface. The lure and its gifts are
-     * real; it is only a little too perfect, shown and never said. Settling goes through the settle council like any world.
+     * real; it is only a little too perfect, shown and never said. Settling goes through the settle council like any world,
+     * and ends the journey as the light's Eden door does (_executeColony → endJourney).
      */
     showEdenEvaModal(planet) {
         const evaTeam = this.currentEvaTeam;
@@ -5057,6 +5084,10 @@ Then you're through.`,
     _executeColony(planet, { isScanWaived = false } = {}) {
         if (!planet.scanned && !isScanWaived && !window.TEST_MODE) { // nobody lands five people on a world they have not looked at
             this.state.addLog('A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first."');
+            return;
+        }
+        if ((planet.isEden || planet.type === 'EDEN') && typeof window.lightEndingFor === 'function') {   // settling on Eden is the Eden door
+            this.endJourney('EDEN', 'eden');
             return;
         }
         // Generate Outcome based on Planet Metrics
