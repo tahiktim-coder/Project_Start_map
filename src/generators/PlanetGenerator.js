@@ -9,6 +9,7 @@ const PLANET_TYPES = [
     'STORM_WORLD', 'FUNGAL', 'TOMB_WORLD', 'EDEN', 'MACHINE_WORLD', 'FROZEN_OCEAN',
     'SULFUR', 'CARBON', 'RADIATION_BELT', 'GHOST_WORLD'
 ];
+const RANDOM_TYPES = PLANET_TYPES.filter(type => type !== 'EDEN');   // Eden is one place (SectorConfig 6 eden), never a random world
 
 const ATMOSPHERES = {
     BREATHABLE: { type: 'BREATHABLE', chance: 0.1 },
@@ -95,6 +96,9 @@ class PlanetGenerator {
             });
         }
 
+        const eden = this.generateEden(level, config);                     // sector 6: the one Eden, at its fixed place beside the light
+        if (eden) sector.push(eden);
+
         // Sector enter hazard (e.g., S3 ghost planets)
         if (config && config.hazard && config.hazard.onSectorEnter) {
             config.hazard.onSectorEnter(null, sector); // state passed from bundle.js
@@ -127,9 +131,9 @@ class PlanetGenerator {
     static assignNonOverlappingPositions(sector) {
         const minDistance = 15; // Minimum distance between planets (percentage)
         const positions = [];
-        const isFixed = body => body.isStructure || body._isWrongPlace || body.isStoryPlanet;
+        const isFixed = body => body.isStructure || body._isWrongPlace || body.isStoryPlanet || body.isEden;
 
-        // First, collect positions of fixed bodies (THE STRUCTURE, the story planet)
+        // First, collect positions of fixed bodies (THE STRUCTURE, the story planet, Eden)
         sector.forEach(body => {
             if (isFixed(body)) {
                 // Keep fixed position, add to collision list
@@ -199,6 +203,23 @@ class PlanetGenerator {
     }
 
     /**
+     * Eden (SectorConfig eden: only sector 6): one green world, always named Eden, always at its place beside the light.
+     * Too perfect to need anything: no site on it, no ruins, no signals, nothing dangerous on a scan. Null in any other sector.
+     */
+    static generateEden(level, config) {
+        const def = config && config.eden;
+        if (!def) return null;
+        const planet = this.generatePlanet(level, config, 'EDEN');
+        return {
+            ...planet,
+            id: `eden-${level}-${Date.now()}`,
+            name: def.name, isEden: true, tags: [], dangerLevel: 0,
+            metrics: { ...planet.metrics, hasTech: false },
+            mapData: { x: def.at.x, y: def.at.y },
+        };
+    }
+
+    /**
      * Generate a space station node for the sector map
      */
     static generateStation(level) {
@@ -250,7 +271,7 @@ class PlanetGenerator {
         } else if (config && config.allowedTypes) {
             type = config.allowedTypes[Math.floor(Math.random() * config.allowedTypes.length)];
         } else {
-            type = PLANET_TYPES[Math.floor(Math.random() * PLANET_TYPES.length)];
+            type = RANDOM_TYPES[Math.floor(Math.random() * RANDOM_TYPES.length)];
         }
         const nameBase = NAMES[Math.floor(Math.random() * NAMES.length)];
         const suffix = SUFFIXES[Math.floor(Math.random() * SUFFIXES.length)];
@@ -512,8 +533,8 @@ class PlanetGenerator {
      * Types in the bias object get multiplied weight; all others get weight 1
      */
     static _selectBiasedType(config) {
-        // Build weighted pool: all allowed types (or all types) with bias multipliers
-        const pool = config.allowedTypes || PLANET_TYPES;
+        // Build weighted pool: all allowed types (or every random type: never Eden) with bias multipliers
+        const pool = config.allowedTypes || RANDOM_TYPES;
         const bias = config.typeBias || {};
 
         const weighted = [];

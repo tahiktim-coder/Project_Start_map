@@ -214,6 +214,7 @@ class GameState {
 
         // --- Exodus Log collection (Phase 2) ---
         this.exodusLogsFound = [];
+        this.hasDisc = false;      // the real disc is aboard (sector 5's find, App.findSectorPage); the twin and the finale read it
 
         // --- Colony knowledge (learned from failed colony encounters) ---
         this._colonyKnowledge = 0;
@@ -279,6 +280,7 @@ class GameState {
             // Progress
             actionsTaken: this.actionsTaken,
             exodusLogsFound: this.exodusLogsFound,
+            hasDisc: !!this.hasDisc,
             _colonyKnowledge: this._colonyKnowledge,
             fungusActionCounter: this.fungusActionCounter,
             // Special states
@@ -378,6 +380,7 @@ class GameState {
             this.actionsTaken = saveData.actionsTaken;
             const pageIds = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).map(p => p.id);
             this.exodusLogsFound = (saveData.exodusLogsFound || []).filter(id => pageIds.includes(id)); // old saves counted eight logs by number
+            this.hasDisc = !!saveData.hasDisc;
             this._boardedHulls = saveData._boardedHulls || [];
             this._standing = saveData._standing || ((saveData.version || 1) < 2 ? { vance: 2, aris: 2, jaxon: 2, mira: 2 } : null); // a save from before standing existed keeps every ending open
             this._countSceneSeen = !!saveData._countSceneSeen;
@@ -997,7 +1000,7 @@ class GameState {
         return this.isDeckOperational('cargo') ? full : Math.floor(full / 2);
     }
 
-    /** Items taking room in the hold. Papers and tapes (isKept: the pages, the disc drawing, the tape) take none. */
+    /** Items taking room in the hold. Papers and the disc (isKept: the pages, the disc drawing, the disc itself) take none. */
     getCargoCount() {
         return this.cargo.filter(item => !item.isKept).length;
     }
@@ -1114,7 +1117,7 @@ window.OPENING_TALK = OPENING_TALK;
 const isNewScreen = () => !!(window.NEW_SCREEN && window.NewScreen && window.NSRoute);   // a partial load falls back to today's map
 window.FINAL_SECTOR = FINAL_SECTOR;                                                  // the new screen reads it (one number, one place)
 /** A place a team can land, other than the sector's story planet (that one keeps its own wreck and page). */
-const isOrdinaryLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && !p.isStoryPlanet && p.type !== 'GAS_GIANT';
+const isOrdinaryLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && !p.isStoryPlanet && !p.isEden && p.type !== 'GAS_GIANT';
 
 class App {
     constructor() {
@@ -1644,7 +1647,7 @@ class App {
     tidySites() {
         const ORDER = ['EXODUS_WRECK', 'ANOMALY', 'LIGHTHOUSE', 'GARDEN', 'GRAVE', 'FAILED_COLONY', 'DERELICT'];
         const nodes = this.state.sectorNodes || [];
-        const isStory = p => p.hasPage || p.hasTape || p.isFirstSignal;
+        const isStory = p => p.hasPage || p.isFirstSignal;
         const isLandable = p => !p.isStation && !p.isAsteroidField && !p.isStructure && !p.ghost && p.type !== 'GAS_GIANT';
         const siteOf = p => (p.tags || []).find(t => ORDER.includes(t));
         nodes.forEach(p => {
@@ -1653,14 +1656,17 @@ class App {
             p.tags = p.tags.filter(t => !ORDER.includes(t) || t === keep);
         });
         if (nodes.some(p => siteOf(p) === 'ANOMALY')) return;
-        const canHost = p => isLandable(p) && !isStory(p) && siteOf(p) !== 'EXODUS_WRECK';
+        const canHost = p => isLandable(p) && !isStory(p) && !p.isEden && siteOf(p) !== 'EXODUS_WRECK';   // Eden keeps its own card
         const host = nodes.find(p => canHost(p) && !siteOf(p)) || nodes.find(canHost);   // a planet with nothing on it first
         if (host) { host.tags = (host.tags || []).filter(t => !ORDER.includes(t)).concat('ANOMALY'); host.forcedAnomaly = true; }
     }
 
-    /** A found page as a cargo item: kept, and readable again from the hold. */
+    /** A found page as a cargo item: kept, and readable again from the hold. Sector 5's is the disc itself, shown as the real object. */
     pageItem(page, acquiredAt) {
-        return { ...page, acquiredAt, onUse: () => { if (window.FoundPage) window.FoundPage.open(this, page, acquiredAt); return 'You read it again.'; } };
+        const onUse = page.kind === 'disc'
+            ? () => { if (window.DiscDocument) window.DiscDocument.open(this, { real: true }); return 'You take the disc out again.'; }
+            : () => { if (window.FoundPage) window.FoundPage.open(this, page, acquiredAt); return 'You read it again.'; };
+        return { ...page, acquiredAt, onUse };
     }
 
     /**
@@ -1677,7 +1683,8 @@ class App {
         this.tidySites();
     }
 
-    /** Found in the wreck: the page opens at once and stays in cargo. Resolves once it is put away. */
+    /** Found in the wreck: the page opens at once and stays in cargo. Resolves once it is put away. Sector 5's "page" is the
+        disc itself (kind 'disc'): it is aboard from now on (state.hasDisc), and its own card shows it (showDiscFound). */
     findSectorPage(shipName, pageId) {
         const PAGE_DELAY_MS = 900;
         const page = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).find(p => p.id === pageId);
@@ -1685,40 +1692,28 @@ class App {
         this.state.exodusLogsFound = this.state.exodusLogsFound || [];
         this.state.exodusLogsFound.push(page.id);
         this.state.cargo.push(this.pageItem(page, shipName));
+        if (page.kind === 'disc') this.state.hasDisc = true;
         this.state.addLog(`In ${shipName}: ${page.desc}`);
         this.state.emitUpdates();
-        return new Promise(resolve => setTimeout(() => {
-            (window.FoundPage ? window.FoundPage.open(this, page, shipName) : Promise.resolve()).then(resolve);
-        }, PAGE_DELAY_MS));
+        const show = () => (page.kind === 'disc' ? this.showDiscFound(page, shipName)
+            : window.FoundPage ? window.FoundPage.open(this, page, shipName) : Promise.resolve());
+        return new Promise(resolve => setTimeout(() => show().then(resolve), PAGE_DELAY_MS));
     }
 
-    /** Sector 2 always holds one wreck with the uncut briefing tape in its archive. Unmarked: you find it by searching wrecks. */
-    plantBriefingTape() {
-        const nodes = this.state.sectorNodes || [];
-        if (this.state.currentSector !== 2 || nodes.some(p => p.hasTape) || this.state.cargo.some(i => i.id === 'briefing_tape')) return;
-        const target = nodes.find(p => isOrdinaryLandable(p) && (p.tags || []).includes('EXODUS_WRECK')) || nodes.find(isOrdinaryLandable);
-        if (!target) return;
-        target.tags = target.tags || [];
-        if (!target.tags.includes('EXODUS_WRECK')) target.tags.push('EXODUS_WRECK');
-        target.hasTape = true;
-    }
-
-    /** Found in the wreck's archive; it plays at once, and Vance says the thing nobody wants said. */
-    findBriefingTape(shipName) {
-        const TAPE_DELAY_MS = 900;
-        if (typeof ITEMS === 'undefined' || !ITEMS.BRIEFING_TAPE || this.state.cargo.some(i => i.id === ITEMS.BRIEFING_TAPE.id)) return Promise.resolve();
-        this.state.cargo.push({ ...ITEMS.BRIEFING_TAPE, acquiredAt: shipName });
-        this.state.addLog(`In the archive of ${shipName}: a tape with our programme's seal. It is in your cargo now.`);
-        this.state.emitUpdates();
-        return new Promise(resolve => setTimeout(() => {
-            const played = window.StoryReel ? window.StoryReel.play('uncut') : Promise.resolve();
-            played.then(() => {
-                this.state.addLog('Vance: "That is not eight ships. That is hundreds."');
-                this.state.addLog('A.U.R.A.: "Old recordings degrade, Vance. I would not read too much into it."');
-                this.state.emitUpdates();
-                resolve();
-            });
-        }, TAPE_DELAY_MS));
+    /** The disc, found in the last ship that carried it: one card with one line from the team (A.U.R.A. over the radio when
+        none of them has a line), then the disc page as the real object. Resolves once the disc is put away. */
+    showDiscFound(page, shipName) {
+        const card = page.card || {}, said = card.said || [];
+        const team = (this.currentEvaTeam || []).filter(m => m && m.status !== 'DEAD').map(m => m.name);
+        const line = said.find(l => team.includes(l.speaker)) || said.find(l => l.speaker === 'A.U.R.A.');
+        const showDisc = () => (window.DiscDocument ? window.DiscDocument.open(this, { real: true }) : Promise.resolve());
+        if (!window.EncounterCard) return showDisc();
+        return new Promise(resolve => window.EncounterCard.open(this, {
+            tone: 'story', zIndex: 2600, kicker: `FOUND IN ${shipName}`, title: card.title || page.name,
+            context: card.context, dialogue: line ? [line] : [],
+            choices: [card.take || { text: 'Bring it aboard', desc: '' }],
+            onPick: () => showDisc().then(resolve),
+        }));
     }
 
     markFirstSignal() {
@@ -2388,11 +2383,12 @@ class App {
         this.state.emitUpdates();
     }
 
-    /** The sector jump, flown (Corridor). Resolves once the flight is over and what it cost is applied; it never rejects. */
+    /** The sector jump, flown (Corridor). Resolves once the flight is over and what it cost is applied; it never rejects.
+        twin: with the disc aboard, a copy of our ship flies beside us on the jump into the last sector (Corridor's SECTORS). */
     flyCorridor() {
         const from = this.state.currentSector;
         const damaged = Object.fromEntries(Object.entries(this.state.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
-        const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, avoidHulls: this.takenHulls() };
+        const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
         return window.MiniHost.play('corridor', opts)
             .then(result => this.applyCorridorResult(result), err => console.error(err));
     }
@@ -2616,7 +2612,6 @@ class App {
         this.state.sectorNodes = PlanetGenerator.generateSector(nextSector);
         this.state.currentSector = nextSector;
         this.state.lastVisitedSystem = null;
-        this.plantBriefingTape();
         this.plantSectorPage();
         this.state.emitUpdates();                                                   // the header names the new sector at once
 
@@ -2723,7 +2718,7 @@ class App {
                 SECTOR_NAMES[s] = SECTOR_CONFIG[s] ? SECTOR_CONFIG[s].name : '???';
             }
         } else {
-            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE GARDEN', 5: 'THE TALLY', 6: 'THE LIGHT' });
+            Object.assign(SECTOR_NAMES, { 1: 'THE GRAVEYARD', 2: 'THE DARK VOID', 3: 'THE SIGNAL', 4: 'THE COLONIES', 5: 'THE STATION', 6: 'THE LIGHT' });
         }
 
         // Use narrative modal system if available for immersive experience
@@ -2828,7 +2823,7 @@ class App {
         const all = typeof EXODUS_ENCOUNTERS !== 'undefined' ? EXODUS_ENCOUNTERS : [];
         const kept = planet.wreckEncounter && all.find(e => e.id === planet.wreckEncounter);
         if (kept) return kept;
-        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal || planet.hasTape);
+        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal);
         if (picked) planet.wreckEncounter = picked.id;
         return picked;
     }
@@ -2844,8 +2839,7 @@ class App {
             this.state.addLog("We already searched this wreck.");
             return;
         }
-        // A story planet's ship is whole (its map line says so); so is the first wreck, whose logbook holds the disc drawing,
-        // and the wreck with the tape in its archive.
+        // A story planet's ship is whole (its map line says so); so is the first wreck, whose logbook holds the disc drawing.
         const selected = this.wreckEncounterFor(planet);
         if (!selected) {
             this.state.addLog("ERROR: Exodus encounter data unavailable.");
@@ -2901,21 +2895,19 @@ class App {
         return [engineerFirst[0], engineerFirst[1] || engineerFirst[0]];
     }
 
-    /** What the wreck held, one thing at a time: the disc drawing (the first wreck), the tape (sector 2), the page (story planets). */
+    /** What the wreck held, one thing at a time: the disc drawing (the first wreck), the page (story planets; in sector 5, the disc). */
     collectWreckFinds(planet, shipName) {
         const drawing = planet.isFirstSignal ? this.findDiscDrawing(shipName) : Promise.resolve();
-        return drawing
-            .then(() => (planet.hasTape ? this.findBriefingTape(shipName) : null))
-            .then(() => (planet.hasPage ? this.findSectorPage(shipName, planet.hasPage) : null));
+        return drawing.then(() => (planet.hasPage ? this.findSectorPage(shipName, planet.hasPage) : null));
     }
 
     // ═══════════════════════════════════════════════════════════════
     // DATING A WRECK WITH THE DISC — and the story planet it points at
     // ═══════════════════════════════════════════════════════════════
 
-    /** One of our wrecks, searched and not yet dated, while the crew has the disc drawing. */
+    /** One of our wrecks, searched and not yet dated, while the crew has the disc drawing (or the disc itself). */
     canDateWreck(planet) {
-        const hasDisc = typeof ITEMS !== 'undefined' && ITEMS.DISC_DRAWING && this.state.cargo.some(i => i.id === ITEMS.DISC_DRAWING.id);
+        const hasDisc = this.state.hasDisc || (typeof ITEMS !== 'undefined' && ITEMS.DISC_DRAWING && this.state.cargo.some(i => i.id === ITEMS.DISC_DRAWING.id));
         return !!(planet && planet.exodusInvestigated && planet.wreckHull && !planet.wreckDated && hasDisc && window.MiniHost && window.MiniHost.has('disc'));
     }
 
@@ -3234,7 +3226,7 @@ Then you're through.`,
 
                         state.currentSystem = null;
                         state.lastVisitedSystem = null;
-                        if (window.app) { window.app.plantBriefingTape(); window.app.plantSectorPage(); }
+                        if (window.app) window.app.plantSectorPage();
                         state.addLog("=== REALITY BREACH SUCCESSFUL ===");
                         state.addLog(`Emerged in Sector ${targetSector}. The crew will never forget what they saw.`);
 
@@ -3266,7 +3258,6 @@ Then you're through.`,
                 'You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again.',
                 'Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four.',
             ],
-            vault: 'Twin 0009 begins, very quietly, to repeat itself.',
         });
     }
 
@@ -3347,15 +3338,15 @@ Then you're through.`,
             const member = this.state.crew.find(c => c.tags.includes(role));
             return !!member && member.status !== 'DEAD';
         };
-        const a = encounter.approach;
-        // the reading (a picture), then the disc inside the light, then the choice; nothing here is random
-        const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('reading') : Promise.resolve();
-        reel.then(() => (window.DiscDocument ? window.DiscDocument.open(this, {
-            kicker: 'INSIDE THE LIGHT · THE DISC, BEING READ', title: 'The disc', aura: 'It is reading the map, Commander. Half of it is read.', close: 'GO ON', closeNote: 'there is nothing else in here',
-        }) : Promise.resolve())).then(() => window.EncounterCard.open(this, {
+        const a = encounter.approach, disc = encounter.disc || {};
+        // the light (a picture), then our own disc from the hold if we found it, then the choice; nothing here is random
+        const reel = window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('light') : Promise.resolve();
+        const ourDisc = () => (this.state.hasDisc && window.DiscDocument ? window.DiscDocument.open(this, { real: true, ...disc.view }) : Promise.resolve());
+        reel.then(ourDisc).then(() => window.EncounterCard.open(this, {
             color: '#ffd27a', kicker: a.kicker, title: a.title, zIndex: 3000, context: a.context,
             dialogue: a.dialogue.filter(d => isAlive(d.speaker)),
             choices: encounter.choices.map(c => {
+                if (c.needsDisc && !this.state.hasDisc) return { text: c.text, desc: c.desc, requires: () => false, requiresLabel: disc.missing };   // nothing to cut
                 const had = c.who ? ((this.state._standing || {})[c.who] || 0) : null;
                 const label = c.who && typeof STANDING_NEEDED !== 'undefined' ? `${c.requiresLabel} (you backed them ${Math.min(had, STANDING_NEEDED)} of the ${STANDING_NEEDED} times it takes)` : c.requiresLabel;
                 return { text: c.text, desc: c.desc, requires: c.requires, requiresLabel: label };
@@ -3368,10 +3359,10 @@ Then you're through.`,
         }));
     }
 
-    /** Destroying the map is done by hand: the commander cuts the disc (Torch, disc mode). Every other ending goes straight to its screen. */
+    /** Destroying the map is done by hand: the commander cuts our disc, from the hold (Torch, disc mode). Every other ending goes straight to its screen. */
     playEndingByHand(choice) {
         if (choice.id !== 'BREAK_MAP' || !window.MiniHost || !window.MiniHost.has('torch')) return Promise.resolve();
-        return window.MiniHost.play('torch', { mode: 'disc', kicker: 'INSIDE THE LIGHT', title: 'The disc' }).catch(err => console.error(err));
+        return window.MiniHost.play('torch', { mode: 'disc', kicker: 'AT THE LIGHT', title: 'The disc' }).catch(err => console.error(err));
     }
 
     showEndingScreen(result) {
@@ -3406,9 +3397,9 @@ Then you're through.`,
             </div>`;
         }
 
-        // An ending is a few short paragraphs, then one line about the vault on Earth
+        // An ending is a few short paragraphs
         const paragraphs = Array.isArray(result.text) ? result.text : String(result.text || '').split(/\n\n+/).map(line => line.trim()).filter(Boolean);
-        const cleanText = paragraphs.map(p => `<p>${p}</p>`).join('') + (result.vault ? `<p class="end-vault"><b>IN THE VAULT ON EARTH</b>${result.vault}</p>` : '');
+        const cleanText = paragraphs.map(p => `<p>${p}</p>`).join('');
 
         modal.innerHTML = `
             <div style="
@@ -4493,8 +4484,8 @@ Then you're through.`,
     }
 
     /**
-     * EDEN EVA — Special peaceful encounter on paradise world.
-     * No danger, guaranteed positive outcomes, emotional payoff.
+     * Eden (the one world beside the light, SectorConfig 6 eden): the team's card on the surface. The lure and its gifts are
+     * real; it is only a little too perfect, shown and never said. Settling goes through the settle council like any world.
      */
     showEdenEvaModal(planet) {
         const evaTeam = this.currentEvaTeam;
@@ -4503,14 +4494,13 @@ Then you're through.`,
             { key: 'gather', text: 'Gather fruit and fresh water', desc: '+10 Rations. The land gives freely.' },
             { key: 'explore', text: 'Explore the valley', desc: '+50 Salvage from natural materials. Marks a colony site.' },
             { key: 'remember', text: 'Remember what you are fighting for', desc: '+20 Energy. All crew -1 Stress.' },
-            { key: 'settle', text: 'END THE JOURNEY — settle here', desc: 'This is what you came for. This is home now. ENDS THE GAME.' },
+            { key: 'settle', text: 'Settle here', desc: 'The journey ends on this world. The crew have their say first.' },
         ];
 
         window.EncounterCard.open(this, {
-            tone: 'station', kicker: 'ON THE SURFACE', title: 'Paradise found',
-            context: `${evaTeam[0].name} and ${evaTeam[1].name} step out. The air is clean. Sweet, even. The grass has never known boots. `
-                + 'Something like birds calls far away, and a cold, clear stream runs close by. For the first time since Earth, the universe feels kind.'
-                + '<br><br>Nothing here will hurt you. You only have to choose.',
+            tone: 'station', kicker: 'ON THE SURFACE', title: planet.name,
+            context: `${evaTeam[0].name} and ${evaTeam[1].name} step out into warm, sweet air, beside a clear stream. `
+                + 'Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass.',
             choices: options,
             onPick: (idx) => {
                 const action = options[idx].key;

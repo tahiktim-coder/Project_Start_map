@@ -99,7 +99,7 @@
     const SAY_GAP_MS = 7000, QUIET_FIRST_MS = 9000, QUIET_MS = 2500;
     let lastSaid = -1e9, quietUntil = 0;
     const naming = new Set(), namedLog = new Set();                                    // node ids being said now; node ids already in the log
-    /** What the story still waits for on this world: 'signal' (the first wreck), 'wreck' (one of our ships; the tape's too),
+    /** What the story still waits for on this world: 'signal' (the first wreck), 'wreck' (one of our ships),
         'course' (the story world, once a dated wreck names it), or null: boarded, behind us, or nothing there. */
     function storyKind(nd) {
         if (!nd || nd.exodusInvestigated || nd.ghost || !nd.nsRoute || nd.nsRoute.status !== 'ahead') return null;

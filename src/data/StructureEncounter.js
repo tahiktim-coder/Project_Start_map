@@ -1,10 +1,10 @@
 /**
- * THE LIGHT — the end of the heading (docs/CANON.md sections 6 and 9).
+ * THE LIGHT — the end of the heading (docs/STORY_MAP.md step 9).
  *
- * Nothing random happens here. The light reads the ship: first A.U.R.A. (a machine, read at once, and made again — she says
- * "five crew" for the first time), then the crew. It cannot read the commander (why is being redesigned; nobody explains it here).
- * So whatever is done in there, the commander does it. You may only choose an ending you have standing for:
- * you backed that person during the run. Nobody goes home. Every ending closes on the computer's twin in the vault on Earth.
+ * Nothing random happens here. The light fills the window (StoryReel 'light'); if we found the disc in sector 5, ours comes out
+ * of the hold (disc.view); then the approach card and the choice. You may only choose an ending you have standing for: you
+ * backed that person during the run. An ending that cuts the disc (needsDisc) is closed without it (disc.missing).
+ * These six endings stay until the two doors replace them (into the light; back to Eden).
  */
 
 const STANDING_NEEDED = 2;   // times you sided with that person during the run (GameState.noteStanding); each has eight or more chances
@@ -25,9 +25,15 @@ const STRUCTURE_ENCOUNTER = {
         ],
     },
 
+    // our own disc, out of the hold before the choice (only if we found it), and the reason an ending that cuts it is closed without it
+    disc: {
+        view: { kicker: 'AT THE LIGHT · THE DISC FROM OUR HOLD', aura: 'We carried it all the way to the light, Commander.', close: 'GO ON', closeNote: 'the crew are waiting' },
+        missing: 'We never found the disc',
+    },
+
     choices: [
         {
-            id: 'BREAK_MAP', who: 'vance',
+            id: 'BREAK_MAP', who: 'vance', needsDisc: true,
             text: 'Destroy the map',
             desc: 'What Earth sent us to do. Vance gives you the cutting torch.',
             requires: (state) => state.hasStanding && state.hasStanding('vance', STANDING_NEEDED),
@@ -36,11 +42,10 @@ const STRUCTURE_ENCOUNTER = {
                 ending: 'BREAK_MAP', title: 'THE MAP IS GONE',
                 text: [
                     'Vance puts the cutting torch in your hands. "It can\'t see you. Go."',
-                    'You go out alone, into the light. The disc is there, gold, the size of a dinner plate. You cut through the map on it, through the point where the fourteen lines meet.',
+                    'You take the disc out of the hold and go out alone, into the light. You cut through the map on it, through the point where the fourteen lines meet.',
                     'It has read everything else: our faces, our names, the letters Jaxon wrote to his daughter. It knows what we are. It will never know where we are.',
                     'A.U.R.A.: "Thank you, Commander." Then, after a long time: "What do I do now?"',
                 ],
-                vault: 'The twin of our ship\'s computer goes quiet. Nobody on Earth knows that this means it worked.',
             }),
         },
         {
@@ -56,21 +61,19 @@ const STRUCTURE_ENCOUNTER = {
                     'You walk her to the edge of the light, where it cannot see you. She keeps walking, reading the names on her list out loud.',
                     'Nobody knows what it will make from a crew that chose to be read.',
                 ],
-                vault: 'A computer twin on Earth starts talking in a new voice. It is reading out names.',
             }),
         },
         {
             id: 'CARRY_ON', who: null,
-            text: 'Take the disc and keep flying',
-            desc: 'As long as the ship keeps moving, it can never finish reading the disc.',
+            text: 'Keep flying past the light',
+            desc: 'We never stop again, and we never land.',
             effect: () => ({
                 ending: 'CARRY_ON', title: 'THE SHIP THAT NEVER ARRIVES',
                 text: [
-                    'You go out and take the disc. It cannot see your hands, so it cannot stop you.',
-                    'You fly past the light and you do not stop. As long as you keep moving, it can never finish reading the map.',
+                    'You burn the drive and fly on, past the light.',
+                    'You do not stop. As long as you keep moving, nothing out here can catch you.',
                     'Everyone aboard, and every sleeper in the hold, is now the crew of a ship that never arrives anywhere.',
                 ],
-                vault: 'The twin of our ship\'s computer never changes again.',
             }),
         },
         {
@@ -83,14 +86,13 @@ const STRUCTURE_ENCOUNTER = {
                 ending: 'AURA_DECIDES', title: 'HER ORDERS',
                 text: [
                     '"Let her decide," Mira says. "She has waited sixty-one years for someone to ask her."',
-                    'A.U.R.A. turns the ship into the light and burns the drive, the disc and herself with it. Those were her real orders all along.',
+                    'A.U.R.A. turns the ship into the light and burns the drive, and herself with it. Those were her real orders all along.',
                     'But the light read her first, and made her again. Nobody will ever know if that was her choice or its.',
                 ],
-                vault: 'The twin of our ship\'s computer goes dark. Its last entry reads: orders carried out.',
             }),
         },
         {
-            id: 'WAKE_SLEEPERS', who: null,
+            id: 'WAKE_SLEEPERS', who: null, needsDisc: true,
             text: 'Wake the sleepers and let them vote',
             desc: 'People from ships built long after ours. They have seen more of this than you.',
             requires: (state) => (state._sleepers || 0) > 0,
@@ -102,7 +104,6 @@ const STRUCTURE_ENCOUNTER = {
                     'They vote. They say it has to be you, because it cannot see you.',
                     'You go out with the cutting torch, and you cut the map.',
                 ],
-                vault: 'The twin of our ship\'s computer goes quiet, and so do two others that had been talking for hundreds of years.',
             }),
         },
         {
@@ -118,7 +119,6 @@ const STRUCTURE_ENCOUNTER = {
                     'It is cold, and small, and the soil is poor. Aris plants seeds from the hold anyway. Jaxon records a letter to his daughter and, for once, finishes it.',
                     'At night the light is the brightest thing in the sky. Nobody talks about it.',
                 ],
-                vault: 'The twin of our ship\'s computer stays quiet for another lifetime. Nobody on Earth knows why.',
             }),
         },
     ],

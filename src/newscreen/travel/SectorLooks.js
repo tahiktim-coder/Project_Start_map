@@ -28,7 +28,7 @@
         5: { seed: 55, dust: 0.1, haze: 0.8, stars: 1.1, light: { core: 11, halo: 58, strength: 1, spikes: 10 }, divider: null },
         6: { seed: 66, dust: 0.16, haze: 1.1, stars: 1, light: { core: 15, halo: 80, strength: 1, spikes: 12 }, divider: null },
     };
-    const FALLBACK_TITLES = { 1: 'The Graveyard', 2: 'The Dark Void', 3: 'The Signal', 4: 'The Garden', 5: 'The Tally', 6: 'The Light' };
+    const FALLBACK_TITLES = { 1: 'The Graveyard', 2: 'The Dark Void', 3: 'The Signal', 4: 'The Colonies', 5: 'The Station', 6: 'The Light' };
 
     function titleOf(n) {
         const cfg = typeof SECTOR_CONFIG !== 'undefined' ? SECTOR_CONFIG[n] : null;           // eslint-disable-line no-undef

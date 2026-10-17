@@ -277,7 +277,7 @@ const DERELICT_ENCOUNTERS = [
         ]
     },
 
-    // --- 5. THE WRONG WRECK: a copy, slightly wrong ---
+    // --- 5. THE WRONG WRECK: one of ours that nobody ever flew (never a copy of our ship: that is only the twin) ---
     {
         id: 'DERELICT_ALIEN',
         weight: 5,
@@ -288,8 +288,8 @@ const DERELICT_ENCOUNTERS = [
         },
         context: (name) => `${name} is an Exodus ship with no hull number painted on it. The welds are perfect. Inside are four bunks and four cups. The bread on the table has no crust.`,
         dialogue: [
-            { speaker: 'Mira', text: "Aura says it matches our ship's blueprints exactly, Commander. Every measurement." },
-            { speaker: 'Vance', text: "I've watched ships being built. They never come out this perfect. This is a copy." },
+            { speaker: 'Mira', text: "A.U.R.A. has no record of it, Commander. No number, no name, no launch date." },
+            { speaker: 'Vance', text: "I've watched ships being built. Nobody has ever flown this one." },
             { speaker: 'Aris', text: "No bodies and no names. Nobody ever lived here." }
         ],
         choices: [

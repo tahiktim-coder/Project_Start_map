@@ -100,11 +100,6 @@ const ITEMS = {
         desc: 'A crystal formed by lightning. It hums in your hand, and the reactor can run on it. +20 Energy.',
         onUse: (state) => { state.energy = Math.min(100, state.energy + 20); return "Fed to the reactor. +20 Energy."; }
     },
-    BRIEFING_TAPE: {
-        id: 'briefing_tape', name: 'Uncut Briefing Tape', type: 'DOCUMENT', value: 0, isKept: true,
-        desc: 'It has our programme\'s seal on the label. It is the briefing film we were shown before launch, but this copy is longer.',
-        onUse: (state) => { if (window.StoryReel) window.StoryReel.play('uncut'); return "You play the tape again."; }
-    },
     DISC_DRAWING: {
         id: 'disc_drawing', name: 'Drawing of the Disc', type: 'DOCUMENT', value: 0, isKept: true,
         desc: 'A page folded into a dead ship\'s logbook. It shows a gold disc, a star map and two figures. Someone wrote in the margin.',
@@ -310,7 +305,7 @@ const ITEM_SOURCES = {
     rock: ['GEODE_SAMPLE', 'OBSIDIAN_MONOLITH', 'CONDENSED_SALVAGE', 'STORM_CRYSTAL'],
     life: ['RADIOTROPHIC_FUNGUS', 'AMBER_SPECIMEN', 'FUNGUS_CULTURE', 'XENO_MYCELIUM', 'BIO_SAMPLE_RARE', 'SYMBIOTIC_CULTURE', 'WILD_HARVEST'],
     built: ['SCRAP_PLATING', 'TECH_FRAGMENT', 'NEURAL_LINK', 'ALIEN_TRANSMITTER', 'XENOTECH_COMPONENT', 'SIGNAL_DECODER', 'STAR_CHART_FRAGMENT', 'CULTURAL_ARTIFACT', 'ANCIENT_DATABASE', 'ALIEN_ARTIFACT'],
-    human: ['MEDKIT', 'FOOD_PACK', 'LUXURY_CHOCOLATE', 'MUSIC_HOLOTAPE', 'IONIZED_BATTERY', 'SALVAGE_BEACON', 'POWER_COUPLER', 'REPAIR_DRONE', 'DISC_DRAWING', 'BRIEFING_TAPE'],
+    human: ['MEDKIT', 'FOOD_PACK', 'LUXURY_CHOCOLATE', 'MUSIC_HOLOTAPE', 'IONIZED_BATTERY', 'SALVAGE_BEACON', 'POWER_COUPLER', 'REPAIR_DRONE', 'DISC_DRAWING'],
 };
 const ITEM_SOURCE_WORDS = { rock: 'any solid world', life: 'living worlds', built: 'ruins and strange places', human: 'human wrecks and stations' };
 Object.keys(ITEM_SOURCES).forEach(place => ITEM_SOURCES[place].forEach(key => {

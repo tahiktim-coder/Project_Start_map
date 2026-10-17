@@ -1,9 +1,9 @@
 /**
  * ANOMALY ENCOUNTERS
  *
- * Things the light at the end of the heading has read and made again.
+ * Things something out here has copied and made again (Eden's work: never named, never explained).
  * Each copy is slightly wrong: the same planet twice, our own ship with four
- * people in the windows, a back garden where every blade of grass is the same.
+ * people in the windows (rare and late: the only copy of our ship is the twin), a back garden where every blade of grass is the same.
  * Nothing here chases the ship. Nothing here is alien. It is all ours, copied.
  * High risk, high reward, high narrative impact.
  *
@@ -90,7 +90,7 @@ const ANOMALY_ENCOUNTERS = [
                         state.addLog("=== OFF THE MAP ===");
                         state.addLog("We came out somewhere that matches no chart we have.");
                         state.addLog("A.U.R.A.: 'I can't place us on any chart, Commander. I'm working on it.'");
-                        state.addLog("There is a wreck here. It is broadcasting our own ship's ID code.");
+                        state.addLog("There is a wreck here, one of our ships. Its beacon is still calling.");
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
@@ -118,7 +118,7 @@ const ANOMALY_ENCOUNTERS = [
                                 config.hazard.onSectorEnter(state, state.sectorNodes);
                             }
 
-                            if (window.app) { window.app.plantBriefingTape(); window.app.plantSectorPage(); }   // the tape and the wreck to date, as on any jump
+                            if (window.app) window.app.plantSectorPage();   // the wreck to date, as on any jump
 
                             // Pick a random planet to arrive at (not the sector's faint contact: that is found by dating a wreck)
                             const reachable = state.sectorNodes.filter(p => !p.storyHidden);
@@ -249,15 +249,15 @@ const ANOMALY_ENCOUNTERS = [
         ]
     },
 
-    // --- 3. THE MIRROR: our own hull, made again ---
+    // --- 3. THE MIRROR: our own hull, made again (rare and late, so it never gives the twin away early) ---
     {
         id: 'ANOMALY_MIRROR',
-        weight: 15,
+        weight: 5,
+        minSector: 5,     // late: sectors 5 and 6 only (docs/STORY_MAP.md)
         title: "OUR OWN SHIP",
         context: () => `A ship is holding position right beside us, and it is ours: same hull, same number, same scratches. Through its windows, four people sit at our stations and wave back at us.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "It is broadcasting our ship's ID, Commander. It answers my signals before I finish sending them." },
-            { speaker: 'Vance', text: "Four people in those windows. Which one of us did they leave out?" },
             { speaker: 'Mira', text: "A.U.R.A. says it's friendly. If she says so, I believe her." }
         ],
         choices: [
@@ -529,7 +529,7 @@ const ANOMALY_ENCOUNTERS = [
                             victim._deathPlanet = 'the door';
                             state.addLog("THE DOOR OPENS.");
                             state.addLog(`${victim.name} walks through it. They don't run, and they don't look back.`);
-                            state.addLog("The door closes. Through its window, four people are walking away. One of them turns and waves.");
+                            state.addLog(`The door closes. Through its window, ${victim.name} is walking away across green grass.`);
                             state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
                             return `${victim.name} walked through the door and is gone. +3 Data.`;
                         }

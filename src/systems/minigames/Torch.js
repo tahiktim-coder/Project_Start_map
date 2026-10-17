@@ -7,8 +7,8 @@
    One short readout by the torch says what to do the first time, what is going wrong, and how far the cut has got.
    The system pointer is hidden over the picture while you hold the torch: the drawn torch is the pointer.
    A crew member can take the torch at any time ("Let Jaxon cut it"): they finish the cut slowly and carefully, without you.
-   THE DISC (for the finale): the same torch on the 1977 disc. The light's sweep reads every live line. Burn the centre and cut
-   each line inside the marked ring; the last sweep finds no map, only the two figures.
+   THE DISC (for the finale): the same torch on our disc, out of the hold, in front of the light. The light's sweep crosses every
+   live line. Burn the centre and cut each line inside the marked ring; the last sweep finds no map, only the two figures.
    SOUND (only while the game's sound is on): a hiss that brightens with heat, spits while metal is really cut, ticks of cooling
    metal, a groan as the last of the seam holds; then a clunk, a rush of air, a long ring and a soft thud as the hatch drifts off.
    On the disc a finer hiss, and one bell when the last line goes.
@@ -131,11 +131,11 @@
         open: [[spotter, 'Hold on. Something in there caught your light.'], [cutter, `${deadFor[0].toUpperCase()}${deadFor.slice(1)} in the dark. Go slow in there.`]],
         hatchDry: [['', 'The tank is empty. The hatch still holds.'], [cutter, "Come back to the lander. We'll swap the tank."]],
         handOver: [cutter, "Give it here. I'll go slow so it cuts clean."], newTank: ['', 'A full tank. Pick up where you left off.'],
-        disc: [['', 'The disc is drifting into the light. The light reads whatever it touches.'],
+        disc: [['', 'The disc is out of the hold, in front of the light.'],
             ['', 'Where the lines meet is home. Burn the centre, then cut each line inside the ring.']],
         discHot: ['', 'The gold is too hot to cut. Wait for it to cool.'], fig: ['', 'You pull the torch back from the figures.'],
-        done: ['A.U.R.A.', 'The map is gone, Commander.'], clean: ['', 'The light already knows what we look like.'],
-        marked: ['', 'Scorched or not, the light already knows what we look like.'], discDry: [['', 'The tank is empty. The map is still there.']],
+        done: ['A.U.R.A.', 'The map is gone, Commander.'], clean: ['', 'Nobody can use it to find Earth now.'],
+        marked: ['', 'Scorched or not, nobody can use it to find Earth now.'], discDry: [['', 'The tank is empty. The map is still there.']],
     });
     const DIRS = { ArrowLeft: [-1, 0], a: [-1, 0], ArrowRight: [1, 0], d: [1, 0], ArrowUp: [0, -1], w: [0, -1], ArrowDown: [0, 1], s: [0, 1] };
 

@@ -29,7 +29,7 @@
         2: 'The last of the eight ships should be out here.',
         6: 'One last log to find. Then there is only the light.',
     };
-    const hasDisc = state => typeof ITEMS !== 'undefined' && !!ITEMS.DISC_DRAWING && (state.cargo || []).some(i => i.id === ITEMS.DISC_DRAWING.id);
+    const hasDisc = state => !!state.hasDisc || (typeof ITEMS !== 'undefined' && !!ITEMS.DISC_DRAWING && (state.cargo || []).some(i => i.id === ITEMS.DISC_DRAWING.id));   // the drawing, or the disc itself
 
     /** Where the sector's page is, as far as the crew knows: on its story planet once that is named, else found by dating a wreck. */
     function whereLine(state, story) {
@@ -46,7 +46,6 @@
         if (isNew && !here) return '';                                                   // travel speaks for itself there (the bar is hidden)
         const stopsLeft = state.getStopsLeft ? state.getStopsLeft() : 1;
         const pageHere = (state.sectorNodes || []).find(p => p.hasPage && !p.exodusInvestigated);
-        const tapeHere = (state.sectorNodes || []).find(p => p.hasTape && !p.exodusInvestigated);
         const storyHere = (state.sectorNodes || []).find(p => p.isStoryPlanet && !p.exodusInvestigated);
         if (sector === 1) {
             if (!here) {
@@ -66,7 +65,7 @@
         }
         if (here) return '';                                                            // in orbit the command deck says what is possible; the bar stays quiet
         if (stopsLeft <= 0) return sector >= 6 ? 'No stops left. The only place left to go is the light.' : 'No stops left in this sector. JUMP SECTOR when you are ready — whatever you skipped is gone for good.';
-        if (pageHere || tapeHere) return [SECTOR_LINE[sector], whereLine(state, pageHere && storyHere)].filter(Boolean).join(' ');
+        if (pageHere) return [SECTOR_LINE[sector], whereLine(state, storyHere)].filter(Boolean).join(' ');
         if (sector >= 6) return 'Every page is found. Nothing here is random any more. Go to the light when you are ready.';
         return `Nothing left to find in this sector. ${stopsLeft} ${stopsLeft === 1 ? 'stop' : 'stops'} left: repair, salvage, then JUMP SECTOR.`;
     }
