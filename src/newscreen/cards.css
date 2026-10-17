@@ -126,6 +126,18 @@ html.ns-on .modal-overlay .enc-chips i { white-space: normal; overflow-wrap: any
 html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips { flex-basis: 100%; }                  /* why it is closed: its own quiet line under the words */
 html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips i { font: 400 14px/1.4 var(--f-text); color: #c98a7c; }
 html.ns-on .modal-overlay .modal-content, html.ns-on .modal-overlay .enc-card { overflow-x: hidden; }
+/* ── what a choice did: it takes the choices' place, then CONTINUE (EncounterCard showOutcome) ── */
+html.ns-on .modal-overlay .enc-outcome { display: grid; gap: 12px; padding: 0 28px; }
+html.ns-on .modal-overlay .enc-outcome-pick { margin: 0 0 2px; font: 500 12px/1.4 var(--f-num); letter-spacing: .12em; text-transform: uppercase; color: var(--warm); }
+html.ns-on .modal-overlay .enc-outcome-line { margin: 0; font: 400 clamp(16px, 1.05vw, 18px)/1.5 var(--f-text); color: var(--text); }
+html.ns-on .modal-overlay .enc-outcome .is-gain { color: var(--warm); }
+html.ns-on .modal-overlay .enc-outcome .is-loss { color: var(--loss); }
+html.ns-on .modal-overlay .enc-outcome-flow { display: flex; justify-content: flex-end; margin-top: 18px; }
+/* the place the gap or the fold throws us to arrives behind a quiet veil (the old cyan and red flashes are gone) */
+html.ns-on .ns-fold-veil { position: fixed; inset: 0; z-index: 9000; pointer-events: none; background: #f2eee4; animation: ns-fold 1.6s ease-out forwards; }
+html.ns-on .ns-fold-veil.is-wrong { background: #1d050b; }
+@keyframes ns-fold { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { html.ns-on .ns-fold-veil { animation-duration: 10ms; } }
 /* the note on the choice you point at: under a hairline, quieter than the choices, and it names its choice */
 html.ns-on .modal-overlay .enc-detail { margin: 10px 28px 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.08); font: italic 400 14px/1.5 var(--f-text); color: #9a9fa3; }
 html.ns-on .modal-overlay .enc-detail:empty { border-top-color: transparent; }

@@ -73,7 +73,13 @@
 
     /** opts (all optional): real (the disc itself, not the drawing), kicker, title, aura (the line under it), close and closeNote
         (the button's words) — the finale shows our own disc, from the hold, with its own kicker and line. */
+    /** Opens once a choice's outcome card (new look) has been read: the disc never lands on top of it. */
     function open(app, opts) {
+        const EC = window.EncounterCard;
+        if (!EC || typeof EC.whenFree !== 'function') return openNow(app, opts);
+        return new Promise(resolve => EC.whenFree(() => openNow(app, opts).then(resolve, resolve)));
+    }
+    function openNow(app, opts) {
         if (document.querySelector('.disc-doc')) return Promise.resolve();
         const isReal = !!(opts && opts.real), notes = isReal ? REAL_NOTES : NOTES;
         const o = Object.assign({}, isReal ? REAL : DRAWING, opts || {});

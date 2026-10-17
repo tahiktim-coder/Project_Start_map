@@ -27,6 +27,7 @@
     const BAD_WORDS = /stress|damage|injur|risk/i;
     const RISKY = /hurt|injured|damag|\blost\b|is gone|walks through|changed by|Stress 3|\+\d+ Stress|strike|gas pocket|discharge/i; // what a bad chance leads to
     const MARKUP = /\[\/?[a-z]+\]/gi; // NarrativeModal-style [highlight] / [whisper] tags in older event text
+    const DRAIN_MS = 300;             // the new look: what waited behind an outcome card comes one at a time, this often
     const DETAIL_MIN_WORDS = 3;       // a sentence that is only its chips ("-5 Energy.", "All crew +1 Stress.") is not repeated under the list
 
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -263,11 +264,58 @@
             </section>`;
     }
 
+    // ── the new look: what a choice did is shown on its own card before anything else can open ──
+    // The game writes a choice's result to the log, which the new look does not show, so a player saw nothing happen, or the
+    // next card (a crew moment) straight away. Now the card stays: the choice's own log lines take the choices' place, with
+    // CONTINUE. Until then a new card, a found page or a mini-game waits its turn (whenFree).
+    const gate = { held: 0, waiting: [], passing: false };
+    let capturing = 0;
+    const mustWait = () => !gate.passing && (gate.held > 0 || gate.waiting.length > 0);   // in order: behind anything already waiting
+    function whenFree(fn) { if (mustWait()) gate.waiting.push(fn); else fn(); }
+    function releaseGate() { gate.held = Math.max(0, gate.held - 1); drain(); }
+    /** What waited comes one at a time: the next only once nothing is on screen. */
+    function drain() {
+        if (gate.held || !gate.waiting.length) return;
+        if (document.querySelector('.modal-overlay')) { setTimeout(drain, DRAIN_MS); return; }
+        const fn = gate.waiting.shift();
+        gate.passing = true;
+        try { fn(); } catch (err) { console.error('EncounterCard: a card that waited could not open', err); } finally { gate.passing = false; }
+        if (gate.waiting.length) setTimeout(drain, DRAIN_MS);
+    }
+    /** Runs a choice and returns every line it wrote to the log on the way (the voice stays quiet meanwhile: the card says it). */
+    function captureLog(run) {
+        const said = [], hear = e => { const m = e && e.detail && e.detail.message; if (m) said.push(String(m)); };
+        addEventListener('log-updated', hear);
+        capturing += 1;
+        try { run(); } finally { capturing -= 1; removeEventListener('log-updated', hear); }
+        return said;
+    }
+    const OUT_SKIP = /^(?:={2,}|\/{2,}|⚠|☠|ERROR\b|WARNING\b|STORAGE WARNING\b|Now entering\b|SOMETHING STRANGE\b|Deploying\b|\[[^\]]*\]$)/i;
+    const OUT_PREFIX = /^(?:CREW|MINING|STATION|SIGNAL|SCAN|PROBE|MALFUNCTION RESOLVED|REPAIR COMPLETE|FABRICATION COMPLETE):\s*/;
+    const OUT_SPEAKER = /^(A\.U\.R\.A\.|Jaxon|Aris|Vance|Mira|Cora)\s*:\s*(.+)$/;
+    const OUT_MAX = 4;
+    const unquote = s => { const t = s.trim(), m = /^["“'‘](.*)["”'’]$/.exec(t); return m && !/["“”]/.test(m[1]) ? m[1] : t; };
+    /** The lines worth showing from what a choice logged: speech and what happened, no system banners, each once, at most four
+        (the first few and the last, which is usually the tally). */
+    function outcomeLines(said) {
+        const out = [], seen = new Set();
+        said.forEach(raw => {
+            const m = String(raw || '').replace(MARKUP, '').replace(/\s+/g, ' ').trim().replace(OUT_PREFIX, '');
+            if (!m || OUT_SKIP.test(m)) return;
+            const sp = OUT_SPEAKER.exec(m), item = sp ? { speaker: sp[1], text: unquote(sp[2]) } : { text: m };
+            const key = item.text.toLowerCase();
+            if (seen.has(key)) return;
+            seen.add(key); out.push(item);
+        });
+        return out.length > OUT_MAX ? out.slice(0, OUT_MAX - 1).concat(out[out.length - 1]) : out;
+    }
+
     /**
      * @param {object} cfg { tone | color, kicker, title, facts:[[label, value]], context, dialogue:[{speaker, text}],
      *                       choices:[{text, desc, descNow(state), disabled, requires, requiresLabel}], onPick(idx), hasSignal, art, zIndex }
      */
     function open(app, cfg) {
+        if (newLook() && mustWait()) { gate.waiting.push(() => open(app, cfg)); return null; }   // the last choice's outcome is still up
         const color = cfg.color || TONES[cfg.tone] || TONES.crew;
         const lines = livingLines(app, cfg.dialogue), context = splitContext(cfg.context);
         const facts = (cfg.facts || []).filter(f => f && f[1] != null && f[1] !== '');
@@ -313,8 +361,14 @@
                 btn.addEventListener('click', () => {
                     if (isPicked) return;
                     isPicked = true;
-                    modal.remove();
-                    cfg.onPick(parseInt(btn.dataset.idx, 10));
+                    const pick = parseInt(btn.dataset.idx, 10);
+                    if (!newLook()) { modal.remove(); cfg.onPick(pick); return; }
+                    gate.held += 1;                                                  // nothing else opens until the outcome is read
+                    let said = [];
+                    try { said = captureLog(() => cfg.onPick(pick)); } catch (err) { console.error('EncounterCard: the choice failed', err); }
+                    const lines = outcomeLines(said);
+                    if (!lines.length || !modal.isConnected) { modal.remove(); releaseGate(); return; }
+                    showOutcome(cfg.choices[pick], lines);
                 });
             });
             // Focus the choice list, not a choice: Enter pressed again after NEXT must not pick one unread. Tab reaches them.
@@ -326,6 +380,32 @@
         function renderChoices() {
             el('.enc-choices').innerHTML = choicesHtml(app, cfg.choices, descs);
             reserveDetail(details.map((d, i) => detailHtml(i)));
+        }
+
+        /** The new look: the choice's outcome takes the choices' place (what was chosen, what happened, CONTINUE). Then the card
+            goes, and whatever waited (a card, a page, a mini-game, a crew moment) can come. */
+        function showOutcome(choice, outcome) {
+            const card = el('.enc-card'), stage = el('.enc-stage');
+            if (stage) stage.hidden = true;                                   // the talk is over: the outcome is what is read now
+            card.classList.add('is-outcome');
+            const picked = String((choice && choice.text) || '').replace(/<[^>]*>/g, '').replace(MARKUP, '');
+            const said = l => markRewards(esc(l.text));
+            decideEl.innerHTML = `
+                <div class="enc-outcome" aria-live="polite">
+                    <p class="enc-outcome-pick">${esc(picked)}</p>
+                    ${outcome.map(l => (l.speaker ? `<div class="enc-line enc-outcome-say is-in">${lineHtml(app, { speaker: l.speaker, text: said(l) })}</div>` : `<p class="enc-outcome-line">${said(l)}</p>`)).join('')}
+                </div>
+                <footer class="enc-flow enc-outcome-flow"><button class="enc-next enc-outcome-go" type="button">CONTINUE ›</button></footer>`;
+            decideEl.hidden = false;
+            decideEl.style.marginTop = '';
+            card.style.maxHeight = 'none';
+            card.style.marginTop = `${Math.max(CARD_FLOOR_PX, Math.round((window.innerHeight - card.offsetHeight) / 2))}px`;
+            const go = decideEl.querySelector('.enc-outcome-go'), guard = window.ChoiceGuard;
+            if (guard && typeof guard.keepOffClick === 'function') guard.keepOffClick(card, [go]);   // the click that chose never lands on CONTINUE
+            let isDone = false;
+            go.addEventListener('click', () => { if (isDone) return; isDone = true; modal.remove(); releaseGate(); });
+            decideEl.tabIndex = -1;
+            decideEl.focus({ preventScroll: true });
         }
 
         /**
@@ -413,5 +493,5 @@
         return modal;
     }
 
-    window.EncounterCard = { open, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply };
+    window.EncounterCard = { open, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, capturing: () => capturing > 0 };
 })();

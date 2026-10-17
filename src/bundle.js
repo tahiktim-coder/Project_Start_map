@@ -5404,6 +5404,18 @@ Then you're through.`,
      */
     handleAnomalyTeleport(detail) {
         const { destination, type } = detail;
+        if (isNewScreen()) {                       // the new look: the choice's outcome card first, then a quiet fold, then the new place
+            const FOLD_PEAK_MS = 400, FOLD_MS = 1600;
+            const fold = () => {
+                const veil = document.createElement('div');
+                veil.className = 'ns-fold-veil' + (type === 'WRONG_PLACE' ? ' is-wrong' : '');
+                document.body.appendChild(veil);
+                setTimeout(() => { if (type === 'FOLD_SUCCESS') this.renderNav(); else { this.state.emitUpdates(); this.renderOrbit(); } }, FOLD_PEAK_MS);
+                setTimeout(() => veil.remove(), FOLD_MS);
+            };
+            if (window.EncounterCard && typeof window.EncounterCard.whenFree === 'function') window.EncounterCard.whenFree(fold); else fold();
+            return;
+        }
 
         // Create visual teleport effect
         const flash = document.createElement('div');

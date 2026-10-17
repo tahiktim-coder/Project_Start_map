@@ -120,6 +120,8 @@
         return line ? { who: 'A.U.R.A.', id: 'aura', line } : null;
     }
     function onLog(e) {
+        const EC = window.EncounterCard;
+        if (EC && typeof EC.capturing === 'function' && EC.capturing()) return;      // a choice's own lines: its outcome card shows them
         const msg = e && e.detail && e.detail.message;
         const v = parse(msg) || (NS.isShown() && onBridge() ? resultLine(msg) : null);
         if (!v) return;

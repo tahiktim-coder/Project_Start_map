@@ -63,7 +63,13 @@
     const DRAW = { plate: drawPlate, paper: drawPaper, log: drawLog };
 
     // ── the card ──
+    /** Opens once a choice's outcome card (new look) has been read: the page never lands on top of it. */
     function open(app, page, foundIn) {
+        const EC = window.EncounterCard;
+        if (!EC || typeof EC.whenFree !== 'function') return openNow(app, page, foundIn);
+        return new Promise(resolve => EC.whenFree(() => openNow(app, page, foundIn).then(resolve, resolve)));
+    }
+    function openNow(app, page, foundIn) {
         if (!page || document.querySelector('.found-page')) return Promise.resolve();
         const state = app && app.state, shipName = foundIn || page.shipName || 'a dead ship';
         const overlay = document.createElement('div');
