@@ -1,9 +1,9 @@
 /**
  * ANOMALY ENCOUNTERS
  *
- * Things the light at the end of the heading has read and made again.
+ * Things something out here has copied and made again (Eden's work: never named, never explained).
  * Each copy is slightly wrong: the same planet twice, our own ship with four
- * people in the windows, a back garden where every blade of grass is the same.
+ * people in the windows (rare and late: the only copy of our ship is the twin), a back garden where every blade of grass is the same.
  * Nothing here chases the ship. Nothing here is alien. It is all ours, copied.
  * High risk, high reward, high narrative impact.
  *
@@ -90,7 +90,7 @@ const ANOMALY_ENCOUNTERS = [
                         state.addLog("=== OFF THE MAP ===");
                         state.addLog("We came out somewhere that matches no chart we have.");
                         state.addLog("A.U.R.A.: 'I can't place us on any chart, Commander. I'm working on it.'");
-                        state.addLog("There is a wreck here. It is broadcasting our own ship's ID code.");
+                        state.addLog("There is a wreck here, one of our ships. Its beacon is still calling.");
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
@@ -118,7 +118,7 @@ const ANOMALY_ENCOUNTERS = [
                                 config.hazard.onSectorEnter(state, state.sectorNodes);
                             }
 
-                            if (window.app) { window.app.plantBriefingTape(); window.app.plantSectorPage(); }   // the tape and the wreck to date, as on any jump
+                            if (window.app) window.app.plantSectorPage();   // the wreck to date, as on any jump
 
                             // Pick a random planet to arrive at (not the sector's faint contact: that is found by dating a wreck)
                             const reachable = state.sectorNodes.filter(p => !p.storyHidden);
@@ -200,7 +200,7 @@ const ANOMALY_ENCOUNTERS = [
             },
             {
                 text: "Have A.U.R.A. answer it",
-                desc: "-5 Energy. Then one of four, 25% chance each: +20 Salvage and +2 Food Pack, but all crew +1 Stress; every planet here revealed; nothing; or all crew +1 Stress.",
+                desc: "-5 Energy. Then one of four, 25% chance each: +20 Salvage and +2 Sealed Rations, but all crew +1 Stress; every planet here revealed; nothing; or all crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     const roll = window.TEST_MODE ? 0.1 : Math.random();
@@ -215,7 +215,7 @@ const ANOMALY_ENCOUNTERS = [
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
                         state.addLog("An hour after she answers, a supply crate drifts up to our airlock. It's one of ours, with our batch numbers, still sealed.");
-                        return "One of our own crates came back. -5 Energy, +20 Salvage, +2 Food Pack. All crew +1 Stress.";
+                        return "One of our own crates came back. -5 Energy, +20 Salvage, +2 Sealed Rations. All crew +1 Stress.";
                     } else if (roll < 0.5) {
                         state.sectorNodes?.forEach(p => {
                             p.remoteScanned = true;
@@ -249,15 +249,15 @@ const ANOMALY_ENCOUNTERS = [
         ]
     },
 
-    // --- 3. THE MIRROR: our own hull, made again ---
+    // --- 3. THE MIRROR: our own hull, made again (rare and late, so it never gives the twin away early) ---
     {
         id: 'ANOMALY_MIRROR',
-        weight: 15,
+        weight: 5,
+        minSector: 5,     // late: sectors 5 and 6 only (docs/STORY_MAP.md)
         title: "OUR OWN SHIP",
         context: () => `A ship is holding position right beside us, and it is ours: same hull, same number, same scratches. Through its windows, four people sit at our stations and wave back at us.`,
         dialogue: [
             { speaker: 'A.U.R.A.', text: "It is broadcasting our ship's ID, Commander. It answers my signals before I finish sending them." },
-            { speaker: 'Vance', text: "Four people in those windows. Which one of us did they leave out?" },
             { speaker: 'Mira', text: "A.U.R.A. says it's friendly. If she says so, I believe her." }
         ],
         choices: [
@@ -285,7 +285,7 @@ const ANOMALY_ENCOUNTERS = [
             },
             {
                 text: "Trade supplies across",
-                desc: "-20 Salvage for +30 Energy. If we have under 20 Salvage: -30 Energy for +20 Salvage instead. Vance +1 Stress either way.",
+                desc: "-20 Salvage. +30 Energy. If we have under 20 Salvage: -30 Energy, +20 Salvage instead. Vance +1 Stress either way.",
                 descNow: (state) => state.salvage >= 20 ? "-20 Salvage for +30 Energy. Vance +1 Stress."
                     : state.energy >= 30 ? "-30 Energy for +20 Salvage. Vance +1 Stress."
                     : "We have nothing to trade: it takes 20 Salvage or 30 Energy.",
@@ -470,7 +470,7 @@ const ANOMALY_ENCOUNTERS = [
             },
             {
                 text: "Burn it",
-                desc: "+10 Energy from the fire. Jaxon +1 Stress, Aris +1 Stress.",
+                desc: "The fire feeds the reactor: +10 Energy. Jaxon +1 Stress, Aris +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.min(100, state.energy + 10);
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
@@ -529,7 +529,7 @@ const ANOMALY_ENCOUNTERS = [
                             victim._deathPlanet = 'the door';
                             state.addLog("THE DOOR OPENS.");
                             state.addLog(`${victim.name} walks through it. They don't run, and they don't look back.`);
-                            state.addLog("The door closes. Through its window, four people are walking away. One of them turns and waves.");
+                            state.addLog(`The door closes. Through its window, ${victim.name} is walking away across green grass.`);
                             state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
                             return `${victim.name} walked through the door and is gone. +3 Data.`;
                         }

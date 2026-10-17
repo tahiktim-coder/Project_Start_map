@@ -402,7 +402,7 @@ const INTENT = {
         wrong: 'The only wrong note: A.U.R.A. says there are four crew when there are five. Nobody explains it (the answer is being redesigned).',
         learn: 'The count. The drawing of the gold disc (why is it in a colony ship\'s orders?). A crew plate with four names and a blank fifth.' },
     2: { idea: 'The last of the eight. The first real crack in the story.',
-        wrong: 'An uncut copy of the briefing film shows your heading full of ships, not eight. A.U.R.A. brushes it off.',
+        wrong: 'On the way in, nothing: the eight beacons are all there, as the briefing said. The crack is the page in the story wreck.',
         learn: 'A memo from Earth: every ship\'s computer has a twin on Earth, and the first one started reading out the gold disc.' },
     3: { idea: 'The jump does not finish. The player sees every ship Earth ever built in one line, then wakes among hundreds of beacons.',
         wrong: 'The ship numbers are higher than ours, and the wrecks are a hundred years old.',
@@ -410,9 +410,9 @@ const INTENT = {
     4: { idea: 'Numbers in the thousands, two hundred years dead. Green worlds that turn out to be copies. Jaxon wants to stop here.',
         wrong: 'The briefing was not a mistake. It was written that way on purpose.',
         learn: 'Orders for commanders only: tell your crew they are the ninth; the ship\'s computer knows and will not tell them.' },
-    5: { idea: 'Tens of thousands of ships, three hundred years dead. The scale of it.',
-        wrong: 'Every ship was lost before it was launched.',
-        learn: 'The launch ledger, with the wrecks you boarded yourself in it.' },
+    5: { idea: 'Tens of thousands of ships, three hundred years dead. At an old station, the last ship that carried the disc.',
+        wrong: 'The disc from the drawing is real, and a dead crew carried it all this way.',
+        learn: 'The disc itself: it comes aboard (state.hasDisc), and on the jump into sector 6 a ship exactly like ours flies beside us.' },
     6: { idea: 'The oldest wrecks, and at the end of the heading a light that looks like a sun. Nothing random happens on the way in.',
         wrong: 'It gives off no heat.',
         learn: 'A dead commander\'s last log: it read my crew, it could not find me. Then the light, and the choice.' },
@@ -463,6 +463,18 @@ function storyPlanetMd(def) {
         `On the disc's map: ${PLACE_SHOWN[def.reward.kind]}${def.reward.label ? `, labelled ${def.reward.label.toUpperCase()}` : ''}. Then:  `,
         `${lineOf(FULL_NAME[line.who] || line.who, line.text)}  `, ''];
 }
+/** Sector 5's find (ExodusLogs PAGE_DISC): the disc itself. Its card (App.showDiscFound), then the disc page as the real object. */
+function discFindMd(page, where) {
+    const c = page.card || {}, take = c.take || {}, D = sandbox.window.DiscDocument || {}, real = D.REAL || {};
+    return [`### The find: ${page.logTitle}${tag('ExodusLogs.js', page.id)}`, `_${where} ${clean(page.desc)} In the cargo hold it is called: ${clean(page.name)}._`, '',
+        `Card: FOUND IN [ship name] · ${clean(c.title)}${tag('ExodusLogs.js', `${page.id}.card`)}  `, `> ${clean(c.context)}`, '',
+        '_One line, from the first of the two who went down that is listed here (A.U.R.A. over the radio if none of them is):_',
+        ...(c.said || []).map(l => lineOf(l.speaker, l.text) + '  '), '',
+        `Choice: **${clean(take.text)}** — ${clean(take.desc)}`, '',
+        `Then the disc itself${tag('DiscDocument.js', 'REAL')}: ${clean(real.kicker)} · ${clean(real.title)}  `,
+        ...(D.REAL_NOTES || []).map(n => `- **${n.label}** — ${clean(n.text)}${tag('DiscDocument.js', `REAL_NOTES.${n.key}`)}`),
+        `${lineOf('A.U.R.A.', real.aura)}  `, `Button: ${clean(real.close)} — ${clean(real.closeNote)}`, ''];
+}
 function extrasMd(sector) {
     const b = [];
     if (sector === 1) {
@@ -474,13 +486,12 @@ function extrasMd(sector) {
         b.push(...textSection(3, 'When nobody dated a wreck', bm('revealLateStoryPlanet'), 'Back on the map with one stop left.'));
         b.push(...textSection(2, 'The hole in the hull (the mini-game)', whole(`${MINI}Breach.js`), 'Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time.', isSaid));
         b.push(...textSection(3, 'In the log afterwards', bm('applyBreachResult'), ''));
-        b.push(...textSection(3, 'How every found page is shown (all sectors)', whole('src/systems/FoundPage.js'), 'The card around each found page; the ledger rows are built from the wrecks you boarded (sector 5).'));
+        b.push(...textSection(3, 'How every found page is shown (all sectors)', whole('src/systems/FoundPage.js'), 'The card around each found page (sector 5\'s find is the disc itself: sector-5.md).'));
         b.push('## If you try to settle a planet here', '', 'The crew have their say first, in every sector — see [08-settling.md](08-settling.md).', '');
     }
     if (sector === 2) b.push('## If you try to settle a planet here', '', 'The crew have their say first, as in every sector — see [08-settling.md](08-settling.md).', '');
     if (sector === 3) {
         b.push(...textSection(2, 'A planet that is not there', between('src/views/NavView.js', /SIGNAL INTERFERENCE: /, /this\.handlePlanetSelect\(data\)/, 'phantom planet click'), 'The arrival can add a ghost planet (see the sector\'s own trouble, below). Clicking it:'));
-        b.push(`## Never played: the corridor film${tag('StoryReel.js', 'corridor')}`, '_Written for this sector, but no code plays it._', reelSource('corridor'), '_Counter on screen: HULLS ON THIS HEADING_', '', ...reelCaptions('corridor'), '');
     }
     if (sector === 6) {
         b.push('## The light', '');
@@ -518,20 +529,17 @@ for (let sector = 1; sector <= 6; sector++) {
     b.push('', '## The story beats (always here)', '');
     if (sector === 1) {
         b.push(`### The marked beacon — the first wreck${tag('bundle.js', 'findDiscDrawing')}`, '_The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), always a whole ship, so the team cuts its hatch first (10-away-team.md). It is named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_', '', ...bulletsOf(bm('findDiscDrawing')), '');
-        b.push(`#### The drawing of the gold disc${tag('DiscDocument.js', 'NOTES')}`, '_A card with the drawing. Point at each label to read its note._', '', ...bulletsOf(block('src/systems/DiscDocument.js', /const o = Object\.assign/, 'open · defaults')), '');
+        b.push(`#### The drawing of the gold disc${tag('DiscDocument.js', 'NOTES')}`, '_A card with the drawing. Point at each label to read its note._', '', ...bulletsOf(block('src/systems/DiscDocument.js', /const DRAWING = \{/, 'DRAWING')), '');
         ((sandbox.window.DiscDocument || {}).NOTES || []).forEach(n => b.push(`- **${n.label}** — ${clean(n.text)}${tag('DiscDocument.js', `NOTES.${n.key}`)}`));
         b.push('', 'In the cargo hold afterwards:', ...bulletsOf(block('src/data/Items.js', /^\s{4}DISC_DRAWING: \{/m, 'DISC_DRAWING')), '');
         const count = methodSource('showCountScene');
         b.push(`### Head count${tag('bundle.js', 'showCountScene')}`, `_On the first return to the map in sector 1. Card kicker: ${kickerOf(count)}_`, '', `> ${clean((/context:\s*'((?:\\'|[^'])*)'/.exec(count) || [])[1] || '').replace(/\\'/g, "'")}`, '', ...dialogueFrom(count), '', 'Choices:', ...choicesFrom(count), '', 'What each choice says in the log:', ...logsFrom(count), '');
     }
-    if (sector === 2) {
-        const tape = methodSource('findBriefingTape');
-        b.push(`### The uncut briefing tape${tag('StoryReel.js', 'uncut')}`, '_In one of the wrecks. Plays as a film, then:_', reelSource('uncut'), '', ...reelCaptions('uncut'), '', ...logsFrom(tape), '', 'In the cargo hold afterwards:', ...bulletsOf(block('src/data/Items.js', /^\s{4}BRIEFING_TAPE: \{/m, 'BRIEFING_TAPE')), '');
-    }
     const story = STORY_PLANETS.find(d => d.sector === sector);
     if (story) b.push(...storyPlanetMd(story));
     PAGES.filter(p => p.sector === sector).forEach(page => {
         const where = story && story.page === page.id ? `In the wreck on ${story.name}.` : 'In one wreck in this sector.';
+        if (page.kind === 'disc') { b.push(...discFindMd(page, where)); return; }
         b.push(`### Found page: ${page.logTitle}${tag('ExodusLogs.js', page.id)}`, `_${where} ${clean(page.desc)} In the cargo hold it is called: ${clean(page.name)}._`, '');
         page.lines.forEach(l => b.push(`${clean(l)}  `));
         if (page.names) b.push('', `Names on it: ${page.names.map(n => n || '(blank)').join(' · ')}`);
@@ -558,25 +566,35 @@ for (let sector = 1; sector <= 6; sector++) {
 
 // the finale
 {
-    const fin = G('STRUCTURE_ENCOUNTER'), modal = bm('showStructureModal'), b = [HOW, ''];
+    const fin = G('STRUCTURE_ENCOUNTER'), b = [HOW, ''], FILE = 'StructureEncounter.js';
     b.push(...textSection(2, 'Going in', bm('handleStructureAction'), 'Pressing GO INTO THE LIGHT.'));
-    b.push(`## The reading${tag('StoryReel.js', 'reading')}`, reelSource('reading'), '', ...reelCaptions('reading'), '');
-    const discCard = between('src/bundle.js', /kicker: 'INSIDE THE LIGHT/, null, 'showStructureModal');   // the one line of options passed to DiscDocument.open
-    b.push(`## The disc, inside the light${tag('bundle.js', 'showStructureModal')}`, '_The disc page from sector 1 again, with these words around it:_', '', ...bulletsOf(discCard), '', 'The four notes, the same as in sector 1:');
-    ((sandbox.window.DiscDocument || {}).NOTES || []).forEach(n => b.push(`- **${n.label}** — ${clean(n.text)}${tag('DiscDocument.js', `NOTES.${n.key}`)}`));
-    b.push('');
-    if (fin) {
-        b.push(`## ${fin.approach.title}${tag('StructureEncounter.js', 'approach')}`, fin.approach.kicker ? `_Card kicker: ${clean(fin.approach.kicker)}_` : '', '', `> ${clean(fin.approach.context)}`, '', ...fin.approach.dialogue.map(d => lineOf(d.speaker, d.text) + '  '), '', '## The choice', '');
-        b.push('_A locked choice shows its reason with this added:_', ...bulletsOf(modal, t => /backed them/.test(t.text)), '');
-        fin.choices.forEach(c => {
-            b.push(`### ${c.text}${tag('StructureEncounter.js', c.id)}`, `_${clean(c.desc)}_${c.requiresLabel ? `  \nLocked when: ${c.requiresLabel}` : ''}`, '');
-            const r = c.effect({ _sleepers: 3 });
-            b.push(`**${r.title}**`, '', ...[].concat(r.text).map(t => `${clean(t)}  `), '', `*In the vault on Earth: ${clean(r.vault)}*`, '');
+    b.push(`## The light${tag('StoryReel.js', 'light')}`, reelSource('light'), '', ...reelCaptions('light'), '');
+    const view = (fin && fin.disc && fin.disc.view) || {};
+    b.push(`## Our disc, from the hold${tag(FILE, 'disc.view')}`, '_Only the first time, and only if the team brought the disc aboard in sector 5: the disc page again, as the real object (its notes in sector-5.md), with these words around it:_', '',
+        `- ${clean(view.kicker)}`, `- ${lineOf('A.U.R.A.', view.aura)}`, `- ${clean(view.close)} — ${clean(view.closeNote)}`, '');
+    if (fin && fin.council && fin.endings) {
+        const C = fin.council, who = id => (id === 'aura' ? 'A.U.R.A.' : id.charAt(0).toUpperCase() + id.slice(1));
+        const WHEN = { hasDisc: 'the disc is aboard', edenVisited: 'a team walked on Eden', walkedEden: 'they walked on Eden themselves', wentWithout: 'they went without supper at least once',
+            sentMost: 'sent down three times or more, more than anyone', lostSomeone: 'a crewmate died ({lost} is the name)' };
+        b.push(`## ${fin.approach.title}: the crew have their say${tag(FILE, 'approach')}`, fin.approach.kicker ? `_Card kicker: ${clean(fin.approach.kicker)}_` : '', '', `> ${clean(fin.approach.context)}`, '',
+            ...fin.approach.dialogue.map(d => lineOf(d.speaker, d.text) + '  '), '',
+            '_Then each crew member who can speak, in this order, says the first of their lines that fits the run (nothing is locked by it):_', '');
+        C.speakOrder.forEach(id => C.lines[id].forEach((l, i) => b.push(`${lineOf(who(id), l.text)} _(${l.when ? `when ${WHEN[l.when] || l.when}` : 'otherwise'})_${tag(FILE, `council.lines.${id}[${i}]`)}  `)));
+        b.push('', `_Asked again after "Not yet":_ ${lineOf(C.again.speaker, C.again.text)}${tag(FILE, 'council.again')}`, '', '## The choice', '',
+            ...C.choices.map((c, i) => `- **${c.text}** — ${clean(c.desc)}${tag(FILE, `council.choices[${i}]`)}`), '');
+        Object.entries(fin.endings).forEach(([door, e]) => {
+            b.push(`## ${e.title}${tag(FILE, `endings.${door}`)}`, '');
+            if (e.flight) b.push('_The flight in (the new look; the lines of the dead are skipped):_', '', ...e.flight.map(l => lineOf(who(l.who), l.say) + '  '),
+                `${lineOf(who(e.hold.who), e.hold.say)} _(the ship slows; the commander chooses "${clean(e.keepGoing)}")_`, '');
+            if (e.turn) b.push('_Turning back from the light (the new look; not when you settled on Eden itself):_', '', lineOf(who(e.turn.who), e.turn.say), '');
+            b.push('_The closing line (the new look), said by the first of them who is alive:_', '', ...e.closing.map(l => lineOf(who(l.who), l.say) + '  '), '');
+            if (e.discLine) b.push(`_The last words, only with the disc aboard:_ ${lineOf(null, e.discLine)}`, '');
+            b.push(`_The end card: **${clean(e.title)}**, then three lines:_`, '', ...Object.entries(e.card).map(([k, t]) => `- ${clean(t)} _(${k})_`), '');
         });
     }
-    b.push(...textSection(2, 'The ending card', block('src/systems/EndScreens.js', /function endingHtml/), 'The kicker shows the ending\'s code name (for example BREAK_MAP) as it is.'));
+    b.push(...textSection(2, 'The ending card (the default game)', block('src/systems/EndScreens.js', /function endingHtml/), 'The kicker shows the ending\'s code name (for example INTO_THE_LIGHT) as it is.'));
     b.push(...textSection(3, 'Who made it', block('src/systems/EndScreens.js', /function rosterHtml/), 'The crew list on the ending and colony cards.'));
-    b.push(...textSection(3, 'In the log', bm('showEndingScreen'), 'The last three lines sit after a return in the code and never print.'));
+    b.push(...textSection(3, 'In the log', bm('recordEnding'), 'Once per run, when the journey ends.'));
     write('07-finale.md', 'The finale — the light', b);
 }
 
@@ -587,7 +605,7 @@ function councilMd() {
     const NAME = { mira: 'Mira', jaxon: 'Jaxon', aris: 'Aris', vance: 'Vance' };
     const SCAN = { good: 'a good world', marginal: 'a marginal world', bad: 'a bad world', any: 'any world' };
     const BAND = { early: 'sectors 1-2', middle: 'sectors 3-4', late: 'sectors 5-6' };
-    const KNOWS = { doubt: 'after the uncut tape', truth: 'once a page explains it' };
+    const KNOWS = { doubt: 'from sector 3 on', truth: 'once a page explains it' };
     const when = key => { const [band, knows] = key.split('.'); return BAND[band] + (knows ? `, ${KNOWS[knows]}` : ''); };
     const b = ['## Before you settle: the crew have their say (every sector)',
         '_Every way of settling (the SETTLE button, or "settle here" on a paradise world) opens this card first, one line at a time. Each crew member who can speak says one line, picked by the scan, the sector and what the crew know; then A.U.R.A. asks. Asked again about the same world, only her question repeats. See docs/SETTLING.md._', '',
@@ -757,10 +775,10 @@ function councilMd() {
 
 // anywhere: cargo, fabricator and map names
 {
-    const STORY_ITEMS = ['BRIEFING_TAPE', 'DISC_DRAWING', 'TECH_FRAGMENT'];
+    const STORY_ITEMS = ['DISC_DRAWING', 'TECH_FRAGMENT'];
     const b = [HOW, '', 'Names and descriptions: things in the cargo hold, parts in the fabricator, and what the sector map says about each place.', ''];
-    b.push(...textSection(2, 'The cargo hold', whole('src/data/Items.js', 'ITEMS'), `Every item: its name, its description, and what using it says. The tape, the disc drawing and the data chip are with their story (sector-2.md, sector-1.md, 09-ship-and-crew.md).`, t => !STORY_ITEMS.includes(t.path[0])));
-    b.push(...textSection(3, 'Reading a found page again', bm('pageItem'), ''));
+    b.push(...textSection(2, 'The cargo hold', whole('src/data/Items.js', 'ITEMS'), `Every item: its name, its description, and what using it says. The disc drawing and the data chip are with their story (sector-1.md, 09-ship-and-crew.md); the disc itself is in sector-5.md.`, t => !STORY_ITEMS.includes(t.path[0])));
+    b.push(...textSection(3, 'Reading a found page again (or taking out the disc)', bm('pageItem'), ''));
     b.push(...textSection(2, 'The fabricator', whole('src/data/Upgrades.js', 'UPGRADES'), 'Each part: name, description, what it changes, where it shows on the ship.'));
     b.push(...textSection(2, 'Planets on the map', block('src/generators/PlanetGenerator.js', /const PLANET_DATA = \{/, 'PLANET_DATA'), 'The description of each kind of world.'));
     b.push(...textSection(2, 'Stations on the map', method('src/generators/PlanetGenerator.js', 'generateStation'), ''));

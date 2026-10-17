@@ -1,7 +1,6 @@
 /* StoryReel — the big pictures. Short, skippable, full-screen dithered sequences that SHOW the story instead of telling it.
      'program'  (new game)   what the crew was told: Earth seeding the whole sky, eight ships ahead on your heading, you are the ninth
-     'corridor' (sector 3)   what is true: every one of those lines bends into this single corridor; the hull count climbs
-                             from 9 into the tens of thousands; at the far end, something dark is waiting
+     'light'    (the finale) the light filling the window, our ship small in front of it
    One line of caption per beat, never more. play(name) → Promise (resolves when it ends or is skipped).
    Stepped at ~12 fps on a timer, so it still runs when the tab is hidden and matches the dither look. */
 
@@ -9,11 +8,10 @@
     'use strict';
     const W = 480, H = 270, TICK_MS = 80;
     const EARTH = { x: 104, y: 135, r: 34 }, HEADING_Y = 135;
-    const RAY_COUNT = 160, DASH_GAP = 22, DASH_LENGTH = 9, RAY_STEP = 2, CORRIDOR_LENGTH = 1500, STRUCTURE_X = 1560, WRECK_COUNT = 760;
+    const RAY_COUNT = 160, DASH_GAP = 22, DASH_LENGTH = 9, RAY_STEP = 2, STRUCTURE_X = 1560;
     const HEADING_WEDGE = 0.1;                                                      // radians kept clear round your heading in the briefing film
-    const UNCUT_LEAN = 0.22;                                                        // how far the lines lean toward your heading before the uncut tape runs out
-    const HULLS_TOLD = 9, HULLS_TRUE = 41207, LIVING_REACH = 420, DYING_SPAN = 1050;
-    const INK = '#05070a', BONE = '#c4d0c4', DIM = '#2f5a48', GREEN = '#74d99a', AMBER = '#d9a24a', RED = '#d85a4e';
+    const LIVING_REACH = 420, DYING_SPAN = 1050;
+    const INK = '#05070a', BONE = '#c4d0c4', DIM = '#2f5a48', GREEN = '#74d99a', AMBER = '#d9a24a';
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
     const ease = t => (t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t));
@@ -32,9 +30,8 @@
             angle: (i / RAY_COUNT) * Math.PI * 2 - Math.PI + (rand() - 0.5) * 0.04,
             speed: 0.6 + rand() * 0.8, offset: rand() * DASH_GAP, lane: (rand() - 0.5) * rand() * 96, // most lanes near the middle: a bright core, a soft edge
         }));
-        const wrecks = Array.from({ length: WRECK_COUNT }, () => { const far = Math.pow(rand(), 0.55); return { x: 150 + far * (CORRIDOR_LENGTH - 150), y: HEADING_Y + (rand() - 0.5) * rand() * (30 + far * 120), old: far, tilt: rand() < 0.5 }; });
         const clouds = Array.from({ length: 9 }, () => ({ x: rand() * (STRUCTURE_X + 200), y: rand() * H, r: 50 + rand() * 90, violet: rand() < 0.5 }));
-        return { stars, rays, wrecks, clouds };
+        return { stars, rays, clouds };
     }
 
     function drawSky(ctx, world, pan) {
@@ -118,42 +115,8 @@
         ctx.fillRect(142, HEADING_Y - 3, 5, 7); ctx.fillRect(140, HEADING_Y - 1, 9, 3);
     }
 
-    /** The corridor as it really is: hulls, thicker and older the further you look. */
-    function drawWrecks(ctx, world, shown, pan, time) {
-        world.wrecks.forEach((wreck, i) => {
-            if (wreck.old > shown) return;
-            const x = Math.round(wreck.x - pan), y = Math.round(wreck.y);
-            if (x < -4 || x >= W) return;
-            ctx.fillStyle = wreck.old > 0.7 ? '#6a2f2a' : wreck.old > 0.35 ? RED : BONE;
-            ctx.fillRect(x, y, 4, 1); ctx.fillRect(x + (wreck.tilt ? 0 : 2), y - 1, 2, 1);          // a hull and what is left of its bridge
-            if (i % 9 === 0) ctx.fillRect(x + 5, y + (wreck.tilt ? 1 : -1), 1, 1);                   // a piece drifting off
-            if (i % 17 === 0 && Math.floor(time / 500 + i) % 3 === 0) { ctx.fillStyle = AMBER; ctx.fillRect(x + 1, y - 2, 1, 1); } // a beacon still blinking
-        });
-    }
-
-    /** What is at the end. A slab with one lit edge, taller than the screen: nothing natural is that straight. */
-    function drawStructure(ctx, pan, shown) {
-        const x = Math.round(STRUCTURE_X - pan), wide = 78, halo = 90;
-        if (x - halo > W || shown <= 0) return;
-        for (let py = 0; py < H; py++) for (let px = Math.max(0, x - halo); px < Math.min(W, x + wide + 30); px++) {
-            if (px >= x && px < x + wide) {
-                const isEdge = px < x + 3;
-                ctx.fillStyle = isEdge ? (dith(px, py, shown) ? '#f2ecff' : '#6a44c8') : (dith(px, py, 0.12 * shown) ? '#1a0f30' : '#020204');
-                ctx.fillRect(px, py, 1, 1);
-            } else if (px < x) {                                               // violet light spilling off the lit edge
-                const glow = Math.pow(1 - (x - px) / halo, 2) * 0.8 * shown;
-                if (dith(px, py, glow)) { ctx.fillStyle = (x - px) < 24 ? '#8844ff' : '#3a1f66'; ctx.fillRect(px, py, 1, 1); }
-            }
-        }
-        for (let r = 100; r < 230; r += 42) for (let a = 0; a < 6.28; a += 0.012) {                     // rings turning round it, far too large
-            const px = Math.round(x + wide / 2 + Math.cos(a) * r), py = Math.round(H / 2 + Math.sin(a) * r * 0.3);
-            if (px >= 0 && px < W && py >= 0 && py < H && (px < x || px >= x + wide) && dith(px, py, 0.6 * shown)) { ctx.fillStyle = '#b79bff'; ctx.fillRect(px, py, 1, 1); }
-        }
-    }
-
-    // ── EXODUS-9 from outside, for the reading. (The short films that closed each sector are gone: the flown jump,
+    // ── EXODUS-9 from outside, in front of the light. (The short films that closed each sector are gone: the flown jump,
     //    Corridor.js, now shows the drifting hull, the numbers in the thousands, the twin and the light itself.) ──
-    const SLAB_WIDE = 78;                                                          // matches drawStructure
     const SHIP_SCALE = 2;
     const SHIP_ART = [
         '...........####...............',
@@ -175,15 +138,7 @@
         }
     }
 
-    /** An old tape: a tracking band rolling down the picture, and now and then a line that tears sideways. */
-    function drawTapeWear(ctx, t) {
-        const band = Math.floor((t / 28) % (H + 40)) - 20;
-        ctx.fillStyle = 'rgba(5, 7, 10, 0.55)'; ctx.fillRect(0, band, W, 6);
-        ctx.fillStyle = 'rgba(214, 255, 228, 0.18)'; ctx.fillRect(0, band + 6, W, 1);
-        if (Math.floor(t / 90) % 23 === 0) { const y = Math.floor((t * 7) % H); ctx.drawImage(ctx.canvas, 0, y, W, 2, 6, y, W, 2); }
-    }
-
-    /** The light, filling the right of the frame: a sun that is not warm. A violet band crosses the picture, reading it. */
+    /** The light, filling the right of the frame: a sun that is not warm. */
     function drawLight(ctx, t, shown) {
         const cx = W + 40, cy = H / 2, R = 150 * shown, breath = 1 + 0.03 * Math.sin(t / 640);
         if (shown <= 0) return;
@@ -196,24 +151,16 @@
             ctx.fillRect(x, y, 1, 1);
         }
     }
-    function drawReading(ctx, t, from, period) {
-        const x = ((t - from) / period) * (W + 60) - 30;
-        if (t < from) return;
-        for (let px = Math.max(0, Math.floor(x - 14)); px < Math.min(W, x + 14); px++) for (let py = 0; py < H; py++)
-            if (dith(px, py, 0.55 - Math.abs(px - x) / 28)) { ctx.fillStyle = '#8844ff'; ctx.fillRect(px, py, 1, 1); }
-    }
-
     // ── the reels: beats are [start ms, caption]; draw(ctx, world, t) paints the frame at time t ──
     const REELS = {
-        reading: {
-            length: 12500,
+        light: {
+            length: 6800,
             source: 'HULL CAMERA · FORWARD',
-            beats: [[400, 'It fills every window.'], [3200, 'It looks like a sun, but it gives off no heat.'], [6200, 'Something moves through the ship, room by room.'], [9600, 'It reads the ship\'s computer first.']],
+            beats: [[400, 'It fills every window.'], [3200, 'It looks like a sun, but it gives off no heat.']],
             draw(ctx, world, t) {
                 ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
                 drawLight(ctx, t, span(t, 0, 2600));
                 drawShip(ctx, 150 + Math.round(Math.sin(t / 900) * 2), 118 + Math.round(Math.sin(t / 1300) * 2), t);
-                drawReading(ctx, t, 6200, 5200);
             },
         },
         program: {
@@ -227,39 +174,12 @@
                 drawHeading(ctx, span(t, 9000, 12500), t);
             },
         },
-        uncut: {
-            length: 17000,
-            source: 'RECOVERED TAPE · EXODUS PROGRAMME MASTER · UNCUT',
-            beats: [[600, 'A tape from a dead ship. Our programme\'s seal on it.'], [3800, 'The same briefing film. Longer.'], [9000, 'Look at your heading. It is not eight ships.'], [13200, 'The tape ends there.']],
-            draw(ctx, world, t) {
-                drawSky(ctx, world, 0);
-                drawStreams(ctx, world, t, span(t, 12500, 16500) * UNCUT_LEAN, 30 + span(t, 3000, 9000) * 460, 0);   // nothing kept clear: the heading is full
-                drawEarth(ctx, 0);
-                drawHeading(ctx, span(t, 9000, 11500), t);
-                drawTapeWear(ctx, t);
-            },
-        },
-        corridor: {
-            length: 21000,
-            source: 'BRIDGE DISPLAY · THE FILM, WITH EVERY TRANSPONDER WE CAN HEAR',
-            beats: [[600, 'Mira puts the briefing film back up.'], [4200, 'Then she lays the real signals over it.'], [9500, 'They were not sent everywhere. They were all sent this way.'], [15500, 'All of them. Toward one thing.']],
-            counter: t => Math.round(HULLS_TOLD + (HULLS_TRUE - HULLS_TOLD) * Math.pow(span(t, 4200, 12500), 2.2)),
-            draw(ctx, world, t) {
-                const bend = span(t, 4200, 9000), pan = span(t, 10500, 19000) * (STRUCTURE_X - W + 110);
-                drawSky(ctx, world, pan);
-                drawStreams(ctx, world, t, bend, 460 + bend * 1100, pan);
-                drawWrecks(ctx, world, span(t, 7000, 15000), pan, t);
-                drawEarth(ctx, pan);
-                drawStructure(ctx, pan, span(t, 15000, 19500));
-            },
-        },
     };
 
     function overlayHtml(reel) {
         return `<div class="reel-frame">
             <canvas class="reel-canvas" width="${W}" height="${H}"></canvas>
             ${reel.source ? `<p class="reel-source"><i aria-hidden="true"></i>${reel.source}</p>` : ''}
-            ${reel.counter ? '<p class="reel-counter"><span>HULLS ON THIS HEADING</span><b>9</b></p>' : ''}
             <p class="reel-caption" aria-live="polite"></p>
             <button class="reel-skip" type="button">skip ›</button>
         </div>`;
@@ -273,7 +193,7 @@
             overlay.className = 'story-reel';
             overlay.innerHTML = overlayHtml(reel);
             document.body.appendChild(overlay);
-            const ctx = overlay.querySelector('canvas').getContext('2d'), captionEl = overlay.querySelector('.reel-caption'), counterEl = overlay.querySelector('.reel-counter b');
+            const ctx = overlay.querySelector('canvas').getContext('2d'), captionEl = overlay.querySelector('.reel-caption');
             const world = buildWorld(), startedAt = performance.now();
             let beatIndex = -1, isDone = false;
 
@@ -291,7 +211,6 @@
                 const t = performance.now() - startedAt;
                 if (t >= reel.length) { finish(); return; }
                 reel.draw(ctx, world, t);
-                if (counterEl) counterEl.textContent = reel.counter(t).toLocaleString('en-US');
                 const next = reel.beats.findIndex(([at]) => at > t), current = (next === -1 ? reel.beats.length : next) - 1;
                 if (current !== beatIndex && current >= 0) {
                     beatIndex = current;

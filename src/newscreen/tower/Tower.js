@@ -10,7 +10,11 @@
      their own bunk, asleep); asleep (sedated) in the med bay bed when no one hurt has it, else in their bunk; confined
      standing still at their bunk in the quarters; nobody stays on a red deck (they wait at the galley table, or in the
      med bay when the quarters are red); Aris tends whoever is in the med bay bed while she is in there; Mira works at her
-     bench while a star fix waits there (NSOrbit.datable).
+     bench while a star fix waits there (NSOrbit.datable); too weak from a missed supper, they stay seated at the galley
+     table (Vance on his bunk) until the next team trip has gone.
+   - Supper after a jump (tower/Supper.js, which this module drives): while it is due the crew's day is held at its meal,
+     everyone at the galley table (set while the tower is out of sight); short of food, pointing at someone says
+     "<name> goes without" and a click picks them.
    - The reactor follows the real energy (ShipArt.reactor.set; a step lower with engineering red); the beat runs 1.1 s at
      100, 1.5 s at 10, a missed beat in four below 25; the conduit carries it up to the bridge (TowerMarks).
    - Red decks from NewScreen.game.decks(); engineering red browns the ship out every 2.9 s.
@@ -20,8 +24,9 @@
      red, A.U.R.A. says once, in travel, that it can be clicked.
    - A new sector: closed until 'opening:done' (5 s at most), then it slides in (1.2 s).
    - The ship's stock (NSStock, below): energy by the reactor, rations over the galley table, salvage over the hold's
-     crates, as small lit numbers in #ns-ship-words. A change flashes (warm up, red down, the difference beside it for
-     1.6 s); the first change of each, A.U.R.A. says once what it is for. Stop.js shows the same three on the bridge wall.
+     crates, data in the lab, as small lit numbers in #ns-ship-words. A change flashes (warm up, red down, the difference
+     beside it for 1.6 s); the first change of each, A.U.R.A. says once what it is for. Stop.js shows the same four on the
+     bridge wall.
    Source: prototypes/slice/ship.js (minus the price charge, signs, asks, meal, plates and pages).
    Load after the art files and TowerMarks.js, and after NewScreen.js (it registers itself as 'tower').
 
@@ -38,16 +43,23 @@
                                  device px); wDev is the tower's width on screen
      debug() → { fit, k, dark, E, decks, crew, people: [{ id, deck, x, act, say }], chips }
    }
-   Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' 'jump:flash'.
+   Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' (a rumble building to the flash) 'jump:flash'.
+   Uses, if present: window.Juice (the tremor; without it nothing shakes).
 
    window.NSStock (frozen): the ship's stock, read from the real game (never written)
-     KEYS                        ['energy', 'rations', 'salvage']
+     KEYS                        ['energy', 'rations', 'salvage', 'data']   (data: GameState._colonyKnowledge, "+1 Data")
      tick()                      reads the numbers; a change starts its flash (and the first time, A.U.R.A.'s line). The
                                  tower's update calls it every frame; a hidden view's return reads afresh (no flash). A
                                  change made out of sight (a card or minigame up, the dive) is held until the numbers
                                  are in view again, so its flash is seen; the numbers hide under a card or a minigame
-     board(layer) → { put(key, x, y, align), hide() }   three readouts in a word layer; put places one at CSS px (x, y
+     board(layer) → { put(key, x, y, align), hide() }   the readouts in a word layer; put places one at CSS px (x, y
                                  its top-left, or top-right with align 'right') and shows it
+   window.NSTower (frozen): the ship feels the flight (picture only; ignored while the tower is closed, sliding or dark)
+     jolt(s)                     s 0..1: the tremor's trauma += s; at 0.3 or more the standing crew's knees give
+     speed(k)                    k 0..1: how hard we fly now, called every frame (eased, tau 400 ms; no calls: back to 0
+                                 within a second); the reactor beats up to 30 % faster
+     hit(deck)                   a deck name (DECKS): trauma += 0.5 and that deck's red light stutters for 360 ms. The
+                                 tower calls it itself for a deck newly red, on the first frame it is in view
    Anchors: 'person:<id>' for the five, 'tower:deck:<name>' for the six decks (CSS px, [] when not in view).
    Uses, if present: NewScreen.mode() (only 'travel' takes clicks), NewScreen.mods.voice.speaking() → 'aura' | id | null
    (the computer's speaker glows while A.U.R.A. talks), NewScreen.flow.{ person(id), bench(), datable(), deckChoices(key),
@@ -84,6 +96,10 @@
         vance: { deck: 3, x: 470, facing: -1 }, mira: { deck: 3, x: 346, facing: 1 } };   // the quarters red too: they wait in the med bay
     const MEAL_STAND = { deck: 2, x: 548, facing: -1 };
     const spot = name => (name === 'mealStand' ? MEAL_STAND : S[name]);
+    // Supper after a jump (tower/Supper.js): the crew's day is held at its meal, everyone at the galley table, while it is due.
+    const SUPPER_AT = 128000;                                              // ms into ShipRoutine's lap: all five at the table (they get up at 140 s)
+    // too weak from a missed supper (GameState.serveSupper): they stay seated at the table; Vance, who eats standing, lies on his bunk
+    const WEAK = { jaxon: ['seatL2', 'sit'], aris: ['seatL1', 'sit'], mira: ['seatR1', 'sit'], vance: ['bedVance', 'sleep'] };
 
     // ── the module's own picture state (never game state) ──
     const V = {
@@ -95,6 +111,8 @@
         real: { crew: {}, decks: {}, engDown: false, datable: false }, readAt: -1e9, dirty: true,
         tendX: null, hover: null, chips: null, words: null, quality: 'high', scaleN: 0, scaleMs: 0,
         tag: null, toldRed: new Set(), tellRed: null, stock: null,
+        shake: null, tremor: null, spd: 0, spdIn: 0, spdAt: -1e9, braceT: null, flick: {}, burnT0: null, newRed: new Set(), readOnce: false,
+        routine: { off: 0, held: null },   // the crew's day runs at t + off; held: kept at that moment (supper)
     };
     let NS = null;
     const G = () => (NS && NS.G) || {};
@@ -123,11 +141,13 @@
     }
     function readReal(t) {
         const list = call('crew', []) || [], crew = {};
-        list.forEach(c => { if (c && IDS.includes(c.id)) crew[c.id] = { status: c.status || 'well', stress: c.stress || 0 }; });
+        list.forEach(c => { if (c && IDS.includes(c.id)) crew[c.id] = { status: c.status || 'well', stress: c.stress || 0, weak: !!c.weak }; });
         const raw = call('decks', {}) || {}, decks = {};
         DECKS.forEach(k => { decks[k] = raw[k] === 'red' ? 'red' : 'ok'; });
         const was = (V.real && V.real.decks) || {};
         DECKS.forEach(k => { if (decks[k] === 'red' && was[k] !== 'red' && GAME_KEY[k] && !V.toldRed.has(k)) { V.toldRed.add(k); V.tellRed = k; } });
+        if (V.readOnce) DECKS.forEach(k => { if (decks[k] === 'red' && was[k] !== 'red') V.newRed.add(k); else if (decks[k] !== 'red') V.newRed.delete(k); });   // felt when first seen
+        if (call('state', null)) V.readOnce = true;                           // a deck red from before the first real read is no news
         V.real = { crew, decks, engDown: decks.engineering === 'red', datable: datable() };
         V.readAt = t; V.dirty = false;
     }
@@ -166,6 +186,7 @@
         if (c.status === 'hurt') return p.id === bed ? stay(p.id, S.patient, 'sleep', t, 'hurt:bed') : stay(p.id, S[BUNK[p.id]], 'sleep', t, 'hurt:bunk');
         if (c.status === 'asleep') return p.id === bed ? stay(p.id, S.patient, 'sleep', t, 'asleep:bed') : stay(p.id, S[BUNK[p.id]], 'sleep', t, 'asleep');
         if (c.status === 'confined') return stay(p.id, CONFINE[p.id], 'idle', t, 'confined');
+        if (c.weak && V.routine.held == null && WEAK[p.id] && !isRed(2)) { const [name, act] = WEAK[p.id]; return stay(p.id, spot(name), act, t, 'weak'); }
         if (p.id === 'mira' && V.real.datable && !isRed(1)) return Object.assign(stay('mira', S.bench, 'console', t, 'bench'), { screen: true });
         if (MOVING[p.act]) return p;                                       // passing through is fine, even a red deck
         if (p.id === 'aris' && bed && bed !== 'aris' && p.deck === 3 && !isRed(3)) return stay('aris', tendSpot(), 'tend', t, 'tend');
@@ -186,9 +207,22 @@
         return has('hurt') || has('asleep') || null;
     }
     function peopleNow(t) {
-        const bed = bedOf(), moved = new Set();
-        const list = SIM.at('travel', t).map(p => { const o = override(p, t, bed); if (o !== p) moved.add(p.id); return o; }).filter(Boolean);
+        const bed = bedOf(), moved = new Set(), held = V.routine.held;
+        const day = SIM.at('travel', held != null ? held : t + V.routine.off)
+            .map(p => (held != null && !MOVING[p.act] && p.act !== 'climb' ? Object.assign({}, p, { ms: t }) : p));   // held: still alive, not a statue
+        const list = day.map(p => { const o = override(p, t, bed); if (o !== p) moved.add(p.id); return o; }).filter(Boolean);
         return unstack(list, moved);
+    }
+    /** Supper after a jump (tower/Supper.js): while it is due, the crew's day is held at its meal, everyone at the galley
+        table; it is set there only while the tower is out of sight (the jump's dark, a new sector's opening), so nobody jumps.
+        Once served, the day runs on from the meal: they finish eating and get up. The scene starts once they are seated. */
+    function stepSupper(dt, t, inView) {
+        const SUP = window.NSSupper;
+        if (!SUP) return;
+        const due = SUP.pending();
+        if (due && V.routine.held == null && !inView) V.routine.held = SUPPER_AT;
+        else if (!due && V.routine.held != null) { V.routine.off = V.routine.held - t; V.routine.held = null; }
+        try { SUP.tick(dt, inView && V.routine.held != null); } catch (err) { console.error('Tower: the supper failed', err); }
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -227,7 +261,8 @@
     function openTower(t) { if (t < V.slide.closedUntil) V.slide = { closedUntil: t, start: t }; }
 
     function stepBeat(dt, t) {
-        const E = V.Eshown, period = MK.BEAT.FULL + (MK.BEAT.LOW - MK.BEAT.FULL) * clamp((100 - E) / 90, 0, 1), b = V.beat;
+        const E = V.Eshown, b = V.beat;
+        const period = (MK.BEAT.FULL + (MK.BEAT.LOW - MK.BEAT.FULL) * clamp((100 - E) / 90, 0, 1)) * (1 - FEEL.beatAtSpeed * V.spd);   // faster in flight
         b.phase += dt / period;
         while (b.phase >= 1) {
             b.phase -= 1; b.n += 1;
@@ -252,6 +287,62 @@
     }
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    // The ship feels the flight (window.NSTower): a tremor on the go, the landing and the jump's burn; the reactor beating
+    // faster at speed; a red deck's lights stuttering when it is first seen broken; the crew's knees giving on a jolt.
+    // Picture only. Calls are ignored while the tower is closed, sliding or dark (nothing is queued).
+    // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+    const FEEL = Object.freeze({ beatAtSpeed: 0.3, speedTau: 400, speedStale: 150, burnFloor: 0.6, burnMs: 2250,
+        hitKick: 0.5, braceMin: 0.3, braceDip: 3, braceIn: 80, braceOut: 250, flickMs: 360 });
+    const STANDING = { idle: 1, console: 1, walk: 1, carry: 1, wall: 1, wave: 1, tend: 1 };
+    const reduced = () => { const J = window.Juice; try { return !!(J && typeof J.reduced === 'function' && J.reduced()); } catch (err) { return false; } };
+    function shaker() {
+        const J = window.Juice;
+        if (!V.shake && J && typeof J.shaker === 'function') V.shake = J.shaker({ max: [12, 6], roll: 0, decay: 1.8, hz: 10 });
+        return V.shake;
+    }
+    /** The tower in view: open, slid in, not in the jump's dark. */
+    const feels = () => !!V.fit && !V.dark && slideK(now()) >= 1;
+    function jolt(s) {
+        const a = clamp(Number(s) || 0, 0, 1), sh = shaker();
+        if (!a || !feels()) return;
+        if (sh) sh.add(a);
+        if (a >= FEEL.braceMin) V.braceT = now();
+    }
+    function speed(k) {
+        if (!feels()) return;
+        V.spdIn = clamp(Number(k) || 0, 0, 1); V.spdAt = now();
+    }
+    function hitDeck(deck) {
+        if (!DECKS.includes(deck) || !feels()) return;
+        const sh = shaker(), t = now();
+        if (sh) sh.add(FEEL.hitKick);
+        V.braceT = t;
+        V.flick = Object.assign({}, V.flick, { [deck]: t });
+    }
+    /** Once a frame: the speed eased (no calls: back to 0 within a second), the burn's rumble, the tremor stepped, a deck
+        newly red felt on the first frame the tower is in view. */
+    function stepFeel(dt, t) {
+        const want = t - V.spdAt < FEEL.speedStale && feels() ? V.spdIn : 0;
+        V.spd += (want - V.spd) * (dt > 0 ? 1 - Math.exp(-dt / FEEL.speedTau) : 0);
+        const sh = shaker();
+        if (sh && V.burnT0 != null && !V.dark) sh.floor(FEEL.burnFloor * Math.pow(clamp((t - V.burnT0) / FEEL.burnMs, 0, 1), 2));
+        V.tremor = sh ? sh.tick(dt / 1000) : null;
+        if (V.newRed.size && feels() && modeNow() === 'travel' && !(NS.blocked && NS.blocked())) {
+            const list = [...V.newRed]; V.newRed = new Set();
+            list.forEach(k => { if (V.real.decks[k] === 'red') hitDeck(k); });
+        }
+        if (Object.values(V.flick).some(t0 => t - t0 > FEEL.flickMs || t < t0)) V.flick = Object.fromEntries(Object.entries(V.flick).filter(([, t0]) => t - t0 <= FEEL.flickMs && t >= t0));
+    }
+    /** The knees give: standing people dip a few tower px, 0 → 1 in 80 ms, back over 250 ms; copies, never the routine's own. */
+    function braced(list, t) {
+        const age = V.braceT == null ? 1e9 : t - V.braceT;
+        if (age < 0 || age >= FEEL.braceIn + FEEL.braceOut) return list;
+        const k = age < FEEL.braceIn ? ease(age / FEEL.braceIn) : 1 - ease((age - FEEL.braceIn) / FEEL.braceOut);
+        const dip = FEEL.braceDip * k * (reduced() ? 0.5 : 1);
+        return list.map(p => (STANDING[p.act] ? Object.assign({}, p, { y: p.y + dip }) : p));
+    }
+
+    // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     // The module
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     function canvas() {
@@ -270,8 +361,8 @@
         bus.on('hidden', () => { hideChips(); ST.state = null; });          // the view back later: the stock is read afresh, no flash
         bus.on('hud', () => { V.dirty = true; });
         bus.on('opening:done', () => openTower(now()));
-        bus.on('jump:burn', () => { V.flood = { kind: 'jump', t0: now() }; hideChips(); });
-        bus.on('jump:flash', () => { V.dark = true; });
+        bus.on('jump:burn', () => { V.flood = { kind: 'jump', t0: now() }; V.burnT0 = now(); hideChips(); });
+        bus.on('jump:flash', () => { V.dark = true; V.burnT0 = null; });
         IDS.forEach(id => NS.anchors.set('person:' + id, () => {
             const a = personAt(id);
             if (!a) return [];
@@ -286,6 +377,7 @@
         const t = now();
         V.dirty = true;
         V.dark = false;
+        V.burnT0 = null;
         if (p.first) closeTower(t, OPEN_FALLBACK_MS);                       // a new sector: from black, the title; then the tower
     }
     function deckAnchor(i) {
@@ -312,12 +404,15 @@
         if (!g.H || !V.fit) return;
         if (V.dirty || t - V.readAt > READ_MS || t < V.readAt) readReal(t);
         stepEnergy(dt, t);
+        stepFeel(dt, t);
         stepBeat(dt, t);
         if (V.flood && MK.floodDone({ t, flood: V.flood })) V.flood = null;
         if (V.slide.start != null && t >= V.slide.start + SLIDE_MS) V.slide = { closedUntil: 0, start: null };
+        stepSupper(dt, t, slideK(t) >= 1 && !V.dark && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
         V.people = peopleNow(t);
         if (V.chips && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.chips.deck] !== 'red')) hideChips();
-        if (V.tag && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.tag.deck] !== 'red' || V.chips)) hideTag();
+        const tagGone = V.tag && (V.tag.who ? !(window.NSSupper && window.NSSupper.choosing()) : V.real.decks[V.tag.deck] !== 'red');
+        if (V.tag && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || tagGone || V.chips)) hideTag();
         tellRed();
         if (modeNow() !== 'travel' || V.dark || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame
         stockTick();
@@ -333,16 +428,16 @@
         o.setTransform(1, 0, 0, 1, 0, 0);
         o.clearRect(0, 0, OFF_W, ROWS);
         o.imageSmoothingEnabled = false;
-        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: V.people, auraTalking: auraTalking() });
+        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: braced(V.people, t), auraTalking: auraTalking() });
         V.drawn = TW.drawn.slice();
         const sunY = (0.4 * f.devH - f.tY0) / f.ts;                       // level with the light (Field's light sits at 40 % of the height)
         const view = { t, G: { W: OFF_W, H: ROWS }, offX: -f.tLeft, cam: f.tTop, decks: V.real.decks, engDown: V.real.engDown, E: V.Eshown, beat: V.beat,
-            flood: V.flood, sunY, fix: V.real.datable ? SLATE : null };
+            flood: V.flood, sunY, fix: V.real.datable ? SLATE : null, flick: V.flick, reduced: reduced() };
         MK.draw(o, view);
         c.imageSmoothingEnabled = true;
         c.imageSmoothingQuality = V.quality;
-        const s0 = performance.now();
-        c.drawImage(V.off, 0, 0, OFF_W, ROWS, V.slideX, f.tY0, OFF_W * f.ts, ROWS * f.ts);
+        const s0 = performance.now(), sh = V.tremor;                          // the tremor: smooth-scaled, so not rounded
+        c.drawImage(V.off, 0, 0, OFF_W, ROWS, V.slideX + (sh ? sh.dx * f.ts : 0), f.tY0 + (sh ? sh.dy * f.ts : 0), OFF_W * f.ts, ROWS * f.ts);
         watchScale(performance.now() - s0);
         placeStock(k >= 1 && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
     }
@@ -384,6 +479,13 @@
         if (type === 'wheel') return false;                                // the whole tower is in view: nothing to scroll
         if (type === 'leave' || V.dark || slideK(t) < 1 || modeNow() !== 'travel') { V.hover = null; hideTag(); return false; }
         const h = hit(e);
+        const SUP = window.NSSupper, who = h && (h.what === 'person' || h.what === 'bench') && IDS.includes(h.id) ? h.id : null;
+        if (who && SUP && SUP.choosing()) {                                // supper, short of food: pointing names who goes without, a click picks them
+            const tag = SUP.tagFor(who);
+            if (type === 'move') { V.hover = h; if (tag) showTag('quarters', e, tag); else hideTag(); return !!tag; }
+            if (type === 'down') { hideTag(); return SUP.pick(who); }
+            return false;
+        }
         if (type === 'move') { V.hover = h; if (h && h.what === 'deck' && !V.chips) showTag(h.id, e); else hideTag(); return !!h; }
         if (type === 'down') hideTag();
         if (type !== 'down') return false;
@@ -439,22 +541,33 @@
         flowCall('deckChoose', key, i);
     }
     function hideChips() { if (V.chips) { V.chips.el.remove(); V.chips = null; } }
-    /** Pointing at a red deck: its name and what can be done, beside it (the same place the choices will take). */
-    function showTag(deck, e) {
+    /** Pointing at a red deck: its name and what can be done, beside it (the same place the choices will take). At supper,
+        pointing at someone: who goes without (who: { verb, note } from NSSupper.tagFor), beside the galley. */
+    function showTag(deck, e, who) {
         const layer = wordsLayer();
         if (!layer) return;
-        if (!V.tag || V.tag.deck !== deck) {
+        const key = who ? 'who:' + who.verb : deck;
+        if (!V.tag || V.tag.key !== key) {
             hideTag();
             const el = document.createElement('div'), b = document.createElement('span'), n = document.createElement('span');
-            el.className = 'nsk-chips nsk-tag'; b.className = 'nsk-verb'; n.className = 'nsk-note';
-            b.textContent = `${DECK_WORD[deck] || 'This deck'}, broken`; n.textContent = 'Fix, patch or live with it';
+            el.className = 'nsk-chips nsk-tag' + (who ? ' is-who' : ''); b.className = 'nsk-verb'; n.className = 'nsk-note';
+            b.textContent = who ? who.verb : `${DECK_WORD[deck] || 'This deck'}, broken`; n.textContent = who ? who.note : 'Fix, patch or live with it';
             el.append(b, n); layer.append(el);
-            V.tag = { el, deck };
+            V.tag = { el, deck, key, who: !!who };
             void el.offsetWidth; el.classList.add('is-in');
         }
+        if (who) { placeWho(V.tag.el); return; }
         const keep = V.chips; V.chips = V.tag; placeChips(deck, e); V.chips = keep;            // placed as the choices would be
     }
     function hideTag() { if (V.tag) { V.tag.el.remove(); V.tag = null; } }
+    /** Supper: "<name> goes without" over space right of the hull, under the "Accept" chip (else level with the galley), so it
+        never covers the one speaking at the table. */
+    function placeWho(el) {
+        const f = V.fit, chip = document.querySelector('#ns-ship-words .nss-supper'), r = chip && chip.getBoundingClientRect();
+        const [, cy] = toCss(0, A.deckTop(2) + F * 0.5), x = r && r.width ? r.left : (f.wDev + V.slideX) / f.dpr + 20;
+        const y = clamp(r && r.height ? r.bottom + 10 : cy, 16, innerHeight - (el.offsetHeight || 30) - 16);
+        el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    }
     /** Beside the deck, on the side of the tower away from the pointer (over space when the pointer is near the hull edge). */
     function placeChips(deck, e) {
         const el = V.chips.el, w = el.offsetWidth, h = el.offsetHeight, f = V.fit, i = DECKS.indexOf(deck);
@@ -478,6 +591,8 @@
 #ns-ship-words .nsk-choice:focus-visible { outline: none; }
 #ns-ship-words .nsk-tag { display: grid; gap: 4px; pointer-events: none; }
 #ns-ship-words .nsk-tag .nsk-verb { color: #ff7a6a; }
+#ns-ship-words .nsk-tag.is-who { grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 8px; }
+#ns-ship-words .nsk-tag.is-who .nsk-verb { color: var(--warm-br, #ffc27a); }
 @media (prefers-reduced-motion: reduce) { #ns-ship-words .nsk-chips, #ns-ship-words .nsk-verb { transition: none; } }`;
         document.head.appendChild(st);
     }
@@ -485,21 +600,24 @@
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     // The ship's stock: small lit numbers beside the rooms they belong to (here) and on the bridge wall (Stop.js)
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
-    const STOCK_KEYS = Object.freeze(['energy', 'rations', 'salvage']);
+    const STOCK_KEYS = Object.freeze(['energy', 'rations', 'salvage', 'data']);
     const STOCK_TELL = {
         energy: 'Energy runs the drive. Every flight costs some, Commander.',
         rations: 'Rations feed the crew. We eat on every jump, Commander.',
         salvage: 'Salvage fixes the ship. Mining and wrecks bring more, Commander.',
+        data: 'Data is what we learn on the way. It helps our colony survive, Commander.',
     };
-    const STOCK_LOW = { energy: 20, rations: 4, salvage: -1 };               // at or under: the number burns amber
+    const STOCK_LOW = { energy: 20, rations: 4, salvage: -1, data: -1 };     // at or under: the number burns amber
     const STOCK_FLASH_MS = 1600, STOCK_SETTLE_MS = 1300;
-    // where each sits in the tower (tower art px, top-left): by the reactor's top, over the galley table, over the crates
-    const STOCK_AT = { energy: { deck: 5, x: 498, y: 50 }, rations: { deck: 2, x: 424, y: 38 }, salvage: { deck: 4, x: 500, y: 44 } };
+    // where each sits in the tower (tower art px, top-left; align 'right': top-right): by the reactor's top, over the galley
+    // table, over the crates, in the lab over its cabinet (right-aligned to the lab's wall, so a longer number grows inward)
+    const STOCK_AT = { energy: { deck: 5, x: 498, y: 50 }, rations: { deck: 2, x: 424, y: 38 }, salvage: { deck: 4, x: 500, y: 44 }, data: { deck: 1, x: 638, y: 38, align: 'right' } };
     const ST = { state: null, val: {}, flash: {}, seenAt: null };                     // seenAt: since when the numbers have been in view
     function stockTick() {
         const s = call('state', null);
         if (!s) return;
-        const now = { energy: Math.round(energy()), rations: Math.round(Number(s.rations) || 0), salvage: Math.round(Number(s.salvage) || 0) };
+        const now = { energy: Math.round(energy()), rations: Math.round(Number(s.rations) || 0), salvage: Math.round(Number(s.salvage) || 0),
+            data: Math.round(Number(s._colonyKnowledge) || 0) };                          // data: what the crew has learned (GameState._colonyKnowledge)
         if (s !== ST.state) { ST.state = s; ST.val = now; ST.flash = {}; return; }        // a new run, or the view back: read afresh
         if (!stockSeen()) { ST.seenAt = null; return; }                                   // out of sight (a card, a minigame, the dive): the change waits to be seen
         if (ST.seenAt == null) ST.seenAt = performance.now();
@@ -533,7 +651,7 @@
 @media (prefers-reduced-motion: reduce) { #ns-root .nss, #ns-root .nss b, #ns-root .nss i { transition: none; } }`;
         document.head.appendChild(st);
     }
-    /** Three readouts in a word layer. Each frame put() writes only what changed (text, class, place). */
+    /** The readouts (one per STOCK_KEYS) in a word layer. Each frame put() writes only what changed (text, class, place). */
     function stockBoard(layer) {
         stockStyle();
         const items = {};
@@ -564,11 +682,11 @@
             hide() { STOCK_KEYS.forEach(k => items[k].el.classList.remove('on')); },
         };
     }
-    /** The tower's own three, beside their rooms (only in travel, the tower in, not in the dark of a jump). */
+    /** The tower's own readouts, beside their rooms (only in travel, the tower in, not in the dark of a jump). */
     function placeStock(show) {
         if (!V.stock) { const layer = wordsLayer(); if (!layer) return; V.stock = stockBoard(layer); }
         if (!show) { V.stock.hide(); return; }
-        STOCK_KEYS.forEach(k => { const a = STOCK_AT[k], [x, y] = toCss(a.x, A.deckTop(a.deck) + a.y); V.stock.put(k, x, y); });
+        STOCK_KEYS.forEach(k => { const a = STOCK_AT[k], [x, y] = toCss(a.x, A.deckTop(a.deck) + a.y); V.stock.put(k, x, y, a.align); });
     }
     window.NSStock = Object.freeze({ KEYS: STOCK_KEYS, tick: stockTick, board: stockBoard });
 
@@ -597,8 +715,10 @@
     function debug() {
         return { fit: fit(), quality: V.quality, k: slideK(now()), dark: V.dark, E: V.E, decks: Object.assign({}, V.real.decks), datable: V.real.datable,
             crew: JSON.parse(JSON.stringify(V.real.crew)), people: V.people.map(p => ({ id: p.id, deck: p.deck, x: p.x, act: p.act, say: p.say })),
-            chips: V.chips ? V.chips.deck : null, stock: Object.assign({}, ST.val) };
+            chips: V.chips ? V.chips.deck : null, stock: Object.assign({}, ST.val),
+            feel: { trauma: V.shake ? V.shake.level() : null, speed: V.spd, flick: Object.keys(V.flick), off: V.tremor ? { dx: V.tremor.dx, dy: V.tremor.dy } : null } };
     }
+    window.NSTower = Object.freeze({ jolt, speed, hit: hitDeck });
 
     const mod = Object.freeze({ init, resize, update, render, pointer, occupied, beat, personAt, fit, debug });
     function attach() {

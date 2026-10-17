@@ -53,6 +53,7 @@
         'single-6': { u: 0.22, v: 0.34, Z: 36, r: 0.026, side: 'top' },
         'single-7': { u: 0.64, v: 0.46, Z: 38, r: 0.026, side: 'bottom' },
         story: { u: 0.72, v: 0.26, Z: 40, r: 0.022, side: 'top' },
+        eden: { u: 0.80, v: 0.60, Z: 44, r: 0.03, side: 'bottom' },              // sector 6: Eden, beside the light, in the light's band
     };
     const ALIAS = { 'band-1': 'first', band1: 'first', 'single-0': 'first', 'fork-giant': 'fork2-giant', 'fork-limb': 'fork2-limb' };
     /** A slot the table does not know (a ninth world, a late one): small and far, in the gaps between the table's places. */

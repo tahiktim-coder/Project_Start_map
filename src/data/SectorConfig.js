@@ -78,7 +78,7 @@ const SECTOR_CONFIG = {
     3: {
         name: 'THE SIGNAL',
         planetCount: [3, 5],
-        allowedTypes: null, // all types allowed
+        allowedTypes: null, // every random type (never Eden: PlanetGenerator RANDOM_TYPES; Eden is one place, in sector 6)
         guaranteedTypes: [],
         typeBias: null,
         wreckageChance: 0.20,
@@ -142,9 +142,9 @@ const SECTOR_CONFIG = {
     },
 
     4: {
-        name: 'THE GARDEN',
+        name: 'THE COLONIES',
         planetCount: [4, 6],
-        allowedTypes: null, // all types, but biased
+        allowedTypes: null, // every random type (never Eden), biased toward living worlds
         guaranteedTypes: [],
         typeBias: {
             'VITAL': 4,
@@ -191,7 +191,7 @@ const SECTOR_CONFIG = {
     },
 
     5: {
-        name: 'THE TALLY',
+        name: 'THE STATION',
         planetCount: [3, 4],
         allowedTypes: ['SHATTERED', 'CRYSTALLINE', 'ROGUE', 'BIO_MASS', 'SINGING', 'MIRROR'],
         guaranteedTypes: ['TERRAFORMED'],
@@ -271,8 +271,9 @@ const SECTOR_CONFIG = {
     6: {
         name: 'THE LIGHT',
         planetCount: [2, 3],
-        allowedTypes: ['GHOST_WORLD', 'EDEN', 'HOLLOW', 'MIRROR', 'SINGING'],
-        guaranteedTypes: ['EDEN'], // At least one perfect world
+        allowedTypes: ['GHOST_WORLD', 'HOLLOW', 'MIRROR', 'SINGING'],
+        guaranteedTypes: [],
+        eden: { name: 'Eden', at: { x: 62, y: 64 } },   // the one Eden, always here, always beside the light (PlanetGenerator.generateEden)
         typeBias: null,
         wreckageChance: 0.0,
         exodusWreckChance: 0.0,  // No more Exodus ships made it this far

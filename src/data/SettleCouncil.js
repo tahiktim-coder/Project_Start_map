@@ -6,11 +6,14 @@
 //   scan      EndingSystem.getPlanetViability: EXCELLENT or GOOD = 'good', MARGINAL = 'marginal', POOR or IMPOSSIBLE = 'bad'
 //   band      sector 1-2 'early' (we only just left), 3-4 'middle', 5-6 'late' (we are this close to the light)
 //   knows     'told'  they still believe the briefing
-//             'doubt' they have seen it is not eight ships: the uncut tape (sector 2), or any sector from 3 on
+//             'doubt' they have seen it is not eight ships: any sector from 3 on
 //                     (hundreds of our ships, numbers higher than ours, a hundred years dead)
-//             'truth' a page explains it: PAGE_THROW (sent less far back in time) or PAGE_LEDGER (lost before launched)
+//             'truth' a page explains it: PAGE_THROW (sent less far back in time)
 //   who       dead, sedated or shut-down (CATATONIC) crew say nothing; crew shut in the hold (CONFINED) refuse to come
 //   unscanned no deep scan of the world (the team walked onto a paradise world first): Mira has no scan to read, and says so
+//   known     the new look only (bundle.js settleCouncilFor): 'deep' (scanned from the bridge: the lines above), 'far' (only the
+//             long-range scan from the travel view: Mira says what it said, and that it was from far away) or 'none' (never
+//             scanned at all: Mira, Jaxon and Aris each say they cannot know). Without it, 'unscanned' applies as before.
 //
 // lines[person][scan] holds one line per band. A key like 'late.truth' wins over 'late' once the crew knows that much.
 // Vance's lines do not depend on the scan (scan key 'any'): he wants the truth whatever the world is like.
@@ -19,8 +22,7 @@
 
 const SETTLE_COUNCIL = {
     MAX_LINES: 5,
-    TRUTH_PAGES: ['PAGE_THROW', 'PAGE_LEDGER'],
-    TAPE_ID: 'briefing_tape',
+    TRUTH_PAGES: ['PAGE_THROW'],
     SCAN_TIER: { EXCELLENT: 'good', GOOD: 'good', MARGINAL: 'marginal', POOR: 'bad', IMPOSSIBLE: 'bad' },
     SPEAK_ORDER: ['mira', 'jaxon', 'aris', 'vance'],
     ROLE_TAG: { jaxon: 'ENGINEER', aris: 'MEDIC', vance: 'SECURITY', mira: 'SPECIALIST' },
@@ -37,6 +39,22 @@ const SETTLE_COUNCIL = {
     // No deep scan of this world (the team walked onto a paradise world first). Every other line of Mira's reads a scan.
     unscanned: {
         mira: 'We never ran a deep scan here, Commander. All we know is what the team saw down there.',
+    },
+
+    // The new look, never scanned at all (known 'none'): whoever reads the world says they cannot. Vance never reads it.
+    blind: {
+        mira: "We never even scanned it, Commander. All I know is what the team saw down there.",
+        jaxon: "I can't plan a camp on ground nobody has scanned. I don't know what's under it.",
+        aris: "Nobody has tested the air or the water here. I'd want to know before anyone stays.",
+    },
+
+    // The new look, only the long-range scan from the travel view (known 'far'): Mira says what it read, from how far.
+    far: {
+        mira: {
+            good: 'We only scanned it from far away, Commander. It said people could live here.',
+            marginal: 'We only scanned it from far away, Commander. It said living here would be hard.',
+            bad: 'We only scanned it from far away, Commander. It said nobody could live here.',
+        },
     },
 
     // Shut in the hold: they will not come up, and say so.
@@ -108,7 +126,6 @@ const SETTLE_COUNCIL = {
         vance: {
             any: {
                 early: 'We only just left, Commander. Land now and we never find out what happened to the others.',
-                'early.doubt': 'That tape showed hundreds of ships, not eight. I want to know where they went before we stop.',
                 middle: "Ship numbers higher than ours, and older than us. I'm not stopping until someone explains that.",
                 'middle.truth': 'Now we know why the numbers are wrong. I still want to know what they were all flying toward.',
                 late: 'Thousands of our ships out here, and still no reason why. I want to see that light first.',
@@ -129,8 +146,7 @@ function settleCouncilBand(sector) {
 function settleCouncilKnowledge(state) {
     const pages = state.exodusLogsFound || [];
     if (SETTLE_COUNCIL.TRUTH_PAGES.some(id => pages.includes(id))) return 'truth';
-    const hasTape = (state.cargo || []).some(item => item && item.id === SETTLE_COUNCIL.TAPE_ID);
-    return (state.currentSector || 1) >= 3 || hasTape ? 'doubt' : 'told';
+    return (state.currentSector || 1) >= 3 ? 'doubt' : 'told';
 }
 
 /** 'speaks', 'refuses' (shut in the hold) or 'silent' (dead, sedated, shut down, or not aboard). */
@@ -147,13 +163,23 @@ function settleCouncilLine(person, scan, band, knows) {
     return table[`${band}.${knows}`] || (knows === 'truth' && table[`${band}.doubt`]) || table[band];
 }
 
+/** What someone says when our scans read the world only from far away, or not at all (see `known` at the top of this
+    file); null when the scan's own line applies. Without `known` (the default game), Mira's 'unscanned' line as before. */
+function settleCouncilUnknown(person, planet, scan, known) {
+    if (known === 'none') return SETTLE_COUNCIL.blind[person] || null;
+    if (known === 'far') return (SETTLE_COUNCIL.far[person] && SETTLE_COUNCIL.far[person][scan]) || null;
+    if (known == null && !planet.scanned) return SETTLE_COUNCIL.unscanned[person] || null;
+    return null;
+}
+
 /**
  * The whole council, ready for EncounterCard.open: { kicker, title, dialogue, choices, situation }.
  *   viability  EndingSystem.getPlanetViability(planet, state); required
  *   isRepeat   true when this world has had its council already: only A.U.R.A.'s question is asked again
- * Reads state.currentSector, state.crew, state.exodusLogsFound, state.cargo and planet.scanned. Changes nothing.
+ *   known      the new look only: 'deep' | 'far' | 'none', what our scans read (see the top of this file)
+ * Reads state.currentSector, state.crew, state.exodusLogsFound and planet.scanned. Changes nothing.
  */
-function buildSettleCouncil(state, planet, { viability, isRepeat = false } = {}) {
+function buildSettleCouncil(state, planet, { viability, isRepeat = false, known = null } = {}) {
     const scan = SETTLE_COUNCIL.SCAN_TIER[viability];
     if (!scan) throw new Error(`buildSettleCouncil: unknown viability "${viability}"`);
     const band = settleCouncilBand(state.currentSector);
@@ -165,7 +191,7 @@ function buildSettleCouncil(state, planet, { viability, isRepeat = false } = {})
         const voice = settleCouncilVoice(member);
         if (voice === 'silent') return null;
         const text = voice === 'refuses' ? SETTLE_COUNCIL.refusal[person]
-            : (!planet.scanned && SETTLE_COUNCIL.unscanned[person]) || settleCouncilLine(person, scan, band, knows);
+            : settleCouncilUnknown(person, planet, scan, known) || settleCouncilLine(person, scan, band, knows);
         return { speaker: member.name, text };
     }).filter(Boolean);
 
@@ -176,7 +202,7 @@ function buildSettleCouncil(state, planet, { viability, isRepeat = false } = {})
         title: SETTLE_COUNCIL.title.replace('{planet}', planet.name),
         dialogue: [...opening, ...crewLines, { speaker: 'A.U.R.A.', text: SETTLE_COUNCIL.closing }],
         choices: SETTLE_COUNCIL.choices.map(choice => ({ ...choice })),
-        situation: { scan, band, knows },
+        situation: { scan, band, knows, known },
     };
 }
 

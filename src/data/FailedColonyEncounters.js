@@ -36,7 +36,7 @@ const FAILED_COLONY_ENCOUNTERS = [
             },
             {
                 text: "Strip the settlement",
-                desc: "+25-45 Salvage, +1 Food Pack. Jaxon +1 Stress: their homes become our hull plates.",
+                desc: "+25-45 Salvage, +1 Sealed Rations. Jaxon +1 Stress: their homes become our hull plates.",
                 effect: function(state) {
                     const salvage = Math.floor(Math.random() * 21) + 25; // 25-45
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
@@ -46,7 +46,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
                     if (jaxon) state.addLog('Jaxon: "Good panels, sealed wiring. They built this to last." He goes quiet after that.');
-                    return `Settlement stripped. +${salvage} Salvage, +1 Food Pack. Jaxon +1 Stress.`;
+                    return `Settlement stripped. +${salvage} Salvage, +1 Sealed Rations. Jaxon +1 Stress.`;
                 }
             },
             {
@@ -148,7 +148,7 @@ const FAILED_COLONY_ENCOUNTERS = [
             },
             {
                 text: "Open the cryo ward",
-                desc: "+15 Salvage, +10 Energy from the ward's power cells. Aris +1 Stress.",
+                desc: "+15 Salvage. The ward's power cells: +10 Energy. Aris +1 Stress.",
                 effect: function(state) {
                     state.addLog('The central building is a clinic. Six pods in the back room, all occupied.');
                     state.addLog('A.U.R.A.: "The ward lost power long ago, Commander. Nobody in it is alive."');
@@ -261,7 +261,7 @@ const FAILED_COLONY_ENCOUNTERS = [
             },
             {
                 text: "Take everything you can carry",
-                desc: "+40 Salvage, +2 Food Pack, +1 Luxury Item. All crew +1 Stress.",
+                desc: "+40 Salvage, +2 Sealed Rations, +1 Luxury Item. All crew +1 Stress.",
                 effect: function(state) {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
                     if (typeof ITEMS !== 'undefined') {
@@ -277,7 +277,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
                     state.addLog('Full pantries and charged batteries. Everything is sealed, as if it was delivered this morning.');
-                    return "Settlement emptied. +40 Salvage, +2 Food Pack, +1 Luxury Item. All crew +1 Stress.";
+                    return "Settlement emptied. +40 Salvage, +2 Sealed Rations, +1 Luxury Item. All crew +1 Stress.";
                 }
             },
             {

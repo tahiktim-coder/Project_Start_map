@@ -1,4 +1,5 @@
 // STORY_PLANETS: one hand-made planet per sector. One of our ships lies on it, with that sector's found page (EXODUS_LOGS).
+// Sector 5's is the station where the last ship that carried the disc died: its "page" is the disc itself (PAGE_DISC).
 // PlanetGenerator makes it first, at its fixed place on the map, and spaces the random planets round it. It starts as a faint
 // contact with no name that cannot be warped to. Dating another of our wrecks with the disc (DiscDating) shows where that crew
 // was going: here. Then it is named and can be reached. If nobody dates a wreck, A.U.R.A. names it when one stop is left.
@@ -34,9 +35,9 @@ const STORY_PLANETS = [
         reward: { kind: 'graves', line: { who: 'Jaxon', text: "They landed there and stayed. I can't say I blame them." } },
     },
     {
-        sector: 5, name: 'Iapetus-60 Minor', type: 'CRYSTALLINE', page: 'PAGE_LEDGER', hull: 17207, at: STORY_PLANET_SPOTS.beacon,
-        desc: 'A dark moon. Someone built a shelter here from the hull of one of our ships.',
-        reward: { kind: 'beacon', line: { who: 'Mira', text: 'That lamp was set up by hand. Someone lived on that moon.' } },
+        sector: 5, name: 'Iapetus-60 Minor', type: 'CRYSTALLINE', page: 'PAGE_DISC', hull: 17207, at: STORY_PLANET_SPOTS.beacon,
+        desc: 'A dark moon with an old station on it. One of our ships died there.',
+        reward: { kind: 'beacon', line: { who: 'Mira', text: "There's a station on that moon. Its lamp is still on." } },
     },
     {
         sector: 6, name: 'Tethys-1 Prime', type: 'ICE_WORLD', page: 'PAGE_LIGHT', hull: 40963, at: STORY_PLANET_SPOTS.nearLight,

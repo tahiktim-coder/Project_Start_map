@@ -1,19 +1,20 @@
-/* FoundPage — a page found in a dead ship, read one line at a time.
-   The six pages in EXODUS_LOGS are the spine of the story. Each is drawn as the object it is (a cast plate, a printed page,
-   a captain's log screen, the launch ledger) on the left, with its lines on the right, then one spoken line from whoever
-   aboard would say something. open(app, page) shows it and resolves when it is put away; the page stays in cargo (isKept) and can be read again from there.
-   The ledger is built at run time from the wrecks this player actually boarded, so the proof is their own journey. */
+/* FoundPage — a page found in a dead ship. Its lines appear one after another by themselves (a click on them shows the rest);
+   every line's place is kept from the start, so nothing on the card moves while it fills.
+   The pages in EXODUS_LOGS are the spine of the story (sector 5's find is the disc itself, shown by DiscDocument instead).
+   Each is drawn as the object it is (a cast plate, a printed page, a captain's log screen) on the left, with its lines on the
+   right, then one spoken line from whoever aboard would say something. open(app, page) shows it and resolves when it is put
+   away; the page stays in cargo (isKept) and can be read again from there. */
 
 (function () {
     'use strict';
-    const SIZE = 300, TICK_MS = 100;
+    const SIZE = 300, TICK_MS = 100, LINE_MS = 1100;             // a new line about every second: read at the page's pace, not by button
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
     const METAL = ['#0b0d10', '#2a2d2a', '#5c6058', '#8f8a7a', '#c4d0c4'], PAPER = ['#141108', '#5a4a2a', '#a08a5a', '#d8c8a0', '#f4ecd6'];
-    const SCREEN_BG = '#05070a', SCREEN_INK = '#2f5a48', SCREEN_LIT = '#74d99a', READER = '#8844ff';
-    const LEDGER_FILL_ROWS = 9, LEDGER_YEAR0 = 2281;           // filler rows around the player's own wrecks; the programme's first keel
+    const SCREEN_BG = '#05070a', SCREEN_INK = '#2f5a48', SCREEN_LIT = '#74d99a';
+    const BACKDROP_GUARD_MS = 1200;                             // a click beside the page puts it away only once it has been up this long
 
-    const KICKER = { plate: 'A CAST PLATE · BESIDE THE AIRLOCK', paper: 'A PRINTED PAGE · EARTH LETTERHEAD', log: 'THE LAST ENTRY · CAPTAIN\'S LOG', ledger: 'BOUND PRINTOUT · EVERY HULL EVER LAID' };
+    const KICKER = { plate: 'A CAST PLATE · BESIDE THE AIRLOCK', paper: 'A PRINTED PAGE · EARTH LETTERHEAD', log: 'THE LAST ENTRY · CAPTAIN\'S LOG' };
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
@@ -61,29 +62,10 @@
     }
     const DRAW = { plate: drawPlate, paper: drawPaper, log: drawLog };
 
-    // ── the ledger: rows of hulls, built from the wrecks this player boarded ──
-    const hullOf = name => { const m = /EXODUS-([\d,]+)/.exec(name || ''); return m ? parseInt(m[1].replace(/,/g, ''), 10) : null; };
-    const fmt = n => n.toLocaleString('en-US');
-    function ledgerRows(state) {
-        const mine = (state._boardedHulls || []).map(hullOf).filter(n => n && n !== 9), rand = seeded(mine.length + 3), rows = new Set(mine);
-        const RANGES = [[212, 980], [1400, 6000], [9000, 22000], [30000, 41000]];
-        for (let k = 0; k < LEDGER_FILL_ROWS; k++) { const [lo, hi] = RANGES[k % RANGES.length]; rows.add(lo + Math.floor(rand() * (hi - lo))); }
-        const hulls = [...rows].sort((a, b) => a - b);
-        const launched = hull => LEDGER_YEAR0 + Math.floor(hull / 700), failed = hull => launched(hull) - 40 - Math.floor(hull / 110);   // every failure is earlier than its launch
-        return hulls.map(hull => ({ hull: `EXODUS-${fmt(hull)}`, crew: 4, cmdr: '—', launched: launched(hull), failed: failed(hull), mine: mine.includes(hull) }))
-            .concat([{ hull: 'EXODUS-9', crew: 4, cmdr: '—', launched: LEDGER_YEAR0, failed: '', mine: true, isYou: true }]);
-    }
-    function ledgerHtml(state) {
-        const rows = ledgerRows(state);
-        return `<div class="found-ledger" role="table"><div class="found-ledger-row found-ledger-head" role="row"><span>HULL</span><span>CREW</span><span>CMDR</span><span>LAUNCHED</span><span>FAILED</span></div>
-            ${rows.map(r => `<div class="found-ledger-row${r.mine ? ' is-mine' : ''}${r.isYou ? ' is-you' : ''}" role="row"><span>${esc(r.hull)}</span><span>${r.crew}</span><span>${r.cmdr}</span><span>${r.launched}</span><span>${r.failed === '' ? '<i>—</i>' : r.failed}</span></div>`).join('')}
-            <p class="found-ledger-note">rows in gold are hulls you boarded</p></div>`;
-    }
-
     // ── the card ──
     function open(app, page, foundIn) {
         if (!page || document.querySelector('.found-page')) return Promise.resolve();
-        const state = app && app.state, isLedger = page.kind === 'ledger', shipName = foundIn || page.shipName || 'a dead ship';
+        const state = app && app.state, shipName = foundIn || page.shipName || 'a dead ship';
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay disc-doc found-page';
         overlay.style.zIndex = '4000';
@@ -91,40 +73,48 @@
             <section class="modal-content deck-panel disc-doc-card found-page-card" role="dialog" aria-label="${esc(page.name)}">
                 <header class="enc-head"><p class="enc-kicker" style="color:var(--amber)">FOUND IN ${esc(shipName)} · ${KICKER[page.kind] || 'A PAGE'}</p><h3>${esc(page.logTitle)}</h3></header>
                 <div class="disc-doc-body">
-                    ${isLedger ? ledgerHtml(state) : `<canvas class="disc-doc-canvas" width="${SIZE}" height="${SIZE}"></canvas>`}
+                    <canvas class="disc-doc-canvas" width="${SIZE}" height="${SIZE}"></canvas>
                     <div class="disc-doc-notes found-page-lines" aria-live="polite">
                         ${page.names ? `<ul class="found-plate-names">${page.names.map(n => `<li>${n ? esc(n) : '<i>— blank —</i>'}</li>`).join('')}</ul>` : ''}
-                        <ol class="found-page-text"></ol>
-                        <button class="found-page-next deck-action" type="button"><span>READ ON</span></button>
-                        <p class="found-page-after" hidden></p>
+                        <ol class="found-page-text">${page.lines.map(line => `<li style="visibility:hidden">${esc(line)}</li>`).join('')}</ol>
+                        <p class="found-page-after" style="visibility:hidden"></p>
                     </div>
                 </div>
                 <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>KEEP IT</span><small>it stays in your cargo</small></button></div>
             </section>`;
         document.body.appendChild(overlay);
-        const list = overlay.querySelector('.found-page-text'), next = overlay.querySelector('.found-page-next'), after = overlay.querySelector('.found-page-after');
-        let shown = 0;
+        const openedAt = performance.now();
+        const items = [...overlay.querySelectorAll('.found-page-text li')], after = overlay.querySelector('.found-page-after');
+        const speakerIsDead = page.after && state && state.isSilentSpeaker && page.after.speaker !== 'A.U.R.A.' && state.isSilentSpeaker(`${page.after.speaker}: `);
+        const hasAfter = !!(page.after && !speakerIsDead);
+        if (hasAfter) after.innerHTML = `<b>${esc(page.after.speaker)}</b>${esc(page.after.text)}`;   // in place from the start: the card never grows
+        else after.remove();
+        // it opens just after a card's choice: KEEP IT never lands under that click (a double click would put it away unread)
+        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.found-page-card'), overlay.querySelectorAll('.disc-doc-close'));
+        let shown = 0, isDone = false;
         const reveal = () => {
-            if (shown < page.lines.length) { const li = document.createElement('li'); li.textContent = page.lines[shown++]; list.appendChild(li); li.classList.add('is-in'); }
-            if (shown >= page.lines.length) {
-                next.hidden = true;
-                const speakerIsDead = page.after && state && state.isSilentSpeaker && page.after.speaker !== 'A.U.R.A.' && state.isSilentSpeaker(`${page.after.speaker}: `);
-                if (page.after && !speakerIsDead) { after.hidden = false; after.innerHTML = `<b>${esc(page.after.speaker)}</b>${esc(page.after.text)}`; if (state && state.addLog) state.addLog(`${page.after.speaker}: "${page.after.text}"`); }
-            }
+            if (shown < items.length) { const li = items[shown++]; li.style.visibility = ''; li.classList.add('is-in'); }
+            if (shown < items.length || isDone) return;
+            isDone = true;                                                                     // the spoken line, once, after the last line
+            if (hasAfter) { after.style.visibility = ''; if (state && state.addLog) state.addLog(`${page.after.speaker}: "${page.after.text}"`); }
         };
-        next.addEventListener('click', reveal);
+        const showAll = () => { while (!isDone) reveal(); };
+        const isReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        const pacer = setInterval(() => { if (!overlay.isConnected || isDone) { clearInterval(pacer); return; } reveal(); }, LINE_MS);
+        overlay.querySelector('.found-page-lines').addEventListener('click', showAll);           // a click on the words: the rest at once
         reveal();
+        if (isReduced) showAll();
         const canvas = overlay.querySelector('canvas');
         if (canvas) {
             const ctx = canvas.getContext('2d'), startedAt = performance.now(), draw = DRAW[page.kind] || drawPaper;
             const timer = setInterval(() => { if (!overlay.isConnected) { clearInterval(timer); return; } draw(ctx, page, performance.now() - startedAt); }, TICK_MS);
             draw(ctx, page, 0);
         }
-        next.focus({ preventScroll: true });
+        overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
         return new Promise(resolve => {
             const close = () => { overlay.remove(); if (state && state.emitUpdates) state.emitUpdates(); resolve(); };
             overlay.querySelector('.disc-doc-close').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+            overlay.addEventListener('click', e => { if (e.target === overlay && performance.now() - openedAt > BACKDROP_GUARD_MS) close(); });
         });
     }
 

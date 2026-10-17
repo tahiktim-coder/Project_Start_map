@@ -818,26 +818,6 @@
     to { opacity: 1; transform: none; }
 }
 
-.reel-counter {
-    position: absolute;
-    top: 14px;
-    right: 18px;
-    margin: 0;
-    text-align: right;
-}
-
-.reel-counter span {
-    display: block;
-    font: 600 0.62em var(--font-display);
-    letter-spacing: 0.26em;
-    color: var(--dim);
-}
-
-.reel-counter b {
-    font: 700 clamp(1.4em, 1em + 1.6vw, 2.6em) var(--font-mono);
-    color: var(--amber);
-}
-
 .reel-skip {
     position: absolute;
     right: 0;
@@ -1000,8 +980,6 @@
 .site-screen.is-structure .site-heading small,
 .site-screen.is-structure .site-tip b { color: #ffd27a; }
 .site-screen.is-structure .site-tip { border-left-color: #ffd27a; background: rgba(255, 210, 122, 0.08); }
-.end-vault { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--bone); }
-.end-vault b { display: block; margin-bottom: 4px; font: 600 0.68em var(--font-display); letter-spacing: 0.2em; color: var(--amber); }
 .site-screen.is-structure .site-visual { position: relative; align-self: stretch; }
 
 .structure-vista {
@@ -1059,13 +1037,6 @@
 .found-plate-names { margin: 0 0 12px; padding: 0; list-style: none; display: grid; gap: 4px; font: 600 0.72em var(--font-display); letter-spacing: 0.16em; color: var(--dim); }
 .found-plate-names li { padding: 4px 8px; border-left: 3px solid var(--line2); }
 .found-plate-names li i { color: var(--amber); font-style: normal; }
-.found-ledger { display: grid; align-content: start; gap: 2px; font: 0.74em var(--font-mono, monospace); color: var(--dim); max-height: 340px; overflow-y: auto; padding-right: 6px; }
-.found-ledger-row { display: grid; grid-template-columns: 1.5fr 0.6fr 0.7fr 1fr 1fr; gap: 6px; padding: 3px 6px; border-bottom: 1px solid var(--line); }
-.found-ledger-head { color: var(--bone); letter-spacing: 0.12em; font-weight: 600; border-bottom: 1px solid var(--line2); }
-.found-ledger-row.is-mine { color: var(--amber); }
-.found-ledger-row.is-you { color: var(--bone); background: rgba(217, 162, 74, 0.10); }
-.found-ledger-row i { color: var(--amber); font-style: normal; }
-.found-ledger-note { grid-column: 1 / -1; margin: 6px 0 0; font-size: 0.9em; color: var(--dim); }
 
 /* EVA choices: what you get, beside what it risks */
 .eva-choice > span { display: flex; flex-direction: column; gap: 3px; }

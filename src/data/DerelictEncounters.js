@@ -67,19 +67,19 @@ const DERELICT_ENCOUNTERS = [
                     }
                     const energyGain = Math.floor(Math.random() * 21) + 50;
                     state.energy = Math.min(100, state.energy + energyGain);
-                    return `Its reactor power moved into ours. +${energyGain} Energy, +${energyGain - 10} after the cost.`;
+                    return `Its reactor power moved into ours. -10 Energy, +${energyGain} Energy.`;   // cost, then gain: EncounterCard.apply replays both
                 }
             },
             {
                 text: "Check the crew bunks",
-                desc: "+10 Salvage, +1 Data. 40% chance: +1 Food Pack.",
+                desc: "+10 Salvage, +1 Data. 40% chance: +1 Sealed Rations.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
                     state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
                     state.addLog("Personal lockers by the bunks. The crew's names are copied off the doors.");
                     if (Math.random() < 0.4 && typeof ITEMS !== 'undefined' && ITEMS.FOOD_PACK) {
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Mining Tender' });
-                        return "Bunks searched and names copied. +10 Salvage, +1 Data, +1 Food Pack.";
+                        return "Bunks searched and names copied. +10 Salvage, +1 Data, +1 Sealed Rations.";
                     }
                     return "Bunks searched and names copied. +10 Salvage, +1 Data.";
                 }
@@ -105,7 +105,7 @@ const DERELICT_ENCOUNTERS = [
         choices: [
             {
                 text: "Cut into the main hold",
-                desc: "-5 Energy. +30 Salvage, +2 Food Pack.",
+                desc: "-5 Energy. +30 Salvage, +2 Sealed Rations.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 30);
@@ -113,7 +113,7 @@ const DERELICT_ENCOUNTERS = [
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Dropped Hold' });
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Dropped Hold' });
                     }
-                    return "Hold opened. The colony supplies are still sealed. -5 Energy, +30 Salvage, +2 Food Pack.";
+                    return "Hold opened. The colony supplies are still sealed. -5 Energy, +30 Salvage, +2 Sealed Rations.";
                 }
             },
             {
@@ -265,7 +265,7 @@ const DERELICT_ENCOUNTERS = [
             },
             {
                 text: "Salvage the probe",
-                desc: "+20 Salvage, +15 Energy from its fuel. Aris +1 Stress: the message is never heard.",
+                desc: "+20 Salvage. Its fuel: +15 Energy. Aris +1 Stress: the message is never heard.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 20);
                     state.energy = Math.min(100, state.energy + 15);
@@ -277,7 +277,7 @@ const DERELICT_ENCOUNTERS = [
         ]
     },
 
-    // --- 5. THE WRONG WRECK: a copy, slightly wrong ---
+    // --- 5. THE WRONG WRECK: one of ours that nobody ever flew (never a copy of our ship: that is only the twin) ---
     {
         id: 'DERELICT_ALIEN',
         weight: 5,
@@ -288,8 +288,8 @@ const DERELICT_ENCOUNTERS = [
         },
         context: (name) => `${name} is an Exodus ship with no hull number painted on it. The welds are perfect. Inside are four bunks and four cups. The bread on the table has no crust.`,
         dialogue: [
-            { speaker: 'Mira', text: "Aura says it matches our ship's blueprints exactly, Commander. Every measurement." },
-            { speaker: 'Vance', text: "I've watched ships being built. They never come out this perfect. This is a copy." },
+            { speaker: 'Mira', text: "A.U.R.A. has no record of it, Commander. No number, no name, no launch date." },
+            { speaker: 'Vance', text: "I've watched ships being built. Nobody has ever flown this one." },
             { speaker: 'Aris', text: "No bodies and no names. Nobody ever lived here." }
         ],
         choices: [
@@ -360,7 +360,7 @@ const DERELICT_ENCOUNTERS = [
         choices: [
             {
                 text: "Search the living rings",
-                desc: "-1 Ration: a day inside. +35 Salvage, +3 Food Pack, +1 Music Holotape.",
+                desc: "-1 Ration: a day inside. +35 Salvage, +3 Sealed Rations, +1 Music Holotape.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 35);
@@ -375,7 +375,7 @@ const DERELICT_ENCOUNTERS = [
                         }
                     }
                     state.addLog("RING LOG: 'The children born this year have never seen the stars. They think the wall paintings are windows.'");
-                    return "Rings searched. -1 Ration, +35 Salvage, +3 Food Pack, +1 Music Holotape.";
+                    return "Rings searched. -1 Ration, +35 Salvage, +3 Sealed Rations, +1 Music Holotape.";
                 }
             },
             {

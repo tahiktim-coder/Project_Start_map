@@ -66,7 +66,6 @@ _On a bad world:_
 ### Vance
 _On any world:_
 - sectors 1-2: **Vance:** We only just left, Commander. Land now and we never find out what happened to the others. «SettleCouncil.js · lines.vance.any.early»
-- sectors 1-2, after the uncut tape: **Vance:** That tape showed hundreds of ships, not eight. I want to know where they went before we stop. «SettleCouncil.js · lines.vance.any.early.doubt»
 - sectors 3-4: **Vance:** Ship numbers higher than ours, and older than us. I'm not stopping until someone explains that. «SettleCouncil.js · lines.vance.any.middle»
 - sectors 3-4, once a page explains it: **Vance:** Now we know why the numbers are wrong. I still want to know what they were all flying toward. «SettleCouncil.js · lines.vance.any.middle.truth»
 - sectors 5-6: **Vance:** Thousands of our ships out here, and still no reason why. I want to see that light first. «SettleCouncil.js · lines.vance.any.late»
@@ -98,20 +97,20 @@ _Sector 6, a good world, after the truth:_
 ## Pressing SETTLE HERE «bundle.js · _executeColony»
 _A.U.R.A. refuses an unscanned world; otherwise the flight-recorder card comes up before the colony card._
 
-- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 4807»
-- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 4854»
-- AVG STRESS «bundle.js · line 4866»
-- COLONY RATING «bundle.js · line 4874»
-- [YES | NO] «bundle.js · line 4895»
-- Type: [type] | Sector [sector] «bundle.js · line 4913»
-- CREW MODIFICATIONS «bundle.js · line 4916»
-- Symbiotes: [symbiotes] «bundle.js · line 4918»
-- Cyborgs: [cyborgs] «bundle.js · line 4919»
-- Touched: [wrong place] «bundle.js · line 4920»
-- COLONY DESIGNATION «bundle.js · line 4928»
-- FINAL CREW ROSTER «bundle.js · line 4940»
-- EXODUS PROGRAM RECORD #[n] «bundle.js · line 4957»
-- REBOOT SIMULATION «bundle.js · line 4962»
+- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 5086»
+- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 5137»
+- AVG STRESS «bundle.js · line 5149»
+- COLONY RATING «bundle.js · line 5157»
+- [YES | NO] «bundle.js · line 5178»
+- Type: [type] | Sector [sector] «bundle.js · line 5196»
+- CREW MODIFICATIONS «bundle.js · line 5199»
+- Symbiotes: [symbiotes] «bundle.js · line 5201»
+- Cyborgs: [cyborgs] «bundle.js · line 5202»
+- Touched: [wrong place] «bundle.js · line 5203»
+- COLONY DESIGNATION «bundle.js · line 5211»
+- FINAL CREW ROSTER «bundle.js · line 5223»
+- EXODUS PROGRAM RECORD #[n] «bundle.js · line 5240»
+- REBOOT SIMULATION «bundle.js · line 5245»
 
 ## The second chance (from colony notes)
 

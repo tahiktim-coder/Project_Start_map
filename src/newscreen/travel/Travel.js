@@ -17,14 +17,19 @@
      landerPose()   → { x, y, len, angle } art px: our ship now
      discs()        → [[x, y, r]] art px of every round thing on screen
      noteUp()       → true while a hover note is showing (the voice waits)
-     debugState()   → { sector, mode, at, hover, lock, flight, modes }
+     debugState()   → { sector, mode, at, hover, lock, flight, modes, feel: { trauma, off, push, plume } }
    }
    Uses:    NewScreen.{ register, bus, anchors, clock, game.{ sector, energy, broken, route }, flow.{ click, canGo, refuse, go,
-            arrive }, blocked, isShown, app, mods.tower.{ occupied, beat } (optional) }
+            arrive }, blocked, isShown, app, mods.tower.{ occupied, beat } (optional) }; if present, window.Juice (the shake)
+            and window.NSTower.{ jolt, speed } (the tower feels the go, the landing and the speed)
    Listens: 'shown' { sector, first, from } · 'hidden' · 'hud' · 'refresh' · 'jump:burn'
    The hover note goes on a click and stays away until the pointer really moves (a refusal is then seen at once); in a
    flight what is under a still pointer is worked out again every frame. The jump's white-gold flash washes the whole
    screen, the tower too (a div over both canvases, warm steps down to the corridor's dark).
+   The long-range scan (Scan.js through flow.scanOffer, scan, facts): a landable world ahead that no scan has read has
+   "Scan" and its cost under its note's words; the note stays up while the pointer crosses to it, a click on the word (not
+   the world) scans it ("Scanning" a moment), and from then on the note shows two short lines of tags. A.U.R.A. explains
+   it once a run, the first time the word has been seen a moment (the voice's once(), kept through the note).
    Emits:   'opening:done' (4.2 s after a sector's first show; at once on a show that is not the first) · 'jump:flash'
             (2.65 s after the burn) · 'note' { up } (the hover note shows or goes: the voice waits)
    Registers anchors (CSS px): 'ship', 'light', 'place:<node id>'.
@@ -46,6 +51,7 @@
     const NS = () => window.NewScreen;
 
     let G = null, sc = 1, cv = null, ctx = null, wordsEl = null, note = null, title = null, flashEl = null, noteRect = null, A = null;
+    let scanEl = null, scanSeenAt = null;                                              // the note's "Scan" line while it can be clicked; since when it shows
     let W = F.blank(1), shownSector = 0, lastRefresh = -1e9, holdRefreshUntil = -1e9, rogueT0 = 0, openedSector = 0, noteWasUp = false;
     const story = new Map();                                                          // node id → { hidden, resolvedAt }
     const placeAnchors = new Set();
@@ -80,6 +86,12 @@
     // ── the story worlds: each still ahead and not boarded wears a warm ring (Pictures), its note says why it matters, and
     //    A.U.R.A. names it once when it is first in sight (the first signal is named by the shell's first hint) ──
     const STORY_TAGS = { signal: 'One of our ships. Send the team aboard', wreck: 'One of our ships. Send the team aboard', course: 'Their last course led here' };
+    const RESERVE_TAG = 'We can only reach it on the reserve';                       // a story world never refused for energy (App.isStoryStop): said before the click
+    /** Short of energy for this story world: the flight there runs on the reserve (bundle.js App.flyOnReserve). */
+    function onReserve(nd) {
+        const ns = NS(), st = ns && ns.app && ns.app.state;
+        try { return !!st && !window.TEST_MODE && typeof st.getWarpCost === 'function' && st.getWarpCost(nd) > st.energy; } catch (err) { return false; }
+    }
     const STORY_LINES = {
         wreck: name => `A.U.R.A.: "One of our ships is calling from ${name}, Commander."`,
         course: name => `A.U.R.A.: "Their last course ends at ${name}, Commander."`,
@@ -87,7 +99,7 @@
     const SAY_GAP_MS = 7000, QUIET_FIRST_MS = 9000, QUIET_MS = 2500;
     let lastSaid = -1e9, quietUntil = 0;
     const naming = new Set(), namedLog = new Set();                                    // node ids being said now; node ids already in the log
-    /** What the story still waits for on this world: 'signal' (the first wreck), 'wreck' (one of our ships; the tape's too),
+    /** What the story still waits for on this world: 'signal' (the first wreck), 'wreck' (one of our ships),
         'course' (the story world, once a dated wreck names it), or null: boarded, behind us, or nothing there. */
     function storyKind(nd) {
         if (!nd || nd.exodusInvestigated || nd.ghost || !nd.nsRoute || nd.nsRoute.status !== 'ahead') return null;
@@ -104,6 +116,8 @@
         if (t < quietUntil || t - lastSaid < SAY_GAP_MS || W.flight || W.lock || W.held || W.opening || W.jump || W.black || W.ease || noteWasUp || blocked()) return;
         const ns = NS(), v = ns && ns.mods && ns.mods.voice, st = ns && ns.app && ns.app.state;
         if (!st || typeof st.addLog !== 'function' || !v || typeof v.say !== 'function' || !ns.isShown() || shownSector !== sectorNow() || naming.size || talking()) return;
+        const sup = window.NSSupper;
+        if (sup && typeof sup.busy === 'function' && sup.busy()) return;                    // supper after the jump first (tower/Supper.js)
         try { if (typeof v.current === 'function' && v.current()) return; } catch (err) { return; }
         const id = F.ids().find(i => { const e = F.entry(i), k = e && storyKind(e.node); return k && STORY_LINES[k] && !e.node.nsSaid && placeAt(i).shown; });
         if (!id) return;
@@ -123,15 +137,25 @@
     }
     function drift(t) { return [Math.round(2 * Math.sin(t / 3100)), Math.round(2.6 * Math.sin(t / 2300 + 1)), 0.035 * Math.sin(t / 2700 + 2)]; }
     const baseAngle = () => { const L = F.lander(), l = F.light(); return Math.atan2(l.y - L.y, l.x - L.x); };
-    function poseAt(t) { const R = F.lander(), [dx, dy, da] = drift(t); return { x: R.x + dx, y: R.y + dy, len: R.len, angle: baseAngle() + W.bank + da }; }
-    /** The plume follows the real energy: 0.25 + 0.75 x energy / 100; x1.7 in flight; a flare on go; it coughs with the drive down. */
-    function plumeLevel(t) {
+    function poseAt(t) {
+        const R = F.lander(), [dx, dy, da] = drift(t), a = baseAngle(), o = pushAt(t);
+        return { x: R.x + dx + Math.cos(a) * o, y: R.y + dy + Math.sin(a) * o, len: R.len, angle: a + W.bank + da };
+    }
+    /** The plume before smoothing: 0.25 + 0.75 x energy / 100; x1.7 in flight; spooling up through the lock; x0.5 held. */
+    function plumeBase(t) {
         if (W.black) return 0.8;
         if (W.jump) return 1 + 2.4 * clamp01((t - W.jump.t0) / 1500);
         let lvl = 0.25 + 0.75 * clamp01(energyNow() / 100);
-        if (W.flight) lvl *= 1.7; else if (W.lock) lvl *= 1.15; else if (W.held) lvl *= 0.5;
+        if (W.flight) lvl *= 1.7; else if (W.lock) lvl *= lerp(1, FEEL.lockPlume, clamp01((t - W.lock.t0) / LOCK_MS)); else if (W.held) lvl *= 0.5;
+        return lvl;
+    }
+    /** The plume follows the real energy, smoothed (it flares up fast and dies down slowly); a flare on go; it coughs with
+        the drive down (after the smoothing, so the cough stays sharp). */
+    function plumeLevel(t) {
+        if (W.black || W.jump) return FX.plume == null ? plumeBase(t) : FX.plume;
+        let lvl = FX.plume == null ? plumeBase(t) : FX.plume;
         if (broken('engineering')) lvl *= sputter(t);
-        if (t >= W.flareT) lvl += 1.6 * Math.exp(-(t - W.flareT) / 350);
+        if (t >= W.flareT) lvl += FEEL.flare * Math.exp(-(t - W.flareT) / FEEL.flareMs);
         return lvl;
     }
     function sputter(t) {                                                             // on the same 2.9 s cycle as the brown-outs aboard
@@ -156,9 +180,66 @@
         return [lerp(LP[0], it.x, k), lerp(LP[1], it.y, k)];
     }
 
+    // ── the feel (picture only: the course, its clicks and its timing are untouched). The ship draws back through the lock,
+    //    surges forward on go, sits a little back at speed (more room ahead), bumps on landing; space shakes on go, on
+    //    landing and through the jump's burn (window.Juice, if loaded); the tower beside us feels it (window.NSTower). ──
+    const FEEL = { lockBack: 2, surge: 5, lead: 6, land: 3, surgeIn: 140, surgeOut: 700, landIn: 120, landOut: 330, cancel: 250,
+        lockPlume: 1.35, flare: 2.0, flareMs: 450, plumeUp: 120, plumeDown: 600,
+        fireKick: 0.8, landKick: 0.5, burnFloor: 0.65, towerFire: 0.75, towerLand: 0.45 };
+    const FX = { shake: null, off: null, plume: null, fireT: null, landT: null, relax: null };   // the module's own picture state
+    const easeOut = k => 1 - Math.pow(1 - clamp01(k), 3);
+    const easeIn = k => clamp01(k) * clamp01(k);
+    function reduced() { const J = window.Juice; try { return !!(J && typeof J.reduced === 'function' && J.reduced()); } catch (err) { return false; } }
+    function shaker() {
+        const J = window.Juice;
+        if (!FX.shake && G && J && typeof J.shaker === 'function') FX.shake = J.shaker({ max: [4 * sc, 3 * sc], roll: 0, decay: 1.4, hz: 9 });
+        return FX.shake;
+    }
+    function kick(a) { const s = shaker(); if (s) s.add(a); }
+    function tower(fn, v) { const T = window.NSTower; if (!T || typeof T[fn] !== 'function') return; try { T[fn](v); } catch (err) { console.error(`NewScreen travel: NSTower.${fn} failed`, err); } }
+    const speed01 = t => clamp01((speedNow(t) - SPEED.rest) / (SPEED.flight - SPEED.rest));
+    /** How far the ship sits along its heading now (art px; + ahead), before reduced motion. */
+    function pushRaw(t) {
+        if (W.lock) return -FEEL.lockBack * sc * easeIn((t - W.lock.t0) / LOCK_MS);
+        let o = 0;
+        if (W.flight) {
+            const age = FX.fireT == null ? 1e9 : t - FX.fireT, lead = -FEEL.lead * sc * speed01(t), top = FEEL.surge * sc;
+            o = age < FEEL.surgeIn ? lerp(-FEEL.lockBack * sc, top, easeOut(age / FEEL.surgeIn))
+                : age < FEEL.surgeIn + FEEL.surgeOut ? lerp(top, lead, ease((age - FEEL.surgeIn) / FEEL.surgeOut)) : lead;
+        } else if (FX.landT != null && t - FX.landT < FEEL.landIn + FEEL.landOut) {
+            const age = t - FX.landT;
+            o = FEEL.land * sc * (age < FEEL.landIn ? easeOut(age / FEEL.landIn) : 1 - ease((age - FEEL.landIn) / FEEL.landOut));
+        }
+        if (FX.relax && t - FX.relax.t0 < FEEL.cancel) o += FX.relax.from * (1 - easeOut((t - FX.relax.t0) / FEEL.cancel));
+        return o;
+    }
+    function pushAt(t) { return G ? pushRaw(t) * (reduced() ? 0.5 : 1) : 0; }
+    /** The lock let go without a flight (cancelled, refused, hidden): the ship eases back from where it was. */
+    function relaxFrom(t) { FX.relax = { t0: t, from: W.lock ? -FEEL.lockBack * sc * easeIn((t - W.lock.t0) / LOCK_MS) : 0 }; }
+    function onFired(t) { FX.fireT = t; FX.relax = null; kick(FEEL.fireKick); tower('jolt', FEEL.towerFire); }
+    function onLanded(t) { FX.landT = t; FX.fireT = null; kick(FEEL.landKick); tower('jolt', FEEL.towerLand); }
+    /** Once a frame: the burn's rumble, the tower told how hard we fly, the shake stepped, the plume smoothed. */
+    function stepFeel(dt, t) {
+        const s = shaker();
+        if (W.jump && !W.black) {
+            if (s) s.floor(FEEL.burnFloor * Math.pow(clamp01((t - W.jump.t0) / JUMP.white), 2));
+            tower('speed', 1);
+        } else tower('speed', W.flight ? speed01(t) : 0);
+        FX.off = s ? s.tick(dt / 1000) : null;
+        const want = plumeBase(t);
+        if (FX.plume == null) FX.plume = want;
+        else FX.plume += (want - FX.plume) * (1 - Math.exp(-dt / (want > FX.plume ? FEEL.plumeUp : FEEL.plumeDown)));
+    }
+
     // ═══ 3. drawing ═══
+    /** Space shakes as one picture: the whole frame moved by whole art px over ink (hit tests and notes stay put). */
     function render(t) {
         if (!G || !ctx) return;
+        const sh = FX.off, dx = sh ? Math.round(sh.dx) : 0, dy = sh ? Math.round(sh.dy) : 0;
+        if (dx || dy) { ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = P.INK; ctx.fillRect(0, 0, G.W, G.H); ctx.setTransform(1, 0, 0, 1, dx, dy); }
+        try { drawScene(t); } finally { if (dx || dy) ctx.setTransform(1, 0, 0, 1, 0, 0); }
+    }
+    function drawScene(t) {
         ctx.imageSmoothingEnabled = false;
         const f = P.framer(ctx, G.W, G.H), pose = poseAt(t), tb = towerBits(t);
         if (!W.black && shownSector !== sectorNow()) { PIC.dimAll(1); return; }       // before a sector's first show (under the briefing): black
@@ -202,8 +283,8 @@
         const e = F.entry(id), nd = e && e.node; if (!nd) return null;
         const status = (nd.nsRoute || {}).status, md = W.modes[id] || {};
         if (nd.isStoryPlanet && nd.storyHidden) return { name: 'A faint contact', tag: 'No fix on it yet' };
-        const tags = nd.tags || [], kind = storyKind(nd);
-        if (kind && !W.visited.has(id) && md.m !== 'passed') return { name: nd.name || '', tag: STORY_TAGS[kind], story: true };
+        const tags = nd.tags || [], kind = storyKind(nd), ahead = status === 'ahead' && !W.visited.has(id) && md.m !== 'passed' && md.m !== 'gone';
+        if (kind && !W.visited.has(id) && md.m !== 'passed') { const tag = onReserve(nd) ? RESERVE_TAG : STORY_TAGS[kind]; return { name: nd.name || '', tag, story: true, ahead, ours: OURS.test(tag) }; }
         const tag = status === 'visited' || W.visited.has(id) ? 'We stopped here'
             : status === 'passed' || status === 'gone' || md.m === 'passed' ? 'We passed it'
             : nd.isFirstSignal ? 'An old ship beacon'
@@ -212,31 +293,124 @@
             : nd.isStation ? 'An empty station'
             : nd.isAsteroidField ? 'Rocks and old metal'
             : TYPE_WORDS[nd.type] || 'A world';
-        return { name: nd.name || '', tag };
+        return { name: nd.name || '', tag, ahead, ours: OURS.test(tag) };                 // ours: the tag says it already, the scan's tags need not
+    }
+    const OURS = /one of our ships/i;
+
+    // ── the long-range scan in a world's note (Scan.js through flow): "Scan" and its cost, "Scanning" a moment, then the tags ──
+    const SCAN_SHOW_MS = 700, SCAN_TELL_MS = 600, SCAN_PAD = 6;   // "Scanning" shows this long; the word is seen this long before A.U.R.A. explains it; CSS px of slack round it
+    const SCAN_WHY = { energy: 'not enough energy', bridge: 'the bridge is down' };
+    /** What the note says of world id's scans now: nothing, the offer ("Scan", its cost or why not), "Scanning", or the tags.
+        No offer while a course is set (one thing at a time); the tags only for a world still ahead. */
+    function scanState(id, w, t) {
+        if (!w || !w.ahead || id === 'light') return { key: '' };
+        if (W.scanning && W.scanning.id === id && t - W.scanning.t0 < SCAN_SHOW_MS) return { key: 'busy', kind: 'busy' };
+        const f = ask('facts', id), S = window.NSScan;
+        if (f && S) { const lines = S.lines(f, !w.ours); return lines.length ? { key: 'f:' + lines.join('|'), kind: 'facts', lines } : { key: '' }; }
+        if (W.flight || W.lock || W.held) return { key: '' };
+        const o = ask('scanOffer', id);
+        return o ? { key: `o:${o.ok}:${o.why}:${o.cost}`, kind: 'offer', offer: o } : { key: '' };
+    }
+    function scanEls(s) {
+        if (s.kind === 'busy') { const p = mk('p', 'scan is-busy'); p.append(mk('b', null, 'Scanning')); return [p]; }
+        if (s.kind === 'facts') return s.lines.map(l => mk('p', 'fact', l));
+        if (s.kind !== 'offer') return [];
+        const p = mk('p', 'scan' + (s.offer.ok ? '' : ' is-off'));
+        p.append(mk('b', null, 'Scan'), mk('span', null, s.offer.ok ? `${s.offer.cost} energy` : SCAN_WHY[s.offer.why] || ''));
+        return [p];
+    }
+    /** The pointer (CSS px) is on the note's "Scan" line while it can be clicked. */
+    function scanAt(e) {
+        if (!scanEl || !note || note.hidden || !e || !scanEl.isConnected) return false;
+        const r = scanEl.getBoundingClientRect();
+        return e.clientX >= r.left - SCAN_PAD && e.clientX <= r.right + SCAN_PAD && e.clientY >= r.top - SCAN_PAD && e.clientY <= r.bottom + SCAN_PAD;
+    }
+    /** The pointer (art px) is on the note, or on the way to its Scan word (the box round the world and its note): the
+        world the note is about stays pointed at. Without a Scan word only the note itself holds it (its tags can be read). */
+    function overNote(x, y) {
+        if (!noteRect || !noteWasUp || !W.hover || W.hover === 'light') return false;
+        const pad = 8 * sc, inBox = (x0, y0, x1, y1) => x >= x0 - pad && x <= x1 + pad && y >= y0 - pad && y <= y1 + pad;
+        if (inBox(noteRect.x, noteRect.y, noteRect.x + noteRect.w, noteRect.y + noteRect.h)) return true;
+        if (!scanEl) return false;
+        const g = placeAt(W.hover);
+        return inBox(Math.min(noteRect.x, g.x - g.r), Math.min(noteRect.y, g.y - g.r), Math.max(noteRect.x + noteRect.w, g.x + g.r), Math.max(noteRect.y + noteRect.h, g.y + g.r));
+    }
+    function hotScan(on) { if (scanEl) scanEl.classList.toggle('is-hot', !!on); }
+    /** A click on "Scan": flow.scan does the game's part (the energy, what is learned, A.U.R.A.'s line); the note says
+        "Scanning" a moment, then shows the tags. It stays where it is. */
+    function scanClick(id, t) {
+        if (!id || !ask('scan', id)) return;
+        W = Object.assign({}, W, { scanning: { id, t0: t } });
+    }
+    /** A.U.R.A. explains the long-range scan once a run (Scan.js TELL), the first time its word has been in a note a moment:
+        kept, so it waits out the note and is said once the note goes. Dropped unseen (a dive clears the voice), it is
+        offered again the next time the word shows. */
+    function tellScan(t) {
+        if (!scanEl || !note || note.hidden) { scanSeenAt = null; return; }
+        if (scanSeenAt == null) scanSeenAt = t;
+        const ns = NS(), v = ns && ns.mods && ns.mods.voice, S = window.NSScan, KEY = 'act:farscan';
+        if (t - scanSeenAt < SCAN_TELL_MS || !v || typeof v.once !== 'function' || typeof v.told !== 'function' || !S || !S.TELL || v.told(KEY)) return;
+        v.once(KEY, S.TELL.far, () => ns.isShown() && (typeof ns.mode !== 'function' || ns.mode() === 'travel'), true)
+            .then(seen => { if (!seen && typeof v.forget === 'function') { v.forget(KEY); scanSeenAt = null; } }, err => console.error('NewScreen travel: the scan line failed', err));
     }
     function updateNote(t) {
         const target = W.flight && (W.flight.light ? 'light' : W.flight.id), id = W.hover && W.hover !== target && !W.lock && !W.quiet ? W.hover : null, g = id ? placeAt(id) : null;
         const up = !!(id && g && g.shown);
         if (up !== noteWasUp) { noteWasUp = up; emit('note', { up }); }
-        if (!up) { note.hidden = true; noteRect = null; W.noteKey = ''; return; }
-        const w = placeWords(id); if (!w) { note.hidden = true; noteRect = null; return; }
-        const key = [id, w.name, w.tag].join('|');
-        if (key !== W.noteKey) { note.replaceChildren(mk('p', 'name', w.name), mk('p', 'tag', w.tag)); note.classList.toggle('is-story', !!w.story); W.noteKey = key; W.noteSide = null; }
+        if (!up) { note.hidden = true; noteRect = null; W.noteKey = ''; W.noteFor = null; W.noteAt = null; scanEl = null; return; }
+        const w = placeWords(id); if (!w) { note.hidden = true; noteRect = null; scanEl = null; return; }
+        const s = scanState(id, w, t), key = [id, w.name, w.tag, s.key].join('|');
+        if (key !== W.noteKey) {
+            const extra = scanEls(s);
+            note.replaceChildren(mk('p', 'name', w.name), mk('p', 'tag', w.tag), ...extra);
+            note.classList.toggle('is-story', !!w.story);
+            scanEl = s.kind === 'offer' && s.offer.ok ? extra[0] : null;
+            if (W.noteFor !== id) { W.noteSide = null; W.noteAt = null; }                    // the same world's words changed (its scan): the note stays where it is
+            W.noteKey = key; W.noteFor = id;
+        }
         note.hidden = false;
         const l = F.light(), k = G.k / G.dpr, nw = note.offsetWidth / k, nh = note.offsetHeight / k, e = F.entry(id), giant = e && e.kind === 'giant';
-        const gap = giant ? 10 : g.r + 8 * sc, ds = F.discsOf(W.last || F.scene(W, t));                    // its own disc too: never words over a world
+        const gap = g.r + (giant ? 10 : 8 * sc), ds = noteDiscs(W.last || F.scene(W, t));   // beside the world's edge, a giant's too: never words over a world
         if (id !== 'light') ds.push([l.x, l.y, 26 * sc]);                                 // off the light's glare too
-        const box = side => side === 'right' ? [g.x + gap, g.y - nh / 2] : side === 'left' ? [g.x - gap - nw, g.y - nh / 2] : side === 'above' ? [g.x - nw / 2, g.y - (giant ? g.r : 0) - gap - nh] : [g.x - nw / 2, g.y + gap];
-        const ok = ([x, y]) => x >= G.hull + 6 && x + nw <= G.W - 6 && y >= 6 && y + nh <= G.H - 6 && !ds.some(([cx, cy, r]) => { const qx = Math.max(x, Math.min(cx, x + nw)), qy = Math.max(y, Math.min(cy, y + nh)); return Math.hypot(qx - cx, qy - cy) < r; });
+        const box = side => side === 'right' ? [g.x + gap, g.y - nh / 2] : side === 'left' ? [g.x - gap - nw, g.y - nh / 2] : side === 'above' ? [g.x - nw / 2, g.y - gap - nh] : [g.x - nw / 2, g.y + gap];
+        const onWorld = ([x, y]) => ds.some(([cx, cy, r]) => { const qx = Math.max(x, Math.min(cx, x + nw)), qy = Math.max(y, Math.min(cy, y + nh)); return Math.hypot(qx - cx, qy - cy) < r; });
+        const inView = ([x, y]) => x >= G.hull + 6 && x + nw <= G.W - 6 && y >= 6 && y + nh <= G.H - 6;
+        const ok = b => inView(b) && !onWorld(b);
         const ptr = W.pointer || [g.x, g.y], sides = ['right', 'left', 'above', 'below'].map(s => ({ s, b: box(s) })).filter(c => ok(c.b));
         sides.sort((a, b) => Math.hypot(b.b[0] + nw / 2 - ptr[0], b.b[1] + nh / 2 - ptr[1]) - Math.hypot(a.b[0] + nw / 2 - ptr[0], a.b[1] + nh / 2 - ptr[1]));   // away from the pointer
-        let pick = sides.find(c => c.s === W.noteSide) || sides[0];
-        if (!pick) { const b = box(g.x > G.hull + (G.W - G.hull) / 2 ? 'left' : 'right'); pick = { s: 'x', b: [Math.max(G.hull + 6, Math.min(G.W - nw - 6, b[0])), Math.max(6, Math.min(G.H - nh - 6, b[1]))] }; }
-        W.noteSide = pick.s;
+        const clampBox = b => [Math.max(G.hull + 6, Math.min(G.W - nw - 6, b[0])), Math.max(6, Math.min(G.H - nh - 6, b[1]))];
+        const SIDES = ['right', 'left', 'above', 'below'], kept = W.noteAt && W.noteFor === id && Math.hypot(W.noteAt.gx - g.x, W.noteAt.gy - g.y) <= 2 ? W.noteAt : null;
+        // the note never runs from the pointer: kept where it is while the pointer is on it, and in open sky until the world moves
+        let pick = kept && (W.onNote || !SIDES.includes(kept.s)) ? { s: kept.s, b: clampBox(SIDES.includes(kept.s) ? box(kept.s) : kept.b) }
+            : sides.find(c => c.s === W.noteSide) || sides[0];
+        if (!pick) pick = openSky(ptr, nw, nh, ok);                                     // a world filling the view (a giant up close): the nearest clear sky
+        if (!pick) { const b = box(g.x > G.hull + (G.W - G.hull) / 2 ? 'left' : 'right'); pick = { s: 'x', b: clampBox(b) }; }
+        W.noteSide = pick.s; W.noteAt = { s: pick.s, b: pick.b, gx: g.x, gy: g.y };
         note.classList.toggle('is-left', pick.s === 'left');
         const [cx, cy] = G.toCss(pick.b[0], pick.b[1]);
         note.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
-        noteRect = { x: Math.round(pick.b[0]), y: Math.round(pick.b[1]), w: Math.ceil(nw), h: Math.ceil(nh) };
+        noteRect = { x: Math.round(pick.b[0]), y: Math.round(pick.b[1]), w: Math.ceil(nw), h: Math.ceil(nh), dense: onWorld(pick.b) };   // still over a world: a darker shade
+    }
+    /** Every round thing the words keep off: the worlds (F.discsOf) and a giant's ring, as a chain of small discs along it. */
+    function noteDiscs(sn) {
+        const ds = F.discsOf(sn), GI = P.GIANT, ct = Math.cos(GI.tilt), st = Math.sin(GI.tilt), mid = (GI.r0 + GI.r1) / 2;
+        sn.items.filter(i => i.kind === 'giant' && i.part !== 'arc' && !(i.fade >= 1)).forEach(i => {
+            const band = (GI.r1 - GI.r0) / 2 * i.r + 3;
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 14) {
+                const u = mid * i.r * Math.cos(a), w = mid * i.r * GI.open * Math.sin(a);
+                ds.push([i.x + u * ct - w * st, i.y + u * st + w * ct, band]);
+            }
+        });
+        return ds;
+    }
+    /** The clear piece of sky nearest the pointer for a note nw x nh (art px), in rings around it; null when there is none. */
+    function openSky(ptr, nw, nh, ok) {
+        let best = null, bestD = Infinity;
+        for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) {
+            const b = [ptr[0] + i * (nw / 2 + 6) - nw / 2, ptr[1] + j * (nh + 6) - nh / 2], d = Math.hypot(i * (nw / 2 + 6), j * (nh + 6));
+            if (d < bestD && ok(b)) { best = { s: 'sky', b }; bestD = d; }
+        }
+        return best;
     }
     /** The white-gold flash over the whole screen (the tower too), in warm steps, then the corridor's dark. */
     function updateFlash(t) {
@@ -261,10 +435,19 @@
         const st = mk('style'); st.id = 'ns-travel-style';
         st.textContent = `#ns-world-words .nst-note { position: absolute; left: 0; top: 0; display: grid; gap: 3px; max-width: 22em; pointer-events: none; }
 #ns-world-words .nst-note[hidden], #ns-world-words .nst-title[hidden] { display: none; }
-#ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name, 19px)/1.15 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.02em; color: var(--text, #e4e4e0); text-shadow: var(--shadow, 0 1px 0 #05070a); }
-#ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-shadow: var(--shadow, 0 1px 0 #05070a); }
+#ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name, 19px)/1.15 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.02em; color: var(--text, #e4e4e0); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
+#ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
 #ns-world-words .nst-note.is-left { text-align: right; justify-items: end; }
 #ns-world-words .nst-note.is-story .tag { color: var(--warm-br, #ffc27a); }
+#ns-world-words .nst-note .scan { margin: 3px 0 0; justify-self: start; display: flex; align-items: baseline; gap: 10px; text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
+#ns-world-words .nst-note.is-left .scan { justify-self: end; }
+#ns-world-words .nst-note .scan b { font: 500 var(--fs-note-line, 16px)/1.2 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.04em; color: var(--warm, #f08c2e); transition: color 140ms var(--ease, ease); }
+#ns-world-words .nst-note .scan span { font: 400 calc(var(--fs-note-line, 16px) - 1px)/1.2 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); }
+#ns-world-words .nst-note .scan.is-hot b { color: var(--warm-br, #ffc27a); }
+#ns-world-words .nst-note .scan.is-off b { color: var(--faint, #5a6168); }
+#ns-world-words .nst-note .scan.is-busy b { font-weight: 400; letter-spacing: 0.06em; color: var(--ui, #c9d1d6); }
+#ns-world-words .nst-note .fact { margin: 0; font: 400 calc(var(--fs-note-line, 16px) - 1px)/1.3 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--ui, #c9d1d6); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
+#ns-world-words .nst-note .tag + .fact { margin-top: 3px; }
 #ns-world-words .nst-flash { position: absolute; inset: 0; pointer-events: none; }
 #ns-world-words .nst-flash[hidden] { display: none; }
 #ns-world-words .nst-title { position: absolute; left: 0; top: 0; margin: 0; font: 300 var(--fs-title, 44px)/1 var(--f-text, 'IBM Plex Sans', sans-serif); letter-spacing: 0.2em; color: var(--text, #e4e4e0); white-space: nowrap; text-shadow: var(--shadow, 0 1px 0 #05070a); pointer-events: none; }`;
@@ -327,11 +510,12 @@
         W = Object.assign({}, W, { lock: { id, t0: t } });
         PIC.prebake(prebakeItems(F.planFlight(W, id, t + LOCK_MS, broken('engineering')), t + LOCK_MS));
     }
-    function cancelLock() { if (W.lock) W = Object.assign({}, W, { lock: null }); }
+    function cancelLock() { if (W.lock) { relaxFrom(now()); W = Object.assign({}, W, { lock: null }); } }
     function fire(t) {
         const id = W.lock.id;
-        if (refused(ask('go', id))) { W = Object.assign({}, W, { lock: null }); return; }   // flow.go speaks why not
+        if (refused(ask('go', id))) { relaxFrom(t); W = Object.assign({}, W, { lock: null }); return; }   // flow.go speaks why not
         W = Object.assign(F.planFlight(W, id, t, broken('engineering')), { flareT: t });
+        onFired(t);
         PIC.prebake(prebakeItems(W, t));
     }
     /** The game did not pull in (flow.arrive said no): back to the field as it was before the flight. */
@@ -346,18 +530,28 @@
         for (let k = 1; k <= 8; k++) F.scene(St, t + d * k / 8).items.forEach(it => out.push(it));
         return out;
     }
+    /** A world under the pointer (art px), else the pointed world kept while the pointer is on its note (or crossing to it).
+        A giant behind the way to a Scan word does not take the pointer from the world in front of it. */
+    function pointed(x, y, t) {
+        let hit = hitTest(x, y, t);
+        if (hit && hit !== W.hover && scanEl && F.entry(hit) && F.entry(hit).kind === 'giant' && overNote(x, y)) hit = null;
+        return { hit, onNote: !hit && !!W.hover && W.hover !== 'light' && overNote(x, y) };
+    }
     function pointer(type, e, x, y) {
         const t = now();
         if (type === 'wheel') return false;
-        if (type === 'leave' || !interactive(t)) { if (W.hover) setHover(null); return false; }
-        const hit = hitTest(x, y, t);
+        if (type === 'leave' || !interactive(t)) { if (W.hover) setHover(null); if (W.onNote) W = Object.assign({}, W, { onNote: false }); hotScan(false); return false; }
+        const onScan = scanAt(e), { hit, onNote } = onScan ? { hit: null, onNote: true } : pointed(x, y, t);
         if (type === 'move') {
             const quiet = W.quiet && Math.hypot(x - W.quiet[0], y - W.quiet[1]) <= QUIET_MOVE ? W.quiet : null;
-            W = Object.assign({}, W, { pointer: [x, y], quiet }); setHover(hit); return !!hit;
+            W = Object.assign({}, W, { pointer: [x, y], quiet, onNote }); setHover(hit || (onNote ? W.hover : null)); hotScan(onScan);
+            return !!hit || onScan;
         }
         if (type === 'down') {
             if (W.lock) { if (!hit || hit !== W.lock.id) cancelLock(); return true; }
+            if (onScan) { scanClick(W.hover, t); return true; }                          // the word, not the world: no flight
             if (hit) { W = Object.assign({}, W, { quiet: [x, y] }); click(hit, t); return true; }
+            if (onNote) return true;                                                     // the note's other words do nothing
         }
         return false;
     }
@@ -385,7 +579,7 @@
             PIC.prebake(prebakeItems(W, t));
         } else if (W.held) W = F.sync(Object.assign({}, W, { held: null, ease: { t0: t, dur: 2000, from: W.cam, to: F.stageCam(W.at, W.modes) } }), t);
     }
-    function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null }); if (note) note.hidden = true; noteRect = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; PIC.setLive(false); }
+    function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null, onNote: false, scanning: null }); FX.relax = null; FX.landT = null; if (note) note.hidden = true; noteRect = null; scanEl = null; scanSeenAt = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; PIC.setLive(false); }
     function update(dt, t) {
         if (!G) return;
         PIC.setLive(true);
@@ -395,9 +589,11 @@
         if (W.lock && t - W.lock.t0 >= LOCK_MS && !blocked()) fire(t);                // a card up: the course waits for it
         if (W.flight && t - W.flight.t0 >= W.flight.dur && !blocked()) {              // the flight lands (once no card is up): the real game pulls in
             const id = W.flight.id; W = F.land(W);
+            onLanded(t);
             if (ask('arrive', id) === false) undoArrival(t);
         }
         if (W.ease && t - W.ease.t0 >= W.ease.dur) W = Object.assign({}, W, { cam: W.ease.to, ease: null });
+        stepFeel(dt, t);
         const tgt = W.flight ? (W.flight.light ? 'light' : W.flight.id) : W.lock ? (W.lock.id === F.light().node ? 'light' : W.lock.id) : W.hover, sn = W.last;
         const it = tgt && tgt !== 'light' && sn && sn.items.find(i => i.id === tgt && i.part !== 'arc');
         let wantB = 0;
@@ -411,14 +607,15 @@
         } else title.hidden = true;
         if (W.jump && !W.jump.flashed && t - W.jump.t0 >= JUMP.flash) { W.jump.flashed = true; W.black = true; emit('jump:flash', {}); }
         if (W.hover && !interactive(t)) setHover(null);
-        else if ((W.ease || W.flight) && W.pointer && interactive(t)) setHover(hitTest(W.pointer[0], W.pointer[1], t));
+        else if ((W.ease || W.flight) && W.pointer && interactive(t)) { const p = pointed(W.pointer[0], W.pointer[1], t); setHover(p.hit || (p.onNote ? W.hover : null)); }
         updateNote(t);
+        tellScan(t);
         announce(t);
         updateFlash(t);
         if (dt > 0) PIC.bakeOne();
     }
     function resize(g) {
-        G = g; sc = G.H / 360;
+        G = g; sc = G.H / 360; FX.shake = null;                                       // the shake's reach is in art px: made again at this size
         ensureDom();
         cv.width = G.W; cv.height = G.H; cv.style.width = (G.W * G.k / G.dpr) + 'px'; cv.style.height = (G.H * G.k / G.dpr) + 'px';
         F.setup(G); PIC.setup(G, ctx); A = null;
@@ -478,8 +675,9 @@
     function discs() { if (!G || W.black) return []; return F.discsOf(W.last || F.scene(W, now())); }
     function debugState() {
         const mode = W.black ? 'corridor' : W.jump ? 'jump' : W.flight ? 'flight' : W.lock ? 'lock' : W.held ? 'held' : W.opening ? 'opening' : 'rest';
-        return { sector: W.sector, mode, at: W.at, hover: W.hover, lock: W.lock ? W.lock.id : null, flight: W.flight ? W.flight.id : null, held: W.held,
-            modes: Object.fromEntries(Object.entries(W.modes).map(([id, m]) => [id, m.m])), slots: Object.fromEntries(F.ids().map(id => [id, F.entry(id).slot + '/' + F.entry(id).band])), light: F.light().node };
+        return { sector: W.sector, mode, at: W.at, hover: W.hover, lock: W.lock ? W.lock.id : null, flight: W.flight ? W.flight.id : null, held: W.held, onNote: !!W.onNote, scanning: W.scanning ? W.scanning.id : null, noteSide: W.noteSide || null,
+            modes: Object.fromEntries(Object.entries(W.modes).map(([id, m]) => [id, m.m])), slots: Object.fromEntries(F.ids().map(id => [id, F.entry(id).slot + '/' + F.entry(id).band])), light: F.light().node,
+            feel: { trauma: FX.shake ? FX.shake.level() : null, off: FX.off ? [Math.round(FX.off.dx), Math.round(FX.off.dy)] : null, push: pushAt(now()), plume: plumeLevel(now()) } };
     }
 
     const MOD = { init, resize, update, render, pointer, key, placeAt, placeCss, landerPose, discs, noteUp: () => noteWasUp, debugState };

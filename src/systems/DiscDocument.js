@@ -1,12 +1,14 @@
 /* DiscDocument — the disc humanity threw out of its solar system, as a page you can find and study.
-   A dithered gold disc with four things etched on it (the map home, the two figures, our planets, the atom that sets the scale),
-   and something slowly reading across it. Point at a label to light up that part of the drawing and read one short note.
-   open(app) → shows it. The page lives in cargo as ITEMS.DISC_DRAWING (isKept: using it does not use it up). */
+   A dithered gold disc with four things etched on it (the map home, the two figures, our planets, the atom that sets the scale).
+   Point at a label to light up that part of the drawing and read one short note.
+   open(app) → the drawing (sector 1), which lives in cargo as ITEMS.DISC_DRAWING (isKept: using it does not use it up).
+   open(app, { real: true }) → the disc itself (sector 5's find, EXODUS_LOGS PAGE_DISC): no margin, its own words. */
 
 (function () {
     'use strict';
     const SIZE = 300, C = SIZE / 2, R = 140, TICK_MS = 100;
-    const GOLD = ['#140d03', '#4a3510', '#8a6a22', '#d9a24a', '#ffe6a0'], ETCH = '#2a1c06', ETCH_LIT = '#fff4d0', READER = '#8844ff';
+    const BACKDROP_GUARD_MS = 1200;                                  // a click beside the page puts it away only once it has been up this long
+    const GOLD = ['#140d03', '#4a3510', '#8a6a22', '#d9a24a', '#ffe6a0'], ETCH = '#2a1c06', ETCH_LIT = '#fff4d0';
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
 
@@ -17,6 +19,13 @@
         { key: 'figures', label: 'THE TWO FIGURES', region: [206, 138, 40], text: 'What we look like. One of them is waving.' },
         { key: 'margin', label: 'WRITTEN IN THE MARGIN', region: [C, 52, 40], text: '“Why is this in a colony ship’s orders? Why is it the only page marked with our heading? — K.”' },
     ];
+    // the disc itself: metal, not paper, so no margin; the map and the figures read the same
+    const REAL_NOTES = [
+        { key: 'disc', label: 'THE DISC', region: [C, C, R], text: 'Gold, cut by a machine. Every mark on our drawing is here, in the metal.' },
+        ...NOTES.filter(n => n.key === 'map' || n.key === 'figures'),
+    ];
+    const DRAWING = { kicker: 'FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK', title: 'The disc', aura: 'An old curiosity, Commander. I would not spend time on it.', close: 'FOLD IT AWAY', closeNote: 'it stays in your cargo' };
+    const REAL = { kicker: 'THE DISC ITSELF · NOW IN OUR HOLD', title: 'The disc', aura: 'I have logged it as cargo, Commander. It changes nothing about our course.', close: 'PUT IT AWAY', closeNote: 'it stays in your cargo' };
 
     function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
@@ -46,7 +55,7 @@
     }
 
     function draw(ctx, marks, time, focus) {
-        const glint = time / 4000, scan = ((time / 9000) % 1) * (SIZE + 60) - 30;
+        const glint = time / 4000;
         for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) {
             const dx = x - C, dy = y - C, d = Math.hypot(dx, dy);
             if (d > R) { ctx.fillStyle = '#05070a'; ctx.fillRect(x, y, 1, 1); continue; }
@@ -58,25 +67,26 @@
             const level = Math.max(0, Math.min(3.99, shine * 4)), lo = Math.floor(level);
             let color = GOLD[dith(x, y, level - lo) ? lo + 1 : lo];
             if (marks[y * SIZE + x]) color = inFocus ? ETCH_LIT : ETCH;
-            if (Math.abs(x - scan) < 14 && dith(x, y, 0.5 - Math.abs(x - scan) / 28)) color = READER; // something is reading it, left to right, over and over
             ctx.fillStyle = color; ctx.fillRect(x, y, 1, 1);
         }
     }
 
-    /** opts (all optional): kicker, title, aura (the line under the drawing), close (the button's words) — the finale shows the real disc, inside the light. */
+    /** opts (all optional): real (the disc itself, not the drawing), kicker, title, aura (the line under it), close and closeNote
+        (the button's words) — the finale shows our own disc, from the hold, with its own kicker and line. */
     function open(app, opts) {
         if (document.querySelector('.disc-doc')) return Promise.resolve();
-        const o = Object.assign({ kicker: 'FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK', title: 'The disc', aura: 'An old curiosity, Commander. I would not spend time on it.', close: 'FOLD IT AWAY', closeNote: 'it stays in your cargo' }, opts || {});
+        const isReal = !!(opts && opts.real), notes = isReal ? REAL_NOTES : NOTES;
+        const o = Object.assign({}, isReal ? REAL : DRAWING, opts || {});
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay disc-doc';
         overlay.style.zIndex = '4000';
         overlay.innerHTML = `
-            <section class="modal-content deck-panel disc-doc-card" role="dialog" aria-label="Drawing of the disc">
+            <section class="modal-content deck-panel disc-doc-card" role="dialog" aria-label="${isReal ? 'The disc' : 'Drawing of the disc'}">
                 <header class="enc-head"><p class="enc-kicker" style="color:var(--amber)">${o.kicker}</p><h3>${o.title}</h3></header>
                 <div class="disc-doc-body">
                     <canvas class="disc-doc-canvas" width="${SIZE}" height="${SIZE}"></canvas>
                     <div class="disc-doc-notes">
-                        ${NOTES.map(n => `<button class="disc-doc-note" data-key="${n.key}" type="button">${n.label}</button>`).join('')}
+                        ${notes.map(n => `<button class="disc-doc-note" data-key="${n.key}" type="button">${n.label}</button>`).join('')}
                         <p class="disc-doc-text" aria-live="polite"></p>
                     </div>
                 </div>
@@ -84,6 +94,9 @@
                 <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>${o.close}</span><small>${o.closeNote}</small></button></div>
             </section>`;
         document.body.appendChild(overlay);
+        // it opens just after a card's choice: FOLD IT AWAY never lands under that click (a double click would put it away unread)
+        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.disc-doc-card'), overlay.querySelectorAll('.disc-doc-close'));
+        const openedAt = performance.now();
         return new Promise(resolve => {
         const ctx = overlay.querySelector('canvas').getContext('2d'), textEl = overlay.querySelector('.disc-doc-text');
         const marks = buildEtching(), startedAt = performance.now();
@@ -94,21 +107,21 @@
             overlay.querySelectorAll('.disc-doc-note').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
         };
         overlay.querySelectorAll('.disc-doc-note').forEach(btn => {
-            const note = NOTES.find(n => n.key === btn.dataset.key);
+            const note = notes.find(n => n.key === btn.dataset.key);
             btn.addEventListener('mouseenter', () => show(note, btn));
             btn.addEventListener('focus', () => show(note, btn));
             btn.addEventListener('click', () => show(note, btn));
         });
-        show(NOTES[0], overlay.querySelector('.disc-doc-note'));
+        show(notes[0], overlay.querySelector('.disc-doc-note'));
         const timer = setInterval(() => { if (!overlay.isConnected) { clearInterval(timer); return; } draw(ctx, marks, performance.now() - startedAt, focus); }, TICK_MS);
         draw(ctx, marks, 0, focus);
         const close = () => { overlay.remove(); resolve(); };
         overlay.querySelector('.disc-doc-close').addEventListener('click', close);
-        overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+        overlay.addEventListener('click', e => { if (e.target === overlay && performance.now() - openedAt > BACKDROP_GUARD_MS) close(); });
         overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
         if (app && app.state) app.state._hasSeenDisc = true;
         });
     }
 
-    window.DiscDocument = { open, NOTES };
+    window.DiscDocument = { open, NOTES, REAL_NOTES, DRAWING, REAL };
 })();

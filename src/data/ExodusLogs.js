@@ -1,9 +1,11 @@
-// EXODUS_LOGS: six found pages, one per sector, in order. Together they are the spine of the story (docs/CANON.md).
+// EXODUS_LOGS: six finds, one per sector, in order: five pages and, in sector 5, the disc itself. The spine of the story (docs/STORY_MAP.md).
 // Each page is short, in plain words, shown one line at a time. Together they explain what happened, one step per sector.
 //   sector     the sector whose planted wreck holds it (App.plantSectorPage)
-//   kind       how FoundPage draws it: 'plate' (a cast metal plate), 'paper' (a printed page), 'ledger' (rows of ships), 'log' (a captain's log)
-//   lines      what is written; a ledger builds its rows at run time from the wrecks the player actually boarded
+//   kind       how FoundPage draws it: 'plate' (a cast metal plate), 'paper' (a printed page), 'log' (a captain's log);
+//              'disc' is not a page: the real disc, shown by its own card (App.showDiscFound) and DiscDocument
+//   lines      what is written
 //   after      one spoken line when the page is read, from whoever aboard would say something (skipped if they are dead)
+//   card       the disc only: the find's card (context, the choice, and one line from whichever of the team is listed first)
 
 const EXODUS_LOGS = [
     {
@@ -58,16 +60,22 @@ const EXODUS_LOGS = [
         after: { speaker: 'Aris', text: 'Eight ships before us. That is exactly what A.U.R.A. told us.' },
     },
     {
-        id: 'PAGE_LEDGER', sector: 5, kind: 'ledger', type: 'EXODUS_LOG', value: 0, isKept: true,
-        name: 'Launch Ledger',
-        desc: 'A printed list of every Exodus ship ever built, with the date it launched and the date it was lost.',
-        logTitle: 'LAUNCH LEDGER',
-        lines: [
-            'Every Exodus ship ever built, in order: the date it launched, and the date it was lost.',
-            'On every line, the ship was lost before it was launched.',
-            'Every ship has four crew names. The commander\'s column is empty on every line, ours included.',
-            'Our ship is the last line. The "lost" column is still empty.',
-        ],
+        id: 'PAGE_DISC', sector: 5, kind: 'disc', type: 'LORE', value: 0, isKept: true,
+        name: 'The Disc',
+        desc: 'A gold disc the size of a dinner plate, with a star map cut into it.',
+        logTitle: 'THE DISC',
+        card: {
+            title: 'The disc',
+            context: 'The captain\'s locker holds the disc from the drawing. Real gold, and not a scratch on it.',
+            take: { text: 'Bring it aboard', desc: 'It goes in the hold.' },
+            said: [
+                { speaker: 'Mira', text: 'I always thought the drawing showed something that didn\'t exist.' },
+                { speaker: 'Vance', text: 'They carried this all the way out here. I want to know why.' },
+                { speaker: 'Aris', text: 'It was locked away beside the captain\'s seat. It mattered to them.' },
+                { speaker: 'Jaxon', text: 'Heavier than it looks. I\'ll carry it.' },
+                { speaker: 'A.U.R.A.', text: 'The team has found the disc from the drawing, Commander. It is real gold.' },
+            ],
+        },
     },
     {
         id: 'PAGE_LIGHT', sector: 6, kind: 'log', type: 'EXODUS_LOG', value: 0, isKept: true,

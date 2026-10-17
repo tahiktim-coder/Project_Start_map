@@ -9,27 +9,27 @@ _Can turn up in: sectors 1, 2, 3, 4, 5._
 
 #### Card words: handleExodusAction «bundle.js · handleExodusAction»
 
-- No Exodus wreck signal detected at this location. «bundle.js · line 2624»
-- We already searched this wreck. «bundle.js · line 2628»
-- ERROR: Exodus encounter data unavailable. «bundle.js · line 2635»
-- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 2641»
+- No Exodus wreck signal detected at this location. «bundle.js · line 2836»
+- We already searched this wreck. «bundle.js · line 2840»
+- ERROR: Exodus encounter data unavailable. «bundle.js · line 2846»
+- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 2852»
 
 #### Names on the hulls «bundle.js · getWreckName»
 _Every wreck card is titled EXODUS-[number] "[CALLSIGN]". The number range grows with the sector; the callsign is picked from this list._
 
-- EXODUS-[hull] "[callsign]" «bundle.js · line 2559»
+- EXODUS-[hull] "[callsign]" «bundle.js · line 2771»
 
 #### A second list of ship names «ExodusDerelicts.js · EXODUS_SHIP_NAMES»
 _Defined in the wreck file; the wreck titles use the list above._
 
-- "PIONEER" «ExodusDerelicts.js · line 22»
-- "COVENANT" «ExodusDerelicts.js · line 23»
-- "SOJOURN" «ExodusDerelicts.js · line 24»
-- "REQUIEM" «ExodusDerelicts.js · line 25»
-- "LAZARUS" «ExodusDerelicts.js · line 26»
-- "ICARUS" «ExodusDerelicts.js · line 27»
-- "MERIDIAN" «ExodusDerelicts.js · line 28»
-- "ORPHEUS" «ExodusDerelicts.js · line 29»
+- "PIONEER" «ExodusDerelicts.js · line 28»
+- "COVENANT" «ExodusDerelicts.js · line 29»
+- "SOJOURN" «ExodusDerelicts.js · line 30»
+- "REQUIEM" «ExodusDerelicts.js · line 31»
+- "LAZARUS" «ExodusDerelicts.js · line 32»
+- "ICARUS" «ExodusDerelicts.js · line 33»
+- "MERIDIAN" «ExodusDerelicts.js · line 34»
+- "ORPHEUS" «ExodusDerelicts.js · line 35»
 
 ### BURNED HULL «ExodusDerelicts.js · EXODUS_BURNED»
 
@@ -60,11 +60,11 @@ Choices:
 1. **Bury them, take only the logs** — -1 Ration, -5 Energy. +2 Data. Aris -1 Stress. The hold stays sealed.
    → Five graves dug, logs copied. -1 Ration, -5 Energy, +2 Data. / SHIP LOG: 'We're too tired to fix anything now. We'll sit at our stations and wait.' / Five graves beside the ship. A name is read over each one.  
    ↳ or: SHIP LOG: 'The air scrubbers failed slowly. Nobody noticed. We had turned the alarms off to save power.'  
-2. **Strip the ship** — +40 Salvage, +1 Food Pack. Aris +2 Stress. Nobody gets buried.
-   → Ship stripped. +40 Salvage, +1 Food Pack. Aris +2 Stress. / We carried their food out past their bodies.  
+2. **Strip the ship** — +40 Salvage, +1 Sealed Rations. Aris +2 Stress. Nobody gets buried.
+   → Ship stripped. +40 Salvage, +1 Sealed Rations. Aris +2 Stress. / We carried their food out past their bodies.  
    ↳ or: Exodus Wreck  
-3. **Bury them, then empty the hold** — -1 Ration, -10 Energy. +20 Salvage, +1 Food Pack. Aris +1 Stress: she digs the graves alone.
-   → Graves dug, hold emptied. -1 Ration, -10 Energy, +20 Salvage, +1 Food Pack. / Aris digs the graves while the rest of us load the lander. She doesn't ask for help.  
+3. **Bury them, then empty the hold** — -1 Ration, -10 Energy. +20 Salvage, +1 Sealed Rations. Aris +1 Stress: she digs the graves alone.
+   → Graves dug, hold emptied. -1 Ration, -10 Energy, +20 Salvage, +1 Sealed Rations. / Aris digs the graves while the rest of us load the lander. She doesn't ask for help.  
    ↳ or: Exodus Wreck  
 
 ### THE SLEEPERS «ExodusDerelicts.js · EXODUS_CRYO»
@@ -93,11 +93,11 @@ Choices:
 **Vance:** The manifest matches what's in the hold. That's the first honest list I've seen out here.  
 
 Choices:
-1. **Take everything** — +30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress: nothing is left for the next ship.
-   → Hold emptied. +30 Salvage, +2 Food Pack, +1 Luxury Item. Jaxon +1 Stress. / Jaxon folds up the note and puts it in his pocket. He doesn't say anything.  
+1. **Take everything** — +30 Salvage, +2 Sealed Rations, +1 Luxury Item. Jaxon +1 Stress: nothing is left for the next ship.
+   → Hold emptied. +30 Salvage, +2 Sealed Rations, +1 Luxury Item. Jaxon +1 Stress. / Jaxon folds up the note and puts it in his pocket. He doesn't say anything.  
    ↳ or: Exodus Cache  
-2. **Take half, leave a note of our own** — +15 Salvage, +1 Food Pack. -1 Ration left in the crate. Jaxon -1 Stress.
-   → Half the hold taken, one ration left behind. +15 Salvage, +1 Food Pack, -1 Ration. / We write the date and our names on the lid, then seal the hold again.  
+2. **Take half, leave a note of our own** — +15 Salvage, +1 Sealed Rations. -1 Ration left in the crate. Jaxon -1 Stress.
+   → Half the hold taken, one ration left behind. +15 Salvage, +1 Sealed Rations, -1 Ration. / We write the date and our names on the lid, then seal the hold again.  
    ↳ or: Exodus Cache  
 
 ### THE GROWTH «ExodusDerelicts.js · EXODUS_INFECTED»
@@ -154,8 +154,8 @@ Choices:
 Choices:
 1. **Read the names, then salvage** — -1 Ration. +25 Salvage, +1 Data. Aris adds their names to her list.
    → Names kept, parts taken after. -1 Ration, +25 Salvage, +1 Data. / SHELTER LOG: 'Don't build until you've tested the soil. The ground here moves.' / Five names, copied from five journals into the notebook where Aris keeps the dead.  
-2. **Strip it deck by deck** — -10 Energy. +50 Salvage, +1 Food Pack, +1 Music Holotape. Aris +1 Stress. _(locked: Need 10 Energy)_
-   → Stripped deck by deck. -10 Energy, +50 Salvage, +1 Food Pack, +1 Music Holotape. / Their journals go into the scrap bin with the wall panels.  
+2. **Strip it deck by deck** — -10 Energy. +50 Salvage, +1 Sealed Rations, +1 Music Holotape. Aris +1 Stress. _(locked: Need 10 Energy)_
+   → Stripped deck by deck. -10 Energy, +50 Salvage, +1 Sealed Rations, +1 Music Holotape. / Their journals go into the scrap bin with the wall panels.  
    ↳ or: Exodus Wreck  
 3. **Search engineering for parts** — -5 Energy. 40% chance: +1 Tech Fragment, +15 Salvage. Otherwise +10 Salvage. _(locked: Need 5 Energy)_
    → The engine bay is too damaged. Only small parts. +10 Salvage. -5 Energy.  
@@ -167,10 +167,10 @@ _Can turn up in: any sector._
 
 #### Card words: handleDerelictAction «bundle.js · handleDerelictAction»
 
-- There is no wreck here. «bundle.js · line 2847»
-- We already searched this wreck. «bundle.js · line 2851»
-- ERROR: Derelict encounter data unavailable. «bundle.js · line 2857»
-- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 2872»
+- There is no wreck here. «bundle.js · line 3060»
+- We already searched this wreck. «bundle.js · line 3064»
+- ERROR: Derelict encounter data unavailable. «bundle.js · line 3070»
+- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3085»
 
 ### MINING CRAFT «DerelictEncounters.js · DERELICT_MINING»
 
@@ -183,12 +183,12 @@ Choices:
 1. **Cut open the ore bays** — -5 Energy. +30-40 Salvage.
    → Ore bays open. Raw metal and spare drill heads. -5 Energy, +35 Salvage.  
 2. **Drain its reactor** — -10 Energy to open it. +50-70 Energy back. 20% chance someone gets hurt. _(locked: Need 10 Energy)_
-   → Its reactor power moved into ours. +60 Energy, +50 after the cost.  
+   → Its reactor power moved into ours. -10 Energy, +60 Energy.  
    ↳ or: RADIATION: [name] was exposed on the way out.  
-3. **Check the crew bunks** — +10 Salvage, +1 Data. 40% chance: +1 Food Pack.
+3. **Check the crew bunks** — +10 Salvage, +1 Data. 40% chance: +1 Sealed Rations.
    → Bunks searched and names copied. +10 Salvage, +1 Data. / Personal lockers by the bunks. The crew's names are copied off the doors.  
    ↳ or: Mining Tender  
-   ↳ or: Bunks searched and names copied. +10 Salvage, +1 Data, +1 Food Pack.  
+   ↳ or: Bunks searched and names copied. +10 Salvage, +1 Data, +1 Sealed Rations.  
 
 ### DROPPED CARGO «DerelictEncounters.js · DERELICT_HAULER»
 
@@ -198,8 +198,8 @@ Choices:
 **Aris:** There's a sealed medical bay at the back. The supplies might still be good.  
 
 Choices:
-1. **Cut into the main hold** — -5 Energy. +30 Salvage, +2 Food Pack.
-   → Hold opened. The colony supplies are still sealed. -5 Energy, +30 Salvage, +2 Food Pack.  
+1. **Cut into the main hold** — -5 Energy. +30 Salvage, +2 Sealed Rations.
+   → Hold opened. The colony supplies are still sealed. -5 Energy, +30 Salvage, +2 Sealed Rations.  
    ↳ or: Dropped Hold  
 2. **Open the medical bay** — -5 Energy. Heals one injured crew member. If nobody is hurt: +1 Revival Item.
    → Nobody needs treatment. In the back locker: Ancient Neural Link. -5 Energy.  
@@ -242,15 +242,15 @@ Choices:
    → The sample container is intact. Inside: Radiation Fungus. -5 Energy.  
    ↳ or: Homeward Probe  
    ↳ or: The sample containers are cracked. Everything inside is gone. -5 Energy.  
-3. **Salvage the probe** — +20 Salvage, +15 Energy from its fuel. Aris +1 Stress: the message is never heard.
+3. **Salvage the probe** — +20 Salvage. Its fuel: +15 Energy. Aris +1 Stress: the message is never heard.
    → Probe cut up, fuel drained. Nobody will hear its message now. +20 Salvage, +15 Energy.  
 
 ### THE WRONG WRECK «DerelictEncounters.js · DERELICT_ALIEN»
 
 > The wreck is an Exodus ship with no hull number painted on it. The welds are perfect. Inside are four bunks and four cups. The bread on the table has no crust.
 
-**Mira:** Aura says it matches our ship's blueprints exactly, Commander. Every measurement.  
-**Vance:** I've watched ships being built. They never come out this perfect. This is a copy.  
+**Mira:** A.U.R.A. has no record of it, Commander. No number, no name, no launch date.  
+**Vance:** I've watched ships being built. Nobody has ever flown this one.  
 **Aris:** No bodies and no names. Nobody ever lived here.  
 
 Choices:
@@ -271,8 +271,8 @@ Choices:
 **A.U.R.A.:** There is a cryo bay in the front section, Commander. I estimate a three percent chance any pod still works.  
 
 Choices:
-1. **Search the living rings** — -1 Ration: a day inside. +35 Salvage, +3 Food Pack, +1 Music Holotape.
-   → Rings searched. -1 Ration, +35 Salvage, +3 Food Pack, +1 Music Holotape. / RING LOG: 'The children born this year have never seen the stars. They think the wall paintings are windows.'  
+1. **Search the living rings** — -1 Ration: a day inside. +35 Salvage, +3 Sealed Rations, +1 Music Holotape.
+   → Rings searched. -1 Ration, +35 Salvage, +3 Sealed Rations, +1 Music Holotape. / RING LOG: 'The children born this year have never seen the stars. They think the wall paintings are windows.'  
    ↳ or: Long Hull  
 2. **Check the cryo bay** — 3% chance: two pods still work, +2 Sleepers, -5 Rations. Otherwise +20 Salvage, +25 Energy.
    → Every pod is dead. The cryo equipment is stripped for parts. +20 Salvage, +25 Energy.  
@@ -286,16 +286,16 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showStationEncounter «bundle.js · showStationEncounter»
 
-- ERROR: Station encounter data unavailable. «bundle.js · line 1869»
-- Unknown Station «bundle.js · line 1883»
-- **kicker** — INSIDE THE STATION «bundle.js · line 1886»
-- STATION: [result] «bundle.js · line 1891»
+- ERROR: Station encounter data unavailable. «bundle.js · line 2007»
+- Unknown Station «bundle.js · line 2021»
+- **kicker** — INSIDE THE STATION «bundle.js · line 2024»
+- STATION: [result] «bundle.js · line 2029»
 
 #### Card words: handleStationAction «bundle.js · handleStationAction»
 
-- No station detected at this location. «bundle.js · line 1903»
-- We already searched this station. «bundle.js · line 1907»
-- Starting docking procedure with [name]... «bundle.js · line 1911»
+- No station detected at this location. «bundle.js · line 2041»
+- We already searched this station. «bundle.js · line 2045»
+- Starting docking procedure with [name]... «bundle.js · line 2049»
 
 ### MINING PLATFORM «SpaceStations.js · STATION_MINING»
 
@@ -419,11 +419,11 @@ _Can turn up in: sectors 3, 4._
 
 #### Card words: handleFailedColonyAction «bundle.js · handleFailedColonyAction»
 
-- No colony ruins detected at this location. «bundle.js · line 2791»
-- Colony ruins already investigated. «bundle.js · line 2795»
-- ERROR: Colony encounter data unavailable. «bundle.js · line 2801»
-- Colony ruins detected. Deploying investigation team... «bundle.js · line 2819»
-- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 2832»
+- No colony ruins detected at this location. «bundle.js · line 3004»
+- Colony ruins already investigated. «bundle.js · line 3008»
+- ERROR: Colony encounter data unavailable. «bundle.js · line 3014»
+- Colony ruins detected. Deploying investigation team... «bundle.js · line 3032»
+- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3045»
 
 ### THE DOME «FailedColonyEncounters.js · FC_ABANDONED_DOME»
 
@@ -437,8 +437,8 @@ _Can turn up in: sectors 3, 4._
 Choices:
 1. **Read the colony logs** — -5 Energy. +8-15 Salvage, +1 Data.
    → Colony records and data drives copied. -5 Energy, +12 Salvage, +1 Data. / COLONY LOG: "Day 1: We landed. The children are on real grass for the first time. Elena cried." / COLONY LOG: "Day 342: The water level is dropping. The local roots are taking minerals we need." / COLONY LOG: "Day 891: The wheat won't grow any more. The local plants always win. Rationing again." / COLONY LOG: "Day 1,204: Last entry. The dome seals have failed. If anyone finds this: Earth crops can't survive in this soil."  
-2. **Strip the settlement** — +25-45 Salvage, +1 Food Pack. Jaxon +1 Stress: their homes become our hull plates.
-   → Settlement stripped. +35 Salvage, +1 Food Pack. Jaxon +1 Stress. / Jaxon: "Good panels, sealed wiring. They built this to last." He goes quiet after that.  
+2. **Strip the settlement** — +25-45 Salvage, +1 Sealed Rations. Jaxon +1 Stress: their homes become our hull plates.
+   → Settlement stripped. +35 Salvage, +1 Sealed Rations. Jaxon +1 Stress. / Jaxon: "Good panels, sealed wiring. They built this to last." He goes quiet after that.  
    ↳ or: Colony Site  
 3. **Check the cryo pods** — 30% chance: a sleeper, +1 Sleeper, -3 Rations. Otherwise the pods are empty, Aris +1 Stress.
    → Empty pods, with small handprints on the glass. Aris +1 Stress. / Every pod is empty. Either they left, or they never reached the pods. / There are handprints on the glass. Small ones.  
@@ -466,7 +466,7 @@ Choices:
    ↳ or: Medical stores taken. +25 Salvage, +1 Fungus Culture. Aris +1 Stress.  
 3. **Read every grave marker aloud** — -1 Ration: it takes a day. +2 Data. Aris -1 Stress.
    → Every marker read. -1 Ration, +2 Data. Aris -1 Stress. / Three hundred names, read from the outer ring inward. The last eighteen have no markers at all. / Aris: "I have all your names now. You won't be forgotten."  
-4. **Open the cryo ward** — +15 Salvage, +10 Energy from the ward's power cells. Aris +1 Stress.
+4. **Open the cryo ward** — +15 Salvage. The ward's power cells: +10 Energy. Aris +1 Stress.
    → Six pods, six dead. They were waiting for a cure. Ward stripped. +15 Salvage, +10 Energy. Aris +1 Stress. / The central building is a clinic. Six pods in the back room, all occupied. / A.U.R.A.: "The ward lost power long ago, Commander. Nobody in it is alive."  
 
 ### THE SPLIT «FailedColonyEncounters.js · FC_CIVIL_WAR»
@@ -501,8 +501,8 @@ Choices:
 Choices:
 1. **Read the colony logs** — +10 Salvage, +1 Data. All crew +1 Stress.
    → Every entry is the first day, over and over. Records copied. +10 Salvage, +1 Data. All crew +1 Stress. / COLONY LOG: "Day 1: We landed. The children are playing in the grass." / COLONY LOG: "Day 1: We landed. The children are playing in the grass." / COLONY LOG: "Day 1: We landed. The children are playing in the grass." / COLONY LOG: "Day 1: We landed."  
-2. **Take everything you can carry** — +40 Salvage, +2 Food Pack, +1 Luxury Item. All crew +1 Stress.
-   → Settlement emptied. +40 Salvage, +2 Food Pack, +1 Luxury Item. All crew +1 Stress. / Full pantries and charged batteries. Everything is sealed, as if it was delivered this morning.  
+2. **Take everything you can carry** — +40 Salvage, +2 Sealed Rations, +1 Luxury Item. All crew +1 Stress.
+   → Settlement emptied. +40 Salvage, +2 Sealed Rations, +1 Luxury Item. All crew +1 Stress. / Full pantries and charged batteries. Everything is sealed, as if it was delivered this morning.  
    ↳ or: Colony Site  
 3. **Leave immediately** — -10 Energy: straight back up, no scan. Vance -1 Stress.
    → We left with nothing. -10 Energy. Vance -1 Stress. / Vance: "Everyone back to the lander. Now. Don't touch anything." / Nobody argues with him.  
@@ -534,11 +534,11 @@ _Can turn up in: any sector (one is always placed in every sector; some only fro
 
 #### Card words: handleAnomalyAction «bundle.js · handleAnomalyAction»
 
-- There is nothing strange here. «bundle.js · line 2901»
-- We have already been there. «bundle.js · line 2905»
-- ERROR: Anomaly encounter data unavailable. «bundle.js · line 2911»
-- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 2940»
-- **context** — ANOMALY: [title] [context] «bundle.js · line 2952»
+- There is nothing strange here. «bundle.js · line 3114»
+- We have already been there. «bundle.js · line 3118»
+- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3124»
+- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3153»
+- **context** — ANOMALY: [title] [context] «bundle.js · line 3165»
 
 ### THE SAME PLANET TWICE «AnomalyEncounters.js · ANOMALY_FOLD»
 _Only from sector 3._
@@ -561,7 +561,7 @@ Choices:
    ↳ or: === OFF THE MAP ===  
    ↳ or: We came out somewhere that matches no chart we have.  
    ↳ or: A.U.R.A.: 'I can't place us on any chart, Commander. I'm working on it.'  
-   ↳ or: There is a wreck here. It is broadcasting our own ship's ID code.  
+   ↳ or: There is a wreck here, one of our ships. Its beacon is still calling.  
    ↳ or: The gap threw us somewhere off the map. All crew +1 Stress.  
    ↳ or: === THROUGH THE GAP ===  
    ↳ or: The two planets closed up behind us. Ahead is a sky we haven't seen before.  
@@ -586,11 +586,11 @@ Choices:
    ↳ or: [name] talked to the voice and came back badly shaken. Stress 3.  
    ↳ or: [name]: "It just said my name, nothing else. I feel better than I have in weeks."  
    ↳ or: [name] came back calm and unhurt. Stress 0.  
-2. **Have A.U.R.A. answer it** — -5 Energy. Then one of four, 25% chance each: +20 Salvage and +2 Food Pack, but all crew +1 Stress; every planet here revealed; nothing; or all crew +1 Stress.
+2. **Have A.U.R.A. answer it** — -5 Energy. Then one of four, 25% chance each: +20 Salvage and +2 Sealed Rations, but all crew +1 Stress; every planet here revealed; nothing; or all crew +1 Stress.
    → A.U.R.A. answered, and the voice went quiet. -5 Energy. / A.U.R.A.: 'I said hello and gave our crew count, Commander. It repeated both back and went quiet.'  
    ↳ or: The Other Voice  
    ↳ or: An hour after she answers, a supply crate drifts up to our airlock. It's one of ours, with our batch numbers, still sealed.  
-   ↳ or: One of our own crates came back. -5 Energy, +20 Salvage, +2 Food Pack. All crew +1 Stress.  
+   ↳ or: One of our own crates came back. -5 Energy, +20 Salvage, +2 Sealed Rations. All crew +1 Stress.  
    ↳ or: The voice describes every planet in this sector to her. She checks each one. Every description is accurate.  
    ↳ or: The voice gave A.U.R.A. the whole sector. -5 Energy. All planets revealed.  
    ↳ or: It answers in five voices, and they are ours. A.U.R.A.: 'That doesn't match my crew count, Commander. I've logged it.'  
@@ -599,11 +599,11 @@ Choices:
    → Channels jammed until the voice was gone. -10 Energy. Vance -1 Stress. / We fill every channel with static until the voice is out of range.  
 
 ### OUR OWN SHIP «AnomalyEncounters.js · ANOMALY_MIRROR»
+_Only from sector 5._
 
 > A ship is holding position right beside us, and it is ours: same hull, same number, same scratches. Through its windows, four people sit at our stations and wave back at us.
 
 **A.U.R.A.:** It is broadcasting our ship's ID, Commander. It answers my signals before I finish sending them.  
-**Vance:** Four people in those windows. Which one of us did they leave out?  
 **Mira:** A.U.R.A. says it's friendly. If she says so, I believe her.  
 
 Choices:
@@ -611,7 +611,7 @@ Choices:
    ↳ or: The other ship answers in our own voices: "Go to [name] last. We went there first." Four voices, not five.  
    ↳ or: Nobody on the bridge says anything for a while.  
    ↳ or: Called our own ship. -5 Energy, +1 Data. One planet revealed. All crew +1 Stress.  
-2. **Trade supplies across** — -20 Salvage for +30 Energy. If we have under 20 Salvage: -30 Energy for +20 Salvage instead. Vance +1 Stress either way.
+2. **Trade supplies across** — -20 Salvage. +30 Energy. If we have under 20 Salvage: -30 Energy, +20 Salvage instead. Vance +1 Stress either way.
    → Traded across. -20 Salvage, +30 Energy. Vance +1 Stress. / We pass crates across on a line. Power cells come back with our own batch numbers and serials on them.  
    ↳ or: They wanted power, not metal. The hull plates they send back have our own welds on them.  
    ↳ or: Traded across. -30 Energy, +20 Salvage. Vance +1 Stress.  
@@ -664,7 +664,7 @@ Choices:
    ↳ or: The garden repaired the probe and healed one injury.  
    ↳ or: It touches the hull and goes still. Everyone aboard sleeps well that night, and nobody can say why.  
    ↳ or: The garden touched the hull. All crew -1 Stress.  
-3. **Burn it** — +10 Energy from the fire. Jaxon +1 Stress, Aris +1 Stress.
+3. **Burn it** — The fire feeds the reactor: +10 Energy. Jaxon +1 Stress, Aris +1 Stress.
    → Garden burned. +10 Energy. Jaxon +1 Stress, Aris +1 Stress. / It burns like dry grass, but there is no smell at all.  
 
 ### THE DOOR «AnomalyEncounters.js · ANOMALY_DOOR»
@@ -679,7 +679,7 @@ _Only from sector 3._
 
 Choices:
 1. **Open the door** — 25% chance: +3 Data, all crew +1 Stress. 25% chance: +40 Energy. 25% chance: one crew member walks through and is gone, +3 Data. 25% chance: nothing.
-   → Jaxon walked through the door and is gone. +3 Data. / THE DOOR OPENS. / Jaxon walks through it. They don't run, and they don't look back. / The door closes. Through its window, four people are walking away. One of them turns and waves.  
+   → Jaxon walked through the door and is gone. +3 Data. / THE DOOR OPENS. / Jaxon walks through it. They don't run, and they don't look back. / The door closes. Through its window, Jaxon is walking away across green grass.  
    ↳ or: Through it: green fields under a yellow sun, and four people walking away from us. The grass doesn't bend under their feet.  
    ↳ or: Then it closes again.  
    ↳ or: The door opened onto a copy of somewhere. +3 Data. All crew +1 Stress.  
@@ -768,7 +768,7 @@ _THE FOLD can throw the ship here. A sector of copies; two ways out._
 ### Arriving «bundle.js · handleAnomalyTeleport»
 _The sector header, and the old names the code still has for sectors._
 
-- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5172»
+- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5455»
 
 ### In orbit «OrbitView.js · updateCommandDeck · wrong place»
 _The two buttons instead of BREAK ORBIT._
@@ -781,39 +781,38 @@ _The two buttons instead of BREAK ORBIT._
 
 ### Fight to escape «bundle.js · handleWrongPlaceEscape»
 
-- **title** — TEAR THROUGH REALITY «bundle.js · line 2970»
-- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 2972»
-- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 2982»
-- We made it «bundle.js · line 2986»
-- **desc** — Return to a random sector, but at great cost. «bundle.js · line 2987»
-- === REALITY BREACH SUCCESSFUL === «bundle.js · line 3018»
-- Emerged in Sector [sector]. The crew will never forget what they saw. «bundle.js · line 3019»
-- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3021»
+- **title** — TEAR THROUGH REALITY «bundle.js · line 3183»
+- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3185»
+- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3195»
+- We made it «bundle.js · line 3199»
+- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3200»
+- === REALITY BREACH SUCCESSFUL === «bundle.js · line 3231»
+- Emerged in Sector [sector]. The crew will never forget what they saw. «bundle.js · line 3232»
+- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3234»
 
 ### Accept your fate (an ending) «bundle.js · handleWrongPlaceAccept»
 
-- **title** — A COPY OF SOMEWHERE «bundle.js · line 3042»
-- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3044»
-- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3045»
-- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3046»
-- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3047»
-- **vault** — Twin 0009 begins, very quietly, to repeat itself. «bundle.js · line 3049»
+- **title** — A COPY OF SOMEWHERE «bundle.js · line 3255»
+- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3257»
+- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3258»
+- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3259»
+- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3260»
 
 ## Asteroid fields (6)
 _Can turn up in: any sector._
 
 #### Card words: showAsteroidEncounter «bundle.js · showAsteroidEncounter»
 
-- ERROR: Asteroid encounter data unavailable. «bundle.js · line 1962»
-- Unknown Field «bundle.js · line 1975»
-- **kicker** — ASTEROID FIELD «bundle.js · line 1978»
-- MINING: [result] «bundle.js · line 1983»
+- ERROR: Asteroid encounter data unavailable. «bundle.js · line 2100»
+- Unknown Field «bundle.js · line 2113»
+- **kicker** — ASTEROID FIELD «bundle.js · line 2116»
+- MINING: [result] «bundle.js · line 2121»
 
 #### Card words: handleAsteroidAction «bundle.js · handleAsteroidAction»
 
-- No asteroid field detected at this location. «bundle.js · line 1935»
-- Asteroid field already mined. «bundle.js · line 1939»
-- Entering [name]. Mining systems online... «bundle.js · line 1943»
+- No asteroid field detected at this location. «bundle.js · line 2073»
+- Asteroid field already mined. «bundle.js · line 2077»
+- Entering [name]. Mining systems online... «bundle.js · line 2081»
 
 ### RICH MINERAL DEPOSIT «AsteroidFields.js · ASTEROID_RICH»
 
@@ -951,10 +950,10 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showDistressSignal «bundle.js · showDistressSignal»
 
-- **kicker** — DISTRESS SIGNAL «bundle.js · line 2007»
-- **facts** — Nobody can tell when «bundle.js · line 2008»
-- **facts** — [signal age] years ago «bundle.js · line 2008»
-- SIGNAL: [result] «bundle.js · line 2012»
+- **kicker** — DISTRESS SIGNAL «bundle.js · line 2145»
+- **facts** — Nobody can tell when «bundle.js · line 2146»
+- **facts** — [signal age] years ago «bundle.js · line 2146»
+- SIGNAL: [result] «bundle.js · line 2150»
 
 ### AUTOMATED DISTRESS BEACON «DistressSignals.js · DISTRESS_BEACON»
 
@@ -1067,7 +1066,7 @@ _Only from sector 3._
 Choices:
 1. **Play the whole call** — -5 Energy. 25% chance: all crew +2 Stress. 35% chance: +5 Data, all planets revealed. Otherwise +3 Data.
    → Every ship's call in the sector, played to us. -5 Energy, +5 Data. All planets revealed. / After our call come the calls of every ship in this sector, one by one. All Exodus ships. All very old.  
-   ↳ or: It reads out our crew list: Jaxon, Aris, Vance, Mira. Four crew. The Commander's name isn't on it.  
+   ↳ or: It reads out our crew list, name by name.  
    ↳ or: A.U.R.A.: 'That is my voice, Commander. But I have never recorded this message.'  
    ↳ or: Our own call, with our names in it. -5 Energy. All crew +2 Stress.  
    ↳ or: At the end of our call there's one extra word, in A.U.R.A.'s voice: 'home.'  
@@ -1083,9 +1082,10 @@ _Can turn up in: any sector (on warps and jumps, never on the approach to the li
 
 #### Card words: showShipMalfunctionModal «bundle.js · showShipMalfunctionModal»
 
-- **kicker** — SHIP ALERT «bundle.js · line 5424»
-- DEAL WITH IT «bundle.js · line 5426»
-- MALFUNCTION RESOLVED: [result] «bundle.js · line 5429»
+- **kicker** — SHIP ALERT «bundle.js · line 5713»
+- Deal with it «bundle.js · line 5715»
+- DEAL WITH IT «bundle.js · line 5715»
+- MALFUNCTION RESOLVED: [result] «bundle.js · line 5718»
 
 ### Power Surge «ShipEvents.js · POWER_SURGE»
 
@@ -1195,21 +1195,23 @@ What happens:
 **Aris:** We'll take any good news we can get.  
 
 What happens:
-→ Forgotten supplies found. +3 Rations. / Forgotten food packs. +3 Rations.  
+→ Forgotten supplies found. +3 Rations. / Forgotten rations in the locker. +3 Rations.  
 ↳ or: Forgotten repair supplies. +20 Salvage.  
 ↳ or: Forgotten supplies found. +20 Salvage.  
-↳ or: Forgotten spare power cells. +15 Energy.  
-↳ or: Forgotten supplies found. +15 Energy.  
+↳ or: Rations already full  
+↳ or: +[got] Energy  
+↳ or: Energy already full  
+↳ or: Forgotten spare power cells. [said].  
 
 ## Late places
 _Can turn up in: sectors 4, 5, 6 (the beacon and the dome from sector 4, the graves from sector 5)._
 
 #### Card words: handleLateGamePOI «bundle.js · handleLateGamePOI»
 
-- No [poi type] detected at this location. «bundle.js · line 3059»
-- [poi type] already investigated. «bundle.js · line 3065»
-- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3071»
-- Approaching [name]... «bundle.js · line 3075»
+- No [poi type] detected at this location. «bundle.js · line 3271»
+- [poi type] already investigated. «bundle.js · line 3277»
+- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3283»
+- Approaching [name]... «bundle.js · line 3287»
 
 ### THE LIGHTHOUSE «LateGamePOIs.js · THE_LIGHTHOUSE»
 _Only from sector 4._

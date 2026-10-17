@@ -18,7 +18,10 @@
    picture, the six readouts as one small mono line under it, the status (a quiet note) or the result (its name in its
    colour over the words) as the voice line, the hint (it fades after the first control input), and the three controls
    as plain words in sentence case (○ hold, ● held, › press).
-   play(app, planet, team) → Promise<{ grade: 'soft'|'rough'|'crash', auto: boolean }> */
+   The new look (opts.unmarked, 2026-10-17): A.U.R.A. marks the spot only after a good deep scan. Unmarked ('unscanned': no
+   deep scan; 'weak': a weak lock) there are no masts, no chevron and no MARK readout: you find level ground by the radar
+   alone, any level stretch counts (nobody can land off a mark that is not there), and A.U.R.A.'s hand goes for the nearest.
+   play(app, planet, team, opts) → Promise<{ grade: 'soft'|'rough'|'crash', auto: boolean, offMark, marked }> */
 
 (function () {
     'use strict';
@@ -35,7 +38,10 @@
     const RESULT_HOLD_MS = 1700, MAX_STEP = 0.033, SKIP_AFTER_MS = 500, SKIP_KEYS = ['Enter', 'Escape'];
     const INK = '#06070a', BONE = '#c4d0c4', AMBER = '#d9a24a', RED = '#d85a4e', GREEN = '#74d99a', DIM = '#2f5a48';
     const LOW_FUEL = 25, LOW_FUEL_BEEP_MS = 900, THRUST_SOUND_MS = 120;
-    const DOCKED_TEXT = 'Docked under the ship. Touch a control to let go.', AUTO_TEXT = 'A.U.R.A. has the stick. She is flying to the marked spot.';
+    // what the player reads before the drop (the hint and DOCKED_TEXT together): 25 words at most, the controls first (2026-10-16)
+    const DOCKED_TEXT = 'Docked. Touch a control to let go.', AUTO_TEXT = 'A.U.R.A. has the stick. She is flying to the marked spot.';
+    const UNMARKED_TEXT = { unscanned: 'Docked. Nothing is marked: we never scanned it. Touch a control to let go.', weak: 'Docked. The scan was too weak to mark a spot. Touch a control to let go.' };
+    const AUTO_FREE_TEXT = 'A.U.R.A. has the stick. She is looking for level ground.';   // nothing marked: the nearest level stretch
     const MARK_BLINK_MS = 420, MARK_ROOM = 4;                                                // the marked spot's beacons, and how much room a stretch needs to be marked
     const GRADES = {
         soft: { label: 'SOFT LANDING', effect: 'the team steps out fresh — the trip is safer', color: GREEN, riskMod: -8 },
@@ -141,11 +147,13 @@
         const edgeFirst = pool.slice().sort((a, b) => Math.abs(b.cx - W / 2) - Math.abs(a.cx - W / 2));
         return edgeFirst[Math.floor(rand() * Math.min(2, edgeFirst.length))];
     }
-    const isOnMark = (g, x) => !g.mark || (x >= g.mark.c0 && x <= g.mark.c1);
+    /** The mark is drawn and counts (g.unmarked: the new look without a good deep scan, set by play). */
+    const isMarked = g => !!g.mark && !g.unmarked;
+    const isOnMark = (g, x) => !isMarked(g) || (x >= g.mark.c0 && x <= g.mark.c1);
 
     /** Where the drop starts: the side of the screen with the longer flight to level ground, so there is always some steering to do. */
     function startState(g) {
-        const leftX = 36, rightX = W - 36, nearest = x => (g.mark ? [g.mark] : g.level).reduce((best, l) => Math.min(best, Math.abs(l.cx - x)), Infinity);
+        const leftX = 36, rightX = W - 36, nearest = x => (isMarked(g) ? [g.mark] : g.level).reduce((best, l) => Math.min(best, Math.abs(l.cx - x)), Infinity);
         const startsLeft = nearest(leftX) >= nearest(rightX);
         return { x: startsLeft ? leftX : rightX, y: 10, vx: startsLeft ? 8 : -8, vy: 0, fuel: FUEL_FULL, altitude: 100, keys: { left: false, right: false }, grade: null, endedAt: 0 };
     }
@@ -200,7 +208,7 @@
 
     /** The level stretch A.U.R.A. goes for: the nearest one with room to be a little off-centre (any one at all if none is that wide). */
     function pickLevelTarget(s, g) {
-        const canReachMark = g.mark && (s.altitude >= AUTO.highAlt || Math.abs(g.mark.cx - s.x) <= Math.max(0, s.altitude) * AUTO.reach); // low and far: land safe off the mark instead
+        const canReachMark = isMarked(g) && (s.altitude >= AUTO.highAlt || Math.abs(g.mark.cx - s.x) <= Math.max(0, s.altitude) * AUTO.reach); // low and far: land safe off the mark instead
         if (canReachMark) return g.mark;
         const roomy = g.level.filter(l => l.room >= AUTO.minRoom), pool = roomy.length ? roomy : g.level;
         return pool.reduce((best, l) => (!best || Math.abs(l.cx - s.x) < Math.abs(best.cx - s.x) ? l : best), null);
@@ -284,7 +292,7 @@
 
     /** The marked spot: A.U.R.A.'s two little masts with blinking lights, the stretch lit between them, a chevron above (gone once the lander is down). */
     function drawMarkArt(ctx, V, g, now, isDown) {
-        if (!g.mark) return;
+        if (!isMarked(g)) return;
         const m = g.mark, N = window.MiniPaint, f = N.framer(ctx, V.w, V.h), on = Math.floor(now / MARK_BLINK_MS) % 2 === 0, ICE = '#9fd8e6', ICE_DIM = '#3d6670';
         const A = (x, y) => [(x - V.ox) * V.d, (y - V.oy) * V.d], u = V.d, k = Math.max(1, Math.round(u / 2.25));
         [m.x0 + 1, m.x1 - 1].forEach(bx => {
@@ -367,7 +375,7 @@
             ctx.fillStyle = g.hot[x] ? BONE : look.edge; ctx.fillRect(x, y, 1, 1);
         }
         if (g.kind.platform) { ctx.fillStyle = BONE; ctx.fillRect(g.padX, g.padY, PAD_WIDTH, 2); }
-        if (g.mark) { ctx.fillStyle = GREEN; ctx.fillRect(Math.round(g.mark.x0 + 1), Math.round(g.mark.y), Math.round(g.mark.x1 - g.mark.x0 - 1), 1); }
+        if (isMarked(g)) { ctx.fillStyle = GREEN; ctx.fillRect(Math.round(g.mark.x0 + 1), Math.round(g.mark.y), Math.round(g.mark.x1 - g.mark.x0 - 1), 1); }
         if (!s.isReleased) { ctx.fillStyle = '#2a2d2a'; ctx.fillRect(Math.round(s.x) - 22, 0, 44, Math.max(1, Math.round(s.y) - 2)); }
         const x = Math.round(s.x), y = Math.round(s.y);
         drawSprite(ctx, x - LANDER_HALF, y, statusColor(s, g));
@@ -465,7 +473,8 @@
         canvas.style.width = `${canvas.width * scale}px`; canvas.style.height = `${canvas.height * scale}px`;
     }
 
-    function overlayHtml(planet, team, site, size) {
+    function overlayHtml(planet, team, site, size, unmarked) {
+        const land = unmarked ? 'Land <b>slowly</b> where the ground reads <b>LEVEL</b>.' : 'Land <b>slowly</b> between the <b>blinking lights</b>.';
         return `<div class="lx-frame">
             <header class="lx-head"><p class="lx-kicker">LANDING — ${esc(team.map(m => m.name).join(' + '))} ABOARD</p><h2 class="lx-title">${esc(planet.name || 'The surface')}</h2></header>
             <div class="lx-screen"><canvas class="lx-canvas lander-canvas" width="${size[0]}" height="${size[1]}"></canvas></div>
@@ -478,7 +487,7 @@
                 <div><dt>MARK</dt><dd class="lander-mark">—</dd></div>
             </dl>
             <div class="lx-talk lx-result" aria-live="polite"><p class="lx-who is-empty"><span class="lx-ring" aria-hidden="true"></span><span class="lx-name"></span></p><p class="lx-line is-note"></p></div>
-            <p class="lx-hint">Hold <kbd>←</kbd> / <kbd>→</kbd> (or <kbd>A</kbd> / <kbd>D</kbd>) to push left and right. Hold both to brake. A.U.R.A. has marked a safe spot${site ? ' next to the site' : ''} — the <b>blinking markers</b>. Put it down there, <b>slowly</b>. The line under the lander goes green over flat ground.</p>
+            <p class="lx-hint">Hold <kbd>←</kbd> or <kbd>→</kbd> (<kbd>A</kbd>, <kbd>D</kbd>) to push, both to brake. ${land}</p>
             <div class="lx-buttons">
                 <button class="lx-btn is-hold lander-hold" data-key="left">Push left</button>
                 <button class="lx-btn is-hold lander-hold" data-key="right">Push right</button>
@@ -490,13 +499,15 @@
     /**
      * opts.site: what the team is going to ('wreck', 'ruins', 'stones', 'dome', 'beacon'), drawn beside the marked spot.
      * opts.wreck: for a wreck, its story id (ExodusDerelicts.js), so it is drawn as that story finds it: whole, broken, burned or a crater.
+     * opts.unmarked: the new look only, 'unscanned' or 'weak': A.U.R.A. marked nothing (see the top of this file).
      */
     function play(app, planet, team, opts) {
-        const site = (opts && opts.site) || null, wreck = (opts && opts.wreck) || null;
+        const site = (opts && opts.site) || null, wreck = (opts && opts.wreck) || null, unmarked = (opts && opts.unmarked) || null;
         return new Promise(resolve => {
             const colors = team.map(m => (window.ShipCutaway ? rgb(window.ShipCutaway.colorOf(m)) : BONE));
             const ids = team.map(m => m.name || m.role || m.id || null);
             const g = buildGround(planet), look = palette(planet);
+            g.unmarked = unmarked;                                                                            // the site still stands where the terrain's mark is (LanderSites)
             const scene = window.LanderScene ? window.LanderScene.build(g, planet, site, wreck) : null;       // null without the picture recipes: the plain fallback
             const size = scene ? [window.LanderScene.util.AW, window.LanderScene.util.AH] : [W * 2, H * 2];
             addStyle();
@@ -504,7 +515,7 @@
             overlay.className = 'warp-plot lander lx';
             overlay.setAttribute('role', 'dialog');
             overlay.setAttribute('aria-label', 'Land the away team');
-            overlay.innerHTML = overlayHtml(planet, team, site, size);
+            overlay.innerHTML = overlayHtml(planet, team, site, size, unmarked);
             document.body.appendChild(overlay);
 
             const canvas = overlay.querySelector('canvas'), viewCtx = canvas.getContext('2d'), world = document.createElement('canvas');
@@ -570,7 +581,7 @@
                 sfx('sfxTouchdown', grade);
                 if (grade === 'crash' && app.screenShake) app.screenShake('heavy');
                 if (grade !== 'crash' && window.LanderCrew && scene) s.crew = window.LanderCrew.plan(g, s, colors, planet, s.endedAt, ids); // they suit up and step out
-                result = { grade, auto: !!s.isAuto, offMark: isOffMark };
+                result = { grade, auto: !!s.isAuto, offMark: isOffMark, marked: !unmarked };
                 setTimeout(() => close(result), s.crew ? s.crew.duration : RESULT_HOLD_MS);
             }
 
@@ -592,7 +603,7 @@
                 const dt = Math.min(MAX_STEP, (now - last) / 1000); last = now;
                 const isHolding = !s.isReleased && !s.isAuto && !s.keys.left && !s.keys.right;   // it hangs under the ship until you touch a control, so nobody crashes while reading
                 if (!isHolding && !s.isReleased) { s.isReleased = true; sfx('sfxUndock'); }
-                const status = s.grade ? null : isHolding ? DOCKED_TEXT : s.isAuto ? AUTO_TEXT : '';
+                const status = s.grade ? null : isHolding ? (unmarked && UNMARKED_TEXT[unmarked]) || DOCKED_TEXT : s.isAuto ? (isMarked(g) ? AUTO_TEXT : AUTO_FREE_TEXT) : '';
                 if (status !== null && status !== s.status) { s.status = status; say('', status); }
                 if (!isHolding && !hintEl.classList.contains('is-gone')) hintEl.classList.add('is-gone');   // read once: it fades after the first control input (≤ 40 words on screen)
                 if (!s.grade && !isHolding) {
@@ -604,7 +615,7 @@
                     sideEl.textContent = Math.abs(Math.round(s.vx)); sideEl.style.color = isSafeSide ? QUIET_INK : Math.abs(s.vx) <= ROUGH.side ? CAUTION_INK : DANGER_INK;
                     altEl.textContent = Math.max(0, Math.round(s.altitude));
                     groundEl.textContent = reading.word; groundEl.style.color = inkOf(reading.color);
-                    if (g.mark) {                                                                   // which way to the marked spot, and how far
+                    if (isMarked(g)) {                                                              // which way to the marked spot, and how far
                         const off = g.mark.cx - s.x, isOn = isOnMark(g, Math.round(s.x));
                         markEl.textContent = isOn ? 'ON IT' : `${off < 0 ? '◀' : '▶'} ${Math.round(Math.abs(off))}`;
                         markEl.style.color = isOn ? LEVEL_INK : QUIET_INK;

@@ -383,7 +383,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 2);
                         });
-                        state.addLog("It reads out our crew list: Jaxon, Aris, Vance, Mira. Four crew. The Commander's name isn't on it.");
+                        state.addLog("It reads out our crew list, name by name.");
                         state.addLog("A.U.R.A.: 'That is my voice, Commander. But I have never recorded this message.'");
                         return "Our own call, with our names in it. -5 Energy. All crew +2 Stress.";
                     }

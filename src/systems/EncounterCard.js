@@ -6,6 +6,7 @@
  *   - the scene text is cut to two sentences (the rest sits behind "more")
  *   - the crew speak one line at a time; click / Space / Enter for the next
  *   - choices show a title and reward chips (the branch that applies now, each chip once); pointing at one adds only what the chips do not say
+ *   - a gain of energy or rations shows what fits now (energy tops out at 100), and apply() makes the result line say it too
  *   - one accent colour per card; speakers are told apart by face and name, not by coloured paragraphs
  */
 (function () {
@@ -19,6 +20,7 @@
     const SIGNAL_W = 280, SIGNAL_H = 36, SIGNAL_TICK_MS = 125;
     const CONTEXT_SENTENCES = 2, SHORT_HINT_WORDS = 8, CARD_FLOOR_PX = 16;
     const CHOICE_ROOM_SLACK_PX = 24;  // room planned under NEXT for the guard's gap, so the choices open below the cursor
+    const TALK_HOLD_MS = 1000;        // NEXT under the last click and no room to move the card: it ignores clicks this long
     // "+15 Salvage", "-10% Energy", "+0-2 Stress", "Vance +1 Stress", "All crew -1 Stress"
     const REWARD_PATTERN = /((?:\b(?:All crew|Jaxon|Aris|Vance|Mira) )?[+\-−]\d+(?:-\d+)?%?\s+[A-Z][a-zA-Z]*(?:\s[A-Z][a-zA-Z]*)?)/g;
     const CHANCE_PATTERN = /(\d+%\s+(?:chance|risk))/gi;
@@ -34,12 +36,83 @@
         return sign === '-' || sign === '−' ? !BAD_WORDS.test(hit) : BAD_WORDS.test(hit);
     }
 
-    /** What a choice will do now: a choice whose result depends on the ship's state words itself with descNow(state). */
-    function descOf(choice, state) {
-        if (choice && typeof choice.descNow === 'function') {
-            try { return String(choice.descNow(state) || ''); } catch (e) { console.error('EncounterCard: descNow failed', e); }
+    // ── what a choice really gives: energy tops out at 100, rations at the store's size (state.maxRations) ──
+    const STOCKS = [
+        { key: 'energy', re: /(^|[^\d.])([+\-−])(\d+)(\s+Energy)\b/g, top: () => 100, full: 'Energy already full' },
+        { key: 'rations', re: /(^|[^\d.])([+\-−])(\d+)(\s+Rations?)\b/g, top: s => Number(s.maxRations), full: 'Rations already full' },
+    ];
+    const stockOf = (state, key) => Math.round(Number(state[key]) || 0);
+    // The new look (?new=1): no single choice gives more energy than NEW_LOOK_ECONOMY.CARD_ENERGY_MAX (bundle.js), and sealed
+    // rations are opened at once (FOOD_PACK_RATIONS each); the chips and the result line say so. The default game: neither.
+    const newLook = () => (window.NEW_SCREEN && window.NewScreen && window.NSRoute && window.NEW_LOOK_ECONOMY) || null;   // bundle.js isNewScreen()'s own test
+    const ENERGY_RANGED = /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Energy)\b/g;   // the new look also cuts a range ("+50-70 Energy")
+    const PACKS = /\+(\d+) Sealed Rations\b/g;
+    /** How high a choice's gain may take a stock that stands at `start`: its own top, and in the new look no more than
+        CARD_ENERGY_MAX of energy above where it started. */
+    function topOf(st, state, start) {
+        const top = st.top(state), look = newLook();
+        return st.key === 'energy' && look ? Math.min(top, start + look.CARD_ENERGY_MAX) : top;
+    }
+    /**
+     * A text's own energy (or rations) numbers replayed in order from `start`: a cost first leaves room for a gain after
+     * it, and a gain is cut to what fits under the top ("+25 Energy" with room for 5 reads "+5 Energy"; with no room, the
+     * stock's "already full"). Returns { text, end, cut }. Ranges ("+25-45") and percentages are left alone (the new look
+     * cuts an energy range too, by its highest number).
+     */
+    function fitStock(text, stock, start, top) {
+        let v = start, cut = false;
+        const ranged = stock.key === 'energy' && !!newLook();
+        const out = String(text).replace(ranged ? ENERGY_RANGED : stock.re, (m, pre, sign, n, ...rest) => {
+            const unit = ranged ? rest[1] : rest[0], k = parseInt((ranged && rest[0]) || n, 10);
+            if (sign !== '+') { v = Math.max(0, v - k); return m; }
+            const got = Math.max(0, Math.min(k, top - v));
+            v += got;
+            if (got === k) return m;
+            cut = true;
+            return pre + (got > 0 ? `+${got}${got === 1 ? unit.replace(/Rations$/, 'Ration') : unit}` : stock.full);
+        });
+        return { text: out, end: v, cut };
+    }
+    /** A choice's words as they stand now: a gain of energy or rations says what fits (a card never promises more). */
+    function capGains(desc, state) {
+        if (!state || !desc) return desc;
+        const look = newLook(), text = look ? String(desc).replace(PACKS, (m, n) => `+${Number(n) * look.FOOD_PACK_RATIONS} Rations`) : String(desc);
+        return STOCKS.reduce((out, st) => {
+            const start = stockOf(state, st.key), top = topOf(st, state, start);
+            return Number.isFinite(top) ? fitStock(out, st, start, top).text : out;
+        }, text);
+    }
+    /**
+     * Runs a choice's effect (choice.effect(state, ...args)) and returns its result line as it really went: a gain of
+     * energy or rations that hit the top is said as what fitted. The words change only when replaying the line's own numbers
+     * from the ship's numbers before lands where the ship is now; otherwise the line is left as the effect wrote it.
+     */
+    function apply(choice, state, ...args) {
+        const before = STOCKS.map(st => stockOf(state, st.key)), tops = STOCKS.map((st, i) => topOf(st, state, before[i]));
+        const look = newLook();
+        let text = choice.effect(state, ...args);
+        if (look) {
+            STOCKS.forEach((st, i) => { if (st.key === 'energy' && Number(state.energy) > tops[i]) state.energy = tops[i]; });
+            if (typeof state.openFoodPacks === 'function') state.openFoodPacks(true);           // opened now, so the line below says what fitted
+            if (typeof text === 'string') text = text.replace(PACKS, (m, n) => `+${Number(n) * look.FOOD_PACK_RATIONS} Rations`);
         }
-        return String((choice && choice.desc) || '');
+        if (typeof text !== 'string' || !text) return text;
+        return STOCKS.reduce((out, st, i) => {
+            const top = tops[i];
+            if (!Number.isFinite(top)) return out;
+            const r = fitStock(out, st, before[i], top);
+            return r.cut && r.end === stockOf(state, st.key) ? r.text : out;
+        }, text);
+    }
+
+    /** What a choice will do now: a choice whose result depends on the ship's state words itself with descNow(state).
+        Either way its gains say what fits now (capGains). */
+    function descOf(choice, state) {
+        let text = String((choice && choice.desc) || '');
+        if (choice && typeof choice.descNow === 'function') {
+            try { text = String(choice.descNow(state) || ''); } catch (e) { console.error('EncounterCard: descNow failed', e); }
+        }
+        return capGains(text, state);
     }
 
     function memberFor(app, speaker) {
@@ -320,13 +393,23 @@
         const moreEl = el('.enc-more');
         if (moreEl) moreEl.addEventListener('click', () => { el('.enc-rest').hidden = false; moreEl.remove(); });
 
+        /** The card often opens just after a click (a choice, a page put away): NEXT and skip never sit under it, so the second
+            click of a double click cannot skip a line (the choices keep clear of it in showChoices). */
+        function keepTalkOffClick() {
+            const guard = window.ChoiceGuard, card = el('.enc-card');
+            if (!guard || typeof guard.offClick !== 'function') return;
+            const d = guard.offClick(card, [nextEl, el('.enc-skip')]);
+            if (d) card.style.marginTop = `${(parseFloat(card.style.marginTop) || 0) + d}px`;
+            else if (d === null) guard.hold(modal, TALK_HOLD_MS);
+        }
+
         decideEl.hidden = false;
         renderChoices();
         decideEl.hidden = true;
         if (lines.length <= 1) { if (lines.length) { index = 0; lineEl.innerHTML = lineHtml(app, lines[0]); } showChoices(true); }
-        else { advance(); planTalkTop(); nextEl.focus({ preventScroll: true }); }
+        else { advance(); planTalkTop(); keepTalkOffClick(); nextEl.focus({ preventScroll: true }); }
         return modal;
     }
 
-    window.EncounterCard = { open, SPEAKER_COLORS, descOf, chipsOf, detailOf };
+    window.EncounterCard = { open, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply };
 })();

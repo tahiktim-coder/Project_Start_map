@@ -3,11 +3,14 @@
      ChoiceGuard.hold(root)                  ignores clicks (and Enter/Space) inside root for 400 ms after it appears
      ChoiceGuard.keepClear(pad, items, avoid) pushes items down (padding on pad) until none sits on the avoid box
      ChoiceGuard.place({...})               where a card goes so its choices sit clear of the avoid boxes without scrolling
+     ChoiceGuard.offClick(card, buttons)    how far a card must move so none of its buttons sits on the last press
+     ChoiceGuard.keepOffClick(card, buttons) a follow-up card (a found page, the disc, the team's choice) slides off the last
+                                            press, or ignores clicks a while longer when no slide fits
    ChoiceGuard.lastClickBox() is a small box around the last place the player pressed, for a guard with no NEXT to avoid. */
 
 (function () {
     'use strict';
-    const LOCK_MS = 400, CLICK_BOX_PX = 14, RECENT_CLICK_MS = 2000, GAP_PX = 10, MAX_NUDGES = 8;
+    const LOCK_MS = 400, CLICK_BOX_PX = 14, RECENT_CLICK_MS = 2000, GAP_PX = 10, MAX_NUDGES = 8, FLOOR_PX = 16, LONG_LOCK_MS = 1000;
     let lastPress = null;
 
     document.addEventListener('pointerdown', e => {
@@ -102,6 +105,33 @@
         return { top: floor, gap: gapAt(floor), isScrolling: true };
     }
 
+    /**
+     * How far (px, + down) a card must move so that none of its buttons sits on the last press (lastClickBox): as little as
+     * it takes, the whole card kept inside the window. 0 when nothing is under the press (or it is more than two seconds
+     * old); null when no move inside the window clears it. A second click of a double click then lands beside the button.
+     */
+    function offClick(card, buttons) {
+        const box = lastClickBox();
+        if (!card || !box) return 0;
+        const rects = [...(buttons || [])].filter(b => b && b.isConnected && b.getClientRects().length).map(b => b.getBoundingClientRect());
+        if (!rects.some(r => overlaps(r, box))) return 0;
+        const c = card.getBoundingClientRect(), viewH = window.innerHeight;
+        const isClear = d => rects.every(r => !overlaps({ left: r.left, right: r.right, top: r.top + d, bottom: r.bottom + d }, box));
+        const isInside = d => c.top + d >= FLOOR_PX - 0.5 && c.bottom + d <= viewH - FLOOR_PX + 0.5;
+        const tries = rects.flatMap(r => [box.bottom + GAP_PX - r.top, box.top - GAP_PX - r.bottom]).map(Math.round);
+        const best = tries.filter(d => isInside(d) && isClear(d)).sort((a, b) => Math.abs(a) - Math.abs(b))[0];
+        return best == null ? null : best;
+    }
+
+    /** A follow-up card opens with no button under the last press: it slides off it (a transform, so the page's own centring
+        is kept), or, when no slide fits, ignores clicks for LONG_LOCK_MS. Returns the slide (0: none needed, null: held). */
+    function keepOffClick(card, buttons) {
+        const d = offClick(card, buttons);
+        if (d) card.style.transform = `translateY(${d}px)`;
+        else if (d === null) hold(card, LONG_LOCK_MS);
+        return d;
+    }
+
     // Every pop-up (cards, panels, the disc, the plot and team screens, the minigames) ignores clicks for its first 400 ms, so a fast
     // second click on whatever opened it can never press a button the player has not seen.
     const POPUPS = '.modal-overlay, .warp-plot, .end-screen, .mini-host';
@@ -109,5 +139,5 @@
         if (node.nodeType === 1 && node.matches(POPUPS)) hold(node);
     }))).observe(document.body, { childList: true });
 
-    window.ChoiceGuard = { LOCK_MS, hold, keepClear, place, lastClickBox, boxOf, overlaps };
+    window.ChoiceGuard = { LOCK_MS, hold, keepClear, place, offClick, keepOffClick, lastClickBox, boxOf, overlaps };
 })();
