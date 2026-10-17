@@ -30,6 +30,8 @@
                              decks(), broken(deck), route(), state()
      flow                    what the modules call (the real game does the rest):
        click, canGo, refuse, go, arrive, light, contact, ghost   travel (BUILD_A §4)
+       scanOffer(id) → { cost, ok, why } | null   the long-range scan offered in a world's note (Scan.js NSScan.offer)
+       scan(id) → bool        run it (travel only);  facts(id) → { site, gives, danger, live, tier } | null   what our scans read
        actions() → [{ key, words, near, team, run() }]          what this stop offers now (NSOrbit.actions)
        act(key, ids?) → bool  run one (ids: the two picked for 'team');  eligible() → ids fit to go
        weak() → ids too weak from a missed supper for this trip;  holdLoss(id, picked) → what the ship loses while id is down
@@ -283,6 +285,7 @@
         s.addLog(line);
     }
     const ask = (fn, ...args) => { const o = orbit(); if (!o || typeof o[fn] !== 'function') return null; try { return o[fn](...args); } catch (err) { console.error(`NewScreen: NSOrbit.${fn} failed`, err); return null; } };
+    const askScan = (fn, ...args) => { const S = window.NSScan; if (!S || typeof S[fn] !== 'function') return null; try { return S[fn](...args); } catch (err) { console.error(`NewScreen: NSScan.${fn} failed`, err); return null; } };
     const flow = {
         canGo: id => window.NSRoute.canGo(st(), id),
         refuse(id) { const r = flow.canGo(id); if (!r.ok) speak(r.say); },
@@ -332,6 +335,10 @@
             if (!s || !a || !node || typeof a.dissolveGhost !== 'function') return;
             if (a.dissolveGhost(node)) bus.emit('refresh', { ghost: id });
         },
+        // ── a world's scans (Scan.js): the long-range scan in its note in travel, and what our scans read ──
+        scanOffer: id => askScan('offer', st(), id),
+        scan(id) { const a = theApp(); if (!a || mode !== 'travel' || blocked() || a._isInTransit) return false; return !!askScan('far', a, id); },
+        facts: id => askScan('facts', theApp(), id),
         // ── the stop (BUILD_B §3, §4) ──
         actions: () => (mode === 'stop' ? ask('actions', theApp()) || [] : []),
         act(key, ids) {

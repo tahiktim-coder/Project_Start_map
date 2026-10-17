@@ -31,12 +31,14 @@
      sayLine(message)                 the same from a log-style line ('A.U.R.A.: "..."'); the caller logs it (a refusal)
      speaking() → 'aura' | id | null  who is talking now (the tower's speaker glows for A.U.R.A.)
      current() → { who, line } | null
-     once(key, text, still?) → Promise<bool>  A.U.R.A. says text once a run (an action's first showing, a number's first
-                                      change): next after the line on screen (never cutting it), ahead of waiting log lines;
-                                      false when said before. still(): asked as the line's turn comes; false drops it
-                                      unsaid and unmarked (the action it explains has gone again). What has been said
+     once(key, text, still?, keep?) → Promise<bool>  A.U.R.A. says text once a run (an action's first showing, a number's
+                                      first change): next after the line on screen (never cutting it), ahead of waiting log
+                                      lines; false when said before. still(): asked as the line's turn comes; false drops it
+                                      unsaid and unmarked (the action it explains has gone again). keep: as say()'s (it waits
+                                      out a hover note: travel's Scan, explained while its note is still up). What has been said
                                       is kept in the game's own saved record of A.U.R.A. (state.reliance.nsTold, saved as is)
-     told(key) → bool }
+     told(key) → bool
+     forget(key)                      a once() line that resolved false (never seen: the dive cleared it) may be said again }
 */
 (function () {
     'use strict';
@@ -168,16 +170,17 @@
         return s.reliance.nsTold;
     }
     function told(key) { const list = toldList(); return !!list && list.includes(key); }
+    function forget(key) { const list = toldList(), i = list ? list.indexOf(key) : -1; if (i >= 0) list.splice(i, 1); }
     /** A.U.R.A. says it once a run: next after the line on screen (a teaching line never cuts one), ahead of the log
         lines still waiting (they are older news), behind other lines someone waits on (a talk said in order). */
-    function once(key, text, still) {
+    function once(key, text, still, keep) {
         const list = toldList();
         if (!list || !key || !text || list.includes(key) || !NS.isShown()) return Promise.resolve(false);
         list.push(key);
         const line = String(text).trim();
         return new Promise(resolve => {
             const at = queue.filter(q => typeof q.done === 'function').length;
-            queue.splice(at, 0, { who: 'A.U.R.A.', id: 'aura', line, anchor: null, age: 0, done: resolve, key, still: typeof still === 'function' ? still : null });
+            queue.splice(at, 0, { who: 'A.U.R.A.', id: 'aura', line, anchor: null, keep: !!keep, age: 0, done: resolve, key, still: typeof still === 'function' ? still : null });
             while (queue.length > QUEUE_MAX + TEACH_EXTRA) { const old = queue.findIndex(q => typeof q.done !== 'function'); settle(queue.splice(old < 0 ? queue.length - 1 : old, 1)[0]); }   // the oldest log line goes
         });
     }
@@ -369,7 +372,7 @@
                 if (!noteUp) cur.seen += dt;                                              // seen: on screen, not hidden by a hover note
                 if (cur.left <= 0) end();
             }
-            queue.forEach(q => { q.age += dt; });                                         // only shown, unblocked time ages a waiting line
+            queue.forEach(q => { if (!(noteUp && q.keep)) q.age += dt; });               // only shown, unblocked time ages a waiting line (a kept one waits out a note too)
             if (!cur) {
                 const now = performance.now(), old = q => q.age >= STALE_MS || (!q.done && q.at && now - q.at > WALL_MS);   // a line someone waits on is never dropped for age
                 queue.filter(old).forEach(settle);
@@ -392,6 +395,7 @@
         sayLine,
         once,
         told,
+        forget,
     };
     NS.register('voice', mod);
 })();

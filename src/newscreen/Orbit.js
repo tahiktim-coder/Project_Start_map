@@ -1,7 +1,8 @@
 /* ═══ Silent Exodus · new screen (?new=1) · Orbit.js: what a stop offers, who goes, who stays, what breaks aboard ═══════
    What it is: the rules of a stop on the bridge (docs/BUILD_B.md §3, §4), on top of the REAL game. Every action calls the
    game's own handler (scan, the team trip, docking, mining, the settle council, the disc); the only new numbers are the
-   skim (NEW_LOOK_ECONOMY.SKIM energy, once per gas giant, set in bundle.js) and the patch (5 salvage). It draws nothing:
+   skim (NEW_LOOK_ECONOMY.SKIM energy, once per gas giant, set in bundle.js) and the patch (5 salvage). Scan is the deep
+   scan, tuned by hand (SignalTune); what it read is said and shown by Scan.js (NSScan). It draws nothing:
    Stop.js shows the words, the shell (NewScreen.flow) hands their clicks here, Tower.js shows the deck choices.
    Loaded only when the new-screen switch is on, after NewScreen.js and Route.js. bundle.js calls it only behind isNewScreen().
 
@@ -71,7 +72,7 @@
 
     // what A.U.R.A. says once a run when an action first shows on the bridge (plain, 15 words at most)
     const TELL = Object.freeze({
-        scan: 'Scan shows what is down there. It costs nothing, Commander.',
+        scan: 'Scan reads the ground. A good lock marks a safe place to land. It costs nothing.',
         team: 'Click two people at the window, then Send the team. Down there is risky.',
         skim: 'Refuel scoops gas from the clouds. Free energy, once per giant.',
         date: 'Date the wreck to learn where its crew went. It costs nothing.',
@@ -159,7 +160,7 @@
         if (n.isAsteroidField && !n.asteroidMined) add('mine', 'Mine it', 'field', () => app.handleAsteroidAction(), false, 'for salvage');
         const scoop = (s.upgrades || []).includes('fuel_scoop');                             // the scoop took its fill on arrival: no skim on top
         if (n.type === 'GAS_GIANT' && !n.nsSkimmed && !scoop && s.energy < 100) add('skim', 'Refuel', 'giant', () => skim(app, n), false, `+${Math.min(SKIM_ENERGY, 100 - s.energy)} energy`);   // full tanks: nothing to skim
-        if (isPlanet(n) && !n.scanned) add('scan', 'Scan', 'world', () => scan(app, n), false, "what's down there");
+        if (isPlanet(n) && !n.scanned) add('scan', 'Scan', 'world', () => scan(app), false, 'read the ground');
         if (isPlanet(n) && strangeSite(app, n) && !trip) add('strange', 'Fly closer', 'site', () => app.handleAnomalyAction(), false, 'something here is wrong');   // never while a team is down
         if (hasTeamAction(n) && evaCrew(app).length >= 2 && !trip && !arisRefuses(app)) add('team', 'Send the team', teamSite(app, n) ? 'site' : 'world', null, true);
         if (!call && n._nsCall) call = savedCall(n);                                         // a call that waited through a reload
@@ -168,26 +169,10 @@
         if (isPlanet(n) && n.type !== 'GAS_GIANT' && (n.scanned || window.TEST_MODE)) add('settle', 'Settle here', 'under', () => app.handleColonyAction(), false, 'ends the journey');
         return out;
     }
-    /** Scan (the game's own handleScanAction), then A.U.R.A. says what is down there in one plain line, at once: the air,
-        the heat, life, and whether we could live there. Logged too. */
-    function scan(app, n) {
-        app.handleScanAction(false);
-        if (!n.scanned) return;
-        const line = scanLine(n), ns = NS(), v = ns && ns.mods && ns.mods.voice;
-        if (v && typeof v.say === 'function') { try { v.say({ id: 'aura', who: 'A.U.R.A.', text: line, keep: true }); } catch (err) { console.error('NSOrbit: the scan line failed', err); } }
-        log(app.state, aura(line));
-    }
-    const AIR = { BREATHABLE: 'Air we can breathe', THIN: 'Thin air', TOXIC: 'Poison air', CORROSIVE: 'Air that burns', NONE: 'No air' };
-    function scanLine(n) {
-        const m = n.metrics || {}, temp = Number(m.temp), grav = Number(m.gravity), tags = n.tags || [];
-        const air = AIR[n.atmosphere] || 'Air I cannot read';
-        const heat = !Number.isFinite(temp) ? '' : temp < -20 ? 'freezing' : temp > 45 ? 'burning hot' : 'mild';
-        const pull = Number.isFinite(grav) && grav > 1.5 ? 'heavy' : '';
-        const life = m.hasLife ? 'life down there' : 'no life';
-        const livable = n.atmosphere === 'BREATHABLE' && heat === 'mild' && !pull && !tags.includes('PREDATORY');
-        const verdict = tags.includes('PREDATORY') ? 'Something down there hunts.' : livable ? 'We could live here.' : 'A hard place to live.';
-        return `Scan done. ${[air, heat, pull, life].filter(Boolean).join(', ')}. ${verdict}`;
-    }
+    /** Scan: the deep scan, tuned by hand (the game's own handleScanAction, its manual path: SignalTune, or "Let A.U.R.A.
+        tune it"). Once the tune is over the game says what the lock read (NSScan.deep) and the tags show under the world's
+        name (Stop.js); the lock decides the marked landing spot and the trip's danger (bundle.js unmarkedWhy, scanRiskMod). */
+    function scan(app) { app.handleScanAction(true); }
     function act(app, key, ids) {
         const a = actions(app).find(x => x.key === key);
         if (!a) return false;

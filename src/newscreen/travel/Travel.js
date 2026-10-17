@@ -26,6 +26,10 @@
    The hover note goes on a click and stays away until the pointer really moves (a refusal is then seen at once); in a
    flight what is under a still pointer is worked out again every frame. The jump's white-gold flash washes the whole
    screen, the tower too (a div over both canvases, warm steps down to the corridor's dark).
+   The long-range scan (Scan.js through flow.scanOffer, scan, facts): a landable world ahead that no scan has read has
+   "Scan" and its cost under its note's words; the note stays up while the pointer crosses to it, a click on the word (not
+   the world) scans it ("Scanning" a moment), and from then on the note shows two short lines of tags. A.U.R.A. explains
+   it once a run, the first time the word has been seen a moment (the voice's once(), kept through the note).
    Emits:   'opening:done' (4.2 s after a sector's first show; at once on a show that is not the first) · 'jump:flash'
             (2.65 s after the burn) · 'note' { up } (the hover note shows or goes: the voice waits)
    Registers anchors (CSS px): 'ship', 'light', 'place:<node id>'.
@@ -47,6 +51,7 @@
     const NS = () => window.NewScreen;
 
     let G = null, sc = 1, cv = null, ctx = null, wordsEl = null, note = null, title = null, flashEl = null, noteRect = null, A = null;
+    let scanEl = null, scanSeenAt = null;                                              // the note's "Scan" line while it can be clicked; since when it shows
     let W = F.blank(1), shownSector = 0, lastRefresh = -1e9, holdRefreshUntil = -1e9, rogueT0 = 0, openedSector = 0, noteWasUp = false;
     const story = new Map();                                                          // node id → { hidden, resolvedAt }
     const placeAnchors = new Set();
@@ -278,8 +283,8 @@
         const e = F.entry(id), nd = e && e.node; if (!nd) return null;
         const status = (nd.nsRoute || {}).status, md = W.modes[id] || {};
         if (nd.isStoryPlanet && nd.storyHidden) return { name: 'A faint contact', tag: 'No fix on it yet' };
-        const tags = nd.tags || [], kind = storyKind(nd);
-        if (kind && !W.visited.has(id) && md.m !== 'passed') return { name: nd.name || '', tag: onReserve(nd) ? RESERVE_TAG : STORY_TAGS[kind], story: true };
+        const tags = nd.tags || [], kind = storyKind(nd), ahead = status === 'ahead' && !W.visited.has(id) && md.m !== 'passed' && md.m !== 'gone';
+        if (kind && !W.visited.has(id) && md.m !== 'passed') { const tag = onReserve(nd) ? RESERVE_TAG : STORY_TAGS[kind]; return { name: nd.name || '', tag, story: true, ahead, ours: OURS.test(tag) }; }
         const tag = status === 'visited' || W.visited.has(id) ? 'We stopped here'
             : status === 'passed' || status === 'gone' || md.m === 'passed' ? 'We passed it'
             : nd.isFirstSignal ? 'An old ship beacon'
@@ -288,16 +293,81 @@
             : nd.isStation ? 'An empty station'
             : nd.isAsteroidField ? 'Rocks and old metal'
             : TYPE_WORDS[nd.type] || 'A world';
-        return { name: nd.name || '', tag };
+        return { name: nd.name || '', tag, ahead, ours: OURS.test(tag) };                 // ours: the tag says it already, the scan's tags need not
+    }
+    const OURS = /one of our ships/i;
+
+    // ── the long-range scan in a world's note (Scan.js through flow): "Scan" and its cost, "Scanning" a moment, then the tags ──
+    const SCAN_SHOW_MS = 700, SCAN_TELL_MS = 600, SCAN_PAD = 6;   // "Scanning" shows this long; the word is seen this long before A.U.R.A. explains it; CSS px of slack round it
+    const SCAN_WHY = { energy: 'not enough energy', bridge: 'the bridge is down' };
+    /** What the note says of world id's scans now: nothing, the offer ("Scan", its cost or why not), "Scanning", or the tags.
+        No offer while a course is set (one thing at a time); the tags only for a world still ahead. */
+    function scanState(id, w, t) {
+        if (!w || !w.ahead || id === 'light') return { key: '' };
+        if (W.scanning && W.scanning.id === id && t - W.scanning.t0 < SCAN_SHOW_MS) return { key: 'busy', kind: 'busy' };
+        const f = ask('facts', id), S = window.NSScan;
+        if (f && S) { const lines = S.lines(f, !w.ours); return lines.length ? { key: 'f:' + lines.join('|'), kind: 'facts', lines } : { key: '' }; }
+        if (W.flight || W.lock || W.held) return { key: '' };
+        const o = ask('scanOffer', id);
+        return o ? { key: `o:${o.ok}:${o.why}:${o.cost}`, kind: 'offer', offer: o } : { key: '' };
+    }
+    function scanEls(s) {
+        if (s.kind === 'busy') { const p = mk('p', 'scan is-busy'); p.append(mk('b', null, 'Scanning')); return [p]; }
+        if (s.kind === 'facts') return s.lines.map(l => mk('p', 'fact', l));
+        if (s.kind !== 'offer') return [];
+        const p = mk('p', 'scan' + (s.offer.ok ? '' : ' is-off'));
+        p.append(mk('b', null, 'Scan'), mk('span', null, s.offer.ok ? `${s.offer.cost} energy` : SCAN_WHY[s.offer.why] || ''));
+        return [p];
+    }
+    /** The pointer (CSS px) is on the note's "Scan" line while it can be clicked. */
+    function scanAt(e) {
+        if (!scanEl || !note || note.hidden || !e || !scanEl.isConnected) return false;
+        const r = scanEl.getBoundingClientRect();
+        return e.clientX >= r.left - SCAN_PAD && e.clientX <= r.right + SCAN_PAD && e.clientY >= r.top - SCAN_PAD && e.clientY <= r.bottom + SCAN_PAD;
+    }
+    /** The pointer (art px) is on the note, or on the way to its Scan word (the box round the world and its note): the
+        world the note is about stays pointed at. Without a Scan word only the note itself holds it (its tags can be read). */
+    function overNote(x, y) {
+        if (!noteRect || !noteWasUp || !W.hover || W.hover === 'light') return false;
+        const pad = 8 * sc, inBox = (x0, y0, x1, y1) => x >= x0 - pad && x <= x1 + pad && y >= y0 - pad && y <= y1 + pad;
+        if (inBox(noteRect.x, noteRect.y, noteRect.x + noteRect.w, noteRect.y + noteRect.h)) return true;
+        if (!scanEl) return false;
+        const g = placeAt(W.hover);
+        return inBox(Math.min(noteRect.x, g.x - g.r), Math.min(noteRect.y, g.y - g.r), Math.max(noteRect.x + noteRect.w, g.x + g.r), Math.max(noteRect.y + noteRect.h, g.y + g.r));
+    }
+    function hotScan(on) { if (scanEl) scanEl.classList.toggle('is-hot', !!on); }
+    /** A click on "Scan": flow.scan does the game's part (the energy, what is learned, A.U.R.A.'s line); the note says
+        "Scanning" a moment, then shows the tags. It stays where it is. */
+    function scanClick(id, t) {
+        if (!id || !ask('scan', id)) return;
+        W = Object.assign({}, W, { scanning: { id, t0: t } });
+    }
+    /** A.U.R.A. explains the long-range scan once a run (Scan.js TELL), the first time its word has been in a note a moment:
+        kept, so it waits out the note and is said once the note goes. Dropped unseen (a dive clears the voice), it is
+        offered again the next time the word shows. */
+    function tellScan(t) {
+        if (!scanEl || !note || note.hidden) { scanSeenAt = null; return; }
+        if (scanSeenAt == null) scanSeenAt = t;
+        const ns = NS(), v = ns && ns.mods && ns.mods.voice, S = window.NSScan, KEY = 'act:farscan';
+        if (t - scanSeenAt < SCAN_TELL_MS || !v || typeof v.once !== 'function' || typeof v.told !== 'function' || !S || !S.TELL || v.told(KEY)) return;
+        v.once(KEY, S.TELL.far, () => ns.isShown() && (typeof ns.mode !== 'function' || ns.mode() === 'travel'), true)
+            .then(seen => { if (!seen && typeof v.forget === 'function') { v.forget(KEY); scanSeenAt = null; } }, err => console.error('NewScreen travel: the scan line failed', err));
     }
     function updateNote(t) {
         const target = W.flight && (W.flight.light ? 'light' : W.flight.id), id = W.hover && W.hover !== target && !W.lock && !W.quiet ? W.hover : null, g = id ? placeAt(id) : null;
         const up = !!(id && g && g.shown);
         if (up !== noteWasUp) { noteWasUp = up; emit('note', { up }); }
-        if (!up) { note.hidden = true; noteRect = null; W.noteKey = ''; return; }
-        const w = placeWords(id); if (!w) { note.hidden = true; noteRect = null; return; }
-        const key = [id, w.name, w.tag].join('|');
-        if (key !== W.noteKey) { note.replaceChildren(mk('p', 'name', w.name), mk('p', 'tag', w.tag)); note.classList.toggle('is-story', !!w.story); W.noteKey = key; W.noteSide = null; }
+        if (!up) { note.hidden = true; noteRect = null; W.noteKey = ''; W.noteFor = null; W.noteAt = null; scanEl = null; return; }
+        const w = placeWords(id); if (!w) { note.hidden = true; noteRect = null; scanEl = null; return; }
+        const s = scanState(id, w, t), key = [id, w.name, w.tag, s.key].join('|');
+        if (key !== W.noteKey) {
+            const extra = scanEls(s);
+            note.replaceChildren(mk('p', 'name', w.name), mk('p', 'tag', w.tag), ...extra);
+            note.classList.toggle('is-story', !!w.story);
+            scanEl = s.kind === 'offer' && s.offer.ok ? extra[0] : null;
+            if (W.noteFor !== id) { W.noteSide = null; W.noteAt = null; }                    // the same world's words changed (its scan): the note stays where it is
+            W.noteKey = key; W.noteFor = id;
+        }
         note.hidden = false;
         const l = F.light(), k = G.k / G.dpr, nw = note.offsetWidth / k, nh = note.offsetHeight / k, e = F.entry(id), giant = e && e.kind === 'giant';
         const gap = g.r + (giant ? 10 : 8 * sc), ds = noteDiscs(W.last || F.scene(W, t));   // beside the world's edge, a giant's too: never words over a world
@@ -308,10 +378,14 @@
         const ok = b => inView(b) && !onWorld(b);
         const ptr = W.pointer || [g.x, g.y], sides = ['right', 'left', 'above', 'below'].map(s => ({ s, b: box(s) })).filter(c => ok(c.b));
         sides.sort((a, b) => Math.hypot(b.b[0] + nw / 2 - ptr[0], b.b[1] + nh / 2 - ptr[1]) - Math.hypot(a.b[0] + nw / 2 - ptr[0], a.b[1] + nh / 2 - ptr[1]));   // away from the pointer
-        let pick = sides.find(c => c.s === W.noteSide) || sides[0];
+        const clampBox = b => [Math.max(G.hull + 6, Math.min(G.W - nw - 6, b[0])), Math.max(6, Math.min(G.H - nh - 6, b[1]))];
+        const SIDES = ['right', 'left', 'above', 'below'], kept = W.noteAt && W.noteFor === id && Math.hypot(W.noteAt.gx - g.x, W.noteAt.gy - g.y) <= 2 ? W.noteAt : null;
+        // the note never runs from the pointer: kept where it is while the pointer is on it, and in open sky until the world moves
+        let pick = kept && (W.onNote || !SIDES.includes(kept.s)) ? { s: kept.s, b: clampBox(SIDES.includes(kept.s) ? box(kept.s) : kept.b) }
+            : sides.find(c => c.s === W.noteSide) || sides[0];
         if (!pick) pick = openSky(ptr, nw, nh, ok);                                     // a world filling the view (a giant up close): the nearest clear sky
-        if (!pick) { const b = box(g.x > G.hull + (G.W - G.hull) / 2 ? 'left' : 'right'); pick = { s: 'x', b: [Math.max(G.hull + 6, Math.min(G.W - nw - 6, b[0])), Math.max(6, Math.min(G.H - nh - 6, b[1]))] }; }
-        W.noteSide = pick.s;
+        if (!pick) { const b = box(g.x > G.hull + (G.W - G.hull) / 2 ? 'left' : 'right'); pick = { s: 'x', b: clampBox(b) }; }
+        W.noteSide = pick.s; W.noteAt = { s: pick.s, b: pick.b, gx: g.x, gy: g.y };
         note.classList.toggle('is-left', pick.s === 'left');
         const [cx, cy] = G.toCss(pick.b[0], pick.b[1]);
         note.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
@@ -365,6 +439,15 @@
 #ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
 #ns-world-words .nst-note.is-left { text-align: right; justify-items: end; }
 #ns-world-words .nst-note.is-story .tag { color: var(--warm-br, #ffc27a); }
+#ns-world-words .nst-note .scan { margin: 3px 0 0; justify-self: start; display: flex; align-items: baseline; gap: 10px; text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
+#ns-world-words .nst-note.is-left .scan { justify-self: end; }
+#ns-world-words .nst-note .scan b { font: 500 var(--fs-note-line, 16px)/1.2 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.04em; color: var(--warm, #f08c2e); transition: color 140ms var(--ease, ease); }
+#ns-world-words .nst-note .scan span { font: 400 calc(var(--fs-note-line, 16px) - 1px)/1.2 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); }
+#ns-world-words .nst-note .scan.is-hot b { color: var(--warm-br, #ffc27a); }
+#ns-world-words .nst-note .scan.is-off b { color: var(--faint, #5a6168); }
+#ns-world-words .nst-note .scan.is-busy b { font-weight: 400; letter-spacing: 0.06em; color: var(--ui, #c9d1d6); }
+#ns-world-words .nst-note .fact { margin: 0; font: 400 calc(var(--fs-note-line, 16px) - 1px)/1.3 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--ui, #c9d1d6); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
+#ns-world-words .nst-note .tag + .fact { margin-top: 3px; }
 #ns-world-words .nst-flash { position: absolute; inset: 0; pointer-events: none; }
 #ns-world-words .nst-flash[hidden] { display: none; }
 #ns-world-words .nst-title { position: absolute; left: 0; top: 0; margin: 0; font: 300 var(--fs-title, 44px)/1 var(--f-text, 'IBM Plex Sans', sans-serif); letter-spacing: 0.2em; color: var(--text, #e4e4e0); white-space: nowrap; text-shadow: var(--shadow, 0 1px 0 #05070a); pointer-events: none; }`;
@@ -447,18 +530,28 @@
         for (let k = 1; k <= 8; k++) F.scene(St, t + d * k / 8).items.forEach(it => out.push(it));
         return out;
     }
+    /** A world under the pointer (art px), else the pointed world kept while the pointer is on its note (or crossing to it).
+        A giant behind the way to a Scan word does not take the pointer from the world in front of it. */
+    function pointed(x, y, t) {
+        let hit = hitTest(x, y, t);
+        if (hit && hit !== W.hover && scanEl && F.entry(hit) && F.entry(hit).kind === 'giant' && overNote(x, y)) hit = null;
+        return { hit, onNote: !hit && !!W.hover && W.hover !== 'light' && overNote(x, y) };
+    }
     function pointer(type, e, x, y) {
         const t = now();
         if (type === 'wheel') return false;
-        if (type === 'leave' || !interactive(t)) { if (W.hover) setHover(null); return false; }
-        const hit = hitTest(x, y, t);
+        if (type === 'leave' || !interactive(t)) { if (W.hover) setHover(null); if (W.onNote) W = Object.assign({}, W, { onNote: false }); hotScan(false); return false; }
+        const onScan = scanAt(e), { hit, onNote } = onScan ? { hit: null, onNote: true } : pointed(x, y, t);
         if (type === 'move') {
             const quiet = W.quiet && Math.hypot(x - W.quiet[0], y - W.quiet[1]) <= QUIET_MOVE ? W.quiet : null;
-            W = Object.assign({}, W, { pointer: [x, y], quiet }); setHover(hit); return !!hit;
+            W = Object.assign({}, W, { pointer: [x, y], quiet, onNote }); setHover(hit || (onNote ? W.hover : null)); hotScan(onScan);
+            return !!hit || onScan;
         }
         if (type === 'down') {
             if (W.lock) { if (!hit || hit !== W.lock.id) cancelLock(); return true; }
+            if (onScan) { scanClick(W.hover, t); return true; }                          // the word, not the world: no flight
             if (hit) { W = Object.assign({}, W, { quiet: [x, y] }); click(hit, t); return true; }
+            if (onNote) return true;                                                     // the note's other words do nothing
         }
         return false;
     }
@@ -486,7 +579,7 @@
             PIC.prebake(prebakeItems(W, t));
         } else if (W.held) W = F.sync(Object.assign({}, W, { held: null, ease: { t0: t, dur: 2000, from: W.cam, to: F.stageCam(W.at, W.modes) } }), t);
     }
-    function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null }); FX.relax = null; FX.landT = null; if (note) note.hidden = true; noteRect = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; PIC.setLive(false); }
+    function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null, onNote: false, scanning: null }); FX.relax = null; FX.landT = null; if (note) note.hidden = true; noteRect = null; scanEl = null; scanSeenAt = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; PIC.setLive(false); }
     function update(dt, t) {
         if (!G) return;
         PIC.setLive(true);
@@ -514,8 +607,9 @@
         } else title.hidden = true;
         if (W.jump && !W.jump.flashed && t - W.jump.t0 >= JUMP.flash) { W.jump.flashed = true; W.black = true; emit('jump:flash', {}); }
         if (W.hover && !interactive(t)) setHover(null);
-        else if ((W.ease || W.flight) && W.pointer && interactive(t)) setHover(hitTest(W.pointer[0], W.pointer[1], t));
+        else if ((W.ease || W.flight) && W.pointer && interactive(t)) { const p = pointed(W.pointer[0], W.pointer[1], t); setHover(p.hit || (p.onNote ? W.hover : null)); }
         updateNote(t);
+        tellScan(t);
         announce(t);
         updateFlash(t);
         if (dt > 0) PIC.bakeOne();
@@ -581,7 +675,7 @@
     function discs() { if (!G || W.black) return []; return F.discsOf(W.last || F.scene(W, now())); }
     function debugState() {
         const mode = W.black ? 'corridor' : W.jump ? 'jump' : W.flight ? 'flight' : W.lock ? 'lock' : W.held ? 'held' : W.opening ? 'opening' : 'rest';
-        return { sector: W.sector, mode, at: W.at, hover: W.hover, lock: W.lock ? W.lock.id : null, flight: W.flight ? W.flight.id : null, held: W.held,
+        return { sector: W.sector, mode, at: W.at, hover: W.hover, lock: W.lock ? W.lock.id : null, flight: W.flight ? W.flight.id : null, held: W.held, onNote: !!W.onNote, scanning: W.scanning ? W.scanning.id : null, noteSide: W.noteSide || null,
             modes: Object.fromEntries(Object.entries(W.modes).map(([id, m]) => [id, m.m])), slots: Object.fromEntries(F.ids().map(id => [id, F.entry(id).slot + '/' + F.entry(id).band])), light: F.light().node,
             feel: { trauma: FX.shake ? FX.shake.level() : null, off: FX.off ? [Math.round(FX.off.dx), Math.round(FX.off.dy)] : null, push: pushAt(now()), plume: plumeLevel(now()) } };
     }

@@ -7,6 +7,8 @@
      weak lock (<45%)  → the scan has to run twice (1 extra energy)
    A.U.R.A. will tune it for you: always fair, never sharp.
    play(opts) → Promise<{ match: 0..1, grade: 'sharp'|'fair'|'weak', auto: boolean }>
+     opts: { targetName, sector, effects? }  effects: { sharp, fair, weak } the result's words when a lock means something
+     else (the new look: src/newscreen/Scan.js LOCK, where a lock decides the marked landing spot); the labels stay
 
    THE LOOK (2026-10-11): the travel view's, like the redrawn minigames (src/systems/minigames/, LanderGame.js): no panel and
    no big buttons; the picture floats on the dimmed game, a quiet header above it, the match as one small readout over the
@@ -276,9 +278,10 @@
                 s.isDone = true;
                 (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(raf);
                 const grade = isAuto ? 'fair' : gradeOf(match), info = GRADES[grade];
+                const effect = (opts.effects && opts.effects[grade]) || info.effect;
                 sfx(grade === 'sharp' ? 'sfxDiscovery' : grade === 'weak' ? 'sfxError' : 'sfxScan');
                 [pitchEl, strengthEl, lockBtn, autoBtn].forEach(el => { el.disabled = true; });
-                say(isAuto ? AUTO_LABEL : info.label, info.effect, info.color);
+                say(isAuto ? AUTO_LABEL : info.label, effect, info.color);
                 setTimeout(() => {
                     overlay.classList.add('is-leaving');
                     setTimeout(() => { fitter.disconnect(); overlay.remove(); resolve({ match, grade, auto: isAuto }); }, LEAVE_MS);

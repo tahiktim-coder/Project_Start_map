@@ -12,7 +12,8 @@
    room, so nothing moves under the pointer. The note over them says what they are good for, and under it what the ship
    loses while they are down at this stop (NSOrbit.holdLoss). Anyone too weak from a missed supper is left out of the
    lineup and stands by the ladder; pointing at them says why. The ship's stock (NSStock: energy, rations, salvage, data) stands as small lit numbers on the wall
-   left of the window. A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
+   left of the window. The world's name sits in the window's corner; under it, quietly, what our scans read of it (Scan.js:
+   two short lines of tags, while the words on screen allow). A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
    Source: prototypes/slice/stop.js §5-12 (people plans, compose, words, the pick, anchors, discs), without its films,
    MOCKUP moments and slice places (docs/BUILD_B.md §2). Draws ONLY into canvas#ns-dive, canvas#ns-bridge and the word
    layer #ns-stop-words. Loaded only when the new-screen switch is on, after stop/BridgeArt, stop/Dive, stop/Glass.
@@ -288,6 +289,8 @@
     transition: opacity 420ms var(--ease), color 140ms var(--ease); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5,7,10,.9), 0 0 2px #05070a; }
 #ns-stop-words .sw.on { opacity: 1; }
 #ns-stop-words .sw-name { font: 500 var(--fs-note-name)/1.15 var(--f-ui); letter-spacing: .02em; color: var(--dim); }
+#ns-stop-words .sw-facts { display: grid; gap: 1px; font: 400 var(--fs-act-sub)/1.3 var(--f-text); color: var(--dim); }
+#ns-stop-words .sw-facts span:empty { display: none; }
 #ns-stop-words .sw-act { display: grid; gap: 2px; justify-items: end; text-align: right; }
 #ns-stop-words .sw-act.at-left { justify-items: start; text-align: left; }
 #ns-stop-words .sw-act b { font: 500 var(--fs-act)/1.15 var(--f-ui); letter-spacing: .02em; color: var(--warm); }
@@ -308,7 +311,7 @@
             document.head.appendChild(st);
         }
         const mk = (cls, html) => { const e = document.createElement('div'); e.className = 'sw ' + cls; e.innerHTML = html; layer.appendChild(e); return e; };
-        S.words = { name: mk('sw-name', ''), acts: [0, 1, 2, 3].map(() => mk('sw-act', '<b></b><span></span>')), leave: mk('sw-leave', 'Leave orbit'), good: mk('sw-good', '<b></b><span></span><i></i>') };
+        S.words = { name: mk('sw-name', ''), facts: mk('sw-facts', '<span></span><span></span>'), acts: [0, 1, 2, 3].map(() => mk('sw-act', '<b></b><span></span>')), leave: mk('sw-leave', 'Leave orbit'), good: mk('sw-good', '<b></b><span></span><i></i>') };
         S.words.acts.forEach(el => { el.dataset.key = ''; });
         S.stock = window.NSStock ? window.NSStock.board(layer) : null;
     }
@@ -319,7 +322,13 @@
         el.classList.toggle('on', !!on);
         if (on) { el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`; if (!was) S.wordShown.set(el, performance.now()); }
     }
-    function hideWords() { S.keyShown.clear(); if (!S.words) return; [S.words.name, S.words.leave, S.words.good].concat(S.words.acts).forEach(el => put(el, false)); if (S.stock) S.stock.hide(); }
+    function hideWords() { S.keyShown.clear(); if (!S.words) return; [S.words.name, S.words.facts, S.words.leave, S.words.good].concat(S.words.acts).forEach(el => put(el, false)); if (S.stock) S.stock.hide(); }
+    /** What our scans read of this world, as two short lines (Scan.js through flow.facts): under its name, quiet. */
+    function factLines() {
+        let f = null;
+        try { f = NS.flow && typeof NS.flow.facts === 'function' && S.id ? NS.flow.facts(S.id) : null; } catch (err) { console.error('NewScreen stop: the scan facts failed', err); }
+        return f && window.NSScan ? window.NSScan.lines(f, true) : [];
+    }
     const titleCase = s => (s && s === s.toUpperCase() && /[A-Z]/.test(s) ? s.toLowerCase().replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase()) : s);
     function teamSub() {
         if (S.picked.length < 2) return 'Choose two at the window';
@@ -367,12 +376,20 @@
         items.forEach(it => { budget -= wordsIn(it.words); });
         const d = hovering && S.drawn.find(q => q.id === S.hover), good = d ? noteFor(d.id) : null;
         if (good) budget -= wordsIn(good.line) + wordsIn(good.loss) + 1;
+        // what our scans read (the tags under the name) is worth more than a sub-line: the name and the tags take their room first
+        const nameText = S.node ? titleCase(S.node.name || '') : '';
+        const facts = settled && !hovering && nameText ? factLines() : [];
+        const factCost = facts.length ? wordsIn(nameText) + wordsIn(facts.join(' ').replace(/·/g, '')) : 0;
+        const factsOn = factCost > 0 && budget - factCost >= 0;
+        if (factsOn) budget -= factCost;
         // a sub-line keeps its room while a person is pointed at (hidden, not removed): nothing under the pointer moves
         items.forEach(it => { if (it.sub && (hovering || budget - wordsIn(it.sub) >= 0)) { if (!hovering) budget -= wordsIn(it.sub); } else it.sub = ''; });
-        const nameText = S.node ? titleCase(S.node.name || '') : '';
-        const nameOn = settled && !hovering && nameText && budget - wordsIn(nameText) >= 0;
+        const nameOn = settled && !hovering && nameText && (factsOn || budget - wordsIn(nameText) >= 0);
         setText(W.name, nameText);
         const [nx, ny] = css(WIN.x0 + 10, WIN.y0 + 8); put(W.name, nameOn, nx, ny);
+        const spans = W.facts.querySelectorAll('span');
+        spans.forEach((sp, i) => setText(sp, factsOn ? facts[i] || '' : ''));
+        put(W.facts, factsOn, nx, ny + (W.name.offsetHeight || 22) + 3);
         // the act words: right-aligned stacks beside the world, the others where they belong
         let stackY = null, rowX = null;
         const keysNow = new Set(items.map(it => it.o.a.key)), at = performance.now();
@@ -704,13 +721,14 @@
         const names = ['stop:aura', 'stop:glass', 'stop:site'].concat(['cora'].concat(CREW).map(id => 'stop:person:' + id));
         if (!on) { names.forEach(n => NS.anchors.delete(n)); return; }
         const pt = (x, y, side, align) => { const [X, Y] = css(x, y); return { x: X, y: Y, side, align }; };
+        const skyY = () => WIN.y0 + 26 + (S.words && S.words.facts.classList.contains('on') ? Math.ceil((S.words.facts.offsetHeight + 4) / unit()) : 0);   // under the name, and under the scan's tags when they show
         // A.U.R.A. speaks in the open sky of the glass's left (the world fills the right); the grille is the fallback
-        NS.anchors.set('stop:aura', () => [pt(WIN.x0 + 12, WIN.y0 + 26, 'below'), pt(WIN.x0 + 12, WIN.y1 - 70, 'below'), pt(574, 122, 'left')]);
-        NS.anchors.set('stop:glass', () => [pt(WIN.x0 + 12, WIN.y0 + 26, 'below'), pt(WIN.x0 + 12, WIN.y1 - 70, 'below'), pt(290, WIN.y0 + 12, 'below')]);
+        NS.anchors.set('stop:aura', () => [pt(WIN.x0 + 12, skyY(), 'below'), pt(WIN.x0 + 12, WIN.y1 - 70, 'below'), pt(574, 122, 'left')]);
+        NS.anchors.set('stop:glass', () => [pt(WIN.x0 + 12, skyY(), 'below'), pt(WIN.x0 + 12, WIN.y1 - 70, 'below'), pt(290, WIN.y0 + 12, 'below')]);
         NS.anchors.set('stop:site', () => { const t = t0(), g = GL.geom(t, S.shownAt), [sx, sy] = GL.site(t, S.shownAt); return [pt(Math.max(WIN.x0 + 20, g.x - g.r - 12), sy, 'left'), pt(sx, Math.min(WIN.y1 - 10, g.y + g.r + 8), 'below', 'center')]; });
         ['cora'].concat(CREW).forEach(id => NS.anchors.set('stop:person:' + id, () => {
             const d = S.drawn.find(q => q.id === id); if (!d) return [];
-            return [pt(d.X, d.Y + 2, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left'), pt(WIN.x0 + 12, WIN.y0 + 26, 'below'), pt(574, 122, 'left')];
+            return [pt(d.X, d.Y + 2, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left'), pt(WIN.x0 + 12, skyY(), 'below'), pt(574, 122, 'left')];
         }));
     }
     function discs() {
@@ -773,7 +791,7 @@
         actions: S.actions.map(a => ({ key: a.key, words: a.words, near: a.near, team: !!a.team })), lineup: S.lineup.slice(), aside: S.aside.slice(), picked: S.picked.slice(), hover: S.hover,
         send: S.send ? S.send.ids.slice() : null, trip: S.trip ? S.trip.ids.slice() : null, drawn: S.drawn.map(d => d.id), glass: GL.current(), atWindow: [...S.atWindow], t: Math.round(t0()),
         plans: Object.fromEntries(Object.entries(S.plans).map(([k, v]) => [k, v.map(q => q.kind + '@' + Math.round(q.t0) + (q.x != null ? ':' + q.x : ''))])),
-        words: S.words ? [S.words.name, S.words.leave, S.words.good].concat(S.words.acts).filter(el => el.classList.contains('on')).map(el => ({ text: el.textContent, rect: (r => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)])(el.getBoundingClientRect()) })) : [],
+        words: S.words ? [S.words.name, S.words.facts, S.words.leave, S.words.good].concat(S.words.acts).filter(el => el.classList.contains('on')).map(el => ({ text: el.textContent, rect: (r => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)])(el.getBoundingClientRect()) })) : [],
         people: S.drawn.map(d => { const [x, y] = css(d.X, d.Y + d.Sp.h * 0.5); return { id: d.id, x: Math.round(x), y: Math.round(y) }; }),
     });
 

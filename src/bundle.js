@@ -1075,6 +1075,14 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     RATIONS_PER_PERSON: 1,   // each living person eats one ration at the supper after a jump (five with everyone alive; was 1 in all)
     FOOD_PACK_RATIONS: 2,    // sealed rations found on a card are opened at once (the new look has no hold to open them from):
                              //   "+2 Sealed Rations" is +4, a little under one supper, so a find helps but does not end the hunger
+    FAR_SCAN: 2,             // "Scan" in a world's note in travel (src/newscreen/Scan.js): what a world holds before we fly there.
+                             //   Under half the cheapest warp, so scanning both worlds of a fork costs less than one more stop,
+                             //   while scanning every world ahead adds up to one (the default game's map scan is free)
+    RISK_UNSCANNED: 5,       // a plain landing on a world nobody deep-scanned from the bridge: 5 % more likely that someone is
+                             //   hurt, and no spot is marked in the landing game (App.unmarkedWhy, App.scanRiskMod)
+    RISK_FAIR_LOCK: -5,      // a fair lock (A.U.R.A.'s own tune is fair): the spot is marked and the trip 5 % safer
+    RISK_SHARP_LOCK: -10,    // a sharp lock: 10 % safer, as much as Mira scanning the ground while they are down. A weak lock
+                             //   marks nothing and changes nothing (it no longer costs energy: losing the mark is its price)
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
@@ -3675,7 +3683,8 @@ Then you're through.`,
 
         // Tune the signal first; we re-enter here with the result (same pattern as the warp plot)
         if (isManual && window.SignalTune && !this._tuneResult && planet && !planet.scanned) {
-            window.SignalTune.play({ targetName: planet.name, sector: this.state.currentSector }).then(result => {
+            const effects = isNewScreen() && window.NSScan ? window.NSScan.LOCK : null;   // the new look: what each lock means now (Scan.js)
+            window.SignalTune.play({ targetName: planet.name, sector: this.state.currentSector, effects }).then(result => {
                 this._tuneResult = result;
                 this.handleScanAction(true);
             });
@@ -3685,20 +3694,22 @@ Then you're through.`,
         this._tuneResult = null;
         if (tune) this.noteReliance(!!tune.auto);
 
-        // A deep scan costs no energy (docs/ECONOMY.md)
+        // A deep scan costs no energy (docs/ECONOMY.md). The new look: a weak lock costs the marked landing spot instead
+        const isNew = isNewScreen();
         this.state.addLog("Deep Scan started...");
         if (tune && tune.grade === 'sharp' && !this.state.isDeckOperational('lab')) {
             this.state.addLog("Sharp lock, but the laboratory is down: nobody can work the extra detail into data.");
         } else if (tune && tune.grade === 'sharp') {
             this.state.addColonyKnowledge(1, true);
-            this.state.addLog("Sharp lock: the scan picked up extra detail. +1 data.");
-        } else if (tune && tune.grade === 'weak') {
+            this.state.addLog(isNew ? "The scan picked up extra detail. +1 data." : "Sharp lock: the scan picked up extra detail. +1 data.");
+        } else if (tune && tune.grade === 'weak' && !isNew) {
             this.state.energy = Math.max(0, this.state.energy - 1);
             this.state.addLog("Weak lock: the scan had to run twice. 1 extra energy spent.");
-        } else if (tune && tune.auto) {
+        } else if (tune && tune.auto && !isNew) {
             this.state.addLog("A.U.R.A. tuned the scan. Adequate.");
         }
         planet.scanned = true;
+        if (isNew) planet.nsLock = !tune || tune.auto ? 'auto' : tune.grade;   // the new look: 'sharp' | 'fair' | 'weak' | 'auto' (A.U.R.A.'s, fair): what we learn, the marked spot
 
         // S3+ deep scan hook — corrects corrupted data, reveals hidden tags
         const deepScanConfig = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[this.state.currentSector] : null;
@@ -3773,6 +3784,7 @@ Then you're through.`,
 
         this.orbitView.updateCommandDeck(this.state.currentSystem);
         this.renderOrbit();
+        if (isNew && window.NSScan) window.NSScan.deep(this, planet);   // the new look: A.U.R.A. says what the lock read (last, so it is said first)
 
         // Check for distress signals after scan (small chance) - use queue; never in the last sector (docs/CANON.md §9)
         if (typeof rollDistressSignal !== 'undefined' && this.state.currentSector < FINAL_SECTOR) {
@@ -4074,7 +4086,7 @@ Then you're through.`,
         const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
         if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
         const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
-        const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null, wreck: wreck && wreck.id })
+        const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
             : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
         const landed = goDown.then(landing => this.applyLanding(landing, evaTeam));
         const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam)) : landed;   // the new screen: the crisis aboard while they are down
@@ -4095,18 +4107,43 @@ Then you're through.`,
         }
 
         // 2. Select Event
-        let potentialEvents = EVENTS.filter(e => e.trigger(planet));
-        if (potentialEvents.length === 0) potentialEvents = [EVENTS[EVENTS.length - 1]];
-
-        // Prefer type-specific events over the generic fallback
-        const specificEvents = potentialEvents.filter(e => e.id !== 'DISTRESS_BEACON');
-        const selectedEvent = specificEvents.length > 0
-            ? specificEvents[Math.floor(Math.random() * specificEvents.length)]
-            : potentialEvents[potentialEvents.length - 1];
+        const selectedEvent = this.landingEventOf(planet);
 
         planet.hasEva = true;
         this.orbitView.updateCommandDeck(planet);
         afterDescent.then(() => this.showEventModal(selectedEvent, planet));
+    }
+
+    /** What a plain landing finds here (src/data/Events.js): one event that fits this world's type and tags, the generic
+        fallback only when none does. The new look keeps the first pick on the world (planet.nsEvent, saved with the map), so
+        what a scan said the world gives (src/newscreen/Scan.js) is what the team finds. The default game picks afresh. */
+    landingEventOf(planet) {
+        const kept = isNewScreen() && planet.nsEvent ? EVENTS.find(e => e.id === planet.nsEvent) : null;
+        if (kept) return kept;
+        let potentialEvents = EVENTS.filter(e => e.trigger(planet));
+        if (potentialEvents.length === 0) potentialEvents = [EVENTS[EVENTS.length - 1]];
+        const specificEvents = potentialEvents.filter(e => e.id !== 'DISTRESS_BEACON');   // prefer type-specific events over the generic fallback
+        const picked = specificEvents.length > 0
+            ? specificEvents[Math.floor(Math.random() * specificEvents.length)]
+            : potentialEvents[potentialEvents.length - 1];
+        if (isNewScreen()) planet.nsEvent = picked.id;
+        return picked;
+    }
+
+    /** Why A.U.R.A. marks no landing spot here (LanderGame's opts.unmarked): never in the default game; in the new look
+        'unscanned' (no deep scan from the bridge) or 'weak' (a weak lock), else null: the spot is marked. */
+    unmarkedWhy(planet) {
+        if (!isNewScreen() || !planet) return null;
+        if (!planet.scanned) return 'unscanned';
+        return planet.nsLock === 'weak' ? 'weak' : null;
+    }
+
+    /** The new look: what the bridge's deep scan does to a plain landing's danger (NEW_LOOK_ECONOMY): none at all, more
+        danger; a fair lock (or A.U.R.A.'s), less; a sharp lock, less again; a weak lock, no change. */
+    scanRiskMod(planet) {
+        if (!planet || !planet.scanned) return NEW_LOOK_ECONOMY.RISK_UNSCANNED;
+        if (planet.nsLock === 'weak') return 0;
+        return planet.nsLock === 'sharp' ? NEW_LOOK_ECONOMY.RISK_SHARP_LOCK : NEW_LOOK_ECONOMY.RISK_FAIR_LOCK;
     }
 
     /** Consequences of the landing: a soft one makes the trip safer, a crash hurts someone before they step out. */
@@ -4115,7 +4152,7 @@ Then you're through.`,
         if (!landing || !window.LanderGame) return;
         this.noteReliance(!!landing.auto);
         this._landingRiskMod = window.LanderGame.GRADES[landing.grade].riskMod;
-        if (landing.grade === 'soft') this.state.addLog("Soft landing on the marked spot. The team steps out steady.");
+        if (landing.grade === 'soft') this.state.addLog(landing.marked === false ? "Soft landing. The team steps out steady." : "Soft landing on the marked spot. The team steps out steady.");
         if (landing.offMark) this.state.addLog("Down safely, but well away from the marked spot. It is a long walk.");
         if (landing.grade === 'crash') {
             const fit = evaTeam.filter(m => m.status === 'HEALTHY');
@@ -4134,51 +4171,30 @@ Then you're through.`,
         return isNewScreen() ? [NEW_LOOK_ECONOMY.EVA_ENERGY_MIN, NEW_LOOK_ECONOMY.EVA_ENERGY_MAX] : [30, 49];
     }
 
+    /** How dangerous a plain landing is from the world itself, before how it is flown and who scans it: 5 % to 30 % by its
+        danger level, then its signals, each a line on the trip's card. The new look's scan tags read the total (Scan.js). */
+    planetRisk(planet) {
+        let risk = (planet.dangerLevel || 0) * 5 + 5;
+        const mods = [];
+        const add = (type, mod, color) => { risk += mod; mods.push({ type, mod, color }); };
+        if (planet.metrics && planet.metrics.hasLife) add('BIOLOGICAL', -5, '#74d99a');                                   // life = a stable place
+        if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) add('ALIEN SIGNAL', +10, '#d9a24a');                      // unknown = danger
+        if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) add('ANCIENT RUINS', -3, '#d9a24a');                      // old structures, still standing
+        if (planet.metrics && planet.metrics.hasTech && !planet.tags?.includes('ALIEN_SIGNALS')) add('TECHNOLOGICAL', -5, '#9bf0bd');   // machine-stable
+        if (planet.tags && planet.tags.includes('DERELICT')) add('DERELICT', +5, '#d9a24a');                                // unstable wreckage
+        if (planet.tags && planet.tags.includes('PREDATORY')) add('PREDATORY', +15, '#d85a4e');                             // something hunts
+        return { risk, mods };
+    }
+
     showEventModal(event, planet) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '2000';
 
-        // === SIGNAL TYPE RISK MODIFIERS ===
-        // Calculate base risk with signal type effects
-        let riskBase = (planet.dangerLevel || 0) * 5 + 5; // Base risk 5% to 30%
-        let signalModifiers = [];
-
-        // BIOLOGICAL signals reduce risk (life = stable environment)
-        if (planet.metrics && planet.metrics.hasLife) {
-            riskBase -= 5;
-            signalModifiers.push({ type: 'BIOLOGICAL', mod: -5, color: '#74d99a' });
-        }
-
-        // ALIEN SIGNALS increase risk (unknown = danger)
-        if (planet.tags && planet.tags.includes('ALIEN_SIGNALS')) {
-            riskBase += 10;
-            signalModifiers.push({ type: 'ALIEN SIGNAL', mod: +10, color: '#d9a24a' });
-        }
-
-        // ANCIENT RUINS slightly reduce risk (stable structures)
-        if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) {
-            riskBase -= 3;
-            signalModifiers.push({ type: 'ANCIENT RUINS', mod: -3, color: '#d9a24a' });
-        }
-
-        // TECHNOLOGICAL signals reduce risk (machine-stable)
-        if (planet.metrics && planet.metrics.hasTech && !planet.tags?.includes('ALIEN_SIGNALS')) {
-            riskBase -= 5;
-            signalModifiers.push({ type: 'TECHNOLOGICAL', mod: -5, color: '#9bf0bd' });
-        }
-
-        // DERELICT ships increase risk slightly (structural instability)
-        if (planet.tags && planet.tags.includes('DERELICT')) {
-            riskBase += 5;
-            signalModifiers.push({ type: 'DERELICT', mod: +5, color: '#d9a24a' });
-        }
-
-        // PREDATORY massively increases risk
-        if (planet.tags && planet.tags.includes('PREDATORY')) {
-            riskBase += 15;
-            signalModifiers.push({ type: 'PREDATORY', mod: +15, color: '#d85a4e' });
-        }
+        // === SIGNAL TYPE RISK MODIFIERS === (the world's own: planetRisk)
+        const fromWorld = this.planetRisk(planet);
+        let riskBase = fromWorld.risk;
+        let signalModifiers = fromWorld.mods;
 
         // How the landing went (LanderGame) carries into the trip
         if (this._landingRiskMod) {
@@ -4190,6 +4206,11 @@ Then you're through.`,
             riskBase += this._nsScanMod;
             signalModifiers.push({ type: 'MIRA SCANNED IT', mod: this._nsScanMod, color: '#74d99a' });
             this._nsScanMod = 0;
+        }
+        const scanMod = isNewScreen() ? this.scanRiskMod(planet) : 0;                       // the new look: how well the bridge's scan read the ground, or no scan at all
+        if (scanMod) {
+            riskBase += scanMod;
+            signalModifiers.push({ type: scanMod > 0 ? 'NOT SCANNED' : planet.nsLock === 'sharp' ? 'SHARP SCAN' : 'SCANNED', mod: scanMod, color: scanMod < 0 ? '#74d99a' : '#d9a24a' });
         }
 
         // Clamp risk base to reasonable range
@@ -4204,7 +4225,8 @@ Then you're through.`,
         const PLAIN_SIGNAL = {
             'BIOLOGICAL': 'Living things here are calm', 'ALIEN SIGNAL': 'Unknown signal nearby', 'ANCIENT RUINS': 'Old ruins, still solid',
             'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here',
-            'SOFT LANDING': 'You put them down gently', 'HARD LANDING': 'The landing shook them up', 'MIRA SCANNED IT': 'Mira scanned the ground'
+            'SOFT LANDING': 'You put them down gently', 'HARD LANDING': 'The landing shook them up', 'MIRA SCANNED IT': 'Mira scanned the ground',
+            'SCANNED': 'Scanned from orbit first', 'SHARP SCAN': 'A sharp scan from orbit', 'NOT SCANNED': 'Never scanned from orbit'
         };
         const signalModDisplay = signalModifiers.length > 0
             ? signalModifiers.map(s => `<span style="color: ${s.color};">${PLAIN_SIGNAL[s.type] || s.type}: ${Math.abs(s.mod)}% ${s.mod > 0 ? 'more dangerous' : 'safer'}</span>`).join(' · ')
@@ -5025,11 +5047,13 @@ Then you're through.`,
         });
     }
 
-    /** The council for this world. If SettleCouncil.js did not load, A.U.R.A. still asks the question on her own. */
+    /** The council for this world. If SettleCouncil.js did not load, A.U.R.A. still asks the question on her own. The new look
+        tells it what our scans read: 'deep' (the bridge's scan), 'far' (only the long-range scan from travel) or 'none'. */
     settleCouncilFor(planet) {
         try {
             const viability = EndingSystem.getPlanetViability(planet, this.state);
-            return window.buildSettleCouncil(this.state, planet, { viability, isRepeat: !!planet._settleCouncilHeard });
+            const known = isNewScreen() ? (planet.scanned ? 'deep' : planet.remoteScanned ? 'far' : 'none') : null;
+            return window.buildSettleCouncil(this.state, planet, { viability, isRepeat: !!planet._settleCouncilHeard, known });
         } catch (e) {
             console.error('Settle council could not be built; A.U.R.A. asks alone', e);
             return {
