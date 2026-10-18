@@ -167,6 +167,7 @@ class GameState {
         this.datedWrecks = [];     // wrecks dated with the disc: { hull, age, ly }, what DiscDating draws on its chart
         this._breachDone = false;  // sector 1's hole in the hull (Breach) happens once per run
         this._paidWarps = 0;       // warps to a new place (free courses too), so the breach never comes on the first one
+        this._wreckDoors = [];     // the doors of the wrecks boarded this run, in order (App.wreckDoorFor, TorchDoors.pick)
 
         // --- Legacy aliases for systems that still reference old names ---
         // TODO: Remove these once all systems are updated
@@ -300,6 +301,7 @@ class GameState {
             _commanderDoubtSeen: this._commanderDoubtSeen,
             // The journey (lost on reload before: the one callback the game had, and the lists that stop stories repeating)
             _boardedHulls: this._boardedHulls || [],
+            _wreckDoors: this._wreckDoors || [],
             _standing: this._standing || null,
             _countSceneSeen: !!this._countSceneSeen,
             _tutorialWarpSeen: !!this._tutorialWarpSeen,   // A.U.R.A.'s first-time lines are said once per run, not once per load
@@ -383,6 +385,7 @@ class GameState {
             this.exodusLogsFound = (saveData.exodusLogsFound || []).filter(id => pageIds.includes(id)); // old saves counted eight logs by number
             this.hasDisc = !!saveData.hasDisc;
             this._boardedHulls = saveData._boardedHulls || [];
+            this._wreckDoors = Array.isArray(saveData._wreckDoors) ? saveData._wreckDoors : this._boardedHulls.map(() => 'cut');   // older saves: every hatch was cut
             this._standing = saveData._standing || null;
             this._countSceneSeen = !!saveData._countSceneSeen;
             this._tutorialWarpSeen = !!saveData._tutorialWarpSeen;
@@ -2831,7 +2834,7 @@ class App {
         return picked;
     }
 
-    /** The team boards one of our wrecks: they cut the hatch open (Torch), then the wreck's story, then what it held. */
+    /** The team boards one of our wrecks: they get in by the door it has (Torch), then the wreck's story, then what it held. */
     handleExodusAction() {
         const planet = this.state.currentSystem;
         if (!planet || !planet.tags || !planet.tags.includes('EXODUS_WRECK')) {
@@ -2855,7 +2858,7 @@ class App {
         this.state.passTime(); // Major action: time passes
         planet.exodusInvestigated = true; // marked at once, so it cannot be clicked twice
 
-        const cutIn = selected.noHatch ? Promise.resolve() : this.cutIntoWreck(shipName);   // a crater has no hatch to cut
+        const cutIn = selected.noHatch ? Promise.resolve() : this.cutIntoWreck(shipName, planet, selected);   // a crater has no hatch to cut
         cutIn.then(() => this.showNarrativeEncounter({
             art: 'EXODUS_WRECK',
             title: selected.title,
@@ -2878,14 +2881,36 @@ class App {
         return (lines || []).filter(line => isThere(line.speaker));
     }
 
-    /** The wreck has no power, so the team cuts its hatch open (Torch). Resolves once it is open; it never rejects. */
-    cutIntoWreck(shipName) {
+    /** The team gets into the wreck by the door it has (Torch: the hatch cut, frozen, a fuel line across it; or no torch: cut
+        open long ago, a split in the hull, an airlock with power). Resolves once they are in; it never rejects. */
+    cutIntoWreck(shipName, planet, story) {
         const [cutter, spotter] = this.torchCrew();
         if (!cutter || !window.MiniHost || !window.MiniHost.has('torch')) return Promise.resolve();
-        const opts = { mode: 'hatch', hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name };
+        const door = this.wreckDoorFor(planet, story);
+        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name };
         return window.MiniHost.play('torch', opts).then(result => {
-            if (result && result.opened) this.state.addLog(result.bySelf ? `The hatch of ${shipName} is cut open.` : `${cutter.name} cut the hatch of ${shipName} open.`);
+            if (result && result.opened) this.state.addLog(this.doorLogLine(result, shipName, cutter.name));
         }, err => console.error(err));
+    }
+
+    /** This wreck's door (TorchDoors.pick: by the doors of this run so far, the hull number, the sector and the wreck's story),
+        picked once and kept on the planet; the run remembers the order. Without TorchDoors.js every door is the hatch cut. */
+    wreckDoorFor(planet, story) {
+        if (planet && planet.wreckDoor) return planet.wreckDoor;
+        const history = this.state._wreckDoors || [], doors = window.TorchDoors;
+        const door = doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id }) : 'cut';
+        this.state._wreckDoors = history.concat(door);
+        if (planet) planet.wreckDoor = door;
+        return door;
+    }
+
+    /** The mission log's line for how the team got in. */
+    doorLogLine(result, shipName, cutterName) {
+        const door = result.door || 'cut';
+        if (door === 'already') return `The hatch of ${shipName} was cut open long ago. The team goes in.`;
+        if (door === 'torn') return `The team climbs into ${shipName} through a split in its hull.`;
+        if (door === 'panel') return `The airlock of ${shipName} still had power. It cycled, and the team went in.`;
+        return result.bySelf ? `The hatch of ${shipName} is cut open.` : `${cutterName} cut the hatch of ${shipName} open.`;
     }
 
     /** Who holds the torch and who keeps watch: the two who went down (Jaxon first), else anyone alive. Never the commander. */
