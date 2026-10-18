@@ -35,6 +35,8 @@
        actions() → [{ key, words, near, team, run() }]          what this stop offers now (NSOrbit.actions)
        act(key, ids?) → bool  run one (ids: the two picked for 'team');  eligible() → ids fit to go
        weak() → ids too weak from a missed supper for this trip;  holdLoss(id, picked) → what the ship loses while id is down
+       lossOf(id, picked) → the loss alone ('' none);  propose() → { ids, why } the two the crew put forward for this world
+       teamRisk(ids) → a plain landing's danger going in (%), null where a site's own story decides
        leave() → Promise<bool>  Leave orbit (the dive back out, or refused with a line)
        trip() → { ids, aboard } | null   who is down now;  sign() → { kind, comes } | null   this stop's crisis sign
        person(id, say?)       a person in the tower clicked: their line, said beside them (not logged: saves keep 20 lines)
@@ -349,6 +351,9 @@
         eligible: () => ask('eligible', theApp()) || [],
         weak: () => ask('weak', theApp()) || [],
         holdLoss: (id, picked) => ask('holdLoss', theApp(), id, picked) || '',
+        lossOf: (id, picked) => ask('lossOf', theApp(), id, picked) || '',
+        propose: () => ask('propose', theApp()) || null,
+        teamRisk: ids => { const r = ask('teamRisk', theApp(), ids); return typeof r === 'number' ? r : null; },
         trip: () => ask('trip') || null,
         sign: () => { const s = st(), n = s && s.currentSystem; return (n && n._nsCrisis) || null; },
         leave() {

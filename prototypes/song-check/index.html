@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Song check</title>
+<!-- Song check: try your own song over a scene of the game (the title, the launch film, either ending, the end card).
+     The song is picked from your computer and plays only in this tab: it is never uploaded. The game runs below, muted
+     unless "Game sounds too" is on. -->
+<style>
+    :root { --ink: #05070a; --text: #eceae2; --dim: #8b9196; --line: rgba(255, 255, 255, 0.09); --warm: #f08c2e; --warm-br: #ffb466; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--ink); color: var(--text); font: 400 15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    body { display: grid; grid-template-rows: auto 1fr; }
+    header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+    h1 { margin: 0 8px 0 0; font: 600 13px/1 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+    .pick { position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 3px; cursor: pointer; }
+    .pick:hover { border-color: rgba(240, 140, 46, 0.5); }
+    .pick input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .pick b { font-weight: 500; color: var(--warm); }
+    .scenes { display: flex; flex-wrap: wrap; gap: 6px; }
+    button { padding: 7px 12px; border: 1px solid var(--line); border-radius: 3px; background: none; color: var(--text); font: inherit; cursor: pointer; }
+    button:hover:not(:disabled), button:focus-visible { border-color: var(--warm); color: var(--warm-br); outline: none; }
+    button:disabled { color: #4c5156; cursor: default; }
+    button.is-on { border-color: var(--warm); color: var(--warm); }
+    label.sounds { display: inline-flex; align-items: center; gap: 6px; color: var(--dim); cursor: pointer; }
+    .note { flex: 1 1 260px; min-width: 0; color: var(--dim); font-size: 13px; }
+    .note.is-bad { color: #e07a62; }
+    main { position: relative; min-height: 0; }
+    iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; background: var(--ink); }
+    @media (max-width: 640px) { header { padding: 10px 12px; } .note { flex-basis: 100%; } }
+</style>
+</head>
+<body>
+<header>
+    <h1>Song check</h1>
+    <label class="pick"><input id="file" type="file" accept="audio/*"><span id="file-name"><b>Choose your song</b> from your computer</span></label>
+    <div class="scenes" role="group" aria-label="Scenes">
+        <button data-scene="title" disabled>Title screen</button>
+        <button data-scene="launch" disabled>Launch film</button>
+        <button data-scene="light" disabled>Into the light</button>
+        <button data-scene="eden" disabled>Back to Eden</button>
+        <button data-scene="card" disabled>End card only</button>
+        <button id="stop" disabled>Stop</button>
+    </div>
+    <label class="sounds"><input id="sounds" type="checkbox"> Game sounds too</label>
+    <p class="note" id="note">The song stays on your computer. Pick it, then a scene: the scene starts with the song.</p>
+</header>
+<main><iframe id="game" title="The game" src="about:blank"></iframe></main>
+<audio id="song" preload="auto"></audio>
+<script>
+(function () {
+    'use strict';
+    const frame = document.getElementById('game'), song = document.getElementById('song'), note = document.getElementById('note');
+    const buttons = [...document.querySelectorAll('[data-scene]')], stopBtn = document.getElementById('stop');
+    const GAME = '../../index.html', TITLE_READY_MS = 2500, SETTLE_MS = 1500;
+    let objectUrl = null, run = 0;
+
+    const say = (text, bad) => { note.textContent = text; note.classList.toggle('is-bad', !!bad); };
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    async function until(test, ms, what) {
+        const t0 = Date.now();
+        for (;;) {
+            let ok = false;
+            try { ok = test(); } catch (e) { ok = false; }
+            if (ok) return ok;
+            if (Date.now() - t0 > ms) throw new Error(`${what} did not start`);
+            await sleep(100);
+        }
+    }
+    function stopSong() { song.pause(); song.currentTime = 0; }
+    function startSong() { song.currentTime = 0; return song.play().catch(err => say('The song would not play: ' + err.message, true)); }
+
+    document.getElementById('file').addEventListener('change', e => {
+        const f = e.target.files && e.target.files[0];
+        if (!f) return;
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = URL.createObjectURL(f);
+        song.src = objectUrl;
+        document.getElementById('file-name').innerHTML = '<b></b>';
+        document.querySelector('#file-name b').textContent = f.name;
+        buttons.forEach(b => { b.disabled = false; });
+        stopBtn.disabled = false;
+        say('Now pick a scene. Each one reloads the game and starts the song with it.');
+    });
+    stopBtn.addEventListener('click', () => { run++; stopSong(); buttons.forEach(b => b.classList.remove('is-on')); say('Stopped.'); });
+
+    /** A fresh game in the frame: muted unless "Game sounds too" is on. Resolves with its window once it has booted. */
+    async function freshGame(id) {
+        const sound = document.getElementById('sounds').checked;
+        const loaded = new Promise(resolve => frame.addEventListener('load', resolve, { once: true }));   // the new page, not the last one
+        frame.src = `${GAME}?new=1${sound ? '' : '&mute=1'}&songcheck=${Date.now()}`;
+        await loaded;
+        if (id !== run) throw new Error('replaced');
+        await until(() => frame.contentWindow && frame.contentWindow.app && frame.contentWindow.NewScreen, 20000, 'The game');
+        if (id !== run) throw new Error('replaced');
+        frame.focus();
+        return frame.contentWindow;
+    }
+    const SCENES = {
+        async title(w, id) { await sleep(600); if (id === run) startSong(); },
+        async launch(w, id) { await newGame(w, id); if (id === run) startSong(); },
+        async light(w, id) { await ending(w, id, 'LIGHT', false); },
+        async eden(w, id) { await ending(w, id, 'EDEN', false); },
+        async card(w, id) { await ending(w, id, 'LIGHT', true); },
+    };
+    /** New game, as a player presses it; resolves once the launch film is playing. */
+    async function newGame(w, id) {
+        await until(() => w.document.querySelector('#btn-start-game'), 10000, 'The title screen');
+        await sleep(TITLE_READY_MS);                                          // the title fades in before New game takes a click
+        for (let tries = 0; tries < 2 && id === run && !(w.NSLaunch && w.NSLaunch.isPlaying()); tries++) {
+            w.document.querySelector('#btn-start-game').click();
+            try { await until(() => w.NSLaunch && w.NSLaunch.isPlaying(), 8000, 'The launch film'); } catch (err) { if (tries) throw err; }
+        }
+    }
+    /** One of the two endings, from the light, with the disc aboard; "card" skips straight to the end card. The game is
+        started first (an ending needs the ship's screen up), with the launch film skipped. */
+    async function ending(w, id, door, cardOnly) {
+        await newGame(w, id);
+        w.NSLaunch.debug.skip();
+        await until(() => w.NewScreen.isShown && w.NewScreen.isShown() && !w.NSLaunch.isPlaying(), 15000, 'The game');
+        await sleep(SETTLE_MS);
+        if (id !== run) return;
+        await until(() => typeof w.lightEndingFor === 'function' && w.NSEnding, 10000, 'The ending');
+        w.app.state.hasDisc = true;
+        const e = w.lightEndingFor(door, w.app.state);
+        w.NSEnding.play(w.app, e, { from: 'light' }).catch(err => say('The ending would not play: ' + err.message, true));
+        if (cardOnly) {                                                   // past the held moment ("Keep going") to the card
+            await until(() => w.NSEnding.debug.state(), 8000, 'The ending');
+            for (let i = 0; i < 24 && id === run; i++) {
+                const st = w.NSEnding.debug.state();
+                if (!st || st.card) break;
+                if (st.keep) w.NSEnding.debug.keepGoing(); else w.NSEnding.debug.skip();
+                await sleep(400);
+            }
+        }
+        if (id === run) startSong();
+    }
+    buttons.forEach(b => b.addEventListener('click', async () => {
+        const id = ++run;
+        stopSong();
+        buttons.forEach(x => x.classList.toggle('is-on', x === b));
+        say(`Loading: ${b.textContent}…`);
+        try {
+            const w = await freshGame(id);
+            await SCENES[b.dataset.scene](w, id);
+            if (id === run) say(`${b.textContent}, with your song. Pick another scene to compare.`);
+        } catch (err) {
+            if (err.message !== 'replaced' && id === run) say(err.message + '. Try again.', true);
+        }
+    }));
+})();
+</script>
+</body>
+</html>

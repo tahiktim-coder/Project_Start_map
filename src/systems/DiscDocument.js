@@ -1,12 +1,17 @@
 /* DiscDocument — the disc humanity threw out of its solar system, as a page you can find and study.
    A dithered gold disc with four things etched on it (the map home, the two figures, our planets, the atom that sets the scale).
    Point at a label to light up that part of the drawing and read one short note.
+   The new look (?new=1, src/newscreen/finds/Finds.js) shows the thing itself: the drawing is the disc sketched in pencil on a
+   logbook page, its notes written on the page beside the parts and K.'s question in the margin in pen; the disc itself is the
+   gold, big, its notes cut fine beside it. The notes come in one after another (a click shows them all), pointing at a part
+   lights it and its note, and A.U.R.A.'s line comes under it once the last is in.
    open(app) → the drawing (sector 1), which lives in cargo as ITEMS.DISC_DRAWING (isKept: using it does not use it up).
    open(app, { real: true }) → the disc itself (sector 5's find, EXODUS_LOGS PAGE_DISC): no margin, its own words. */
 
 (function () {
     'use strict';
     const SIZE = 300, C = SIZE / 2, R = 140, TICK_MS = 100;
+    const NOTE_MS = 1100, SAID_MS = 350;                             // the new look: a note about every second, A.U.R.A. a beat after the last
     const BACKDROP_GUARD_MS = 1200;                                  // a click beside the page puts it away only once it has been up this long
     const GOLD = ['#140d03', '#4a3510', '#8a6a22', '#d9a24a', '#ffe6a0'], ETCH = '#2a1c06', ETCH_LIT = '#fff4d0';
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
@@ -24,7 +29,7 @@
         { key: 'disc', label: 'THE DISC', region: [C, C, R], text: 'Gold, cut by a machine. Every mark on our drawing is here, in the metal.' },
         ...NOTES.filter(n => n.key === 'map' || n.key === 'figures'),
     ];
-    const DRAWING = { kicker: 'FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK', title: 'The disc', aura: 'An old curiosity, Commander. I would not spend time on it.', close: 'FOLD IT AWAY', closeNote: 'it stays in your cargo' };
+    const DRAWING = { kicker: 'FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK', title: 'The disc', aura: 'An old curiosity, Commander. I would not spend time on it.', close: 'KEEP IT', closeNote: 'it stays in your cargo' };
     const REAL = { kicker: 'THE DISC ITSELF · NOW IN OUR HOLD', title: 'The disc', aura: 'I have logged it as cargo, Commander. It changes nothing about our course.', close: 'PUT IT AWAY', closeNote: 'it stays in your cargo' };
 
     function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
@@ -73,10 +78,18 @@
 
     /** opts (all optional): real (the disc itself, not the drawing), kicker, title, aura (the line under it), close and closeNote
         (the button's words) — the finale shows our own disc, from the hold, with its own kicker and line. */
+    /** Opens once a choice's outcome card (new look) has been read: the disc never lands on top of it. */
     function open(app, opts) {
+        const EC = window.EncounterCard;
+        if (!EC || typeof EC.whenFree !== 'function') return openNow(app, opts);
+        return new Promise(resolve => EC.whenFree(() => openNow(app, opts).then(resolve, resolve)));
+    }
+    function openNow(app, opts) {
         if (document.querySelector('.disc-doc')) return Promise.resolve();
         const isReal = !!(opts && opts.real), notes = isReal ? REAL_NOTES : NOTES;
         const o = Object.assign({}, isReal ? REAL : DRAWING, opts || {});
+        const F = window.NSFinds;
+        if (F && F.isOn()) return openThing(app, o, isReal, notes, F);
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay disc-doc';
         overlay.style.zIndex = '4000';
@@ -94,7 +107,7 @@
                 <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>${o.close}</span><small>${o.closeNote}</small></button></div>
             </section>`;
         document.body.appendChild(overlay);
-        // it opens just after a card's choice: FOLD IT AWAY never lands under that click (a double click would put it away unread)
+        // it opens just after a card's choice: KEEP IT never lands under that click (a double click would put it away unread)
         if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.disc-doc-card'), overlay.querySelectorAll('.disc-doc-close'));
         const openedAt = performance.now();
         return new Promise(resolve => {
@@ -120,6 +133,36 @@
         overlay.addEventListener('click', e => { if (e.target === overlay && performance.now() - openedAt > BACKDROP_GUARD_MS) close(); });
         overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
         if (app && app.state) app.state._hasSeenDisc = true;
+        });
+    }
+
+    /** The new look: the drawing as a logbook page, or the gold disc itself, its notes on it; A.U.R.A. under it once they are in. */
+    function openThing(app, o, isReal, notes, F) {
+        const view = F.disc({ real: isReal, notes, lineMs: NOTE_MS });
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay disc-doc find-view';
+        overlay.style.zIndex = '4000';
+        overlay.innerHTML = `
+            <section class="modal-content deck-panel disc-doc-card find-card ${isReal ? 'is-gold' : 'is-sketch'}" role="dialog" aria-label="${isReal ? 'The disc' : 'Drawing of the disc'}">
+                <header class="enc-head"><p class="enc-kicker">${o.kicker}</p><h3>${o.title}</h3></header>
+                <div class="find-slot"></div>
+                <div class="enc-line find-said" aria-live="polite" style="visibility:hidden">${F.said(app, 'A.U.R.A.', o.aura)}</div>
+                <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>${o.close}</span><small>${o.closeNote}</small></button></div>
+            </section>`;
+        overlay.querySelector('.find-slot').replaceWith(view.el);
+        document.body.appendChild(overlay);
+        view.mount();
+        // it opens just after a card's choice: KEEP IT never lands under that click (a double click would put it away unread)
+        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.disc-doc-card'), overlay.querySelectorAll('.disc-doc-close'));
+        const openedAt = performance.now(), saidEl = overlay.querySelector('.find-said');
+        const say = () => { if (overlay.isConnected) { saidEl.style.visibility = ''; saidEl.classList.add('is-in'); } };
+        F.pace(view, overlay, NOTE_MS, isAtOnce => { if (isAtOnce) say(); else setTimeout(say, SAID_MS); });
+        if (app && app.state) app.state._hasSeenDisc = true;
+        overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
+        return new Promise(resolve => {
+            const close = () => { view.destroy(); overlay.remove(); resolve(); };
+            overlay.querySelector('.disc-doc-close').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay && performance.now() - openedAt > BACKDROP_GUARD_MS) close(); });
         });
     }
 

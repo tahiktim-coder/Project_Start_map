@@ -1597,6 +1597,8 @@ class App {
         this.state._countSceneSeen = true;
         const alive = who => this.state.crew.some(c => c.status !== 'DEAD' && c.name.includes(who));
         const names = [['Jaxon', 'Jaxon Mercer'], ['Aris', 'Aris Novak'], ['Vance', 'Kael Vance'], ['Mira', 'Mira Chen']].filter(([first]) => alive(first)).map(([, full]) => full);
+        const leader = this.state.crew.find(c => (c.tags || []).includes('LEADER'));
+        names.push((leader && leader.realName) || 'Cora Moon');          // she names the commander too, not "you": five names, "four crew"
         window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE', title: 'Head count',
             context: isNewScreen() ? 'Vance is frowning at the crew screen.' : 'Back on the bridge, Vance is frowning at the crew screen.',   // the new screen opens it in travel, off the bridge
@@ -1604,7 +1606,7 @@ class App {
                 { speaker: 'Vance', text: 'There are five of us on this ship. She keeps saying four.' },
                 { speaker: 'A.U.R.A.', text: 'Four crew, Commander. All well.' },
                 { speaker: 'Vance', text: 'Then list them.' },
-                { speaker: 'A.U.R.A.', text: `${names.join('. ')}. And you, Commander. Four crew.` },
+                { speaker: 'A.U.R.A.', text: `${names.join('. ')}. Four crew.` },
                 { speaker: 'Jaxon', text: 'It is a glitch. She slept sixty years too. Let it go.' },
             ],
             choices: [
@@ -5402,6 +5404,18 @@ Then you're through.`,
      */
     handleAnomalyTeleport(detail) {
         const { destination, type } = detail;
+        if (isNewScreen()) {                       // the new look: the choice's outcome card first, then a quiet fold, then the new place
+            const FOLD_PEAK_MS = 400, FOLD_MS = 1600;
+            const fold = () => {
+                const veil = document.createElement('div');
+                veil.className = 'ns-fold-veil' + (type === 'WRONG_PLACE' ? ' is-wrong' : '');
+                document.body.appendChild(veil);
+                setTimeout(() => { if (type === 'FOLD_SUCCESS') this.renderNav(); else { this.state.emitUpdates(); this.renderOrbit(); } }, FOLD_PEAK_MS);
+                setTimeout(() => veil.remove(), FOLD_MS);
+            };
+            if (window.EncounterCard && typeof window.EncounterCard.whenFree === 'function') window.EncounterCard.whenFree(fold); else fold();
+            return;
+        }
 
         // Create visual teleport effect
         const flash = document.createElement('div');

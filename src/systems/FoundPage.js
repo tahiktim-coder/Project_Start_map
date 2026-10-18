@@ -1,13 +1,16 @@
 /* FoundPage — a page found in a dead ship. Its lines appear one after another by themselves (a click on them shows the rest);
    every line's place is kept from the start, so nothing on the card moves while it fills.
    The pages in EXODUS_LOGS are the spine of the story (sector 5's find is the disc itself, shown by DiscDocument instead).
-   Each is drawn as the object it is (a cast plate, a printed page, a captain's log screen) on the left, with its lines on the
-   right, then one spoken line from whoever aboard would say something. open(app, page) shows it and resolves when it is put
-   away; the page stays in cargo (isKept) and can be read again from there. */
+   The new look (?new=1) shows the thing itself, big, with its words on it (src/newscreen/finds/Finds.js): the printed page
+   with its lines typed on the paper, the log screen typing them out, the plate with the names cast in; the crew's line comes
+   under it once the last line is in. The old look draws the object on the left with its lines on the right. Either way one
+   spoken line follows from whoever aboard would say something. open(app, page) shows it and resolves when it is put away;
+   the page stays in cargo (isKept) and can be read again from there. */
 
 (function () {
     'use strict';
     const SIZE = 300, TICK_MS = 100, LINE_MS = 1100;             // a new line about every second: read at the page's pace, not by button
+    const SAID_MS = 350;                                        // the new look: the crew's line a beat after the last line is in
     const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
     const dith = (x, y, v) => v * 16 > BAYER[(y & 3) * 4 + (x & 3)];
     const METAL = ['#0b0d10', '#2a2d2a', '#5c6058', '#8f8a7a', '#c4d0c4'], PAPER = ['#141108', '#5a4a2a', '#a08a5a', '#d8c8a0', '#f4ecd6'];
@@ -18,7 +21,7 @@
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
-    // ── the objects ──
+    // ── the objects (the old look) ──
     function shade(ctx, x, y, w, h, ramp, tone) {                 // a dithered flat of one tone from a ramp
         const level = Math.max(0, Math.min(ramp.length - 1.01, tone * (ramp.length - 1))), lo = Math.floor(level);
         for (let py = y; py < y + h; py++) for (let px = x; px < x + w; px++) { ctx.fillStyle = ramp[dith(px, py, level - lo) ? lo + 1 : lo]; ctx.fillRect(px, py, 1, 1); }
@@ -63,8 +66,33 @@
     const DRAW = { plate: drawPlate, paper: drawPaper, log: drawLog };
 
     // ── the card ──
+    /** Opens once a choice's outcome card (new look) has been read: the page never lands on top of it. */
     function open(app, page, foundIn) {
+        const EC = window.EncounterCard;
+        if (!EC || typeof EC.whenFree !== 'function') return openNow(app, page, foundIn);
+        return new Promise(resolve => EC.whenFree(() => openNow(app, page, foundIn).then(resolve, resolve)));
+    }
+    function openNow(app, page, foundIn) {
         if (!page || document.querySelector('.found-page')) return Promise.resolve();
+        const F = window.NSFinds;
+        return F && F.isOn() ? openThing(app, page, foundIn, F) : openCard(app, page, foundIn);
+    }
+    /** The spoken line after the page, unless its speaker is dead (the dead do not talk; A.U.R.A. always can). */
+    function afterOf(page, state) {
+        const isDead = !!(page.after && state && state.isSilentSpeaker && page.after.speaker !== 'A.U.R.A.' && state.isSilentSpeaker(`${page.after.speaker}: `));
+        return page.after && !isDead ? page.after : null;
+    }
+    /** KEEP IT, or a click beside the page once it has been up a moment, puts it away. */
+    function putAway(overlay, state, openedAt, onClose) {
+        return new Promise(resolve => {
+            const close = () => { if (onClose) onClose(); overlay.remove(); if (state && state.emitUpdates) state.emitUpdates(); resolve(); };
+            overlay.querySelector('.disc-doc-close').addEventListener('click', close);
+            overlay.addEventListener('click', e => { if (e.target === overlay && performance.now() - openedAt > BACKDROP_GUARD_MS) close(); });
+        });
+    }
+
+    /** The old look: the object drawn on the left, its lines on the right. */
+    function openCard(app, page, foundIn) {
         const state = app && app.state, shipName = foundIn || page.shipName || 'a dead ship';
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay disc-doc found-page';
@@ -84,11 +112,10 @@
             </section>`;
         document.body.appendChild(overlay);
         const openedAt = performance.now();
-        const items = [...overlay.querySelectorAll('.found-page-text li')], after = overlay.querySelector('.found-page-after');
-        const speakerIsDead = page.after && state && state.isSilentSpeaker && page.after.speaker !== 'A.U.R.A.' && state.isSilentSpeaker(`${page.after.speaker}: `);
-        const hasAfter = !!(page.after && !speakerIsDead);
-        if (hasAfter) after.innerHTML = `<b>${esc(page.after.speaker)}</b>${esc(page.after.text)}`;   // in place from the start: the card never grows
-        else after.remove();
+        const items = [...overlay.querySelectorAll('.found-page-text li')], afterEl = overlay.querySelector('.found-page-after');
+        const after = afterOf(page, state);
+        if (after) afterEl.innerHTML = `<b>${esc(after.speaker)}</b>${esc(after.text)}`;   // in place from the start: the card never grows
+        else afterEl.remove();
         // it opens just after a card's choice: KEEP IT never lands under that click (a double click would put it away unread)
         if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.found-page-card'), overlay.querySelectorAll('.disc-doc-close'));
         let shown = 0, isDone = false;
@@ -96,7 +123,7 @@
             if (shown < items.length) { const li = items[shown++]; li.style.visibility = ''; li.classList.add('is-in'); }
             if (shown < items.length || isDone) return;
             isDone = true;                                                                     // the spoken line, once, after the last line
-            if (hasAfter) { after.style.visibility = ''; if (state && state.addLog) state.addLog(`${page.after.speaker}: "${page.after.text}"`); }
+            if (after) { afterEl.style.visibility = ''; if (state && state.addLog) state.addLog(`${after.speaker}: "${after.text}"`); }
         };
         const showAll = () => { while (!isDone) reveal(); };
         const isReduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -111,11 +138,39 @@
             draw(ctx, page, 0);
         }
         overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
-        return new Promise(resolve => {
-            const close = () => { overlay.remove(); if (state && state.emitUpdates) state.emitUpdates(); resolve(); };
-            overlay.querySelector('.disc-doc-close').addEventListener('click', close);
-            overlay.addEventListener('click', e => { if (e.target === overlay && performance.now() - openedAt > BACKDROP_GUARD_MS) close(); });
-        });
+        return putAway(overlay, state, openedAt);
+    }
+
+    /** The new look: the thing itself, big, its words on it; the crew's line under it once the last line is in. */
+    function openThing(app, page, foundIn, F) {
+        const state = app && app.state, shipName = foundIn || page.shipName || 'a dead ship', after = afterOf(page, state);
+        const view = F.page(page, { shipName, lineMs: LINE_MS });
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay disc-doc found-page find-view';
+        overlay.style.zIndex = '4000';
+        overlay.innerHTML = `
+            <section class="modal-content deck-panel disc-doc-card found-page-card find-card is-${esc(page.kind)}" role="dialog" aria-label="${esc(page.name)}">
+                <header class="enc-head"><p class="enc-kicker">FOUND IN ${esc(shipName)} · ${KICKER[page.kind] || 'A PAGE'}</p><h3>${esc(page.logTitle)}</h3></header>
+                <div class="find-slot"></div>
+                ${after ? `<div class="enc-line find-said" aria-live="polite" style="visibility:hidden">${F.said(app, after.speaker, esc(after.text))}</div>` : ''}
+                <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>KEEP IT</span><small>it stays in your cargo</small></button></div>
+            </section>`;
+        overlay.querySelector('.find-slot').replaceWith(view.el);                              // every line in place from the start: the card never grows
+        document.body.appendChild(overlay);
+        view.mount();
+        const openedAt = performance.now(), saidEl = overlay.querySelector('.find-said');
+        // it opens just after a card's choice: KEEP IT never lands under that click (a double click would put it away unread)
+        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(overlay.querySelector('.found-page-card'), overlay.querySelectorAll('.disc-doc-close'));
+        let isSaid = false;
+        const say = () => {                                                                    // the spoken line, once, after the last line
+            if (isSaid || !after || !overlay.isConnected) return;
+            isSaid = true;
+            saidEl.style.visibility = ''; saidEl.classList.add('is-in');
+            if (state && state.addLog) state.addLog(`${after.speaker}: "${after.text}"`);
+        };
+        F.pace(view, overlay, LINE_MS, isAtOnce => { if (isAtOnce) say(); else setTimeout(say, SAID_MS); });   // a click on the words: the rest at once
+        overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
+        return putAway(overlay, state, openedAt, () => view.destroy());
     }
 
     window.FoundPage = { open };
