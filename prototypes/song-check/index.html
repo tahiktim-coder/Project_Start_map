@@ -85,11 +85,33 @@
     });
     stopBtn.addEventListener('click', () => { run++; stopSong(); buttons.forEach(b => b.classList.remove('is-on')); say('Stopped.'); });
 
+    /** The game in this frame keeps everything in memory only: it never sees or changes your real saved run, your sound
+        setting or your tips (same site, same browser storage otherwise). Runs first, before any of the game's own scripts. */
+    function isolate(muted) {
+        const memory = seed => {
+            const m = new Map(Object.entries(seed));
+            return { getItem: k => (m.has(String(k)) ? m.get(String(k)) : null), setItem: (k, v) => { m.set(String(k), String(v)); },
+                removeItem: k => { m.delete(String(k)); }, clear: () => { m.clear(); }, key: i => [...m.keys()][i] || null, get length() { return m.size; } };
+        };
+        Object.defineProperty(window, 'localStorage', { value: memory(muted ? { 'psm-muted': '1' } : {}), configurable: true });
+        Object.defineProperty(window, 'sessionStorage', { value: memory({ 'se-new-screen': '1' }), configurable: true });   // the new look
+    }
+    let gameHtml = null;
+    /** The game's page, with the storage guard and its own address for files put in front of everything else. */
+    async function gamePage(sound) {
+        const base = new URL(GAME, location.href);
+        if (!gameHtml) gameHtml = await (await fetch(base.href, { cache: 'no-store' })).text();
+        const guard = `<base href="${new URL('./', base).href}"><script>(${isolate.toString()})(${sound ? 'false' : 'true'});<\/script>`;
+        return gameHtml.replace(/<head[^>]*>/i, head => head + guard);
+    }
     /** A fresh game in the frame: muted unless "Game sounds too" is on. Resolves with its window once it has booted. */
     async function freshGame(id) {
         const sound = document.getElementById('sounds').checked;
+        const html = await gamePage(sound);
+        if (id !== run) throw new Error('replaced');
         const loaded = new Promise(resolve => frame.addEventListener('load', resolve, { once: true }));   // the new page, not the last one
-        frame.src = `${GAME}?new=1${sound ? '' : '&mute=1'}&songcheck=${Date.now()}`;
+        frame.removeAttribute('src');
+        frame.srcdoc = html;
         await loaded;
         if (id !== run) throw new Error('replaced');
         await until(() => frame.contentWindow && frame.contentWindow.app && frame.contentWindow.NewScreen, 20000, 'The game');
