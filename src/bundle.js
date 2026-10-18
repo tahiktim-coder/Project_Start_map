@@ -168,6 +168,7 @@ class GameState {
         this._breachDone = false;  // sector 1's hole in the hull (Breach) happens once per run
         this._paidWarps = 0;       // warps to a new place (free courses too), so the breach never comes on the first one
         this._wreckDoors = [];     // the doors of the wrecks boarded this run, in order (App.wreckDoorFor, TorchDoors.pick)
+        this._kindsScanned = [];   // the new look: the kinds of world scanned this run (the first of each kind is +1 data, App.noteNewKind)
 
         // --- Legacy aliases for systems that still reference old names ---
         // TODO: Remove these once all systems are updated
@@ -302,6 +303,7 @@ class GameState {
             // The journey (lost on reload before: the one callback the game had, and the lists that stop stories repeating)
             _boardedHulls: this._boardedHulls || [],
             _wreckDoors: this._wreckDoors || [],
+            _kindsScanned: this._kindsScanned || [],
             _standing: this._standing || null,
             _countSceneSeen: !!this._countSceneSeen,
             _tutorialWarpSeen: !!this._tutorialWarpSeen,   // A.U.R.A.'s first-time lines are said once per run, not once per load
@@ -386,6 +388,7 @@ class GameState {
             this.hasDisc = !!saveData.hasDisc;
             this._boardedHulls = saveData._boardedHulls || [];
             this._wreckDoors = Array.isArray(saveData._wreckDoors) ? saveData._wreckDoors : this._boardedHulls.map(() => 'cut');   // older saves: every hatch was cut
+            this._kindsScanned = Array.isArray(saveData._kindsScanned) ? saveData._kindsScanned : [];
             this._standing = saveData._standing || null;
             this._countSceneSeen = !!saveData._countSceneSeen;
             this._tutorialWarpSeen = !!saveData._tutorialWarpSeen;
@@ -522,14 +525,15 @@ class GameState {
     }
 
     /**
-     * Add colony knowledge (data from failed colonies).
-     * Shows A.U.R.A. comment when thresholds are reached.
+     * Add colony knowledge: "data", what the crew learned on the way (every gain comes through here). In the new look A.U.R.A.
+     * says so at 1, 3 and 5 (the default game keeps its log as it was). later: a card's own effect is still running (gainData):
+     * the screen is updated when it is over, as before, so no stress or loss check runs in the middle of it.
      */
-    addColonyKnowledge(amount, silent = false) {
+    addColonyKnowledge(amount, silent = false, later = false) {
         const prev = this._colonyKnowledge || 0;
         this._colonyKnowledge = prev + amount;
 
-        if (!silent) {
+        if (!silent && isNewScreen()) {
             // A.U.R.A. comments at key thresholds
             if (prev < 1 && this._colonyKnowledge >= 1) {
                 this.addLog('A.U.R.A.: "Filed, Commander. Everything we learn here goes toward the world we settle."');
@@ -540,7 +544,28 @@ class GameState {
             }
         }
 
-        this.emitUpdates();
+        if (!later) this.emitUpdates();
+    }
+
+    /** A card's data, from inside its effect (the data files): counted as above, the screen updated when the effect is over. */
+    gainData(amount) {
+        this.addColonyKnowledge(amount, false, true);
+    }
+
+    /**
+     * The new look: a hint names the sector's story world while it is still a faint contact (a card's map, a beacon's log): it
+     * gets its name and can be reached, as when a dated wreck points at it (App.revealStoryPlanet). lineOf(name) says where
+     * the hint came from. Returns the story world, or null when there was nothing hidden to name (and always in the default
+     * game, where a card's map leaves the faint contact as it was).
+     */
+    revealStoryWorld(lineOf) {
+        if (!isNewScreen()) return null;
+        const story = (this.sectorNodes || []).find(p => p.storyHidden);
+        if (!story) return null;
+        story.storyHidden = false;
+        story.nsSaid = true;                                                       // named here: travel does not name it again (Travel.js)
+        this.addLog(typeof lineOf === 'function' ? lineOf(story.name) : `${story.name} is on the map now. One of our ships is there.`);
+        return story;
     }
 
     consumeEnergy(amount) {
@@ -3695,6 +3720,19 @@ Then you're through.`,
         });
     }
 
+    /** The new look: the first scan of each kind of world this run (from the bridge, or from travel for 2 energy) adds 1 data,
+        what the colony will know. Returns A.U.R.A.'s "a new kind of world" line for the scan to say (null: a kind seen before).
+        Her line on a data milestone (GameState.addColonyKnowledge) follows it. */
+    noteNewKind(planet) {
+        if (!isNewScreen() || !planet || !planet.type || planet.isStructure || planet._isWrongPlace || planet.ghost || planet.isStation || planet.isAsteroidField) return null;
+        const kinds = this.state._kindsScanned = this.state._kindsScanned || [];
+        if (kinds.includes(planet.type)) return null;
+        this.state._kindsScanned = kinds.concat(planet.type);
+        this.state.addColonyKnowledge(1);
+        const line = window.AuraSystem && typeof window.AuraSystem.line === 'function' ? window.AuraSystem.line('FIRST_LANDING') : null;
+        return line || 'A new kind of world, Commander. I will record everything.';
+    }
+
     handleScanAction(isManual = false) {
         const planet = this.state.currentSystem;
 
@@ -3721,10 +3759,10 @@ Then you're through.`,
             return;
         }
 
-        // Tune the signal first; we re-enter here with the result (same pattern as the warp plot)
-        if (isManual && window.SignalTune && !this._tuneResult && planet && !planet.scanned) {
-            const effects = isNewScreen() && window.NSScan ? window.NSScan.LOCK : null;   // the new look: what each lock means now (Scan.js)
-            window.SignalTune.play({ targetName: planet.name, sector: this.state.currentSector, effects }).then(result => {
+        // Tune the signal first; we re-enter here with the result (same pattern as the warp plot). The new look scans in one
+        // click: the bridge's sweep, then what is down there shows as marks on the world (src/newscreen/WorldFinds.js)
+        if (isManual && !isNewScreen() && window.SignalTune && !this._tuneResult && planet && !planet.scanned) {
+            window.SignalTune.play({ targetName: planet.name, sector: this.state.currentSector, effects: null }).then(result => {
                 this._tuneResult = result;
                 this.handleScanAction(true);
             });
@@ -3740,7 +3778,7 @@ Then you're through.`,
         if (tune && tune.grade === 'sharp' && !this.state.isDeckOperational('lab')) {
             this.state.addLog("Sharp lock, but the laboratory is down: nobody can work the extra detail into data.");
         } else if (tune && tune.grade === 'sharp') {
-            this.state.addColonyKnowledge(1, true);
+            this.state.addColonyKnowledge(1);
             this.state.addLog(isNew ? "The scan picked up extra detail. +1 data." : "Sharp lock: the scan picked up extra detail. +1 data.");
         } else if (tune && tune.grade === 'weak' && !isNew) {
             this.state.energy = Math.max(0, this.state.energy - 1);
@@ -3802,8 +3840,8 @@ Then you're through.`,
             window.BarkSystem.tryBark('AFTER_SCAN', this.state, { planet });
         }
 
-        // A.U.R.A. scan commentary
-        if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+        // A.U.R.A. scan commentary (the new look: she says one line herself once the marks are on the world, NSScan.deep)
+        if (!isNew && typeof AuraSystem !== 'undefined' && window.AuraSystem) {
             window.AuraSystem.tryComment('SCAN_COMPLETE', this.state);
 
             // Additional commentary for high-viability colony sites
@@ -3823,8 +3861,9 @@ Then you're through.`,
         }
 
         this.orbitView.updateCommandDeck(this.state.currentSystem);
+        const newKind = isNew ? this.noteNewKind(planet) : null;           // the new look: the first scan of each kind of world is +1 data
         this.renderOrbit();
-        if (isNew && window.NSScan) window.NSScan.deep(this, planet);   // the new look: A.U.R.A. says what the lock read (last, so it is said first)
+        if (isNew && window.NSScan) window.NSScan.deep(this, planet, newKind);   // the new look: A.U.R.A. says what the scan read (last, so it is said first)
 
         // Check for distress signals after scan (small chance) - use queue; never in the last sector (docs/CANON.md §9)
         if (typeof rollDistressSignal !== 'undefined' && this.state.currentSector < FINAL_SECTOR) {
@@ -4043,6 +4082,8 @@ Then you're through.`,
 
     handleEvaAction() {
         const planet = this.state.currentSystem;
+        const find = isNewScreen() ? this._nsFind || null : null;   // the new look: the find the team goes to (src/newscreen/WorldFinds.js); none: a blind trip
+        this._nsFind = null;
 
         // THE STRUCTURE — Cannot EVA on this cosmic entity
         if (planet && (planet.isStructure || planet.type === 'STRUCTURE')) {
@@ -4090,7 +4131,8 @@ Then you're through.`,
         // A team trip costs no energy (docs/ECONOMY.md). OBSESSED (Mira at stress 3) keeps the team out a full day, which costs a ration.
         const isObsessed = this.state.hasActiveTrait('OBSESSED');
         const siteHere = this.siteOf(planet);
-        const site = isNewScreen() && siteHere && siteHere.tag === 'ANOMALY' ? null : siteHere;   // the new screen: the ship flies to the strange site itself ("Fly closer")
+        const siteNow = isNewScreen() && siteHere && siteHere.tag === 'ANOMALY' ? null : siteHere;   // the new screen: the ship flies to the strange site itself ("Fly closer")
+        const site = find && find.kind !== 'site' ? null : siteNow;                  // the new look: another find chosen, the site waits for a trip of its own
         const isSiteTrip = !!(site && !planet[site.done]);
 
         // Bark: crew reacts before EVA
@@ -4125,12 +4167,18 @@ Then you're through.`,
             c._tripsDown = (c._tripsDown || 0) + 1;
             if (planet.isEden || planet.type === 'EDEN') c._walkedEden = true;
         });
+        if (isNewScreen()) {                                                         // the new look: this find is visited (a blind trip: the site, else the world's own event)
+            if (window.NSWorldFinds) window.NSWorldFinds.keepOld(this, planet);      //   (a save from before finds: its one trip stays counted)
+            planet.nsTrips = (planet.nsTrips || 0) + 1;                              //   and the trip has really gone (NSOrbit.send reads it)
+            if (window.NSWorldFinds) window.NSWorldFinds.markDone(planet, find ? find.id : isSiteTrip ? 'site' : 'kind');
+        }
 
         // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
         const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
         if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
         const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
-        const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: isSiteTrip ? site.art : null, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
+        const siteArt = isSiteTrip ? site.art : (find && find.art) || null;          // a find of its own (old ruins, a beacon) is drawn by the mark too
+        const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
             : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
         const landed = goDown.then(landing => this.applyLanding(landing, evaTeam));
         const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam)) : landed;   // the new screen: the crisis aboard while they are down
@@ -4150,8 +4198,9 @@ Then you're through.`,
             return;
         }
 
-        // 2. Select Event
-        const selectedEvent = this.landingEventOf(planet);
+        // 2. Select Event (the new look: the chosen find's own event)
+        const chosen = find && find.event ? EVENTS.find(e => e.id === find.event) : null;
+        const selectedEvent = chosen || this.landingEventOf(planet);
 
         planet.hasEva = true;
         this.orbitView.updateCommandDeck(planet);
@@ -4162,9 +4211,14 @@ Then you're through.`,
         fallback only when none does. The new look keeps the first pick on the world (planet.nsEvent, saved with the map), so
         what a scan said the world gives (src/newscreen/Scan.js) is what the team finds. The default game picks afresh. */
     landingEventOf(planet) {
-        const kept = isNewScreen() && planet.nsEvent ? EVENTS.find(e => e.id === planet.nsEvent) : null;
+        const isNew = isNewScreen();
+        const kept = isNew && planet.nsEvent ? EVENTS.find(e => e.id === planet.nsEvent) : null;
         if (kept) return kept;
-        let potentialEvents = EVENTS.filter(e => e.trigger(planet));
+        const own = isNew ? this.kindEventOf(planet) : null;                        // the new look: the world's own event first (Events.js KIND_EVENTS)
+        if (own) { planet.nsEvent = own.id; return own; }
+        const FEATURE_TAGS = ['ANCIENT_RUINS', 'ALIEN_SIGNALS', 'FAILED_COLONY'];      // the new look: each of these is a find of its own (WorldFinds.js)
+        const probe = isNew ? Object.assign({}, planet, { tags: (planet.tags || []).filter(t => !FEATURE_TAGS.includes(t)) }) : planet;
+        let potentialEvents = EVENTS.filter(e => e.trigger(probe));
         if (potentialEvents.length === 0) potentialEvents = [EVENTS[EVENTS.length - 1]];
         const specificEvents = potentialEvents.filter(e => e.id !== 'DISTRESS_BEACON');   // prefer type-specific events over the generic fallback
         const picked = specificEvents.length > 0
@@ -4172,6 +4226,33 @@ Then you're through.`,
             : potentialEvents[potentialEvents.length - 1];
         if (isNewScreen()) planet.nsEvent = picked.id;
         return picked;
+    }
+
+    /** The new look: one of this world's own landing events (Events.js KIND_EVENTS) whose trigger holds, chosen by the world's
+        id, so the same world always offers the same one; null when its type has none. */
+    kindEventOf(planet) {
+        const ids = (typeof KIND_EVENTS !== 'undefined' && planet && KIND_EVENTS[planet.type]) || [];
+        const holds = e => { try { return !!e.trigger(planet); } catch (err) { return false; } };
+        const fits = ids.map(id => EVENTS.find(e => e.id === id)).filter(e => e && holds(e));
+        if (!fits.length) return null;
+        let h = 2166136261; const s = String(planet.id);
+        for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+        return fits[(h >>> 0) % fits.length];
+    }
+
+    /** How likely it is that someone is hurt on a plain landing here, going in (before the choice on the card): the world
+        (planetRisk), the bridge's scan (scanRiskMod), how the landing went (opts.landing) and Mira's ground scan from aboard
+        (opts.mira, -10 when she stays aboard and well). Held to 0..50, with each part as a line for the card. The trip card
+        starts from it (showEventModal) and the new look's marks show it (WorldFinds.js): one number for both. */
+    tripRisk(planet, opts = {}) {
+        const world = this.planetRisk(planet), mods = world.mods.slice();
+        let risk = world.risk;
+        const add = (type, mod, color) => { risk += mod; mods.push({ type, mod, color }); };
+        if (opts.landing) add(opts.landing < 0 ? 'SOFT LANDING' : 'HARD LANDING', opts.landing, opts.landing < 0 ? '#74d99a' : '#d85a4e');
+        if (opts.mira && isNewScreen()) add('MIRA SCANNED IT', opts.mira, '#74d99a');   // the new screen: Mira stayed aboard and scanned the ground
+        const scanMod = isNewScreen() ? this.scanRiskMod(planet) : 0;                     // the new look: the bridge's scan, or no scan at all
+        if (scanMod) add(scanMod > 0 ? 'NOT SCANNED' : planet.nsLock === 'sharp' ? 'SHARP SCAN' : 'SCANNED', scanMod, scanMod < 0 ? '#74d99a' : '#d9a24a');
+        return { risk: Math.max(0, Math.min(50, risk)), mods };
     }
 
     /** Why A.U.R.A. marks no landing spot here (LanderGame's opts.unmarked): never in the default game; in the new look
@@ -4235,30 +4316,13 @@ Then you're through.`,
         modal.className = 'modal-overlay';
         modal.style.zIndex = '2000';
 
-        // === SIGNAL TYPE RISK MODIFIERS === (the world's own: planetRisk)
-        const fromWorld = this.planetRisk(planet);
-        let riskBase = fromWorld.risk;
-        let signalModifiers = fromWorld.mods;
-
-        // How the landing went (LanderGame) carries into the trip
-        if (this._landingRiskMod) {
-            riskBase += this._landingRiskMod;
-            signalModifiers.push({ type: this._landingRiskMod < 0 ? 'SOFT LANDING' : 'HARD LANDING', mod: this._landingRiskMod, color: this._landingRiskMod < 0 ? '#74d99a' : '#d85a4e' });
-            this._landingRiskMod = 0;
-        }
-        if (this._nsScanMod && isNewScreen()) {                                            // the new screen: Mira stayed aboard and scanned the ground
-            riskBase += this._nsScanMod;
-            signalModifiers.push({ type: 'MIRA SCANNED IT', mod: this._nsScanMod, color: '#74d99a' });
-            this._nsScanMod = 0;
-        }
-        const scanMod = isNewScreen() ? this.scanRiskMod(planet) : 0;                       // the new look: how well the bridge's scan read the ground, or no scan at all
-        if (scanMod) {
-            riskBase += scanMod;
-            signalModifiers.push({ type: scanMod > 0 ? 'NOT SCANNED' : planet.nsLock === 'sharp' ? 'SHARP SCAN' : 'SCANNED', mod: scanMod, color: scanMod < 0 ? '#74d99a' : '#d9a24a' });
-        }
-
-        // Clamp risk base to reasonable range
-        riskBase = Math.max(0, Math.min(50, riskBase));
+        // === SIGNAL TYPE RISK MODIFIERS === the world's own, how the landing went (LanderGame), Mira's ground scan from aboard,
+        // the bridge's scan: App.tripRisk, the same number the new look's mark on the world showed (held to 0..50)
+        const goingIn = this.tripRisk(planet, { landing: this._landingRiskMod, mira: this._nsScanMod });
+        this._landingRiskMod = 0;
+        if (isNewScreen()) this._nsScanMod = 0;
+        const riskBase = goingIn.risk;
+        const signalModifiers = goingIn.mods;
 
         // Stress trait checks
         const isParanoid = this.state.hasActiveTrait('PARANOID');
@@ -4284,6 +4348,7 @@ Then you're through.`,
         const rewardWords = (choice) => {
             const r = choice.reward || {};
             if (r.type === 'ITEM') return `an item${r.tags && r.tags.length ? ' · ' + String(r.tags[0]).toLowerCase() : ''}`;
+            if (r.type === 'DATA') return `+${r.val || 1} data`;
             const isEnergy = r.type === 'RESOURCE' && r.val !== 'NOTHING' && !String(r.val || '').includes('METALS');   // resolveEvaOutcome's own rule
             return isEnergy ? energyWords : REWARD_WORDS[r.val] || 'nothing';
         };
@@ -4320,9 +4385,17 @@ Then you're through.`,
         // it opens just after a click (the landing, the breach): no choice lands under it, so a second click picks nothing unread
         if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(modal.querySelector('.eva-panel'), modal.querySelectorAll('.choice-btn'));
 
+        let isPicked = false;
         modal.querySelectorAll('.choice-btn:not([disabled])').forEach(btn => {
             btn.addEventListener('click', () => {
+                if (isPicked) return;
+                isPicked = true;
                 const choice = event.choices[btn.dataset.idx];
+                const EC = window.EncounterCard;
+                if (isNewScreen() && EC && typeof EC.outcomeIn === 'function') {             // the new look: what happened shows in the card, then CONTINUE
+                    EC.outcomeIn(this, modal.querySelector('.eva-panel'), choice.text, () => this.resolveEvaOutcome(choice, riskBase), () => modal.remove());
+                    return;
+                }
                 this.resolveEvaOutcome(choice, riskBase);
                 modal.remove();
             });
@@ -4512,6 +4585,10 @@ Then you're through.`,
                 this.state.energy = Math.min(100, this.state.energy + amount);
                 logMsg += got ? `Siphoned ${got} Energy.` : 'Energy was already full.';
             }
+        } else if (choice.reward.type === 'DATA') {                                   // what the team learned (the new look's old ruins): the colony's knowledge
+            const learned = Number(choice.reward.val) || 1;
+            this.state.gainData(learned);                                              // the screen is updated at the end, with the rest
+            logMsg += `+${learned} Data.`;
         } else if (choice.reward.type === 'ITEM') {
             const item = this.getProbeItem(this.state.currentSystem);
             this.state.cargo.push(item);
@@ -5097,7 +5174,7 @@ Then you're through.`,
         try {
             const viability = EndingSystem.getPlanetViability(planet, this.state);
             const known = isNewScreen() ? (planet.scanned ? 'deep' : planet.remoteScanned ? 'far' : 'none') : null;
-            return window.buildSettleCouncil(this.state, planet, { viability, isRepeat: !!planet._settleCouncilHeard, known });
+            return window.buildSettleCouncil(this.state, planet, { viability, isRepeat: !!planet._settleCouncilHeard, known, withData: isNewScreen() });   // the new look: what our data buys the colony
         } catch (e) {
             console.error('Settle council could not be built; A.U.R.A. asks alone', e);
             return {

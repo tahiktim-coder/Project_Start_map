@@ -47,11 +47,12 @@ const SPACE_STATION_ENCOUNTERS = [
                 desc: "-10 Energy. +2 Data. 40% chance: all planets revealed.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog("A.U.R.A.: 'Six drones are surveying the sector for us, Commander.'");
                     if (Math.random() < 0.4) {
                         state.sectorNodes?.forEach(p => p.remoteScanned = true);
                         state.addLog("The drone survey is finished. Every planet in the sector is on the map.");
+                        state.revealStoryWorld(name => `The drones also found one of our ships, on ${name}.`);   // the new look: the faint contact is named too
                     }
                     state.noteStanding && state.noteStanding('mira');
                     return "Drones handed to A.U.R.A. -10 Energy, +2 Data.";
@@ -106,7 +107,7 @@ const SPACE_STATION_ENCOUNTERS = [
                             return `Database copied. -5 Energy. Found: ${item.name}`;
                         }
                     }
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    state.gainData(3);
                     return "Drives copied. -5 Energy, +3 Data.";
                 }
             },
@@ -185,7 +186,7 @@ const SPACE_STATION_ENCOUNTERS = [
                 desc: "-1 Ration: a day spent here. +1 Data. Jaxon -1 Stress, Aris -1 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
@@ -201,7 +202,7 @@ const SPACE_STATION_ENCOUNTERS = [
                 text: "Play the comm array",
                 desc: "+2 Data. All crew +1 Stress.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
@@ -253,6 +254,7 @@ const SPACE_STATION_ENCOUNTERS = [
                         if (!p.remoteScanned) p.remoteScanned = true;
                     });
                     state.addLog("To aim the beam, it had to map everything nearby. Every planet in the sector is plotted.");
+                    state.revealStoryWorld(name => `Its map also shows one of our ships, on ${name}.`);   // the new look: the faint contact is named too
                     return "Aiming data copied. Every planet is on the map. -5 Energy.";
                 }
             },
@@ -261,7 +263,7 @@ const SPACE_STATION_ENCOUNTERS = [
                 desc: "-10 Energy. +2 Data. Vance +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
                     if (vance) state.addLog("Vance adds our hull number to the message, so Earth knows we heard it too.");
@@ -342,13 +344,14 @@ const SPACE_STATION_ENCOUNTERS = [
                 desc: "-1 Ration: a day reading. +3 Data. All planets revealed. Vance +1 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    state.gainData(3);
                     state.sectorNodes?.forEach(p => {
                         if (!p.remoteScanned) p.remoteScanned = true;
                     });
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
                     state.addLog("LEDGER: hull number, where it was found, what was taken. The deeper they went, the higher the numbers, and the older the wrecks.");
+                    state.revealStoryWorld(name => `The ledger also lists one of our ships, on ${name}.`);   // the new look: the faint contact is named too
                     if (vance) state.addLog("Vance: \"Thousands of ships, and we were told eight. Someone lied to all of them.\"");
                     return "Ledger read. It shows where every wreck they found lies. -1 Ration, +3 Data. Vance +1 Stress.";
                 }
@@ -405,7 +408,7 @@ const SPACE_STATION_ENCOUNTERS = [
                 desc: "-5 Energy. +2 Data.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog("Not one scratch on the whole station. A.U.R.A. confirms every measurement matches the plan exactly.");
                     return "Measured and logged. Every measurement is correct, and nothing has been used. -5 Energy, +2 Data.";
                 }

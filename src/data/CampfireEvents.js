@@ -78,7 +78,7 @@ const CAMPFIRE_EVENTS = [
                 text: "Read its memory.",
                 desc: "+1 Data. 30% chance of -15 Energy.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     if (Math.random() < 0.3) {
                         state.energy = Math.max(0, state.energy - 15);
                         return "The beacon shorted out while A.U.R.A. was reading it. +1 Data. -15 Energy.";
@@ -163,7 +163,7 @@ const CAMPFIRE_EVENTS = [
                 text: "Let Aris write it down.",
                 desc: "+2 Data. Nobody's stress goes down.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     return "Three accounts: the same room, the same light. Aris files them as evidence. +2 Data.";
                 }
             }
@@ -275,7 +275,7 @@ const CAMPFIRE_EVENTS = [
                 desc: "+1 Data. Mira +1 Stress: she didn't want A.U.R.A. questioned.",
                 effect: (state) => {
                     state._auraEthicsAsked = true;
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.noteStanding && state.noteStanding('vance');
                     const mira = state.crew.find(c => c.name.includes('Mira') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
@@ -361,7 +361,7 @@ const CAMPFIRE_EVENTS = [
                 text: "Record everything Mira saw.",
                 desc: "+3 Data. Mira +1 Stress: she has to watch it again.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    state.gainData(3);
                     const mira = state.crew.find(c => c.name.includes('Mira') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
                     return "Mira replays the footage nine times. A.U.R.A. files it under stars. +3 Data. Mira +1 Stress.";
@@ -410,7 +410,7 @@ const CAMPFIRE_EVENTS = [
                 text: "All power to the sensors.",
                 desc: "+5 Data. The injured stay injured.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 5;
+                    state.gainData(5);
                     return "Every beacon is logged by ship number. +5 Data.";
                 }
             },
@@ -419,7 +419,7 @@ const CAMPFIRE_EVENTS = [
                 desc: "+2 Data. Heals one injured crew member. -5 Energy.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const injured = state.crew.find(c => c.status === 'INJURED');
                     if (injured) {
                         injured.status = 'HEALTHY';

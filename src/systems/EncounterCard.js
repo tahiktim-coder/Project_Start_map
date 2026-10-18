@@ -310,6 +310,38 @@
         return out.length > OUT_MAX ? out.slice(0, OUT_MAX - 1).concat(out[out.length - 1]) : out;
     }
 
+    const ALARM = /^(?:⚠\s*)?(?:WARNING|INCIDENT|CRITICAL|CATASTROPHE|FATAL|KIA|PREDATOR ALERT):\s*/i;   // the team card's result lines: the alarm word goes, the news stays
+    /**
+     * The new look, for a panel that is not an EncounterCard (the team-on-the-ground card, bundle.js showEventModal): runs the
+     * choice (run), then shows what it did in place of the panel's choices, in showOutcome's look, then CONTINUE (done: close
+     * the panel). Nothing else opens meanwhile. With nothing to show, or the panel gone, it closes at once.
+     */
+    function outcomeIn(app, panel, picked, run, done) {
+        gate.held += 1;
+        let said = [];
+        try { said = captureLog(run); } catch (err) { console.error('EncounterCard: the choice failed', err); }
+        const lines = outcomeLines(said.map(m => String(m || '').replace(ALARM, '').replace(/^\w/, c => c.toUpperCase())));
+        let isDone = false;
+        const finish = () => { if (isDone) return; isDone = true; try { done(); } catch (err) { console.error('EncounterCard: closing the panel failed', err); } releaseGate(); };
+        if (!lines.length || !panel || !panel.isConnected) { finish(); return; }
+        const pick = String(picked || '').replace(/<[^>]*>/g, '').replace(MARKUP, '');
+        [...panel.children].forEach(el => { if (!el.matches('header, .eva-team, .eva-found')) el.style.display = 'none'; });   // the choices give way to what happened
+        const box = document.createElement('div');
+        box.className = 'enc-decide eva-outcome';
+        box.innerHTML = `
+            <div class="enc-outcome" aria-live="polite">
+                <p class="enc-outcome-pick">${esc(pick)}</p>
+                ${lines.map(l => (l.speaker ? `<div class="enc-line enc-outcome-say is-in">${lineHtml(app, { speaker: l.speaker, text: markRewards(esc(l.text)) })}</div>` : `<p class="enc-outcome-line">${markRewards(esc(l.text))}</p>`)).join('')}
+            </div>
+            <footer class="enc-flow enc-outcome-flow"><button class="enc-next enc-outcome-go" type="button">CONTINUE ›</button></footer>`;
+        panel.appendChild(box);
+        const go = box.querySelector('.enc-outcome-go'), guard = window.ChoiceGuard;
+        if (guard && typeof guard.keepOffClick === 'function') guard.keepOffClick(panel, [go]);   // the click that chose never lands on CONTINUE
+        go.addEventListener('click', finish);
+        box.tabIndex = -1;
+        box.focus({ preventScroll: true });
+    }
+
     /**
      * @param {object} cfg { tone | color, kicker, title, facts:[[label, value]], context, dialogue:[{speaker, text}],
      *                       choices:[{text, desc, descNow(state), disabled, requires, requiresLabel}], onPick(idx), hasSignal, art, zIndex }
@@ -493,5 +525,5 @@
         return modal;
     }
 
-    window.EncounterCard = { open, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, capturing: () => capturing > 0 };
+    window.EncounterCard = { open, outcomeIn, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, capturing: () => capturing > 0 };
 })();

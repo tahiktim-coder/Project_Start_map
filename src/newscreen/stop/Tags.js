@@ -11,7 +11,8 @@
    window.NSTags (frozen)
      make(layer, kind) → tag
        tag.el, tag.kind, tag.w, tag.h      the element; its size in bridge px (after size())
-       tag.set({ label, chips: [{ icon, text, tone }], name, why, line, loss, html, tone, cls }) → bool (changed)
+       tag.set({ label, chips: [{ icon, text, tone }], rows: [[chip]], name, why, line, loss, html, tone, cls }) → bool (changed)
+                                                     a chip's tone 'kind' is the world's kind line (a quiet sentence)
        tag.size(unit, maxArt?) → [w, h]   bridge px, the content measured at unit CSS px per bridge px (cached)
        tag.place(cssX, cssY), tag.show(on), tag.flag(cls, on), tag.type(now, still)
      PAD                                   { kind: [left, top, right, bottom] } bridge px round the words
@@ -36,7 +37,9 @@
         const st = document.createElement('style');
         st.id = 'ns-tags-style';
         st.textContent = `#ns-stop-words { --fs-tag: calc(14px + 2px * var(--t, 1)); --fs-chip: calc(12px + 1px * var(--t, 1)); --fs-tname: calc(13px + 2px * var(--t, 1));
-    --fs-why: calc(12px + 1px * var(--t, 1)); --fs-note: calc(14px + 2px * var(--t, 1)); --amber: #f0a050; --amber-br: #ffd8a0; --amber-dim: #a66a32; --cool: #a9b6bc; }
+    --fs-why: calc(12px + 1px * var(--t, 1)); --fs-note: calc(14px + 2px * var(--t, 1)); --fs-kind: calc(14px + 1px * var(--t, 1)); --amber: #f0a050; --amber-br: #ffd8a0; --amber-dim: #a66a32; --cool: #a9b6bc; }
+#ns-stop-words .tg-c.is-kind { font: 400 var(--fs-kind)/1.25 var(--f-text); letter-spacing: .01em; color: #c6cdd0; }
+#ns-stop-words .tg-c.is-done { color: #7d8a90; }
 #ns-stop-words .tg { position: absolute; left: 0; top: 0; box-sizing: border-box; margin: 0; opacity: 0; white-space: nowrap; pointer-events: none;
     transition: opacity 180ms steps(3, end); text-shadow: 0 1px 0 #05070a; }
 #ns-stop-words .tg.on { opacity: 1; }

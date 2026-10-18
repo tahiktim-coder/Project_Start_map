@@ -20,16 +20,19 @@
      debugState()   → { sector, mode, at, hover, lock, flight, modes, feel: { trauma, off, push, plume } }
    }
    Uses:    NewScreen.{ register, bus, anchors, clock, game.{ sector, energy, broken, route }, flow.{ click, canGo, refuse, go,
-            arrive }, blocked, isShown, app, mods.tower.{ occupied, beat } (optional) }; if present, window.Juice (the shake)
+            arrive, scanOffer, scan, findNote }, blocked, isShown, app, mods.tower.{ occupied, beat } (optional) }; window.NSWorldFinds.kind
+            (the kind line); if present, window.Juice (the shake)
             and window.NSTower.{ jolt, speed } (the tower feels the go, the landing and the speed)
    Listens: 'shown' { sector, first, from } · 'hidden' · 'hud' · 'refresh' · 'jump:burn'
    The hover note goes on a click and stays away until the pointer really moves (a refusal is then seen at once); in a
    flight what is under a still pointer is worked out again every frame. The jump's white-gold flash washes the whole
    screen, the tower too (a div over both canvases, warm steps down to the corridor's dark).
-   The long-range scan (Scan.js through flow.scanOffer, scan, facts): a landable world ahead that no scan has read has
-   "Scan" and its cost under its note's words; the note stays up while the pointer crosses to it, a click on the word (not
-   the world) scans it ("Scanning" a moment), and from then on the note shows two short lines of tags. A.U.R.A. explains
-   it once a run, the first time the word has been seen a moment (the voice's once(), kept through the note).
+   Under a world's name its note says what kind of world it is (WorldFinds.js kind: "A singing world. One low note comes off
+   it."); our wrecks and the story world keep their own lines. The long-range scan (Scan.js through flow.scanOffer, scan,
+   findNote): a landable world ahead that no scan has read has "Scan" and its cost under its note's words; the note stays up
+   while the pointer crosses to it, a click on the word (not the world) scans it ("Scanning" a moment), and from then on the
+   note names its finds (the places a team can go there, a clue marked) and whether people could live there. A.U.R.A.
+   explains it once a run, the first time the word has been seen a moment (the voice's once(), kept through the note).
    Emits:   'opening:done' (4.2 s after a sector's first show; at once on a show that is not the first) · 'jump:flash'
             (2.65 s after the burn) · 'note' { up } (the hover note shows or goes: the voice waits)
    Registers anchors (CSS px): 'ship', 'light', 'place:<node id>'.
@@ -272,12 +275,12 @@
     }
 
     // ═══ 4. words: the note when pointing (a name and one line), the sector title ═══
-    const TYPE_WORDS = { ROCKY: 'A rocky world', GAS_GIANT: 'A gas giant', ICE_WORLD: 'An ice world', OCEANIC: 'An ocean world', DESERT: 'A desert world', VOLCANIC: 'A world of volcanoes',
-        TOXIC: 'A world with poison air', VITAL: 'A world with life on it', BIO_MASS: 'A living world', MECHA: 'A world of old war machines', SHATTERED: 'A broken world',
-        TERRAFORMED: 'A world someone made for us', CRYSTALLINE: 'A world of crystal', ROGUE: 'A world with no sun', TIDALLY_LOCKED: 'One side burns, one side freezes',
-        HOLLOW: 'A hollow world', SYMBIOTE_WORLD: 'A living world', MIRROR: 'A world like a mirror', GRAVEYARD: 'A world made of dead ships', SINGING: 'A world sending one note',
-        STORM_WORLD: 'A world of storms', FUNGAL: 'A world of fungus', TOMB_WORLD: 'A world of dead cities', EDEN: 'A green world', MACHINE_WORLD: 'A world of machines',
-        FROZEN_OCEAN: 'A frozen ocean', SULFUR: 'A sulphur world', CARBON: 'A carbon world', RADIATION_BELT: 'A world in deadly radiation', GHOST_WORLD: 'A world the scanner cannot hold' };
+    /** What kind of world it is, in one plain line (WorldFinds.js: "A singing world. One low note comes off it."). */
+    function kindLine(nd) {
+        const K = window.NSWorldFinds;
+        try { const k = K ? K.kind(nd) : null; if (k) return k.text; } catch (err) { console.error('NewScreen travel: the kind line failed', err); }
+        return nd.isStation ? 'An empty station' : nd.isAsteroidField ? 'Rocks and old metal' : 'A world';
+    }
     function placeWords(id) {
         if (id === 'light') return W.sector >= 6 ? { name: 'The light', tag: 'Where the heading ends' } : { name: 'The light ahead', tag: 'The jump' };
         const e = F.entry(id), nd = e && e.node; if (!nd) return null;
@@ -290,10 +293,8 @@
             : nd.isFirstSignal ? 'An old ship beacon'
             : nd.isStoryPlanet ? 'Their last course'
             : tags.includes('EXODUS_WRECK') ? 'One of our ships'
-            : nd.isStation ? 'An empty station'
-            : nd.isAsteroidField ? 'Rocks and old metal'
-            : TYPE_WORDS[nd.type] || 'A world';
-        return { name: nd.name || '', tag, ahead, ours: OURS.test(tag) };                 // ours: the tag says it already, the scan's tags need not
+            : kindLine(nd);
+        return { name: nd.name || '', tag, ahead, ours: OURS.test(tag) };                 // ours: the tag says it already, the finds need not
     }
     const OURS = /one of our ships/i;
 
@@ -305,8 +306,8 @@
     function scanState(id, w, t) {
         if (!w || !w.ahead || id === 'light') return { key: '' };
         if (W.scanning && W.scanning.id === id && t - W.scanning.t0 < SCAN_SHOW_MS) return { key: 'busy', kind: 'busy' };
-        const f = ask('facts', id), S = window.NSScan;
-        if (f && S) { const lines = S.lines(f, !w.ours); return lines.length ? { key: 'f:' + lines.join('|'), kind: 'facts', lines } : { key: '' }; }
+        const lines = ask('findNote', id, !w.ours);                                        // what the scan found there (WorldFinds.js), once scanned
+        if (lines) return lines.length ? { key: 'f:' + lines.join('|'), kind: 'facts', lines } : { key: '' };
         if (W.flight || W.lock || W.held) return { key: '' };
         const o = ask('scanOffer', id);
         return o ? { key: `o:${o.ok}:${o.why}:${o.cost}`, kind: 'offer', offer: o } : { key: '' };
@@ -433,10 +434,10 @@
     function injectStyle() {
         if ($('ns-travel-style')) return;
         const st = mk('style'); st.id = 'ns-travel-style';
-        st.textContent = `#ns-world-words .nst-note { position: absolute; left: 0; top: 0; display: grid; gap: 3px; max-width: 22em; pointer-events: none; }
+        st.textContent = `#ns-world-words .nst-note { position: absolute; left: 0; top: 0; display: grid; gap: 3px; max-width: 24em; pointer-events: none; }
 #ns-world-words .nst-note[hidden], #ns-world-words .nst-title[hidden] { display: none; }
 #ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name, 19px)/1.15 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.02em; color: var(--text, #e4e4e0); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
-#ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
+#ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-wrap: balance; text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
 #ns-world-words .nst-note.is-left { text-align: right; justify-items: end; }
 #ns-world-words .nst-note.is-story .tag { color: var(--warm-br, #ffc27a); }
 #ns-world-words .nst-note .scan { margin: 3px 0 0; justify-self: start; display: flex; align-items: baseline; gap: 10px; text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }

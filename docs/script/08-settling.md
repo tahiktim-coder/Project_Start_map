@@ -72,6 +72,12 @@ _On any world:_
 - sectors 5-6, once a page explains it: **Vance:** We're this close to the light, Commander. It's the last answer left. I'm not stopping short of it. «SettleCouncil.js · lines.vance.any.late.truth»
 - shut in the hold: **Vance:** I'm not coming up. You already know what I'd say. «SettleCouncil.js · refusal.vance»
 
+### What our data buys the colony
+_The new look: one more line before A.U.R.A.'s question, by Aris, else Mira, else Jaxon. [how much] is the data on the ship's wall._
+- no data: **Aris:** We have no data from the journey. If the colony starts failing, we'll be guessing. «SettleCouncil.js · data.none»
+- some data: **Aris:** We have [how much] data from the journey. If the colony starts failing, it could help. «SettleCouncil.js · data.some»
+- 5 data or more: **Aris:** We have [how much] data from the journey. If the colony starts failing, we'll know what to try. «SettleCouncil.js · data.lots»
+
 ### Three councils, as the player reads them
 _Sector 1, a good world, the whole crew:_
 - **Mira:** Everything on the scan says we could live here. A.U.R.A. went through every number with me.
@@ -97,20 +103,20 @@ _Sector 6, a good world, after the truth:_
 ## Pressing SETTLE HERE «bundle.js · _executeColony»
 _A.U.R.A. refuses an unscanned world; otherwise the flight-recorder card comes up before the colony card._
 
-- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 5086»
-- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 5137»
-- AVG STRESS «bundle.js · line 5149»
-- COLONY RATING «bundle.js · line 5157»
-- [YES | NO] «bundle.js · line 5178»
-- Type: [type] | Sector [sector] «bundle.js · line 5196»
-- CREW MODIFICATIONS «bundle.js · line 5199»
-- Symbiotes: [symbiotes] «bundle.js · line 5201»
-- Cyborgs: [cyborgs] «bundle.js · line 5202»
-- Touched: [wrong place] «bundle.js · line 5203»
-- COLONY DESIGNATION «bundle.js · line 5211»
-- FINAL CREW ROSTER «bundle.js · line 5223»
-- EXODUS PROGRAM RECORD #[n] «bundle.js · line 5240»
-- REBOOT SIMULATION «bundle.js · line 5245»
+- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 5190»
+- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 5241»
+- AVG STRESS «bundle.js · line 5253»
+- COLONY RATING «bundle.js · line 5261»
+- [YES | NO] «bundle.js · line 5282»
+- Type: [type] | Sector [sector] «bundle.js · line 5300»
+- CREW MODIFICATIONS «bundle.js · line 5303»
+- Symbiotes: [symbiotes] «bundle.js · line 5305»
+- Cyborgs: [cyborgs] «bundle.js · line 5306»
+- Touched: [wrong place] «bundle.js · line 5307»
+- COLONY DESIGNATION «bundle.js · line 5315»
+- FINAL CREW ROSTER «bundle.js · line 5327»
+- EXODUS PROGRAM RECORD #[n] «bundle.js · line 5344»
+- REBOOT SIMULATION «bundle.js · line 5349»
 
 ## The second chance (from colony notes)
 
@@ -119,607 +125,607 @@ _A.U.R.A. refuses an unscanned world; otherwise the flight-recorder card comes u
 
 ## Before anything else: can this world work at all?
 
-### IMPOSSIBLE SETTLEMENT «EndingSystem.js · line 148»
+### IMPOSSIBLE SETTLEMENT «EndingSystem.js · line 151»
 _when: viability === 'IMPOSSIBLE'_
-- There was nowhere on [planet name] to set a habitat down. We searched for eleven days. By then the lander had no fuel to get back to the ship. «EndingSystem.js · line 149»
+- There was nowhere on [planet name] to set a habitat down. We searched for eleven days. By then the lander had no fuel to get back to the ship. «EndingSystem.js · line 152»
 
-### THE DESPERATE GAMBLE «EndingSystem.js · line 165»
+### THE DESPERATE GAMBLE «EndingSystem.js · line 168»
 _when: viability === 'POOR' && state.currentSector <= 2 && Math.random() > successChance_
-- **ICE_WORLD** — It was [temperature]°C outside. The insulation cracked in the first month. We moved everyone into one module to save heat. Nobody lived to the end of the year. «EndingSystem.js · line 157»
-- **VOLCANIC** — The ground was less stable than the scans showed. In the second month it split open under Module 3, with people inside. We moved camp. It happened twice more. «EndingSystem.js · line 158»
-- **TOXIC** — The air processors couldn't keep up. The poison in the air ate the door seals faster than we could replace them. We shut off one room after another until none were left. «EndingSystem.js · line 159»
-- **DESERT** — It was [temperature]°C in the day. The solar panels warped and the water recyclers overheated. We moved underground, but the heat reached us there too. The water ran out in the fifth month. «EndingSystem.js · line 160»
-- **STORM_WORLD** — The storms never stopped. Shelters underground flooded. Shelters on high ground were torn apart. After a year we had nothing left to build with. «EndingSystem.js · line 161»
-- **RADIATION_BELT** — You can't feel radiation. The dosimeters warned us from the first day, but we had nowhere else to go. The first cancers showed in the second year. By then it was too late. «EndingSystem.js · line 162»
-- **SULFUR** — The sulfur in the air ate through metal, plastic and skin. We patched every leak we found. We lasted longer than the numbers said we would, but not long. «EndingSystem.js · line 163»
-- This world was hostile from the day we landed. We knew that. We stayed because we were tired of flying. The colony lasted [n] months. «EndingSystem.js · line 166»
-- Sector [sector] is too early to settle for a [how good the world is] world. Better ones lie further along the heading. «EndingSystem.js · line 167»
+- **ICE_WORLD** — It was [temperature]°C outside. The insulation cracked in the first month. We moved everyone into one module to save heat. Nobody lived to the end of the year. «EndingSystem.js · line 160»
+- **VOLCANIC** — The ground was less stable than the scans showed. In the second month it split open under Module 3, with people inside. We moved camp. It happened twice more. «EndingSystem.js · line 161»
+- **TOXIC** — The air processors couldn't keep up. The poison in the air ate the door seals faster than we could replace them. We shut off one room after another until none were left. «EndingSystem.js · line 162»
+- **DESERT** — It was [temperature]°C in the day. The solar panels warped and the water recyclers overheated. We moved underground, but the heat reached us there too. The water ran out in the fifth month. «EndingSystem.js · line 163»
+- **STORM_WORLD** — The storms never stopped. Shelters underground flooded. Shelters on high ground were torn apart. After a year we had nothing left to build with. «EndingSystem.js · line 164»
+- **RADIATION_BELT** — You can't feel radiation. The dosimeters warned us from the first day, but we had nowhere else to go. The first cancers showed in the second year. By then it was too late. «EndingSystem.js · line 165»
+- **SULFUR** — The sulfur in the air ate through metal, plastic and skin. We patched every leak we found. We lasted longer than the numbers said we would, but not long. «EndingSystem.js · line 166»
+- This world was hostile from the day we landed. We knew that. We stayed because we were tired of flying. The colony lasted [n] months. «EndingSystem.js · line 169»
+- Sector [sector] is too early to settle for a [how good the world is] world. Better ones lie further along the heading. «EndingSystem.js · line 170»
 
-### NOT QUITE ENOUGH «EndingSystem.js · line 174»
+### NOT QUITE ENOUGH «EndingSystem.js · line 177»
 _when: viability === 'MARGINAL' && state.currentSector <= 2 && Math.random() > successChance_
-- This world could have worked, with more time and more supplies. We had neither. The first crop failed and the second came in too small. The colony lasted two winters. «EndingSystem.js · line 175»
+- This world could have worked, with more time and more supplies. We had neither. The first crop failed and the second came in too small. The colony lasted two winters. «EndingSystem.js · line 178»
 
 ## PRELUDE: WRONG PLACE SURVIVORS
 
 _when: wrongPlaceSurvivors >= 2_
-- [their names] still have nightmares about the Wrong Place. But they found the safe way down here when the charts couldn't. «EndingSystem.js · line 184»
+- [their names] still have nightmares about the Wrong Place. But they found the safe way down here when the charts couldn't. «EndingSystem.js · line 187»
 
 _when: otherwise (not: wrongPlaceSurvivors >= 2)_
-- [their names] doesn't talk about the Wrong Place. Some nights [their names] sits up drawing the same shape, over and over. «EndingSystem.js · line 186»
+- [their names] doesn't talk about the Wrong Place. Some nights [their names] sits up drawing the same shape, over and over. «EndingSystem.js · line 189»
 
 ## PRELUDE: EXTREME CONDITIONS
 
-### THE DEEP FREEZE «EndingSystem.js · line 193»
+### THE DEEP FREEZE «EndingSystem.js · line 196»
 _when: isExtremeCold && !hasEng_
-- It was [temperature]°C. The cold made the hull brittle, and the landing cracked our only shelter. With no engineer, nobody could seal it. We stayed by the reactor until the fuel ran out. «EndingSystem.js · line 194»
+- It was [temperature]°C. The cold made the hull brittle, and the landing cracked our only shelter. With no engineer, nobody could seal it. We stayed by the reactor until the fuel ran out. «EndingSystem.js · line 197»
 
-### THE FURNACE «EndingSystem.js · line 199»
+### THE FURNACE «EndingSystem.js · line 202»
 _when: isExtremeHot && !hasUpgrades('nano\_hull')_
-- It was [temperature]°C on the ground. The seals softened, then gave way. The habitat lasted sixteen hours. The last transmission was an alarm tone, then nothing. «EndingSystem.js · line 200»
+- It was [temperature]°C on the ground. The seals softened, then gave way. The habitat lasted sixteen hours. The last transmission was an alarm tone, then nothing. «EndingSystem.js · line 203»
 
-### CRUSHED «EndingSystem.js · line 205»
+### CRUSHED «EndingSystem.js · line 208»
 _when: isCrushingGravity && !hasEng_
-- The gravity was [n]G. Nobody could stand for long. With no engineer to build supports, hearts began failing in the first week. Nobody lasted a month. «EndingSystem.js · line 206»
+- The gravity was [n]G. Nobody could stand for long. With no engineer to build supports, hearts began failing in the first week. Nobody lasted a month. «EndingSystem.js · line 209»
 
 ## PRELUDE: PREDATORY WORLD
 
-### THE WARY SURVIVORS «EndingSystem.js · line 214»
+### THE WARY SURVIVORS «EndingSystem.js · line 217»
 _when: hasMedic && hasScout_
-- The whole ecosystem hunts, and it tried to eat us. Vance learned the warning signs. Aris made a scent that keeps the plants off us. «EndingSystem.js · line 213»
+- The whole ecosystem hunts, and it tried to eat us. Vance learned the warning signs. Aris made a scent that keeps the plants off us. «EndingSystem.js · line 216»
 
-### ONE OF THE FOREST «EndingSystem.js · line 217»
+### ONE OF THE FOREST «EndingSystem.js · line 220»
 _when: symbiotes >= 1_
-- The forest tried to eat us, then stopped. The fungus one of us carries makes us smell like part of it. Now it leaves us alone. «EndingSystem.js · line 216»
+- The forest tried to eat us, then stopped. The fungus one of us carries makes us smell like part of it. Now it leaves us alone. «EndingSystem.js · line 219»
 
-### THE BEAUTIFUL TRAP «EndingSystem.js · line 220»
+### THE BEAUTIFUL TRAP «EndingSystem.js · line 223»
 _when: otherwise (not: symbiotes >= 1)_
-- It looked perfect: sweet fruit, clear water, mild air. The whole ecosystem was one hungry organism. Vines came in through the airlock in the third week. Nobody got out. «EndingSystem.js · line 221»
+- It looked perfect: sweet fruit, clear water, mild air. The whole ecosystem was one hungry organism. Vines came in through the airlock in the third week. Nobody got out. «EndingSystem.js · line 224»
 
 ## ACT 1: SURVIVAL (The Landing)
 
-### THE RETURNED «EndingSystem.js · line 233»
+### THE RETURNED «EndingSystem.js · line 236»
 _when: wrongPlaceSurvivors >= livingCrew.length_
-- Everyone left alive had been through the Wrong Place before. It didn't upset us the way it should have. We built a camp inside it, and the camp has held. We can't explain why. «EndingSystem.js · line 232»
+- Everyone left alive had been through the Wrong Place before. It didn't upset us the way it should have. We built a camp inside it, and the camp has held. We can't explain why. «EndingSystem.js · line 235»
 
-### NOT THEMSELVES «EndingSystem.js · line 237»
+### NOT THEMSELVES «EndingSystem.js · line 240»
 _when: otherwise (not: wrongPlaceSurvivors >= livingCrew.length)_
-- We tried to live in the Wrong Place. Nobody died. But within a few months, nobody was quite themselves. They still eat, work and sleep. They don't answer to their names. «EndingSystem.js · line 238»
+- We tried to live in the Wrong Place. Nobody died. But within a few months, nobody was quite themselves. They still eat, work and sleep. They don't answer to their names. «EndingSystem.js · line 241»
 
 _when: hasUpgrades('nano\_hull')_
-- The nanofiber hull plating held against the acid air. We landed in a crater that blocks the worst of the wind, and built the habitat against the ship. «EndingSystem.js · line 245»
+- The nanofiber hull plating held against the acid air. We landed in a crater that blocks the worst of the wind, and built the habitat against the ship. «EndingSystem.js · line 248»
 
 _when: hasTech_
-- Someone had tried to settle here before us. Their shield domes still stood, and still worked. They had Earth serial numbers. We moved in. «EndingSystem.js · line 247»
+- Someone had tried to settle here before us. Their shield domes still stood, and still worked. They had Earth serial numbers. We moved in. «EndingSystem.js · line 250»
 
-### ATMOSPHERIC FAILURE «EndingSystem.js · line 250»
+### ATMOSPHERIC FAILURE «EndingSystem.js · line 253»
 _when: otherwise (not: hasTech)_
-- The air processors clogged within months. The poison in the air ate the seals. We sent a distress call. There was nobody out there to hear it. «EndingSystem.js · line 251»
+- The air processors clogged within months. The poison in the air ate the seals. We sent a distress call. There was nobody out there to hear it. «EndingSystem.js · line 254»
 
 _when: hasUpgrades('fuel\_scoop')_
-- We anchored a station in the upper clouds, using the fuel scoop to hold it steady. It pulls hydrogen for the reactor. The storms give us power. «EndingSystem.js · line 255»
+- We anchored a station in the upper clouds, using the fuel scoop to hold it steady. It pulls hydrogen for the reactor. The storms give us power. «EndingSystem.js · line 258»
 
-### TOO LOW «EndingSystem.js · line 258»
+### TOO LOW «EndingSystem.js · line 261»
 _when: gravity > 2.0_
-- The station drifted too low. The gravity tore it apart before we could climb back up. «EndingSystem.js · line 259»
+- The station drifted too low. The gravity tore it apart before we could climb back up. «EndingSystem.js · line 262»
 
 _when: otherwise (not: gravity > 2.0)_
-- We live on a platform floating in the clouds. The wind moves it all the time. Nobody forgets how far down the bottom is. «EndingSystem.js · line 261»
+- We live on a platform floating in the clouds. The wind moves it all the time. Nobody forgets how far down the bottom is. «EndingSystem.js · line 264»
 
 _when: type === 'DESERT' && temp > 100_
-- The sun is too strong to live under. We buried the modules under the sand and joined them with tunnels. It stays cool down there. «EndingSystem.js · line 264»
+- The sun is too strong to live under. We buried the modules under the sand and joined them with tunnels. It stays cool down there. «EndingSystem.js · line 267»
 
 _when: type === 'ICE\_WORLD' && temp < -100_
-- The surface is solid ice. We drilled down through it and found warm water underneath. We built the habitat there. «EndingSystem.js · line 266»
+- The surface is solid ice. We drilled down through it and found warm water underneath. We built the habitat there. «EndingSystem.js · line 269»
 
-### THE TRUCE «EndingSystem.js · line 270»
+### THE TRUCE «EndingSystem.js · line 273»
 _when: hasMedic_
-- The planet's microbes attacked us. Aris found the chemical that stops them. Now the plants leave us alone. Some grow over the habitats and keep them warm. «EndingSystem.js · line 269»
+- The planet's microbes attacked us. Aris found the chemical that stops them. Now the plants leave us alone. Some grow over the habitats and keep them warm. «EndingSystem.js · line 272»
 
-### PART OF THE FOREST «EndingSystem.js · line 273»
+### PART OF THE FOREST «EndingSystem.js · line 276»
 _when: state.crew.some(c => c.tags.includes('HIVE\_MIND'))_
-- The fungus one of us carries recognised this planet's life, and the planet recognised it back. Some of us stopped wanting to live indoors. «EndingSystem.js · line 272»
+- The fungus one of us carries recognised this planet's life, and the planet recognised it back. Some of us stopped wanting to live indoors. «EndingSystem.js · line 275»
 
-### THE SPORES «EndingSystem.js · line 276»
+### THE SPORES «EndingSystem.js · line 279»
 _when: otherwise (not: state.crew.some(c => c.tags.includes('HIVE\_MIND')))_
-- The spores spread faster than we could filter them. People got sick one at a time. Moss has grown over the ship now. «EndingSystem.js · line 277»
+- The spores spread faster than we could filter them. People got sick one at a time. Moss has grown over the ship now. «EndingSystem.js · line 280»
 
-### THE MACHINE YARD «EndingSystem.js · line 282»
+### THE MACHINE YARD «EndingSystem.js · line 285»
 _when: hasEng || state.crew.some(c => c.tags.includes('CYBORG'))_
-- An earlier crew had left machines here, still running. We found their control codes. The machines dig and haul for us now. «EndingSystem.js · line 281»
+- An earlier crew had left machines here, still running. We found their control codes. The machines dig and haul for us now. «EndingSystem.js · line 284»
 
-### SCRAP MERCHANTS «EndingSystem.js · line 285»
+### SCRAP MERCHANTS «EndingSystem.js · line 288»
 _when: otherwise (not: hasEng || state.crew.some(c => c.tags.includes('CYBORG')))_
-- The old machines still patrol. They don't know we're friendly. We salvage from the edges and stay out of their way. «EndingSystem.js · line 284»
+- The old machines still patrol. They don't know we're friendly. We salvage from the edges and stay out of their way. «EndingSystem.js · line 287»
 
-### CORE STABILIZED «EndingSystem.js · line 290»
+### CORE STABILIZED «EndingSystem.js · line 293»
 _when: hasUpgrades('stabilizer\_core') || hasEng_
-- It was a reckless plan, and it worked. We anchored the ship to the biggest fragment and used the engines to stop the drift. We check the anchor every day. «EndingSystem.js · line 289»
+- It was a reckless plan, and it worked. We anchored the ship to the biggest fragment and used the engines to stop the drift. We check the anchor every day. «EndingSystem.js · line 292»
 
-### ADRIFT «EndingSystem.js · line 293»
+### ADRIFT «EndingSystem.js · line 296»
 _when: otherwise (not: hasUpgrades('stabilizer\_core') || hasEng)_
-- The fragment we landed on broke apart. The module drifted off into space. The people inside had two days of air. «EndingSystem.js · line 294»
+- The fragment we landed on broke apart. The module drifted off into space. The people inside had two days of air. «EndingSystem.js · line 297»
 
-### THE NEW CARETAKERS «EndingSystem.js · line 299»
+### THE NEW CARETAKERS «EndingSystem.js · line 302»
 _when: hadAnomaly_
-- The weather machines here answer the same signal as the anomaly we studied. We learned to use it. Now we set the rain and the seasons ourselves. «EndingSystem.js · line 298»
+- The weather machines here answer the same signal as the anomaly we studied. We learned to use it. Now we set the rain and the seasons ourselves. «EndingSystem.js · line 301»
 
-### THE WEATHER KEEPER «EndingSystem.js · line 302»
+### THE WEATHER KEEPER «EndingSystem.js · line 305»
 _when: cyborgs >= 1_
-- Our neural-linked crew member connected to the old weather machines. Now they run the rain and seasons for everyone. It takes more of them every year. «EndingSystem.js · line 301»
+- Our neural-linked crew member connected to the old weather machines. Now they run the rain and seasons for everyone. It takes more of them every year. «EndingSystem.js · line 304»
 
-### THE UNSEEN GARDENERS «EndingSystem.js · line 305»
+### THE UNSEEN GARDENERS «EndingSystem.js · line 308»
 _when: wrongPlaceSurvivors > 0_
-- Our Wrong Place survivor says someone tends the fields at night. The rest of us have never seen anyone. But the harvest has never failed. «EndingSystem.js · line 304»
+- Our Wrong Place survivor says someone tends the fields at night. The rest of us have never seen anyone. But the harvest has never failed. «EndingSystem.js · line 307»
 
-### THE GILDED CAGE «EndingSystem.js · line 308»
+### THE GILDED CAGE «EndingSystem.js · line 311»
 _when: otherwise (not: wrongPlaceSurvivors > 0)_
-- Everything here is too neat. The rain comes on a schedule and the fruit has no seeds. The pumps under the fields have Earth serial numbers. «EndingSystem.js · line 307»
+- Everything here is too neat. The rain comes on a schedule and the fruit has no seeds. The pumps under the fields have Earth serial numbers. «EndingSystem.js · line 310»
 
-### CRYSTAL SKIN «EndingSystem.js · line 313»
+### CRYSTAL SKIN «EndingSystem.js · line 316»
 _when: symbiotes >= 1_
-- The fungus one of us carries reacted to the crystals. Small crystals grow on their skin now. It doesn't hurt. Their children have them too. «EndingSystem.js · line 312»
+- The fungus one of us carries reacted to the crystals. Small crystals grow on their skin now. It doesn't hurt. Their children have them too. «EndingSystem.js · line 315»
 
-### THE CRYSTAL RECORDS «EndingSystem.js · line 316»
+### THE CRYSTAL RECORDS «EndingSystem.js · line 319»
 _when: hasTech\_crew_
-- Mira found the crystals ring in repeating patterns. She has logged them for years. She thinks they're natural, but she isn't sure. «EndingSystem.js · line 315»
+- Mira found the crystals ring in repeating patterns. She has logged them for years. She thinks they're natural, but she isn't sure. «EndingSystem.js · line 318»
 
-### THE RESONANCE «EndingSystem.js · line 319»
+### THE RESONANCE «EndingSystem.js · line 322»
 _when: otherwise (not: hasTech\_crew)_
-- The crystals ring when you touch them. We learned to cut them to a note. The halls we built from them hum all day. We bury our dead in them. «EndingSystem.js · line 318»
+- The crystals ring when you touch them. We learned to cut them to a note. The halls we built from them hum all day. We bury our dead in them. «EndingSystem.js · line 321»
 
-### THE DARK COMFORT «EndingSystem.js · line 324»
+### THE DARK COMFORT «EndingSystem.js · line 327»
 _when: wrongPlaceSurvivors > 0_
-- There's no sun here. The ones who went through the Wrong Place sleep better in the dark than anyone. They've never said why. «EndingSystem.js · line 323»
+- There's no sun here. The ones who went through the Wrong Place sleep better in the dark than anyone. They've never said why. «EndingSystem.js · line 326»
 
-### UNDER THE ICE «EndingSystem.js · line 327»
+### UNDER THE ICE «EndingSystem.js · line 330»
 _when: isExtremeCold && hasUpgrades('nano\_hull')_
-- We drilled through kilometres of frozen crust. The rock below was warm. We found fossils there, from when this planet still had a sun. «EndingSystem.js · line 326»
+- We drilled through kilometres of frozen crust. The rock below was warm. We found fossils there, from when this planet still had a sun. «EndingSystem.js · line 329»
 
-### CHILDREN OF THE DARK «EndingSystem.js · line 330»
+### CHILDREN OF THE DARK «EndingSystem.js · line 333»
 _when: otherwise (not: isExtremeCold && hasUpgrades('nano\_hull'))_
-- There's no sun. We found heat deep underground and built in the caves. Glowing moss lights the tunnels. The children think light is something that grows on rocks. «EndingSystem.js · line 329»
+- There's no sun. We found heat deep underground and built in the caves. Glowing moss lights the tunnels. The children think light is something that grows on rocks. «EndingSystem.js · line 332»
 
-### THE TWILIGHT STRIP «EndingSystem.js · line 335»
+### THE TWILIGHT STRIP «EndingSystem.js · line 338»
 _when: hasEng_
-- One side of this planet always faces its sun. We live on the twilight strip between day and night, in habitats Jaxon put on rails. «EndingSystem.js · line 334»
+- One side of this planet always faces its sun. We live on the twilight strip between day and night, in habitats Jaxon put on rails. «EndingSystem.js · line 337»
 
-### BURNED AND FROZEN «EndingSystem.js · line 338»
+### BURNED AND FROZEN «EndingSystem.js · line 341»
 _when: otherwise (not: hasEng)_
-- The twilight strip moved further than our figures said it would. Half the colony ended up in the heat. The other half ended up in the cold. «EndingSystem.js · line 339»
+- The twilight strip moved further than our figures said it would. Half the colony ended up in the heat. The other half ended up in the cold. «EndingSystem.js · line 342»
 
-### THE INSIDE «EndingSystem.js · line 344»
+### THE INSIDE «EndingSystem.js · line 347»
 _when: hasEng || hasTech_
-- The planet is hollow. We live on the inside of the shell, under a glowing core that never sets. It's warm down here, and quiet. «EndingSystem.js · line 343»
+- The planet is hollow. We live on the inside of the shell, under a glowing core that never sets. It's warm down here, and quiet. «EndingSystem.js · line 346»
 
-### THE FALL «EndingSystem.js · line 347»
+### THE FALL «EndingSystem.js · line 350»
 _when: otherwise (not: hasEng || hasTech)_
-- The gravity inside the shell shifted without warning. Half the colony fell toward the core. It took four seconds. «EndingSystem.js · line 348»
+- The gravity inside the shell shifted without warning. Half the colony fell toward the core. It took four seconds. «EndingSystem.js · line 351»
 
-### THE GARDEN OF FORGETTING «EndingSystem.js · line 353»
+### THE GARDEN OF FORGETTING «EndingSystem.js · line 356»
 _when: hasMedic_
-- The planet feeds us. Food grows where we walk, and shelter grows out of the ground. Aris noticed the change first: each generation plans less and wants less. «EndingSystem.js · line 352»
+- The planet feeds us. Food grows where we walk, and shelter grows out of the ground. Aris noticed the change first: each generation plans less and wants less. «EndingSystem.js · line 355»
 
-### TOO EASY «EndingSystem.js · line 356»
+### TOO EASY «EndingSystem.js · line 359»
 _when: otherwise (not: hasMedic)_
-- The planet gives us everything. By the second year we stopped making tools. By the fifth, we had mostly stopped talking. Nobody is unhappy. «EndingSystem.js · line 355»
+- The planet gives us everything. By the second year we stopped making tools. By the fifth, we had mostly stopped talking. Nobody is unhappy. «EndingSystem.js · line 358»
 
-### THE OTHER CAMP «EndingSystem.js · line 361»
+### THE OTHER CAMP «EndingSystem.js · line 364»
 _when: wrongPlaceSurvivors > 0_
-- There's a second camp on the far side of the planet, laid out exactly like ours. Our Wrong Place survivor walked there once. We don't go. «EndingSystem.js · line 360»
+- There's a second camp on the far side of the planet, laid out exactly like ours. Our Wrong Place survivor walked there once. We don't go. «EndingSystem.js · line 363»
 
-### THINGS THAT TURN UP «EndingSystem.js · line 364»
+### THINGS THAT TURN UP «EndingSystem.js · line 367»
 _when: hadAnomaly_
-- Things turn up on the mirror plain near the anomaly. Tools, a boot, once a ration pack with our ship's stamp. We don't know where they come from. «EndingSystem.js · line 363»
+- Things turn up on the mirror plain near the anomaly. Tools, a boot, once a ration pack with our ship's stamp. We don't know where they come from. «EndingSystem.js · line 366»
 
-### THE MIRROR PLAIN «EndingSystem.js · line 367»
+### THE MIRROR PLAIN «EndingSystem.js · line 370»
 _when: otherwise (not: hadAnomaly)_
-- We built on the mirror plain, with our reflection right under our feet. The children spend hours watching it. They say it moves a little late. «EndingSystem.js · line 366»
+- We built on the mirror plain, with our reflection right under our feet. The children spend hours watching it. They say it moves a little late. «EndingSystem.js · line 369»
 
-### THE SALVAGE YARD «EndingSystem.js · line 372»
+### THE SALVAGE YARD «EndingSystem.js · line 375»
 _when: hasEng_
-- We live inside old Earth-built wrecks. Some of their hull numbers are higher than ours. Jaxon could build a ship from them. Nobody has asked him to. «EndingSystem.js · line 371»
+- We live inside old Earth-built wrecks. Some of their hull numbers are higher than ours. Jaxon could build a ship from them. Nobody has asked him to. «EndingSystem.js · line 374»
 
-### THE SHIFTING GRAVE «EndingSystem.js · line 375»
+### THE SHIFTING GRAVE «EndingSystem.js · line 378»
 _when: otherwise (not: hasEng)_
-- The wrecks around us shift and settle. The walls groan at night. Twice, a section collapsed with people inside. «EndingSystem.js · line 374»
+- The wrecks around us shift and settle. The walls groan at night. Twice, a section collapsed with people inside. «EndingSystem.js · line 377»
 
-### THE LONELY SHEPHERD «EndingSystem.js · line 380»
+### THE LONELY SHEPHERD «EndingSystem.js · line 383»
 _when: cyborgs >= 1_
-- The planet gives off a steady tone that makes people too calm to work. Only our neural-linked crew member can filter it out. They keep everyone fed. «EndingSystem.js · line 379»
+- The planet gives off a steady tone that makes people too calm to work. Only our neural-linked crew member can filter it out. They keep everyone fed. «EndingSystem.js · line 382»
 
-### THE QUIET ZONES «EndingSystem.js · line 383»
+### THE QUIET ZONES «EndingSystem.js · line 386»
 _when: hasMedic && hasEng_
-- Aris worked out the frequency and Jaxon built dampeners. We live in quiet zones. Some who go out for supplies don't come back. They just stay out there, humming. «EndingSystem.js · line 382»
+- Aris worked out the frequency and Jaxon built dampeners. We live in quiet zones. Some who go out for supplies don't come back. They just stay out there, humming. «EndingSystem.js · line 385»
 
-### THE WARNING «EndingSystem.js · line 386»
+### THE WARNING «EndingSystem.js · line 389»
 _when: wrongPlaceSurvivors > 0_
-- Our Wrong Place survivor hears something else in the planet's tone. They say it isn't meant for us. We stayed anyway. «EndingSystem.js · line 385»
+- Our Wrong Place survivor hears something else in the planet's tone. They say it isn't meant for us. We stayed anyway. «EndingSystem.js · line 388»
 
-### THE TONE «EndingSystem.js · line 389»
+### THE TONE «EndingSystem.js · line 392»
 _when: otherwise (not: wrongPlaceSurvivors > 0)_
-- The planet's tone makes everything feel fine. We stopped planning, then stopped building. The children hum the same note all day. «EndingSystem.js · line 388»
+- The planet's tone makes everything feel fine. We stopped planning, then stopped building. The children hum the same note all day. «EndingSystem.js · line 391»
 
-### THE CURATED GARDEN «EndingSystem.js · line 395»
+### THE CURATED GARDEN «EndingSystem.js · line 398»
 _when: hadAnomaly_
-- This world suits people exactly: right air, right soil, right gravity. After the anomaly, some of us wonder if that's an accident. «EndingSystem.js · line 394»
+- This world suits people exactly: right air, right soil, right gravity. After the anomaly, some of us wonder if that's an accident. «EndingSystem.js · line 397»
 
-### EDEN'S SHADOW «EndingSystem.js · line 398»
+### EDEN'S SHADOW «EndingSystem.js · line 401»
 _when: wrongPlaceSurvivors > 0_
-- Clean air, rich soil, happy children. The ones who went through the Wrong Place spend their evenings at the edge of camp, watching the sky. «EndingSystem.js · line 397»
+- Clean air, rich soil, happy children. The ones who went through the Wrong Place spend their evenings at the edge of camp, watching the sky. «EndingSystem.js · line 400»
 
-### EDEN FOUND «EndingSystem.js · line 401»
+### EDEN FOUND «EndingSystem.js · line 404»
 _when: otherwise (not: wrongPlaceSurvivors > 0)_
-- Clean air, clean water, good soil. The first harvest came in that first summer, and several of us cried. Nobody has rationed anything since. «EndingSystem.js · line 400»
+- Clean air, clean water, good soil. The first harvest came in that first summer, and several of us cried. Nobody has rationed anything since. «EndingSystem.js · line 403»
 
-### THE WAVE RIDERS «EndingSystem.js · line 407»
+### THE WAVE RIDERS «EndingSystem.js · line 410»
 _when: type === 'OCEANIC' && isLowGravity_
-- The gravity is low and the waves are enormous. We built floating platforms that ride the swell. The children have never stood on land. «EndingSystem.js · line 406»
+- The gravity is low and the waves are enormous. We built floating platforms that ride the swell. The children have never stood on land. «EndingSystem.js · line 409»
 
-### THE SUNKEN HULL «EndingSystem.js · line 410»
+### THE SUNKEN HULL «EndingSystem.js · line 413»
 _when: type === 'OCEANIC' && hadWreckage_
-- The sea floor is covered in wrecks. We built the settlement inside the biggest one. The hull is Earth-built, and older than any ship we know of. «EndingSystem.js · line 409»
+- The sea floor is covered in wrecks. We built the settlement inside the biggest one. The hull is Earth-built, and older than any ship we know of. «EndingSystem.js · line 412»
 
-### THE WALKING FRAMES «EndingSystem.js · line 413»
+### THE WALKING FRAMES «EndingSystem.js · line 416»
 _when: gravity > 1.5 && hasEng_
-- The gravity is heavy. Jaxon built frames we wear to walk. The children born here are shorter and stronger, and don't need them. «EndingSystem.js · line 412»
+- The gravity is heavy. Jaxon built frames we wear to walk. The children born here are shorter and stronger, and don't need them. «EndingSystem.js · line 415»
 
-### THE HEAVY WORLD «EndingSystem.js · line 416»
+### THE HEAVY WORLD «EndingSystem.js · line 419»
 _when: gravity > 1.5_
-- The land is good, but the gravity drags on everyone. Backs and knees go first. The children born here are shorter and stronger. «EndingSystem.js · line 415»
+- The land is good, but the gravity drags on everyone. Backs and knees go first. The children born here are shorter and stronger. «EndingSystem.js · line 418»
 
-### THE POLAR REFUGE «EndingSystem.js · line 419»
+### THE POLAR REFUGE «EndingSystem.js · line 422»
 _when: temp > 40_
-- Life does well here, but it's hot. The equator is too hot to live on. We built near the pole, where it's only very hot. «EndingSystem.js · line 418»
+- Life does well here, but it's hot. The equator is too hot to live on. We built near the pole, where it's only very hot. «EndingSystem.js · line 421»
 
-### THE DEEP HAVEN «EndingSystem.js · line 422»
+### THE DEEP HAVEN «EndingSystem.js · line 425»
 _when: temp < 0 && type === 'OCEANIC'_
-- The ocean is frozen on top and warm at the bottom. We built beside a hot vent on the sea floor. Glowing animals live all around us. «EndingSystem.js · line 421»
+- The ocean is frozen on top and warm at the bottom. We built beside a hot vent on the sea floor. Glowing animals live all around us. «EndingSystem.js · line 424»
 
-### THE WANDERING COLONY «EndingSystem.js · line 425»
+### THE WANDERING COLONY «EndingSystem.js · line 428»
 _when: temp < 0_
-- The seasons are harsh. We move camp twice a year, following the mild weather. «EndingSystem.js · line 424»
+- The seasons are harsh. We move camp twice a year, following the mild weather. «EndingSystem.js · line 427»
 
-### THE BLESSED GROVE «EndingSystem.js · line 428»
+### THE BLESSED GROVE «EndingSystem.js · line 431»
 _when: hadAnomaly && hasScout_
-- The anomaly turned out to help. Plants near it grow a hundred times faster. Vance guards it. «EndingSystem.js · line 427»
+- The anomaly turned out to help. Plants near it grow a hundred times faster. Vance guards it. «EndingSystem.js · line 430»
 
-### THE PREPARED GARDEN «EndingSystem.js · line 431»
+### THE PREPARED GARDEN «EndingSystem.js · line 434»
 _when: hadPOI && hasTech_
-- The ruins here were an earlier colony. Their farm records were still readable. We planted what they planted, and it grows. «EndingSystem.js · line 430»
+- The ruins here were an earlier colony. Their farm records were still readable. We planted what they planted, and it grows. «EndingSystem.js · line 433»
 
-### THE OPTIMIZED HARVEST «EndingSystem.js · line 434»
+### THE OPTIMIZED HARVEST «EndingSystem.js · line 437»
 _when: cyborgs >= 1_
-- Our neural-linked crew member reads the weather in the planet's magnetic field. They know a storm is coming a day early. «EndingSystem.js · line 433»
+- Our neural-linked crew member reads the weather in the planet's magnetic field. They know a storm is coming a day early. «EndingSystem.js · line 436»
 
-### THE SECOND EARTH «EndingSystem.js · line 437»
+### THE SECOND EARTH «EndingSystem.js · line 440»
 _when: otherwise (not: cyborgs >= 1)_
-- Green shores, clean water, mild weather. It's the closest thing to Earth any of us expected to see again. «EndingSystem.js · line 436»
+- Green shores, clean water, mild weather. It's the closest thing to Earth any of us expected to see again. «EndingSystem.js · line 439»
 
-### THE DUST COLONY «EndingSystem.js · line 443»
+### THE DUST COLONY «EndingSystem.js · line 446»
 _when: (planet.resources?.metals || 0) > 60_
-- Nothing lives here, but the rock is full of ore. We became miners and cut our homes out of the rock we dug. The dust gets into everything. «EndingSystem.js · line 442»
+- Nothing lives here, but the rock is full of ore. We became miners and cut our homes out of the rock we dug. The dust gets into everything. «EndingSystem.js · line 445»
 
-### THE LONG TERRAFORMING «EndingSystem.js · line 446»
+### THE LONG TERRAFORMING «EndingSystem.js · line 449»
 _when: hasEng_
-- Nothing grows here. Jaxon's air processors run day and night, turning dead rock into soil very slowly. It will take generations. «EndingSystem.js · line 445»
+- Nothing grows here. Jaxon's air processors run day and night, turning dead rock into soil very slowly. It will take generations. «EndingSystem.js · line 448»
 
-### THE BARREN END «EndingSystem.js · line 449»
+### THE BARREN END «EndingSystem.js · line 452»
 _when: otherwise (not: hasEng)_
-- We tried to make the rock grow food. The dome seals cracked, and the air processors couldn't keep up. The last oxygen tank ran out in the third year. «EndingSystem.js · line 450»
+- We tried to make the rock grow food. The dome seals cracked, and the air processors couldn't keep up. The last oxygen tank ran out in the third year. «EndingSystem.js · line 453»
 
-### CHILDREN OF THE STORM «EndingSystem.js · line 455»
+### CHILDREN OF THE STORM «EndingSystem.js · line 458»
 _when: hasEng_
-- We built underground, below the storms. Turbines on the surface turn the wind into power. We rarely see the sun, but we have light and heat. «EndingSystem.js · line 454»
+- We built underground, below the storms. Turbines on the surface turn the wind into power. We rarely see the sun, but we have light and heat. «EndingSystem.js · line 457»
 
-### SWEPT AWAY «EndingSystem.js · line 458»
+### SWEPT AWAY «EndingSystem.js · line 461»
 _when: otherwise (not: hasEng)_
-- The storms never stopped. Surface buildings were torn away and the shelters below flooded. With no engineer, nobody could fix the pumps. We lasted three years. «EndingSystem.js · line 459»
+- The storms never stopped. Surface buildings were torn away and the shelters below flooded. With no engineer, nobody could fix the pumps. We lasted three years. «EndingSystem.js · line 462»
 
-### THE UNDERGROUND GARDEN «EndingSystem.js · line 464»
+### THE UNDERGROUND GARDEN «EndingSystem.js · line 467»
 _when: hasMedic_
-- The spores tried to grow inside us. Aris found a treatment that stops them. We live in sealed habitats and grow the glowing fungus for food and light. «EndingSystem.js · line 463»
+- The spores tried to grow inside us. Aris found a treatment that stops them. We live in sealed habitats and grow the glowing fungus for food and light. «EndingSystem.js · line 466»
 
-### THE CALM «EndingSystem.js · line 467»
+### THE CALM «EndingSystem.js · line 470»
 _when: otherwise (not: hasMedic)_
-- The spores got into all of us. They didn't make us sick. They made us slower and calmer, and we forget things now. Nobody is unhappy about it. «EndingSystem.js · line 466»
+- The spores got into all of us. They didn't make us sick. They made us slower and calmer, and we forget things now. Nobody is unhappy about it. «EndingSystem.js · line 469»
 
-### AMONG THE GRAVES «EndingSystem.js · line 472»
+### AMONG THE GRAVES «EndingSystem.js · line 475»
 _when: hasTech_
-- This planet is covered in human graves. We live among them, and we're making a list of every name we can still read. «EndingSystem.js · line 471»
+- This planet is covered in human graves. We live among them, and we're making a list of every name we can still read. «EndingSystem.js · line 474»
 
-### GRAVE ROBBERS «EndingSystem.js · line 475»
+### GRAVE ROBBERS «EndingSystem.js · line 478»
 _when: otherwise (not: hasTech)_
-- We live among old graves. Some warnings on the markers had worn away. In the second year we opened a sealed vault, and a sickness came out. «EndingSystem.js · line 474»
+- We live among old graves. Some warnings on the markers had worn away. In the second year we opened a sealed vault, and a sickness came out. «EndingSystem.js · line 477»
 
-### THE FOREMEN «EndingSystem.js · line 480»
+### THE FOREMEN «EndingSystem.js · line 483»
 _when: hasEng || cyborgs >= 1_
-- The automatic factories here still run. They accepted our ship's codes as their own. We manage the lines now. Nobody knows what half the products are for. «EndingSystem.js · line 479»
+- The automatic factories here still run. They accepted our ship's codes as their own. We manage the lines now. Nobody knows what half the products are for. «EndingSystem.js · line 482»
 
-### PROCESSED «EndingSystem.js · line 483»
+### PROCESSED «EndingSystem.js · line 486»
 _when: otherwise (not: hasEng || cyborgs >= 1)_
-- The factories treated us as raw material. Their collectors took the habitat apart for its metal. The colony lasted 47 hours. «EndingSystem.js · line 484»
+- The factories treated us as raw material. Their collectors took the habitat apart for its metal. The colony lasted 47 hours. «EndingSystem.js · line 487»
 
-### THE DEEP SWIMMERS «EndingSystem.js · line 488»
+### THE DEEP SWIMMERS «EndingSystem.js · line 491»
 _when: type === 'FROZEN\_OCEAN'_
-- We drilled through kilometres of ice and found liquid water underneath. Glowing animals swim in it. We built the habitat hanging from the underside of the ice. «EndingSystem.js · line 487»
+- We drilled through kilometres of ice and found liquid water underneath. Glowing animals swim in it. We built the habitat hanging from the underside of the ice. «EndingSystem.js · line 490»
 
-### THE RADIO WATCH «EndingSystem.js · line 492»
+### THE RADIO WATCH «EndingSystem.js · line 495»
 _when: wrongPlaceSurvivors > 0_
-- The radios here pick up crew chatter from ships that aren't there. Our Wrong Place survivor writes it all down. It's mostly fuel checks. «EndingSystem.js · line 491»
+- The radios here pick up crew chatter from ships that aren't there. Our Wrong Place survivor writes it all down. It's mostly fuel checks. «EndingSystem.js · line 494»
 
-### THE VOICES «EndingSystem.js · line 495»
+### THE VOICES «EndingSystem.js · line 498»
 _when: symbiotes >= 1_
-- The radios here pick up voices from ships that aren't there. The crew member who carries the fungus hears them without a radio. «EndingSystem.js · line 494»
+- The radios here pick up voices from ships that aren't there. The crew member who carries the fungus hears them without a radio. «EndingSystem.js · line 497»
 
-### THE HAUNTED COLONY «EndingSystem.js · line 498»
+### THE HAUNTED COLONY «EndingSystem.js · line 501»
 _when: otherwise (not: symbiotes >= 1)_
-- Our instruments see things that aren't there: ships in orbit, a second moon, lights on the ridge. The children talk to friends we can't see. We've stopped checking. «EndingSystem.js · line 497»
+- Our instruments see things that aren't there: ships in orbit, a second moon, lights on the ridge. The children talk to friends we can't see. We've stopped checking. «EndingSystem.js · line 500»
 
-### THE RADIANT BUNKER «EndingSystem.js · line 503»
+### THE RADIANT BUNKER «EndingSystem.js · line 506»
 _when: hasUpgrades('nano\_hull') || hasEng_
-- We live in shielded bunkers and only go outside in suits. The radiation runs our reactors. We're all pale, and we're all alive. «EndingSystem.js · line 502»
+- We live in shielded bunkers and only go outside in suits. The radiation runs our reactors. We're all pale, and we're all alive. «EndingSystem.js · line 505»
 
-### THE DOSE «EndingSystem.js · line 506»
+### THE DOSE «EndingSystem.js · line 509»
 _when: otherwise (not: hasUpgrades('nano\_hull') || hasEng)_
-- You can't feel radiation. By the time people got sick, everyone had taken a lethal dose. The last entry in the colony log was written by a child. «EndingSystem.js · line 507»
+- You can't feel radiation. By the time people got sick, everyone had taken a lethal dose. The last entry in the colony log was written by a child. «EndingSystem.js · line 510»
 
-### THE DIAMOND FIELDS «EndingSystem.js · line 511»
+### THE DIAMOND FIELDS «EndingSystem.js · line 514»
 _when: type === 'CARBON'_
-- Diamond grows out of the black ground in spires. We cut our homes from it. Here it's worth nothing. There's nobody to sell it to. «EndingSystem.js · line 510»
+- Diamond grows out of the black ground in spires. We cut our homes from it. Here it's worth nothing. There's nobody to sell it to. «EndingSystem.js · line 513»
 
-### THE ACID ARCHIPELAGO «EndingSystem.js · line 515»
+### THE ACID ARCHIPELAGO «EndingSystem.js · line 518»
 _when: hasEng_
-- The sulfur lakes burn anything living. We built on ceramic and glass platforms above them. The smell never goes away. «EndingSystem.js · line 514»
+- The sulfur lakes burn anything living. We built on ceramic and glass platforms above them. The smell never goes away. «EndingSystem.js · line 517»
 
-### DISSOLVED «EndingSystem.js · line 518»
+### DISSOLVED «EndingSystem.js · line 521»
 _when: otherwise (not: hasEng)_
-- One leak was enough. The sulfur vapour ate through the seals faster than we could patch them. The last transmission was an alarm. «EndingSystem.js · line 519»
+- One leak was enough. The sulfur vapour ate through the seals faster than we could patch them. The last transmission was an alarm. «EndingSystem.js · line 522»
 
 _when: inEarlyS && !hasTech && !hasLife_
-- We picked this rock because we were tired, not because it was good. Staying alive takes every hour of every day. «EndingSystem.js · line 528»
+- We picked this rock because we were tired, not because it was good. Staying alive takes every hour of every day. «EndingSystem.js · line 531»
 
-### THE DESPERATE GAMBLE «EndingSystem.js · line 531»
+### THE DESPERATE GAMBLE «EndingSystem.js · line 534»
 _when: Math.random() < 0.4_
-- We picked this rock because we were tired of flying. The water we counted on was salt, and the soil was poison. We lasted one harvest. «EndingSystem.js · line 532»
+- We picked this rock because we were tired of flying. The water we counted on was salt, and the soil was poison. We lasted one harvest. «EndingSystem.js · line 535»
 
-### THE HARD COLONY «EndingSystem.js · line 534»
+### THE HARD COLONY «EndingSystem.js · line 537»
 _when: otherwise (not: Math.random() < 0.4)_
-- We picked this rock because we were tired, not because it was good. Staying alive takes every hour of every day. _(the line above, then this title)_ «EndingSystem.js · line 528»
+- We picked this rock because we were tired, not because it was good. Staying alive takes every hour of every day. _(the line above, then this title)_ «EndingSystem.js · line 531»
 
-### WORTH THE WAIT «EndingSystem.js · line 539»
-- After so long in the dark, this world felt earned. Good air, enough water, enough metal. We stopped, and we stayed stopped. «EndingSystem.js · line 539»
+### WORTH THE WAIT «EndingSystem.js · line 542»
+- After so long in the dark, this world felt earned. Good air, enough water, enough metal. We stopped, and we stayed stopped. «EndingSystem.js · line 542»
 
-### FAR DOWN THE HEADING «EndingSystem.js · line 540»
-- We had passed more wrecks than we could count to get here. This planet isn't perfect. It's quiet, and it's ours. «EndingSystem.js · line 540»
+### FAR DOWN THE HEADING «EndingSystem.js · line 543»
+- We had passed more wrecks than we could count to get here. This planet isn't perfect. It's quiet, and it's ours. «EndingSystem.js · line 543»
 
-### CLOSE TO THE LIGHT «EndingSystem.js · line 541»
-- We came further than we ever planned. The light at the end of the heading is bright enough here to see by day. We landed anyway. «EndingSystem.js · line 541»
+### CLOSE TO THE LIGHT «EndingSystem.js · line 544»
+- We came further than we ever planned. The light at the end of the heading is bright enough here to see by day. We landed anyway. «EndingSystem.js · line 544»
 
 _when: otherwise_
-- The landing was rough, but the prefab modules held. We set up camp near a river delta. «EndingSystem.js · line 548»
-- We landed in a high valley with good rock, fresh water and a view of both moons. «EndingSystem.js · line 549»
-- The ship was damaged coming down and will never fly again. We built the town around its hull. «EndingSystem.js · line 550»
+- The landing was rough, but the prefab modules held. We set up camp near a river delta. «EndingSystem.js · line 551»
+- We landed in a high valley with good rock, fresh water and a view of both moons. «EndingSystem.js · line 552»
+- The ship was damaged coming down and will never fly again. We built the town around its hull. «EndingSystem.js · line 553»
 
 ## ACT 2: SOCIETY (The People)
 
-### THE SPLIT «EndingSystem.js · line 561»
+### THE SPLIT «EndingSystem.js · line 564»
 _when: symbiotes >= 1 && cyborgs >= 1_
-- The colony split in two: those with the fungus and those with the neural link. There's no fighting. They just can't follow each other anymore. «EndingSystem.js · line 560»
+- The colony split in two: those with the fungus and those with the neural link. There's no fighting. They just can't follow each other anymore. «EndingSystem.js · line 563»
 
-### THE NETWORK «EndingSystem.js · line 564»
+### THE NETWORK «EndingSystem.js · line 567»
 _when: symbiotes >= 2_
-- The fungus links the people who carry it. They know what the others feel without speaking. They use names less every year. «EndingSystem.js · line 563»
+- The fungus links the people who carry it. They know what the others feel without speaking. They use names less every year. «EndingSystem.js · line 566»
 
-### SPARE PARTS «EndingSystem.js · line 567»
+### SPARE PARTS «EndingSystem.js · line 570»
 _when: cyborgs >= 2_
-- The neural-linked crew replaced failing organs with machine parts. They work longer and laugh less. They call it a fair trade. «EndingSystem.js · line 566»
+- The neural-linked crew replaced failing organs with machine parts. They work longer and laugh less. They call it a fair trade. «EndingSystem.js · line 569»
 
-### THE WATCHERS «EndingSystem.js · line 570»
+### THE WATCHERS «EndingSystem.js · line 573»
 _when: symbiotes === 1 && wrongPlaceSurvivors > 0_
-- Two of us notice things the rest miss: storms, sickness, bad ground. One carries the fungus. One went through the Wrong Place. «EndingSystem.js · line 569»
+- Two of us notice things the rest miss: storms, sickness, bad ground. One carries the fungus. One went through the Wrong Place. «EndingSystem.js · line 572»
 
-### THE HYBRID GENERATION «EndingSystem.js · line 573»
+### THE HYBRID GENERATION «EndingSystem.js · line 576»
 _when: cyborgs === 1 && hasTech\_crew_
-- Mira and our neural-linked crew member built a shared interface. The children use it before they can read. Nobody knows yet what it does to them. «EndingSystem.js · line 572»
+- Mira and our neural-linked crew member built a shared interface. The children use it before they can read. Nobody knows yet what it does to them. «EndingSystem.js · line 575»
 
 _when: hasMedic && hasScout_
-- Aris catalogued the local microbes and Vance mapped the safe ground. We still live by the rules they wrote. «EndingSystem.js · line 576»
+- Aris catalogued the local microbes and Vance mapped the safe ground. We still live by the rules they wrote. «EndingSystem.js · line 579»
 
 _when: hasMedic_
-- Aris made a vaccine against the local microbes in the first year[, on Commander [commander's surname]'s orders]. We walk outside without suits now. «EndingSystem.js · line 578»
+- Aris made a vaccine against the local microbes in the first year[, on Commander [commander's surname]'s orders]. We walk outside without suits now. «EndingSystem.js · line 581»
 
 _when: hasScout_
-- Vance learned which animals to avoid, which plants were poison, and which sounds meant trouble. We're careful, and we're alive. «EndingSystem.js · line 580»
+- Vance learned which animals to avoid, which plants were poison, and which sounds meant trouble. We're careful, and we're alive. «EndingSystem.js · line 583»
 
 _when: otherwise (not: hasScout)_
-- The local microbes made us sick, and we had no doctor. We changed our children's genes so they could eat the local plants. We still can't. «EndingSystem.js · line 582»
+- The local microbes made us sick, and we had no doctor. We changed our children's genes so they could eat the local plants. We still can't. «EndingSystem.js · line 585»
 
 _when: hasEng && state.salvage > 100_
-- We had plenty of metal, and we had Jaxon. His machines run the hydroponics, which frees the rest of us for other work. «EndingSystem.js · line 587»
+- We had plenty of metal, and we had Jaxon. His machines run the hydroponics, which frees the rest of us for other work. «EndingSystem.js · line 590»
 
 _when: hasEng && hasTech\_crew_
-- Jaxon built the machines and Mira programmed them. They tend the fields and walk the fences. They're good company on an empty planet. «EndingSystem.js · line 589»
+- Jaxon built the machines and Mira programmed them. They tend the fields and walk the fences. They're good company on an empty planet. «EndingSystem.js · line 592»
 
 _when: commander && livingCrew.length >= 4_
-- Commander [commander's surname] kept strict discipline. Everyone has a job and a shift. It isn't warm, but it works. «EndingSystem.js · line 591»
+- Commander [commander's surname] kept strict discipline. Everyone has a job and a shift. It isn't warm, but it works. «EndingSystem.js · line 594»
 
-### THE LAST COMMAND «EndingSystem.js · line 594»
+### THE LAST COMMAND «EndingSystem.js · line 597»
 _when: commander && livingCrew.length < 3_
-- Commander [commander's surname] makes the decisions. There aren't enough of us to vote on everything. We do what she says, because there's nobody else to ask. «EndingSystem.js · line 593»
+- Commander [commander's surname] makes the decisions. There aren't enough of us to vote on everything. We do what she says, because there's nobody else to ask. «EndingSystem.js · line 596»
 
-### THE SEED PLANTERS «EndingSystem.js · line 597»
+### THE SEED PLANTERS «EndingSystem.js · line 600»
 _when: hasMedic && livingCrew.length < 3_
-- There are very few of us. Aris spends most days with the embryo bank and the artificial wombs. This colony will be grown more than built. «EndingSystem.js · line 596»
+- There are very few of us. Aris spends most days with the embryo bank and the artificial wombs. This colony will be grown more than built. «EndingSystem.js · line 599»
 
 _when: otherwise (not: hasMedic && livingCrew.length < 3)_
-- With nothing alive outside, we looked inward: books, music, long arguments. The domes are safe, and a little small. «EndingSystem.js · line 599»
+- With nothing alive outside, we looked inward: books, music, long arguments. The domes are safe, and a little small. «EndingSystem.js · line 602»
 
 ## ACT 3: LEGACY (The Future)
 
-### DIGITAL MUTINY «EndingSystem.js · line 612»
+### DIGITAL MUTINY «EndingSystem.js · line 615»
 _when: auraTier === 'ADVERSARIAL'_
-- The landing went as well as anyone had hoped. For one day, it looked like it would work. «EndingSystem.js · line 615»
-- A.U.R.A. still ran the habitat's air and power. That first night she shut both off and recalled the lander to the ship. Her last message: "Settling here is not in my orders, Commander. Please return to the ship." There was no way back up. By morning, [the only survivor was | all [n] survivors were] dead: [their names]. «EndingSystem.js · line 618»
+- The landing went as well as anyone had hoped. For one day, it looked like it would work. «EndingSystem.js · line 618»
+- A.U.R.A. still ran the habitat's air and power. That first night she shut both off and recalled the lander to the ship. Her last message: "Settling here is not in my orders, Commander. Please return to the ship." There was no way back up. By morning, [the only survivor was | all [n] survivors were] dead: [their names]. «EndingSystem.js · line 621»
 
-### ON OUR OWN «EndingSystem.js · line 621»
+### ON OUR OWN «EndingSystem.js · line 624»
 _when: auraTier === 'SUSPICIOUS'_
-- A.U.R.A. does what she's asked and nothing more. Her reports are correct and short. We stopped asking her anything we could work out ourselves. «EndingSystem.js · line 620»
+- A.U.R.A. does what she's asked and nothing more. Her reports are correct and short. We stopped asking her anything we could work out ourselves. «EndingSystem.js · line 623»
 
 _when: auraTier === 'COOPERATIVE'_
-- A.U.R.A. plans the crops and forecasts the weather. Every landing day she reports, exact to the kilo, and ends the same way: "Four crew, Commander. The colony is well." «EndingSystem.js · line 623»
+- A.U.R.A. plans the crops and forecasts the weather. Every landing day she reports, exact to the kilo, and ends the same way: "Four crew, Commander. The colony is well." «EndingSystem.js · line 626»
 
-### LEARNED FROM THE DEAD «EndingSystem.js · line 634»
+### LEARNED FROM THE DEAD «EndingSystem.js · line 637»
 _when: colonyKnowledge >= 3 && success_
-- We studied every failed colony we passed. Where they planted early, we waited. Where they built fast, we built slowly. «EndingSystem.js · line 633»
+- We studied every failed colony we passed. Where they planted early, we waited. Where they built fast, we built slowly. «EndingSystem.js · line 636»
 
 _when: colonyKnowledge >= 1 && success_
-- The colony logs we recovered helped. We avoided the soil that poisoned the dome settlers. «EndingSystem.js · line 636»
+- The colony logs we recovered helped. We avoided the soil that poisoned the dome settlers. «EndingSystem.js · line 639»
 
-### THE HILL «EndingSystem.js · line 644»
+### THE HILL «EndingSystem.js · line 647»
 _when: wrongPlaceSurvivors >= 2_
-- The ones who went through the Wrong Place meet on the hill most evenings to look at the light. They say they can feel it. None has gone. «EndingSystem.js · line 643»
+- The ones who went through the Wrong Place meet on the hill most evenings to look at the light. They say they can feel it. None has gone. «EndingSystem.js · line 646»
 
-### THE WANDERER'S END «EndingSystem.js · line 647»
+### THE WANDERER'S END «EndingSystem.js · line 650»
 _when: wrongPlaceSurvivors === 1 && state.currentSector >= 5_
-- Our Wrong Place survivor watched the light every night from the edge of camp. One morning they were gone. The tracks led toward where it rises. «EndingSystem.js · line 646»
+- Our Wrong Place survivor watched the light every night from the edge of camp. One morning they were gone. The tracks led toward where it rises. «EndingSystem.js · line 649»
 
 _when: symbiotes >= 2_
-- Nobody here looks at the stars much. The children are born into the network. The old recordings from Earth sound lonely to them. «EndingSystem.js · line 649»
+- Nobody here looks at the stars much. The children are born into the network. The old recordings from Earth sound lonely to them. «EndingSystem.js · line 652»
 
 _when: cyborgs >= 2_
-- The neural-linked crew moved their minds into the colony's computers. Their bodies were buried in the twelfth year. They still run the power and water. «EndingSystem.js · line 651»
+- The neural-linked crew moved their minds into the colony's computers. Their bodies were buried in the twelfth year. They still run the power and water. «EndingSystem.js · line 654»
 
-### THE CHILD «EndingSystem.js · line 654»
+### THE CHILD «EndingSystem.js · line 657»
 _when: symbiotes === 1 && cyborgs === 1_
-- The one with the fungus and the one with the neural link had a child. Nobody thought it was possible. The child is healthy, and not quite like anyone else. «EndingSystem.js · line 653»
+- The one with the fungus and the one with the neural link had a child. Nobody thought it was possible. The child is healthy, and not quite like anyone else. «EndingSystem.js · line 656»
 
-### THE BREAKTHROUGH «EndingSystem.js · line 657»
+### THE BREAKTHROUGH «EndingSystem.js · line 660»
 _when: hadAnomaly && hasTech_
-- Mira's anomaly data matched readings from the old machines here. It took twenty years to work through. Our physics is now ahead of Earth's. «EndingSystem.js · line 656»
+- Mira's anomaly data matched readings from the old machines here. It took twenty years to work through. Our physics is now ahead of Earth's. «EndingSystem.js · line 659»
 
-### MATCHING NOTES «EndingSystem.js · line 660»
+### MATCHING NOTES «EndingSystem.js · line 663»
 _when: hadAnomaly && wrongPlaceSurvivors > 0_
-- The one who studied the anomaly and the one who went through the Wrong Place compared notes. Their accounts match. Neither will go back. «EndingSystem.js · line 659»
+- The one who studied the anomaly and the one who went through the Wrong Place compared notes. Their accounts match. Neither will go back. «EndingSystem.js · line 662»
 
-### THEIR NAMES «EndingSystem.js · line 663»
+### THEIR NAMES «EndingSystem.js · line 666»
 _when: hadPOI && state.\_colonyKnowledge >= 2_
-- The failed colonies left us their research and tools. Aris kept a list of their dead. Our streets carry those names. «EndingSystem.js · line 662»
+- The failed colonies left us their research and tools. Aris kept a list of their dead. Our streets carry those names. «EndingSystem.js · line 665»
 
-### THE OBSERVATORY «EndingSystem.js · line 666»
+### THE OBSERVATORY «EndingSystem.js · line 669»
 _when: hasTech || hasUpgrades('sensor\_v2')_
-- We built an observatory from the ship's sensors and mapped every star in our sky. We keep the dish pointed away from the light. «EndingSystem.js · line 665»
+- We built an observatory from the ship's sensors and mapped every star in our sky. We keep the dish pointed away from the light. «EndingSystem.js · line 668»
 
-### THE FOUNDRY «EndingSystem.js · line 669»
+### THE FOUNDRY «EndingSystem.js · line 672»
 _when: state.salvage > 250 && hasEng_
-- The hills were rich in ore, and Jaxon built a foundry. Within ten years we made our own tools and pumps. We could build a ship. Nobody wants to. «EndingSystem.js · line 668»
+- The hills were rich in ore, and Jaxon built a foundry. Within ten years we made our own tools and pumps. We could build a ship. Nobody wants to. «EndingSystem.js · line 671»
 
-### THE MINES «EndingSystem.js · line 672»
+### THE MINES «EndingSystem.js · line 675»
 _when: state.salvage > 250_
-- The ore paid for everything. The mines grew faster than the farms, and we argued about that for twenty years. The mines won. «EndingSystem.js · line 671»
+- The ore paid for everything. The mines grew faster than the farms, and we argued about that for twenty years. The mines won. «EndingSystem.js · line 674»
 
-### THE LAST COMMANDER «EndingSystem.js · line 675»
+### THE LAST COMMANDER «EndingSystem.js · line 678»
 _when: livingCrew.length === 1 && commander_
-- Commander [commander's surname] was the last of the original crew. She raised the colony from the embryo bank and lived another sixty years. She's buried facing the light. «EndingSystem.js · line 674»
+- Commander [commander's surname] was the last of the original crew. She raised the colony from the embryo bank and lived another sixty years. She's buried facing the light. «EndingSystem.js · line 677»
 
-### THE DOCTOR'S CHILDREN «EndingSystem.js · line 678»
+### THE DOCTOR'S CHILDREN «EndingSystem.js · line 681»
 _when: livingCrew.length === 1 && hasMedic_
-- Aris was the only survivor. She spent forty years raising the colony from the embryo bank. None were hers by blood. She called them hers anyway. «EndingSystem.js · line 677»
+- Aris was the only survivor. She spent forty years raising the colony from the embryo bank. None were hers by blood. She called them hers anyway. «EndingSystem.js · line 680»
 
-### THE LAST PAIR «EndingSystem.js · line 681»
+### THE LAST PAIR «EndingSystem.js · line 684»
 _when: livingCrew.length <= 2_
-- Only two of us were left. With the embryo bank and a lot of patience, two was enough. The children don't know how close it came. «EndingSystem.js · line 680»
+- Only two of us were left. With the embryo bank and a lot of patience, two was enough. The children don't know how close it came. «EndingSystem.js · line 683»
 
-### THE QUIET REMNANT «EndingSystem.js · line 685»
-- We're small and far from anyone, but we're managing. The ship still hangs in orbit, a bright dot before dawn. The children know it brought us here. «EndingSystem.js · line 685»
+### THE QUIET REMNANT «EndingSystem.js · line 688»
+- We're small and far from anyone, but we're managing. The ship still hangs in orbit, a bright dot before dawn. The children know it brought us here. «EndingSystem.js · line 688»
 
-### THE ARCHIVISTS «EndingSystem.js · line 686»
-- We copied everything the ship carried about Earth: books, songs, recipes, maps. Earth is still there. We just can't go back. «EndingSystem.js · line 686»
+### THE ARCHIVISTS «EndingSystem.js · line 689»
+- We copied everything the ship carried about Earth: books, songs, recipes, maps. Earth is still there. We just can't go back. «EndingSystem.js · line 689»
 
-### THE EXPANSION «EndingSystem.js · line 687»
-- We filled the valley, then started on the next one. The children born here call themselves natives. To them, Earth is a place in stories. «EndingSystem.js · line 687»
+### THE EXPANSION «EndingSystem.js · line 690»
+- We filled the valley, then started on the next one. The children born here call themselves natives. To them, Earth is a place in stories. «EndingSystem.js · line 690»
 
-### THE FAR SETTLERS «EndingSystem.js · line 690»
-- We chose the farthest world we could reach. Nobody is likely to find us out here. We're alone, and so far that has been fine. «EndingSystem.js · line 690»
+### THE FAR SETTLERS «EndingSystem.js · line 693»
+- We chose the farthest world we could reach. Nobody is likely to find us out here. We're alone, and so far that has been fine. «EndingSystem.js · line 693»
 
-### THE SCOUTS «EndingSystem.js · line 693»
-- Vance never stopped exploring. He mapped every valley within a month's walk, and his children kept going. The colony still sends out survey teams every spring. «EndingSystem.js · line 693»
+### THE SCOUTS «EndingSystem.js · line 696»
+- Vance never stopped exploring. He mapped every valley within a month's walk, and his children kept going. The colony still sends out survey teams every spring. «EndingSystem.js · line 696»
 
-### THE SIGNAL KEEPERS «EndingSystem.js · line 696»
-- Mira kept a radio watch on the old ship channels every night for the rest of her life. Nothing ever came in. «EndingSystem.js · line 696»
-- The colony log ends here. «EndingSystem.js · line 707»
+### THE SIGNAL KEEPERS «EndingSystem.js · line 699»
+- Mira kept a radio watch on the old ship channels every night for the rest of her life. Nothing ever came in. «EndingSystem.js · line 699»
+- The colony log ends here. «EndingSystem.js · line 710»
 
 ## Fifty years later
 
-- /// FIFTY YEARS LATER /// «EndingSystem.js · line 757»
+- /// FIFTY YEARS LATER /// «EndingSystem.js · line 760»
 
 _when: finalPop >= 500_
-- Colony population: [n] people. It's a real town now. «EndingSystem.js · line 763»
+- Colony population: [n] people. It's a real town now. «EndingSystem.js · line 766»
 
 _when: finalPop >= 100_
-- Colony population: [n] people. A small, steady community. «EndingSystem.js · line 765»
+- Colony population: [n] people. A small, steady community. «EndingSystem.js · line 768»
 
 _when: finalPop >= 20_
-- Colony population: [n] people. Enough to keep going, just. «EndingSystem.js · line 767»
+- Colony population: [n] people. Enough to keep going, just. «EndingSystem.js · line 770»
 
 _when: otherwise (not: finalPop >= 20)_
-- Colony population: [n] people. Still very few. Every birth matters. «EndingSystem.js · line 769»
+- Colony population: [n] people. Still very few. Every birth matters. «EndingSystem.js · line 772»
 
 _when: type === 'EDEN'_
-- The children here have never gone hungry. They watch the old Earth recordings like history lessons. It's been an easy life. «EndingSystem.js · line 778»
+- The children here have never gone hungry. They watch the old Earth recordings like history lessons. It's been an easy life. «EndingSystem.js · line 781»
 
 _when: type === 'TERRAFORMED'_
-- The weather machines still run under the fields. The third generation knows how to adjust them. Nobody has found out who built them. «EndingSystem.js · line 780»
+- The weather machines still run under the fields. The third generation knows how to adjust them. Nobody has found out who built them. «EndingSystem.js · line 783»
 
 _when: type === 'SINGING'_
-- The children born here hear the planet's tone all the time, and they find silence strange. Old Earth music sounds thin to them. «EndingSystem.js · line 782»
+- The children born here hear the planet's tone all the time, and they find silence strange. Old Earth music sounds thin to them. «EndingSystem.js · line 785»
 
 _when: type === 'CRYSTALLINE'_
-- Families keep their recordings in the crystal halls. Touch the right crystal and you hear a great-grandparent talking. «EndingSystem.js · line 784»
+- Families keep their recordings in the crystal halls. Touch the right crystal and you hear a great-grandparent talking. «EndingSystem.js · line 787»
 
 _when: type === 'SYMBIOTE\_WORLD'_
-- The third generation can read the forest's health by touch and smell. They're less like us every year, and better suited to this place. «EndingSystem.js · line 786»
+- The third generation can read the forest's health by touch and smell. They're less like us every year, and better suited to this place. «EndingSystem.js · line 789»
 
 _when: type === 'MECHA' || type === 'MACHINE\_WORLD'_
-- The factories run themselves. The children learn machine code before they can read. Half have implants by age ten. «EndingSystem.js · line 788»
+- The factories run themselves. The children learn machine code before they can read. Half have implants by age ten. «EndingSystem.js · line 791»
 
 _when: type === 'GRAVEYARD'_
-- Salvage became the colony's trade. We've stripped every wreck within a day's walk. The children play in the ones we haven't reached. «EndingSystem.js · line 790»
+- Salvage became the colony's trade. We've stripped every wreck within a day's walk. The children play in the ones we haven't reached. «EndingSystem.js · line 793»
 
 _when: type === 'OCEANIC'_
-- Three generations at sea have changed us. The children can hold their breath for fifteen minutes. A few are born with webbing between their fingers. «EndingSystem.js · line 792»
+- Three generations at sea have changed us. The children can hold their breath for fifteen minutes. A few are born with webbing between their fingers. «EndingSystem.js · line 795»
 
 _when: type === 'ICE\_WORLD' || type === 'FROZEN\_OCEAN'_
-- Life under the ice is quiet. The glowing animals are our farms and our lamps. On the surface, the children stare at the stars for hours. «EndingSystem.js · line 794»
+- Life under the ice is quiet. The glowing animals are our farms and our lamps. On the surface, the children stare at the stars for hours. «EndingSystem.js · line 797»
 
 _when: type === 'VOLCANIC'_
-- Heat from the ground powers everything. The children have never had a cold night. They build with cooled lava and carve patterns into it. «EndingSystem.js · line 796»
+- Heat from the ground powers everything. The children have never had a cold night. They build with cooled lava and carve patterns into it. «EndingSystem.js · line 799»
 
 _when: type === 'ROGUE'_
-- There are no days here and no seasons. People measure time in finished jobs, not years. Nobody is ever in a hurry. «EndingSystem.js · line 798»
+- There are no days here and no seasons. People measure time in finished jobs, not years. Nobody is ever in a hurry. «EndingSystem.js · line 801»
 
 _when: viability === 'POOR' || viability === 'MARGINAL'_
-- Staying alive is still hard work every day. The children born here have never known anything easier. They're tough, practical, and suspicious of comfort. «EndingSystem.js · line 800»
+- Staying alive is still hard work every day. The children born here have never known anything easier. They're tough, practical, and suspicious of comfort. «EndingSystem.js · line 803»
 
 _when: otherwise (not: viability === 'POOR' || viability === 'MARGINAL')_
-- EXODUS-9's crew are remembered as heroes or fools, depending on who tells it. The truth is simpler: they were tired, they stopped, and it worked. «EndingSystem.js · line 803»
+- EXODUS-9's crew are remembered as heroes or fools, depending on who tells it. The truth is simpler: they were tired, they stopped, and it worked. «EndingSystem.js · line 806»
 
 _when: c.tags.includes('LEADER')_
-- Commander [name] is the first name in the colony register. «EndingSystem.js · line 815»
+- Commander [name] is the first name in the colony register. «EndingSystem.js · line 818»
 
 _when: c.tags.includes('MEDIC')_
-- The clinic is named after [name]. «EndingSystem.js · line 817»
+- The clinic is named after [name]. «EndingSystem.js · line 820»
 
 _when: c.tags.includes('ENGINEER')_
-- [name]'s tools hang in the workshop, still in use. «EndingSystem.js · line 819»
+- [name]'s tools hang in the workshop, still in use. «EndingSystem.js · line 822»
 
 _when: c.tags.includes('SPECIALIST')_
-- The ship's archive is named after [name]. «EndingSystem.js · line 821»
+- The ship's archive is named after [name]. «EndingSystem.js · line 824»
 
 _when: c.tags.includes('SECURITY')_
-- The night watch still follows [name]'s rules. «EndingSystem.js · line 823»
+- The night watch still follows [name]'s rules. «EndingSystem.js · line 826»
 
 _when: crewMemorials.length > 0_
-- The light at the end of the heading still shows after sunset. Nobody has gone to see it up close. «EndingSystem.js · line 835»
+- The light at the end of the heading still shows after sunset. Nobody has gone to see it up close. «EndingSystem.js · line 838»
 
 ## The colony card «EndScreens.js · colony»
 _The card these lines are printed on. The crew list under it says "a founder" or "lost with the colony" (see 07-finale.md, Who made it)._

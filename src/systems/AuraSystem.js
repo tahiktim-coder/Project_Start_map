@@ -107,11 +107,11 @@ const AURA_COMMENTARY = {
         ADVERSARIAL: ["Done, Commander."]
     },
 
-    // First landing on a planet type
+    // The first scan of a kind of world (the new look: +1 data, App.noteNewKind)
     FIRST_LANDING: {
         COOPERATIVE: ["A new kind of world, Commander. I will record everything."],
-        NEUTRAL: ["A new kind of world, Commander. I have no data on it yet."],
-        SUSPICIOUS: ["A new kind of world, Commander. I am recording the landing."],
+        NEUTRAL: ["A new kind of world, Commander. I have added it to the file."],
+        SUSPICIOUS: ["A new kind of world, Commander. I have logged the scan."],
         ADVERSARIAL: ["A new kind of world, Commander."]
     },
 
@@ -247,6 +247,12 @@ class AuraSystem {
                 state.addLog(`A.U.R.A.: "${line}"`);
             }
         }, 350); // slightly after crew bark (150ms)
+    }
+
+    /** One line for a moment, in her current tier, for the caller to say: no cooldown, not logged. null when there is none. */
+    line(trigger) {
+        const lines = (AURA_COMMENTARY[trigger] || {})[this.getTier()];
+        return lines && lines.length ? lines[Math.floor(Math.random() * lines.length)] : null;
     }
 
     // ═══════════════════════════════════════════════════════════════

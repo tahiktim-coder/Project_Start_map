@@ -25,7 +25,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                     state.energy = Math.max(0, state.energy - 5);
                     const salvage = Math.floor(Math.random() * 8) + 8; // 8-15
                     state.salvage = Math.min(state.maxSalvage, state.salvage + salvage);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog('COLONY LOG: "Day 1: We landed. The children are on real grass for the first time. Elena cried."');
                     state.addLog('COLONY LOG: "Day 342: The water level is dropping. The local roots are taking minerals we need."');
                     state.addLog('COLONY LOG: "Day 891: The wheat won\'t grow any more. The local plants always win. Rationing again."');
@@ -107,7 +107,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                 effect: function(state) {
                     state.energy = Math.max(0, state.energy - 5);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog('COLONY LOG: "Month 3: The engineers have a cough. The doctor says it\'s dust."');
                     state.addLog('COLONY LOG: "Month 5: It isn\'t dust. It\'s in the water. Boiling it makes it worse."');
                     state.addLog('COLONY LOG: "Month 7: Six deaths a day now. The doctor died first. The children don\'t seem to catch it."');
@@ -136,7 +136,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                 desc: "-1 Ration: it takes a day. +2 Data. Aris -1 Stress.",
                 effect: function(state) {
                     state.rations = Math.max(0, state.rations - 1);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
                     state.addLog('Three hundred names, read from the outer ring inward. The last eighteen have no markers at all.');
@@ -181,7 +181,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                 effect: function(state) {
                     state.energy = Math.max(0, state.energy - 5);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog('LOG, NORTH: "The south won\'t share the water. Their leader says it\'s their land. We dug that well."');
                     state.addLog('LOG, SOUTH: "They stole twelve kilos of seed in the night. Without it, our children starve."');
                     state.addLog('LOG, NORTH: "Shots fired last night. Reko is dead. He was sixteen."');
@@ -247,7 +247,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                 desc: "+10 Salvage, +1 Data. All crew +1 Stress.",
                 effect: function(state) {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog('COLONY LOG: "Day 1: We landed. The children are playing in the grass."');
                     state.addLog('COLONY LOG: "Day 1: We landed. The children are playing in the grass."');
                     state.addLog('COLONY LOG: "Day 1: We landed. The children are playing in the grass."');
@@ -299,7 +299,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                 desc: "-5 Energy. +1 Data.",
                 effect: function(state) {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog('A.U.R.A.: "Population zero, Commander. I can find no cause. I have logged the site as complete."');
                     state.addLog('A.U.R.A.: "Four plates per table is standard issue, Commander. That part is correct."');
                     return "A.U.R.A. has filed her report. Nothing in it is wrong. -5 Energy, +1 Data.";
@@ -328,7 +328,7 @@ const FAILED_COLONY_ENCOUNTERS = [
                 effect: function(state) {
                     state.energy = Math.max(0, state.energy - 5);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog('COLONY LOG: "Week 8: The gardens are thriving. Growth is three times what we expected."');
                     state.addLog('COLONY LOG: "Month 5: It\'s out of control. Vines in the foundations. The greenhouse burst overnight."');
                     state.addLog('COLONY LOG: "Month 9: We only use the inner ring now. The plants aren\'t smart, but they get past every fence."');

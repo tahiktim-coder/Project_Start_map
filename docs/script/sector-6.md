@@ -91,42 +91,42 @@ _In the last sector the jump button is disabled._
 ### Warping to the light «bundle.js · handleWarp»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "The drive fires, Commander. We do not move." «bundle.js · line 1763»
-- A.U.R.A.: "I have checked it three times. From here we can only go in, or turn back to Eden." «bundle.js · line 1764»
-- Approach complete. The light fills every window. It is not warm. «bundle.js · line 1912»
+- A.U.R.A.: "The drive fires, Commander. We do not move." «bundle.js · line 1793»
+- A.U.R.A.: "I have checked it three times. From here we can only go in, or turn back to Eden." «bundle.js · line 1794»
+- Approach complete. The light fills every window. It is not warm. «bundle.js · line 1942»
 
 ### Trying to jump past it «bundle.js · handleSectorJump»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light." «bundle.js · line 2424»
+- A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light." «bundle.js · line 2454»
 
 ### Scanning it «bundle.js · handleScanAction»
 _Only these lines of it play at the light._
 
-- Deep Scan started... «bundle.js · line 3676»
-- SCAN: Light, but no heat. «bundle.js · line 3677»
-- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 3678»
-- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 3679»
-- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 3685»
-- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 3687»
+- Deep Scan started... «bundle.js · line 3741»
+- SCAN: Light, but no heat. «bundle.js · line 3742»
+- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 3743»
+- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 3744»
+- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 3750»
+- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 3752»
 
 ### Sending a probe «bundle.js · handleProbeAction»
 _Only these lines of it play at the light._
 
-- No probe available. «bundle.js · line 3820»
-- Probe launched toward the light... «bundle.js · line 3824»
-- Signal lost at once. No data, and no wreckage. «bundle.js · line 3825»
-- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 3826»
+- No probe available. «bundle.js · line 3886»
+- Probe launched toward the light... «bundle.js · line 3890»
+- Signal lost at once. No data, and no wreckage. «bundle.js · line 3891»
+- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 3892»
 
 ### Sending the team «bundle.js · handleEvaAction»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 4022»
+- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 4090»
 
 ### Trying to leave «bundle.js · init · req-break-orbit»
 _Breaking orbit at the light._
 
-- A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times." «bundle.js · line 1421»
+- A.U.R.A.: "The drive fires, Commander. We do not move. I have checked it three times." «bundle.js · line 1449»
 
 ## The sector's own trouble: THRESHOLD_CALL «SectorConfig.js · 6.hazard»
 _Nothing here is random. The light reads what reaches it._

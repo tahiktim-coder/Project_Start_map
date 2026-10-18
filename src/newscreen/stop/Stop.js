@@ -8,8 +8,12 @@
    each with their name and why over them; the "GO DOWN" tag stands over the hatch. A click on someone at the hatch sends
    them back to the window (a place opens: the tag says "one more"); a click on someone at the window puts them in the open
    place, or in the place of whoever joined last. Only two fit: both go, nobody changes. "GO DOWN": the two climb down the
-   hatch, THEN the shuttle drops to the site (a click hurries it), then the real game runs the trip (LanderGame, the
-   Torch, the cards). When they are back the shuttle comes up and they climb back. "Leave orbit" plays the dive backwards.
+   hatch, THEN the shuttle drops to where they go (a click hurries it), then the real game runs the trip (LanderGame, the
+   Torch, the cards). When they are back the shuttle comes up and they climb back; if a find is still open, two step forward
+   again. "Leave orbit" plays the dive backwards.
+   Scan is one click: the glass sweeps the world (no click lands meanwhile), then the game scans it and its finds show as
+   tags with marks on the world (stop/Words.js, WorldFinds.js). A click on a find (its tag or its mark) is where GO DOWN
+   goes: the shuttle aims there (NSGlass.aim), never while it is flying.
    Every action calls the REAL game through NewScreen.flow (Orbit.js): costs, events, rewards and saves are today's.
    Anyone too weak from a missed supper is not put forward and stands apart, by the suit locker; pointing says why.
    A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
@@ -26,7 +30,7 @@
    Listens: 'dive:start' { id }  'dive:cancel'  'stop:open' { id, dived }  'stop:refresh'  'dive:back'  'trip:down' { ids }
             'trip:back'  'flow:go' { id } (bakes ahead)  'hidden'
    Emits:   'dive:plated' { dir }  'stop:shown' { id }  'stop:hidden' { id }  'stop:pick' { ids }
-   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave()
+   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id)
    Anchors (CSS px, while open): 'stop:person:<id>', 'stop:aura', 'stop:glass', 'stop:site'
 */
 (function () {
@@ -44,6 +48,7 @@
     const TONE = { cora: '#c9d1d6', jaxon: '#f08c2e', aris: '#ffc27a', vance: '#c4622a', mira: '#e8836a' };   // as the voice lines
     const CREW = ['jaxon', 'aris', 'vance', 'mira'];
     const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, READ_MS = 250, GATHER_LEAD = 2600, PROPOSE_AFTER = 450, CLICK_GAP = 300;
+    const SWEEP_MS = 1750;                                                // Scan: the glass sweeps the world's face once, then the finds show
 
     // ── the stop's own state (none of it is game state) ──
     const freshPick = () => ({ slots: [null, null], order: [], why: {}, manual: false, key: '', from: Infinity });
@@ -60,6 +65,8 @@
         drop: null,          // { at }: the shuttle leaves when the team has climbed down the hatch
         trip: null,          // { ids } while the team is down
         decks: null,
+        finds: [],           // the world's finds (NewScreen.flow.finds: WorldFinds.js), read with the actions
+        sweep: null,         // { t0 } while the glass sweeps the world after a click on Scan
     };
     let room = null, art = null, actx = null, diveC = null, bridgeC = null, dctx = null, bctx = null, fxList = [], W = null;
     const t0 = () => NS.clock.t;
@@ -330,7 +337,16 @@
         S.pick.order = S.pick.order.filter(id => S.pick.slots.includes(id));
         crewNow = crewMap();
         try { S.decks = NS.game.decks(); } catch (err) { S.decks = null; }
+        readFinds(t);
         if (S.open && !S.dive) proposeNow(t);
+    }
+    /** The world's finds (their risk with the two at the hatch); the shuttle aims at the one chosen, but never mid-flight. */
+    function readFinds(t) {
+        try { S.finds = (NS.flow && typeof NS.flow.finds === 'function' ? NS.flow.finds(team()) : []) || []; } catch (err) { console.error('NewScreen stop: the finds failed', err); S.finds = []; }
+        const sh = GL.shuttleState(), flying = !!(sh && t < sh.t0 + sh.dur);
+        if (S.send || S.trip || flying) return;
+        const aimed = S.finds.find(f => f.target);
+        GL.aim(aimed ? aimed.at : null);
     }
     const hasTeamAction = () => S.actions.some(a => a.team);
     const isWrongPlace = () => S.actions.some(a => a.key === 'escape' || a.key === 'accept') || !!(S.node && S.node._isWrongPlace);
@@ -340,7 +356,7 @@
     const currentNode = () => { try { const s = NS.game.state(); return s ? s.currentSystem : null; } catch (err) { return null; } };
     function freshStop(id, node) {
         S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.pick = freshPick();
-        S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9;
+        S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9; S.finds = []; S.sweep = null;
         GL.shuttle(null);
         GL.place(node);
         crewNow = crewMap();
@@ -392,7 +408,7 @@
         let pose = null;
         try { pose = tw && tw.landerPose ? tw.landerPose() : null; } catch (err) { pose = null; }
         S.dive = Object.assign(D.start('out', pose, t0()), { id: S.id });
-        S.hover = null; S.hot = null;
+        S.hover = null; S.hot = null; S.sweep = null;
         W.hide();
     }
     /** The team goes down: from our own click (we already walked them out), or from the game alone. */
@@ -404,12 +420,13 @@
         S.send = null; S.pick = freshPick(); S.lineup = []; S.aside = [];
     }
     function onTripBack(p) {
-        const t = t0(), ids = S.trip ? S.trip.ids : [];
+        const t = t0(), ids = S.trip ? S.trip.ids : [], home = t + SHUTTLE_MS + 700;
         S.trip = null; S.send = null;
         if (p && p.failed) S.pick = Object.assign(freshPick(), { from: t + PROPOSE_AFTER * 4 });   // the game would not take them: they come back up, and two step forward again
+        else S.pick = Object.assign(freshPick(), { from: home + ids.length * 700 + PROPOSE_AFTER });   // home and up the ladder: another find still open, two step forward again
         GL.shuttle('up', t + 300, SHUTTLE_MS + 200);
         crewNow = crewMap();
-        ids.forEach((id, i) => { if (crewOf(id) === 'well') { S.atWindow.add(id); enterTo(id, t + SHUTTLE_MS + 700 + i * 700, SPOT_X[id], 'idle', 1); } });
+        ids.forEach((id, i) => { if (crewOf(id) === 'well') { S.atWindow.add(id); enterTo(id, home + i * 700, SPOT_X[id], 'idle', 1); } });
     }
     function onFlowGo(p) { const node = p && nodeOf(p.id); if (node) GL.prepare(node); D.prepare(); }
 
@@ -434,6 +451,7 @@
         if (S.open && !S.dive && S.fadeAt != null && t - S.fadeAt >= DISSOLVE && !S.shownSent) shown();
         if (S.drop && t >= S.drop.at) { GL.shuttle('down', S.drop.at, SHUTTLE_MS); S.drop = null; }   // the team is down the hatch: the shuttle goes
         if (S.send && !S.send.fired && t >= S.send.fireAt && !NS.blocked()) fireSend();   // a card came up meanwhile: they wait below
+        if (S.sweep && t - S.sweep.t0 >= SWEEP_MS && !NS.blocked()) { S.sweep = null; runAct('scan', t); }   // the glass has swept the world: the scan reads it
         if ((S.open || S.dive) && t - S.readAt >= READ_MS && S.id && !(S.dive && !S.dive.open && S.dive.dir === 'in')) { readActions(t); if (S.open && !(S.dive && S.dive.dir === 'out')) reconcile(t); }
     }
     function shown() {
@@ -446,7 +464,7 @@
     function close(tell) {
         const id = S.id;
         S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.pick = freshPick(); S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null;
-        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = []; S.apart = [];
+        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.finds = []; S.sweep = null;
         GL.shuttle(null); GL.place(null);
         registerAnchors(false); W.hide(); setPointing(false);
         if (tell) emit('stop:hidden', { id });
@@ -538,25 +556,34 @@
         const who = picking() ? (hit && hit.kind === 'who' ? hit.id : personAtPx(ax, ay)) : null;
         const fit = who && S.lineup.includes(who) ? who : null, weak = who && S.aside.includes(who) ? who : null;   // too weak to go: pointing says why, a click does nothing
         const actKey = hit && hit.kind === 'act' ? hit.key : null, onLeave = !!(hit && hit.kind === 'leave');
-        return { fit, weak, actKey, onLeave, on: !!actKey || onLeave || (!!fit && S.lineup.length > 2) };
+        const find = hit && hit.kind === 'find' ? hit : null;            // a find's tag or its mark on the world
+        return { fit, weak, actKey, onLeave, find, on: !!actKey || onLeave || !!find || (!!fit && S.lineup.length > 2) };
     }
-    function pointAt(u) { setHot(u.actKey || (u.onLeave ? 'leave' : null)); S.hover = u.actKey || u.onLeave ? null : u.fit || u.weak; setPointing(u.on); return u.on; }
+    function pointAt(u) { setHot(u.actKey || (u.find ? u.find.key : null) || (u.onLeave ? 'leave' : null)); S.hover = u.actKey || u.find || u.onLeave ? null : u.fit || u.weak; setPointing(u.on); return u.on; }
     /** Each frame: what is under a still pointer now (someone walked off, or onto it). */
-    function repoint() { if (ptr && S.open && !S.dive && !S.send && !NS.blocked()) pointAt(under(ptr.x, ptr.y)); }
+    function repoint() { if (ptr && S.open && !S.dive && !S.send && !S.sweep && !NS.blocked()) pointAt(under(ptr.x, ptr.y)); }
     function pointer(type, e) {
         ptr = type === 'leave' ? null : { x: e.clientX, y: e.clientY };
         if (!S.open || S.dive || S.fadeAt != null && t0() - S.fadeAt < DISSOLVE || NS.blocked()) { if (type === 'move' || type === 'leave') { S.hover = null; setHot(null); setPointing(false); } return false; }
         const t = t0(), cx = e.clientX, cy = e.clientY;
         if (type === 'leave') { S.hover = null; setHot(null); setPointing(false); return false; }
         if (S.send) { setPointing(false); if (type === 'down') skipSend(t); return type === 'down'; }   // the team is leaving: a click hurries it
-        const u = under(cx, cy), { fit, actKey, onLeave } = u;
+        if (S.sweep) { S.hover = null; setHot(null); setPointing(false); return type === 'down'; }    // the glass is sweeping the world: a moment
+        const u = under(cx, cy), { fit, actKey, onLeave, find } = u;
         if (type === 'move') return pointAt(u);
         if (type !== 'down') return false;
         if (t - S.clickAt < CLICK_GAP) return true;
         if (onLeave && !W.fresh('leave')) { S.clickAt = t; leave(); return true; }
         if (actKey && !W.fresh(actKey)) { S.clickAt = t; doAct(actKey, t); return true; }
+        if (find && !W.fresh(find.key)) { S.clickAt = t; aimAt(find.id, t); return true; }
         if (fit) { S.clickAt = t; return pickPerson(fit, t); }
         return false;
+    }
+    /** A click on a find: GO DOWN goes there now (its mark in brackets, the shuttle's path ends there). */
+    function aimAt(id, t) {
+        let ok = false;
+        try { ok = !!(NS.flow && typeof NS.flow.aim === 'function' && NS.flow.aim(id)); } catch (err) { console.error('NewScreen stop: choosing the find failed', err); }
+        if (ok) { S.readAt = t - READ_MS; readFinds(t); }               // read again now: the marks and GO DOWN's risk follow at once
     }
     function say(text) { const v = NS.mods.voice; if (v && v.say) { try { v.say({ id: 'aura', who: 'A.U.R.A.', text }); } catch (err) { console.error('NewScreen stop: voice failed', err); } } }
     function doAct(key, t) {
@@ -569,8 +596,15 @@
             S.hover = null; setHot(null); setPointing(false);
             return;
         }
+        if (key === 'scan') { if (!S.sweep) S.sweep = { t0: t }; S.hover = null; setHot(null); setPointing(false); return; }   // the glass sweeps first (update reads it after)
         if (key === 'skim') GL.skim(t);
-        S.readAt = t + 400 - READ_MS;                                    // the list changes after this; look again soon
+        runAct(key, t);
+    }
+    /** The game's own action now (NewScreen.flow.act); the list changes after it, so it is read again soon. */
+    function runAct(key, t) {
+        const a = S.actions.find(q => q.key === key);
+        if (!a) return;
+        S.readAt = t + 400 - READ_MS;
         try {
             if (NS.flow && typeof NS.flow.act === 'function') NS.flow.act(key);
             else if (typeof a.run === 'function') a.run();
@@ -650,6 +684,7 @@
         vis(diveC, false); vis(bridgeC, false);
         W = WORDS.create({
             S, css: (x, y) => css(x, y), unit: () => unit(), t0, poseOf, picking, team, arrived, joinedLast, isWrongPlace,
+            sweep: () => (S.sweep ? Math.max(0, t0() - S.sweep.t0) : null),
             proposed: () => !!(S.pick.key || S.pick.manual || t0() > S.pick.from + 1500),   // the crew have stepped forward (or should have)
             sprite: id => CE.sprite(id, 'idle', 0, {}), NAMES, TONE, CREW, OFFX, F, HATCH: HATCH + OFFX, NAV: NAV + OFFX, HELM: HELM + OFFX,
         });
@@ -682,6 +717,8 @@
         actions: S.actions.map(a => ({ key: a.key, words: a.words, near: a.near, team: !!a.team })), lineup: S.lineup.slice(), aside: S.aside.slice(),
         hatch: S.pick.slots.slice(), picked: team(), arrived: team().filter(arrived), why: Object.assign({}, S.pick.why), manual: S.pick.manual, joinedLast: joinedLast(), hover: S.hover, hot: S.hot,
         send: S.send ? S.send.ids.slice() : null, trip: S.trip ? S.trip.ids.slice() : null, drawn: S.drawn.map(d => d.id), glass: GL.current(), atWindow: [...S.atWindow], t: Math.round(t0()),
+        sweep: !!S.sweep, aimed: GL.aimed(),
+        finds: S.finds.map(f => { const p = S.id && geo ? GL.spot(t0(), S.shownAt, f.at) : null, c = p ? css(p[0], p[1]) : null; return { id: f.id, label: f.label, done: !!f.done, target: !!f.target, risk: f.risk, hint: f.hint, event: f.event || f.site || f.kind, mark: c ? c.map(Math.round) : null }; }),
         plans: Object.fromEntries(Object.entries(S.plans).map(([k, v]) => [k, v.map(q => q.kind + '@' + Math.round(q.t0) + (q.x != null ? ':' + q.x : ''))])),
         words: W ? W.debug() : [],
         people: S.drawn.map(d => { const [x, y] = css(d.X, d.Y + d.Sp.h * 0.5); return { id: d.id, x: Math.round(x), y: Math.round(y) }; }),

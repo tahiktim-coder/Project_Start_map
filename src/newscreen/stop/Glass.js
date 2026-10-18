@@ -1,8 +1,8 @@
 /* ═══ Silent Exodus · new screen (?new=1) · stop/Glass.js: what the bridge's big window shows ═══════════════════════════
    What it is: the sky behind the glass in orbit: far space with the sector's dust, the light ahead (it grows with every
    world we have passed), the world we came to braking in at eight sizes until it fills most of the window, a red beacon
-   on our own wrecks, a slow red blink in the sky while a distress call waits, the shuttle dropping to the site and coming
-   home, and the fuel stream pulled up from a gas giant after "Skim fuel".
+   on our own wrecks not yet boarded, a slow red blink in the sky while a distress call waits, the shuttle dropping to the
+   find chosen (or the landing site) and coming home, and the fuel stream pulled up from a gas giant after "Skim fuel".
    Worlds: NSWorlds.paint (art/Worlds.js) when it is loaded, so the world in the glass is the one in the travel view; else
    the sphere recipe with the orbit's colours. A station is drawStation, a field of rocks five small spheres, sector 1's
    giant paintGiant pushed in on its limb, the Structure the light itself, the Wrong Place a dark world.
@@ -16,10 +16,14 @@
      prepare(node)                     a course is set: bake that world's sizes in the flight's idle frames
      geom(t, shownAt) → { x, y, r, e, kind }   where the world sits now (e: 0..1 braked in), frame px
      settled(t, shownAt) → bool        the world has braked in
-     site(t, shownAt) → [x, y]         the landing site (the shuttle goes there; "Send the team" sits beside it)
+     site(t, shownAt) → [x, y]         the landing site (our wreck's beacon blinks there; the actions' threads end there)
+     aim([u, v] | null), aimed()       where the team goes: a find (WorldFinds.js), in the world's radii from its centre;
+                                       null: the landing site. spot(t, shownAt, [u, v]) → [x, y]: a find's place, frame px;
+                                       target(t, shownAt) → [x, y]: where the shuttle goes now
      callAt() → [x, y]                 the blink of a waiting call, frame px
      shuttle(dir, t, dur)              'down' | 'up' | null;  shuttleState() → { dir, t0, dur } | null
-     route(t, shownAt, n) → [[x, y]]   the shuttle's way down from its clamp to the site, n + 1 points (frame px)
+     route(t, shownAt, n, uv?) → [[x, y]]   the shuttle's way down from its clamp to where the team goes (or to the find
+                                       at uv), n + 1 points (frame px)
      skim(t)                           the stream for a few seconds
      draw(ctx, t, { shownAt, call })   the glass into the frame canvas (clipped to the window)
      disc(t, shownAt) → [x, y, r]      the world's disc, frame px (words keep off it)
@@ -89,7 +93,8 @@
         if (giant && giant === node.id) return 'giant';
         return 'world';
     }
-    const isWreck = node => !!(node && (node.type === 'EXODUS_WRECK' || node.isFirstSignal));
+    /** One of our ships is down there and not yet boarded: its beacon still calls (the wreck is a site, App.siteOf: a tag, never a type). */
+    const isWreck = node => !!(node && (node.isFirstSignal || (node.tags || []).includes('EXODUS_WRECK')) && !node.exodusInvestigated);
     const sectorNow = () => { try { return NS.game.sector() || 1; } catch (err) { return 1; } };
     let cur = null;                                                       // { id, node, kind, seed, sector }
 
@@ -190,9 +195,10 @@
         return p;
     }
     function place(node) {
-        if (!node) { cur = null; return; }
+        if (!node) { cur = null; aimAt = null; return; }
         const id = node.id;
         if (cur && cur.id === id && cur.node === node) return;
+        if (!cur || cur.id !== id) aimAt = null;                          // another world: nowhere chosen yet
         if (pics.size > 40) pics.clear();
         cur = { id, node, kind: kindOf(node), seed: hashId(id), sector: sectorNow() };
         for (let j = STEPS - 1; j >= 0; j--) D.first(worldPic(j));        // its sizes, ahead of everything else
@@ -218,6 +224,12 @@
         return [g.x - 0.6 * g.r, g.y + 0.1 * g.r];
     }
     const site = (t, shownAt) => siteOf(geom(t, shownAt));
+    // ── where the team goes: a find on the world (WorldFinds.js), as [u, v] in the world's radii from its centre ──
+    let aimAt = null;
+    function aim(uv) { aimAt = Array.isArray(uv) && uv.length === 2 && uv.every(Number.isFinite) ? uv.slice() : null; }
+    const spotOf = (g, uv) => [g.x + uv[0] * g.r, g.y + uv[1] * g.r];
+    /** The shuttle's end: the find chosen, else the landing site. */
+    const targetOf = g => (aimAt && cur && cur.kind === 'world' ? spotOf(g, aimAt) : siteOf(g));
     function disc(t, shownAt) {
         const g = geom(t, shownAt);
         if (!cur) return null;
@@ -238,14 +250,14 @@
     }
     function shuttle(dir, t, dur) { sh = dir ? { dir, t0: t, dur: dur || 2400 } : null; }
     /** The shuttle's way down from its clamp to the site, as n + 1 points along the curve it flies (the team's preview). */
-    function route(t, shownAt, n) {
-        const s = siteOf(geom(t, shownAt)), out = [];
+    function route(t, shownAt, n, uv) {
+        const g = geom(t, shownAt), s = uv && cur && cur.kind === 'world' ? spotOf(g, uv) : targetOf(g), out = [];
         for (let i = 0; i <= n; i++) { const e = i / n, bend = Math.sin(e * Math.PI) * 26; out.push([lerp(DOCK[0], s[0], e) + bend * 0.3, lerp(DOCK[1], s[1], e) - bend]); }
         return out;
     }
     function shuttlePos(t, g) {
         if (!sh) return null;
-        const u = clamp01((t - sh.t0) / sh.dur), e = smooth(0, 1, u), s = siteOf(g);
+        const u = clamp01((t - sh.t0) / sh.dur), e = smooth(0, 1, u), s = targetOf(g);
         const [a, b] = sh.dir === 'down' ? [DOCK, s] : [s, DOCK];
         const bend = Math.sin(e * Math.PI) * 26, x = lerp(a[0], b[0], e) + bend * 0.3, y = lerp(a[1], b[1], e) - bend;
         const len = Math.round(sh.dir === 'down' ? lerp(16, 3, e) : lerp(3, 16, e));
@@ -303,8 +315,9 @@
     D.later(D.pic(1, 1, [() => backdrop(0), () => lightNow()]));
 
     window.NSGlass = Object.freeze({
-        SW, SH, OFFX, WIN, LIGHT, place, prepare, geom, settled, disc, draw, shuttle, kindOf, route,
+        SW, SH, OFFX, WIN, LIGHT, place, prepare, geom, settled, disc, draw, shuttle, kindOf, route, aim,
         site: (t, shownAt) => site(t, shownAt), callAt: () => CALL.slice(), shuttleState: () => (sh ? Object.assign({}, sh) : null),
+        spot: (t, shownAt, uv) => spotOf(geom(t, shownAt), uv), target: (t, shownAt) => targetOf(geom(t, shownAt)), aimed: () => (aimAt ? aimAt.slice() : null),
         skim: t => { skimAt = t; }, current: () => (cur ? { id: cur.id, kind: cur.kind } : null),
     });
 })();

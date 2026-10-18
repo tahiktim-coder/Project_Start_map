@@ -56,7 +56,7 @@ const EXODUS_ENCOUNTERS = [
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     const loreTexts = [
                         "TRANSPONDER: 'Entry angle off by a third of a degree. That was all it took.'",
                         "TRANSPONDER: 'The heat shield was rated for three landings. This was our fourth.'",
@@ -104,7 +104,7 @@ const EXODUS_ENCOUNTERS = [
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
                     const loreTexts = [
@@ -365,7 +365,7 @@ const EXODUS_ENCOUNTERS = [
                 effect: (state) => {
                     state.energy -= 10;
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     const briefing = [
                         "CREW BRIEFING, RECORDED: 'Eight ships went this way before you. You are the ninth.' It's our briefing, word for word. But their hull number isn't nine.",
                         "Every crew was told the same three things: you are the ninth, a good world is ahead, and the ship knows the way.",
@@ -426,7 +426,7 @@ const EXODUS_ENCOUNTERS = [
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 25);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog("SHELTER LOG: 'Don't build until you've tested the soil. The ground here moves.'");
                     state.addLog("Five names, copied from five journals into the notebook where Aris keeps the dead.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Took the names before the parts');

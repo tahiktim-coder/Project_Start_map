@@ -39,7 +39,7 @@ function mockState(sector) {
         shipDecks: { bridge: deck('Bridge'), lab: deck('Laboratory'), quarters: deck('Crew quarters'), cargo: deck('Cargo hold'), engineering: deck('Engineering'), upgrades: deck('Fabrication') },
         addLog: m => logs.push(String(m)), emitUpdates() {}, noteStanding() {}, hasStanding() { return false; }, isDeckOperational() { return true; },
         consumeRation() {}, consumeEnergy() { return true; }, damageRandomDeck() { return 'lab'; }, hasActiveTrait() { return false; },
-        getStopsLeft() { return 2; }, addColonyKnowledge() {}, isSilentSpeaker() { return false; }, repairDeck() {}, adjustStress() {},
+        getStopsLeft() { return 2; }, addColonyKnowledge() {}, gainData() {}, revealStoryWorld() { return null; }, isSilentSpeaker() { return false; }, repairDeck() {}, adjustStress() {},
     };
     return { state, logs };
 }
@@ -622,6 +622,10 @@ function councilMd() {
         if (C.unscanned && C.unscanned[person]) b.push(`- no deep scan (a paradise world the team walked onto): ${lineOf(NAME[person], C.unscanned[person])}${tag(FILE, `unscanned.${person}`)}`);
         b.push(`- shut in the hold: ${lineOf(NAME[person], C.refusal[person])}${tag(FILE, `refusal.${person}`)}`, '');
     });
+    if (C.data) b.push('### What our data buys the colony', "_The new look: one more line before A.U.R.A.'s question, by Aris, else Mira, else Jaxon. [how much] is the data on the ship's wall._",
+        `- no data: ${lineOf('Aris', C.data.none)}${tag(FILE, 'data.none')}`,
+        `- some data: ${lineOf('Aris', C.data.some.replace('{n}', '[how much]'))}${tag(FILE, 'data.some')}`,
+        `- ${C.data.LOTS_AT} data or more: ${lineOf('Aris', C.data.lots.replace('{n}', '[how much]'))}${tag(FILE, 'data.lots')}`, '');
     if (typeof build !== 'function') return b;
     const EXAMPLES = [['Sector 1, a good world, the whole crew', 1, 'EXCELLENT', []], ['Sector 4, a marginal world, before any page explains the numbers', 4, 'MARGINAL', []],
         ['Sector 6, a good world, after the truth', 6, 'GOOD', ['PAGE_THROW']]];
@@ -782,6 +786,11 @@ function councilMd() {
     b.push(...textSection(2, 'The fabricator', whole('src/data/Upgrades.js', 'UPGRADES'), 'Each part: name, description, what it changes, where it shows on the ship.'));
     b.push(...textSection(2, 'Planets on the map', block('src/generators/PlanetGenerator.js', /const PLANET_DATA = \{/, 'PLANET_DATA'), 'The description of each kind of world.'));
     b.push(...textSection(2, 'Stations on the map', method('src/generators/PlanetGenerator.js', 'generateStation'), ''));
+    const WF = 'src/newscreen/WorldFinds.js';                                        // the new look: a world's kind, and what a scan finds there
+    b.push(...textSection(2, 'What kind of world it is (the new look)', block(WF, /const KINDS = \{/, 'KINDS'), "Under every world's name, in travel and on the bridge: its kind, then one short line (ten words at most). Our wrecks and the story world keep their own lines."));
+    b.push(...textSection(2, 'What a scan finds on a world (the new look)', block(WF, /const SITES = \{/, 'SITES'), "The places a team can go, as marks on the bridge window. A world's own event and its feature are named by their card's title, or by the names below."));
+    b.push(...textSection(3, 'Names for a few cards', block(WF, /const LABELS = \{/, 'LABELS'), ''));
+    b.push(...textSection(3, 'A clue toward our ship', block(WF, /const CLUE_LINES = \{/, 'CLUE_LINES'), 'Said by A.U.R.A. when the team comes back from the find that holds the clue (one side world in sectors 2 to 6).'));
     b.push(...textSection(2, 'Asteroid fields on the map', block('src/data/AsteroidFields.js', /const ASTEROID_FIELD_NAMES/, 'ASTEROID_FIELD_NAMES'), ''), ...bulletsOf(block('src/data/AsteroidFields.js', /^function generateAsteroidField/m, 'generateAsteroidField')), '');
     write('11-cargo-and-map.md', 'Cargo, fabricator and map names — any sector', b);
 }
