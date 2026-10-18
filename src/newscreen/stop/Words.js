@@ -1,34 +1,43 @@
 /* ═══ Silent Exodus · new screen (?new=1) · stop/Words.js: what the bridge's glass shows, and where ══════════════════════
    What it is: the words of a stop, laid out on the bridge as parts of the ship (the window is the ship's display):
-   - the glass's title, top left: the world's name in capitals and, as quiet chips, what our scans read of it (Scan.js);
+   - the glass's title, top left: the world's name in capitals, under it what kind of world it is (WorldFinds.js: "A singing
+     world. One low note comes off it.") and, once scanned, whether people could live there (Scan.js);
    - each action as a glass tag (amber corner brackets, a dither shade, a pixel icon, the label in capitals, its cost and
      gain as chips) beside what it acts on, with a thin dotted thread to an anchor ON the target: Scan to the world's limb,
      Dock to the station's port, Mine to the biggest rock, Refuel to the cloud tops, Fly closer and Settle here to the
      landing site, Answer the call to the blink in the sky, Date the wreck to Mira's screen, Go into the light to the light;
-   - the team's "GO DOWN" tag over the hatch (the two names, the risk), and over each of the two at the hatch their first
-     name in their colour and why they go;
+   - Scan is one click: the glass sweeps the world, then each find (WorldFinds.js, 1 to 3: the places a team can go) is a
+     glass tag in the sky beside the world, its thread to its mark ON the world: what it is, what it can give, a clue toward
+     our ship, its risk ("risk 12%"); a visited one says "done". They keep below the room A.U.R.A. speaks in under the
+     title (two lines) while they fit there. A click on a find (its tag or its mark) makes it where GO
+     DOWN goes: its mark in brackets, and the shuttle's path ends there (NSGlass.aim). Pointing at it shows that path;
+   - the team's "GO DOWN" tag over the hatch (the two names, the risk where they go), and over each of the two at the hatch
+     their first name in their colour and why they go;
    - "Leave orbit" as a lit key on Cora's console (it glows as the next step once nothing but settling is left);
    - the note over someone pointed at: at the hatch what they are good for; at the window "Aris goes instead of Vance" and
      what the ship loses while they are down; too weak, why;
    - the ship's stock on the wall left of the window (NSStock).
    A tag draws in from its corners, its label types on, its thread reaches out (80 ms apart, 125 ms steps); pointed at, it
    brightens, its thread turns solid with a pulse at the anchor, and the glass shows what it does (stop/TagArt.js).
-   At most 40 words on screen (the voice line counted): the names and the labels first, then the team's chips, the names
-   at the hatch, the world's name, the actions' chips, the scan chips. Hidden chips keep their room: nothing moves under
-   the pointer. Words never sit over the world's disc or a person. Settle here is cool grey, never warm.
-   The first time an action shows, A.U.R.A. says once what it does (NSOrbit.TELL), one at a time, the pointed-at first.
+   At most 40 words on screen (the voice line counted): the world's name, the labels, the key and the stock first, then
+   the kind line, the chosen find's chips, the names at the hatch, the team's chips, whether people could live there, the
+   other finds' chips, the actions' chips. Decided afresh only while nothing is pointed at: nothing moves under the pointer
+   (but a click that chooses another find shows its chips at once). Words never sit over the world's disc or a person. Settle here is cool grey, never warm.
+   The first time an action shows, A.U.R.A. says once what it does (NSOrbit.TELL), one at a time, the pointed-at first; and
+   once how to choose a find.
    Loaded only when the new-screen switch is on, after stop/TagArt.js and stop/Tags.js, before stop/Stop.js.
 
    window.NSStopWords (frozen)
      create(ctx) → words     ctx from Stop.js: { S, css, unit, t0, poseOf, picking, team, arrived, joinedLast, isWrongPlace,
-                             proposed, sprite(id), NAMES, TONE, CREW, OFFX, F, HATCH, NAV, HELM } (frame px)
+                             proposed, sweep() → ms into the scan's sweep | null, sprite(id), NAMES, TONE, CREW, OFFX, F,
+                             HATCH, NAV, HELM } (frame px); S.finds: the world's finds (NewScreen.flow.finds)
      words.init(layer)       the tags and the stock in #ns-stop-words
      words.layout(t) → L     what shows where now (frame px), or null before the world has braked in
-     words.glass(c, t, L)    what a pointed-at tag shows on the glass (drawn under the room's frame)
-     words.threads(c, t, L)  the threads and their pins (under the people)
+     words.glass(c, t, L)    what a pointed-at tag shows on the glass, and the scan's sweep (drawn under the room's frame)
+     words.threads(c, t, L)  the threads and their pins, the finds' marks (under the people)
      words.tags(c, t, L)     shades, brackets, icons, the helm key (over everything)
      words.apply(t, L)       the DOM half: place, show, type on; A.U.R.A.'s first-time lines
-     words.hide()            all off;  words.hit(cx, cy) → { kind: 'act' | 'leave' | 'who', key?, id? } | null (CSS px)
+     words.hide()            all off;  words.hit(cx, cy) → { kind: 'act' | 'leave' | 'who' | 'find', key?, id? } | null (CSS px)
      words.fresh(key) → bool shown less than 400 ms ago (a click is ignored);  words.noteUp(), words.skyY() (frame y)
      words.debug() → [{ text, rect }]
 */
@@ -53,6 +62,8 @@
     const WHO_WRAP = 44;                                                  // frame px: the most a name over someone at the hatch may spread
     const WHO_GAP = 3;                                                    // frame px: kept between the two names at the hatch
     const HATCH_NOTE_WRAP = 78;                                           // frame px: the note over someone at the hatch, narrow (it sits under GO DOWN)
+    const MAX_FINDS = 3, MARK_HIT = 7;                                    // a world's finds at most (WorldFinds.js); frame px round a mark that takes a click
+    const VOICE_ROOM = 38;                                                // frame px: two of A.U.R.A.'s lines under the title (Stop.js 'stop:aura', 1280 wide and up)
     const wordsIn = s => (String(s || '').trim().match(/\S+/g) || []).length;
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
     const clamp01 = v => clamp(v, 0, 1);
@@ -83,11 +94,13 @@
         function init(el) {
             layer = el;
             T = { title: TG.make(layer, 'title'), acts: [0, 1, 2, 3].map(() => TG.make(layer, 'act')), go: TG.make(layer, 'act'), key: TG.make(layer, 'key'),
-                who: [TG.make(layer, 'who'), TG.make(layer, 'who')], note: TG.make(layer, 'note'), probe: TG.make(layer, 'note') };
+                who: [TG.make(layer, 'who'), TG.make(layer, 'who')], note: TG.make(layer, 'note'), probe: TG.make(layer, 'note'),
+                titleProbe: TG.make(layer, 'title'),                     // never shown: the title with every row, measured (the room kept under it)
+                finds: Array.from({ length: MAX_FINDS }, () => TG.make(layer, 'act')) };
             T.key.set({ label: 'Leave orbit' });
             stock = window.NSStock ? window.NSStock.board(layer) : null;
         }
-        const allTags = () => [T.title, T.go, T.key, T.note].concat(T.acts, T.who);
+        const allTags = () => [T.title, T.go, T.key, T.note].concat(T.acts, T.who, T.finds);
 
         // ── geometry ──
         /** The top of someone's head standing at floor row F (frame px): their idle sprite's first painted row. */
@@ -145,6 +158,7 @@
             switch (a.key) {
                 case 'escape': case 'accept': return null;                // the Wrong Place's two choices are about the place itself
                 case 'scan': return limb(dc, box);
+                case 'settle': return (S.finds || []).length && g.kind === 'world' ? limb(dc, box) : site.map(Math.round);   // the finds hold the landing site's marks: settling is the world itself
                 case 'strange': return [Math.round(dc[0] - dc[2] * 0.92), Math.round(dc[1] + dc[2] * 0.62)];   // the strange site is in space, off the world's lower limb (marked there)
                 case 'dock': return [Math.round(g.x), Math.round(g.y + g.r * 11 / 24)];          // the station's core, its lower end: the port
                 case 'mine': return [Math.round(g.x - g.r * 0.34 + 2), Math.round(g.y)];          // the biggest rock's near side
@@ -177,14 +191,24 @@
             return out;
         }
         const chipWords = list => (list || []).reduce((n, c) => n + wordsIn(c.text), 0);
-        function factRows() {
+        /** Under the world's name: what kind of world it is (WorldFinds.js). What it holds, what it gives and how risky it is
+            now show on its finds. */
+        function kindLine() {
+            try { const K = window.NSWorldFinds, k = K && S.node ? K.kind(S.node) : null; return k ? k.text : ''; } catch (err) { console.error('NewScreen stop: the kind line failed', err); return ''; }
+        }
+        /** Once scanned: whether people could live there (Scan.js, the tier the settle question reads). */
+        function liveRow() {
             let f = null;
             try { f = NS.flow && typeof NS.flow.facts === 'function' && S.id ? NS.flow.facts(S.id) : null; } catch (err) { console.error('NewScreen stop: the scan facts failed', err); }
-            if (!f) return [];
-            const dTone = { 'rough ground': 'risk', 'dangerous ground': 'high' }[f.danger] || null;
-            const rows = [[f.site && { icon: 'site', text: cap(f.site) }, f.gives && { icon: 'gives', text: cap(f.gives) }],
-                [f.danger && { icon: 'danger', text: cap(f.danger), tone: dTone }, f.live && { icon: 'live', text: cap(f.live) }]];
-            return rows.map(r => r.filter(Boolean)).filter(r => r.length);
+            return f && f.live ? [{ icon: 'live', text: cap(f.live) }] : null;
+        }
+        /** A find's chips: what it can give, a clue toward our ship, its risk; a visited one only says so. */
+        function findChips(f) {
+            if (f.done) return [{ icon: 'done', text: 'done', tone: 'done' }];
+            const out = (f.gives || []).map(c => ({ icon: c.icon, text: c.text }));
+            if (f.hint) out.push({ icon: 'where', text: 'a clue', tone: 'gain' });
+            if (typeof f.risk === 'number') out.push({ icon: 'risk', text: `risk ${f.risk}%`, tone: f.risk >= 30 ? 'high' : 'risk' });
+            return out;
         }
         /** The note over someone pointed at (null: nobody fit to go or too weak is pointed at). */
         function noteFor(id) {
@@ -203,28 +227,34 @@
             return { html, text, loss: loss ? cap(loss) + '.' : `Nothing aboard needs ${id === 'aris' || id === 'mira' ? 'her' : 'him'} this time.`, tone };
         }
 
-        // ── the words budget: at most 40 on screen (the voice line counted, unless a note has stepped it back). The labels, the
-        //    key and the stock always; then, while they fit: the team's chips, the names at the hatch (both or neither), the
-        //    world's name, each action's chips, the scan chips. Decided afresh only while nothing is pointed at: what is on
-        //    screen holds still under the pointer ──
+        // ── the words budget: at most 40 on screen (the voice line counted, unless a note has stepped it back). The world's
+        //    name, the labels, the key and the stock always; then, while they fit: the kind line, the chosen find's chips, the
+        //    names at the hatch (both or neither), the team's chips, whether people could live there, the other finds' chips,
+        //    each action's chips. Decided afresh only while nothing is pointed at: what is on screen holds still under the pointer
+        //    (a click that chooses another find is the one exception: the player asked to see it) ──
         let frozen = null;
         function decide(o) {
-            if ((S.hot || S.hover) && frozen) return frozen;
+            const aimed = o.finds.find(f => f.target), aimedId = aimed ? aimed.id : null;
+            if ((S.hot || S.hover) && frozen && frozen.aimed === aimedId) return frozen;   // a click that chose another find: decided once more, its chips show
             const voice = !o.note && NS.mods.voice && NS.mods.voice.current ? NS.mods.voice.current() : null;
             let budget = MAX_WORDS - (voice ? wordsIn(voice.who) + wordsIn(voice.line) : 0);
             const take = n => { if (n <= 0) return true; if (budget - n >= 0) { budget -= n; return true; } return false; };
             o.acts.forEach(a => { budget -= wordsIn(a.words); });
+            o.finds.forEach(f => { budget -= wordsIn(f.label); });
             if (o.team) budget -= 2;
             if (o.leave) budget -= 2;
             if (o.stock) budget -= window.NSStock.KEYS.length;
+            if (o.name) budget -= wordsIn(o.name);
             if (o.note) budget -= wordsIn(o.note.name) + wordsIn(o.note.text || o.note.line) + wordsIn(o.note.loss);
-            const dec = { act: {} };
+            const dec = { act: {}, find: {}, aimed: aimedId };
+            dec.kind = !!o.kind && take(wordsIn(o.kind));
+            if (aimed) dec.find[aimed.id] = take(chipWords(aimed.chips));
             dec.who = !!o.team && take(o.whoIds.reduce((n, id) => n + 1 + wordsIn(S.pick.why[id] || ''), 0));
             const named = dec.who ? o.goChips.filter(c => c.tone === 'who' && o.whoIds.some(id => ctx.NAMES[id] === c.text)).length : 0;   // read once: the same names stand over their heads
             dec.go = !!o.team && take(chipWords(o.goChips) - named);
-            dec.title = !!o.name && take(wordsIn(o.name));
+            dec.facts = !!o.live && take(chipWords(o.live));
+            o.finds.forEach(f => { if (!(f.id in dec.find)) dec.find[f.id] = take(chipWords(f.chips)); });
             o.acts.forEach(a => { dec.act[a.key] = take(chipWords(a.chips)); });
-            dec.facts = dec.title && o.rows.length > 0 && take(o.rows.reduce((n, r) => n + chipWords(r), 0));
             frozen = dec;
             return dec;
         }
@@ -239,29 +269,36 @@
         // ── the layout: what shows where, frame px ──
         function layout(t) {
             if (!T || !S.id || !GL.settled(t, S.shownAt)) return null;
-            const u = ctx.unit(), busy = !!S.send, wrong = ctx.isWrongPlace(), picking = ctx.picking();
+            const u = ctx.unit(), busy = !!S.send, wrong = ctx.isWrongPlace(), picking = ctx.picking(), sweeping = ctx.sweep() != null;
             const g = GL.geom(t, S.shownAt), dc = GL.disc(t, S.shownAt) || [g.x, g.y, g.r], site = GL.site(t, S.shownAt);
             const rank = a => { const i = WORTH.indexOf(a.key); return i < 0 ? WORTH.length : i; };
             const best = S.actions.slice().sort((a, b) => rank(a) - rank(b)).slice(0, MAX_LIT);
-            const shown = busy ? [] : S.actions.filter(a => best.includes(a));
+            const shown = busy ? [] : S.actions.filter(a => best.includes(a) && !(sweeping && a.key === 'scan'));   // the glass is sweeping: Scan is under way
             const teamAct = shown.find(a => a.team && picking && ctx.proposed()) || null, acts = shown.filter(a => !a.team);
             // each action keeps its own tag while it stays on screen (a neighbour going never makes it draw in again)
             const used = new Set(), tagOf = new Map();
             acts.forEach(a => { const tg = T.acts.find(q => q.key0 === a.key); if (tg) { used.add(tg); tagOf.set(a.key, tg); } });
             acts.forEach(a => { if (tagOf.has(a.key)) return; const tg = T.acts.find(q => !used.has(q)); used.add(tg); tagOf.set(a.key, tg); });
-            const L = { t, items: [], preview: null, stock: !NS.blocked() && !!stock };
+            const L = { t, items: [], preview: null, stock: !NS.blocked() && !!stock, marks: [] };
             const leaveOn = !busy && !wrong, note = noteFor(S.hover), team = teamAct ? ctx.team() : [];
             const goChips = teamAct ? teamChips() : [], whoIds = team.filter(ctx.arrived);
-            const nameText = S.node ? titleCase(S.node.name || '') : '', rows = nameText ? factRows() : [];
-            const dec = decide({ acts, team: !!teamAct, leave: leaveOn, stock: L.stock, note, goChips, whoIds, name: nameText, rows });
+            const nameText = S.node ? titleCase(S.node.name || '') : '', kind = nameText ? kindLine() : '', live = nameText ? liveRow() : null;
+            // the world's finds (WorldFinds.js): shown once the glass has swept it, never while the team is on its way
+            const ground = g.kind === 'world' || g.kind === 'giant', allFinds = ground && !sweeping ? (S.finds || []).slice(0, MAX_FINDS) : [];
+            const finds = busy ? [] : allFinds.map((f, i) => ({ f, id: f.id, label: f.label, chips: findChips(f), target: !!f.target, tag: T.finds[i] }));
+            if (busy) allFinds.filter(f => f.target).forEach(f => L.marks.push({ at: GL.spot(t, S.shownAt, f.at), state: 'target' }));   // where they are going stays marked
+            const dec = decide({ acts, finds, team: !!teamAct, leave: leaveOn, stock: L.stock, note, goChips, whoIds, name: nameText, kind, live });
 
-            // the glass's title: the world's name, and what our scans read of it
-            let titleBox = null;
-            if (dec.title) {
-                T.title.set({ label: nameText, rows: dec.facts ? rows : null });
+            // the glass's title: the world's name, what kind of world it is, and once scanned whether people could live there
+            let titleBox = null, voiceFloor = null;
+            if (nameText) {
+                const rows = [kind ? [{ text: kind, tone: 'kind' }] : null, live].filter(Boolean);
+                T.title.set({ label: nameText, rows: rows.filter(r => (r === live ? dec.facts : dec.kind)) });
                 const [w, h] = T.title.size(u);
                 titleBox = [WIN.x0 + 6, WIN.y0 + 5, w, h];
                 L.items.push({ key: 'title', tag: T.title, kind: 'title', x: titleBox[0], y: titleBox[1], w, h, tone: 'cool', brackets: true });
+                T.titleProbe.set({ label: nameText, rows });                 // A.U.R.A. speaks under the title: the finds keep below her two lines,
+                voiceFloor = titleBox[1] + T.titleProbe.size(u)[1] + 4 + VOICE_ROOM;   // measured from the whole title, so nothing moves when a row hides
             }
             // the actions beside what they act on
             const boxes = [];
@@ -271,25 +308,44 @@
                 item.thread = item.anchor ? threadTo([x, y, w, h], item.anchor) : null;
                 L.items.push(item); boxes.push([x, y, w, h]);
             };
+            /** A find's tag (kind 'find'), its thread to its mark ON the world; a visited one cool grey and dimmed. */
+            const addFind = (v, x, y, w, h, at) => {
+                const item = { key: 'find:' + v.id, id: v.id, tag: v.tag, kind: 'find', x, y, w, h, tone: v.f.done ? 'cool' : 'warm', icon: v.f.icon, brackets: true,
+                    dim: !!v.f.done, target: v.target, at: v.f.at, anchor: at.map(Math.round) };
+                item.thread = threadTo([x, y, w, h], item.anchor);
+                L.items.push(item); boxes.push([x, y, w, h]);
+            };
             const sized = acts.map(a => { const tg = tagOf.get(a.key); tg.set({ label: a.words, chips: dec.act[a.key] ? a.chips : null }); return tg.size(u); });
             const stack = acts.filter(a => NEAR_WORLD.includes(a.near) || a.near === 'call' || (a.near === 'under' && !wrong))   // the call too: last, its thread runs down to the blink
                 .sort((a, b) => (a.near === 'call') - (b.near === 'call'));
-            if (stack.length) {
+            // the finds first, in the order of their marks (top to bottom: no thread crosses another), each level with its mark
+            // where it can be; the actions under them (or, with no finds, starting by the landing site as before)
+            const column = finds.map(v => { v.tag.set({ label: v.label, chips: dec.find[v.id] ? v.chips : null }); const [w, h] = v.tag.size(u); return { v, w, h, at: GL.spot(t, S.shownAt, v.f.at) }; })
+                .sort((a, b) => a.at[1] - b.at[1]);
+            if (stack.length || column.length) {
                 let right = g.kind === 'giant' ? Math.round(site[0] + 76) : Math.round(dc[0] - dc[2] - 14), top = g.kind === 'giant' ? Math.round(site[1] - 84) : Math.round(site[1] - 16);   // a giant: in the sky over the cloud tops
-                if (g.kind === 'station') top = Math.round(g.y + g.r * 11 / 24 - sized[acts.indexOf(stack[0])][1] / 2);   // level with the port: the thread runs under the panels
+                if (g.kind === 'station' && stack.length) top = Math.round(g.y + g.r * 11 / 24 - sized[acts.indexOf(stack[0])][1] / 2);   // level with the port: the thread runs under the panels
                 right = Math.max(WIN.x0 + 72, right);
-                const list = stack.map(a => { const [w, h] = sized[acts.indexOf(a)]; return [a, w, h]; });
-                const total = list.reduce((n, q) => n + q[2] + GAP, -GAP), floor = WIN.y1 - 32;
-                if (top + total > floor) top = floor - total;
-                if (g.kind === 'world') {                                 // a moon, a ring or debris on the world's left: the stack keeps clear of it too
-                    const edge = pictureLeft(g, top - 4, top + total + 4);
+                const list = column.map(e => ({ find: e, w: e.w, h: e.h, want: Math.round(e.at[1] - e.h / 2) }))
+                    .concat(stack.map((a, i) => { const [w, h] = sized[acts.indexOf(a)]; return { act: a, w, h, want: !column.length && i === 0 ? top : null }; }));
+                const floor = WIN.y1 - 32, widest = Math.max(...list.map(q => q.w)), need = list.reduce((n, q) => n + q.h + GAP, -GAP);
+                const ceil0 = titleBox && right - widest < titleBox[0] + titleBox[2] + 4 ? titleBox[1] + titleBox[3] + 8 : WIN.y0 + 5;
+                const ceil = column.length && voiceFloor != null ? Math.max(ceil0, Math.min(voiceFloor, floor - need)) : ceil0;   // her room, while the column fits under it
+                let cursor = ceil;
+                list.forEach(q => { q.y = Math.max(cursor, q.want != null ? q.want : cursor); cursor = q.y + q.h + GAP; });
+                let limit = floor;                                        // too low: pushed up from the bottom, never over the title
+                for (let i = list.length - 1; i >= 0; i--) { list[i].y = Math.min(list[i].y, limit - list[i].h); limit = list[i].y - GAP; }
+                cursor = ceil;
+                list.forEach(q => { q.y = Math.max(q.y, cursor); cursor = q.y + q.h + GAP; });
+                if (g.kind === 'world') {                                 // a moon, a ring or debris on the world's left: the column keeps clear of it too
+                    const edge = pictureLeft(g, list[0].y - 4, cursor - GAP + 4);
                     if (edge != null) right = Math.max(WIN.x0 + 72, Math.min(right, edge - 10));
                 }
-                if (titleBox && top < titleBox[1] + titleBox[3] + 8 && right - Math.max(...list.map(q => q[1])) < titleBox[0] + titleBox[2] + 4) top = titleBox[1] + titleBox[3] + 8;
-                list.forEach(([a, w, h]) => {
-                    let x = right - w;
-                    while (onDisc([x, top, w, h], dc, 4) && x > WIN.x0 + 4) x -= 2;
-                    add(a, x, top, w, h); top += h + GAP;
+                list.forEach(q => {
+                    let x = right - q.w;
+                    while (onDisc([x, q.y, q.w, q.h], dc, 4) && x > WIN.x0 + 4) x -= 2;
+                    if (q.act) add(q.act, x, q.y, q.w, q.h);
+                    else addFind(q.find.v, x, q.y, q.w, q.h, q.find.at);
                 });
             }
             acts.filter(a => !stack.includes(a)).forEach(a => {
@@ -362,6 +418,7 @@
         }
         function previewFor(it, g, dc, site, t) {
             const o = { t, still: still() };
+            if (it.kind === 'find') return it.dim ? null : { kind: 'route', o: Object.assign(o, { pts: GL.route(t, S.shownAt, 24, it.at) }) };   // the shuttle's way to it
             switch (it.key) {
                 case 'scan': return { kind: 'scan', o: Object.assign(o, { disc: [dc[0], dc[1], g.kind === 'world' ? g.r : dc[2]] }) };
                 case 'team': return { kind: 'route', o: Object.assign(o, { pts: GL.route(t, S.shownAt, 24) }) };
@@ -382,10 +439,12 @@
         }
         function glass(c, t, L) {
             const mark = L.items.find(it => it.key === 'strange' && it.anchor);   // the strange site: a faint cold contact the glass marks
-            if (!L.preview && !mark) return;
+            const sweep = ctx.sweep();                                    // Scan was clicked: the glass sweeps the world's face once
+            if (!L.preview && !mark && sweep == null) return;
             c.save(); c.beginPath(); c.rect(WIN.x0, WIN.y0, WIN.x1 - WIN.x0, WIN.y1 - WIN.y0); c.clip();
             try {
                 if (mark) TA.preview(c, 'mark', { at: mark.anchor, t, still: still() });
+                if (sweep != null) { const g = GL.geom(t, S.shownAt), dc = GL.disc(t, S.shownAt) || [g.x, g.y, g.r]; TA.preview(c, 'scan', { disc: [dc[0], dc[1], g.kind === 'world' ? g.r : dc[2]], t: sweep, still: false }); }
                 if (L.preview) TA.preview(c, L.preview.kind, L.preview.o);
             } catch (err) { console.error('NewScreen stop: a preview failed', err); }
             c.restore();
@@ -396,23 +455,28 @@
                 if (!it.thread) return;
                 const k = calm ? 1 : clamp01((since(it, t) - ARM_MS * 0.6) / THREAD_MS), hot = S.hot === it.key;
                 if (k <= 0) return;
-                TA.thread(c, it.thread, it.tone, { solid: hot, frac: k, lift: hot ? 1 : it.dim ? -1 : 0 });
-                if (k >= 1) TA.pin(c, it.anchor[0], it.anchor[1], it.tone, { pulse: hot && !calm ? t - S.hotAt : null, lift: hot ? 1 : 0 });
+                TA.thread(c, it.thread, it.tone, { solid: hot || !!it.target, frac: k, lift: hot ? 1 : it.dim ? -1 : 0 });
+                if (k < 1) return;
+                if (it.kind === 'find') {                                 // the find's mark on the world: a ring goes out once as it is found
+                    TA.findMark(c, it.anchor[0], it.anchor[1], { state: it.dim ? 'done' : it.target ? 'target' : 'open', hot, pulse: hot && !calm ? t - S.hotAt : null,
+                        born: calm ? null : since(it, t) - ARM_MS * 0.6 - THREAD_MS, t, still: calm });
+                } else TA.pin(c, it.anchor[0], it.anchor[1], it.tone, { pulse: hot && !calm ? t - S.hotAt : null, lift: hot ? 1 : 0 });
             });
+            (L.marks || []).forEach(m => TA.findMark(c, m.at[0], m.at[1], { state: m.state, t, still: calm }));   // the team on its way: where they go
         }
         function tags(c, t, L) {
             const calm = still();
             if (L.stock && stockBox) TA.panel(c, stockBox[0], stockBox[1], stockBox[2], stockBox[3], t);
             L.items.forEach(it => {
-                const k = calm ? 1 : clamp01(since(it, t) / ARM_MS), hot = S.hot === it.key;
+                const k = calm ? 1 : clamp01(since(it, t) / ARM_MS), hot = S.hot === it.key, lit = hot || !!it.target;   // the find chosen stays lit
                 if (it.kind === 'key') {
                     TA.key(c, it.x, it.y, it.w, it.h, { hot, next: it.next, t, still: calm });
                     TA.icon(c, 'chevrons', it.x + 4, it.y + Math.floor((it.h - 9) / 2), 'warm', hot || it.next ? 1 : 0);
                     return;
                 }
                 TA.shade(c, it.x, it.y, it.w, it.h, Math.min(1, k * 1.6));
-                if (it.brackets) TA.brackets(c, it.x, it.y, it.w, it.h, it.tone, k, hot);
-                if (it.icon && k > 0.4) TA.icon(c, it.icon, it.x + 4, it.y + Math.floor((it.h - 9) / 2), it.tone, hot ? 1 : it.dim ? -1 : 0);
+                if (it.brackets) TA.brackets(c, it.x, it.y, it.w, it.h, it.tone, k, lit);
+                if (it.icon && k > 0.4) TA.icon(c, it.icon, it.x + 4, it.y + Math.floor((it.h - 9) / 2), it.tone, lit ? 1 : it.dim ? -1 : 0);
                 if (it.kind === 'who') {                                  // a small caret under the name, over their head
                     const r = TA.ramp(it.tone), y = it.y + it.h + 1;
                     const cx = it.px ? clamp(Math.round(it.px), it.x + 3, it.x + it.w - 4) : it.x + Math.floor(it.w / 2);   // over their head, even when the name stepped aside
@@ -435,7 +499,7 @@
                 }
                 const [x, y] = ctx.css(it.x, it.y);
                 tag.place(x, y);
-                tag.flag('is-hot', S.hot === it.key);
+                tag.flag('is-hot', S.hot === it.key || !!it.target);
                 tag.flag('is-cool', it.tone === 'cool');
                 tag.flag('is-wait', !!it.dim);
                 tag.flag('is-next', !!it.next);
@@ -479,9 +543,12 @@
                 if (!it.tag.on || it.kind === 'title' || it.kind === 'note' || !inside(it, cx, cy, it.kind === 'who' ? 2 : 6)) continue;
                 if (it.kind === 'key') return { kind: 'leave' };
                 if (it.kind === 'who') return { kind: 'who', id: it.id };
+                if (it.kind === 'find') { if (it.dim) continue; return { kind: 'find', id: it.id, key: it.key }; }   // a visited find takes no click
                 return { kind: 'act', key: it.key };
             }
-            return null;
+            const [ox, oy] = ctx.css(0, 0), u = ctx.unit(), fx = (cx - ox) / u, fy = (cy - oy) / u;   // a find's mark on the world takes a click too
+            const m = lastL.items.find(it => it.kind === 'find' && it.tag.on && !it.dim && Math.hypot(it.anchor[0] - fx, it.anchor[1] - fy) <= MARK_HIT);
+            return m ? { kind: 'find', id: m.id, key: m.key } : null;
         }
         const fresh = key => performance.now() - (shownWall.get(key) || 0) < GUARD_MS;
         function skyY() {
@@ -497,13 +564,16 @@
             if (telling || !lastL || !v || typeof v.once !== 'function' || typeof v.told !== 'function') return;
             const now = performance.now(), team = ctx.team();
             const ready = key => key !== 'team' || (team.length === 2 && team.every(ctx.arrived) && S.lineup.length >= 3);
-            const shown = lastL.items.filter(it => (it.kind === 'act' || it.kind === 'key') && it.tag.on && now - (shownWall.get(it.key) || now) >= TELL_AFTER_MS && ready(it.key)).map(it => it.key);
+            const seen = it => it.tag.on && now - (shownWall.get(it.key) || now) >= TELL_AFTER_MS;
+            const isFind = it => it.kind === 'find' && !it.dim;                                // the finds: told once, as one ('find')
+            const shown = lastL.items.filter(it => (it.kind === 'act' || it.kind === 'key') && seen(it) && ready(it.key)).map(it => it.key)
+                .concat(lastL.items.some(it => isFind(it) && seen(it)) ? ['find'] : []);
             const key = (S.hot && shown.includes(S.hot) ? [S.hot] : []).concat(shown).find(k => tell[k] && !v.told('act:' + k));
             if (!key) return;
             telling = true;
             const text = String(tell[key]).replace('{team}', team.map(id => ctx.NAMES[id]).join(' and '));
             const done = () => { telling = false; };
-            const stillThere = () => S.open && !S.dive && !!lastL && lastL.items.some(it => it.key === key && it.tag.on) && ready(key);
+            const stillThere = () => S.open && !S.dive && !!lastL && lastL.items.some(it => (key === 'find' ? isFind(it) : it.key === key) && it.tag.on) && ready(key);
             v.once('act:' + key, text, stillThere).then(done, err => { done(); console.error('NewScreen stop: the voice failed', err); });
         }
         const debug = () => (T ? allTags().filter(tag => tag.on).map(tag => ({ key: tag.key0, text: tag.el.textContent, rect: (r => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)])(tag.el.getBoundingClientRect()) })) : []);

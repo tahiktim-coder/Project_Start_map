@@ -118,7 +118,7 @@ const ITEMS = {
     ALIEN_ARTIFACT: {
         id: 'alien_artifact', name: 'Strange Object', type: 'ARTIFACT', value: 80,
         desc: 'Nobody aboard can say who made it or what it is for. It is warm. Studying it gives +2 Data.',
-        onUse: (state) => { state._colonyKnowledge = (state._colonyKnowledge || 0) + 2; return "Hours of study, and a few answers. +2 Data."; }
+        onUse: (state) => { state.gainData(2); return "Hours of study, and a few answers. +2 Data."; }
     },
     FOOD_PACK: {
         id: 'food_pack', name: 'Sealed Rations', type: 'CONSUMABLE', value: 10,   // the id stays (saves); the player reads "rations"

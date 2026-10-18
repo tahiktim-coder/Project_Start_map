@@ -9,15 +9,15 @@ _Can turn up in: sectors 1, 2, 3, 4, 5._
 
 #### Card words: handleExodusAction «bundle.js · handleExodusAction»
 
-- No Exodus wreck signal detected at this location. «bundle.js · line 2836»
-- We already searched this wreck. «bundle.js · line 2840»
-- ERROR: Exodus encounter data unavailable. «bundle.js · line 2846»
-- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 2852»
+- No Exodus wreck signal detected at this location. «bundle.js · line 2866»
+- We already searched this wreck. «bundle.js · line 2870»
+- ERROR: Exodus encounter data unavailable. «bundle.js · line 2876»
+- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 2882»
 
 #### Names on the hulls «bundle.js · getWreckName»
 _Every wreck card is titled EXODUS-[number] "[CALLSIGN]". The number range grows with the sector; the callsign is picked from this list._
 
-- EXODUS-[hull] "[callsign]" «bundle.js · line 2771»
+- EXODUS-[hull] "[callsign]" «bundle.js · line 2801»
 
 #### A second list of ship names «ExodusDerelicts.js · EXODUS_SHIP_NAMES»
 _Defined in the wreck file; the wreck titles use the list above._
@@ -167,10 +167,10 @@ _Can turn up in: any sector._
 
 #### Card words: handleDerelictAction «bundle.js · handleDerelictAction»
 
-- There is no wreck here. «bundle.js · line 3060»
-- We already searched this wreck. «bundle.js · line 3064»
-- ERROR: Derelict encounter data unavailable. «bundle.js · line 3070»
-- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3085»
+- There is no wreck here. «bundle.js · line 3112»
+- We already searched this wreck. «bundle.js · line 3116»
+- ERROR: Derelict encounter data unavailable. «bundle.js · line 3122»
+- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3137»
 
 ### MINING CRAFT «DerelictEncounters.js · DERELICT_MINING»
 
@@ -286,16 +286,16 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showStationEncounter «bundle.js · showStationEncounter»
 
-- ERROR: Station encounter data unavailable. «bundle.js · line 2007»
-- Unknown Station «bundle.js · line 2021»
-- **kicker** — INSIDE THE STATION «bundle.js · line 2024»
-- STATION: [result] «bundle.js · line 2029»
+- ERROR: Station encounter data unavailable. «bundle.js · line 2037»
+- Unknown Station «bundle.js · line 2051»
+- **kicker** — INSIDE THE STATION «bundle.js · line 2054»
+- STATION: [result] «bundle.js · line 2059»
 
 #### Card words: handleStationAction «bundle.js · handleStationAction»
 
-- No station detected at this location. «bundle.js · line 2041»
-- We already searched this station. «bundle.js · line 2045»
-- Starting docking procedure with [name]... «bundle.js · line 2049»
+- No station detected at this location. «bundle.js · line 2071»
+- We already searched this station. «bundle.js · line 2075»
+- Starting docking procedure with [name]... «bundle.js · line 2079»
 
 ### MINING PLATFORM «SpaceStations.js · STATION_MINING»
 
@@ -311,6 +311,7 @@ Choices:
 2. **Let A.U.R.A. run the drones** — -10 Energy. +2 Data. 40% chance: all planets revealed.
    → Drones handed to A.U.R.A. -10 Energy, +2 Data. / A.U.R.A.: 'Six drones are surveying the sector for us, Commander.'  
    ↳ or: The drone survey is finished. Every planet in the sector is on the map.  
+   ↳ or: The drones also found one of our ships, on [name].  
 3. **Strip the reactor** — +40 Energy. 25% chance someone gets hurt.
    → Reactor stripped. +40 Energy. / The reactor cells came out cleanly.  
    ↳ or: [name] was exposed to radiation at the reactor. INJURED.  
@@ -370,6 +371,7 @@ Choices:
    → Capacitors drained into our reactor. +40 Energy. The beacon is dark. / The beacon cuts off mid-word. / Mira: 'That was the only other voice out here.'  
 2. **Copy its aiming data** — -5 Energy. All planets in the sector revealed.
    → Aiming data copied. Every planet is on the map. -5 Energy. / To aim the beam, it had to map everything nearby. Every planet in the sector is plotted.  
+   ↳ or: Its map also shows one of our ships, on [name].  
 3. **Add our hull number to its message** — -10 Energy. +2 Data. Vance +1 Stress.
    → The beacon now says: 'Turn back. Exodus 9.' -10 Energy, +2 Data. Vance +1 Stress. / Vance adds our hull number to the message, so Earth knows we heard it too. / A.U.R.A.: 'Transmitting, Commander. I will tell you if anyone answers.'  
 
@@ -393,6 +395,7 @@ Choices:
    ↳ or: The medical shelf is bare, but there are food supplements. -5 Energy, +3 Rations.  
 3. **Read the ledger** — -1 Ration: a day reading. +3 Data. All planets revealed. Vance +1 Stress.
    → Ledger read. It shows where every wreck they found lies. -1 Ration, +3 Data. Vance +1 Stress. / LEDGER: hull number, where it was found, what was taken. The deeper they went, the higher the numbers, and the older the wrecks. / Vance: "Thousands of ships, and we were told eight. Someone lied to all of them."  
+   ↳ or: The ledger also lists one of our ships, on [name].  
 
 ### THE SILENT STATION «SpaceStations.js · STATION_GHOST»
 
@@ -419,11 +422,11 @@ _Can turn up in: sectors 3, 4._
 
 #### Card words: handleFailedColonyAction «bundle.js · handleFailedColonyAction»
 
-- No colony ruins detected at this location. «bundle.js · line 3004»
-- Colony ruins already investigated. «bundle.js · line 3008»
-- ERROR: Colony encounter data unavailable. «bundle.js · line 3014»
-- Colony ruins detected. Deploying investigation team... «bundle.js · line 3032»
-- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3045»
+- No colony ruins detected at this location. «bundle.js · line 3056»
+- Colony ruins already investigated. «bundle.js · line 3060»
+- ERROR: Colony encounter data unavailable. «bundle.js · line 3066»
+- Colony ruins detected. Deploying investigation team... «bundle.js · line 3084»
+- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3097»
 
 ### THE DOME «FailedColonyEncounters.js · FC_ABANDONED_DOME»
 
@@ -534,11 +537,11 @@ _Can turn up in: any sector (one is always placed in every sector; some only fro
 
 #### Card words: handleAnomalyAction «bundle.js · handleAnomalyAction»
 
-- There is nothing strange here. «bundle.js · line 3114»
-- We have already been there. «bundle.js · line 3118»
-- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3124»
-- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3153»
-- **context** — ANOMALY: [title] [context] «bundle.js · line 3165»
+- There is nothing strange here. «bundle.js · line 3166»
+- We have already been there. «bundle.js · line 3170»
+- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3176»
+- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3205»
+- **context** — ANOMALY: [title] [context] «bundle.js · line 3217»
 
 ### THE SAME PLANET TWICE «AnomalyEncounters.js · ANOMALY_FOLD»
 _Only from sector 3._
@@ -592,6 +595,7 @@ Choices:
    ↳ or: An hour after she answers, a supply crate drifts up to our airlock. It's one of ours, with our batch numbers, still sealed.  
    ↳ or: One of our own crates came back. -5 Energy, +20 Salvage, +2 Sealed Rations. All crew +1 Stress.  
    ↳ or: The voice describes every planet in this sector to her. She checks each one. Every description is accurate.  
+   ↳ or: The voice also names [name]. One of our ships is there.  
    ↳ or: The voice gave A.U.R.A. the whole sector. -5 Energy. All planets revealed.  
    ↳ or: It answers in five voices, and they are ours. A.U.R.A.: 'That doesn't match my crew count, Commander. I've logged it.'  
    ↳ or: It answered in our own voices. -5 Energy. All crew +1 Stress.  
@@ -759,6 +763,7 @@ Choices:
    → Shelves cut up and stored. +120 Salvage. Aris +2 Stress. / A.U.R.A.: 'You're taking the shelves apart, Commander. I've logged which sections.' / The shelves come down with every ship's records still on them.  
 4. **Read only the shelf about planets** — -5 Energy. +3 Data. All planets revealed. All crew +1 Stress.
    → Planet shelf read. -5 Energy, +3 Data. All planets revealed. All crew +1 Stress. / The shelf lists every planet in this sector and what's on it. The list of good ones has a single entry, and it isn't in this sector.  
+   ↳ or: The shelf also lists one of our ships, on [name].  
 
 ## The Wrong Place
 _Can turn up in: sectors 3, 4, 5, 6 (only through THE FOLD)._
@@ -768,7 +773,7 @@ _THE FOLD can throw the ship here. A sector of copies; two ways out._
 ### Arriving «bundle.js · handleAnomalyTeleport»
 _The sector header, and the old names the code still has for sectors._
 
-- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5455»
+- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5571»
 
 ### In orbit «OrbitView.js · updateCommandDeck · wrong place»
 _The two buttons instead of BREAK ORBIT._
@@ -781,38 +786,38 @@ _The two buttons instead of BREAK ORBIT._
 
 ### Fight to escape «bundle.js · handleWrongPlaceEscape»
 
-- **title** — TEAR THROUGH REALITY «bundle.js · line 3183»
-- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3185»
-- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3195»
-- We made it «bundle.js · line 3199»
-- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3200»
-- === REALITY BREACH SUCCESSFUL === «bundle.js · line 3231»
-- Emerged in Sector [sector]. The crew will never forget what they saw. «bundle.js · line 3232»
-- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3234»
+- **title** — TEAR THROUGH REALITY «bundle.js · line 3235»
+- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3237»
+- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3247»
+- We made it «bundle.js · line 3251»
+- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3252»
+- === REALITY BREACH SUCCESSFUL === «bundle.js · line 3283»
+- Emerged in Sector [sector]. The crew will never forget what they saw. «bundle.js · line 3284»
+- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3286»
 
 ### Accept your fate (an ending) «bundle.js · handleWrongPlaceAccept»
 
-- **title** — A COPY OF SOMEWHERE «bundle.js · line 3255»
-- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3257»
-- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3258»
-- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3259»
-- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3260»
+- **title** — A COPY OF SOMEWHERE «bundle.js · line 3307»
+- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3309»
+- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3310»
+- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3311»
+- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3312»
 
 ## Asteroid fields (6)
 _Can turn up in: any sector._
 
 #### Card words: showAsteroidEncounter «bundle.js · showAsteroidEncounter»
 
-- ERROR: Asteroid encounter data unavailable. «bundle.js · line 2100»
-- Unknown Field «bundle.js · line 2113»
-- **kicker** — ASTEROID FIELD «bundle.js · line 2116»
-- MINING: [result] «bundle.js · line 2121»
+- ERROR: Asteroid encounter data unavailable. «bundle.js · line 2130»
+- Unknown Field «bundle.js · line 2143»
+- **kicker** — ASTEROID FIELD «bundle.js · line 2146»
+- MINING: [result] «bundle.js · line 2151»
 
 #### Card words: handleAsteroidAction «bundle.js · handleAsteroidAction»
 
-- No asteroid field detected at this location. «bundle.js · line 2073»
-- Asteroid field already mined. «bundle.js · line 2077»
-- Entering [name]. Mining systems online... «bundle.js · line 2081»
+- No asteroid field detected at this location. «bundle.js · line 2103»
+- Asteroid field already mined. «bundle.js · line 2107»
+- Entering [name]. Mining systems online... «bundle.js · line 2111»
 
 ### RICH MINERAL DEPOSIT «AsteroidFields.js · ASTEROID_RICH»
 
@@ -950,10 +955,10 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showDistressSignal «bundle.js · showDistressSignal»
 
-- **kicker** — DISTRESS SIGNAL «bundle.js · line 2145»
-- **facts** — Nobody can tell when «bundle.js · line 2146»
-- **facts** — [signal age] years ago «bundle.js · line 2146»
-- SIGNAL: [result] «bundle.js · line 2150»
+- **kicker** — DISTRESS SIGNAL «bundle.js · line 2175»
+- **facts** — Nobody can tell when «bundle.js · line 2176»
+- **facts** — [signal age] years ago «bundle.js · line 2176»
+- SIGNAL: [result] «bundle.js · line 2180»
 
 ### AUTOMATED DISTRESS BEACON «DistressSignals.js · DISTRESS_BEACON»
 
@@ -968,6 +973,7 @@ Choices:
    → Beacon stripped. +20 Salvage, +10 Energy. Aris +1 Stress. / Cells pulled. The beacon cuts off mid-call. Nobody has time to copy the crew's names.  
 2. **Copy the beacon's log** — -5 Energy. +1 Data. 30% chance: one planet revealed.
    → Log copied. -5 Energy, +1 Data. / BEACON LOG: 'Engine failure. Drifting. The computer says help is on the way.' Then the call repeats.  
+   ↳ or: The beacon's log has a fix on [name]. One of our ships is there.  
    ↳ or: The beacon had a fix on the nearest planet. One planet added to the map.  
 3. **Answer it, then switch it off** — -1 Ration: a day beside it. +1 Data. Aris -1 Stress.
    → Beacon answered and switched off. -1 Ration, +1 Data. Aris -1 Stress. / A.U.R.A. sends a reply. Their crew's names are read aloud over the channel. / Aris: "We heard you. You can rest now." The beacon goes quiet.  
@@ -985,6 +991,7 @@ Choices:
    → Message rebuilt. -5 Energy, +3 Data. / Mira: 'Coordinates. They were heading for a bright light. Aura, is that a star?' A.U.R.A.: 'It is not on any chart, Mira.'  
    ↳ or: Mira: 'It's a list of wrecks they passed. Each one they found was older than the last.'  
    ↳ or: Mira: 'It's someone saying goodbye to their family. Just their names, over and over.'  
+   ↳ or: The coordinates point to [name]. One of our ships is there.  
    ↳ or: Coordinates plotted. One planet added to the map.  
    ↳ or: Mira +[stress] Stress.  
 2. **Copy the transmitter code only** — +15 Salvage. The message is lost. Mira +1 Stress.
@@ -1009,8 +1016,9 @@ Choices:
    ↳ or: An engine fire. The pilot stays calm and reads the checklist to the very end.  
 2. **Copy only the navigation track** — -5 Energy. +1 Data. 50% chance: one planet revealed.
    → Navigation track copied. -5 Energy, +1 Data. / Navigation track copied. Exactly the same heading as ours.  
-   ↳ or: Navigation track copied. Exactly the same heading as ours. One planet added to the map.  
+   ↳ or: Their navigation track ends at [name]. One of our ships is there.  
    ↳ or: Navigation track copied. -5 Energy, +1 Data. One planet revealed.  
+   ↳ or: Navigation track copied. Exactly the same heading as ours. One planet added to the map.  
 3. **Strip the casing** — +25 Salvage. The recording is lost. Aris +1 Stress, Jaxon +1 Stress.
    → Casing stripped. +25 Salvage. Aris +1 Stress, Jaxon +1 Stress. / Casing cut off for the metal. The memory chip cracked on the way out. Nobody will ever hear it now.  
 
@@ -1028,6 +1036,7 @@ Choices:
    → Sector map recovered. -5 Energy. All planets revealed. / Under the garbage is a full map of the sector. All planets added to the map.  
    ↳ or: The garbage is just damaged memory. There's nothing in it.  
    ↳ or: Nothing but damaged data. -5 Energy.  
+   ↳ or: The map also shows one of our ships, on [name].  
    ↳ or: The garbage is a list. Someone reprogrammed the buoy to carry it.  
    ↳ or: A.U.R.A.: 'They are hull numbers, Commander. Thousands of them, in order. Ours is not among them.'  
    ↳ or: A list of thousands of ships. -5 Energy, +2 Data. All crew +1 Stress.  
@@ -1069,6 +1078,7 @@ Choices:
    ↳ or: It reads out our crew list, name by name.  
    ↳ or: A.U.R.A.: 'That is my voice, Commander. But I have never recorded this message.'  
    ↳ or: Our own call, with our names in it. -5 Energy. All crew +2 Stress.  
+   ↳ or: One of those calls comes from [name].  
    ↳ or: At the end of our call there's one extra word, in A.U.R.A.'s voice: 'home.'  
    ↳ or: Mira: 'Aura, did you say that?' A.U.R.A.: 'No, Mira. I have never put that word in a message.'  
    ↳ or: One extra word at the end of our call. -5 Energy, +3 Data.  
@@ -1082,10 +1092,10 @@ _Can turn up in: any sector (on warps and jumps, never on the approach to the li
 
 #### Card words: showShipMalfunctionModal «bundle.js · showShipMalfunctionModal»
 
-- **kicker** — SHIP ALERT «bundle.js · line 5713»
-- Deal with it «bundle.js · line 5715»
-- DEAL WITH IT «bundle.js · line 5715»
-- MALFUNCTION RESOLVED: [result] «bundle.js · line 5718»
+- **kicker** — SHIP ALERT «bundle.js · line 5829»
+- Deal with it «bundle.js · line 5831»
+- DEAL WITH IT «bundle.js · line 5831»
+- MALFUNCTION RESOLVED: [result] «bundle.js · line 5834»
 
 ### Power Surge «ShipEvents.js · POWER_SURGE»
 
@@ -1208,10 +1218,10 @@ _Can turn up in: sectors 4, 5, 6 (the beacon and the dome from sector 4, the gra
 
 #### Card words: handleLateGamePOI «bundle.js · handleLateGamePOI»
 
-- No [poi type] detected at this location. «bundle.js · line 3271»
-- [poi type] already investigated. «bundle.js · line 3277»
-- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3283»
-- Approaching [name]... «bundle.js · line 3287»
+- No [poi type] detected at this location. «bundle.js · line 3323»
+- [poi type] already investigated. «bundle.js · line 3329»
+- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3335»
+- Approaching [name]... «bundle.js · line 3339»
 
 ### THE LIGHTHOUSE «LateGamePOIs.js · THE_LIGHTHOUSE»
 _Only from sector 4._
@@ -1276,7 +1286,7 @@ Choices:
    ↳ or: Nothing found. One crew member hurt digging at the graves.  
    ↳ or: A small stone from the graves that never cools down. Scratched on it: "For whoever comes next."  
 
-## Surface finds (37)
+## Surface finds (38)
 _Can turn up in: any sector._
 
 _What the team finds when there is no site. Two choices each: the safe one and the risky one. The card they are shown on, and how the trip ends, are in [10-away-team.md](10-away-team.md)._
@@ -1353,6 +1363,8 @@ _What the team finds when there is no site. Two choices each: the safe one and t
   1. Pull back now · 2. Rush in and grab the ore
 - **SOMEONE WAS HERE** — There are human footprints in the dust, but no wreck and no bodies. The prints just stop. «Events.js · FOOTPRINTS»  
   1. Log them and leave · 2. Follow the footprints
+- **OLD RUINS** — Walls and roofs, half buried in the dust. Nobody has lived here for a very long time. «Events.js · OLD_RUINS»  
+  1. Map the walls and leave · 2. Dig under the walls
 - **DISTRESS CALL** — A weak distress call keeps repeating from a field of wreckage. «Events.js · DISTRESS_BEACON»  
   1. Scan it from where we are · 2. Search through the wreckage
 

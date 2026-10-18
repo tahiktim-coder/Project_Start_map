@@ -17,15 +17,27 @@
    own sky and light over its edge. Our clamp lamp lights the hatch; Jaxon (the cutter) floats by it in his suit on a tether,
    and when he takes the torch he works the seam from beside it. The disc is pressed gold drifting into a close false sun.
    The readouts are MiniHost notes in IBM Plex: one by the torch, a few quiet ones in the corner.
+   THE DOORS (2026-10-17): boarding a wreck is not the same cut every time. The game picks the door (TorchDoors.pick):
+     cut      the hatch cut above: always the first boarding of a run, at most once more
+     frozen   frost hides the seam: the flame is held back off the metal and only warms it until the frost melts and the seam
+              shows (steam, meltwater beads); the ice has split most of the seal, so only the stretches still holding are cut
+     fuel     a fuel line crosses the seam, marked by the suit: cut the seam but skip where the line crosses; the flame on the
+              line is a scar and a spray of frozen vapour; when the hatch goes, the line snaps at the seam
+     already, torn, panel   no torch: a short picture with a line or two (TorchDoors.js plays them; see there)
+   Each door's pictures and geometry are in TorchDoors.js; without it every door is the plain cut. "Let Jaxon cut it" stays on
+   every door played with the torch. The disc is untouched.
 
    const result = await MiniHost.play('torch', opts)
    opts: { mode: 'hatch' | 'disc'  (default 'hatch')
+           door: 'cut' | 'frozen' | 'fuel' | 'already' | 'torn' | 'panel'   (hatch only; default 'cut')
            hull: 'EXODUS-6'         named in the first line; the game's getWreckName() ('EXODUS-4 "LAZARUS"') is fine, the number is painted
+                                    (and seeds which stretches of a frozen seam still hold, and how a fuel line runs)
            sector: 1..6             how long the wreck has been dead (docs/CANON.md §2); deadFor: 'twenty years' overrides it
            cutter: 'Jaxon'          coaches the cut and can take the torch; pass a living crew member ('Vance' if Jaxon is dead);
                                     a titled name from an old save ('Eng. Jaxon') is shortened to its last word
            spotter: 'Vance' }       says the other lines; pass a living crew member (may be the same as cutter)
-   result, hatch: { opened: true, fuelLeft: 0..1 in the last tank, scars, warps, tanks: tanks used, bySelf: false if handed over }
+   result, hatch: { opened: true, fuelLeft: 0..1 in the last tank, scars, warps, tanks: tanks used, bySelf: false if handed over,
+                    door: the door it was }  (a door without the torch: fuelLeft 1, no scars or warps, one tank, bySelf true)
    result, disc:  { destroyed: true, figuresScorched: the torch touched the two figures, fuelLeft, tanks } */
 (function () {
     'use strict';
@@ -42,14 +54,23 @@
     const REACT_GAP = 1.2, KERF_COOL = 1.6, HOT_FADE = 3.5;  // reactions wait after the line before; a cut fades white → warm → dark; cooling ticks fade
     const HEAT_SHOW = 0.45, OFF_SEAM_MAX = 0.45, SPARK_CHANCE = 0.7;   // s an uncut patch keeps its red; off the seam the flame only scorches; sparks per pixel cut through
 
+    // ── the doors (TorchDoors.js says what each one is and plays the three without the torch; here, how the torch plays the
+    //    frozen hatch and the fuel line) ──
+    const DOORS = ['cut', 'frozen', 'fuel', 'already', 'torn', 'panel'], PLAYED = ['cut', 'frozen', 'fuel'];
+    const DOOR_TITLES = { cut: 'The cutting torch', frozen: 'A frozen hatch', fuel: 'A fuel line', already: 'An open hatch', torn: 'A split hull', panel: 'A working airlock' };
+    const MELT_R = 11, MELT_RATE = 4.6, MELT_OFF = 10, MELT_GLIDE = 30, BURN_MELT_R = 4.5;   // FROZEN: the held-back flame warms this far round it (units) and melts this much frost a second at its centre; its nozzle is held this far off the metal; the crew member warms the seam at this pace (px/s); the cutting flame melts a little round itself
+    const FROST_GONE = 0.2, SEAM_SHOWS = 0.88, STEAM_PER_S = 30, BEADS_PER_S = 4;   // frost thinner than this is gone; the seam shows once this share of it is clear; puffs and beads a second while frost melts
+    const TOUCH_PAUSE = 1, LEAK_FOR = 2.6;                     // FUEL LINE: the torch stops when its flame touches the line; the line hisses a while after
+
     // ── the readout by the torch: one short line at a time, never over the seam the torch is on ──
     const STANDOFF = 3, LABEL_GAP = 8, LABEL_SCALE = 2;      // the nozzle is held this far off the metal, so the glow under the flame stays in view
     const STRAY_AFTER = 0.15, FAST_AFTER = 0.3, IDLE_AFTER = 0.35, IDLE_SPEED = 6, READOUT_FOR = 0.8, TAUGHT_AT = 0.05;   // s, s, s, px/s, s, share of the seam
     const HINTS = {                                          // the first time only: what to do, in plain words
         hatch: [['PRESS AND HOLD', 'ON THE DOTTED LINE'], ['WHITE MEANS CUT', 'FOLLOW THE LINE SLOWLY']],
         disc: [['PRESS AND HOLD ON A LINE', 'INSIDE THE DOTTED RING']],
+        melt: [['PRESS AND HOLD', 'TO WARM THE FROST'], ['MELT IT OFF', 'ALL ROUND THE HATCH']],
     };
-    let taught = { hatch: false, disc: false };              // for this page: once the player has cut a little, the hints stay away
+    let taught = { hatch: false, disc: false, melt: false };   // for this page: once the player has cut (or melted) a little, the hints stay away
 
     // ── HATCH: a rounded-rectangle seam, measured by its signed distance ──
     const HB = { cx: 322, cy: 132, hw: 42, hh: 51, r: 10 }, HATCH_BOX = [HB.cx - HB.hw - 1, HB.cy - HB.hh - 1, HB.cx + HB.hw + 1, HB.cy + HB.hh + 1];
@@ -88,6 +109,12 @@
         const i = Math.floor(j), a = PATH[i], b = PATH[(i + 1) % STEPS];
         return { x: MiniLab.lerp(a.x, b.x, j - i), y: MiniLab.lerp(a.y, b.y, j - i) };
     }
+    const SEAM_STEP = SEAM.map(i => {                            // each seam pixel's step round the path (the doors mark stretches of the seam by it)
+        const x = i % W, y = (i - x) / W;
+        let best = 0, bd = 1e9;
+        PATH.forEach((p, j) => { const dd = (p.x - x) ** 2 + (p.y - y) ** 2; if (dd < bd) { bd = dd; best = j; } });
+        return best;
+    });
     const bend = x => ((x - 330) / 330) ** 2, horizon = x => Math.round(14 + 26 * bend(x));   // the wreck's hull curves away towards the top of the picture
     const EDGES = [[50, 14], [200, 3]], JOINTS = [[176, 404], [98, 252, 446], [64, 300]];   // plate joints: across (y, bend), and down each row of plates
     const edgeY = (k, x) => Math.round(EDGES[k][0] + EDGES[k][1] * bend(x)), rowOf = (x, y) => (y < edgeY(0, x) ? 0 : y < edgeY(1, x) ? 1 : 2);
@@ -117,10 +144,14 @@
     const DEAD_FOR = ['twenty years', 'twenty years', 'a hundred years', 'two hundred years', 'three hundred years', 'four hundred years'];   // by sector
     const named = (v, fallback) => (typeof v === 'string' && v.trim() ? v.trim() : fallback);
     const shortName = (v, fallback) => named(v, fallback).split(' ').pop();   // 'Eng. Jaxon' (an old save) → 'Jaxon', as the mission log shortens names
+    const hullSeed = hull => parseInt((String(hull).match(/\d+/) || ['6'])[0], 10) || 6;   // 'EXODUS-12 "ORPHEUS"' → 12
+    /** The door asked for, if this page can show it (TorchDoors.js knows every door but the plain cut); else the plain cut. */
+    const doorOf = v => (DOORS.includes(v) && (v === 'cut' || !!(window.TorchDoors && window.TorchDoors.has(v))) ? v : 'cut');
     function readOpts(opts) {
-        const o = opts || {}, sector = MiniLab.clamp(Math.round(Number(o.sector) || 1), 1, DEAD_FOR.length);
-        return { mode: o.mode === 'disc' ? 'disc' : 'hatch', hull: named(o.hull, 'EXODUS-6'), deadFor: named(o.deadFor, DEAD_FOR[sector - 1]),
-            cutter: shortName(o.cutter, 'Jaxon'), spotter: shortName(o.spotter, 'Vance'), sector };   // sector: the sky and the rust
+        const o = opts || {}, sector = MiniLab.clamp(Math.round(Number(o.sector) || 1), 1, DEAD_FOR.length), hull = named(o.hull, 'EXODUS-6');
+        return { mode: o.mode === 'disc' ? 'disc' : 'hatch', hull, deadFor: named(o.deadFor, DEAD_FOR[sector - 1]),
+            cutter: shortName(o.cutter, 'Jaxon'), spotter: shortName(o.spotter, 'Vance'), sector,   // sector: the sky and the rust
+            door: o.mode === 'disc' ? 'cut' : doorOf(o.door), seed: hullSeed(hull) };
     }
     const sayLines = ({ hull, deadFor, cutter, spotter }) => ({
         hatch: [['', `${hull}. Dead about ${deadFor}. The hatch has no power, so it won't open.`],
@@ -129,6 +160,14 @@
         warp: [cutter, "Too hot, and now it's warped. Let it cool a second."], stray: [spotter, "You're off the seam. That's fuel we don't get back."],
         half: [spotter, 'Still nothing warm on the other side.'], gap: [cutter, "It's still holding somewhere. Find the bit you missed."],
         open: [[spotter, 'Hold on. Something in there caught your light.'], [cutter, `${deadFor[0].toUpperCase()}${deadFor.slice(1)} in the dark. Go slow in there.`]],
+        frozen: [['', `${hull}. Dead about ${deadFor}. The hatch is under thick frost.`],
+            [cutter, "Hold the flame back and warm it. We can't cut what we can't see."]],
+        shows: [cutter, 'The ice has split most of the seal. Cut the bits that still hold.'],
+        frozenOpen: [[spotter, "It's iced over in there too."], [cutter, 'Mind your gloves on that ice. It cuts.']],
+        fuel: [['', `${hull}. Dead about ${deadFor}. A fuel line runs across the hatch.`],
+            [cutter, "There's still frozen fuel in that line. Stop the flame where it crosses the seam."]],
+        line: [spotter, 'You hit the fuel line! Keep the flame off it.'],
+        fuelOpen: [[spotter, "The line's snapped. Only vapour left in it."], [cutter, 'Keep your suit clear of the broken end.']],
         hatchDry: [['', 'The tank is empty. The hatch still holds.'], [cutter, "Come back to the lander. We'll swap the tank."]],
         handOver: [cutter, "Give it here. I'll go slow so it cuts clean."], newTank: ['', 'A full tank. Pick up where you left off.'],
         disc: [['', 'The disc is out of the hold, in front of the light.'],
@@ -144,7 +183,7 @@
     const RING =[[0.5, 0.068, 9], [1, 0.15, 12], [1.0035, 0.11, 11], [1.5, 0.06, 8], [2, 0.052, 7], [2.006, 0.038, 6], [2.98, 0.019, 4], [4.16, 0.008, 2.5]];   // the hatch: [ratio, level, seconds]; detuned pairs beat slowly
     const BELL = [[0.5, 0.03, 7], [1, 0.11, 10], [1.0022, 0.07, 9], [2, 0.035, 6], [3.01, 0.015, 3]];   // the disc's one bell
     function makeSound() {
-        let bus = null, wired = null, flame = null, wasFiring = false;
+        let bus = null, wired = null, flame = null, wasFiring = false, hum = null;
         function ready() {                                       // a fresh master bus: wire up again
             const a = MiniLab.audio.get();
             if (!a || !MiniLab.audio.master) return null;
@@ -153,8 +192,10 @@
         }
         function drop() {                                        // let go; the old bus stays on the old master, which fades the ringing hatch out
             if (flame) { try { flame.src.stop(flame.src.context.currentTime + LET_GO_S); } catch (e) { /* never started */ } flame = null; }
+            if (hum) { try { hum.o.stop(hum.o.context.currentTime + LET_GO_S); } catch (e) { /* never started */ } hum = null; }
             bus = null; wired = null; wasFiring = false;
         }
+        const guard = fn => (...args) => { try { return fn(...args); } catch (e) { console.error(e); return undefined; } };   // the doors' sounds: a fault never stops the picture
         function filter(a, type, freq, q = 0.7) { const f = a.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; return f; }
         function strike(a, node, peak, t, attack, decay, pan = 0) {   // route `node` through a struck envelope (and a pan) into the bus
             const g = a.createGain();
@@ -243,6 +284,56 @@
                 tone(a, t + THUD_AT, 72, 'sine', 0.18, 0.01, 0.45, 0, 44); burst(a, t + THUD_AT, 'lowpass', 300, 0.7, 0.1, 0.005, 0.2);
             },
             bell() { const a = ready(); if (a) ring(a, a.currentTime + 0.02, 659.3, BELL, 6000); },   // the last line on the disc goes
+            // ── the doors ──
+            hiss: guard(k => {                                   // frozen vapour out of the fuel line: a sharp hiss that thins away
+                const a = ready();
+                if (!a) return;
+                const t = a.currentTime, len = 0.5 + 0.7 * MiniLab.clamp(k, 0, 1), f = burst(a, t, 'bandpass', 5200, 1.1, 0.06 + 0.06 * k, 0.01, len);
+                f.frequency.setValueAtTime(5200, t); f.frequency.exponentialRampToValueAtTime(2400, t + len);
+            }),
+            sizzle: guard(() => {                                // frost meeting the flame: a few small crackles
+                const a = ready();
+                if (!a) return;
+                const t = a.currentTime;
+                for (let k = 0; k < 3; k++) burst(a, t + Math.random() * 0.08, 'bandpass', 2600 + Math.random() * 2400, 3, 0.015 + Math.random() * 0.02, 0.002, 0.02 + Math.random() * 0.03);
+            }),
+            knock: guard((k = 1) => {                            // a dull knock of metal on metal
+                const a = ready();
+                if (!a) return;
+                const t = a.currentTime + 0.01;
+                tone(a, t, 120, 'sine', 0.12 * k, 0.004, 0.35, 0, 70); burst(a, t, 'lowpass', 500, 0.7, 0.06 * k, 0.002, 0.12);
+            }),
+            hum: guard(level => {                                // the airlock's motor on what power is left, while it cycles (0: quiet)
+                const a = ready();
+                if (!a) return;
+                if (!hum) {
+                    const o = a.createOscillator(), lp = filter(a, 'lowpass', 300), g = a.createGain();
+                    o.type = 'sawtooth'; o.frequency.value = 50; g.gain.value = 0;
+                    o.connect(lp); lp.connect(g); g.connect(bus); o.start(); hum = { o, g, lp };
+                }
+                const now = a.currentTime, v = MiniLab.clamp(level, 0, 1);
+                hum.g.gain.setTargetAtTime(0.05 * v, now, 0.08);
+                hum.o.frequency.setTargetAtTime(48 + 40 * v, now, 0.15); hum.lp.frequency.setTargetAtTime(240 + 600 * v, now, 0.15);
+            }),
+            clunk: guard(() => {                                 // a lock letting go
+                const a = ready();
+                if (!a) return;
+                const t = a.currentTime + 0.01;
+                tone(a, t, 150, 'square', 0.04, 0.002, 0.12, 0, 80); tone(a, t, 75, 'sine', 0.14, 0.004, 0.4, 0, 50); burst(a, t, 'bandpass', 1800, 2, 0.05, 0.001, 0.05);
+            }),
+            slide: guard(len => {                                // a heavy door running in its track
+                const a = ready();
+                if (!a) return;
+                const t = a.currentTime, f = burst(a, t, 'lowpass', 900, 1.2, 0.08, 0.15, len);
+                f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(260, t + len);
+                tone(a, t, 62, 'triangle', 0.06, 0.2, len, 0, 55);
+            }),
+            puff: guard(() => {                                  // the last air out through a gap
+                const a = ready();
+                if (!a) return;
+                const t = a.currentTime, f = burst(a, t, 'bandpass', 2200, 0.9, 0.08, 0.02, 0.6);
+                f.frequency.setValueAtTime(2200, t); f.frequency.exponentialRampToValueAtTime(500, t + 0.6);
+            }),
         };
     }
 
@@ -265,6 +356,7 @@
     const LAMP = { x: 247, y: 209, aimX: 318, aimY: 128 };          // our work lamp, clamped to the hull, aimed at the hatch
     const PORT = { x: 66, y: 168, r: 10, glass: 7.2 };               // one of the wreck's portholes: the Lander has one per deck
     const NAME_AT = { x: 30, y: 92 };
+    const JAX_H = 64, JAX_IDLE = { x: 205, y: 250 }, JAX_REACH = 27;   // Jaxon (the cutter), in units: his height; his feet by the lamp; hands to the tip
     let RAMPS = null;
     function ramps() {                                           // the materials, made once MiniPaint is there
         if (RAMPS) return RAMPS;
@@ -277,6 +369,7 @@
             COPPER: P.ramp(INK, '#2a1408', '#5a2c12', '#9a5426', '#d08850', '#f2c08a'),     // the torch's nozzle
             RUBBER: P.ramp(INK, '#0e1316', '#1a2226', '#2a3439', '#3f4c52', '#5d6c72'),     // its grip
             GLASS: P.ramp(INK, '#070c10', '#0c1a20', '#16303a', '#33606e', '#7fb3c2', '#d6eef4'),
+            FROST: P.ramp(INK, '#1b282e', '#3a4f57', '#6f878f', '#a7bbc0', '#d7e2e5', '#f4f9f9'),   // hoarfrost: the hull's own cold grey gone white
         };
         return RAMPS;
     }
@@ -304,11 +397,11 @@
         JOINTS[row].forEach(j => { const cy = 9 * Math.round((y - 4) / 9) + 4; take(j - 4, cy); take(j + 4, cy); });
         return best;
     }
-    /** The wreck's plating at one point: 0..1 on the hull ramp (−1 is space above its edge). */
-    function plateTone(x, y, hp, rustAmt, ax, ay) {
+    /** The wreck's plating at one point: 0..1 on the hull ramp (−1 is space above its edge). lampK: how much our lamp lights it. */
+    function plateTone(x, y, hp, rustAmt, ax, ay, lampK = 1) {
         const P = window.MiniPaint, t = y - horizonF(x);
         if (t < -hp) return { v: -1 };
-        const lampD = Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15), lamp = Math.max(0, 1 - lampD / 235);
+        const lampD = Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15), lamp = lampK * Math.max(0, 1 - lampD / 235);
         if (t < hp) return { v: 0.66 + 0.2 * (x / W), lamp };    // its edge, lit by the far light
         if (t < 3 * hp) return { v: 0.44 + 0.1 * (x / W), lamp };
         const row = rowAt(x, y), joints = JOINTS[row], left = joints.filter(j => x > j).length;
@@ -353,16 +446,18 @@
             for (let yy = 0; yy < cell - gap; yy++) for (let xx = 0; xx < cell - gap; xx++) { const ax = ax0 + gx * cell + xx, ay = ay0 + gy * cell + yy, v = toneAt(ax, ay); if (v) p.solid(ax, ay, v[0], v[1]); }
         });
     }
-    function paintHull(o, d) {
+    /** The hull close up. door (optional, from TorchDoors.art): { paint(p, d, RR) the door's own art over the plating,
+        lampK: how much our lamp lights the hull (0: only the far light), lamp: false leaves our clamp lamp out }. */
+    function paintHull(o, d, door = {}) {
         const P = window.MiniPaint, RR = ramps(), { AW, AH } = sizeOf(d), p = P.painter(AW, AH, true), hp = 0.5 / d;
         const look = LOOKS[o.sector] || LOOKS[1], k = AH / 360, L = { core: look.light.core * k, halo: look.light.halo * k, strength: 1, spikes: look.light.spikes * k };
-        const lx = (FAR_LIGHT.x + 0.5) * d, ly = (FAR_LIGHT.y + 0.5) * d, rustAmt = RUST_BY_SECTOR[o.sector - 1] || 0.2;
+        const lx = (FAR_LIGHT.x + 0.5) * d, ly = (FAR_LIGHT.y + 0.5) * d, rustAmt = RUST_BY_SECTOR[o.sector - 1] || 0.2, lampK = door.lampK == null ? 1 : door.lampK;
         paintSky(p, look, L, lx, ly);
         P.lightGlow(p, lx, ly, L, 1);                            // the light at the end of the heading, just past the hull's edge
         eachArt(d, -1, -1, W, H, (ax, ay, x, y) => {
-            const pt = plateTone(x, y, hp, rustAmt, ax, ay);
+            const pt = plateTone(x, y, hp, rustAmt, ax, ay, lampK);
             if (pt.v < 0) return;
-            const pool = Math.max(0, 1 - Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15) / 150), v = doorTone(x, y, pt.v, hp);
+            const pool = lampK * Math.max(0, 1 - Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15) / 150), v = doorTone(x, y, pt.v, hp);
             const ramp = pt.rust && v === pt.v ? RR.RUST : P.threshold(ax, ay) < 0.7 * pool * pool ? RR.LIT : RR.HULL;   // our lamp warms the metal a little
             p.solid(ax, ay, ramp, ramp === RR.RUST ? 0.1 + v * 1.25 : v);
         });
@@ -381,7 +476,7 @@
         stencil(p, name, nx0, ny0, cell, 0, (ax, ay) => {
             if (P.fbm(ax / 6, ay / 6, 51, 3) < 0.31 || P.hash(ax, ay, 52) < 0.06) return null;   // flaked off
             painted.set(ax, Math.max(painted.get(ax) || 0, ay));
-            const x = (ax + 0.5) / d - 0.5, y = (ay + 0.5) / d - 0.5, lamp = Math.max(0, 1 - Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15) / 235);
+            const x = (ax + 0.5) / d - 0.5, y = (ay + 0.5) / d - 0.5, lamp = lampK * Math.max(0, 1 - Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15) / 235);
             return [RR.PAINT, 0.36 + 0.28 * lamp + (P.vnoise(ax / 3, ay / 3, 53) - 0.5) * 0.18];
         });
         painted.forEach((bottom, ax) => {                        // rust runs down from the paint's lower edges
@@ -392,7 +487,8 @@
         const rw = P.pixelTextWidth('RESCUE') * 2;
         stencil(p, 'RESCUE', Math.round((HB.cx + 0.5) * d - rw / 2), Math.round((HB.cy - HB.hh - 10 + 0.5) * d), 2, 0, (ax, ay) =>
             (P.hash(ax, ay, 54) < 0.1 ? null : [RR.AMBER, 0.42 + (P.vnoise(ax / 2, ay / 2, 55) - 0.5) * 0.2]));
-        paintLamp(p, d, RR);
+        if (door.paint) door.paint(p, d, RR);                    // the door's own: a fuel line, an old cut, a split in the hull, a panel …
+        if (door.lamp !== false) paintLamp(p, d, RR);
         return p.canvas();
     }
     function paintPorthole(p, d, RR) {                           // dark glass in a bolted ring, the sky caught in it
@@ -429,7 +525,7 @@
             p.solid(ax, ay, RR.HULL, 0.22 + 0.36 * MiniLab.clamp(-v / 1.9 + 0.3, 0, 1) - (Math.abs(u % 1.4) < 0.3 ? 0.08 : 0));
         });
     }
-    function paintHole(d) {                                      // behind the hatch: a dead corridor, lit only by our lamp
+    function paintHole(d, inside) {                              // behind the hatch: a dead corridor, lit only by our lamp; a door may paint its own over it
         const RR = ramps(), P = window.MiniPaint, { AW, AH } = sizeOf(d), p = P.painter(AW, AH, false), hp = 0.5 / d;
         eachArt(d, ...HATCH_BOX, (ax, ay, x, y) => {
             const dd = sdf(x, y);
@@ -447,6 +543,7 @@
             v += (P.fbm(x / 6, y / 6, 61, 2) - 0.5) * 0.05 * q;
             p.solid(ax, ay, P.threshold(ax, ay) < 0.5 * q * q ? RR.LIT : RR.HULL, v);
         });
+        if (inside) inside(p, d, RR);                            // the frozen corridor, the airlock with power …
         return p.canvas();
     }
     function paintLid(hullBg, d) {                               // the cut-out door, to drift away: a mask of the door, then the hull drawn into it
@@ -496,10 +593,11 @@
         });
         return p.canvas();
     }
-    function paintScene(o, d) {                                  // only the pictures this part needs
+    function paintScene(o, d) {                                  // only the pictures this part needs (and this door: TorchDoors.art)
         if (o.mode === 'disc') return { discBg: paintDiscScene(d) };
-        const hullBg = paintHull(o, d);
-        return Object.assign({ hullBg, hole: paintHole(d) }, paintLid(hullBg, d));
+        const door = (o.door !== 'cut' && window.TorchDoors && window.TorchDoors.art(o)) || {};
+        const hullBg = paintHull(o, d, door);
+        return Object.assign({ hullBg, hole: paintHole(d, door.inside) }, paintLid(hullBg, d), door.more ? door.more(o, d, hullBg) : {});
     }
 
     /** A layer of art pixels drawn fresh every frame (the burns, the sparks, the torch): written into one buffer, drawn once. */
@@ -543,13 +641,17 @@
     }
 
     function mount(ctx, ui, opts) {
+        const setup = readOpts(opts);
+        if (setup.mode === 'hatch' && !PLAYED.includes(setup.door)) return window.TorchDoors.mountBeat(ctx, ui, setup, KIT);   // no torch: TorchDoors plays the picture
         const HEATING = [C.hurt[2], C.hurt[3], C.danger, C.warm, C.warmBright], GLOW = [C.hurt[2], C.hurt[3], C.warm, C.warmBright];   // metal under the flame: dull → red → orange; the plate heating
         const KERF = [C.void, C.hurt[2], C.hurt[3], C.danger, C.warm, C.warmBright, C.star];   // a cut: white-hot while the flame is on it, then cooling to a dark slot
         const TEMPER = MiniLab.mix(C.warm, C.hull[2], 0.45), CUT_LINE = MiniLab.mix(C.lightHalo, C.void, 0.62), DIM_GOLD = MiniLab.mix(C.lightHalo, C.void, 0.55);
         const SCORCH = MiniLab.mix(C.warm, C.hull[1], 0.62), HOSE = [MiniLab.mix(C.warm, C.void, 0.82), MiniLab.mix(C.warm, C.void, 0.66), MiniLab.mix(C.warm, C.void, 0.45)];   // a cut's tempered edge; the suit's hose
-        const setup = readOpts(opts), SAY = sayLines(setup), snd = makeSound();
+        const SAY = sayLines(setup), snd = makeSound();
         const d = (ui.art && ui.art.d) || MiniLab.density || 1, { AW, AH } = sizeOf(d);
         const { hullBg, hole, lid, lidShadow, discBg } = paintScene(setup, d);
+        const DOOR = (setup.mode === 'hatch' && setup.door !== 'cut' && window.TorchDoors.geometry(setup)) || {};   // the seam already free; the fuel line
+        const LINE = DOOR.line || null;
         let s = null, clock = 0, ptrFire = false, aim = null;
         const clampTip = (x, y) => ({ x: MiniLab.clamp(x, 2, W - 3), y: MiniLab.clamp(y, 2, H - 3) });
         const cellOf = p => MiniLab.clamp(Math.floor((p.y + 0.5) / CELL), 0, GH - 1) * GW + MiniLab.clamp(Math.floor((p.x + 0.5) / CELL), 0, GW - 1);
@@ -578,8 +680,15 @@
                 glow: 0, idleT: 0, lastThruT: -99, progT: -99, progText: '',   // the metal's heat under the tip; for the readout by the torch
                 sparks: [], warps: [], speech: [], react: null, nextSay: 0, saidAt: -99, said: {}, scars: 0, strayT: 0, fastT: 0,
                 seamCut: new Uint8Array(SEAM.length), cut: 0, lastCut: 0, stall: 0, openT: 0, groanT: 0, thruNow: 0, hot: 0, hotX: W / 2,
-                cutT: LINES.map(() => null), centre: false, figTouched: false, sweep: 0, final: false };
-            script(SAY[part], 0); showButtons();
+                cutT: LINES.map(() => null), centre: false, figTouched: false, sweep: 0, final: false,
+                free: 0, melt: false, frost: null, frostLeft: 1, meltedT: 0, onLine: false, leaks: [] };   // the doors: seam already free, the frost, the fuel line
+            if (part === 'hatch') prepareDoor();
+            script(SAY[part === 'hatch' && setup.door !== 'cut' ? setup.door : part], 0); showButtons();
+        }
+        function prepareDoor() {                                 // what this door brings: seam the ice already split (or the suit keeps clear of the fuel line), frost
+            (DOOR.free || []).forEach(k => { if (!s.seamCut[k]) { s.seamCut[k] = 1; s.free++; } });
+            s.cut = s.free; s.lastCut = s.cut;
+            if (setup.door === 'frozen') { s.melt = true; s.frost = frostField(); frost0 = s.frost.slice(); frostLayer.repaint(); s.frostLeft = frostOnSeam(); }
         }
         function showButtons() {
             const canHandOver = s.part === 'hatch' && !s.auto, handOverButton = { label: `Let ${setup.cutter} cut it`, onClick: handOver };
@@ -588,6 +697,7 @@
             ui.buttons(s.phase === 'cut' && canHandOver ? [{ ...handOverButton, quiet: true }] : []);
         }
         const canSteer = () => s.phase === 'cut' && !s.auto;
+        const doneFrac = () => (s.cut - s.free) / Math.max(1, SEAM.length - s.free);   // the share cut of the seam this door needs cut (all of it on the plain hatch)
         function swapTank() { s.fuel = 1; s.tanks += 1; }
         function newTank() {                                     // back to the lander for a full tank; the cut so far stays cut
             if (s.phase !== 'dry') return;
@@ -604,7 +714,7 @@
             if (s.phase !== 'end') return;
             const fuelLeft = Math.round(s.fuel * 100) / 100;
             ui.finish(s.part === 'hatch'
-                ? { opened: true, fuelLeft, scars: s.scars, warps: s.warps.length, tanks: s.tanks, bySelf: !s.auto }
+                ? { opened: true, fuelLeft, scars: s.scars, warps: s.warps.length, tanks: s.tanks, bySelf: !s.auto, door: setup.door }
                 : { destroyed: true, figuresScorched: s.figTouched, fuelLeft, tanks: s.tanks });
         }
 
@@ -661,15 +771,24 @@
             const a = s.auto, h = heatAt(s.tip), cooling = a.cooling ? h > AUTO_COOLED : h >= AUTO_HOT;   // a careful hand waits for the plate
             s.auto = { ...a, cooling };
             if (a.j === null) { reachSeam(dt); return false; }
+            if (s.melt) return autoWarm(dt);                     // FROZEN: first once round the seam with the flame held back
             if (cooling || paused()) return false;
-            const cut = uncutNear(a.j, a.dir), j = wrapPath(a.j + a.dir * (cut ? AUTO_CUT : AUTO_GLIDE) * dt);
+            const cut = uncutNear(a.j, a.dir) && !lineClear(s.tip), j = wrapPath(a.j + a.dir * (cut ? AUTO_CUT : AUTO_GLIDE) * dt);
             s.auto = { ...s.auto, j };
             s.tip = pathAt(j);
-            return cut;
+            return cut && !lineClear(s.tip);                     // FUEL LINE: never a flame where the suit keeps the seam clear
         }
+        function autoWarm(dt) {                                  // FROZEN: the crew member warms the frost off the seam, all the way round
+            const j = wrapPath(s.auto.j + s.auto.dir * MELT_GLIDE * dt);
+            s.auto = { ...s.auto, j, cooling: false };
+            s.tip = pathAt(j);
+            return true;
+        }
+        const lineClear = p => !!LINE && LINE.dist(p.x, p.y) < LINE.clear;   // FUEL LINE: inside the stretch the suit keeps clear round the line
         const solid = (x, y) => s.part === 'hatch' || Math.hypot(x - DX, y - DY) <= DR;   // off the disc there is nothing to burn
         function burn(p, dt) {
             if (!solid(p.x, p.y)) return;
+            if (s.frost) melt(p.x, p.y, BURN_MELT_R, MELT_RATE * 2 * dt);   // FROZEN: the cutting flame clears the frost round itself
             const x0 = Math.round(p.x), y0 = Math.round(p.y), c = cellOf(p), gx = c % GW, gy = (c - gx) / GW;
             for (let y = y0 - 3; y <= y0 + 3; y++) for (let x = x0 - 3; x <= x0 + 3; x++) {
                 const w = 1 - Math.hypot(x - p.x, y - p.y) / BURN_R, i = y * W + x, was = s.depth[i];
@@ -726,6 +845,7 @@
         function update(dt) {
             s.thruNow = 0;
             s.sparks = s.sparks.map(p => ({ ...p, x: p.x + p.vx * dt, y: p.y + p.vy * dt, life: p.life - dt })).filter(p => p.life > 0);
+            if (s.leaks.length) leaking(dt);
             cool(dt); talk();
             if (s.part === 'disc') sweepOn(dt);
             if (isOpen()) s.openT += dt;
@@ -738,6 +858,7 @@
             s.burst = Math.max(0, s.burst - dt);
             const from = s.tip, wants = s.auto ? autoMove(dt) : playerMove(dt);
             trackSpeed();
+            if (s.onLine && !lineClear(s.tip)) s.onLine = false;   // FUEL LINE: away from it again; the next touch is a new scar
             s.pause = Math.max(0, s.pause - dt);
             if (s.hotSpot && s.pause <= 0 && heatAt(s.hotSpot) <= COOLED) s.hotSpot = null;
             s.firing = wants && !paused() && s.fuel > 0;
@@ -752,9 +873,11 @@
         function fire(dt, from) {
             const to = s.tip, n = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 0.7));
             s.fuel = Math.max(0, s.fuel - dt / s.P.fuel);
+            if (s.melt) return warm(dt, from, to);               // FROZEN: the flame held back only warms the plate and melts the frost
             for (let k = 1; k <= n; k++) {                       // burn along the whole path, so a quick stroke leaves a shallow line
                 const p = { x: MiniLab.lerp(from.x, to.x, k / n), y: MiniLab.lerp(from.y, to.y, k / n) };
                 if (s.part === 'disc' && nearFigures(p, 2).length) return touch(p);
+                if (LINE && LINE.dist(p.x, p.y) < LINE.touch) return touchLine(p);   // FUEL LINE: the flame never cuts into it
                 burn(p, dt / n);
             }
             readMetal(dt, to);
@@ -779,7 +902,8 @@
             s.idleT = hatch && cuttable && !holding && s.glow >= 1 && s.speed < IDLE_SPEED ? s.idleT + dt : 0;
         }
         function hatchRules(dt) {
-            const f = s.cut / SEAM.length;
+            if (s.melt) return frostRules();                     // FROZEN: nothing to cut until the seam shows
+            const f = doneFrac();
             if (f >= TAUGHT_AT) teach();
             if (s.fastT > 0.6 && !s.auto) react('fast', SAY.fast);
             if (f >= 0.5) react('half', SAY.half);
@@ -799,14 +923,167 @@
         function crackOpen() {
             s.phase = 'open'; s.openT = 0;
             snd.crack();
+            const iceOf = setup.door === 'frozen' ? 104 : 80;    // a frozen hatch throws more ice
             s.sparks = s.sparks.concat(Array.from({ length: 120 }, (_, k) => {   // the last of the air: a flash of ice, then twenty years of dust
-                const i = SEAM[Math.floor(Math.random() * SEAM.length)], x = i % W, y = (i - x) / W, a = Math.atan2(y - HB.cy, x - HB.cx), ice = k < 80;
+                const i = SEAM[Math.floor(Math.random() * SEAM.length)], x = i % W, y = (i - x) / W, a = Math.atan2(y - HB.cy, x - HB.cx), ice = k < iceOf;
                 const v = ice ? 20 + Math.random() * 60 : 5 + Math.random() * 16;
                 return { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: (ice ? 0.5 : 1.4) + Math.random() * 1.2, ice, dust: !ice };
             }));
-            script(SAY.open, 3.2, () => { s.phase = 'end'; showButtons(); });   // the spotter speaks once the hatch has moved off the glint
+            if (s.frost) frostOnLid();                           // FROZEN: the door takes its frost with it
+            if (LINE) {                                          // FUEL LINE: the line snaps where it crossed the seam; the hull's end hisses a while
+                LINE.crossings.forEach(c => { spray(c, 48, 1.4, c.dir); s.leaks = s.leaks.concat({ x: c.x, y: c.y, t: clock, dir: c.dir, for: 3.6 }); });
+                snd.hiss(0.7);
+            }
+            script(SAY[{ frozen: 'frozenOpen', fuel: 'fuelOpen' }[setup.door] || 'open'], 3.2, () => { s.phase = 'end'; showButtons(); });   // the spotter speaks once the hatch has moved off the glint
             showButtons();
         }
+
+        // ── FUEL LINE: the flame on the line ──
+        function touchLine(p) {                                  // frozen vapour sprays out and the suit cuts the flame; one scar each time the torch comes back to it
+            s.pause = TOUCH_PAUSE;
+            if (s.onLine) return;
+            s.onLine = true; s.scars++;
+            spray(p, 46, 1); s.leaks = s.leaks.concat({ x: p.x, y: p.y, t: clock });
+            react('line', SAY.line); snd.hiss(1);
+        }
+        function spray(p, count, k, dir) {                       // frozen vapour jetting off the line: both ways off it, or out of a broken end along dir
+            const n = dir || LINE.normal(p.x, p.y);
+            s.sparks = s.sparks.concat(Array.from({ length: count }, (_, i) => {
+                const side = dir ? 1 : i % 2 ? 1 : -1, a = Math.atan2(n.y * side, n.x * side) + (Math.random() - 0.5) * (dir ? 0.7 : 1.1), v = (18 + Math.random() * 50) * k;
+                return { x: p.x + n.x * side * 1.5, y: p.y + n.y * side * 1.5, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.4 + Math.random() * 0.8, vapour: true };
+            }));
+        }
+        function leaking(dt) {                                   // where the line was touched (or snapped) it keeps hissing, thinner and thinner
+            s.leaks = s.leaks.filter(l => clock - l.t < (l.for || LEAK_FOR));
+            s.leaks.forEach(l => { const k = 1 - (clock - l.t) / (l.for || LEAK_FOR); if (Math.random() < 1 - Math.exp(-30 * k * dt)) spray(l, 2, 0.4 + 0.6 * k, l.dir); });
+        }
+
+        // ── FROZEN: the frost over the hatch (0..1.4 thick a unit; thickest in a ridge along the seam, where the last air froze),
+        //    melted by the flame held back. The seam shows once most of it is clear; the rest of the frost stays. ──
+        const FB = { x0: HB.cx - HB.hw - 30, y0: HB.cy - HB.hh - 26, x1: HB.cx + HB.hw + 30, y1: HB.cy + HB.hh + 30 }, FW = FB.x1 - FB.x0 + 1, FH = FB.y1 - FB.y0 + 1;
+        function frostField() {                                   // a thin coat over the door, a thick ridge along the seam, feathered out over the hull
+            const P = window.MiniPaint, f = new Float32Array(FW * FH);
+            for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) {
+                const ux = FB.x0 + x, uy = FB.y0 + y, dd = sdf(ux, uy), reach = 9 + 15 * P.fbm(ux / 11, uy / 11, 81, 2);
+                const feather = (P.vnoise(ux / 1.6, uy / 4.2, 84) - 0.5) * 0.3 + (P.vnoise(ux / 4.4, uy / 1.5, 85) - 0.5) * 0.2;   // crystals grow in streaks
+                const coat = (0.42 + (P.fbm(ux / 9, uy / 9, 83, 3) - 0.5) * 0.22 + feather) * (1 - P.smooth(reach * 0.3, reach, dd));
+                const wide = 3.2 * (0.6 + 0.8 * P.vnoise(ux / 7, uy / 7, 87));   // the ridge swells and thins along the seam
+                f[y * FW + x] = MiniLab.clamp(coat + 0.8 * Math.exp(-((dd / wide) ** 2)) * (0.75 + 0.4 * P.vnoise(ux / 5, uy / 5, 86)), 0, 1.3);
+            }
+            return f;
+        }
+        function fieldAt(f, x, y) {                              // a frost field read between the units
+            const fx = x - FB.x0, fy = y - FB.y0;
+            if (!f || fx < 0 || fy < 0 || fx > FW - 1 || fy > FH - 1) return 0;
+            const x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0, x1 = Math.min(FW - 1, x0 + 1), y1 = Math.min(FH - 1, y0 + 1);
+            return (f[y0 * FW + x0] * (1 - tx) + f[y0 * FW + x1] * tx) * (1 - ty) + (f[y1 * FW + x0] * (1 - tx) + f[y1 * FW + x1] * tx) * ty;
+        }
+        function frostAt(x, y) { return fieldAt(s.frost, x, y); }
+        function melt(cx, cy, r, amount) {                       // the frost round (cx, cy) thins, most at the centre; returns how much went
+            const f = s.frost;
+            if (!f) return 0;
+            const x0 = Math.max(FB.x0, Math.floor(cx - r)), x1 = Math.min(FB.x1, Math.ceil(cx + r)), y0 = Math.max(FB.y0, Math.floor(cy - r)), y1 = Math.min(FB.y1, Math.ceil(cy + r));
+            let gone = 0;
+            for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+                const dd = Math.hypot(x - cx, y - cy), i = (y - FB.y0) * FW + (x - FB.x0), was = f[i];
+                if (dd >= r || was <= 0) continue;
+                const now = Math.max(0, was - amount * (1 - dd / r) ** 1.3);
+                f[i] = now; gone += was - now;
+            }
+            if (gone > 0) frostLayer.touch(x0 - 1, y0 - 1, x1 + 1, y1 + 1);
+            return gone;
+        }
+        function frostOnSeam() {                                 // the share of the seam still under frost
+            let n = 0;
+            for (let k = 0; k < SEAM.length; k++) { const i = SEAM[k], x = i % W, y = (i - x) / W; if (s.frost[(y - FB.y0) * FW + (x - FB.x0)] >= FROST_GONE) n++; }
+            return n / SEAM.length;
+        }
+        function warm(dt, from, to) {                            // the flame held back off the metal: no cut and no heat to speak of; the frost round it melts
+            const n = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 2));
+            let gone = 0;
+            for (let k = 1; k <= n; k++) gone += melt(MiniLab.lerp(from.x, to.x, k / n), MiniLab.lerp(from.y, to.y, k / n), MELT_R, MELT_RATE * dt / n);
+            s.glow = 0; s.strayT = 0; s.fastT = 0; s.idleT = 0;
+            if (gone < 0.01) return;
+            if (!s.auto) s.meltedT += dt;
+            if (Math.random() < 1 - Math.exp(-STEAM_PER_S * dt)) steam(to);
+            if (Math.random() < 1 - Math.exp(-BEADS_PER_S * dt)) bead(to);
+            if (Math.random() < 3 * dt) snd.sizzle();
+        }
+        function steam(p) {                                      // a puff off the melting frost, drifting away from the plate
+            const a = Math.random() * Math.PI * 2, r = Math.random() * MELT_R * 0.6, life = 0.8 + Math.random() * 0.8;
+            s.sparks = s.sparks.concat({ x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r, vx: (Math.random() - 0.5) * 10 - 3, vy: -5 - Math.random() * 9, life, l0: life, steam: 1 + Math.random() });
+        }
+        function bead(p) {                                       // a bead of meltwater at the edge of the melt, floating slowly off the plate
+            const a = Math.random() * Math.PI * 2, r = MELT_R * (0.7 + Math.random() * 0.3), v = 1.5 + Math.random() * 2.5, life = 0.9 + Math.random() * 1.1;
+            s.sparks = s.sparks.concat({ x: p.x + Math.cos(a) * r, y: p.y + Math.sin(a) * r, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 1.5, life, l0: life, bead: true });
+        }
+        function frostRules() {
+            s.frostLeft = frostOnSeam();
+            if (1 - s.frostLeft >= SEAM_SHOWS) seamShows();
+        }
+        function seamShows() {                                   // the seam is clear enough: the last frost on it flakes away; the suit marks what still holds
+            s.melt = false; s.trail = [];
+            if (!s.auto) taught = { ...taught, melt: true };
+            const flakes = SEAM.filter((_, k) => k % 5 === 0).map(i => { const x = i % W; return { x, y: (i - x) / W }; }).filter(p => frostAt(p.x, p.y) > 0.05);
+            SEAM.forEach(i => { const x = i % W; melt(x, (i - x) / W, 3.2, 9); });
+            s.sparks = s.sparks.concat(flakes.slice(0, 80).map(p => {
+                const n = normal(p.x, p.y), v = 5 + Math.random() * 14;
+                return { x: p.x, y: p.y, vx: n.x * v + (Math.random() - 0.5) * 6, vy: n.y * v + (Math.random() - 0.5) * 6, life: 0.6 + Math.random() * 0.9, ice: true };
+            }));
+            s.frostLeft = frostOnSeam(); snd.sizzle();
+            script([SAY.shows], 0.2);
+        }
+        function frostOnLid() {                                  // the door carries its frost away; none is left over the opening
+            const g = lid.getContext('2d');
+            g.save(); g.globalCompositeOperation = 'source-atop'; frostLayer.draw(g); g.restore();
+            for (let y = 0; y < FH; y++) for (let x = 0; x < FW; x++) if (sdf(FB.x0 + x, FB.y0 + y) <= 0.8) { s.frost[y * FW + x] = 0; frost0[y * FW + x] = 0; }
+            frostLayer.repaint();
+        }
+        const ICE_HEX = ramps().ICE.hex, FROST_HEX = ramps().FROST.hex;
+        let frost0 = null;                                       // the frost as it lay before anyone warmed it: where it is thinner now, it melted
+        function frostColor(ax, ay, x, y) {                      // grey-white crust, whiter where it is thick, catching our lamp; thin frost lets the plate show; where it melted, wet metal
+            const v = frostAt(x, y), P = window.MiniPaint, was = frost0 ? frostAt0(x, y) : v;
+            if (was - v > 0.12 && v < FROST_GONE) return P.hash(ax, ay, 91) < 0.006 ? FROST_HEX[5] : MiniLab.on(ax, ay, 0.08 + 0.4 * v) ? ICE_HEX[2] : null;   // meltwater: a dark sheen, a bright bead of light
+            if (v < 0.06 || !MiniLab.on(ax + 3, ay + 5, P.smooth(0.06, 0.62, v))) return null;
+            const lamp = Math.max(0, 1 - Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15) / 210);
+            const grain = P.vnoise(ax / 2.1, ay / 3.6, 88) * 0.6 + P.vnoise(ax / 4.2, ay / 1.7, 89) * 0.4;   // the crust's grain, in streaks
+            const t = P.hash(ax, ay, 87) < 0.006 * v ? 1 : 0.18 + 0.46 * Math.min(1, v) + 0.32 * (grain - 0.5) + 0.12 * lamp;
+            return MiniLab.pick(FROST_HEX, t, ax, ay);
+        }
+        function frostAt0(x, y) { return fieldAt(frost0, x, y); }
+        let glints = null;                                       // FROZEN: crystals that catch the light for a moment, here and there over the thick frost
+        function drawGlints(L) {
+            if (!glints) { glints = []; eachArt(d, FB.x0, FB.y0, FB.x1, FB.y1, (ax, ay, x, y) => { if (window.MiniPaint.hash(ax, ay, 99) < 0.02 && frostAt(x, y) > 0.7) glints.push({ ax, ay, x, y }); }); }
+            const step = Math.floor(clock * 5);
+            glints.forEach((g, i) => {
+                if (window.MiniPaint.hash(i, step, 98) > 0.035 || frostAt(g.x, g.y) < 0.5) return;
+                L.set(g.ax, g.ay, C.star); PLUS.forEach(([ox, oy]) => L.set(g.ax + ox, g.ay + oy, FROST_HEX[5]));
+            });
+        }
+        const frostLayer = (() => {                              // the frost in art pixels: repainted only where it changed
+            const ax0 = Math.max(0, Math.floor((FB.x0 + 0.5) * d)), ay0 = Math.max(0, Math.floor((FB.y0 + 0.5) * d));
+            const ax1 = Math.min(AW - 1, Math.ceil((FB.x1 + 0.5) * d)), ay1 = Math.min(AH - 1, Math.ceil((FB.y1 + 0.5) * d)), w = ax1 - ax0 + 1, h = ay1 - ay0 + 1;
+            const cv = Object.assign(document.createElement('canvas'), { width: w, height: h }), g = cv.getContext('2d');
+            const img = g.createImageData(w, h), u32 = new Uint32Array(img.data.buffer), packed = new Map();
+            const pack = hex => { let v = packed.get(hex); if (v === undefined) { const n = parseInt(hex.slice(1), 16); v = (0xff000000 | ((n & 0xff) << 16) | (n & 0xff00) | ((n >> 16) & 0xff)) >>> 0; packed.set(hex, v); } return v; };
+            let dirty = null;
+            function paint(ux0, uy0, ux1, uy1) {
+                eachArt(d, ux0, uy0, ux1, uy1, (ax, ay, x, y) => {
+                    if (ax < ax0 || ay < ay0 || ax > ax1 || ay > ay1) return;
+                    const col = frostColor(ax, ay, x, y);
+                    u32[(ay - ay0) * w + (ax - ax0)] = col ? pack(col) : 0;
+                    dirty = dirty ? [Math.min(dirty[0], ax), Math.min(dirty[1], ay), Math.max(dirty[2], ax), Math.max(dirty[3], ay)] : [ax, ay, ax, ay];
+                });
+            }
+            return {
+                repaint() { paint(FB.x0, FB.y0, FB.x1, FB.y1); },
+                touch: paint,
+                draw(target) {                                   // target: a context in art pixels
+                    if (dirty) { g.putImageData(img, 0, 0, dirty[0] - ax0, dirty[1] - ay0, dirty[2] - dirty[0] + 1, dirty[3] - dirty[1] + 1); dirty = null; }
+                    target.drawImage(cv, ax0, ay0);
+                },
+            };
+        })();
         function discRules() {
             if (!s.centre || s.cutT.some(v => v === null)) return;
             s.phase = 'closing'; s.final = true; s.sweep = -0.2; s.openT = 0;   // the light makes one more pass, and reads nothing
@@ -899,12 +1176,40 @@
             s.sparks.forEach(p => {
                 const x = (p.x + 0.5) * d, y = (p.y + 0.5) * d;
                 if (p.dust) return L.set(x, y, p.life > 0.9 ? C.textDim : C.mist);
+                if (p.steam) return drawSteam(L, p, x, y);
+                if (p.bead) return drawBead(L, p, x, y);
+                if (p.vapour) {                                  // FUEL LINE: frozen vapour, a pale streak
+                    L.line(x - p.vx * 0.045 * d, y - p.vy * 0.045 * d, x, y, p.life > 0.5 ? C.uiBright : C.uiDim);
+                    return L.set(x, y, p.life > 0.6 ? C.star : C.uiBright);
+                }
                 const k = (p.ice ? 0.03 : 0.025) * d;            // a short streak behind each
                 if (p.ice || p.life > 0.25) L.line(x - p.vx * k, y - p.vy * k, x, y, p.ice ? C.uiDim : C.warm);
                 L.set(x, y, p.ice ? (p.life > 0.7 ? C.star : C.uiBright) : p.life > 0.3 ? C.warmBright : p.life > 0.12 ? C.warm : C.hurt[3]);
             });
         }
+        function drawSteam(L, p, x, y) {                         // FROZEN: a soft puff off the frost that swells and thins away
+            const age = 1 - p.life / p.l0, r = (0.8 + 2.6 * age) * p.steam * d, tone = 0.42 * (1 - age);
+            for (let ay = Math.floor(y - r); ay <= y + r; ay++) for (let ax = Math.floor(x - r); ax <= x + r; ax++) {
+                const q = Math.hypot(ax + 0.5 - x, ay + 0.5 - y) / r;
+                if (q < 1 && MiniLab.on(ax, ay, tone * (1 - q * q))) L.set(ax, ay, q < 0.5 ? R.HULL.hex[4] : R.HULL.hex[3]);
+            }
+        }
+        function drawBead(L, p, x, y) {                          // FROZEN: a bead of meltwater, our lamp a bright point on it; it shrinks as it boils off
+            const ax = Math.floor(x), ay = Math.floor(y);
+            L.set(ax, ay, ICE_HEX[5]);
+            if (p.life > p.l0 * 0.35) { L.set(ax + 1, ay, ICE_HEX[3]); L.set(ax, ay + 1, ICE_HEX[3]); L.set(ax + 1, ay + 1, ICE_HEX[2]); }
+        }
+        function meltRing(L, x, y) {                             // FROZEN: the aim is the warm flame's reach, a dotted ring, outlined to stand out on the frost
+            const cx = (x + 0.5) * d, cy = (y + 0.5) * d, r = MELT_R * d, n = Math.ceil(r * 6), m = Math.floor(clock * 6);
+            for (let i = 0; i < n; i++) {
+                if ((i + m) % 8 >= 4) continue;
+                const a = (i / n) * Math.PI * 2, c = Math.cos(a), sn = Math.sin(a);
+                L.set(cx + c * (r + 1), cy + sn * (r + 1), C.void); L.set(cx + c * r, cy + sn * r, C.ui);
+            }
+            if (!s.firing) { PLUS.forEach(([ox, oy]) => L.set(A(x) + ox, A(y) + oy, C.void)); L.set(A(x), A(y), C.uiBright); }
+        }
         function reticle(L, x, y) {                              // the aim, and the pointer: four short ticks, outlined so they stand out on gold and bright plate
+            if (s.melt && s.phase === 'cut') return meltRing(L, x, y);
             const col = s.phase === 'cut' && paused() ? (Math.floor(clock * 4) % 2 ? C.danger : C.hurt[3]) : C.ui, cx = A(x), cy = A(y);
             PLUS.forEach(([ox, oy]) => { for (let k = Math.round(4 * d); k <= Math.round(6.4 * d); k++) { L.set(cx + ox * k + oy, cy + oy * k + ox, C.void); L.set(cx + ox * k - oy, cy + oy * k - ox, C.void); } });
             PLUS.forEach(([ox, oy]) => { for (let k = Math.round(4 * d); k <= Math.round(6.4 * d); k++) L.set(cx + ox * k, cy + oy * k, col); });
@@ -920,10 +1225,11 @@
         }
         const TOOL_R = k => (k < 6 ? 0.75 + 0.06 * k : k < 7.2 ? 1.45 : k < 9.4 ? 1.2 : k < 11.4 ? 2.05 : k < 28.4 ? 2.5 : 2.5 - (k - 28.4) * 1.6);
         /** The torch: nozzle, valve, ribbed grip and hose, held STANDOFF off the metal along U from the tip; `away` pulls it back.
-            hoseTo: where the hose goes (off the bottom of the picture for you, to Jaxon's pack when he has it). */
-        function drawTool(L, tip, U, away, hoseTo) {
+            hoseTo: where the hose goes (off the bottom of the picture for you, to Jaxon's pack when he has it).
+            wide: held back off the metal (FROZEN), a wide soft flame that warms instead of cuts. */
+        function drawTool(L, tip, U, away, hoseTo, wide) {
             const n1 = { x: U.y, y: -U.x }, N = n1.x - n1.y >= 0 ? n1 : { x: -n1.x, y: -n1.y };   // its lit side: towards the light, up and right
-            const bx = tip.x + U.x * (away + STANDOFF), by = tip.y + U.y * (away + STANDOFF), at = (k, o = 0) => [bx + U.x * k + N.x * o, by + U.y * k + N.y * o];
+            const stand = wide ? MELT_OFF : STANDOFF, bx = tip.x + U.x * (away + stand), by = tip.y + U.y * (away + stand), at = (k, o = 0) => [bx + U.x * k + N.x * o, by + U.y * k + N.y * o];
             const [hx, hy] = at(29), [ex, ey] = hoseTo(hx, hy), mx = (hx + ex) / 2 + 6, my = Math.max(hy, ey) + 18;   // the hose sags
             for (let t = 0; t <= 1; t += 0.004) {
                 const u = 1 - t, px = u * u * hx + 2 * u * t * mx + t * t * ex, py = u * u * hy + 2 * u * t * my + t * t * ey;
@@ -951,22 +1257,36 @@
             const rc = s.phase === 'cut' && paused() ? C.danger : s.firing ? C.uiBright : C.uiDim;
             L.set(A(rlx), A(rly), rc); L.set(A(rlx) + 1, A(rly), rc);
             if (away > 0) return;
+            if (s.firing && wide) return drawWarmFlame(L, tip, U, N);
             if (s.firing) for (let k = 0.3; k <= STANDOFF; k += 0.2) {   // the flame: a thin blue-white jet; the metal shows its own heat
                 const fx = (tip.x + U.x * k + 0.5) * d, fy = (tip.y + U.y * k + 0.5) * d;
                 L.set(fx, fy, k < 1.6 ? C.star : C.uiBright);
                 if (k > 1 && k < 2.6) L.set(fx + N.x, fy + N.y, R.ICE.hex[4]);
             }
         }
+        function drawWarmFlame(L, tip, U, N) {                   // FROZEN: the flame held back: a soft plume that spreads out over the frost and lights it
+            const cx = (tip.x + 0.5) * d, cy = (tip.y + 0.5) * d, rad = MELT_R * 0.85 * d, flick = 0.85 + 0.15 * Math.sin(clock * 37);
+            for (let ay = Math.floor(cy - rad); ay <= cy + rad; ay++) for (let ax = Math.floor(cx - rad); ax <= cx + rad; ax++) {   // the wash of hot gas on the plate
+                const q = Math.hypot(ax + 0.5 - cx, ay + 0.5 - cy) / rad;
+                if (q < 1 && MiniLab.on(ax, ay, 0.36 * flick * (1 - q) ** 1.5)) L.set(ax, ay, q < 0.3 ? C.warmBright : C.warm);
+            }
+            for (let k = 0.2; k <= MELT_OFF; k += 0.25) {         // the plume from the nozzle, widening as it meets the plate
+                const w = 0.6 + 4.2 * (1 - k / MELT_OFF) ** 1.4, px = tip.x + U.x * k, py = tip.y + U.y * k;
+                for (let o = -w; o <= w; o += 0.5 / d) {
+                    const q = Math.abs(o) / w, ax = (px + N.x * o + 0.5) * d, ay = (py + N.y * o + 0.5) * d;
+                    if (MiniLab.on(Math.floor(ax), Math.floor(ay), (1 - q) * (0.35 + 0.6 * k / MELT_OFF))) L.set(ax, ay, q < 0.3 && k > MELT_OFF * 0.5 ? C.star : q < 0.6 ? C.uiBright : R.ICE.hex[4]);
+                }
+            }
+        }
         const TU_DIR = { x: TU.x, y: TU.y }, offBottom = (hx, hy) => [hx + 30, H + 10];
         function drawTorch(L) {                                  // yours, held just off the metal; when the job is done it is pulled back
             if (s.auto) return;
             const away = s.phase === 'cut' || s.phase === 'dry' ? 0 : 300 * Math.min(1, s.openT / 0.6) ** 2;
-            drawTool(L, s.tip, TU_DIR, away, offBottom);
+            drawTool(L, s.tip, TU_DIR, away, offBottom, s.melt);
             if (away === 0) reticle(L, s.tip.x, s.tip.y);
         }
 
         // ── Jaxon (the cutter), in his suit: by our lamp, tethered; when he takes the torch he works the seam from beside it ──
-        const JAX_H = 64, JAX_IDLE = { x: 205, y: 250 }, JAX_REACH = 27;   // units: his height; his feet by the lamp; hands to the tip
         const cutterId = window.MiniCrew ? window.MiniCrew.idOf(setup.cutter) || 'jaxon' : 'jaxon';
         let jax = { x: JAX_IDLE.x, y: JAX_IDLE.y, facing: 1, side: -1, working: false }, lastDraw = 0;
         const handsOf = j => ({ x: j.x + j.facing * 0.33 * JAX_H, y: j.y - 0.7 * JAX_H });
@@ -999,7 +1319,7 @@
         function drawJaxonTorch(L) {                             // the torch in his hands, its hose to his pack
             if (!s.auto || !jax.working) return;
             const hd = handsOf(jax), ux = hd.x - s.tip.x, uy = hd.y - s.tip.y, ul = Math.hypot(ux, uy) || 1;
-            drawTool(L, s.tip, { x: ux / ul, y: uy / ul }, 0, () => [jax.x - jax.facing * 0.13 * JAX_H, jax.y - 0.6 * JAX_H]);
+            drawTool(L, s.tip, { x: ux / ul, y: uy / ul }, 0, () => [jax.x - jax.facing * 0.13 * JAX_H, jax.y - 0.6 * JAX_H], s.melt);
         }
 
         // ── the readouts: by the torch, one short line; and a few quiet ones in the corner (MiniHost notes, IBM Plex) ──
@@ -1014,8 +1334,10 @@
         const growing = () => clock - s.progT < READOUT_FOR;
         function tipLabel() {                                    // one short readout by the torch, or none: what is wrong, what to do, how far
             if (!canSteer()) return null;
-            if (paused()) return Math.floor(clock * 3) % 3 ? [['COOLING'], 'danger'] : null;
+            if (paused()) return s.onLine ? [['FUEL LINE'], 'danger'] : Math.floor(clock * 3) % 3 ? [['COOLING'], 'danger'] : null;
+            if (s.melt) return taught.melt ? null : [HINTS.melt[s.meltedT > 1.5 ? 1 : 0], 'ui'];   // FROZEN: warm it first
             if (s.firing && s.strayT >= STRAY_AFTER) return [['OFF THE LINE'], 'text'];
+            if (lineClear(s.tip)) return [['FUEL LINE'], 'warm'];   // FUEL LINE: the suit says where not to cut
             if (!taught[s.part]) { const hints = HINTS[s.part]; return [hints[Math.min(hints.length - 1, s.cut > 0 ? 1 : 0)], 'ui']; }
             if (s.firing && s.fastT > FAST_AFTER) return [['SLOW DOWN'], 'warm'];
             if (s.firing && s.idleT > IDLE_AFTER) return [['MOVE ON'], 'warm'];
@@ -1027,11 +1349,12 @@
             const label = tipLabel(), upx = unitsPerPx();
             if (!label) { note('tip0', null, {}); note('tip1', null, {}); return; }
             const [lines, tone] = label, lh = TIP_PX * TIP_LINE * upx, w = Math.max(...lines.map(l => l.length)) * TIP_PX * CHAR_EM * upx, h = lines.length * lh;
-            const x = s.tip.x + 0.5, y = s.tip.y + 0.5, left = x - LABEL_GAP - w >= 3, up = y - LABEL_GAP - h >= 3;
-            const lx = left ? x - LABEL_GAP : Math.min(x + LABEL_GAP, W - 3 - w), ly = MiniLab.clamp(up ? y - LABEL_GAP - h : y + LABEL_GAP, 3, H - 3 - h);
+            const gap = s.melt ? MELT_R + 2 : LABEL_GAP;         // FROZEN: clear of the warm flame's ring
+            const x = s.tip.x + 0.5, y = s.tip.y + 0.5, left = x - gap - w >= 3, up = y - gap - h >= 3;
+            const lx = left ? x - gap : Math.min(x + gap, W - 3 - w), ly = MiniLab.clamp(up ? y - gap - h : y + gap, 3, H - 3 - h);
             [0, 1].forEach(k => note('tip' + k, lines[k] == null ? null : lines[k], { x: lx, y: ly + k * lh, align: left ? 'right' : 'left', tone, size: 'm' }));
         }
-        const seamPercent = () => Math.min(100, Math.floor((100 * s.cut) / (SEAM.length * TEAR)));   // the hatch tears free at TEAR: that is 100%
+        const seamPercent = () => Math.min(100, Math.floor((100 * (s.cut - s.free)) / (Math.max(1, SEAM.length - s.free) * TEAR)));   // the hatch tears free at TEAR: that is 100% (of the seam this door needs cut)
         function readout(rows, fromTop) {                        // [id, text or null, tone]: stacked in the corner, the empty ones left out
             const lh = NOTE_PX * NOTE_LINE * unitsPerPx(), live = rows.filter(r => r[1] != null);
             rows.filter(r => r[1] == null).forEach(r => note(r[0], null, {}));
@@ -1076,7 +1399,7 @@
             for (let k = 1; k <= Math.round(arm * d); k++) PLUS.forEach(([ox, oy]) => L.set(gx + ox * k, gy + oy * k, k <= d ? C.warmBright : C.warm));
         }
         function renderHatch() {
-            const opened = s.phase === 'open' || s.phase === 'end', f = opened ? 1 : s.cut / SEAM.length;
+            const opened = s.phase === 'open' || s.phase === 'end', f = opened ? 1 : doneFrac();
             const jolt = opened && s.openT < 0.45 ? Math.round(2.4 * (1 - s.openT / 0.45)) : 0;   // the crack shakes the picture, then settles
             moveJaxon(Math.min(0.1, clock - lastDraw)); lastDraw = clock;
             ctx.setTransform(d, 0, 0, d, 0, 0);
@@ -1084,14 +1407,17 @@
             ctx.setTransform(d, 0, 0, d, Math.round(jolt * d * (Math.random() < 0.5 ? -1 : 1)), Math.round(jolt * d * (Math.random() < 0.5 ? -1 : 1)));
             under.clear(); over.clear();
             art(g => { g.drawImage(hullBg, 0, 0); if (opened) g.drawImage(hole, 0, 0); });
+            if (s.frost) art(g => frostLayer.draw(g));            // FROZEN: the frost over it all
             if (opened && s.openT > 2.6) drawGlint(under);
             if (opened && s.openT < 0.4) SEAM.forEach(i => {      // the last air flashing out of the seam as ice
                 const x = i % W, y = (i - x) / W, k = 1 - s.openT / 0.4;
                 for (let ay = A(y - 1); ay <= A(y + 1); ay++) for (let ax = A(x - 1); ax <= A(x + 1); ax++) if (MiniLab.on(ax, ay, 0.45 * k)) under.set(ax, ay, C.uiBright);
                 if (MiniLab.on(A(x), A(y), k)) udot(under, x, y, C.star);
             });
+            if (s.frost) drawGlints(under);
             drawFlameLight(under); drawBurns(under, opened);
-            if (!opened) drawSeamGuide(under, f);
+            if (!opened && !s.melt) drawSeamGuide(under, f);      // FROZEN: no guide until the seam shows
+            if (LINE && !opened) drawLineMarks(under);
             drawTether(under);
             art(g => under.draw(g));
             if (opened && s.openT < 10) art(g => drawLid(g, s.openT));
@@ -1101,8 +1427,20 @@
             ctx.setTransform(d, 0, 0, d, 0, 0);
             drawTipLabel();
             const pct = opened ? 100 : seamPercent();             // the readout moves as the seam frees
-            readout([fuelRow(), heatRow(), ['seam', 'SEAM ' + pct + '%', pct >= 100 || growing() ? 'ui' : 'text'],
+            readout([fuelRow(), heatRow(), s.melt ? ['seam', 'FROST ' + Math.round(s.frostLeft * 100) + '%', 'text'] : ['seam', 'SEAM ' + pct + '%', pct >= 100 || growing() ? 'ui' : 'text'],
                 ['marks', s.scars || s.warps.length ? 'SCARS ' + s.scars + '   WARPS ' + s.warps.length : null, 'dim']], false);
+        }
+        // FUEL LINE: the suit marks the line in red either side of it, and a bar across the seam where the cut has to stop
+        const LINE_MARKS = LINE ? LINE.marks.map(m => ({ ax: A(m.x), ay: A(m.y), j: m.j })) : [];
+        const LINE_STOPS = LINE ? LINE.stops.map(st => {         // two art pixels thick, across the seam
+            const px = [];
+            for (let o = -4.2; o <= 4.2; o += 0.5 / d) [0, 0.66].forEach(t => px.push([A(st.x + st.nx * o - st.ny * t), A(st.y + st.ny * o + st.nx * t)]));
+            return px;
+        }) : [];
+        function drawLineMarks(L) {
+            const march = Math.floor(clock * 5), near = lineClear(s.tip) || LINE.dist(s.tip.x, s.tip.y) < LINE.clear + 8, flash = near && Math.floor(clock * 4) % 2;
+            LINE_MARKS.forEach(m => { if ((m.j + march) % 6 < 3) L.set(m.ax, m.ay, C.danger); });
+            LINE_STOPS.forEach(px => px.forEach(([ax, ay]) => L.set(ax, ay, flash ? C.warmBright : C.danger)));
         }
         function renderDisc() {
             ctx.setTransform(d, 0, 0, d, 0, 0);
@@ -1170,14 +1508,26 @@
         return () => { cv.style.cursor = ''; snd.drop(); };
     }
 
+    // ── what TorchDoors.js paints and plays with: the hull and its hatch, our lamp, Jaxon's place, the torch's sounds ──
+    const KIT = Object.freeze({
+        W, H, DENSITY, INK, HB, HATCH_BOX, LAMP, PORT, FAR_LIGHT, VP, GLINT, JAX: Object.freeze({ H: JAX_H, IDLE: JAX_IDLE, REACH: JAX_REACH }),
+        sdf, normal, SEAM, SEAM_STEP, PATH, STEPS, horizon: horizonF, hash, eachArt, sizeOf, ramps, makeLayer, paintScene, paintHull, makeSound, sayLines,
+    });
+    window.MiniTorchKit = KIT;
+
     MiniHost.register({
         id: 'torch', kicker: 'EVA', title: 'The cutting torch',
         density: DENSITY,                                        // 720 × 405 art pixels: the travel view's grain
+        header(opts) {                                           // the door it is on names the frame
+            const o = readOpts(opts);
+            return o.mode === 'hatch' ? { title: DOOR_TITLES[o.door] } : {};
+        },
         mount,
-        autoResult(opts) {                                       // TEST_MODE: the crew member cut it
-            return readOpts(opts).mode === 'disc'
+        autoResult(opts) {                                       // TEST_MODE: the crew member cut it (or the door needed no torch)
+            const o = readOpts(opts), torch = PLAYED.includes(o.door);
+            return o.mode === 'disc'
                 ? { destroyed: true, figuresScorched: false, fuelLeft: 0.5, tanks: 1 }
-                : { opened: true, fuelLeft: 0.5, scars: 0, warps: 0, tanks: 1, bySelf: false };
+                : { opened: true, fuelLeft: torch ? 0.5 : 1, scars: 0, warps: 0, tanks: 1, bySelf: !torch, door: o.door };
         },
     });
 })();

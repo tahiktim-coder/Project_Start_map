@@ -176,7 +176,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                 desc: "-5 Energy. +2 Data. All crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const stories = [
                         "RECORDER: 'The drive failed on the last jump. We can't move. Whoever finds this, take what you need.'",
                         "RECORDER: 'Fuel's gone. We're going into the pods. Please come and get us.'",
@@ -261,7 +261,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                 desc: "-5 Energy, then +10 Energy back. +2 Data. Mira -1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.max(0, (mira.stress || 0) - 1);
                     state.energy = Math.min(100, state.energy + 10);
@@ -336,7 +336,7 @@ const ASTEROID_FIELD_ENCOUNTERS = [
                         state.addLog(`The probe found their supplies and towed out what it could. Probe at ${state.probeIntegrity.toFixed(0)}%.`);
                         return "The probe towed out supplies. +30 Salvage. Probe scraped.";
                     }
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog(`The probe's camera finds a list scratched on the wall: hull numbers and dates, with a 4 beside each. Probe at ${state.probeIntegrity.toFixed(0)}%.`);
                     return "The probe read a list on the wall. +2 Data. Probe scraped.";
                 }

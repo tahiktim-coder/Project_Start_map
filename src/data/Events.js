@@ -368,6 +368,16 @@ const EVENTS = [
         ]
     },
     {
+        id: 'OLD_RUINS',
+        trigger: () => false,   // never a plain landing's pick: the new look's "Old ruins" find (src/newscreen/WorldFinds.js) plays it
+        title: "OLD RUINS",
+        desc: "Walls and roofs, half buried in the dust. Nobody has lived here for a very long time.",
+        choices: [
+            { text: "Map the walls and leave", riskMod: 5, reward: { type: 'DATA', val: 1 } },
+            { text: "Dig under the walls", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
+        ]
+    },
+    {
         id: 'DISTRESS_BEACON', // Fallback — MUST BE LAST
         trigger: () => true,
         title: "DISTRESS CALL",
@@ -378,3 +388,24 @@ const EVENTS = [
         ]
     }
 ];
+
+// The new look (?new=1) only. A world's own landing events, by its type: what a plain landing finds there first (App.landingEventOf
+// picks one of these when its trigger holds, else today's pick). Types with none land on today's pick.
+const KIND_EVENTS = {
+    ROCKY: ['MINERAL_VEIN', 'CAVE_SYSTEM'], ICE_WORLD: ['FROZEN_LAKE', 'CRYSTAL_SPIRE'], DESERT: ['MIRAGE_VISION', 'MINERAL_VEIN'],
+    SULFUR: ['GAS_POCKET'], ROGUE: ['VOID_WHISPERS'], BIO_MASS: ['BIO_SAMPLES'], SHATTERED: ['VOID_WHISPERS', 'MAGNETIC_STORM'],
+    CRYSTALLINE: ['PRISM_SONG'], SINGING: ['THE_FREQUENCY'], MIRROR: ['THE_REFLECTION'], HOLLOW: ['INNER_WORLD'],
+    OCEANIC: ['MIRAGE_VISION'], VOLCANIC: ['TECTONIC_SHIFT', 'GAS_POCKET', 'MINERAL_VEIN'], TOXIC: ['ACID_RAIN'],
+    VITAL: ['BIO_HORROR', 'HIVE_MIND'], SYMBIOTE_WORLD: ['SYMBIOTE_EMBRACE'], FUNGAL: ['FUNGAL_BLOOM'], FROZEN_OCEAN: ['FROZEN_LAKE'],
+    MECHA: ['MECHA_SALVAGE', 'LIVING_METAL'], MACHINE_WORLD: ['LIVING_METAL'], GRAVEYARD: ['SHIP_GRAVEYARD'], TOMB_WORLD: ['MASS_BURIAL'],
+    TIDALLY_LOCKED: ['TERMINATOR_WALK'],
+};
+// The new look only. A world's one feature, as a second place to go: old ruins, an old signal (one of our beacons), life, machines.
+// The first event of the list that is not already the world's own landing event is played there.
+const FEATURE_EVENTS = {
+    ruins: ['OLD_RUINS'],
+    signal: ['DERELICT', 'ROGUE_AI'],
+    life: ['BIO_HORROR', 'FUNGAL_BLOOM'],
+    machines: ['MECHA_SALVAGE', 'LIVING_METAL'],
+};
+if (typeof window !== 'undefined') Object.assign(window, { KIND_EVENTS, FEATURE_EVENTS });

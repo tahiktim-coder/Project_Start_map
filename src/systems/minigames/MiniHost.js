@@ -3,10 +3,11 @@
    last line said under it as a voice (the name in the speaker's colour over the line), the choices as plain words.
 
    A minigame registers once, when its script loads:
-     MiniHost.register({ id, title, kicker, mount(ctx, ui, opts), autoResult(opts), density?, hideHeader? })
+     MiniHost.register({ id, title, kicker, mount(ctx, ui, opts), autoResult(opts), density?, hideHeader?, header? })
    and the game plays it, waiting for the result:
      const result = await MiniHost.play('corridor', { sector: 2 });
-   opts.kicker and opts.title, when given, replace the minigame's own header for this one play.
+   opts.kicker and opts.title, when given, replace the minigame's own header for this one play. header(opts), when the
+   minigame has one, may return { kicker, title } for this play (the torch names the door it is on); opts still win.
 
    density (optional): art pixels per picture unit, 1 (default: the old 480 × 270 grain), 1.5 (720 × 405: one art pixel is
    two screen pixels in a 1080p window, as in the travel view — use this one), 2 or 3. The picture stays 480 × 270 UNITS
@@ -85,6 +86,12 @@
     }
 
     // ── the frame ──
+    /** The minigame's own header for this play ({ kicker, title }, either may be missing); {} when it has none or it fails. */
+    function headerOf(def, opts) {
+        if (typeof def.header !== 'function') return {};
+        try { const h = def.header(opts); return h && typeof h === 'object' ? h : {}; } catch (e) { console.error(e); return {}; }
+    }
+
     function buildOverlay(def, opts, density) {
         const overlay = document.createElement('div');
         overlay.className = 'mini-host';
@@ -100,8 +107,9 @@
                 <div class="mini-buttons"></div>
             </div>`;
         const q = sel => overlay.querySelector(sel);
-        q('.mini-kicker').textContent = opts.kicker || def.kicker || '';
-        q('.mini-title').textContent = opts.title || def.title;
+        const own = headerOf(def, opts);
+        q('.mini-kicker').textContent = opts.kicker || own.kicker || def.kicker || '';
+        q('.mini-title').textContent = opts.title || own.title || def.title;
         if (def.hideHeader && !opts.title && !opts.kicker) q('.mini-head').classList.add('is-hidden');   // the title still names the dialog for screen readers
         return { overlay, frame: q('.mini-frame'), canvas: q('canvas'), notes: q('.mini-notes'), prev: q('.mini-prev'), who: q('.mini-who'), name: q('.mini-name'), line: q('.mini-line'), row: q('.mini-buttons') };
     }

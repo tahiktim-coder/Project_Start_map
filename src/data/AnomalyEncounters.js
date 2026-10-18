@@ -146,7 +146,7 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "-10 Energy to go the long way. +2 Data.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog("A.U.R.A.: 'Both planets are logged, Commander. I can't tell which one is the original.'");
                     return "Went around the long way. -10 Energy, +2 Data.";
                 }
@@ -185,7 +185,7 @@ const ANOMALY_ENCOUNTERS = [
                         return `${listener.name} talked to the voice and came back badly shaken. Stress 3.`;
                     } else if (roll < 0.7) {
                         // Neutral: Knowledge
-                        state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                        state.gainData(2);
                         listener.stress = Math.min(3, (listener.stress || 0) + 1);
                         state.addLog(`${listener.name}: "It read me a list of ships and where each one ended up. I wrote down what I could."`);
                         return `${listener.name} wrote down a list of ships. +2 Data. ${listener.name} +1 Stress.`;
@@ -222,6 +222,7 @@ const ANOMALY_ENCOUNTERS = [
                             p._tagsRevealed = true;
                         });
                         state.addLog("The voice describes every planet in this sector to her. She checks each one. Every description is accurate.");
+                        state.revealStoryWorld(name => `The voice also names ${name}. One of our ships is there.`);   // the new look: the faint contact is named too
                         return "The voice gave A.U.R.A. the whole sector. -5 Energy. All planets revealed.";
                     } else if (roll < 0.75) {
                         state.addLog("A.U.R.A.: 'I said hello and gave our crew count, Commander. It repeated both back and went quiet.'");
@@ -266,7 +267,7 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "-5 Energy. +1 Data. The richest planet here revealed. All crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
@@ -329,7 +330,7 @@ const ANOMALY_ENCOUNTERS = [
                         return "It was solid. -15 Energy. A deck damaged, and someone hurt.";
                     }
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 40);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog("We pass through it like fog. Hull plates peel off it in sheets, still warm, each one stamped with our number.");
                     return "It came apart around us. -15 Energy, +40 Salvage, +2 Data.";
                 }
@@ -356,7 +357,7 @@ const ANOMALY_ENCOUNTERS = [
                     if (state.salvage < 30) return "We don't have 30 Salvage to spare. Nothing goes in.";
                     state.salvage -= 30;
                     state._hungerFavor = true;
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    state.gainData(3);
                     const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
                     state.addLog("The crate drifts in. An hour later it drifts out the far side, sealed and empty. The label is ours, with one letter wrong.");
@@ -507,7 +508,7 @@ const ANOMALY_ENCOUNTERS = [
 
                     const roll = window.TEST_MODE ? 0.1 : Math.random();
                     if (roll < 0.25) {
-                        state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                        state.gainData(3);
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
@@ -530,7 +531,7 @@ const ANOMALY_ENCOUNTERS = [
                             state.addLog("THE DOOR OPENS.");
                             state.addLog(`${victim.name} walks through it. They don't run, and they don't look back.`);
                             state.addLog(`The door closes. Through its window, ${victim.name} is walking away across green grass.`);
-                            state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                            state.gainData(3);
                             return `${victim.name} walked through the door and is gone. +3 Data.`;
                         }
                     }
@@ -564,7 +565,7 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "-5 Energy. +2 Data.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog("We measure it from the lander. Every dimension matches ours to the millimetre, and the scratch is in the same place.");
                     return "Measured and logged. -5 Energy, +2 Data.";
                 }
@@ -615,7 +616,7 @@ const ANOMALY_ENCOUNTERS = [
                     state.energy = Math.max(0, state.energy - 10);
                     if (_anomalyTestChance(0.5)) {
                         state.energy = Math.min(100, state.energy + 40);
-                        state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                        state.gainData(3);
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });
@@ -633,7 +634,7 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "-5 Energy. +1 Data. Vance -1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
                     state.addLog("All seventeen hull numbers go into the log, lowest to highest. Even the lowest one has four digits.");
@@ -673,7 +674,7 @@ const ANOMALY_ENCOUNTERS = [
                     solver.tags = solver.tags || [];
                     if (!solver.tags.includes('GEOMETRY_SOLVED')) solver.tags.push('GEOMETRY_SOLVED');
                     solver.stress = 0;
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 4;
+                    state.gainData(4);
 
                     state.addLog(`${solver.name} reads for a whole day. Then: "We're on it, Commander. Ship nine, four crew. Just what A.U.R.A. says."`);
                     state.noteStanding && state.noteStanding('mira');
@@ -685,7 +686,7 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "-5 Energy. +2 Data. Vance +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.min(3, (vance.stress || 0) + 1);
                     state.addLog("A.U.R.A.: 'It matches my records, Commander. Every line, including ours.'");
@@ -730,7 +731,7 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "-1 Ration: a full day of reading. +8 Data. All crew +2 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 8;
+                    state.gainData(8);
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 2);
                     });
@@ -776,7 +777,7 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "-5 Energy. +3 Data. All planets revealed. All crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    state.gainData(3);
                     state.sectorNodes?.forEach(p => {
                         p.remoteScanned = true;
                     });
@@ -784,6 +785,7 @@ const ANOMALY_ENCOUNTERS = [
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
                     state.addLog("The shelf lists every planet in this sector and what's on it. The list of good ones has a single entry, and it isn't in this sector.");
+                    state.revealStoryWorld(name => `The shelf also lists one of our ships, on ${name}.`);   // the new look: the faint contact is named too
                     return "Planet shelf read. -5 Energy, +3 Data. All planets revealed. All crew +1 Stress.";
                 }
             }

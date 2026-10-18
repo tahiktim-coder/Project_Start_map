@@ -2,7 +2,8 @@
    What it is: everything of an action tag on the bridge that is a picture, at the bridge's own pixel (640 x 360 frame px,
    the same grid as the room): amber corner brackets that draw in from the corners, the ink dither behind the words (as the
    voice lines have), a 9 x 9 pixel icon per action, the thin dotted thread to what the tag acts on with a pin on the target
-   (it turns solid and pulses while pointed at), the lit key on Cora's console for "Leave orbit", and what the glass shows
+   (it turns solid and pulses while pointed at), the marks of a world's finds on its face (WorldFinds.js: one of our ships,
+   a colony, ruins, life...: an icon each), the lit key on Cora's console for "Leave orbit", and what the glass shows
    while a tag is pointed at (Scan sweeps the world's face, the team's way down, guide lines to a dock, a reticle on a
    field, the dive into a giant's clouds, chevrons at the window's edge). The words themselves are DOM (stop/Tags.js).
    House style (docs/ART_STYLE.md): ramps from the ink, 8 x 8 Bayer dither, motion in 125 ms steps. Warm amber for what you
@@ -18,6 +19,8 @@
      brackets(c, x, y, w, h, tone, k, hot)   the corners; k 0..1 their arms drawing in from the corners
      thread(c, pts, tone, o)          a polyline: o.solid, o.frac 0..1 (how far it has reached), o.lift
      pin(c, x, y, tone, o)            the mark on the target: o.pulse (t ms, or null), o.lift
+     findMark(c, x, y, o)             a find's mark on the world: o.state 'open' | 'target' | 'done', o.hot, o.pulse, o.born
+                                      (ms since it was found: one ring goes out), o.t, o.still
      key(c, x, y, w, h, o)            the helm key plate: o.hot, o.next, o.t
      panel(c, x, y, w, h, t)          the stock's small display set into the wall
      hatchLight(c, cx, floorY, k)     warm light rising out of the open hatch (k 0..1)
@@ -66,6 +69,16 @@
         light: ['....2....', '.2..3..2.', '..2.3.2..', '...343...', '233444332', '...343...', '..2.3.2..', '.2..3..2.', '....2....'],
         escape: ['....33333', '......443', '.....3.43', '....3..33', '...3.....', '..3......', '.3.......', '3........', '.........'],
         accept: ['.........', '..22222..', '.2.....2.', '.2.333.2.', '.2.343.2.', '.2.333.2.', '.2.....2.', '..22222..', '.........'],
+        // the finds on a world (WorldFinds.js): one of our ships, a colony, a beacon, a dome, graves, ruins, life, machines, a place
+        wreck: ['.........', '.....233.', '....2343.', '...2332..', '.........', '.2332....', '2343.....', '332......', '.........'],
+        house: ['....3....', '...343...', '..33333..', '.3333333.', '..2...2..', '..2.4.2..', '..2.4.2..', '..22222..', '.........'],
+        beacon: ['....4....', '...343...', '....3....', '....3....', '...232...', '....2....', '...2.2...', '..2...2..', '.2.....2.'],
+        dome: ['.........', '...222...', '..2...2..', '.2..3..2.', '.2.343.2.', '2..333..2', '222222222', '.........', '.........'],
+        stones: ['.........', '..3...3..', '.333.333.', '..3...3..', '..3...3..', '..2...2..', '.........', '222222222', '.........'],
+        ruins: ['.........', '.3.......', '.3...3...', '.3...3.3.', '.3.3.3.3.', '.3.3.3.3.', '.2.2.2.2.', '222222222', '.........'],
+        life: ['.........', '.33...33.', '3443.3443', '.3443443.', '...343...', '....3....', '....2....', '....2....', '...222...'],
+        gear: ['...2.2...', '.2.333.2.', '..33333..', '2333.3332', '.33...33.', '2333.3332', '..33333..', '.2.333.2.', '...2.2...'],
+        pin: ['...333...', '..34443..', '..34.43..', '..34443..', '...343...', '...333...', '....3....', '....2....', '...2.2...'],
     };
     const CHIPS = {
         free: ['..2..', '.2.2.', '2...2', '.2.2.', '..2..'],
@@ -81,6 +94,11 @@
         live: ['..3..', '.333.', '33333', '.3.3.', '.333.'],
         slot: ['2.2.2', '.....', '2...2', '.....', '2.2.2'],
         dot: ['.....', '.....', '..3..', '.....', '.....'],
+        rations: ['.333.', '3...3', '33333', '3...3', '.333.'],
+        data: ['.333.', '3...3', '.333.', '3...3', '.333.'],
+        item: ['..3..', '.333.', '33333', '.333.', '..3..'],
+        page: ['333..', '3.33.', '3...3', '3.3.3', '33333'],
+        done: ['....3', '...3.', '3.3..', '.3...', '.....'],
     };
     const iconCache = new Map();
     function iconCanvas(map, tone, lift) {
@@ -181,6 +199,34 @@
         c.fillStyle = at(r, 2 + lift); c.fillRect(x, y, 1, 1);
         if (opt.pulse == null) return;
         const step = Math.floor(opt.pulse / STEP) % 8, rad = 3 + step, fade = 1 - step / 8;
+        ringPts(x, y, rad).forEach(([px, py]) => { if (fade * 0.9 > threshold(px, py)) { c.fillStyle = at(r, step < 3 ? 2 : 1); c.fillRect(px, py, 1, 1); } });
+    }
+
+    // ── a find's mark on the world (WorldFinds.js): where a team can go ──
+    /** o: { state: 'open' | 'target' | 'done', hot (pointed at), pulse (ms since pointed, or null), born (ms since it was found:
+        one ring goes out), t, still }. A small diamond with a lit point; the target inside corner brackets, its diamond
+        blinking; a visited one a small grey cross. An ink rim keeps it clear on a lit face. */
+    function findMark(c, x, y, o) {
+        const opt = o || {}, done = opt.state === 'done', target = opt.state === 'target', r = ramp(done ? 'cool' : 'warm'), lift = opt.hot ? 1 : 0;
+        x = Math.round(x); y = Math.round(y);
+        c.fillStyle = INK;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) c.fillRect(x + dx, y + dy, 1, 1);
+        if (done) {
+            c.fillStyle = at(r, 1); [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([dx, dy]) => c.fillRect(x + dx, y + dy, 1, 1));
+            c.fillStyle = at(r, 2); c.fillRect(x, y, 1, 1);
+            return;
+        }
+        const blink = target && !opt.still && Math.floor((opt.t || 0) / STEP) % 8 >= 5;
+        c.fillStyle = at(r, (target ? 2 : 1) + lift - (blink ? 1 : 0));
+        [[2, 0], [-2, 0], [0, 2], [0, -2]].forEach(([dx, dy]) => c.fillRect(x + dx, y + dy, 1, 1));
+        if (target) {                                                                 // where GO DOWN takes them: brackets round it
+            c.fillStyle = at(r, 2 + lift);
+            [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sy]) => { c.fillRect(x + sx * 4, y + sy * 4, 1, 1); c.fillRect(x + sx * 3, y + sy * 4, 1, 1); c.fillRect(x + sx * 4, y + sy * 3, 1, 1); });
+        }
+        c.fillStyle = at(r, 3); c.fillRect(x, y, 1, 1);
+        const ping = opt.born != null && opt.born >= 0 && opt.born < STEP * 8 ? Math.floor(opt.born / STEP) : -1;
+        if (ping < 0 && opt.pulse == null) return;
+        const step = ping >= 0 ? ping : Math.floor(opt.pulse / STEP) % 8, rad = 3 + step, fade = 1 - step / 8;
         ringPts(x, y, rad).forEach(([px, py]) => { if (fade * 0.9 > threshold(px, py)) { c.fillStyle = at(r, step < 3 ? 2 : 1); c.fillRect(px, py, 1, 1); } });
     }
 
@@ -349,5 +395,5 @@
     const PREVIEWS = { scan: sweep, route, dock: dockGuide, reticle, dive, chevrons, target, flag, rings, mark };
     function preview(c, kind, o) { const fn = PREVIEWS[kind]; if (fn && o) fn(c, o); }
 
-    window.NSTagArt = Object.freeze({ ICON, CHIP, ramp, icon, chipURL, shade, brackets, thread, pin, key, panel, hatchLight, preview, linePts });
+    window.NSTagArt = Object.freeze({ ICON, CHIP, ramp, icon, chipURL, shade, brackets, thread, pin, findMark, key, panel, hatchLight, preview, linePts });
 })();

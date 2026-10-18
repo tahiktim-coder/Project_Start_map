@@ -15,10 +15,15 @@
 //             long-range scan from the travel view: Mira says what it said, and that it was from far away) or 'none' (never
 //             scanned at all: Mira, Jaxon and Aris each say they cannot know). Without it, 'unscanned' applies as before.
 //
+//   data      the new look only (withData): what we learned on the way (GameState._colonyKnowledge, the "data" on the ship's wall): one more crew line says
+//             what it buys the colony (EndingSystem.generateOutcome: a failing colony holds 5 % more often a point, up to 25 %).
+//             Said by whoever keeps the records: Aris, else Mira, else Jaxon.
+//
 // lines[person][scan] holds one line per band. A key like 'late.truth' wins over 'late' once the crew knows that much.
 // Vance's lines do not depend on the scan (scan key 'any'): he wants the truth whatever the world is like.
-// Order: Mira reads the scan, Jaxon the ship and supplies, Aris the living, Vance the truth, then A.U.R.A.'s question.
-// At most MAX_LINES are spoken: A.U.R.A. opens only when fewer than four crew can speak. Every line follows docs/STYLE.md.
+// Order: Mira reads the scan, Jaxon the ship and supplies, Aris the living, Vance the truth, the data, then A.U.R.A.'s question.
+// At most MAX_LINES are spoken (the data line is one more): A.U.R.A. opens only when fewer than four crew can speak. Every
+// line follows docs/STYLE.md.
 
 const SETTLE_COUNCIL = {
     MAX_LINES: 5,
@@ -55,6 +60,15 @@ const SETTLE_COUNCIL = {
             marginal: 'We only scanned it from far away, Commander. It said living here would be hard.',
             bad: 'We only scanned it from far away, Commander. It said nobody could live here.',
         },
+    },
+
+    // What our data buys the colony: none, some, or LOTS_AT and more ({n}: how much, as the ship's wall shows it).
+    data: {
+        speakers: ['aris', 'mira', 'jaxon'],
+        LOTS_AT: 5,
+        none: "We have no data from the journey. If the colony starts failing, we'll be guessing.",
+        some: 'We have {n} data from the journey. If the colony starts failing, it could help.',
+        lots: "We have {n} data from the journey. If the colony starts failing, we'll know what to try.",
     },
 
     // Shut in the hold: they will not come up, and say so.
@@ -177,9 +191,10 @@ function settleCouncilUnknown(person, planet, scan, known) {
  *   viability  EndingSystem.getPlanetViability(planet, state); required
  *   isRepeat   true when this world has had its council already: only A.U.R.A.'s question is asked again
  *   known      the new look only: 'deep' | 'far' | 'none', what our scans read (see the top of this file)
+ *   withData   the new look only: one more crew line on what our data buys the colony (see `data` at the top)
  * Reads state.currentSector, state.crew, state.exodusLogsFound and planet.scanned. Changes nothing.
  */
-function buildSettleCouncil(state, planet, { viability, isRepeat = false, known = null } = {}) {
+function buildSettleCouncil(state, planet, { viability, isRepeat = false, known = null, withData = false } = {}) {
     const scan = SETTLE_COUNCIL.SCAN_TIER[viability];
     if (!scan) throw new Error(`buildSettleCouncil: unknown viability "${viability}"`);
     const band = settleCouncilBand(state.currentSector);
@@ -195,15 +210,26 @@ function buildSettleCouncil(state, planet, { viability, isRepeat = false, known 
         return { speaker: member.name, text };
     }).filter(Boolean);
 
-    const hasRoomToOpen = crewLines.length > 0 && crewLines.length + 2 <= SETTLE_COUNCIL.MAX_LINES;
+    const data = isRepeat || !withData ? null : settleCouncilData(state, crew);
+    const crewTalk = data ? [...crewLines, data.line] : crewLines;
+    const hasRoomToOpen = crewLines.length > 0 && crewLines.length + 2 <= SETTLE_COUNCIL.MAX_LINES;   // the data line does not count: as before it
     const opening = hasRoomToOpen ? [{ speaker: 'A.U.R.A.', text: SETTLE_COUNCIL.opening }] : [];
     return {
         kicker: SETTLE_COUNCIL.kicker,
         title: SETTLE_COUNCIL.title.replace('{planet}', planet.name),
-        dialogue: [...opening, ...crewLines, { speaker: 'A.U.R.A.', text: SETTLE_COUNCIL.closing }],
+        dialogue: [...opening, ...crewTalk, { speaker: 'A.U.R.A.', text: SETTLE_COUNCIL.closing }],
         choices: SETTLE_COUNCIL.choices.map(choice => ({ ...choice })),
-        situation: { scan, band, knows, known },
+        situation: { scan, band, knows, known, data: data ? data.n : null },
     };
+}
+
+/** The line on what our data buys the colony, by the first of SETTLE_COUNCIL.data.speakers who can speak: { n, line } or null. */
+function settleCouncilData(state, crew) {
+    const D = SETTLE_COUNCIL.data, n = Math.max(0, Math.round(Number(state._colonyKnowledge) || 0));
+    const member = D.speakers.map(person => crew.find(c => (c.tags || []).includes(SETTLE_COUNCIL.ROLE_TAG[person]))).find(m => settleCouncilVoice(m) === 'speaks');
+    if (!member) return null;
+    const text = (n === 0 ? D.none : n >= D.LOTS_AT ? D.lots : D.some).replace('{n}', String(n));
+    return { n, line: { speaker: member.name, text } };
 }
 
 if (typeof window !== 'undefined') {

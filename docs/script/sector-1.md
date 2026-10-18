@@ -31,16 +31,16 @@ Objective lines (the tip above the log, one at a time, whichever fits what you a
 ### The marked beacon — the first wreck «bundle.js · findDiscDrawing»
 _The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), always a whole ship, so the team cuts its hatch first (10-away-team.md). It is named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_
 
-- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 2792»
+- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 2822»
 
 #### The drawing of the gold disc «DiscDocument.js · NOTES»
 _A card with the drawing. Point at each label to read its note._
 
-- **kicker** — FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK «DiscDocument.js · line 27»
-- **title** — The disc «DiscDocument.js · line 27»
-- **aura** — An old curiosity, Commander. I would not spend time on it. «DiscDocument.js · line 27»
-- **close** — FOLD IT AWAY «DiscDocument.js · line 27»
-- **closeNote** — it stays in your cargo «DiscDocument.js · line 27»
+- **kicker** — FOUND IN THE WRECK · A PAGE FOLDED INTO THE LOGBOOK «DiscDocument.js · line 32»
+- **title** — The disc «DiscDocument.js · line 32»
+- **aura** — An old curiosity, Commander. I would not spend time on it. «DiscDocument.js · line 32»
+- **close** — KEEP IT «DiscDocument.js · line 32»
+- **closeNote** — it stays in your cargo «DiscDocument.js · line 32»
 
 - **THE DISC** — Gold. Thrown out of our solar system in 1977, bolted to a probe the size of a car. The oldest thing we ever sent anywhere. «DiscDocument.js · NOTES.disc»
 - **THE MAP** — Fourteen lines from one point. Each line is a star that ticks like a clock. Where they meet is home. Anyone who can count can find us. «DiscDocument.js · NOTES.map»
@@ -60,7 +60,7 @@ _On the first return to the map in sector 1. Card kicker: THE BRIDGE / FOUND IN 
 **Vance:** There are five of us on this ship. She keeps saying four.  
 **A.U.R.A.:** Four crew, Commander. All well.  
 **Vance:** Then list them.  
-**A.U.R.A.:** Jaxon Mercer. Aris Novak. Kael Vance. Mira Chen. And you, Commander. Four crew.  
+**A.U.R.A.:** Jaxon Mercer. Aris Novak. Kael Vance. Mira Chen. Four crew.  
 **Jaxon:** It is a glitch. She slept sixty years too. Let it go.  
 **A.U.R.A.:** ${reason} Jump anyway?  
 **A.U.R.A.:** I can run the drive on the reserve, Commander. The crew quarters will lose power.  
@@ -268,16 +268,16 @@ _The story planet before it is named: a faint dot labelled UNIDENTIFIED. Clickin
 ### The offer «bundle.js · offerDiscDating»
 _A card after the wreck. Mira asks; A.U.R.A. if Mira is dead._
 
-- **kicker** — THE DISC «bundle.js · line 2922»
-- **title** — Date this wreck «bundle.js · line 2922»
-- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 2923»
-- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 2925»
-- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 2926»
-- Date this wreck with the disc «bundle.js · line 2928»
-- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 2928»
-- **desc** — No cost. Shows when it died. «bundle.js · line 2928»
-- Not now «bundle.js · line 2929»
-- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 2929»
+- **kicker** — THE DISC «bundle.js · line 2974»
+- **title** — Date this wreck «bundle.js · line 2974»
+- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 2975»
+- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 2977»
+- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 2978»
+- Date this wreck with the disc «bundle.js · line 2980»
+- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 2980»
+- **desc** — No cost. Shows when it died. «bundle.js · line 2980»
+- Not now «bundle.js · line 2981»
+- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 2981»
 
 ### Dating it (the mini-game) «DiscDating.js · DiscDating»
 _The reactions by depth play the first time a wreck that deep is dated; after that A.U.R.A. says the age._
@@ -331,16 +331,16 @@ _The reactions by depth play the first time a wreck that deep is dated; after th
 
 ### In the log afterwards «bundle.js · dateWreck»
 
-- The disc dates [planet name]: dead for [age] years. «bundle.js · line 2950»
-- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 2954»
+- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3002»
+- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3006»
 
-- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 2982»
-- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 2983»
+- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3034»
+- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3035»
 
 ### When nobody dated a wreck «bundle.js · revealLateStoryPlanet»
 _Back on the map with one stop left._
 
-- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 2998»
+- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3050»
 
 ## The hole in the hull (the mini-game) «Breach.js · Breach»
 _Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time._
@@ -422,20 +422,23 @@ _Once per run, on a warp in sector 1 that costs energy, never the first. It take
 
 ### In the log afterwards «bundle.js · applyBreachResult»
 
-- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 1983»
-- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 1984»
-- [name] was caught in the breach and is injured. «bundle.js · line 1988»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 2013»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 2014»
+- [name] was caught in the breach and is injured. «bundle.js · line 2018»
 
 ### How every found page is shown (all sectors) «FoundPage.js · FoundPage»
 _The card around each found page (sector 5's find is the disc itself: sector-5.md)._
 
-- **plate** — A CAST PLATE · BESIDE THE AIRLOCK «FoundPage.js · line 17»
-- **paper** — A PRINTED PAGE · EARTH LETTERHEAD «FoundPage.js · line 17»
-- **log** — THE LAST ENTRY · CAPTAIN'S LOG «FoundPage.js · line 17»
-- a dead ship «FoundPage.js · line 68»
-- FOUND IN [ship name] · [A PAGE] «FoundPage.js · line 74»
-- — blank — «FoundPage.js · line 78»
-- KEEP IT it stays in your cargo «FoundPage.js · line 83»
+- **plate** — A CAST PLATE · BESIDE THE AIRLOCK «FoundPage.js · line 20»
+- **paper** — A PRINTED PAGE · EARTH LETTERHEAD «FoundPage.js · line 20»
+- **log** — THE LAST ENTRY · CAPTAIN'S LOG «FoundPage.js · line 20»
+- a dead ship «FoundPage.js · line 96»
+- FOUND IN [ship name] · [A PAGE] «FoundPage.js · line 102»
+- — blank — «FoundPage.js · line 106»
+- KEEP IT it stays in your cargo «FoundPage.js · line 111»
+- a dead ship «FoundPage.js · line 146»
+- FOUND IN [ship name] · [A PAGE] «FoundPage.js · line 153»
+- KEEP IT it stays in your cargo «FoundPage.js · line 156»
 
 ## If you try to settle a planet here
 

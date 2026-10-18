@@ -130,7 +130,10 @@ class EndingSystem {
         const isExtremeHot = temp > 200;
         const isCrushingGravity = gravity > 2.5;
         const isLowGravity = gravity < 0.3;
-        const isPredatory = planet._hiddenTags && planet._hiddenTags.includes('PREDATORY');
+        // a deep scan (needed to settle) moves the hidden predators into the tags (SectorConfig 4 onDeepScan): the new look reads
+        // both; the default game keeps its own reading (the hidden list only)
+        const seen = typeof isNewScreen === 'function' && isNewScreen() && !!(planet.tags && planet.tags.includes('PREDATORY'));
+        const isPredatory = seen || !!(planet._hiddenTags && planet._hiddenTags.includes('PREDATORY'));
 
         let success = true;
         let title = "UNKNOWN";

@@ -1228,7 +1228,7 @@
                 if (f.kind === 'medkit' && hasItem('MEDKIT')) { state.cargo.push({ ...ITEMS.MEDKIT, acquiredAt: station.name }); lines.push('A medkit, now in the cargo hold'); }
                 if (f.kind === 'tech' && hasItem('TECH_FRAGMENT')) { state.cargo.push({ ...ITEMS.TECH_FRAGMENT, acquiredAt: station.name }); lines.push('A piece of working tech, now in the cargo hold'); }
             });
-            if (data && state.addColonyKnowledge) { state.addColonyKnowledge(data, true); lines.push(`+${data} data, from the research notes`); }
+            if (data && state.addColonyKnowledge) { state.addColonyKnowledge(data); lines.push(`+${data} data, from the research notes`); }
             if (pods) { state._sleepers = (state._sleepers || 0) + pods; lines.push(`${pods} sleeper pod${pods > 1 ? 's' : ''}, now in the hold. Someone is alive inside.`); }
             notes.forEach(note => { state.addLog(`Diary from ${station.name}: ${note}`); lines.push('A diary. It is in the mission log.'); });
             if (b.isRecorded) {

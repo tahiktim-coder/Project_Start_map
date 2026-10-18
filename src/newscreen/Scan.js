@@ -1,27 +1,27 @@
 /* ═══ Silent Exodus · new screen (?new=1) · Scan.js: what our scans tell us about a world ═════════════════════════════
    What it is: the new look's two scans and what they teach (designer playtests, 2026-10-17: "we almost know nothing about
-   planets anymore"). In travel, "Scan" in a world's hover note is the long-range scan: NEW_LOOK_ECONOMY.FAR_SCAN energy, no
-   minigame, one A.U.R.A. line, and from then on the note shows a few short tags. On the bridge, "Scan" is the deep scan
-   (bundle.js handleScanAction's manual path: SignalTune): the lock decides how much we learn (a weak lock alone cannot read
-   the ground) and whether A.U.R.A. marks a landing spot and the trip is safer (bundle.js unmarkedWhy, scanRiskMod).
-   The tags read the game's own rules, so they stay true: App.siteOf (what is down there), App.landingEventOf (the event a
+   planets anymore", "scan is useless"). In travel, "Scan" in a world's hover note is the long-range scan:
+   NEW_LOOK_ECONOMY.FAR_SCAN energy, no minigame, one A.U.R.A. line, and from then on the note names the world's finds
+   (WorldFinds.js). On the bridge, "Scan" is one click: the glass sweeps the world, then its finds show as marks on it
+   (bundle.js handleScanAction, no tuning); the scan marks the landing spot and makes a plain landing safer (bundle.js
+   unmarkedWhy, scanRiskMod). The first scan of each kind of world is +1 data (bundle.js noteNewKind).
+   The facts read the game's own rules, so they stay true: App.siteOf (what is down there), App.landingEventOf (the event a
    plain landing finds, kept on the world from the first look: what it gives), App.planetRisk (the danger the trip's card
    starts from: how rough the ground is) and EndingSystem.getPlanetViability through SETTLE_COUNCIL.SCAN_TIER (the tier the
    settle question reads: whether people could live there). A sector's own scan hazards still apply: sector 3's interference
    can scramble a long-range air reading, sector 4 hides its predators from it; the deep scan puts both right.
-   Loaded only when the new-screen switch is on, after Route.js. Draws nothing: Travel.js shows the note, Stop.js the tags
-   under the world's name on the bridge; both reach the game through NewScreen.flow (scanOffer, scan, facts).
+   Loaded only when the new-screen switch is on, after Route.js. Draws nothing: Travel.js shows the note, Stop.js the marks
+   and the line under the world's name on the bridge; both reach the game through NewScreen.flow (scanOffer, scan, facts).
 
    window.NSScan (frozen)
      offer(state, id) → { cost, ok, why } | null   the long-range scan of a landable world ahead that no scan has read (null:
                                  none); ok false: why 'energy' (not enough) or 'bridge' (the bridge deck is down: no long-range scans)
-     far(app, id) → bool         run it: the energy, node.remoteScanned, the sector's scan hazard, the landing event kept,
-                                 A.U.R.A.'s line said (kept through a hover note) and logged
+     far(app, id) → bool         run it: the energy, node.remoteScanned, the sector's scan hazard, the landing event kept, a new
+                                 kind's data, A.U.R.A.'s line said (kept through a hover note) and logged
      facts(app, node | id) → { site, gives, danger, live, tier } | null   what our scans read (null: nothing yet); each a few
                                  lower-case words or null (a weak lock alone: danger 'ground unclear', gives null)
-     lines(facts, withSite) → ['One of our ships · salvage and rations', 'Rough ground · people could live here']
-     deep(app, node)             the bridge's deep scan is done (bundle.js): A.U.R.A. says what the lock read, logged
-     LOCK                        { sharp, fair, weak }: SignalTune's result words in the new look
+     deep(app, node, newKind)    the bridge's scan is done (bundle.js): A.U.R.A. says one line (a new kind of world, or how
+                                 many places are worth a trip; whether people could live here), logged
      TELL                        { far }: what A.U.R.A. says once a run, the first time the long-range scan is offered
 */
 (function () {
@@ -38,9 +38,9 @@
     const LIVE = { good: 'people could live here', marginal: 'a hard place to live', bad: 'nobody could live here' };
     const LIVE_THERE = { good: 'People could live there, Commander.', marginal: 'It would be a hard place to live, Commander.', bad: 'Nobody could live there, Commander.' };
     const LIVE_HERE = { good: 'People could live here.', marginal: 'It would be a hard place to live.', bad: 'Nobody could live here.' };
-    const LOCK_WORD = { sharp: 'Sharp lock, Commander.', fair: 'Fair lock, Commander.', auto: 'I tuned it myself, Commander.', weak: 'Weak lock, Commander.' };
-    const MARKED = "I've marked a safe place to land.", UNMARKED = 'Too faint to mark a landing spot.', NO_GROUND = 'There is no ground to land on.';
-    const LOCK = Object.freeze({ sharp: 'a safe spot marked, and extra detail — +1 data', fair: 'a safe spot marked for the landing', weak: 'too faint to mark a landing spot' });
+    const NO_GROUND = 'There is no ground to land on.', NOTHING_HERE = 'Nothing down there is worth a trip, Commander.';
+    const COUNT = ['no', 'one', 'two', 'three', 'four'];
+    const places = n => `${COUNT[n] || n} ${n === 1 ? 'place' : 'places'} worth a trip`;
     const TELL = Object.freeze({ far: `Scan shows what a world holds before we fly there. It costs ${COST} energy, Commander.` });
 
     const aura = text => `A.U.R.A.: "${text}"`;
@@ -100,9 +100,10 @@
             tier,
         };
     }
-    function lines(f, withSite) {
-        if (!f) return [];
-        return [[withSite === false ? null : f.site, f.gives], [f.danger, f.live]].map(l => l.filter(Boolean)).filter(l => l.length).map(l => cap(l.join(' · ')));
+    /** How many finds are still open on a world (WorldFinds.js), once a scan has read it. */
+    function openFinds(app, node) {
+        const F = window.NSWorldFinds;
+        try { return F ? F.list(app, node).filter(f => !f.done).length : 0; } catch (err) { console.error('NSScan: the finds failed', err); return 0; }
     }
 
     // ── the long-range scan (travel) ──
@@ -113,11 +114,10 @@
         const energy = !!window.TEST_MODE || state.energy >= COST;
         return { cost: COST, ok: bridge && energy, why: !bridge ? 'bridge' : !energy ? 'energy' : null };
     }
-    /** "Kryos-12 Major has an empty colony, with salvage and rations, on rough ground. People could live there, Commander."
-        Calm ground goes unsaid (the tags show it): the line stays short. */
-    function farLine(node, f) {
-        const what = f.site ? `${f.site}${f.gives ? `, with ${f.gives}` : ''}` : f.gives || 'nothing we can read';
-        const said = `${node.name} has ${what}${f.danger && f.danger !== 'calm ground' ? `, on ${f.danger}` : ''}.`;
+    /** "Three places worth a trip on Kryos-12 Major. People could live there, Commander." (the note names them) */
+    function farLine(app, node, f) {
+        const n = openFinds(app, node);
+        const said = n ? `${cap(places(n))} on ${node.name}.` : `Nothing worth a trip on ${node.name}.`;
         return node._scanCorrupted || !LIVE_THERE[f.tier] ? said : `${said} ${LIVE_THERE[f.tier]}`;   // scrambled air: the sector's own line says so
     }
     function far(app, id) {
@@ -129,20 +129,23 @@
             try { cfg.hazard.onScan(node, s); } catch (err) { console.error("NSScan: the sector's scan hazard failed", err); }
         }
         const f = facts(app, node);                                                                  // keeps the landing event on the world
-        if (f) speak(s, farLine(node, f));
+        if (f) speak(s, farLine(app, node, f));
+        const newKind = typeof app.noteNewKind === 'function' ? app.noteNewKind(node) : null;        // the first of its kind: +1 data
+        if (newKind) s.addLog(aura(newKind));                                                         // said after the line above
         sfx('sfxScan');
         s.emitUpdates();
         if (typeof app.autoSave === 'function') app.autoSave();
         return true;
     }
 
-    // ── the deep scan (the bridge), once its tune is over ──
-    function deep(app, node) {
+    // ── the bridge's scan, once the glass has swept the world: one line (newKind: A.U.R.A.'s "a new kind of world") ──
+    function deep(app, node, newKind) {
         const s = app && app.state;
         if (!s || !node) return;
-        const lock = LOCK_WORD[node.nsLock] ? node.nsLock : 'auto', world = isWorld(node), tier = world ? tierOf(s, node) : null;
-        speak(s, [LOCK_WORD[lock], !world ? NO_GROUND : lock === 'weak' ? UNMARKED : MARKED, LIVE_HERE[tier] || ''].filter(Boolean).join(' '));
+        const world = isWorld(node), tier = world ? tierOf(s, node) : null, n = world ? openFinds(app, node) : 0;
+        const first = newKind || (!world ? NO_GROUND : n ? `I've marked ${places(n)}, Commander.` : NOTHING_HERE);
+        speak(s, [first, newKind && !world ? NO_GROUND : '', newKind ? '' : LIVE_HERE[tier] || ''].filter(Boolean).join(' '));   // a new kind: its own line is enough
     }
 
-    window.NSScan = Object.freeze({ offer, far, facts, lines, deep, LOCK, TELL });
+    window.NSScan = Object.freeze({ offer, far, facts, deep, TELL });
 })();

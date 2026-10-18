@@ -48,8 +48,8 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 desc: "-5 Energy. +1 Data. 30% chance: one planet revealed.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
-                    if (Math.random() < 0.3) {
+                    state.gainData(1);
+                    if (Math.random() < 0.3 && !state.revealStoryWorld(name => `The beacon's log has a fix on ${name}. One of our ships is there.`)) {   // the new look: our ship first
                         const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned && !p.storyHidden);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
@@ -65,7 +65,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 desc: "-1 Ration: a day beside it. +1 Data. Aris -1 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.max(0, (aris.stress || 0) - 1);
                     state.addLog("A.U.R.A. sends a reply. Their crew's names are read aloud over the channel.");
@@ -119,11 +119,11 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                     ];
                     const outcome = outcomes[Math.floor(Math.random() * outcomes.length)];
                     state.addLog(outcome.log);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + outcome.knowledge;
+                    state.gainData(outcome.knowledge);
                     if (mira && outcome.stress > 0) {
                         mira.stress = Math.min(3, (mira.stress || 0) + outcome.stress);
                     }
-                    if (outcome.reveal) {
+                    if (outcome.reveal && !state.revealStoryWorld(name => `The coordinates point to ${name}. One of our ships is there.`)) {   // the new look: our ship first
                         const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned && !p.storyHidden);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
@@ -149,7 +149,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 text: "Log where it came from and go",
                 desc: "+1 Data. Nobody hears the rest. Vance -1 Stress.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     const vance = state.crew.find(c => c.tags?.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
                     if (vance) state.addLog("Source direction logged. Vance switches off the speaker himself.");
@@ -177,7 +177,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 desc: "-5 Energy. +3 Data. 50% chance for each crew member: +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    state.gainData(3);
                     const fates = [
                         "The water recycler broke. They lasted forty-seven days, and marked each one on the wall.",
                         "They landed. The last recording is people singing. Then silence.",
@@ -203,8 +203,9 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 desc: "-5 Energy. +1 Data. 50% chance: one planet revealed.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     if (Math.random() < 0.5) {
+                        if (state.revealStoryWorld(name => `Their navigation track ends at ${name}. One of our ships is there.`)) return "Navigation track copied. -5 Energy, +1 Data. One planet revealed.";   // the new look: our ship first
                         const unrevealed = state.sectorNodes?.filter(p => !p.remoteScanned && !p.storyHidden);
                         if (unrevealed?.length > 0) {
                             unrevealed[0].remoteScanned = true;
@@ -260,9 +261,10 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                     if (roll < 0.7) {
                         state.sectorNodes?.forEach(p => p.remoteScanned = true);
                         state.addLog("Under the garbage is a full map of the sector. All planets added to the map.");
+                        state.revealStoryWorld(name => `The map also shows one of our ships, on ${name}.`);   // the new look: the faint contact is named too
                         return "Sector map recovered. -5 Energy. All planets revealed.";
                     }
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog("The garbage is a list. Someone reprogrammed the buoy to carry it.");
                     state.addLog("A.U.R.A.: 'They are hull numbers, Commander. Thousands of them, in order. Ours is not among them.'");
                     state.crew.forEach(c => {
@@ -275,7 +277,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 text: "Fix it for whoever comes next",
                 desc: "-10 Salvage. +2 Data. Jaxon -1 Stress.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.salvage = Math.max(0, state.salvage - 10);
                     const jaxon = state.crew.find(c => c.tags && c.tags.includes('ENGINEER') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.max(0, (jaxon.stress || 0) - 1);
@@ -319,7 +321,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 desc: "-5 Energy. +1 Data. Vance -1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     const vance = state.crew.find(c => c.tags && c.tags.includes('SECURITY') && c.status !== 'DEAD');
                     if (vance) vance.stress = Math.max(0, (vance.stress || 0) - 1);
                     if (vance) state.addLog("Vance writes it out by hand, then checks it against the recording. It matches.");
@@ -388,12 +390,13 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                         return "Our own call, with our names in it. -5 Energy. All crew +2 Stress.";
                     }
                     if (roll < 0.6) {
-                        state._colonyKnowledge = (state._colonyKnowledge || 0) + 5;
+                        state.gainData(5);
                         state.sectorNodes?.forEach(p => p.remoteScanned = true);
                         state.addLog("After our call come the calls of every ship in this sector, one by one. All Exodus ships. All very old.");
+                        state.revealStoryWorld(name => `One of those calls comes from ${name}.`);   // the new look: the faint contact is named too
                         return "Every ship's call in the sector, played to us. -5 Energy, +5 Data. All planets revealed.";
                     }
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    state.gainData(3);
                     state.addLog("At the end of our call there's one extra word, in A.U.R.A.'s voice: 'home.'");
                     state.addLog("Mira: 'Aura, did you say that?' A.U.R.A.: 'No, Mira. I have never put that word in a message.'");
                     return "One extra word at the end of our call. -5 Energy, +3 Data.";
@@ -403,7 +406,7 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
                 text: "Record it, but don't play it",
                 desc: "+2 Data. Mira +1 Stress: she wants to hear it.",
                 effect: (state) => {
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const mira = state.crew.find(c => c.tags && c.tags.includes('SPECIALIST') && c.status !== 'DEAD');
                     if (mira) mira.stress = Math.min(3, (mira.stress || 0) + 1);
                     state.addLog("Recorded and sealed, never played.");

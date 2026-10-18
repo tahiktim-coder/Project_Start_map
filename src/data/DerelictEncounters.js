@@ -75,7 +75,7 @@ const DERELICT_ENCOUNTERS = [
                 desc: "+10 Salvage, +1 Data. 40% chance: +1 Sealed Rations.",
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog("Personal lockers by the bunks. The crew's names are copied off the doors.");
                     if (Math.random() < 0.4 && typeof ITEMS !== 'undefined' && ITEMS.FOOD_PACK) {
                         state.cargo.push({ ...ITEMS.FOOD_PACK, acquiredAt: 'Mining Tender' });
@@ -142,7 +142,7 @@ const DERELICT_ENCOUNTERS = [
                 desc: "-5 Energy. +2 Data. It names the ship that dropped it.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog("CARGO LIST: 'Dropped to lose weight for the last burn. We will come back for it.' They never did.");
                     if (typeof AuraSystem !== 'undefined') AuraSystem.adjustEthics(1, 'Kept the manifest');
                     return "Cargo list copied. The ship's hull number is stamped on every crate. -5 Energy, +2 Data.";
@@ -235,7 +235,7 @@ const DERELICT_ENCOUNTERS = [
                 desc: "-5 Energy. +2 Data. All crew +1 Stress.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.crew.forEach(c => {
                         if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                     });
@@ -319,7 +319,7 @@ const DERELICT_ENCOUNTERS = [
                             return `The console gave off a shock. ${victim.name} INJURED. -5 Energy.`;
                         }
                     }
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 3;
+                    state.gainData(3);
                     state._alienNavData = true;
                     state.addLog("NAV: one heading, plotted from start to finish. It's our heading. It ends at a bright light.");
                     return "Course copied. It's the same course as ours. -5 Energy, +3 Data.";
@@ -398,7 +398,7 @@ const DERELICT_ENCOUNTERS = [
                 desc: "-1 Ration: Aris reads every grave marker. +2 Data. Aris +1 Stress.",
                 effect: (state) => {
                     state.rations = Math.max(0, state.rations - 1);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     const aris = state.crew.find(c => c.tags && c.tags.includes('MEDIC') && c.status !== 'DEAD');
                     if (aris) aris.stress = Math.min(3, (aris.stress || 0) + 1);
                     state.addLog("RING RECORD: 'Food is shared by deck, not by rank. It worked for sixty years. Then it stopped working.'");

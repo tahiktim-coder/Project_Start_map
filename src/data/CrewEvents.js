@@ -185,7 +185,7 @@ const CREW_PERSONAL_EVENTS = [
                 effect: (state, crew) => {
                     state._arisPatientSeen = true;
                     state.rations = Math.max(0, state.rations - 1);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 2;
+                    state.gainData(2);
                     state.addLog("She reads for forty minutes. Every name has a ship number next to it. None is higher than eight.");
                     return "Aris read you the whole list. +2 Data. -1 Ration.";
                 }
@@ -212,7 +212,7 @@ const CREW_PERSONAL_EVENTS = [
                     crew.stress = Math.max(0, crew.stress - 1);
                     state._arisGardenSeen = true;
                     state.energy = Math.max(0, state.energy - 10);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.noteStanding && state.noteStanding('aris');
                     state.addLog("Aris: 'Thank you.' She takes the scan results to bed. By morning her list has a tenth page.");
                     return "The long scan ran all night. +1 Data. Aris -1 Stress. -10 Energy.";
@@ -236,7 +236,7 @@ const CREW_PERSONAL_EVENTS = [
                 effect: (state, crew) => {
                     crew.stress = Math.min(3, crew.stress + 1);
                     state._arisGardenSeen = true;
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog("A.U.R.A.: 'Sorted by ship number, Commander. The further we travel, the higher the numbers. I have no explanation.'");
                     return "A.U.R.A. sorted the list. +1 Data. Aris +1 Stress.";
                 }
@@ -291,7 +291,7 @@ const CREW_PERSONAL_EVENTS = [
                 effect: (state, crew) => {
                     crew.stress = Math.min(3, crew.stress + 1);
                     state._vanceScarSeen = true;
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog("He writes 31 on the table with his finger: the highest ship number he saw painted at the yard. Then he wipes it off.");
                     return "He saw ship number 31 being built. +1 Data. Vance +1 Stress.";
                 }
@@ -317,7 +317,7 @@ const CREW_PERSONAL_EVENTS = [
                 effect: (state, crew) => {
                     crew.stress = Math.max(0, crew.stress - 1);
                     state._vanceWatchSeen = true;
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.noteStanding && state.noteStanding('vance');
                     const jaxon = state.crew.find(c => c.name.includes('Jaxon') && c.status !== 'DEAD');
                     if (jaxon) jaxon.stress = Math.min(3, (jaxon.stress || 0) + 1);
@@ -398,7 +398,7 @@ const CREW_PERSONAL_EVENTS = [
                     crew.stress = Math.min(3, crew.stress + 1);
                     state._miraWonderSeen = true;
                     state.energy = Math.max(0, state.energy - 5);
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     state.addLog("Mira runs the scan again. Same ridge, same numbers. She wanted an order, not a delay.");
                     return "Second scan done. +1 Data. -5 Energy. Mira +1 Stress.";
                 }
@@ -524,7 +524,7 @@ const CREW_PERSONAL_EVENTS = [
                 effect: (state, crew) => {
                     crew.stress = Math.min(3, (crew.stress || 0) + 1);
                     state._commanderDoubtSeen = true;
-                    state._colonyKnowledge = (state._colonyKnowledge || 0) + 1;
+                    state.gainData(1);
                     const names = state.crew.filter(c => c.status !== 'DEAD').map(c => c.realName || c.name).join(', ');
                     const sleepers = state._sleepers || 0;
                     state.addLog(`A.U.R.A.: '${names}. Four crew, Commander.'`);

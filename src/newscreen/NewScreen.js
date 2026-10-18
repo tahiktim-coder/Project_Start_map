@@ -32,6 +32,8 @@
        click, canGo, refuse, go, arrive, light, contact, ghost   travel (BUILD_A §4)
        scanOffer(id) → { cost, ok, why } | null   the long-range scan offered in a world's note (Scan.js NSScan.offer)
        scan(id) → bool        run it (travel only);  facts(id) → { site, gives, danger, live, tier } | null   what our scans read
+       findNote(id, withSite) → ['Old ruins · The hum', 'People could live here'] | null   travel's note once scanned (WorldFinds.js)
+       finds(ids) → [find]    the finds on the world we orbit (WorldFinds.list; ids: the two at the hatch);  aim(id) → bool  choose one
        actions() → [{ key, words, near, team, run() }]          what this stop offers now (NSOrbit.actions)
        act(key, ids?) → bool  run one (ids: the two picked for 'team');  eligible() → ids fit to go
        weak() → ids too weak from a missed supper for this trip;  holdLoss(id, picked) → what the ship loses while id is down
@@ -341,6 +343,18 @@
         scanOffer: id => askScan('offer', st(), id),
         scan(id) { const a = theApp(); if (!a || mode !== 'travel' || blocked() || a._isInTransit) return false; return !!askScan('far', a, id); },
         facts: id => askScan('facts', theApp(), id),
+        // ── a world's finds (WorldFinds.js): the places a team can go, once a scan has read the world ──
+        findNote(id, withSite) {
+            const F = window.NSWorldFinds, s = st(), node = s ? window.NSRoute.find(s, id) : null;
+            if (!F || !node || !F.known(node)) return null;
+            try { return F.noteLines(theApp(), node, withSite); } catch (err) { console.error('NewScreen: the find note failed', err); return null; }
+        },
+        finds(ids) {
+            const F = window.NSWorldFinds, s = st(), node = s && s.currentSystem;
+            if (!F || !node || mode === 'travel') return [];
+            try { return F.list(theApp(), node, ids); } catch (err) { console.error('NewScreen: the finds failed', err); return []; }
+        },
+        aim(id) { const F = window.NSWorldFinds, s = st(), node = s && s.currentSystem; return !!(F && node && mode === 'stop' && !blocked() && F.aim(theApp(), node, id)); },
         // ── the stop (BUILD_B §3, §4) ──
         actions: () => (mode === 'stop' ? ask('actions', theApp()) || [] : []),
         act(key, ids) {
