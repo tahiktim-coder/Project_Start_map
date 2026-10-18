@@ -92,7 +92,7 @@
         dock: 'Dock and we search the station. It may hold salvage, Commander.',
         mine: 'Mine it and we cut salvage from the rocks. Salvage fixes the ship.',
         call: 'Answer the call to hear who needs help. If we leave, it is lost.',
-        settle: 'Settle here ends the journey. We stay on this world for good.',
+        settle: 'This world could be home, Commander. Settling ends the journey. Hold the key if you choose it.',
         leave: 'Leave orbit takes us back out. Then pick the next world.',
     });
 

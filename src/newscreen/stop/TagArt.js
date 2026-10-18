@@ -244,8 +244,9 @@
 
     // ── the helm key: a lit plate set in Cora's console ──
     const SPILL = 14;
+    /** o.tone 'cool': the settle key, steel and quiet; o.fill 0..1: how far a held key has filled (left to right, lit). */
     function key(c, x, y, w, h, o) {
-        const opt = o || {}, r = RAMPS.warm, on = opt.next || opt.hot, beat = opt.next && !opt.still ? [0, 1, 2, 2, 1, 0, 0, 0][Math.floor((opt.t || 0) / STEP) % 8] : 0;
+        const opt = o || {}, cool = opt.tone === 'cool', r = cool ? RAMPS.cool : RAMPS.warm, on = opt.next || opt.hot, beat = opt.next && !opt.still ? [0, 1, 2, 2, 1, 0, 0, 0][Math.floor((opt.t || 0) / STEP) % 8] : 0;
         x = Math.round(x); y = Math.round(y);
         if (opt.next) {                                                    // the next step: its light spills on the desk round it (added light, dithered)
             const W = w + SPILL * 2, H = h + SPILL * 2, px = phase(x - SPILL), py = phase(y - SPILL);
@@ -260,9 +261,9 @@
             c.save(); c.globalCompositeOperation = 'lighter'; c.drawImage(glow, x - SPILL, y - SPILL); c.restore();
         }
         const state = opt.hot ? 2 : on ? 1 : 0;
-        c.drawImage(sprite(`key:${w}x${h}:${phase(x)}:${phase(y)}:${state}:${beat}`, w + 2, h + 2, g => {
+        c.drawImage(sprite(`key:${cool ? 'c' : 'w'}:${w}x${h}:${phase(x)}:${phase(y)}:${state}:${beat}`, w + 2, h + 2, g => {
             g.fillStyle = INK; g.fillRect(0, 0, w + 2, h + 2);                // the recess
-            const face = P.ramp(INK, '#1c1209', '#3a2410', '#5c3818');
+            const face = cool ? P.ramp(INK, '#0e1418', '#1c272d', '#2c3a42') : P.ramp(INK, '#1c1209', '#3a2410', '#5c3818');
             for (let yy = 0; yy < h; yy++) for (let xx = 0; xx < w; xx++) {
                 const v = [0.42, 0.58, 0.74][state] + (beat * 0.06) - yy / h * 0.22, k = P.level(face, v, x + xx, y + yy);
                 if (k) { g.fillStyle = face.hex[k]; g.fillRect(xx + 1, yy + 1, 1, 1); }
@@ -272,6 +273,14 @@
             if (state === 2) { g.fillStyle = at(r, 1); g.fillRect(1, 1, 1, h); g.fillRect(w, 1, 1, h); }
             g.fillStyle = at(r, state === 2 ? 3 : 1); g.fillRect(1, 1, 1, 1); g.fillRect(w, 1, 1, 1);
         }), x - 1, y - 1);
+        const fill = Math.max(0, Math.min(1, opt.fill || 0));
+        if (fill > 0) {                                                    // held: a cold light fills the key from the left, then the choice is made
+            const fw = Math.max(1, Math.round((w - 2) * fill));
+            c.save(); c.globalCompositeOperation = 'lighter';
+            c.fillStyle = 'rgba(120, 150, 165, 0.5)'; c.fillRect(x + 1, y + 1, fw, h - 2);
+            c.fillStyle = at(r, 3); c.fillRect(x + 1, y + h - 2, fw, 1);   // its bright edge along the bottom
+            c.restore();
+        }
     }
 
     // ── the stock display: a small screen set into the wall, a steel bevel round it, faint scan lines, one status light ──

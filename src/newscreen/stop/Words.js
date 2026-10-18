@@ -93,14 +93,15 @@
 
         function init(el) {
             layer = el;
-            T = { title: TG.make(layer, 'title'), acts: [0, 1, 2, 3].map(() => TG.make(layer, 'act')), go: TG.make(layer, 'act'), key: TG.make(layer, 'key'),
+            T = { title: TG.make(layer, 'title'), acts: [0, 1, 2, 3].map(() => TG.make(layer, 'act')), go: TG.make(layer, 'act'), key: TG.make(layer, 'key'), settle: TG.make(layer, 'key'),
                 who: [TG.make(layer, 'who'), TG.make(layer, 'who')], note: TG.make(layer, 'note'), probe: TG.make(layer, 'note'),
                 titleProbe: TG.make(layer, 'title'),                     // never shown: the title with every row, measured (the room kept under it)
                 finds: Array.from({ length: MAX_FINDS }, () => TG.make(layer, 'act')) };
             T.key.set({ label: 'Leave orbit' });
+            T.settle.set({ label: 'Settle here' });
             stock = window.NSStock ? window.NSStock.board(layer) : null;
         }
-        const allTags = () => [T.title, T.go, T.key, T.note].concat(T.acts, T.who, T.finds);
+        const allTags = () => [T.title, T.go, T.key, T.settle, T.note].concat(T.acts, T.who, T.finds);
 
         // ── geometry ──
         /** The top of someone's head standing at floor row F (frame px): their idle sprite's first painted row. */
@@ -196,6 +197,13 @@
         function kindLine() {
             try { const K = window.NSWorldFinds, k = K && S.node ? K.kind(S.node) : null; return k ? k.text : ''; } catch (err) { console.error('NewScreen stop: the kind line failed', err); return ''; }
         }
+        /** Settling is offered only where our scan says people could live (good or hard), and always on Eden. */
+        function homeable() {
+            if (S.node && (S.node.isEden || S.node.type === 'EDEN')) return true;
+            let f = null;
+            try { f = NS.flow && typeof NS.flow.facts === 'function' && S.id ? NS.flow.facts(S.id) : null; } catch (err) { console.error('NewScreen stop: the scan facts failed', err); }
+            return !!f && (f.tier === 'good' || f.tier === 'marginal');
+        }
         /** Once scanned: whether people could live there (Scan.js, the tier the settle question reads). */
         function liveRow() {
             let f = null;
@@ -272,7 +280,8 @@
             const u = ctx.unit(), busy = !!S.send, wrong = ctx.isWrongPlace(), picking = ctx.picking(), sweeping = ctx.sweep() != null;
             const g = GL.geom(t, S.shownAt), dc = GL.disc(t, S.shownAt) || [g.x, g.y, g.r], site = GL.site(t, S.shownAt);
             const rank = a => { const i = WORTH.indexOf(a.key); return i < 0 ? WORTH.length : i; };
-            const best = S.actions.slice().sort((a, b) => rank(a) - rank(b)).slice(0, MAX_LIT);
+            const settleAct = S.actions.find(a => a.key === 'settle') || null;   // never on the glass: its own key at the helm (below)
+            const best = S.actions.filter(a => a !== settleAct).sort((a, b) => rank(a) - rank(b)).slice(0, MAX_LIT);
             const shown = busy ? [] : S.actions.filter(a => best.includes(a) && !(sweeping && a.key === 'scan'));   // the glass is sweeping: Scan is under way
             const teamAct = shown.find(a => a.team && picking && ctx.proposed()) || null, acts = shown.filter(a => !a.team);
             // each action keeps its own tag while it stays on screen (a neighbour going never makes it draw in again)
@@ -387,10 +396,20 @@
                 if (note && team.includes(S.hover)) notedBox = true;
                 if (dec.who) L.whoBoxes = spread(whoBoxes.filter(b => whoIds.includes(b.id)));
             }
-            // Leave orbit: a lit key on Cora's console; the next step once nothing but settling is left
+            // Leave orbit: a lit key on Cora's console; the next step once nothing is left to do here
+            let keyBottom = KEY_Y;
             if (leaveOn) {
-                const [w, h] = T.key.size(u), next = !S.trip && !acts.some(a => a.key !== 'settle') && !teamAct;
+                const [w, h] = T.key.size(u), next = !S.trip && !acts.length && !teamAct && !finds.some(v => !v.f.done);
                 L.items.push({ key: 'leave', tag: T.key, kind: 'key', x: Math.round((DESK[0] + DESK[1]) / 2 - w / 2), y: Math.round(KEY_Y - h / 2), w, h, next });
+                keyBottom = Math.round(KEY_Y + h / 2);
+            }
+            // Settle here: the one choice that ends the journey. Never a tag among the others: a quiet grey key under Leave orbit,
+            // only once our scan says people could live here (or on Eden), and held down, not clicked (Stop.js SETTLE_HOLD_MS)
+            if (settleAct && !busy && !wrong && !S.trip && homeable()) {
+                const [w, h] = T.settle.size(u);
+                const item = { key: 'settle', tag: T.settle, kind: 'key', x: Math.round((DESK[0] + DESK[1]) / 2 - w / 2), y: keyBottom + 4, w, h, tone: 'cool', hold: ctx.hold ? ctx.hold() : 0 };
+                item.anchor = site.map(Math.round);                     // where the flag would stand (its preview), no thread
+                L.items.push(item);
             }
             // the note over someone pointed at: at the hatch it takes the place of their name, narrow, under GO DOWN
             if (note) {
@@ -470,8 +489,9 @@
             L.items.forEach(it => {
                 const k = calm ? 1 : clamp01(since(it, t) / ARM_MS), hot = S.hot === it.key, lit = hot || !!it.target;   // the find chosen stays lit
                 if (it.kind === 'key') {
-                    TA.key(c, it.x, it.y, it.w, it.h, { hot, next: it.next, t, still: calm });
-                    TA.icon(c, 'chevrons', it.x + 4, it.y + Math.floor((it.h - 9) / 2), 'warm', hot || it.next ? 1 : 0);
+                    const cool = it.tone === 'cool';
+                    TA.key(c, it.x, it.y, it.w, it.h, { hot, next: it.next, t, still: calm, tone: it.tone, fill: it.hold || 0 });
+                    TA.icon(c, cool ? 'flag' : 'chevrons', it.x + 4, it.y + Math.floor((it.h - 9) / 2), cool ? 'cool' : 'warm', hot || it.next ? 1 : 0);
                     return;
                 }
                 TA.shade(c, it.x, it.y, it.w, it.h, Math.min(1, k * 1.6));
@@ -541,7 +561,7 @@
             if (!lastL) return null;
             for (const it of lastL.items) {
                 if (!it.tag.on || it.kind === 'title' || it.kind === 'note' || !inside(it, cx, cy, it.kind === 'who' ? 2 : 6)) continue;
-                if (it.kind === 'key') return { kind: 'leave' };
+                if (it.kind === 'key') return { kind: it.key === 'settle' ? 'settle' : 'leave' };
                 if (it.kind === 'who') return { kind: 'who', id: it.id };
                 if (it.kind === 'find') { if (it.dim) continue; return { kind: 'find', id: it.id, key: it.key }; }   // a visited find takes no click
                 return { kind: 'act', key: it.key };

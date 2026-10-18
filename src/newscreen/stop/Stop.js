@@ -48,6 +48,7 @@
     const TONE = { cora: '#c9d1d6', jaxon: '#f08c2e', aris: '#ffc27a', vance: '#c4622a', mira: '#e8836a' };   // as the voice lines
     const CREW = ['jaxon', 'aris', 'vance', 'mira'];
     const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, READ_MS = 250, GATHER_LEAD = 2600, PROPOSE_AFTER = 450, CLICK_GAP = 300;
+    const SETTLE_HOLD_MS = 1400;                                          // settling ends the journey: the key is held, not clicked
     const SWEEP_MS = 1750;                                                // Scan: the glass sweeps the world's face once, then the finds show
 
     // ── the stop's own state (none of it is game state) ──
@@ -67,6 +68,7 @@
         decks: null,
         finds: [],           // the world's finds (NewScreen.flow.finds: WorldFinds.js), read with the actions
         sweep: null,         // { t0 } while the glass sweeps the world after a click on Scan
+        hold: null,          // { t0 } while the settle key is held down (SETTLE_HOLD_MS, then the crew have their say)
     };
     let room = null, art = null, actx = null, diveC = null, bridgeC = null, dctx = null, bctx = null, fxList = [], W = null;
     const t0 = () => NS.clock.t;
@@ -356,7 +358,7 @@
     const currentNode = () => { try { const s = NS.game.state(); return s ? s.currentSystem : null; } catch (err) { return null; } };
     function freshStop(id, node) {
         S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.pick = freshPick();
-        S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9; S.finds = []; S.sweep = null;
+        S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9; S.finds = []; S.sweep = null; S.hold = null;
         GL.shuttle(null);
         GL.place(node);
         crewNow = crewMap();
@@ -452,6 +454,7 @@
         if (S.drop && t >= S.drop.at) { GL.shuttle('down', S.drop.at, SHUTTLE_MS); S.drop = null; }   // the team is down the hatch: the shuttle goes
         if (S.send && !S.send.fired && t >= S.send.fireAt && !NS.blocked()) fireSend();   // a card came up meanwhile: they wait below
         if (S.sweep && t - S.sweep.t0 >= SWEEP_MS && !NS.blocked()) { S.sweep = null; runAct('scan', t); }   // the glass has swept the world: the scan reads it
+        if (S.hold && t - S.hold.t0 >= SETTLE_HOLD_MS) { S.hold = null; setHot(null); runAct('settle', t); }   // held long enough: the crew have their say
         if ((S.open || S.dive) && t - S.readAt >= READ_MS && S.id && !(S.dive && !S.dive.open && S.dive.dir === 'in')) { readActions(t); if (S.open && !(S.dive && S.dive.dir === 'out')) reconcile(t); }
     }
     function shown() {
@@ -464,7 +467,7 @@
     function close(tell) {
         const id = S.id;
         S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.pick = freshPick(); S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null;
-        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.finds = []; S.sweep = null;
+        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.finds = []; S.sweep = null; S.hold = null;
         GL.shuttle(null); GL.place(null);
         registerAnchors(false); W.hide(); setPointing(false);
         if (tell) emit('stop:hidden', { id });
@@ -555,11 +558,21 @@
         const [ax, ay] = toFrame(cx, cy), hit = W.hit(cx, cy);
         const who = picking() ? (hit && hit.kind === 'who' ? hit.id : personAtPx(ax, ay)) : null;
         const fit = who && S.lineup.includes(who) ? who : null, weak = who && S.aside.includes(who) ? who : null;   // too weak to go: pointing says why, a click does nothing
-        const actKey = hit && hit.kind === 'act' ? hit.key : null, onLeave = !!(hit && hit.kind === 'leave');
+        const actKey = hit && hit.kind === 'act' ? hit.key : null, onLeave = !!(hit && hit.kind === 'leave'), onSettle = !!(hit && hit.kind === 'settle');
         const find = hit && hit.kind === 'find' ? hit : null;            // a find's tag or its mark on the world
-        return { fit, weak, actKey, onLeave, find, on: !!actKey || onLeave || !!find || (!!fit && S.lineup.length > 2) };
+        return { fit, weak, actKey, onLeave, onSettle, find, on: !!actKey || onLeave || onSettle || !!find || (!!fit && S.lineup.length > 2) };
     }
-    function pointAt(u) { setHot(u.actKey || (u.find ? u.find.key : null) || (u.onLeave ? 'leave' : null)); S.hover = u.actKey || u.find || u.onLeave ? null : u.fit || u.weak; setPointing(u.on); return u.on; }
+    function pointAt(u) {
+        setHot(u.actKey || (u.find ? u.find.key : null) || (u.onLeave ? 'leave' : null) || (u.onSettle ? 'settle' : null));
+        if (S.hold && !u.onSettle) S.hold = null;                        // slid off the settle key: nothing is decided
+        S.hover = u.actKey || u.find || u.onLeave || u.onSettle ? null : u.fit || u.weak; setPointing(u.on); return u.on;
+    }
+    /** The settle key held down: let go (or slide off) before it fills and nothing happens; held, the crew have their say. */
+    function holdSettle(t) {
+        S.hold = { t0: t };
+        const end = () => { removeEventListener('pointerup', end, true); removeEventListener('pointercancel', end, true); S.hold = null; };
+        addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true);
+    }
     /** Each frame: what is under a still pointer now (someone walked off, or onto it). */
     function repoint() { if (ptr && S.open && !S.dive && !S.send && !S.sweep && !NS.blocked()) pointAt(under(ptr.x, ptr.y)); }
     function pointer(type, e) {
@@ -569,11 +582,12 @@
         if (type === 'leave') { S.hover = null; setHot(null); setPointing(false); return false; }
         if (S.send) { setPointing(false); if (type === 'down') skipSend(t); return type === 'down'; }   // the team is leaving: a click hurries it
         if (S.sweep) { S.hover = null; setHot(null); setPointing(false); return type === 'down'; }    // the glass is sweeping the world: a moment
-        const u = under(cx, cy), { fit, actKey, onLeave, find } = u;
+        const u = under(cx, cy), { fit, actKey, onLeave, onSettle, find } = u;
         if (type === 'move') return pointAt(u);
         if (type !== 'down') return false;
         if (t - S.clickAt < CLICK_GAP) return true;
         if (onLeave && !W.fresh('leave')) { S.clickAt = t; leave(); return true; }
+        if (onSettle && !W.fresh('settle')) { S.clickAt = t; holdSettle(t); return true; }
         if (actKey && !W.fresh(actKey)) { S.clickAt = t; doAct(actKey, t); return true; }
         if (find && !W.fresh(find.key)) { S.clickAt = t; aimAt(find.id, t); return true; }
         if (fit) { S.clickAt = t; return pickPerson(fit, t); }
@@ -685,6 +699,7 @@
         W = WORDS.create({
             S, css: (x, y) => css(x, y), unit: () => unit(), t0, poseOf, picking, team, arrived, joinedLast, isWrongPlace,
             sweep: () => (S.sweep ? Math.max(0, t0() - S.sweep.t0) : null),
+            hold: () => (S.hold ? Math.min(1, Math.max(0, (t0() - S.hold.t0) / SETTLE_HOLD_MS)) : 0),   // how far the settle key has filled
             proposed: () => !!(S.pick.key || S.pick.manual || t0() > S.pick.from + 1500),   // the crew have stepped forward (or should have)
             sprite: id => CE.sprite(id, 'idle', 0, {}), NAMES, TONE, CREW, OFFX, F, HATCH: HATCH + OFFX, NAV: NAV + OFFX, HELM: HELM + OFFX,
         });
