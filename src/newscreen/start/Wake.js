@@ -1,20 +1,25 @@
-/* ═══ Silent Exodus · new screen (?new=1) · start/Wake.js: the wake-up talk, in the scene ══════════════════════════════
-   What it is: after the launch film, the first words aboard (docs/BUILD_B.md §6). Instead of today's boxed "Good morning,
-   Commander" card and its "Take command" choice, the card's words are said one at a time in the travel view: its context
-   line first as plain narration by our Lander ("...the ship has woken all five of you": the four-or-five count starts
-   here), then its six lines, each beside whoever says it (A.U.R.A. by our Lander, Jaxon and Vance by themselves in the
-   tower), then the rules from its choice (minus the stop count: the new screen has none), by A.U.R.A. Each is logged as
-   today's card lines would be. The sixth line has no "I have marked it on your map" (no map any more). The talk waits
-   until the tower has slid in; a line waits while a card or a minigame is up; if the player sets a course while the talk
-   runs, the line on screen finishes and the rest are not said; a jump (or any arrival in another sector) ends it too.
-   Then the shell's first hint (NewScreen.hint), once.
+/* ═══ Silent Exodus · new screen (?new=1) · start/Wake.js: the wake-up, then the rest of the talk in the scene ════════════
+   What it is: after the launch film, the first minutes aboard (docs/BUILD_B.md §6). First the wake-up at the sleeper pods
+   in the hold (start/Pods.js): the player wakes the crew, and A.U.R.A. says most of the setup there, in the card's own
+   words. Then, in the travel view, once the tower has slid in, what the hold did not say (all of it if "Let A.U.R.A. do
+   it" came early), and the rules from the old card's choice (minus the stop count: the new screen has none), by A.U.R.A.,
+   before Vance's doubt if that is still to come (his question and her answer, the old beacon, lead into the first hint).
+   If the wake-up cannot run, or was skipped before a word was said (later new games), the old talk is said whole, as
+   before: instead of today's boxed "Good morning, Commander" card and its "Take command" choice, the card's words one at
+   a time in the travel view: its context line first as plain narration by our Lander ("...the ship has woken all five of
+   you": the four-or-five count starts here), then its six lines, each beside whoever says it (A.U.R.A. by our Lander,
+   Jaxon and Vance by themselves in the tower), then the rules. Each line is logged as today's card lines would be. The
+   sixth line has no "I have marked it on your map" (no map any more). The talk waits until the tower has slid in; a line
+   waits while a card or a minigame is up; if the player sets a course while the talk runs, the line on screen finishes
+   and the rest are not said; a jump (or any arrival in another sector) ends it too. Then the shell's first hint
+   (NewScreen.hint), once.
    Source: bundle.js's OPENING_TALK (window.OPENING_TALK, the one copy the card also builds from; unchanged words,
    docs/STYLE.md), the one-at-a-time talk of prototypes/slice/script.js (sayLines, startOpening, cutOpening).
-   Loaded only when the new-screen switch is on. Needs NewScreen (its bus, voice and state).
+   Loaded only when the new-screen switch is on, after start/Pods.js. Needs NewScreen (its bus, voice and state).
 
    window.NSWake (frozen)
      start(app)        bundle's begin() calls it under the switch (instead of the card); runs once per new game
-     pending() → bool  true from start() until the talk is over (the shell's own first hint waits while it is)
+     pending() → bool  true from start() until the talk is over, the wake-up included (the first hint waits while it is)
 */
 (function () {
     'use strict';
@@ -22,12 +27,27 @@
     if (!window.NEW_SCREEN || !NS || !NS.on) return;
 
     const NARRATION = '';                                                                   // a line with no speaker: the card's context
+    const rulesOf = T => (Array.isArray(T.rules) ? [T.rules[0], T.rules[2]].filter(Boolean).join(' ') : '');
     /** The talk, from the card's own words (bundle.js OPENING_TALK): [who, text]; who '' is narration. */
     function linesOf() {
         const T = window.OPENING_TALK;
         if (!T || !Array.isArray(T.dialogue)) { console.error('NSWake: OPENING_TALK is missing'); return []; }
-        const rules = Array.isArray(T.rules) ? [T.rules[0], T.rules[2]].filter(Boolean).join(' ') : '';
+        const rules = rulesOf(T);
         return [[NARRATION, T.context]].concat(T.dialogue.map(l => [l.speaker, l.text]), rules ? [['A.U.R.A.', rules]] : []).filter(([, text]) => !!text);
+    }
+    /** After the wake-up: what the hold did not say, with the rules before Vance's doubt (his question and her answer, the
+        old beacon, lead straight into the first hint), else at the end. */
+    function restOf(rest) {
+        const T = window.OPENING_TALK, rules = T ? rulesOf(T) : '', list = (Array.isArray(rest) ? rest : []).map(([who, text, key]) => ({ who, text, key }));
+        const at = list.findIndex(l => l.key === 'vance8');
+        if (rules) list.splice(at < 0 ? list.length : at, 0, { who: 'A.U.R.A.', text: rules });
+        return list.map(l => [l.who, l.text]).filter(([, text]) => !!text);
+    }
+    /** The wake-up at the pods (start/Pods.js), or nothing (it is not there, or it failed): resolves either way. */
+    function pods(app) {
+        const P = window.NSPods;
+        if (!P || typeof P.play !== 'function') return Promise.resolve(null);
+        try { return Promise.resolve(P.play(app)).catch(err => { console.error('NSWake: the wake-up failed', err); return null; }); } catch (err) { console.error('NSWake: the wake-up failed', err); return Promise.resolve(null); }
     }
     const IDS = { 'A.U.R.A.': 'aura', Jaxon: 'jaxon', Vance: 'vance', Aris: 'aris', Mira: 'mira' };
     const POLL_MS = 100, GAP_MS = 450, OPENING_FALLBACK_MS = 12000, FIRST_MIN_MS = 400, READ_PAD_MS = 600;
@@ -108,9 +128,12 @@
 
     function start(app) {
         if (run || !app || !app.state) return;
-        const r = run = { app, lines: linesOf(), i: 0, cut: false, cutP: null, onCut: null, sector: app.state.currentSector || 1 };
+        const r = run = { app, lines: [], i: 0, cut: false, cutP: null, onCut: null, sector: app.state.currentSector || 1 };
         r.cutP = new Promise(resolve => { r.onCut = resolve; });
-        talk(r).catch(err => console.error('NSWake: the talk failed', err)).then(() => {
+        pods(app).then(res => {                                                              // the wake-up first; then the rest, or the old talk whole
+            r.lines = res && !res.fresh ? restOf(res.rest) : linesOf();                    // fresh: the hold said nothing (skipped, or never ran)
+            return talk(r);
+        }).catch(err => console.error('NSWake: the talk failed', err)).then(() => {
             const wasCut = r.cut;
             if (run === r) run = null;
             if (!wasCut && typeof NS.hint === 'function') { try { NS.hint(); } catch (err) { console.error('NSWake: the hint failed', err); } }

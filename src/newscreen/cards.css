@@ -183,13 +183,15 @@ html.ns-on .modal-overlay .disc-doc-card .deck-action:focus-visible { background
    No panel: the scene goes almost dark behind the dither and the object is the card. Its size follows the window (--obj-w and
    --obj-h, set per kind below, leave room for the kicker, the title, the spoken line and the button), so nothing scrolls. */
 html.ns-on .modal-overlay.disc-doc.find-view { background: repeating-conic-gradient(rgba(5, 7, 10, 0.975) 0 25%, rgba(5, 7, 10, 0.86) 0 50%) 0 0 / 4px 4px !important; }
+/* a window too small for the thing and its words: the view scrolls (top first), it never cuts the title or KEEP IT off */
+html.ns-on .modal-overlay.disc-doc.find-view { overflow-y: auto; align-items: safe center; }
 html.ns-on .modal-overlay .disc-doc-card.find-card {
     --chrome: 272px; --room: calc(100vh - var(--chrome));
     width: var(--obj-w); max-width: none; max-height: none; overflow: visible !important; padding: 0;
     background: none !important; box-shadow: none !important; user-select: none; -webkit-user-select: none;
 }
 html.ns-on .modal-overlay .find-card .enc-head { padding: 0 0 14px; }
-html.ns-on .modal-overlay .find-card .enc-kicker { margin-bottom: 6px; letter-spacing: 0.2em; white-space: nowrap; flex-wrap: nowrap; }
+html.ns-on .modal-overlay .find-card .enc-kicker { margin-bottom: 6px; letter-spacing: 0.2em; white-space: normal; }   /* wraps in a narrow window, never runs off */
 html.ns-on .modal-overlay .find-card .enc-head h3 { margin: 0; }
 html.ns-on .modal-overlay .find-stage { position: relative; }
 html.ns-on .modal-overlay .find-object { position: relative; width: var(--obj-w); height: var(--obj-h); cursor: default; }
@@ -207,7 +209,7 @@ html.ns-on .modal-overlay .find-card .deck-action:hover:not([disabled]),
 html.ns-on .modal-overlay .find-card .deck-action:focus-visible { background: none; }
 
 /* a printed page: the paper turned a little, Earth's letterhead, a stamp, the lines typed on it in dark ink */
-html.ns-on .modal-overlay .find-card.is-paper { --obj-h: min(800px, var(--room)); --obj-w: calc(var(--obj-h) / 1.25); }
+html.ns-on .modal-overlay .find-card.is-paper { --obj-h: min(800px, var(--room)); --obj-w: max(calc(var(--obj-h) / 1.25), min(480px, calc(100vw - 64px))); }   /* a short window: a wider page, fewer lines */
 html.ns-on .modal-overlay .find-paper { transform: rotate(-1.5deg); font-size: clamp(15px, calc(var(--obj-w) * 0.0285), 19px); }
 html.ns-on .modal-overlay .find-face { position: absolute; inset: 0; padding: 7.2% 8.2% 6%; color: #221e17; }
 html.ns-on .modal-overlay .find-letterhead {

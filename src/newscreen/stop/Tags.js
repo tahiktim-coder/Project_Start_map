@@ -68,6 +68,8 @@
 #ns-stop-words .tg.is-key .tg-l { font-size: calc(13px + 1px * var(--t, 1)); color: #d89048; }
 #ns-stop-words .tg.is-key.is-next .tg-l { color: var(--amber-br); }
 #ns-stop-words .tg.is-key.is-hot .tg-l { color: #fff0d8; }
+#ns-stop-words .tg.is-key.is-cool .tg-l { color: #a9b6bc; }
+#ns-stop-words .tg.is-key.is-cool.is-hot .tg-l { color: #eef3f5; }
 #ns-stop-words .tg.is-who .tg-in, #ns-stop-words .tg.is-note .tg-in { justify-items: center; text-align: center; gap: 2px; }
 #ns-stop-words .tg.is-who .tg-n, #ns-stop-words .tg.is-note .tg-n { font: 600 var(--fs-tname)/1 var(--f-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--who, var(--ui)); }
 #ns-stop-words .tg.is-who .tg-why { max-width: var(--wrap, 12em); white-space: normal; font: 400 var(--fs-why)/1.2 var(--f-text); color: #d8d5cc; text-wrap: balance; }

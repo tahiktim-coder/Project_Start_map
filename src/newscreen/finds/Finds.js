@@ -50,6 +50,16 @@
         last = `${el.offsetWidth}x${el.offsetHeight}`;
         return () => { ro.disconnect(); clearTimeout(timer); };
     }
+    /** The words stay on the thing. When a small window cannot hold them at full size, the type steps down (to MIN_TYPE_PX at
+        the least), then the thing grows a little taller (grow(px over)); the picture follows through its own resize watch. */
+    const MIN_TYPE_PX = 13;
+    function fitWords(sizeEl, box, grow) {
+        sizeEl.style.fontSize = '';
+        const over = () => box.scrollHeight - box.clientHeight;
+        let px = parseFloat(getComputedStyle(sizeEl).fontSize) || 16;
+        while (over() > 1 && px > MIN_TYPE_PX) { px = Math.max(MIN_TYPE_PX, px - 0.5); sizeEl.style.fontSize = `${px}px`; }
+        if (over() > 1) grow(over());
+    }
     /** A loop that runs while its element is on the page (it may be built before it is attached: it waits for that). */
     function loop(el, ms, fn) {
         let wasOn = false;
@@ -201,14 +211,20 @@
             art.getContext('2d').putImageData(new ImageData(pic.data, fit.W, fit.H), 0, 0);
             if (penShown) drawPen(true);
         }
+        /** Every typed line on the paper, whatever the window: smaller type first, then a taller page. */
+        function fitPaper() {
+            const face = el.querySelector('.find-face');
+            obj.style.height = '';
+            fitWords(obj, face, over => { obj.style.height = `${obj.offsetHeight + over + 6}px`; });
+        }
         return {
             el, steps: lines.length,
             mount() {
                 const emblem = el.querySelector('.find-emblem');
                 if (emblem) drawEmblem(emblem);
-                draw();
-                unwatch = onResize(obj, draw);
-                if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (penShown) drawPen(true); });
+                fitPaper(); draw();
+                unwatch = onResize(obj, () => { fitPaper(); draw(); });
+                if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitPaper(); draw(); });   // the typewriter face arrived: measure again
             },
             reveal(i, done) { t.type(i, () => { if (i === page.underlined) drawPen(false); if (done) done(); }); },
             finish() { t.finish(); if (page.underlined != null && lineEls[page.underlined]) drawPen(true); },
@@ -255,13 +271,19 @@
             A().led(art.getContext('2d'), g, W, H, performance.now());
             place(t.last(), false);
         }
+        /** Every line on the screen, whatever the window: smaller type first, then a taller housing (the glass is ~0.77 of it). */
+        function fitScreen() {
+            const screen = el.querySelector('.find-screen');
+            obj.style.height = ''; draw();
+            fitWords(screen, screen, over => { obj.style.height = `${obj.offsetHeight + Math.ceil(over / 0.765) + 6}px`; draw(); });
+        }
         return {
             el, steps: lines.length,
             mount() {
-                draw();
-                unwatch = onResize(obj, draw);
+                fitScreen();
+                unwatch = onResize(obj, () => { fitScreen(); });
                 stopLed = loop(obj, LED_MS, () => { if (g) A().led(art.getContext('2d'), g, fit.W, fit.H, performance.now()); });
-                if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => place(t.last(), false));
+                if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitScreen(); place(t.last(), false); });
             },
             reveal(i, done) { t.type(i, done); },
             finish() { t.finish(); },
