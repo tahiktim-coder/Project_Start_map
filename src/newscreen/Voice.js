@@ -38,7 +38,10 @@
                                       out a hover note: travel's Scan, explained while its note is still up). What has been said
                                       is kept in the game's own saved record of A.U.R.A. (state.reliance.nsTold, saved as is)
      told(key) → bool
-     forget(key)                      a once() line that resolved false (never seen: the dive cleared it) may be said again }
+     forget(key)                      a once() line that resolved false (never seen: the dive cleared it) may be said again
+     hush()                           the line on screen goes and the waiting ones are dropped (a scene ends: the wake-up) }
+   In the shell's 'wake' mode (start/Pods.js) the anchors are the bridge's names ('stop:person:<id>', 'stop:aura'), the
+   round things to keep off are the wake module's discs(), and its panel's words (#ns-wake-words .sw) are kept off too.
 */
 (function () {
     'use strict';
@@ -225,7 +228,7 @@
     }
     /** Round things on screen now, in art px: worlds, our Lander. Travel offers them if it can. */
     function discs() {
-        const t = NS.mods.travel, st = NS.mods.stop;
+        const t = NS.mods.travel, st = NS.mode() === 'wake' && NS.mods.wake ? NS.mods.wake : NS.mods.stop;   // the wake-up: its people and pods
         let list = [];
         if (onBridge()) {                                                                 // the bridge: its world and its people, CSS px → art px
             try {
@@ -244,8 +247,7 @@
     /** How busy the picture is under a CSS box: a world, our Lander, the hull edge, off screen. */
     /** The bridge's words on screen now (CSS rects): a line keeps off them. */
     function wordRects() {
-        const layer = document.getElementById('ns-stop-words');
-        return layer ? [...layer.querySelectorAll('.sw.on')].map(el => el.getBoundingClientRect()) : [];
+        return [...document.querySelectorAll('#ns-stop-words .sw.on, #ns-wake-words .sw.on')].map(el => el.getBoundingClientRect());
     }
     /** The ship's own choices in travel (a red deck's, supper's "Accept"), CSS rects: a line keeps off them too. */
     function chipRects() {
@@ -398,6 +400,7 @@
         once,
         told,
         forget,
+        hush() { end(); queue.forEach(settle); queue = []; },
     };
     NS.register('voice', mod);
 })();

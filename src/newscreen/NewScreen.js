@@ -19,13 +19,13 @@
                              the 45 % width cap shrank it). hull = ceil((HULL_OUT − tLeft) × ts / k).
      clock.t                 ms; runs only while the view is shown
      app                     the real App (set by show / stop)
-     mode() → 'travel' | 'dive-in' | 'stop' | 'dive-out'
+     mode() → 'travel' | 'dive-in' | 'stop' | 'dive-out' | 'wake'
      bus.on(name, fn) → off, bus.emit(name, payload), bus.once(name, fn) → off
      anchors                 Map name → () => [{ x, y, side, align }] in CSS px
-     register(name, mod)     name: 'travel' | 'tower' | 'stop' | 'voice'; mod: { init(), resize(G), update(dt, t),
+     register(name, mod)     name: 'travel' | 'tower' | 'stop' | 'wake' | 'voice'; mod: { init(), resize(G), update(dt, t),
                              render(t), pointer(type, e, x, y) → bool (type 'move' | 'down' | 'leave' | 'wheel'), key?(e) }.
-                             travel and tower get art px; stop gets CSS px (e.clientX, e.clientY), as in the slice.
-     mods                    { travel, tower, stop, voice } as registered
+                             travel and tower get art px; stop and wake get CSS px (e.clientX, e.clientY), as in the slice.
+     mods                    { travel, tower, stop, wake, voice } as registered
      game                    read-only, the real state: energy(), sector(), crew() ([{ id, status, stress, hurt, weak }]),
                              decks(), broken(deck), route(), state()
      flow                    what the modules call (the real game does the rest):
@@ -47,6 +47,9 @@
        deckChoices(key) → [{ words, note }]   a red deck clicked: fix, patch, live with it
        deckChoose(key, i) → bool
      show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, playJump() → Promise
+     wake(on) → bool         the wake-up after the launch film (start/Pods.js): on, the 'wake' module has the screen (travel
+                             and the tower are not drawn, cards wait, the travel view's first show waits); off, the travel
+                             view opens as on a sector's first show (from black, its title, the tower sliding in)
      debug.state(), debug.placeAt(id) → { x, y, r } CSS px    for the headless runs
 
    Bus: 'showing', 'shown' { sector, first, from }, 'hidden', 'hud', 'refresh', 'resize' (G), 'mode' { mode }, 'jump:burn';
@@ -64,7 +67,7 @@
     const BLOCKED_RENDER_EVERY = 12;                      // under a card or a minigame the picture is drawn only every 12th frame (it is covered)
     const HOLD_STOP_MS = 4000, HOLD_TRAVEL_MS = 1800, CLICK_GRACE_MS = 700;   // a card that turns up on its own waits until the picture has been seen
     const FIRST_HINT = 'A.U.R.A.: "One of our ships is calling, Commander. Point at a world to fly there."';
-    const ORDER = ['travel', 'tower', 'stop', 'voice'];
+    const ORDER = ['travel', 'tower', 'stop', 'wake', 'voice'];
     const OUTSIDE = new Set(['travel', 'dive-in', 'dive-out']);                          // travel and the tower are drawn only then
     const BLOCKERS = '.modal-overlay:not(.ns-held), .story-reel, .mini-host, .warp-plot, .throw-veil, .end-screen, #start-menu, #narrative-modal.active, .ns-film';
     const COVERS = '.ns-film, #start-menu, .story-reel, .end-screen';   // opaque over the whole screen: nothing under them is drawn (a stale frame would show when they go)
@@ -135,6 +138,7 @@
     //    and the world in the window (or the travel view) has been seen for a moment; one the player asked for opens at once ──
     function holding() {
         const now = performance.now();
+        if (mode === 'wake') return true;                                                    // the wake-up first: a card waits for the travel view
         if (!shown || now - lastDown < CLICK_GRACE_MS) return false;
         if (mode === 'dive-in' || mode === 'dive-out') return true;
         if (mode === 'stop') return now - stopShownAt < HOLD_STOP_MS;
@@ -227,8 +231,8 @@
         if (!shown || !G.W) return;
         if (blocked()) { root.classList.remove('is-pointing'); return; }
         if (mode !== 'travel') {
-            const used = tell(mods.stop, type, e, e.clientX, e.clientY);
-            if (type === 'move') { lastSide = mods.stop; root.classList.toggle('is-pointing', used); }
+            const m = mode === 'wake' ? mods.wake : mods.stop, used = tell(m, type, e, e.clientX, e.clientY);
+            if (type === 'move') { lastSide = m; root.classList.toggle('is-pointing', used); }
             return;
         }
         const [ax, ay] = G.toArt(e.clientX, e.clientY), m = ax < G.hull ? mods.tower : mods.travel;
@@ -247,7 +251,7 @@
     }
     function onKey(e) {
         if (!shown || blocked() || e.defaultPrevented) return;
-        const m = mode === 'travel' ? mods.travel : mods.stop;
+        const m = mode === 'travel' ? mods.travel : mode === 'wake' ? mods.wake : mods.stop;
         let used = false;
         try { used = !!(m && m.key && m.key(e)); } catch (err) { console.error('NewScreen: key failed', err); }
         if (used) e.preventDefault();
@@ -521,6 +525,21 @@
         root.classList.remove('is-pointing');
         if (wasShown) bus.emit('hidden', {});
     }
+    /** The wake-up after the launch film (start/Pods.js): on, the screen is the 'wake' module's (only from travel, and only
+        with it registered); off, back to travel, whose next frame shows the sector as for the first time. */
+    function wake(on) {
+        if (!ON) return false;
+        if (on) {
+            if (mode !== 'travel' || !mods.wake) return false;
+            setMode('wake');
+            return true;
+        }
+        if (mode !== 'wake') return false;
+        setMode('travel');
+        const s = st();
+        pendingShown = { sector: s ? s.currentSector : 1, first: true, from: null };
+        return true;
+    }
     function playJump() {
         if (!shown || mode !== 'travel') return Promise.resolve();
         jumping = true;
@@ -581,6 +600,6 @@
         on: ON, G, clock, bus, anchors, mods, game, flow, debug, register, sizeCanvas,
         get app() { return theApp(); },
         mode: () => mode,
-        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, playJump,
+        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, playJump, wake,
     });
 })();

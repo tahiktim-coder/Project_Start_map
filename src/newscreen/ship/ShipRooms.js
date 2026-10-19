@@ -6,7 +6,8 @@
 /* ═══ Silent Exodus · the living ship (study) · the picture, part 2: the rooms ══════════════════════════════════════
    One painter per deck. Each paints its furniture into the deck's buffer (local rows: 0 is the deck's top, F = 190 is
    the row people stand on, so a thing h rows tall stands at F - h) and returns its lamps, its small moving things
-   (fx) and any extra light (screens, pods). A look ({ lampOff, mira: 'gone', stretcher, dark, pods, hatchClosed })
+   (fx) and any extra light (screens, pods). A look ({ lampOff, mira: 'gone', stretcher, dark, pods (true: four; 5: five, the
+   wake-up's), hatchClosed })
    changes a deck for a story state; the page asks for the look, ship-art.js keeps one painted copy of each.
    ShipArt.SPOTS   where people stand, sit, work and sleep: { deck, x, facing, h? } (x is the sprite's x, as the engine
                    draws it; for a bed, h is the mattress top and x is the hips). The routines in ShipRoutine.js use only these.
@@ -449,8 +450,8 @@
         // the cargo terminal by the ladder
         desk(p, 152, 188);
         lights.push(monitor(p, 166, F - DESK, 8, 10, fx, 'text'));
-        if (look.pods) {
-            [330, 378, 426, 474].forEach((cx, k) => pod(p, cx, k, fx, lights));
+        if (look.pods) {                                                                            // pods: 5 is the wake-up's hold (start/PodArt.js): Cora's pod too, wider apart
+            (look.pods === 5 ? [270, 326, 382, 438, 494] : [330, 378, 426, 474]).forEach((cx, k) => pod(p, cx, k, fx, lights));
             crate(p, 112 + 10, F - 22, 156, F, 9, { label: false });
         } else {
             crate(p, 330, F - SEAT, 366, F, 10);
