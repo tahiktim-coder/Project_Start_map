@@ -20,9 +20,10 @@
 
    window.NSPods (frozen)
      play(app) → Promise<{ done: 'played' | 'aura' | 'skipped' | 'none', fresh, rest: [[who, text, key]] }>
-                           the scene, once; 'none' at once when it cannot run. fresh: nothing was said in the hold (the
-                           old talk is said whole); rest: OPENING_TALK lines the hold did not say, in order (key: 'orders',
-                           'eight', 'jaxon8', 'vance8', 'beacon')
+                           the scene, once; 'none' at once when it cannot run (or keeps failing). fresh: the hold never got past
+                           A.U.R.A.'s greeting (the old talk is said whole); rest: what the hold did not say, in order: the
+                           count if unsaid (a late skip), then OPENING_TALK's lines (key: 'orders', 'eight', 'jaxon8',
+                           'vance8', 'beacon')
      playing() → bool
      debug                 { state(), need() }   headless runs: what is where (CSS rects), and the valve the reading asks for
    NewScreen.mods.wake = { init, resize, update, render, pointer, key, discs }   (the shell's 'wake' mode)
@@ -324,10 +325,18 @@
         Object.assign(cv.style, { width: (geo.CW * geo.bk / geo.dpr) + 'px', height: (geo.CH * geo.bk / geo.dpr) + 'px', left: '0px', top: '0px' });
         cx.imageSmoothingEnabled = false;
     }
+    let fails = 0;
+    const MAX_FAILS = 20;                                                   // failing frame after frame: the game back (the old talk follows)
     function update(dt, t) {
         if (!S || !S.on || !geo) return;
-        step(dt, t);
-        if (S && S.on) words.update(viewModel(t), t);
+        try {
+            step(dt, t);
+            if (S && S.on) words.update(viewModel(t), t);
+            fails = 0;
+        } catch (err) {
+            console.error('NSPods: the wake-up failed', err);
+            if (++fails >= MAX_FAILS) { fails = 0; abort(); }
+        }
     }
     /** What the words show now. */
     function viewModel(t) {
@@ -439,14 +448,30 @@
         if (S) return Promise.resolve({ done: 'none', fresh: true, rest: [] });
         if (!canPlay(a) || !NS.wake(true)) return Promise.resolve({ done: 'none', fresh: true, rest: [] });
         return new Promise(resolve => {
-            S = { on: true, app: a, resolve, phase: 'card', phaseAt: 0, t0: null, later: later(), pods: freshPods(), sel: null, hover: null, touched: false, opened: false,
-                litAt: null, plans: {}, drawn: [], aura: { used: false }, lines: setupLines(), jobs: PA.prepare(), leaving: false,
-                talk: { said: new Set(), carried: new Set(), skipped: new Set(), firsts: [], busy: null, nextAt: 0 } };
-            if (!geo) resize();
-            anchors(true);
+            try {
+                S = { on: true, app: a, resolve, phase: 'card', phaseAt: 0, t0: null, later: later(), pods: freshPods(), sel: null, hover: null, touched: false, opened: false,
+                    litAt: null, plans: {}, drawn: [], aura: { used: false }, lines: setupLines(), jobs: PA.prepare(), leaving: false,
+                    talk: { said: new Set(), carried: new Set(), skipped: new Set(), firsts: [], busy: null, nextAt: 0 } };
+                if (!geo) resize();
+                anchors(true);
+            } catch (err) {                                                  // it cannot start: the game back at once, the old talk whole
+                console.error('NSPods: the wake-up could not start', err);
+                if (S) { S.on = false; S.leaving = true; }
+                try { close(); } catch (e) { /* half built: nothing more to undo */ }
+                S = null;
+                if (typeof NS.mode === 'function' && NS.mode() === 'wake') NS.wake(false);
+                resolve({ done: 'none', fresh: true, rest: [] });
+            }
         });
     }
-    function rest() { return S ? S.lines.setup.filter(b => !S.talk.said.has(b.key)).map(b => [b.who, b.text, b.key]) : []; }
+    /** What the hold did not say, for the travel view: the count first if it was never said (a late skip), then the setup. */
+    function rest() {
+        if (!S) return [];
+        const T = S.talk, L = S.lines, out = L.count && !T.said.has('count') ? [['A.U.R.A.', L.count, 'count']] : [];
+        return out.concat(L.setup.filter(b => !T.said.has(b.key)).map(b => [b.who, b.text, b.key]));
+    }
+    /** Nothing said in the hold yet, or the greeting cut short (a skip while she spoke): the old talk is said whole. */
+    const isFresh = () => !S.talk.said.has('hello');
     function close() {
         anchors(false);
         if (words) words.hide();
@@ -456,7 +481,7 @@
     }
     function finish(done) {
         if (!S || !S.on) return;
-        const r = S.resolve, out = { done, fresh: S.talk.said.size === 0 && !S.talk.busy, rest: rest() };
+        const r = S.resolve, out = { done, fresh: isFresh(), rest: rest() };
         S.on = false; S.leaving = true;
         close();
         try { localStorage.setItem(SEEN_KEY, '1'); } catch (err) { /* storage blocked: the skip is offered next time too */ }
@@ -466,7 +491,7 @@
     }
     function abort() {
         if (!S || !S.on) return;
-        const r = S.resolve, out = { done: 'none', fresh: S.talk.said.size === 0 && !S.talk.busy, rest: rest() };
+        const r = S.resolve, out = { done: 'none', fresh: isFresh(), rest: rest() };
         S.on = false; S.leaving = true;
         close();
         if (typeof NS.mode === 'function' && NS.mode() === 'wake') NS.wake(false);

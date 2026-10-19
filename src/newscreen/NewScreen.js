@@ -526,7 +526,8 @@
         if (wasShown) bus.emit('hidden', {});
     }
     /** The wake-up after the launch film (start/Pods.js): on, the screen is the 'wake' module's (only from travel, and only
-        with it registered); off, back to travel, whose next frame shows the sector as for the first time. */
+        with it registered); off, back to travel, shown as for the first time: at once (this frame already draws travel and
+        the tower, which must hear 'shown' first or its open default flashes for a frame), or on the first unblocked frame. */
     function wake(on) {
         if (!ON) return false;
         if (on) {
@@ -536,8 +537,9 @@
         }
         if (mode !== 'wake') return false;
         setMode('travel');
-        const s = st();
-        pendingShown = { sector: s ? s.currentSector : 1, first: true, from: null };
+        const s = st(), p = { sector: s ? s.currentSector : 1, first: true, from: null };
+        if (shown && !blocked()) { pendingShown = null; carryFirst = false; travelShownAt = performance.now(); bus.emit('shown', p); }
+        else pendingShown = p;
         return true;
     }
     function playJump() {
