@@ -302,19 +302,39 @@
     /** A world the story still waits on: a warm glow in the light's colours breathing slowly on its edge, and a thin ring
         that leaves it now and then and fades as it widens (a call, in steps), all under the world so only the part outside
         it shows. Gone once it greys, hides behind the giant or fades. */
-    const RING = [0, 0.14, 0.32, 0.5, 0.6, 0.5, 0.32, 0.14], PING_MS = 3600;
-    function storyRing(f, it, t) {
-        if (it.grey > 0 || it.passed || (it.hiding || 0) > 0.2 || it.fade >= 0.5) return;
-        const x = Math.round(it.x), y = Math.round(it.y), sw = RING[Math.floor(t / 450) % 8], r0 = it.r + 1, k = Math.min(1.6, Math.sqrt(it.r / (20 * sc)));
+    const RING = [0, 0.14, 0.32, 0.5, 0.6, 0.5, 0.32, 0.14], PING_MS = 3600, RING_STEP_MS = PING_MS / 8;   // the glow and the ping step together
+    const ringCache = new Map(), RING_CACHE_MAX = 48;
+    /** One step of the ring for a world of radius r, as a sprite: it changes only every RING_STEP_MS and with the world's size,
+        so it is painted once into a buffer and blitted, not redrawn as tens of thousands of one-pixel fills every frame
+        (that was a tenth of the travel view's time). Dithered from its own centre, as the world sprites are. */
+    function ringSprite(r, s) {
+        const key = r + '|' + sc + '|' + s;
+        let sp = ringCache.get(key);
+        if (sp) return sp;
+        const sw = RING[s], r0 = r + 1, k = Math.min(1.6, Math.sqrt(r / (20 * sc)));
         const w = Math.max(3, (3 + 5 * sw) * sc * k), peak = 0.3 + 0.45 * sw;
-        const step = Math.floor((t % PING_MS) / PING_MS * 8) / 8, pr = r0 + (4 + 18 * step) * sc * k, th = Math.max(1.2, 1.3 * sc), pv = 0.75 * (1 - step);
-        const R = Math.ceil(Math.max(r0 + w, pr + th));
+        const step = s / 8, pr = r0 + (4 + 18 * step) * sc * k, th = Math.max(1.2, 1.3 * sc), pv = 0.75 * (1 - step);
+        const R = Math.ceil(Math.max(r0 + w, pr + th)), S = 2 * R + 1;
+        const c = document.createElement('canvas'); c.width = S; c.height = S;
+        const g = c.getContext('2d'), img = g.createImageData(S, S), px = img.data;
         for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
             const d = Math.hypot(dx, dy); if (d < r0 - 1 || d > R) continue;
             const v = Math.max(d <= r0 + w ? peak * Math.pow(1 - (d - r0) / w, 1.6) : 0, Math.abs(d - pr) < th ? pv * (1 - Math.abs(d - pr) / th) : 0);
-            if (v > 0.04) f.tone(x + dx, y + dy, RP.SUN, v);
+            if (v <= 0.04) continue;
+            const lv = P.level(RP.SUN, v, dx, dy); if (lv === 0) continue;
+            const rgb = RP.SUN.rgb[lv], o = ((dy + R) * S + dx + R) * 4;
+            px[o] = rgb[0]; px[o + 1] = rgb[1]; px[o + 2] = rgb[2]; px[o + 3] = 255;
         }
-        f.reset();
+        g.putImageData(img, 0, 0);
+        sp = { canvas: c, R };
+        if (ringCache.size >= RING_CACHE_MAX) ringCache.delete(ringCache.keys().next().value);
+        ringCache.set(key, sp);
+        return sp;
+    }
+    function storyRing(f, it, t) {
+        if (it.grey > 0 || it.passed || (it.hiding || 0) > 0.2 || it.fade >= 0.5) return;
+        const sp = ringSprite(Math.round(it.r * 2) / 2, Math.floor(t / RING_STEP_MS) % 8);
+        ctx.drawImage(sp.canvas, Math.round(it.x) - sp.R, Math.round(it.y) - sp.R);
     }
     function rims(f, it, up) {
         const sp = spriteFor(it); if (!sp || !sp.rims) return;

@@ -287,6 +287,7 @@
     function paint(now) {
         const state = window.app && window.app.state;
         if (!view || !state) return;
+        if (document.documentElement.classList.contains('ns-on')) return;   // the new look hides this panel: no painting it unseen
         const v = view, decks = {};
         Object.keys(state.shipDecks || {}).forEach(key => { decks[key] = state.shipDecks[key].status; });
         cargoCount = (state.cargo || []).length;
