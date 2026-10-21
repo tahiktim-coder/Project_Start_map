@@ -274,10 +274,11 @@
             g.fillStyle = at(r, state === 2 ? 3 : 1); g.fillRect(1, 1, 1, 1); g.fillRect(w, 1, 1, 1);
         }), x - 1, y - 1);
         const fill = Math.max(0, Math.min(1, opt.fill || 0));
-        if (fill > 0) {                                                    // held: a cold light fills the key from the left, then the choice is made
-            const fw = Math.max(1, Math.round((w - 2) * fill));
+        if (fill > 0) {                                                    // held: a light fills the key from the left (cold, or warm: Fight to escape), then the choice is made
+            const fw = Math.max(1, Math.round((w - 2) * fill)), fh = opt.fillH > 0 ? Math.max(1, Math.min(h - 2, opt.fillH - 1)) : h - 2;
             c.save(); c.globalCompositeOperation = 'lighter';
-            c.fillStyle = 'rgba(120, 150, 165, 0.5)'; c.fillRect(x + 1, y + 1, fw, h - 2);
+            c.fillStyle = cool ? 'rgba(120, 150, 165, 0.5)' : 'rgba(200, 110, 40, 0.42)'; c.fillRect(x + 1, y + 1, fw, fh);
+            if (fh < h - 2) { c.fillStyle = cool ? 'rgba(120, 150, 165, 0.14)' : 'rgba(200, 110, 40, 0.12)'; c.fillRect(x + 1, y + 1 + fh, fw, h - 2 - fh); }   // under its chips the same light, low: they stay legible
             c.fillStyle = at(r, 3); c.fillRect(x + 1, y + h - 2, fw, 1);   // its bright edge along the bottom
             c.restore();
         }

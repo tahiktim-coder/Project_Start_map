@@ -16,6 +16,14 @@ const AURA_COMMENTARY = {
         ADVERSARIAL: ["Orbit reached, Commander. The readings are on your screen."]
     },
 
+    // Arriving beside a station: we dock there, nobody lands (DRAFT lines, 2026-10-21)
+    ENTER_STATION: {
+        COOPERATIVE: ["Holding position beside the station, Commander. Its docking port still works."],
+        NEUTRAL: ["Holding position beside the station, Commander. We can dock when you are ready."],
+        SUSPICIOUS: ["Holding position beside the station, Commander. I have logged our approach."],
+        ADVERSARIAL: ["Beside the station, Commander."]
+    },
+
     SCAN_COMPLETE: {
         COOPERATIVE: ["Scan complete, Commander. I have marked the best deposits."],
         NEUTRAL: ["Scan complete, Commander. The results are on your screen."],

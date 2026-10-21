@@ -9,6 +9,7 @@
     'use strict';
     const GRID = 12, SCALE = 4, TICK_MS = 120, SHINE_EVERY = 34;
     const TOAST_MS = 3600, WATCH_MS = 500, BULK_CHANGE = 4;   // more than this many new items at once is a loaded save, not a find
+    const CLEAR_POLL_MS = 400;                               // the new look: how often a waiting FOUND note looks again for a clear screen
 
     const KIND = {
         CONSUMABLE: { ink: ['#7a4f1e', '#d9a24a', '#ffe6a0'], art: ['............', '...######...', '..#++++++#..', '..#+####+#..', '..########..', '..#------#..', '..#-####-#..', '..#-#++#-#..', '..#-####-#..', '..#------#..', '..########..', '............'] },
@@ -73,13 +74,21 @@
 
     // ── "FOUND" card ──
     function toast(item) {
-        const stack = document.getElementById('item-toasts') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'item-toasts' }));
-        const card = document.createElement('div');
-        card.className = 'item-toast';
-        card.innerHTML = `${iconHtml(item)}<p><b>FOUND</b>${String(item.name || 'Something').replace(/[<>&]/g, '')}</p>`;
-        stack.appendChild(card);
-        hydrate(card);
-        setTimeout(() => { card.classList.add('is-leaving'); setTimeout(() => card.remove(), 500); }, TOAST_MS);
+        const show = () => {
+            const stack = document.getElementById('item-toasts') || document.body.appendChild(Object.assign(document.createElement('div'), { id: 'item-toasts' }));
+            const card = document.createElement('div');
+            card.className = 'item-toast';
+            card.innerHTML = `${iconHtml(item)}<p><b>FOUND</b>${String(item.name || 'Something').replace(/[<>&]/g, '')}</p>`;
+            stack.appendChild(card);
+            hydrate(card);
+            setTimeout(() => { card.classList.add('is-leaving'); setTimeout(() => card.remove(), 500); }, TOAST_MS);
+        };
+        if (!document.documentElement.classList.contains('ns-on')) { show(); return; }
+        // the new look: never over a card, a found page or a scene; it lands once they have gone (after any outcome still to read)
+        const busy = () => !!document.querySelector('.modal-overlay:not(.ns-held), .ns-film, .ns-end, .end-screen');
+        const whenClear = () => { if (busy()) setTimeout(whenClear, CLEAR_POLL_MS); else show(); };
+        const EC = window.EncounterCard;
+        if (EC && typeof EC.whenFree === 'function') EC.whenFree(whenClear); else whenClear();
     }
 
     let seenCount = null;

@@ -58,10 +58,10 @@ const EXODUS_LOGS = [
         lines: [
             'We told the first crews the truth. They stopped flying within a week.',
             'One ship turned back. One landed on the first rock it found. One just drifted, everyone awake and nobody flying it.',
-            'Do not tell your crew. Tell them what they already believe: eight ships went this way before them, and they are the ninth.',
+            'Do not tell your crew. Tell them what they already believe: they are going to find a new home.',
             'Your ship\'s computer knows the truth. It will not tell them.',
         ],
-        after: { speaker: 'Aris', text: 'Eight ships before us. That is exactly what A.U.R.A. told us.' },
+        after: { speaker: 'Aris', text: 'A new home. That is exactly what A.U.R.A. told us.' },
     },
     {
         id: 'PAGE_DISC', sector: 5, kind: 'disc', type: 'LORE', value: 0, isKept: true,

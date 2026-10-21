@@ -73,6 +73,8 @@
 #ns-stop-words .tg.is-who .tg-in, #ns-stop-words .tg.is-note .tg-in { justify-items: center; text-align: center; gap: 2px; }
 #ns-stop-words .tg.is-who .tg-n, #ns-stop-words .tg.is-note .tg-n { font: 600 var(--fs-tname)/1 var(--f-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--who, var(--ui)); }
 #ns-stop-words .tg.is-who .tg-why { max-width: var(--wrap, 12em); white-space: normal; font: 400 var(--fs-why)/1.2 var(--f-text); color: #d8d5cc; text-wrap: balance; }
+#ns-stop-words .tg.is-state .tg-why { font-weight: 500; color: #ff7a6a; }
+#ns-stop-words .tg.is-who .tg-n:empty { display: none; }
 #ns-stop-words .tg.is-note .tg-in { justify-items: start; text-align: left; gap: 4px; }
 #ns-stop-words .tg.is-note .tg-line { max-width: var(--wrap, 22em); white-space: normal; font: 400 var(--fs-note)/1.3 var(--f-text); color: #eceae2; }
 #ns-stop-words .tg.is-note .tg-line b { font-weight: 600; color: var(--c, inherit); }
@@ -121,10 +123,11 @@
             const k = unit.toFixed(4) + ':' + (minArtH || 0) + ':' + fontGen;
             if (tag.sized === k) return [tag.w, tag.h];
             el.style.width = ''; el.style.height = ''; el.style.padding = '0';
-            const w = inner.offsetWidth, h = inner.offsetHeight;
+            const w = inner.offsetWidth, h = inner.offsetHeight, lb = label && chips ? label.offsetTop + label.offsetHeight : 0;
             const slack = kind === 'who' || kind === 'note' ? 0.6 : 0;      // offsetWidth rounds: words that wrap get the part px back, or they wrap a word early
             tag.w = pad[0] + Math.ceil((w + slack) / unit - 0.02) + pad[2];
             tag.h = Math.max(minArtH || 0, pad[1] + Math.ceil(h / unit - 0.02) + pad[3]);
+            tag.lh = lb ? Math.min(tag.h, pad[1] + Math.ceil(lb / unit) + 1) : 0;   // a key with chips: how far down its word's row reaches (art px)
             el.style.padding = `${pad[1] * unit}px ${pad[2] * unit}px 0 ${pad[0] * unit}px`;
             el.style.width = (tag.w * unit) + 'px'; el.style.height = (tag.h * unit) + 'px';
             tag.sized = k;

@@ -94,6 +94,8 @@
         carry:   { frames: 8, ms: 130, move: 3, head: 'front' },
         wall:    { frames: 4, ms: 1300, head: 'down', reach: 18 },
         wave:    { frames: 4, ms: 240, head: 'front' },
+        brace:   { frames: 2, ms: [170, 230], head: 'front' },   // knees bent, arms up in front: holding on through a jolt (stop/Copy.js)
+        stand:   { frames: 2, ms: [1500, 1300], head: 'back' },  // seen from behind, standing still, arms down: before they turn to us (throw/Stall.js)
     });
 
     // ── small helpers ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -259,6 +261,18 @@
             ];
             const work = [[0, 0, 0, 0], [1, -1, 0, 1], [0, 0, 1, -1], [-1, 1, 0, 0]][f];
             P.hands = { target: [v2(hx + 24 + work[0], A.hands - 1 + work[1]), v2(hx + 27 + work[2], A.hands + work[3])] };
+        },
+        /** Braced for a hit: a wide low stance, knees bent, the forearms up in front of the face, shaking a little. */
+        brace(P, b, A, f) {
+            P.hip = v2(HIPX - 1, HIPY + 4.5 + f * 0.6); P.lean = 0.08; P.headDx = 1; P.headDy = 1 + f;
+            P.feet = [v2(HIPX - 9, ANKLE), v2(HIPX + 8, ANKLE)];
+            P.hands = { target: [v2(HIPX + 12 + f, HIPY + b.shY + 1), v2(HIPX + 15, HIPY + b.shY - 4 + f)] };
+        },
+        /** Standing still with the back to us, the arms hanging, a slow breath in the shoulders (the back view, as climb's). */
+        stand(P, b, A, f) {
+            P.view = 'back'; P.breath = f * 0.8;
+            P.hands = { target: [v2(HIPX - b.backW - 1.6, HIPY + 1.5), v2(HIPX + b.backW + 1.6, HIPY + 1.5)] };
+            P.feet = [v2(HIPX - 4, GROUND + 0.5), v2(HIPX + 4, GROUND + 0.5)];                     // sole rows: on the floor
         },
         wall(P, b, A, f) {
             P.feet = [v2(HIPX - 2, ANKLE), v2(HIPX + 2, ANKLE)];

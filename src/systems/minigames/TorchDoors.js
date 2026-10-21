@@ -15,13 +15,17 @@
      panel    the airlock still has a little power: the cutter wires its panel; "Hold it" (a held press, about two seconds) while
               the panel's lights climb; the airlock cycles and its door slides open on a dim light inside
    A door without the torch is a short picture with a line; any click (or Enter) or about four seconds moves on.
+   ON THE GROUND (place 'ground', TorchGround.js): the same doors on the world's own soil. Nobody floats or has a line: Jaxon
+   walks in, over to the split and climbs in, or stands at the airlock's panel (lower on the hull, where he can reach it from
+   the soil); the cables in a split hull hang down; the loose door falls back into the wreck with a thud; sparks fall.
 
    THE RULE (pick): never the same door twice in a row; the first boarding is the cut, and the cut comes back at most once; after
-   it about half the boardings are a picture; frozen only in sectors 2 and 5, already from sector 3; a wreck whose story still has
-   power aboard leans to the panel, one with wrecked decks to the split hull. Seeded by the hull number and the sector, so a
-   reload gives the same door.
+   it about half the boardings are a picture; frozen only on a cold world (-10 °C or colder; a wreck whose world is not known:
+   only in the dark sectors 2 and 5), the fuel line (its fuel frozen) never on a hot one (35 °C or hotter), already from
+   sector 3; a wreck whose story still has power aboard leans to the panel, one with wrecked decks to the split hull. Seeded by
+   the hull number and the sector, so a reload gives the same door.
 
-   window.TorchDoors = { KINDS, PLAYED, BEATS, has(kind), isBeat(kind), pick(history, { hull, sector, story }),
+   window.TorchDoors = { KINDS, PLAYED, BEATS, has(kind), isBeat(kind), pick(history, { hull, sector, story, temp }),
                          geometry(setup), art(setup), mountBeat(ctx, ui, setup, kit) }   (the last three are for Torch.js)
    Needs MiniLab, MiniPaint, MiniCrew and Torch.js (window.MiniTorchKit): load right after Torch.js. Sound only while the
    game's sound is on (Torch's own sound kit). Reduced motion: no flicker and no flashing. */
@@ -37,21 +41,25 @@
     const isBeat = k => BEATS.includes(k);
 
     // ── which door a boarding gets ──
-    const WEIGHT = { cut: 0.25, frozen: 2.4, fuel: 1.4, already: 1.6, torn: 1, panel: 1 };   // within its group: a dark sector's frost is likely, the plain cut rarely comes back
+    const WEIGHT = { cut: 0.25, frozen: 2.4, fuel: 1.4, already: 1.6, torn: 1, panel: 1 };   // within its group: a cold world's frost is likely, the plain cut rarely comes back
     const STORY_FIT = { EXODUS_CRYO: 'panel', EXODUS_PARTIAL: 'panel', EXODUS_CACHE: 'torn' };   // the wreck's own story: power still aboard; its decks wrecked
     const roll = (...keys) => {                                  // 0..1 from whole numbers: the same wreck and history always roll the same
         let h = 2166136261;
         keys.forEach(v => { h = Math.imul(h ^ (v | 0), 16777619); h = Math.imul(h ^ (h >>> 15), 2246822507); h ^= h >>> 13; });
         return (h >>> 0) / 4294967296;
     };
-    /** The door for this boarding. history: this run's doors so far, oldest first. wreck: { hull (number), sector, story (its id) }. */
+    const COLD_AT = -10, HOT_AT = 35;                            // °C: frost on a hatch at or below; frozen fuel in a line never at or above
+    /** The door for this boarding. history: this run's doors so far, oldest first. wreck: { hull (number), sector, story (its id),
+        temp (its world's °C; missing: not known, as in space) }. */
     function pick(history, wreck) {
         const past = (Array.isArray(history) ? history : []).filter(k => KINDS.includes(k)), w = wreck || {};
         if (!past.length) return 'cut';                          // the first boarding of a run teaches the torch
         const hull = Math.abs(Math.round(Number(w.hull) || 0)), sector = clamp(Math.round(Number(w.sector) || 1), 1, 6), last = past[past.length - 1];
+        const temp = w.temp == null || w.temp === '' || !Number.isFinite(Number(w.temp)) ? null : Number(w.temp);
+        const cold = temp == null ? sector === 2 || sector === 5 : temp <= COLD_AT, hot = temp != null && temp >= HOT_AT;   // the world decides; unknown: the dark sectors
         const after = past.slice(1), beats = after.filter(isBeat).length, plays = after.length - beats;
         const fits = k => k !== last && (k !== 'cut' || past.filter(x => x === 'cut').length < 2)
-            && (k !== 'frozen' || sector === 2 || sector === 5) && (k !== 'already' || sector >= 3);
+            && (k !== 'frozen' || cold) && (k !== 'fuel' || !hot) && (k !== 'already' || sector >= 3);
         const wantBeat = roll(hull, sector, past.length, 1) < clamp(0.5 + 0.2 * (plays - beats), 0.25, 0.75);   // about half of them are a picture
         const play = PLAYED.filter(fits), beat = BEATS.filter(fits);
         const onlyCut = play.length === 1 && play[0] === 'cut' && beat.length && roll(hull, sector, past.length, 3) < 0.7;   // the plain cut as the only torch door left: usually a picture instead
@@ -248,7 +256,7 @@
         tearMemo = { top, bot, mid, half, left, right, outline, creases };
         return tearMemo;
     }
-    function tearPainter(p, d, RR) {
+    function tearPainter(p, d, RR, hanging) {   // hanging: on the ground, the cables out of the split hang down
         const M = P(), T = tearShape();
         K.eachArt(d, 360, T.top - 14, 456, T.bot + 14, (ax, ay, x, y) => {
             if (y < K.horizon(x) + 1) return;
@@ -268,17 +276,18 @@
                 if (Math.abs(o) < w) return p.solid(ax, ay, RR.HULL, o < 0 ? 0.03 : 0.5);
             }
         });
-        [[[T.mid(118) + 2, 118], [432, 112], [438, 133]], [[T.mid(162) - 3, 162], [384, 168], [391, 196]], [[T.mid(92) + 4, 92], [426, 86], [433, 79]]]   // cables floating out of it
-            .forEach(([a, b, c]) => {
-                for (let t = 0; t <= 1; t += 0.004) {
-                    const u = 1 - t, x = u * u * a[0] + 2 * u * t * b[0] + t * t * c[0], y = u * u * a[1] + 2 * u * t * b[1] + t * t * c[1];
-                    if (x > T.left(y) && x < T.right(y) && t < 0.3) continue;   // in the dark it cannot be seen
-                    const axp = Math.floor((x + 0.5) * d), ayp = Math.floor((y + 0.5) * d);
-                    p.solid(axp, ayp, RR.HULL, 0.08); p.solid(axp, ayp - 1, RR.HULL, 0.45);
-                }
-                const ex = Math.floor((c[0] + 0.5) * d), ey = Math.floor((c[1] + 0.5) * d);
-                [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([ox, oy]) => p.solid(ex + ox, ey + oy, RR.HULL, oy ? 0.3 : 0.7));   // its plug
-            });
+        const cables = hanging ? [[[T.mid(118) + 2, 118], [430, 128], [431, 152]], [[T.mid(162) - 3, 162], [390, 172], [389, 196]], [[T.mid(92) + 4, 92], [425, 100], [428, 117]]]   // on the ground they hang
+            : [[[T.mid(118) + 2, 118], [432, 112], [438, 133]], [[T.mid(162) - 3, 162], [384, 168], [391, 196]], [[T.mid(92) + 4, 92], [426, 86], [433, 79]]];   // cables floating out of it
+        cables.forEach(([a, b, c]) => {
+            for (let t = 0; t <= 1; t += 0.004) {
+                const u = 1 - t, x = u * u * a[0] + 2 * u * t * b[0] + t * t * c[0], y = u * u * a[1] + 2 * u * t * b[1] + t * t * c[1];
+                if (x > T.left(y) && x < T.right(y) && t < 0.3) continue;   // in the dark it cannot be seen
+                const axp = Math.floor((x + 0.5) * d), ayp = Math.floor((y + 0.5) * d);
+                p.solid(axp, ayp, RR.HULL, 0.08); p.solid(axp, ayp - 1, RR.HULL, 0.45);
+            }
+            const ex = Math.floor((c[0] + 0.5) * d), ey = Math.floor((c[1] + 0.5) * d);
+            [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([ox, oy]) => p.solid(ex + ox, ey + oy, RR.HULL, oy ? 0.3 : 0.7));   // its plug
+        });
     }
     function tearInside(x, y, l, r, ax, ay, M, RR) {             // inside: the hull's frame and a broken deck, our lamp on their near edges, dark beyond → [ramp, tone]
         const T = tearShape(), u = (x - l) / Math.max(1, r - l), lamp = Math.max(0, 1 - u * 1.1) * Math.exp(-Math.abs(y - 160) / 80);
@@ -294,10 +303,17 @@
     }
 
     // ── LIVE PANEL: the airlock's panel beside the hatch (units) and the airlock behind the door ──
-    const PANEL = { box: [257, 97, 276, 130], screen: [259.5, 99.5, 274, 107.5], label: [259.6, 109.4], lights: [271, 113, 274, 128], lever: [259.5, 114, 266, 128], port: [258.6, 129.4] };
+    const PANEL_AT = { box: [257, 97, 276, 130], screen: [259.5, 99.5, 274, 107.5], label: [259.6, 109.4], lights: [271, 113, 274, 128], lever: [259.5, 114, 266, 128], port: [258.6, 129.4] };
     const LIGHTS = 6;
-    const lightBox = n => { const [x0, y0, x1, y1] = PANEL.lights, h = (y1 - y0) / LIGHTS; return [x0, y1 - (n + 1) * h + 0.35, x1, y1 - n * h - 0.35]; };   // the lights climb from the bottom
-    function panelPainter(p, d, RR) {
+    /** The panel's parts (units): as built in space; on the ground lower down the hull, its lever where Jaxon's hands are when he
+        stands on the soil beside it (TorchGround.standAt), so nobody floats up to it. */
+    function panelOf(o) {
+        const TG = window.TorchGround, dy = TG && TG.is(o) ? Math.round(TG.standAt(PANEL_AT.lever[0] + 2.5 - 0.33 * K.JAX.H, o) - 0.7 * K.JAX.H - (PANEL_AT.lever[1] + 5)) : 0;
+        const down = v => v.map((q, i) => (i % 2 ? q + dy : q));
+        return Object.fromEntries(Object.entries(PANEL_AT).map(([k, v]) => [k, down(v)]));
+    }
+    const lightBox = (PANEL, n) => { const [x0, y0, x1, y1] = PANEL.lights, h = (y1 - y0) / LIGHTS; return [x0, y1 - (n + 1) * h + 0.35, x1, y1 - n * h - 0.35]; };   // the lights climb from the bottom
+    const panelPainter = PANEL => (p, d, RR) => {
         const M = P(), [x0, y0, x1, y1] = PANEL.box, inside = (b, x, y) => x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3];
         K.eachArt(d, x0 - 2, y0 - 2, x1 + 2, y1 + 2, (ax, ay, x, y) => {
             if (!inside(PANEL.box, x, y)) {                      // its shadow on the hull: our lamp is below and to the left
@@ -311,7 +327,7 @@
                 const e = Math.min(x - PANEL.screen[0], PANEL.screen[2] - x, y - PANEL.screen[1], PANEL.screen[3] - y);
                 return p.solid(ax, ay, RR.GLASS, e < 0.6 ? 0.02 : 0.1 + (Math.abs((x - y * 0.6) % 9 - 3) < 0.7 ? 0.14 : 0));
             }
-            for (let n = 0; n < LIGHTS; n++) { const b = lightBox(n); if (inside(b, x, y)) return p.solid(ax, ay, RR.GLASS, x - b[0] < 0.6 ? 0.04 : 0.13); }   // the lights, dark
+            for (let n = 0; n < LIGHTS; n++) { const b = lightBox(PANEL, n); if (inside(b, x, y)) return p.solid(ax, ay, RR.GLASS, x - b[0] < 0.6 ? 0.04 : 0.13); }   // the lights, dark
             if (inside(PANEL.lever, x, y)) {                      // the lever's slot
                 const e = Math.min(x - PANEL.lever[0], PANEL.lever[2] - x, y - PANEL.lever[1], PANEL.lever[3] - y);
                 return p.solid(ax, ay, RR.HULL, e < 0.6 ? (y - PANEL.lever[1] < 0.6 ? 0.02 : 0.38) : 0.06);
@@ -320,7 +336,7 @@
         });
         const lx = Math.round((PANEL.label[0] + 0.5) * d), ly = Math.round((PANEL.label[1] + 0.5) * d);
         M.pixelText('CYCLE', lx, ly, (gx, gy) => { if (M.hash(gx, gy, 132) > 0.12) p.solid(gx, gy, RR.PAINT, 0.6); });
-    }
+    };
     /** The airlock behind the door: a short room, its inner door shut at the back, a strip light still on above it. */
     function airlockInside(p, d, RR) {
         const M = P(), BACK = 0.55, VP = K.VP, bw = BACK * HB.hw, bh = BACK * HB.hh, lampY = VP.y - bh + 2.2;
@@ -372,8 +388,9 @@
         if (o.door === 'frozen') return { paint: crackPainter(iceHolds(o.seed)), inside: icedInside };
         if (o.door === 'fuel') return { paint: pipePainter(fuelLine(o.seed)) };
         if (o.door === 'already') return { paint: oldCutPainter(o.seed), lamp: false, more: (s, d, lit) => ({ hullDark: inTheDark(lit, d) }) };   // no lamp of ours yet: the lander's lamp sweeps the hull
-        if (o.door === 'torn') return { paint: tearPainter };
-        if (o.door === 'panel') return { paint: panelPainter, inside: airlockInside };
+        const hanging = !!(window.TorchGround && window.TorchGround.is(o));   // on the ground
+        if (o.door === 'torn') return { paint: (p, d, RR) => tearPainter(p, d, RR, hanging) };
+        if (o.door === 'panel') return { paint: panelPainter(panelOf(o)), inside: airlockInside };
         return {};
     }
 
@@ -388,6 +405,7 @@
             setup, d, AW, AH, ctx, ui, R: K.ramps(), snd: K.makeSound(), pics: K.paintScene(setup, d),
             under: K.makeLayer(AW, AH), over: K.makeLayer(AW, AH), A: v => Math.floor((v + 0.5) * d), art: fn => MiniLab.inArt(ctx, fn),
             jaxId: idOf(setup.cutter) || 'jaxon', spotId: idOf(setup.spotter),
+            ground: window.TorchGround && window.TorchGround.is(setup) ? window.TorchGround : null,   // on a planet's surface (TorchGround.js)
         };
         let clock = 0, ended = false, lastLine = -99, lineEnd = 0;
         const queue = [], shown = new Map();                     // lines still to say: [earliest, speaker, words]; the readouts on the picture now
@@ -439,13 +457,14 @@
     }
     const idOf = who => (window.MiniCrew ? window.MiniCrew.idOf(who) : null);
 
-    // people in the beats: drawn as Torch draws Jaxon, lit by our lamp (or the lander's)
+    // people in the beats: drawn as Torch draws Jaxon, lit by our lamp (or the lander's); on the ground they stand
     function person(env, id, at, o = {}) {
         if (!window.MiniCrew || !id) return;
         const warm = clamp(1 - Math.hypot(at.x - K.LAMP.aimX, at.y - 30 - K.LAMP.aimY) / 200, 0, 1);
-        window.MiniCrew.small(env.ctx, id, at.x, at.y, { h: o.h || K.JAX.H, pose: o.pose || 'float', facing: o.facing || 1, light: 1, warm: 0.25 + 0.5 * warm * (o.lit == null ? 1 : o.lit), dim: o.dim == null ? 0.25 : o.dim, t: o.t || 0 });
+        window.MiniCrew.small(env.ctx, id, at.x, at.y, { h: o.h || K.JAX.H, pose: o.pose || (env.ground ? 'stand' : 'float'), facing: o.facing || 1, light: 1, warm: 0.25 + 0.5 * warm * (o.lit == null ? 1 : o.lit), dim: o.dim == null ? 0.25 : o.dim, t: o.t || 0 });
     }
-    function tether(env, from, to, sag = 10) {                   // a slack line, as Torch draws Jaxon's
+    function tether(env, from, to, sag = 10) {                   // a slack line, as Torch draws Jaxon's (none on the ground)
+        if (env.ground) return;
         const { under: L, d } = env, mx = (from.x + to.x) / 2, my = Math.max(from.y, to.y) + sag, n = Math.max(100, Math.ceil((Math.hypot(to.x - from.x, to.y - from.y) + 2 * sag) * d * 1.4));
         for (let k = 0; k <= n; k++) {
             const t = k / n, u = 1 - t;
@@ -453,12 +472,16 @@
         }
     }
     const waist = (at, facing = 1) => ({ x: at.x - facing * 0.1 * K.JAX.H, y: at.y - 0.5 * K.JAX.H });
-    const bobOf = (t, d) => Math.round(Math.sin(Math.floor(t * 8) / 8 * 0.9) * 2 * d) / d;   // drifting on a line, eight steps a second
-    function sparksOf(list, dt) { return list.map(q => ({ ...q, x: q.x + q.vx * dt, y: q.y + q.vy * dt, life: q.life - dt })).filter(q => q.life > 0); }
+    const bobOf = (t, d, env) => (env && env.ground ? 0 : Math.round(Math.sin(Math.floor(t * 8) / 8 * 0.9) * 2 * d) / d);   // drifting on a line, eight steps a second; still on the ground
+    function sparksOf(list, dt, env) {                           // on the ground they fall (TorchGround.fly)
+        if (env && env.ground) return list.map(q => env.ground.fly(q, dt, env.setup)).filter(q => q.life > 0);
+        return list.map(q => ({ ...q, x: q.x + q.vx * dt, y: q.y + q.vy * dt, life: q.life - dt })).filter(q => q.life > 0);
+    }
     function drawSparks(env, list) {
         const { over: L, d } = env;
         list.forEach(q => {
             const x = (q.x + 0.5) * d, y = (q.y + 0.5) * d;
+            if (q.dust) return L.set(x, y, q.life > 0.5 ? C.textDim : C.mist);
             if (q.ice) { L.line(x - q.vx * 0.03 * d, y - q.vy * 0.03 * d, x, y, C.uiDim); return L.set(x, y, q.life > 0.5 ? C.star : C.uiBright); }
             if (q.life > 0.2) L.line(x - q.vx * 0.025 * d, y - q.vy * 0.025 * d, x, y, C.warm);
             L.set(x, y, q.life > 0.3 ? C.warmBright : C.warm);
@@ -466,17 +489,19 @@
     }
     const burst = (x, y, n, o = {}) => Array.from({ length: n }, () => {   // sparks (or ice) flying from a point
         const a = (o.dir == null ? Math.random() * Math.PI * 2 : o.dir + (Math.random() - 0.5) * (o.spread || 1.2)), v = (o.v || 40) * (0.4 + Math.random() * 0.8);
-        return { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: (o.life || 0.5) * (0.5 + Math.random()), ice: !!o.ice };
+        return { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: (o.life || 0.5) * (0.5 + Math.random()), ice: !!o.ice, dust: !!o.dust };
     });
 
-    // ALREADY CUT: the lander's lamp finds the hatch; the loose door, cut long ago, tips out of its frame
+    // ALREADY CUT: the lander's lamp finds the hatch; the loose door, cut long ago, tips out of its frame (on the ground Jaxon
+    // walks in from the left, and the door tips back into the wreck and lands with the knock)
     SCENES.already = env => {
-        const { setup, d, AW, AH, pics, art } = env, J = K.JAX;
-        const SWEEP = [0.15, 1.5], OPEN_AT = 1.55, TIP = 1.9, END = 4.4;
+        const { setup, d, AW, AH, pics, art } = env, J = K.JAX, TG = env.ground;
+        const SWEEP = [0.15, 1.5], OPEN_AT = 1.55, TIP = 1.9, END = 4.4, FALL = 1.3;   // FALL: on the ground it lands with the knock
         const lit = pixelsOf(pics.hullBg), dark = pixelsOf(pics.hullDark), img = new ImageData(AW, AH), f32 = new Uint32Array(img.data.buffer);
         const beamCv = Object.assign(document.createElement('canvas'), { width: AW, height: AH }), bg = beamCv.getContext('2d');
-        const from = { x: 60, y: 300 }, to = { x: K.LAMP.aimX, y: K.LAMP.aimY }, arrive = { from: { x: 150, y: 352 }, to: J.IDLE, at: [0.25, 2.3] };
-        let groaned = false, knocked = false, jax = { ...arrive.from };
+        const from = { x: 60, y: 300 }, to = { x: K.LAMP.aimX, y: K.LAMP.aimY };
+        const arrive = TG ? { from: { x: 6, y: TG.standAt(6, setup) }, to: TG.jaxonAt(setup), at: [0.25, 2.3] } : { from: { x: 150, y: 352 }, to: J.IDLE, at: [0.25, 2.3] };
+        let groaned = false, knocked = false, jax = { ...arrive.from }, walking = false, dust = [];
         function beam(t) {                                       // the lamp's pool: from low on the left up onto the hatch, widening, then everywhere
             const k = ease(clamp((t - SWEEP[0]) / (SWEEP[1] - SWEEP[0]), 0, 1));
             return { x: lerp(from.x, to.x, k), y: lerp(from.y, to.y, k), r: lerp(55, 170, k) + 500 * Math.max(0, t - SWEEP[1]) };
@@ -500,21 +525,31 @@
             }
             g.restore();
         }
+        const SILL = [-30, -10, 10, 30].map(ox => ({ x: HB.cx + ox, y: HB.cy + HB.hh - 3 }));   // GROUND: where the fallen door throws dust up
         return {
             update(dt, t) {
-                const k = ease(clamp((t - arrive.at[0]) / (arrive.at[1] - arrive.at[0]), 0, 1));
-                jax = { x: lerp(arrive.from.x, arrive.to.x, k), y: lerp(arrive.from.y, arrive.to.y, k) };
+                const k = ease(clamp((t - arrive.at[0]) / (arrive.at[1] - arrive.at[0]), 0, 1)), x = lerp(arrive.from.x, arrive.to.x, k);
+                walking = !!TG && k > 0 && k < 1;
+                jax = { x, y: TG ? TG.standAt(x, setup) : lerp(arrive.from.y, arrive.to.y, k) };
                 if (t >= OPEN_AT && !groaned) { groaned = true; env.snd.groan(0.25); }
-                if (t >= OPEN_AT + 1.3 && !knocked) { knocked = true; env.snd.knock(0.5); }
+                if (t >= OPEN_AT + FALL && !knocked) {
+                    knocked = true; env.snd.knock(0.5);
+                    if (TG) dust = burst(HB.cx, HB.cy + HB.hh - 4, 24, { dir: -Math.PI / 2, spread: 2.4, v: TG.hasAir(setup) ? 22 : 34, life: 1.4, dust: true });   // the door hits the floor
+                }
+                dust = sparksOf(dust, dt, env);
             },
             draw(t) {
                 art(g => { g.fillStyle = C.void; g.fillRect(0, 0, AW, AH); });
                 if (t < SWEEP[1] + 0.5) { paintBeam(t); art(g => g.drawImage(beamCv, 0, 0)); } else art(g => g.drawImage(pics.hullBg, 0, 0));
-                if (t >= OPEN_AT) art(g => { g.drawImage(pics.hole, 0, 0); tipLid(g, t - OPEN_AT); });
-                const at = { x: jax.x, y: jax.y + bobOf(t, d) }, b = beam(t), lit = clamp(1 - Math.hypot(at.x - b.x, at.y - 30 - b.y) / b.r, 0, 1);
+                if (t >= OPEN_AT) art(g => { g.drawImage(pics.hole, 0, 0); if (TG) TG.drawLid(g, TG.lidAt((t - OPEN_AT) * TG.LAND / FALL), pics.lid, d); else tipLid(g, t - OPEN_AT); });
+                const landT = t - OPEN_AT - FALL;
+                if (TG && TG.hasAir(setup) && landT >= 0 && landT < 1.2) SILL.forEach(q => TG.puff(env.under, setup, q.x, q.y - 4 * landT, 1 - landT / 1.2, d, 3));
+                const at = { x: jax.x, y: jax.y + bobOf(t, d, env) }, b = beam(t), lit = clamp(1 - Math.hypot(at.x - b.x, at.y - 30 - b.y) / b.r, 0, 1);
                 tether(env, waist(at), { x: 168, y: 300 }, 6);     // their line goes back to the lander
+                if (TG) TG.footShadow(env.under, at.x, at.y, d, 9);
                 art(g => env.under.draw(g));
-                person(env, env.jaxId, at, { lit, dim: 0.25 + 0.5 * (1 - lit) });
+                person(env, env.jaxId, at, { lit, dim: 0.25 + 0.5 * (1 - lit), pose: walking ? 'walk' : undefined, t: t * 1600 });
+                if (dust.length) { drawSparks(env, dust); art(g => env.over.draw(g)); }
             },
             endsAt: () => END,
             canSkip: () => true,
@@ -525,29 +560,38 @@
         return new Uint32Array(g.getImageData(0, 0, canvas.width, canvas.height).data.buffer.slice(0));
     }
 
-    // TORN: no door to open; Jaxon floats over to the split and climbs in, the spotter after him
+    // TORN: no door to open; Jaxon floats over to the split and climbs in, the spotter after him. On the ground they walk to the
+    // foot of the split (the spotter from the right, off the picture), scramble up and climb in
     SCENES.torn = env => {
-        const { setup, d, pics, art, ctx } = env, T = tearShape(), J = K.JAX;
+        const { setup, d, pics, art, ctx } = env, T = tearShape(), J = K.JAX, TG = env.ground;
         const gapAt = y => ({ x: T.mid(y) - 1, y });
-        const JAX = { from: J.IDLE, front: { x: T.mid(150) - 1, y: 188 }, inside: { x: T.mid(140) + 5, y: 172 }, go: [0.5, 2.2], climb: [2.2, 3.1] };
-        const SPOT = { from: { x: 96, y: 345 }, front: { x: T.mid(160) - 2, y: 196 }, inside: { x: T.mid(150) + 4, y: 180 }, go: [1.5, 3.2], climb: [3.2, 4.0] };   // in after him, from off the picture
-        const two = !!env.spotId && env.spotId !== env.jaxId, END = 4.4;
+        const onSoil = x => ({ x, y: TG.standAt(x, setup) });
+        const JAX = TG ? { from: TG.jaxonAt(setup), front: onSoil(T.mid(206) - 3), inside: { x: T.mid(198) + 5, y: 207 }, go: [0.5, 2.2], climb: [2.2, 3.1] }
+            : { from: J.IDLE, front: { x: T.mid(150) - 1, y: 188 }, inside: { x: T.mid(140) + 5, y: 172 }, go: [0.5, 2.2], climb: [2.2, 3.1] };
+        const SPOT = TG ? { from: onSoil(500), front: onSoil(T.mid(212) + 3), inside: { x: T.mid(204) + 4, y: 212 }, go: [1.5, 3.2], climb: [3.2, 4.0] }
+            : { from: { x: 96, y: 345 }, front: { x: T.mid(160) - 2, y: 196 }, inside: { x: T.mid(150) + 4, y: 180 }, go: [1.5, 3.2], climb: [3.2, 4.0] };   // in after him, from off the picture
+        const two = !!env.spotId && env.spotId !== env.jaxId, END = 4.4, IN_FROM = TG ? 0.45 : 0;   // GROUND: the first part of the climb is up to the split
         let grabbed = false;
-        const clipToGap = g => { g.beginPath(); T.outline.forEach(([x, y], i) => (i ? g.lineTo : g.moveTo).call(g, (x + 0.5) * d, (y + 0.5) * d)); g.closePath(); g.clip(); };
-        function placeOf(m, t) {                                 // floating over to the split, then climbing in
-            if (t < m.go[0]) return { at: m.from, pose: 'float', inside: 0 };
+        const clipToGap = g => {                                 // the split (on the ground with what is below it: legs still outside stay seen)
+            g.beginPath(); T.outline.forEach(([x, y], i) => (i ? g.lineTo : g.moveTo).call(g, (x + 0.5) * d, (y + 0.5) * d)); g.closePath();
+            if (TG) g.rect((T.mid(T.bot) - 40 + 0.5) * d, (T.bot - 10 + 0.5) * d, 80 * d, (K.H - T.bot + 12) * d);
+            g.clip();
+        };
+        function placeOf(m, t) {                                 // floating (walking) over to the split, then climbing in
+            if (t < m.go[0]) return { at: m.from, pose: TG ? 'stand' : 'float', inside: 0 };
             if (t < m.go[1]) {
-                const k = ease((t - m.go[0]) / (m.go[1] - m.go[0]));
+                const k = ease((t - m.go[0]) / (m.go[1] - m.go[0])), x = lerp(m.from.x, m.front.x, k);
+                if (TG) return { at: { x, y: TG.standAt(x, setup) }, pose: 'walk', inside: 0, facing: Math.sign(m.front.x - m.from.x) || 1 };
                 return { at: { x: lerp(m.from.x, m.front.x, k), y: lerp(m.from.y, m.front.y, k) - 16 * Math.sin(Math.PI * k) }, pose: 'float', inside: 0 };
             }
             const k = clamp((t - m.climb[0]) / (m.climb[1] - m.climb[0]), 0, 1);
-            return { at: { x: lerp(m.front.x, m.inside.x, k), y: lerp(m.front.y, m.inside.y, k) }, pose: 'climb', inside: k };
+            return { at: { x: lerp(m.front.x, m.inside.x, k), y: lerp(m.front.y, m.inside.y, k) }, pose: 'climb', inside: clamp((k - IN_FROM) / (1 - IN_FROM), 0, 1), climbing: k > 0 };
         }
         function draw(id, m, t) {
             const pl = placeOf(m, t);
             if (pl.inside >= 1) return;
-            const bob = pl.pose === 'float' && t < m.go[0] ? bobOf(t, d) : 0, at = { x: pl.at.x, y: pl.at.y + bob };
-            if (pl.inside <= 0) return person(env, id, at, { pose: pl.pose });
+            const bob = pl.pose === 'float' && t < m.go[0] ? bobOf(t, d, env) : 0, at = { x: pl.at.x, y: pl.at.y + bob };
+            if (pl.inside <= 0) return person(env, id, at, { pose: pl.pose, facing: pl.facing, t: t * (TG && pl.pose === 'walk' ? 1700 : 1000) });
             ctx.save(); art(clipToGap);                          // going in: what passes behind the plating is hidden; they go dark
             person(env, id, at, { pose: 'climb', t: t * 1000, h: K.JAX.H * (1 - 0.12 * pl.inside), dim: 0.25 + 0.75 * pl.inside, lit: 1 - pl.inside });
             ctx.restore();
@@ -558,6 +602,7 @@
                 art(g => g.drawImage(pics.hullBg, 0, 0));
                 const pj = placeOf(JAX, t), lip = gapAt(150);    // Jaxon's line: to him, or to the edge of the split once he is in
                 tether(env, pj.inside > 0.5 ? { x: T.left(150), y: lip.y } : waist(pj.at), { x: K.LAMP.x - 3, y: K.LAMP.y + 5 });
+                if (TG) { [[JAX, env.jaxId], two ? [SPOT, env.spotId] : null].filter(Boolean).forEach(([m]) => { const pl = placeOf(m, t); if (!pl.climbing) TG.footShadow(env.under, pl.at.x, pl.at.y, d, 9); }); }
                 art(g => env.under.draw(g));
                 if (two) draw(env.spotId, SPOT, t);
                 draw(env.jaxId, JAX, t);
@@ -568,12 +613,14 @@
     };
     SCENES.torn.lines = setup => [[0.45, setup.cutter, 'No need for the torch. We go in through the side.']];
 
-    // LIVE PANEL: the cutter wires the airlock's panel; the player holds the switch while it cycles; the door slides open
+    // LIVE PANEL: the cutter wires the airlock's panel; the player holds the switch while it cycles; the door slides open.
+    // On the ground the panel is lower on the hull, and Jaxon walks over to it on the soil
     SCENES.panel = env => {
-        const { setup, d, AW, pics, art, ui, ctx, A } = env, J = K.JAX;
+        const { setup, d, AW, pics, art, ui, ctx, A } = env, J = K.JAX, TG = env.ground, PANEL = panelOf(setup);
         const hands = { x: PANEL.lever[0] + 2.5, y: PANEL.lever[1] + 5 }, at = { x: hands.x - 0.33 * J.H, y: hands.y + 0.7 * J.H };
         const GO = [0.35, 1.5], WIRED = 1.6, OFFER = 1.9, CYCLE_S = 2, DRAIN_S = 3, UNLOCK = 0.45, SLIDE = 1.6, AFTER = 2.4;
-        let jax = { ...J.IDLE }, wired = false, offered = false, held = false, charge = 0, cycledAt = null, slid = false, sparks = [], hintT = 0;
+        const home = TG ? TG.jaxonAt(setup) : J.IDLE;
+        let jax = { ...home }, wired = false, offered = false, held = false, charge = 0, cycledAt = null, slid = false, sparks = [], hintT = 0;
         const port = { x: PANEL.port[0], y: PANEL.port[1] };
         const opening = t => (cycledAt === null ? 0 : ease(clamp((t - cycledAt - UNLOCK) / SLIDE, 0, 1)));
         function slideLid(g, k) {                                // the door runs sideways into the hull, behind the frame
@@ -603,7 +650,7 @@
             const lit = !wired ? 0 : cycledAt !== null ? LIGHTS : Math.max(1, Math.ceil(charge * LIGHTS - 0.001));
             const flash = cycledAt !== null && !reduced() && t - cycledAt < 0.5 && Math.floor((t - cycledAt) * 8) % 2;
             for (let n = 0; n < lit; n++) {
-                const [x0, y0, x1, y1] = lightBox(n);
+                const [x0, y0, x1, y1] = lightBox(PANEL, n);
                 for (let ay = A(y0); ay <= A(y1); ay++) for (let ax = A(x0) + 1; ax <= A(x1); ax++) L.set(ax, ay, flash ? C.star : ay === A(y0) ? C.warmBright : C.warm);
             }
             const ly = PANEL.lever[1] + 2 + (cycledAt !== null ? 1 : charge) * 9;   // the lever's handle
@@ -632,9 +679,9 @@
                 return true;
             },
             update(dt, t) {
-                const k = ease(clamp((t - GO[0]) / (GO[1] - GO[0]), 0, 1));
-                jax = { x: lerp(J.IDLE.x, at.x, k), y: lerp(J.IDLE.y, at.y, k) - 10 * Math.sin(Math.PI * k) };
-                sparks = sparksOf(sparks, dt);
+                const k = ease(clamp((t - GO[0]) / (GO[1] - GO[0]), 0, 1)), x = lerp(home.x, at.x, k);
+                jax = TG ? { x, y: lerp(home.y, at.y, k) } : { x, y: lerp(J.IDLE.y, at.y, k) - 10 * Math.sin(Math.PI * k) };   // on the ground he walks over
+                sparks = sparksOf(sparks, dt, env);
                 if (t >= WIRED && !wired) { wired = true; sparks = sparks.concat(burst(port.x, port.y, 14, { v: 30, life: 0.45 })); env.snd.knock(0.3); }
                 if (t >= OFFER && !offered) {
                     offered = true;
@@ -649,7 +696,8 @@
                 }
                 if (cycledAt !== null && !slid && t >= cycledAt + UNLOCK) {
                     slid = true; env.snd.slide(SLIDE); env.snd.puff();
-                    sparks = sparks.concat(burst(HB.cx - HB.hw + 2, HB.cy, 26, { ice: true, dir: Math.PI, spread: 1.6, v: 26, life: 0.9 }));   // the last air out of the gap
+                    const dusty = !!TG && TG.hasAir(setup);                   // on a world with air: a breath of dust, not ice
+                    sparks = sparks.concat(burst(HB.cx - HB.hw + 2, HB.cy, 26, { ice: !dusty, dust: dusty, dir: Math.PI, spread: 1.6, v: dusty ? 18 : 26, life: dusty ? 1.3 : 0.9 }));   // the last air out of the gap
                 }
             },
             draw(t) {
@@ -659,14 +707,16 @@
                 drawPanel(t);
                 if (k > 0) spill(k);
                 if (wired) drawCable();
-                const bob = t < GO[0] ? bobOf(t, d) : 0, me = { x: jax.x, y: jax.y + bob };
+                const bob = t < GO[0] ? bobOf(t, d, env) : 0, me = { x: jax.x, y: jax.y + bob };
                 tether(env, waist(me), { x: K.LAMP.x - 3, y: K.LAMP.y + 5 });
+                if (TG) TG.footShadow(env.under, me.x, me.y, d, 9);
                 art(g => env.under.draw(g));
-                person(env, env.jaxId, me, { pose: t >= GO[1] - 0.2 ? 'reach' : 'float' });
+                const moving = !!TG && t > GO[0] && t < GO[1] - 0.2;
+                person(env, env.jaxId, me, { pose: t >= GO[1] - 0.2 ? 'reach' : moving ? 'walk' : TG ? 'stand' : 'float', t: t * 1000 });
                 drawSparks(env, sparks); art(g => env.over.draw(g));
                 if (offered && cycledAt === null) {              // how far it has cycled; a nudge if nobody holds the switch
                     env.note('cycle', 'CYCLE ' + Math.round(charge * 100) + '%', { x: 8, y: K.H - 8 - 13 * 1.3 * (K.W / (ui.canvas.getBoundingClientRect().width || 960)), tone: charge > 0 ? 'ui' : 'text' });
-                    env.note('hold', hintT > 1.2 && charge < 0.05 ? 'PRESS AND HOLD' : null, { x: PANEL.box[0] - 4, y: PANEL.box[1] - 14, align: 'right', tone: 'ui', size: 'm' });
+                    env.note('hold', hintT > 1.2 && charge < 0.05 ? 'PRESS AND HOLD' : null, { x: PANEL.box[0] - 4, y: PANEL.box[1] - 14, align: 'right', tone: 'ui', size: 'm' });   // over the panel, where it is
                 } else env.note('hold', null);
             },
             endsAt: () => (cycledAt === null ? null : cycledAt + UNLOCK + SLIDE + AFTER - 1.4),

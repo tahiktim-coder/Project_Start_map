@@ -87,8 +87,8 @@ const DISTRESS_SIGNAL_ENCOUNTERS = [
         context: (age) => `A damaged signal: words, static, then more words. Sent ${age} years ago. Most of it is lost. The part that's left keeps repeating one sentence.`,
         dialogue: [
             { speaker: 'Mira', text: "I can rebuild some of it. Aura, will you help? You're better at this than me." },
-            { speaker: 'A.U.R.A.', text: "Partly rebuilt, Commander: '...this is hull... we are not the ninth... please...' Then nothing." },
-            { speaker: 'Vance', text: "Not the ninth. So they were told the same thing we were." }
+            { speaker: 'A.U.R.A.', text: "Partly rebuilt, Commander: '...this is hull two hundred and... the year is wrong... please...' Then nothing." },
+            { speaker: 'Vance', text: "Hull two hundred? We're the ninth. How are they out here before us?" }
         ],
         choices: [
             {

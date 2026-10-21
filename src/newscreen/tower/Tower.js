@@ -23,6 +23,10 @@
      Pointing at a red deck names it ("Engine room, broken" over "Fix, patch or live with it"); the first time a deck goes
      red, A.U.R.A. says once, in travel, that it can be clicked.
    - A new sector: closed until 'opening:done' (5 s at most), then it slides in (1.2 s).
+   - The jump into sector 3 stalls (throw/Stall.js, read through window.NSStall.view() each frame): the decks go dark one by
+     one, one red lamp left on each (throw/StallArt.js paints them), their screens and lamps dead; the reactor goes cold and
+     stops beating, the conduit dark, the drive's plume out; the stock numbers go out; nothing can be pointed at or clicked.
+     Then the whole crew stands on the bridge, their backs to us, lit only by its red lamp, and they turn to us one by one.
    - The ship's stock (NSStock, below): energy by the reactor, rations over the galley table, salvage over the hold's
      crates, data in the lab, as small lit numbers in #ns-ship-words. A change flashes (warm up, red down, the difference
      beside it for 1.6 s); the first change of each, A.U.R.A. says once what it is for. Stop.js shows the same four on the
@@ -113,7 +117,9 @@
         tag: null, toldRed: new Set(), tellRed: null, stock: null,
         shake: null, tremor: null, spd: 0, spdIn: 0, spdAt: -1e9, braceT: null, flick: {}, burnT0: null, newRed: new Set(), readOnce: false,
         routine: { off: 0, held: null },   // the crew's day runs at t + off; held: kept at that moment (supper)
+        stall: null,                       // the jump that stalls: NSStall.view() this frame (throw/Stall.js), or null
     };
+    function stallView() { const S = window.NSStall; try { return S && typeof S.view === 'function' ? S.view() : null; } catch (err) { console.error('Tower: the stall view failed', err); return null; } }
     let NS = null;
     const G = () => (NS && NS.G) || {};
     const now = () => (NS && NS.clock ? NS.clock.t : 0);
@@ -206,8 +212,16 @@
         const has = s => IDS.find(id => V.real.crew[id] && V.real.crew[id].status === s);
         return has('hurt') || has('asleep') || null;
     }
+    /** The stall: everyone alive on the bridge, their backs to us until they turn (NSStall.GATHER: where each stands). */
+    function gathered(t) {
+        const G0 = (window.NSStall && window.NSStall.GATHER) || {}, sv = V.stall, y = A.floorY(0);
+        return IDS.filter(id => G0[id] && (!V.real.crew[id] || V.real.crew[id].status !== 'dead')).map(id => ({
+            id, deck: 0, x: G0[id].x, y, act: sv.turned[id] ? 'idle' : 'stand', facing: G0[id].facing, ms: t, z: 2, say: 'stall', lit: true,
+        }));
+    }
     function peopleNow(t) {
-        const bed = bedOf(), moved = new Set(), held = V.routine.held;
+        if (V.stall && V.stall.gather) return gathered(t);
+        const bed = bedOf(), moved = new Set(), held = V.stall ? null : V.routine.held;   // the stall: their day as it is, not the supper still due
         const day = SIM.at('travel', held != null ? held : t + V.routine.off)
             .map(p => (held != null && !MOVING[p.act] && p.act !== 'climb' ? Object.assign({}, p, { ms: t }) : p));   // held: still alive, not a statue
         const list = day.map(p => { const o = override(p, t, bed); if (o !== p) moved.add(p.id); return o; }).filter(Boolean);
@@ -262,6 +276,7 @@
 
     function stepBeat(dt, t) {
         const E = V.Eshown, b = V.beat;
+        if (V.stall && V.stall.reactorCold) { b.onsets = []; b.val = 0; return; }    // the reactor has gone cold: no beat at all
         const period = (MK.BEAT.FULL + (MK.BEAT.LOW - MK.BEAT.FULL) * clamp((100 - E) / 90, 0, 1)) * (1 - FEEL.beatAtSpeed * V.spd);   // faster in flight
         b.phase += dt / period;
         while (b.phase >= 1) {
@@ -274,7 +289,7 @@
     }
     /** The core's level: the real energy, a step lower while engineering is red. */
     function setCore(E) {
-        const lvl = Math.round(V.real.engDown ? E * CORE_ENG_DOWN : E);
+        const lvl = V.stall && V.stall.reactorCold ? 0 : Math.round(V.real.engDown ? E * CORE_ENG_DOWN : E);
         if (lvl !== V.coreSet && A.reactor) { A.reactor.set(lvl); V.coreSet = lvl; }
     }
     function stepEnergy(dt, t) {
@@ -324,8 +339,9 @@
     function stepFeel(dt, t) {
         const want = t - V.spdAt < FEEL.speedStale && feels() ? V.spdIn : 0;
         V.spd += (want - V.spd) * (dt > 0 ? 1 - Math.exp(-dt / FEEL.speedTau) : 0);
-        const sh = shaker();
+        const sh = shaker(), sv = V.stall;
         if (sh && V.burnT0 != null && !V.dark) sh.floor(FEEL.burnFloor * Math.pow(clamp((t - V.burnT0) / FEEL.burnMs, 0, 1), 2));
+        if (sh && sv && sv.burn > 0 && !sv.stop && !sv.still) sh.floor(FEEL.burnFloor * sv.burn);   // the stall's burn, dying
         V.tremor = sh ? sh.tick(dt / 1000) : null;
         if (V.newRed.size && feels() && modeNow() === 'travel' && !(NS.blocked && NS.blocked())) {
             const list = [...V.newRed]; V.newRed = new Set();
@@ -402,19 +418,20 @@
         if (job) { try { job(); } catch (err) { console.error('Tower: a warm job failed', err); } }
         const g = G();
         if (!g.H || !V.fit) return;
+        V.stall = stallView();
         if (V.dirty || t - V.readAt > READ_MS || t < V.readAt) readReal(t);
         stepEnergy(dt, t);
         stepFeel(dt, t);
         stepBeat(dt, t);
         if (V.flood && MK.floodDone({ t, flood: V.flood })) V.flood = null;
         if (V.slide.start != null && t >= V.slide.start + SLIDE_MS) V.slide = { closedUntil: 0, start: null };
-        stepSupper(dt, t, slideK(t) >= 1 && !V.dark && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
+        if (!V.stall) stepSupper(dt, t, slideK(t) >= 1 && !V.dark && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
         V.people = peopleNow(t);
-        if (V.chips && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.chips.deck] !== 'red')) hideChips();
+        if (V.chips && (V.stall || modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.chips.deck] !== 'red')) hideChips();
         const tagGone = V.tag && (V.tag.who ? !(window.NSSupper && window.NSSupper.choosing()) : V.real.decks[V.tag.deck] !== 'red');
-        if (V.tag && (modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || tagGone || V.chips)) hideTag();
-        tellRed();
-        if (modeNow() !== 'travel' || V.dark || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame
+        if (V.tag && (V.stall || modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || tagGone || V.chips)) hideTag();
+        if (!V.stall) tellRed();
+        if (V.stall || modeNow() !== 'travel' || V.dark || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame; out with the power
         stockTick();
     }
     function render(t) {
@@ -428,18 +445,24 @@
         o.setTransform(1, 0, 0, 1, 0, 0);
         o.clearRect(0, 0, OFF_W, ROWS);
         o.imageSmoothingEnabled = false;
-        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: braced(V.people, t), auraTalking: auraTalking() });
+        const sv = V.stall, lit = sv ? V.people.filter(p => p.lit) : [], others = sv ? V.people.filter(p => !p.lit) : V.people;
+        const fxOff = sv ? sv.dark.map(d => d >= 0.5) : null;
+        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: braced(others, t), auraTalking: auraTalking() && !sv, fxOff, driveOff: !!(sv && sv.cold) });
         V.drawn = TW.drawn.slice();
         const sunY = (0.4 * f.devH - f.tY0) / f.ts;                       // level with the light (Field's light sits at 40 % of the height)
         const view = { t, G: { W: OFF_W, H: ROWS }, offX: -f.tLeft, cam: f.tTop, decks: V.real.decks, engDown: V.real.engDown, E: V.Eshown, beat: V.beat,
-            flood: V.flood, sunY, fix: V.real.datable ? SLATE : null, flick: V.flick, reduced: reduced() };
+            flood: V.flood, sunY, fix: V.real.datable && !sv ? SLATE : null, flick: V.flick, reduced: reduced(), cold: !!(sv && sv.reactorCold) };
         MK.draw(o, view);
+        if (sv && window.NSStallArt) {                                     // the stall: the dead decks, their red lamps, the crew in that light
+            window.NSStallArt.draw(o, { camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, t, dark: sv.dark, red: sv.red, still: sv.still });
+            if (lit.length) { TW.drawPeople(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS }, lit, window.NSStallArt.lit); V.drawn = TW.drawn.slice(); }
+        }
         c.imageSmoothingEnabled = true;
         c.imageSmoothingQuality = V.quality;
         const s0 = performance.now(), sh = V.tremor;                          // the tremor: smooth-scaled, so not rounded
         c.drawImage(V.off, 0, 0, OFF_W, ROWS, V.slideX + (sh ? sh.dx * f.ts : 0), f.tY0 + (sh ? sh.dy * f.ts : 0), OFF_W * f.ts, ROWS * f.ts);
         watchScale(performance.now() - s0);
-        placeStock(k >= 1 && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
+        placeStock(k >= 1 && !V.stall && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
     }
     /** 'high' scaling where it is cheap (a GPU canvas); a machine where it costs over 3 ms a frame on average gets 'low'
         (bilinear: at these scales the two look nearly the same, checked at 1080p and 720p). */
@@ -477,7 +500,7 @@
     function pointer(type, e) {
         const t = now();
         if (type === 'wheel') return false;                                // the whole tower is in view: nothing to scroll
-        if (type === 'leave' || V.dark || slideK(t) < 1 || modeNow() !== 'travel') { V.hover = null; hideTag(); return false; }
+        if (type === 'leave' || V.dark || V.stall || slideK(t) < 1 || modeNow() !== 'travel') { V.hover = null; hideTag(); return false; }
         const h = hit(e);
         const SUP = window.NSSupper, who = h && (h.what === 'person' || h.what === 'bench') && IDS.includes(h.id) ? h.id : null;
         if (who && SUP && SUP.choosing()) {                                // supper, short of food: pointing names who goes without, a click picks them

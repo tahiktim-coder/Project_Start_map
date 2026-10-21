@@ -327,9 +327,10 @@ class OrbitView {
             }
 
                 ${(() => {                                                          // one button for the team: to the site the scan found, or to the surface
-                    const site = window.app && window.app.siteOf ? window.app.siteOf(planet) : null, isOpen = site && !planet[site.done] && planet.scanned;
+                    const site = window.app && window.app.siteOf ? window.app.siteOf(planet) : null, isOpen = site && !planet[site.done] && (planet.scanned || (planet.type === 'GAS_GIANT' && site.inSpace));   // a giant's site in orbit needs no scan to be reached
                     const cost = this.state.hasActiveTrait && this.state.hasActiveTrait('OBSESSED') ? 'A FULL DAY · -1 RATION' : 'NO COST';   // App.handleEvaAction
                     if (planet.isStructure || planet.isStation || planet.isAsteroidField) return '';
+                    if (planet.type === 'GAS_GIANT' && !(isOpen && site.inSpace)) return '';   // a gas giant has no ground: only a site in orbit takes a team
                     return `<button class="cmd-btn ${planet.hasEva ? 'cmd-done' : isOpen ? 'cmd-site' : ''}" id="btn-eva" ${planet.hasEva ? 'disabled' : ''}>
                         <div>${planet.hasEva ? 'TEAM ALREADY WENT' : isOpen ? `SEND TEAM TO ${site.label}` : 'SEND TEAM DOWN'}</div>
                         <div class="cost">${planet.hasEva ? 'ONE TRIP PER STOP' : isOpen ? `${site.note} · ${cost}` : `${cost} · SEARCH THE SURFACE`}</div>

@@ -20,7 +20,7 @@ const LATE_GAME_POIS = {
         weight: 15, // Rarer than Exodus wrecks
 
         context: () => `
-A dead ship is parked in orbit here. Its crew is long gone, but its navigation beacon is still running.
+A dead ship has come down here. Its crew is long gone, but its navigation beacon is still running.
 
 The beacon sends one message, over and over: the safest route onward, for any ship that comes after it.
 
@@ -92,7 +92,7 @@ Every route it gives points the same way. Down our heading.`,
         weight: 15,
 
         context: () => `
-On this dead planet, under a dome kilometres wide, there is a whole Earth garden: grass, trees, running water, birds. The grass has no roots. It just sits on the soil.
+On this planet, under a dome kilometres wide, there is a whole Earth garden: grass, trees, running water, birds. The grass has no roots. It just sits on the soil.
 
 Nobody built it. It is a copy of a real place, and the copy is not quite right.
 

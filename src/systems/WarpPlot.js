@@ -289,5 +289,11 @@
         return GRADES.rough.effect;
     }
 
-    window.WarpPlot = { play, energyDelta };
+    /** The rules, read by the new look's gauge (src/newscreen/throw/Gauge.js), so both looks play the same game. */
+    const rules = Object.freeze({
+        STAGES, LOCK, GRADES, ROUGH_FACTOR, LOCK_PAUSE_MS, FLIGHT_MS, RESULT_HOLD_MS, FIRST_PLOT_WATCH_MS, FIRST_PLOT_HOLD_MS,
+        baseDifficulty, stageDifficulty, lockGrade, finalGrade, burnsOf, pickLine, effectText,
+    });
+
+    window.WarpPlot = { play, energyDelta, rules };
 })();

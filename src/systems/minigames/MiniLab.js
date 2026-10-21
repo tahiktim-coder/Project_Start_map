@@ -33,7 +33,7 @@
     /** The art files this kit draws with (art/: MiniPaint, MiniPeople, MiniCrew), written into the page right after this
         script while the page is still being read, so every page that loads MiniLab.js gets them without tags of its own.
         Bump ART_VERSION (and this file's ?v=) when one of them changes. */
-    const ART_VERSION = 1;
+    const ART_VERSION = 2;                   // 2: MiniCrew's hoist poses (the torch on the ground)
     (function loadArt() {
         const me = document.currentScript;
         if (!me || !me.src || document.readyState !== 'loading') return;

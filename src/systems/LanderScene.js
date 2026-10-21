@@ -16,6 +16,8 @@
    own look; the flat strips you land on stay clear. The recipes come from window.MiniPaint (the travel view's Paint.js,
    copied for the minigames by art/MiniPaint.js), read when a landing starts, so this file needs nothing from src/newscreen/.
    build(g, planet, site, detail) → scene (or null without MiniPaint: LanderGame then draws its plain fallback)
+   look(g, planet) → S                        this world's look alone (its colours, air, cloud, sun, ground ramp S.GRD),
+                                              for a picture of the same place (the cutting torch at a wreck: Torch.js)
    backdrop(scene, g, V) → { canvas, jobs }   a painting of the still place for view V, done one job at a time
    drawLive(ctx, scene, g, s, now, nozzles, V)   the still place plus what moves: pools, wind, fog, smoke, dust, the
                                                  lander's shadow, the strange worlds' motion, the site's lights, our ship above
@@ -130,7 +132,7 @@
     }
 
     // ── the look of this landing: colours, air, the sun, a moon ──
-    const AIR = { rock: 0.16, ice: 0.22, dunes: 0.34, lava: 0.22, green: 0.44, sea: 0.42, haze: 0.56, sky: 0.24 };
+    const AIR = { rock: 0.16, ice: 0.22, dunes: 0.34, lava: 0.22, green: 0.44, sea: 0.42, haze: 0.56, sky: 0.24, storm: 0.5 };
     function lookOf(g, planet) {
         const K = kit(), N = K.N, type = planet.type, kindName = g.kindName || 'rock', rand = seeded(planet.id + ':look');
         const pal = paletteOf(type), seed = hashId(planet.id) % 9973;
@@ -588,7 +590,7 @@
             const y = 16 + k * 12.5, x = (((now / 1000) * g.wind * (7 + k % 3 * 3) + k * 83) % (W + 20) + W + 20) % (W + 20) - 10, len = (5 + (k % 3) * 3) * V.d;
             for (let i = 0; i < len; i += 1) f.tone(toAX(V, x) + i * Math.sign(g.wind || 1), toAY(V, y), S.airRamp, 0.42 * (1 - i / len));
         }
-        if (S.kindName !== 'haze' && S.kindName !== 'sky') return;
+        if (S.kindName !== 'haze' && S.kindName !== 'sky' && S.kindName !== 'storm') return;
         tickLayer(scene, V, 'murk', now, (L, tick) => {                                                     // murk drifting low over the ground
             const shift = tick * 0.7 * Math.sign(g.wind);
             for (let ay = Math.floor(toAY(V, 96)); ay < Math.min(V.h, toAY(V, 148)); ay++) {
@@ -727,8 +729,11 @@
         return V;
     }
 
+    /** This world's look on its own (no scene): null without the picture recipes. */
+    const look = (g, planet) => (kit() && g && planet ? lookOf(g, planet) : null);
+
     window.LanderScene = {
-        build, backdrop, bake, closeUp, drawLive, MAIN,
+        build, look, backdrop, bake, closeUp, drawLive, MAIN,
         util: { W, H, D, AW, AH, PAD_WIDTH, view, region, hAt, toAX, toAY, clampX, clamp01, seeded, hashId, kit, lump, spire, stroke, buriedHull, groundAt, mixRgb, hexOf },
     };
 })();

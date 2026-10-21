@@ -2,9 +2,9 @@
 <!--
   SILENT EXODUS · FILM 2 · THE SEA OF SHIPS (mockup, silent). The jump into sector 3, replacing the old "throw" sequence.
   The jump stalls; the stars shrink back to points; our Lander's drive coughs out and its decks go dark one by one until one
-  red lamp is left. Then, as if our eyes adjust, we see we are in a graveyard: wrecks of our own class all round us, snapped
+  red lamp is left. As the stars come back to points we see where we stopped: a graveyard, wrecks of our own class all round us, snapped
   in two, torn open to the frame, burnt black, plates peeled back, loose plating and girders drifting between them, a few with
-  a dead red beacon, and every one still pointing at the far light. The camera pulls back, and back, and back, until our ship
+  a dead red beacon, and every one still pointing at the far light. The camera pulls back in one slow move, until our ship
   is a red dot in a sea of thousands of wrecks, all on the same heading. One line from A.U.R.A.; the drive relights; white.
   About 42 seconds. Nothing in the game or the other prototypes is changed; this page only LOADS
     ../screens/game-screen-v3/paint.js   V3Paint: the dither recipe, ramps, hull() + shapeL (the Lander), lightGlow, stars
@@ -85,8 +85,8 @@ body.is-over #again { display: block; }
         cough: [2600, 4600],       // the drive coughs and goes out
         ports: [5000, 7600],       // the decks go dark one by one
         lamp: 7800,                // one red lamp left, blinking
-        reveal: [10200, 15200],    // the wrecks round us come out of the dark
-        pull: [[15400, 21600, 3.7, 24], [22200, 28600, 24, 110], [29200, 36400, 110, 270]],   // three pulls back: [t0, t1, from, to] (distance in ship lengths)
+        reveal: [1500, 3600],      // the wrecks round us come into view as the stars come back to points: they were there all along
+        pull: [[8000, 36400, 3.7, 270]],   // ONE slow pull back, no stops: [t0, t1, from, to] (distance in ship lengths)
         line: [37000, 41200],
         relight: 40400, white: [41200, 41600], end: DUR,
     };
@@ -676,7 +676,7 @@ body.is-over #again { display: block; }
             K.set(drive.gain, 0.42 * Math.min(1, burn * cough), 0.012);
             const decks = PORT_OFF.filter(o => T < o).length, back = T > TL.relight + 300 ? 5 : 0;
             K.set(sys.gain, 0.1 * Math.min(6, decks + back) / 6, 0.03);
-            const hk = clamp01(Math.log(distAt(T) / D0) / Math.log(TL.pull[2][3] / D0)), seen = smooth(TL.reveal[0] - 1500, TL.reveal[1], T);
+            const hk = clamp01(Math.log(distAt(T) / D0) / Math.log(TL.pull[TL.pull.length - 1][3] / D0)), seen = smooth(TL.reveal[0] - 1500, TL.reveal[1], T);
             K.set(hum.gain, seen * (0.08 + 0.34 * hk) * (1 + 0.12 * Math.sin(T / 1900)), 0.12);
             K.set(humLp.frequency, 140 + 900 * hk ** 1.2, 0.12);
         }
@@ -718,10 +718,9 @@ body.is-over #again { display: block; }
     addEventListener('keydown', e => { if (['Escape', 'Enter', ' '].includes(e.key)) { e.preventDefault(); if (!ended) skip(); } });
     $('again').addEventListener('click', () => { ended = false; document.body.classList.remove('is-over'); setTime(0); playing = true; });
     const SHOTS = [
-        { id: 'stall', t0: 0, t1: 4600, caption: 'The jump stalls: the stretched stars shrink back to points; the drive coughs out.' },
-        { id: 'dark', t0: 4600, t1: 10200, caption: 'Our decks go dark one by one. One red lamp is left.' },
-        { id: 'reveal', t0: 10200, t1: 15400, caption: 'As the eyes adjust: a graveyard. Wrecks of our own class all round us, snapped, gutted, burnt, all pointing at the light.' },
-        { id: 'pull', t0: 15400, t1: 36400, caption: 'The camera pulls back, and back, and back: dozens of wrecks, then hundreds, then thousands.' },
+        { id: 'stall', t0: 0, t1: 3600, caption: 'The jump stalls: the stretched stars shrink back to points, and the wrecks round us come into view, all pointing at the light.' },
+        { id: 'dark', t0: 3600, t1: 8000, caption: 'The drive coughs out. Our decks go dark one by one. One red lamp is left.' },
+        { id: 'pull', t0: 8000, t1: 36400, caption: 'The camera pulls back in one slow move: dozens of wrecks, then hundreds, then thousands.' },
         { id: 'sea', t0: 36400, t1: 42000, caption: 'Our ship is a red dot in a sea of wrecks. A.U.R.A.: the drive is back. White.' },
     ];
     window.film = {

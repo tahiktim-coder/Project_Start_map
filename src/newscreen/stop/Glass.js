@@ -5,7 +5,8 @@
    find chosen (or the landing site) and coming home, and the fuel stream pulled up from a gas giant after "Skim fuel".
    Worlds: NSWorlds.paint (art/Worlds.js) when it is loaded, so the world in the glass is the one in the travel view; else
    the sphere recipe with the orbit's colours. A station is drawStation, a field of rocks five small spheres, sector 1's
-   giant paintGiant pushed in on its limb, the Structure the light itself, the Wrong Place a dark world.
+   giant paintGiant pushed in on its limb, the Structure the light itself, the Wrong Place the copy of Earth (stop/Copy.js
+   paints it and its sky; without it, a dark world).
    Source: prototypes/slice/stop.js §2-3 (backdrop, lightNow, worldPic, worldGeom, siteOf, drawGlass, skimFlow, the
    shuttle), generalised from five fixed places to any real node (docs/BUILD_B.md §2). No randomness: seeds hash the id.
    Loaded only when the new-screen switch is on, after stop/Dive.js.
@@ -186,6 +187,8 @@
             p.half = half; p.r = r;
         } else if (pl.kind === 'light') {
             p = D.pic(1, 1, []); p.half = 0; p.r = 0; p.none = true;
+        } else if (pl.kind === 'wrong' && window.NSCopy) {                // the copy of Earth: stop/Copy.js paints it (it turns, then stops)
+            p = D.pic(1, 1, []); p.half = 0; p.r = Math.round(ORBIT.r * f); p.copy = true;
         } else {
             const r = Math.round(ORBIT.r * f), half = worldExtent(pl.node, r);
             p = D.pic(half * 2, half * 2, [g => { const sp = P.painter(half * 2, half * 2, false); paintWorld(pl, sp, half, r, f); g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0); }]);
@@ -286,6 +289,12 @@
     // ── one frame of the glass ──
     function draw(c, t, o) {
         const opts = o || {}, shownAt = opts.shownAt == null ? -1e9 : opts.shownAt;
+        if (cur && cur.kind === 'wrong' && window.NSCopy) {                // the copy of Earth: its own sky, stars in rows, and Earth (stop/Copy.js)
+            c.save(); c.beginPath(); c.rect(WIN.x0, WIN.y0, GW, GH); c.clip();
+            try { window.NSCopy.glass(c, t, { g: geom(t, shownAt) }); } catch (err) { console.error('NewScreen stop: the copy failed', err); }
+            c.restore();
+            return;
+        }
         const f = P.framer(c, SW, SH), bk = backdrop(Math.floor(t / 900) % 240), lg = lightNow();
         c.save(); c.beginPath(); c.rect(WIN.x0, WIN.y0, GW, GH); c.clip();
         c.drawImage(bk.c, WIN.x0, WIN.y0);

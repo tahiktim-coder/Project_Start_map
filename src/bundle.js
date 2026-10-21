@@ -1118,7 +1118,9 @@ const NEW_LOOK_ECONOMY = Object.freeze({
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
-const SCRAPES_PER_BROKEN_DECK = 3; // flying the jump (Corridor): every third scrape breaks a deck
+const SCRAPES_PER_BROKEN_DECK = 2; // flying the jump (Corridor): every second scrape breaks a deck (was 3). Measured over a run's
+                                   // four flown jumps (2026-10-21): a careful pilot loses about 0.6 decks (a slower one, 1.5), a
+                                   // ship that never moves all of them, one at full throttle the whole way about five. At 3: 0.2, 5, 3
 // Our wrecks (docs/CANON.md §2): the further out, the higher the hull number. Index = sector. The callsign comes from the number.
 const WRECK_HULL_RANGE = [[1, 8], [1, 8], [1, 8], [212, 980], [1400, 6000], [9000, 22000], [30000, 41000]];
 const SHORT_HULL_RANGE = 50;     // below this many hull numbers, a new wreck is picked from the numbers not yet used
@@ -1839,8 +1841,9 @@ class App {
             this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 
-            // Tutorial: first warp
-            if (!this.state._tutorialWarpSeen) {
+            // Tutorial: first warp to a world (beside a station or in a field of rocks nobody lands: it waits for the first world)
+            const isLandingPlace = !(planet.isStation || planet.type === 'STATION' || planet.isAsteroidField || planet.type === 'ASTEROID_FIELD');
+            if (!this.state._tutorialWarpSeen && isLandingPlace) {
                 this.state._tutorialWarpSeen = true;
                 setTimeout(() => {
                     this.state.addLog('A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander."');
@@ -1971,18 +1974,20 @@ class App {
         }
     }
 
-    /** The crew and A.U.R.A. react to the new orbit. Not at the light: nothing random happens there. */
+    /** The crew and A.U.R.A. react to the new orbit (beside a station: to docking, nobody lands there). Not at the light:
+        nothing random happens there. */
     reactToOrbit(planet, isFinale) {
         const barks = typeof BarkSystem !== 'undefined' ? window.BarkSystem : null;
         const isSigned = isNewScreen() && window.NSOrbit && window.NSOrbit.signed(this);   // the new screen: A.U.R.A. warns here, so no "all clear"
+        const arrival = planet && (planet.isStation || planet.type === 'STATION') ? 'ENTER_STATION' : 'ENTER_ORBIT';
         if (barks && !isFinale) {
             barks.checkPlanetBarks(this.state, planet);
-            if (!isSigned) setTimeout(() => barks.tryBark('ENTER_ORBIT', this.state, { planet }), 50);     // if no special bark fired
+            if (!isSigned) setTimeout(() => barks.tryBark(arrival, this.state, { planet }), 50);     // if no special bark fired
             setTimeout(() => barks.checkResourceBarks(this.state), 600);
         }
         const aura = typeof AuraSystem !== 'undefined' ? window.AuraSystem : null;
         if (!aura || isFinale) return;
-        if (!isSigned) aura.tryComment('ENTER_ORBIT', this.state);
+        if (!isSigned) aura.tryComment(arrival, this.state);
         aura.checkAdversarialAction(this.state);
         if (aura.triggerPremonition(this.state)) this.state.addLog(`[A.U.R.A.'s reading was right.]`);
         aura.generatePremonition(this.state);                                                // maybe a new one for the next action
@@ -2419,19 +2424,33 @@ class App {
     flyCorridor() {
         const from = this.state.currentSector;
         const damaged = Object.fromEntries(Object.entries(this.state.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
-        const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
+        const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: this.state.energy, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
         return window.MiniHost.play('corridor', opts)
             .then(result => this.applyCorridorResult(result), err => console.error(err));
     }
 
     /**
-     * Every third scrape breaks a deck: the one the flight showed turning red, else a random one.
-     * Who flew it counts toward what A.U.R.A. says about who flies.
+     * Every SCRAPES_PER_BROKEN_DECK-th scrape breaks a deck: the one the flight showed turning red, else a random one.
+     * What the flight cost or saved in energy (Corridor STAKES: A.U.R.A.'s slower way costs, a clean flight of your own saves),
+     * already said in her report, is applied here. Who flew it counts toward what A.U.R.A. says about who flies.
      */
+    /** How many decks a jump's scrapes may break: never the one that would end the run (3+ broken and too little salvage for the
+        cheapest repair: checkLoseConditions' hull breach). The flight is a risk to the ship, never a sudden game over (as flyOnReserve). */
+    corridorBreakAllowance() {
+        const decks = Object.values(this.state.shipDecks), down = decks.filter(d => d.status === 'DAMAGED').length;
+        if (decks.length && this.state.salvage >= Math.max(...decks.map(d => d.repairCost || 0))) return Infinity;   // any break can be paid for
+        return Math.max(0, 2 - down);
+    }
+
     applyCorridorResult(result) {
         if (!result) return;
         this.noteReliance(!!result.auraFlew);
-        const brokenDecks = Math.floor((result.scrapes || 0) / SCRAPES_PER_BROKEN_DECK), shownRed = result.damagedRooms || [];
+        const energyDelta = Number.isFinite(result.energyDelta) ? Math.round(result.energyDelta) : 0;
+        if (energyDelta && !window.TEST_MODE) {                                        // tests spend no energy (consumeEnergy is off there too)
+            this.state.energy = Math.max(0, Math.min(100, this.state.energy + energyDelta));
+            this.state.addLog(energyDelta > 0 ? `Good flying: ${energyDelta} energy saved.` : `A.U.R.A.'s slower course: ${-energyDelta} extra energy.`);   // DRAFT
+        }
+        const brokenDecks = Math.min(Math.floor((result.scrapes || 0) / SCRAPES_PER_BROKEN_DECK), this.corridorBreakAllowance()), shownRed = result.damagedRooms || [];
         for (let k = 0; k < brokenDecks; k++) {
             if (!this.state.damageDeck(shownRed[k])) this.state.damageRandomDeck();
         }
@@ -2619,10 +2638,12 @@ class App {
             this.state.addLog("Crew Quarters: Rest cycle complete. Stress levels reduced.");
         }
 
-        // The flight, then what the crew makes of it, then the campfire. Into sector 3 the burn stalls and the throw plays instead.
+        // The flight, then what the crew makes of it, then the campfire. Into sector 3 the burn stalls and the throw plays instead
+        // (the new look: on the travel view itself, then the sea of ships, then the arrival: src/newscreen/throw/Throw.js).
         const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
         const fly = () => this.showWarpAnimation(() => {
-            const afterFlight = isThrow ? window.TheThrow.play(this)
+            if (this.state.gameOver) return;                                         // the run ended in the flight: nothing more follows
+            const afterFlight = isThrow ? (isNewScreen() && window.NSThrow ? window.NSThrow.play(this) : window.TheThrow.play(this))
                 : this.reactToSectorJump().then(() => new Promise(done => this.showCampfireEvent(done)));
             afterFlight.then(() => this.enterNextSector());
         }, isThrow);
@@ -2692,15 +2713,26 @@ class App {
         onComplete();
     }
 
-    /** Into sector 3: the plot (WarpPlot), then the throw (TheThrow, played by handleSectorJump). No sector name; only A.U.R.A. may speak. */
+    /** Into sector 3: the plot (WarpPlot), then the throw (TheThrow, played by handleSectorJump). No sector name; only A.U.R.A. may speak.
+        The new look plays WarpPlot's game as the 'burn' minigame (src/newscreen/throw/Gauge.js): same rules, no arrival card
+        (its line opens the stall on the travel view; A.U.R.A.'s word on who flies is said after the crew's). */
     plotStalledBurn(onComplete) {
+        const isGauge = isNewScreen() && !!window.MiniHost && window.MiniHost.has('burn');
         if (!window.WarpPlot) { onComplete(); return; }
         const nextSector = this.state.currentSector + 1;
         const plotOptions = this.getPlotOptions(`S${nextSector} —`, 'sector');
         const jumpBase = isNewScreen() ? NEW_LOOK_ECONOMY.JUMP : SECTOR_JUMP_BASE_COST;
         plotOptions.cost = jumpBase;                                                 // what applyPlotResult grades against below
-        plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         const relianceVoice = this.getRelianceVoice();
+        if (isGauge) {
+            plotOptions.relianceVoice = relianceVoice;
+            window.MiniHost.play('burn', plotOptions).then(result => {
+                this.applyPlotResult(result, jumpBase);
+                onComplete();
+            }, err => { console.error('The burn gauge failed; the jump goes on as A.U.R.A. plotted it', err); onComplete(); });
+            return;
+        }
+        plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
         window.WarpPlot.play(plotOptions).then(result => {
             this.applyPlotResult(result, jumpBase);
@@ -2885,7 +2917,7 @@ class App {
 
         const cutIn = selected.noHatch ? Promise.resolve() : this.cutIntoWreck(shipName, planet, selected);   // a crater has no hatch to cut
         cutIn.then(() => this.showNarrativeEncounter({
-            art: 'EXODUS_WRECK',
+            art: `EXODUS_WRECK:${selected.id}`,                                      // the card's picture: the wreck as this story leaves it (SceneArt)
             title: selected.title,
             speaker: 'NARRATOR',
             context: `[highlight]${shipName}[/highlight]\n\n${selected.context(shipName)}`,
@@ -2907,23 +2939,26 @@ class App {
     }
 
     /** The team gets into the wreck by the door it has (Torch: the hatch cut, frozen, a fuel line across it; or no torch: cut
-        open long ago, a split in the hull, an airlock with power). Resolves once they are in; it never rejects. */
+        open long ago, a split in the hull, an airlock with power). Every wreck of ours lies on its planet's surface, so the torch
+        is played on the ground, under that world's own sky (TorchGround.js). Resolves once they are in; it never rejects. */
     cutIntoWreck(shipName, planet, story) {
         const [cutter, spotter] = this.torchCrew();
         if (!cutter || !window.MiniHost || !window.MiniHost.has('torch')) return Promise.resolve();
         const door = this.wreckDoorFor(planet, story);
-        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name };
+        const world = planet ? { type: planet.type, temp: planet.metrics ? planet.metrics.temp : null, air: planet.atmosphere, id: planet.id } : null;
+        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name, place: 'ground', world };
         return window.MiniHost.play('torch', opts).then(result => {
             if (result && result.opened) this.state.addLog(this.doorLogLine(result, shipName, cutter.name));
         }, err => console.error(err));
     }
 
-    /** This wreck's door (TorchDoors.pick: by the doors of this run so far, the hull number, the sector and the wreck's story),
-        picked once and kept on the planet; the run remembers the order. Without TorchDoors.js every door is the hatch cut. */
+    /** This wreck's door (TorchDoors.pick: by the doors of this run so far, the hull number, the sector, the wreck's story and its
+        world's temperature: frost only on a cold world, no frozen fuel on a hot one), picked once and kept on the planet; the run
+        remembers the order. Without TorchDoors.js every door is the hatch cut. */
     wreckDoorFor(planet, story) {
         if (planet && planet.wreckDoor) return planet.wreckDoor;
-        const history = this.state._wreckDoors || [], doors = window.TorchDoors;
-        const door = doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id }) : 'cut';
+        const history = this.state._wreckDoors || [], doors = window.TorchDoors, temp = planet && planet.metrics ? planet.metrics.temp : null;
+        const door = doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id, temp }) : 'cut';
         this.state._wreckDoors = history.concat(door);
         if (planet) planet.wreckDoor = door;
         return door;
@@ -3251,38 +3286,7 @@ Then you're through.`,
                     text: "We made it",
                     desc: "Return to a random sector, but at great cost.",
                     effect: (state) => {
-                        // Heavy cost
-                        state.energy = Math.max(10, state.energy - 50);
-                        state.salvage = Math.max(0, state.salvage - 30);
-
-                        // Crew trauma
-                        state.crew.forEach(c => {
-                            if (c.status !== 'DEAD') {
-                                c.stress = Math.min(3, (c.stress || 0) + 1);
-                                if (!c.tags.includes('WRONG_PLACE_SURVIVOR')) {
-                                    c.tags.push('WRONG_PLACE_SURVIVOR');
-                                }
-                            }
-                        });
-
-                        // Return to a random sector (prefer ahead)
-                        const targetSector = Math.min(6, Math.max(1, (state._previousSector || 1) + Math.floor(Math.random() * 2)));
-                        state.currentSector = targetSector;
-                        state.sectorNodes = PlanetGenerator.generateSector(targetSector);
-                        state._inWrongPlace = false;
-
-                        // Apply sector entry effects
-                        const config = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[targetSector] : null;
-                        if (config && config.hazard && config.hazard.onSectorEnter) {
-                            config.hazard.onSectorEnter(state, state.sectorNodes);
-                        }
-
-                        state.currentSystem = null;
-                        state.lastVisitedSystem = null;
-                        if (window.app) window.app.plantSectorPage();
-                        state.addLog("=== REALITY BREACH SUCCESSFUL ===");
-                        state.addLog(`Emerged in Sector ${targetSector}. The crew will never forget what they saw.`);
-
+                        this.escapeWrongPlace(state);
                         return "You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress.";
                     }
                 }
@@ -3300,7 +3304,37 @@ Then you're through.`,
         });
     }
 
+    /**
+     * Out of the Wrong Place by force, the same in both looks (the default game's card above; the new look's held key and its
+     * reveal, src/newscreen/stop/Copy.js): -50 energy (never below 10), -30 salvage, everyone +1 stress and marked
+     * WRONG_PLACE_SURVIVOR, then back to normal space in the sector we came from or one ahead, freshly made, with its hazard
+     * on entry and its page planted. Returns what it took: { sector, energy, salvage }.
+     */
+    escapeWrongPlace(state) {
+        const before = { energy: state.energy, salvage: state.salvage };
+        state.energy = Math.max(10, state.energy - 50);                                     // heavy cost
+        state.salvage = Math.max(0, state.salvage - 30);
+        state.crew.forEach(c => {                                                           // crew trauma
+            if (c.status === 'DEAD') return;
+            c.stress = Math.min(3, (c.stress || 0) + 1);
+            if (!c.tags.includes('WRONG_PLACE_SURVIVOR')) c.tags.push('WRONG_PLACE_SURVIVOR');
+        });
+        const targetSector = Math.min(6, Math.max(1, (state._previousSector || 1) + Math.floor(Math.random() * 2)));   // prefer ahead
+        state.currentSector = targetSector;
+        state.sectorNodes = PlanetGenerator.generateSector(targetSector);
+        state._inWrongPlace = false;
+        const config = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[targetSector] : null;   // sector entry effects
+        if (config && config.hazard && config.hazard.onSectorEnter) config.hazard.onSectorEnter(state, state.sectorNodes);
+        state.currentSystem = null;
+        state.lastVisitedSystem = null;
+        this.plantSectorPage();
+        state.addLog("=== REALITY BREACH SUCCESSFUL ===");
+        state.addLog(`Emerged in Sector ${targetSector}. The crew will never forget what they saw.`);
+        return { sector: targetSector, energy: Math.max(0, before.energy - state.energy), salvage: Math.max(0, before.salvage - state.salvage) };
+    }
+
     handleWrongPlaceAccept() {
+        if (isNewScreen() && window.NSCopy) { window.NSCopy.askGoingDown(this); return; }   // the new look: the crew have their say, then the trap's ending
         // Accepting your fate in THE WRONG PLACE is a unique ending
         this.showEndingScreen({
             ending: 'WRONG_PLACE_ACCEPTED',
@@ -3425,6 +3459,31 @@ Then you're through.`,
         this.state.addLog(door === 'LIGHT' ? 'Going into the light.' : from === 'light' ? 'Turning back to Eden.' : 'We are staying on Eden.');
         if (isNewScreen() && window.NSEnding) {
             window.NSEnding.play(this, ending, { from }).then(() => this.recordEnding(ending), err => {
+                console.error('The ending scene failed; the end screen instead', err);
+                this.showEndingScreen(asScreen());
+            });
+            return true;
+        }
+        this.showEndingScreen(asScreen());
+        return true;
+    }
+
+    /**
+     * The new look's "Go down" at the copy of Earth (the crew had their say first, src/newscreen/stop/Copy.js): the trap's
+     * ending, started as endJourney starts the others: once per run, the run over, its scene (end/Ending.js, kind 'copy'),
+     * the save dropped when the end card shows. The default game keeps handleWrongPlaceAccept's old end screen.
+     */
+    endOnTheCopy() {
+        if (this._journeyEnded) return false;
+        let ending;
+        try { ending = window.NSCopyWords.ending(this.state); } catch (err) { console.error('The ending could not be built', err); return false; }
+        this._journeyEnded = true;
+        this.state.gameOver = true;
+        if (window.EncounterCard && typeof window.EncounterCard.noOutcome === 'function') window.EncounterCard.noOutcome();   // the scene is the outcome
+        this.state.addLog('We are going down to it.');
+        const asScreen = () => ({ ending: ending.ending, title: ending.title.toUpperCase(), text: ending.text });
+        if (isNewScreen() && window.NSEnding) {
+            window.NSEnding.play(this, ending, { from: 'copy' }).then(() => this.recordEnding(ending), err => {
                 console.error('The ending scene failed; the end screen instead', err);
                 this.showEndingScreen(asScreen());
             });
@@ -3801,7 +3860,8 @@ Then you're through.`,
             this.state.addLog('A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part."');
         }
 
-        this.state.addLog("Detailed surface analysis complete. Resource data available.");
+        const isStationHere = !!(planet.isStation || planet.type === 'STATION');               // a station has no surface
+        this.state.addLog(isStationHere ? "Detailed scan of the station complete. Resource data available." : "Detailed surface analysis complete. Resource data available.");   // DRAFT (the station's line)
 
         // === SIGNAL TYPE SCAN BONUSES ===
         // Different signals provide different benefits when detected
@@ -3915,7 +3975,7 @@ Then you're through.`,
         }
 
         // 2. Launch Sequence (planet already declared at top of function)
-        this.state.addLog(`Probe launched to ${planet.name} surface...`);
+        this.state.addLog(planet.isStation || planet.type === 'STATION' ? `Probe launched to ${planet.name}...` : `Probe launched to ${planet.name} surface...`);   // DRAFT: a station has no surface
 
         // Bark: crew reacts to probe deploy
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
@@ -5506,6 +5566,12 @@ Then you're through.`,
      */
     handleAnomalyTeleport(detail) {
         const { destination, type } = detail;
+        if (isNewScreen() && type === 'WRONG_PLACE') {   // the new look: no outcome step; the fall itself is the outcome (src/newscreen/stop/Copy.js)
+            if (window.EncounterCard && typeof window.EncounterCard.noOutcome === 'function') window.EncounterCard.noOutcome();
+            const open = () => { if (!(window.NSCopy && window.NSCopy.fall(this))) { this.state.emitUpdates(); this.renderOrbit(); } };   // not on the bridge: it opens plainly
+            if (window.EncounterCard && typeof window.EncounterCard.whenFree === 'function') window.EncounterCard.whenFree(open); else open();
+            return;
+        }
         if (isNewScreen()) {                       // the new look: the choice's outcome card first, then a quiet fold, then the new place
             const FOLD_PEAK_MS = 400, FOLD_MS = 1600;
             const fold = () => {

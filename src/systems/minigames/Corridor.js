@@ -6,7 +6,8 @@
    On the jump into sector 6, once the disc is aboard (opts.twin), a ship exactly like ours flies beside us for a while, a
    quarter of a second late, and the light at the end of the heading fills the view. The ship follows the pointer (or the
    arrows); holding the mouse, Space, W or Shift opens the throttle, so the end comes sooner and the debris faster. Once through, A.U.R.A. says what the flight found, one
-   line at a time. A.U.R.A. can fly: steady, never faster. Quiet sound, only when the game's is on.
+   line at a time. A.U.R.A. can fly: steady, never faster, and her slower way costs energy; a flight of your own with no
+   scrape saves energy (THE STAKES, below). Quiet sound, only when the game's is on.
    THE LOOK (2026-10-11) is the travel view's, drawn at density 1.5 (720 × 405 art pixels; the flight still thinks in 480 × 270
    units): each sector's sky is its place in sky F (the band, the rare colours and its enormous thing: the vast planet, the
    dark clouds and the spiral, the shell and its pulsar, the pillars, the eye, the ring of lit dust round the light); the light
@@ -20,12 +21,18 @@
                         A.U.R.A.'s first line at the end counts the living and the injured (without the Commander). Missing: all four, well
            damaged      optional: { deckKey: true } for decks already broken, drawn red on the ship inset
            scrapesPerBreak  optional: every this many scrapes a deck breaks and turns red (default 1: every scrape)
+           maxBreaks    optional: at most this many decks may break in this flight (the game's allowance: never the one that
+                        would end the run); missing: no limit
+           energy       optional: the ship's energy now (the jump already paid), so what A.U.R.A. says the flight cost or
+                        saved is what the game can really take or give (missing: plenty either way)
            avoidHulls   optional: hull numbers the game has already used; the two hulls seen are never these when the range allows
            twin         optional: true when the disc is aboard; then on the jump into sector 6 the twin flies beside us
                         (missing or false: no twin)
-   result  { scrapes, auraFlew, beaconsHeard, shipsSeen, hulls, damagedRooms }
-           scrapes      debris or hulls that touched the ship (only when the player flies)
+   result  { scrapes, auraFlew, energyDelta, beaconsHeard, shipsSeen, hulls, damagedRooms }
+           scrapes      debris or hulls that touched the ship (A.U.R.A. too, rarely: in the thickest wave, OPEN_WAVE)
            auraFlew     A.U.R.A. had the stick for at least half the flight
+           energyDelta  what the flight cost (negative) or saved (positive), as A.U.R.A. said it (STAKES); the game adds it.
+                        A skip (autoResult) is A.U.R.A.'s flight: her cost, and her clips counted on her own line
            beaconsHeard the counter at the end: the destination sector's level
            shipsSeen    hulls that came close enough to name (always 2)
            hulls        their hull numbers
@@ -53,8 +60,17 @@
     const BOOST = 1.75, FEEL = 2.2, BOOST_UP = 0.8, BOOST_DOWN = 0.6, PUSH = 0.07;
     const AIM_GAIN = 3.2, AIM_REACH = [200, 100];               // the pointer: how keenly the ship goes where it points; px from the middle to the box edge
     // the flight's shape, in shares of the course: the hulls far apart, the debris in waves [middle, half-width, share] that
-    // build and ease, with empty space before, between and after
+    // build and ease, with empty space before, between and after (each sector packs them tighter: SECTORS tight)
     const HULL_AT = [0.34, 0.82], DEBRIS_FROM = 0.07, WAVES = [[0.17, 0.09, 0.3], [0.65, 0.13, 0.52], [0.9, 0.04, 0.18]], NEB_SWELL = 0.08;
+    // the thickest wave: its debris is not moved off A.U.R.A.'s safe line, so she can be clipped there too (rarely: about one
+    // flight in eight into sector 2, one in six into sector 6); everywhere else the safe line stays clear for her
+    const OPEN_WAVE = 1;
+    // THE STAKES (2026-10-21): what the flight costs or saves in energy, said in A.U.R.A.'s report and returned as energyDelta,
+    // the way the sector 3 gauge hands fuel back for a clean burn (WarpPlot GRADES). Her way is slower and longer: a flight she
+    // flew (at least half of it) costs AURA; a flight you flew but handed her part of costs that part's share of AURA (a stretch
+    // under YOURS of the course is yours). Your own flight: no scrape saves CLEAN, and FAST more with the throttle fully open
+    // for FAST_SHARE of the course or more; one scrape saves ONE; two or more save nothing. ENERGY_MAX: the game's tank.
+    const STAKES = { AURA: 4, CLEAN: 5, FAST: 2, ONE: 2, FAST_SHARE: 0.5, YOURS: 0.05 }, ENERGY_MAX = 100;
     // the twin (the jump into sector 6, the disc aboard): when it is beside us (shares of the course); how far to the side,
     // above, ahead and behind; how late it copies us; how far the camera turns to it; how much of our speed-up it shows by dropping back
     const TWIN = { from: 0.4, to: 0.62, side: 4.6, up: -0.6, z: 6, behind: -6, lag: 0.25, settled: 0.3, look: 0.5, slip: 0.35 };
@@ -72,15 +88,22 @@
     const FIRST_SECTOR = 1, LAST_SECTOR = 6, SHIPS_PER_JUMP = 2, CREW_SIZE = 4, BRIEFED = 8;
 
     // Per sector (CANON.md §2): the beacons heard by the time you are through it, the hull numbers out there, and the flight:
-    // course seconds, debris, the share that sets a course for you, the share of hulls torn, how late the count climbs,
-    // the false sun and the nebula's strength at the start and end of the flight, its offset and mirroring. Sector 1 is a sky.
+    // course seconds, debris, the share that sets a course for you, how close to us that share aims (spread: ± units across
+    // and up), how far out it turns towards us (aimAt, course units: the nearer, the less warning; AIM_AT before), how tightly
+    // the waves are packed (tight: their half-widths × this), the share of hulls torn, how late the count climbs, the false sun
+    // and the nebula's strength at the start and end of the flight, its offset and mirroring. Sector 1 is a sky.
+    // The flights get harder each sector (2026-10-21): more of the debris aims at us, closer, turning later, in tighter waves;
+    // sector 2, the first flown jump, is the gentlest (today's warning). Measured frame by frame with this flight's own numbers
+    // (2,000 flights a sector): a careful pilot, who steers away from the nearest red piece 0.45 s after it turns red, takes
+    // about 0.2 scrapes into sector 2 and 1.2 into sector 6 (a quicker one, 0.35 s: 0.2 and 0.5; a slower, 0.55 s: 0.3 and
+    // 2.5); a ship that never moves about 3.1 and 6.5; one at full throttle the whole way about 2.3 and 4.3; A.U.R.A. 0.1 and 0.2.
     const SECTORS = {
         1: { heard: 0, sun: [0.05, 0.05], neb: [0.4, 0.4], nebU: -80, flip: 1 },
-        2: { heard: 8, hulls: [1, 8], dur: 50, debris: 36, aim: 0.18, broken: 0.3, curve: 1.2, sun: [0.06, 0.08], neb: [0.42, 0.5], nebU: 0, flip: 1 },
-        3: { heard: 687, hulls: [212, 980], dur: 52, debris: 50, aim: 0.15, broken: 0.6, curve: 1.6, sun: [0.18, 0.22], neb: [0.52, 0.42], nebU: 0, flip: -1 },
-        4: { heard: 5614, hulls: [1400, 6000], dur: 54, debris: 58, aim: 0.14, broken: 0.7, curve: 1.9, sun: [0.26, 0.32], neb: [0.4, 0.5], nebU: 60, flip: 1 },
-        5: { heard: 21483, hulls: [9000, 22000], dur: 56, debris: 64, aim: 0.13, broken: 0.8, curve: 2.2, sun: [0.35, 0.5], neb: [0.42, 0.32], nebU: 100, flip: 1 },
-        6: { heard: 39806, hulls: [30000, 41000], dur: 58, debris: 70, aim: 0.12, broken: 0.85, curve: 2.4, sun: [0.5, 1.45], neb: [0.34, 0.16], nebU: 120, flip: -1, twin: true },   // twin: only with opts.twin
+        2: { heard: 8, hulls: [1, 8], dur: 50, debris: 40, aim: 0.16, spread: [0.68, 0.39], aimAt: 28, tight: 1, broken: 0.3, curve: 1.2, sun: [0.06, 0.08], neb: [0.42, 0.5], nebU: 0, flip: 1 },
+        3: { heard: 687, hulls: [212, 980], dur: 52, debris: 46, aim: 0.17, spread: [0.66, 0.38], aimAt: 26, tight: 0.95, broken: 0.6, curve: 1.6, sun: [0.18, 0.22], neb: [0.52, 0.42], nebU: 0, flip: -1 },
+        4: { heard: 5614, hulls: [1400, 6000], dur: 54, debris: 52, aim: 0.18, spread: [0.64, 0.36], aimAt: 24, tight: 0.9, broken: 0.7, curve: 1.9, sun: [0.26, 0.32], neb: [0.4, 0.5], nebU: 60, flip: 1 },
+        5: { heard: 21483, hulls: [9000, 22000], dur: 56, debris: 56, aim: 0.19, spread: [0.62, 0.35], aimAt: 21, tight: 0.86, broken: 0.8, curve: 2.2, sun: [0.35, 0.5], neb: [0.42, 0.32], nebU: 100, flip: 1 },
+        6: { heard: 39806, hulls: [30000, 41000], dur: 58, debris: 60, aim: 0.22, spread: [0.6, 0.34], aimAt: 20, tight: 0.82, broken: 0.85, curve: 2.4, sun: [0.5, 1.45], neb: [0.34, 0.16], nebU: 120, flip: -1, twin: true },   // twin: only with opts.twin
     };
     const fmt = n => n.toLocaleString('en-US');
     const smooth = x => x * x * (3 - 2 * x);
@@ -120,11 +143,24 @@
     const PLURAL_ROOMS = ['quarters'];                          // "the crew quarters are damaged"
     // how A.U.R.A. opens her report on arriving in each sector, so no two jumps start the same way
     const OPENINGS = { 2: "We're through, Commander.", 3: "We're clear, Commander.", 4: 'We made it through, Commander.', 5: 'Out of the debris, Commander.', 6: 'All clear, Commander.' };
+    // ── DRAFT lines (2026-10-21; the designer rewrites them; docs/STYLE.md: one idea, 20 words at most; A.U.R.A. without
+    //    contractions). Her offer before the flight: on the first flown jump (into sector 2) she says once what her way costs.
+    const OFFER = 'Debris on the heading, Commander. I can fly us through, if you prefer.';
+    const OFFER_FIRST = n => `Debris on the heading, Commander. I can fly us through, but slower. It costs ${n} more energy.`;   // DRAFT
+    // what the flight cost or saved, said after the scrapes (STAKES; n is what the game can really take or give)
+    const PAID = {
+        aura: n => `I took the long way round, Commander. It cost ${n} more energy.`,      // DRAFT (the brief's own line)
+        part: n => `I flew part of it the long way round. That cost ${n} more energy.`,     // DRAFT: you handed her the stick a while
+        clean: n => `A clean line, Commander. That saved ${n} energy.`,                     // DRAFT
+        fast: n => `Fast and clean, Commander. That saved ${n} energy.`,                    // DRAFT: the throttle open most of the way
+        one: n => `That still saved ${n} energy.`,                                          // DRAFT: after "One scrape on the hull."
+    };
     const hash = (n, s) => { const h = Math.imul(Math.imul(n, 374761393) ^ s, 1274126177); return ((h ^ (h >>> 15)) & 1023) / 1023; };
     let throttleTaught = false;                                 // the hint shows until the player first opens the throttle
     // what A.U.R.A. has already reported on earlier jumps this session: the head count (said again only when it changes)
     // and whether she has compared the beacons with the briefing (said in full once)
     let told = { crew: null, briefing: false };
+    let live = null;                                            // the open flight's debug state (Corridor.debug.state), or null
 
     // ── the game's options, checked at the door ──
     const asInt = v => (typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : NaN);
@@ -154,9 +190,10 @@
     const listOf = xs => (xs.length > 1 ? xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1] : xs[0]);
     /** What A.U.R.A. reports once through, one line each: the crew (when the count has changed since she last said it), the
         beacons (against the briefing the first time they outnumber it; not at all when someone just said the count), the hulls
-        we passed, the scrapes and what they broke. Plain words where a card used to be.
-        tell: { crew: the head count to add, or '', count: say the beacons, briefing: compare them with the briefing } */
-    function report(sector, heard, nums, hits, rooms, tell) {
+        we passed, the scrapes and what they broke, then what the flight cost or saved. Plain words where a card used to be.
+        tell: { crew: the head count to add, or '', count: say the beacons, briefing: compare them with the briefing }
+        paid: stakesOf's { kind, delta } (nothing is said when delta is 0) */
+    function report(sector, heard, nums, hits, rooms, tell, paid) {
         const hulls = [...nums].sort((a, b) => a - b).map(fmt), broke = rooms.map(k => ROOM_NAMES[k] || k);
         const lines = [(OPENINGS[sector] || OPENINGS[2]) + tell.crew];
         if (tell.count) lines.push(heard === BRIEFED ? `${count(heard)} beacons heard, as the briefing said.`
@@ -165,7 +202,21 @@
         const isPlural = broke.length > 1 || PLURAL_ROOMS.includes(rooms[0]);
         const damage = broke.length ? ` ${listOf(broke).replace(/^./, c => c.toUpperCase())} ${isPlural ? 'are' : 'is'} damaged.` : '';
         lines.push(hits ? `${count(hits)} ${hits > 1 ? 'scrapes' : 'scrape'} on the hull.${damage}` : 'No scrapes on the hull.');
+        if (paid && paid.delta && PAID[paid.kind]) lines.push(PAID[paid.kind](Math.abs(paid.delta)));
         return lines;
+    }
+    /** What the flight cost or saved (STAKES): { kind: 'aura' | 'part' | 'clean' | 'fast' | 'one' | 'none', delta }.
+        auraShare: the share of the course A.U.R.A. flew; fullShare: the share flown with the throttle fully open; energy: the
+        tank now (not a number: plenty), so a cost never takes more than is left and a saving never overfills it; steered: you
+        touched the controls in the flight (a ship nobody steers saves nothing, even when the debris happens to miss it). */
+    function stakesOf(hits, auraShare, fullShare, energy, steered) {
+        const has = Number.isFinite(energy), left = has ? Math.max(0, energy) : Infinity, room = has ? Math.max(0, ENERGY_MAX - energy) : Infinity;
+        const cost = (kind, n) => ({ kind, delta: -Math.min(left, n) || 0 }), save = (kind, n) => ({ kind, delta: Math.min(room, n) });
+        if (auraShare >= 0.5) return cost('aura', STAKES.AURA);
+        if (auraShare > STAKES.YOURS) return cost('part', Math.max(1, Math.round(STAKES.AURA * auraShare)));   // any share of hers costs something
+        if (hits >= 2 || !steered) return { kind: 'none', delta: 0 };
+        if (hits === 1) return save('one', STAKES.ONE);
+        return fullShare >= STAKES.FAST_SHARE ? save('fast', STAKES.CLEAN + STAKES.FAST) : save('clean', STAKES.CLEAN);
     }
     // a scrape can only break a room that is a deck in the game (the inset's med bay, MiniShip's old 'upgrades' key, is not one)
     const DECK_KEYS = MiniShip.ROOMS.map(r => r.key).filter(k => k !== 'upgrades');
@@ -861,11 +912,13 @@
                 clamp(BOX[1] * (0.53 * Math.sin(0.55 * tt + ph[2]) + 0.15 * Math.sin(1.25 * tt + ph[3])) + b[1], -BOX[1] + 0.4, BOX[1] - 0.4)];
         };
     }
-    /** Where in the course (course seconds) a piece of loose debris comes: in one of the waves, never in the first stretch. */
+    /** Where in the course (course seconds) a piece of loose debris comes, and in which wave: [at, wave index]. Never in the
+        first stretch; the sector's waves are packed `tight`. */
     function debrisAt(cfg, r) {
-        let pick = r(), w = WAVES[WAVES.length - 1];
-        for (const wave of WAVES) { if (pick < wave[2]) { w = wave; break; } pick -= wave[2]; }
-        return clamp(w[0] + w[1] * (r() + r() - 1), DEBRIS_FROM, 0.97) * cfg.dur;
+        let pick = r(), k = WAVES.length - 1;
+        for (let i = 0; i < WAVES.length; i++) { if (pick < WAVES[i][2]) { k = i; break; } pick -= WAVES[i][2]; }
+        const [mid, half] = WAVES[k];
+        return [clamp(mid + half * (cfg.tight || 1) * (r() + r() - 1), DEBRIS_FROM, 0.97) * cfg.dur, k];
     }
     /** What each line is and when: the sector's own, the living's only, after A.U.R.A. naming any hull no crew line names. */
     function legLines(sector, hulls, living) {
@@ -876,25 +929,31 @@
         return [...naming, ...own].map(l => ({ ...l, done: false }));
     }
     /** The flight into `sector`: two hulls, the safe line, debris (some will set a course for wherever we are, and a cloud round
-        each hull, none on the safe line), the twin (sector 6, only withTwin: the disc is aboard), the beacon count from
-        `fromHeard` up to the sector's, and the lines. */
+        each hull, none on the safe line but in the thickest wave, OPEN_WAVE), the twin (sector 6, only withTwin: the disc is
+        aboard), the beacon count from `fromHeard` up to the sector's, and the lines. */
     function makeLeg(sector, r, fromHeard, living, avoid, withTwin) {
         const cfg = SECTORS[sector], frags = [];
         let side = r() < 0.5 ? -1 : 1;
         const hulls = hullNumbers(cfg.hulls, r, avoid).map((num, k) => makeHull(cfg, r, num, cfg.dur * HULL_AT[k] + (r() - 0.5) * 0.6, side = -side, k === 1 && sector >= 3));
         const path = safeLine(hulls, r);
-        const add = (at, x, y, rad, aimed) => {
+        const add = (at, x, y, rad, aimed, isOpen) => {
             const [px, py] = path(at), keep = SHIP_R[0] + rad + 0.2, dx = x - px, dy = y - py, d = Math.hypot(dx, dy);
-            if (d < keep) { x = px + (d ? dx / d : 1) * keep; y = py + (d ? dy / d : 0) * keep; }
+            if (d < keep && !isOpen) { x = px + (d ? dx / d : 1) * keep; y = py + (d ? dy / d : 0) * keep; }
             frags.push({ at, x, y, vx: 0, vy: 0, rad, aimed, a0: r() * 6.28, spin: (r() - 0.5) * 4, flip: 0.5 + r() * 3, pts: plate(r), done: false, gone: false });
         };
         for (let k = 0; k < cfg.debris; k++) {
-            const inBox = r() < 0.62, at = debrisAt(cfg, r);
-            add(at, (r() * 2 - 1) * (inBox ? BOX[0] + 0.5 : 13), (r() * 2 - 1) * (inBox ? BOX[1] + 0.4 : 9), 0.1 + r() * r() * 0.35, inBox && at > cfg.dur * 0.12 && r() < cfg.aim);
+            const inBox = r() < 0.62, [at, wave] = debrisAt(cfg, r);
+            add(at, (r() * 2 - 1) * (inBox ? BOX[0] + 0.5 : 13), (r() * 2 - 1) * (inBox ? BOX[1] + 0.4 : 9), 0.1 + r() * r() * 0.35, inBox && at > cfg.dur * 0.12 && r() < cfg.aim, wave === OPEN_WAVE);
         }
-        hulls.forEach(h => { for (let k = 0; k < 16; k++) { const a = r() * 6.28, d = HULL_L * (0.5 + r() * 1.4); add(h.at + (r() - 0.5) * 1.6, h.x + Math.cos(a) * d, h.y + Math.sin(a) * d, 0.06 + r() * 0.2, false); } });
+        hulls.forEach(h => { for (let k = 0; k < 16; k++) { const a = r() * 6.28, d = HULL_L * (0.5 + r() * 1.4); add(h.at + (r() - 0.5) * 1.6, h.x + Math.cos(a) * d, h.y + Math.sin(a) * d, 0.06 + r() * 0.2, false, false); } });
         const twin = cfg.twin && withTwin ? { side: r() < 0.5 ? -1 : 1, x: 0, y: 0, z: TWIN.behind, b: 0, q: -1, on: false, settled: false } : null;
         return { sector, cfg, path, hulls, twin, frags: frags.sort((a, b) => a.at - b.at), from: fromHeard, to: cfg.heard, seen: 0, lines: legLines(sector, hulls, living) };
+    }
+    /** The scrapes A.U.R.A. takes flying `leg` (a skip): what lies on her own safe line as it reaches us. She keeps to the line,
+        so this matches her flown result (simulated: 0.12 against 0.11 scrapes into sector 2, 0.17 against 0.17 into 6). */
+    function auraClips(leg) {
+        const onLine = (x, y, rad, at) => { const [px, py] = leg.path(at); return ((px - x) / (SHIP_R[0] + rad)) ** 2 + ((py - y) / (SHIP_R[1] + rad)) ** 2 < 1; };
+        return leg.frags.filter(f => onLine(f.x, f.y, f.rad, f.at)).length + leg.hulls.filter(h => hullHit(h, leg.path(h.at), h.at)).length;
     }
 
     // ── sound: quiet, and only while the game's sound is on ──
@@ -958,6 +1017,8 @@
     function mount(ctx, ui, rawOpts) {
         const opts = rawOpts || {}, { from, to } = readSectors(opts), living = livingRoles(opts.crew), aboard = crewAboard(opts.crew);
         const perBreak = Math.max(1, asInt(opts.scrapesPerBreak) || 1);
+        const maxBreaks = Number.isFinite(opts.maxBreaks) ? Math.max(0, Math.floor(opts.maxBreaks)) : Infinity;   // the game's allowance
+        const energyNow = asInt(opts.energy);                                  // NaN when the game did not say: plenty (stakesOf)
         const avoid = Array.isArray(opts.avoidHulls) ? opts.avoidHulls.filter(Number.isFinite) : [];
         const withTwin = opts.twin === true;                                  // the disc is aboard: the twin can come (SECTORS twin)
         // the picture in art pixels (ui.art: 720 × 405 at density 1.5); the flight goes on thinking in 480 × 270 units
@@ -970,7 +1031,9 @@
         const sound = makeSound(), shipL = MiniShip.layout(8, 172, 36, 76, MiniShip.LANDER_ORDER);
         const openedAt = performance.now(), SETTLE_MS = (window.ChoiceGuard && window.ChoiceGuard.LOCK_MS) || 400;
         const isSettling = () => performance.now() - openedAt < SETTLE_MS;   // a second click on whatever opened this must not choose how to fly
-        let mode = 'ready', here = from, leg = null, t = 0, phaseT = 0, clock = 0, whiteAt = -99, rowAt = 0, auraT = 0, saidAt = -99, isEndReady = false;
+        // auraT / fullT: course seconds A.U.R.A. had the stick / the throttle was fully open (STAKES); paid: what it cost or saved
+        // steered: you touched the controls while the ship was yours in the flight (only then can it save energy)
+        let mode = 'ready', here = from, leg = null, t = 0, phaseT = 0, clock = 0, whiteAt = -99, rowAt = 0, auraT = 0, fullT = 0, saidAt = -99, isEndReady = false, paid = null, steered = false;
         let auto = false, cam = [0, 0], vel = [0, 0], look = [0, 0], roll = 0, jolt = 0, nearT = 0, threat = false;
         let pointer = null, aiming = false, pressed = false, th = 0, queue = [], nextLine = 0, pinged = SECTORS[from].heard, pingAt = -9;
         const trail = [], held = new Set();   // where we were lately (the twin copies it); throttle keys pressed since the flight began
@@ -1017,14 +1080,15 @@
             endPlume = plumeNow(); addTrauma(TRAUMA.through);
             mode = 'done'; phaseT = 0;
             const crew = headCount(aboard), tell = { crew: crew === told.crew ? '' : crew, count: !leg.lines.some(l => l.done && l.heard === g.heard), briefing: !told.briefing };
-            report(to, g.heard, g.nums, g.hits, g.hitRooms, tell).forEach(line => queue.push({ who: 'A.U.R.A.', line: () => line }));
+            paid = stakesOf(g.hits, auraT / leg.cfg.dur, fullT / leg.cfg.dur, energyNow, steered);
+            report(to, g.heard, g.nums, g.hits, g.hitRooms, tell, paid).forEach(line => queue.push({ who: 'A.U.R.A.', line: () => line }));
             told = { crew, briefing: told.briefing || (tell.count && g.heard > BRIEFED) };
             nextLine = Math.max(nextLine, clock + REPORT_DELAY);
             row([]);
         }
         function showContinue() { isEndReady = true; row([{ label: 'Continue', primary: true, onClick: end }]); }
         function end() {
-            ui.finish({ scrapes: g.hits, auraFlew: auraT >= leg.cfg.dur / 2, beaconsHeard: g.heard, shipsSeen: g.seen, hulls: [...g.nums], damagedRooms: [...g.hitRooms] });
+            ui.finish({ scrapes: g.hits, auraFlew: auraT >= leg.cfg.dur / 2, energyDelta: paid ? paid.delta : 0, beaconsHeard: g.heard, shipsSeen: g.seen, hulls: [...g.nums], damagedRooms: [...g.hitRooms] });
         }
 
         // ── simulation ──
@@ -1057,6 +1121,7 @@
             const isRun = mode === 'run';
             if (auto && isRun && (ctl.keys || ctl.throttle)) setAuto(false);           // touching the controls takes the ship back
             const isAuto = auto && isRun, k = Math.min(1, dt * (isAuto ? 8 : 5));
+            if (isRun && !auto && (ctl.keys || ctl.aim || ctl.throttle)) steered = true;
             const want = !isRun ? [0, 0] : isAuto ? [0, 1].map(i => {                   // A.U.R.A. follows the safe line exactly
                 const p = leg.path(t)[i], q = leg.path(t + 0.05)[i];
                 return clamp((q - p) / 0.05 * rate + (p - cam[i]) * 5, -MAXV[i], MAXV[i]);
@@ -1074,23 +1139,23 @@
         }
         function reach(f) {                                                              // a fragment reaches our plane: does it touch us?
             const e = ((cam[0] - f.x) / (SHIP_R[0] + f.rad)) ** 2 + ((cam[1] - f.y) / (SHIP_R[1] + f.rad)) ** 2;
-            f.done = true;
-            if (e < 1 && !auto) { f.gone = true; scrape(); } else if (e < 2.4) nearT = 0.3;
+            f.done = true;                                                               // (whoever flies: A.U.R.A. can be clipped in OPEN_WAVE)
+            if (e < 1) { f.gone = true; scrape(); } else if (e < 2.4) nearT = 0.3;
         }
         function scrape() {                                                              // every perBreak-th scrape turns a room of the ship inset red
             const free = DECK_KEYS.filter(k => !g.damaged[k]);
             g.hits++; jolt = 0.45; sound.scrape();
             addTrauma(TRAUMA.scrape); hitAt = clock;
             if (clock >= stopUntil) stopUntil = clock + HIT_STOP;                       // one hit-stop at a time
-            if (!free.length || g.hits % perBreak) return;
+            if (!free.length || g.hits % perBreak || g.hitRooms.length >= maxBreaks) return;   // never more decks than the game allows
             const room = free[Math.floor(g.r() * free.length)];
             g.damaged = { ...g.damaged, [room]: true };
             g.hitRooms.push(room);
         }
         function drift(f, step) {                                                        // some debris sets a course for wherever we are
-            if (f.aimed && zOf(f.at) < AIM_AT) {                                         // (about half would hit a ship that sat still)
-                const left = f.at - t;
-                f.aimed = false; if (!auto) { f.vx = (cam[0] + (g.r() - 0.5) * 1.6 - f.x) / left; f.vy = (cam[1] + (g.r() - 0.5) * 0.9 - f.y) / left; }
+            if (f.aimed && zOf(f.at) < (leg.cfg.aimAt || AIM_AT)) {                      // (most would hit a ship that sat still: SECTORS spread)
+                const left = f.at - t, [sx, sy] = leg.cfg.spread || [0.8, 0.45];
+                f.aimed = false; if (!auto) { f.vx = (cam[0] + (g.r() - 0.5) * 2 * sx - f.x) / left; f.vy = (cam[1] + (g.r() - 0.5) * 2 * sy - f.y) / left; }
             }
             f.x += f.vx * step; f.y += f.vy * step;
         }
@@ -1135,11 +1200,12 @@
             const pace = paceAt(t), rate = pace * (1 + (BOOST - 1) * smooth(th) * pace) * (1 + DROP * Math.exp(-(clock - whiteAt) / 0.6)), step = dt * rate;
             t += step;
             if (auto) auraT += step;
+            if (th >= FULL_AT) fullT += step;
             trail.push([clock, cam[0], cam[1], t, smooth(th)]);
             while (trail.length > 2 && trail[1][0] < clock - 1) trail.shift();
             leg.frags.forEach(f => { if (!f.done) { drift(f, step); if (f.at <= t) reach(f); } else if (!f.gone) { f.x += f.vx * step; f.y += f.vy * step; } });
             leg.hulls.forEach(h => {
-                if (!h.crossed && h.at <= t) { h.crossed = true; if (!auto && hullHit(h, cam, t)) scrape(); }
+                if (!h.crossed && h.at <= t) { h.crossed = true; if (hullHit(h, cam, t)) scrape(); }
                 if (h.seenAt < 0 && zOf(h.at) < SEE_AT) { h.seenAt = clock; leg.seen++; g.seen++; g.nums.push(h.num); sound.lock(); }
             });
             moveTwin();
@@ -1521,8 +1587,10 @@
             leg.frags.forEach(f => {
                 const z = zOf(f.at), left = f.at - t;
                 if (f.gone || z < NEAR || z > FAR_FRAG) return;
-                f.threat = mode === 'run' && !f.done && !auto && left < WARN
-                    && ((cam[0] - f.x - f.vx * left) / (SHIP_R[0] + f.rad)) ** 2 + ((cam[1] - f.y - f.vy * left) / (SHIP_R[1] + f.rad)) ** 2 < 1;
+                // red: it will hit us where we are (yours), or where A.U.R.A.'s line takes us when it arrives (hers: only
+                // what will really clip her, so you can take the stick from her in time)
+                const isNear = mode === 'run' && !f.done && left < WARN, [ax, ay] = isNear && auto ? leg.path(f.at) : cam;
+                f.threat = isNear && ((ax - f.x - f.vx * left) / (SHIP_R[0] + f.rad)) ** 2 + ((ay - f.y - f.vy * left) / (SHIP_R[1] + f.rad)) ** 2 < 1;
                 threat = threat || f.threat;
                 vis.push([z, f, 0]);
             });
@@ -1652,14 +1720,21 @@
             else if (mode === 'done' && isEndReady && clock - rowAt > (k === 'Enter' ? 0.3 : 1)) end();   // only once A.U.R.A. is done
         });
 
+        // read only, for the headless runs (Corridor.debug.state): what the pilot sees, the pieces marked red with where each
+        // will cross us, and the tallies the stakes are worked out from
+        live = () => ({
+            mode, auto, t, dur: leg ? leg.cfg.dur : 0, cam: [...cam], th, hits: g.hits, auraT, fullT, paid: paid && { ...paid },
+            threats: mode !== 'run' ? [] : leg.frags.map((f, id) => (f.threat && !f.done && !f.gone ? { id, x: f.x + f.vx * (f.at - t), y: f.y + f.vy * (f.at - t), rad: f.rad, left: f.at - t } : null)).filter(Boolean),
+        });
         seedSky(from);
-        say('A.U.R.A.', 'Debris on the heading, Commander. I can fly us through, if you prefer.', 0);
+        say('A.U.R.A.', to === FIRST_SECTOR + 1 ? OFFER_FIRST(STAKES.AURA) : OFFER, 0);   // the first flown jump: once, what her way costs
         row([{ label: 'Fly it myself', primary: true, onClick: () => start(false) }, { label: 'Let A.U.R.A. fly', onClick: () => start(true) }]);
         render(0.3);
         MiniLab.loop(dt => { render(update(dt)); skyOf(to, PAINT_AHEAD_MS); }, 30);   // the next sector's sky, a little each frame
-        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); };
+        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); live = null; };
     }
 
+    window.Corridor = Object.freeze({ debug: Object.freeze({ state: () => (live ? live() : null) }) });
     MiniHost.register({
         id: 'corridor',
         title: 'Fly the corridor',
@@ -1667,9 +1742,12 @@
         hideHeader: true,                                   // a pilot sees the flight, not a game title over it
         density: DENSITY,                                   // 720 × 405 art pixels, the travel view's grain
         mount,
+        /** A skip (TEST_MODE, or a flight that would not start) is A.U.R.A.'s flight, never free: her cost, and the scrapes
+            she would take on her own safe line through this sector's debris. */
         autoResult(opts) {
-            const { to } = readSectors(opts || {});
-            return { scrapes: 0, auraFlew: true, beaconsHeard: SECTORS[to].heard, shipsSeen: SHIPS_PER_JUMP, hulls: [], damagedRooms: [] };
+            const o = opts || {}, { to } = readSectors(o), avoid = Array.isArray(o.avoidHulls) ? o.avoidHulls.filter(Number.isFinite) : [];
+            const leg = makeLeg(to, MiniLab.rng((Math.random() * 4294967295) >>> 0), SECTORS[to].heard, null, avoid, false);
+            return { scrapes: auraClips(leg), auraFlew: true, energyDelta: stakesOf(0, 1, 0, asInt(o.energy)).delta, beaconsHeard: SECTORS[to].heard, shipsSeen: SHIPS_PER_JUMP, hulls: leg.hulls.map(h => h.num), damagedRooms: [] };
         },
     });
 })();

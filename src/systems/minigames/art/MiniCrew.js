@@ -14,7 +14,8 @@
        shell in their colours (Cora slate panels and cyan trim, Jaxon charcoal and amber, Aris cream padding with rust
        panels and a maroon helmet ring, Vance his worn white shell and brown gloves, Mira sage cream and gold); a face
        shows behind the visor from about 26 art pixels tall. suit: false is how they dress aboard (hair, skin, suit).
-       pose: 'stand' | 'walk' | 'kneel' | 'reach' | 'float' | 'climb' | 'lie';  t: ms, for the walk cycle (8 frames).
+       pose: 'stand' | 'walk' | 'kneel' | 'reach' | 'float' | 'climb' | 'lie' | 'hoist' (both hands up on a pole, as the
+       torch on the ground) | 'hoistwalk' | 'reachwalk' (those arms on walking legs);  t: ms, for the walk cycle (8 frames).
        facing: 1 (right) | -1;  light: -1 | 1, the side the light comes from (default 1, the right);  warm 0..1: a lamp's
        warmth on the lit side;  dim 0..1: in shadow.  Returns { w, h } in units.
 
@@ -127,11 +128,17 @@
     const WALK_FRAMES = 8, WALK_MS = 125;
     function poseOf(name, frame) {
         const P = { lean: 0, drop: 0, tilt: 0, legs: [[0.06, 0.03], [-0.05, 0.02]], arms: [[0.12, 0.18], [-0.1, 0.12]] };
-        if (name === 'walk') {
+        const walking = name === 'walk' || name === 'hoistwalk' || name === 'reachwalk';
+        if (walking) {
             const a = (frame / WALK_FRAMES) * Math.PI * 2, s = Math.sin(a);
             P.legs = [[0.42 * s, 0.75 * Math.max(0, -Math.sin(a + 0.9))], [-0.42 * s, 0.75 * Math.max(0, Math.sin(a + 0.9))]];
             P.arms = [[-0.38 * s, 0.25], [0.38 * s, 0.25]];
             P.drop = 0.012 * Math.abs(Math.cos(a)); P.lean = 0.05;
+        }
+        if (name === 'hoist' || name === 'hoistwalk') {           // both hands up on a pole, near hand higher (hands about 0.29 h out, 0.88 h up)
+            P.lean = name === 'hoist' ? -0.03 : 0.01; P.arms = [[2.1, 0.25], [1.85, 0.35]];
+        } else if (name === 'reachwalk') {
+            P.lean = 0.06; P.arms = [[1.35, 0.15], [1.1, 0.35]];
         } else if (name === 'kneel') {
             P.drop = 0.2; P.lean = 0.22;
             P.legs = [[1.35, 1.35], [-0.12, 1.6]];
@@ -296,7 +303,8 @@
 
     function small(ctx, who, x, feetY, o = {}) {
         const id = idOf(who) || 'cora', d = MiniLab.inArt(ctx, (c, k) => k), Hpx = Math.max(6, Math.round((o.h || 9) * d));
-        const pose = o.pose || 'stand', frame = pose === 'walk' ? Math.floor((o.t || 0) / WALK_MS) % WALK_FRAMES : pose === 'climb' ? Math.floor((o.t || 0) / 220) % 2 : 0;
+        const pose = o.pose || 'stand', walks = pose === 'walk' || pose === 'hoistwalk' || pose === 'reachwalk';
+        const frame = walks ? Math.floor((o.t || 0) / WALK_MS) % WALK_FRAMES : pose === 'climb' ? Math.floor((o.t || 0) / 220) % 2 : 0;
         const S = bake(id, pose, frame, Hpx, o.facing < 0 ? -1 : 1, o.suit !== false, o.light < 0 ? -1 : 1, Math.round(clamp01(o.warm || 0) * 4) / 4, Math.round(clamp01(o.dim || 0) * 4) / 4);
         MiniLab.inArt(ctx, (c, k) => c.drawImage(S.canvas, Math.round(x * k) - S.ox, Math.round(feetY * k) - S.oy));
         return { w: S.w / d, h: S.h / d };

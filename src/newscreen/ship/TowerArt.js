@@ -7,8 +7,12 @@
    Load after ShipRoutine.js.
 
    window.TowerArt (frozen)
-     draw(ctx, o)            o = { t, camY, offX, W, H, people, auraTalking }; people: ShipRoutine.at() poses (or the
-                             tower's own, overridden by the real crew)
+     draw(ctx, o)            o = { t, camY, offX, W, H, people, auraTalking, fxOff?, driveOff? }; people: ShipRoutine.at() poses
+                             (or the tower's own, overridden by the real crew). fxOff: [6 booleans], a deck whose power is out
+                             (its screens, lamps and lights stand still and dark); driveOff: the engine's plume out (the jump
+                             that stalls, throw/Stall.js)
+     drawPeople(ctx, o, people, tint) → [drawn]   people drawn on their own, after the rest (the stall's gathered crew):
+                             o as draw's (t, camY, offX); tint(canvas, person) → canvas, the sprite as their light shows it
      hitPerson(ax, ay) → id | null   who is under the art point (the sprite's own pixels, 3 px margin)
      drawn                   [{ id, Sp, x, y, facing, act, say }] the people of the last draw
      warm() → [() => void]   small jobs that paint every deck and every sprite frame ahead of time (run one a frame)
@@ -48,9 +52,9 @@
         const ms = STILL[p.act] ? p.ms + SEED(p.id) * 977 : p.ms;
         return CE.sprite(p.id, p.act, CE.frameAt(p.act, ms), { blink: p.act !== 'sleep' && blinking(ms, SEED(p.id)), warm: ll.warm, rim: ll.rim * p.facing, screen: p.screen === undefined ? p.act === 'console' : p.screen });
     }
-    function drawPerson(p) {
+    function drawPerson(p, tint) {
         const ll = lightFor(p), Sp = spriteOf(p, ll);
-        blit(ll.dim ? dimOf(Sp.canvas) : Sp.canvas, Sp, p.x, p.y, p.facing);
+        blit(tint ? tint(Sp.canvas, p) : ll.dim ? dimOf(Sp.canvas) : Sp.canvas, Sp, p.x, p.y, p.facing);
         drawn.push({ id: p.id, Sp, x: p.x, y: p.y, facing: p.facing, act: p.act, say: p.say });
     }
 
@@ -135,11 +139,21 @@
             const top = A.deckTop(i); if (!visible(top, L.PITCH)) continue;
             const D = deckOf(i);
             ctx.drawImage(D.canvas, o.offX, top - cam);
-            D.fx.forEach(f => fx(f, t, tick, ctxS));
+            if (!(o.fxOff && o.fxOff[i])) D.fx.forEach(f => fx(f, t, tick, ctxS));      // a deck without power: nothing on it moves or glows
         }
-        if (visible(L.TAIL0, L.H - L.TAIL0)) { ctx.drawImage(T.canvas, o.offX, L.TAIL0 - cam); T.fx.forEach(f => fx(f, t, tick, ctxS)); }
+        if (visible(L.TAIL0, L.H - L.TAIL0)) { ctx.drawImage(T.canvas, o.offX, L.TAIL0 - cam); if (!o.driveOff) T.fx.forEach(f => fx(f, t, tick, ctxS)); }
         drawn = [];
         o.people.slice().sort((a, b) => a.z - b.z || a.x - b.x).forEach(p => { if (visible(p.y - 110, 120) && p.x + o.offX > -30) drawPerson(p); });
+    }
+    /** People drawn on their own, over what draw() and the marks laid down (the stall's gathered crew, lit by their red lamp). */
+    function drawPeople(c, o, people, tint) {
+        ctx = c; O = o; curFill = '';
+        const cam = Math.round(o.camY), keep = drawn;
+        drawn = [];
+        people.slice().sort((a, b) => a.z - b.z || a.x - b.x).forEach(p => { if (p.y - 110 + 120 > cam && p.y - 110 < cam + o.H && p.x + o.offX > -30) drawPerson(p, tint); });
+        const mine = drawn;
+        drawn = keep.concat(mine);
+        return mine;
     }
 
     // ── who is under the pointer: the sprite's own pixels, with a 3 px margin (ship-life) ──
@@ -167,5 +181,5 @@
         return jobs;
     }
 
-    window.TowerArt = Object.freeze({ draw, hitPerson, warm, get drawn() { return drawn; } });
+    window.TowerArt = Object.freeze({ draw, drawPeople, hitPerson, warm, get drawn() { return drawn; } });
 })();

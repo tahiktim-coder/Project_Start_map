@@ -9,7 +9,8 @@
 
    window.NSOrbit (frozen)
      actions(app) → [{ key, words, near, team, run(), sub, chips }]   in the plan's order, only what applies here now
-                    near: 'world' | 'station' | 'field' | 'giant' | 'site' | 'call' | 'mira' | 'aura' | 'under'
+                    near: 'world' | 'station' | 'field' | 'giant' | 'site' | 'call' | 'mira' | 'aura' | 'under' | 'key'
+                    ('key': a held key on Cora's console, the copy of Earth's two; their chips may be rows: [[chip], [chip]])
                     chips: [{ icon, text, tone? }] what it costs and gives, a word or three each (the bridge's glass tags)
      act(app, key, ids?) → bool    run one action (ids: the two picked, for 'team')
      eligible(app) → ['jaxon', ...]  who is fit to go down (handleEvaAction's own rule; not who is too weak from a missed supper,
@@ -94,6 +95,8 @@
         call: 'Answer the call to hear who needs help. If we leave, it is lost.',
         settle: 'This world could be home, Commander. Settling ends the journey. Hold the key if you choose it.',
         leave: 'Leave orbit takes us back out. Then pick the next world.',
+        escape: 'Hold the key and we fight our way out, Commander. It will cost us.',     // DRAFT: the copy of Earth (stop/Copy.js)
+        accept: 'Hold Go down and we land on it. The journey would end there.',           // DRAFT
     });
 
     let trip = null, call = null, fixWait = 0, pendingBreach = null;
@@ -179,9 +182,12 @@
         if (!n) return [];
         const out = [], add = (key, words, near, run, team, sub, chips) => out.push({ key, words, near, team: !!team, run, sub: sub || '', chips: chips || [] });   // sub: what it gives or costs, in a few words
         if ((n.isStructure || n.type === 'STRUCTURE') && !n.structureApproached) add('light', 'Go into the light', 'world', () => app.handleStructureAction());
-        if (n._isWrongPlace) {
-            add('escape', 'Fight to escape', 'under', () => window.dispatchEvent(new CustomEvent('req-wrong-escape')));
-            add('accept', 'Accept it', 'under', () => window.dispatchEvent(new CustomEvent('req-wrong-accept')));
+        if (n._isWrongPlace) {                                                               // the copy of Earth (stop/Copy.js): once it has stopped turning
+            const CP = window.NSCopy;
+            if (CP && !CP.ready(n)) return out;
+            if (CP && !(n._nsCopy && n._nsCopy.scanned)) add('scan', 'Scan', 'world', () => CP.scan(app), false, 'read the ground', [FREE]);
+            add('escape', 'Fight to escape', 'key', () => (CP ? CP.escape(app) : window.dispatchEvent(new CustomEvent('req-wrong-escape'))), false, 'costs a lot', CP ? CP.fightChips(app) : []);
+            add('accept', 'Go down', 'key', () => window.dispatchEvent(new CustomEvent('req-wrong-accept')), false, 'ends the journey', [chip('end', 'ends the journey', 'cool')]);
             return out;
         }
         if (n.isStation && !n.stationInvestigated) add('dock', 'Dock', 'station', () => app.handleStationAction(), false, 'search the station', [FREE, chip('salvage', 'salvage')]);
