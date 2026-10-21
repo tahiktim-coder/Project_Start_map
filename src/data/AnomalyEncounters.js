@@ -51,12 +51,17 @@ const ANOMALY_ENCOUNTERS = [
                 desc: "60% chance: we skip 1 or 2 sectors ahead for free. 40% chance: we come out somewhere off the map, someone gets hurt, all crew +1 Stress.",
                 effect: (state) => {
                     if (_anomalyTestChance(0.4)) {
-                        // BAD OUTCOME - thrown to THE WRONG PLACE
+                        // BAD OUTCOME - thrown to THE WRONG PLACE (the new look plays it as the fall to a copy of Earth: src/newscreen/stop/Copy.js)
+                        const isNewLook = !!(window.NEW_SCREEN && window.NewScreen);
+                        const stressBefore = {};                                // the new look shows what the fall did to each of them
+                        state.crew.forEach(c => { stressBefore[c.name] = c.stress || 0; });
+                        let thrown = null;
                         const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
-                            victim.stress = 3;
+                            victim.stress = Math.min(3, (victim.stress || 0) + 1);   // shaken: +1 on top of everyone's +1 below
+                            thrown = victim.name;
                             state.addLog(`${victim.name} was thrown against a wall on the way through, and is hurt and badly shaken.`);
                         }
 
@@ -76,7 +81,9 @@ const ANOMALY_ENCOUNTERS = [
                             metrics: { hasLife: true, hasTech: true },
                             mapData: { x: 50, y: 50 },
                             _isWrongPlace: true,
-                            _returnSector: state.currentSector // Remember where we came from
+                            _returnSector: state.currentSector, // Remember where we came from
+                            _thrown: thrown,                    // who the fall hurt (the new look shows them)
+                            _stressBefore: stressBefore
                         };
 
                         // Replace sector with just this planet
@@ -87,10 +94,13 @@ const ANOMALY_ENCOUNTERS = [
                         state.lastVisitedSystem = hellPlanet;
                         state._inWrongPlace = true;
 
-                        state.addLog("=== OFF THE MAP ===");
-                        state.addLog("We came out somewhere that matches no chart we have.");
-                        state.addLog("A.U.R.A.: 'I can't place us on any chart, Commander. I'm working on it.'");
-                        state.addLog("There is a wreck here, one of our ships. Its beacon is still calling.");
+                        if (isNewLook) state.addLog("We fell through the gap, and came out somewhere that matches no chart we have.");
+                        else {
+                            state.addLog("=== OFF THE MAP ===");
+                            state.addLog("We came out somewhere that matches no chart we have.");
+                            state.addLog("A.U.R.A.: 'I can't place us on any chart, Commander. I'm working on it.'");
+                            state.addLog("There is a wreck here, one of our ships. Its beacon is still calling.");
+                        }
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);
                         });

@@ -269,7 +269,10 @@
     // next card (a crew moment) straight away. Now the card stays: the choice's own log lines take the choices' place, with
     // CONTINUE. Until then a new card, a found page or a mini-game waits its turn (whenFree).
     const gate = { held: 0, waiting: [], passing: false };
-    let capturing = 0;
+    let capturing = 0, quiet = false;
+    /** Called while a choice runs (its effect, or what it sets off): the card closes with no outcome step, because the
+        outcome is shown another way (the fall through the gap, src/newscreen/stop/Copy.js). Outside a choice: nothing. */
+    function noOutcome() { if (capturing) quiet = true; }
     const mustWait = () => !gate.passing && (gate.held > 0 || gate.waiting.length > 0);   // in order: behind anything already waiting
     function whenFree(fn) { if (mustWait()) gate.waiting.push(fn); else fn(); }
     function releaseGate() { gate.held = Math.max(0, gate.held - 1); drain(); }
@@ -397,9 +400,11 @@
                     if (!newLook()) { modal.remove(); cfg.onPick(pick); return; }
                     gate.held += 1;                                                  // nothing else opens until the outcome is read
                     let said = [];
+                    quiet = false;
                     try { said = captureLog(() => cfg.onPick(pick)); } catch (err) { console.error('EncounterCard: the choice failed', err); }
-                    const lines = outcomeLines(said);
-                    if (!lines.length || !modal.isConnected) { modal.remove(); releaseGate(); return; }
+                    const lines = outcomeLines(said), isQuiet = quiet;
+                    quiet = false;
+                    if (isQuiet || !lines.length || !modal.isConnected) { modal.remove(); releaseGate(); return; }
                     showOutcome(cfg.choices[pick], lines);
                 });
             });
@@ -525,5 +530,5 @@
         return modal;
     }
 
-    window.EncounterCard = { open, outcomeIn, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, capturing: () => capturing > 0 };
+    window.EncounterCard = { open, outcomeIn, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, noOutcome, capturing: () => capturing > 0 };
 })();

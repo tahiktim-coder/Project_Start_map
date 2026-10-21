@@ -249,6 +249,8 @@
     function wordRects() {
         return [...document.querySelectorAll('#ns-stop-words .sw.on, #ns-wake-words .sw.on')].map(el => el.getBoundingClientRect());
     }
+    /** How many of the bridge's words are on screen: a line looks for a free place again when one comes or goes. */
+    const wordCount = () => document.querySelectorAll('#ns-stop-words .sw.on, #ns-wake-words .sw.on').length;
     /** The ship's own choices in travel (a red deck's, supper's "Accept"), CSS rects: a line keeps off them too. */
     function chipRects() {
         const layer = document.getElementById('ns-ship-words');
@@ -273,7 +275,7 @@
         const boxes = anchorList(c.id, c.anchor).map(a => boxAt(a, c.w, c.h));
         if (!boxes.length) return;
         let pick = c.pick != null && c.pick < boxes.length ? c.pick : null;
-        const b0 = boxes[pick == null ? 0 : pick], chips = onBridge() ? 0 : chipRects().length;   // a choice that came or went in the ship: look again
+        const b0 = boxes[pick == null ? 0 : pick], chips = onBridge() ? wordCount() : chipRects().length;   // a choice in the ship, a word on the bridge, came or went: look again
         if (pick == null || !c.sampledAt || Math.hypot(c.sampledAt.x - b0.x, c.sampledAt.y - b0.y) > MOVE_RESAMPLE || chips !== c.chips) {
             c.chips = chips;
             const ds = discs(), score = boxes.map(b => busy(b, ds));

@@ -9,13 +9,17 @@
                      meadow (end/EdenArt.js), the crew settling into the grass, one line; the camera rises until the meadow is
                      one cold point of light in the dark; with the disc aboard, one quiet last line. Settled on Eden itself:
                      the meadow first.
+     THE COPY        "Go down" at the copy of Earth (stop/Copy.js): our Lander drops into the blue through clouds that do not move,
+                     a perfect day by a perfect sea where the grass is one blade copied, the crew step out, one line; then the
+                     view tilts up to the night: stars in rows, our ship a point of light; the last lines (end/CopyArt.js).
    Then the end card over the last picture: the ending's name, three short lines, "New game". No stats, no scores.
-   The words come from StructureEncounter.js lightEndingFor(door, state) (bundle.js endJourney passes them); all are DRAFTS.
+   The words come from StructureEncounter.js lightEndingFor(door, state) (bundle.js endJourney passes them), or for the copy from
+   stop/CopyWords.js ending(state) (bundle.js endOnTheCopy); all are DRAFTS.
    Esc skips ahead (to the held moment while flying in; otherwise to the end card). No sound of its own.
-   Loaded only when the new-screen switch is on, after end/LightArt.js, end/CalmArt.js and end/EdenArt.js.
+   Loaded only when the new-screen switch is on, after end/LightArt.js, end/CalmArt.js, end/EdenArt.js and end/CopyArt.js.
 
    window.NSEnding (frozen)
-     play(app, ending, { from: 'light' | 'eden' }) → Promise   resolves once the end card is up (bundle.js drops the save then;
+     play(app, ending, { from: 'light' | 'eden' | 'copy' }) → Promise   resolves once the end card is up (bundle.js drops the save then;
                                                                "New game" reloads); rejects if the scene cannot start (bundle.js
                                                                then shows the old end screen)
      isPlaying() → bool
@@ -23,7 +27,7 @@
 */
 (function () {
     'use strict';
-    const P = window.NSPaint, LA = window.NSLightArt, CA = window.NSCalmArt, EA = window.NSEdenArt;
+    const P = window.NSPaint, LA = window.NSLightArt, CA = window.NSCalmArt, EA = window.NSEdenArt, CP = window.NSCopyArt;
     if (!window.NEW_SCREEN || !P || !LA || !CA || !EA) return;
     const { INK, clamp01, threshold } = P;
     const ss = P.smooth;
@@ -33,6 +37,8 @@
     const APPROACH_S = 34, HOLD_AT = 0.88, KEEP_AFTER_S = 1.4, PUSH_S = 3.2, WHITE_S = 3.4, QUIET_S = 1.8, DAWN_S = 2.8;
     // back to Eden (s)
     const TURN_S = 3.8, TURN_LINE_S = 0.9, TURN_HOLD_S = 3.4, LAND_S = 1.1, MEADOW_LINE_S = 3.9, MEADOW_S = 9.2, RISE_S = 1.6, SHRINK_S = 5.4, POINT_LINE_S = 1.0;
+    // the copy (s): the descent, the landing's dissolve, the ground (its two lines), the tilt up, the night (its two lines)
+    const DESCENT_S = 6.4, COPY_LAND_S = 1.0, GROUND_S = 13.4, GROUND_LINE_S = 6.6, GROUND_GAP_S = 3.4, TILT_S = 3.6, NIGHT_LINE_S = 1.4, NIGHT_GAP_S = 4.4;
     // both (s)
     const IN_S = 0.9, LINE_AFTER_S = 0.9, CARD_AFTER_S = 3.8, CARD_DIM = 0.75, GUARD_MS = 900, KEEP_GUARD_MS = 400, CARD_FRAME_EVERY = 4, CARD_SETTLE_S = 3, VEIL_RATE = 4;
     // the ship's alarms, in shares of the approach: the deck that turns emergency red and the word the ship flashes (the mockup's)
@@ -163,6 +169,7 @@
     /** The pictures this run needs now (built while the screen is ink, white or quiet; the rest one per idle slot). */
     function buildFirst(R) {
         const { W, H } = R.G;
+        if (R.kind === 'copy') { R.copy = CP.build(W, H, R.ending.living); return; }
         if (R.kind === 'light') { R.light = LA.create(W, H); return; }
         if (R.from === 'light') { R.light = LA.create(W, H); LA.eden(R.light, edenNode(R)); }
         R.eden = EA.build(W, H, R.ending.living, edenNode(R));
@@ -174,6 +181,7 @@
         if (R.light) { const hadEden = !!R.light.eden; R.light = LA.create(W, H); if (hadEden) LA.eden(R.light, edenNode(R)); }
         if (R.calm) R.calm = CA.build(W, H, R.ending.living);
         if (R.eden) { R.eden = EA.build(W, H, R.ending.living, edenNode(R)); EA.bakeNext(R.eden); }
+        if (R.copy) R.copy = CP.build(W, H, R.ending.living);
         if (R.frozen) R.frozen = null;
     }
 
@@ -217,7 +225,7 @@
         R.t += dt; R.clock += dt;
         if (R.voiceUntil && R.clock > R.voiceUntil) hush(R);
         R.veilK += ((R.ui.voice.classList.contains('is-in') ? 1 : 0) - R.veilK) * Math.min(1, dt * VEIL_RATE);
-        if (R.kind === 'light') updateLight(R, dt); else updateEden(R, dt);
+        if (R.kind === 'light') updateLight(R, dt); else if (R.kind === 'copy') updateCopy(R, dt); else updateEden(R, dt);
     }
     function updateLight(R, dt) {
         const sc = R.ending.scene, L = R.light;
@@ -281,6 +289,24 @@
             if (R.t >= POINT_LINE_S + (last ? CARD_AFTER_S : 1.6)) showCard(R);
         }
     }
+    /** The copy: down through the clouds, the ground and the crew's line, the tilt up, the night and its last lines, the card. */
+    function updateCopy(R, dt) {
+        const sc = R.ending.scene;
+        if (R.phase === 'descent') { if (R.t >= DESCENT_S) { R.frozen = snapshot(R); go(R, 'land'); } return; }
+        if (R.phase === 'land') { if (R.t >= COPY_LAND_S) { R.frozen = null; R.lineAt = 0; go(R, 'ground'); } return; }
+        if (R.phase === 'ground') {
+            const lines = sc.ground || [];
+            while (R.lineAt < lines.length && R.t >= GROUND_LINE_S + R.lineAt * GROUND_GAP_S) say(R, lines[R.lineAt++]);
+            if (R.t >= GROUND_S) { hush(R); R.lineAt = 0; go(R, 'tilt'); }
+            return;
+        }
+        if (R.phase === 'tilt') { if (R.t >= TILT_S) { R.lineAt = 0; go(R, 'night'); } return; }
+        if (R.phase === 'night') {
+            const lines = sc.night || [];
+            while (R.lineAt < lines.length && R.t >= NIGHT_LINE_S + R.lineAt * NIGHT_GAP_S) { say(R, lines[R.lineAt], R.lineAt === lines.length - 1); R.lineAt++; }
+            if (R.t >= NIGHT_LINE_S + Math.max(0, lines.length - 1) * NIGHT_GAP_S + CARD_AFTER_S) showCard(R);
+        }
+    }
     function snapshot(R) {
         const c = document.createElement('canvas'); c.width = R.G.W; c.height = R.G.H;
         c.getContext('2d').drawImage(R.ui.canvas, 0, 0);
@@ -314,6 +340,7 @@
             return;
         }
         if (R.kind === 'light' && R.phase === 'hold') return;                       // only "Keep going" leaves the held moment
+        if (R.kind === 'copy') { R.frozen = null; go(R, 'night'); R.lineAt = 99; showCard(R); return; }
         if (R.kind === 'light') { if (!R.calm) R.calm = CA.build(R.G.W, R.G.H, R.ending.living); go(R, 'calm'); R.t = DAWN_S + LINE_AFTER_S; R.spoke = true; say(R, R.ending.scene.closing, true); showCard(R); return; }
         R.frozen = null; go(R, 'point'); R.spoke = true; showCard(R);
     }
@@ -363,6 +390,18 @@
                 if (dawn > 0) LA.white(ctx, W, H, dawn * 1.05);                   // the white clears into the calm place
                 else if (R.phase !== 'card') drawVeil(R);
             }
+        } else if (R.kind === 'copy') {
+            const A = R.copy;
+            if (phase === 'descent') CP.drawDescent(ctx, A, clamp01(t / DESCENT_S), ms);
+            else if (phase === 'land') { CP.drawGround(ctx, A, 0, ms, 0); if (R.frozen) dissolve(ctx, R.aux, R.frozen, W, H, 1 - clamp01(t / COPY_LAND_S)); }
+            else if (phase === 'ground') CP.drawGround(ctx, A, t, ms, 0);
+            else if (phase === 'tilt') {                                                // the view tilts up: the ground slides away, the night comes over it
+                const k = clamp01(t / TILT_S);
+                CP.drawNight(ctx, A, ms);
+                CP.drawGround(R.aux2.getContext('2d'), A, GROUND_S, ms, k);
+                dissolve(ctx, R.aux, R.aux2, W, H, 1 - ss(0.3, 1, k));
+            } else CP.drawNight(ctx, A, ms);
+            if (R.phase !== 'card') { if (phase === 'night') LA.shade(ctx, W, H, wordBoxes(R)); else drawVeil(R); }
         } else if (phase === 'turn') {
             LA.draw(ctx, R.light, { phase: 'turn', s: 0.62, k: clamp01(t / TURN_S), from: { s: 0.62, off: [0, 0] }, edenK: clamp01((t - 0.7) / (TURN_S - 0.7)),
                 off: [0, 0], shake: 0, clock: R.clock, damaged: {}, flash: false, plume: 0.55, white: 0, words: wordBoxes(R) }, ms);
@@ -380,7 +419,7 @@
             if (R.phase !== 'card') LA.shade(ctx, W, H, wordBoxes(R));
         }
         if (R.clock < IN_S) dim(ctx, W, H, 1 - R.clock / IN_S);                     // in from ink
-        if (R.phase === 'card' && R.kind === 'light') LA.darken(ctx, W, H, CARD_DIM * ss(0, 0.8, R.t));   // Eden's last picture is already the dark
+        if (R.phase === 'card' && R.kind !== 'eden') LA.darken(ctx, W, H, (R.kind === 'copy' ? 0.55 : CARD_DIM) * ss(0, 0.8, R.t));   // Eden's last picture is already the dark
     }
 
     // ════════════════════════════════════════ playing ════════════════════════════════════════
@@ -427,13 +466,14 @@
     function play(app, ending, opts = {}) {
         if (run) return Promise.reject(new Error('NSEnding: an ending is already playing'));
         if (!app || !ending || !ending.scene || !Array.isArray(ending.text)) return Promise.reject(new Error('NSEnding: no ending to play'));
+        if (ending.door === 'COPY' && !CP) return Promise.reject(new Error('NSEnding: the copy has no pictures (end/CopyArt.js)'));
         let ui;
         try { ui = mount(); } catch (err) { return Promise.reject(err); }
         const R = {
-            app, ending, ui, kind: ending.door === 'LIGHT' ? 'light' : 'eden', from: opts.from === 'eden' ? 'eden' : 'light',
+            app, ending, ui, kind: ending.door === 'LIGHT' ? 'light' : ending.door === 'COPY' ? 'copy' : 'eden', from: opts.from === 'eden' ? 'eden' : opts.from === 'copy' ? 'copy' : 'light',
             phase: null, t: 0, clock: 0, s: 0, lineAt: 0, alarmAt: 0, damaged: {}, label: null, jolt: 0, voiceUntil: 0, line: '',
             spoke: false, keepAt: 0, cardShown: false, cardFrom: null, speed: 1, last: 0, acc: 0, frameMs: 0, ready: false, started: false, veilK: 0,
-            light: null, calm: null, eden: null, frozen: null, frameId: null,
+            light: null, calm: null, eden: null, copy: null, frozen: null, frameId: null,
         };
         const done = new Promise((resolve, reject) => { R.resolve = resolve; R.reject = reject; });
         run = R;
@@ -461,7 +501,7 @@
             if (run !== R) return;
             try {
                 buildFirst(R);
-                go(R, R.kind === 'light' ? 'fly' : R.from === 'light' ? 'turn' : 'meadow');
+                go(R, R.kind === 'light' ? 'fly' : R.kind === 'copy' ? 'descent' : R.from === 'light' ? 'turn' : 'meadow');
                 R.ready = true;
             } catch (err) { console.error('NSEnding: the scene could not be built', err); fail(R, err); }
         }, BUILD_GAP_MS);

@@ -3251,38 +3251,7 @@ Then you're through.`,
                     text: "We made it",
                     desc: "Return to a random sector, but at great cost.",
                     effect: (state) => {
-                        // Heavy cost
-                        state.energy = Math.max(10, state.energy - 50);
-                        state.salvage = Math.max(0, state.salvage - 30);
-
-                        // Crew trauma
-                        state.crew.forEach(c => {
-                            if (c.status !== 'DEAD') {
-                                c.stress = Math.min(3, (c.stress || 0) + 1);
-                                if (!c.tags.includes('WRONG_PLACE_SURVIVOR')) {
-                                    c.tags.push('WRONG_PLACE_SURVIVOR');
-                                }
-                            }
-                        });
-
-                        // Return to a random sector (prefer ahead)
-                        const targetSector = Math.min(6, Math.max(1, (state._previousSector || 1) + Math.floor(Math.random() * 2)));
-                        state.currentSector = targetSector;
-                        state.sectorNodes = PlanetGenerator.generateSector(targetSector);
-                        state._inWrongPlace = false;
-
-                        // Apply sector entry effects
-                        const config = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[targetSector] : null;
-                        if (config && config.hazard && config.hazard.onSectorEnter) {
-                            config.hazard.onSectorEnter(state, state.sectorNodes);
-                        }
-
-                        state.currentSystem = null;
-                        state.lastVisitedSystem = null;
-                        if (window.app) window.app.plantSectorPage();
-                        state.addLog("=== REALITY BREACH SUCCESSFUL ===");
-                        state.addLog(`Emerged in Sector ${targetSector}. The crew will never forget what they saw.`);
-
+                        this.escapeWrongPlace(state);
                         return "You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress.";
                     }
                 }
@@ -3300,7 +3269,37 @@ Then you're through.`,
         });
     }
 
+    /**
+     * Out of the Wrong Place by force, the same in both looks (the default game's card above; the new look's held key and its
+     * reveal, src/newscreen/stop/Copy.js): -50 energy (never below 10), -30 salvage, everyone +1 stress and marked
+     * WRONG_PLACE_SURVIVOR, then back to normal space in the sector we came from or one ahead, freshly made, with its hazard
+     * on entry and its page planted. Returns what it took: { sector, energy, salvage }.
+     */
+    escapeWrongPlace(state) {
+        const before = { energy: state.energy, salvage: state.salvage };
+        state.energy = Math.max(10, state.energy - 50);                                     // heavy cost
+        state.salvage = Math.max(0, state.salvage - 30);
+        state.crew.forEach(c => {                                                           // crew trauma
+            if (c.status === 'DEAD') return;
+            c.stress = Math.min(3, (c.stress || 0) + 1);
+            if (!c.tags.includes('WRONG_PLACE_SURVIVOR')) c.tags.push('WRONG_PLACE_SURVIVOR');
+        });
+        const targetSector = Math.min(6, Math.max(1, (state._previousSector || 1) + Math.floor(Math.random() * 2)));   // prefer ahead
+        state.currentSector = targetSector;
+        state.sectorNodes = PlanetGenerator.generateSector(targetSector);
+        state._inWrongPlace = false;
+        const config = (typeof SECTOR_CONFIG !== 'undefined') ? SECTOR_CONFIG[targetSector] : null;   // sector entry effects
+        if (config && config.hazard && config.hazard.onSectorEnter) config.hazard.onSectorEnter(state, state.sectorNodes);
+        state.currentSystem = null;
+        state.lastVisitedSystem = null;
+        this.plantSectorPage();
+        state.addLog("=== REALITY BREACH SUCCESSFUL ===");
+        state.addLog(`Emerged in Sector ${targetSector}. The crew will never forget what they saw.`);
+        return { sector: targetSector, energy: Math.max(0, before.energy - state.energy), salvage: Math.max(0, before.salvage - state.salvage) };
+    }
+
     handleWrongPlaceAccept() {
+        if (isNewScreen() && window.NSCopy) { window.NSCopy.askGoingDown(this); return; }   // the new look: the crew have their say, then the trap's ending
         // Accepting your fate in THE WRONG PLACE is a unique ending
         this.showEndingScreen({
             ending: 'WRONG_PLACE_ACCEPTED',
@@ -3425,6 +3424,31 @@ Then you're through.`,
         this.state.addLog(door === 'LIGHT' ? 'Going into the light.' : from === 'light' ? 'Turning back to Eden.' : 'We are staying on Eden.');
         if (isNewScreen() && window.NSEnding) {
             window.NSEnding.play(this, ending, { from }).then(() => this.recordEnding(ending), err => {
+                console.error('The ending scene failed; the end screen instead', err);
+                this.showEndingScreen(asScreen());
+            });
+            return true;
+        }
+        this.showEndingScreen(asScreen());
+        return true;
+    }
+
+    /**
+     * The new look's "Go down" at the copy of Earth (the crew had their say first, src/newscreen/stop/Copy.js): the trap's
+     * ending, started as endJourney starts the others: once per run, the run over, its scene (end/Ending.js, kind 'copy'),
+     * the save dropped when the end card shows. The default game keeps handleWrongPlaceAccept's old end screen.
+     */
+    endOnTheCopy() {
+        if (this._journeyEnded) return false;
+        let ending;
+        try { ending = window.NSCopyWords.ending(this.state); } catch (err) { console.error('The ending could not be built', err); return false; }
+        this._journeyEnded = true;
+        this.state.gameOver = true;
+        if (window.EncounterCard && typeof window.EncounterCard.noOutcome === 'function') window.EncounterCard.noOutcome();   // the scene is the outcome
+        this.state.addLog('We are going down to it.');
+        const asScreen = () => ({ ending: ending.ending, title: ending.title.toUpperCase(), text: ending.text });
+        if (isNewScreen() && window.NSEnding) {
+            window.NSEnding.play(this, ending, { from: 'copy' }).then(() => this.recordEnding(ending), err => {
                 console.error('The ending scene failed; the end screen instead', err);
                 this.showEndingScreen(asScreen());
             });
@@ -5506,6 +5530,12 @@ Then you're through.`,
      */
     handleAnomalyTeleport(detail) {
         const { destination, type } = detail;
+        if (isNewScreen() && type === 'WRONG_PLACE') {   // the new look: no outcome step; the fall itself is the outcome (src/newscreen/stop/Copy.js)
+            if (window.EncounterCard && typeof window.EncounterCard.noOutcome === 'function') window.EncounterCard.noOutcome();
+            const open = () => { if (!(window.NSCopy && window.NSCopy.fall(this))) { this.state.emitUpdates(); this.renderOrbit(); } };   // not on the bridge: it opens plainly
+            if (window.EncounterCard && typeof window.EncounterCard.whenFree === 'function') window.EncounterCard.whenFree(open); else open();
+            return;
+        }
         if (isNewScreen()) {                       // the new look: the choice's outcome card first, then a quiet fold, then the new place
             const FOLD_PEAK_MS = 400, FOLD_MS = 1600;
             const fold = () => {

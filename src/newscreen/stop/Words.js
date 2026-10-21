@@ -39,6 +39,7 @@
      words.apply(t, L)       the DOM half: place, show, type on; A.U.R.A.'s first-time lines
      words.hide()            all off;  words.hit(cx, cy) → { kind: 'act' | 'leave' | 'who' | 'find', key?, id? } | null (CSS px)
      words.fresh(key) → bool shown less than 400 ms ago (a click is ignored);  words.noteUp(), words.skyY() (frame y)
+     words.markTop(id) → frame y | null   the top of the copy's state mark over a person (a line said beside them goes above)
      words.debug() → [{ text, rect }]
 */
 (function () {
@@ -58,6 +59,7 @@
     };
     const WEAK_LINE = "I went without supper. I'm too weak to go down this time.";   // too weak for this trip (GameState.serveSupper)
     const DESK = [334, 429], KEY_Y = 290;                                 // Cora's console front (frame px): the helm key sits on it
+    const KEY_TOP_TWO = 266;                                              // two held keys with their chips (the copy of Earth): the first one's top, so both fit the console
     const ROOM_R = 606;                                                   // frame px: the inside of the bridge's right wall (a note never runs onto the hull)
     const WHO_WRAP = 44;                                                  // frame px: the most a name over someone at the hatch may spread
     const WHO_GAP = 3;                                                    // frame px: kept between the two names at the hatch
@@ -96,25 +98,27 @@
             T = { title: TG.make(layer, 'title'), acts: [0, 1, 2, 3].map(() => TG.make(layer, 'act')), go: TG.make(layer, 'act'), key: TG.make(layer, 'key'), settle: TG.make(layer, 'key'),
                 who: [TG.make(layer, 'who'), TG.make(layer, 'who')], note: TG.make(layer, 'note'), probe: TG.make(layer, 'note'),
                 titleProbe: TG.make(layer, 'title'),                     // never shown: the title with every row, measured (the room kept under it)
-                finds: Array.from({ length: MAX_FINDS }, () => TG.make(layer, 'act')) };
+                finds: Array.from({ length: MAX_FINDS }, () => TG.make(layer, 'act')),
+                marks: Array.from({ length: 5 }, () => TG.make(layer, 'who')) };   // the copy of Earth: what the fall did to each of them
             T.key.set({ label: 'Leave orbit' });
             T.settle.set({ label: 'Settle here' });
             stock = window.NSStock ? window.NSStock.board(layer) : null;
         }
-        const allTags = () => [T.title, T.go, T.key, T.settle, T.note].concat(T.acts, T.who, T.finds);
+        const allTags = () => [T.title, T.go, T.key, T.settle, T.note].concat(T.acts, T.who, T.finds, T.marks);
 
         // ── geometry ──
         /** The top of someone's head standing at floor row F (frame px): their idle sprite's first painted row. */
-        function headTop(id) {
-            if (!heads.has(id)) {
+        function headTop(id, act) {
+            const k = id + ':' + (act || 'idle');
+            if (!heads.has(k)) {
                 let row = 0;
                 try {
-                    const Sp = ctx.sprite(id), d = Sp.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, Sp.w, Sp.h).data;
+                    const Sp = ctx.sprite(id, act), d = Sp.canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, Sp.w, Sp.h).data;
                     outer: for (let y = 0; y < Sp.h; y++) for (let x = 0; x < Sp.w; x++) if (d[(y * Sp.w + x) * 4 + 3]) { row = y; break outer; }
-                    heads.set(id, { row, oy: Sp.origin.y });
-                } catch (err) { heads.set(id, { row: 4, oy: 101 }); }
+                    heads.set(k, { row, oy: Sp.origin.y });
+                } catch (err) { heads.set(k, { row: 4, oy: 101 }); }
             }
-            const h = heads.get(id);
+            const h = heads.get(k);
             return ctx.F - h.oy + h.row;
         }
         /** A point just inside the world's limb, facing the box: level with it when the world is beside it, else the nearest
@@ -251,10 +255,13 @@
             o.finds.forEach(f => { budget -= wordsIn(f.label); });
             if (o.team) budget -= 2;
             if (o.leave) budget -= 2;
+            (o.keys || []).forEach(a => { budget -= wordsIn(a.words); });
             if (o.stock) budget -= window.NSStock.KEYS.length;
             if (o.name) budget -= wordsIn(o.name);
             if (o.note) budget -= wordsIn(o.note.name) + wordsIn(o.note.text || o.note.line) + wordsIn(o.note.loss);
-            const dec = { act: {}, find: {}, aimed: aimedId };
+            const dec = { act: {}, find: {}, keys: {}, aimed: aimedId };
+            (o.keys || []).forEach(a => { dec.keys[a.key] = take(chipWords([].concat(...(a.chips || []).map(c => (Array.isArray(c) ? c : [c]))))); });   // what a held key costs: first
+            dec.marks = !!(o.marks && o.marks.length) && take(o.marks.reduce((n, m) => n + 1 + wordsIn(m.text), 0));   // then what the fall did to each of them
             dec.kind = !!o.kind && take(wordsIn(o.kind));
             if (aimed) dec.find[aimed.id] = take(chipWords(aimed.chips));
             dec.who = !!o.team && take(o.whoIds.reduce((n, id) => n + 1 + wordsIn(S.pick.why[id] || ''), 0));
@@ -281,8 +288,10 @@
             const g = GL.geom(t, S.shownAt), dc = GL.disc(t, S.shownAt) || [g.x, g.y, g.r], site = GL.site(t, S.shownAt);
             const rank = a => { const i = WORTH.indexOf(a.key); return i < 0 ? WORTH.length : i; };
             const settleAct = S.actions.find(a => a.key === 'settle') || null;   // never on the glass: its own key at the helm (below)
-            const best = S.actions.filter(a => a !== settleAct).sort((a, b) => rank(a) - rank(b)).slice(0, MAX_LIT);
-            const shown = busy ? [] : S.actions.filter(a => best.includes(a) && !(sweeping && a.key === 'scan'));   // the glass is sweeping: Scan is under way
+            const keyActs = S.actions.filter(a => a.near === 'key');              // the copy of Earth's two held keys (Orbit.js): on the console too
+            const CPY = window.NSCopy, strained = wrong && !!(CPY && CPY.fighting());   // the engines straining: only the keys stay
+            const best = S.actions.filter(a => a !== settleAct && a.near !== 'key').sort((a, b) => rank(a) - rank(b)).slice(0, MAX_LIT);
+            const shown = busy || strained ? [] : S.actions.filter(a => best.includes(a) && !(sweeping && a.key === 'scan'));   // the glass is sweeping: Scan is under way
             const teamAct = shown.find(a => a.team && picking && ctx.proposed()) || null, acts = shown.filter(a => !a.team);
             // each action keeps its own tag while it stays on screen (a neighbour going never makes it draw in again)
             const used = new Set(), tagOf = new Map();
@@ -291,12 +300,13 @@
             const L = { t, items: [], preview: null, stock: !NS.blocked() && !!stock, marks: [] };
             const leaveOn = !busy && !wrong, note = noteFor(S.hover), team = teamAct ? ctx.team() : [];
             const goChips = teamAct ? teamChips() : [], whoIds = team.filter(ctx.arrived);
-            const nameText = S.node ? titleCase(S.node.name || '') : '', kind = nameText ? kindLine() : '', live = nameText ? liveRow() : null;
+            const nameText = S.node && !wrong ? titleCase(S.node.name || '') : '', kind = nameText ? kindLine() : '', live = nameText ? liveRow() : null;   // the copy has no name on the glass
+            const marks = wrong && CPY && !busy ? CPY.marks(t) || [] : [];
             // the world's finds (WorldFinds.js): shown once the glass has swept it, never while the team is on its way
             const ground = g.kind === 'world' || g.kind === 'giant', allFinds = ground && !sweeping ? (S.finds || []).slice(0, MAX_FINDS) : [];
             const finds = busy ? [] : allFinds.map((f, i) => ({ f, id: f.id, label: f.label, chips: findChips(f), target: !!f.target, tag: T.finds[i] }));
             if (busy) allFinds.filter(f => f.target).forEach(f => L.marks.push({ at: GL.spot(t, S.shownAt, f.at), state: 'target' }));   // where they are going stays marked
-            const dec = decide({ acts, finds, team: !!teamAct, leave: leaveOn, stock: L.stock, note, goChips, whoIds, name: nameText, kind, live });
+            const dec = decide({ acts, finds, team: !!teamAct, leave: leaveOn, keys: busy ? [] : keyActs, marks, stock: L.stock, note, goChips, whoIds, name: nameText, kind, live });
 
             // the glass's title: the world's name, what kind of world it is, and once scanned whether people could live there
             let titleBox = null, voiceFloor = null;
@@ -363,9 +373,6 @@
                 if (a.near === 'mira') {
                     const p = ctx.poseOf('mira', t), mx = p && !p.hidden ? Math.round(p.x) + ctx.OFFX : ctx.NAV;
                     x = mx + 8; y = headTop('mira') - h - 3;              // over her shoulder, clear of her head; its thread drops to her screen
-                } else if (a.near === 'under') {                          // the Wrong Place's two choices: a row low in the open sky
-                    const row = boxes.filter(b => b[1] > WIN.y1 - 60);
-                    x = row.length ? Math.max(...row.map(b => b[0] + b[2])) + 10 : WIN.x0 + 12; y = WIN.y1 - 30 - h;
                 } else { x = WIN.x1 - 6 - w; y = WIN.y0 + 5; }           // A.U.R.A.'s, and anything else: the glass's top right
                 for (let k = 0; k < 12 && boxes.some(b => overlaps([x, y, w, h], b, 3)); k++) y += 6;   // never on another tag
                 if (a.near !== 'mira') y = Math.min(y, WIN.y1 - 22 - h);  // and never down among the heads at the window
@@ -387,7 +394,7 @@
                     whoBoxes.push({ id, tag, px: cx, x: clamp(Math.round(cx - w / 2), 2, SW - w - 2), y: headTop(id) - 4 - h, w, h });
                 });
                 T.go.set({ label: 'Go down', chips: dec.go ? goChips : null });
-                const heads = team.map(headTop).concat(team.length ? [] : [headTop('vance')]);
+                const heads = team.map(id => headTop(id)).concat(team.length ? [] : [headTop('vance')]);
                 const [w, h] = T.go.size(u), top = Math.min(...heads) - 4 - Math.max(room, 18) - 7 - h;
                 const go = { key: 'team', tag: T.go, kind: 'act', x: 34, y: top, w, h, tone: 'warm', icon: ICON.team, brackets: true, dim: team.length < 2 };
                 go.anchor = anchorOf(teamAct, g, dc, site, [go.x, go.y, w, h]);
@@ -398,19 +405,44 @@
             }
             // Leave orbit: a lit key on Cora's console; the next step once nothing is left to do here
             let keyBottom = KEY_Y;
+            const deskX = w => Math.round((DESK[0] + DESK[1]) / 2 - w / 2), held = key => (ctx.holdKey && ctx.holdKey() === key && ctx.hold ? ctx.hold() : 0);
+            const fightAct = busy ? null : keyActs.find(a => a.key === 'escape') || null, downAct = busy ? null : keyActs.find(a => a.key === 'accept') || null;
             if (leaveOn) {
+                T.key.set({ label: 'Leave orbit' });
                 const [w, h] = T.key.size(u), next = !S.trip && !acts.length && !teamAct && !finds.some(v => !v.f.done);
-                L.items.push({ key: 'leave', tag: T.key, kind: 'key', x: Math.round((DESK[0] + DESK[1]) / 2 - w / 2), y: Math.round(KEY_Y - h / 2), w, h, next });
+                L.items.push({ key: 'leave', tag: T.key, kind: 'key', x: deskX(w), y: Math.round(KEY_Y - h / 2), w, h, next });
                 keyBottom = Math.round(KEY_Y + h / 2);
+            } else if (fightAct) {                                        // the copy of Earth: Fight to escape where Leave orbit sits, held (stop/Copy.js)
+                const rows = (fightAct.chips || []).every(Array.isArray) ? fightAct.chips : [fightAct.chips || []];
+                T.key.set({ label: fightAct.words, rows: dec.keys.escape ? rows.filter(r => r.length) : null });
+                const [w, h] = T.key.size(u), y = KEY_TOP_TWO;
+                L.items.push({ key: 'escape', tag: T.key, kind: 'key', x: deskX(w), y, w, h, tone: 'warm', icon: 'escape', hold: ctx.fight ? ctx.fight() : 0 });
+                keyBottom = y + h - 1;
             }
             // Settle here: the one choice that ends the journey. Never a tag among the others: a quiet grey key under Leave orbit,
-            // only once our scan says people could live here (or on Eden), and held down, not clicked (Stop.js SETTLE_HOLD_MS)
+            // only once our scan says people could live here (or on Eden), and held down, not clicked (Stop.js SETTLE_HOLD_MS).
+            // At the copy of Earth the same key is "Go down" (it IS settling, on the trap), its chip under its word.
             if (settleAct && !busy && !wrong && !S.trip && homeable()) {
+                T.settle.set({ label: 'Settle here' });
                 const [w, h] = T.settle.size(u);
-                const item = { key: 'settle', tag: T.settle, kind: 'key', x: Math.round((DESK[0] + DESK[1]) / 2 - w / 2), y: keyBottom + 4, w, h, tone: 'cool', hold: ctx.hold ? ctx.hold() : 0 };
+                const item = { key: 'settle', tag: T.settle, kind: 'key', x: deskX(w), y: keyBottom + 4, w, h, tone: 'cool', hold: held('settle') };
                 item.anchor = site.map(Math.round);                     // where the flag would stand (its preview), no thread
                 L.items.push(item);
+            } else if (downAct) {
+                T.settle.set({ label: downAct.words, chips: dec.keys.accept ? downAct.chips : null });
+                const [w, h] = T.settle.size(u);
+                L.items.push({ key: 'accept', tag: T.settle, kind: 'key', x: deskX(w), y: keyBottom + 4, w, h, tone: 'cool', icon: 'shuttle', hold: held('accept') });
             }
+            // the copy of Earth, a moment after the fall: over each person what it did to them ("+1 stress", "hurt"), in red; while one
+            // of them talks, their line sits over their mark (Stop.js anchors) and names them, so the mark drops its name
+            const talker = NS.mods.voice && NS.mods.voice.speaking ? NS.mods.voice.speaking() : null;
+            (dec.marks ? marks : []).forEach((m, i) => {
+                const tag = T.marks[i], p = ctx.poseOf(m.id, t);
+                if (!tag || !p || p.hidden) return;
+                tag.set({ name: talker === m.id ? '' : ctx.NAMES[m.id], why: m.text, tone: ctx.TONE[m.id], wrap: Math.floor(WHO_WRAP * u) + 'px' });
+                const [w, h] = tag.size(u), cx = Math.round(p.x) + ctx.OFFX + (m.lying ? -42 * (p.facing || 1) : 0), top = m.lying ? ctx.F - 26 : headTop(m.id, p.act);   // lying: over their head, clear of whoever kneels by them
+                L.items.push({ key: 'mark:' + m.id, id: m.id, tag, kind: 'who', state: true, x: clamp(Math.round(cx - w / 2), 2, SW - w - 2), y: top - 4 - h, w, h, px: cx, tone: ctx.TONE[m.id] });
+            });
             // the note over someone pointed at: at the hatch it takes the place of their name, narrow, under GO DOWN
             if (note) {
                 const atHatch = notedBox === true;
@@ -490,8 +522,8 @@
                 const k = calm ? 1 : clamp01(since(it, t) / ARM_MS), hot = S.hot === it.key, lit = hot || !!it.target;   // the find chosen stays lit
                 if (it.kind === 'key') {
                     const cool = it.tone === 'cool';
-                    TA.key(c, it.x, it.y, it.w, it.h, { hot, next: it.next, t, still: calm, tone: it.tone, fill: it.hold || 0 });
-                    TA.icon(c, cool ? 'flag' : 'chevrons', it.x + 4, it.y + Math.floor((it.h - 9) / 2), cool ? 'cool' : 'warm', hot || it.next ? 1 : 0);
+                    TA.key(c, it.x, it.y, it.w, it.h, { hot, next: it.next, t, still: calm, tone: it.tone, fill: it.hold || 0, fillH: it.tag.lh || 0 });
+                    TA.icon(c, it.icon || (cool ? 'flag' : 'chevrons'), it.x + 4, it.y + (it.h > 16 ? 3 : Math.floor((it.h - 9) / 2)), cool ? 'cool' : 'warm', hot || it.next ? 1 : 0);   // with chips: level with its word
                     return;
                 }
                 TA.shade(c, it.x, it.y, it.w, it.h, Math.min(1, k * 1.6));
@@ -523,6 +555,7 @@
                 tag.flag('is-cool', it.tone === 'cool');
                 tag.flag('is-wait', !!it.dim);
                 tag.flag('is-next', !!it.next);
+                tag.flag('is-state', !!it.state);
                 tag.type(now, calm);
             });
             allTags().forEach(tag => { if (!on.has(tag)) { if (tag.on && tag.key0) { drawnAt.delete(tag.key0); shownWall.delete(tag.key0); } tag.show(false); tag.key0 = null; } });
@@ -561,7 +594,7 @@
             if (!lastL) return null;
             for (const it of lastL.items) {
                 if (!it.tag.on || it.kind === 'title' || it.kind === 'note' || !inside(it, cx, cy, it.kind === 'who' ? 2 : 6)) continue;
-                if (it.kind === 'key') return { kind: it.key === 'settle' ? 'settle' : 'leave' };
+                if (it.kind === 'key') return { kind: it.key === 'settle' || it.key === 'accept' ? 'settle' : it.key === 'escape' ? 'fight' : 'leave', key: it.key };
                 if (it.kind === 'who') return { kind: 'who', id: it.id };
                 if (it.kind === 'find') { if (it.dim) continue; return { kind: 'find', id: it.id, key: it.key }; }   // a visited find takes no click
                 return { kind: 'act', key: it.key };
@@ -571,6 +604,11 @@
             return m ? { kind: 'find', id: m.id, key: m.key } : null;
         }
         const fresh = key => performance.now() - (shownWall.get(key) || 0) < GUARD_MS;
+        /** The top of the mark over a person at the copy (frame y), or null: a line said beside them goes above it. */
+        function markTop(id) {
+            const it = lastL && lastL.items.find(q => q.key === 'mark:' + id);
+            return it ? it.y : null;
+        }
         function skyY() {
             const it = lastL && lastL.items.find(q => q.kind === 'title');
             return it ? it.y + it.h + 4 : WIN.y0 + 8;
@@ -582,11 +620,13 @@
         function explain() {
             const v = NS.mods.voice, tell = (window.NSOrbit && window.NSOrbit.TELL) || {};
             if (telling || !lastL || !v || typeof v.once !== 'function' || typeof v.told !== 'function') return;
+            const copy = ctx.isWrongPlace(), CPY = window.NSCopy;
+            if (copy && CPY && CPY.talking()) return;                    // the copy of Earth: the crew's talk first
             const now = performance.now(), team = ctx.team();
             const ready = key => key !== 'team' || (team.length === 2 && team.every(ctx.arrived) && S.lineup.length >= 3);
             const seen = it => it.tag.on && now - (shownWall.get(it.key) || now) >= TELL_AFTER_MS;
             const isFind = it => it.kind === 'find' && !it.dim;                                // the finds: told once, as one ('find')
-            const shown = lastL.items.filter(it => (it.kind === 'act' || it.kind === 'key') && seen(it) && ready(it.key)).map(it => it.key)
+            const shown = lastL.items.filter(it => (it.kind === 'act' || it.kind === 'key') && seen(it) && ready(it.key) && !(copy && (it.key === 'scan' || (CPY && CPY.used(it.key))))).map(it => it.key)   // the copy: A.U.R.A.'s scan line is its own; a key pressed needs no telling
                 .concat(lastL.items.some(it => isFind(it) && seen(it)) ? ['find'] : []);
             const key = (S.hot && shown.includes(S.hot) ? [S.hot] : []).concat(shown).find(k => tell[k] && !v.told('act:' + k));
             if (!key) return;
@@ -597,7 +637,7 @@
             v.once('act:' + key, text, stillThere).then(done, err => { done(); console.error('NewScreen stop: the voice failed', err); });
         }
         const debug = () => (T ? allTags().filter(tag => tag.on).map(tag => ({ key: tag.key0, text: tag.el.textContent, rect: (r => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)])(tag.el.getBoundingClientRect()) })) : []);
-        return { init, layout, glass, threads, tags, apply, hide, hit, fresh, noteUp: () => !!(T && T.note.on), skyY, debug };
+        return { init, layout, glass, threads, tags, apply, hide, hit, fresh, noteUp: () => !!(T && T.note.on), skyY, markTop, debug };
     }
 
     window.NSStopWords = Object.freeze({ create });

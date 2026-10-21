@@ -50,6 +50,7 @@
     const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, READ_MS = 250, GATHER_LEAD = 2600, PROPOSE_AFTER = 450, CLICK_GAP = 300;
     const SETTLE_HOLD_MS = 1400;                                          // settling ends the journey: the key is held, not clicked
     const SWEEP_MS = 1750;                                                // Scan: the glass sweeps the world's face once, then the finds show
+    const CP = window.NSCopy || null;                                     // the fall through the gap and the copy of Earth (stop/Copy.js)
 
     // ── the stop's own state (none of it is game state) ──
     const freshPick = () => ({ slots: [null, null], order: [], why: {}, manual: false, key: '', from: Infinity });
@@ -138,6 +139,8 @@
         while a team action waits (and they stay there for the rest of the stop); the too weak apart; Mira at her console
         otherwise; the team away; the hurt, the confined and the dead are not on the bridge. */
     function desired() {
+        const cp = CP ? CP.desired(Object.fromEntries(['cora'].concat(CREW).map(id => [id, crewOf(id)])), t0()) : null;   // the fall, the copy of Earth
+        if (cp) return Object.fromEntries(['cora'].concat(CREW).map(id => [id, cp[id] || null]));
         const away = S.trip ? S.trip.ids : S.send ? S.send.ids : [], out = { cora: crewOf('cora') === 'dead' ? null : { x: HELM, act: 'console', facing: 1 } };
         CREW.forEach(id => {
             if (crewOf(id) !== 'well' || away.includes(id)) { out[id] = null; return; }
@@ -274,13 +277,14 @@
     }
     /** The bridge, back to front: the sky in the glass (and what a pointed-at tag shows on it), the room, the threads to
         what each tag acts on, the people, damage, then the tags' own pixels (shade, brackets, icons, the helm key). */
-    function composeBridge(t, words) {
+    function composeBridge(t, words, cv) {
         const c = actx;
         c.imageSmoothingEnabled = false;
         c.globalCompositeOperation = 'source-over';
         c.fillStyle = INK; c.fillRect(0, 0, SW, SH);
         drawSides(c, t);
-        GL.draw(c, t, { shownAt: S.shownAt, call: S.actions.some(a => a.key === 'call') });
+        if (cv && cv.fall) CP.drawFallGlass(c, t);                         // the fall: the world split along a seam
+        else GL.draw(c, t, { shownAt: S.shownAt, call: S.actions.some(a => a.key === 'call') });
         if (words) W.glass(c, t, words);
         c.drawImage(room.canvas, OFFX, 0);
         c.globalCompositeOperation = 'lighter'; c.drawImage(room.glass, 0, 0); c.globalCompositeOperation = 'source-over';
@@ -290,6 +294,7 @@
         if (words) W.threads(c, t, words);
         drawPeople(c, t);
         drawDamage(c, t);
+        if (cv) CP.drawRoom(c, t, cv);                                    // the lamps out, Earth's blue light
         if (words) W.tags(c, t, words);
     }
     /** A broken deck shows here too: the bridge (or the lab under it) under a dithered red wash; engineering down, the lights
@@ -396,6 +401,8 @@
         readActions(t);
         reconcile(t, true);
         S.open = true; S.fadeAt = t; S.shownAt = -1e9;
+        const sa = CP ? CP.shownAtFor(id, t) : null;                     // the copy of Earth after the fall: it brakes in as the light returns
+        if (sa != null) S.shownAt = sa;
     }
     function onRefresh() {
         const t = t0(), node = currentNode();
@@ -436,6 +443,7 @@
     function emit(name, payload) { NS.bus.emit(name, payload); }
     function update(dt, t) {
         D.bake(dt > 0 ? 4 : 2);
+        if (CP) CP.update(dt, t);
         const d = S.dive;
         if (d) {
             const el = t - d.t0;
@@ -454,7 +462,7 @@
         if (S.drop && t >= S.drop.at) { GL.shuttle('down', S.drop.at, SHUTTLE_MS); S.drop = null; }   // the team is down the hatch: the shuttle goes
         if (S.send && !S.send.fired && t >= S.send.fireAt && !NS.blocked()) fireSend();   // a card came up meanwhile: they wait below
         if (S.sweep && t - S.sweep.t0 >= SWEEP_MS && !NS.blocked()) { S.sweep = null; runAct('scan', t); }   // the glass has swept the world: the scan reads it
-        if (S.hold && t - S.hold.t0 >= SETTLE_HOLD_MS) { S.hold = null; setHot(null); runAct('settle', t); }   // held long enough: the crew have their say
+        if (S.hold && t - S.hold.t0 >= SETTLE_HOLD_MS) { const k = S.hold.key || 'settle'; S.hold = null; setHot(null); runAct(k, t); }   // held long enough: the crew have their say
         if ((S.open || S.dive) && t - S.readAt >= READ_MS && S.id && !(S.dive && !S.dive.open && S.dive.dir === 'in')) { readActions(t); if (S.open && !(S.dive && S.dive.dir === 'out')) reconcile(t); }
     }
     function shown() {
@@ -497,6 +505,8 @@
         if (!room) return;
         const d = S.dive, G = NS.G;
         if (!d && !S.open) { vis(diveC, false); vis(bridgeC, false); W.hide(); inked = false; return; }
+        const cv = CP && !d ? CP.view(t) : null;                          // the fall, the copy of Earth: black, dark, shaken
+        if (cv && cv.black) { bctx.fillStyle = INK; bctx.fillRect(0, 0, geo.CW, geo.CH); vis(bridgeC, true); W.hide(); return; }
         let j = STEPS;                                                    // how much of the bridge shows (Bayer steps)
         if (d) {
             const el = t - d.t0;
@@ -508,13 +518,14 @@
             if (!inked) { dctx.globalCompositeOperation = 'source-over'; dctx.fillStyle = INK; dctx.fillRect(0, 0, G.W, G.H); inked = true; }
             if (S.fadeAt != null) j = Math.min(STEPS, 1 + Math.floor((t - S.fadeAt) / (DISSOLVE / STEPS)));
         }
+        if (cv && cv.fadeJ != null) j = Math.min(j, cv.fadeJ);           // the light coming back after the fall, slowly
         if (j <= 0) { vis(bridgeC, false); W.hide(); return; }
-        const words = j >= STEPS && !(d && d.dir === 'out') ? W.layout(t) : null;   // the tags only once the bridge is whole
-        composeBridge(t, words);
+        const words = j >= STEPS && !(d && d.dir === 'out') && !(cv && cv.noWords) ? W.layout(t) : null;   // the tags only once the bridge is whole
+        composeBridge(t, words, cv);
         if (j < STEPS) { actx.globalCompositeOperation = 'destination-in'; actx.drawImage(mask(j - 1), 0, 0); actx.globalCompositeOperation = 'source-over'; }
         bctx.clearRect(0, 0, geo.CW, geo.CH);
         drawMargins(t, j);
-        bctx.drawImage(art, geo.ox, geo.oy);
+        bctx.drawImage(art, geo.ox + (cv ? cv.shake[0] : 0), geo.oy + (cv ? cv.shake[1] : 0));
         vis(bridgeC, true);
         if (words) W.apply(t, words); else W.hide();
         repoint();
@@ -559,24 +570,36 @@
         const who = picking() ? (hit && hit.kind === 'who' ? hit.id : personAtPx(ax, ay)) : null;
         const fit = who && S.lineup.includes(who) ? who : null, weak = who && S.aside.includes(who) ? who : null;   // too weak to go: pointing says why, a click does nothing
         const actKey = hit && hit.kind === 'act' ? hit.key : null, onLeave = !!(hit && hit.kind === 'leave'), onSettle = !!(hit && hit.kind === 'settle');
+        const onFight = !!(hit && hit.kind === 'fight'), settleKey = onSettle ? hit.key || 'settle' : null;   // the copy of Earth: Fight to escape, Go down
         const find = hit && hit.kind === 'find' ? hit : null;            // a find's tag or its mark on the world
-        return { fit, weak, actKey, onLeave, onSettle, find, on: !!actKey || onLeave || onSettle || !!find || (!!fit && S.lineup.length > 2) };
+        return { fit, weak, actKey, onLeave, onSettle, onFight, settleKey, find, on: !!actKey || onLeave || onSettle || onFight || !!find || (!!fit && S.lineup.length > 2) };
     }
     function pointAt(u) {
-        setHot(u.actKey || (u.find ? u.find.key : null) || (u.onLeave ? 'leave' : null) || (u.onSettle ? 'settle' : null));
+        setHot(u.actKey || (u.find ? u.find.key : null) || (u.onLeave ? 'leave' : null) || u.settleKey || (u.onFight ? 'escape' : null));
         if (S.hold && !u.onSettle) S.hold = null;                        // slid off the settle key: nothing is decided
-        S.hover = u.actKey || u.find || u.onLeave || u.onSettle ? null : u.fit || u.weak; setPointing(u.on); return u.on;
+        if (CP && !u.onFight) CP.holdFight(false);                       // slid off the fight key: it drifts back
+        S.hover = u.actKey || u.find || u.onLeave || u.onSettle || u.onFight ? null : u.fit || u.weak; setPointing(u.on); return u.on;
     }
-    /** The settle key held down: let go (or slide off) before it fills and nothing happens; held, the crew have their say. */
-    function holdSettle(t) {
-        S.hold = { t0: t };
-        const end = () => { removeEventListener('pointerup', end, true); removeEventListener('pointercancel', end, true); S.hold = null; };
-        addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true);
+    /** A held key lets go on any release: the button up, the pointer lost, the window left (alt-tab) or the tab hidden, so a
+        key held while the player is away never fills on its own. */
+    function onRelease(fn) {
+        const end = () => {
+            removeEventListener('pointerup', end, true); removeEventListener('pointercancel', end, true); removeEventListener('blur', end);
+            document.removeEventListener('visibilitychange', end);
+            fn();
+        };
+        addEventListener('pointerup', end, true); addEventListener('pointercancel', end, true); addEventListener('blur', end);
+        document.addEventListener('visibilitychange', end);
     }
+    /** The settle key (or Go down) held down: let go (or slide off) before it fills and nothing happens; held, the crew have their say. */
+    function holdSettle(t, key) { S.hold = { t0: t, key: key || 'settle' }; onRelease(() => { S.hold = null; }); }
+    /** Fight to escape held down: the engines strain while it is (stop/Copy.js); let go and it drifts back. */
+    function holdFight() { CP.holdFight(true); onRelease(() => CP.holdFight(false)); }
     /** Each frame: what is under a still pointer now (someone walked off, or onto it). */
     function repoint() { if (ptr && S.open && !S.dive && !S.send && !S.sweep && !NS.blocked()) pointAt(under(ptr.x, ptr.y)); }
     function pointer(type, e) {
         ptr = type === 'leave' ? null : { x: e.clientX, y: e.clientY };
+        if (CP && CP.falling()) { if (type === 'down' && !NS.blocked()) CP.hurry(); return type === 'down'; }   // the fall: a click hurries it
         if (!S.open || S.dive || S.fadeAt != null && t0() - S.fadeAt < DISSOLVE || NS.blocked()) { if (type === 'move' || type === 'leave') { S.hover = null; setHot(null); setPointing(false); } return false; }
         const t = t0(), cx = e.clientX, cy = e.clientY;
         if (type === 'leave') { S.hover = null; setHot(null); setPointing(false); return false; }
@@ -587,7 +610,8 @@
         if (type !== 'down') return false;
         if (t - S.clickAt < CLICK_GAP) return true;
         if (onLeave && !W.fresh('leave')) { S.clickAt = t; leave(); return true; }
-        if (onSettle && !W.fresh('settle')) { S.clickAt = t; holdSettle(t); return true; }
+        if (onSettle && !W.fresh(u.settleKey)) { S.clickAt = t; holdSettle(t, u.settleKey); return true; }
+        if (u.onFight && !W.fresh('escape')) { S.clickAt = t; if (CP) holdFight(); else doAct('escape', t); return true; }   // without stop/Copy.js: the old escape card
         if (actKey && !W.fresh(actKey)) { S.clickAt = t; doAct(actKey, t); return true; }
         if (find && !W.fresh(find.key)) { S.clickAt = t; aimAt(find.id, t); return true; }
         if (fit) { S.clickAt = t; return pickPerson(fit, t); }
@@ -653,7 +677,8 @@
         NS.anchors.set('stop:site', () => { const t = t0(), g = GL.geom(t, S.shownAt), [sx, sy] = GL.site(t, S.shownAt); return [pt(Math.max(WIN.x0 + 20, g.x - g.r - 12), sy, 'left'), pt(sx, Math.min(WIN.y1 - 10, g.y + g.r + 8), 'below', 'center')]; });
         ['cora'].concat(CREW).forEach(id => NS.anchors.set('stop:person:' + id, () => {
             const d = S.drawn.find(q => q.id === id); if (!d) return [];
-            return [pt(d.X, d.Y + 2, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left'), pt(WIN.x0 + 10, skyY(), 'below'), pt(574, 122, 'left')];
+            const mt = W.markTop ? W.markTop(id) : null, top = mt != null ? Math.min(d.Y + 2, mt - 3) : d.Y + 2;   // the copy: over their state mark, not on it
+            return [pt(d.X, top, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left'), pt(WIN.x0 + 10, skyY(), 'below'), pt(574, 122, 'left')];
         }));
     }
     function discs() {
@@ -700,10 +725,12 @@
             S, css: (x, y) => css(x, y), unit: () => unit(), t0, poseOf, picking, team, arrived, joinedLast, isWrongPlace,
             sweep: () => (S.sweep ? Math.max(0, t0() - S.sweep.t0) : null),
             hold: () => (S.hold ? Math.min(1, Math.max(0, (t0() - S.hold.t0) / SETTLE_HOLD_MS)) : 0),   // how far the settle key has filled
+            holdKey: () => (S.hold ? S.hold.key : null), fight: () => (CP ? CP.fightK() : 0),   // which held key; how far Fight to escape has filled
             proposed: () => !!(S.pick.key || S.pick.manual || t0() > S.pick.from + 1500),   // the crew have stepped forward (or should have)
-            sprite: id => CE.sprite(id, 'idle', 0, {}), NAMES, TONE, CREW, OFFX, F, HATCH: HATCH + OFFX, NAV: NAV + OFFX, HELM: HELM + OFFX,
+            sprite: (id, act) => CE.sprite(id, act || 'idle', 0, {}), NAMES, TONE, CREW, OFFX, F, HATCH: HATCH + OFFX, NAV: NAV + OFFX, HELM: HELM + OFFX,
         });
         W.init(wordsLayer());
+        if (CP) CP.attach({ S, poseOf, glassAt: (c, t) => GL.draw(c, t, { shownAt: S.shownAt, call: false }), sweep: () => (S.sweep ? Math.max(0, t0() - S.sweep.t0) : null) });
         NS.bus.on('dive:start', onDiveStart);
         NS.bus.on('dive:cancel', onDiveCancel);
         NS.bus.on('stop:open', onStopOpen);
