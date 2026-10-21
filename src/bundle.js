@@ -1839,8 +1839,9 @@ class App {
             this.applyPlotResult(plotResult, cost);
             this.state.addLog(`Warping to ${planet.name}...`);
 
-            // Tutorial: first warp
-            if (!this.state._tutorialWarpSeen) {
+            // Tutorial: first warp to a world (beside a station or in a field of rocks nobody lands: it waits for the first world)
+            const isLandingPlace = !(planet.isStation || planet.type === 'STATION' || planet.isAsteroidField || planet.type === 'ASTEROID_FIELD');
+            if (!this.state._tutorialWarpSeen && isLandingPlace) {
                 this.state._tutorialWarpSeen = true;
                 setTimeout(() => {
                     this.state.addLog('A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander."');
@@ -1971,18 +1972,20 @@ class App {
         }
     }
 
-    /** The crew and A.U.R.A. react to the new orbit. Not at the light: nothing random happens there. */
+    /** The crew and A.U.R.A. react to the new orbit (beside a station: to docking, nobody lands there). Not at the light:
+        nothing random happens there. */
     reactToOrbit(planet, isFinale) {
         const barks = typeof BarkSystem !== 'undefined' ? window.BarkSystem : null;
         const isSigned = isNewScreen() && window.NSOrbit && window.NSOrbit.signed(this);   // the new screen: A.U.R.A. warns here, so no "all clear"
+        const arrival = planet && (planet.isStation || planet.type === 'STATION') ? 'ENTER_STATION' : 'ENTER_ORBIT';
         if (barks && !isFinale) {
             barks.checkPlanetBarks(this.state, planet);
-            if (!isSigned) setTimeout(() => barks.tryBark('ENTER_ORBIT', this.state, { planet }), 50);     // if no special bark fired
+            if (!isSigned) setTimeout(() => barks.tryBark(arrival, this.state, { planet }), 50);     // if no special bark fired
             setTimeout(() => barks.checkResourceBarks(this.state), 600);
         }
         const aura = typeof AuraSystem !== 'undefined' ? window.AuraSystem : null;
         if (!aura || isFinale) return;
-        if (!isSigned) aura.tryComment('ENTER_ORBIT', this.state);
+        if (!isSigned) aura.tryComment(arrival, this.state);
         aura.checkAdversarialAction(this.state);
         if (aura.triggerPremonition(this.state)) this.state.addLog(`[A.U.R.A.'s reading was right.]`);
         aura.generatePremonition(this.state);                                                // maybe a new one for the next action
@@ -2897,7 +2900,7 @@ class App {
 
         const cutIn = selected.noHatch ? Promise.resolve() : this.cutIntoWreck(shipName, planet, selected);   // a crater has no hatch to cut
         cutIn.then(() => this.showNarrativeEncounter({
-            art: 'EXODUS_WRECK',
+            art: `EXODUS_WRECK:${selected.id}`,                                      // the card's picture: the wreck as this story leaves it (SceneArt)
             title: selected.title,
             speaker: 'NARRATOR',
             context: `[highlight]${shipName}[/highlight]\n\n${selected.context(shipName)}`,
@@ -2919,23 +2922,26 @@ class App {
     }
 
     /** The team gets into the wreck by the door it has (Torch: the hatch cut, frozen, a fuel line across it; or no torch: cut
-        open long ago, a split in the hull, an airlock with power). Resolves once they are in; it never rejects. */
+        open long ago, a split in the hull, an airlock with power). Every wreck of ours lies on its planet's surface, so the torch
+        is played on the ground, under that world's own sky (TorchGround.js). Resolves once they are in; it never rejects. */
     cutIntoWreck(shipName, planet, story) {
         const [cutter, spotter] = this.torchCrew();
         if (!cutter || !window.MiniHost || !window.MiniHost.has('torch')) return Promise.resolve();
         const door = this.wreckDoorFor(planet, story);
-        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name };
+        const world = planet ? { type: planet.type, temp: planet.metrics ? planet.metrics.temp : null, air: planet.atmosphere, id: planet.id } : null;
+        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name, place: 'ground', world };
         return window.MiniHost.play('torch', opts).then(result => {
             if (result && result.opened) this.state.addLog(this.doorLogLine(result, shipName, cutter.name));
         }, err => console.error(err));
     }
 
-    /** This wreck's door (TorchDoors.pick: by the doors of this run so far, the hull number, the sector and the wreck's story),
-        picked once and kept on the planet; the run remembers the order. Without TorchDoors.js every door is the hatch cut. */
+    /** This wreck's door (TorchDoors.pick: by the doors of this run so far, the hull number, the sector, the wreck's story and its
+        world's temperature: frost only on a cold world, no frozen fuel on a hot one), picked once and kept on the planet; the run
+        remembers the order. Without TorchDoors.js every door is the hatch cut. */
     wreckDoorFor(planet, story) {
         if (planet && planet.wreckDoor) return planet.wreckDoor;
-        const history = this.state._wreckDoors || [], doors = window.TorchDoors;
-        const door = doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id }) : 'cut';
+        const history = this.state._wreckDoors || [], doors = window.TorchDoors, temp = planet && planet.metrics ? planet.metrics.temp : null;
+        const door = doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id, temp }) : 'cut';
         this.state._wreckDoors = history.concat(door);
         if (planet) planet.wreckDoor = door;
         return door;
@@ -3837,7 +3843,8 @@ Then you're through.`,
             this.state.addLog('A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part."');
         }
 
-        this.state.addLog("Detailed surface analysis complete. Resource data available.");
+        const isStationHere = !!(planet.isStation || planet.type === 'STATION');               // a station has no surface
+        this.state.addLog(isStationHere ? "Detailed scan of the station complete. Resource data available." : "Detailed surface analysis complete. Resource data available.");   // DRAFT (the station's line)
 
         // === SIGNAL TYPE SCAN BONUSES ===
         // Different signals provide different benefits when detected
@@ -3951,7 +3958,7 @@ Then you're through.`,
         }
 
         // 2. Launch Sequence (planet already declared at top of function)
-        this.state.addLog(`Probe launched to ${planet.name} surface...`);
+        this.state.addLog(planet.isStation || planet.type === 'STATION' ? `Probe launched to ${planet.name}...` : `Probe launched to ${planet.name} surface...`);   // DRAFT: a station has no surface
 
         // Bark: crew reacts to probe deploy
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {

@@ -25,7 +25,8 @@
                                                   (Mira aboard scans the ground: less risk). A find: { id, kind: 'site' | 'event'
                                                   | 'eden', label, icon, gives: [{ icon, text }], risk, at: [u, v] (on the world,
                                                   in its radii from the centre), done, target, hint ('note' | 'course' | 'fix'
-                                                  | 'date': our wreck the disc can date | null), event?, site?, art? }
+                                                  | 'date': our wreck the disc can date | null), event?, site?, art?, inSpace?
+                                                  (a site in orbit: the team crosses to it, nobody lands) }
      target(app, node) → find | null               where GO DOWN takes the team: the one chosen, else a clue, else the first not done
      blind(app, node) → find | null                where a blind trip goes before a scan (the site, else its own event)
      aim(app, node, id) → bool                     choose where the team goes (kept on the world: node.nsTarget)
@@ -174,7 +175,7 @@
         const s = app.state, hasDisc = !!(s && (s.hasDisc || (typeof ITEMS !== 'undefined' && ITEMS.DISC_DRAWING && (s.cargo || []).some(i => i.id === ITEMS.DISC_DRAWING.id))));
         const toDate = ours && !node.hasPage && !node.isFirstSignal && hasDisc && (s.sectorNodes || []).some(p => p.storyHidden);   // the disc dates it: where its crew went
         return { id: 'site', kind: 'site', site: site.tag, label: d.label, icon: d.icon, gives: gives.map(chip), risk: 0, at: spot(node, 'site', site),
-            done: !!node[site.done], hint: toDate ? 'date' : null };
+            done: !!node[site.done], hint: toDate ? 'date' : null, inSpace: !!site.inSpace };   // inSpace: in orbit, the lander crosses to it (GO DOWN says "Go across")
     }
     function featureOf(node, own) {
         const tags = tagsOf(node), m = node.metrics || {};

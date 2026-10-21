@@ -11,8 +11,9 @@
      our ship, its risk ("risk 12%"); a visited one says "done". They keep below the room A.U.R.A. speaks in under the
      title (two lines) while they fit there. A click on a find (its tag or its mark) makes it where GO
      DOWN goes: its mark in brackets, and the shuttle's path ends there (NSGlass.aim). Pointing at it shows that path;
-   - the team's "GO DOWN" tag over the hatch (the two names, the risk where they go), and over each of the two at the hatch
-     their first name in their colour and why they go;
+   - the team's "GO DOWN" tag over the hatch (the two names, the risk where they go; "Go across" when the trip goes to a site
+     in orbit, the wreckage, where nobody lands), and over each of the two at the hatch their first name in their colour and
+     why they go;
    - "Leave orbit" as a lit key on Cora's console (it glows as the next step once nothing but settling is left);
    - the note over someone pointed at: at the hatch what they are good for; at the window "Aris goes instead of Vance" and
      what the ship loses while they are down; too weak, why;
@@ -273,6 +274,21 @@
             frozen = dec;
             return dec;
         }
+        /** Does this trip go to a site in orbit (the wreckage), where the lander crosses and nobody lands? The find chosen; before
+            a scan, where a blind trip goes (WorldFinds.blind). Worked out again only when the world or its finds change. */
+        let across = { key: null, value: false };
+        function goesAcross() {
+            const finds = S.finds || [], node = S.node, key = node ? `${node.id}|${node.nsTrips || 0}|${finds.map(f => f.id + (f.target ? '*' : '') + (f.done ? '-' : '')).join(',')}` : null;
+            if (key === across.key) return across.value;
+            let value = false;
+            const aimed = finds.find(f => f.target);
+            if (aimed) value = !!aimed.inSpace;
+            else if (!finds.length && node) {
+                try { const F = window.NSWorldFinds, b = F && window.app ? F.blind(window.app, node) : null; value = !!(b && b.inSpace); } catch (err) { console.error('NewScreen stop: where the trip goes failed', err); }
+            }
+            across = { key, value };
+            return value;
+        }
         /** How tall the note over someone at the hatch would be (GO DOWN leaves room for it under itself). */
         const noteHs = new Map();
         function hatchNoteH(id, u) {
@@ -393,7 +409,7 @@
                     room = Math.max(room, h, hatchNoteH(id, u));
                     whoBoxes.push({ id, tag, px: cx, x: clamp(Math.round(cx - w / 2), 2, SW - w - 2), y: headTop(id) - 4 - h, w, h });
                 });
-                T.go.set({ label: 'Go down', chips: dec.go ? goChips : null });
+                T.go.set({ label: goesAcross() ? 'Go across' : 'Go down', chips: dec.go ? goChips : null });   // DRAFT 'Go across': to the wreckage in orbit, nobody lands
                 const heads = team.map(id => headTop(id)).concat(team.length ? [] : [headTop('vance')]);
                 const [w, h] = T.go.size(u), top = Math.min(...heads) - 4 - Math.max(room, 18) - 7 - h;
                 const go = { key: 'team', tag: T.go, kind: 'act', x: 34, y: top, w, h, tone: 'warm', icon: ICON.team, brackets: true, dim: team.length < 2 };

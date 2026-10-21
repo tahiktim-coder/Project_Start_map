@@ -5,6 +5,7 @@ class ProbeSystem {
      * Uses Data-Driven LootTables for scalable outcome generation.
      */
     static performProbe(planet, currentIntegrity) {
+        const isStation = !!(planet.isStation || planet.type === 'STATION');   // a station has no surface (its words, below)
         // 1. Calculate Risk & Damage
         // Increased base damage to prevent "infinite probing". Max life ~8 launches.
         let damage = Math.floor(Math.random() * 10) + 10;
@@ -70,9 +71,10 @@ class ProbeSystem {
                 const thematic = this.getThematicMessage(planet, selected);
                 if (selected.val === 'METALS') {
                     reward = { type: 'RESOURCE', resource: 'metals', amount: amount };
+                    const log = selected.log && isStation ? selected.log.replace(/^Surface Scan:/, 'Hull scan:') : selected.log;   // DRAFT: a station has no surface
                     finalMessage = thematic
                         ? `${thematic} <span style="color:var(--color-primary)">(+${amount} Salvage)</span>`
-                        : (selected.log || `Extracted <span style="color:var(--color-primary)">${amount} Salvage</span>.`);
+                        : (log || `Extracted <span style="color:var(--color-primary)">${amount} Salvage</span>.`);
                 } else {
                     reward = { type: 'RESOURCE', resource: 'energy', amount: amount };
                     finalMessage = thematic
@@ -102,7 +104,9 @@ class ProbeSystem {
     }
 
     /**
-     * Iterates through LOOT_RULES and aggregates valid loot pools based on Planet State.
+     * Iterates through LOOT_RULES and aggregates valid loot pools based on Planet State. Human supplies (medkits, food,
+     * batteries: Items.js ITEM_SOURCES 'human') only where people once stocked a shelf, as a team trip's finds already are
+     * (App.getProbeItem): a station, a wreck, a dead colony. Never from a world of machines or ruins.
      */
     static buildLootPool(planet) {
         let aggPool = [];
@@ -117,7 +121,14 @@ class ProbeSystem {
             }
         });
 
+        if (!this.hadPeople(planet)) aggPool = aggPool.filter(entry => !(entry.item && entry.item.source === 'human'));
         return aggPool;
+    }
+
+    /** People once stocked a shelf here: a station, one of the wrecks, a dead colony. */
+    static hadPeople(planet) {
+        const tags = planet.tags || [];
+        return !!(planet.isStation || planet.type === 'STATION') || ['DERELICT', 'WRECKAGE', 'EXODUS_WRECK', 'FAILED_COLONY'].some(tag => tags.includes(tag));
     }
 
     /**

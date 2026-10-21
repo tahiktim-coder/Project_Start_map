@@ -38,7 +38,14 @@
     const closeThen = (el, done) => { el.classList.add('is-leaving'); setTimeout(() => { el.remove(); done(); }, 350); };
 
     // ── 1. who goes ──
+    /** The trip goes to a site in orbit (the wreckage, a strange site): the lander crosses to it and nobody lands
+        (App.handleEvaAction's own rule: the planet's open site goes first; the new look picks its team elsewhere). */
+    function goesAcross(app, planet) {
+        const site = app && typeof app.siteOf === 'function' && planet ? app.siteOf(planet) : null;
+        return !!(site && site.inSpace && !planet[site.done]);
+    }
     function pick(app, eligible, planet) {
+        const across = goesAcross(app, planet);
         return new Promise(resolve => {
             const chosen = new Set();
             const cards = eligible.map(m => `
@@ -46,10 +53,11 @@
                     <img src="assets/crew/${esc(m.portraitId)}.png" alt=""><b>${esc(m.name)}</b>
                     <span>${esc(ABOUT[roleOf(m)] || '')}${m.stress >= 2 ? ' Already on edge.' : ''}</span>
                 </button>`).join('');
+            // DRAFT 'Who goes across?' and 'out there': the words for a trip to a site in orbit
             const el = overlay('away-picker', `
                 <p class="warp-plot-kicker">AWAY TEAM — ${esc(planet && planet.name ? planet.name : 'THE SURFACE')}</p>
-                <h2 class="warp-plot-target">Who goes down?</h2>
-                <p class="warp-plot-hint">Choose two. The commander stays with the ship. If something goes wrong down there, it goes wrong for one of them.</p>
+                <h2 class="warp-plot-target">${across ? 'Who goes across?' : 'Who goes down?'}</h2>
+                <p class="warp-plot-hint">Choose two. The commander stays with the ship. If something goes wrong ${across ? 'out there' : 'down there'}, it goes wrong for one of them.</p>
                 <div class="boarding-picker">${cards}</div>
                 <div class="warp-plot-buttons">
                     <button class="warp-plot-engage away-go" disabled>SEND THEM</button>

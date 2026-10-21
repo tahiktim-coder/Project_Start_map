@@ -26,6 +26,10 @@
      already, torn, panel   no torch: a short picture with a line or two (TorchDoors.js plays them; see there)
    Each door's pictures and geometry are in TorchDoors.js; without it every door is the plain cut. "Let Jaxon cut it" stays on
    every door played with the torch. The disc is untouched.
+   ON THE GROUND (2026-10-21): every one of our wrecks lies on a planet, so the game boards them with place 'ground' and the
+   world's { type, temp, air, id }. TorchGround.js then gives the hatch the world's own sky and soil (the landing's colours),
+   Jaxon standing on the soil with the torch on a pole, sparks and dust that fall, a puff of dust instead of the flash of ice
+   (unless there is no air), and the hatch falling back into the wreck with a thud. Space stays the default and looks as before.
 
    const result = await MiniHost.play('torch', opts)
    opts: { mode: 'hatch' | 'disc'  (default 'hatch')
@@ -35,7 +39,9 @@
            sector: 1..6             how long the wreck has been dead (docs/CANON.md §2); deadFor: 'twenty years' overrides it
            cutter: 'Jaxon'          coaches the cut and can take the torch; pass a living crew member ('Vance' if Jaxon is dead);
                                     a titled name from an old save ('Eng. Jaxon') is shortened to its last word
-           spotter: 'Vance' }       says the other lines; pass a living crew member (may be the same as cutter)
+           spotter: 'Vance'         says the other lines; pass a living crew member (may be the same as cutter)
+           place: 'space' | 'ground'   where the wreck is (default 'space'; hatch only)
+           world: { type, temp, air, id } }   on the ground: the planet's type, °C, atmosphere and id (TorchGround.js)
    result, hatch: { opened: true, fuelLeft: 0..1 in the last tank, scars, warps, tanks: tanks used, bySelf: false if handed over,
                     door: the door it was }  (a door without the torch: fuelLeft 1, no scars or warps, one tank, bySelf true)
    result, disc:  { destroyed: true, figuresScorched: the torch touched the two figures, fuelLeft, tanks } */
@@ -149,10 +155,13 @@
     const doorOf = v => (DOORS.includes(v) && (v === 'cut' || !!(window.TorchDoors && window.TorchDoors.has(v))) ? v : 'cut');
     function readOpts(opts) {
         const o = opts || {}, sector = MiniLab.clamp(Math.round(Number(o.sector) || 1), 1, DEAD_FOR.length), hull = named(o.hull, 'EXODUS-6');
+        const TG = window.TorchGround, ground = o.place === 'ground' && o.mode !== 'disc' && !!TG;   // the ground needs TorchGround.js; else space
         return { mode: o.mode === 'disc' ? 'disc' : 'hatch', hull, deadFor: named(o.deadFor, DEAD_FOR[sector - 1]),
             cutter: shortName(o.cutter, 'Jaxon'), spotter: shortName(o.spotter, 'Vance'), sector,   // sector: the sky and the rust
-            door: o.mode === 'disc' ? 'cut' : doorOf(o.door), seed: hullSeed(hull) };
+            door: o.mode === 'disc' ? 'cut' : doorOf(o.door), seed: hullSeed(hull),
+            place: ground ? 'ground' : 'space', world: ground ? TG.world(o.world) : null };   // where the wreck lies, and on what world
     }
+    const onGround = o => !!(o && o.place === 'ground' && window.TorchGround);
     const sayLines = ({ hull, deadFor, cutter, spotter }) => ({
         hatch: [['', `${hull}. Dead about ${deadFor}. The hatch has no power, so it won't open.`],
             [cutter, 'Hold the torch on the line until it glows white, then move on.']],
@@ -452,8 +461,12 @@
         const P = window.MiniPaint, RR = ramps(), { AW, AH } = sizeOf(d), p = P.painter(AW, AH, true), hp = 0.5 / d;
         const look = LOOKS[o.sector] || LOOKS[1], k = AH / 360, L = { core: look.light.core * k, halo: look.light.halo * k, strength: 1, spikes: look.light.spikes * k };
         const lx = (FAR_LIGHT.x + 0.5) * d, ly = (FAR_LIGHT.y + 0.5) * d, rustAmt = RUST_BY_SECTOR[o.sector - 1] || 0.2, lampK = door.lampK == null ? 1 : door.lampK;
-        paintSky(p, look, L, lx, ly);
-        P.lightGlow(p, lx, ly, L, 1);                            // the light at the end of the heading, just past the hull's edge
+        const ground = onGround(o);
+        if (ground) window.TorchGround.paintSky(p, o, d);        // on a planet: its own sky and sun over the hull's edge
+        else {
+            paintSky(p, look, L, lx, ly);
+            P.lightGlow(p, lx, ly, L, 1);                        // the light at the end of the heading, just past the hull's edge
+        }
         eachArt(d, -1, -1, W, H, (ax, ay, x, y) => {
             const pt = plateTone(x, y, hp, rustAmt, ax, ay, lampK);
             if (pt.v < 0) return;
@@ -488,6 +501,7 @@
         stencil(p, 'RESCUE', Math.round((HB.cx + 0.5) * d - rw / 2), Math.round((HB.cy - HB.hh - 10 + 0.5) * d), 2, 0, (ax, ay) =>
             (P.hash(ax, ay, 54) < 0.1 ? null : [RR.AMBER, 0.42 + (P.vnoise(ax / 2, ay / 2, 55) - 0.5) * 0.2]));
         if (door.paint) door.paint(p, d, RR);                    // the door's own: a fuel line, an old cut, a split in the hull, a panel …
+        if (ground) window.TorchGround.paintSoil(p, o, d, RR);   // the world's soil heaped at the hull's foot
         if (door.lamp !== false) paintLamp(p, d, RR);
         return p.canvas();
     }
@@ -648,6 +662,7 @@
         const TEMPER = MiniLab.mix(C.warm, C.hull[2], 0.45), CUT_LINE = MiniLab.mix(C.lightHalo, C.void, 0.62), DIM_GOLD = MiniLab.mix(C.lightHalo, C.void, 0.55);
         const SCORCH = MiniLab.mix(C.warm, C.hull[1], 0.62), HOSE = [MiniLab.mix(C.warm, C.void, 0.82), MiniLab.mix(C.warm, C.void, 0.66), MiniLab.mix(C.warm, C.void, 0.45)];   // a cut's tempered edge; the suit's hose
         const SAY = sayLines(setup), snd = makeSound();
+        const GROUND = setup.mode === 'hatch' && onGround(setup) ? window.TorchGround : null;   // on a planet: TorchGround.js; null in space
         const d = (ui.art && ui.art.d) || MiniLab.density || 1, { AW, AH } = sizeOf(d);
         const { hullBg, hole, lid, lidShadow, discBg } = paintScene(setup, d);
         const DOOR = (setup.mode === 'hatch' && setup.door !== 'cut' && window.TorchDoors.geometry(setup)) || {};   // the seam already free; the fuel line
@@ -681,7 +696,8 @@
                 sparks: [], warps: [], speech: [], react: null, nextSay: 0, saidAt: -99, said: {}, scars: 0, strayT: 0, fastT: 0,
                 seamCut: new Uint8Array(SEAM.length), cut: 0, lastCut: 0, stall: 0, openT: 0, groanT: 0, thruNow: 0, hot: 0, hotX: W / 2,
                 cutT: LINES.map(() => null), centre: false, figTouched: false, sweep: 0, final: false,
-                free: 0, melt: false, frost: null, frostLeft: 1, meltedT: 0, onLine: false, leaks: [] };   // the doors: seam already free, the frost, the fuel line
+                free: 0, melt: false, frost: null, frostLeft: 1, meltedT: 0, onLine: false, leaks: [],   // the doors: seam already free, the frost, the fuel line
+                lidDown: false };                                // GROUND: the hatch has hit the corridor floor
             if (part === 'hatch') prepareDoor();
             script(SAY[part === 'hatch' && setup.door !== 'cut' ? setup.door : part], 0); showButtons();
         }
@@ -800,7 +816,7 @@
             }
             for (let oy = -1; oy <= 1; oy++) for (let ox = -1; ox <= 1; ox++) if (gx + ox >= 0 && gy + oy >= 0 && gx + ox < GW && gy + oy < GH) s.heat[c + oy * GW + ox] += HEAT_IN * s.P.heat * dt * (ox && oy ? 0.25 : ox || oy ? 0.5 : 1);
         }
-        function spark(x, y) {                                   // no air: sparks fly straight, out of the metal being cut
+        function spark(x, y) {                                   // out of the metal being cut: straight in space, falling on the ground (update)
             const a = Math.random() * Math.PI * 2, v = 30 + Math.random() * 70;
             s.sparks = s.sparks.concat({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.2 + Math.random() * 0.45 });
         }
@@ -844,11 +860,13 @@
         // ── the rules ──
         function update(dt) {
             s.thruNow = 0;
-            s.sparks = s.sparks.map(p => ({ ...p, x: p.x + p.vx * dt, y: p.y + p.vy * dt, life: p.life - dt })).filter(p => p.life > 0);
+            s.sparks = (GROUND ? s.sparks.map(p => GROUND.fly(p, dt, setup))   // on the ground everything falls
+                : s.sparks.map(p => ({ ...p, x: p.x + p.vx * dt, y: p.y + p.vy * dt, life: p.life - dt }))).filter(p => p.life > 0);
             if (s.leaks.length) leaking(dt);
             cool(dt); talk();
             if (s.part === 'disc') sweepOn(dt);
             if (isOpen()) s.openT += dt;
+            if (GROUND && isOpen() && !s.lidDown && s.openT >= GROUND.LAND) lidDown();
             if (s.phase === 'cut') cutting(dt); else { s.firing = false; s.glow = 0; }
             if (s.thruNow) s.lastThruT = clock;
             s.hot = s.hot * Math.exp(-dt / HOT_FADE) + s.thruNow;
@@ -923,10 +941,11 @@
         function crackOpen() {
             s.phase = 'open'; s.openT = 0;
             snd.crack();
-            const iceOf = setup.door === 'frozen' ? 104 : 80;    // a frozen hatch throws more ice
+            const airy = GROUND && GROUND.hasAir(setup);         // on a world with air nothing rushes out to freeze: a puff of dust instead
+            const iceOf = airy ? (setup.door === 'frozen' ? 30 : 0) : setup.door === 'frozen' ? 104 : 80;   // a frozen hatch throws more ice (its own frost, on the ground)
             s.sparks = s.sparks.concat(Array.from({ length: 120 }, (_, k) => {   // the last of the air: a flash of ice, then twenty years of dust
                 const i = SEAM[Math.floor(Math.random() * SEAM.length)], x = i % W, y = (i - x) / W, a = Math.atan2(y - HB.cy, x - HB.cx), ice = k < iceOf;
-                const v = ice ? 20 + Math.random() * 60 : 5 + Math.random() * 16;
+                const v = ice ? 20 + Math.random() * 60 : airy ? 8 + Math.random() * 22 : 5 + Math.random() * 16;
                 return { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: (ice ? 0.5 : 1.4) + Math.random() * 1.2, ice, dust: !ice };
             }));
             if (s.frost) frostOnLid();                           // FROZEN: the door takes its frost with it
@@ -936,6 +955,15 @@
             }
             script(SAY[{ frozen: 'frozenOpen', fuel: 'fuelOpen' }[setup.door] || 'open'], 3.2, () => { s.phase = 'end'; showButtons(); });   // the spotter speaks once the hatch has moved off the glint
             showButtons();
+        }
+
+        function lidDown() {                                     // GROUND: the hatch hits the corridor floor: grit and dust thrown up out of the opening
+            s.lidDown = true;
+            const air = GROUND.hasAir(setup);
+            s.sparks = s.sparks.concat(Array.from({ length: 36 }, () => {
+                const x = HB.cx + (Math.random() - 0.5) * 1.8 * HB.hw, y = HB.cy + HB.hh - 2 - Math.random() * 6, a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, v = (air ? 12 : 26) + Math.random() * 30;
+                return { x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.8 + Math.random() * 1.2, dust: true };
+            }));
         }
 
         // ── FUEL LINE: the flame on the line ──
@@ -1175,7 +1203,7 @@
         function drawSparks(L) {
             s.sparks.forEach(p => {
                 const x = (p.x + 0.5) * d, y = (p.y + 0.5) * d;
-                if (p.dust) return L.set(x, y, p.life > 0.9 ? C.textDim : C.mist);
+                if (p.dust) return L.set(x, y, p.life > 0.9 ? (GROUND ? R.HULL.hex[3] : C.textDim) : C.mist);   // on the ground: duller, it is only dust
                 if (p.steam) return drawSteam(L, p, x, y);
                 if (p.bead) return drawBead(L, p, x, y);
                 if (p.vapour) {                                  // FUEL LINE: frozen vapour, a pale streak
@@ -1286,11 +1314,21 @@
             if (away === 0) reticle(L, s.tip.x, s.tip.y);
         }
 
-        // ── Jaxon (the cutter), in his suit: by our lamp, tethered; when he takes the torch he works the seam from beside it ──
+        // ── Jaxon (the cutter), in his suit: by our lamp, tethered; when he takes the torch he works the seam from beside it.
+        //    On the ground he stands on the soil, and works the seam from below with the torch on a pole (TorchGround.js) ──
         const cutterId = window.MiniCrew ? window.MiniCrew.idOf(setup.cutter) || 'jaxon' : 'jaxon';
-        let jax = { x: JAX_IDLE.x, y: JAX_IDLE.y, facing: 1, side: -1, working: false }, lastDraw = 0;
-        const handsOf = j => ({ x: j.x + j.facing * 0.33 * JAX_H, y: j.y - 0.7 * JAX_H });
+        const jaxStart = GROUND ? GROUND.jaxonAt(setup) : JAX_IDLE;
+        let jax = { x: jaxStart.x, y: jaxStart.y, facing: 1, side: -1, working: false, walking: false, walkT: 0, high: false }, lastDraw = 0;
+        const handsOf = j => (j.high ? { x: j.x + j.facing * 0.285 * JAX_H, y: j.y - 0.86 * JAX_H } : { x: j.x + j.facing * 0.33 * JAX_H, y: j.y - 0.7 * JAX_H });   // high: the pole held up (MiniCrew 'hoist')
+        function moveJaxonOnGround(dt) {                         // he walks along the soil: under the tip while he cuts, back to the lamp after
+            const working = !!s.auto && (s.phase === 'cut' || s.phase === 'dry');
+            const want = working ? GROUND.workAt(s.tip, jax.side, setup) : Object.assign(GROUND.jaxonAt(setup), { side: jax.side, facing: 1 });
+            const step = GROUND.walkTo(jax, want, dt, setup), facing = step.walking && !working ? Math.sign(want.x - jax.x) || jax.facing : want.facing;   // while he cuts he keeps facing the flame
+            const high = working && s.tip.y < step.y - (jax.high ? 0.74 : 0.8) * JAX_H;   // the flame above his shoulders: he holds the pole up
+            jax = { ...jax, x: step.x, y: step.y, facing, side: want.side, working, walking: step.walking, walkT: jax.walkT + (step.walking ? dt : 0), high };
+        }
         function moveJaxon(dt) {
+            if (GROUND) return moveJaxonOnGround(dt);
             const working = !!s.auto && (s.phase === 'cut' || s.phase === 'dry');
             let want = { x: JAX_IDLE.x, y: JAX_IDLE.y, facing: 1 };
             if (working) {                                       // hands beside the tip, out from the seam, on the side he is working from
@@ -1302,9 +1340,10 @@
             const k = 1 - Math.exp(-dt * (working ? 6 : 2.5));
             jax = { ...jax, x: jax.x + (want.x - jax.x) * k, y: jax.y + (want.y - jax.y) * k, facing: want.facing, working };
         }
-        function drawTether(L) {                                 // his line to the lamp's foot, slack
+        function drawTether(L) {                                 // his line to the lamp's foot, slack (on the ground: no line, his shadow on the soil)
             const MC = window.MiniCrew;
             if (!MC || s.part !== 'hatch') return;
+            if (GROUND) return GROUND.footShadow(L, jax.x, jax.y, d, 9);
             const bob = jax.working ? 0 : Math.round(Math.sin(Math.floor(clock * 8) / 8 * 0.9) * 2 * d) / d;
             const x0 = jax.x - jax.facing * 0.1 * JAX_H, y0 = jax.y - 0.5 * JAX_H + bob, x1 = LAMP.x - 3, y1 = LAMP.y + 5, mx = (x0 + x1) / 2, my = Math.max(y0, y1) + 10;
             for (let t = 0; t <= 1; t += 0.01) { const u = 1 - t; L.set((u * u * x0 + 2 * u * t * mx + t * t * x1 + 0.5) * d, (u * u * y0 + 2 * u * t * my + t * t * y1 + 0.5) * d, t % 0.04 < 0.02 ? C.hull[3] : C.hull[2]); }
@@ -1312,14 +1351,18 @@
         function drawJaxon() {
             const MC = window.MiniCrew;
             if (!MC || s.part !== 'hatch') return;
-            const bob = jax.working ? 0 : Math.round(Math.sin(Math.floor(clock * 8) / 8 * 0.9) * 2 * d) / d;   // he drifts on his line, eight steps a second
+            const bob = jax.working || GROUND ? 0 : Math.round(Math.sin(Math.floor(clock * 8) / 8 * 0.9) * 2 * d) / d;   // he drifts on his line, eight steps a second
             const warm = MiniLab.clamp(1 - Math.hypot(jax.x - LAMP.aimX, jax.y - 30 - LAMP.aimY) / 200, 0, 1);
-            MC.small(ctx, cutterId, jax.x, jax.y + bob, { h: JAX_H, pose: jax.working ? 'reach' : 'float', facing: jax.facing, light: 1, warm: 0.25 + 0.5 * warm, dim: 0.25 });
+            const arms = jax.high ? 'hoist' : 'reach', pose = !GROUND ? (jax.working ? 'reach' : 'float')   // on the ground he stands, walks, holds the pole up
+                : jax.working ? (jax.walking ? arms + 'walk' : arms) : jax.walking ? 'walk' : 'stand';
+            MC.small(ctx, cutterId, jax.x, jax.y + bob, { h: JAX_H, pose, t: jax.walkT * 1000, facing: jax.facing, light: 1, warm: 0.25 + 0.5 * warm, dim: 0.25 });
         }
-        function drawJaxonTorch(L) {                             // the torch in his hands, its hose to his pack
+        function drawJaxonTorch(L) {                             // the torch in his hands, its hose to his pack (on the ground: up on its pole)
             if (!s.auto || !jax.working) return;
-            const hd = handsOf(jax), ux = hd.x - s.tip.x, uy = hd.y - s.tip.y, ul = Math.hypot(ux, uy) || 1;
-            drawTool(L, s.tip, { x: ux / ul, y: uy / ul }, 0, () => [jax.x - jax.facing * 0.13 * JAX_H, jax.y - 0.6 * JAX_H], s.melt);
+            const hd = handsOf(jax), ux = hd.x - s.tip.x, uy = hd.y - s.tip.y, ul = Math.hypot(ux, uy) || 1, U = { x: ux / ul, y: uy / ul };
+            const head = (s.melt ? MELT_OFF : STANDOFF) + 29.6;  // where the torch's grip ends, out from the tip
+            if (GROUND && ul > head + 1) GROUND.drawPole(L, { x: s.tip.x + U.x * head, y: s.tip.y + U.y * head }, hd, d, R.HULL.hex);
+            drawTool(L, s.tip, U, 0, () => [jax.x - jax.facing * 0.13 * JAX_H, jax.y - 0.6 * JAX_H], s.melt);
         }
 
         // ── the readouts: by the torch, one short line; and a few quiet ones in the corner (MiniHost notes, IBM Plex) ──
@@ -1398,18 +1441,25 @@
             L.set(gx, gy, arm ? C.star : C.warm);
             for (let k = 1; k <= Math.round(arm * d); k++) PLUS.forEach(([ox, oy]) => L.set(gx + ox * k, gy + oy * k, k <= d ? C.warmBright : C.warm));
         }
+        const PUFF_AT = SEAM.filter((_, k) => k % 14 === 0).map(i => { const x = i % W, y = (i - x) / W, n = normal(x, y); return { x: x + n.x * 2, y: y + n.y * 2 }; });   // GROUND: where the dust puffs out
+        const SILL_AT = [-34, -17, 0, 17, 34].map(ox => ({ x: HB.cx + ox, y: HB.cy + HB.hh - 3 }));   // GROUND: where the fallen hatch throws dust up
         function renderHatch() {
             const opened = s.phase === 'open' || s.phase === 'end', f = opened ? 1 : doneFrac();
-            const jolt = opened && s.openT < 0.45 ? Math.round(2.4 * (1 - s.openT / 0.45)) : 0;   // the crack shakes the picture, then settles
+            const landT = GROUND && opened ? s.openT - GROUND.LAND : -1;   // GROUND: seconds since the hatch hit the corridor floor
+            const jolt = opened && s.openT < 0.45 ? Math.round(2.4 * (1 - s.openT / 0.45)) : landT >= 0 && landT < 0.3 ? Math.round(1.6 * (1 - landT / 0.3)) : 0;   // the crack shakes the picture, then settles (and the thud, on the ground)
             moveJaxon(Math.min(0.1, clock - lastDraw)); lastDraw = clock;
             ctx.setTransform(d, 0, 0, d, 0, 0);
             art(g => { g.fillStyle = C.void; g.fillRect(0, 0, AW, AH); });
             ctx.setTransform(d, 0, 0, d, Math.round(jolt * d * (Math.random() < 0.5 ? -1 : 1)), Math.round(jolt * d * (Math.random() < 0.5 ? -1 : 1)));
             under.clear(); over.clear();
             art(g => { g.drawImage(hullBg, 0, 0); if (opened) g.drawImage(hole, 0, 0); });
+            if (GROUND && opened) art(g => GROUND.drawLid(g, GROUND.lidAt(s.openT), lid, d));   // it tips back into the wreck and lies on the floor
             if (s.frost) art(g => frostLayer.draw(g));            // FROZEN: the frost over it all
             if (opened && s.openT > 2.6) drawGlint(under);
-            if (opened && s.openT < 0.4) SEAM.forEach(i => {      // the last air flashing out of the seam as ice
+            const dusty = GROUND && GROUND.hasAir(setup);         // GROUND: a world with air: dust, not ice
+            if (dusty && opened && s.openT < 0.9) PUFF_AT.forEach(q => GROUND.puff(under, setup, q.x, q.y, 1 - s.openT / 0.9, d, 1));
+            if (dusty && landT >= 0 && landT < 1.2) SILL_AT.forEach(q => GROUND.puff(under, setup, q.x, q.y - 4 * landT, 1 - landT / 1.2, d, 3));
+            if (!dusty && opened && s.openT < 0.4) SEAM.forEach(i => {   // the last air flashing out of the seam as ice
                 const x = i % W, y = (i - x) / W, k = 1 - s.openT / 0.4;
                 for (let ay = A(y - 1); ay <= A(y + 1); ay++) for (let ax = A(x - 1); ax <= A(x + 1); ax++) if (MiniLab.on(ax, ay, 0.45 * k)) under.set(ax, ay, C.uiBright);
                 if (MiniLab.on(A(x), A(y), k)) udot(under, x, y, C.star);
@@ -1420,7 +1470,7 @@
             if (LINE && !opened) drawLineMarks(under);
             drawTether(under);
             art(g => under.draw(g));
-            if (opened && s.openT < 10) art(g => drawLid(g, s.openT));
+            if (!GROUND && opened && s.openT < 10) art(g => drawLid(g, s.openT));
             drawJaxon();
             drawJaxonTorch(over); drawSparks(over); drawTorch(over);
             art(g => over.draw(g));

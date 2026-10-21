@@ -4,7 +4,10 @@
    kept; about eight times a second only the small moving parts are drawn on top (a blinking beacon, dust, birds, a slow crawl).
      has(key)            → true when there is a picture for that key (anomaly ids, 'GRAVE', 'GARDEN', 'LIGHTHOUSE', 'EXODUS_WRECK', …)
      mount(canvas, key)  → draws into the card's canvas and keeps it moving until the card is closed
-     paint(ctx, key, t)  → one frame at t ms (lets a test page or harness paint any moment) */
+     paint(ctx, key, t)  → one frame at t ms (lets a test page or harness paint any moment)
+   A key may name a detail after a colon: 'EXODUS_WRECK:EXODUS_LOG' is the wreck as that story leaves it (2026-10-21: whole,
+   broken in two, burned, or only a crater, as the landing draws it, LanderSites.js); a key without one is the picture as
+   it always was. */
 
 (function () {
     'use strict';
@@ -662,22 +665,32 @@
         },
     };
 
-    // ═══ THE LIGHTHOUSE — a dead ship in orbit, its beacon still giving directions. Every route points the same way. ═══
-    const BEACON = { light: [462, 44], blinkMs: 1600, routes: [-48, -24, 2, 28, 52], dashSpeed: 0.012 };
+    // ═══ THE LIGHTHOUSE — a dead ship come down on a dead world, its beacon mast beside it still giving directions (the
+    //     landing draws the same mast on guy wires, its hut at the foot: LanderSites.js). Every route points the same way. ═══
+    const BEACON = { light: [448, 78], blinkMs: 1600, routes: [-48, -24, 2, 28, 52], dashSpeed: 0.012, horizon: 104, mast: [318, 127, 36] };
     SCENES.LIGHTHOUSE = {
         build(p) {
-            const stars = space(p, 41, 420, 0.25), [lx, ly] = BEACON.light;
-            p.region(lx - 40, ly - 40, W, ly + 40, (x, y) => { const d = Math.hypot(x - lx, y - ly); const v = 1.1 * Math.exp(-d / 4) + 0.4 * Math.exp(-d / 20) + (Math.abs(y - ly) < 1 ? 0.35 * Math.exp(-Math.abs(x - lx) / 30) : 0); if (v > 0.1) p.tone(x, y, SUN, v); });
-            const pc = [240, 1100], pr = 985;
-            p.region(0, 110, W, H, (x, y) => {                                                // a dead planet below, lit from the light's side
-                const d = Math.hypot(x - pc[0], y - pc[1]);
-                if (d <= pr) p.tone(x, y, GROUND, 0.1 + 0.5 * (x / W) ** 2 + (fbm(x / 30, y / 8, 12, 4) - 0.5) * 0.3 + (pr - d < 2 ? 0.25 + 0.5 * x / W : 0));
+            const [lx, ly] = BEACON.light, [mx, base, top] = BEACON.mast;
+            const stars = duskLand(p, DUSK, BEACON.horizon, lx, 41);                          // night over the dead world, the horizon warm under the light
+            p.region(lx - 40, ly - 40, W, ly + 26, (x, y) => { const d = Math.hypot(x - lx, y - ly); const v = 1.1 * Math.exp(-d / 4) + 0.4 * Math.exp(-d / 20) + (Math.abs(y - ly) < 1 ? 0.35 * Math.exp(-Math.abs(x - lx) / 30) : 0); if (v > 0.1 && y < BEACON.horizon - 1) p.tone(x, y, SUN, v); });
+            p.ellipse(160, 139, 128, 6, (x, y) => p.tone(x, y, GROUND, 0.03));             // the dead ship's shadow on the ground
+            drawHull(p, { x: 152, y: 121, len: 204, ht: 32, angle: -0.04, ramp: RUST, holes: true, rust: true, seed: 5 });
+            p.ellipse(52, 135, 40, 12, (x, y) => p.tone(x, y, GROUND, 0.38 - (y - 124) / 34 + (fbm(x / 4, y / 2.5, 5, 2) - 0.5) * 0.3));   // its nose dug in
+            [[0.3, 28], [0.62, 18]].forEach(([h, reach]) => [-1, 1].forEach(side => {          // the mast's guy wires, behind it
+                const y0 = top + (base - top) * h;
+                p.line(mx, y0, mx + side * reach, base + 1, (x, y, k) => { if (Math.floor(k * 60) % 2 === 0) p.tone(x, y, HULL, 0.3); });
+            }));
+            p.region(mx - 6, top, mx + 7, base, (x, y) => {                                   // the lattice mast, tapering
+                const k = (base - y) / (base - top), half = 5 - 3.6 * k, dx = x + 0.5 - mx, rail = Math.abs(Math.abs(dx) - half) < 0.6;
+                const s = ((base - y) % 9) / 9, brace = Math.abs(dx - (-half + s * 2 * half)) < 0.55 && Math.abs(dx) < half;
+                if (rail || brace) p.tone(x, y, HULL, 0.3 + (dx > 0 ? 0.32 : 0));               // the side toward the light, lit
             });
-            const at = drawHull(p, { x: 168, y: 64, len: 150, ht: 26, angle: -0.06, ramp: RUST, holes: true, rust: true, seed: 5 });
-            const [mx, my] = at(0.26, -0.72);
-            p.line(mx, my, mx, my - 24, (x, y) => p.region(x, y, x + 2, y + 1, (a, b) => p.tone(a, b, HULL, a === x ? 0.7 : 0.4)));
-            [[-5, -10], [-4, -18]].forEach(([dx, dy]) => p.line(mx + dx, my + dy, mx - dx + 1, my + dy, (x, y) => p.tone(x, y, HULL, 0.5)));
-            return { stars: keepVisible(p, stars), beacon: [Math.round(mx), Math.round(my - 26)] };
+            p.region(mx + 3, base - 9, mx + 17, base, (x, y) => {                             // the hut at its foot, its door toward us
+                const door = x >= mx + 6 && x < mx + 9 && y > base - 7;
+                p.tone(x, y, HULL, door ? 0.02 : y < base - 8 ? 0.7 : 0.3 + (x > mx + 13 ? 0.14 : 0));
+            });
+            p.region(mx - 8, base, mx + 20, base + 2, (x, y) => p.tone(x, y, GROUND, 0.04));
+            return { stars: keepVisible(p, stars), beacon: [mx, top - 2] };
         },
         frame(f, t, s) {
             twinkle(f, s.stars, t);
@@ -696,7 +709,11 @@
     };
 
     // ═══ THE WRECK — an Exodus hull broken on the ground at dusk. One light on it still blinks. ═══
+    // With its story (key 'EXODUS_WRECK:<story id>') it is the shape that story leaves, the same as the landing draws it
+    // (LanderSites.js WRECK_LOOKS): whole where the ship landed, broken in two, burned through, or only a crater round the
+    // flight recorder. The same dusk, the same moon, the same light; only the wreck changes. No story: broken in two.
     const WRECK = { horizon: 104, blinkMs: 1500, onMs: 380 };
+    const WRECK_FORM = { EXODUS_DEAD_CREW: 'whole', EXODUS_INFECTED: 'whole', EXODUS_CRYO: 'whole', EXODUS_PARTIAL: 'whole', EXODUS_CACHE: 'broken', EXODUS_BURNED: 'burned', EXODUS_LOG: 'crater' };
     function duskLand(p, r, horizon, glowAt, seed) {
         p.region(0, 0, W, horizon, (x, y) => p.tone(x, y, r, 0.05 + 0.72 * Math.pow(y / horizon, 2.4) + 0.3 * Math.exp(-Math.hypot(x - glowAt, (y - horizon) * 3) / 90)));
         const stars = scatterStars(p, seed, 300, (x, y) => y < horizon * 0.5);
@@ -704,15 +721,62 @@
         p.region(0, horizon, W, H, (x, y) => p.tone(x, y, GROUND, 0.12 + 0.36 * Math.exp(-(y - horizon) / 12) + (fbm(x / 5, y / 2.5, seed + 1, 3) - 0.5) * 0.24));
         return stars;
     }
+    /** EXODUS_LOG: nothing left but a wide, shallow crater, fused to glass in places, a few twisted plates, and the armoured
+        flight recorder in the middle of it. Returns where its light is. */
+    function crater(p) {
+        const C0 = { x: 240, y: 131, rx: 204, ry: 15 }, grit = (x, y) => (fbm(x / 4, y / 2, 9, 2) - 0.5) * 0.18;
+        p.region(0, WRECK.horizon - 3, W, H, (x, y) => {
+            const dx = (x + 0.5 - C0.x) / C0.rx, dy = (y + 0.5 - C0.y) / C0.ry, q = dx * dx + dy * dy, far = dy < 0;
+            if (q > 1.5) return;
+            if (q > 1) {                                                                     // the rim it threw up, falling away outward
+                const k = 1 - (q - 1) / 0.5;
+                p.tone(x, y, GROUND, (far ? 0.14 + 0.3 * k * k : 0.12 + 0.16 * k) + grit(x, y));   // the far rim faces the dusk
+                return;
+            }
+            if (far && q > 0.7) { p.tone(x, y, GROUND, 0.05 + 0.03 * (1 - q) + grit(x, y) * 0.5); return; }   // its far inner wall, in its own shadow
+            const ray = Math.abs(Math.sin(Math.atan2(dy, dx) * 9 + fbm(dx * 3, dy * 3, 4, 2) * 4));   // the blast's streaks, out from the middle
+            if (hash(x, y, 7) > 0.994 && q > 0.12 && q < 0.85) { p.tone(x, y, STONE, 0.5); return; }   // ground fused to glass, here and there a glint
+            p.tone(x, y, GROUND, 0.06 + 0.1 * q + (ray > 0.92 ? 0.05 : 0) + (fbm(x / 7, y / 1.6, 11, 3) - 0.5) * 0.14);
+        });
+        for (let x = 0; x < W; x++) {                                                        // the rim's crest: a lit edge along its far side, a dull one near us
+            const dx = (x + 0.5 - C0.x) / C0.rx;
+            if (Math.abs(dx) >= 1) continue;
+            const half = C0.ry * Math.sqrt(1 - dx * dx);
+            p.tone(x, C0.y - half - 1, GROUND, 0.62 + grit(x, 0)); p.tone(x, C0.y + half, GROUND, 0.34 + grit(x, 3));
+        }
+        const rand = seeded(23);
+        for (let i = 0; i < 18; i++) {                                                       // twisted plates of our hull, lit on top
+            const a = rand() * Math.PI * 2, r = 0.25 + 0.7 * Math.sqrt(rand()), x = Math.round(C0.x + Math.cos(a) * C0.rx * r), y = Math.round(C0.y + Math.sin(a) * C0.ry * r * 0.85);
+            const w = 3 + Math.floor(rand() * (i < 4 ? 7 : 4)), h = i < 4 ? 2 : 1, lift = rand() < 0.5 ? -1 : 0;
+            p.region(x, y - h, x + w, y + 1, (px, py) => p.tone(px, py, RUST, py === y - h ? 0.62 : 0.3 + (px === x + w - 1 ? -0.12 : 0)));
+            if (lift) p.line(x + w - 1, y - h, x + w + 1, y - h - 3, (px, py) => p.tone(px, py, RUST, 0.55));   // a torn edge sticking up
+            p.region(x, y + 1, x + w + 1, y + 2, (px, py) => p.tone(px, py, GROUND, 0.02));
+        }
+        const rx = 200, ry = 133;                                                            // the flight recorder: an orange box, banded, half sunk
+        p.region(rx - 9, ry - 7, rx + 9, ry + 1, (x, y) => {
+            const band = Math.floor((x - rx + 9) / 4) % 2 === 1;
+            p.tone(x, y, AMBER, (y < ry - 6 ? 0.88 : 0.58) + (band ? -0.22 : 0) + (x > rx + 5 ? -0.14 : 0));
+        });
+        p.region(rx - 11, ry + 1, rx + 12, ry + 3, (x, y) => p.tone(x, y, GROUND, 0.02));
+        p.line(rx + 5, ry - 7, rx + 6, ry - 19, (x, y) => p.tone(x, y, HULL, 0.55));        // its whip aerial
+        return [rx + 6, ry - 20];
+    }
     SCENES.EXODUS_WRECK = {
-        build(p) {
+        build(p, detail) {
+            const form = WRECK_FORM[detail] || 'broken';
             const stars = duskLand(p, DUSK, WRECK.horizon, 110, 61);
             p.ellipse(392, 30, 15, 15, (x, y, q) => { const nx = (x + 0.5 - 392) / 15, ny = (y + 0.5 - 30) / 15; p.tone(x, y, MOON, clamp01(-nx * 0.8 + ny * 0.3 + 0.2) * 1.1); });
+            if (form === 'crater') return { stars: keepVisible(p, stars), light: crater(p) };
             p.poly([[330, 118], [470, 105], [476, 106], [340, 126]], (x, y) => p.tone(x, y, GROUND, 0.04));  // the furrow it cut coming down
             p.ellipse(186, 140, 150, 7, (x, y) => p.tone(x, y, GROUND, 0.03));
             const hull = { x: 172, y: 118, len: 260, ht: 42, ramp: RUST, holes: 0.7, rust: true, seed: 3 };
-            drawHull(p, Object.assign({}, hull, { angle: -0.05, from: 0.55, anchor: 0.5 }));
-            const at = drawHull(p, Object.assign({}, hull, { angle: -0.08, to: 0.52, anchor: 0.5 }));
+            let at;
+            if (form === 'broken') {
+                drawHull(p, Object.assign({}, hull, { angle: -0.05, from: 0.55, anchor: 0.5 }));
+                at = drawHull(p, Object.assign({}, hull, { angle: -0.08, to: 0.52, anchor: 0.5 }));
+            } else {                                                                         // whole: it came down in one piece (burned: holed through and darker)
+                at = drawHull(p, Object.assign({}, hull, { angle: -0.065, anchor: 0.5 }, form === 'burned' ? { holes: 0.58, light: 0.72 } : { holes: 0.8 }));
+            }
             p.ellipse(56, 138, 54, 16, (x, y, q) => p.tone(x, y, GROUND, 0.42 - (y - 122) / 40 + (fbm(x / 4, y / 2.5, 3, 2) - 0.5) * 0.3)); // the nose is buried
             const [mx, my] = at(0.3, -0.72);
             p.line(mx, my, mx + 3, my - 16, (x, y) => p.tone(x, y, HULL, 0.5));
@@ -856,13 +920,15 @@
 
     // ── drawing and running ──
     const layers = new Map();                                                                  // key → { data, state }: each picture is painted once
+    const sceneOf = key => String(key == null ? '' : key).split(':')[0];                      // 'EXODUS_WRECK:EXODUS_LOG' → its scene, and
+    const detailOf = key => String(key == null ? '' : key).split(':')[1] || null;              // the detail it is painted with
     function staticLayer(key) {
-        if (!layers.has(key)) { const p = painter(), state = SCENES[key].build(p) || {}; layers.set(key, { data: p.data, state }); }
+        if (!layers.has(key)) { const p = painter(), state = SCENES[sceneOf(key)].build(p, detailOf(key)) || {}; layers.set(key, { data: p.data, state }); }
         return layers.get(key);
     }
     const images = new WeakMap();                                                              // ctx → { key, image }
     function paint(ctx, key, t) {
-        const scene = SCENES[key];
+        const scene = SCENES[sceneOf(key)];
         if (!scene) return;
         const layer = staticLayer(key);
         let held = images.get(ctx);
@@ -870,7 +936,7 @@
         ctx.putImageData(held.image, 0, 0);
         if (scene.frame) scene.frame(framer(ctx), t, layer.state);
     }
-    const has = key => Object.prototype.hasOwnProperty.call(SCENES, key);
+    const has = key => Object.prototype.hasOwnProperty.call(SCENES, sceneOf(key));
     const now = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
     const timers = new WeakMap();
 

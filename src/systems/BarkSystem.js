@@ -34,6 +34,29 @@ const BARK_DATA = {
     },
 
     // ═══════════════════════════════════════════════════════════════
+    // ENTER_STATION — When the ship arrives beside a station (nobody lands there: we dock)
+    // DRAFT lines (2026-10-21), plain speech (docs/STYLE.md)
+    // ═══════════════════════════════════════════════════════════════
+    ENTER_STATION: {
+        PESSIMIST: {
+            0: ["We're alongside the station. Its docking port still looks usable."],
+            3: ["Another dead station. I'll get us docked, but don't expect much."]
+        },
+        HUMANIST: {
+            0: ["If anyone is still aboard that station, we'll find them when we dock."],
+            3: ["People waited a long time on stations like this one. Let's dock and see."]
+        },
+        SURVIVOR: {
+            0: ["Nobody's answering from the station. We dock slowly, and we watch the hatch."],
+            3: ["No answer on any channel. I don't like docking with something that won't talk."]
+        },
+        CURIOUS: {
+            0: ["A whole station out here! A.U.R.A., can you find us a port to dock at?"],
+            3: ["I used to want to see inside places like this. Now I hope it's empty."]
+        }
+    },
+
+    // ═══════════════════════════════════════════════════════════════
     // AFTER_SCAN — After deep scan completes
     // ═══════════════════════════════════════════════════════════════
     AFTER_SCAN: {
@@ -396,7 +419,7 @@ const BARK_DATA = {
             3: ["Let the machine look first. I've seen enough bodies."]
         },
         SURVIVOR: {
-            0: ["Probe launched. Ninety seconds to the surface."],
+            0: ["Probe launched. It'll be there in ninety seconds."],   // DRAFT: no "surface", a probe can go to a station too
             3: ["Probe's away. We don't have many left. Use them carefully."]
         },
         CURIOUS: {

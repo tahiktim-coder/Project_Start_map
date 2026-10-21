@@ -56,12 +56,13 @@
         green: { amp: 11, jag: 2, spikes: 0, wind: 1 }, sea: { amp: 14, jag: 1.5, spikes: 0, wind: 3, sea: true },
         // gentle worlds still get sand ripples / pebbles / shingle (jag), so only their true shelves read LEVEL and the rest reads as a landable slope
         haze: { amp: 15, jag: 2, spikes: 0, wind: 4 }, sky: { amp: 0, jag: 0, spikes: 0, wind: 5, platform: true },
+        storm: { amp: 16, jag: 2.5, spikes: 0, wind: 5 },   // 2026-10-21: a storm world has ground under its storm (PlanetGenerator), with the sky's full wind
     };
     const GROUND_OF = {
         ICE_WORLD: 'ice', FROZEN_OCEAN: 'ice', CRYSTALLINE: 'ice', MIRROR: 'ice', DESERT: 'dunes', SULFUR: 'dunes',
         VOLCANIC: 'lava', SHATTERED: 'lava', TIDALLY_LOCKED: 'lava', HOLLOW: 'lava', VITAL: 'green', EDEN: 'green',
         TERRAFORMED: 'green', FUNGAL: 'green', SYMBIOTE_WORLD: 'green', OCEANIC: 'sea', SINGING: 'sea',
-        TOXIC: 'haze', BIO_MASS: 'haze', RADIATION_BELT: 'haze', GHOST_WORLD: 'haze', GAS_GIANT: 'sky', STORM_WORLD: 'sky',
+        TOXIC: 'haze', BIO_MASS: 'haze', RADIATION_BELT: 'haze', GHOST_WORLD: 'haze', GAS_GIANT: 'sky', STORM_WORLD: 'storm',
     };
     const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     const sfx = (name, ...args) => { const audio = window.AudioSystem; if (audio && typeof audio[name] === 'function') audio[name](...args); }; // silent when muted
