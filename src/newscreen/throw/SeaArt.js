@@ -32,8 +32,8 @@
     // ═══ the timeline (ms) ═══
     const TL = Object.freeze({
         in: 900,                   // in from ink: our ship, dark, its red lamp
-        reveal: [1700, 6600],      // the wrecks round us come out of the dark
-        pull: [[6800, 12900, 3.7, 24], [13500, 19800, 24, 110], [20400, 27400, 110, 270]],   // three pulls back: [t0, t1, from, to] (ship lengths)
+        reveal: [0, 900],          // the wrecks are there from the first frame: they come in from ink with our ship, never out of nowhere
+        pull: [[1200, 27400, 3.7, 270]],   // ONE slow pull back, no stops: [t0, t1, from, to] (ship lengths)
         relight: 28700, white: [30700, 31100], end: 31700,
     });
     const DUR = TL.end;

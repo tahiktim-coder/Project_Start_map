@@ -144,7 +144,7 @@
         function render(now) {
             ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH);
             if (!a.ready()) { while (runJob() && !a.ready()) { /* the rest of the picture, under the ink */ } }
-            else if (a.jobs.length && T < SA.TL.reveal[0]) runJob();                         // the nearest wrecks, before they come out of the dark
+            else if (a.jobs.length) runJob();                                               // the rest of the nearest wrecks, a little each frame
             const t0 = performance.now();
             try { a.draw(ctx, T, still, playing && !ended && skipT == null); } catch (err) { console.error('NSSea: a frame failed', err); }
             drawMs = drawMs * 0.9 + (performance.now() - t0) * 0.1;
