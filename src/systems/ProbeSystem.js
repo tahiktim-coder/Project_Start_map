@@ -77,9 +77,10 @@ class ProbeSystem {
                         : (log || `Extracted <span style="color:var(--color-primary)">${amount} Salvage</span>.`);
                 } else {
                     reward = { type: 'RESOURCE', resource: 'energy', amount: amount };
+                    const elog = selected.log && isStation ? selected.log.replace(/^Atmosphere:/, 'Station power:') : selected.log;   // DRAFT: a station has no atmosphere
                     finalMessage = thematic
                         ? `${thematic} <span style="color:var(--color-primary)">(+${amount} Energy)</span>`
-                        : (selected.log || `Siphoned <span style="color:var(--color-primary)">${amount} Energy</span> units.`);
+                        : (elog || `Siphoned <span style="color:var(--color-primary)">${amount} Energy</span> units.`);
                 }
             } else if (selected.type === 'LORE') {
                 // LORE FOUND — always give a small resource bonus alongside the data

@@ -58,7 +58,7 @@
         vance: 'Down there I take the hit for the other one. Up here, I keep people safe.',
         mira: 'Down there I bring their star fix back. Up here, I scan the site.',
     };
-    const WEAK_LINE = "I went without supper. I'm too weak to go down this time.";   // too weak for this trip (GameState.serveSupper)
+    const WEAK_LINE = "I went without supper. I'm too weak to go this time.";   // too weak for this trip (GameState.serveSupper)
     const DESK = [334, 429], KEY_Y = 290;                                 // Cora's console front (frame px): the helm key sits on it
     const KEY_TOP_TWO = 266;                                              // two held keys with their chips (the copy of Earth): the first one's top, so both fit the console
     const ROOM_R = 606;                                                   // frame px: the inside of the bridge's right wall (a note never runs onto the hull)
@@ -235,7 +235,8 @@
             let loss = '';
             try { loss = (NS.flow && typeof NS.flow.lossOf === 'function' ? NS.flow.lossOf(id, mates) : '') || ''; } catch (err) { console.error('NewScreen stop: the loss failed', err); }
             const b = q => `<b style="--c:${ctx.TONE[q]}">${ctx.NAMES[q]}</b>`;
-            const html = S.lineup.length <= 2 ? `${b(id)} goes down` : out ? `${b(id)} goes instead of ${b(out)}` : team.length ? `${b(id)} goes with ${b(team[0])}` : `${b(id)} goes down`;
+            const verb = goesAcross() ? 'goes across' : 'goes down';             // to the wreckage in orbit nobody lands
+            const html = S.lineup.length <= 2 ? `${b(id)} ${verb}` : out ? `${b(id)} goes instead of ${b(out)}` : team.length ? `${b(id)} goes with ${b(team[0])}` : `${b(id)} ${verb}`;
             const text = html.replace(/<[^>]+>/g, '');
             return { html, text, loss: loss ? cap(loss) + '.' : `Nothing aboard needs ${id === 'aris' || id === 'mira' ? 'her' : 'him'} this time.`, tone };
         }

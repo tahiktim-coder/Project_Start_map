@@ -13,7 +13,7 @@
    The rules, timings, lines and results stay Torch.js's own. Without this file every place is space.
    window.TorchGround (frozen) = { is(setup), world(raw), look(setup), floorAt(x, setup), standAt(x, setup), paintSky,
                                    paintSoil, fly(q, dt, setup), puff(L, setup, x, y, k), lidAt(t), drawLid(g, angle, lid, d),
-                                   jaxonAt(setup), drawPole(L, from, to, d), PANEL_DY }
+                                   jaxonAt(setup), drawPole(L, from, to, d) }
    Needs MiniLab, MiniPaint and Torch.js (window.MiniTorchKit); LanderScene and LanderGame for the world's look (without
    them the soil is plain stone and the sky plain dark). Load right after Torch.js, before TorchDoors.js. */
 (function () {
@@ -315,10 +315,9 @@
     }
 
     // ── the airlock's panel stands lower on the ground, where Jaxon can reach it from the soil (TorchDoors.js) ──
-    const PANEL_DY = 66;
 
     window.TorchGround = Object.freeze({
         is, world, look, hasAir, floorAt, standAt, paintSky, paintSoil, fly, puff, lidAt, drawLid, LAND,
-        workAt, walkTo, drawPole, jaxonAt, footShadow, PANEL_DY,
+        workAt, walkTo, drawPole, jaxonAt, footShadow,
     });
 })();
