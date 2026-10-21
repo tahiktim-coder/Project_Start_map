@@ -367,8 +367,8 @@ const EXODUS_ENCOUNTERS = [
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state.gainData(1);
                     const briefing = [
-                        "CREW BRIEFING, RECORDED: 'Eight ships went this way before you. You are the ninth.' It's our briefing, word for word. But their hull number isn't nine.",
-                        "Every crew was told the same three things: you are the ninth, a good world is ahead, and the ship knows the way.",
+                        "CREW BRIEFING, RECORDED: 'Find a planet people can live on, and settle it.' Our orders, word for word. But their hull number is higher than ours.",
+                        "Every crew was told the same three things: a good world is ahead, settle it, and the ship knows the way.",
                         "The ship set the course. Nobody on board was ever shown where it ends."
                     ];
                     const throwLog = [

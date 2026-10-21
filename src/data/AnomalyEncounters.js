@@ -592,7 +592,7 @@ const ANOMALY_ENCOUNTERS = [
         context: () => `Seventeen dead ships sit in a ring, all pointing inward. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.`,
         dialogue: [
             { speaker: 'Vance', text: "Seventeen ships, and every one has a higher hull number than ours. We were told eight went before us." },
-            { speaker: 'Aris', text: "Listen. 'Eight ships went this way before you.' It's our briefing. Even the pauses match." },
+            { speaker: 'Aris', text: "Listen. 'Find a planet people can live on, and settle it.' It's our briefing. Even the pauses match." },
             { speaker: 'Jaxon', text: "There's no damage on any of them. The crews just left." },
             { speaker: 'A.U.R.A.', text: "That is the standard briefing, Commander. I have the same file. They're playing it correctly." }
         ],
