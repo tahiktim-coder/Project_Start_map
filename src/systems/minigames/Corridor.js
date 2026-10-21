@@ -21,6 +21,8 @@
                         A.U.R.A.'s first line at the end counts the living and the injured (without the Commander). Missing: all four, well
            damaged      optional: { deckKey: true } for decks already broken, drawn red on the ship inset
            scrapesPerBreak  optional: every this many scrapes a deck breaks and turns red (default 1: every scrape)
+           maxBreaks    optional: at most this many decks may break in this flight (the game's allowance: never the one that
+                        would end the run); missing: no limit
            energy       optional: the ship's energy now (the jump already paid), so what A.U.R.A. says the flight cost or
                         saved is what the game can really take or give (missing: plenty either way)
            avoidHulls   optional: hull numbers the game has already used; the two hulls seen are never these when the range allows
@@ -211,7 +213,7 @@
         const has = Number.isFinite(energy), left = has ? Math.max(0, energy) : Infinity, room = has ? Math.max(0, ENERGY_MAX - energy) : Infinity;
         const cost = (kind, n) => ({ kind, delta: -Math.min(left, n) || 0 }), save = (kind, n) => ({ kind, delta: Math.min(room, n) });
         if (auraShare >= 0.5) return cost('aura', STAKES.AURA);
-        if (auraShare > STAKES.YOURS) return cost('part', Math.round(STAKES.AURA * auraShare));
+        if (auraShare > STAKES.YOURS) return cost('part', Math.max(1, Math.round(STAKES.AURA * auraShare)));   // any share of hers costs something
         if (hits >= 2 || !steered) return { kind: 'none', delta: 0 };
         if (hits === 1) return save('one', STAKES.ONE);
         return fullShare >= STAKES.FAST_SHARE ? save('fast', STAKES.CLEAN + STAKES.FAST) : save('clean', STAKES.CLEAN);
@@ -1015,6 +1017,7 @@
     function mount(ctx, ui, rawOpts) {
         const opts = rawOpts || {}, { from, to } = readSectors(opts), living = livingRoles(opts.crew), aboard = crewAboard(opts.crew);
         const perBreak = Math.max(1, asInt(opts.scrapesPerBreak) || 1);
+        const maxBreaks = Number.isFinite(opts.maxBreaks) ? Math.max(0, Math.floor(opts.maxBreaks)) : Infinity;   // the game's allowance
         const energyNow = asInt(opts.energy);                                  // NaN when the game did not say: plenty (stakesOf)
         const avoid = Array.isArray(opts.avoidHulls) ? opts.avoidHulls.filter(Number.isFinite) : [];
         const withTwin = opts.twin === true;                                  // the disc is aboard: the twin can come (SECTORS twin)
@@ -1144,7 +1147,7 @@
             g.hits++; jolt = 0.45; sound.scrape();
             addTrauma(TRAUMA.scrape); hitAt = clock;
             if (clock >= stopUntil) stopUntil = clock + HIT_STOP;                       // one hit-stop at a time
-            if (!free.length || g.hits % perBreak) return;
+            if (!free.length || g.hits % perBreak || g.hitRooms.length >= maxBreaks) return;   // never more decks than the game allows
             const room = free[Math.floor(g.r() * free.length)];
             g.damaged = { ...g.damaged, [room]: true };
             g.hitRooms.push(room);
@@ -1720,7 +1723,7 @@
         // read only, for the headless runs (Corridor.debug.state): what the pilot sees, the pieces marked red with where each
         // will cross us, and the tallies the stakes are worked out from
         live = () => ({
-            mode, auto, t, dur: leg ? leg.cfg.dur : 0, cam: [...cam], th, hits: g.hits, auraT, fullT, paid,
+            mode, auto, t, dur: leg ? leg.cfg.dur : 0, cam: [...cam], th, hits: g.hits, auraT, fullT, paid: paid && { ...paid },
             threats: mode !== 'run' ? [] : leg.frags.map((f, id) => (f.threat && !f.done && !f.gone ? { id, x: f.x + f.vx * (f.at - t), y: f.y + f.vy * (f.at - t), rad: f.rad, left: f.at - t } : null)).filter(Boolean),
         });
         seedSky(from);

@@ -2424,7 +2424,7 @@ class App {
     flyCorridor() {
         const from = this.state.currentSector;
         const damaged = Object.fromEntries(Object.entries(this.state.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
-        const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, energy: this.state.energy, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
+        const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: this.state.energy, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
         return window.MiniHost.play('corridor', opts)
             .then(result => this.applyCorridorResult(result), err => console.error(err));
     }
@@ -2434,15 +2434,23 @@ class App {
      * What the flight cost or saved in energy (Corridor STAKES: A.U.R.A.'s slower way costs, a clean flight of your own saves),
      * already said in her report, is applied here. Who flew it counts toward what A.U.R.A. says about who flies.
      */
+    /** How many decks a jump's scrapes may break: never the one that would end the run (3+ broken and too little salvage for the
+        cheapest repair: checkLoseConditions' hull breach). The flight is a risk to the ship, never a sudden game over (as flyOnReserve). */
+    corridorBreakAllowance() {
+        const decks = Object.values(this.state.shipDecks), down = decks.filter(d => d.status === 'DAMAGED').length;
+        if (decks.length && this.state.salvage >= Math.max(...decks.map(d => d.repairCost || 0))) return Infinity;   // any break can be paid for
+        return Math.max(0, 2 - down);
+    }
+
     applyCorridorResult(result) {
         if (!result) return;
         this.noteReliance(!!result.auraFlew);
         const energyDelta = Number.isFinite(result.energyDelta) ? Math.round(result.energyDelta) : 0;
-        if (energyDelta) {
+        if (energyDelta && !window.TEST_MODE) {                                        // tests spend no energy (consumeEnergy is off there too)
             this.state.energy = Math.max(0, Math.min(100, this.state.energy + energyDelta));
             this.state.addLog(energyDelta > 0 ? `Good flying: ${energyDelta} energy saved.` : `A.U.R.A.'s slower course: ${-energyDelta} extra energy.`);   // DRAFT
         }
-        const brokenDecks = Math.floor((result.scrapes || 0) / SCRAPES_PER_BROKEN_DECK), shownRed = result.damagedRooms || [];
+        const brokenDecks = Math.min(Math.floor((result.scrapes || 0) / SCRAPES_PER_BROKEN_DECK), this.corridorBreakAllowance()), shownRed = result.damagedRooms || [];
         for (let k = 0; k < brokenDecks; k++) {
             if (!this.state.damageDeck(shownRed[k])) this.state.damageRandomDeck();
         }
@@ -2634,6 +2642,7 @@ class App {
         // (the new look: on the travel view itself, then the sea of ships, then the arrival: src/newscreen/throw/Throw.js).
         const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
         const fly = () => this.showWarpAnimation(() => {
+            if (this.state.gameOver) return;                                         // the run ended in the flight: nothing more follows
             const afterFlight = isThrow ? (isNewScreen() && window.NSThrow ? window.NSThrow.play(this) : window.TheThrow.play(this))
                 : this.reactToSectorJump().then(() => new Promise(done => this.showCampfireEvent(done)));
             afterFlight.then(() => this.enterNextSector());
