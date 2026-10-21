@@ -740,7 +740,7 @@ function councilMd() {
     [['handleWarp', 'Warping to a planet'], ['handleSectorJump', 'Jumping to the next sector']].forEach(([n, title]) => { const p = bm(n); b.push(...textSection(3, title, p, 'The lines for the light are in sector-6.md.', outside(...lightRanges(p)))); });
     b.push(...textSection(3, 'Breaking orbit', BREAK_ORBIT, '', outside(...lightRanges(BREAK_ORBIT))), ...textSection(3, 'After the burn', bm('applyPlotResult'), 'After every warp and jump plot.'));
     b.push(...textSection(3, 'Plotting the burn (the mini-game)', whole('src/systems/WarpPlot.js'), 'Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to how it went.'));
-    b.push(...textSection(3, 'Flying a sector jump (the mini-game)', whole(CORRIDOR), 'Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every third scrape breaks a deck.', isSaid));
+    b.push(...textSection(3, 'Flying a sector jump (the mini-game)', whole(CORRIDOR), 'Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck.', isSaid));
     b.push('## Game over', '', ...textSection(3, 'All hands lost, hull breach', bm('checkLoseConditions'), ''), ...textSection(3, 'Stranded', bm('checkStranded'), 'No energy and no way out.'));
     b.push(...textSection(3, 'The game-over screen', block('src/systems/EndScreens.js', /function gameOver/), ''), ...textSection(3, 'The dead, on that screen', block('src/systems/EndScreens.js', /function memorialHtml/), ''));
     b.push(...textSection(3, 'The numbers, on that screen', block('src/systems/EndScreens.js', /function statsHtml/), ''));

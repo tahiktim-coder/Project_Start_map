@@ -1118,7 +1118,9 @@ const NEW_LOOK_ECONOMY = Object.freeze({
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
-const SCRAPES_PER_BROKEN_DECK = 3; // flying the jump (Corridor): every third scrape breaks a deck
+const SCRAPES_PER_BROKEN_DECK = 2; // flying the jump (Corridor): every second scrape breaks a deck (was 3). Measured over a run's
+                                   // four flown jumps (2026-10-21): a careful pilot loses about 0.6 decks (a slower one, 1.5), a
+                                   // ship that never moves all of them, one at full throttle the whole way about five. At 3: 0.2, 5, 3
 // Our wrecks (docs/CANON.md §2): the further out, the higher the hull number. Index = sector. The callsign comes from the number.
 const WRECK_HULL_RANGE = [[1, 8], [1, 8], [1, 8], [212, 980], [1400, 6000], [9000, 22000], [30000, 41000]];
 const SHORT_HULL_RANGE = 50;     // below this many hull numbers, a new wreck is picked from the numbers not yet used
@@ -2422,18 +2424,24 @@ class App {
     flyCorridor() {
         const from = this.state.currentSector;
         const damaged = Object.fromEntries(Object.entries(this.state.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
-        const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
+        const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, energy: this.state.energy, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
         return window.MiniHost.play('corridor', opts)
             .then(result => this.applyCorridorResult(result), err => console.error(err));
     }
 
     /**
-     * Every third scrape breaks a deck: the one the flight showed turning red, else a random one.
-     * Who flew it counts toward what A.U.R.A. says about who flies.
+     * Every SCRAPES_PER_BROKEN_DECK-th scrape breaks a deck: the one the flight showed turning red, else a random one.
+     * What the flight cost or saved in energy (Corridor STAKES: A.U.R.A.'s slower way costs, a clean flight of your own saves),
+     * already said in her report, is applied here. Who flew it counts toward what A.U.R.A. says about who flies.
      */
     applyCorridorResult(result) {
         if (!result) return;
         this.noteReliance(!!result.auraFlew);
+        const energyDelta = Number.isFinite(result.energyDelta) ? Math.round(result.energyDelta) : 0;
+        if (energyDelta) {
+            this.state.energy = Math.max(0, Math.min(100, this.state.energy + energyDelta));
+            this.state.addLog(energyDelta > 0 ? `Good flying: ${energyDelta} energy saved.` : `A.U.R.A.'s slower course: ${-energyDelta} extra energy.`);   // DRAFT
+        }
         const brokenDecks = Math.floor((result.scrapes || 0) / SCRAPES_PER_BROKEN_DECK), shownRed = result.damagedRooms || [];
         for (let k = 0; k < brokenDecks; k++) {
             if (!this.state.damageDeck(shownRed[k])) this.state.damageRandomDeck();

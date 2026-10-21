@@ -322,7 +322,7 @@ _Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to h
 - [delta] extra energy burned — hull shudders «WarpPlot.js · line 288»
 
 ### Flying a sector jump (the mini-game) «Corridor.js · Corridor»
-_Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every third scrape breaks a deck._
+_Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck._
 
 - zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen «Corridor.js · line 87»
 - **2 · say** — I'll count every beacon we hear, Commander. «Corridor.js · line 99»

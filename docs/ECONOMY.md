@@ -112,7 +112,8 @@ siding with someone reads as a purchase.
 - Torch: fuel tanks and scars. The game ignores both (bundle.js:2576), though the spotter says "That's fuel we don't get back."
 - Breach: air lost; the holed deck is damaged and whoever was in it is hurt. Feeds repairs.
 - Corridor: every third scrape breaks a deck, but only when you fly. When A.U.R.A. flies there are no scrapes at all, so
-  flying by hand has no upside.
+  flying by hand has no upside. (Fixed 2026-10-21: every second scrape breaks a deck; A.U.R.A.'s flight costs 4 energy and
+  she can be clipped in the thickest wave; your own flight saves 5 with no scrape, 7 at full throttle, 2 with one. Corridor.js STAKES.)
 - Warp plot: ±15–30% of the warp price. Small.
 
 ### A careful run, today's numbers
