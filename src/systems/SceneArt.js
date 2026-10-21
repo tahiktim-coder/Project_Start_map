@@ -272,24 +272,30 @@
         },
     };
 
-    // ═══ THE RING OF SHIPS — seventeen dead ships in a ring, all pointing inward at nothing, all playing our briefing. ═══
-    const RING = { cx: 240, cy: 82, rx: 190, ry: 50, count: 17, turn: 0.21, tilt: 0.42, len: 44, ht: 10, blinkMs: 2400, onMs: 700 };
+    // ═══ SEVENTEEN SHIPS — dead ships of ours drifting together, near and far, every nose on the far light, all playing our
+    //     briefing at the same moment (the sea of ships, in small). ═══
+    const DRIFT = { count: 17, light: [452, 42], seed: 61, blinkMs: 2400, onMs: 700 };
     SCENES.ANOMALY_CHORUS = {
         build(p) {
-            const stars = space(p, 17, 440);
-            for (let a = 0, k = 0; a < Math.PI * 2; a += 0.011, k++) if (k % 3 === 0) p.tone(RING.cx + RING.rx * Math.cos(a), RING.cy + RING.ry * Math.sin(a), BONE, 0.3);
-            const ships = Array.from({ length: RING.count }, (_, i) => { const a = RING.turn + (i / RING.count) * Math.PI * 2; return { a, i, depth: Math.sin(a) }; }).sort((m, n) => m.depth - n.depth);
-            const lights = ships.map(({ a, i, depth }) => {
-                const scale = 1 + 0.42 * depth, dx = -Math.cos(a), dy = -Math.sin(a) * RING.tilt;
-                const at = drawHull(p, { x: RING.cx + RING.rx * Math.cos(a), y: RING.cy + RING.ry * Math.sin(a), len: Math.max(7, RING.len * scale * Math.hypot(dx, dy)), ht: RING.ht * scale,
-                    angle: Math.atan2(-dy, -dx), ramp: RUST, seed: i + 3, light: 0.82 + 0.18 * depth });
+            const stars = space(p, 17, 440), [lx, ly] = DRIFT.light;
+            p.region(lx - 70, ly - 44, W, ly + 44, (x, y) => { const d = Math.hypot(x - lx, y - ly), v = 1.1 * Math.exp(-d / 3) + 0.35 * Math.exp(-d / 18); if (v > 0.1) p.tone(x, y, SUN, v); });   // a pinhead of light, far off
+            const rand = seeded(DRIFT.seed), ships = [];
+            for (let k = 0; ships.length < DRIFT.count && k < 600; k++) {                         // scattered, never stacked: the far ones small and dim
+                const depth = rand(), x = 24 + rand() * 370, y = 18 + rand() * 126, len = 12 + depth * 48;
+                if (ships.some(q => Math.abs(q.x - x) < (q.len + len) * 0.5 && Math.abs(q.y - y) < 10 + 9 * Math.max(q.depth, depth))) continue;
+                ships.push({ x, y, len, depth, i: ships.length });
+            }
+            ships.sort((m, n) => m.depth - n.depth);                                             // the far ones first, the near ones over them
+            const lights = ships.map(s => {
+                const at = drawHull(p, { x: s.x, y: s.y, len: s.len, ht: 3 + s.depth * 8, angle: Math.atan2(ly - s.y, lx - s.x), flip: true,   // nose on the light
+                    ramp: RUST, seed: s.i + 3, light: 0.5 + 0.45 * s.depth, rust: true });
                 return at(0.55, -0.45);
             });
             return { stars: keepVisible(p, stars), lights };
         },
         frame(f, t, s) {
             twinkle(f, s.stars, t);
-            const isOn = t % RING.blinkMs < RING.onMs;                                        // every ship, the same recording, the same moment
+            const isOn = t % DRIFT.blinkMs < DRIFT.onMs;                                      // every ship, the same recording, the same moment
             s.lights.forEach(([x, y]) => { if (isOn) { f.glow(x, y, 4, GREEN, 0.7); f.px(x - 1, y - 1, GREEN.hex[4], 2, 2); } else f.px(x, y, GREEN.hex[2]); });
         },
     };

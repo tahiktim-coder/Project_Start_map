@@ -587,8 +587,8 @@ const ANOMALY_ENCOUNTERS = [
         id: 'ANOMALY_CHORUS',
         weight: 12,
         minSector: 4,     // four-digit hull numbers (docs/CANON.md section 2)
-        title: "THE RING OF SHIPS",
-        context: () => `Seventeen dead ships sit in a ring, all pointing inward. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.`,
+        title: "SEVENTEEN SHIPS",
+        context: () => `Seventeen dead ships drift together here, all pointing the same way, at the light. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.`,
         dialogue: [
             { speaker: 'Vance', text: "Seventeen ships, and every one has a higher hull number than ours. We were told eight went before us." },
             { speaker: 'Aris', text: "Listen. 'Find a planet people can live on, and settle it.' It's our briefing. Even the pauses match." },
