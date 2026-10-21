@@ -12,7 +12,8 @@
                              'red' }, engDown, E (0..100, eased), beat: { val, onsets: [ms] }, flood: { kind: 'jump' | 'fill',
                              t0 } | null, sunY (canvas row), fix: { x, y } tower px | null (a star fix waiting on Mira's bench),
                              flick: { [deck]: ms } (optional: a hit just now, the deck's red wash stutters for 360 ms),
-                             reduced (optional: reduced motion, the stutter is one steady wash) }
+                             reduced (optional: reduced motion, the stutter is one steady wash), cold (optional: the reactor is
+                             out, the conduit dark: the jump that stalls, throw/Stall.js) }
                              red decks, brown-out, conduit, hull light, the fix, in that order
      vignette(ctx, v, drawn) the left-edge fade (unused since the whole tower fits, BUILD_B §8; kept for a cut hull)
      floodDone(v) → bool     true once v.flood has run its 1.8 s
@@ -187,11 +188,11 @@
     /** 2 px of light up the inner hull wall into the bridge console. Its base is the energy; the beat runs up it; on the
         jump it floods; when energy comes back it fills upward. Engineering red: the light stutters. */
     function drawConduit(t) {
-        const G = V.G, X = sx(CONDUIT.X), JY = sy(CONDUIT.JY), JX = sx(CONDUIT.JX), Lc = conduitLen(), vl = vertLen();
-        const E = clamp(V.E, 0, 100) / 100, red = engRed(), beatVal = V.beat.val;
-        const base = 0.2 + 0.2 * E + 0.08 * beatVal * E;
-        const pulses = V.beat.onsets.map(o => (t - o) * BEAT.RISE).filter(s => s >= 0 && s < Lc + 40);
-        const fl = V.flood, flAge = fl ? t - fl.t0 : 0, live = fl && flAge >= 0 && flAge <= FLOOD_MS;
+        const G = V.G, X = sx(CONDUIT.X), JY = sy(CONDUIT.JY), JX = sx(CONDUIT.JX), Lc = conduitLen(), vl = vertLen(), cold = !!V.cold;   // cold: the reactor is out (the jump that stalls)
+        const E = cold ? 0 : clamp(V.E, 0, 100) / 100, red = engRed(), beatVal = cold ? 0 : V.beat.val;
+        const base = cold ? 0.03 : 0.2 + 0.2 * E + 0.08 * beatVal * E;
+        const pulses = cold ? [] : V.beat.onsets.map(o => (t - o) * BEAT.RISE).filter(s => s >= 0 && s < Lc + 40);
+        const fl = cold ? null : V.flood, flAge = fl ? t - fl.t0 : 0, live = fl && flAge >= 0 && flAge <= FLOOD_MS;
         const jump = live && fl.kind === 'jump', fill = live && fl.kind === 'fill';
         const vAt = s => {
             let v = base;
@@ -222,7 +223,7 @@
                 if (x <= X) { tone(x, JY, R.ICE, v); tone(x, JY + 1, R.ICE, v * 0.86); }
             }
             for (let y = -3; y < 5; y++) for (let x = -5; x < 0; x++) tone(JX + x, JY + y, R.STEEL, y === -3 ? 0.56 : x === -1 ? 0.44 : 0.26);
-            const glow = 0.2 + 0.4 * beatVal * E + (jump ? 0.4 * (1 - flAge / FLOOD_MS) : 0);
+            const glow = cold ? 0 : 0.2 + 0.4 * beatVal * E + (jump ? 0.4 * (1 - flAge / FLOOD_MS) : 0);
             tone(JX - 3, JY, R.ICE, glow); tone(JX - 3, JY + 1, R.ICE, glow * 0.8); tone(JX - 2, JY, R.ICE, glow * 0.7);
         }
     }

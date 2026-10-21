@@ -2619,10 +2619,11 @@ class App {
             this.state.addLog("Crew Quarters: Rest cycle complete. Stress levels reduced.");
         }
 
-        // The flight, then what the crew makes of it, then the campfire. Into sector 3 the burn stalls and the throw plays instead.
+        // The flight, then what the crew makes of it, then the campfire. Into sector 3 the burn stalls and the throw plays instead
+        // (the new look: on the travel view itself, then the sea of ships, then the arrival: src/newscreen/throw/Throw.js).
         const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
         const fly = () => this.showWarpAnimation(() => {
-            const afterFlight = isThrow ? window.TheThrow.play(this)
+            const afterFlight = isThrow ? (isNewScreen() && window.NSThrow ? window.NSThrow.play(this) : window.TheThrow.play(this))
                 : this.reactToSectorJump().then(() => new Promise(done => this.showCampfireEvent(done)));
             afterFlight.then(() => this.enterNextSector());
         }, isThrow);
@@ -2692,15 +2693,26 @@ class App {
         onComplete();
     }
 
-    /** Into sector 3: the plot (WarpPlot), then the throw (TheThrow, played by handleSectorJump). No sector name; only A.U.R.A. may speak. */
+    /** Into sector 3: the plot (WarpPlot), then the throw (TheThrow, played by handleSectorJump). No sector name; only A.U.R.A. may speak.
+        The new look plays WarpPlot's game as the 'burn' minigame (src/newscreen/throw/Gauge.js): same rules, no arrival card
+        (its line opens the stall on the travel view; A.U.R.A.'s word on who flies is said after the crew's). */
     plotStalledBurn(onComplete) {
+        const isGauge = isNewScreen() && !!window.MiniHost && window.MiniHost.has('burn');
         if (!window.WarpPlot) { onComplete(); return; }
         const nextSector = this.state.currentSector + 1;
         const plotOptions = this.getPlotOptions(`S${nextSector} —`, 'sector');
         const jumpBase = isNewScreen() ? NEW_LOOK_ECONOMY.JUMP : SECTOR_JUMP_BASE_COST;
         plotOptions.cost = jumpBase;                                                 // what applyPlotResult grades against below
-        plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         const relianceVoice = this.getRelianceVoice();
+        if (isGauge) {
+            plotOptions.relianceVoice = relianceVoice;
+            window.MiniHost.play('burn', plotOptions).then(result => {
+                this.applyPlotResult(result, jumpBase);
+                onComplete();
+            }, err => { console.error('The burn gauge failed; the jump goes on as A.U.R.A. plotted it', err); onComplete(); });
+            return;
+        }
+        plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
         window.WarpPlot.play(plotOptions).then(result => {
             this.applyPlotResult(result, jumpBase);

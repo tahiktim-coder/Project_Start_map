@@ -17,9 +17,10 @@
                                     fall behind), drawn at x, y; preglow queues the sizes a sector can reach
      item(f, it, t, o) · rims(f, it, up)   one field item (o: { hidden, resolvedAt, mark }); its lit rim when pointed at
      prebake(items) · bakeOne()     ask for the sizes a move will need; bake one in an idle frame
-     lander(f, t, pose, lvl, on, beat)     our Lander outside: pose { x, y, len, angle }, plume level, ports lit, reactor beat
+     lander(f, t, pose, lvl, on, beat, o)  our Lander outside: pose { x, y, len, angle }, plume level, ports lit, reactor beat;
+                                    o (optional) { cold: no plume, lamp: ms its red lamp has been on, still } (the jump that stalls)
      stream(which, vp, speed, flowPos, front)   space streaming past; which: 'back' | 'front'
-     rogue(A, t0, t) · jump(A, s) · dark(t) · dimAll(amount) · shade(rect)
+     rogue(A, t0, t) · jump(A, s) · stretch(A, k) · dark(t) · dimAll(amount) · shade(rect)   stretch: the stall's (0..1)
 */
 (function () {
     'use strict';
@@ -138,7 +139,8 @@
         const o = { x: half, y: half, len, ht, angle: a, flip: true, seed: 9, anchor: 0.5, sun: len < 80 ? 0.24 : 0.32, sunDir: [Math.cos(sa), Math.sin(sa)], fade: 0.22, mirror: false, flat: len < 130 };
         const at = P.hull(p, o, P.shapeL), rel = q => [q[0] - half, q[1] - half];
         const out = { canvas: p.canvas(), half, ports: [0, 1, 2, 3, 4, 5].map(i => rel(at(P.DECK_U(i) + 0.054, -0.32))), bridge: rel(at(P.LANDER.NOSE - 0.02, -0.12)),
-            bell: rel(at(1.0, 0)), clamp: rel(at(P.DECK_U(4) + 0.05, 0.56 + 1.2 / ht)), skirt: [0.87, 0.89, 0.91, 0.93].map(u => rel(at(u, 0.6))) };
+            bell: rel(at(1.0, 0)), clamp: rel(at(P.DECK_U(4) + 0.05, 0.56 + 1.2 / ht)), skirt: [0.87, 0.89, 0.91, 0.93].map(u => rel(at(u, 0.6))),
+            lamp: rel(at(P.LANDER.NOSE + 0.06, -0.52)) };                              // the red emergency lamp (the jump that stalls)
         if (landerCache.size > 400) landerCache.clear();
         landerCache.set(key, out);
         return out;
@@ -343,24 +345,39 @@
     }
 
     // ═══ 5. our ship outside, space streaming past, the jump, the corridor ═══
-    function lander(f, t, pose, lvl, on, beat) {
-        const sp = landerSprite(pose.len, pose.angle), cx = Math.round(pose.x), cy = Math.round(pose.y), s = pose.len / 48;
+    /** o (optional, the jump that stalls: throw/Stall.js): { cold: the drive out (no plume), lamp: ms the red emergency lamp has
+        been on (null: none), still: reduced motion (the lamp steady) }. */
+    function lander(f, t, pose, lvl, on, beat, o) {
+        const sp = landerSprite(pose.len, pose.angle), cx = Math.round(pose.x), cy = Math.round(pose.y), s = pose.len / 48, cold = !!(o && o.cold);
         const ca = Math.cos(pose.angle), sa = Math.sin(pose.angle), bx = cx + sp.bell[0], by = cy + sp.bell[1], frame = Math.floor(t / TICK) % 4;
-        for (let i = 0; i < 9; i++) { const age = ((t / 1000) * 0.8 + hash(i, 1, 57)) % 1, dist = (14 + age * 40) * s, side = (hash(i, 2, 57) - 0.5) * age * 9 * s; f.tone(bx - ca * dist - sa * side, by - sa * dist + ca * side, RP.PLUME, 0.62 * (1 - age) * Math.min(1, lvl)); }
+        if (!cold) for (let i = 0; i < 9; i++) { const age = ((t / 1000) * 0.8 + hash(i, 1, 57)) % 1, dist = (14 + age * 40) * s, side = (hash(i, 2, 57) - 0.5) * age * 9 * s; f.tone(bx - ca * dist - sa * side, by - sa * dist + ca * side, RP.PLUME, 0.62 * (1 - age) * Math.min(1, lvl)); }
         const shut = landerSprite(Math.max(6, Math.round(pose.len * 0.18)), pose.angle);
         ctx.drawImage(shut.canvas, cx + sp.clamp[0] - shut.half, cy + sp.clamp[1] - shut.half);      // the shuttle, clamped beside the hold
         ctx.drawImage(sp.canvas, cx - sp.half, cy - sp.half);
-        const flick = [1, 0.72, 1.16, 0.88][frame], hot = [1, 0.86, 1, 0.92][frame], len = (6 + 19 * lvl) * s * flick, w0 = Math.max(1, 1.8 * s * (0.8 + 0.2 * Math.min(lvl, 2)));
-        for (let d = 0; d < len; d++) { const hw = w0 * (1 - (d / len) * 0.6); for (let k = -Math.ceil(hw); k <= Math.ceil(hw); k++) { const u = Math.abs(k) / (hw + 0.01), v = (1 - d / len) ** 0.8 * (1 - u * u) * hot; if (v > 0.06) f.tone(bx - ca * d - sa * k, by - sa * d + ca * k, RP.PLUME, v); } }
-        sp.skirt.forEach(([x, y], i) => { if ((i + frame) % 2 === 0 || lvl > 1) f.tone(cx + x, cy + y, RP.PLUME, 0.4 + 0.15 * Math.min(lvl, 2)); });
+        if (!cold) {
+            const flick = [1, 0.72, 1.16, 0.88][frame], hot = [1, 0.86, 1, 0.92][frame], len = (6 + 19 * lvl) * s * flick, w0 = Math.max(1, 1.8 * s * (0.8 + 0.2 * Math.min(lvl, 2)));
+            for (let d = 0; d < len; d++) { const hw = w0 * (1 - (d / len) * 0.6); for (let k = -Math.ceil(hw); k <= Math.ceil(hw); k++) { const u = Math.abs(k) / (hw + 0.01), v = (1 - d / len) ** 0.8 * (1 - u * u) * hot; if (v > 0.06) f.tone(bx - ca * d - sa * k, by - sa * d + ca * k, RP.PLUME, v); } }
+            sp.skirt.forEach(([x, y], i) => { if ((i + frame) % 2 === 0 || lvl > 1) f.tone(cx + x, cy + y, RP.PLUME, 0.4 + 0.15 * Math.min(lvl, 2)); });
+        }
         const hi = beat > 0.55 ? 4 : 3;                                                              // the ports breathe with the reactor
         sp.ports.forEach(([px, py], i) => { if (on[i]) f.px(cx + px, cy + py, RP.AMBER.hex[i === 0 ? hi : hi - 1]); });
-        f.px(cx + sp.bridge[0], cy + sp.bridge[1], RP.AMBER.hex[on[0] ? hi : 2]);
+        f.px(cx + sp.bridge[0], cy + sp.bridge[1], on[0] ? RP.AMBER.hex[hi] : cold ? RP.HULL.hex[1] : RP.AMBER.hex[2]);
+        if (o && o.lamp != null) redLamp(f, cx + sp.lamp[0], cy + sp.lamp[1], o.lamp, s, o.still);
+    }
+    /** The red emergency lamp on our hull (prototypes/films/sea.html's): a slow blink, 0.9 s on in every 2.2; steady when still. */
+    function redLamp(f, x, y, ms, s, still) {
+        const on = still || (ms % 2200) < 900, r = Math.max(2, Math.round(1 + s * 1.2)), X = Math.round(x), Y = Math.round(y);
+        if (on) { f.glow(X, Y, r + 2, RP.RED, 0.8); f.px(X, Y, RP.RED.hex[4]); }
+        else { f.glow(X, Y, 2, RP.RED, 0.45); f.px(X, Y, RP.RED.hex[3]); }
+        f.reset();
     }
     const FLOWS = { motes: { n: 110, seed: 41, rate: 0.0005, tail: 0.1, ramp: 'DUST', v: 0.85, lit: true }, streaks: { n: 230, seed: 43, rate: 0.0015, tail: 0.17, ramp: 'STAR', v: 0.9 },
         near: { n: 30, seed: 47, rate: 0.0027, tail: 0.13, ramp: 'STAR', v: 1.05, wide: 0.5 } };
     const FLOW_LN = Math.log(900 / 22);
-    let layerBack = null, layerFront = null;
+    let layerBack = null, layerFront = null, layerFull = null;
+    /** One whole-screen pixel buffer for the jump's streaks and the stall's stretch, cleared and reused every frame (a new one each
+        frame was a canvas and 2 MB of pixels thrown away 60 times a second). */
+    function fullLayer() { if (!layerFull || layerFull.W !== G.W || layerFull.H !== G.H) layerFull = P.pixelLayer(G.W, G.H); else layerFull.clear(); return layerFull; }
     /** Space streaming past touches a few thousand scattered pixels a frame: kept as runs per colour and drawn with fillRect,
         instead of clearing and uploading a whole-screen pixel buffer twice a frame (that cost 4-9 ms at 1080p once the
         space side grew to three quarters of the width, BUILD_B §8). Same API as NSPaint.pixelLayer. */
@@ -407,9 +424,18 @@
     function jump(A, s) {
         if (s < 1500) return;
         if (s >= 2250) { ctx.fillStyle = RP.SUN.hex[6 - Math.min(3, Math.floor((s - 2250) / 100))]; ctx.fillRect(0, 0, G.W, G.H); return; }   // white-gold, then warm steps (Travel washes the tower too)
-        const LP = LPx(), k = Math.min(6, Math.floor((s - 1500) / TICK) + 1), L = P.pixelLayer(G.W, G.H);
+        const LP = LPx(), k = Math.min(6, Math.floor((s - 1500) / TICK) + 1), L = fullLayer();
         dimAll(k / 8);
         A.bright.forEach(st => { const dx = LP[0] - st.x, dy = LP[1] - st.y, d = Math.hypot(dx, dy) || 1, len = Math.min(d, k * k * 2.6 * sc * (0.5 + st.mag)); for (let i = 0; i < len; i++) L.tone(st.x + dx / d * i, st.y + dy / d * i, RP.STAR, (0.45 + 0.5 * st.mag) * (1 - i / len)); });
+        L.draw(ctx);
+    }
+    /** The jump that stalls (throw/Stall.js): the jump's stretch at k (0..1: 1 is the burn at full, 0 every star a point
+        again), the sky a step darker with it. */
+    function stretch(A, k) {
+        if (!(k > 0.01)) return;
+        const LP = LPx(), kk = 6 * Math.min(1, k), L = fullLayer();
+        dimAll(Math.floor(kk) / 8 * 0.75);
+        A.bright.forEach(st => { const dx = LP[0] - st.x, dy = LP[1] - st.y, d = Math.hypot(dx, dy) || 1, len = Math.min(d, kk * kk * 2.6 * sc * (0.5 + st.mag)); for (let i = 0; i < len; i++) L.tone(st.x + dx / d * i, st.y + dy / d * i, RP.STAR, (0.45 + 0.5 * st.mag) * (1 - i / len)); });
         L.draw(ctx);
     }
     /** After the flash: jump space is dark, not empty: a faint teal haze down the corridor, the far light a warm smudge. */
@@ -449,6 +475,6 @@
 
     window.NSPictures = Object.freeze({
         setup, clear, setLive: on => { live = !!on; }, art, backdrop, glow, preglow, lightOf, item, rims, prebake, bakeOne, queued: () => queue.size,
-        lander, stream, rogue, jump, dark, dimAll, shade,
+        lander, stream, rogue, jump, stretch, dark, dimAll, shade,
     });
 })();

@@ -27,6 +27,10 @@
    The hover note goes on a click and stays away until the pointer really moves (a refusal is then seen at once); in a
    flight what is under a still pointer is worked out again every frame. The jump's white-gold flash washes the whole
    screen, the tower too (a div over both canvases, warm steps down to the corridor's dark).
+   The jump into sector 3 stalls here instead (throw/Stall.js, read through window.NSStall.view() each frame): the burn's
+   stretch shrinks back, space stops streaming, the drive coughs out and time stands still (the sky, the stars, our ship);
+   our ports go dark with the tower's decks and a red lamp burns on our hull; then the same world shows up again and again
+   and our ship is too big, then too small. Nothing can be pointed at or clicked meanwhile.
    Under a world's name its note says what kind of world it is (WorldFinds.js kind: "A singing world. One low note comes off
    it."); our wrecks and the story world keep their own lines. The long-range scan (Scan.js through flow.scanOffer, scan,
    findNote): a landable world ahead that no scan has read has "Scan" and its cost under its note's words; the note stays up
@@ -55,6 +59,8 @@
 
     let G = null, sc = 1, cv = null, ctx = null, wordsEl = null, note = null, title = null, flashEl = null, noteRect = null, A = null;
     let scanEl = null, scanSeenAt = null;                                              // the note's "Scan" line while it can be clicked; since when it shows
+    let SV = null, stallT = null, stallStopped = false, copyOf = null;                  // the jump that stalls (throw/Stall.js): its view this frame, when time stopped
+    function stallView() { const S = window.NSStall; try { return S && typeof S.view === 'function' ? S.view() : null; } catch (err) { console.error('NewScreen travel: the stall view failed', err); return null; } }
     let W = F.blank(1), shownSector = 0, lastRefresh = -1e9, holdRefreshUntil = -1e9, rogueT0 = 0, openedSector = 0, noteWasUp = false;
     const story = new Map();                                                          // node id → { hidden, resolvedAt }
     const placeAnchors = new Set();
@@ -116,7 +122,7 @@
         that has not been named yet is named, one at a time. It is marked said only once it was seen on screen (a line cut
         or dropped is said again later); a later line never cuts it before Voice's KEEP_MS. */
     function announce(t) {
-        if (t < quietUntil || t - lastSaid < SAY_GAP_MS || W.flight || W.lock || W.held || W.opening || W.jump || W.black || W.ease || noteWasUp || blocked()) return;
+        if (SV || t < quietUntil || t - lastSaid < SAY_GAP_MS || W.flight || W.lock || W.held || W.opening || W.jump || W.black || W.ease || noteWasUp || blocked()) return;
         const ns = NS(), v = ns && ns.mods && ns.mods.voice, st = ns && ns.app && ns.app.state;
         if (!st || typeof st.addLog !== 'function' || !v || typeof v.say !== 'function' || !ns.isShown() || shownSector !== sectorNow() || naming.size || talking()) return;
         const sup = window.NSSupper;
@@ -135,7 +141,7 @@
     // ═══ 2. the light, our ship, speed ═══
     const lostCount = () => F.ids().filter(id => { const m = (W.modes[id] || {}).m, e = F.entry(id); return !e.scenery && (m === 'passed' || m === 'gone'); }).length;
     function lightScale(t) {
-        const f = W.flight, boost = f && f.light ? 1 + 0.5 * ease(F.flightE(f, t)) : W.held && W.held === F.light().node || W.jump ? 1.5 : 1;
+        const f = W.flight, boost = SV ? SV.boost : f && f.light ? 1 + 0.5 * ease(F.flightE(f, t)) : W.held && W.held === F.light().node || W.jump ? 1.5 : 1;
         return Math.pow(GROW, lostCount()) * boost;
     }
     function drift(t) { return [Math.round(2 * Math.sin(t / 3100)), Math.round(2.6 * Math.sin(t / 2300 + 1)), 0.035 * Math.sin(t / 2700 + 2)]; }
@@ -146,6 +152,7 @@
     }
     /** The plume before smoothing: 0.25 + 0.75 x energy / 100; x1.7 in flight; spooling up through the lock; x0.5 held. */
     function plumeBase(t) {
+        if (SV) return SV.plume;
         if (W.black) return 0.8;
         if (W.jump) return 1 + 2.4 * clamp01((t - W.jump.t0) / 1500);
         let lvl = 0.25 + 0.75 * clamp01(energyNow() / 100);
@@ -155,6 +162,7 @@
     /** The plume follows the real energy, smoothed (it flares up fast and dies down slowly); a flare on go; it coughs with
         the drive down (after the smoothing, so the cough stays sharp). */
     function plumeLevel(t) {
+        if (SV) return SV.plume;                                                      // the stall's cough stays sharp
         if (W.black || W.jump) return FX.plume == null ? plumeBase(t) : FX.plume;
         let lvl = FX.plume == null ? plumeBase(t) : FX.plume;
         if (broken('engineering')) lvl *= sputter(t);
@@ -172,6 +180,7 @@
         return { on, b };
     }
     function speedNow(t) {
+        if (SV) return SV.speed;
         if (W.jump) return SPEED.burn;
         const f = W.flight; if (f) { const e = F.flightE(f, t); return lerp(SPEED.held, SPEED.flight, smooth(0, 0.15, e) * (1 - smooth(0.8, 1, e))); }
         return W.held ? SPEED.held : SPEED.rest;
@@ -224,7 +233,11 @@
     /** Once a frame: the burn's rumble, the tower told how hard we fly, the shake stepped, the plume smoothed. */
     function stepFeel(dt, t) {
         const s = shaker();
-        if (W.jump && !W.black) {
+        if (SV) {                                                                     // the stall: the burn's rumble dying, one jolt as it stops
+            if (s && SV.burn > 0 && !SV.stop && !SV.still) s.floor(FEEL.burnFloor * SV.burn);
+            tower('speed', SV.stop ? 0 : SV.burn);
+            if (SV.stop && !stallStopped) { stallStopped = true; if (!SV.still) kick(0.9); }
+        } else if (W.jump && !W.black) {
             if (s) s.floor(FEEL.burnFloor * Math.pow(clamp01((t - W.jump.t0) / JUMP.white), 2));
             tower('speed', 1);
         } else tower('speed', W.flight ? speed01(t) : 0);
@@ -244,7 +257,9 @@
     }
     function drawScene(t) {
         ctx.imageSmoothingEnabled = false;
-        const f = P.framer(ctx, G.W, G.H), pose = poseAt(t), tb = towerBits(t);
+        const tv = SV && stallT != null ? stallT : t;                                // the stall: time stands still (the sky, the stars, our ship)
+        const f = P.framer(ctx, G.W, G.H), pose0 = poseAt(tv), tb = towerBits(t);
+        const pose = SV && SV.shipScale !== 1 ? Object.assign({}, pose0, { len: Math.round(pose0.len * SV.shipScale) }) : pose0;
         if (!W.black && shownSector !== sectorNow()) { PIC.dimAll(1); return; }       // before a sector's first show (under the briefing): black
         if (W.black) {                                                                // the corridor: dark, not empty, our Lander still with us
             PIC.dark(); PIC.stream('front', [F.light().x, F.light().y], 30, W.flow);
@@ -252,26 +267,69 @@
         }
         if (!A) A = PIC.art(W.sector);
         const sn = F.scene(W, t); W.last = sn;
-        PIC.backdrop(A, W.D, t);
-        const l = F.light(), gl = PIC.glow(W.sector, lightScale(t), t); ctx.drawImage(gl.canvas, gl.x, gl.y);
+        PIC.backdrop(A, W.D, tv);
+        const l = F.light(), gl = PIC.glow(W.sector, lightScale(t), tv); ctx.drawImage(gl.canvas, gl.x, gl.y);
         const dl = F.discsOf(sn);
-        P.twinkle(f, A.bright.filter(st => !dl.some(([x, y, r]) => Math.hypot(st.x - x, st.y - y) < r + 2)), t); f.reset();
-        if (W.sector === 2) PIC.rogue(rogueT0, t);
-        const vp = vanishing(sn, t), sp = speedNow(t), front = !!(W.flight || W.jump);  // at rest the streaks pass behind the worlds
+        P.twinkle(f, A.bright.filter(st => !dl.some(([x, y, r]) => Math.hypot(st.x - x, st.y - y) < r + 2)), tv); f.reset();
+        if (W.sector === 2) PIC.rogue(rogueT0, tv);
+        if (SV) PIC.stretch(A, SV.stretch);                                           // the burn's stretch, shrinking back as the jump stalls
+        const vp = vanishing(sn, t), sp = speedNow(t), front = !!(W.flight || W.jump || (SV && SV.speed > 60));   // at rest the streaks pass behind the worlds
         PIC.stream('back', vp, sp, W.flow);
         if (!front) PIC.stream('front', vp, sp, W.flow);
         sn.items.forEach(it => {
             const s = story.get(it.id), e = F.entry(it.id);
-            PIC.item(f, it, t, { hidden: !!(s && s.hidden), resolvedAt: s ? s.resolvedAt : null, mark: !!(e && storyKind(e.node)) }); f.reset();
+            PIC.item(f, it, tv, { hidden: !!(s && s.hidden), resolvedAt: s ? s.resolvedAt : null, mark: !SV && !!(e && storyKind(e.node)) }); f.reset();
         });
+        if (SV && SV.copies.length) drawCopies(f, sn, tv);
         const lockId = W.lock ? (W.lock.id === F.light().node ? 'light' : W.lock.id) : null, hov = lockId || (W.flight ? null : W.hover);
         if (hov && hov !== 'light' && !(story.get(hov) || {}).hidden) sn.items.filter(i => i.id === hov && i.part !== 'arc' && !i.hiding && !i.passed).forEach(i => PIC.rims(f, i, lockId ? 2 : 1));
         if (hov === 'light') { const r = PIC.lightOf(W.sector, lightScale(t)), lx = Math.round(l.x), ly = Math.round(l.y); for (let d = Math.round(r.core + 2); d < r.core + 10 * sc; d++) { const v = 0.85 - (d - r.core) / (12 * sc); f.tone(lx - d, ly, P.RP.SUN, v); f.tone(lx, ly - d, P.RP.SUN, v); f.tone(lx, ly + d, P.RP.SUN, v); } }
-        PIC.lander(f, t, pose, plumeLevel(t), tb.on, tb.b);
+        if (SV) PIC.lander(f, tv, pose, plumeLevel(t), tb.on.map((on, i) => on && !(SV.dark[i] >= 0.5)), 0, { cold: SV.cold, lamp: SV.lamp, still: SV.still });
+        else PIC.lander(f, t, pose, plumeLevel(t), tb.on, tb.b);
         if (front) PIC.stream('front', vp, sp, W.flow);
         PIC.shade(noteRect);
         if (W.jump) PIC.jump(A, t - W.jump.t0);
         if (W.opening) PIC.dimAll(1 - Math.floor(clamp01((t - W.opening.t0) / OPEN.dim) * 8) / 8);
+    }
+
+    /** The stall's picture going wrong: the biggest world in view, again and again, dithered in where nothing was (in open
+        sky: never over a world, the light or our ship, nor over another copy). */
+    let copySpots = null;
+    function copyPlaces(sn, it) {
+        if (copySpots && copySpots.id === it.id && copySpots.W === G.W) return copySpots.list;
+        const spW = G.W - G.hull, l = F.light(), Ld = F.lander(), r = it.r, list = [];
+        const ds = F.discsOf(sn).concat([[l.x, l.y, 46 * sc], [Ld.x, Ld.y, Ld.len * 1.2]]);
+        for (let k = 0; k < 600 && list.length < 6; k++) {
+            const x = G.hull + spW * (0.1 + 0.82 * ((k * 0.618034 + 0.27) % 1)), y = G.H * (0.1 + 0.8 * ((k * 0.754877 + 0.61) % 1));
+            if (x - r < G.hull + 10 * sc || x + r > G.W - 8 * sc || y - r < 8 * sc || y + r > G.H - 8 * sc) continue;
+            if (ds.some(([cx, cy, cr]) => Math.hypot(x - cx, y - cy) < cr + r + 9 * sc)) continue;
+            list.push([Math.round(x), Math.round(y)]); ds.push([x, y, r]);
+        }
+        copySpots = { id: it.id, W: G.W, list };
+        return list;
+    }
+    function copyOfNow(sn) {
+        const usable = i => i.part !== 'arc' && !(i.hiding > 0.2) && !(i.fade > 0) && !i.passed && F.entry(i.id) && F.entry(i.id).kind === 'world';
+        if (!copyOf || !sn.items.some(i => i.id === copyOf && usable(i))) {
+            const pick = sn.items.filter(usable).sort((a, b) => b.r - a.r)[0];
+            copyOf = pick ? pick.id : null;
+        }
+        return copyOf && sn.items.find(i => i.id === copyOf && i.part !== 'arc');
+    }
+    function drawCopies(f, sn, tv) {
+        const it = copyOfNow(sn);
+        if (!it) return;
+        const at = copyPlaces(sn, it);
+        SV.copies.forEach((c, k) => {
+            if (!(c.k > 0) || !at[k]) return;
+            PIC.item(f, Object.assign({}, it, { x: at[k][0], y: at[k][1], fade: 1 - c.k, cut: null, grey: 0, hiding: 0, passed: false }), tv, {}); f.reset();
+        });
+    }
+    /** The copies on screen now, as discs (the voice keeps its words off them). */
+    function copyDiscs() {
+        if (!SV || !SV.copies.length || !copySpots || !W.last) return [];
+        const it = W.last.items.find(i => i.id === copySpots.id && i.part !== 'arc');
+        return it ? SV.copies.map((c, k) => (c.k > 0 && copySpots.list[k] ? [copySpots.list[k][0], copySpots.list[k][1], it.r] : null)).filter(Boolean) : [];
     }
 
     // ═══ 4. words: the note when pointing (a name and one line), the sector title ═══
@@ -458,7 +516,7 @@
     // ═══ 5. pointing, the lock, flying ═══
     function interactive(t) {
         const ns = NS();
-        return !!G && !!(ns && (!ns.isShown || ns.isShown())) && !W.jump && !W.black && !W.held && !(W.opening && t - W.opening.t0 < OPEN.dim) && !blocked();
+        return !!G && !SV && !!(ns && (!ns.isShown || ns.isShown())) && !W.jump && !W.black && !W.held && !(W.opening && t - W.opening.t0 < OPEN.dim) && !blocked();
     }
     function hitTest(x, y, t) {
         const sn = W.last || F.scene(W, t), order = sn.items.filter(i => i.kind === 'giant').concat(sn.items.filter(i => i.kind !== 'giant'));
@@ -583,10 +641,13 @@
     function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null, onNote: false, scanning: null }); FX.relax = null; FX.landT = null; if (note) note.hidden = true; noteRect = null; scanEl = null; scanSeenAt = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; PIC.setLive(false); }
     function update(dt, t) {
         if (!G) return;
+        SV = stallView();
+        if (SV) { if (SV.frozen && stallT == null) stallT = t; }
+        else if (stallT != null || stallStopped || copyOf) { stallT = null; stallStopped = false; copyOf = null; copySpots = null; }
         PIC.setLive(true);
         refresh(t, false);
         const s = speedNow(t);
-        W.flow += s * dt / 1000; W.D = Math.min(9800, W.D + (W.flight ? DRATE.flight : DRATE.rest) * dt / 1000);
+        W.flow += s * dt / 1000; if (!(SV && SV.frozen)) W.D = Math.min(9800, W.D + (W.flight ? DRATE.flight : DRATE.rest) * dt / 1000);
         if (W.lock && t - W.lock.t0 >= LOCK_MS && !blocked()) fire(t);                // a card up: the course waits for it
         if (W.flight && t - W.flight.t0 >= W.flight.dur && !blocked()) {              // the flight lands (once no card is up): the real game pulls in
             const id = W.flight.id; W = F.land(W);
@@ -673,7 +734,7 @@
     }
     function placeCss(id) { const g = placeAt(id); if (!G) return g; const [x, y] = G.toCss(g.x, g.y); return { x, y, r: g.r * G.k / G.dpr, shown: g.shown }; }
     function landerPose() { if (!G) return { x: 0, y: 0, len: 0, angle: 0 }; const p = poseAt(now()); return { x: p.x, y: p.y, len: p.len, angle: p.angle }; }
-    function discs() { if (!G || W.black) return []; return F.discsOf(W.last || F.scene(W, now())); }
+    function discs() { if (!G || W.black) return []; return F.discsOf(W.last || F.scene(W, now())).concat(copyDiscs()); }
     function debugState() {
         const mode = W.black ? 'corridor' : W.jump ? 'jump' : W.flight ? 'flight' : W.lock ? 'lock' : W.held ? 'held' : W.opening ? 'opening' : 'rest';
         return { sector: W.sector, mode, at: W.at, hover: W.hover, lock: W.lock ? W.lock.id : null, flight: W.flight ? W.flight.id : null, held: W.held, onNote: !!W.onNote, scanning: W.scanning ? W.scanning.id : null, noteSide: W.noteSide || null,
