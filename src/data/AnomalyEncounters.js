@@ -99,7 +99,6 @@ const ANOMALY_ENCOUNTERS = [
                             state.addLog("=== OFF THE MAP ===");
                             state.addLog("We came out somewhere that matches no chart we have.");
                             state.addLog("A.U.R.A.: 'I can't place us on any chart, Commander. I'm working on it.'");
-                            state.addLog("There is a wreck here, one of our ships. Its beacon is still calling.");
                         }
                         state.crew.forEach(c => {
                             if (c.status !== 'DEAD') c.stress = Math.min(3, (c.stress || 0) + 1);

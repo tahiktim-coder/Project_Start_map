@@ -80,7 +80,7 @@
     const tagsOf = node => (node && node.tags) || [];
     function companionOf(node, type, sector, rnd) {
         const tags = tagsOf(node);
-        if (node && (node.isFirstSignal || (tags.includes('EXODUS_WRECK') && !node.isStoryPlanet))) return 'wreck';   // the story world keeps its own beacon
+        // our wrecks lie on the ground (the team lands beside them; their beacon blinks on the surface, travel/Field.js): nothing of theirs orbits
         if (tags.includes('FAILED_COLONY') || tags.includes('ANCIENT_RUINS')) return 'ruins';
         if (tags.includes('DERELICT') || tags.includes('WRECKAGE')) return 'debris';
         if (tags.includes('ANOMALY') && sector > 1) return 'halo';                // sector 1 stays familiar
@@ -117,7 +117,7 @@
         params.set(key, pr);
         return pr;
     }
-    const REACH = { ring: 1.72, moon: 1.78, wreck: 1.62, debris: 1.52, halo: 1.42, lighthouse: 1.1, ruins: 1.05, aurora: 1.14 };
+    const REACH = { ring: 1.72, moon: 1.78, debris: 1.52, halo: 1.42, lighthouse: 1.1, ruins: 1.05, aurora: 1.14 };
     function reach(node, sector, type) {
         const pr = paramsOf(node, sector || 1, type);
         return Math.max(pr.type === 'SHATTERED' ? 1.16 : 1.05, REACH[pr.companion] || 1);
@@ -526,12 +526,6 @@
         const { cx, cy, r } = o, d = r * 1.52, rr = Math.max(3, Math.round(r * (r < 30 ? 0.22 : 0.17)));
         smallSphere(p, cx + Math.cos(PR.moonA) * d, cy + Math.sin(PR.moonA) * d * 0.6, rr, o.L, MOON, o.dim, PR.salt);
     }
-    /** One of ours in orbit: a broken hull glinting (the beacon stays on the ground, as in checkpoint A). */
-    function wreck(p, o) {
-        const { cx, cy, r } = o, a = PR.moonA, d = r * 1.36, X = cx + Math.cos(a) * d, Y = cy + Math.sin(a) * d * 0.55, len = Math.max(5, r * 0.22);
-        if (len < 9) { p.solid(X - 1, Y + 1, RP.RUST, 0.62 * o.dim); p.solid(X, Y, DEBRIS, 0.62 * o.dim); p.solid(X + 1, Y, DEBRIS, 0.9 * o.dim); p.solid(X + 2, Y - 1, DEBRIS, 0.7 * o.dim); return; }
-        P.hull(p, { x: X, y: Y, len, ht: len / 3, angle: a + 1.3, flip: a > Math.PI, light: (0.6 + 0.35 * BIG) * o.dim, rust: true, ramp: BIG > 0.5 ? RP.HULL : RP.RUST, seed: PR.salt, from: 0, to: 0.72 }, P.shapeL);   // seen big: lit steel, so it reads
-    }
     function debris(p, o) {
         const { cx, cy, r } = o, rnd = seeded(PR.seed + 11), n = 10 + Math.round(Math.min(10, r / 6)), a0 = PR.moonA;
         for (let i = 0; i < n; i++) {
@@ -701,7 +695,6 @@
         body(p, O);
         if (comp === 'ring') ring(p, O, true);
         else if (comp === 'moon' && !PR.moonBehind) moon(p, O);
-        else if (comp === 'wreck') wreck(p, O);
         else if (comp === 'debris') debris(p, O);
         else if (comp === 'ruins') ruins(p, O);
         else if (comp === 'aurora' && o.r >= 10) auroraCap(p, O);
@@ -774,9 +767,6 @@
             f.px(bx, by, RP.AMBER.hex[4]); if (r > 20) { f.px(bx - 1, by, RP.AMBER.hex[2]); f.px(bx + 1, by, RP.AMBER.hex[2]); f.px(bx, by - 1, RP.AMBER.hex[2]); }
         }
         if (pr.companion === 'halo') { const a = (t / 5200) * TAU + pr.moonA, R = r * 1.34; f.px(X + Math.round(Math.cos(a) * R), Y + Math.round(Math.sin(a) * R), GLOW.halo.hex[5]); }
-        if (pr.companion === 'wreck' && (t % 2600) < 250 && r >= 14) {
-            const a = pr.moonA, d = r * 1.36; f.px(X + Math.round(Math.cos(a) * d), Y + Math.round(Math.sin(a) * d * 0.55), GLOW.speck.hex[4]);
-        }
         if (pr.touch.odd && (tick % 7) < 2) {                                          // sector 3: the odd edge shimmers
             const a = Math.atan2(-L[1], -L[0]) + (hash(tick & 255, 4, pr.salt) - 0.5) * 1.4;
             f.px(X + Math.round(Math.cos(a) * (r - 0.5)), Y + Math.round(Math.sin(a) * (r - 0.5)), GLOW.odd.hex[4]);

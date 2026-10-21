@@ -366,10 +366,10 @@ const CREW_PERSONAL_EVENTS = [
         trigger: (state, crew) => crew.name.includes('Mira') && state.currentSector <= 2 && !state._miraWonderSeen,
         weight: 20,
         title: "MIRA AT THE SCANNER",
-        context: "Mira hasn't left the sensor console in hours. She's talking A.U.R.A. through the planet below, and A.U.R.A. is answering.",
+        context: "Mira hasn't left the sensor console in hours. She's talking A.U.R.A. through the worlds on the scanner, and A.U.R.A. is answering.",   // crew moments open in travel: no planet below
         dialogue: [
             { speaker: 'Mira', text: "Look at the line where day turns to night. You can see the heat leaving the ground." },
-            { speaker: 'Mira', text: "A.U.R.A. found a ridge she thinks is worth landing on. She's usually right. Should we?" },
+            { speaker: 'Mira', text: "A.U.R.A. found a ridge on one of them she thinks is worth landing on. She's usually right. Should we?" },
             { speaker: 'A.U.R.A.', text: "The ridge is seventy percent metal, Commander. I would land there." }
         ],
         choices: [

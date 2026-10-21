@@ -49,10 +49,10 @@ const EVENTS = [
         id: 'GHOST_SHIP',
         trigger: (planet) => deepEnough() && Math.random() < 0.3,
         title: "SILENT SHIP",
-        desc: "A ship is drifting in high orbit. It isn't sending any ID code, and nobody aboard is alive.",
+        desc: "A ship lies on the ground here, nose first. It isn't sending any ID code, and nobody aboard is alive.",   // the team is on the ground: no ship in orbit
         choices: [
             { text: "Call it once, then leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Send a team aboard", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }
+            { text: "Go aboard", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }
         ]
     },
     {
@@ -71,7 +71,7 @@ const EVENTS = [
         title: "SLOW CLOCKS",
         desc: "The gravity here is so strong it slows time. One hour on the surface is a whole day up on the ship.",
         choices: [
-            { text: "Call the team back now", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Call the team back now", riskMod: 0, reward: { type: 'DATA', val: 1 } },
             { text: "Stay longer and collect samples", riskMod: 35, reward: { type: 'ITEM', tags: ['GEO', 'LORE'] } }
         ]
     },
@@ -118,8 +118,8 @@ const EVENTS = [
     {
         id: 'ROGUE_AI',
         trigger: (planet) => planet.tags && planet.tags.includes('ALIEN_SIGNALS'),
-        title: "ARMED SATELLITE",
-        desc: "An old defence satellite in orbit has locked on to the lander.",
+        title: "ARMED TURRET",
+        desc: "An old defence turret on the ridge has locked on to the team.",                                             // a landing event: on the ground, not in orbit
         choices: [
             { text: "Dodge it and keep going", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
             { text: "Try to break into its controls", riskMod: 40, reward: { type: 'ITEM', tags: ['TECH'] } }
@@ -142,7 +142,7 @@ const EVENTS = [
         title: "INSIDE THE PLANET",
         desc: "The team found a way in. The planet is hollow, with a small sun in the middle and ruined buildings on the inside walls.",
         choices: [
-            { text: "Take photos from the entrance", riskMod: 5, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Take photos from the entrance", riskMod: 5, reward: { type: 'DATA', val: 1 } },
             { text: "Climb down inside", riskMod: 50, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
         ]
     },
@@ -343,7 +343,7 @@ const EVENTS = [
         title: "THE SPHERE",
         desc: "A perfect sphere, 10 metres across, made of something we can't identify. It's warm, and it hums.",
         choices: [
-            { text: "Photograph it and stay back", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Photograph it and stay back", riskMod: 0, reward: { type: 'DATA', val: 1 } },
             { text: "Touch it", riskMod: 45, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
         ]
     },
@@ -383,7 +383,7 @@ const EVENTS = [
         title: "DISTRESS CALL",
         desc: "A weak distress call keeps repeating from a field of wreckage.",
         choices: [
-            { text: "Scan it from where we are", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
+            { text: "Scan it from where we are", riskMod: 0, reward: { type: 'DATA', val: 1 } },
             { text: "Search through the wreckage", riskMod: 20, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
         ]
     }

@@ -116,7 +116,7 @@ const BARK_DATA = {
             3: ["If you find graves down there, read me the names over the radio."]
         },
         SURVIVOR: {
-            0: ["Three going down, three coming back. I'll check you in at the airlock."],
+            0: ["Everyone who goes down comes back. I'll check you in at the airlock."],
             3: ["Stay in sight of each other down there. No wandering off."]
         },
         CURIOUS: {
