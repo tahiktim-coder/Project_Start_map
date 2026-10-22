@@ -175,12 +175,12 @@ body.is-over #again { display: block; }
     // The sea: 90,000 hulls (broken ones in two pieces). Most are spread evenly within 700 ship lengths of us, in a thick layer
     // above and below; the rest thin out to 7,000 lengths in a flatter sheet toward the light. What can be seen grows as the
     // camera pulls back (SEEN, in camera distances): first the wrecks round us, then hundreds, then thousands.
-    // PASS: wrecks along the camera's way back. Each sits beside the path at a distance `d` from us and is `edge` pixels from
-    // our dot when the camera stops at one of the pulls' ends (24, 110 or 270 lengths), so as the camera pulls back they slide
-    // in from the edges of the frame, big and close, and at no stop do they cover us or the light. They keep every shot
-    // reading as wrecks from the foreground to the far field.
-    const SEA_N = 64000, SEA_RHO = [4, 7000], SEA_EVEN = [700, 0.7], SEEN = [3.6, 7.2];   // SEA_EVEN: [radius, share of hulls] spread evenly
-    const PASS = { n: [500, 700, 1300], stops: [24, 110, 270], edge: [40, 440], clear: 0.6 };
+    // PASS: wrecks along the camera's way back, `d` ship lengths from us. Each ends at a point picked evenly over the frame
+    // at the last look, so as the camera pulls back they slide in from the edges, big and close, and at the end they lie as
+    // evenly as the rest of the sea: no bare patch round our dot. sets: [count, d from, d to, pw], d spread as 1/d^pw (most
+    // close to us, passing early); none within `lat` ship lengths of the path (never over us), none across the light.
+    const SEA_N = 58000, SEA_RHO = [4, 7000], SEA_EVEN = [700, 0.7], SEEN = [3.6, 7.2];   // SEA_EVEN: [radius, share of hulls] spread evenly
+    const PASS = { sets: [[4000, 2.5, 60, 2], [1500, 60, 190, 0], [1200, 20, 256, 1]], light: 0.22, lat: 0.9 };
     const at3 = (u, w, h) => [0, 1, 2].map(k => u * HEAD[k] + w * SIDE[k] + h * NRM[k]);
     /** One hull into the list: whole (a quarter of them), or snapped in two with the halves drifting apart along the heading,
         the engine half turning away; sometimes one half is gone. */
@@ -215,13 +215,15 @@ body.is-over #again { display: block; }
             n++;
             addHull(list, baseAt(p, rho), r);
         }
-        const lightAng = Math.atan2(VP[1] - OUR[1], VP[0] - OUR[0]), stops = PASS.stops;
-        stops.forEach((E, k) => {
-            for (let i = 0, tries = 0; i < PASS.n[k] && tries < 40000; tries++) {
-                const d = lerp(3, E * 0.95, r()), edge = lerp(PASS.edge[0], PASS.edge[1], r()), a = r() * Math.PI * 2;
-                if (Math.abs(Math.atan2(Math.sin(a - lightAng), Math.cos(a - lightAng))) < 0.22) continue;   // not across the light
-                const o = edge * (E - d) / F;
-                if (stops.some(D => D > d && F * o / (D - d) < Math.max(10, PASS.clear * F * LEN_K / (D - d)))) continue;   // not on top of our dot at a stop
+        const lightAng = Math.atan2(VP[1] - OUR[1], VP[0] - OUR[0]), END = TL.pull[TL.pull.length - 1][3];
+        PASS.sets.forEach(([n, d0, d1, pw]) => {
+            const q0 = Math.pow(d0, 1 - pw), q1 = Math.pow(d1, 1 - pw);
+            for (let i = 0, tries = 0; i < n && tries < n * 20; tries++) {                       // d spread as 1/d^pw
+                const u = r(), d = pw === 1 ? d0 * Math.pow(d1 / d0, u) : Math.pow(lerp(q0, q1, u), 1 / (1 - pw));
+                const ex = r() * AW, ey = r() * AH, a = Math.atan2(ey - OUR[1], ex - OUR[0]), edge = Math.hypot(ex - OUR[0], ey - OUR[1]);
+                if (Math.abs(Math.atan2(Math.sin(a - lightAng), Math.cos(a - lightAng))) < PASS.light) continue;   // not across the light
+                const o = edge * (END - d) / F;
+                if (o < PASS.lat) continue;                                                    // never over our dot
                 i++;
                 const p = [-d * CAMDIR[0] + o * Math.cos(a), -d * CAMDIR[1] + o * Math.sin(a), -d * CAMDIR[2]];
                 addHull(list, Object.assign(baseAt(p, Math.hypot(...p)), { pass: true }), r);
@@ -246,7 +248,7 @@ body.is-over #again { display: block; }
         };
         SEA.forEach(s => {
             if (s.near) add(s.p, 0.25 + 0.5 * (s.to - s.from), Math.round(10 + 22 * (s.to - s.from) * (s.len > 60 ? 1 : 0.5)));
-            else if (s.pass || (s.broken && s.rho < 160)) add(s.p, 0.5, s.pass ? 3 : 2);
+            else if (s.pass || (s.broken && s.rho < 160)) add(s.p, 0.5, s.pass ? 1 : 2);
         });
         for (let i = 0; i < 2600; i++) { const rho = 1 + 90 * r() ** 1.4, th = r() * 6.283; add(at3(rho * Math.cos(th), rho * Math.sin(th), (r() - 0.5) * 2), 0.1, 1); }
         return list;
