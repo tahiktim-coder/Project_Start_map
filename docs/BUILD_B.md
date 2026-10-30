@@ -120,6 +120,11 @@ team word; A.U.R.A. says once "We need two people fit to go, Commander." No prob
   each time (it overrides a sign kept from before): with a team action it comes while the team is down; at a place with
   no team action it comes on the bridge after 5 s of the bridge being seen (A.U.R.A.'s sign first); not yet played when
   we leave: `beforeLeave` plays it. All three call the game's own `App.playBreach(away)` (away: the team, not aboard).
+  (2026-10-30) The patching game is gone from the new look: all three now call `App.hullHit(away)`, the hull hit. One
+  deck (the hold, the engine room or the quarters, never one that would end the run) is sealed, nobody is hurt, and
+  A.U.R.A. and the one whose deck it is say a line each on the bridge (the trip's card and the dive out wait for them).
+  The broken deck shows its cost on the tower (`NSOrbit.deckCost`: plain chips in its tag and under "Live with it").
+  The old look keeps Breach.js. The docking is flown in the new look too (Bring Her In, `App.flyDock`, src/newscreen/dock/).
 - **The trip's end** (review fix): `NSOrbit.tripOver()` from the real end points (the end of `resolveEvaOutcome`, the
   paradise card, `offerDiscDating` → `fixIn` for the wreck); the shuttle comes home 0.6 s after nothing blocks and no card
   is queued. The quiet rule (3.5 s, queue empty) stays only as the safety net for the other site stories.

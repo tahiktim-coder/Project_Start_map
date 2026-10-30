@@ -29,11 +29,11 @@ const report = require('./runsim/report');
 
 const NOTES = [
     'Five players, scripted (tools/runsim/models.js STYLES, tools/runsim/policy.js). Cards: careful "kind" = the first choice that does not settle, as cardsim.js.',
-    'The flown jump: measured (dark-leg tune: careful +4.7 energy, 0.01 decks; careless +0.5, 1.35 decks; A.U.R.A. -4). Landings, the breach, the burn gauge and a player docking: assumptions (models.js).',
+    'The flown jump: measured (dark-leg tune: careful +4.7 energy, 0.01 decks; careless +0.5, 1.35 decks; A.U.R.A. -4). Landings, the burn gauge and a player docking: assumptions (models.js). The breach is the game\'s own hull hit (App.hullHit: a deck, nobody hurt).',
     "A.U.R.A.'s landings: her own autopilot, run headless on each world's own ground (tools/runsim/lander.js), lands soft on 99.9 % of worlds. The browser check should log 50 to confirm.",
     'Never locked (depth step 4): a trip card whose every way a stress trait struck keeps its careful way open (counted as "locked trip card"), and with fewer than two well the hurt go down, or the one left goes alone.',
     'A trip\'s odds are the game\'s own (src/data/TripOdds.js through App.wayOdds): no death under 30 % hurt, the fit of the two going down, Vance\'s cover, a death chance never above what the card showed.',
-    'Docking: a player\'s grade is an assumption (good 70/25/5 soft/rough/crash, poor 30/40/30); a crash breaks a deck, as DockingGame does. A.U.R.A. docks with her own autopilot run headless (tools/runsim/docking.js): soft on every station tried.',
+    'Docking: a player\'s grade is an assumption (good 70/25/5 soft/rough/crash, poor 30/40/30); a crash breaks a deck within the allowance and A.U.R.A.\'s dock costs 4 energy (the game\'s own App.applyDockResult, the new look\'s Bring Her In). A.U.R.A. docks with her own autopilot run headless (tools/runsim/docking.js): soft on every station tried.',
     'Not modelled: A.U.R.A.\'s ethics and her adversarial acts (vents, locked decks), premonitions, the far scan (2 energy), Eden\'s valley (players fly straight to the light), settling, the copy of Earth beyond "fight out", saves and reloads.',
     'Trips: careful and A.U.R.A.-heavy players make one trip a world (the site first, else a find showing 25 % or less; a clue always), the optimizer up to two finds worth it, greedy and reckless every find.',
     'Station walks use BoardingParty\'s own headless rules (A.U.R.A.\'s guide, except the optimizer, who walks its best plan).',

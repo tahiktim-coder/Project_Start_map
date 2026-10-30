@@ -123,12 +123,13 @@ function board(rc, station) {
     const I = ctx.BoardingParty.internals, member = P.pickBoarder(state, style, rnd);
     if (!I || !member) return { reachedCommand: false, member: null };
     const grade = M.dockingGrade(style.pilot, rnd, station);
-    if (grade === 'crash') {                                                     // DockingGame end(): a hard docking breaks a deck
-        R.decks.dockCrash += 1;
+    {                                                                            // the new look's dock (App.flyDock): its costs through the game's own App.applyDockResult
+        const isAura = style.pilot === 'aura', free = Object.keys(state.shipDecks).filter(k => state.shipDecks[k].status === 'OPERATIONAL');
+        const broke = grade === 'crash' && free.length ? [free[Math.floor(rnd() * free.length)]] : [];   // a hard dock breaks a deck (within the allowance)
+        if (grade === 'crash') R.decks.dockCrash += 1;
         const was = cur.src;
         cur.src = 'docking';
-        state.damageRandomDeck();
-        state.emitUpdates();
+        rc.app.applyDockResult({ grade, auto: isAura, scrapes: 0, damagedRooms: broke, energyDelta: isAura ? -M.DOCK_AURA_ENERGY : 0 });
         cur.src = was;
         if (state.gameOver) return { reachedCommand: false, member: null };
     }

@@ -94,7 +94,8 @@ Each screen lists **purpose / you decide / you can click / replaces.**
 - **On screen:** the world in the window, lit from the front, its name in a corner. One action word in the window's
   sky beside the site, no thread. "Leave orbit" under the window, always.
 - **The one action:** wreck, strange site, story world: **Send the team** · station: **Dock**, then boarding (the docking
-  game, one readout at most, our Lander's art) · gas giant: **Skim fuel** (+15, no team) · asteroid field: **Mine it** ·
+  game, one readout at most, our Lander's art; built 2026-10-30 as Bring Her In: flown from the glass, the film cut outside
+  at the touch, the first dock of a run the whole approach and later ones from close) · gas giant: **Skim fuel** (+15, no team) · asteroid field: **Mine it** ·
   a world that could hold people: **Settle here** as a second word, and A.U.R.A. asks first, because it ends the run ·
   an empty world: A.U.R.A. says what it is ("Only ice"), and you leave.
 - **Replaces:** the orbit screen, CONDITIONS, the COMMAND DECK column, deep scan and its tuning game, DATE THE WRECK.
@@ -105,7 +106,8 @@ Each screen lists **purpose / you decide / you can click / replaces.**
 - **The pick:** everyone who can go stands at the window. Click two. The hurt, the shut-in and anyone mid-repair don't
   come up. Cora stays. Each person is good down there and good aboard, so no pair is always right.
 - **While they're down:** about half the time the crisis aboard happens, and the two who stayed decide it: one line,
-  two choices, or Breach.js itself. The shuttle drops to the site; you watch, you don't fly it.
+  two choices, or Breach.js itself (since 2026-10-30, in the new look: the hull hit, a deck sealed and a line each, no
+  minigame). The shuttle drops to the site; you watch, you don't fly it.
 - **At the site, at most one minigame:** the torch if the hatch is sealed. Then the scene in voice lines; the speakers
   are the two who went. At our own wrecks, whoever went asks on the radio: strip it or make a marker.
 - **Then:** the film if the place has one; the found page as the object itself.
@@ -127,7 +129,8 @@ Each screen lists **purpose / you decide / you can click / replaces.**
 - **A talk with a choice** is a standing moment (backing someone counts toward their ending) or an ask (someone wants
   something with a cost either way; if you don't go before the next stop, they do it their way). No "Listen" button.
 - **A red deck** (after the breach, a scrape, a surge): click it for three choices: Fix (20 salvage, done during the
-  next trip by whoever stays), Patch (free, breaks worse later), Live with it (that deck's cost every leg).
+  next trip by whoever stays), Patch (free, breaks worse later), Live with it (that deck's cost every leg; since 2026-10-30
+  the tower names that cost in plain chips when you point at the deck).
 - **Only three things are announced,** one A.U.R.A. line each: a breakdown, a crisis aboard, a world you can't afford.
 - **A distress call** is a world on the lane with a red beacon; you pull in or pass it like any other.
 - **Replaces:** the modal queue of distress and crew-moment cards, REST, DeckPanel and its repair quote.

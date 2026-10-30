@@ -102,4 +102,7 @@ const SECONDS = Object.freeze({
 // step 6 turns on resultCard. The scan itself always runs as the game runs it (stop.js visit): only its seconds follow C1
 const CUTS = { autoScan: true, walkOut: true, repeatTrip: true, bridgeHold: true, resultCard: false };
 
-module.exports = { STYLES, STYLE_ORDER, VALUE, SAFE_TRIP_RISK, corridorResult, landingResult, breachResult, burnResult, dockingGrade, SECONDS, CUTS };
+// A.U.R.A.'s whole dock in the new look (Bring Her In, src/newscreen/dock/DockFlight.js DOCK.energy): her share of the flying
+const DOCK_AURA_ENERGY = 4;
+
+module.exports = { STYLES, STYLE_ORDER, VALUE, SAFE_TRIP_RISK, corridorResult, landingResult, breachResult, burnResult, dockingGrade, SECONDS, CUTS, DOCK_AURA_ENERGY };

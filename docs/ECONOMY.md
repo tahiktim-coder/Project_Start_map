@@ -113,7 +113,10 @@ siding with someone reads as a purchase.
 **Inside the minigames** (local resources, not carried out):
 - Boarding: air, with every cost shown before you click. The best-designed economy in the game.
 - Torch: fuel tanks and scars. The game ignores both (bundle.js:2576), though the spotter says "That's fuel we don't get back."
-- Breach: air lost; the holed deck is damaged and whoever was in it is hurt. Feeds repairs.
+- Breach: air lost; the holed deck is damaged and whoever was in it is hurt. Feeds repairs. (The old look. Since 2026-10-30
+  the new look has the hull hit instead: one deck, never the lab, is always lost in sector 1, and nobody is hurt.)
+- Docking (the new look, Bring Her In, 2026-10-30): the boarder's air as before (rough −2, hard −3); a hard dock and every
+  second scrape on the way in break a deck (never past the allowance); A.U.R.A.'s dock costs up to 4 energy (it was free).
 - Corridor: every third scrape breaks a deck, but only when you fly. When A.U.R.A. flies there are no scrapes at all, so
   flying by hand has no upside. (Fixed 2026-10-21: every second scrape breaks a deck; A.U.R.A.'s flight costs 4 energy and
   she can be clipped in the thickest wave; your own flight saves 5 with no scrape, 7 at full throttle, 2 with one. Corridor.js STAKES.)
