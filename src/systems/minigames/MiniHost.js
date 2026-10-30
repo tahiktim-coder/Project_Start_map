@@ -3,11 +3,13 @@
    last line said under it as a voice (the name in the speaker's colour over the line), the choices as plain words.
 
    A minigame registers once, when its script loads:
-     MiniHost.register({ id, title, kicker, mount(ctx, ui, opts), autoResult(opts), density?, hideHeader?, header? })
+     MiniHost.register({ id, title, kicker, mount(ctx, ui, opts), autoResult(opts), density?, hideHeader?, header?, frameClass? })
    and the game plays it, waiting for the result:
      const result = await MiniHost.play('corridor', { sector: 2 });
    opts.kicker and opts.title, when given, replace the minigame's own header for this one play. header(opts), when the
    minigame has one, may return { kicker, title } for this play (the torch names the door it is on); opts still win.
+   frameClass (optional): one more class on the overlay (.mini-host), so a minigame's own frame rules apply from the first
+   fit, before mount() (the dock's, src/newscreen/dock/DockFlight.js).
 
    density (optional): art pixels per picture unit, 1 (default: the old 480 × 270 grain), 1.5 (720 × 405: one art pixel is
    two screen pixels in a 1080p window, as in the travel view — use this one), 2 or 3. The picture stays 480 × 270 UNITS
@@ -94,7 +96,7 @@
 
     function buildOverlay(def, opts, density) {
         const overlay = document.createElement('div');
-        overlay.className = 'mini-host';
+        overlay.className = 'mini-host' + (typeof def.frameClass === 'string' && def.frameClass ? ' ' + def.frameClass : '');   // (frameClass: its own frame rules)
         overlay.setAttribute('role', 'dialog');
         overlay.setAttribute('aria-modal', 'true');
         overlay.setAttribute('aria-labelledby', 'mini-host-title');

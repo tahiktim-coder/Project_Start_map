@@ -167,6 +167,7 @@ class GameState {
         this.datedWrecks = [];     // wrecks dated with the disc: { hull, age, ly }, what DiscDating draws on its chart
         this._breachDone = false;  // sector 1's hole in the hull (Breach) happens once per run
         this._paidWarps = 0;       // warps to a new place (free courses too), so the breach never comes on the first one
+        this._docksFlown = 0;      // the new look: docks flown this run; the first plays the whole approach (App.flyDock)
         this._wreckDoors = [];     // the doors of the wrecks boarded this run, in order (App.wreckDoorFor, TorchDoors.pick)
         this._kindsScanned = [];   // the new look: the kinds of world scanned this run (the first of each kind is +1 data, App.noteNewKind)
 
@@ -269,6 +270,7 @@ class GameState {
             datedWrecks: this.datedWrecks || [],
             _breachDone: !!this._breachDone,
             _paidWarps: this._paidWarps || 0,
+            _docksFlown: this._docksFlown || 0,
             _nsSupper: this._nsSupper || null,     // the new look: a supper still due after the jump (eaten after a reload too)
             _hungerChain: 1,                       // missed suppers counted by the hunger chain (loadGame: older counts never kill)
             aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
@@ -367,6 +369,7 @@ class GameState {
             this.datedWrecks = saveData.datedWrecks || [];            // saves from before the disc dating have none
             this._breachDone = !!saveData._breachDone;
             this._paidWarps = saveData._paidWarps || 0;
+            this._docksFlown = saveData._docksFlown || 0;            // saves from before the flown docking have none
             this._nsSupper = saveData._nsSupper || null;
             if (saveData.aura && window.AuraSystem) {
                 window.AuraSystem.ethicsScore = saveData.aura.ethicsScore || 0;
@@ -2614,6 +2617,42 @@ class App {
         const relianceVoice = this.getRelianceVoice(!!result.auraFlew);
         if (relianceVoice) this.state.addLog(`A.U.R.A.: "${relianceVoice.text}"`);
         this.state.emitUpdates();
+    }
+
+    /**
+     * The new look's docking (BoardingParty.start asks first): Bring Her In, flown from the bridge glass with the film cut
+     * outside at the touch (src/newscreen/dock/DockFlight.js). The first dock of a run, and a story station's, plays the whole
+     * approach; every later one is a routine dock and starts close (quick). Resolves { grade, auto } as DockingGame.play does
+     * (the air rule is BoardingParty's) and never rejects. null when this is not the new look (the old look's DockingGame).
+     */
+    flyDock(station) {
+        if (!isNewScreen() || !window.MiniHost || !window.MiniHost.has('dock-flight')) return null;
+        const s = this.state, full = !s._docksFlown || !!(station && station.isStoryPlanet);
+        const damaged = Object.fromEntries(Object.entries(s.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
+        const seed = String((station && station.id) || 'station').split('').reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 19);   // one ring per station, as DockingGame seeds it
+        const opts = { kind: 'dock', sector: s.currentSector, quick: !full, crew: s.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: s.energy, seed };
+        return window.MiniHost.play('dock-flight', opts)
+            .then(result => this.applyDockResult(result), err => { console.error(err); return this.applyDockResult(null); });
+    }
+
+    /**
+     * What the dock cost: the decks its chips named broken (scrapes on the way in, a hard dock's; never past the allowance),
+     * A.U.R.A.'s share of the flying in energy (as the corridor's: not in tests), who docked counted toward who flies.
+     * The air is BoardingParty's (DOCK_AIR_LOSS by grade). Returns { grade, auto } for it; a dock that never ran is hers.
+     */
+    applyDockResult(result) {
+        const s = this.state;
+        s._docksFlown = (s._docksFlown || 0) + 1;
+        if (!result || !result.grade) return { grade: 'soft', auto: true };
+        this.noteReliance(!!result.auto);
+        const energyDelta = Number.isFinite(result.energyDelta) ? Math.round(result.energyDelta) : 0;
+        if (energyDelta < 0 && !window.TEST_MODE) {
+            s.energy = Math.max(0, Math.min(100, s.energy + energyDelta));
+            s.addLog(`A.U.R.A. docked us: ${-energyDelta} more energy.`);                          // DRAFT (no sign: the dock's chip already said it)
+        }
+        (result.damagedRooms || []).slice(0, this.corridorBreakAllowance()).forEach(key => s.damageDeck(key));
+        s.emitUpdates();
+        return { grade: result.grade, auto: !!result.auto };
     }
 
     /** What the sector jump costs now: 8, double with engineering down, 4 less once with the drive braced (the hull-cracks campfire). */

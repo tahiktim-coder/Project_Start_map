@@ -1,5 +1,6 @@
 /* BoardingParty — one crew member walks through an old station on one tank of air.
-   First the ship docks (DockingGame.js): a rough docking costs the boarder 2 air, a hard one 3.
+   First the ship docks (the old look: DockingGame.js; the new look flies it, Bring Her In: App.flyDock, src/newscreen/dock/):
+   a rough docking costs the boarder 2 air, a hard one 3.
    The station is a small branching map: the airlock, corridors that split, and rooms worth the trip —
    stores, power room, med bay, crew deck, cryo bay — with the command deck, and the station's story, at the far end.
    Every door and every search shows its air cost before you click. The air bar marks what the walk back out costs
@@ -996,7 +997,8 @@
         overlay.setAttribute('aria-label', 'Board the station');
         overlay.setAttribute('aria-hidden', 'true');
         document.body.appendChild(overlay);
-        const docking = window.DockingGame ? window.DockingGame.play(app, station) : Promise.resolve({ grade: 'soft', auto: false });
+        const flown = typeof app.flyDock === 'function' ? app.flyDock(station) : null;      // the new look: Bring Her In (MiniHost, over this backdrop)
+        const docking = flown || (window.DockingGame ? window.DockingGame.play(app, station) : Promise.resolve({ grade: 'soft', auto: false }));
         return docking.then(dock => new Promise(resolve => {
             if (dock.grade !== 'soft') app.state.addLog(dock.grade === 'crash' ? `Hard docking at ${station.name}. The hull took damage.` : `Rough docking at ${station.name}. We scraped the ring.`);
             const L = buildStation({ seed: station.id, sector: app.state.currentSector || 1, age });
