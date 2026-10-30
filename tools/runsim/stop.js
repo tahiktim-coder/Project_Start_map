@@ -28,9 +28,11 @@ async function visit(rc, node) {
     await game.drain();
     game.setMode('stop'); cur.phase = 'stop';
     try { orbit.opened(app); } catch (err) { game.hooks.error(err, 'opened'); }
-    rc.add(M.SECONDS.arriveHold, 'bridge');
+    rc.add(M.CUTS.bridgeHold && node._nsSeen ? rc.ECON.HOLD_SEEN_MS / 1000 : M.SECONDS.arriveHold, 'bridge');   // C6: a world seen before (the game's own number)
     noteInjuries(rc);
+    if (typeof orbit.scanDue === 'function' && orbit.scanDue(app)) await act(rc, 'scan');   // the game scans a world as its bridge shows (Stop.js)
     await atStop(rc, node);
+    node._nsSeen = true;                                                           // as stop/Stop.js marks it when the bridge closes
     if (state.gameOver || state._inWrongPlace || R.ending) return;                 // R.ending: a locked trip card
     const site = app.siteOf(node);
     if (wasStory && site && site.tag === 'EXODUS_WRECK' && !node[site.done]) { R.counts.storyMissed += 1; R.counts[orbit.eligible(app).length < 2 ? 'storyMissedFew' : 'storyMissedOther'] += 1; }
@@ -85,7 +87,7 @@ async function trip(rc, node, find) {
     if (!ids) { R.counts.stuck += 1; return false; }
     const mark = (finds.list(app, node, ids).find(f => f.id === find.id) || {}).risk;
     const again = (node.nsTrips || 0) > 0;
-    rc.add(M.SECONDS.teamPick + (again ? (M.CUTS.repeatTrip ? M.SECONDS.secondTripCut : M.SECONDS.secondTrip) + (M.CUTS.bridgeHold ? M.SECONDS.bridgeAgainCut : M.SECONDS.bridgeAgain) : 0), 'hatch');
+    rc.add(M.SECONDS.teamPick + (again ? (M.CUTS.repeatTrip ? M.SECONDS.secondTripCut + M.SECONDS.bridgeAgainCut : M.SECONDS.secondTrip + M.SECONDS.bridgeAgain) : 0), 'hatch');
     const traitOn = ['PARANOID', 'RECKLESS', 'BLEEDING_HEART', 'OBSESSED'].some(t => state.hasActiveTrait(t));
     cur.trip = { sector: state.currentSector, world: node.name, kind: worldWords(node), find: find.label, findKind: find.kind, site: find.site || null,
         ids: ids.slice(), team: rc.nameList(ids), fit: fitOf(rc, node, ids), mark: typeof mark === 'number' ? mark : null, landing: null, phase: 'hatch',

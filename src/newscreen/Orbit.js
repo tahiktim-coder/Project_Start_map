@@ -1,7 +1,8 @@
 /* ═══ Silent Exodus · new screen (?new=1) · Orbit.js: what a stop offers, who goes, who stays, what breaks aboard ═══════
    What it is: the rules of a stop on the bridge (docs/BUILD_B.md §3, §4), on top of the REAL game. Every action calls the
    game's own handler (scan, the team trip, docking, mining, the settle council, the disc); the only new numbers are the
-   skim (NEW_LOOK_ECONOMY.SKIM energy, once per gas giant, set in bundle.js) and the patch (5 salvage). Scan is one click;
+   skim (NEW_LOOK_ECONOMY.SKIM energy, once per gas giant, set in bundle.js) and the patch (5 salvage). A world's scan runs
+   by itself when we arrive (Stop.js sweeps the glass, then act(app, 'scan'); it is never a tag on the glass, scanDue);
    what it read is said by Scan.js (NSScan) and its finds are WorldFinds.js's: once a scan has read the world the team goes
    to the find chosen on the glass (its own event or story), one trip per find. It draws nothing:
    Stop.js shows the words, the shell (NewScreen.flow) hands their clicks here, Tower.js shows the deck choices.
@@ -12,7 +13,8 @@
                     near: 'world' | 'station' | 'field' | 'giant' | 'site' | 'call' | 'mira' | 'aura' | 'under' | 'key'
                     ('key': a held key on Cora's console, the copy of Earth's two; their chips may be rows: [[chip], [chip]])
                     chips: [{ icon, text, tone? }] what it costs and gives, a word or three each (the bridge's glass tags)
-     act(app, key, ids?) → bool    run one action (ids: the two picked, for 'team')
+     act(app, key, ids?) → bool    run one action (ids: the two picked, for 'team'); 'scan' also runs while scanDue, unlisted
+     scanDue(app) → bool           we are at a world nobody has scanned from the bridge: Stop.js scans it as the bridge shows
      eligible(app) → ['jaxon', ...]  who is fit to go down (handleEvaAction's own rule; not who is too weak from a missed supper,
                                    unless that leaves fewer than two). A trip that leaves ends everyone's weakness
      weak(app) → ['jaxon', ...]    fit, but too weak from a missed supper for this trip (Stop.js stands them aside)
@@ -93,7 +95,7 @@
 
     // what A.U.R.A. says once a run when an action first shows on the bridge (plain, 15 words at most)
     const TELL = Object.freeze({
-        scan: 'Scan shows where the team can go down there. It costs nothing.',
+        scan: 'I scan each world as we arrive. The marks show where the team can go.',   // DRAFT: said once, during the first sweep (Stop.js)
         find: 'Pick a mark, Commander. The team goes there.',
         team: '{team} are ready at the hatch. Click anyone to change who goes.',   // {team}: "Vance and Mira" (Stop.js fills it in)
         skim: 'Refuel scoops gas from the clouds. Free energy, once per giant.',
@@ -204,7 +206,6 @@
         const scoop = (s.upgrades || []).includes('fuel_scoop');                             // the scoop took its fill on arrival: no skim on top
         const gain = Math.min(SKIM_ENERGY, Math.max(0, Math.round(100 - s.energy)));
         if (n.type === 'GAS_GIANT' && !n.nsSkimmed && !scoop && s.energy < 100) add('skim', 'Refuel', 'giant', () => skim(app, n), false, `+${gain} energy`, [chip('energy', `+${gain} energy`, 'gain')]);   // full tanks: nothing to skim
-        if (isPlanet(n) && !n.scanned) add('scan', 'Scan', 'world', () => scan(app), false, 'read the ground', [FREE]);
         if (isPlanet(n) && strangeSite(app, n) && !trip) add('strange', 'Fly closer', 'site', () => app.handleAnomalyAction(), false, 'something here is wrong', [chip('risk', 'something here is wrong', 'risk')]);   // never while a team is down
         if (hasTeamAction(n) && evaCrew(app).length >= 2 && !trip && !arisRefuses(app)) add('team', 'Send the team', teamSite(app, n) ? 'site' : 'world', null, true);
         if (!call && n._nsCall) call = savedCall(n);                                         // a call that waited through a reload
@@ -213,12 +214,15 @@
         if (isPlanet(n) && n.type !== 'GAS_GIANT' && (n.scanned || window.TEST_MODE)) add('settle', 'Settle here', 'under', () => app.handleColonyAction(), false, 'ends the journey', [chip('end', 'ends the journey', 'cool')]);
         return out;
     }
-    /** Scan: one click (the game's own handleScanAction, no tuning). Stop.js sweeps the glass first; then the finds show as
-        marks on the world (WorldFinds.js) and A.U.R.A. says one line (NSScan.deep). It marks the landing spot and makes a
-        plain landing safer (bundle.js unmarkedWhy, scanRiskMod). */
+    /** The bridge's scan (the game's own handleScanAction, no tuning). It runs by itself when we arrive: Stop.js sweeps the
+        glass first; then the finds show as marks on the world (WorldFinds.js) and A.U.R.A. says one line (NSScan.deep). It
+        marks the landing spot and makes a plain landing safer (bundle.js unmarkedWhy, scanRiskMod). */
     function scan(app) { app.handleScanAction(false); }
+    /** A world nobody has scanned from the bridge (the copy of Earth has its own Scan, a tag: stop/Copy.js). */
+    function scanDue(app) { const n = app && app.state && app.state.currentSystem; return isPlanet(n) && !n.scanned; }
     function act(app, key, ids) {
         const a = actions(app).find(x => x.key === key);
+        if (!a && key === 'scan' && scanDue(app)) { try { scan(app); } catch (err) { console.error('NSOrbit: scan failed', err); return false; } return true; }
         if (!a) return false;
         if (a.team) return send(app, ids || []);
         try { a.run(); } catch (err) { console.error(`NSOrbit: ${key} failed`, err); return false; }
@@ -640,7 +644,7 @@
 
     window.NSOrbit = Object.freeze({
         actions, act, eligible, weak, holdLoss, lossOf, propose, teamRisk, hasTeamAction, opened, signed, beforeLeave, whileDown, tripOver, tick, offerCall, fixIn, canDate, datable,
-        breakPatched, deckChoices, deckChoose, sign, TELL,
+        breakPatched, deckChoices, deckChoose, sign, scanDue, TELL,
         trip: () => (trip ? { ids: trip.ids.slice(), aboard: trip.aboard.slice() } : null),
         debug: () => ({ trip: trip ? { ids: trip.ids, downDone: trip.downDone, over: !!trip.over, quiet: Math.round(trip.quiet) } : null, call: call ? call.title || true : null, breach: pendingBreach ? Math.round(pendingBreach.wait) : null, held: moments.held.map(e => e.id || e.title) }),
     });

@@ -36,7 +36,7 @@ const NOTES = [
     'Not modelled: A.U.R.A.\'s ethics and her adversarial acts (vents, locked decks), premonitions, the far scan (2 energy), Eden\'s valley (players fly straight to the light), settling, the copy of Earth beyond "fight out", saves and reloads.',
     'Trips: careful and A.U.R.A.-heavy players make one trip a world (the site first, else a find showing 25 % or less; a clue always), the optimizer up to two finds worth it, greedy and reckless every find.',
     'Station walks use BoardingParty\'s own headless rules (A.U.R.A.\'s guide, except the optimizer, who walks its best plan).',
-    'Minutes are the seconds per routine in models.js SECONDS added up (assumptions until the browser runs time them); no routine cut is live today (models.js CUTS).',
+    'Minutes are the seconds per routine in models.js SECONDS added up (assumptions until the browser runs time them); the routine cuts C1, C4, C5 and C6 are live, the result card for repeats (step 6) is not (models.js CUTS).',
 ];
 
 function args(argv) {

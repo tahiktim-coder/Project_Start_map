@@ -9,15 +9,15 @@ _Can turn up in: sectors 1, 2, 3, 4, 5._
 
 #### Card words: handleExodusAction «bundle.js · handleExodusAction»
 
-- No Exodus wreck signal detected at this location. «bundle.js · line 2866»
-- We already searched this wreck. «bundle.js · line 2870»
-- ERROR: Exodus encounter data unavailable. «bundle.js · line 2876»
-- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 2882»
+- No Exodus wreck signal detected at this location. «bundle.js · line 2925»
+- We already searched this wreck. «bundle.js · line 2929»
+- ERROR: Exodus encounter data unavailable. «bundle.js · line 2935»
+- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 2941»
 
 #### Names on the hulls «bundle.js · getWreckName»
 _Every wreck card is titled EXODUS-[number] "[CALLSIGN]". The number range grows with the sector; the callsign is picked from this list._
 
-- EXODUS-[hull] "[callsign]" «bundle.js · line 2801»
+- EXODUS-[hull] "[callsign]" «bundle.js · line 2860»
 
 #### A second list of ship names «ExodusDerelicts.js · EXODUS_SHIP_NAMES»
 _Defined in the wreck file; the wreck titles use the list above._
@@ -132,8 +132,8 @@ Choices:
 Choices:
 1. **Let A.U.R.A. decode the full log** — -10 Energy. +15 Salvage, +1 Data. You hear the whole log. _(locked: Need 10 Energy)_
    → Full log decoded. We keep the decoding hardware. -10 Energy, +15 Salvage, +1 Data. / ENGINEERING REPORT: 'After every jump, our clock and the star positions disagree. The manual doesn't explain it.' / MEDICAL LOG: 'Twelve percent of the sleep pods will fail. That's three of our people. I've decided not to tell them who.' / LAST MESSAGE FROM EARTH: 'The next ship launches on schedule. If you can hear this, it's already ahead of you. Keep going.'  
-   ↳ or: CREW BRIEFING, RECORDED: 'Eight ships went this way before you. You are the ninth.' It's our briefing, word for word. But their hull number isn't nine.  
-   ↳ or: Every crew was told the same three things: you are the ninth, a good world is ahead, and the ship knows the way.  
+   ↳ or: CREW BRIEFING, RECORDED: 'Find a planet people can live on, and settle it.' Our orders, word for word. But their hull number is higher than ours.  
+   ↳ or: Every crew was told the same three things: a good world is ahead, settle it, and the ship knows the way.  
    ↳ or: The ship set the course. Nobody on board was ever shown where it ends.  
    ↳ or: CAPTAIN'S LOG: 'We found a wreck with our mission patch today. Its hull number is higher than ours, but it's much older.'  
    ↳ or: 'I asked the ship how that was possible. It said: you were not sent further than the others, Captain.'  
@@ -167,10 +167,10 @@ _Can turn up in: any sector._
 
 #### Card words: handleDerelictAction «bundle.js · handleDerelictAction»
 
-- There is no wreck here. «bundle.js · line 3112»
-- We already searched this wreck. «bundle.js · line 3116»
-- ERROR: Derelict encounter data unavailable. «bundle.js · line 3122»
-- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3137»
+- There is no wreck here. «bundle.js · line 3174»
+- We already searched this wreck. «bundle.js · line 3178»
+- ERROR: Derelict encounter data unavailable. «bundle.js · line 3184»
+- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3199»
 
 ### MINING CRAFT «DerelictEncounters.js · DERELICT_MINING»
 
@@ -286,16 +286,16 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showStationEncounter «bundle.js · showStationEncounter»
 
-- ERROR: Station encounter data unavailable. «bundle.js · line 2037»
-- Unknown Station «bundle.js · line 2051»
-- **kicker** — INSIDE THE STATION «bundle.js · line 2054»
-- STATION: [result] «bundle.js · line 2059»
+- ERROR: Station encounter data unavailable. «bundle.js · line 2056»
+- Unknown Station «bundle.js · line 2070»
+- **kicker** — INSIDE THE STATION «bundle.js · line 2073»
+- STATION: [result] «bundle.js · line 2078»
 
 #### Card words: handleStationAction «bundle.js · handleStationAction»
 
-- No station detected at this location. «bundle.js · line 2071»
-- We already searched this station. «bundle.js · line 2075»
-- Starting docking procedure with [name]... «bundle.js · line 2079»
+- No station detected at this location. «bundle.js · line 2090»
+- We already searched this station. «bundle.js · line 2094»
+- Starting docking procedure with [name]... «bundle.js · line 2098»
 
 ### MINING PLATFORM «SpaceStations.js · STATION_MINING»
 
@@ -422,11 +422,11 @@ _Can turn up in: sectors 3, 4._
 
 #### Card words: handleFailedColonyAction «bundle.js · handleFailedColonyAction»
 
-- No colony ruins detected at this location. «bundle.js · line 3056»
-- Colony ruins already investigated. «bundle.js · line 3060»
-- ERROR: Colony encounter data unavailable. «bundle.js · line 3066»
-- Colony ruins detected. Deploying investigation team... «bundle.js · line 3084»
-- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3097»
+- No colony ruins detected at this location. «bundle.js · line 3118»
+- Colony ruins already investigated. «bundle.js · line 3122»
+- ERROR: Colony encounter data unavailable. «bundle.js · line 3128»
+- Colony ruins detected. Deploying investigation team... «bundle.js · line 3146»
+- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3159»
 
 ### THE DOME «FailedColonyEncounters.js · FC_ABANDONED_DOME»
 
@@ -537,11 +537,11 @@ _Can turn up in: any sector (one is always placed in every sector; some only fro
 
 #### Card words: handleAnomalyAction «bundle.js · handleAnomalyAction»
 
-- There is nothing strange here. «bundle.js · line 3166»
-- We have already been there. «bundle.js · line 3170»
-- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3176»
-- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3205»
-- **context** — ANOMALY: [title] [context] «bundle.js · line 3217»
+- There is nothing strange here. «bundle.js · line 3228»
+- We have already been there. «bundle.js · line 3232»
+- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3238»
+- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3267»
+- **context** — ANOMALY: [title] [context] «bundle.js · line 3279»
 
 ### THE SAME PLANET TWICE «AnomalyEncounters.js · ANOMALY_FOLD»
 _Only from sector 3._
@@ -561,10 +561,10 @@ Choices:
    ↳ or: THE WRONG PLACE  
    ↳ or: This is not on any chart. The stars here match nothing we know. We should leave.  
    ↳ or: NEGATIVE KELVIN  
+   ↳ or: We fell through the gap, and came out somewhere that matches no chart we have.  
    ↳ or: === OFF THE MAP ===  
    ↳ or: We came out somewhere that matches no chart we have.  
    ↳ or: A.U.R.A.: 'I can't place us on any chart, Commander. I'm working on it.'  
-   ↳ or: There is a wreck here, one of our ships. Its beacon is still calling.  
    ↳ or: The gap threw us somewhere off the map. All crew +1 Stress.  
    ↳ or: === THROUGH THE GAP ===  
    ↳ or: The two planets closed up behind us. Ahead is a sky we haven't seen before.  
@@ -701,13 +701,13 @@ Choices:
 3. **Measure it and leave** — -5 Energy. +2 Data.
    → Measured and logged. -5 Energy, +2 Data. / We measure it from the lander. Every dimension matches ours to the millimetre, and the scratch is in the same place.  
 
-### THE RING OF SHIPS «AnomalyEncounters.js · ANOMALY_CHORUS»
+### SEVENTEEN SHIPS «AnomalyEncounters.js · ANOMALY_CHORUS»
 _Only from sector 4._
 
-> Seventeen dead ships sit in a ring, all pointing inward. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.
+> Seventeen dead ships drift together here, all pointing the same way, at the light. Every one of them is broadcasting the same recording: the mission briefing we were given before launch.
 
 **Vance:** Seventeen ships, and every one has a higher hull number than ours. We were told eight went before us.  
-**Aris:** Listen. 'Eight ships went this way before you.' It's our briefing. Even the pauses match.  
+**Aris:** Listen. 'Find a planet people can live on, and settle it.' It's our briefing. Even the pauses match.  
 **Jaxon:** There's no damage on any of them. The crews just left.  
 **A.U.R.A.:** That is the standard briefing, Commander. I have the same file. They're playing it correctly.  
 
@@ -773,51 +773,49 @@ _THE FOLD can throw the ship here. A sector of copies; two ways out._
 ### Arriving «bundle.js · handleAnomalyTeleport»
 _The sector header, and the old names the code still has for sectors._
 
-- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5571»
+- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 5670»
 
 ### In orbit «OrbitView.js · updateCommandDeck · wrong place»
 _The two buttons instead of BREAK ORBIT._
 
-- /// THE WRONG PLACE /// «OrbitView.js · line 361»
-- FIGHT TO ESCAPE «OrbitView.js · line 365»
-- TEAR THROUGH REALITY «OrbitView.js · line 366»
-- ACCEPT YOUR FATE «OrbitView.js · line 369»
-- BECOME PART OF THIS PLACE «OrbitView.js · line 370»
+- /// THE WRONG PLACE /// «OrbitView.js · line 362»
+- FIGHT TO ESCAPE «OrbitView.js · line 366»
+- TEAR THROUGH REALITY «OrbitView.js · line 367»
+- ACCEPT YOUR FATE «OrbitView.js · line 370»
+- BECOME PART OF THIS PLACE «OrbitView.js · line 371»
 
 ### Fight to escape «bundle.js · handleWrongPlaceEscape»
 
-- **title** — TEAR THROUGH REALITY «bundle.js · line 3235»
-- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3237»
-- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3247»
-- We made it «bundle.js · line 3251»
-- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3252»
-- === REALITY BREACH SUCCESSFUL === «bundle.js · line 3283»
-- Emerged in Sector [sector]. The crew will never forget what they saw. «bundle.js · line 3284»
-- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3286»
+- **title** — TEAR THROUGH REALITY «bundle.js · line 3297»
+- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3299»
+- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3309»
+- We made it «bundle.js · line 3313»
+- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3314»
+- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3317»
 
 ### Accept your fate (an ending) «bundle.js · handleWrongPlaceAccept»
 
-- **title** — A COPY OF SOMEWHERE «bundle.js · line 3307»
-- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3309»
-- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3310»
-- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3311»
-- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3312»
+- **title** — A COPY OF SOMEWHERE «bundle.js · line 3368»
+- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3370»
+- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3371»
+- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3372»
+- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3373»
 
 ## Asteroid fields (6)
 _Can turn up in: any sector._
 
 #### Card words: showAsteroidEncounter «bundle.js · showAsteroidEncounter»
 
-- ERROR: Asteroid encounter data unavailable. «bundle.js · line 2130»
-- Unknown Field «bundle.js · line 2143»
-- **kicker** — ASTEROID FIELD «bundle.js · line 2146»
-- MINING: [result] «bundle.js · line 2151»
+- ERROR: Asteroid encounter data unavailable. «bundle.js · line 2149»
+- Unknown Field «bundle.js · line 2162»
+- **kicker** — ASTEROID FIELD «bundle.js · line 2165»
+- MINING: [result] «bundle.js · line 2170»
 
 #### Card words: handleAsteroidAction «bundle.js · handleAsteroidAction»
 
-- No asteroid field detected at this location. «bundle.js · line 2103»
-- Asteroid field already mined. «bundle.js · line 2107»
-- Entering [name]. Mining systems online... «bundle.js · line 2111»
+- No asteroid field detected at this location. «bundle.js · line 2122»
+- Asteroid field already mined. «bundle.js · line 2126»
+- Entering [name]. Mining systems online... «bundle.js · line 2130»
 
 ### RICH MINERAL DEPOSIT «AsteroidFields.js · ASTEROID_RICH»
 
@@ -955,10 +953,10 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showDistressSignal «bundle.js · showDistressSignal»
 
-- **kicker** — DISTRESS SIGNAL «bundle.js · line 2175»
-- **facts** — Nobody can tell when «bundle.js · line 2176»
-- **facts** — [signal age] years ago «bundle.js · line 2176»
-- SIGNAL: [result] «bundle.js · line 2180»
+- **kicker** — DISTRESS SIGNAL «bundle.js · line 2194»
+- **facts** — Nobody can tell when «bundle.js · line 2195»
+- **facts** — [signal age] years ago «bundle.js · line 2195»
+- SIGNAL: [result] «bundle.js · line 2199»
 
 ### AUTOMATED DISTRESS BEACON «DistressSignals.js · DISTRESS_BEACON»
 
@@ -983,8 +981,8 @@ Choices:
 > A damaged signal: words, static, then more words. Sent 120 years ago. Most of it is lost. The part that's left keeps repeating one sentence.
 
 **Mira:** I can rebuild some of it. Aura, will you help? You're better at this than me.  
-**A.U.R.A.:** Partly rebuilt, Commander: '...this is hull... we are not the ninth... please...' Then nothing.  
-**Vance:** Not the ninth. So they were told the same thing we were.  
+**A.U.R.A.:** Partly rebuilt, Commander: '...this is hull two hundred and... the year is wrong... please...' Then nothing.  
+**Vance:** Hull two hundred? We're the ninth. How are they out here before us?  
 
 Choices:
 1. **Let Mira and A.U.R.A. rebuild it** — -5 Energy. +1-3 Data. Mira +0-2 Stress. May reveal one planet. _(locked: Requires Mira)_
@@ -1092,10 +1090,10 @@ _Can turn up in: any sector (on warps and jumps, never on the approach to the li
 
 #### Card words: showShipMalfunctionModal «bundle.js · showShipMalfunctionModal»
 
-- **kicker** — SHIP ALERT «bundle.js · line 5829»
-- Deal with it «bundle.js · line 5831»
-- DEAL WITH IT «bundle.js · line 5831»
-- MALFUNCTION RESOLVED: [result] «bundle.js · line 5834»
+- **kicker** — SHIP ALERT «bundle.js · line 5928»
+- Deal with it «bundle.js · line 5930»
+- DEAL WITH IT «bundle.js · line 5930»
+- MALFUNCTION RESOLVED: [result] «bundle.js · line 5933»
 
 ### Power Surge «ShipEvents.js · POWER_SURGE»
 
@@ -1218,15 +1216,15 @@ _Can turn up in: sectors 4, 5, 6 (the beacon and the dome from sector 4, the gra
 
 #### Card words: handleLateGamePOI «bundle.js · handleLateGamePOI»
 
-- No [poi type] detected at this location. «bundle.js · line 3323»
-- [poi type] already investigated. «bundle.js · line 3329»
-- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3335»
-- Approaching [name]... «bundle.js · line 3339»
+- No [poi type] detected at this location. «bundle.js · line 3384»
+- [poi type] already investigated. «bundle.js · line 3390»
+- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3396»
+- Approaching [name]... «bundle.js · line 3400»
 
 ### THE LIGHTHOUSE «LateGamePOIs.js · THE_LIGHTHOUSE»
 _Only from sector 4._
 
-> A dead ship is parked in orbit here. Its crew is long gone, but its navigation beacon is still running. The beacon sends one message, over and over: the safest route onward, for any ship that comes after it. Every route it gives points the same way. Down our heading.
+> A dead ship has come down here. Its crew is long gone, but its navigation beacon is still running. The beacon sends one message, over and over: the safest route onward, for any ship that comes after it. Every route it gives points the same way. Down our heading.
 
 **Mira:** It's a navigation beacon, Commander. It's giving directions to any ship behind it.  
 **A.U.R.A.:** The route it gives is accurate, Commander. It matches our heading exactly.  
@@ -1246,7 +1244,7 @@ Choices:
 ### THE GARDEN «LateGamePOIs.js · THE_GARDEN»
 _Only from sector 4._
 
-> On this dead planet, under a dome kilometres wide, there is a whole Earth garden: grass, trees, running water, birds. The grass has no roots. It just sits on the soil. Nobody built it. It is a copy of a real place, and the copy is not quite right. The door is open, because the real place had an open door.
+> On this planet, under a dome kilometres wide, there is a whole Earth garden: grass, trees, running water, birds. The grass has no roots. It just sits on the soil. Nobody built it. It is a copy of a real place, and the copy is not quite right. The door is open, because the real place had an open door.
 
 **Aris:** Every plant here is an Earth plant. Whoever copied them didn't know how plants grow.  
 **Mira:** The dome makes its own daylight. I can't find where it's coming from.  
@@ -1299,8 +1297,8 @@ _What the team finds when there is no site. Two choices each: the safe one and t
   1. Dig at the surface · 2. Drill deep into the ridge
 - **SOLAR FLARE COMING** — The star is about to flare. Radiation on the surface is rising fast. «Events.js · SOLAR_FLARE»  
   1. Collect power under the radiation shield · 2. Leave the collectors out in the open
-- **SILENT SHIP** — A ship is drifting in high orbit. It isn't sending any ID code, and nobody aboard is alive. «Events.js · GHOST_SHIP»  
-  1. Call it once, then leave · 2. Send a team aboard
+- **SILENT SHIP** — A ship lies on the ground here, nose first. It isn't sending any ID code, and nobody aboard is alive. «Events.js · GHOST_SHIP»  
+  1. Call it once, then leave · 2. Go aboard
 - **RINGING TOWER** — A huge crystal tower sticks up out of the ice. It gives off a low ringing sound. «Events.js · CRYSTAL_SPIRE»  
   1. Scan it from a distance · 2. Cut out its core
 - **SLOW CLOCKS** — The gravity here is so strong it slows time. One hour on the surface is a whole day up on the ship. «Events.js · TIME_DILATION»  
@@ -1313,7 +1311,7 @@ _What the team finds when there is no site. Two choices each: the safe one and t
   1. Burn them back and harvest · 2. Play their sound back to them
 - **OLD SLEEP POD** — There's a working sleep pod frozen into the ice. We can't tell whether the person inside is alive. «Events.js · CRYOSLEEP_POD»  
   1. Take the parts around the pod · 2. Thaw the pod and open it
-- **ARMED SATELLITE** — An old defence satellite in orbit has locked on to the lander. «Events.js · ROGUE_AI»  
+- **ARMED TURRET** — An old defence turret on the ridge has locked on to the team. «Events.js · ROGUE_AI»  
   1. Dodge it and keep going · 2. Try to break into its controls
 - **THE TWILIGHT STRIP** — Only a strip about 200 km wide is safe to walk on. One side burns and the other side freezes. «Events.js · TERMINATOR_WALK»  
   1. Search along the twilight strip · 2. Cross into the frozen dark side
@@ -1385,6 +1383,16 @@ _Short lines the crew say when things happen. Grouped by moment, then by person 
 - CURIOUS 0: A.U.R.A., bring up the orbital data. I want a proper look.
 - CURIOUS 3: I used to love arriving at a new planet. Now I check for wrecks first.
 
+### ENTER_STATION «BarkSystem.js · ENTER_STATION»
+- PESSIMIST 0: We're alongside the station. Its docking port still looks usable.
+- PESSIMIST 3: Another dead station. I'll get us docked, but don't expect much.
+- HUMANIST 0: If anyone is still aboard that station, we'll find them when we dock.
+- HUMANIST 3: People waited a long time on stations like this one. Let's dock and see.
+- SURVIVOR 0: Nobody's answering from the station. We dock slowly, and we watch the hatch.
+- SURVIVOR 3: No answer on any channel. I don't like docking with something that won't talk.
+- CURIOUS 0: A whole station out here! A.U.R.A., can you find us a port to dock at?
+- CURIOUS 3: I used to want to see inside places like this. Now I hope it's empty.
+
 ### AFTER_SCAN «BarkSystem.js · AFTER_SCAN»
 - PESSIMIST 0: Scan's back. Not much here, but the next one might be better.
 - PESSIMIST 3: Scan's in. No air, no water. Same as the last one.
@@ -1424,7 +1432,7 @@ _Short lines the crew say when things happen. Grouped by moment, then by person 
 - PESSIMIST 3: The lander's been patched too many times. Land gently.
 - HUMANIST 0: Everyone has a medical kit. Come back with everyone you took.
 - HUMANIST 3: If you find graves down there, read me the names over the radio.
-- SURVIVOR 0: Three going down, three coming back. I'll check you in at the airlock.
+- SURVIVOR 0: Everyone who goes down comes back. I'll check you in at the airlock.
 - SURVIVOR 3: Stay in sight of each other down there. No wandering off.
 - CURIOUS 0: Good luck down there. A.U.R.A., keep the channel open for me.
 - CURIOUS 3: A.U.R.A. says the surface is safe. She hasn't been wrong about a surface yet.
@@ -1576,7 +1584,7 @@ _Short lines the crew say when things happen. Grouped by moment, then by person 
 - PESSIMIST 3: Send the probe. At least something gets off this ship.
 - HUMANIST 0: Probe's out. Good. Nobody gets hurt for a reading.
 - HUMANIST 3: Let the machine look first. I've seen enough bodies.
-- SURVIVOR 0: Probe launched. Ninety seconds to the surface.
+- SURVIVOR 0: Probe launched. It'll be there in ninety seconds.
 - SURVIVOR 3: Probe's away. We don't have many left. Use them carefully.
 - CURIOUS 0: Probe's away. A.U.R.A. has it on the line.
 - CURIOUS 3: The probe's out. A.U.R.A. likes the probes. They always answer her.

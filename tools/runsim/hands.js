@@ -67,7 +67,7 @@ function minigame(rc, name, o) {
 function land(rc, planet, o) {
     const { style, rnd, cur } = rc;
     rc.add(style.pilot === 'aura' ? M.SECONDS.landingAura : M.SECONDS.landingFull, 'landing');
-    rc.add(M.CUTS.walkOut ? M.SECONDS.walkOutCut : M.SECONDS.walkOut, 'walk-out');
+    rc.add(M.CUTS.walkOut ? rc.ECON.WALK_OUT_MS / 1000 : M.SECONDS.walkOut, 'walk-out');   // C4: the game's own number
     const r = M.landingResult(style.pilot, rnd, o.unmarked, planet);
     if (cur.trip) { cur.trip.landing = r.grade; cur.trip.phase = 'down'; }
     return r;

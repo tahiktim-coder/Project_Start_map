@@ -84,18 +84,21 @@ function gauss(rnd) { const u = Math.max(1e-9, rnd()), v = rnd(); return Math.sq
 const SECONDS = Object.freeze({
     opening: 150, ending: 120,                       // the wake-up and the launch film; the light and its ending
     pickWorld: 3, flight: 10, arriveHold: 4,         // travel: choosing a world, the flight in, the bridge hold on arrival
-    bridgeAgain: 4, bridgeAgainCut: 2,               // the bridge shown again after a trip (C6: 2 s on a world already seen)
-    scan: 3,                                         // Scan: the click and the sweep (C1: it runs by itself; ~1 min a run)
+    bridgeAgain: 4, bridgeAgainCut: 2,               // after a trip, until two step forward again (Stop.js: 4.75 s; C5: at once, while
+                                                     //   the shuttle comes up, about 2 s with their walk to the hatch)
+    scan: 3,                                         // Scan: the click and the sweep (C1: it runs by itself as the bridge shows; ~1 min a run)
     teamPick: 5, landingFull: 22, landingAura: 16,   // the hatch; the drop flown by the player, or watched
-    walkOut: 5.6, walkOutCut: 2,                     // the walk-out after touchdown (C4: 2 s)
+    walkOut: 5.6,                                    // the walk-out after touchdown (C4: the game's NEW_LOOK_ECONOMY.WALK_OUT_MS)
     tripCard: 16, resultCard: 9, tripBack: 4,        // the trip's card; a repeat's result card (step 6); the shuttle home
-    secondTrip: 6, secondTripCut: 2,                 // the hatch again for another find at the same stop (C5)
+    secondTrip: 6, secondTripCut: 2,                 // the hatch again for another find at the same stop (C5: nobody walks to it)
     wreck: 35, torch: 20, page: 20, dating: 25,      // our wrecks: the story card, the door, a found page, dating the disc
     site: 30, strange: 30, station: 75, stationCard: 20, mine: 20, skim: 4, call: 25, moment: 25, deckChoice: 5,
     leave: 3, jumpBurn: 6, corridor: { good: 49, poor: 30, aura: 45 }, jumpFault: 14, campfire: 40,   // corridor: measured flight times
     supper: 8, supperShort: 14, throwSequence: 95, burnGauge: 25, breach: 50, reserveCard: 8, askJump: 4,
 });
-// which of the plan's routine cuts are live (step 3 turns on autoScan, walkOut, repeatTrip, bridgeHold; step 6 resultCard)
-const CUTS = { autoScan: false, walkOut: false, repeatTrip: false, bridgeHold: false, resultCard: false };
+// which of the plan's routine cuts are live: step 3's four are (C1 autoScan, C4 walkOut, C5 repeatTrip, C6 bridgeHold);
+// C4 and C6 take their seconds from the game's table (NEW_LOOK_ECONOMY.WALK_OUT_MS, HOLD_SEEN_MS: rc.ECON), never a copy;
+// step 6 turns on resultCard. The scan itself always runs as the game runs it (stop.js visit): only its seconds follow C1
+const CUTS = { autoScan: true, walkOut: true, repeatTrip: true, bridgeHold: true, resultCard: false };
 
 module.exports = { STYLES, STYLE_ORDER, VALUE, SAFE_TRIP_RISK, corridorResult, landingResult, breachResult, burnResult, dockingGrade, SECONDS, CUTS };

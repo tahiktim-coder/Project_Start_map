@@ -1125,6 +1125,10 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     RISK_FAIR_LOCK: -5,      // a fair lock (A.U.R.A.'s own tune is fair): the spot is marked and the trip 5 % safer
     RISK_SHARP_LOCK: -10,    // a sharp lock: 10 % safer, twice what Mira's ground scan from aboard gives (MIRA_ABOARD). A weak lock
                              //   marks nothing and changes nothing (it no longer costs energy: losing the mark is its price)
+    WALK_OUT_MS: 2000,       // the walk-out after touchdown holds the screen this long (the default game 5.6 s; a click still skips
+                             //   it): LanderCrew.plan
+    HOLD_SEEN_MS: 2000,      // a card that turns up on its own waits this long on a world whose bridge we saw before (4 s on a new
+                             //   world, so the picture is seen first): NewScreen.js
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it

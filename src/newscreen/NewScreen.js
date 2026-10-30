@@ -41,6 +41,7 @@
        teamRisk(ids) → a plain landing's danger going in (%), null where a site's own story decides
        leave() → Promise<bool>  Leave orbit (the dive back out, or refused with a line)
        trip() → { ids, aboard } | null   who is down now;  sign() → { kind, comes } | null   this stop's crisis sign
+       scanDue() → bool       we orbit a world nobody has scanned from the bridge (Stop.js scans it as the bridge shows)
        person(id, say?)       a person in the tower clicked: their line, said beside them (not logged: saves keep 20 lines)
        bench() → bool         Mira's bench clicked: date the wreck whose star fix is on it
        datable() → node | null    a wreck whose fix is on Mira's bench now
@@ -66,6 +67,14 @@
     const JUMP_FALLBACK_MS = 5000, REFUSE_GAP_MS = 4000, DIVE_WATCH_MS = 4500;
     const BLOCKED_RENDER_EVERY = 12;                      // under a card or a minigame the picture is drawn only every 12th frame (it is covered)
     const HOLD_STOP_MS = 4000, HOLD_TRAVEL_MS = 1800, CLICK_GRACE_MS = 700;   // a card that turns up on its own waits until the picture has been seen
+    /** How long such a card waits on a world whose bridge we saw before (stop/Stop.js marks it _nsSeen as it closes): less,
+        NEW_LOOK_ECONOMY.HOLD_SEEN_MS (bundle.js, read when used; without it the full hold) */
+    function holdSeenMs() {
+        const v = window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY.HOLD_SEEN_MS;
+        if (typeof v === 'number') return v;
+        console.error('NewScreen: NEW_LOOK_ECONOMY.HOLD_SEEN_MS is missing; a seen world keeps the full hold');
+        return HOLD_STOP_MS;
+    }
     const FIRST_HINT = 'A.U.R.A.: "One of our ships is calling, Commander. Point at a world to fly there."';
     const ORDER = ['travel', 'tower', 'stop', 'wake', 'voice'];
     const OUTSIDE = new Set(['travel', 'dive-in', 'dive-out']);                          // travel and the tower are drawn only then
@@ -89,7 +98,7 @@
     let pendingShown = null, carryFirst = false, orbitFrom = null, seenIds = new Set();
     let inFrame = false, frameBlocked = false, frameN = 0, jumping = false, hintGiven = false;
     let mode = 'travel', stopId = null, watch = null;
-    let stopShownAt = -1e9, travelShownAt = -1e9, lastDown = -1e9;
+    let stopShownAt = -1e9, travelShownAt = -1e9, lastDown = -1e9, stopHoldMs = HOLD_STOP_MS;
     const theApp = () => app || window.app || null;
     const st = () => { const a = theApp(); return (a && a.state) || null; };
     const orbit = () => window.NSOrbit || null;
@@ -141,7 +150,7 @@
         if (mode === 'wake') return true;                                                    // the wake-up first: a card waits for the travel view
         if (!shown || now - lastDown < CLICK_GRACE_MS) return false;
         if (mode === 'dive-in' || mode === 'dive-out') return true;
-        if (mode === 'stop') return now - stopShownAt < HOLD_STOP_MS;
+        if (mode === 'stop') return now - stopShownAt < stopHoldMs;
         return !!pendingShown || now - travelShownAt < HOLD_TRAVEL_MS;
     }
     function onAdded(list) {
@@ -373,6 +382,7 @@
         propose: () => ask('propose', theApp()) || null,
         teamRisk: ids => { const r = ask('teamRisk', theApp(), ids); return typeof r === 'number' ? r : null; },
         trip: () => ask('trip') || null,
+        scanDue: () => !!ask('scanDue', theApp()),                                         // a world nobody has scanned: Stop.js scans it as it shows
         sign: () => { const s = st(), n = s && s.currentSystem; return (n && n._nsCrisis) || null; },
         leave() {
             const a = theApp(), s = st(), node = s && s.currentSystem;
@@ -429,6 +439,7 @@
         setMode('stop');
         stopShownAt = performance.now();
         const s = st();
+        stopHoldMs = s && s.currentSystem && s.currentSystem._nsSeen ? holdSeenMs() : HOLD_STOP_MS;   // a new world: the picture first, longer
         stopId = (s && s.currentSystem && s.currentSystem.id) || (p && p.id) || stopId;
         orbitFrom = stopId;
         ask('opened', theApp());

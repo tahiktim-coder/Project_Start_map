@@ -34,10 +34,10 @@ _In the wreck on Pallas-17 Major. Printed orders from Earth, marked for commande
 
 We told the first crews the truth. They stopped flying within a week.  
 One ship turned back. One landed on the first rock it found. One just drifted, everyone awake and nobody flying it.  
-Do not tell your crew. Tell them what they already believe: eight ships went this way before them, and they are the ninth.  
+Do not tell your crew. Tell them what they already believe: they are going to find a new home.  
 Your ship's computer knows the truth. It will not tell them.  
 
-**Aris:** Eight ships before us. That is exactly what A.U.R.A. told us.
+**Aris:** A new home. That is exactly what A.U.R.A. told us.
 
 ## The sector's own trouble: FALSE_PARADISE «SectorConfig.js · 4.hazard»
 _Not everything green is safe_
