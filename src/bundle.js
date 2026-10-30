@@ -1279,6 +1279,20 @@ const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the headi
 const SCRAPES_PER_BROKEN_DECK = 2; // flying the jump (Corridor): every second scrape breaks a deck (was 3). Measured over a run's
                                    // four flown jumps (2026-10-21): a careful pilot loses about 0.6 decks (a slower one, 1.5), a
                                    // ship that never moves all of them, one at full throttle the whole way about five. At 3: 0.2, 5, 3
+// The new look's hull hit (App.hullHit): sector 1's micrometeorite strike without the patching game (Breach.js stays the old
+// look's). It seals one deck whose loss the new look feels (the hold, the engine room, the quarters; never the lab, which
+// costs nothing there), never one that would end the run (corridorBreakAllowance). Nobody is hurt: with no game to play
+// there is nothing the player could have done to save them. After A.U.R.A., the one whose deck it is speaks (HULL_HIT_WHO).
+const HULL_HIT_DECKS = ['cargo', 'engineering', 'quarters'];
+const HULL_HIT_WHO = { cargo: 'SECURITY', engineering: 'ENGINEER', quarters: 'MEDIC' };
+const HULL_HIT_ROOM = { cargo: 'hold', engineering: 'engine room', quarters: 'crew quarters' };
+const HULL_HIT_LINES = Object.freeze({                                                       // DRAFT (2026-10-30): the designer rewrites them (docs/STYLE.md)
+    sealed: room => `Micrometeorite strike, Commander. I have sealed off the ${room}.`,      // DRAFT: A.U.R.A., a deck sealed
+    held: 'Micrometeorite strike, Commander. The hull held.',                                // DRAFT: A.U.R.A., when no deck may break now
+    cargo: "The hold's sealed. We can only carry half now.",                                 // DRAFT: Vance (else whoever is aboard)
+    engineering: "Engine room's sealed off. Jumps cost double until we fix it.",            // DRAFT: Jaxon (else whoever is aboard)
+    quarters: "Quarters are sealed. Nobody rests properly until it's fixed.",               // DRAFT: Aris (else whoever is aboard)
+});
 // Our wrecks (docs/CANON.md §2): the further out, the higher the hull number. Index = sector. The callsign comes from the number.
 const WRECK_HULL_RANGE = [[1, 8], [1, 8], [1, 8], [212, 980], [1400, 6000], [9000, 22000], [30000, 41000]];
 const SHORT_HULL_RANGE = 50;     // below this many hull numbers, a new wreck is picked from the numbers not yet used
@@ -2183,6 +2197,31 @@ class App {
             window.dispatchEvent(new CustomEvent('crew-injury', { detail: { crew: c } }));
         });
         this.state.emitUpdates();
+    }
+
+    /**
+     * The new look's micrometeorite strike in sector 1 (NSOrbit plays it at a stop, where the breach used to come; the old
+     * look keeps the patching game, playBreach): one deck is holed and sealed off (HULL_HIT_DECKS), nobody is hurt, and
+     * A.U.R.A. and the one whose deck it is say so, a line each. Returns { deck, lines: [{ id, who, text }] } for NSOrbit to
+     * say, deck null when no deck may break now (the hull held). away: crew who are not aboard (the team on the ground).
+     */
+    hullHit(away = []) {
+        const s = this.state;
+        s._breachDone = true;
+        const open = HULL_HIT_DECKS.filter(k => s.shipDecks[k] && s.shipDecks[k].status === 'OPERATIONAL');
+        const deck = open.length && this.corridorBreakAllowance() > 0 ? open[Math.floor(Math.random() * open.length)] : null;
+        if (!deck) {
+            s.addLog('Micrometeorite strike. The hull held.');
+            s.emitUpdates();
+            return { deck: null, lines: [{ id: 'aura', who: 'A.U.R.A.', text: HULL_HIT_LINES.held }] };
+        }
+        s._tutorialDeckSeen = true;                                                          // the hit says it: no second "A deck is damaged" line
+        s.damageDeck(deck, `Micrometeorite strike. A.U.R.A. sealed off the ${HULL_HIT_ROOM[deck]}.`);              // DRAFT (log only)
+        const aboard = tag => s.crew.find(c => (c.tags || []).includes(tag) && c.status !== 'DEAD' && !(c.tags || []).includes('SEDATED') && !away.includes(c));
+        const who = [HULL_HIT_WHO[deck], 'ENGINEER', 'SECURITY', 'MEDIC', 'SPECIALIST'].map(aboard).find(Boolean);
+        const lines = [{ id: 'aura', who: 'A.U.R.A.', text: HULL_HIT_LINES.sealed(HULL_HIT_ROOM[deck]) }];
+        if (who) lines.push({ id: crewIdOf(who), who: who.name, text: HULL_HIT_LINES[deck] });
+        return { deck, lines };
     }
 
     /** A pooled card turns up once the ship has reached its minSector: hull numbers and ship counts belong to sectors (CANON.md section 2). */

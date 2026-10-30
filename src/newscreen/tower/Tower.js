@@ -20,8 +20,9 @@
    - Red decks from NewScreen.game.decks(); engineering red browns the ship out every 2.9 s.
    - Clicks in travel (BUILD_B §8): a person → flow.person(id); Mira or her bench while a fix waits → flow.bench(); a red
      deck → its choices as a few words in #ns-ship-words, away from the pointer, deaf for 400 ms → flow.deckChoose(key, i).
-     Pointing at a red deck names it ("Engine room, broken" over "Fix, patch or live with it"); the first time a deck goes
-     red, A.U.R.A. says once, in travel, that it can be clicked.
+     Pointing at a red deck names it ("Engine room, broken" over "Fix, patch or live with it"), and between the two what it
+     costs while it stays broken, as plain chips ("jumps cost double", "repairs cost more": NSOrbit.deckCost, the game's own
+     rules); the first time a deck goes red, A.U.R.A. says once, in travel, that it can be clicked.
    - A new sector: closed until 'opening:done' (5 s at most), then it slides in (1.2 s).
    - The jump into sector 3 stalls (throw/Stall.js, read through window.NSStall.view() each frame): the decks go dark one by
      one, one red lamp left on each (throw/StallArt.js paints them), their screens and lamps dead; the reactor goes cold and
@@ -536,6 +537,15 @@
             : { i: c.i != null ? c.i : i, words: c.words || c.verb || c.label || c.text || '', note: c.note || c.sub || c.chip || c.cost || '' }))
             .filter(c => c.words);
     }
+    /** What a red deck costs while it stays broken, a few words each (flow.deckCost; else NSOrbit.deckCost, as choicesFor). */
+    function costFor(key) {
+        let list = flowCall('deckCost', key);
+        const O = window.NSOrbit, s = call('state', null);
+        if (!Array.isArray(list) && O && typeof O.deckCost === 'function' && s) {
+            try { list = O.deckCost(s, key); } catch (err) { console.error('Tower: NSOrbit.deckCost failed', err); list = null; }
+        }
+        return Array.isArray(list) ? list.map(c => (c && typeof c.text === 'string' ? c.text : '')).filter(Boolean) : [];
+    }
     function wordsLayer() {
         if (!V.words || !V.words.isConnected) V.words = document.getElementById('ns-ship-words');
         return V.words;
@@ -568,18 +578,27 @@
         flowCall('deckChoose', key, i);
     }
     function hideChips() { if (V.chips) { V.chips.el.remove(); V.chips = null; } }
-    /** Pointing at a red deck: its name and what can be done, beside it (the same place the choices will take). At supper,
-        pointing at someone: who goes without (who: { verb, note } from NSSupper.tagFor), beside the galley. */
+    /** Pointing at a red deck: its name, what it costs while it stays broken (costFor: plain chips) and what can be done,
+        beside it (the same place the choices will take). At supper, pointing at someone: who goes without (who: { verb,
+        note } from NSSupper.tagFor), beside the galley. */
     function showTag(deck, e, who) {
         const layer = wordsLayer();
         if (!layer) return;
-        const key = who ? 'who:' + who.verb : deck;
+        const cost = who ? [] : costFor(GAME_KEY[deck]);
+        const key = who ? 'who:' + who.verb : deck + ':' + cost.join('|');                    // a cost that changes shows at once
         if (!V.tag || V.tag.key !== key) {
             hideTag();
             const el = document.createElement('div'), b = document.createElement('span'), n = document.createElement('span');
             el.className = 'nsk-chips nsk-tag' + (who ? ' is-who' : ''); b.className = 'nsk-verb'; n.className = 'nsk-note';
             b.textContent = who ? who.verb : `${DECK_WORD[deck] || 'This deck'}, broken`; n.textContent = who ? who.note : 'Fix, patch or live with it';
-            el.append(b, n); layer.append(el);
+            el.append(b);
+            if (cost.length) {
+                const row = document.createElement('span');
+                row.className = 'nsk-cost';
+                cost.forEach(text => { const i = document.createElement('i'); i.textContent = text; row.append(i); });
+                el.append(row);
+            }
+            el.append(n); layer.append(el);
             V.tag = { el, deck, key, who: !!who };
             void el.offsetWidth; el.classList.add('is-in');
         }
@@ -619,6 +638,8 @@
 #ns-ship-words .nsk-choice:focus-visible { outline: none; }
 #ns-ship-words .nsk-tag { display: grid; gap: 4px; pointer-events: none; }
 #ns-ship-words .nsk-tag .nsk-verb { color: #ff7a6a; }
+#ns-ship-words .nsk-cost { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+#ns-ship-words .nsk-cost i { font: 400 max(14px, calc(var(--fs-who, 15px) * 0.95))/1.2 var(--f-num, 'IBM Plex Mono', monospace); font-style: normal; color: #ff7a6a; white-space: nowrap; }
 #ns-ship-words .nsk-tag.is-who { grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 8px; }
 #ns-ship-words .nsk-tag.is-who .nsk-verb { color: var(--warm-br, #ffc27a); }
 @media (prefers-reduced-motion: reduce) { #ns-ship-words .nsk-chips, #ns-ship-words .nsk-verb { transition: none; } }`;

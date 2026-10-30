@@ -47,6 +47,7 @@
        bench() → bool         Mira's bench clicked: date the wreck whose star fix is on it
        datable() → node | null    a wreck whose fix is on Mira's bench now
        deckChoices(key) → [{ words, note }]   a red deck clicked: fix, patch, live with it
+       deckCost(key) → [{ icon, text, tone }]   what a red deck costs while it stays broken (the tower's tag shows it)
        deckChoose(key, i) → bool
      show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, playJump() → Promise
      wake(on) → bool         the wake-up after the launch film (start/Pods.js): on, the 'wake' module has the screen (travel
@@ -411,6 +412,7 @@
         datable: () => ask('datable', st()) || null,
         bench() { const a = theApp(), n = flow.datable(); if (!a || !n || blocked()) return false; a.dateWreck(n); return true; },
         deckChoices: key => ask('deckChoices', st(), key) || [],
+        deckCost: key => ask('deckCost', st(), key) || [],
         deckChoose(key, i) { const a = theApp(); if (!a || blocked()) return false; return !!ask('deckChoose', a, key, i); },
     };
 
