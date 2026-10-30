@@ -9,15 +9,15 @@ _Can turn up in: sectors 1, 2, 3, 4, 5._
 
 #### Card words: handleExodusAction «bundle.js · handleExodusAction»
 
-- No Exodus wreck signal detected at this location. «bundle.js · line 3145»
-- We already searched this wreck. «bundle.js · line 3149»
-- ERROR: Exodus encounter data unavailable. «bundle.js · line 3155»
-- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 3161»
+- No Exodus wreck signal detected at this location. «bundle.js · line 3147»
+- We already searched this wreck. «bundle.js · line 3151»
+- ERROR: Exodus encounter data unavailable. «bundle.js · line 3157»
+- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 3163»
 
 #### Names on the hulls «bundle.js · getWreckName»
 _Every wreck card is titled EXODUS-[number] "[CALLSIGN]". The number range grows with the sector; the callsign is picked from this list._
 
-- EXODUS-[hull] "[callsign]" «bundle.js · line 3080»
+- EXODUS-[hull] "[callsign]" «bundle.js · line 3082»
 
 #### A second list of ship names «ExodusDerelicts.js · EXODUS_SHIP_NAMES»
 _Defined in the wreck file; the wreck titles use the list above._
@@ -167,10 +167,10 @@ _Can turn up in: any sector._
 
 #### Card words: handleDerelictAction «bundle.js · handleDerelictAction»
 
-- There is no wreck here. «bundle.js · line 3394»
-- We already searched this wreck. «bundle.js · line 3398»
-- ERROR: Derelict encounter data unavailable. «bundle.js · line 3404»
-- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3419»
+- There is no wreck here. «bundle.js · line 3396»
+- We already searched this wreck. «bundle.js · line 3400»
+- ERROR: Derelict encounter data unavailable. «bundle.js · line 3406»
+- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3421»
 
 ### MINING CRAFT «DerelictEncounters.js · DERELICT_MINING»
 
@@ -422,11 +422,11 @@ _Can turn up in: sectors 3, 4._
 
 #### Card words: handleFailedColonyAction «bundle.js · handleFailedColonyAction»
 
-- No colony ruins detected at this location. «bundle.js · line 3338»
-- Colony ruins already investigated. «bundle.js · line 3342»
-- ERROR: Colony encounter data unavailable. «bundle.js · line 3348»
-- Colony ruins detected. Deploying investigation team... «bundle.js · line 3366»
-- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3379»
+- No colony ruins detected at this location. «bundle.js · line 3340»
+- Colony ruins already investigated. «bundle.js · line 3344»
+- ERROR: Colony encounter data unavailable. «bundle.js · line 3350»
+- Colony ruins detected. Deploying investigation team... «bundle.js · line 3368»
+- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3381»
 
 ### THE DOME «FailedColonyEncounters.js · FC_ABANDONED_DOME»
 
@@ -537,11 +537,11 @@ _Can turn up in: any sector (one is always placed in every sector; some only fro
 
 #### Card words: handleAnomalyAction «bundle.js · handleAnomalyAction»
 
-- There is nothing strange here. «bundle.js · line 3448»
-- We have already been there. «bundle.js · line 3452»
-- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3458»
-- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3487»
-- **context** — ANOMALY: [title] [context] «bundle.js · line 3499»
+- There is nothing strange here. «bundle.js · line 3450»
+- We have already been there. «bundle.js · line 3454»
+- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3460»
+- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3489»
+- **context** — ANOMALY: [title] [context] «bundle.js · line 3501»
 
 ### THE SAME PLANET TWICE «AnomalyEncounters.js · ANOMALY_FOLD»
 _Only from sector 3._
@@ -773,7 +773,7 @@ _THE FOLD can throw the ship here. A sector of copies; two ways out._
 ### Arriving «bundle.js · handleAnomalyTeleport»
 _The sector header, and the old names the code still has for sectors._
 
-- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 6039»
+- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 6041»
 
 ### In orbit «OrbitView.js · updateCommandDeck · wrong place»
 _The two buttons instead of BREAK ORBIT._
@@ -786,20 +786,20 @@ _The two buttons instead of BREAK ORBIT._
 
 ### Fight to escape «bundle.js · handleWrongPlaceEscape»
 
-- **title** — TEAR THROUGH REALITY «bundle.js · line 3517»
-- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3519»
-- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3529»
-- We made it «bundle.js · line 3533»
-- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3534»
-- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3537»
+- **title** — TEAR THROUGH REALITY «bundle.js · line 3519»
+- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3521»
+- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3531»
+- We made it «bundle.js · line 3535»
+- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3536»
+- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3539»
 
 ### Accept your fate (an ending) «bundle.js · handleWrongPlaceAccept»
 
-- **title** — A COPY OF SOMEWHERE «bundle.js · line 3588»
-- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3590»
-- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3591»
-- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3592»
-- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3593»
+- **title** — A COPY OF SOMEWHERE «bundle.js · line 3590»
+- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3592»
+- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3593»
+- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3594»
+- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3595»
 
 ## Asteroid fields (6)
 _Can turn up in: any sector._
@@ -1090,10 +1090,10 @@ _Can turn up in: any sector (on warps and jumps, never on the approach to the li
 
 #### Card words: showShipMalfunctionModal «bundle.js · showShipMalfunctionModal»
 
-- **kicker** — SHIP ALERT «bundle.js · line 6297»
-- Deal with it «bundle.js · line 6299»
-- DEAL WITH IT «bundle.js · line 6299»
-- MALFUNCTION RESOLVED: [result] «bundle.js · line 6302»
+- **kicker** — SHIP ALERT «bundle.js · line 6299»
+- Deal with it «bundle.js · line 6301»
+- DEAL WITH IT «bundle.js · line 6301»
+- MALFUNCTION RESOLVED: [result] «bundle.js · line 6304»
 
 ### Power Surge «ShipEvents.js · POWER_SURGE»
 
@@ -1216,10 +1216,10 @@ _Can turn up in: sectors 4, 5, 6 (the beacon and the dome from sector 4, the gra
 
 #### Card words: handleLateGamePOI «bundle.js · handleLateGamePOI»
 
-- No [poi type] detected at this location. «bundle.js · line 3604»
-- [poi type] already investigated. «bundle.js · line 3610»
-- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3616»
-- Approaching [name]... «bundle.js · line 3620»
+- No [poi type] detected at this location. «bundle.js · line 3606»
+- [poi type] already investigated. «bundle.js · line 3612»
+- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3618»
+- Approaching [name]... «bundle.js · line 3622»
 
 ### THE LIGHTHOUSE «LateGamePOIs.js · THE_LIGHTHOUSE»
 _Only from sector 4._

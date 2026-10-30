@@ -36,7 +36,8 @@
      discs() → [[x, y, r]]  CSS px: the world in the glass and the people on the bridge (words keep off them)
      noteUp() → bool        a person's note is up (the voice steps back meanwhile)
    Listens: 'dive:start' { id }  'dive:cancel'  'stop:open' { id, dived }  'stop:refresh'  'dive:back'  'trip:down' { ids }
-            'trip:back'  'flow:go' { id } (bakes ahead)  'hidden'
+            'trip:back'  'flow:go' { id } (bakes ahead)  'hidden'  'hull:hit' { deck } (NSOrbit: the bridge jolts and the lamps dip,
+            HIT; reduced motion: one dip only)
    Emits:   'dive:plated' { dir }  'stop:shown' { id }  'stop:hidden' { id }  'stop:pick' { ids }
    Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id), .scanDue()
    Anchors (CSS px, while open): 'stop:person:<id>', 'stop:aura', 'stop:glass', 'stop:site'
@@ -58,6 +59,9 @@
     const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, READ_MS = 250, GATHER_LEAD = 2600, PROPOSE_AFTER = 450, CLICK_GAP = 300;
     const SETTLE_HOLD_MS = 1400;                                          // settling ends the journey: the key is held, not clicked
     const SWEEP_MS = 1750;                                                // Scan: the glass sweeps the world's face once, then the finds show
+    // the hull hit (review fix, 2026-10-30: the strike was only told): the bridge jolts (up to `shake` art px, easing out over
+    // shakeMs) and the lamps dip twice (ms from the strike, the room under ink at `dark`), as A.U.R.A. says it
+    const HIT = { shake: 4, shakeMs: 520, dips: [[0, 120], [210, 300]], dark: 0.55 };
     const CP = window.NSCopy || null;                                     // the fall through the gap and the copy of Earth (stop/Copy.js)
 
     // ── the stop's own state (none of it is game state) ──
@@ -327,7 +331,21 @@
         }
         g.putImageData(img, 0, 0); return cv;
     }
+    let hitAt = -1e9;                                                     // when the hull hit came ('hull:hit'), shell ms
+    const isReduced = () => { const J = window.Juice; try { return !!(J && typeof J.reduced === 'function' && J.reduced()); } catch (err) { return false; } };
+    /** The strike: the lamps dip (here, under the people) and the bridge jolts (hitShake, where the bridge is drawn). */
+    function hitDip(c, t) {
+        const age = t - hitAt;
+        if (HIT.dips.some(([a, b], i) => age >= a && age < b && (i === 0 || !isReduced()))) { c.fillStyle = `rgba(5,7,10,${HIT.dark})`; c.fillRect(0, 0, SW, SH); }
+    }
+    function hitShake(t) {
+        const age = t - hitAt;
+        if (age < 0 || age >= HIT.shakeMs || isReduced()) return [0, 0];
+        const k = HIT.shake * (1 - age / HIT.shakeMs) ** 2, tick = Math.floor(age / 40);
+        return [Math.round((P.hash(tick & 255, 7, 21) - 0.5) * 2 * k), Math.round((P.hash(tick & 255, 9, 21) - 0.5) * 1.2 * k)];
+    }
     function drawDamage(c, t) {
+        hitDip(c, t);
         const d = S.decks;
         if (!d) return;
         if (!washes) washes = { bridge: wash(0, B.H), lab: wash(B.H, SH), dark: null };
@@ -561,7 +579,8 @@
         if (j < STEPS) { actx.globalCompositeOperation = 'destination-in'; actx.drawImage(mask(j - 1), 0, 0); actx.globalCompositeOperation = 'source-over'; }
         bctx.clearRect(0, 0, geo.CW, geo.CH);
         drawMargins(t, j);
-        bctx.drawImage(art, geo.ox + (cv ? cv.shake[0] : 0), geo.oy + (cv ? cv.shake[1] : 0));
+        const hs = hitShake(t);                                           // the hull hit's jolt (0, 0 most frames)
+        bctx.drawImage(art, geo.ox + (cv ? cv.shake[0] : 0) + hs[0], geo.oy + (cv ? cv.shake[1] : 0) + hs[1]);
         vis(bridgeC, true);
         if (words) W.apply(t, words); else W.hide();
         repoint();
@@ -780,6 +799,7 @@
         NS.bus.on('hidden', () => { if (S.open || S.dive) close(false); });
         NS.bus.on('stop:close', () => { if (S.open || S.dive) close(false); });
         NS.bus.on('stop:skim', () => GL.skim(t0()));
+        NS.bus.on('hull:hit', () => { hitAt = t0(); });
         new MutationObserver(guardCards).observe(document.body, { childList: true });
         D.later(D.pic(1, 1, [() => mask(0), () => { A.deck(1); }]));
     }

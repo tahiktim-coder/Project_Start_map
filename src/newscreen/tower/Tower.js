@@ -20,9 +20,10 @@
    - Red decks from NewScreen.game.decks(); engineering red browns the ship out every 2.9 s.
    - Clicks in travel (BUILD_B §8): a person → flow.person(id); Mira or her bench while a fix waits → flow.bench(); a red
      deck → its choices as a few words in #ns-ship-words, away from the pointer, deaf for 400 ms → flow.deckChoose(key, i).
-     Pointing at a red deck names it ("Engine room, broken" over "Fix, patch or live with it"), and between the two what it
-     costs while it stays broken, as plain chips ("jumps cost double", "repairs cost more": NSOrbit.deckCost, the game's own
-     rules); the first time a deck goes red, A.U.R.A. says once, in travel, that it can be clicked.
+     Pointing at a red deck names it ("Engine room, broken" over "Fix, patch or live with it"); the first time a deck goes
+     red, A.U.R.A. says once, in travel, that it can be clicked. What a red deck costs while it stays broken is always on it
+     (review fix, 2026-10-30: it showed only while pointed at): plain red chips at the hull's inner edge, under the deck's own readout
+     ("jumps cost double" over "repairs cost more": NSOrbit.deckCost, the game's own rules), shown as the stock is (placeCosts).
    - A new sector: closed until 'opening:done' (5 s at most), then it slides in (1.2 s).
    - The jump into sector 3 stalls (throw/Stall.js, read through window.NSStall.view() each frame): the decks go dark one by
      one, one red lamp left on each (throw/StallArt.js paints them), their screens and lamps dead; the reactor goes cold and
@@ -115,7 +116,7 @@
         E: null, Eshown: 100, coreSet: null, flood: null,
         real: { crew: {}, decks: {}, engDown: false, datable: false }, readAt: -1e9, dirty: true,
         tendX: null, hover: null, chips: null, words: null, quality: 'high', scaleN: 0, scaleMs: 0,
-        tag: null, toldRed: new Set(), tellRed: null, stock: null,
+        tag: null, toldRed: new Set(), tellRed: null, stock: null, costs: {},
         shake: null, tremor: null, spd: 0, spdIn: 0, spdAt: -1e9, braceT: null, flick: {}, burnT0: null, newRed: new Set(), readOnce: false,
         routine: { off: 0, held: null },   // the crew's day runs at t + off; held: kept at that moment (supper)
         stall: null,                       // the jump that stalls: NSStall.view() this frame (throw/Stall.js), or null
@@ -155,7 +156,9 @@
         DECKS.forEach(k => { if (decks[k] === 'red' && was[k] !== 'red' && GAME_KEY[k] && !V.toldRed.has(k)) { V.toldRed.add(k); V.tellRed = k; } });
         if (V.readOnce) DECKS.forEach(k => { if (decks[k] === 'red' && was[k] !== 'red') V.newRed.add(k); else if (decks[k] !== 'red') V.newRed.delete(k); });   // felt when first seen
         if (call('state', null)) V.readOnce = true;                           // a deck red from before the first real read is no news
-        V.real = { crew, decks, engDown: decks.engineering === 'red', datable: datable() };
+        const costs = {};                                                     // what each red deck costs, as its chips say it (placeCosts)
+        DECKS.forEach(k => { if (decks[k] === 'red' && GAME_KEY[k]) costs[k] = costFor(GAME_KEY[k]).join('\n'); });   // one chip a line
+        V.real = { crew, decks, engDown: decks.engineering === 'red', datable: datable(), costs };
         V.readAt = t; V.dirty = false;
     }
     /** A deck just went red: A.U.R.A. says once, in travel, where to click (the voice, not the log). */
@@ -578,27 +581,19 @@
         flowCall('deckChoose', key, i);
     }
     function hideChips() { if (V.chips) { V.chips.el.remove(); V.chips = null; } }
-    /** Pointing at a red deck: its name, what it costs while it stays broken (costFor: plain chips) and what can be done,
-        beside it (the same place the choices will take). At supper, pointing at someone: who goes without (who: { verb,
-        note } from NSSupper.tagFor), beside the galley. */
+    /** Pointing at a red deck: its name and what can be done, beside it (the same place the choices will take; what it costs
+        is on the deck itself, placeCosts). At supper, pointing at someone: who goes without (who: { verb, note } from
+        NSSupper.tagFor), beside the galley. */
     function showTag(deck, e, who) {
         const layer = wordsLayer();
         if (!layer) return;
-        const cost = who ? [] : costFor(GAME_KEY[deck]);
-        const key = who ? 'who:' + who.verb : deck + ':' + cost.join('|');                    // a cost that changes shows at once
+        const key = who ? 'who:' + who.verb : deck;
         if (!V.tag || V.tag.key !== key) {
             hideTag();
             const el = document.createElement('div'), b = document.createElement('span'), n = document.createElement('span');
             el.className = 'nsk-chips nsk-tag' + (who ? ' is-who' : ''); b.className = 'nsk-verb'; n.className = 'nsk-note';
             b.textContent = who ? who.verb : `${DECK_WORD[deck] || 'This deck'}, broken`; n.textContent = who ? who.note : 'Fix, patch or live with it';
-            el.append(b);
-            if (cost.length) {
-                const row = document.createElement('span');
-                row.className = 'nsk-cost';
-                cost.forEach(text => { const i = document.createElement('i'); i.textContent = text; row.append(i); });
-                el.append(row);
-            }
-            el.append(n); layer.append(el);
+            el.append(b, n); layer.append(el);
             V.tag = { el, deck, key, who: !!who };
             void el.offsetWidth; el.classList.add('is-in');
         }
@@ -638,8 +633,8 @@
 #ns-ship-words .nsk-choice:focus-visible { outline: none; }
 #ns-ship-words .nsk-tag { display: grid; gap: 4px; pointer-events: none; }
 #ns-ship-words .nsk-tag .nsk-verb { color: #ff7a6a; }
-#ns-ship-words .nsk-cost { display: flex; flex-wrap: wrap; gap: 2px 12px; }
-#ns-ship-words .nsk-cost i { font: 400 max(14px, calc(var(--fs-who, 15px) * 0.95))/1.2 var(--f-num, 'IBM Plex Mono', monospace); font-style: normal; color: #ff7a6a; white-space: nowrap; }
+#ns-ship-words .nsk-cost { position: absolute; left: 0; top: 0; white-space: pre; text-align: right; pointer-events: none; opacity: 0; transition: opacity 400ms var(--ease, ease); font: 400 calc(12px + 1px * var(--t, 1))/1.3 var(--f-num, 'IBM Plex Mono', monospace); color: #ff7a6a; text-shadow: 0 0 6px rgba(255, 90, 70, 0.45), 0 1px 0 #05070a, 0 0 4px #05070a; }
+#ns-ship-words .nsk-cost.on { opacity: 1; }
 #ns-ship-words .nsk-tag.is-who { grid-auto-flow: column; justify-content: start; align-items: baseline; gap: 8px; }
 #ns-ship-words .nsk-tag.is-who .nsk-verb { color: var(--warm-br, #ffc27a); }
 @media (prefers-reduced-motion: reduce) { #ns-ship-words .nsk-chips, #ns-ship-words .nsk-verb { transition: none; } }`;
@@ -734,8 +729,28 @@
     /** The tower's own readouts, beside their rooms (only in travel, the tower in, not in the dark of a jump). */
     function placeStock(show) {
         if (!V.stock) { const layer = wordsLayer(); if (!layer) return; V.stock = stockBoard(layer); }
-        if (!show) { V.stock.hide(); return; }
+        if (!show) { V.stock.hide(); placeCosts(false); return; }
         STOCK_KEYS.forEach(k => { const a = STOCK_AT[k], [x, y] = toCss(a.x, A.deckTop(a.deck) + a.y); V.stock.put(k, x, y, a.align); });
+        placeCosts(show);
+    }
+    // What a red deck costs, always on it: plain red chips, one a line (V.real.costs, NSOrbit.deckCost's words), right-aligned at
+    // the hull's inner edge under the deck's own readout (tower px from the deck's top), shown when the stock is
+    const COST_AT = { x: 638, y: 82 };
+    function placeCosts(show) {
+        const layer = wordsLayer();
+        if (!layer) return;
+        const costs = (V.real && V.real.costs) || {};
+        DECKS.forEach((deck, i) => {
+            let it = V.costs[deck];
+            const text = show ? costs[deck] || '' : '';
+            if (!text) { if (it) it.el.classList.remove('on'); return; }
+            if (!it || !it.el.isConnected) { const el = document.createElement('div'); el.className = 'nsk-cost'; layer.append(el); it = V.costs[deck] = { el, text: '', pos: '', w: 0 }; }
+            if (it.text !== text) { it.el.textContent = text; it.text = text; it.w = 0; }
+            if (!it.w) it.w = it.el.offsetWidth;
+            const [x, y] = toCss(COST_AT.x, A.deckTop(i) + COST_AT.y), pos = `translate(${Math.round(x - it.w)}px, ${Math.round(y)}px)`;
+            if (it.pos !== pos) { it.el.style.transform = pos; it.pos = pos; }
+            it.el.classList.add('on');
+        });
     }
     window.NSStock = Object.freeze({ KEYS: STOCK_KEYS, tick: stockTick, board: stockBoard });
 

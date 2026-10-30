@@ -240,30 +240,51 @@
     }
     const lightVector = (fx, fy, lx, ly, depth) => norm3(lx - fx, ly - fy, depth);
 
-    /** A small station: a hub, a ring, two panel arms. Lit from the right. Returns where its one window is. */
+    /** A station, as the dock's film cut shows it (src/newscreen/dock/DockExterior.js; review fix 2026-10-30: the glass drew
+        a different station, a cylinder with a flat ring and two panel wings): a tilted torus round a sphere hub, four spokes
+        with panel boards along them, a short mast on the hub. Lit from the right. Within 26 s of (cx, cy). Returns where its
+        one window is (on the near side of the ring). STATION: in s; the ring's half-width rx and half-height ry (its tilt),
+        the tube's radius, the hub's, the panel boards (along each spoke from a0 to a1 of the way out, from b0 to b1 either
+        side of it), the seams round the tube, the light. */
+    const STATION = { rx: 22, ry: 10.5, tube: 3.2, hub: 4.6, a0: 0.26, a1: 0.84, b0: 0.7, b1: 3.1, spoke: 0.6, seams: 18, L: norm3(0.72, -0.48, 0.5) };
     function drawStation(p, cx, cy, s, seed, dim = 1, ramps) {
-        const HULL = (ramps && ramps.hull) || RP.HULL, PANEL = (ramps && ramps.panel) || RP.UI;
-        for (const side of [-1, 1]) {
-            p.region(Math.min(cx + side * 4 * s, cx + side * 26 * s), cy - 0.5 * s, Math.max(cx + side * 4 * s, cx + side * 26 * s), cy + 0.5 * s + 1, (x, y) => p.solid(x, y, HULL, 0.42 * dim));
-            p.region(Math.min(cx + side * 9 * s, cx + side * 24 * s), cy - 7 * s, Math.max(cx + side * 9 * s, cx + side * 24 * s), cy + 7 * s, (x, y) => {
-                if (Math.abs(y + 0.5 - cy) < 1.6 * s) return;
-                const gx = (x - cx) / (2.5 * s), gy = (y - cy) / (2.2 * s), isGrid = Math.abs(gx - Math.round(gx)) < 0.12 || Math.abs(gy - Math.round(gy)) < 0.14;
-                p.solid(x, y, PANEL, (isGrid ? 0.22 : 0.3 + 0.18 * (side > 0 ? 1 : 0) + 0.1 * fbm(x / 3, y / 3, seed, 2)) * dim);
+        const HULL = (ramps && ramps.hull) || RP.HULL, PANEL = (ramps && ramps.panel) || RP.UI, K = STATION, L = K.L;
+        const rx = K.rx * s, ry = K.ry * s, tilt = ry / rx, tr = K.tube * s, hr = K.hub * s, TAU = Math.PI * 2;
+        const th0 = 0.35 + (seed % 7) * 0.21, spokes = [0, 1, 2, 3].map(k => th0 + k * Math.PI / 2);
+        const lit = (nx, ny, nz) => Math.max(0, nx * L[0] + ny * L[1] + nz * L[2]);
+        /** The tube, one half: front (the near side, lower on the glass) or back. */
+        const ring = front => p.region(cx - rx - tr - 1, cy - ry - tr - 1, cx + rx + tr + 1, cy + ry + tr + 1, (x, y) => {
+            const u = x + 0.5 - cx, w = y + 0.5 - cy, phi = Math.atan2(w / tilt, u), sn = Math.sin(phi);
+            if ((sn > 0) !== front) return;
+            const dx = u - rx * Math.cos(phi), dy = w - ry * sn, d = Math.hypot(dx, dy);
+            if (d >= tr) return;
+            const nx = dx / tr, ny = dy / tr, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+            const seam = Math.abs(((phi / TAU * K.seams) % 1 + 1) % 1 - 0.5) > 0.46 ? -0.12 : 0;
+            p.solid(x, y, HULL, (0.14 + 0.62 * lit(nx, ny, nz) + (d > tr - 1.2 ? -0.06 : 0) + seam + 0.06 * (fbm(x / 4, y / 4, seed, 2) - 0.5)) * dim);
+        });
+        /** A spoke and its panel boards, in the ring's plane (worked back from the glass: u across, v into the glass). */
+        const arm = th => {
+            const c = Math.cos(th), sn = Math.sin(th), ex = rx * c, ey = ry * sn, len2 = ex * ex + ey * ey;
+            p.region(cx + Math.min(0, ex) - 3 * s, cy + Math.min(0, ey) - 3 * s, cx + Math.max(0, ex) + 3 * s, cy + Math.max(0, ey) + 3 * s, (x, y) => {
+                const u = x + 0.5 - cx, w = y + 0.5 - cy, k = clamp01((u * ex + w * ey) / len2);
+                if (Math.hypot(u - k * ex, w - k * ey) < K.spoke * s) { p.solid(x, y, HULL, (0.3 + 0.24 * lit(-sn, c * tilt, 0.4)) * dim); return; }   // the spoke (a strut, its width on the glass)
+                const v = w / tilt, a = (u * c + v * sn) / rx, b = (-u * sn + v * c) / s, ab = Math.abs(b);
+                if (a < K.a0 || a > K.a1 || ab < K.b0 || ab > K.b1) return;
+                const ga = (a - K.a0) * rx / (2.4 * s), gb = (ab - K.b0) / 0.6, isGrid = Math.abs(ga - Math.round(ga)) < 0.1 || Math.abs(gb - Math.round(gb)) < 0.12;
+                p.solid(x, y, PANEL, (isGrid ? 0.22 : 0.36 + 0.18 * (b > 0 ? 1 : 0) + 0.1 * fbm(x / 3, y / 3, seed, 2)) * dim);
             });
-        }
-        const ring = (front) => p.ellipse(cx, cy, 15 * s, 5 * s, (x, y, q) => {
-            if (q < 0.62) return;
-            const isFront = y + 0.5 > cy; if (isFront !== front) return;
-            p.solid(x, y, HULL, (0.32 + 0.4 * clamp01((x - cx) / (15 * s) * 0.5 + 0.5) + (q > 0.9 ? -0.12 : 0)) * dim);
-        });
+        };
         ring(false);
-        p.region(cx - 3.4 * s, cy - 11 * s, cx + 3.4 * s, cy + 11 * s, (x, y) => {
-            const nx = (x + 0.5 - cx) / (3.4 * s), ends = Math.abs(y + 0.5 - cy) / (11 * s);
-            if (ends > 0.9 && Math.abs(nx) > 0.6) return;
-            p.solid(x, y, HULL, (0.3 + 0.42 * (nx * 0.5 + 0.5) + (Math.abs((y - cy) % (4 * s)) < 0.6 ? -0.15 : 0)) * dim);
+        spokes.filter(th => Math.sin(th) <= 0).forEach(arm);
+        p.line(cx - 0.4 * s, cy - hr, cx - 1.6 * s, cy - hr - 3.6 * s, (x, y) => p.solid(x, y, HULL, 0.5 * dim));   // the mast
+        p.ellipse(cx, cy, hr, hr, (x, y) => {
+            const nx = (x + 0.5 - cx) / hr, ny = (y + 0.5 - cy) / hr, nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
+            p.solid(x, y, HULL, (0.16 + 0.66 * lit(nx, ny, nz) + (Math.abs(ny) < 0.09 ? -0.14 : 0)) * dim);   // its seam round the middle
         });
+        spokes.filter(th => Math.sin(th) > 0).forEach(arm);
         ring(true);
-        return [Math.round(cx + 1.2 * s), Math.round(cy - 4 * s)];
+        const wa = 1.05;                                                                     // the window: on the near side, lit side
+        return [Math.round(cx + (rx + tr * 0.4) * Math.cos(wa)), Math.round(cy + (ry + tr * 0.5) * Math.sin(wa))];
     }
     /** A faint contact: a soft dithered smudge of cold light that brightens and fades in slow steps. No ring, no reticle. */
     function contactBlip(f, x, y, t, strong) {

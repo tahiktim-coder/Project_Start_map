@@ -123,7 +123,8 @@ team word; A.U.R.A. says once "We need two people fit to go, Commander." No prob
   (2026-10-30) The patching game is gone from the new look: all three now call `App.hullHit(away)`, the hull hit. One
   deck (the hold, the engine room or the quarters, never one that would end the run) is sealed, nobody is hurt, and
   A.U.R.A. and the one whose deck it is say a line each on the bridge (the trip's card and the dive out wait for them).
-  The broken deck shows its cost on the tower (`NSOrbit.deckCost`: plain chips in its tag and under "Live with it").
+  At the strike the bridge jolts and its lamps dip. The broken deck shows its cost on the tower (`NSOrbit.deckCost`: plain
+  chips always on the red deck, and under "Live with it").
   The old look keeps Breach.js. The docking is flown in the new look too (Bring Her In, `App.flyDock`, src/newscreen/dock/).
 - **The trip's end** (review fix): `NSOrbit.tripOver()` from the real end points (the end of `resolveEvaOutcome`, the
   paradise card, `offerDiscDating` → `fixIn` for the wreck); the shuttle comes home 0.6 s after nothing blocks and no card

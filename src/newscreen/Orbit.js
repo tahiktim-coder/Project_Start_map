@@ -57,15 +57,16 @@
      breakPatched(state)           every patched deck breaks again (a crisis aboard, the sector jump)
      deckChoices(state, deck) → [{ key: 'fix' | 'patch' | 'live', words, note }]   deck: the tower's name (hold = cargo); the
                                    note under "Live with it" is what living with it costs (deckCost's words)
-     deckCost(state, deck) → [{ icon: 'cost', text, tone: 'loss' }]   what a broken deck costs in the game's rules (DECK_COST),
-                                   a few words each; [] for a working deck or one whose loss costs nothing (the lab)
+     deckCost(state, deck) → [{ icon: 'cost', text, tone: 'loss' }]   what a broken deck costs in the game's rules (DECK_COST,
+                                   and DECK_COST_IF while something aboard needs it), a few words each; [] for a working deck
+                                   or one whose loss costs nothing (the lab). The tower shows them on the red deck
      deckChoose(app, deck, i | key) → bool
      TELL                          { key: line }  what A.U.R.A. says once a run when an action first shows (Stop.js), and 'leave'
      debug() → { trip, call, breach, held }
    Crew moments (App.queueModal('crew', ...), the "A MOMENT WITH ..." cards bundle rolls 2 s after a warp) are held here
    while we arrive, sit on the bridge or pick the team: they open in travel, once it is calm (the view up and no card for
    2.5 s, no click for 1.2 s), under ChoiceGuard's 400 ms hold. One waits at a time (a later roll is let go). A moment whose person died meanwhile is dropped.
-   Bus (NewScreen.bus): emits 'trip:down' { ids, aboard }, 'trip:back' { ids, failed? }, 'stop:skim' { id }.
+   Bus (NewScreen.bus): emits 'trip:down' { ids, aboard }, 'trip:back' { ids, failed? }, 'stop:skim' { id }, 'hull:hit' { deck | null }.
 */
 (function () {
     'use strict';
@@ -352,6 +353,7 @@
         pendingBreach = null;
         let hit = null;
         try { hit = app.hullHit(away || []); } catch (err) { console.error('NSOrbit: the hull hit failed', err); return Promise.resolve(); }
+        emit('hull:hit', { deck: hit ? hit.deck : null });                                  // the bridge feels it (Stop.js: a jolt, the lamps dip)
         const said = sayLines(app.state, (hit && hit.lines) || []).catch(err => console.error('NSOrbit: the hull hit lines failed', err));
         return wait ? Promise.race([said, new Promise(r => setTimeout(r, HIT_WAIT_MS))]) : Promise.resolve();
     }
@@ -662,7 +664,7 @@
         if (n._isWrongPlace) return Promise.resolve({ ok: false });
         if (call || n._nsCall) { dropCall(s); log(s, LINES.unanswered); }
         if (!breachDue(s, n)) return Promise.resolve({ ok: true });
-        return playBreach(app, [], true).then(() => ({ ok: true }));                         // the hull hit due here, nobody sent: it comes as we leave
+        return playBreach(app, [], true).then(() => (trip ? { ok: false, say: LINES.away } : { ok: true }));   // the hull hit due here, nobody sent: it comes as we leave (asked again after its lines)
     }
 
     // ── the disc: Mira's star fix ──
@@ -696,12 +698,20 @@
         engineering: ['jumps cost double', 'repairs cost more'], // DRAFT: App.sectorJumpCost ×2; GameState.repairCostOf +50 %
         lab: [],                                                 // nothing in the new look
     });
-    /** A broken deck's cost as chips ({ icon, text, tone }, the glass tags' format), shown where the player meets it: the
-        tower's tag on the red deck and the note under "Live with it". [] for a working deck. */
+    // and what it costs only while something aboard needs that deck (GameState.passTime): a culture in the hold stops making
+    // rations; someone shut down (CATATONIC) only comes back while the quarters work. DRAFT words (2026-10-30)
+    const CULTURES = ['FUNGUS_CULTURE', 'symbiotic_culture'];
+    const DECK_COST_IF = Object.freeze({
+        cargo: s => ((s.cargo || []).some(item => item && CULTURES.includes(item.id)) ? ['the culture stops growing'] : []),   // DRAFT
+        quarters: s => (s.crew || []).filter(c => alive(c) && c.trait === 'CATATONIC').map(c => `no recovery for ${c.name}`),   // DRAFT
+    });
+    /** A broken deck's cost as chips ({ icon, text, tone }, the glass tags' format), shown where the player meets it: on the
+        red deck in the tower (always, and under "Live with it"). [] for a working deck. */
     function deckCost(state, deck) {
         const o = deckOf(state, deck);
         if (!o || !o.d || o.d.status !== 'DAMAGED') return [];
-        return (DECK_COST[o.key] || []).map(text => chip('cost', text, 'loss'));
+        const extra = DECK_COST_IF[o.key] ? DECK_COST_IF[o.key](state) : [];
+        return (DECK_COST[o.key] || []).concat(extra).map(text => chip('cost', text, 'loss'));
     }
     function deckChoose(app, deck, which) {
         const s = app && app.state, o = deckOf(s, deck), list = deckChoices(s, deck);

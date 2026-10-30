@@ -737,7 +737,8 @@ function councilMd() {
     b.push(...textSection(3, 'Breakdowns', bm('triggerBreakdown'), 'When someone reaches stress 3. The commander breaking is game over.'));   // Vance's gun scene was cut (2026-10-07): his breakdown is in triggerBreakdown
     b.push(...textSection(3, 'Bringing someone back', bm('handleRevivalAction'), 'Using Pulsing Spores or an Ancient Neural Link from the cargo hold.'));
     b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('eatOnJump'), 'The crew eats one ration on each sector jump.'), ...textSection(3, 'Deck damage', bm('damageDeck'), 'The first time is a tutorial.'));
-    b.push(...textSection(3, 'What a broken deck costs (the new look)', block('src/newscreen/Orbit.js', /^\s*const DECK_COST = /m, 'DECK_COST'), 'Chips on a red deck in the tower when you point at it, and under "Live with it". The lab costs nothing there.'));
+    b.push(...textSection(3, 'What a broken deck costs (the new look)', block('src/newscreen/Orbit.js', /^\s*const DECK_COST = /m, 'DECK_COST'), 'Chips always on a red deck in the tower, and under "Live with it". The lab costs nothing there.'));
+    b.push(...textSection(3, 'And only while something aboard needs that deck', block('src/newscreen/Orbit.js', /^\s*const DECK_COST_IF = /m, 'DECK_COST_IF'), 'A culture in the hold; someone shut down (catatonic) in the quarters.'));
     b.push(...textSection(3, 'What the data adds up to', bm('addColonyKnowledge'), 'At 1, 3 and 5 data.'));
     b.push('## Flying', '');
     [['handleWarp', 'Warping to a planet'], ['handleSectorJump', 'Jumping to the next sector']].forEach(([n, title]) => { const p = bm(n); b.push(...textSection(3, title, p, 'The lines for the light are in sector-6.md.', outside(...lightRanges(p)))); });

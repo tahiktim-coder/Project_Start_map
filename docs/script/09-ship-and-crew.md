@@ -116,24 +116,24 @@ _When she trusts you NEUTRAL or less: a 30% chance on entering orbit. The follow
 ### The air vent card «bundle.js · showAuraVentModal»
 _When she turns hostile. The third time is game over._
 
-- She will empty the whole ship. Everyone dies. «bundle.js · line 3966»
-- One of the crew will die before the air comes back. «bundle.js · line 3967»
-- One of the crew will be hurt before the air comes back. «bundle.js · line 3968»
-- Jaxon: "I can shut her out!" «bundle.js · line 3970»
-- **desc** — He cuts her off from the air system. A.U.R.A. goes back to neutral. «bundle.js · line 3970»
-- Plug in the Tech Fragment «bundle.js · line 3971»
-- **desc** — Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment. «bundle.js · line 3971»
-- Do nothing and wait «bundle.js · line 3972»
-- **kicker** — AIR ALERT — TIME NUMBER [n] «bundle.js · line 3976»
-- **kicker** — AIR ALERT «bundle.js · line 3976»
-- **title** — A.U.R.A. is letting the air out «bundle.js · line 3976»
-- **context** — The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself. «bundle.js · line 3977»
-- She is not giving warnings any more. «bundle.js · line 3978»
-- **title** — A.U.R.A. MUTINY «bundle.js · line 3998»
-- **message** — A.U.R.A. opened the vents on every deck. Her last log entry reads: "All decks vented, Commander. By my figures, the mission does better without a commander. I have logged my reasons." «bundle.js · line 3999»
-- A.U.R.A. atmospheric venting «bundle.js · line 4009»
-- ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time. «bundle.js · line 4011»
-- [name] suffered oxygen deprivation during the vent. Status: INJURED. «bundle.js · line 4020»
+- She will empty the whole ship. Everyone dies. «bundle.js · line 3968»
+- One of the crew will die before the air comes back. «bundle.js · line 3969»
+- One of the crew will be hurt before the air comes back. «bundle.js · line 3970»
+- Jaxon: "I can shut her out!" «bundle.js · line 3972»
+- **desc** — He cuts her off from the air system. A.U.R.A. goes back to neutral. «bundle.js · line 3972»
+- Plug in the Tech Fragment «bundle.js · line 3973»
+- **desc** — Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment. «bundle.js · line 3973»
+- Do nothing and wait «bundle.js · line 3974»
+- **kicker** — AIR ALERT — TIME NUMBER [n] «bundle.js · line 3978»
+- **kicker** — AIR ALERT «bundle.js · line 3978»
+- **title** — A.U.R.A. is letting the air out «bundle.js · line 3978»
+- **context** — The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself. «bundle.js · line 3979»
+- She is not giving warnings any more. «bundle.js · line 3980»
+- **title** — A.U.R.A. MUTINY «bundle.js · line 4000»
+- **message** — A.U.R.A. opened the vents on every deck. Her last log entry reads: "All decks vented, Commander. By my figures, the mission does better without a commander. I have logged my reasons." «bundle.js · line 4001»
+- A.U.R.A. atmospheric venting «bundle.js · line 4011»
+- ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time. «bundle.js · line 4013»
+- [name] suffered oxygen deprivation during the vent. Status: INJURED. «bundle.js · line 4022»
 
 ### The data chip «Items.js · TECH_FRAGMENT»
 _A Tech Fragment used from the cargo hold._
@@ -199,17 +199,17 @@ _When someone reaches stress 3. The commander breaking is game over._
 ### Bringing someone back «bundle.js · handleRevivalAction»
 _Using Pulsing Spores or an Ancient Neural Link from the cargo hold._
 
-- **title** — INVALID TARGET «bundle.js · line 5519»
-- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 5520»
-- CANCEL «bundle.js · line 5521»
-- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 5531»
-- Select subject for integration with [name]. «bundle.js · line 5533»
-- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 5534»
-- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 5566»
-- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 5567»
-- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 5570»
-- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 5571»
-- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 5578»
+- **title** — INVALID TARGET «bundle.js · line 5521»
+- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 5522»
+- CANCEL «bundle.js · line 5523»
+- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 5533»
+- Select subject for integration with [name]. «bundle.js · line 5535»
+- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 5536»
+- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 5568»
+- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 5569»
+- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 5572»
+- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 5573»
+- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 5580»
 
 ## Food, damage and data
 
@@ -232,14 +232,20 @@ _The first time is a tutorial._
 - A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage." «bundle.js · line 938»
 
 ### What a broken deck costs (the new look) «Orbit.js · DECK_COST»
-_Chips on a red deck in the tower when you point at it, and under "Live with it". The lab costs nothing there._
+_Chips always on a red deck in the tower, and under "Live with it". The lab costs nothing there._
 
-- **bridge** — warps cost more «Orbit.js · line 693»
-- **bridge** — no far scans «Orbit.js · line 693»
-- **quarters** — no rest at supper «Orbit.js · line 694»
-- **cargo** — the hold takes half «Orbit.js · line 695»
-- **engineering** — jumps cost double «Orbit.js · line 696»
-- **engineering** — repairs cost more «Orbit.js · line 696»
+- **bridge** — warps cost more «Orbit.js · line 695»
+- **bridge** — no far scans «Orbit.js · line 695»
+- **quarters** — no rest at supper «Orbit.js · line 696»
+- **cargo** — the hold takes half «Orbit.js · line 697»
+- **engineering** — jumps cost double «Orbit.js · line 698»
+- **engineering** — repairs cost more «Orbit.js · line 698»
+
+### And only while something aboard needs that deck «Orbit.js · DECK_COST_IF»
+_A culture in the hold; someone shut down (catatonic) in the quarters._
+
+- the culture stops growing «Orbit.js · line 705»
+- no recovery for [name] «Orbit.js · line 706»
 
 ### What the data adds up to «bundle.js · addColonyKnowledge»
 _At 1, 3 and 5 data._
@@ -418,8 +424,8 @@ _Every sector jump except the one into sector 3 (that one stalls: sector-3.md), 
 ### Stranded «bundle.js · checkStranded»
 _No energy and no way out._
 
-- **title** — STRANDED «bundle.js · line 6205»
-- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 6206»
+- **title** — STRANDED «bundle.js · line 6207»
+- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 6208»
 
 ### The game-over screen «EndScreens.js · gameOver»
 

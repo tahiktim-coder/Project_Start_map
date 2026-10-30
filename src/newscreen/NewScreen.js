@@ -40,7 +40,8 @@
        lossOf(id, picked) → the loss alone ('' none);  propose() → { ids, why } the two the crew put forward for this world
        teamRisk(ids) → a plain landing's danger going in (%), null where a site's own story decides
        teamOdds(ids) → { hurt, death, deadly, oneIn } the same trip's odds, its death chance too (GO DOWN), or null
-       leave() → Promise<bool>  Leave orbit (the dive back out, or refused with a line)
+       leave() → Promise<bool>  Leave orbit (the dive back out, or refused with a line); until it settles (a hull hit's two lines
+                              first: NSOrbit.beforeLeave) the bridge takes no clicks or keys, and act, aim and leave refuse
        trip() → { ids, aboard } | null   who is down now;  sign() → { kind, comes } | null   this stop's crisis sign
        scanDue() → bool       we orbit a world nobody has scanned from the bridge (Stop.js scans it as the bridge shows)
        person(id, say?)       a person in the tower clicked: their line, said beside them (not logged: saves keep 20 lines)
@@ -99,7 +100,7 @@
     let app = null, root = null, shown = false, frameId = null, last = null, inited = false;
     let pendingShown = null, carryFirst = false, orbitFrom = null, seenIds = new Set();
     let inFrame = false, frameBlocked = false, frameN = 0, jumping = false, hintGiven = false;
-    let mode = 'travel', stopId = null, watch = null;
+    let mode = 'travel', stopId = null, watch = null, leaving = false;                   // leaving: flow.leave() waits on beforeLeave (the bridge holds)
     let stopShownAt = -1e9, travelShownAt = -1e9, lastDown = -1e9, stopHoldMs = HOLD_STOP_MS;
     const theApp = () => app || window.app || null;
     const st = () => { const a = theApp(); return (a && a.state) || null; };
@@ -241,6 +242,7 @@
     function route(type, e) {
         if (!shown || !G.W) return;
         if (blocked()) { root.classList.remove('is-pointing'); return; }
+        if (leaving && mode === 'stop') { tell(mods.stop, 'leave', e, e.clientX, e.clientY); root.classList.remove('is-pointing'); return; }   // leaving orbit: nothing else is chosen meanwhile
         if (mode !== 'travel') {
             const m = mode === 'wake' ? mods.wake : mods.stop, used = tell(m, type, e, e.clientX, e.clientY);
             if (type === 'move') { lastSide = m; root.classList.toggle('is-pointing', used); }
@@ -261,7 +263,7 @@
         if (tell(mods.tower, 'wheel', e, ax, ay)) e.preventDefault();
     }
     function onKey(e) {
-        if (!shown || blocked() || e.defaultPrevented) return;
+        if (!shown || blocked() || e.defaultPrevented || (leaving && mode === 'stop')) return;
         const m = mode === 'travel' ? mods.travel : mode === 'wake' ? mods.wake : mods.stop;
         let used = false;
         try { used = !!(m && m.key && m.key(e)); } catch (err) { console.error('NewScreen: key failed', err); }
@@ -369,12 +371,12 @@
             if (!F || !node || mode === 'travel') return [];
             try { return F.list(theApp(), node, ids); } catch (err) { console.error('NewScreen: the finds failed', err); return []; }
         },
-        aim(id) { const F = window.NSWorldFinds, s = st(), node = s && s.currentSystem; return !!(F && node && mode === 'stop' && !blocked() && F.aim(theApp(), node, id)); },
+        aim(id) { const F = window.NSWorldFinds, s = st(), node = s && s.currentSystem; return !!(F && node && mode === 'stop' && !blocked() && !leaving && F.aim(theApp(), node, id)); },
         // ── the stop (BUILD_B §3, §4) ──
         actions: () => (mode === 'stop' ? ask('actions', theApp()) || [] : []),
         act(key, ids) {
             const a = theApp();
-            if (!a || mode !== 'stop' || blocked() || a._isInTransit) return false;
+            if (!a || mode !== 'stop' || blocked() || a._isInTransit || leaving) return false;
             return !!ask('act', a, key, ids);
         },
         eligible: () => ask('eligible', theApp()) || [],
@@ -389,18 +391,20 @@
         sign: () => { const s = st(), n = s && s.currentSystem; return (n && n._nsCrisis) || null; },
         leave() {
             const a = theApp(), s = st(), node = s && s.currentSystem;
-            if (!a || !node || mode !== 'stop' || blocked() || a._isInTransit) return Promise.resolve(false);
+            if (!a || !node || mode !== 'stop' || blocked() || a._isInTransit || leaving) return Promise.resolve(false);
+            leaving = true;
             const r = ask('beforeLeave', a);
             return Promise.resolve(r).then(v => {
+                leaving = false;
                 if (!v || !v.ok) { if (v && v.say) speak(v.say); return false; }
                 if (v.direct || !mods.stop) { window.dispatchEvent(new Event('req-break-orbit')); return true; }   // the Structure refuses itself
-                if (mode !== 'stop' || s.currentSystem !== node) return false;
+                if (mode !== 'stop' || s.currentSystem !== node || blocked() || a._isInTransit || ask('trip')) return false;   // (asked again: the wait may have let something in)
                 stopId = node.id;
                 setMode('dive-out');
                 bus.emit('dive:back', { id: node.id });
                 arm('plated', node.id);
                 return true;
-            });
+            }, err => { leaving = false; console.error('NewScreen: leaving orbit failed', err); return false; });   // never held for good
         },
         person(id, say) {
             const s = st(), R = window.ShipRoutine;

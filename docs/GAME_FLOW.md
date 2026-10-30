@@ -130,7 +130,7 @@ Each screen lists **purpose / you decide / you can click / replaces.**
   something with a cost either way; if you don't go before the next stop, they do it their way). No "Listen" button.
 - **A red deck** (after the breach, a scrape, a surge): click it for three choices: Fix (20 salvage, done during the
   next trip by whoever stays), Patch (free, breaks worse later), Live with it (that deck's cost every leg; since 2026-10-30
-  the tower names that cost in plain chips when you point at the deck).
+  the tower shows that cost in plain chips on the deck).
 - **Only three things are announced,** one A.U.R.A. line each: a breakdown, a crisis aboard, a world you can't afford.
 - **A distress call** is a world on the lane with a red beacon; you pull in or pass it like any other.
 - **Replaces:** the modal queue of distress and crew-moment cards, REST, DeckPanel and its repair quote.
