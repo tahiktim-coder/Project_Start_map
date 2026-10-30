@@ -7,8 +7,9 @@
    for this world (NSOrbit.propose) and those two walk from the window to the hatch and stand by it, facing the window,
    each with their name and why over them; the "GO DOWN" tag stands over the hatch. A click on someone at the hatch sends
    them back to the window (a place opens: the tag says "one more"); a click on someone at the window puts them in the open
-   place, or in the place of whoever joined last. Only two fit: both go, nobody changes. A trip is never locked
-   (NSOrbit.pool): with fewer than two well the hurt come up to the hatch too, and the one left who can go goes alone.
+   place, or in the place of whoever joined last. Only two fit, both well: both go, nobody changes. A trip is never locked
+   (NSOrbit.pool): with fewer than two well the hurt come up to the window too; one goes (the crew put the well one
+   forward) and a hurt one goes beside them only if clicked to the hatch; the one left who can go goes alone.
    "GO DOWN": the two climb down the hatch, THEN the shuttle drops to where they go (a click hurries it), then the real
    game runs the trip (LanderGame, the Torch, the cards). When they are back the shuttle comes up and they climb back; if a
    find is still open, two step forward
@@ -186,8 +187,11 @@
 
     // ═══ 2. the team at the hatch: who the crew put forward, and the player's changes ═══
     const team = () => S.pick.slots.filter(Boolean);
-    /** How many go down: two, or the one left who can go (a trip is never locked: NSOrbit.pool). */
-    const need = () => Math.max(1, Math.min(2, S.lineup.length));
+    /** How many must go down: two once two in the lineup are well; else one, and a second only if the player adds them
+        (a trip is never locked, and a hurt one never has to go: NSOrbit.pool, teamSizes). */
+    const need = () => (S.lineup.filter(id => crewOf(id) === 'well').length >= 2 ? 2 : 1);
+    /** The player may change who goes: more in the lineup than the two places, or room beside the one who must go. */
+    const choosable = () => S.lineup.length > 2 || need() < Math.min(2, S.lineup.length);
     /** Standing at their place by the hatch now (their name and why show only then: words never chase a walker). */
     function arrived(id) {
         const k = S.pick.slots.indexOf(id), last = lastOf(id);
@@ -202,8 +206,8 @@
         let p = null;
         try { p = NS.flow && typeof NS.flow.propose === 'function' ? NS.flow.propose() : null; } catch (err) { console.error('NewScreen stop: the proposal failed', err); }
         if (p && p.why) S.pick.why = p.why;
-        if (S.pick.manual && S.lineup.length > 2) return;              // the player's choice stands (only two fit, or one: they go, whatever was picked)
-        const ids = S.lineup.length <= 2 ? S.lineup.slice() : (p && Array.isArray(p.ids) ? p.ids : []).filter(id => S.lineup.includes(id)).slice(0, 2);
+        if (S.pick.manual && choosable()) return;                      // the player's choice stands (only two well, or one: they go, whatever was picked)
+        const ids = !choosable() ? S.lineup.slice() : (p && Array.isArray(p.ids) ? p.ids : []).filter(id => S.lineup.includes(id)).slice(0, 2);
         if (ids.length < need()) return;
         const key = ids.slice().sort().join('+');
         if (key === S.pick.key && ids.every(id => S.pick.slots.includes(id))) return;   // the same two, both still at the hatch
@@ -215,9 +219,9 @@
         reconcile(t);
     }
     /** A click on someone fit to go: at the hatch, they step back to the window (a place opens); at the window, they take the
-        open place, or the place of whoever joined last. Only two fit: nobody changes. */
+        open place, or the place of whoever joined last. Only two well, or one: nobody changes. */
     function pickPerson(id, t) {
-        if (S.lineup.length <= 2 || !S.lineup.includes(id)) return false;
+        if (!choosable() || !S.lineup.includes(id)) return false;
         const slots = S.pick.slots.slice(), at = slots.indexOf(id);
         let order = S.pick.order.filter(q => slots.includes(q));
         if (at >= 0) { slots[at] = null; order = order.filter(q => q !== id); }
@@ -450,7 +454,11 @@
         GL.shuttle('up', t + 300, SHUTTLE_MS + 200);
         S.upEnd = t + 300 + SHUTTLE_MS + 200; S.back = {};
         crewNow = crewMap();
-        ids.forEach((id, i) => { if (crewOf(id) === 'well') { S.atWindow.add(id); S.back[id] = home + i * 700; enterTo(id, S.back[id], SPOT_X[id], 'idle', 1); } });
+        ids.forEach((id, i) => {                                         // all who came back climb in once it is home; the hurt too, if they are wanted on the bridge
+            if (crewOf(id) === 'dead') return;
+            S.back[id] = home + i * 700;
+            if (crewOf(id) === 'well') { S.atWindow.add(id); enterTo(id, S.back[id], SPOT_X[id], 'idle', 1); }
+        });
     }
     function onFlowGo(p) { const node = p && nodeOf(p.id); if (node) GL.prepare(node); D.prepare(); }
 
@@ -600,7 +608,7 @@
         const actKey = hit && hit.kind === 'act' ? hit.key : null, onLeave = !!(hit && hit.kind === 'leave'), onSettle = !!(hit && hit.kind === 'settle');
         const onFight = !!(hit && hit.kind === 'fight'), settleKey = onSettle ? hit.key || 'settle' : null;   // the copy of Earth: Fight to escape, Go down
         const find = hit && hit.kind === 'find' ? hit : null;            // a find's tag or its mark on the world
-        return { fit, weak, actKey, onLeave, onSettle, onFight, settleKey, find, on: !!actKey || onLeave || onSettle || onFight || !!find || (!!fit && S.lineup.length > 2) };
+        return { fit, weak, actKey, onLeave, onSettle, onFight, settleKey, find, on: !!actKey || onLeave || onSettle || onFight || !!find || (!!fit && choosable()) };
     }
     function pointAt(u) {
         setHot(u.actKey || (u.find ? u.find.key : null) || (u.onLeave ? 'leave' : null) || u.settleKey || (u.onFight ? 'escape' : null));

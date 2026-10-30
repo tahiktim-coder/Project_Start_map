@@ -46,7 +46,7 @@
         { key: 'rations', re: /(^|[^\d.])([+\-−])(\d+)(\s+Rations?)\b/g, ranged: /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Rations?)\b/g,
             top: s => Number(s.maxRations), full: 'Rations already full', cap: 'CARD_RATIONS_MAX' },
         { key: 'salvage', re: /(^|[^\d.])([+\-−])(\d+)(\s+Salvage)\b/g, ranged: /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Salvage)\b/g,
-            top: s => Number(s.maxSalvage), full: 'Salvage already full', cap: 'CARD_SALVAGE_MAX', newOnly: true },
+            top: s => Number(s.maxSalvage), full: 'Salvage already full', cap: 'CARD_SALVAGE_MAX', newOnly: true },   // DRAFT: "Salvage already full" (the new look)
     ];
     const stockOf = (state, key) => Math.round(Number(state[key]) || 0);
     // The new look (?new=1): no single choice gives more energy, rations or salvage than NEW_LOOK_ECONOMY's CARD_ENERGY_MAX,

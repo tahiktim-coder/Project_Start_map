@@ -200,7 +200,7 @@
         }
         function teamChips() {
             const ids = ctx.team(), out = ids.map(id => ({ text: ctx.NAMES[id], tone: 'who', color: ctx.TONE[id] }));
-            if (ids.length < need()) out.push({ icon: 'slot', text: ids.length ? 'one more' : 'two more', tone: 'open' });
+            if (ids.length < need()) out.push({ icon: 'slot', text: ids.length || need() < 2 ? 'one more' : 'two more', tone: 'open' });
             else {
                 if (ids.some(id => hurtIds().includes(id))) out.push({ icon: 'help', text: 'hurt', tone: 'high', odds: true });   // DRAFT: someone hurt goes (riskier)
                 const o = teamOdds(ids);
@@ -249,7 +249,7 @@
             try { loss = (NS.flow && typeof NS.flow.lossOf === 'function' ? NS.flow.lossOf(id, mates) : '') || ''; } catch (err) { console.error('NewScreen stop: the loss failed', err); }
             const b = q => `<b style="--c:${ctx.TONE[q]}">${ctx.NAMES[q]}</b>`;
             const verb = goesAcross() ? 'goes across' : 'goes down';             // to the wreckage in orbit nobody lands
-            const html = S.lineup.length <= 2 ? `${b(id)} ${verb}` : out ? `${b(id)} goes instead of ${b(out)}` : team.length ? `${b(id)} goes with ${b(team[0])}` : `${b(id)} ${verb}`;
+            const html = out ? `${b(id)} goes instead of ${b(out)}` : team.length ? `${b(id)} goes with ${b(team[0])}` : `${b(id)} ${verb}`;
             const text = html.replace(/<[^>]+>/g, '');
             return { html, text, loss: loss ? cap(loss) + '.' : `Nothing aboard needs ${id === 'aris' || id === 'mira' ? 'her' : 'him'} this time.`, tone };
         }

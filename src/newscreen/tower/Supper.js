@@ -9,7 +9,7 @@
    beside the tower. Two to go without: after the first pick A.U.R.A. asks for one more, and the next one offers.
    The table moment: a click on someone who already went without twice (pointing says so) has Aris say at the table that
    it would kill them (A.U.R.A. when Aris cannot), and the choice waits beside the tower: "Not yet" first (back to picking),
-   or "Share it out" when nobody else can go without; then "Go without", its note naming who dies (the cost stays on the
+   then "Share it out" too when nobody else can go without; then "Go without", its note naming who dies (the cost stays on the
    button, as a trip's "death 1 in N"; a click on the crew meanwhile does nothing). With nobody left to offer, "Share it
    out" waits beside the tower instead of "Accept"; with too few left who could go without at all, nobody is asked and it
    waits alone (GameState.serveSupper would share the food out anyway). Setting a course first keeps the offer (settle): whoever
@@ -25,7 +25,7 @@
      busy() → bool            pending, or the choice is open (NSOrbit holds crew moments meanwhile)
      tick(dt, open)           the tower's frame; open: the tower in view (travel, slid in, not dark, nothing over it)
      choosing() → bool        the choice is open: a click on a person picks them (not while the table moment waits)
-     atTable() → bool         the table moment waits ("Not yet"/"Share it out", "Go without"): Tower.js ignores clicks on people
+     atTable() → bool         the table moment waits ("Not yet", "Share it out", "Go without"): Tower.js ignores clicks on people
      pick(id) → bool          id goes without (never Cora; anyone else alive); at their last: the table moment opens
      settle()                 serve it now, nobody asked (a course set, or another jump, before anyone chose): the offer stands
      tagFor(id) → { verb, note } | null   what pointing at someone says while choosing
@@ -52,7 +52,7 @@
             aris: ['Give mine to someone else.', 'Give mine away again. I can manage.'],
             mira: ["I'm not hungry. Really.", "I'm still not hungry. Really."],
         },
-        // the table moment (DRAFT): Aris says it; about herself; A.U.R.A. when Aris is dead or asleep
+        // the table moment (DRAFT): Aris says it; about herself; A.U.R.A. when Aris is dead, asleep or shut down
         warn: (name, him) => `${name} can't go without again. It would kill ${him}.`,
         warnSelf: "I can't go without again, Commander. It would kill me.",
         warnAura: (name, him) => `${name} can't go without again, Commander. It would kill ${him}.`,
@@ -82,9 +82,9 @@
     const isLast = c => { const s = state(); return !!s && canGoWithout(c) && typeof s.mayGoWithout === 'function' && !s.mayGoWithout(c, false); };
     /** May go without with no table moment: alive, not Cora, not picked tonight, not at their last. */
     const free = c => canGoWithout(c) && !S.picks.includes(idOf(c)) && !isLast(c);
-    /** Who offers: the first in OFFER_ORDER who may go without and is not shut away. */
+    /** Who offers: the first in OFFER_ORDER who may go without and is not shut away, asleep or shut down (CATATONIC). */
     function offererNow() {
-        const ok = c => free(c) && !tags(c).includes('CONFINED') && !tags(c).includes('SEDATED');
+        const ok = c => free(c) && !tags(c).includes('CONFINED') && !tags(c).includes('SEDATED') && c.trait !== 'CATATONIC';
         return OFFER_ORDER.find(id => ok(member(id))) || null;
     }
     /** Anyone besides id who could still go without tonight (the table moment's "Not yet" needs one). */
@@ -192,10 +192,11 @@
         say(w.id, w.who, w.text);
         showChip();
     }
-    /** Who says it at the table: Aris (about herself too), else A.U.R.A. Dead people do not speak (docs/STYLE.md). */
+    /** Who says it at the table: Aris (about herself too), else A.U.R.A. Dead people do not speak (docs/STYLE.md), nor does
+        Aris asleep or shut down (CATATONIC). */
     function warning(m) {
         const aris = member('aris'), him = m.gender === 'F' ? 'her' : 'him';
-        const speaks = !!aris && aris.status !== 'DEAD' && !tags(aris).includes('SEDATED');
+        const speaks = !!aris && aris.status !== 'DEAD' && !tags(aris).includes('SEDATED') && aris.trait !== 'CATATONIC';
         if (speaks) return { id: 'aris', who: aris.name, text: aris === m ? LINES.warnSelf : LINES.warn(m.name, him) };
         return { id: 'aura', who: 'A.U.R.A.', text: LINES.warnAura(m.name, him) };
     }
@@ -209,11 +210,11 @@
         if (what === 'go') { S.picks.push(id); S.confirmed.push(id); next(); }
     }
 
-    // ── the words beside the tower: "Accept", "Share it out", or the table moment's two ──
+    // ── the words beside the tower: "Accept", "Share it out", or the table moment's ("Not yet" always first) ──
     function chipList() {
         if (S.phase === 'table' && S.table) {
             const m = member(S.table.id);
-            return m ? [othersCan(S.table.id) ? CHIP.notYet() : CHIP.share(), CHIP.go(m.name)] : [];
+            return m ? [CHIP.notYet()].concat(othersCan(S.table.id) ? [] : [CHIP.share()], [CHIP.go(m.name)]) : [];
         }
         const m = S.offerer && member(S.offerer);
         return [m && free(m) ? CHIP.accept(m.name) : CHIP.share()];

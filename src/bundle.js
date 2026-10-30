@@ -778,16 +778,17 @@ class GameState {
         if (share) living.forEach(c => this.hungerStress(c));
         const names = list => list.map(c => c.name).join(' and ');
         if (!short) this.addLog(`The crew ate ${ate} rations at supper. ${this.rations} left.`);
-        else if (share) this.addLog('A.U.R.A. shared out the last of the food. Everyone went to bed hungry.');   // DRAFT
+        else if (share) this.addLog(ate > 0 ? 'A.U.R.A. shared out the last of the food. Everyone went to bed hungry.' : 'There was no food left. Everyone went to bed hungry.');   // DRAFT (both)
         else this.addLog(`A.U.R.A. cut the portions. ${names(skips)} went without supper. ${this.rations} rations left.`);
         if (rests) this.addLog('Crew Quarters: Rest cycle complete. Stress levels reduced.');
-        const hit = this.goWithout(skips);                                              // after the portions line: a death is told last
+        const hit = this.goWithout(skips);                                              // after the portions line
         hit.sick.forEach(c => this.addLog(this.sickLine(c)));
         const healed = this.crew.filter(c => c.status === 'INJURED' && !skips.includes(c) && c.trait !== 'CATATONIC' && !(share && c._nsHungerSick));
         if (healed.length) {
             this.mend(healed);
             this.addLog(`After supper, ${names(healed)} ${healed.length === 1 ? 'is' : 'are'} well again.`);   // DRAFT
         }
+        hit.died.forEach(c => this.dieOfHunger(c));                                     // a death is told last
         this.emitUpdates();
         return { ate, short, left: this.rations, without: skips, share, weak: hit.weak, sick: hit.sick, died: hit.died };
     }
@@ -796,12 +797,13 @@ class GameState {
         too weak for the next team trip (_nsWeak, read by NSOrbit); the second sick in bed (INJURED, _nsHungerSick: only a
         supper they eat makes them well, never Aris's "up by the next stop" or the autodoc; a card's, an item's or a station's
         treatment still can); each time +1 stress, never past 2, and no rest.
-        The third time (HUNGER_DEATH_AT) they die. Returns { weak, sick, died }. */
+        The third time (HUNGER_DEATH_AT) they die: listed in died, and serveSupper calls dieOfHunger once its other lines are
+        told. Returns { weak, sick, died }. */
     goWithout(skips) {
         const E = NEW_LOOK_ECONOMY, out = { weak: [], sick: [], died: [] };
         skips.forEach(c => {
             c._wentWithout = (c._wentWithout || 0) + 1;                                      // remembered: the crew may say so at the light
-            if (c._wentWithout >= E.HUNGER_DEATH_AT) { this.dieOfHunger(c); out.died.push(c); return; }
+            if (c._wentWithout >= E.HUNGER_DEATH_AT) { out.died.push(c); return; }
             this.hungerStress(c);
             if (c._wentWithout >= E.HUNGER_SICK_AT) { c.status = 'INJURED'; c._nsHungerSick = true; delete c._nsMendAt; out.sick.push(c); }
             else { c._nsWeak = true; out.weak.push(c); }
@@ -828,9 +830,9 @@ class GameState {
     }
 
     /** The new look: who says someone is sick from hunger (a log line Voice says in the ship): Aris, unless she is the one, or
-        dead, or asleep; then A.U.R.A. */
+        dead, asleep or shut down (CATATONIC); then A.U.R.A. */
     sickLine(c) {
-        const aris = this.crew.find(m => (m.tags || []).includes('MEDIC') && m.status !== 'DEAD' && m !== c && !(m.tags || []).includes('SEDATED'));
+        const aris = this.crew.find(m => (m.tags || []).includes('MEDIC') && m.status !== 'DEAD' && m !== c && !(m.tags || []).includes('SEDATED') && m.trait !== 'CATATONIC');
         const he = c.gender === 'F' ? 'she' : 'he', He = c.gender === 'F' ? 'She' : 'He';
         return aris ? `Aris: "${c.name} is sick from hunger. ${He} stays in bed until ${he} eats."`   // DRAFT
             : `A.U.R.A.: "${c.name} is sick from hunger, Commander. ${He} stays in bed until ${he} eats."`;   // DRAFT
@@ -1028,7 +1030,8 @@ class GameState {
                         break;
                     case 'HUMANIST':   // Aris
                         c.trait = 'BLEEDING_HEART';
-                        this.addLog(`${c.name}: "I won't leave anyone behind. No EVA until everyone is stable."`);
+                        if (isNewScreen()) this.addLog(`${c.name}: "I won't leave anyone behind. While someone is hurt, I stay aboard."`);   // DRAFT: the new look never locks a trip (NSOrbit.pool)
+                        else this.addLog(`${c.name}: "I won't leave anyone behind. No EVA until everyone is stable."`);
                         break;
                     case 'CURIOUS':    // Mira
                         c.trait = 'RECKLESS';
@@ -2019,7 +2022,7 @@ class App {
             if (this.state.upgrades.includes('autodoc')) {
                 let healed = false;
                 this.state.crew.forEach(c => {
-                    if (c.status === 'INJURED' && !c._nsHungerSick) {          // the new look's hunger sickness: only a supper they eat mends it
+                    if (c.status === 'INJURED' && !(isNewScreen() && c._nsHungerSick)) {   // the new look's hunger sickness: only a supper they eat mends it
                         c.status = 'HEALTHY';
                         c.healCounter = 0;
                         healed = true;
@@ -4546,7 +4549,8 @@ Then you're through.`,
     /** The trip card's ways: [{ choice, idx, odds, struck: 'PARANOID' | 'RECKLESS' | null }] and whether a stress trait struck
         any. Vance under stress (PARANOID) will not take a way at 30 or more; Mira under stress (RECKLESS) half the time will
         not take the careful one. The new look never locks the card: when every way is struck, the careful way stays open;
-        and its traits are those of when the team went down (App.tripContext). odds: App.wayOdds (the new look), else null. */
+        and its traits are those of when the team went down (App.tripContext). odds: App.wayOdds (the new look), else null.
+        vanceSays, miraSays: the card shows their line (not when the way kept open is the one they refused, and no other). */
     tripChoices(event, riskBase) {
         const t = isNewScreen() && this._nsTrip ? this._nsTrip : null, has = trait => (t && t[trait] != null ? t[trait] : this.state.hasActiveTrait(trait.toUpperCase()));
         const isParanoid = has('paranoid');
@@ -4561,7 +4565,8 @@ Then you're through.`,
             careful.struck = null;
             careful.keptOpen = true;
         }
-        return { ways, isParanoid, recklessBlocksSafe, allStruck };
+        const says = (on, trait) => on && (!allStruck || !isNewScreen() || ways.some(w => w.struck === trait));   // a way kept open: its refusal is not said
+        return { ways, isParanoid, recklessBlocksSafe, allStruck, vanceSays: says(isParanoid, 'PARANOID'), miraSays: says(recklessBlocksSafe, 'RECKLESS') };
     }
 
     /** The new look: the way GO DOWN vouches for, as an index on the event's card: the safest way the card is sure to leave
@@ -4661,7 +4666,7 @@ Then you're through.`,
         const signalModifiers = goingIn.mods;
 
         // Stress trait checks (App.tripChoices: the new look never locks the card) and each way's odds (App.wayOdds, the new look)
-        const { ways, isParanoid, recklessBlocksSafe } = this.tripChoices(event, riskBase);
+        const { ways, vanceSays, miraSays } = this.tripChoices(event, riskBase);
 
         // Build signal modifier display string
         const PLAIN_SIGNAL = {
@@ -4694,7 +4699,7 @@ Then you're through.`,
             const paranoidBlocked = way.struck === 'PARANOID';                   // PARANOID: Vance refuses high-risk options
             const recklessBlocked = way.struck === 'RECKLESS';                   // RECKLESS: Mira overrides the safe option
             const isDisabled = paranoidBlocked || recklessBlocked;
-            const odd = `${totalRisk}% chance someone gets hurt${odds && odds.deadly ? `, 1 in ${odds.oneIn} someone dies` : ''}`;   // DRAFT: the death chance (the new look)
+            const odd = `${totalRisk}% chance someone gets hurt${odds && odds.deadly ? `, a 1 in ${odds.oneIn} chance someone dies` : ''}`;   // DRAFT: the death chance (the new look)
             const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : odd);
             return `<button class="deck-action choice-btn eva-choice" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
                         <span>${choice.text}<em class="eva-gets">${rewardWords(choice)}</em></span>
@@ -4711,8 +4716,8 @@ Then you're through.`,
                 <ul class="deck-panel-crew eva-team">${(this.currentEvaTeam || []).map(m => `<li><img class="deck-panel-face" src="assets/crew/${m.portraitId}.png" alt=""><span class="deck-panel-name">${m.name}</span><span class="deck-panel-mood">ON THE GROUND</span></li>`).join('')}</ul>
                 <p class="eva-found">“${event.desc}”</p>
                 ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>GOING IN</dt><dd>${signalModDisplay}</dd></dl>` : ''}
-                ${isParanoid ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
-                ${recklessBlocksSafe ? '<p class="eva-voice" style="color:#d070ff">Mira: “The safe option gets us nothing. I am going in.”</p>' : ''}
+                ${vanceSays ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
+                ${miraSays ? '<p class="eva-voice" style="color:#d070ff">Mira: “The safe option gets us nothing. I am going in.”</p>' : ''}
                 <h4>WHAT DO THEY DO?</h4>
                 <div class="deck-panel-actions">${event.choices.map(evaChoice).join('')}</div>
             </section>
@@ -5009,7 +5014,7 @@ Then you're through.`,
 
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'ON THE SURFACE', title: planet.name,
-            context: `${names} step${evaTeam.length === 1 ? 's' : ''} out into warm, sweet air, beside a clear stream. `
+            context: `${names} step${evaTeam.length === 1 ? 's' : ''} out into warm, sweet air, beside a clear stream. `   // DRAFT: "steps", one who went alone (the new look)
                 + 'Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass.',
             choices: options,
             onPick: (idx) => {

@@ -210,7 +210,7 @@ function supperPlan(state, style, run) {
 /** One pick: the offer (Accept), or the player's own. `safe`: those who may go without with no table moment. */
 function pickOne(style, left, safe, run) {
     const went = c => c._wentWithout || 0, hurt = c => (c.status === 'INJURED' ? 1 : 0), stress = c => c.stress || 0, byRank = (a, b) => rankOf(a) - rankOf(b);
-    const offerer = safe.filter(c => !tagsOf(c).includes('CONFINED') && !tagsOf(c).includes('SEDATED')).sort(byRank)[0] || null;
+    const offerer = safe.filter(c => !tagsOf(c).includes('CONFINED') && !tagsOf(c).includes('SEDATED') && c.trait !== 'CATATONIC').sort(byRank)[0] || null;   // Supper.js offererNow
     if (style.supper === 'rotate') return safe.slice().sort((a, b) => went(a) - went(b) || hurt(a) - hurt(b) || stress(a) - stress(b) || byRank(a, b))[0] || left[0] || null;
     if (style.supper === 'best') return safe.slice().sort((a, b) => hurt(a) - hurt(b) || stress(a) - stress(b) || went(a) - went(b) || byRank(a, b))[0] || left[0] || null;
     if (style.supper === 'same') return left.find(c => c.name === run.supperVictim) || offerer || left.slice().sort(byRank)[0] || null;

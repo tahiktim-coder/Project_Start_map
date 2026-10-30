@@ -17,16 +17,19 @@
      scanDue(app) → bool           we are at a world nobody has scanned from the bridge: Stop.js scans it as the bridge shows
      eligible(app) → ['jaxon', ...]  who may go down (pool's ids). A trip that leaves ends everyone's weakness
      pool(app) → [crew]            who may go down (handleEvaAction reads it): the well; not who is too weak from a missed supper,
-                                   unless that leaves fewer than two; never a locked trip: with fewer than two well the hurt go
-                                   too (TripOdds' hurtGoes), and with one left they go alone. Two go, or the one left. Aris
-                                   under stress (BLEEDING_HEART) stays in the med bay while anyone is hurt: not in it
+                                   unless that leaves fewer than two; never a locked trip: with fewer than two well the hurt may
+                                   go too (TripOdds' hurtGoes), the hunger-sick only when nobody else at all can. Two well or
+                                   more: two go; fewer: one, and a second only if the player puts them at the hatch. Aris
+                                   under stress (BLEEDING_HEART) stays in the med bay while someone else is hurt: not in it,
+                                   unless nobody else can go
      weak(app) → ['jaxon', ...]    fit, but too weak from a missed supper for this trip (Stop.js stands them aside)
      holdLoss(app, id, picked) → 'Aris goes: nobody aboard can treat the hurt.'   what the ship loses while id is down (the pick)
      lossOf(app, id, picked) → 'nobody aboard can treat the hurt' | ''   the same, only the loss ('' when nothing is lost)
      propose(app) → { ids: [a, b], why: { id: 'wreck work' } } | null   the two the crew put forward for THIS world, from
                                    what we know of it (its type, its visible tags, the wreck, what the scans read; once its
                                    finds show, the find chosen) and what the ship loses without them; why: a few plain words
-                                   for everyone fit to go. One id when only one can go
+                                   for everyone fit to go. One id when fewer than two are well: the well one (a hurt one goes
+                                   too only if the player adds them at the hatch)
      teamRisk(app, ids, way?) → 25 | null  the chosen find's hurt chance with ids down (TripOdds with App.tripRisk, the
                                    way's own risk, the fit and anyone hurt going; way: the card's index, left out the way
                                    GO DOWN vouches for, the careful one, its mark's number, unless a stress trait may
@@ -137,20 +140,29 @@
     /** Who may go down (handleEvaAction asks the same, NSOrbit.pool): HEALTHY, not the commander, not confined, not asleep;
         and not too weak from going without supper (GameState.serveSupper's _nsWeak), unless that would leave fewer than two:
         then the weak go too, so a story world is never closed by a supper. A trip is never locked: with fewer than two
-        well, the hurt may go too (not Aris while she has shut down), at more risk (TripOdds' hurtGoes); and with only one
-        left who can go, they go alone. Aris under stress (BLEEDING_HEART) stays in the med bay while anyone is hurt
-        (arisRefuses): the others go without her. */
+        well, the hurt may go too (not Aris while she has shut down), at more risk (TripOdds' hurtGoes), but only if the
+        player puts them at the hatch (teamSizes); the hunger-sick (GameState.goWithout: in bed until they eat) only when
+        nobody else at all can go. Aris under stress (BLEEDING_HEART) stays in the med bay while someone else is hurt
+        (arisRefuses): the others go without her, and with nobody else to go she goes after all. */
     function evaCrew(app) {
         const s = app && app.state, crew = (s && s.crew) || [], aris = arisRefuses(app) ? byRole(s, 'MEDIC') : null;
-        const free = c => c !== aris && !tags(c).includes('LEADER') && !tags(c).includes('CONFINED') && !tags(c).includes('SEDATED');
-        const fit = crew.filter(c => c.status === 'HEALTHY' && free(c));
+        const free = c => !tags(c).includes('LEADER') && !tags(c).includes('CONFINED') && !tags(c).includes('SEDATED');
+        const hurtCan = c => c.status === 'INJURED' && c.trait !== 'CATATONIC' && free(c);
+        const fit = crew.filter(c => c !== aris && c.status === 'HEALTHY' && free(c));
         const strong = fit.filter(c => !c._nsWeak);
         if (strong.length >= 2) return strong;
         if (fit.length >= 2) return fit;
-        return fit.concat(crew.filter(c => c.status === 'INJURED' && c.trait !== 'CATATONIC' && free(c)));
+        const some = fit.concat(crew.filter(c => c !== aris && hurtCan(c) && !c._nsHungerSick));
+        if (some.length) return some;
+        if (aris && (isWell(aris) || hurtCan(aris)) && !aris._nsHungerSick) return [aris];       // nobody else can go: Aris goes after all
+        return crew.filter(c => hurtCan(c) && c._nsHungerSick);                                 // the hunger-sick, only when nobody else at all can go
     }
-    /** How many go down: two, or the one left who can go. */
-    const teamSize = app => Math.min(2, evaCrew(app).length);
+    /** How many go down: { fewest, most }. Two or more well: two. Fewer: one, and a second only if the player puts them at
+        the hatch (Stop.js): a hurt one never has to go beside the well one. */
+    function teamSizes(app) {
+        const pool = evaCrew(app), most = Math.min(2, pool.length);
+        return { most, fewest: pool.filter(c => c.status === 'HEALTHY').length >= 2 ? most : Math.min(1, most) };
+    }
     const isHurt = c => !!c && c.status === 'INJURED';
     const eligible = app => evaCrew(app).map(idOf);
     /** Who stays aboard this trip because they went without supper: well, weak, and left out of the lineup (Stop.js puts them
@@ -159,12 +171,13 @@
         const s = app && app.state, pool = evaCrew(app);
         return ((s && s.crew) || []).filter(c => c._nsWeak && isWell(c) && !tags(c).includes('LEADER') && !pool.includes(c)).map(idOf);
     }
-    /** Aris under stress (BLEEDING_HEART) won't leave the med bay while someone is hurt: the hurt one, or null. The default
-        game's handleEvaAction refuses every trip then; the new look never locks one, so evaCrew only leaves her aboard. */
+    /** Aris under stress (BLEEDING_HEART) won't leave the med bay while someone else is hurt: the hurt one, or null (her own
+        injury keeps nobody aboard). The default game's handleEvaAction refuses every trip then; the new look never locks
+        one, so evaCrew only leaves her aboard while someone else can go. */
     function arisRefuses(app) {
         const s = app && app.state;
         if (!s || typeof s.hasActiveTrait !== 'function' || !s.hasActiveTrait('BLEEDING_HEART')) return null;
-        return (s.crew || []).find(c => alive(c) && c.status === 'INJURED') || null;
+        return (s.crew || []).find(c => alive(c) && c.status === 'INJURED' && !tags(c).includes('MEDIC')) || null;
     }
 
     // ── what this place offers ──
@@ -320,9 +333,9 @@
         const c = sign(app);
         if (saysSign(c, n)) { c.said = true; log(s, aura(SIGN[c.kind] || OTHER_SIGN)); }
         if (c && c.kind === 'BREACH' && !hasTeamAction(n) && !s._breachDone) pendingBreach = { id: n.id, wait: BREACH_WAIT_MS };   // nobody goes down here: it comes on the bridge
-        const refusing = hasTeamAction(n) ? arisRefuses(app) : null;
-        if (refusing && !arisSaid.has(n.id)) { arisSaid.add(n.id); log(s, LINES.arisAboard); }                // she stays aboard; the others still go
-        if (hasTeamAction(n) && evaCrew(app).length < 1 && !pairSaid.has(n.id)) { pairSaid.add(n.id); log(s, LINES.pair); }
+        const pool = hasTeamAction(n) ? evaCrew(app) : null, aris = byRole(s, 'MEDIC');
+        if (pool && pool.length && arisRefuses(app) && !pool.includes(aris) && !arisSaid.has(n.id)) { arisSaid.add(n.id); log(s, LINES.arisAboard); }   // she stays aboard; the others still go
+        if (pool && pool.length < 1 && !pairSaid.has(n.id)) { pairSaid.add(n.id); log(s, LINES.pair); }
     }
     /** The breach, played by the game's own App.playBreach (away: the crew who are not aboard). The patches break first. */
     function playBreach(app, away) {
@@ -333,9 +346,9 @@
 
     // ── the team trip ──
     function send(app, ids) {
-        const s = app.state, n = s.currentSystem, pool = evaCrew(app);
+        const s = app.state, n = s.currentSystem, pool = evaCrew(app), size = teamSizes(app);
         const team = (ids || []).map(id => pool.find(c => idOf(c) === id)).filter(Boolean);
-        if (!n || trip || !team.length || team.length !== teamSize(app) || team[0] === team[1]) { log(s, LINES.pick); return false; }
+        if (!n || trip || !team.length || team.length !== (ids || []).length || team.length < size.fewest || team.length > size.most || team[0] === team[1]) { log(s, LINES.pick); return false; }
         const aboard = s.crew.filter(c => alive(c) && !team.includes(c)).map(idOf), find = targetFind(app, n), before = n.nsTrips || 0;
         const blind = find ? null : blindFind(app, n);                                       // no scan yet: where the blind trip goes (its clue still counts)
         trip = { ids: team.map(idOf), aboard, node: n.id, find, blind, hurtBefore: new Set(s.crew.filter(c => c.status !== 'HEALTHY').map(idOf)), downDone: false, quiet: 0, lost: 0 };
@@ -469,7 +482,8 @@
         const fit = fitsOf(app, n, find);
         return ids.reduce((sum, id) => sum + ((fit[id] && fit[id].score) || 0), 0);
     }
-    /** The two the crew put forward (one, when only one can go). Each scores their fit for this find, less what the ship loses
+    /** The two the crew put forward (one, when fewer than two are well: the well one, else the best of the hurt; a hurt one
+        goes beside them only if the player adds them, teamSizes). Each scores their fit for this find, less what the ship loses
         without them aboard (lossOf: NEED; Mira's ground scan from aboard is worth FIT_MIRA_ABOARD points), plus
         FIT_JAXON_LANDS for Jaxon while A.U.R.A. lands us (his step on her landing, App.applyLanding), less the risk of going
         down hurt (HURT_GOES_RISK in points of fit). Before a scan, a plain trip's fit is for the world's own event, the find
@@ -487,12 +501,17 @@
         const rank = id => PRIORITY.indexOf(id), plain = plainTrip(app, n);
         const hurtCost = econ('HURT_GOES_RISK', 0) / Math.max(1, econ('FIT_PER_POINT', 1));   // (before the table: no cost)
         const miraAboard = econ('FIT_MIRA_ABOARD', NEED), jaxonLands = econ('FIT_JAXON_LANDS', 0);   // (before: a loss aboard was NEED)
-        const value = (id, mate) => fit[id].score - (lossOf(app, id, [mate]) ? (id === 'mira' ? miraAboard : NEED) : 0)
+        const value = (id, mates) => fit[id].score - (lossOf(app, id, mates) ? (id === 'mira' ? miraAboard : NEED) : 0)
             + (id === 'jaxon' && plain && s._nsLandAuto ? jaxonLands : 0) - (isHurt(member(id)) ? hurtCost : 0);
+        const well = pool.filter(id => !isHurt(member(id)));
+        if (well.length < 2) {                                                               // fewer than two well: one goes (teamSizes)
+            const one = (well.length ? well : pool).slice().sort((a, b) => value(b, []) - value(a, []) || trips(a) - trips(b) || rank(a) - rank(b))[0];
+            return { ids: [one], why };
+        }
         let best = null;
         for (let i = 0; i < pool.length; i++) for (let j = i + 1; j < pool.length; j++) {
             const a = pool[i], b = pool[j];
-            const score = value(a, b) + value(b, a);
+            const score = value(a, [b]) + value(b, [a]);
             const cand = { ids: [a, b], score, trips: trips(a) + trips(b), order: Math.min(rank(a), rank(b)) * 10 + Math.max(rank(a), rank(b)) };
             if (!best || cand.score > best.score || (cand.score === best.score && (cand.trips < best.trips || (cand.trips === best.trips && cand.order < best.order)))) best = cand;
         }
