@@ -1085,12 +1085,13 @@ const SECTOR_JUMP_BASE_COST = 8; // energy for a sector jump (double with engine
 const DRIVE_BRACE_SAVING = 4;    // a braced drive (the hull-cracks campfire) takes this much off the next jump, once
 const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, besides "a day" on a card (GameState.eatOnJump)
 /**
- * The new look's economy (?new=1 only; measured with scripted runs and tuned 2026-10-17; the old failure it answers is
- * docs/ECONOMY.md §1-2). Every number the new look spends or gives differently from the default game is here, with why. The
- * default game keeps the numbers above and its own card amounts.
+ * The new look's economy (?new=1 only; tuned 2026-10-17 against docs/ECONOMY.md §1-2, retuned 2026-10-30 so losses bite:
+ * smaller card gains and landing salvage, fewer crises aboard, and the reserve costs a cold night; measured with the node run
+ * model, tools/runsim.js, which reads this same table). Every number the new look spends or gives differently from the default
+ * game is here, with why. The default game keeps the numbers above and its own card amounts.
  * The new screen's files read it as window.NEW_LOOK_ECONOMY. Two rules go with it, with no number: a story world (one of our
  * wrecks nobody has boarded, or the sector's story planet) can always be reached, on the reserve if need be (App.isStoryStop),
- * and food that runs short means one person goes without supper, never a death (GameState.serveSupper).
+ * and food that runs short means someone goes without supper (GameState.serveSupper says what that costs them).
  */
 const NEW_LOOK_ECONOMY = Object.freeze({
     START_ENERGY: 100,       // a full tank (the cap stays 100)
@@ -1101,7 +1102,16 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     SKIM: 20,                // "Refuel" at a gas giant, once per giant (was 15): about three warps, so the giant can pay for a stop
     EVA_ENERGY_MIN: 8,       // what a plain landing's energy find brings (was 30 to 49: one landing paid for six warps, so
     EVA_ENERGY_MAX: 12,      //   energy never got tight for anyone who landed on bare worlds)
-    CARD_ENERGY_MAX: 20,     // no single card choice gives more energy than this (was up to 70); its chips say what it really gives
+    EVA_METALS: Object.freeze([20, 39]),       // what a plain landing's salvage find brings (was 40 to 79: landings paid for
+    EVA_METALS_HIGH: Object.freeze([35, 64]),  //   every repair); the rich find (was 60 to 119). App.evaSalvageRange
+    CARD_ENERGY_MAX: 12,     // no single card choice gives more energy than this (was 20, and up to 70 before that); no more
+    CARD_RATIONS_MAX: 3,     //   rations than this (sealed rations count, opened) and no more salvage than this either (salvage was
+    CARD_SALVAGE_MAX: 40,    //   up to 120). Its chips say what it really gives (EncounterCard.capGains, EncounterCard.apply).
+                             //   Card costs are not capped: a 12 cap left the kind and pragmatic picks 62 energy apart in the
+                             //   run model (61 without it), so closing that gap waits on the designer
+    CRISIS_CHANCE: 0.35,    // how likely a sign aboard turns into a crisis while the team is down (was 0.5: about 1 trip in 3)
+    MIRA_ABOARD: -5,         // Mira scanning the ground from aboard while the team is down: 5 % safer (was 10 %, so sending
+                             //   her down is sometimes worth more). NSOrbit.whileDown and NSWorldFinds' marks read it
     START_RATIONS: 24,       // all but the last supper with everyone alive (was 20, eaten one a jump): it runs short at a jump or
                              //   two for a careful crew that takes days for people, unless it finds food on the way
     RATIONS_PER_PERSON: 1,   // each living person eats one ration at the supper after a jump (five with everyone alive; was 1 in all)
@@ -1113,7 +1123,7 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     RISK_UNSCANNED: 5,       // a plain landing on a world nobody deep-scanned from the bridge: 5 % more likely that someone is
                              //   hurt, and no spot is marked in the landing game (App.unmarkedWhy, App.scanRiskMod)
     RISK_FAIR_LOCK: -5,      // a fair lock (A.U.R.A.'s own tune is fair): the spot is marked and the trip 5 % safer
-    RISK_SHARP_LOCK: -10,    // a sharp lock: 10 % safer, as much as Mira scanning the ground while they are down. A weak lock
+    RISK_SHARP_LOCK: -10,    // a sharp lock: 10 % safer, twice what Mira's ground scan from aboard gives (MIRA_ABOARD). A weak lock
                              //   marks nothing and changes nothing (it no longer costs energy: losing the mark is its price)
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
@@ -2574,26 +2584,39 @@ class App {
 
     /**
      * Short of energy for the jump. The jump is always a way out: A.U.R.A. can run the drive on the reserve,
-     * which takes every bit of energy left and the crew quarters' power. Turned down, nothing happens.
+     * which takes every bit of energy left and the crew quarters' power (the new look: and a cold night, coldNight).
+     * Turned down, nothing happens.
      */
     offerReserveJump(jumpCost) {
         if (!window.EncounterCard) { this.state.addLog('WARNING: Not enough Energy!'); return; }
+        const isNew = isNewScreen();
+        const choices = [
+            { text: 'Jump on the reserve', desc: 'Uses all the energy left. The crew quarters are damaged.' },
+            { text: 'Not yet', desc: 'Probes and wrecks can still bring energy back.' },
+        ];
+        if (isNew) choices[0] = Object.assign({}, choices[0], { desc: `${choices[0].desc} All crew +1 Stress.` });   // DRAFT chip: the cold night (coldNight)
         window.EncounterCard.open(this, {
             tone: 'alert', kicker: 'SHIP ALERT', title: 'Not enough energy to jump', zIndex: 2800,
             context: `The jump needs ${jumpCost} energy. We have ${this.state.energy}.`,
             dialogue: [{ speaker: 'A.U.R.A.', text: 'I can run the drive on the reserve, Commander. The crew quarters will lose power.' }],
-            choices: [
-                { text: 'Jump on the reserve', desc: 'Uses all the energy left. The crew quarters are damaged.' },
-                { text: 'Not yet', desc: 'Probes and wrecks can still bring energy back.' },
-            ],
+            choices,
             onPick: idx => {
                 if (idx !== 0) return;
                 this.state.energy = 0;
+                if (isNew) this.coldNight();
                 this.state.damageDeck('quarters', 'The drive ran on the reserve. The crew quarters have lost power.');
                 this.state.emitUpdates();
                 this.startSectorJump();
             },
         });
+    }
+
+    /** The new look: what flying on the reserve costs the crew, besides the energy and the quarters' power: a cold night.
+        Everyone alive takes +1 stress, held at 2 (a cold night alone never breaks anyone), and A.U.R.A. says so. The
+        quarters' damage (the caller's) already keeps anyone from resting at the next supper. */
+    coldNight() {
+        this.state.crew.forEach(c => { if (c.status !== 'DEAD') c.stress = Math.max(c.stress || 0, Math.min(2, (c.stress || 0) + 1)); });
+        this.state.addLog('A.U.R.A.: "We fly on the reserve. It will be a cold night, Commander."');   // DRAFT
     }
 
     /** A story world (the new look's floor, docs/STORY_MAP.md): one of our wrecks nobody has boarded yet, or the sector's
@@ -2603,14 +2626,14 @@ class App {
         return !!planet && !planet.storyHidden && !planet.ghost && (planet.isStoryPlanet || isWreck);
     }
 
-    /** The new look: a story world flown on the reserve. Every bit of energy left goes, and the crew quarters lose power
-        (unless two decks are down already: a third could end the run, and the story world must stay reachable). */
+    /** The new look: a story world flown on the reserve. Every bit of energy left goes, the crew have a cold night
+        (coldNight), and the crew quarters lose power (unless two decks are down already: a third could end the run, and
+        the story world must stay reachable). */
     flyOnReserve() {
         const decksDown = Object.values(this.state.shipDecks).filter(d => d.status === 'DAMAGED').length;
         const losesPower = this.state.isDeckOperational('quarters') && decksDown < 2;
         this.state.energy = 0;
-        this.state.addLog(losesPower ? 'A.U.R.A.: "We are flying on the reserve, Commander. The crew quarters will lose power."'
-            : 'A.U.R.A.: "We are flying on the reserve, Commander."');
+        this.coldNight();
         if (losesPower) this.state.damageDeck('quarters', 'The drive ran on the reserve. The crew quarters have lost power.');
         this.state.emitUpdates();
     }
@@ -4302,7 +4325,7 @@ Then you're through.`,
 
     /** How likely it is that someone is hurt on a plain landing here, going in (before the choice on the card): the world
         (planetRisk), the bridge's scan (scanRiskMod), how the landing went (opts.landing) and Mira's ground scan from aboard
-        (opts.mira, -10 when she stays aboard and well). Held to 0..50, with each part as a line for the card. The trip card
+        (opts.mira: NEW_LOOK_ECONOMY.MIRA_ABOARD when she stays aboard and well). Held to 0..50, with each part as a line for the card. The trip card
         starts from it (showEventModal) and the new look's marks show it (WorldFinds.js): one number for both. */
     tripRisk(planet, opts = {}) {
         const world = this.planetRisk(planet), mods = world.mods.slice();
@@ -4356,6 +4379,13 @@ Then you're through.`,
         return isNewScreen() ? [NEW_LOOK_ECONOMY.EVA_ENERGY_MIN, NEW_LOOK_ECONOMY.EVA_ENERGY_MAX] : [30, 49];
     }
 
+    /** What a plain landing's salvage find brings, [lowest, highest]: 40 to 79, a rich one (isHigh) 60 to 119 (the new look:
+        NEW_LOOK_ECONOMY's EVA_METALS and EVA_METALS_HIGH). */
+    evaSalvageRange(isHigh) {
+        if (isNewScreen()) return (isHigh ? NEW_LOOK_ECONOMY.EVA_METALS_HIGH : NEW_LOOK_ECONOMY.EVA_METALS).slice();
+        return isHigh ? [60, 119] : [40, 79];
+    }
+
     /** How dangerous a plain landing is from the world itself, before how it is flown and who scans it: 5 % to 30 % by its
         danger level, then its signals, each a line on the trip's card. The new look's scan tags read the total (Scan.js). */
     planetRisk(planet) {
@@ -4401,8 +4431,8 @@ Then you're through.`,
             : '';
 
         // Card layout: what the team found, what the scan says, then one button per option with its real odds
-        const [EVA_LO, EVA_HI] = this.evaEnergyRange();
-        const REWARD_WORDS = { METALS: '+40 to 79 salvage', METALS_HIGH: '+60 to 119 salvage', ENERGY: `+${EVA_LO} to ${EVA_HI} energy`, NOTHING: 'nothing' };
+        const [EVA_LO, EVA_HI] = this.evaEnergyRange(), salvageWords = isHigh => `+${this.evaSalvageRange(isHigh).join(' to ')} salvage`;
+        const REWARD_WORDS = { METALS: salvageWords(false), METALS_HIGH: salvageWords(true), ENERGY: `+${EVA_LO} to ${EVA_HI} energy`, NOTHING: 'nothing' };
         const energyRoom = Math.max(0, 100 - Math.round(this.state.energy));                // energy tops out at 100: say what fits
         const energyWords = energyRoom <= 0 ? 'energy already full' : energyRoom < EVA_LO ? `+${energyRoom} energy` : energyRoom < EVA_HI ? `+${EVA_LO} to ${energyRoom} energy` : REWARD_WORDS.ENERGY;
         const rewardWords = (choice) => {
@@ -4623,10 +4653,9 @@ Then you're through.`,
             else if (/Morale Loss/i.test(choice.text)) { evaTeam.forEach(m => { if (m.status !== 'DEAD') m.stress = Math.min(3, (m.stress || 0) + 1); }); logMsg += 'Nothing brought back. The team is shaken: +1 Stress.'; }
             else logMsg += 'Nothing brought back.';
         } else if (choice.reward.type === 'RESOURCE') {
-            let amount = 0;
-            if (choice.reward.val === 'METALS') amount = 40 + Math.floor(Math.random() * 40);
-            else if (choice.reward.val === 'METALS_HIGH') amount = 60 + Math.floor(Math.random() * 60);
-            else { const [lo, hi] = this.evaEnergyRange(); amount = lo + Math.floor(Math.random() * (hi - lo + 1)); }   // Energy
+            const isMetals = choice.reward.val === 'METALS' || choice.reward.val === 'METALS_HIGH';
+            const [lo, hi] = isMetals ? this.evaSalvageRange(choice.reward.val === 'METALS_HIGH') : this.evaEnergyRange();   // salvage, else energy
+            let amount = lo + Math.floor(Math.random() * (hi - lo + 1));
 
             if (isObsessed) {
                 amount = Math.floor(amount * 1.5);

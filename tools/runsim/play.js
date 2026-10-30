@@ -56,7 +56,7 @@ function runContext(game, styleName, seed, opts, R) {
     const rc = {
         game, ctx, G, style, styleName, seed, opts, R, rnd, state, app,
         orbit: ctx.NSOrbit, finds: ctx.NSWorldFinds, route: ctx.NSRoute, EC: ctx.EncounterCard, ECON: G('NEW_LOOK_ECONOMY'), Gen: G('PlanetGenerator'),
-        evaRange: app.evaEnergyRange(),
+        evaRange: { energy: app.evaEnergyRange(), salvage: app.evaSalvageRange(false), salvageHigh: app.evaSalvageRange(true) },   // policy.js rewardValue
         cur: { sector: 1, node: null, trip: null, phase: 'start', src: null, lastCard: null, campfire: false, strange: false, stop: 0, beat: 0, opening: null },
         lastStress: {}, seenEvents: new Set(), lastStock: { energy: 100, rations: 24, salvage: 50 }, injuredAt: {}, run: { supperVictim: null },
     };

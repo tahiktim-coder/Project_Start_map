@@ -27,7 +27,8 @@
                                    story or Eden's card
      hasTeamAction(planet) → bool  this place has a team trip still to take: a find still open, or before a scan one blind
                                    trip (handleWarp defers the breach to it)
-     opened(app)                   the bridge is up: the crisis sign is decided (once per place) and said
+     opened(app)                   the bridge is up: the crisis sign is decided (once per place) and said; a sign comes
+                                   true while the team is down at NEW_LOOK_ECONOMY.CRISIS_CHANCE
      signed(app) → bool            a sign will be said here (bundle's reactToOrbit skips the crew's "all clear" bark then)
      beforeLeave(app) → Promise<{ ok, say?, direct? }>   the team away refuses; a breach still due plays first; a call is dropped
      whileDown(app, team) → Promise   the crisis aboard while the team is down, then the skills aboard
@@ -52,6 +53,14 @@
     const NS = () => window.NewScreen;
     const CREW_BY_TAG = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
     const SKIM_ENERGY = (window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY.SKIM) || 15;   // bundle.js NEW_LOOK_ECONOMY, the one place it is set
+    /** A number from the same table, read when used. Missing (a renamed key), it is logged and `before` is used: the rule
+        before the table had it, never a second copy of the table's number. */
+    function econ(key, before) {
+        const v = window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY[key];
+        if (typeof v === 'number') return v;
+        console.error(`NSOrbit: NEW_LOOK_ECONOMY.${key} is missing; using the old ${before}`);
+        return before;
+    }
     const PATCH_COST = 5, TRIP_QUIET_MS = 3500, TRIP_OVER_MS = 600, TRIP_LOST_MS = 20000, FIX_CHECK_MS = 500;
     const TREAT_WAIT_MS = 9000;                                                              // the trip's story waits at most this long for the treat line
     const BREACH_WAIT_MS = 5000;                                                             // a breach at a stop with no trip: the bridge is seen first
@@ -271,7 +280,7 @@
         if (n._nsCrisis !== undefined) return n._nsCrisis;
         if (!last && hasTeamAction(n) && !(s.currentSector === 1 && !s._breachDone)) {
             const ev = pickEvent(s);
-            n._nsCrisis = ev ? { kind: ev.id, comes: chance(0.5, 'crisis') } : null;
+            n._nsCrisis = ev ? { kind: ev.id, comes: chance(econ('CRISIS_CHANCE', 0.5), 'crisis') } : null;
         } else n._nsCrisis = null;
         return n._nsCrisis;
     }
@@ -345,7 +354,7 @@
             const vance = crisis === 'BREACH' ? aboardWell('SECURITY') : null, healer = hurtNow.length ? vance || aboardWell('MEDIC') : null;
             return healer ? treat(app, healer, hurtNow, (healer === vance ? LINES.vancePulled : LINES.arisTreated)(hurtNow.map(m => m.name).join(' and '))) : null;
         }).then(() => {
-            if (aboardWell('SPECIALIST')) { app._nsScanMod = -10; log(s, LINES.miraScanned); }
+            if (aboardWell('SPECIALIST')) { app._nsScanMod = econ('MIRA_ABOARD', -10); log(s, LINES.miraScanned); }
             s.emitUpdates();
         }).catch(err => console.error('NSOrbit: the crisis aboard failed', err)).then(() => { if (trip) trip.downDone = true; });
     }

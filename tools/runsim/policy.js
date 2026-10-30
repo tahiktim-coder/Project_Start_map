@@ -59,10 +59,12 @@ function pickCard(cfg, state, style, rnd, descOf) {
 function safe(f, d) { try { return f(); } catch (err) { return d; } }
 
 // ── the trip card's way ──
+/** evaRange: what a plain landing's find brings, as the game says ([lowest, highest] each): { energy, salvage, salvageHigh }
+    (play.js, from App.evaEnergyRange and App.evaSalvageRange). */
 function rewardValue(choice, evaRange) {
-    const r = choice.reward || {};
+    const r = choice.reward || {}, mid = range => (range[0] + range[1]) / 2;
     if (r.type === 'RESOURCE' && r.val === 'NOTHING') return /Lose Fuel|Energy Cost/i.test(choice.text) ? -10 : /Morale Loss/i.test(choice.text) ? -3 : 0;
-    if (r.type === 'RESOURCE') return String(r.val).includes('METALS_HIGH') ? 89.5 * VALUE.salvage : String(r.val).includes('METALS') ? 59.5 * VALUE.salvage : (evaRange[0] + evaRange[1]) / 2 * VALUE.energy;
+    if (r.type === 'RESOURCE') return String(r.val).includes('METALS_HIGH') ? mid(evaRange.salvageHigh) * VALUE.salvage : String(r.val).includes('METALS') ? mid(evaRange.salvage) * VALUE.salvage : mid(evaRange.energy) * VALUE.energy;
     if (r.type === 'DATA') return (Number(r.val) || 1) * VALUE.data;
     if (r.type === 'ITEM') return VALUE.item;
     return 0;

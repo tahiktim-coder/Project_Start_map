@@ -96,7 +96,14 @@
         course: name => `A.U.R.A.: "That signal logged one of our ships heading for ${name}, Commander."`,
         fix: name => `A.U.R.A.: "The team brought back an old star fix. One of our ships is at ${name}, Commander."`,
     };
-    const SITE_AT = [-0.6, 0.1], ORBIT_AT = [-1.22, 0.4], EDEN_AT = [-0.55, 0.12], MAX_GIVES = 2, MIRA_SCAN = -10;
+    const SITE_AT = [-0.6, 0.1], ORBIT_AT = [-1.22, 0.4], EDEN_AT = [-0.55, 0.12], MAX_GIVES = 2;
+    /** Mira's ground scan from aboard (NSOrbit.whileDown sets the same): bundle.js NEW_LOOK_ECONOMY, read when used. */
+    function miraScan() {
+        const v = window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY.MIRA_ABOARD;
+        if (typeof v === 'number') return v;
+        console.error('NSWorldFinds: NEW_LOOK_ECONOMY.MIRA_ABOARD is missing; using the old -10');   // never a second copy of the table's number
+        return -10;
+    }
 
     function hashOf(s) { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; }
     const unit = (s, k) => (hashOf(s + ':' + k) % 1000) / 999;
@@ -140,7 +147,7 @@
     /** A plain landing's risk going in (App.tripRisk) plus its careful choice's own: what the card's careful choice will say. */
     function eventRisk(app, node, ev, ids) {
         if (!app || typeof app.tripRisk !== 'function') return null;
-        const base = app.tripRisk(node, { mira: miraAboard(app, ids) ? MIRA_SCAN : 0 }).risk;
+        const base = app.tripRisk(node, { mira: miraAboard(app, ids) ? miraScan() : 0 }).risk;
         const least = Math.min(...(ev.choices || []).map(c => Number(c.riskMod) || 0));
         return Math.max(0, Math.min(100, Math.round(base + (Number.isFinite(least) ? least : 0))));
     }
