@@ -5,6 +5,9 @@
 > engineering down); Refuel at a gas giant +20; a plain landing's energy find 8-12; no card choice gives more than 20 energy; every
 > living person eats one ration at the supper after a jump; sealed rations open at once (+2 each). Two rules: a story world can
 > always be reached (on the reserve if need be), and food that runs short means one person goes without supper, never a death.
+> (2026-10-30, depth plan step 5: one or two go without, by how short the food is; the first time leaves them too weak for the
+> next trip, the second sick in bed until they eat, and a third kills them only when the player chooses it at the table after
+> Aris warns, over "Not yet" or sharing the food out. `HUNGER_*` in `NEW_LOOK_ECONOMY`.)
 > Measured: no story page lost in 3,000 model runs (was up to 90%); careful players skip extras from sector 3 on. Open: card choices
 > still move energy more than the route does (a card pass is due). The tables below describe the default game as it was.
 

@@ -270,6 +270,7 @@ class GameState {
             _breachDone: !!this._breachDone,
             _paidWarps: this._paidWarps || 0,
             _nsSupper: this._nsSupper || null,     // the new look: a supper still due after the jump (eaten after a reload too)
+            _hungerChain: 1,                       // missed suppers counted by the hunger chain (loadGame: older counts never kill)
             aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
             // Navigation
             currentSector: this.currentSector,
@@ -380,7 +381,10 @@ class GameState {
             // Ship
             this.shipDecks = saveData.shipDecks;
             // Crew (saves from before first names had "Eng. Jaxon" and the like: those become first names, in the log too)
-            this.crew = (saveData.crew || []).map(c => ({ ...c, name: firstNameOf(c.name) }));
+            // Saves from before the hunger chain counted missed suppers that cost nothing: they carry in as one at most (still
+            // remembered, never sick or at their last on load)
+            const wentBefore = c => (saveData._hungerChain || !(c._wentWithout > 1) ? {} : { _wentWithout: 1 });
+            this.crew = (saveData.crew || []).map(c => ({ ...c, name: firstNameOf(c.name), ...wentBefore(c) }));
             // Progress
             this.actionsTaken = saveData.actionsTaken;
             const pageIds = (typeof EXODUS_LOGS !== 'undefined' ? EXODUS_LOGS : []).map(p => p.id);
@@ -650,8 +654,10 @@ class GameState {
     /**
      * The sector jump: the crew eats (RATIONS_PER_JUMP). The only place rations are eaten besides "a day" on a card.
      * Short of food, stress climbs; on the third jump in a row with nothing to eat, someone dies.
+     * The default game only: the new look eats at the supper after the jump (serveSupper), where hunger kills nobody unasked.
      */
     eatOnJump() {
+        if (isNewScreen()) return;
         const before = this.rations;
         this.rations = Math.max(0, this.rations - RATIONS_PER_JUMP);
         const eaten = before - this.rations;
@@ -732,50 +738,121 @@ class GameState {
         return this.crew.filter(c => c.status !== 'DEAD').length * NEW_LOOK_ECONOMY.RATIONS_PER_PERSON;
     }
 
+    /** The new look: how many go without at this supper: one for each ration short, NEW_LOOK_ECONOMY.HUNGER_WITHOUT_MAX at most. */
+    supperWithout() {
+        return Math.min(NEW_LOOK_ECONOMY.HUNGER_WITHOUT_MAX, Math.max(0, this.supperNeed() - this.rations));
+    }
+
+    /** The new look: whether c may go without supper: alive and not the commander, and, if it would be their last missed supper
+        (the one that kills: HUNGER_DEATH_AT), only when `chosen` (the table moment, tower/Supper.js: Aris warned, the player
+        chose it). */
+    mayGoWithout(c, chosen) {
+        if (!c || c.status === 'DEAD' || !this.crew.includes(c) || (c.tags || []).includes('LEADER')) return false;
+        return !!chosen || (c._wentWithout || 0) + 1 < NEW_LOOK_ECONOMY.HUNGER_DEATH_AT;
+    }
+
     /**
-     * The new look's supper after a sector jump (docs/SHIP_LIFE.md "2. Supper at the jump"; the scene is
-     * src/newscreen/tower/Supper.js). Everyone living eats; with too few rations A.U.R.A. cuts the portions, everything left is
-     * eaten, and one person goes without: `without`, the player's pick. They take +1 stress and get no rest this jump; if
-     * they are hurt or already at stress 2 they are too weak for the next team trip instead (_nsWeak, read by NSOrbit), and
-     * their stress does not climb past where it was, so a missed supper never sets off a breakdown. Everyone else rests if
-     * the crew quarters work. That is the floor: nobody starves, however short the food. Returns { ate, short, left }.
+     * The new look's supper after a sector jump (docs/SHIP_LIFE.md "2. Supper at the jump"; the scene, who goes without and
+     * the table moment, is src/newscreen/tower/Supper.js). Everyone living eats; with too few rations everything left is
+     * eaten and one person goes without for each ration short, two at most (supperWithout): `without`, the player's picks
+     * (one person or a list). The cost is counted per person over the whole run (_wentWithout, goWithout): the first time
+     * they are too weak for the next team trip, the second they are sick in bed until they eat at a later supper, the third
+     * kills them, and only if opts.confirmed names them (mayGoWithout). With opts.share, or too few who may go without, the
+     * food is shared out instead: everyone +1 stress (never past 2), nobody rests, nobody's count rises. Short by
+     * HUNGER_NO_REST or more, nobody rests either; else everyone who ate rests if the crew quarters work. Whoever ate is well
+     * again (an injury lasts until supper), but not the hunger-sick at a shared supper.
+     * Returns { ate, short, left, without, share, weak, sick, died } (the last four: lists of crew).
      */
-    serveSupper(without) {
-        const need = this.supperNeed(), ate = Math.min(this.rations, need), short = ate < need;
-        const skip = short && without && without.status !== 'DEAD' && this.crew.includes(without) ? without : null;
-        const rests = this.isDeckOperational('quarters');
+    serveSupper(without, opts = {}) {
+        const E = NEW_LOOK_ECONOMY, need = this.supperNeed(), ate = Math.min(this.rations, need), shortBy = need - ate, short = shortBy > 0;
+        const many = this.supperWithout(), confirmed = opts.confirmed || [];
+        const picked = (Array.isArray(without) ? without : [without]).filter((c, i, all) => all.indexOf(c) === i && this.mayGoWithout(c, confirmed.includes(c)));
+        const share = short && (!!opts.share || picked.length < many);
+        const skips = short && !share ? picked.slice(0, many) : [];
+        const rests = this.isDeckOperational('quarters') && !share && shortBy < E.HUNGER_NO_REST;
         this.rations -= ate;
         this._nsSupper = null;
-        this.crew.forEach(c => { delete c._nsWeak; });                                  // last supper's weakness is over
-        this.crew.forEach(c => { if (c.status !== 'DEAD' && c !== skip && rests && c.stress > 0) c.stress--; });
-        if (skip) {
-            const was = skip.stress || 0;
-            if (skip.status === 'INJURED' || was >= 2) skip._nsWeak = true;
-            skip.stress = Math.min(skip._nsWeak ? Math.max(2, was) : 3, was + 1);
-            skip._wentWithout = (skip._wentWithout || 0) + 1;                                // remembered: the crew may say so at the light
-        }
-        this.addLog(short ? `A.U.R.A. cut the portions.${skip ? ` ${skip.name} went without supper.` : ''} ${this.rations} rations left.`
-            : `The crew ate ${ate} rations at supper. ${this.rations} left.`);
+        this.crew.forEach(c => { delete c._nsWeak; if (c.status !== 'INJURED') delete c._nsHungerSick; });   // last supper's weakness is over
+        const living = this.crew.filter(c => c.status !== 'DEAD');
+        living.forEach(c => { if (rests && !skips.includes(c) && c.stress > 0) c.stress--; });
+        if (share) living.forEach(c => this.hungerStress(c));
+        const names = list => list.map(c => c.name).join(' and ');
+        if (!short) this.addLog(`The crew ate ${ate} rations at supper. ${this.rations} left.`);
+        else if (share) this.addLog('A.U.R.A. shared out the last of the food. Everyone went to bed hungry.');   // DRAFT
+        else this.addLog(`A.U.R.A. cut the portions. ${names(skips)} went without supper. ${this.rations} rations left.`);
         if (rests) this.addLog('Crew Quarters: Rest cycle complete. Stress levels reduced.');
-        const healed = this.crew.filter(c => c.status === 'INJURED' && c !== skip && c.trait !== 'CATATONIC');   // an injury lasts until supper: whoever ate is well
+        const hit = this.goWithout(skips);                                              // after the portions line: a death is told last
+        hit.sick.forEach(c => this.addLog(this.sickLine(c)));
+        const healed = this.crew.filter(c => c.status === 'INJURED' && !skips.includes(c) && c.trait !== 'CATATONIC' && !(share && c._nsHungerSick));
         if (healed.length) {
             this.mend(healed);
-            this.addLog(`After supper, ${healed.map(c => c.name).join(' and ')} ${healed.length === 1 ? 'is' : 'are'} well again.`);   // DRAFT
+            this.addLog(`After supper, ${names(healed)} ${healed.length === 1 ? 'is' : 'are'} well again.`);   // DRAFT
         }
         this.emitUpdates();
-        return { ate, short, left: this.rations };
+        return { ate, short, left: this.rations, without: skips, share, weak: hit.weak, sick: hit.sick, died: hit.died };
+    }
+
+    /** The new look: what going without supper does to each of them (serveSupper), by their count over the run: the first time
+        too weak for the next team trip (_nsWeak, read by NSOrbit); the second sick in bed (INJURED, _nsHungerSick: only a
+        supper they eat makes them well, never Aris's "up by the next stop" or the autodoc; a card's, an item's or a station's
+        treatment still can); each time +1 stress, never past 2, and no rest.
+        The third time (HUNGER_DEATH_AT) they die. Returns { weak, sick, died }. */
+    goWithout(skips) {
+        const E = NEW_LOOK_ECONOMY, out = { weak: [], sick: [], died: [] };
+        skips.forEach(c => {
+            c._wentWithout = (c._wentWithout || 0) + 1;                                      // remembered: the crew may say so at the light
+            if (c._wentWithout >= E.HUNGER_DEATH_AT) { this.dieOfHunger(c); out.died.push(c); return; }
+            this.hungerStress(c);
+            if (c._wentWithout >= E.HUNGER_SICK_AT) { c.status = 'INJURED'; c._nsHungerSick = true; delete c._nsMendAt; out.sick.push(c); }
+            else { c._nsWeak = true; out.weak.push(c); }
+        });
+        return out;
+    }
+
+    /** The new look: hunger's +1 stress, never past HUNGER_STRESS_HOLD (2), so it never sets off a breakdown. */
+    hungerStress(c) {
+        const was = c.stress || 0;
+        c.stress = Math.max(was, Math.min(NEW_LOOK_ECONOMY.HUNGER_STRESS_HOLD, was + 1));
+    }
+
+    /** The new look: a third missed supper, chosen at the table (tower/Supper.js). The seat at the table is empty from now on. */
+    dieOfHunger(c) {
+        c.status = 'DEAD';
+        c._deathCause = 'hunger';
+        c._deathSector = this.currentSector;
+        delete c._nsWeak; delete c._nsHungerSick; delete c._nsMendAt;
+        this.addLog(`${c.name} died of hunger.`);   // DRAFT
+        window.dispatchEvent(new CustomEvent('crew-death', { detail: { crew: c } }));
+        if (window.BarkSystem) window.BarkSystem.tryBark('CREW_DEATH', this, { crew: c });
+        if (window.AuraSystem) window.AuraSystem.tryComment('CREW_DEATH', this, true);
+    }
+
+    /** The new look: who says someone is sick from hunger (a log line Voice says in the ship): Aris, unless she is the one, or
+        dead, or asleep; then A.U.R.A. */
+    sickLine(c) {
+        const aris = this.crew.find(m => (m.tags || []).includes('MEDIC') && m.status !== 'DEAD' && m !== c && !(m.tags || []).includes('SEDATED'));
+        const he = c.gender === 'F' ? 'she' : 'he', He = c.gender === 'F' ? 'She' : 'He';
+        return aris ? `Aris: "${c.name} is sick from hunger. ${He} stays in bed until ${he} eats."`   // DRAFT
+            : `A.U.R.A.: "${c.name} is sick from hunger, Commander. ${He} stays in bed until ${he} eats."`;   // DRAFT
+    }
+
+    /** The new look: the hunger-sick mark (_nsHungerSick) belongs to the sickness it caused. Once something else has made
+        them well (a card, an item, a station), it goes, so a later injury is a plain one: Aris's "up by the next stop" and a
+        shared-out supper treat it as such. emitUpdates calls it. */
+    dropStaleHunger() {
+        this.crew.forEach(c => { if (c._nsHungerSick && c.status !== 'INJURED') delete c._nsHungerSick; });
     }
 
     /** The new look: the hurt are well again (supper, Aris's next stop). */
     mend(list) {
-        list.forEach(c => { c.status = 'HEALTHY'; c.healCounter = 0; delete c._nsMendAt; });
+        list.forEach(c => { c.status = 'HEALTHY'; c.healCounter = 0; delete c._nsMendAt; delete c._nsHungerSick; });
     }
 
     /** The new look: Aris went down with them, so whoever was hurt on that trip is well at the next stop (NSOrbit.tripDone
         marks them, _nsMendAt: the warps made then). App.handleWarp calls it on arriving somewhere new. */
     mendOnArrival() {
         const due = this.crew.filter(c => c._nsMendAt != null && (this._paidWarps || 0) > c._nsMendAt);
-        const well = due.filter(c => c.status === 'INJURED' && c.trait !== 'CATATONIC');
+        const well = due.filter(c => c.status === 'INJURED' && c.trait !== 'CATATONIC' && !c._nsHungerSick);   // hunger: only food mends it
         due.forEach(c => { delete c._nsMendAt; });                                  // spent, even where another heal came first: never a later injury's
         if (!well.length) return;
         this.mend(well);
@@ -1094,7 +1171,7 @@ class GameState {
     }
 
     emitUpdates() {
-        if (isNewScreen()) this.openFoodPacks();
+        if (isNewScreen()) { this.openFoodPacks(); this.dropStaleHunger(); }
         this.enforceCargoLimit();
         this.applyStressTraits();
         this.checkLoseConditions();
@@ -1129,7 +1206,7 @@ const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, 
  * and its own card amounts.
  * The new screen's files read it as window.NEW_LOOK_ECONOMY. Two rules go with it, with no number: a story world (one of our
  * wrecks nobody has boarded, or the sector's story planet) can always be reached, on the reserve if need be (App.isStoryStop),
- * and food that runs short means someone goes without supper (GameState.serveSupper says what that costs them).
+ * and food that runs short means one or two people go without supper (GameState.serveSupper says what that costs them).
  */
 const NEW_LOOK_ECONOMY = Object.freeze({
     START_ENERGY: 100,       // a full tank (the cap stays 100)
@@ -1153,6 +1230,13 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     START_RATIONS: 24,       // all but the last supper with everyone alive (was 20, eaten one a jump): it runs short at a jump or
                              //   two for a careful crew that takes days for people, unless it finds food on the way
     RATIONS_PER_PERSON: 1,   // each living person eats one ration at the supper after a jump (five with everyone alive; was 1 in all)
+    HUNGER_WITHOUT_MAX: 2,   // food short at supper: one person goes without for each ration missing, two at most
+    HUNGER_NO_REST: 3,       //   short by this many or more: nobody rests that night either (GameState.serveSupper)
+    HUNGER_SICK_AT: 2,       // missed suppers are counted per person over the whole run: the first leaves them too weak for the
+    HUNGER_DEATH_AT: 3,      //   next trip, the second sick in bed until they eat, the third kills them, and only after Aris
+                             //   warns at the table and the player chooses it over "Not yet" (tower/Supper.js); with nobody
+                             //   else to go without, the food is shared out instead
+    HUNGER_STRESS_HOLD: 2,   // going without, or a supper shared out: +1 stress, never past 2 (hunger never sets off a breakdown)
     FOOD_PACK_RATIONS: 2,    // sealed rations found on a card are opened at once (the new look has no hold to open them from):
                              //   "+2 Sealed Rations" is +4, a little under one supper, so a find helps but does not end the hunger
     FAR_SCAN: 2,             // "Scan" in a world's note in travel (src/newscreen/Scan.js): what a world holds before we fly there.
@@ -1935,7 +2019,7 @@ class App {
             if (this.state.upgrades.includes('autodoc')) {
                 let healed = false;
                 this.state.crew.forEach(c => {
-                    if (c.status === 'INJURED') {
+                    if (c.status === 'INJURED' && !c._nsHungerSick) {          // the new look's hunger sickness: only a supper they eat mends it
                         c.status = 'HEALTHY';
                         c.healCounter = 0;
                         healed = true;
@@ -2706,8 +2790,8 @@ class App {
         // Time passes, and the crew eats: the jump is where rations go (docs/ECONOMY.md). The new look: they eat, and rest, at the
         // supper after the jump, in the ship (src/newscreen/tower/Supper.js, GameState.serveSupper).
         this.state.passTime();
-        const isSupperLater = isNewScreen() && !!window.NSSupper;
-        if (isSupperLater) { window.NSSupper.settle(); this.state._nsSupper = { sector: this.state.currentSector + 1 }; }   // a supper still due is eaten first
+        const isSupperLater = isNewScreen();                                                // never eatOnJump's starving in the new look
+        if (isSupperLater) { if (window.NSSupper) window.NSSupper.settle(); this.state._nsSupper = { sector: this.state.currentSector + 1 }; }   // a supper still due is eaten first
         else this.state.eatOnJump();
 
         // Passive stress recovery on sector jump (if quarters operational)
@@ -4679,6 +4763,7 @@ Then you're through.`,
             const home = partner ? `${partner.name} is bringing ${them} home.` : `The lander is bringing ${them} home.`;
             return { crew, died: true, line: hunted ? `A.U.R.A.: "Something down there hunted ${crew.name}, Commander. ${crew.name} is dead."` : `A.U.R.A.: "${crew.name} is dead, Commander. ${home}"` };
         }
+        if (crew.status !== 'INJURED') delete crew._nsHungerSick;                   // well before this: a plain injury, never hunger's
         crew.status = 'INJURED';
         delete crew._nsMendAt;                                                       // a new injury: an old "up by the next stop" is not this one's
         window.dispatchEvent(new CustomEvent('crew-injury', { detail: { crew } }));

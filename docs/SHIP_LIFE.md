@@ -48,6 +48,12 @@ to**. At the end, **the window at the light**, which reads all four.
   jump (start 24); when it runs short Vance offers to go without, or you choose who does. No bowl count is shown (the "four
   crew" meaning is undecided). This replaces the "five bowls" meal in SHIP_GAMEPLAY §8 and §10. When the shelf is full, the
   fifth jar is a single click.
+- *Built (2026-10-30, the hunger chain):* one person goes without for each ration short, two at most, counted per person
+  over the run: the first time too weak for the next trip, the second sick in bed until they eat (Aris cannot treat it), the
+  third kills them. Nobody offers at their last; picking them has Aris say it would kill them, with "Not yet" first, or
+  "Share it out" when nobody else can go without (everyone +1 stress, no rest, no count rises), and "Go without" says in red
+  who dies. With too few left to go without at all, nobody is asked: "Share it out" waits alone. Only a supper they eat
+  cures hunger sickness (not Aris, not the autodoc); a card's, item's or station's treatment still can. Lines are DRAFT.
 
 **3. Strip or names (at a wreck)**
 - *See and click:* the two who went argue on the radio about the one load to bring up: food, hull plates, a reactor cell,

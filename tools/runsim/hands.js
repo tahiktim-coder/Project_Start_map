@@ -167,17 +167,20 @@ function boardingHaul(rc, station, member, b) {
     state.emitUpdates();
 }
 
-/** NSSupper.settle: the supper due after a jump; when short, the player picks who goes without. */
+/** NSSupper.settle: the supper due after a jump; when short, the player picks who goes without (one or two), and a pick at
+    someone's last missed supper opens the table moment (policy.js supperPlan). A hunger death is marked chosen at the table. */
 function serveSupper(rc) {
     const { state, style, R, run } = rc;
     if (!state._nsSupper || state.gameOver) return;
-    const need = state.supperNeed(), food = state.rations, short = food < need;
-    const without = short ? P.pickWithout(state, style, run) : null;
-    rc.add(short ? M.SECONDS.supperShort : M.SECONDS.supper, 'supper');
+    const need = state.supperNeed(), food = state.rations, short = food < need, many = short ? state.supperWithout() : 0;
+    const plan = short ? P.supperPlan(state, style, run) : { picks: [], confirmed: [], share: false, tables: 0 };
+    rc.add(short ? M.SECONDS.supperShort + plan.tables * M.SECONDS.supperTable + Math.max(0, plan.picks.length - 1) * M.SECONDS.supperMore : M.SECONDS.supper, 'supper');
     rc.beat();
-    state.serveSupper(without);
-    R.suppers.push({ sector: state.currentSector, need, food, short, without: without ? without.name : null,
-        weak: without ? !!without._nsWeak : false, counts: Object.fromEntries(rc.living().map(c => [c.name, c._wentWithout || 0])) });
+    const r = state.serveSupper(plan.picks, { share: plan.share, confirmed: plan.confirmed });
+    const names = list => (list || []).map(c => c.name);
+    r.died.forEach(c => { const d = R.deaths.find(x => x.who === c.name); if (d) d.supper = { chosen: plan.confirmed.includes(c), tables: plan.tables }; });
+    R.suppers.push({ sector: state.currentSector, need, food, short, many, without: names(r.without), share: !!r.share, tables: plan.tables,
+        weak: names(r.weak), sick: names(r.sick), died: names(r.died), counts: Object.fromEntries(rc.living().concat(r.died).map(c => [c.name, c._wentWithout || 0])) });
 }
 
 module.exports = { hands, tripCard, board, serveSupper };

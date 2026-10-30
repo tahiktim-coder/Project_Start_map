@@ -61,6 +61,13 @@ function measureCrew(runs) {
         shortAny: pct(runs, r => r.suppers.some(s => s.short)), shortMean: mean(runs, r => r.suppers.filter(s => s.short).length),
         firstShort: pct(runs, r => !!(r.suppers[0] && r.suppers[0].short)), twice: pct(runs, r => r.suppers.some(s => Object.values(s.counts).some(v => v >= 2))),
         hungerDeaths: pct(runs, r => r.deaths.some(d => /hunger|starv/i.test(d.cause))),
+        hungerDeathsAll: runs.reduce((a, r) => a + r.deaths.filter(d => /hunger|starv/i.test(d.cause)).length, 0),
+        hungerDeathsChosen: runs.reduce((a, r) => a + r.deaths.filter(d => /hunger|starv/i.test(d.cause) && d.supper && d.supper.chosen).length, 0),
+        twoWithout: pct(runs, r => r.suppers.some(s => (s.without || []).length >= 2)),
+        sharedAny: pct(runs, r => r.suppers.some(s => s.share)), sharedMean: mean(runs, r => r.suppers.filter(s => s.share).length),
+        tablesMean: mean(runs, r => r.suppers.reduce((a, s) => a + (s.tables || 0), 0)),
+        hungerWeak: mean(runs, r => r.suppers.reduce((a, s) => a + (s.weak || []).length, 0)),
+        hungerSick: mean(runs, r => r.suppers.reduce((a, s) => a + (s.sick || []).length, 0)), sickAny: pct(runs, r => r.suppers.some(s => (s.sick || []).length > 0)),
         lostAny: pct(runs, r => r.deaths.length > 0), lost2: pct(runs, r => r.deaths.length >= 2), lostMean: mean(runs, r => r.deaths.length),
         phases: tally(runs.flatMap(r => r.deaths), d => d.phase),
         stress2: pct(runs, r => r.stress.reached2 > 0), stress2Mean: mean(runs, r => r.stress.reached2),
@@ -111,6 +118,7 @@ function curveOf(runs) {
 
 // ── loss stories ──
 function deathLine(d) {
+    if (/hunger/i.test(d.cause)) return `Sector ${d.sector}, at supper: the food ran short and ${d.who} had gone without twice. ${d.supper && d.supper.chosen ? 'Aris said it would kill them, and we chose "Go without".' : 'Nobody chose it at the table (a rule error).'} ${d.who} died of hunger.`;
     const at = `Sector ${d.sector}${d.world ? `, ${d.world} (${d.kind})` : ''}`;
     if (d.phase === 'trip' && d.trip) {
         const way = d.trip.wayKind === 'only' ? `"${d.trip.way}"` : `the ${d.trip.wayKind} way, "${d.trip.way}"`;
@@ -212,6 +220,10 @@ function perPlayer(L, results, order) {
     row('first supper short', m => `${m.firstShort}%`);
     row('someone went without twice', m => `${m.twice}%`);
     row('hunger death', m => `${m.hungerDeaths}%`);
+    row('two went without at one supper (runs)', m => `${m.twoWithout}%`);
+    row('went without: weak / sick, people per run', m => `${m.hungerWeak} / ${m.hungerSick}`);
+    row('someone sick from hunger (runs)', m => `${m.sickAny}%`);
+    row('shared out (runs) / per run / table moments', m => `${m.sharedAny}% / ${m.sharedMean} / ${m.tablesMean}`);
     row('crew lost per run', m => m.lostMean);
     row('lost someone / two or more', m => `${m.lostAny}% / ${m.lost2}%`);
     row('reached the light / with all four', m => `${m.light}% / ${m.allFour}%`);
@@ -311,6 +323,8 @@ function guards(L, results, order) {
     }
     const sum = key => order.reduce((a, k) => a + (results[k][key] || 0), 0), tripDeaths = sum('tripDeaths'), readable = sum('tripDeathsReadable');
     g('Readable deaths (all runs)', `${verdict(readable === tripDeaths)} ${readable} of ${tripDeaths} trip deaths were readable: the card showed the death chance, and GO DOWN said it could kill (${sum('tripDeathsGo')}) or the card left a way that could not [all]`);
+    const hungerAll = sum('hungerDeathsAll'), hungerChosen = sum('hungerDeathsChosen');
+    g('Hunger deaths chosen at the table', `${verdict(hungerChosen === hungerAll)} ${hungerChosen} of ${hungerAll} hunger deaths came after Aris warned and the player chose "Go without" [all]`);
     const twice = order.reduce((a, k) => a + results[k].twoBreakdownsOneEvent, 0);
     g('One breakdown per event (all runs)', `${verdict(twice === 0)} ${twice} second breakdowns from one event`);
     order.forEach(k => { const m = results[k]; if (m.traitTrips) g(`Traits matter: ${STYLES[k].label}`, `${verdict(m.struckTrips >= 30 && m.struckTrips <= 60)} way struck on ${m.struckTrips}% of trips with a trait on [30-60]`); });

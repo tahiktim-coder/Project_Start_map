@@ -187,15 +187,33 @@ function pickTeam(find, style, ctx) {
 }
 
 // ── supper ──
-/** Who goes without when the food is short: Supper.js's offer (Accept), or the player's own pick. */
-function pickWithout(state, style, run) {
-    const can = (state.crew || []).filter(c => c.status !== 'DEAD' && !tagsOf(c).includes('LEADER'));
-    if (!can.length) return null;
-    const offerer = can.filter(c => !tagsOf(c).includes('CONFINED') && !tagsOf(c).includes('SEDATED')).sort((a, b) => rankOf(a) - rankOf(b))[0] || null;
-    const went = c => c._wentWithout || 0, hurt = c => (c.status === 'INJURED' ? 1 : 0), stress = c => c.stress || 0;
-    if (style.supper === 'rotate') return can.slice().sort((a, b) => went(a) - went(b) || hurt(a) - hurt(b) || stress(a) - stress(b) || rankOf(a) - rankOf(b))[0];
-    if (style.supper === 'same') return can.find(c => c.name === run.supperVictim) || offerer;
-    if (style.supper === 'best') return can.slice().sort((a, b) => hurt(a) - hurt(b) || stress(a) - stress(b) || went(a) - went(b) || rankOf(a) - rankOf(b))[0];
+/** Who goes without when the food is short (tower/Supper.js): one pick for each ration short, two at most
+    (GameState.supperWithout). A pick at someone's last missed supper (GameState.mayGoWithout says no) opens the table moment:
+    the reckless player chooses "Go without" (a death), everyone else shares the food out. An "Accept" player with nobody left
+    to offer shares too (no table moment: "Share it out" waits beside the tower, or settle). With fewer left who could go
+    without at all than must, nobody is asked: the food is shared out. Returns { picks, confirmed, share, tables }. */
+function supperPlan(state, style, run) {
+    const many = state.supperWithout(), plan = { picks: [], confirmed: [], share: false, tables: 0 };
+    const able = (state.crew || []).filter(c => c.status !== 'DEAD' && !tagsOf(c).includes('LEADER'));
+    if (able.length < many) return { picks: [], confirmed: [], share: true, tables: 0 };   // too few could go without at all: nobody is asked (Supper.js tooFew)
+    for (let k = 0; k < many && !plan.share; k++) {
+        const left = (state.crew || []).filter(c => c.status !== 'DEAD' && !tagsOf(c).includes('LEADER') && !plan.picks.includes(c));
+        const safe = left.filter(c => state.mayGoWithout(c, false));
+        const c = pickOne(style, left, safe, run);
+        if (!c) { plan.share = true; break; }
+        if (safe.includes(c)) { plan.picks.push(c); continue; }
+        plan.tables += 1;                                                            // Aris: it would kill them
+        if (style.supper === 'same') { plan.picks.push(c); plan.confirmed.push(c); } else plan.share = true;
+    }
+    return plan;
+}
+/** One pick: the offer (Accept), or the player's own. `safe`: those who may go without with no table moment. */
+function pickOne(style, left, safe, run) {
+    const went = c => c._wentWithout || 0, hurt = c => (c.status === 'INJURED' ? 1 : 0), stress = c => c.stress || 0, byRank = (a, b) => rankOf(a) - rankOf(b);
+    const offerer = safe.filter(c => !tagsOf(c).includes('CONFINED') && !tagsOf(c).includes('SEDATED')).sort(byRank)[0] || null;
+    if (style.supper === 'rotate') return safe.slice().sort((a, b) => went(a) - went(b) || hurt(a) - hurt(b) || stress(a) - stress(b) || byRank(a, b))[0] || left[0] || null;
+    if (style.supper === 'best') return safe.slice().sort((a, b) => hurt(a) - hurt(b) || stress(a) - stress(b) || went(a) - went(b) || byRank(a, b))[0] || left[0] || null;
+    if (style.supper === 'same') return left.find(c => c.name === run.supperVictim) || offerer || left.slice().sort(byRank)[0] || null;
     return offerer;                                                                  // Accept: Vance, else the next who can
 }
 
@@ -219,4 +237,4 @@ function pickBoarder(state, style, rnd) {
     return well.slice().sort((a, b) => pref.findIndex(t => tagsOf(a).includes(t)) - pref.findIndex(t => tagsOf(b).includes(t)))[0];
 }
 
-module.exports = { pickCard, pickWay, pickWorld, wantsFind, pickTeam, pickWithout, deckPlan, pickBoarder, idOf, tagsOf, SETTLE, expected };
+module.exports = { pickCard, pickWay, pickWorld, wantsFind, pickTeam, supperPlan, deckPlan, pickBoarder, idOf, tagsOf, SETTLE, expected };

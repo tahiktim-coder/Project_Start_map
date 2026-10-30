@@ -14,7 +14,7 @@
      table (Vance on his bunk) until the next team trip has gone.
    - Supper after a jump (tower/Supper.js, which this module drives): while it is due the crew's day is held at its meal,
      everyone at the galley table (set while the tower is out of sight); short of food, pointing at someone says
-     "<name> goes without" and a click picks them.
+     "<name> goes without" and a click picks them; while the table moment waits (NSSupper.atTable), a click on them does nothing.
    - The reactor follows the real energy (ShipArt.reactor.set; a step lower with engineering red); the beat runs 1.1 s at
      100, 1.5 s at 10, a missed beat in four below 25; the conduit carries it up to the bridge (TowerMarks).
    - Red decks from NewScreen.game.decks(); engineering red browns the ship out every 2.9 s.
@@ -509,6 +509,10 @@
             if (type === 'down') { hideTag(); return SUP.pick(who); }
             return false;
         }
+        if (who && SUP && typeof SUP.atTable === 'function' && SUP.atTable()) {   // the table moment: no chatter over Aris's warning
+            if (type === 'move') { V.hover = null; hideTag(); }
+            return type === 'down';
+        }
         if (type === 'move') { V.hover = h; if (h && h.what === 'deck' && !V.chips) showTag(h.id, e); else hideTag(); return !!h; }
         if (type === 'down') hideTag();
         if (type !== 'down') return false;
@@ -609,6 +613,7 @@
 #ns-ship-words .nsk-choice { display: grid; grid-template-columns: max-content max-content; align-items: baseline; gap: 12px; padding: 6px 0; margin: 0; background: none; border: 0; cursor: pointer; text-align: left; text-shadow: var(--shadow, 0 1px 0 #05070a); }
 #ns-ship-words .nsk-verb { font: 400 var(--fs-voice, 22px)/1.25 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--text, #e4e4e0); transition: color 140ms var(--ease, ease), transform 140ms var(--ease, ease); }
 #ns-ship-words .nsk-note { font: 400 max(14px, calc(var(--fs-who, 15px) * 0.95))/1 var(--f-num, 'IBM Plex Mono', monospace); color: var(--dim, #8b8d90); }
+#ns-ship-words .nsk-note.is-high { color: #ff7a6a; }
 #ns-ship-words .nsk-choice:hover .nsk-verb, #ns-ship-words .nsk-choice:focus-visible .nsk-verb { color: var(--warm, #f08c2e); transform: translateX(3px); }
 #ns-ship-words .nsk-choice:active .nsk-verb { color: var(--warm-br, #ffc27a); }
 #ns-ship-words .nsk-choice:focus-visible { outline: none; }

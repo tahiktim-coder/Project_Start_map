@@ -94,7 +94,8 @@ const SECONDS = Object.freeze({
     wreck: 35, torch: 20, page: 20, dating: 25,      // our wrecks: the story card, the door, a found page, dating the disc
     site: 30, strange: 30, station: 75, stationCard: 20, mine: 20, skim: 4, call: 25, moment: 25, deckChoice: 5,
     leave: 3, jumpBurn: 6, corridor: { good: 49, poor: 30, aura: 45 }, jumpFault: 14, campfire: 40,   // corridor: measured flight times
-    supper: 8, supperShort: 14, throwSequence: 95, burnGauge: 25, breach: 50, reserveCard: 8, askJump: 4,
+    supper: 8, supperShort: 14, supperTable: 8, supperMore: 5,   // supper; short; the table moment (Aris, two chips); a second pick
+    throwSequence: 95, burnGauge: 25, breach: 50, reserveCard: 8, askJump: 4,
 });
 // which of the plan's routine cuts are live: step 3's four are (C1 autoScan, C4 walkOut, C5 repeatTrip, C6 bridgeHold);
 // C4 and C6 take their seconds from the game's table (NEW_LOOK_ECONOMY.WALK_OUT_MS, HOLD_SEEN_MS: rc.ECON), never a copy;
