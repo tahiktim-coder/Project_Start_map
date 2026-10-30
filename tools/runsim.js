@@ -9,8 +9,8 @@
      --void   the dark leg stand-in at the start of sector 5 (careful, A.U.R.A.-heavy and the optimizer wait: one ration a
               person; greedy and reckless push through: the hold breaks)
      --port   Last Port stand-in: one more station to dock at in sector 5 (not approved; report it with and without)
-     --unlock a trip card whose every way a trait struck keeps its careful way open (a stand-in for the plan's step 4
-              "never lock"); without it such a run ends there, 'locked', as today's game cannot leave that card
+     --unlock no longer changes anything: since depth step 4 the game itself never locks a trip card (App.tripChoices keeps
+              the careful way open) nor a team trip (NSOrbit.pool); kept so older pass scripts still run
      --off    rules cardsim.js left out, turned off (tools/runsim/switches.js): only for the check against its tables
      --log    one JSON line per run (the plan's D3 log);  --from a.jsonl,b.jsonl  writes the report again from such logs
               (one process per player, each with its own --log, then one report: every player found in the logs)
@@ -31,7 +31,8 @@ const NOTES = [
     'Five players, scripted (tools/runsim/models.js STYLES, tools/runsim/policy.js). Cards: careful "kind" = the first choice that does not settle, as cardsim.js.',
     'The flown jump: measured (dark-leg tune: careful +4.7 energy, 0.01 decks; careless +0.5, 1.35 decks; A.U.R.A. -4). Landings, the breach, the burn gauge and a player docking: assumptions (models.js).',
     "A.U.R.A.'s landings: her own autopilot, run headless on each world's own ground (tools/runsim/lander.js), lands soft on 99.9 % of worlds. The browser check should log 50 to confirm.",
-    'The lock: a trip card on which Vance\'s PARANOID strikes every way at 30+ and Mira\'s RECKLESS strikes the 0 way has no button left; today\'s game cannot leave it, so the run ends there ("locked"), unless --unlock.',
+    'Never locked (depth step 4): a trip card whose every way a stress trait struck keeps its careful way open (counted as "locked trip card"), and with fewer than two well the hurt go down, or the one left goes alone.',
+    'A trip\'s odds are the game\'s own (src/data/TripOdds.js through App.wayOdds): no death under 30 % hurt, the fit of the two going down, Vance\'s cover, a death chance never above what the card showed.',
     'Docking: a player\'s grade is an assumption (good 70/25/5 soft/rough/crash, poor 30/40/30); a crash breaks a deck, as DockingGame does. A.U.R.A. docks with her own autopilot run headless (tools/runsim/docking.js): soft on every station tried.',
     'Not modelled: A.U.R.A.\'s ethics and her adversarial acts (vents, locked decks), premonitions, the far scan (2 energy), Eden\'s valley (players fly straight to the light), settling, the copy of Earth beyond "fight out", saves and reloads.',
     'Trips: careful and A.U.R.A.-heavy players make one trip a world (the site first, else a find showing 25 % or less; a clue always), the optimizer up to two finds worth it, greedy and reckless every find.',

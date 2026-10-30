@@ -1,7 +1,7 @@
 /* tools/runsim/game.js — the game's own rule files in a node vm: a stub page, a fake clock, seeded dice. No window, no sound.
    Part of tools/runsim.js (the node run model, docs: the depth plan's PART 2 "D. Bot test protocol").
    What runs for real: GameState (bundle.js), App's handlers on an App object made without its constructor (no page), the sector
-   generator, NavView's map geometry, NSRoute (Route.js), NSScan (Scan.js), NSWorldFinds (WorldFinds.js), NSOrbit (Orbit.js),
+   generator, NavView's map geometry, TripOdds (a trip's odds), NSRoute (Route.js), NSScan (Scan.js), NSWorldFinds (WorldFinds.js), NSOrbit (Orbit.js),
    EncounterCard.apply, WarpPlot.energyDelta, BoardingParty's headless rules and every data file's choices and effects.
    What is stood in for (hooks.*, set by tools/runsim/play.js): every card's choice (EncounterCard.open), the minigames
    (MiniHost.play, LanderGame.play), the supper scene (NSSupper), the trip card's buttons (App.showEventModal).
@@ -13,7 +13,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 
 // index.html's order, only the files with rules or data (no drawing, no sound)
 const BEFORE_BUNDLE = [
-    'src/data/Items.js', 'src/data/Upgrades.js', 'src/data/Events.js', 'src/data/CampfireEvents.js', 'src/data/ExodusDerelicts.js', 'src/data/LootTables.js',
+    'src/data/Items.js', 'src/data/Upgrades.js', 'src/data/Events.js', 'src/data/TripOdds.js', 'src/data/CampfireEvents.js', 'src/data/ExodusDerelicts.js', 'src/data/LootTables.js',
     'src/data/SectorConfig.js', 'src/data/SettleCouncil.js', 'src/data/ExodusLogs.js', 'src/data/StoryPlanets.js', 'src/data/FailedColonyEncounters.js',
     'src/data/DerelictEncounters.js', 'src/data/AnomalyEncounters.js', 'src/data/LateGamePOIs.js', 'src/data/StructureEncounter.js', 'src/data/ShipEvents.js',
     'src/data/SpaceStations.js', 'src/data/AsteroidFields.js', 'src/data/DistressSignals.js', 'src/data/CrewEvents.js',

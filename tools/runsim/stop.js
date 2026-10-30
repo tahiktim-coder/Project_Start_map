@@ -35,7 +35,7 @@ async function visit(rc, node) {
     node._nsSeen = true;                                                           // as stop/Stop.js marks it when the bridge closes
     if (state.gameOver || state._inWrongPlace || R.ending) return;                 // R.ending: a locked trip card
     const site = app.siteOf(node);
-    if (wasStory && site && site.tag === 'EXODUS_WRECK' && !node[site.done]) { R.counts.storyMissed += 1; R.counts[orbit.eligible(app).length < 2 ? 'storyMissedFew' : 'storyMissedOther'] += 1; }
+    if (wasStory && site && site.tag === 'EXODUS_WRECK' && !node[site.done]) { R.counts.storyMissed += 1; R.counts[orbit.eligible(app).length < 1 ? 'storyMissedFew' : 'storyMissedOther'] += 1; }
     await repairs(rc);
     try { await orbit.beforeLeave(app); } catch (err) { game.hooks.error(err, 'beforeLeave'); }
     await game.drain();
@@ -53,12 +53,14 @@ async function atStop(rc, node) {
         const acts = orbit.actions(app), has = key => acts.find(a => a.key === key);
         const did = BRIDGE_ORDER.find(has);
         if (did) { await act(rc, did); continue; }
-        const open = finds.known(node) ? finds.list(app, node, (orbit.propose(app) || {}).ids).filter(f => !f.done && !declined.has(f.id)) : [];
+        const proposed = (orbit.propose(app) || {}).ids;
+        const open = finds.known(node) ? finds.list(app, node, proposed).filter(f => !f.done && !declined.has(f.id)) : [];
         const eventTrips = (node.nsDone || []).filter(id => id !== 'site').length;
-        const want = open.find(f => P.wantsFind(f, style, { eventOf: id => (G('EVENTS') || []).find(e => e.id === id), evaRange: rc.evaRange, eventTrips, tripsHere: node.nsTrips || 0 }));
+        const wayOdds = (f, ev, way) => (typeof finds.oddsOf === 'function' ? finds.oddsOf(app, node, ev, proposed, { way, find: f }) : null);   // the game's own odds
+        const want = open.find(f => P.wantsFind(f, style, { eventOf: id => (G('EVENTS') || []).find(e => e.id === id), evaRange: rc.evaRange, eventTrips, tripsHere: node.nsTrips || 0, wayOdds }));
         if (want && has('team')) { if (!(await trip(rc, node, want))) declined.add(want.id); continue; }
-        if (want) {                                                              // a find wanted, but fewer than two can go (or Aris will not)
-            if (!stuckHere) { stuckHere = true; R.counts.stuck += 1; R.counts[orbit.eligible(app).length < 2 ? 'stuckFew' : 'stuckAris'] += 1; }
+        if (want) {                                                              // a find wanted, but nobody can go (or Aris will not)
+            if (!stuckHere) { stuckHere = true; R.counts.stuck += 1; R.counts[orbit.eligible(app).length < 1 ? 'stuckFew' : 'stuckAris'] += 1; }
             declined.add(want.id); continue;
         }
         open.forEach(f => declined.add(f.id));
@@ -86,12 +88,15 @@ async function trip(rc, node, find) {
     const ids = P.pickTeam(find, style, { orbit, app, rnd, finds, node });
     if (!ids) { R.counts.stuck += 1; return false; }
     const mark = (finds.list(app, node, ids).find(f => f.id === find.id) || {}).risk;
+    const go = typeof orbit.teamOdds === 'function' ? orbit.teamOdds(app, ids) : null;   // what GO DOWN shows before they go
     const again = (node.nsTrips || 0) > 0;
     rc.add(M.SECONDS.teamPick + (again ? (M.CUTS.repeatTrip ? M.SECONDS.secondTripCut + M.SECONDS.bridgeAgainCut : M.SECONDS.secondTrip + M.SECONDS.bridgeAgain) : 0), 'hatch');
     const traitOn = ['PARANOID', 'RECKLESS', 'BLEEDING_HEART', 'OBSESSED'].some(t => state.hasActiveTrait(t));
     cur.trip = { sector: state.currentSector, world: node.name, kind: worldWords(node), find: find.label, findKind: find.kind, site: find.site || null,
         ids: ids.slice(), team: rc.nameList(ids), fit: fitOf(rc, node, ids), mark: typeof mark === 'number' ? mark : null, landing: null, phase: 'hatch',
-        shown: null, wayText: null, wayKind: null, prize: null, hurt: [], died: [], traitOn };
+        alone: ids.length === 1, hurtGoes: ids.some(id => (state.crew.find(c => P.idOf(c) === id) || {}).status === 'INJURED'),
+        goHurt: go ? go.hurt : null, goDeath: go ? go.death : 0, goOneIn: go ? go.oneIn : null,
+        shown: null, death: null, oneIn: null, deadly: false, safeOpen: null, wayText: null, wayKind: null, prize: null, hurt: [], died: [], traitOn };
     if (traitOn) R.counts.tripsWithTrait += 1;
     const pair = ids.slice().sort().join('+');
     R.pairs[pair] = (R.pairs[pair] || 0) + 1;
@@ -110,11 +115,11 @@ async function trip(rc, node, find) {
     return true;
 }
 
-/** The pair's fit for this find (NSOrbit's fitsOf, the scores its proposal adds up): { total, by: { id: score } }, or null. */
+/** The team's fit for this find (NSOrbit.fitOf, the points TripOdds counts): { total, by: { id: points } }, or null. */
 function fitOf(rc, node, ids) {
-    const fits = typeof rc.ctx.__runsimFitsOf === 'function' ? rc.ctx.__runsimFitsOf(rc.app, node) : null;
-    if (!fits) return null;
-    const by = Object.fromEntries(ids.map(id => [id, (fits[id] && fits[id].score) || 0]));
+    const O = rc.orbit;
+    if (!O || typeof O.fitOf !== 'function') return null;
+    const by = Object.fromEntries(ids.map(id => [id, O.fitOf(rc.app, node, [id])]));
     return { total: Object.values(by).reduce((a, b) => a + b, 0), by };
 }
 

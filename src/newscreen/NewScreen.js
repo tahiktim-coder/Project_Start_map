@@ -39,6 +39,7 @@
        weak() → ids too weak from a missed supper for this trip;  holdLoss(id, picked) → what the ship loses while id is down
        lossOf(id, picked) → the loss alone ('' none);  propose() → { ids, why } the two the crew put forward for this world
        teamRisk(ids) → a plain landing's danger going in (%), null where a site's own story decides
+       teamOdds(ids) → { hurt, death, deadly, oneIn } the same trip's odds, its death chance too (GO DOWN), or null
        leave() → Promise<bool>  Leave orbit (the dive back out, or refused with a line)
        trip() → { ids, aboard } | null   who is down now;  sign() → { kind, comes } | null   this stop's crisis sign
        scanDue() → bool       we orbit a world nobody has scanned from the bridge (Stop.js scans it as the bridge shows)
@@ -381,6 +382,7 @@
         lossOf: (id, picked) => ask('lossOf', theApp(), id, picked) || '',
         propose: () => ask('propose', theApp()) || null,
         teamRisk: ids => { const r = ask('teamRisk', theApp(), ids); return typeof r === 'number' ? r : null; },
+        teamOdds: ids => { const o = ask('teamOdds', theApp(), ids); return o && typeof o.hurt === 'number' ? o : null; },
         trip: () => ask('trip') || null,
         scanDue: () => !!ask('scanDue', theApp()),                                         // a world nobody has scanned: Stop.js scans it as it shows
         sign: () => { const s = st(), n = s && s.currentSystem; return (n && n._nsCrisis) || null; },

@@ -7,9 +7,11 @@
    for this world (NSOrbit.propose) and those two walk from the window to the hatch and stand by it, facing the window,
    each with their name and why over them; the "GO DOWN" tag stands over the hatch. A click on someone at the hatch sends
    them back to the window (a place opens: the tag says "one more"); a click on someone at the window puts them in the open
-   place, or in the place of whoever joined last. Only two fit: both go, nobody changes. "GO DOWN": the two climb down the
-   hatch, THEN the shuttle drops to where they go (a click hurries it), then the real game runs the trip (LanderGame, the
-   Torch, the cards). When they are back the shuttle comes up and they climb back; if a find is still open, two step forward
+   place, or in the place of whoever joined last. Only two fit: both go, nobody changes. A trip is never locked
+   (NSOrbit.pool): with fewer than two well the hurt come up to the hatch too, and the one left who can go goes alone.
+   "GO DOWN": the two climb down the hatch, THEN the shuttle drops to where they go (a click hurries it), then the real
+   game runs the trip (LanderGame, the Torch, the cards). When they are back the shuttle comes up and they climb back; if a
+   find is still open, two step forward
    at once, while it comes up (anyone still in it climbs in when it is home, straight to their place), and the next trip
    from here goes down the hatch at once (nobody walks it twice; a shuttle still coming up docks first).
    "Leave orbit" plays the dive backwards. The bridge marks the world seen when it closes (NewScreen.js holds a card that
@@ -151,7 +153,8 @@
         if (cp) return Object.fromEntries(['cora'].concat(CREW).map(id => [id, cp[id] || null]));
         const away = S.trip ? S.trip.ids : S.send ? S.send.ids : [], out = { cora: crewOf('cora') === 'dead' ? null : { x: HELM, act: 'console', facing: 1 } };
         CREW.forEach(id => {
-            if (crewOf(id) !== 'well' || away.includes(id)) { out[id] = null; return; }
+            const fitToGo = crewOf(id) === 'well' || (crewOf(id) === 'hurt' && S.lineup.includes(id));   // never locked: with fewer than two well, the hurt come up too (NSOrbit.pool)
+            if (!fitToGo || away.includes(id)) { out[id] = null; return; }
             const slot = S.lineup.includes(id) ? S.pick.slots.indexOf(id) : -1;
             if (slot >= 0) { out[id] = { x: HATCH_X[slot], act: 'idle', facing: 1 }; return; }
             if (S.lineup.includes(id) || S.atWindow.has(id)) { out[id] = { x: SPOT_X[id], act: 'idle', facing: 1 }; return; }
@@ -183,6 +186,8 @@
 
     // ═══ 2. the team at the hatch: who the crew put forward, and the player's changes ═══
     const team = () => S.pick.slots.filter(Boolean);
+    /** How many go down: two, or the one left who can go (a trip is never locked: NSOrbit.pool). */
+    const need = () => Math.max(1, Math.min(2, S.lineup.length));
     /** Standing at their place by the hatch now (their name and why show only then: words never chase a walker). */
     function arrived(id) {
         const k = S.pick.slots.indexOf(id), last = lastOf(id);
@@ -197,9 +202,9 @@
         let p = null;
         try { p = NS.flow && typeof NS.flow.propose === 'function' ? NS.flow.propose() : null; } catch (err) { console.error('NewScreen stop: the proposal failed', err); }
         if (p && p.why) S.pick.why = p.why;
-        if (S.pick.manual && S.lineup.length !== 2) return;            // the player's choice stands (only two fit: both go, whatever was picked)
-        const ids = S.lineup.length === 2 ? S.lineup.slice() : (p && Array.isArray(p.ids) ? p.ids : []).filter(id => S.lineup.includes(id)).slice(0, 2);
-        if (ids.length < 2) return;
+        if (S.pick.manual && S.lineup.length > 2) return;              // the player's choice stands (only two fit, or one: they go, whatever was picked)
+        const ids = S.lineup.length <= 2 ? S.lineup.slice() : (p && Array.isArray(p.ids) ? p.ids : []).filter(id => S.lineup.includes(id)).slice(0, 2);
+        if (ids.length < need()) return;
         const key = ids.slice().sort().join('+');
         if (key === S.pick.key && ids.every(id => S.pick.slots.includes(id))) return;   // the same two, both still at the hatch
         S.pick.key = key;
@@ -256,7 +261,7 @@
         const f = P.framer(c, SW, SH);
         for (let dy = -3; dy <= 2; dy++) for (let dx = -22; dx <= 22; dx++) { const d = Math.hypot(dx / 22, dy / 3.2); if (d < 1) f.tone(x + dx, y + dy, RP.AMBER, peak * (1 - d) ** 1.4); }
     }
-    const picking = () => !S.send && !S.trip && S.lineup.length >= 2 && hasTeamAction();
+    const picking = () => !S.send && !S.trip && S.lineup.length >= 1 && hasTeamAction();
     /** The hatch stands open for the team: a warm light from the lab below rises out of it (stronger once both are there). */
     const hatchGlow = (c, k) => { if (TA) TA.hatchLight(c, HATCH + OFFX, F, k); };
     function drawPeople(c, t) {
@@ -299,7 +304,7 @@
         c.globalCompositeOperation = 'lighter'; c.drawImage(room.glass, 0, 0); c.globalCompositeOperation = 'source-over';
         c.drawImage(A.deck(1).canvas, OFFX, B.H);
         drawFx(P.framer(c, SW, SH), t);
-        if (picking() && team().length) hatchGlow(c, team().length === 2 && team().every(arrived) ? 1 : 0.55);
+        if (picking() && team().length) hatchGlow(c, team().length === need() && team().every(arrived) ? 1 : 0.55);
         if (words) W.threads(c, t, words);
         drawPeople(c, t);
         drawDamage(c, t);
@@ -653,7 +658,7 @@
         if (a.team && S.autoScan) { S.autoScan = false; S.sweep = { t0: t }; tellScan(); S.hover = null; setHot(null); setPointing(false); return; }   // not read yet: the scan first
         if (a.team) {
             const ids = team();
-            if (ids.length < 2) { say(ids.length ? 'We need one more at the hatch, Commander.' : 'We need two at the hatch, Commander.'); return; }
+            if (ids.length < need()) { say(ids.length ? 'We need one more at the hatch, Commander.' : need() === 1 ? 'We need someone at the hatch, Commander.' : 'We need two at the hatch, Commander.'); return; }   // DRAFT: "someone" (one left who can go)
             S.send = { ids, t0: t, fired: false, skipped: false, fireAt: sendOff(ids, t, 350) + SHUTTLE_MS };   // the trip begins once the shuttle is down
             if (S.node && S.node.nsTrips > 0) skipSend(t);              // a trip from here before: nobody walks it again, the shuttle goes at once
             S.hover = null; setHot(null); setPointing(false);
@@ -747,7 +752,7 @@
         dctx = diveC.getContext('2d'); bctx = bridgeC.getContext('2d');
         vis(diveC, false); vis(bridgeC, false);
         W = WORDS.create({
-            S, css: (x, y) => css(x, y), unit: () => unit(), t0, poseOf, picking, team, arrived, joinedLast, isWrongPlace,
+            S, css: (x, y) => css(x, y), unit: () => unit(), t0, poseOf, picking, team, need, arrived, joinedLast, isWrongPlace,
             sweep: () => (S.sweep ? Math.max(0, t0() - S.sweep.t0) : null),
             hold: () => (S.hold ? Math.min(1, Math.max(0, (t0() - S.hold.t0) / SETTLE_HOLD_MS)) : 0),   // how far the settle key has filled
             holdKey: () => (S.hold ? S.hold.key : null), fight: () => (CP ? CP.fightK() : 0),   // which held key; how far Fight to escape has filled

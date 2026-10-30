@@ -73,46 +73,42 @@ function land(rc, planet, o) {
     return r;
 }
 
-/** App.showEventModal's rules without its page: the risk going in (App.tripRisk), the traits that strike a way, the pick.
-    Vance's PARANOID strikes every way at 30+ and Mira's RECKLESS (half the time) the 0 way; on a card with only such ways
-    both strike every button, and the game gives no other way off the card (bundle.js showEventModal: only enabled buttons
-    get a click): the run is locked there. --unlock (opts.unlock) keeps the careful way open instead, a stand-in for the
-    depth plan's step 4 ("never lock"), so later rules can be measured past it; the lock is counted either way. */
+/** App.showEventModal's rules without its page, through the game's own methods: the risk going in (App.tripGoingIn), each
+    way's odds and the stress traits that strike a way (App.tripChoices: TripOdds' hurt and death chance, as the card shows
+    them; Vance's PARANOID strikes every way at 30+, Mira's RECKLESS half the time the 0 way), the pick, then resolveEvaOutcome
+    with the odds the card showed. The new look never locks the card: with every way struck the careful way stays open
+    (counted as 'locked' all the same: R.counts.locked, R.locked.unlocked). --unlock no longer changes anything. */
 function tripCard(rc, event, planet) {
-    const { ctx, app, state, style, rnd, R, cur } = rc;
-    const goingIn = app.tripRisk(planet, { landing: app._landingRiskMod, mira: app._nsScanMod });
-    app._landingRiskMod = 0; app._nsScanMod = 0;
-    const riskBase = goingIn.risk;
-    const isParanoid = state.hasActiveTrait('PARANOID'), isReckless = state.hasActiveTrait('RECKLESS');
-    const recklessBlocksSafe = isReckless && ctx.Math.random() > 0.5;
-    const all = event.choices.map((c, i) => ({ c, i, struck: (isParanoid && c.riskMod >= 30) || (recklessBlocksSafe && c.riskMod === 0) }));
-    let open = all.filter(o => !o.struck);
-    const struck = all.some(o => o.struck) ? [isParanoid ? 'PARANOID' : null, recklessBlocksSafe ? 'RECKLESS' : null].filter(Boolean) : [];
+    const { app, style, rnd, R, cur, game } = rc;
+    const riskBase = app.tripGoingIn(planet).risk;
+    const { ways, isParanoid, recklessBlocksSafe, allStruck } = app.tripChoices(event, riskBase);
+    const struck = ways.some(w => w.struck || w.keptOpen) ? [isParanoid ? 'PARANOID' : null, recklessBlocksSafe ? 'RECKLESS' : null].filter(Boolean) : [];
     if (struck.length) R.counts.struck += 1;
     rc.add(M.CUTS.resultCard && rc.seenEvents.has(event.id) ? M.SECONDS.resultCard : M.SECONDS.tripCard, 'trip card');
     rc.seenEvents.add(event.id);
-    if (!open.length) {
+    if (allStruck) {
         R.counts.locked += 1;
-        if (!R.locked) R.locked = { sector: state.currentSector, world: cur.node ? cur.node.name : null, event: event.id, title: String(event.title || ''), team: cur.trip ? cur.trip.team : null, struck, unlocked: !!rc.opts.unlock };
-        if (!rc.opts.unlock) {
-            if (cur.trip) Object.assign(cur.trip, { phase: 'card', event: event.id, struck, locked: true, riskBase });
-            R.ending = 'locked';
-            return;
-        }
-        open = [all.slice().sort((a, b) => (a.c.riskMod || 0) - (b.c.riskMod || 0) || a.i - b.i)[0]];
+        if (!R.locked) R.locked = { sector: rc.state.currentSector, world: cur.node ? cur.node.name : null, event: event.id, title: String(event.title || ''), team: cur.trip ? cur.trip.team : null, struck, unlocked: true };
     }
-    const idx = P.pickWay(open, style, riskBase, rc.evaRange, rnd), choice = event.choices[idx];
+    let open = ways.filter(w => !w.struck).map(w => ({ c: w.choice, i: w.idx, odds: w.odds }));
+    if (!open.length) {                                                            // never in the new look (App.tripChoices keeps one open)
+        game.hooks.error(new Error('tripCard: every way struck'), 'tripCard');
+        open = [{ c: ways[0].choice, i: 0, odds: ways[0].odds }];
+    }
+    const idx = P.pickWay(open, style, riskBase, rc.evaRange, rnd), way = ways[idx], choice = way.choice, odds = way.odds || {};
     const byRisk = event.choices.map(c => c.riskMod || 0), lo = Math.min(...byRisk), hi = Math.max(...byRisk);
     if (cur.trip) Object.assign(cur.trip, { phase: 'card', event: event.id, struck, wayText: String(choice.text || ''), wayKind: hi === lo ? 'only' : choice.riskMod === lo ? 'careful' : choice.riskMod === hi ? 'bold' : 'middle',
-        shown: Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod))), riskBase });
-    resolveWay(rc, choice, riskBase);
+        shown: odds.hurt != null ? odds.hurt : Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod))), death: odds.death != null ? Math.round(odds.death * 100) / 100 : null,
+        oneIn: odds.oneIn || null, deadly: !!odds.deadly, riskBase,
+        safeOpen: open.some(o => o.odds && !o.odds.deadly) });                    // the card left a way that cannot kill
+    resolveWay(rc, choice, riskBase, way.odds);
 }
-/** resolveEvaOutcome, and what it paid (the prize as the game gave it, after the caps). */
-function resolveWay(rc, choice, riskBase) {
+/** resolveEvaOutcome with the way's odds, and what it paid (the prize as the game gave it, after the caps). */
+function resolveWay(rc, choice, riskBase, odds) {
     const { game, app, state, cur } = rc;
     const before = stock(state);
     rc.beat();
-    try { app.resolveEvaOutcome(choice, riskBase); } catch (err) { game.hooks.error(err, 'resolveEvaOutcome'); }
+    try { app.resolveEvaOutcome(choice, riskBase, odds); } catch (err) { game.hooks.error(err, 'resolveEvaOutcome'); }
     const after = stock(state);
     if (cur.trip) cur.trip.prize = Object.fromEntries(Object.keys(after).map(k => [k, after[k] - before[k]]).filter(([, v]) => v));
 }

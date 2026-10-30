@@ -615,11 +615,13 @@ class GameState {
             }
         }
 
-        // Passive injury healing: INJURED crew recover after 3 actions if quarters operational
+        // Passive injury healing: INJURED crew recover after 3 actions if quarters operational (the new look: an injury lasts
+        // until the next supper, serveSupper, or until Aris's next stop, mendOnArrival)
         // CATATONIC crew cannot heal passively but recover from catatonia after 5 actions
         if (this.shipDecks.quarters.status === 'OPERATIONAL') {
+            const healsHere = !isNewScreen();
             this.crew.forEach(c => {
-                if (c.status === 'INJURED' && c.trait !== 'CATATONIC') {
+                if (healsHere && c.status === 'INJURED' && c.trait !== 'CATATONIC') {
                     c.healCounter = (c.healCounter || 0) + 1;
                     if (c.healCounter >= 3) {
                         c.status = 'HEALTHY';
@@ -755,8 +757,29 @@ class GameState {
         this.addLog(short ? `A.U.R.A. cut the portions.${skip ? ` ${skip.name} went without supper.` : ''} ${this.rations} rations left.`
             : `The crew ate ${ate} rations at supper. ${this.rations} left.`);
         if (rests) this.addLog('Crew Quarters: Rest cycle complete. Stress levels reduced.');
+        const healed = this.crew.filter(c => c.status === 'INJURED' && c !== skip && c.trait !== 'CATATONIC');   // an injury lasts until supper: whoever ate is well
+        if (healed.length) {
+            this.mend(healed);
+            this.addLog(`After supper, ${healed.map(c => c.name).join(' and ')} ${healed.length === 1 ? 'is' : 'are'} well again.`);   // DRAFT
+        }
         this.emitUpdates();
         return { ate, short, left: this.rations };
+    }
+
+    /** The new look: the hurt are well again (supper, Aris's next stop). */
+    mend(list) {
+        list.forEach(c => { c.status = 'HEALTHY'; c.healCounter = 0; delete c._nsMendAt; });
+    }
+
+    /** The new look: Aris went down with them, so whoever was hurt on that trip is well at the next stop (NSOrbit.tripDone
+        marks them, _nsMendAt: the warps made then). App.handleWarp calls it on arriving somewhere new. */
+    mendOnArrival() {
+        const due = this.crew.filter(c => c._nsMendAt != null && (this._paidWarps || 0) > c._nsMendAt);
+        const well = due.filter(c => c.status === 'INJURED' && c.trait !== 'CATATONIC');
+        due.forEach(c => { delete c._nsMendAt; });                                  // spent, even where another heal came first: never a later injury's
+        if (!well.length) return;
+        this.mend(well);
+        this.addLog(`${well.map(c => c.name).join(' and ')} ${well.length === 1 ? 'is' : 'are'} well again. Aris saw to it.`);   // DRAFT
     }
 
     /** The new look has no hold to open things from: sealed rations put in the cargo are opened at once
@@ -896,6 +919,7 @@ class GameState {
      * Called after any stress change.
      */
     applyStressTraits() {
+        if (isNewScreen()) this.oneBreakdown();
         this.crew.forEach(c => {
             if (c.status === 'DEAD') return;
 
@@ -941,7 +965,7 @@ class GameState {
                 }
             }
 
-            // Stress 3: Breakdown events (fire once)
+            // Stress 3: Breakdown events (fire once). The new look: one at most per event (oneBreakdown held the rest at 2)
             if (stress >= 3 && !c.breakdownFired) {
                 c.breakdownFired = true;
                 this.triggerBreakdown(c);
@@ -954,6 +978,18 @@ class GameState {
                 c.breakdownFired = false;
             }
         });
+    }
+
+    /** The new look, before applyStressTraits looks at anyone: when an event takes more than one person to stress 3 at once,
+        only one breaks down (one event never breaks two people) and the others are held at 2, first, so nothing a breakdown
+        sets off (a deck Jaxon breaks) can break a second. Who breaks: the partner of whoever a trip just hurt or killed
+        (_nsPartner, set by resolveEvaOutcome), else the most stressed, else the first aboard. Returns them, or null. */
+    oneBreakdown() {
+        const due = this.crew.filter(c => c.status !== 'DEAD' && (c.stress || 0) >= 3 && !c.breakdownFired && !(c.tags || []).includes('LEADER'));
+        if (due.length < 2) return due[0] || null;
+        const pick = this._nsPartner && due.includes(this._nsPartner) ? this._nsPartner : due.slice().sort((a, b) => (b.stress || 0) - (a.stress || 0))[0];
+        due.forEach(c => { if (c !== pick) c.stress = 2; });
+        return pick;
     }
 
     /**
@@ -1086,9 +1122,11 @@ const DRIVE_BRACE_SAVING = 4;    // a braced drive (the hull-cracks campfire) ta
 const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, besides "a day" on a card (GameState.eatOnJump)
 /**
  * The new look's economy (?new=1 only; tuned 2026-10-17 against docs/ECONOMY.md §1-2, retuned 2026-10-30 so losses bite:
- * smaller card gains and landing salvage, fewer crises aboard, and the reserve costs a cold night; measured with the node run
- * model, tools/runsim.js, which reads this same table). Every number the new look spends or gives differently from the default
- * game is here, with why. The default game keeps the numbers above and its own card amounts.
+ * smaller card gains and landing salvage, fewer crises aboard, and the reserve costs a cold night; then a trip's odds, shared
+ * with the model through src/data/TripOdds.js: no death under 30 % hurt, the right crew make it safer, and every death chance
+ * is shown on the card first; measured with the node run model, tools/runsim.js, which reads this same table). Every number
+ * the new look spends or gives differently from the default game is here, with why. The default game keeps the numbers above
+ * and its own card amounts.
  * The new screen's files read it as window.NEW_LOOK_ECONOMY. Two rules go with it, with no number: a story world (one of our
  * wrecks nobody has boarded, or the sector's story planet) can always be reached, on the reserve if need be (App.isStoryStop),
  * and food that runs short means someone goes without supper (GameState.serveSupper says what that costs them).
@@ -1129,6 +1167,22 @@ const NEW_LOOK_ECONOMY = Object.freeze({
                              //   it): LanderCrew.plan
     HOLD_SEEN_MS: 2000,      // a card that turns up on its own waits this long on a world whose bridge we saw before (4 s on a new
                              //   world, so the picture is seen first): NewScreen.js
+    // A team trip's odds (src/data/TripOdds.js, read by the game and the run model): how likely someone is hurt, and how likely
+    // that kills. A trip can kill only where its card shows the death chance first ("1 in 14"), and a landing never raises it.
+    DEATH_FLOOR: 30,         // under 30 % hurt, a trip never kills (it did 10 % of all hits before, however small the risk)
+    DEATH_SHARE: 10,         // at 30 % or more: 10 % of hits kill, one more for each point of hurt past DEATH_PAST (as before)
+    DEATH_PAST: 40,          //   (the default game's HIGH_RISK_FLOOR)
+    DEATH_SHARE_HUNTED: 25,  //   where something hunts (PREDATORY), 25 % of hits kill (was a hidden 40 % attack roll on top)
+    VANCE_DEATH_SHARE: 0.5,  // Vance down and well with a partner takes the partner's hit, so only a hit on him can kill: half
+    HURT_MAX: 75,            // a trip's hurt chance is never more than this (the card's bar and the death share stay readable)
+    PREDATOR_RISK: 30,       // something hunts here: +30 % hurt, all of it shown (was +15 % shown and that hidden roll)
+    HURT_GOES_RISK: 10,      // fewer than two are well, so someone hurt goes down: +10 % hurt (no trip is ever locked)
+    FIT_PER_POINT: 5,        // the right people for the find (NSOrbit's fit: Vance where something hunts, Aris in sick air ...):
+    FIT_MAX: 10,             //   5 % safer a point of fit, 10 % at most
+    FIT_MIRA_ABOARD: 1,      // the crew's proposal (NSOrbit.propose): Mira's ground scan from aboard is worth a point of fit
+    FIT_JAXON_LANDS: 0,      //   and Jaxon's step on A.U.R.A.'s landing this many while she lands us. 0 for now: her autopilot
+                             //   lands soft on 99.9 % of worlds (tools/runsim/lander.js), so his step almost never changes a
+                             //   landing; raise it if the browser check's 50 autopilot landings show rough or crashed ones
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
@@ -1875,6 +1929,7 @@ class App {
             // Time passes (nobody eats on a warp: rations go on the sector jump). No energy comes back on arrival: the price was the price.
             // Going back into the orbit we are parked at is no warp: no time passes, so free re-entries cannot farm the cultures or the scoop.
             if (!isReentry) this.state.passTime();
+            if (isTrip && isNewScreen()) this.state.mendOnArrival();                // Aris went down with them: up by the next stop
 
             // UPGRADE: Autodoc — heals crew during transit (separate from quarters passive heal)
             if (this.state.upgrades.includes('autodoc')) {
@@ -4184,12 +4239,17 @@ Then you're through.`,
             // Allow but add extra danger warning
         }
 
-        // Commander stays on the bridge — only non-LEADER crew go on EVA
-        const evaCrew = this.state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER') && !c.tags.includes('CONFINED') && !c.tags.includes('SEDATED'));
+        // Commander stays on the bridge — only non-LEADER crew go on EVA. The new look never locks a trip (NSOrbit.pool): fewer
+        // than two well and someone hurt goes too; one left who can go, and they go alone
+        const isNew = isNewScreen() && !!window.NSOrbit && typeof window.NSOrbit.pool === 'function';
+        const evaCrew = isNew ? window.NSOrbit.pool(this)
+            : this.state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER') && !c.tags.includes('CONFINED') && !c.tags.includes('SEDATED'));
+        const fewest = isNew ? 1 : 2;
         const livingCrew = this.state.crew.filter(c => c.status !== 'DEAD');
 
-        // BLEEDING_HEART (Aris stress trait): Refuses EVA unless ALL living crew are healthy
-        if (this.state.hasActiveTrait('BLEEDING_HEART')) {
+        // BLEEDING_HEART (Aris stress trait): Refuses EVA unless ALL living crew are healthy. The new look never locks a trip:
+        // Aris stays in the med bay and the others go (NSOrbit.pool leaves her out)
+        if (!isNew && this.state.hasActiveTrait('BLEEDING_HEART')) {
             const injured = livingCrew.filter(c => c.status === 'INJURED');
             if (injured.length > 0) {
                 this.state.addLog(`Aris: "Absolutely not. ${injured[0].name} needs treatment first. No one goes out there."`);
@@ -4197,9 +4257,10 @@ Then you're through.`,
             }
         }
 
-        // 1. Check Requirements (need 2 EVA-eligible crew — Commander stays on bridge)
-        if (evaCrew.length < 2) {
-            this.state.addLog("MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge.");
+        // 1. Check Requirements (need 2 EVA-eligible crew — Commander stays on bridge; the new look: 1)
+        if (evaCrew.length < fewest) {
+            if (isNew) this.state.addLog('A.U.R.A.: "Nobody aboard can go down, Commander."');   // DRAFT
+            else this.state.addLog("MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge.");
             return;
         }
 
@@ -4228,7 +4289,8 @@ Then you're through.`,
         }
 
         // Log the EVA team
-        this.state.addLog(`EVA team deployed: ${evaTeam[0].name} and ${evaTeam[1].name}.`);
+        if (evaTeam.length === 1) this.state.addLog(`EVA team deployed: ${evaTeam[0].name}.`);   // DRAFT: the new look, the one left who can go
+        else this.state.addLog(`EVA team deployed: ${evaTeam[0].name} and ${evaTeam[1].name}.`);
 
         // Tutorial: first EVA
         if (!this.state._tutorialEvaSeen) {
@@ -4250,6 +4312,7 @@ Then you're through.`,
 
         // Store EVA team for resolveEvaOutcome
         this.currentEvaTeam = evaTeam;
+        this._nsTrip = isNew && !isSiteTrip ? this.tripContext(planet, evaTeam, find || { id: 'kind', kind: 'event', feature: null }) : null;   // the new look: what this trip's odds are made of (a blind trip: the world's own event)
         evaTeam.forEach(c => {                                                       // remembered: the crew may say so at the light
             c._tripsDown = (c._tripsDown || 0) + 1;
             if (planet.isEden || planet.type === 'EDEN') c._walkedEden = true;
@@ -4339,7 +4402,94 @@ Then you're through.`,
         if (opts.mira && isNewScreen()) add('MIRA SCANNED IT', opts.mira, '#74d99a');   // the new screen: Mira stayed aboard and scanned the ground
         const scanMod = isNewScreen() ? this.scanRiskMod(planet) : 0;                     // the new look: the bridge's scan, or no scan at all
         if (scanMod) add(scanMod > 0 ? 'NOT SCANNED' : planet.nsLock === 'sharp' ? 'SHARP SCAN' : 'SCANNED', scanMod, scanMod < 0 ? '#74d99a' : '#d9a24a');
+        // the new look: the team's fit (opts.fit, NSOrbit.fitOf) and someone hurt going down (opts.hurtGoes) are lines on the card
+        // too, but TripOdds counts them after the way's own risk (so the fit helps a bold way as well): they are not in `risk`
+        if (isNewScreen() && opts.fit > 0) mods.push({ type: 'RIGHT TEAM', mod: -Math.min(NEW_LOOK_ECONOMY.FIT_MAX, NEW_LOOK_ECONOMY.FIT_PER_POINT * opts.fit), color: '#74d99a' });
+        if (isNewScreen() && opts.hurtGoes) mods.push({ type: 'HURT GOES', mod: NEW_LOOK_ECONOMY.HURT_GOES_RISK, color: '#d85a4e' });
         return { risk: Math.max(0, Math.min(50, risk)), mods };
+    }
+
+    /** The new look: what a team trip's odds are made of, kept as the team goes down (handleEvaAction): the risk GO DOWN
+        showed going in (App.tripRisk with Mira's ground scan from aboard as it stood then, the number NSWorldFinds' marks and
+        NSOrbit.teamRisk start from), the team's fit for the find (NSOrbit.fitOf), whether something hunts there, whether
+        someone hurt went down, whether Vance covers his partner, and the stress traits that strike ways as they stood when
+        the team went down (GO DOWN's odds counted those: App.sureWay; one gained while they are down waits for the next trip,
+        so the card never strikes the way GO DOWN vouched for). App.wayOdds and App.tripChoices read it; resolveEvaOutcome
+        drops it. */
+    tripContext(planet, team, find) {
+        const s = this.state, O = window.NSOrbit, ids = team.map(crewIdOf);
+        const mira = s.crew.find(c => (c.tags || []).includes('SPECIALIST'));
+        const miraAboard = !!mira && !team.includes(mira) && mira.status === 'HEALTHY' && !mira.tags.includes('CONFINED') && !mira.tags.includes('SEDATED');
+        let fit = 0;
+        try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(this, planet, ids, find) : 0; } catch (err) { console.error('App: the team fit failed', err); }
+        return { shownBase: this.tripRisk(planet, { mira: miraAboard ? NEW_LOOK_ECONOMY.MIRA_ABOARD : 0 }).risk, fit,
+            hunted: this.isHunted(planet), hurtGoes: team.some(m => m.status === 'INJURED'), vance: this.vanceCovers(team),
+            paranoid: s.hasActiveTrait('PARANOID'), reckless: s.hasActiveTrait('RECKLESS') };
+    }
+
+    /** Something hunts on this world (a plain landing there: TripOdds' hunted share). The scan reveals the tag. */
+    isHunted(planet) { return !!(planet && planet.tags && planet.tags.includes('PREDATORY')); }
+
+    /** Vance is down, well, and with a partner: a hit meant for the partner is his (resolveEvaOutcome), so only a hit on him
+        can kill. */
+    vanceCovers(team) {
+        const list = team || [];
+        return list.length === 2 && list.some(m => (m.tags || []).includes('SECURITY') && m.status === 'HEALTHY');
+    }
+
+    /** The new look: one way's odds now, after the landing (TripOdds): { hurt, death, deadly, oneIn, kill }. The death chance
+        is never more than GO DOWN's odds for that way (TripOdds.afterLanding). null in the default game. */
+    wayOdds(choice, baseRisk) {
+        const T = window.TripOdds;
+        if (!isNewScreen() || !T) return null;
+        const t = this._nsTrip || {}, team = this.currentEvaTeam || [];
+        const common = { wayMod: Number(choice.riskMod) || 0, fit: t.fit || 0, hunted: t.hunted != null ? !!t.hunted : this.isHunted(this.state.currentSystem), hurtGoes: !!t.hurtGoes };
+        const landed = T.odds(Object.assign({ base: baseRisk, vance: this.vanceCovers(team) }, common));
+        const shown = t.shownBase != null ? T.odds(Object.assign({ base: t.shownBase, vance: !!t.vance }, common)) : landed;
+        return T.afterLanding(shown, landed);
+    }
+
+    /** The trip card's risk going in (App.tripRisk with how the landing went and Mira's ground scan from aboard), read once:
+        the landing's and the scan's part are used up. showEventModal and the run model (tools/runsim) both start here. */
+    tripGoingIn(planet) {
+        const t = this._nsTrip || {};
+        const goingIn = this.tripRisk(planet, { landing: this._landingRiskMod, mira: this._nsScanMod, fit: t.fit, hurtGoes: t.hurtGoes });
+        this._landingRiskMod = 0;
+        if (isNewScreen()) this._nsScanMod = 0;
+        return goingIn;
+    }
+
+    /** The trip card's ways: [{ choice, idx, odds, struck: 'PARANOID' | 'RECKLESS' | null }] and whether a stress trait struck
+        any. Vance under stress (PARANOID) will not take a way at 30 or more; Mira under stress (RECKLESS) half the time will
+        not take the careful one. The new look never locks the card: when every way is struck, the careful way stays open;
+        and its traits are those of when the team went down (App.tripContext). odds: App.wayOdds (the new look), else null. */
+    tripChoices(event, riskBase) {
+        const t = isNewScreen() && this._nsTrip ? this._nsTrip : null, has = trait => (t && t[trait] != null ? t[trait] : this.state.hasActiveTrait(trait.toUpperCase()));
+        const isParanoid = has('paranoid');
+        const recklessBlocksSafe = has('reckless') && Math.random() > 0.5;           // 50% chance to block safe option
+        const ways = event.choices.map((choice, idx) => ({
+            choice, idx, odds: this.wayOdds(choice, riskBase),
+            struck: isParanoid && choice.riskMod >= 30 ? 'PARANOID' : recklessBlocksSafe && choice.riskMod === 0 ? 'RECKLESS' : null,
+        }));
+        const allStruck = ways.every(w => w.struck);
+        if (allStruck && isNewScreen()) {                                             // never locked: the careful way stays open
+            const careful = ways.slice().sort((a, b) => (a.choice.riskMod || 0) - (b.choice.riskMod || 0) || a.idx - b.idx)[0];
+            careful.struck = null;
+            careful.keptOpen = true;
+        }
+        return { ways, isParanoid, recklessBlocksSafe, allStruck };
+    }
+
+    /** The new look: the way GO DOWN vouches for, as an index on the event's card: the safest way the card is sure to leave
+        open (tripChoices always strikes PARANOID's ways at 30 or more, but RECKLESS's careful way only half the time, so that
+        one is not sure; when no way is sure, the careful way it keeps open). GO DOWN shows this way's odds (NSOrbit.teamOdds),
+        so a trip that may leave no safe way on its card says "could die" before anyone goes down. */
+    sureWay(event) {
+        const isParanoid = this.state.hasActiveTrait('PARANOID'), isReckless = this.state.hasActiveTrait('RECKLESS');
+        const byRisk = ((event && event.choices) || []).map((choice, idx) => ({ choice, idx }))
+            .sort((a, b) => (a.choice.riskMod || 0) - (b.choice.riskMod || 0) || a.idx - b.idx);
+        const sure = byRisk.find(w => !(isParanoid && w.choice.riskMod >= 30) && !(isReckless && w.choice.riskMod === 0));
+        return (sure || byRisk[0] || { idx: 0 }).idx;
     }
 
     /** Why A.U.R.A. marks no landing spot here (LanderGame's opts.unmarked): never in the default game; in the new look
@@ -4358,11 +4508,20 @@ Then you're through.`,
         return planet.nsLock === 'sharp' ? NEW_LOOK_ECONOMY.RISK_SHARP_LOCK : NEW_LOOK_ECONOMY.RISK_FAIR_LOCK;
     }
 
-    /** Consequences of the landing: a soft one makes the trip safer, a crash hurts someone before they step out. */
+    /** Consequences of the landing: a soft one makes the trip safer, a crash hurts someone before they step out. The new look:
+        with Jaxon on the team, A.U.R.A.'s landing is one step better (a crash is rough, a rough one soft): he flies with her. */
     applyLanding(landing, evaTeam) {
         this._landingRiskMod = 0;
         if (!landing || !window.LanderGame) return;
         this.noteReliance(!!landing.auto);
+        if (isNewScreen()) {
+            this.state._nsLandAuto = !!landing.auto;                                  // NSOrbit.propose: Jaxon's step counts while A.U.R.A. lands
+            const lift = { crash: 'rough', rough: 'soft' }[landing.grade];
+            if (landing.auto && lift && (evaTeam || []).some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD')) {
+                landing = Object.assign({}, landing, { grade: lift });
+                this.state.addLog('Jaxon: "I helped A.U.R.A. with the landing. We came down softer."');   // DRAFT
+            }
+        }
         this._landingRiskMod = window.LanderGame.GRADES[landing.grade].riskMod;
         if (landing.grade === 'soft') this.state.addLog(landing.marked === false ? "Soft landing. The team steps out steady." : "Soft landing on the marked spot. The team steps out steady.");
         if (landing.offMark) this.state.addLog("Down safely, but well away from the marked spot. It is a long walk.");
@@ -4371,6 +4530,7 @@ Then you're through.`,
             const hurt = fit[Math.floor(Math.random() * fit.length)];
             if (hurt) {
                 hurt.status = 'INJURED';
+                delete hurt._nsMendAt;                                               // the new look: a new injury, not one Aris already saw to
                 this.state.addLog(`WARNING: The lander came down hard. ${hurt.name} is INJURED before the hatch even opens.`);
                 window.dispatchEvent(new CustomEvent('crew-injury', { detail: { crew: hurt } }));
                 this.state.emitUpdates();
@@ -4401,7 +4561,7 @@ Then you're through.`,
         if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) add('ANCIENT RUINS', -3, '#d9a24a');                      // old structures, still standing
         if (planet.metrics && planet.metrics.hasTech && !planet.tags?.includes('ALIEN_SIGNALS')) add('TECHNOLOGICAL', -5, '#9bf0bd');   // machine-stable
         if (planet.tags && planet.tags.includes('DERELICT')) add('DERELICT', +5, '#d9a24a');                                // unstable wreckage
-        if (planet.tags && planet.tags.includes('PREDATORY')) add('PREDATORY', +15, '#d85a4e');                             // something hunts
+        if (planet.tags && planet.tags.includes('PREDATORY')) add('PREDATORY', isNewScreen() ? NEW_LOOK_ECONOMY.PREDATOR_RISK : +15, '#d85a4e');   // something hunts (the new look: all of it shown, no hidden attack roll)
         return { risk, mods };
     }
 
@@ -4412,23 +4572,20 @@ Then you're through.`,
 
         // === SIGNAL TYPE RISK MODIFIERS === the world's own, how the landing went (LanderGame), Mira's ground scan from aboard,
         // the bridge's scan: App.tripRisk, the same number the new look's mark on the world showed (held to 0..50)
-        const goingIn = this.tripRisk(planet, { landing: this._landingRiskMod, mira: this._nsScanMod });
-        this._landingRiskMod = 0;
-        if (isNewScreen()) this._nsScanMod = 0;
+        const goingIn = this.tripGoingIn(planet);
         const riskBase = goingIn.risk;
         const signalModifiers = goingIn.mods;
 
-        // Stress trait checks
-        const isParanoid = this.state.hasActiveTrait('PARANOID');
-        const isReckless = this.state.hasActiveTrait('RECKLESS');
-        const recklessBlocksSafe = isReckless && Math.random() > 0.5; // 50% chance to block safe option
+        // Stress trait checks (App.tripChoices: the new look never locks the card) and each way's odds (App.wayOdds, the new look)
+        const { ways, isParanoid, recklessBlocksSafe } = this.tripChoices(event, riskBase);
 
         // Build signal modifier display string
         const PLAIN_SIGNAL = {
             'BIOLOGICAL': 'Living things here are calm', 'ALIEN SIGNAL': 'Unknown signal nearby', 'ANCIENT RUINS': 'Old ruins, still solid',
             'TECHNOLOGICAL': 'Working machines nearby', 'DERELICT': 'Unstable wreckage', 'PREDATORY': 'Something hunts here',
             'SOFT LANDING': 'You put them down gently', 'HARD LANDING': 'The landing shook them up', 'MIRA SCANNED IT': 'Mira scanned the ground',
-            'SCANNED': 'Scanned from orbit first', 'SHARP SCAN': 'A sharp scan from orbit', 'NOT SCANNED': 'Never scanned from orbit'
+            'SCANNED': 'Scanned from orbit first', 'SHARP SCAN': 'A sharp scan from orbit', 'NOT SCANNED': 'Never scanned from orbit',
+            'RIGHT TEAM': 'The right people went down', 'HURT GOES': 'Someone hurt went down',   // DRAFT (the new look)
         };
         const signalModDisplay = signalModifiers.length > 0
             ? signalModifiers.map(s => `<span style="color: ${s.color};">${PLAIN_SIGNAL[s.type] || s.type}: ${Math.abs(s.mod)}% ${s.mod > 0 ? 'more dangerous' : 'safer'}</span>`).join(' · ')
@@ -4447,12 +4604,14 @@ Then you're through.`,
             return isEnergy ? energyWords : REWARD_WORDS[r.val] || 'nothing';
         };
         const evaChoice = (choice, idx) => {
-            const totalRisk = Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
-            const riskColor = totalRisk < 10 ? 'var(--green)' : totalRisk < 30 ? 'var(--amber)' : 'var(--red)';
-            const paranoidBlocked = isParanoid && choice.riskMod >= 30;        // PARANOID: Vance refuses high-risk options
-            const recklessBlocked = recklessBlocksSafe && choice.riskMod === 0; // RECKLESS: Mira overrides the safe option
+            const way = ways[idx], odds = way.odds;                              // odds: the new look's (TripOdds), else null
+            const totalRisk = odds ? odds.hurt : Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
+            const riskColor = odds && odds.deadly ? 'var(--red)' : totalRisk < 10 ? 'var(--green)' : totalRisk < 30 ? 'var(--amber)' : 'var(--red)';
+            const paranoidBlocked = way.struck === 'PARANOID';                   // PARANOID: Vance refuses high-risk options
+            const recklessBlocked = way.struck === 'RECKLESS';                   // RECKLESS: Mira overrides the safe option
             const isDisabled = paranoidBlocked || recklessBlocked;
-            const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : `${totalRisk}% chance someone gets hurt`);
+            const odd = `${totalRisk}% chance someone gets hurt${odds && odds.deadly ? `, 1 in ${odds.oneIn} someone dies` : ''}`;   // DRAFT: the death chance (the new look)
+            const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : odd);
             return `<button class="deck-action choice-btn eva-choice" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
                         <span>${choice.text}<em class="eva-gets">${rewardWords(choice)}</em></span>
                         <small style="color:${isDisabled ? 'var(--red)' : riskColor}">${note}<i class="eva-risk"><b style="width:${totalRisk}%; background:${riskColor}"></b></i></small>
@@ -4487,10 +4646,10 @@ Then you're through.`,
                 const choice = event.choices[btn.dataset.idx];
                 const EC = window.EncounterCard;
                 if (isNewScreen() && EC && typeof EC.outcomeIn === 'function') {             // the new look: what happened shows in the card, then CONTINUE
-                    EC.outcomeIn(this, modal.querySelector('.eva-panel'), choice.text, () => this.resolveEvaOutcome(choice, riskBase), () => modal.remove());
+                    EC.outcomeIn(this, modal.querySelector('.eva-panel'), choice.text, () => this.resolveEvaOutcome(choice, riskBase, ways[btn.dataset.idx].odds), () => modal.remove());
                     return;
                 }
-                this.resolveEvaOutcome(choice, riskBase);
+                this.resolveEvaOutcome(choice, riskBase, ways[btn.dataset.idx].odds);
                 modal.remove();
             });
         });
@@ -4498,9 +4657,44 @@ Then you're through.`,
         // hover/focus states come from .deck-action in ship.css
     }
 
-    resolveEvaOutcome(choice, baseRisk) {
+    /** The new look: someone on a team trip is hit (resolveEvaOutcome). While Vance is well and has a partner down there, a hit
+        meant for the partner is his: he is hurt and nobody dies. A hit on anyone else kills at the way's own odds (odds.kill,
+        TripOdds.afterLanding: never more than its card showed), else hurts. One line in a crew or A.U.R.A. voice says what
+        happened (no alarm words). The partner of whoever was hit breaks first if this takes two people to stress 3
+        (GameState.oneBreakdown). Returns { crew, died, line }. */
+    tripHit(odds, team, target, planet, hazard, severity) {
+        const s = this.state, hunted = this._nsTrip ? !!this._nsTrip.hunted : this.isHunted(planet);
+        const vance = team.find(m => (m.tags || []).includes('SECURITY'));
+        const covered = this.vanceCovers(team) && target !== vance;
+        const crew = covered ? vance : target, partner = team.find(m => m !== crew) || null;
+        const them = crew.gender === 'F' ? 'her' : 'him';
+        s._nsPartner = partner;
+        if (!covered && severity < odds.kill * 100) {
+            crew.status = 'DEAD';
+            crew._deathSector = s.currentSector;
+            crew._deathCause = hunted ? 'predatory organisms' : hazard;
+            crew._deathPlanet = (planet && (planet.name || planet.type)) || 'unknown world';
+            window.dispatchEvent(new CustomEvent('crew-death', { detail: { crew } }));
+            // DRAFT lines (the dead come home: their pod is racked in the hold, so no line may say the body was lost)
+            const home = partner ? `${partner.name} is bringing ${them} home.` : `The lander is bringing ${them} home.`;
+            return { crew, died: true, line: hunted ? `A.U.R.A.: "Something down there hunted ${crew.name}, Commander. ${crew.name} is dead."` : `A.U.R.A.: "${crew.name} is dead, Commander. ${home}"` };
+        }
+        crew.status = 'INJURED';
+        delete crew._nsMendAt;                                                       // a new injury: an old "up by the next stop" is not this one's
+        window.dispatchEvent(new CustomEvent('crew-injury', { detail: { crew } }));
+        // DRAFT lines
+        if (covered) return { crew, died: false, line: `Vance: "I took the hit for ${target.name}. I'll heal."` };
+        if (partner) return { crew, died: false, line: `${partner.name}: "${crew.name} is hurt. We're coming back up."` };
+        return { crew, died: false, line: `A.U.R.A.: "${crew.name} is hurt, Commander. The lander is bringing ${them} home."` };
+    }
+
+    /** A plain landing's outcome: whether someone is hit, then what the way brings home. The new look rolls the way's own odds
+        (wayOdds: App.wayOdds, the numbers its card showed; TripOdds): the hurt chance, then a death only at the shown odds,
+        and only on someone Vance does not cover (App.tripHit). The default game keeps its own rule. */
+    resolveEvaOutcome(choice, baseRisk, wayOdds) {
         const planet = this.state.currentSystem;
-        let totalRisk = baseRisk + choice.riskMod;
+        const odds = isNewScreen() ? wayOdds || this.wayOdds(choice, baseRisk) : null;
+        let totalRisk = odds ? odds.hurt : baseRisk + choice.riskMod;
         const roll = Math.random() * 100;
         let logMsg = "";
 
@@ -4534,7 +4728,7 @@ Then you're through.`,
         const isPredatory = planet && planet.tags && planet.tags.includes('PREDATORY');
         let predatoryAttack = false;
 
-        if (isPredatory) {
+        if (isPredatory && !odds) {                                                  // the new look: no hidden roll (PREDATOR_RISK is shown)
             // 40% chance of predator attack regardless of other outcomes
             if (Math.random() < 0.4) {
                 predatoryAttack = true;
@@ -4549,13 +4743,18 @@ Then you're through.`,
         if ((roll < totalRisk || predatoryAttack) && evaTeam.length > 0) {
             // INJURY or DEATH — pick randomly from the 2-person EVA team
             const severity = Math.random() * 100;
-            const targetCrew = evaTeam[Math.floor(Math.random() * evaTeam.length)];
+            let targetCrew = evaTeam[Math.floor(Math.random() * evaTeam.length)];
 
             // Predatory attacks are more likely to be fatal
             const deathThreshold = (predatoryAttack ? 30 : 10) + Math.max(0, totalRisk - HIGH_RISK_FLOOR); // 10% of hits kill; past 40% risk, each point adds one more
             const hazardDesc = getHazard();
 
-            if (severity < deathThreshold) {
+            if (odds) {                                                              // the new look: TripOdds, Vance's cover, one line in a voice
+                const hit = this.tripHit(odds, evaTeam, targetCrew, planet, hazardDesc, severity);
+                targetCrew = hit.crew;
+                isTeamMemberLost = hit.died;
+                this.state.addLog(hit.line);                                         // its own line: the card shows it with the speaker's face
+            } else if (severity < deathThreshold) {
                 isTeamMemberLost = true;
                 targetCrew.status = 'DEAD';
                 targetCrew._deathSector = this.state.currentSector;
@@ -4650,7 +4849,7 @@ Then you're through.`,
         const isObsessed = this.state.hasActiveTrait('OBSESSED');
 
         if (isTeamMemberLost) {
-            logMsg += 'The survivor came back with empty hands.';
+            logMsg += evaTeam.some(m => m.status !== 'DEAD') ? 'The survivor came back with empty hands.' : 'The lander came home with nothing.';   // DRAFT: one went alone
         } else if (choice.reward.type === 'RESOURCE' && choice.reward.val === 'NOTHING') {
             // walking away brings nothing home, and costs what the choice says it costs
             if (/Lose Fuel|Energy Cost/i.test(choice.text)) { this.state.energy = Math.max(0, this.state.energy - RETREAT_ENERGY_COST); logMsg += `Nothing brought back. -${RETREAT_ENERGY_COST} Energy.`; }
@@ -4697,6 +4896,8 @@ Then you're through.`,
 
         this.state.addLog(logMsg);
         this.state.emitUpdates();
+        delete this.state._nsPartner;                                                // the new look: this event's breakdown is decided
+        this._nsTrip = null;
 
         // Auto-save after EVA completes
         this.autoSave();
@@ -4712,7 +4913,7 @@ Then you're through.`,
      * and ends the journey as the light's Eden door does (_executeColony → endJourney).
      */
     showEdenEvaModal(planet) {
-        const evaTeam = this.currentEvaTeam;
+        const evaTeam = this.currentEvaTeam, names = evaTeam.map(m => m.name).join(' and ');   // two, or one who went alone
         const options = [
             { key: 'rest', text: 'Rest and recover', desc: 'Everyone sleeps properly for once. All stress gone, all injuries healed.' },
             { key: 'gather', text: 'Gather fruit and fresh water', desc: '+10 Rations. The land gives freely.' },
@@ -4723,7 +4924,7 @@ Then you're through.`,
 
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'ON THE SURFACE', title: planet.name,
-            context: `${evaTeam[0].name} and ${evaTeam[1].name} step out into warm, sweet air, beside a clear stream. `
+            context: `${names} step${evaTeam.length === 1 ? 's' : ''} out into warm, sweet air, beside a clear stream. `
                 + 'Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass.',
             choices: options,
             onPick: (idx) => {
@@ -4738,7 +4939,7 @@ Then you're through.`,
                                 if (c.status === 'INJURED') c.status = 'HEALTHY';
                             }
                         });
-                        this.state.addLog(`${evaTeam[0].name} and ${evaTeam[1].name} found a quiet place by the stream. The whole crew rotated through in shifts.`);
+                        this.state.addLog(`${names} found a quiet place by the stream. The whole crew rotated through in shifts.`);
                         this.state.addLog("For the first time in months, everyone truly rested. All stress cleared. All injuries healed.");
                         break;
                     case 'gather': {

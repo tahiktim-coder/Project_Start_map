@@ -19,13 +19,9 @@ const { travel, nextWorld, jump, goLight } = require('./voyage');
 const { offRun } = require('./switches');
 
 // the new look's own files keep a little state between calls (a trip, a call, held crew moments): loaded fresh for every run.
-// Orbit.js keeps its fitsOf to itself: one line hands it out (window.__runsimFitsOf) for the trip log's fit; the file is unchanged.
-const FITS_ANCHOR = 'window.NSOrbit = Object.freeze({';
-const PER_RUN = ['src/newscreen/Route.js', 'src/newscreen/Scan.js', 'src/newscreen/WorldFinds.js', 'src/newscreen/Orbit.js'].map(rel => {
-    let src = fs.readFileSync(path.join(ROOT, rel), 'utf8');
-    if (rel.endsWith('Orbit.js') && src.includes(FITS_ANCHOR)) src = src.replace(FITS_ANCHOR, "window.__runsimFitsOf = typeof fitsOf === 'function' ? fitsOf : null; " + FITS_ANCHOR);
-    return new vm.Script(src, { filename: rel });
-});
+// The trip log's fit is NSOrbit.fitOf (the game's own, as TripOdds counts it).
+const PER_RUN = ['src/newscreen/Route.js', 'src/newscreen/Scan.js', 'src/newscreen/WorldFinds.js', 'src/newscreen/Orbit.js']
+    .map(rel => new vm.Script(fs.readFileSync(path.join(ROOT, rel), 'utf8'), { filename: rel }));
 const MAX_STEPS = 400;
 
 /** A fresh game state and an App without its page (its handlers run for real), for one run. */

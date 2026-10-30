@@ -106,8 +106,8 @@ _Every item: its name, its description, and what using it says. The disc drawing
 
 ### Reading a found page again (or taking out the disc) «bundle.js · pageItem»
 
-- You take the disc out again. «bundle.js · line 1714»
-- You read it again. «bundle.js · line 1715»
+- You take the disc out again. «bundle.js · line 1768»
+- You read it again. «bundle.js · line 1769»
 
 ## The fabricator «Upgrades.js · UPGRADES»
 _Each part: name, description, what it changes, where it shows on the ship._
@@ -179,111 +179,111 @@ _The description of each kind of world._
 ## What kind of world it is (the new look) «WorldFinds.js · KINDS»
 _Under every world's name, in travel and on the bridge: its kind, then one short line (ten words at most). Our wrecks and the story world keep their own lines._
 
-- **ROCKY** — A rocky world «WorldFinds.js · line 42»
-- **ROCKY** — Bare stone, rich in metal. «WorldFinds.js · line 42»
-- **GAS_GIANT** — A gas giant «WorldFinds.js · line 43»
-- **GAS_GIANT** — No ground to stand on. «WorldFinds.js · line 43»
-- **ICE_WORLD** — An ice world «WorldFinds.js · line 44»
-- **ICE_WORLD** — Frozen hard, from pole to pole. «WorldFinds.js · line 44»
-- **OCEANIC** — An ocean world «WorldFinds.js · line 45»
-- **OCEANIC** — Water everywhere, almost no land. «WorldFinds.js · line 45»
-- **DESERT** — A desert world «WorldFinds.js · line 46»
-- **DESERT** — The ground is too hot to touch. «WorldFinds.js · line 46»
-- **VOLCANIC** — A world of volcanoes «WorldFinds.js · line 47»
-- **VOLCANIC** — The ground still moves. «WorldFinds.js · line 47»
-- **TOXIC** — A poison world «WorldFinds.js · line 48»
-- **TOXIC** — Nobody could breathe this air. «WorldFinds.js · line 48»
-- **VITAL** — A living world «WorldFinds.js · line 49»
-- **VITAL** — Forests, rivers and animals. «WorldFinds.js · line 49»
-- **BIO_MASS** — A world that is alive «WorldFinds.js · line 50»
-- **BIO_MASS** — One huge creature covers it. «WorldFinds.js · line 50»
-- **MECHA** — A world of war machines «WorldFinds.js · line 51»
-- **MECHA** — Most of them are asleep. «WorldFinds.js · line 51»
-- **SHATTERED** — A broken world «WorldFinds.js · line 52»
-- **SHATTERED** — It split apart long ago. «WorldFinds.js · line 52»
-- **TERRAFORMED** — A world someone made «WorldFinds.js · line 53»
-- **TERRAFORMED** — The weather never changes. «WorldFinds.js · line 53»
-- **CRYSTALLINE** — A crystal world «WorldFinds.js · line 54»
-- **CRYSTALLINE** — Huge crystals hum in the wind. «WorldFinds.js · line 54»
-- **ROGUE** — A world with no sun «WorldFinds.js · line 55»
-- **ROGUE** — Dark and very cold. «WorldFinds.js · line 55»
-- **TIDALLY_LOCKED** — A half-lit world «WorldFinds.js · line 56»
-- **TIDALLY_LOCKED** — One side burns, one side freezes. «WorldFinds.js · line 56»
-- **HOLLOW** — A hollow world «WorldFinds.js · line 57»
-- **HOLLOW** — Something is inside it. «WorldFinds.js · line 57»
-- **SYMBIOTE_WORLD** — A welcoming world «WorldFinds.js · line 58»
-- **SYMBIOTE_WORLD** — The plants turn toward us. «WorldFinds.js · line 58»
-- **MIRROR** — A mirror world «WorldFinds.js · line 59»
-- **MIRROR** — Our scans show our own ship. «WorldFinds.js · line 59»
-- **GRAVEYARD** — A world of dead ships «WorldFinds.js · line 60»
-- **GRAVEYARD** — Hundreds of them, crushed together. «WorldFinds.js · line 60»
-- **SINGING** — A singing world «WorldFinds.js · line 61»
-- **SINGING** — One low note comes off it. «WorldFinds.js · line 61»
-- **STORM_WORLD** — A storm world «WorldFinds.js · line 62»
-- **STORM_WORLD** — The wind never stops. «WorldFinds.js · line 62»
-- **FUNGAL** — A fungus world «WorldFinds.js · line 63»
-- **FUNGAL** — Spores hang in the air. «WorldFinds.js · line 63»
-- **TOMB_WORLD** — A world of dead cities «WorldFinds.js · line 64»
-- **TOMB_WORLD** — Nobody knows what killed them. «WorldFinds.js · line 64»
-- **EDEN** — A green world «WorldFinds.js · line 65»
-- **EDEN** — It looks made for us. «WorldFinds.js · line 65»
-- **MACHINE_WORLD** — A machine world «WorldFinds.js · line 66»
-- **MACHINE_WORLD** — Someone built every part of it. «WorldFinds.js · line 66»
-- **FROZEN_OCEAN** — A frozen ocean «WorldFinds.js · line 67»
-- **FROZEN_OCEAN** — Something swims under the ice. «WorldFinds.js · line 67»
-- **SULFUR** — A sulphur world «WorldFinds.js · line 68»
-- **SULFUR** — Yellow lakes, and air that burns. «WorldFinds.js · line 68»
-- **CARBON** — A carbon world «WorldFinds.js · line 69»
-- **CARBON** — Mountains of diamond. «WorldFinds.js · line 69»
-- **RADIATION_BELT** — A radiation world «WorldFinds.js · line 70»
-- **RADIATION_BELT** — Deadly to stand on for long. «WorldFinds.js · line 70»
-- **GHOST_WORLD** — A ghost world «WorldFinds.js · line 71»
-- **GHOST_WORLD** — Our scanner keeps losing it. «WorldFinds.js · line 71»
-- **STATION** — An empty station «WorldFinds.js · line 72»
-- **STATION** — Nobody answers our call. «WorldFinds.js · line 72»
-- **ASTEROID_FIELD** — Rocks and old metal «WorldFinds.js · line 73»
-- **ASTEROID_FIELD** — Good for mining. «WorldFinds.js · line 73»
+- **ROCKY** — A rocky world «WorldFinds.js · line 46»
+- **ROCKY** — Bare stone, rich in metal. «WorldFinds.js · line 46»
+- **GAS_GIANT** — A gas giant «WorldFinds.js · line 47»
+- **GAS_GIANT** — No ground to stand on. «WorldFinds.js · line 47»
+- **ICE_WORLD** — An ice world «WorldFinds.js · line 48»
+- **ICE_WORLD** — Frozen hard, from pole to pole. «WorldFinds.js · line 48»
+- **OCEANIC** — An ocean world «WorldFinds.js · line 49»
+- **OCEANIC** — Water everywhere, almost no land. «WorldFinds.js · line 49»
+- **DESERT** — A desert world «WorldFinds.js · line 50»
+- **DESERT** — The ground is too hot to touch. «WorldFinds.js · line 50»
+- **VOLCANIC** — A world of volcanoes «WorldFinds.js · line 51»
+- **VOLCANIC** — The ground still moves. «WorldFinds.js · line 51»
+- **TOXIC** — A poison world «WorldFinds.js · line 52»
+- **TOXIC** — Nobody could breathe this air. «WorldFinds.js · line 52»
+- **VITAL** — A living world «WorldFinds.js · line 53»
+- **VITAL** — Forests, rivers and animals. «WorldFinds.js · line 53»
+- **BIO_MASS** — A world that is alive «WorldFinds.js · line 54»
+- **BIO_MASS** — One huge creature covers it. «WorldFinds.js · line 54»
+- **MECHA** — A world of war machines «WorldFinds.js · line 55»
+- **MECHA** — Most of them are asleep. «WorldFinds.js · line 55»
+- **SHATTERED** — A broken world «WorldFinds.js · line 56»
+- **SHATTERED** — It split apart long ago. «WorldFinds.js · line 56»
+- **TERRAFORMED** — A world someone made «WorldFinds.js · line 57»
+- **TERRAFORMED** — The weather never changes. «WorldFinds.js · line 57»
+- **CRYSTALLINE** — A crystal world «WorldFinds.js · line 58»
+- **CRYSTALLINE** — Huge crystals hum in the wind. «WorldFinds.js · line 58»
+- **ROGUE** — A world with no sun «WorldFinds.js · line 59»
+- **ROGUE** — Dark and very cold. «WorldFinds.js · line 59»
+- **TIDALLY_LOCKED** — A half-lit world «WorldFinds.js · line 60»
+- **TIDALLY_LOCKED** — One side burns, one side freezes. «WorldFinds.js · line 60»
+- **HOLLOW** — A hollow world «WorldFinds.js · line 61»
+- **HOLLOW** — Something is inside it. «WorldFinds.js · line 61»
+- **SYMBIOTE_WORLD** — A welcoming world «WorldFinds.js · line 62»
+- **SYMBIOTE_WORLD** — The plants turn toward us. «WorldFinds.js · line 62»
+- **MIRROR** — A mirror world «WorldFinds.js · line 63»
+- **MIRROR** — Our scans show our own ship. «WorldFinds.js · line 63»
+- **GRAVEYARD** — A world of dead ships «WorldFinds.js · line 64»
+- **GRAVEYARD** — Hundreds of them, crushed together. «WorldFinds.js · line 64»
+- **SINGING** — A singing world «WorldFinds.js · line 65»
+- **SINGING** — One low note comes off it. «WorldFinds.js · line 65»
+- **STORM_WORLD** — A storm world «WorldFinds.js · line 66»
+- **STORM_WORLD** — The wind never stops. «WorldFinds.js · line 66»
+- **FUNGAL** — A fungus world «WorldFinds.js · line 67»
+- **FUNGAL** — Spores hang in the air. «WorldFinds.js · line 67»
+- **TOMB_WORLD** — A world of dead cities «WorldFinds.js · line 68»
+- **TOMB_WORLD** — Nobody knows what killed them. «WorldFinds.js · line 68»
+- **EDEN** — A green world «WorldFinds.js · line 69»
+- **EDEN** — It looks made for us. «WorldFinds.js · line 69»
+- **MACHINE_WORLD** — A machine world «WorldFinds.js · line 70»
+- **MACHINE_WORLD** — Someone built every part of it. «WorldFinds.js · line 70»
+- **FROZEN_OCEAN** — A frozen ocean «WorldFinds.js · line 71»
+- **FROZEN_OCEAN** — Something swims under the ice. «WorldFinds.js · line 71»
+- **SULFUR** — A sulphur world «WorldFinds.js · line 72»
+- **SULFUR** — Yellow lakes, and air that burns. «WorldFinds.js · line 72»
+- **CARBON** — A carbon world «WorldFinds.js · line 73»
+- **CARBON** — Mountains of diamond. «WorldFinds.js · line 73»
+- **RADIATION_BELT** — A radiation world «WorldFinds.js · line 74»
+- **RADIATION_BELT** — Deadly to stand on for long. «WorldFinds.js · line 74»
+- **GHOST_WORLD** — A ghost world «WorldFinds.js · line 75»
+- **GHOST_WORLD** — Our scanner keeps losing it. «WorldFinds.js · line 75»
+- **STATION** — An empty station «WorldFinds.js · line 76»
+- **STATION** — Nobody answers our call. «WorldFinds.js · line 76»
+- **ASTEROID_FIELD** — Rocks and old metal «WorldFinds.js · line 77»
+- **ASTEROID_FIELD** — Good for mining. «WorldFinds.js · line 77»
 
 ## What a scan finds on a world (the new look) «WorldFinds.js · SITES»
 _The places a team can go, as marks on the bridge window. A world's own event and its feature are named by their card's title, or by the names below._
 
-- **EXODUS_WRECK · label** — One of our ships «WorldFinds.js · line 77»
-- **FAILED_COLONY · label** — Empty colony «WorldFinds.js · line 78»
-- **DERELICT · label** — Wreckage in orbit «WorldFinds.js · line 79»
-- **LIGHTHOUSE · label** — Old beacon «WorldFinds.js · line 80»
-- **GARDEN · label** — Garden dome «WorldFinds.js · line 81»
-- **GRAVE · label** — Graves «WorldFinds.js · line 82»
-- **GRAVE · gives** — an item «WorldFinds.js · line 82»
+- **EXODUS_WRECK · label** — One of our ships «WorldFinds.js · line 81»
+- **FAILED_COLONY · label** — Empty colony «WorldFinds.js · line 82»
+- **DERELICT · label** — Wreckage in orbit «WorldFinds.js · line 83»
+- **LIGHTHOUSE · label** — Old beacon «WorldFinds.js · line 84»
+- **GARDEN · label** — Garden dome «WorldFinds.js · line 85»
+- **GRAVE · label** — Graves «WorldFinds.js · line 86»
+- **GRAVE · gives** — an item «WorldFinds.js · line 86»
 
 ### Names for a few cards «WorldFinds.js · LABELS»
 
-- **TIME_DILATION** — Crushing gravity «WorldFinds.js · line 86»
-- **SYMBIOTE_EMBRACE** — Welcoming plants «WorldFinds.js · line 86»
-- **SOLAR_FLARE** — Solar flare «WorldFinds.js · line 86»
-- **MASS_BURIAL** — Old graves «WorldFinds.js · line 86»
-- **THE_REFLECTION** — Strange reflection «WorldFinds.js · line 87»
-- **GHOST_SHIP** — Silent ship «WorldFinds.js · line 87»
-- **DERELICT** — Crashed ship «WorldFinds.js · line 87»
-- **ROGUE_AI** — Armed satellite «WorldFinds.js · line 87»
-- **CRYOSLEEP_POD** — Old sleep pod «WorldFinds.js · line 87»
-- **DISTRESS_BEACON** — Distress call «WorldFinds.js · line 88»
-- **DUST_STORM** — Dust storm «WorldFinds.js · line 88»
-- **MAGNETIC_STORM** — Magnetic storm «WorldFinds.js · line 88»
-- **PERFECT_SPHERE** — Perfect sphere «WorldFinds.js · line 88»
-- **INNER_WORLD** — Way inside «WorldFinds.js · line 88»
-- **RADIO_SILENCE** — Radio dead zone «WorldFinds.js · line 89»
-- **FOOTPRINTS** — Footprints in the dust «WorldFinds.js · line 89»
-- ruins · signal · life · machines «WorldFinds.js · line 92»
-- **note** — A.U.R.A.: "The team found a note from one of our crews. They went on to [name], Commander." «WorldFinds.js · line 95»
-- **course** — A.U.R.A.: "That signal logged one of our ships heading for [name], Commander." «WorldFinds.js · line 96»
-- **fix** — A.U.R.A.: "The team brought back an old star fix. One of our ships is at [name], Commander." «WorldFinds.js · line 97»
+- **TIME_DILATION** — Crushing gravity «WorldFinds.js · line 90»
+- **SYMBIOTE_EMBRACE** — Welcoming plants «WorldFinds.js · line 90»
+- **SOLAR_FLARE** — Solar flare «WorldFinds.js · line 90»
+- **MASS_BURIAL** — Old graves «WorldFinds.js · line 90»
+- **THE_REFLECTION** — Strange reflection «WorldFinds.js · line 91»
+- **GHOST_SHIP** — Silent ship «WorldFinds.js · line 91»
+- **DERELICT** — Crashed ship «WorldFinds.js · line 91»
+- **ROGUE_AI** — Armed satellite «WorldFinds.js · line 91»
+- **CRYOSLEEP_POD** — Old sleep pod «WorldFinds.js · line 91»
+- **DISTRESS_BEACON** — Distress call «WorldFinds.js · line 92»
+- **DUST_STORM** — Dust storm «WorldFinds.js · line 92»
+- **MAGNETIC_STORM** — Magnetic storm «WorldFinds.js · line 92»
+- **PERFECT_SPHERE** — Perfect sphere «WorldFinds.js · line 92»
+- **INNER_WORLD** — Way inside «WorldFinds.js · line 92»
+- **RADIO_SILENCE** — Radio dead zone «WorldFinds.js · line 93»
+- **FOOTPRINTS** — Footprints in the dust «WorldFinds.js · line 93»
+- ruins · signal · life · machines «WorldFinds.js · line 96»
+- **note** — A.U.R.A.: "The team found a note from one of our crews. They went on to [name], Commander." «WorldFinds.js · line 99»
+- **course** — A.U.R.A.: "That signal logged one of our ships heading for [name], Commander." «WorldFinds.js · line 100»
+- **fix** — A.U.R.A.: "The team brought back an old star fix. One of our ships is at [name], Commander." «WorldFinds.js · line 101»
 
 ### A clue toward our ship «WorldFinds.js · CLUE_LINES»
 _Said by A.U.R.A. when the team comes back from the find that holds the clue (one side world in sectors 2 to 6)._
 
-- **note** — A.U.R.A.: "The team found a note from one of our crews. They went on to [name], Commander." «WorldFinds.js · line 95»
-- **course** — A.U.R.A.: "That signal logged one of our ships heading for [name], Commander." «WorldFinds.js · line 96»
-- **fix** — A.U.R.A.: "The team brought back an old star fix. One of our ships is at [name], Commander." «WorldFinds.js · line 97»
+- **note** — A.U.R.A.: "The team found a note from one of our crews. They went on to [name], Commander." «WorldFinds.js · line 99»
+- **course** — A.U.R.A.: "That signal logged one of our ships heading for [name], Commander." «WorldFinds.js · line 100»
+- **fix** — A.U.R.A.: "The team brought back an old star fix. One of our ships is at [name], Commander." «WorldFinds.js · line 101»
 
 ## Asteroid fields on the map «AsteroidFields.js · ASTEROID_FIELD_NAMES»
 

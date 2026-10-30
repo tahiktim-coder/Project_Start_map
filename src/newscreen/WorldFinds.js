@@ -10,9 +10,10 @@
                 machines, the first the world has whose event is not its own event again
    Finds show once a scan has read the world (the bridge's, or travel's far scan); unscanned, the team takes one blind trip as
    today (the site if there is one, else the world's own event). A trip marks its find done; another find is another trip.
-   The risk on a find is App.tripRisk (the trip card starts from it) plus the careful choice's own: the card's careful choice
-   shows the same number, before how the landing went. A site's own story never adds the world's danger: its risk is 0, and
-   its card says the risk of each choice.
+   The risk on a find is the chance someone is hurt on its careful way (TripOdds: App.tripRisk, which the trip card starts
+   from, the careful choice's own, the fit of the two going down, anyone hurt going): the card's careful choice shows the
+   same number, before how the landing went. A site's own story never adds the world's danger: its risk is 0, and its card
+   says the risk of each choice.
    A clue: in sectors 2 to 6, while the sector's story world is still a faint contact, one side world carries a clue toward it
    on one of its finds (a survivor's note, a beacon's last course, a star fix); the trip there names the story world
    (App.revealStoryPlanet, as a dated wreck does), and A.U.R.A. says where the clue came from.
@@ -33,7 +34,10 @@
      markDone(node, id)                            a trip went there (bundle.js handleEvaAction)
      keepOld(app, node)                            before a trip: an old save's one trip (its own event) stays done
      clue(app, find)                               that trip's story is over: a clue on it names the story world
-     riskOf(app, node, event, ids) → n             a plain landing's risk with that event (App.tripRisk + its careful choice's)
+     riskOf(app, node, event, ids, opts?) → n      a plain landing's hurt chance with that event (TripOdds; opts.way: the
+                                                  card's index, else the careful one; opts.find: the find, for the fit)
+     oddsOf(app, node, event, ids, opts?) → { hurt, death, deadly, oneIn }   the same way's odds, its death chance too
+                                                  (something hunting there, Vance's cover): what its card will show
      noteLines(app, node, withSite) → ['Worth a trip: Old ruins (a clue) · The hum', 'People could live here']   travel's note
 */
 (function () {
@@ -144,13 +148,33 @@
         if (!m || m.status !== 'HEALTHY' || (m.tags || []).includes('CONFINED') || (m.tags || []).includes('SEDATED')) return false;
         return !(ids || []).includes('mira');
     }
-    /** A plain landing's risk going in (App.tripRisk) plus its careful choice's own: what the card's careful choice will say. */
-    function eventRisk(app, node, ev, ids) {
-        if (!app || typeof app.tripRisk !== 'function') return null;
-        const base = app.tripRisk(node, { mira: miraAboard(app, ids) ? miraScan() : 0 }).risk;
-        const least = Math.min(...(ev.choices || []).map(c => Number(c.riskMod) || 0));
-        return Math.max(0, Math.min(100, Math.round(base + (Number.isFinite(least) ? least : 0))));
+    const ROLE_OF = { jaxon: 'ENGINEER', aris: 'MEDIC', vance: 'SECURITY', mira: 'SPECIALIST' };
+    /** The crew members ids name. */
+    function teamOf(app, ids) {
+        const crew = (app && app.state && app.state.crew) || [];
+        return (ids || []).map(id => crew.find(c => (c.tags || []).includes(ROLE_OF[id]))).filter(Boolean);
     }
+    /** A plain landing's odds going in (before the landing), as the card will show them for that way: App.tripRisk, the way's
+        own risk (opts.way: its index on the card; left out, the careful choice's), the team's fit for the find (NSOrbit.fitOf;
+        opts.find, else the world's own event), anyone hurt going down (fewer than two were well: NSOrbit.pool), something
+        hunting there (App.isHunted) and Vance's cover (App.vanceCovers), through TripOdds: { hurt, death, deadly, oneIn }. */
+    function eventOdds(app, node, ev, ids, opts) {
+        if (!app || typeof app.tripRisk !== 'function' || !ev) return null;
+        const o = opts || {}, base = app.tripRisk(node, { mira: miraAboard(app, ids) ? miraScan() : 0 }).risk;
+        const mods = (ev.choices || []).map(c => Number(c.riskMod) || 0), least = mods.length ? Math.min(...mods) : 0;
+        const wayMod = o.way != null && mods[o.way] != null ? mods[o.way] : least;
+        const T = window.TripOdds, O = window.NSOrbit;
+        if (!T) return { hurt: Math.max(0, Math.min(100, Math.round(base + wayMod))), death: 0, deadly: false, oneIn: null };
+        const find = o.find || { id: 'kind', kind: 'event', feature: null, event: ev.id };
+        let fit = 0;
+        try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(app, node, ids, find) : 0; } catch (err) { console.error('NSWorldFinds: the fit failed', err); }
+        const team = teamOf(app, ids);
+        const hunted = typeof app.isHunted === 'function' ? app.isHunted(node) : tagsOf(node).includes('PREDATORY');
+        const vance = typeof app.vanceCovers === 'function' ? app.vanceCovers(team) : false;
+        return T.odds({ base, wayMod, fit, hunted, vance, hurtGoes: team.some(c => c.status === 'INJURED') });
+    }
+    /** The hurt chance of eventOdds: a find's "risk N%". */
+    function eventRisk(app, node, ev, ids, opts) { const o = eventOdds(app, node, ev, ids, opts); return o ? o.hurt : null; }
 
     // ── where each find sits on the world (its own seeded spot, on the side facing the open sky) ──
     function spot(node, id, site) {
@@ -198,7 +222,7 @@
     function eventFind(app, node, id, ev, ids, feature) {
         const f = feature ? FEATURE[feature] : null;
         return { id, kind: 'event', event: ev.id, label: LABELS[ev.id] || sentence(ev.title), icon: f ? f.icon : 'pin', art: f ? f.art : null, gives: eventGives(ev),
-            risk: eventRisk(app, node, ev, ids), at: spot(node, id), done: false, hint: null, feature: feature || null };
+            risk: eventRisk(app, node, ev, ids, { find: { id, kind: 'event', event: ev.id, feature: feature || null } }), at: spot(node, id), done: false, hint: null, feature: feature || null };
     }
 
     /** Every find on a known world, in order, with what is done and which is the target. unread: the same before a scan (the
@@ -273,5 +297,5 @@
         return [said, live].filter(Boolean);
     }
 
-    window.NSWorldFinds = Object.freeze({ kind, known, list, target, blind, aim, markDone, keepOld, clue, noteLines, riskOf: eventRisk, KINDS });
+    window.NSWorldFinds = Object.freeze({ kind, known, list, target, blind, aim, markDone, keepOld, clue, noteLines, riskOf: eventRisk, oddsOf: eventOdds, KINDS });
 })();

@@ -71,7 +71,7 @@ function noteDeath(rc, c) {
     R.deaths.push({
         who: c.name, sector: state.currentSector, cause: c._deathCause || 'unknown', world: cur.node ? cur.node.name : null, kind: cur.node ? worldWords(cur.node) : null,
         phase: t ? (t.phase === 'card' ? 'trip' : t.phase === 'site' ? 'site' : 'down') : cur.phase,
-        trip: t ? { find: t.find, team: t.team, way: t.wayText, wayKind: t.wayKind, shown: t.shown, mark: t.mark, landing: t.landing, struck: t.struck || [] } : null,
+        trip: t ? { find: t.find, team: t.team, way: t.wayText, wayKind: t.wayKind, shown: t.shown, death: t.death, oneIn: t.oneIn, deadly: !!t.deadly, goDeath: t.goDeath || 0, goOneIn: t.goOneIn || null, safeOpen: !!t.safeOpen, mark: t.mark, landing: t.landing, struck: t.struck || [], alone: !!t.alone, hurtGoes: !!t.hurtGoes } : null,
         card: cur.lastCard,
     });
     if (t) t.died.push(c.name);

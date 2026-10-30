@@ -69,19 +69,21 @@ function rewardValue(choice, evaRange) {
     if (r.type === 'ITEM') return VALUE.item;
     return 0;
 }
-/** resolveEvaOutcome's own odds: a hit at total risk t kills 10 % of the time, one more point past 40 % risk. */
-function expected(choice, riskBase, evaRange) {
+/** A way's worth less its risk: odds are the game's own (TripOdds: { hurt, death } in %, as its card shows them). Without
+    odds, the old rule: a hit at total risk t kills 10 % of the time, one more point past 40 % risk. */
+function expected(choice, riskBase, evaRange, odds) {
+    if (odds) return rewardValue(choice, evaRange) - odds.hurt / 100 * VALUE.hurt - odds.death / 100 * VALUE.life;
     const t = clamp(riskBase + (Number(choice.riskMod) || 0), 0, 100), deathShare = (10 + Math.max(0, t - 40)) / 100;
     return rewardValue(choice, evaRange) - t / 100 * (VALUE.hurt + deathShare * VALUE.life);
 }
 const isSupply = c => { const r = c.reward || {}; return r.type === 'RESOURCE' && r.val !== 'NOTHING'; };
-/** The choice's index among `open` ({ c, i } not struck by a trait). */
+/** The choice's index among `open` ({ c, i, odds } not struck by a trait; odds: App.wayOdds, as the card shows them). */
 function pickWay(open, style, riskBase, evaRange, rnd) {
     const byRisk = open.slice().sort((a, b) => (a.c.riskMod || 0) - (b.c.riskMod || 0) || a.i - b.i);
     const careful = byRisk[0], bold = byRisk[byRisk.length - 1];
     if (style.way === 'bold') return bold.i;
     if (style.way === 'boldForSupply') { const s = byRisk.filter(o => isSupply(o.c)); return (s.length ? s[s.length - 1] : careful).i; }
-    if (style.way === 'expected') return open.slice().sort((a, b) => expected(b.c, riskBase, evaRange) - expected(a.c, riskBase, evaRange) || a.i - b.i)[0].i;
+    if (style.way === 'expected') return open.slice().sort((a, b) => expected(b.c, riskBase, evaRange, b.odds) - expected(a.c, riskBase, evaRange, a.odds) || a.i - b.i)[0].i;
     return careful.i;
 }
 
@@ -141,8 +143,10 @@ function pickWorld(ahead, style, ctx) {
 
 // ── the finds and the team ──
 /** Does this player send a team to this find? risk: the find's shown risk with the proposed pair (null: a site's own story).
-    ctx.tripsHere: trips already made from this orbit; ctx.eventTrips: event finds visited here. The careful players make one
-    trip a world (its site first), and a second only for a clue; the optimizer up to two event finds; the others every find. */
+    ctx.tripsHere: trips already made from this orbit; ctx.eventTrips: event finds visited here; ctx.wayOdds(find, event,
+    way): the game's own odds for one way of that find with the proposed pair (NSWorldFinds.oddsOf: the fit, someone hurt
+    going, something hunting there, Vance's cover). The careful players make one trip a world (its site first), and a second
+    only for a clue; the optimizer up to two event finds; the others every find. */
 function wantsFind(find, style, ctx) {
     if (find.done) return false;
     if (style.trips === 'safe' && (ctx.tripsHere || 0) > 0 && !find.hint) return false;
@@ -154,16 +158,17 @@ function wantsFind(find, style, ctx) {
     if (style.trips === 'payoff') {
         const ev = ctx.eventOf(find.event);
         if (!ev) return false;
-        const base = risk - Math.min(...ev.choices.map(c => Number(c.riskMod) || 0));
-        return Math.max(...ev.choices.map(c => expected(c, base, ctx.evaRange))) > 0;
+        const base = risk - Math.min(...ev.choices.map(c => Number(c.riskMod) || 0));   // only where the game gives no odds
+        return Math.max(...ev.choices.map((c, i) => expected(c, base, ctx.evaRange, ctx.wayOdds ? ctx.wayOdds(find, ev, i) : null))) > 0;
     }
     return true;
 }
-/** The two who go down: [id, id], or null when fewer than two can go. */
+/** The two who go down: [id, id]; the one left who can go: [id] (a trip is never locked: NSOrbit.pool); null: nobody. */
 function pickTeam(find, style, ctx) {
     const { orbit, app, rnd, finds, node } = ctx;
     const pool = orbit.eligible(app);
-    if (pool.length < 2) return null;
+    if (!pool.length) return null;
+    if (pool.length === 1) return pool.slice();
     if (style.team === 'random') {
         const a = pool[Math.floor(rnd() * pool.length)], rest = pool.filter(x => x !== a);
         return [a, rest[Math.floor(rnd() * rest.length)]];

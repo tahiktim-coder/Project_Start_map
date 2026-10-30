@@ -91,6 +91,13 @@ function measureTrips(runs) {
         stuck: mean(runs, r => r.counts.stuck), stuckFew: mean(runs, r => r.counts.stuckFew), stuckAris: mean(runs, r => r.counts.stuckAris),
         tripDeaths: tripDeaths.length, tripDeathsShown30: tripDeaths.length ? Math.round(100 * tripDeaths.filter(d => (d.trip.shown || 0) >= 30).length / tripDeaths.length) : null,
         tripDeathShownMedian: quantile(tripDeaths.map(d => d.trip.shown), 0.5),
+        tripDeathsDeadly: tripDeaths.length ? Math.round(100 * tripDeaths.filter(d => d.trip.deadly).length / tripDeaths.length) : null,
+        // readable: the card showed its death chance, and either GO DOWN said the trip could kill or the card left a way
+        // that could not (the player chose the deadly one with its odds in front of them)
+        tripDeathsCard: tripDeaths.filter(d => d.trip.deadly).length,
+        tripDeathsGo: tripDeaths.filter(d => (d.trip.goDeath || 0) > 0).length,
+        tripDeathsReadable: tripDeaths.filter(d => d.trip.deadly && ((d.trip.goDeath || 0) > 0 || d.trip.safeOpen)).length,
+        deadlyTrips: share(trips.filter(x => x.deadly).length, trips.length), aloneTrips: mean(runs, r => r.trips.filter(x => x.alone).length), hurtGoesTrips: mean(runs, r => r.trips.filter(x => x.hurtGoes).length),
     };
 }
 /** Energy, food and salvage per sector (means over the runs that reached it). */
@@ -108,7 +115,8 @@ function deathLine(d) {
     if (d.phase === 'trip' && d.trip) {
         const way = d.trip.wayKind === 'only' ? `"${d.trip.way}"` : `the ${d.trip.wayKind} way, "${d.trip.way}"`;
         const struck = (d.trip.struck || []).length ? ` (${d.trip.struck.map(t => (t === 'RECKLESS' ? "Mira's stress" : "Vance's stress")).join(' and ')} struck a way off the card.)` : '';
-        return `${at}: ${d.trip.team} went down to ${d.trip.find} and took ${way}. The card showed ${d.trip.shown}% that someone gets hurt.${struck} ${d.who} did not come back (${d.cause}).`;
+        const death = d.trip.deadly ? ` and 1 in ${d.trip.oneIn} that someone dies` : ' and no death chance';
+        return `${at}: ${d.trip.team} went down to ${d.trip.find} and took ${way}. The card showed ${d.trip.shown}% that someone gets hurt${d.trip.oneIn != null || d.trip.deadly === false ? death : ''}.${struck} ${d.who} did not come back (${d.cause}).`;
     }
     if (d.phase === 'site' && d.trip) return `${at}: ${d.trip.team} went to ${d.trip.find}.${d.card ? ` On its card we chose "${d.card.choice}".` : ''} ${d.who} died (${d.cause}).`;
     if (d.phase === 'down' && d.trip) return `${at}: ${d.trip.team} went down to ${d.trip.find}; the landing was ${d.trip.landing || 'rough'}. ${d.who} died before the card (${d.cause}).`;
@@ -158,7 +166,7 @@ const TARGETS = [   // the depth plan's D4 (careful, greedy, reckless, A.U.R.A.-
     ['Salvage at the light (median)', 'salvageLight', [30, 120], [60, 150], null, null],
     ['Wanted a fix, too little salvage', 'wantedFix', [35, 60], [20, 45], null, null],
     ['Game over', 'gameOver', [0, 3], [0, 5], [10, 25], [0, 5]],
-    ['Stuck: a locked trip card (runs)', 'lockedAny', ...ALL4(0, 0)],
+    ['Stuck: a locked trip card (runs)', 'lockedRuns', ...ALL4(0, 0)],
     ['Stuck: stops nobody could go (per run)', 'stuck', ...ALL4(0, 0)],
     ['Modeled minutes (median)', 'minutesP50', [25, 32], null, null, null],
 ];
@@ -208,7 +216,7 @@ function perPlayer(L, results, order) {
     row('lost someone / two or more', m => `${m.lostAny}% / ${m.lost2}%`);
     row('reached the light / with all four', m => `${m.light}% / ${m.allFour}%`);
     row('game over', m => `${m.gameOver}%`);
-    row('locked trip card: runs / cards per run', m => `${m.lockedAny}% / ${m.lockedMean}`);
+    row('every way struck (careful kept open): runs / per run', m => `${m.lockedAny}% / ${m.lockedMean}`);
     row('reserve used (runs) / times per run', m => `${m.reserveAny}% / ${m.reserveMean}`);
     row('  reserve jumps / reserve warps', m => `${m.reserveJumps} / ${m.reserveWarps}`);
     row('someone at stress 2 / people per run', m => `${m.stress2}% / ${m.stress2Mean}`);
@@ -227,6 +235,10 @@ function perPlayer(L, results, order) {
     row('stations / strange sites / pages', m => `${m.stations}/${m.strange}/${m.pages}`);
     row('injuries per run / stops each lasted', m => `${m.injuriesPerRun} / ${m.injuryStops}`);
     row('trip deaths / shown risk 30%+ / median', m => `${m.tripDeaths} / ${or(m.tripDeathsShown30, '%')} / ${or(m.tripDeathShownMedian)}`);
+    row('trip deaths with a death chance shown', m => or(m.tripDeathsDeadly, '%'));
+    row('trip deaths: card showed it / GO DOWN did / readable', m => `${m.tripDeathsCard} / ${m.tripDeathsGo} / ${m.tripDeathsReadable}`);
+    row('trips that could kill (of all trips)', m => `${m.deadlyTrips}%`);
+    row('trips per run: one went alone / someone hurt went', m => `${m.aloneTrips} / ${m.hurtGoesTrips}`);
     row('death by S3: runs / still reached light', m => `${m.earlyDeaths} / ${or(m.earlyDeathLight, '%')}`);
     row('stuck stops per run: fewer than two / Aris', m => `${m.stuckFew} / ${m.stuckAris}`);
     row('our wrecks left unboarded / fewer than two', m => `${m.storyMissed} / ${m.storyMissedFew}`);
@@ -297,6 +309,8 @@ function guards(L, results, order) {
         const band = car.earlyDeathBand;
         g('No death spiral (careful)', `${verdict(car.earlyDeathLight >= 85)} ${car.earlyDeathLight}% of ${car.earlyDeaths} runs [85+]; 90% interval ${band[0]}-${band[1]}%${band[0] < 85 ? ' (too few runs to be sure)' : ''}`);
     }
+    const sum = key => order.reduce((a, k) => a + (results[k][key] || 0), 0), tripDeaths = sum('tripDeaths'), readable = sum('tripDeathsReadable');
+    g('Readable deaths (all runs)', `${verdict(readable === tripDeaths)} ${readable} of ${tripDeaths} trip deaths were readable: the card showed the death chance, and GO DOWN said it could kill (${sum('tripDeathsGo')}) or the card left a way that could not [all]`);
     const twice = order.reduce((a, k) => a + results[k].twoBreakdownsOneEvent, 0);
     g('One breakdown per event (all runs)', `${verdict(twice === 0)} ${twice} second breakdowns from one event`);
     order.forEach(k => { const m = results[k]; if (m.traitTrips) g(`Traits matter: ${STYLES[k].label}`, `${verdict(m.struckTrips >= 30 && m.struckTrips <= 60)} way struck on ${m.struckTrips}% of trips with a trait on [30-60]`); });
