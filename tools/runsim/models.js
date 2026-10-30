@@ -92,7 +92,11 @@ const SECONDS = Object.freeze({
     tripCard: 16, resultCard: 9, tripBack: 4,        // the trip's card; a repeat's result card (step 6); the shuttle home
     secondTrip: 6, secondTripCut: 2,                 // the hatch again for another find at the same stop (C5: nobody walks to it)
     wreck: 35, torch: 20, page: 20, dating: 25,      // our wrecks: the story card, the door, a found page, dating the disc
-    site: 30, strange: 30, station: 75, stationCard: 20, mine: 20, skim: 4, call: 25, moment: 25, deckChoice: 5,
+    site: 30, strange: 30, station: 45, stationCard: 20, mine: 20, skim: 4, call: 25, moment: 25, deckChoice: 5,   // station: the picker and the walk
+    dock: { full: 59, quick: 21 },                   // the new look's flown dock (Bring Her In), Dock click to Continue: the first of a run
+                                                     //   (or a story station's) the whole approach, the rest routine; measured 2026-10-30
+                                                     //   (careful 59 / 59, A.U.R.A. 20, careful 21-22, careless 15)
+                                                     //   (station was 75 with DockingGame's dock in it)
     leave: 3, jumpBurn: 6, corridor: { good: 49, poor: 30, aura: 45 }, jumpFault: 14, campfire: 40,   // corridor: measured flight times
     supper: 8, supperShort: 14, supperTable: 8, supperMore: 5,   // supper; short; the table moment (Aris, two chips); a second pick
     throwSequence: 95, burnGauge: 25, breach: 50, reserveCard: 8, askJump: 4,

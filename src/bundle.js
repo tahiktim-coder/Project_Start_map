@@ -2211,13 +2211,13 @@ class App {
         const open = HULL_HIT_DECKS.filter(k => s.shipDecks[k] && s.shipDecks[k].status === 'OPERATIONAL');
         const deck = open.length && this.corridorBreakAllowance() > 0 ? open[Math.floor(Math.random() * open.length)] : null;
         if (!deck) {
-            s.addLog('Micrometeorite strike. The hull held.');
+            s.addLog('Micrometeorite strike. The hull held.');                                // DRAFT (log only)
             s.emitUpdates();
             return { deck: null, lines: [{ id: 'aura', who: 'A.U.R.A.', text: HULL_HIT_LINES.held }] };
         }
         s._tutorialDeckSeen = true;                                                          // the hit says it: no second "A deck is damaged" line
         s.damageDeck(deck, `Micrometeorite strike. A.U.R.A. sealed off the ${HULL_HIT_ROOM[deck]}.`);              // DRAFT (log only)
-        const aboard = tag => s.crew.find(c => (c.tags || []).includes(tag) && c.status !== 'DEAD' && !(c.tags || []).includes('SEDATED') && !away.includes(c));
+        const aboard = tag => s.crew.find(c => (c.tags || []).includes(tag) && c.status !== 'DEAD' && !(c.tags || []).some(t => t === 'SEDATED' || t === 'CONFINED') && c.trait !== 'CATATONIC' && !away.includes(c));   // who can speak: awake, not shut away or shut down (sickLine's rule, CopyWords')
         const who = [HULL_HIT_WHO[deck], 'ENGINEER', 'SECURITY', 'MEDIC', 'SPECIALIST'].map(aboard).find(Boolean);
         const lines = [{ id: 'aura', who: 'A.U.R.A.', text: HULL_HIT_LINES.sealed(HULL_HIT_ROOM[deck]) }];
         if (who) lines.push({ id: crewIdOf(who), who: who.name, text: HULL_HIT_LINES[deck] });
@@ -2677,7 +2677,8 @@ class App {
     /**
      * What the dock cost: the decks its chips named broken (scrapes on the way in, a hard dock's; never past the allowance),
      * A.U.R.A.'s share of the flying in energy (as the corridor's: not in tests), who docked counted toward who flies.
-     * The air is BoardingParty's (DOCK_AIR_LOSS by grade). Returns { grade, auto } for it; a dock that never ran is hers.
+     * The air is BoardingParty's (DOCK_AIR_LOSS by grade). Returns { grade, auto, hullHeld } for it (hullHeld: a hard dock
+     * that broke nothing, so nobody says the hull is damaged); a dock that never ran is hers.
      */
     applyDockResult(result) {
         const s = this.state;
@@ -2689,9 +2690,10 @@ class App {
             s.energy = Math.max(0, Math.min(100, s.energy + energyDelta));
             s.addLog(`A.U.R.A. docked us: ${-energyDelta} more energy.`);                          // DRAFT (no sign: the dock's chip already said it)
         }
-        (result.damagedRooms || []).slice(0, this.corridorBreakAllowance()).forEach(key => s.damageDeck(key));
+        const rooms = (result.damagedRooms || []).slice(0, this.corridorBreakAllowance());
+        rooms.forEach(key => s.damageDeck(key));
         s.emitUpdates();
-        return { grade: result.grade, auto: !!result.auto };
+        return { grade: result.grade, auto: !!result.auto, hullHeld: result.grade === 'crash' && !rooms.length };
     }
 
     /** What the sector jump costs now: 8, double with engineering down, 4 less once with the drive braced (the hull-cracks campfire). */

@@ -5,7 +5,9 @@
    A byte copy of src/systems/minigames/Corridor.js (2026-10-22) registered as MiniHost 'dock-flight', with every change
    behind one flag, opts.kind === 'dock' (isDock). Without it this file would fly today's jump unchanged (the game never
    asks it to: the jump is Corridor.js's); it is kept whole so a later fold back into Corridor.js is a plain diff.
-   With it: the drop-out into the sector we are in (opts.sector), where the light would be one amber lamp: the station's lit port. Three clusters
+   With it: no jump (review fix, 2026-10-30: the ship is already holding off the station, so no white flash, no warp
+   sound, no drop-out kick; the run starts from the start screen), the sector we are in (opts.sector), where the light
+   would be one amber lamp: the station's lit port. Three clusters
    of the plates it shed and its antenna mast swinging across (the jump's debris, its red warning, scrapes and broken
    decks: every second scrape breaks one). The lamp grows into the ring face (DockFace.js: DockingGame's own face), a few
    of our own class's dead hulls drifting by it. The last 80 m are DockingGame's rules unchanged (DockingGame.internals):
@@ -22,8 +24,10 @@
    A.U.R.A. says why (if it was not soft) and the game's own grade line, then the chips. Without DockExterior.js loaded the old ending plays (the ring slides past, a freeze, the shake, the
    clamps on the glass). "Let A.U.R.A. dock" is autopilot(); her share of the flying costs energy (never more than is left).
    A routine dock is short (the designer's rule: shorter routines, keep every big moment): with opts.quick the station is
-   already about 120 m out on the start screen, the drop-out comes in past the debris, and the docking starts nearer
-   (DOCK.quick); the cut at the touch is the same. A.U.R.A.'s two teaching lines (hold, roll) and Vance's line on the lights
+   already about 120 m out on the start screen, lined up (A.U.R.A. has matched the ring: it holds still, its port under
+   the marks, and the sky wheels behind it), the run brings us in past the debris, and the docking starts nearer
+   (DOCK.quick), still lined up, the lever resting at that roll; the grade's chips and the way on come sooner. The cut at
+   the touch is the same. A.U.R.A.'s two teaching lines (hold, roll) and Vance's line on the lights
    are said once a session, on whichever dock first meets them (dockTold), so a routine dock is not taught again.
      MiniHost.play('dock-flight', { kind: 'dock', sector, quick, crew, damaged, scrapesPerBreak, maxBreaks, energy, seed, spin })
        sector   1..6, the sector we are in: its sky behind the station (missing: DOCK.sector)
@@ -32,9 +36,11 @@
                 deck counts against maxBreaks too, and A.U.R.A.'s cost never takes more than energy
        seed     optional: the same ring and debris every time (the game seeds it from the station, as DockingGame does)
        spin     optional 'fast': the mining platform's 32°/s
-     → { grade: 'soft' | 'rough' | 'crash', auto, scrapes, damagedRooms, energyDelta }   (the shape BoardingParty expects, and more)
+     → { grade: 'soft' | 'rough' | 'crash', auto, scrapes, damagedRooms, energyDelta, hullHeld }   (the shape BoardingParty expects, and more)
        damagedRooms  the decks the scrapes broke, then a hard dock's (the chips name them; App.applyDockResult breaks them)
        energyDelta   minus A.U.R.A.'s share of DOCK.energy (0 when the player flew it all)
+       hullHeld      a hard dock that broke nothing (the game's allowance was full): A.U.R.A. says the hull held, not that
+                     it is damaged (DOCK_LINES.held), and BoardingParty says so too
    Every new line of words is marked DRAFT for the designer to rewrite (docs/STYLE.md).
    ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
 /* Corridor.js — Fly the corridor: every sector jump, flown (ported from prototypes/sim-bay/proto-corridor.js).
@@ -220,12 +226,15 @@
     // (lightStep s apart), Vance's line lightsSay s later. A soft dock: the clamps swing shut over clampT s and their lamps
     // light at lockAt s.
     // (the game, 2026-10-30) sector: the sky when the game does not say which sector we are in. quick: a routine dock
-    // (opts.quick): the run starts u course seconds before its end, past every piece of debris, and the docking at `near`
-    // metres instead of 80 (the station about 120 m out on the start screen, the ring face already filling the glass at the
-    // drop-out). Measured with the game's own step and autopilot (2026-10-30): from 40 m A.U.R.A. docks in about 17 s
-    // (27.6 from 80 m) and a pilot who only lets go in about 19 (32 from 80); a careful pilot with a quick hand docks soft
-    // about 80 % of the time from 40 m (88 % from 80 m), but only 62 % from 30 m, and a slow one hits hard far more often
-    // nearer: the port needs time to line up. Nearer saves A.U.R.A. nothing (she holds at 12 m until the port is lined up).
+    // (opts.quick): the run starts u course seconds before its end (the station about 120 m out on the start screen), past
+    // every piece of debris, at `rate` times the pace, and the docking at `near` metres instead of 80; from the start screen
+    // on we are lined up and turning with the ring (A.U.R.A. matched it), so the last metres are the routine part: hold, let
+    // go, keep the roll. The grade's chips come chipsAfter s after A.U.R.A.'s line and the way on rowAfter s after them.
+    // (review fix, 2026-10-30: from 40 m and unmatched a routine dock took 31-33 s and was harder than the whole approach.)
+    // Measured with the game's own step and autopilot (bhi-game/fix/quick-sim.js, 400 rings each): lined up from 12 m,
+    // A.U.R.A. docks in about 8.3 s and a careful pilot (the bot's hand) soft 97 % of the time in about 9.3 s (75 % on the
+    // whole approach); a slow, fidgety hand 37-54 % (21-44 % on the whole approach); letting go and never touching the roll
+    // docks soft every time; holding the throttle all the way hits hard every time, as on the whole approach.
     // The cut at the touch is the same whatever the start.
     const DOCK = {
         sector: 3, dur: 20, aim: 0.3, spread: [0.66, 0.38], aimAt: 26, perBreak: 2, lit: 0.05,
@@ -238,7 +247,7 @@
         trauma: { soft: 0.3, rough: 0.6, crash: 1 }, kick: { soft: 0.02, rough: 0.04, crash: 0.07 }, jolt: { soft: 0, rough: 0.25, crash: 0.6 },
         markW: 0.27, markH: 0.17, markMin: [9, 6.5], fast: 32, energy: 4, nearWarn: 4, sayFrom: 1.5, boxT: 1,
         lightFade: 0.15, lightSlack: [4, 2], lightStep: 0.16, lightsSay: 0.8, clampT: 0.35, lockAt: 0.45,
-        quick: { u: 2.1, near: 40, bakeMs: [16, 7] },   // bakeMs: on the start screen, then after it (a routine dock can touch sooner)
+        quick: { u: 2.33, near: 12, rate: 1.5, chipsAfter: 0.2, rowAfter: 0.4, bakeMs: [16, 7] },   // bakeMs: on the start screen, then after it (a routine dock can touch sooner)
         // the film cut at the touch (DockExterior.js): the station bakes bakeMs a frame from the start screen on. The flight
         // keeps the last `keep` s of its track; the cut replays the last replay.max s of it (from no further out than
         // replay.from metres, but at least replay.min s). Vance asks who turned the lights on `vance` s after the ring's
@@ -259,6 +268,7 @@
         lights: 'Who turned the lights on?',                                              // DRAFT (Vance, the idea's own line): the port's lights come on by themselves
         // DRAFT: why a dock was rough or hard, said before the game's grade line (the limit gradeContact found furthest off)
         cause: { speed: 'We came in too fast.', port: 'We were not lined up with the port.', roll: 'We were not rolling with the ring.' },
+        held: 'The hull held. Whoever goes in starts with 3 less air.',                   // DRAFT (2026-10-30): a hard dock that broke nothing, instead of the game's "The hull is damaged."
     };
     // the result chips: the game's format ({ icon, text, tone }, src/newscreen/Orbit.js chip); DRAFT words
     const dockChip = (icon, text, tone) => Object.freeze(tone ? { icon, text, tone } : { icon, text });
@@ -1266,16 +1276,20 @@
             auto = on; say('A.U.R.A.', on ? 'I have the ship, Commander.' : 'You have the ship, Commander.', 2);
             row([{ label: on ? 'Take the stick' : isDock ? 'Let A.U.R.A. dock' : 'Let A.U.R.A. fly', primary: on, onClick: () => setAuto(!auto) }]);   // DRAFT label: 'Let A.U.R.A. dock'
         }
-        function start(isAuto) { mode = 'jump'; phaseT = 0; sound.jump(); setAuto(isAuto); addTrauma(TRAUMA.start); pushKick(0); }
-        function arrive() {   // the flash clears on the new sector
-            whiteAt = clock; seedSky(to);
+        function start(isAuto) {
+            if (isDock) { setAuto(isAuto); addTrauma(TRAUMA.start); arrive(); return; }   // a dock: no jump, we are holding off the station already (no flash, no warp)
+            mode = 'jump'; phaseT = 0; sound.jump(); setAuto(isAuto); addTrauma(TRAUMA.start); pushKick(0);
+        }
+        function arrive() {   // the flash clears on the new sector (a dock: no flash, the run starts from the start screen)
+            if (!isDock) whiteAt = clock;
+            seedSky(to);
             leg = isDock ? makeDockLeg(g.r, to) : makeLeg(to, g.r, g.heard, living, avoid, withTwin); t = 0; mode = 'run';
             if (isQuick) {                                                                     // a routine dock: the run's last stretch, past the debris
                 t = leg.quickFrom = leg.cfg.dur - DOCK.quick.u;
                 leg.frags.forEach(f => { if (f.at < t + 0.6) { f.done = true; f.gone = true; } });
             }
             if (isDock && !auto && !dockTold.hold) queue.push({ who: 'A.U.R.A.', line: () => { dockTold = { ...dockTold, hold: true }; return DOCK_LINES.hold; } });   // what holding means here, once a session
-            addTrauma(TRAUMA.drop); pushKick(KICK.drop);
+            if (!isDock) { addTrauma(TRAUMA.drop); pushKick(KICK.drop); }
         }
         /** Through: the ship cruises on into the light while A.U.R.A. reports, one line at a time. Only after her last line
             does the way on show, so a quick click (or a tap of Space for the throttle) cannot cut her off. */
@@ -1313,6 +1327,9 @@
             const off = x - leverO, a = Math.abs(off) - DOCK.dead;
             return a <= 0 ? 0 : clamp(Math.sign(off) * a / DOCK.rollReach, -1, 1);
         }
+        /** A routine dock: where the lever counts from so that the pointer at x keeps the roll we have (rate, °/s), so taking
+            the lever never undoes the match (it does not relax to the middle there). */
+        const leverRest = (x, rate) => x - Math.sign(rate) * (DOCK.dead + Math.min(1, Math.abs(rate) / DOCK.rollMax) * DOCK.rollReach);
         /** The spot in the box the pointer points at: the middle of the picture is the middle of the corridor. */
         const aimAt = p => [p.x - CX, p.y - CY].map((d, i) => clamp(d / AIM_REACH[i], -1, 1) * (BOX[i] - SHIP_R[i]));
         const zOf = at => (at - t) * SPEED + ZHIT;
@@ -1349,6 +1366,7 @@
             const lean = isRun && ctl.keys && !isAuto ? ctl.stick : vel.map((v, i) => v / MAXV[i]), gl = glance();
             look = look.map((l, i) => l + ((mode === 'done' ? 0 : LOOK_POS[i] * cam[i] + LOOK_STICK[i] * lean[i] + gl[i]) - l) * Math.min(1, dt * 2));
             roll += (-BANK * (0.6 * vel[0] / MAXV[0] + 0.4 * lean[0]) - roll) * Math.min(1, dt * 2.5);
+            if (isQuick) roll = -dock.s.roll * DOCK_RAD;                                // a routine dock: we turn with the ring from the start screen on
         }
         function reach(f) {                                                              // a fragment reaches our plane: does it touch us?
             const e = closeness(f, f.x, f.y, cam[0], cam[1], t);                        // (the same sum as before for a plate; the mast along its length)
@@ -1410,7 +1428,7 @@
             tw.settled = tw.settled || tw.q > TWIN.settled;
         }
         function runLeg(dt) {   // after the jump the ship drops out fast and settles to cruise, so far wrecks come up from the horizon
-            const pace = paceAt(t), rate = pace * (1 + (BOOST - 1) * smooth(th) * pace) * (1 + DROP * Math.exp(-(clock - whiteAt) / 0.6)), step = dt * rate;
+            const pace = paceAt(t), rate = pace * (1 + (BOOST - 1) * smooth(th) * pace) * (1 + DROP * Math.exp(-(clock - whiteAt) / 0.6)) * (isQuick ? DOCK.quick.rate : 1), step = dt * rate;
             t += step;
             if (auto) auraT += step;
             if (th >= FULL_AT) fullT += step;
@@ -1470,7 +1488,10 @@
             const opening = isDock && mode === 'dock' ? (auto ? dock.s.keys.in : ctl.throttle) : ctl.throttle && mode === 'run';
             if (opening) throttleTaught = true;
             let rate = 1;
-            if (isDock && (mode === 'ready' || mode === 'jump' || mode === 'run')) dock.s.ringAngle += dock.s.spin * dt;   // the ring turns while we come
+            if (isDock && (mode === 'ready' || mode === 'jump' || mode === 'run')) {          // the ring turns while we come (a routine dock: we turn with it)
+                dock.s.ringAngle += dock.s.spin * dt;
+                if (isQuick) dock.s.roll += dock.s.rollRate * dt;
+            }
             if (mode === 'run') rate = runLeg(dt);
             else if (isDock && isDocking()) rate = dockStep(dt, ctl);
             else if (mode === 'jump' || mode === 'done') {
@@ -1545,13 +1566,18 @@
         /** The face's radius in art pixels at `dist` metres. */
         const faceR = dist => DOCK.faceA / (dist + DOCK.faceB);
         /** The run is over: the last 80 m (a routine dock: DOCK.quick.near). The ship keeps the bank it had (the sky turns from
-            there), at the docking's start speed. */
+            there), at the docking's start speed. A routine dock is lined up and turning with the ring already: it keeps that,
+            the hub is under the marks, and the lever rests at that roll (leverRest). */
         function startDock() {
             const s = dock.s;
-            mode = 'dock'; phaseT = 0; dock.at = clock; dock.r0 = roll;
+            mode = 'dock'; phaseT = 0; dock.at = clock; dock.r0 = isQuick ? 0 : roll;
             dock.box = boxPts ? boxPts.map(p => [...p]) : null;                                // the run's box shrinks onto the hatch marks
-            leverO = pointer && aiming ? clamp(pointer.x, CX - DOCK.rollReach, CX + DOCK.rollReach) : CX;   // the lever starts at rest where the pointer is
-            s.roll = -roll * DOCK_DEG; s.rollRate = 0; s.dist = nearAt; s.speed = DOCK.crawl;
+            if (isQuick) leverO = pointer && aiming ? leverRest(pointer.x, s.rollRate) : CX;
+            else {
+                leverO = pointer && aiming ? clamp(pointer.x, CX - DOCK.rollReach, CX + DOCK.rollReach) : CX;   // the lever starts at rest where the pointer is
+                s.roll = -roll * DOCK_DEG; s.rollRate = 0;
+            }
+            s.dist = nearAt; s.speed = DOCK.crawl;
             if (!auto && !dockTold.roll) queue.push({ who: 'A.U.R.A.', line: () => { dockTold = { ...dockTold, roll: true }; return DOCK_LINES.roll; } });   // once a session
         }
         /** One frame of the approach (or of its end). The game's step runs in its own slices (MAX_STEP), A.U.R.A. deciding each. */
@@ -1648,15 +1674,15 @@
                 }
             }
             if (mode !== 'docked') return;
-            if (dock.chipsAt > 0 && clock >= dock.chipsAt) { dock.chipsAt = -1; showChips(); dock.rowAt = clock + DOCK.rowAfter; }
+            if (dock.chipsAt > 0 && clock >= dock.chipsAt) { dock.chipsAt = -1; showChips(); dock.rowAt = clock + (isQuick ? DOCK.quick.rowAfter : DOCK.rowAfter); }
             if (dock.rowAt > 0 && clock >= dock.rowAt) { dock.rowAt = -1; isEndReady = true; row([{ label: 'Continue', primary: true, onClick: end }]); }   // the corridor's way on
         }
         /** A.U.R.A.'s grade line: why it was not soft (DRAFT), then the game's own words for the grade; the chips follow. */
         function sayGrade() {
             mode = 'docked'; phaseT = 0;
             const why = dock.cause ? DOCK_LINES.cause[dock.cause] + ' ' : '';               // DRAFT: why, then the game's own words for the grade
-            ui.clear(); say('A.U.R.A.', why + window.DockingGame.GRADES[dock.grade].effect, 9);
-            dock.chipsAt = clock + DOCK.chipsAfter;
+            ui.clear(); say('A.U.R.A.', why + (hullHeld() ? DOCK_LINES.held : window.DockingGame.GRADES[dock.grade].effect), 9);   // (a hard dock that broke nothing: the hull held)
+            dock.chipsAt = clock + (isQuick ? DOCK.quick.chipsAfter : DOCK.chipsAfter);
         }
         /** The film cut's beats, from the touch (DockExterior.js): the touch is the game's impact (the shake, a hard dock's
             broken deck); the clamps catching late or on the second try, and their lock, are smaller shudders; A.U.R.A.'s
@@ -1691,7 +1717,8 @@
             return 0.04;
         }
         const dockRooms = () => [...g.hitRooms, ...(dock.broke ? [dock.broke] : [])];
-        const dockResult = () => ({ grade: dock.grade, auto: dock.auraDocked, scrapes: g.hits, damagedRooms: dockRooms(), energyDelta: -dock.cost });
+        const hullHeld = () => dock.grade === 'crash' && !dockRooms().length;           // a hard dock, and no deck broke (the allowance was full)
+        const dockResult = () => ({ grade: dock.grade, auto: dock.auraDocked, scrapes: g.hits, damagedRooms: dockRooms(), energyDelta: -dock.cost, hullHeld: hullHeld() });
         /** The chips, under A.U.R.A.'s line, in the game's .enc-chips look: the grade, the air, every deck broken, her cost. */
         function dockChips() {
             const decks = dockRooms().map(k => dockChip('deck', (DOCK_DECK_WORD[k] || k) + ' broken', 'loss'));      // DRAFT
@@ -2118,7 +2145,7 @@
             const s = dock.s, flying = mode === 'dock', ending = mode === 'contact' || mode === 'docked';
             if (!isFrozen()) dock.tick = Math.floor(clock * 8);
             const dist = ending ? -dock.slide : flying ? s.dist : runDist(), rd = faceR(dist) * view.zm;
-            const [mx, my] = sky(0, 0), rigid = !(flying || ending);
+            const [mx, my] = sky(0, 0), rigid = !(flying || ending || isQuick);          // (a routine dock: lined up from the start screen on, the hub under the marks)
             const rot = rigid ? roll + shake.rot : dock.r0 * Math.exp(-(clock - dock.at) / DOCK.settleRot) + shake.rot;
             const phi = DG.portAngle(s) + (rigid ? roll + shake.rot : shake.rot) * DOCK_DEG, h = 0.84 * rd;
             const hx = mx - Math.sin(rot) * h, hy = my + Math.cos(rot) * h;
@@ -2378,7 +2405,8 @@
         // ── input: the pointer steers wherever it is over the picture; holding the button (or Space, W, Shift) is the throttle ──
         ui.canvas.onpointermove = e => {
             const p = ui.toPixel(e);
-            if (isDock && mode === 'dock' && pointer && leverO !== CX) {                // the roll lever's rest relaxes to the middle as the pointer moves
+            if (isQuick && mode === 'dock' && !aiming) leverO = leverRest(p.x, dock.s.rollRate);   // a routine dock: the pointer takes the lever at the roll we have
+            else if (isDock && !isQuick && mode === 'dock' && pointer && leverO !== CX) {   // the roll lever's rest relaxes to the middle as the pointer moves
                 const step = Math.abs(p.x - pointer.x) * DOCK.relax;
                 leverO = leverO > CX ? Math.max(CX, leverO - step) : Math.min(CX, leverO + step);
             }
@@ -2415,6 +2443,7 @@
         });
         seedSky(from);
         if (isDock) dock = newDock();
+        if (isQuick) { dock.s.roll = dock.s.ringAngle; dock.s.rollRate = dock.s.spin; roll = -dock.s.roll * DOCK_RAD; }   // a routine dock: A.U.R.A. has lined us up and matched the ring
         const dockOffer = () => { const n = Math.min(DOCK.energy, energyLeft); return n > 0 ? DOCK_LINES.offer(n) : DOCK_LINES.offerFree; };   // what she can really take
         say('A.U.R.A.', isDock ? dockOffer() : to === FIRST_SECTOR + 1 ? OFFER_FIRST(STAKES.AURA) : OFFER, 0);   // the first flown jump: once, what her way costs
         row([{ label: 'Fly it myself', primary: true, onClick: () => start(false) }, { label: isDock ? 'Let A.U.R.A. dock' : 'Let A.U.R.A. fly', onClick: () => start(true) }]);   // DRAFT label: 'Let A.U.R.A. dock'

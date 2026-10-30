@@ -911,6 +911,8 @@
     const toneOf = member => (window.MiniCrew && window.MiniCrew.TONE[whoOf(member)]) || AMBER_T;
     const airFor = (role, dock) => Math.max(1, TANK + ((PERKS[role] || {}).air || 0) - (DOCK_AIR_LOSS[dock.grade] || 0));
     const DOCK_LINES = { soft: '', rough: 'Rough docking. Whoever goes starts with 2 less air.', crash: 'Hard docking. The hull is damaged, and whoever goes starts with 3 less air.' };
+    const DOCK_HELD_LINE = 'Hard docking. The hull held, but whoever goes starts with 3 less air.';   // DRAFT (2026-10-30): the new look's hard dock that broke nothing (dock.hullHeld)
+    const dockLine = dock => (dock.grade === 'crash' && dock.hullHeld ? DOCK_HELD_LINE : DOCK_LINES[dock.grade]);
     const conditionRule = (L, b, cond) => ({
         DARK: b.role === 'SPECIALIST' ? 'Dark. Her scanner sees fine.' : `Dark. Searching costs ${DARK_EXTRA} more air.`,
         VENTED: `Vented. Walking in costs ${VENT_EXTRA} more air, every time.`,
@@ -928,7 +930,7 @@
         return `<div class="bx-frame">
             <header class="bx-head"><p class="bx-kicker">BOARDING — SILENT FOR ${age} YEARS</p><h2 class="bx-title">${esc(station.name || 'Unknown station')}</h2></header>
             <div class="bx-screen"><canvas class="bx-canvas" width="${AW}" height="${PICK_H}" aria-hidden="true"></canvas></div>
-            ${DOCK_LINES[dock.grade] ? `<p class="bx-dock is-${esc(dock.grade)}">${DOCK_LINES[dock.grade]}</p>` : ''}
+            ${dockLine(dock) ? `<p class="bx-dock is-${esc(dock.grade)}">${dockLine(dock)}</p>` : ''}
             <p class="bx-hint">One person goes in on one tank of air. Every door and every search shows its cost first. The bar marks the air needed to walk back out. <b>Heavy things make that walk cost more.</b> ${station.scanned ? 'Your deep scan mapped every room.' : 'Without a deep scan, you see a room only when you reach its door.'}</p>
             <p class="bx-sub">WHO GOES IN?</p>
             <div class="bx-picks">${cards || '<p class="bx-hint">Nobody is fit to go.</p>'}</div>
@@ -1000,7 +1002,7 @@
         const flown = typeof app.flyDock === 'function' ? app.flyDock(station) : null;      // the new look: Bring Her In (MiniHost, over this backdrop)
         const docking = flown || (window.DockingGame ? window.DockingGame.play(app, station) : Promise.resolve({ grade: 'soft', auto: false }));
         return docking.then(dock => new Promise(resolve => {
-            if (dock.grade !== 'soft') app.state.addLog(dock.grade === 'crash' ? `Hard docking at ${station.name}. The hull took damage.` : `Rough docking at ${station.name}. We scraped the ring.`);
+            if (dock.grade !== 'soft') app.state.addLog(dock.grade === 'crash' ? `Hard docking at ${station.name}. ${dock.hullHeld ? 'The hull held.' : 'The hull took damage.'}` : `Rough docking at ${station.name}. We scraped the ring.`);   // ("The hull held.": DRAFT, the new look's dock.hullHeld)
             const L = buildStation({ seed: station.id, sector: app.state.currentSector || 1, age });
             const scene = { seed: artSeed(station.id), rust: rustOf(age), base: null, outside: null, rooms: new Map(), isAboard: false };
             overlay.removeAttribute('aria-hidden');

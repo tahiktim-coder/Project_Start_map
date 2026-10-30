@@ -118,6 +118,7 @@ const stock = s => ({ energy: Math.round(Number(s.energy) || 0), salvage: s.salv
 function board(rc, station) {
     const { ctx, state, style, rnd, R, cur } = rc;
     R.counts.stations += 1;
+    rc.add(!state._docksFlown || station.isStoryPlanet ? M.SECONDS.dock.full : M.SECONDS.dock.quick, 'dock');   // App.flyDock's rule: the first (or a story) dock is the whole approach
     rc.add(M.SECONDS.station, 'station walk');
     rc.beat();
     const I = ctx.BoardingParty.internals, member = P.pickBoarder(state, style, rnd);
