@@ -239,7 +239,7 @@
     // the crew react, one line at a time (docs/STYLE.md; A.U.R.A. without contractions). who: the speakers in order, the first
     // alive says it (a third item: their own words); the dead and the absent never speak; Cora never speaks. in: the phase; at:
     // drain seconds (drain) or real seconds into the black; after: only once that line was said; if / unless: what the pilot
-    // did, or a line already said; auto: what is said instead while A.U.R.A. is flying (and no hint then); hit: said for a hit
+    // did, or a line already said (a pilot told to speed up is never then told it is too fast); auto: what is said instead while A.U.R.A. is flying (and no hint then); hit: said for a hit
     // in the dark, at once. The first that may be said is (the order below), when the last has had its time and the quiet.
     const VOID_LINES = [
         { id: 'stars', in: 'drain', at: 2.6, say: 'Commander, the stars are going out.',                                    // DRAFT (6)
@@ -249,7 +249,7 @@
             who: [['SECURITY', 'Vance'], ['SPECIALIST', 'Mira'], ['MEDIC', 'Aris']] },
         { id: 'late', in: 'black', hit: 'late', who: [['ENGINEER', 'Jaxon', 'Our lights found it too late.'],              // DRAFT (6): hit by one our lights showed
             ['SECURITY', 'Vance', 'Our lights found it too late.'], ['AURA', 'A.U.R.A.', 'Our lights found it too late, Commander.']] },   // DRAFT (7)
-        { id: 'fast', in: 'black', after: 'lost', if: 'fast', who: [['ENGINEER', 'Jaxon', "Too fast. We won't see it until it hits us."],   // DRAFT (9)
+        { id: 'fast', in: 'black', after: 'lost', if: 'fast', unless: 'speed', who: [['ENGINEER', 'Jaxon', "Too fast. We won't see it until it hits us."],   // DRAFT (9)
             ['MEDIC', 'Aris', "Slow down, Commander. We can't see what's coming."]] },                                   // DRAFT (8)
         { id: 'slow', in: 'black', after: 'lost', unless: 'fast', slows: true, who: [['ENGINEER', 'Jaxon', "I'm slowing us down. Our lights don't reach far."],   // DRAFT (9)
             ['AURA', 'A.U.R.A.', 'I am slowing us down, Commander. Our lights do not reach far.']] },                    // DRAFT (11)

@@ -2897,7 +2897,7 @@ class App {
                     { text: 'Not yet', desc: 'Stay in this sector.' },
                     { text: 'Go anyway', desc: 'Whatever is left here is gone for good.' },
                 ],
-                onPick: idx => { if (idx === 1) this.jumpNow(this.sectorJumpCost()); },
+                onPick: idx => { if (idx === 1) { this.jumpNow(this.sectorJumpCost()); this.jumpIsTheOutcome(); } },
             });
             return;
         }
@@ -2908,8 +2908,14 @@ class App {
                 { text: 'Not yet', desc: 'Stay in this sector.' },
                 { text: 'Jump now', desc: 'Whatever is left here is gone for good.' },
             ],
-            onPick: idx => { if (idx === 1) this.jumpNow(this.sectorJumpCost()); },
+            onPick: idx => { if (idx === 1) { this.jumpNow(this.sectorJumpCost()); this.jumpIsTheOutcome(); } },
         });
+    }
+
+    /** The new look: a "Jump now?" card closes with no outcome step once its choice is made (the flight is what happens; its
+        "Starting Sector Jump..." stays in the log). Without it the card's outcome waited under the flight and came up after it. */
+    jumpIsTheOutcome() {
+        if (window.EncounterCard && typeof window.EncounterCard.noOutcome === 'function') window.EncounterCard.noOutcome();
     }
 
     /** The jump itself, once it is paid for and nobody is asking any more. */
