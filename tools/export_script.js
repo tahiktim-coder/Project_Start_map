@@ -486,6 +486,8 @@ function extrasMd(sector) {
         b.push(...textSection(3, 'When nobody dated a wreck', bm('revealLateStoryPlanet'), 'Back on the map with one stop left.'));
         b.push(...textSection(2, 'The hole in the hull (the mini-game)', whole(`${MINI}Breach.js`), 'Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time.', isSaid));
         b.push(...textSection(3, 'In the log afterwards', bm('applyBreachResult'), ''));
+        b.push(...textSection(2, 'The hull hit (the new look, instead of the mini-game)', block('src/bundle.js', /^const HULL_HIT_LINES = /m, 'HULL_HIT_LINES'), 'The same moment in the new look: one deck sealed (the hold, the engine room or the quarters), nobody hurt. A.U.R.A. first, then the one whose deck it is (else whoever is aboard).'));
+        b.push(...textSection(3, 'In the log afterwards (the new look)', bm('hullHit'), ''));
         b.push(...textSection(3, 'How every found page is shown (all sectors)', whole('src/systems/FoundPage.js'), 'The card around each found page (sector 5\'s find is the disc itself: sector-5.md).'));
         b.push('## If you try to settle a planet here', '', 'The crew have their say first, in every sector — see [08-settling.md](08-settling.md).', '');
     }
@@ -735,6 +737,8 @@ function councilMd() {
     b.push(...textSection(3, 'Breakdowns', bm('triggerBreakdown'), 'When someone reaches stress 3. The commander breaking is game over.'));   // Vance's gun scene was cut (2026-10-07): his breakdown is in triggerBreakdown
     b.push(...textSection(3, 'Bringing someone back', bm('handleRevivalAction'), 'Using Pulsing Spores or an Ancient Neural Link from the cargo hold.'));
     b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('eatOnJump'), 'The crew eats one ration on each sector jump.'), ...textSection(3, 'Deck damage', bm('damageDeck'), 'The first time is a tutorial.'));
+    b.push(...textSection(3, 'What a broken deck costs (the new look)', block('src/newscreen/Orbit.js', /^\s*const DECK_COST = /m, 'DECK_COST'), 'Chips always on a red deck in the tower, and under "Live with it". The lab costs nothing there.'));
+    b.push(...textSection(3, 'And only while something aboard needs that deck', block('src/newscreen/Orbit.js', /^\s*const DECK_COST_IF = /m, 'DECK_COST_IF'), 'A culture in the hold; someone shut down (catatonic) in the quarters.'));
     b.push(...textSection(3, 'What the data adds up to', bm('addColonyKnowledge'), 'At 1, 3 and 5 data.'));
     b.push('## Flying', '');
     [['handleWarp', 'Warping to a planet'], ['handleSectorJump', 'Jumping to the next sector']].forEach(([n, title]) => { const p = bm(n); b.push(...textSection(3, title, p, 'The lines for the light are in sector-6.md.', outside(...lightRanges(p)))); });
@@ -772,7 +776,10 @@ function councilMd() {
     b.push(...textSection(3, 'Cutting into one of our wrecks (the mini-game)', whole(`${MINI}Torch.js`), "Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet.", isSaid), ...textSection(3, 'When the hatch is open', bm('cutIntoWreck'), ''));
     b.push(...textSection(3, 'The choice card on the surface', bm('showEventModal'), 'The card around every surface find (pools.md, Surface finds).'), ...textSection(3, 'How the trip went', bm('resolveEvaOutcome'), 'Dangers and results by planet type, deaths, injuries and rewards.'));
     b.push(...textSection(3, 'Paradise found', bm('showEdenEvaModal'), 'A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one).'));
-    b.push('## Boarding a station', '', ...textSection(3, 'Docking (the mini-game)', whole('src/systems/DockingGame.js'), ''));
+    b.push('## Boarding a station', '', ...textSection(3, 'Docking (the mini-game)', whole('src/systems/DockingGame.js'), "The old look. Its grade line is the new look's too."));
+    const DOCK = 'src/newscreen/dock/DockFlight.js';                                     // the new look: Bring Her In (the rest of the file is the corridor's)
+    b.push(...textSection(3, 'Docking, flown (the new look: Bring Her In)', block(DOCK, /^\s*const DOCK_LINES = /m, 'DOCK_LINES'), "The hold and roll lines and Vance's are said once a session; the grade line is DockingGame's (above)."));
+    b.push(...textSection(3, 'Its chips', block(DOCK, /^\s*const DOCK_GRADE_CHIPS = /m, 'DOCK_GRADE_CHIPS'), "Under A.U.R.A.'s grade line, with every deck broken (Hold broken) and her cost (Energy −4)."), ...textSection(3, 'In the log afterwards', bm('applyDockResult'), ''));
     b.push(...textSection(3, 'Inside', whole('src/systems/BoardingParty.js'), 'Rooms, crew perks, results. The diary on the crew deck depends on the station\'s age: the first list is for sectors 1-3, then 4, 5 and 6.'));
     write('10-away-team.md', 'Orbit, scans and away teams — any sector', b);
 }

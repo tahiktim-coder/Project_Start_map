@@ -1,7 +1,9 @@
 /* ═══ Silent Exodus · new screen (?new=1) · Orbit.js: what a stop offers, who goes, who stays, what breaks aboard ═══════
    What it is: the rules of a stop on the bridge (docs/BUILD_B.md §3, §4), on top of the REAL game. Every action calls the
    game's own handler (scan, the team trip, docking, mining, the settle council, the disc); the only new numbers are the
-   skim (NEW_LOOK_ECONOMY.SKIM energy, once per gas giant, set in bundle.js) and the patch (5 salvage). A world's scan runs
+   skim (NEW_LOOK_ECONOMY.SKIM energy, once per gas giant, set in bundle.js) and the patch (5 salvage). Sector 1's breach is
+   the hull hit here (App.hullHit: a deck sealed, nobody hurt, two lines), not the patching game (Breach.js, the old look's);
+   a broken deck shows what it costs (deckCost: plain chips, the game's own rules) on the tower's red deck. A world's scan runs
    by itself when we arrive (Stop.js sweeps the glass, then act(app, 'scan'); it is never a tag on the glass, scanDue);
    what it read is said by Scan.js (NSScan) and its finds are WorldFinds.js's: once a scan has read the world the team goes
    to the find chosen on the glass (its own event or story), one trip per find. It draws nothing:
@@ -40,27 +42,31 @@
                                    can kill, its death chance
      fitOf(app, node, ids, find?) → 3   the team's fit points for a find (TripOdds' fit; the tables are TripOdds.FIT)
      hasTeamAction(planet) → bool  this place has a team trip still to take: a find still open, or before a scan one blind
-                                   trip (handleWarp defers the breach to it)
+                                   trip (handleWarp defers the breach, the hull hit, to it)
      opened(app)                   the bridge is up: the crisis sign is decided (once per place) and said; a sign comes
                                    true while the team is down at NEW_LOOK_ECONOMY.CRISIS_CHANCE
      signed(app) → bool            a sign will be said here (bundle's reactToOrbit skips the crew's "all clear" bark then)
-     beforeLeave(app) → Promise<{ ok, say?, direct? }>   the team away refuses; a breach still due plays first; a call is dropped
-     whileDown(app, team) → Promise   the crisis aboard while the team is down, then the skills aboard
+     beforeLeave(app) → Promise<{ ok, say?, direct? }>   the team away refuses; a hull hit still due comes first; a call is dropped
+     whileDown(app, team) → Promise   the crisis aboard while the team is down (sector 1: the hull hit), then the skills aboard
      tripOver()                    the trip's story has ended (bundle's real end points): the shuttle comes home
-     tick(dt, blocked)             the shell's frame: the trip's end, the breach at a stop with no trip, the late star fix
+     tick(dt, blocked)             the shell's frame: the trip's end, the hull hit at a stop with no trip, the late star fix
      trip() → { ids, aboard } | null
      offerCall(app, encounter)     a distress call after a warp waits on the bridge instead of popping up
      fixIn(app, planet)            the wreck's star fix: dated now (Mira went) or after the next warp (she stayed)
      canDate(app, node), datable(state) → node | null
      breakPatched(state)           every patched deck breaks again (a crisis aboard, the sector jump)
-     deckChoices(state, deck) → [{ key: 'fix' | 'patch' | 'live', words, note }]   deck: the tower's name (hold = cargo)
+     deckChoices(state, deck) → [{ key: 'fix' | 'patch' | 'live', words, note }]   deck: the tower's name (hold = cargo); the
+                                   note under "Live with it" is what living with it costs (deckCost's words)
+     deckCost(state, deck) → [{ icon: 'cost', text, tone: 'loss' }]   what a broken deck costs in the game's rules (DECK_COST,
+                                   and DECK_COST_IF while something aboard needs it), a few words each; [] for a working deck
+                                   or one whose loss costs nothing (the lab). The tower shows them on the red deck
      deckChoose(app, deck, i | key) → bool
      TELL                          { key: line }  what A.U.R.A. says once a run when an action first shows (Stop.js), and 'leave'
      debug() → { trip, call, breach, held }
    Crew moments (App.queueModal('crew', ...), the "A MOMENT WITH ..." cards bundle rolls 2 s after a warp) are held here
    while we arrive, sit on the bridge or pick the team: they open in travel, once it is calm (the view up and no card for
    2.5 s, no click for 1.2 s), under ChoiceGuard's 400 ms hold. One waits at a time (a later roll is let go). A moment whose person died meanwhile is dropped.
-   Bus (NewScreen.bus): emits 'trip:down' { ids, aboard }, 'trip:back' { ids, failed? }, 'stop:skim' { id }.
+   Bus (NewScreen.bus): emits 'trip:down' { ids, aboard }, 'trip:back' { ids, failed? }, 'stop:skim' { id }, 'hull:hit' { deck | null }.
 */
 (function () {
     'use strict';
@@ -78,6 +84,7 @@
     const PATCH_COST = 5, TRIP_QUIET_MS = 3500, TRIP_OVER_MS = 600, TRIP_LOST_MS = 20000, FIX_CHECK_MS = 500;
     const TREAT_WAIT_MS = 9000;                                                              // the trip's story waits at most this long for the treat line
     const BREACH_WAIT_MS = 5000;                                                             // a breach at a stop with no trip: the bridge is seen first
+    const HIT_WAIT_MS = 10000;                                                               // what waits for the hull hit's two lines (the trip's card, the dive out) waits at most this long
     const DECK_KEY = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', hold: 'cargo', cargo: 'cargo', engineering: 'engineering' };
     const DECK_WORD = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', cargo: 'hold', engineering: 'engine room' };
     const NOT_CRISES = new Set(['LUCKY_FIND']);                                              // a find is not a crisis
@@ -133,7 +140,7 @@
     const alive = c => !!c && c.status !== 'DEAD';
     const log = (s, line) => { if (s && line) s.addLog(line); };
     const isPlanet = n => !!n && !n.isStation && !n.isAsteroidField && !n.isStructure && n.type !== 'STRUCTURE' && !n._isWrongPlace && n.type !== 'WRONG_PLACE';
-    const hasBreach = () => !!(window.MiniHost && window.MiniHost.has && window.MiniHost.has('breach'));
+    const hasHit = () => !!(window.app && typeof window.app.hullHit === 'function');      // the hull hit needs no minigame (App.hullHit)
     const chance = (p, why) => (typeof window.testChance === 'function' ? window.testChance(p, why) : Math.random() < p);
 
     // ── who can go ──
@@ -298,7 +305,7 @@
     /** Sector 1's breach is due (bundle's isBreachDue, counted after the warp). Under the switch it comes at a stop, never in flight:
         while the team is down, else on the bridge after a moment, else as we leave orbit. Asked as it stands now, never kept. */
     function breachDue(s, n) {
-        return !!n && s.currentSector === 1 && !s._breachDone && (s._paidWarps || 0) >= 2 && hasBreach();
+        return !!n && s.currentSector === 1 && !s._breachDone && (s._paidWarps || 0) >= 2 && hasHit();
     }
     function pickEvent(s) {
         const list = (window.SHIP_MALFUNCTION_EVENTS || []).filter(e => !NOT_CRISES.has(e.id) && (() => { try { return !!e.condition(s); } catch (err) { return false; } })());
@@ -337,11 +344,30 @@
         if (pool && pool.length && arisRefuses(app) && !pool.includes(aris) && !arisSaid.has(n.id)) { arisSaid.add(n.id); log(s, LINES.arisAboard); }   // she stays aboard; the others still go
         if (pool && pool.length < 1 && !pairSaid.has(n.id)) { pairSaid.add(n.id); log(s, LINES.pair); }
     }
-    /** The breach, played by the game's own App.playBreach (away: the crew who are not aboard). The patches break first. */
-    function playBreach(app, away) {
+    /** The breach in the new look: the hull hit (the game's own App.hullHit; away: the crew who are not aboard), one deck
+        sealed and nobody hurt, no minigame. Its lines (A.U.R.A.'s, then the one whose deck it is) are said on the bridge one
+        after another (sayLines). wait: resolve once they are said (HIT_WAIT_MS at most), so what follows waits for them (the
+        trip's card, the dive out); else at once. The patches break first. */
+    function playBreach(app, away, wait) {
         breakPatched(app.state);
         pendingBreach = null;
-        return Promise.resolve(app.playBreach(away || [])).catch(err => console.error('NSOrbit: the breach failed', err));
+        let hit = null;
+        try { hit = app.hullHit(away || []); } catch (err) { console.error('NSOrbit: the hull hit failed', err); return Promise.resolve(); }
+        emit('hull:hit', { deck: hit ? hit.deck : null });                                  // the bridge feels it (Stop.js: a jolt, the lamps dip)
+        const said = sayLines(app.state, (hit && hit.lines) || []).catch(err => console.error('NSOrbit: the hull hit lines failed', err));
+        return wait ? Promise.race([said, new Promise(r => setTimeout(r, HIT_WAIT_MS))]) : Promise.resolve();
+    }
+    /** Lines [{ id, who, text }] said one by one beside their speakers, as treat() says its line, each logged as it is said
+        (the voice skips the line it is saying). With no voice on screen they are only logged: the voice says them once it shows. */
+    function sayLines(s, lines) {
+        const ns = NS(), v = ns && ns.mods && ns.mods.voice;
+        if (!v || typeof v.say !== 'function' || !ns.isShown()) { lines.forEach(l => log(s, `${l.who}: "${l.text}"`)); return Promise.resolve(); }
+        return lines.reduce((before, l) => before.then(() => {
+            let said = null;
+            try { said = v.say({ id: l.id, who: l.who, text: l.text, keep: true }); } catch (err) { console.error('NSOrbit: a hull hit line failed', err); }
+            log(s, `${l.who}: "${l.text}"`);
+            return Promise.resolve(said).catch(() => false);
+        }), Promise.resolve());
     }
 
     // ── the team trip ──
@@ -374,7 +400,7 @@
         let crisis = null, run = Promise.resolve();
         if (breachDue(s, n)) {
             crisis = 'BREACH';
-            run = playBreach(app, members);
+            run = playBreach(app, members, true);                                           // the trip's card waits for its lines
         } else if (c && c.comes && !c.done && c.kind !== 'BREACH') {
             const ev = (window.SHIP_MALFUNCTION_EVENTS || []).find(e => e.id === c.kind);
             c.done = true;
@@ -415,8 +441,8 @@
     // ── who holds the ship: what the ship loses while someone is down (whileDown's own rules, for this stop's sign) ──
     const NAME = { jaxon: 'Jaxon', aris: 'Aris', vance: 'Vance', mira: 'Mira' }, PRONOUN = { jaxon: 'him', aris: 'her', vance: 'him', mira: 'her' };
     /** The bridge's hover line at the pick (Stop.js): what the ship loses while `id` is down, with the others picked so far
-        down too. whileDown's rules: Jaxon aboard stops a power surge; Vance aboard pulls the hurt out of a breach, else Aris
-        aboard treats anyone a crisis hurts (a coolant leak can); Mira aboard scans the ground, which only a plain landing uses.
+        down too. whileDown's rules: Jaxon aboard stops a power surge; Aris aboard treats anyone a crisis hurts (a coolant leak
+        can; the hull hit hurts nobody); Mira aboard scans the ground, which only a plain landing uses.
         Only this stop's sign can come (sign()), and only on the first trip down (whileDown plays it once). '' for anyone else. */
     function holdLoss(app, id, picked) {
         const s = app && app.state, n = s && s.currentSystem;
@@ -434,8 +460,7 @@
         const aboard = tag => { const m = byRole(s, tag); return !!m && !away.has(idOf(m)) && isWell(m); };
         return {
             jaxon: kind === 'POWER_SURGE' ? 'nobody aboard can stop the power surge' : '',
-            aris: kind === 'CRYO_LEAK' || (kind === 'BREACH' && !aboard('SECURITY')) ? 'nobody aboard can treat the hurt' : '',
-            vance: kind === 'BREACH' && !aboard('MEDIC') ? 'nobody can pull people out of the breach' : '',
+            aris: kind === 'CRYO_LEAK' ? 'nobody aboard can treat the hurt' : '',
             mira: plainTrip(app, n) ? 'nobody scans the ground for them' : '',
         }[id] || '';
     }
@@ -639,7 +664,7 @@
         if (n._isWrongPlace) return Promise.resolve({ ok: false });
         if (call || n._nsCall) { dropCall(s); log(s, LINES.unanswered); }
         if (!breachDue(s, n)) return Promise.resolve({ ok: true });
-        return playBreach(app, []).then(() => ({ ok: true }));                               // the breach due here, nobody sent: it comes as we leave
+        return playBreach(app, [], true).then(() => (trip ? { ok: false, say: LINES.away } : { ok: true }));   // the hull hit due here, nobody sent: it comes as we leave (asked again after its lines)
     }
 
     // ── the disc: Mira's star fix ──
@@ -661,8 +686,32 @@
         if (!o || !o.d || o.d.status !== 'DAMAGED') return [];
         const out = [{ key: 'fix', words: 'Fix it', note: `costs ${fixCost(state, o.key)} salvage` }];
         if (!o.d._nsWorn) out.push({ key: 'patch', words: 'Patch it', note: 'a little salvage, for now' });
-        out.push({ key: 'live', words: 'Live with it', note: 'it stays broken' });
+        const costs = deckCost(state, deck).map(c => c.text);
+        out.push({ key: 'live', words: 'Live with it', note: costs.length ? costs.join(' · ') : 'it stays broken' });
         return out;
+    }
+    // what a broken deck costs while it stays broken, the game's own rules in a few words (bundle.js; DRAFT words, 2026-10-30)
+    const DECK_COST = Object.freeze({
+        bridge: ['warps cost more', 'no far scans'],             // DRAFT: GameState.getWarpCost ×1.5; Scan.js: no long-range scan
+        quarters: ['no rest at supper'],                         // DRAFT: GameState.serveSupper: nobody rests
+        cargo: ['the hold takes half'],                          // DRAFT: GameState.getCargoLimit halves
+        engineering: ['jumps cost double', 'repairs cost more'], // DRAFT: App.sectorJumpCost ×2; GameState.repairCostOf +50 %
+        lab: [],                                                 // nothing in the new look
+    });
+    // and what it costs only while something aboard needs that deck (GameState.passTime): a culture in the hold stops making
+    // rations; someone shut down (CATATONIC) only comes back while the quarters work. DRAFT words (2026-10-30)
+    const CULTURES = ['FUNGUS_CULTURE', 'symbiotic_culture'];
+    const DECK_COST_IF = Object.freeze({
+        cargo: s => ((s.cargo || []).some(item => item && CULTURES.includes(item.id)) ? ['the culture stops growing'] : []),   // DRAFT
+        quarters: s => (s.crew || []).filter(c => alive(c) && c.trait === 'CATATONIC').map(c => `no recovery for ${c.name}`),   // DRAFT
+    });
+    /** A broken deck's cost as chips ({ icon, text, tone }, the glass tags' format), shown where the player meets it: on the
+        red deck in the tower (always, and under "Live with it"). [] for a working deck. */
+    function deckCost(state, deck) {
+        const o = deckOf(state, deck);
+        if (!o || !o.d || o.d.status !== 'DAMAGED') return [];
+        const extra = DECK_COST_IF[o.key] ? DECK_COST_IF[o.key](state) : [];
+        return (DECK_COST[o.key] || []).concat(extra).map(text => chip('cost', text, 'loss'));
     }
     function deckChoose(app, deck, which) {
         const s = app && app.state, o = deckOf(s, deck), list = deckChoices(s, deck);
@@ -702,7 +751,7 @@
 
     window.NSOrbit = Object.freeze({
         actions, act, eligible, weak, holdLoss, lossOf, propose, teamRisk, teamOdds, fitOf, hasTeamAction, opened, signed, beforeLeave, whileDown, tripOver, tick, offerCall, fixIn, canDate, datable,
-        breakPatched, deckChoices, deckChoose, sign, scanDue, TELL, pool: app => evaCrew(app).slice(),
+        breakPatched, deckChoices, deckCost, deckChoose, sign, scanDue, TELL, pool: app => evaCrew(app).slice(),
         trip: () => (trip ? { ids: trip.ids.slice(), aboard: trip.aboard.slice() } : null),
         debug: () => ({ trip: trip ? { ids: trip.ids, downDone: trip.downDone, over: !!trip.over, quiet: Math.round(trip.quiet) } : null, call: call ? call.title || true : null, breach: pendingBreach ? Math.round(pendingBreach.wait) : null, held: moments.held.map(e => e.id || e.title) }),
     });
