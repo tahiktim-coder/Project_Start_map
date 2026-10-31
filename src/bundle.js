@@ -1276,6 +1276,8 @@ const NEW_LOOK_ECONOMY = Object.freeze({
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
+// Last Port: the wreck stories that say the ship landed (SILENT SHIP, THE FENCE) cannot be the disc's ship, clamped to the relay
+const RELAY_UNFIT_STORIES = ['EXODUS_DEAD_CREW', 'EXODUS_PARTIAL'];
 const SCRAPES_PER_BROKEN_DECK = 2; // flying the jump (Corridor): every second scrape breaks a deck (was 3). Measured over a run's
                                    // four flown jumps (2026-10-21): a careful pilot loses about 0.6 decks (a slower one, 1.5), a
                                    // ship that never moves all of them, one at full throttle the whole way about five. At 3: 0.2, 5, 3
@@ -1831,6 +1833,7 @@ class App {
     /**
      * The one place a team can go on this planet (a planet has at most one: see tidySites). kind order = which wins.
      * inSpace: reached by crossing in the lander, no landing. art: what the landing game draws beside the marked spot.
+     * relay (Last Port, the new look): the disc's moon, where the way to our wreck is a dock at the old relay (flyRelay).
      */
     siteOf(planet) {
         const SITES = [
@@ -1842,7 +1845,14 @@ class App {
             { tag: 'FAILED_COLONY', done: 'colonyInvestigated', label: 'THE COLONY RUINS', note: 'A SETTLEMENT, EMPTY', art: 'ruins', run: () => this.handleFailedColonyAction() },
             { tag: 'DERELICT', done: 'derelictInvestigated', label: 'THE WRECKAGE', note: 'A SHIP IN PIECES, IN ORBIT', inSpace: true, run: () => this.handleDerelictAction() },
         ];
-        return (planet && planet.tags && SITES.find(site => planet.tags.includes(site.tag))) || null;
+        const site = (planet && planet.tags && SITES.find(one => planet.tags.includes(one.tag))) || null;
+        return site && site.tag === 'EXODUS_WRECK' && this.isRelayStop(planet) ? { ...site, inSpace: true, relay: true } : site;
+    }
+
+    /** Last Port (the new look): the disc's moon (the story planet whose page is the disc) has an old relay in orbit with three
+        of our ships clamped to its ring, one of them the disc's; the team gets to it by docking there, flown (flyRelay). */
+    isRelayStop(planet) {
+        return !!(planet && isNewScreen() && planet.isStoryPlanet && planet.hasPage === 'PAGE_DISC' && window.DockRelay && window.MiniHost && window.MiniHost.has('dock-flight'));
     }
 
     /**
@@ -2667,18 +2677,50 @@ class App {
     flyDock(station) {
         if (!isNewScreen() || !window.MiniHost || !window.MiniHost.has('dock-flight')) return null;
         const s = this.state, full = !s._docksFlown || !!(station && station.isStoryPlanet);
-        const damaged = Object.fromEntries(Object.entries(s.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
-        const seed = String((station && station.id) || 'station').split('').reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 19);   // one ring per station, as DockingGame seeds it
-        const opts = { kind: 'dock', sector: s.currentSector, quick: !full, crew: s.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: s.energy, seed };
+        const opts = { ...this.dockFlightOpts(station), quick: !full };
         return window.MiniHost.play('dock-flight', opts)
             .then(result => this.applyDockResult(result), err => { console.error(err); return this.applyDockResult(null); });
+    }
+
+    /** What every flown dock is told (DockFlight.js): the sector, the crew, the decks already broken, the allowance, the tank,
+        and a seed from the station (one ring per station, as DockingGame seeds it). */
+    dockFlightOpts(station) {
+        const s = this.state;
+        const damaged = Object.fromEntries(Object.entries(s.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
+        const seed = String((station && station.id) || 'station').split('').reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 19);
+        return { kind: 'dock', sector: s.currentSector, crew: s.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: s.energy, seed };
+    }
+
+    /**
+     * Last Port (the new look): the team's way to the disc's wreck. The ship docks at the old relay on the moon, flown
+     * (DockFlight with opts.relay, DockRelay.js): always the whole approach, between three of our ships clamped to its ring,
+     * the disc's one of them. What it cost is applyDockResult's (the decks, A.U.R.A.'s share; a soft dock flown all by hand
+     * gives a little), with BoardingParty's own words for a rough or hard dock in the log. The two hulls beside the disc's are
+     * seen, so no later wreck takes their numbers. Resolves null (no landing: nobody is hurt coming down) and never
+     * rejects; a dock that fails to open is A.U.R.A.'s.
+     */
+    flyRelay(planet) {
+        const s = this.state, opts = { ...this.dockFlightOpts(planet), relay: true, quick: false };
+        return window.MiniHost.play('dock-flight', opts)
+            .then(result => result, err => { console.error(err); return null; })
+            .then(result => {
+                const dock = this.applyDockResult(result), name = planet.name || 'the relay';
+                if (dock.grade !== 'soft') s.addLog(dock.grade === 'crash' ? `Hard docking at ${name}. ${dock.hullHeld ? 'The hull held.' : 'The hull took damage.'}` : `Rough docking at ${name}. We scraped the ring.`);   // (BoardingParty's lines)
+                const seen = (window.DockRelay.hulls || []).map(h => h.num).filter(n => n !== planet.wreckHull).map(n => `EXODUS-${n}`);
+                s._encounteredShipNames = (s._encounteredShipNames || []).concat(seen.filter(n => !(s._encounteredShipNames || []).includes(n)));
+                if (result && result.tornHull) planet.relayTorn = result.tornHull;               // which of them a hard dock tore loose (the card's picture; no line says so yet)
+                s.emitUpdates();
+                return null;
+            })
+            .catch(err => { console.error(err); return null; });                              // never in the way of the team going in
     }
 
     /**
      * What the dock cost: the decks its chips named broken (scrapes on the way in, a hard dock's; never past the allowance),
      * A.U.R.A.'s share of the flying in energy (as the corridor's: not in tests), who docked counted toward who flies.
      * The air is BoardingParty's (DOCK_AIR_LOSS by grade). Returns { grade, auto, hullHeld } for it (hullHeld: a hard dock
-     * that broke nothing, so nobody says the hull is damaged); a dock that never ran is hers.
+     * that broke nothing, so nobody says the hull is damaged); a dock that never ran is hers. At the relay (flyRelay) a soft
+     * dock flown all by hand gives energy (the result's energyDelta, logged as the corridor's good flying is).
      */
     applyDockResult(result) {
         const s = this.state;
@@ -2689,6 +2731,9 @@ class App {
         if (energyDelta < 0 && !window.TEST_MODE) {
             s.energy = Math.max(0, Math.min(100, s.energy + energyDelta));
             s.addLog(`A.U.R.A. docked us: ${-energyDelta} more energy.`);                          // DRAFT (no sign: the dock's chip already said it)
+        } else if (energyDelta > 0 && result.relay && !window.TEST_MODE) {                        // Last Port: the relay's clamps topped us up
+            s.energy = Math.max(0, Math.min(100, s.energy + energyDelta));
+            s.addLog(`Good flying: ${energyDelta} energy saved.`);                                  // (the corridor's DRAFT line)
         }
         const rooms = (result.damagedRooms || []).slice(0, this.corridorBreakAllowance());
         rooms.forEach(key => s.damageDeck(key));
@@ -3107,9 +3152,10 @@ class App {
         }, DISC_REVEAL_DELAY_MS));
     }
 
-    /** One of the Exodus wreck stories, weighted, avoiding ones already told while any are left. needsHatch: only whole ships. */
-    pickExodusEncounter(needsHatch) {
-        const allEncounters = ((typeof EXODUS_ENCOUNTERS !== 'undefined') ? EXODUS_ENCOUNTERS : []).filter(e => !(needsHatch && e.noHatch));
+    /** One of the Exodus wreck stories, weighted, avoiding ones already told while any are left. needsHatch: only whole ships.
+        skip: story ids that cannot be this wreck's. */
+    pickExodusEncounter(needsHatch, skip = []) {
+        const allEncounters = ((typeof EXODUS_ENCOUNTERS !== 'undefined') ? EXODUS_ENCOUNTERS : []).filter(e => !(needsHatch && e.noHatch) && !skip.includes(e.id));
         if (allEncounters.length === 0) return null;
         this.state._encounteredExodus = this.state._encounteredExodus || [];
         let encounters = allEncounters.filter(e => !this.state._encounteredExodus.includes(e.id));
@@ -3133,9 +3179,10 @@ class App {
      */
     wreckEncounterFor(planet) {
         const all = typeof EXODUS_ENCOUNTERS !== 'undefined' ? EXODUS_ENCOUNTERS : [];
-        const kept = planet.wreckEncounter && all.find(e => e.id === planet.wreckEncounter);
+        const skip = this.isRelayStop(planet) ? RELAY_UNFIT_STORIES : [];                   // Last Port: clamped to the relay, it never landed
+        const kept = planet.wreckEncounter && all.find(e => e.id === planet.wreckEncounter && !skip.includes(e.id));
         if (kept) return kept;
-        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal);
+        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal, skip);
         if (picked) planet.wreckEncounter = picked.id;
         return picked;
     }
@@ -3165,8 +3212,9 @@ class App {
         planet.exodusInvestigated = true; // marked at once, so it cannot be clicked twice
 
         const cutIn = selected.noHatch ? Promise.resolve() : this.cutIntoWreck(shipName, planet, selected);   // a crater has no hatch to cut
+        const isRelay = this.isRelayStop(planet);                                    // Last Port: the wreck is clamped to the relay, not on the ground
         cutIn.then(() => this.showNarrativeEncounter({
-            art: `EXODUS_WRECK:${selected.id}`,                                      // the card's picture: the wreck as this story leaves it (SceneArt)
+            art: isRelay ? this.relayArt(planet) : `EXODUS_WRECK:${selected.id}`,   // the card's picture: the wreck as this story leaves it (SceneArt; the relay: its ring over the moon)
             title: selected.title,
             speaker: 'NARRATOR',
             context: `[highlight]${shipName}[/highlight]\n\n${selected.context(shipName)}`,
@@ -3179,6 +3227,13 @@ class App {
         }));
     }
 
+    /** Last Port's card picture (SceneArt RELAY): the relay's ring over the moon, our ship and three of ours in their ports; a
+        hull a hard dock tore loose is gone from its berth (its place in the row: DockRelay.exterior.nums). */
+    relayArt(planet) {
+        const nums = window.DockRelay ? window.DockRelay.exterior.nums : [], k = planet && planet.relayTorn ? nums.indexOf(planet.relayTorn) : -1;
+        return k === 0 || k === 1 ? 'RELAY:torn' + k : 'RELAY';
+    }
+
     /** Inside a wreck only the two who went down speak (and A.U.R.A. over the radio). The others were never there. */
     teamLines(lines) {
         const team = this.currentEvaTeam || [];
@@ -3189,13 +3244,14 @@ class App {
 
     /** The team gets into the wreck by the door it has (Torch: the hatch cut, frozen, a fuel line across it; or no torch: cut
         open long ago, a split in the hull, an airlock with power). Every wreck of ours lies on its planet's surface, so the torch
-        is played on the ground, under that world's own sky (TorchGround.js). Resolves once they are in; it never rejects. */
+        is played on the ground, under that world's own sky (TorchGround.js); but the disc's ship at the relay (Last Port) is
+        clamped to its ring in space, and its airlock still has the relay's power. Resolves once they are in; it never rejects. */
     cutIntoWreck(shipName, planet, story) {
         const [cutter, spotter] = this.torchCrew();
         if (!cutter || !window.MiniHost || !window.MiniHost.has('torch')) return Promise.resolve();
-        const door = this.wreckDoorFor(planet, story);
-        const world = planet ? { type: planet.type, temp: planet.metrics ? planet.metrics.temp : null, air: planet.atmosphere, id: planet.id } : null;
-        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name, place: 'ground', world };
+        const door = this.wreckDoorFor(planet, story), inSpace = this.isRelayStop(planet);
+        const world = planet && !inSpace ? { type: planet.type, temp: planet.metrics ? planet.metrics.temp : null, air: planet.atmosphere, id: planet.id } : null;
+        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name, place: inSpace ? 'space' : 'ground', world };
         return window.MiniHost.play('torch', opts).then(result => {
             if (result && result.opened) this.state.addLog(this.doorLogLine(result, shipName, cutter.name));
         }, err => console.error(err));
@@ -3207,7 +3263,8 @@ class App {
     wreckDoorFor(planet, story) {
         if (planet && planet.wreckDoor) return planet.wreckDoor;
         const history = this.state._wreckDoors || [], doors = window.TorchDoors, temp = planet && planet.metrics ? planet.metrics.temp : null;
-        const door = doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id, temp }) : 'cut';
+        const door = this.isRelayStop(planet) ? 'panel'                                    // Last Port: the relay still powers the airlock
+            : doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id, temp }) : 'cut';
         this.state._wreckDoors = history.concat(door);
         if (planet) planet.wreckDoor = door;
         return door;
@@ -4491,11 +4548,12 @@ Then you're through.`,
         }
 
         // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
-        const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
+        const isRelay = isSiteTrip && !!site.relay;                                  // Last Port: the ship docks at the relay, flown (flyRelay)
+        const isCrossing = isSiteTrip && site.inSpace && !isRelay;                   // a strange site or wreckage in orbit: the lander crosses, nobody lands
         if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
         const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
         const siteArt = isSiteTrip ? site.art : (find && find.art) || null;          // a find of its own (old ruins, a beacon) is drawn by the mark too
-        const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
+        const goDown = isRelay ? this.flyRelay(planet) : isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
             : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
         const landed = goDown.then(landing => this.applyLanding(landing, evaTeam));
         const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam)) : landed;   // the new screen: the crisis aboard while they are down
