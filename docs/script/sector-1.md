@@ -31,7 +31,7 @@ Objective lines (the tip above the log, one at a time, whichever fits what you a
 ### The marked beacon — the first wreck «bundle.js · findDiscDrawing»
 _The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), always a whole ship, so the team cuts its hatch first (10-away-team.md). It is named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_
 
-- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 3227»
+- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 3229»
 
 #### The drawing of the gold disc «DiscDocument.js · NOTES»
 _A card with the drawing. Point at each label to read its note._
@@ -275,16 +275,16 @@ _The story planet before it is named: a faint dot labelled UNIDENTIFIED. Clickin
 ### The offer «bundle.js · offerDiscDating»
 _A card after the wreck. Mira asks; A.U.R.A. if Mira is dead._
 
-- **kicker** — THE DISC «bundle.js · line 3394»
-- **title** — Date this wreck «bundle.js · line 3394»
-- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 3395»
-- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 3397»
-- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 3398»
-- Date this wreck with the disc «bundle.js · line 3400»
-- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 3400»
-- **desc** — No cost. Shows when it died. «bundle.js · line 3400»
-- Not now «bundle.js · line 3401»
-- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 3401»
+- **kicker** — THE DISC «bundle.js · line 3396»
+- **title** — Date this wreck «bundle.js · line 3396»
+- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 3397»
+- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 3399»
+- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 3400»
+- Date this wreck with the disc «bundle.js · line 3402»
+- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 3402»
+- **desc** — No cost. Shows when it died. «bundle.js · line 3402»
+- Not now «bundle.js · line 3403»
+- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 3403»
 
 ### Dating it (the mini-game) «DiscDating.js · DiscDating»
 _The reactions by depth play the first time a wreck that deep is dated; after that A.U.R.A. says the age._
@@ -338,16 +338,16 @@ _The reactions by depth play the first time a wreck that deep is dated; after th
 
 ### In the log afterwards «bundle.js · dateWreck»
 
-- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3422»
-- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3426»
+- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3424»
+- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3428»
 
-- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3454»
-- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3455»
+- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3456»
+- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3457»
 
 ### When nobody dated a wreck «bundle.js · revealLateStoryPlanet»
 _Back on the map with one stop left._
 
-- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3470»
+- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3472»
 
 ## The hole in the hull (the mini-game) «Breach.js · Breach»
 _Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time._
@@ -429,9 +429,9 @@ _Once per run, on a warp in sector 1 that costs energy, never the first. It take
 
 ### In the log afterwards «bundle.js · applyBreachResult»
 
-- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 2261»
-- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 2262»
-- [name] was caught in the breach and is injured. «bundle.js · line 2266»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 2263»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 2264»
+- [name] was caught in the breach and is injured. «bundle.js · line 2268»
 
 ## The hull hit (the new look, instead of the mini-game) «bundle.js · HULL_HIT_LINES»
 _The same moment in the new look: one deck sealed (the hold, the engine room or the quarters), nobody hurt. A.U.R.A. first, then the one whose deck it is (else whoever is aboard)._
@@ -444,8 +444,8 @@ _The same moment in the new look: one deck sealed (the hold, the engine room or 
 
 ### In the log afterwards (the new look) «bundle.js · hullHit»
 
-- Micrometeorite strike. The hull held. «bundle.js · line 2284»
-- Micrometeorite strike. A.U.R.A. sealed off the [deck]. «bundle.js · line 2289»
+- Micrometeorite strike. The hull held. «bundle.js · line 2286»
+- Micrometeorite strike. A.U.R.A. sealed off the [deck]. «bundle.js · line 2291»
 
 ### How every found page is shown (all sectors) «FoundPage.js · FoundPage»
 _The card around each found page (sector 5's find is the disc itself: sector-5.md)._

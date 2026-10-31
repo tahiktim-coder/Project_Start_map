@@ -35,8 +35,8 @@ _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, ea
 #### A.U.R.A. on who has been flying «bundle.js · getRelianceVoice»
 _In the log after every jump from here on, once she has seen four or more burns and flights: one line if she flew most of them, the other if you did. She says nothing when this jump went against the pattern._
 
-- **A.U.R.A.:** You let me fly again, Commander. I am glad to. You should rest. «bundle.js · line 2666»
-- **A.U.R.A.:** You flew it yourself again, Commander. I am here when you want me. «bundle.js · line 2667»
+- **A.U.R.A.:** You let me fly again, Commander. I am glad to. You should rest. «bundle.js · line 2668»
+- **A.U.R.A.:** You flew it yourself again, Commander. I am here when you want me. «bundle.js · line 2669»
 
 
 ## The story beats (always here)
