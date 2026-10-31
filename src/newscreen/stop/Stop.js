@@ -7,13 +7,21 @@
    for this world (NSOrbit.propose) and those two walk from the window to the hatch and stand by it, facing the window,
    each with their name and why over them; the "GO DOWN" tag stands over the hatch. A click on someone at the hatch sends
    them back to the window (a place opens: the tag says "one more"); a click on someone at the window puts them in the open
-   place, or in the place of whoever joined last. Only two fit: both go, nobody changes. "GO DOWN": the two climb down the
-   hatch, THEN the shuttle drops to where they go (a click hurries it), then the real game runs the trip (LanderGame, the
-   Torch, the cards). When they are back the shuttle comes up and they climb back; if a find is still open, two step forward
-   again. "Leave orbit" plays the dive backwards.
-   Scan is one click: the glass sweeps the world (no click lands meanwhile), then the game scans it and its finds show as
-   tags with marks on the world (stop/Words.js, WorldFinds.js). A click on a find (its tag or its mark) is where GO DOWN
-   goes: the shuttle aims there (NSGlass.aim), never while it is flying.
+   place, or in the place of whoever joined last. Only two fit, both well: both go, nobody changes. A trip is never locked
+   (NSOrbit.pool): with fewer than two well the hurt come up to the window too; one goes (the crew put the well one
+   forward) and a hurt one goes beside them only if clicked to the hatch; the one left who can go goes alone.
+   "GO DOWN": the two climb down the hatch, THEN the shuttle drops to where they go (a click hurries it), then the real
+   game runs the trip (LanderGame, the Torch, the cards). When they are back the shuttle comes up and they climb back; if a
+   find is still open, two step forward
+   at once, while it comes up (anyone still in it climbs in when it is home, straight to their place), and the next trip
+   from here goes down the hatch at once (nobody walks it twice; a shuttle still coming up docks first).
+   "Leave orbit" plays the dive backwards. The bridge marks the world seen when it closes (NewScreen.js holds a card that
+   turns up on its own a shorter time on a world seen before).
+   A world nobody has scanned is scanned as we arrive (NewScreen.flow.scanDue): once the world has braked in, the glass
+   sweeps it (no click lands meanwhile; the first time in a run A.U.R.A. says what that is, NSOrbit.TELL.scan), then the
+   game scans it and its finds show as tags with marks on the world (stop/Words.js, WorldFinds.js). Only the copy of Earth
+   still has a Scan tag (one click, the same sweep). A click on a find (its tag or its mark) is where GO DOWN goes: the
+   shuttle aims there (NSGlass.aim), never while it is flying.
    Every action calls the REAL game through NewScreen.flow (Orbit.js): costs, events, rewards and saves are today's.
    Anyone too weak from a missed supper is not put forward and stands apart, by the suit locker; pointing says why.
    A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
@@ -30,7 +38,7 @@
    Listens: 'dive:start' { id }  'dive:cancel'  'stop:open' { id, dived }  'stop:refresh'  'dive:back'  'trip:down' { ids }
             'trip:back'  'flow:go' { id } (bakes ahead)  'hidden'
    Emits:   'dive:plated' { dir }  'stop:shown' { id }  'stop:hidden' { id }  'stop:pick' { ids }
-   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id)
+   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id), .scanDue()
    Anchors (CSS px, while open): 'stop:person:<id>', 'stop:aura', 'stop:glass', 'stop:site'
 */
 (function () {
@@ -65,10 +73,13 @@
         hover: null, hot: null, hotAt: 0, clickAt: 0,
         send: null,          // { ids, t0, fireAt, fired, skipped } between the click and flow.act
         drop: null,          // { at }: the shuttle leaves when the team has climbed down the hatch
+        upEnd: -1e9,         // when the shuttle coming up is home: it never turns back down before then
+        back: {},            // id → when they climb in from the shuttle coming up (onTripBack): never seen aboard before then
         trip: null,          // { ids } while the team is down
         decks: null,
         finds: [],           // the world's finds (NewScreen.flow.finds: WorldFinds.js), read with the actions
-        sweep: null,         // { t0 } while the glass sweeps the world after a click on Scan
+        sweep: null,         // { t0 } while the glass sweeps the world (on arrival, or after a click on the copy's Scan)
+        autoScan: false,     // a world nobody has scanned: its sweep starts once the world has braked in
         hold: null,          // { t0 } while the settle key is held down (SETTLE_HOLD_MS, then the crew have their say)
     };
     let room = null, art = null, actx = null, diveC = null, bridgeC = null, dctx = null, bctx = null, fxList = [], W = null;
@@ -123,7 +134,7 @@
         world. Returns when the shuttle starts down. */
     function sendOff(ids, t, gap) {
         const gone = ids.reduce((last, id, i) => Math.max(last, exitDown(id, t + 150 + i * gap)), t);
-        S.drop = { at: gone + SHUTTLE_GAP };
+        S.drop = { at: Math.max(gone + SHUTTLE_GAP, S.upEnd) };              // a shuttle still coming up docks first
         return S.drop.at;
     }
     function poseOf(id, t) {
@@ -143,7 +154,8 @@
         if (cp) return Object.fromEntries(['cora'].concat(CREW).map(id => [id, cp[id] || null]));
         const away = S.trip ? S.trip.ids : S.send ? S.send.ids : [], out = { cora: crewOf('cora') === 'dead' ? null : { x: HELM, act: 'console', facing: 1 } };
         CREW.forEach(id => {
-            if (crewOf(id) !== 'well' || away.includes(id)) { out[id] = null; return; }
+            const fitToGo = crewOf(id) === 'well' || (crewOf(id) === 'hurt' && S.lineup.includes(id));   // never locked: with fewer than two well, the hurt come up too (NSOrbit.pool)
+            if (!fitToGo || away.includes(id)) { out[id] = null; return; }
             const slot = S.lineup.includes(id) ? S.pick.slots.indexOf(id) : -1;
             if (slot >= 0) { out[id] = { x: HATCH_X[slot], act: 'idle', facing: 1 }; return; }
             if (S.lineup.includes(id) || S.atWindow.has(id)) { out[id] = { x: SPOT_X[id], act: 'idle', facing: 1 }; return; }
@@ -169,11 +181,17 @@
             if (settle) { stayPlan(id, w.x, w.act, w.facing); return; }
             if (seen) walkTo(id, t, w.x, w.act, w.facing); else entering.push([id, w]);
         });
-        entering.sort((a, b) => b[1].x - a[1].x).forEach(([id, w], i) => enterTo(id, t + i * 700, w.x, w.act, w.facing));
+        // still in the shuttle coming up (S.back): they climb in when it is home, and go straight to where they are wanted
+        entering.sort((a, b) => b[1].x - a[1].x).forEach(([id, w], i) => enterTo(id, Math.max(t + i * 700, S.back[id] || -1e9), w.x, w.act, w.facing));
     }
 
     // ═══ 2. the team at the hatch: who the crew put forward, and the player's changes ═══
     const team = () => S.pick.slots.filter(Boolean);
+    /** How many must go down: two once two in the lineup are well; else one, and a second only if the player adds them
+        (a trip is never locked, and a hurt one never has to go: NSOrbit.pool, teamSizes). */
+    const need = () => (S.lineup.filter(id => crewOf(id) === 'well').length >= 2 ? 2 : 1);
+    /** The player may change who goes: more in the lineup than the two places, or room beside the one who must go. */
+    const choosable = () => S.lineup.length > 2 || need() < Math.min(2, S.lineup.length);
     /** Standing at their place by the hatch now (their name and why show only then: words never chase a walker). */
     function arrived(id) {
         const k = S.pick.slots.indexOf(id), last = lastOf(id);
@@ -188,9 +206,9 @@
         let p = null;
         try { p = NS.flow && typeof NS.flow.propose === 'function' ? NS.flow.propose() : null; } catch (err) { console.error('NewScreen stop: the proposal failed', err); }
         if (p && p.why) S.pick.why = p.why;
-        if (S.pick.manual && S.lineup.length !== 2) return;            // the player's choice stands (only two fit: both go, whatever was picked)
-        const ids = S.lineup.length === 2 ? S.lineup.slice() : (p && Array.isArray(p.ids) ? p.ids : []).filter(id => S.lineup.includes(id)).slice(0, 2);
-        if (ids.length < 2) return;
+        if (S.pick.manual && choosable()) return;                      // the player's choice stands (only two well, or one: they go, whatever was picked)
+        const ids = !choosable() ? S.lineup.slice() : (p && Array.isArray(p.ids) ? p.ids : []).filter(id => S.lineup.includes(id)).slice(0, 2);
+        if (ids.length < need()) return;
         const key = ids.slice().sort().join('+');
         if (key === S.pick.key && ids.every(id => S.pick.slots.includes(id))) return;   // the same two, both still at the hatch
         S.pick.key = key;
@@ -201,9 +219,9 @@
         reconcile(t);
     }
     /** A click on someone fit to go: at the hatch, they step back to the window (a place opens); at the window, they take the
-        open place, or the place of whoever joined last. Only two fit: nobody changes. */
+        open place, or the place of whoever joined last. Only two well, or one: nobody changes. */
     function pickPerson(id, t) {
-        if (S.lineup.length <= 2 || !S.lineup.includes(id)) return false;
+        if (!choosable() || !S.lineup.includes(id)) return false;
         const slots = S.pick.slots.slice(), at = slots.indexOf(id);
         let order = S.pick.order.filter(q => slots.includes(q));
         if (at >= 0) { slots[at] = null; order = order.filter(q => q !== id); }
@@ -247,7 +265,7 @@
         const f = P.framer(c, SW, SH);
         for (let dy = -3; dy <= 2; dy++) for (let dx = -22; dx <= 22; dx++) { const d = Math.hypot(dx / 22, dy / 3.2); if (d < 1) f.tone(x + dx, y + dy, RP.AMBER, peak * (1 - d) ** 1.4); }
     }
-    const picking = () => !S.send && !S.trip && S.lineup.length >= 2 && hasTeamAction();
+    const picking = () => !S.send && !S.trip && S.lineup.length >= 1 && hasTeamAction();
     /** The hatch stands open for the team: a warm light from the lab below rises out of it (stronger once both are there). */
     const hatchGlow = (c, k) => { if (TA) TA.hatchLight(c, HATCH + OFFX, F, k); };
     function drawPeople(c, t) {
@@ -290,7 +308,7 @@
         c.globalCompositeOperation = 'lighter'; c.drawImage(room.glass, 0, 0); c.globalCompositeOperation = 'source-over';
         c.drawImage(A.deck(1).canvas, OFFX, B.H);
         drawFx(P.framer(c, SW, SH), t);
-        if (picking() && team().length) hatchGlow(c, team().length === 2 && team().every(arrived) ? 1 : 0.55);
+        if (picking() && team().length) hatchGlow(c, team().length === need() && team().every(arrived) ? 1 : 0.55);
         if (words) W.threads(c, t, words);
         drawPeople(c, t);
         drawDamage(c, t);
@@ -363,7 +381,7 @@
     const currentNode = () => { try { const s = NS.game.state(); return s ? s.currentSystem : null; } catch (err) { return null; } };
     function freshStop(id, node) {
         S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.pick = freshPick();
-        S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9; S.finds = []; S.sweep = null; S.hold = null;
+        S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9; S.finds = []; S.sweep = null; S.autoScan = false; S.hold = null; S.upEnd = -1e9; S.back = {};
         GL.shuttle(null);
         GL.place(node);
         crewNow = crewMap();
@@ -417,7 +435,7 @@
         let pose = null;
         try { pose = tw && tw.landerPose ? tw.landerPose() : null; } catch (err) { pose = null; }
         S.dive = Object.assign(D.start('out', pose, t0()), { id: S.id });
-        S.hover = null; S.hot = null; S.sweep = null;
+        S.hover = null; S.hot = null; S.sweep = null; S.autoScan = false;
         W.hide();
     }
     /** The team goes down: from our own click (we already walked them out), or from the game alone. */
@@ -432,10 +450,15 @@
         const t = t0(), ids = S.trip ? S.trip.ids : [], home = t + SHUTTLE_MS + 700;
         S.trip = null; S.send = null;
         if (p && p.failed) S.pick = Object.assign(freshPick(), { from: t + PROPOSE_AFTER * 4 });   // the game would not take them: they come back up, and two step forward again
-        else S.pick = Object.assign(freshPick(), { from: home + ids.length * 700 + PROPOSE_AFTER });   // home and up the ladder: another find still open, two step forward again
+        else S.pick = Object.assign(freshPick(), { from: t + PROPOSE_AFTER });   // another find still open: two step forward while the shuttle comes up
         GL.shuttle('up', t + 300, SHUTTLE_MS + 200);
+        S.upEnd = t + 300 + SHUTTLE_MS + 200; S.back = {};
         crewNow = crewMap();
-        ids.forEach((id, i) => { if (crewOf(id) === 'well') { S.atWindow.add(id); enterTo(id, home + i * 700, SPOT_X[id], 'idle', 1); } });
+        ids.forEach((id, i) => {                                         // all who came back climb in once it is home; the hurt too, if they are wanted on the bridge
+            if (crewOf(id) === 'dead') return;
+            S.back[id] = home + i * 700;
+            if (crewOf(id) === 'well') { S.atWindow.add(id); enterTo(id, S.back[id], SPOT_X[id], 'idle', 1); }
+        });
     }
     function onFlowGo(p) { const node = p && nodeOf(p.id); if (node) GL.prepare(node); D.prepare(); }
 
@@ -461,6 +484,7 @@
         if (S.open && !S.dive && S.fadeAt != null && t - S.fadeAt >= DISSOLVE && !S.shownSent) shown();
         if (S.drop && t >= S.drop.at) { GL.shuttle('down', S.drop.at, SHUTTLE_MS); S.drop = null; }   // the team is down the hatch: the shuttle goes
         if (S.send && !S.send.fired && t >= S.send.fireAt && !NS.blocked()) fireSend();   // a card came up meanwhile: they wait below
+        if (S.autoScan && !S.sweep && !S.send && !S.trip && GL.settled(t, S.shownAt) && !NS.blocked()) { S.autoScan = false; S.sweep = { t0: t }; tellScan(); }   // the world has braked in: it is scanned
         if (S.sweep && t - S.sweep.t0 >= SWEEP_MS && !NS.blocked()) { S.sweep = null; runAct('scan', t); }   // the glass has swept the world: the scan reads it
         if (S.hold && t - S.hold.t0 >= SETTLE_HOLD_MS) { const k = S.hold.key || 'settle'; S.hold = null; setHot(null); runAct(k, t); }   // held long enough: the crew have their say
         if ((S.open || S.dive) && t - S.readAt >= READ_MS && S.id && !(S.dive && !S.dive.open && S.dive.dir === 'in')) { readActions(t); if (S.open && !(S.dive && S.dive.dir === 'out')) reconcile(t); }
@@ -469,13 +493,25 @@
         if (S.shownSent) return;
         S.shownSent = true;
         S.pick.from = t0() + PROPOSE_AFTER;                              // the crew step forward once the bridge has been seen a moment
+        S.autoScan = scanDue();                                          // nobody has scanned this world: update() sweeps it once it has braked in
         registerAnchors(true);
         emit('stop:shown', { id: S.id });
     }
+    /** We are at a world nobody has scanned from the bridge (NSOrbit.scanDue). */
+    function scanDue() {
+        try { return !!(NS.flow && typeof NS.flow.scanDue === 'function' && NS.flow.scanDue()); } catch (err) { console.error('NewScreen stop: scanDue failed', err); return false; }
+    }
+    /** The first sweep of a run: A.U.R.A. says once what it is (there is no Scan tag to explain). */
+    function tellScan() {
+        const v = NS.mods.voice, line = window.NSOrbit && window.NSOrbit.TELL && window.NSOrbit.TELL.scan;
+        if (!line || !v || typeof v.once !== 'function') return;
+        Promise.resolve(v.once('act:scan', line, () => S.open && !S.dive)).catch(err => console.error('NewScreen stop: the voice failed', err));
+    }
     function close(tell) {
         const id = S.id;
+        if (S.node && S.shownSent) S.node._nsSeen = true;                // a world seen: NewScreen.js holds a card a shorter time when we come back
         S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.pick = freshPick(); S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null;
-        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.finds = []; S.sweep = null; S.hold = null;
+        S.shownSent = false; S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.finds = []; S.sweep = null; S.autoScan = false; S.hold = null; S.upEnd = -1e9; S.back = {};
         GL.shuttle(null); GL.place(null);
         registerAnchors(false); W.hide(); setPointing(false);
         if (tell) emit('stop:hidden', { id });
@@ -494,7 +530,7 @@
             if (!went && !talking) say('The team stays aboard for now, Commander.');
             S.send = null; S.drop = null; S.pick = Object.assign(freshPick(), { from: t0() + PROPOSE_AFTER * 4 }); const t = t0();
             ids.forEach((id, i) => { if (crewOf(id) === 'well') enterTo(id, t + 300 + i * 600, SPOT_X[id], 'idle', 1); });
-            GL.shuttle('up', t, SHUTTLE_MS);
+            GL.shuttle('up', t, SHUTTLE_MS); S.upEnd = t + SHUTTLE_MS;
         }
     }
 
@@ -572,7 +608,7 @@
         const actKey = hit && hit.kind === 'act' ? hit.key : null, onLeave = !!(hit && hit.kind === 'leave'), onSettle = !!(hit && hit.kind === 'settle');
         const onFight = !!(hit && hit.kind === 'fight'), settleKey = onSettle ? hit.key || 'settle' : null;   // the copy of Earth: Fight to escape, Go down
         const find = hit && hit.kind === 'find' ? hit : null;            // a find's tag or its mark on the world
-        return { fit, weak, actKey, onLeave, onSettle, onFight, settleKey, find, on: !!actKey || onLeave || onSettle || onFight || !!find || (!!fit && S.lineup.length > 2) };
+        return { fit, weak, actKey, onLeave, onSettle, onFight, settleKey, find, on: !!actKey || onLeave || onSettle || onFight || !!find || (!!fit && choosable()) };
     }
     function pointAt(u) {
         setHot(u.actKey || (u.find ? u.find.key : null) || (u.onLeave ? 'leave' : null) || u.settleKey || (u.onFight ? 'escape' : null));
@@ -627,10 +663,12 @@
     function doAct(key, t) {
         const a = S.actions.find(q => q.key === key);
         if (!a) return;
+        if (a.team && S.autoScan) { S.autoScan = false; S.sweep = { t0: t }; tellScan(); S.hover = null; setHot(null); setPointing(false); return; }   // not read yet: the scan first
         if (a.team) {
             const ids = team();
-            if (ids.length < 2) { say(ids.length ? 'We need one more at the hatch, Commander.' : 'We need two at the hatch, Commander.'); return; }
+            if (ids.length < need()) { say(ids.length ? 'We need one more at the hatch, Commander.' : need() === 1 ? 'We need someone at the hatch, Commander.' : 'We need two at the hatch, Commander.'); return; }   // DRAFT: "someone" (one left who can go)
             S.send = { ids, t0: t, fired: false, skipped: false, fireAt: sendOff(ids, t, 350) + SHUTTLE_MS };   // the trip begins once the shuttle is down
+            if (S.node && S.node.nsTrips > 0) skipSend(t);              // a trip from here before: nobody walks it again, the shuttle goes at once
             S.hover = null; setHot(null); setPointing(false);
             return;
         }
@@ -641,11 +679,11 @@
     /** The game's own action now (NewScreen.flow.act); the list changes after it, so it is read again soon. */
     function runAct(key, t) {
         const a = S.actions.find(q => q.key === key);
-        if (!a) return;
+        if (!a && key !== 'scan') return;                                // a world's scan has no tag (it runs by itself): the game still takes it
         S.readAt = t + 400 - READ_MS;
         try {
             if (NS.flow && typeof NS.flow.act === 'function') NS.flow.act(key);
-            else if (typeof a.run === 'function') a.run();
+            else if (a && typeof a.run === 'function') a.run();
         } catch (err) { console.error(`NewScreen stop: the action "${key}" failed`, err); }
     }
     /** A click while the team is still walking out: they are down the hatch at once and the shuttle leaves now. */
@@ -654,8 +692,8 @@
         if (!s || s.fired || s.skipped || !S.drop) return;               // the shuttle is already on its way down
         s.skipped = true;
         s.ids.forEach(hidePlan);
-        S.drop = { at: t };
-        s.fireAt = t + SHUTTLE_MS;
+        S.drop = { at: Math.max(t, S.upEnd) };                            // still coming up: it docks, then goes straight down
+        s.fireAt = S.drop.at + SHUTTLE_MS;
     }
     function leave() {
         S.hover = null; setHot(null); setPointing(false);
@@ -722,7 +760,7 @@
         dctx = diveC.getContext('2d'); bctx = bridgeC.getContext('2d');
         vis(diveC, false); vis(bridgeC, false);
         W = WORDS.create({
-            S, css: (x, y) => css(x, y), unit: () => unit(), t0, poseOf, picking, team, arrived, joinedLast, isWrongPlace,
+            S, css: (x, y) => css(x, y), unit: () => unit(), t0, poseOf, picking, team, need, arrived, joinedLast, isWrongPlace,
             sweep: () => (S.sweep ? Math.max(0, t0() - S.sweep.t0) : null),
             hold: () => (S.hold ? Math.min(1, Math.max(0, (t0() - S.hold.t0) / SETTLE_HOLD_MS)) : 0),   // how far the settle key has filled
             holdKey: () => (S.hold ? S.hold.key : null), fight: () => (CP ? CP.fightK() : 0),   // which held key; how far Fight to escape has filled
@@ -759,7 +797,7 @@
         actions: S.actions.map(a => ({ key: a.key, words: a.words, near: a.near, team: !!a.team })), lineup: S.lineup.slice(), aside: S.aside.slice(),
         hatch: S.pick.slots.slice(), picked: team(), arrived: team().filter(arrived), why: Object.assign({}, S.pick.why), manual: S.pick.manual, joinedLast: joinedLast(), hover: S.hover, hot: S.hot,
         send: S.send ? S.send.ids.slice() : null, trip: S.trip ? S.trip.ids.slice() : null, drawn: S.drawn.map(d => d.id), glass: GL.current(), atWindow: [...S.atWindow], t: Math.round(t0()),
-        sweep: !!S.sweep, aimed: GL.aimed(),
+        sweep: !!S.sweep, autoScan: S.autoScan, skipped: S.send ? !!S.send.skipped : null, aimed: GL.aimed(),
         finds: S.finds.map(f => { const p = S.id && geo ? GL.spot(t0(), S.shownAt, f.at) : null, c = p ? css(p[0], p[1]) : null; return { id: f.id, label: f.label, done: !!f.done, target: !!f.target, risk: f.risk, hint: f.hint, event: f.event || f.site || f.kind, mark: c ? c.map(Math.round) : null }; }),
         plans: Object.fromEntries(Object.entries(S.plans).map(([k, v]) => [k, v.map(q => q.kind + '@' + Math.round(q.t0) + (q.x != null ? ':' + q.x : ''))])),
         words: W ? W.debug() : [],

@@ -37,33 +37,40 @@
         return sign === '-' || sign === '−' ? !BAD_WORDS.test(hit) : BAD_WORDS.test(hit);
     }
 
-    // ── what a choice really gives: energy tops out at 100, rations at the store's size (state.maxRations) ──
+    // ── what a choice really gives: energy tops out at 100, rations at the store's size (state.maxRations), and in the new
+    //    look salvage at the hold's (state.maxSalvage). cap: the new look's most one choice may give (NEW_LOOK_ECONOMY).
+    //    Costs are never cut: a loss costs what it says ──
     const STOCKS = [
-        { key: 'energy', re: /(^|[^\d.])([+\-−])(\d+)(\s+Energy)\b/g, top: () => 100, full: 'Energy already full' },
-        { key: 'rations', re: /(^|[^\d.])([+\-−])(\d+)(\s+Rations?)\b/g, top: s => Number(s.maxRations), full: 'Rations already full' },
+        { key: 'energy', re: /(^|[^\d.])([+\-−])(\d+)(\s+Energy)\b/g, ranged: /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Energy)\b/g,
+            top: () => 100, full: 'Energy already full', cap: 'CARD_ENERGY_MAX' },
+        { key: 'rations', re: /(^|[^\d.])([+\-−])(\d+)(\s+Rations?)\b/g, ranged: /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Rations?)\b/g,
+            top: s => Number(s.maxRations), full: 'Rations already full', cap: 'CARD_RATIONS_MAX' },
+        { key: 'salvage', re: /(^|[^\d.])([+\-−])(\d+)(\s+Salvage)\b/g, ranged: /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Salvage)\b/g,
+            top: s => Number(s.maxSalvage), full: 'Salvage already full', cap: 'CARD_SALVAGE_MAX', newOnly: true },   // DRAFT: "Salvage already full" (the new look)
     ];
     const stockOf = (state, key) => Math.round(Number(state[key]) || 0);
-    // The new look (?new=1): no single choice gives more energy than NEW_LOOK_ECONOMY.CARD_ENERGY_MAX (bundle.js), and sealed
-    // rations are opened at once (FOOD_PACK_RATIONS each); the chips and the result line say so. The default game: neither.
+    // The new look (?new=1): no single choice gives more energy, rations or salvage than NEW_LOOK_ECONOMY's CARD_ENERGY_MAX,
+    // CARD_RATIONS_MAX and CARD_SALVAGE_MAX (bundle.js), and sealed rations are opened at once (FOOD_PACK_RATIONS each, and
+    // counted toward the rations cap); the chips and the result line say so. The default game: none of it.
     const newLook = () => (window.NEW_SCREEN && window.NewScreen && window.NSRoute && window.NEW_LOOK_ECONOMY) || null;   // bundle.js isNewScreen()'s own test
-    const ENERGY_RANGED = /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Energy)\b/g;   // the new look also cuts a range ("+50-70 Energy")
+    const stocksNow = () => (newLook() ? STOCKS : STOCKS.filter(st => !st.newOnly));
     const PACKS = /\+(\d+) Sealed Rations\b/g;
-    /** How high a choice's gain may take a stock that stands at `start`: its own top, and in the new look no more than
-        CARD_ENERGY_MAX of energy above where it started. */
+    /** How high a choice's gain may take a stock that stands at `start`: its own top, and in the new look no more than its
+        cap above where it started. */
     function topOf(st, state, start) {
-        const top = st.top(state), look = newLook();
-        return st.key === 'energy' && look ? Math.min(top, start + look.CARD_ENERGY_MAX) : top;
+        const top = st.top(state), look = newLook(), cap = look ? Number(look[st.cap]) : NaN;
+        return cap > 0 ? Math.min(Number.isFinite(top) ? top : Infinity, start + cap) : top;   // no store size known: the cap alone
     }
     /**
-     * A text's own energy (or rations) numbers replayed in order from `start`: a cost first leaves room for a gain after
-     * it, and a gain is cut to what fits under the top ("+25 Energy" with room for 5 reads "+5 Energy"; with no room, the
-     * stock's "already full"). Returns { text, end, cut }. Ranges ("+25-45") and percentages are left alone (the new look
-     * cuts an energy range too, by its highest number).
+     * A text's own energy, rations or salvage numbers replayed in order from `start`: a cost first leaves room for a gain
+     * after it, and a gain is cut to what fits under the top ("+25 Energy" with room for 5 reads "+5 Energy"; with no room,
+     * the stock's "already full"). Returns { text, end, cut }. Ranges ("+25-45") and percentages are left alone (the new
+     * look cuts a range too, by its highest number).
      */
     function fitStock(text, stock, start, top) {
         let v = start, cut = false;
-        const ranged = stock.key === 'energy' && !!newLook();
-        const out = String(text).replace(ranged ? ENERGY_RANGED : stock.re, (m, pre, sign, n, ...rest) => {
+        const ranged = !!newLook();
+        const out = String(text).replace(ranged ? stock.ranged : stock.re, (m, pre, sign, n, ...rest) => {
             const unit = ranged ? rest[1] : rest[0], k = parseInt((ranged && rest[0]) || n, 10);
             if (sign !== '+') { v = Math.max(0, v - k); return m; }
             const got = Math.max(0, Math.min(k, top - v));
@@ -74,31 +81,34 @@
         });
         return { text: out, end: v, cut };
     }
-    /** A choice's words as they stand now: a gain of energy or rations says what fits (a card never promises more). */
+    /** A choice's words as they stand now: a gain of energy or rations (the new look: salvage too) says what fits (a card
+        never promises more). */
     function capGains(desc, state) {
         if (!state || !desc) return desc;
         const look = newLook(), text = look ? String(desc).replace(PACKS, (m, n) => `+${Number(n) * look.FOOD_PACK_RATIONS} Rations`) : String(desc);
-        return STOCKS.reduce((out, st) => {
+        return stocksNow().reduce((out, st) => {
             const start = stockOf(state, st.key), top = topOf(st, state, start);
             return Number.isFinite(top) ? fitStock(out, st, start, top).text : out;
         }, text);
     }
     /**
      * Runs a choice's effect (choice.effect(state, ...args)) and returns its result line as it really went: a gain of
-     * energy or rations that hit the top is said as what fitted. The words change only when replaying the line's own numbers
-     * from the ship's numbers before lands where the ship is now; otherwise the line is left as the effect wrote it.
+     * energy or rations (the new look: salvage too) that hit the top is said as what fitted. The new look holds each stock
+     * to its cap above where it stood (never below that), sealed rations opened first; a cost is never cut. The words
+     * change only when replaying the line's own numbers from the ship's numbers before lands where the ship is now;
+     * otherwise the line is left as the effect wrote it.
      */
     function apply(choice, state, ...args) {
-        const before = STOCKS.map(st => stockOf(state, st.key)), tops = STOCKS.map((st, i) => topOf(st, state, before[i]));
+        const stocks = stocksNow(), before = stocks.map(st => stockOf(state, st.key)), tops = stocks.map((st, i) => topOf(st, state, before[i]));
         const look = newLook();
         let text = choice.effect(state, ...args);
         if (look) {
-            STOCKS.forEach((st, i) => { if (st.key === 'energy' && Number(state.energy) > tops[i]) state.energy = tops[i]; });
-            if (typeof state.openFoodPacks === 'function') state.openFoodPacks(true);           // opened now, so the line below says what fitted
+            if (typeof state.openFoodPacks === 'function') state.openFoodPacks(true);           // opened now: they count toward the cap, and the line below says what fitted
+            stocks.forEach((st, i) => { const most = Math.max(tops[i], before[i]); if (Number(state[st.key]) > most) state[st.key] = most; });
             if (typeof text === 'string') text = text.replace(PACKS, (m, n) => `+${Number(n) * look.FOOD_PACK_RATIONS} Rations`);
         }
         if (typeof text !== 'string' || !text) return text;
-        return STOCKS.reduce((out, st, i) => {
+        return stocks.reduce((out, st, i) => {
             const top = tops[i];
             if (!Number.isFinite(top)) return out;
             const r = fitStock(out, st, before[i], top);

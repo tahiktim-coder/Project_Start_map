@@ -27,18 +27,18 @@ _The buttons for the light are in sector-6.md, the Wrong Place ones in pools.md.
 - [NEED 50 SALVAGE | -50 SALVAGE] «OrbitView.js · line 325»
 - A FULL DAY · -1 RATION «OrbitView.js · line 331»
 - NO COST «OrbitView.js · line 331»
-- [TEAM ALREADY WENT | SEND TEAM TO [site] | SEND TEAM DOWN] «OrbitView.js · line 334»
-- [ONE TRIP PER STOP | [n] · SEARCH THE SURFACE] «OrbitView.js · line 335»
-- DATE THE WRECK «OrbitView.js · line 341»
-- WITH THE DISC · NO COST «OrbitView.js · line 342»
-- LEAVE ORBIT «OrbitView.js · line 374»
-- FLY ON «OrbitView.js · line 374»
-- BREAK ORBIT «OrbitView.js · line 374»
-- RETURN TO MAP «OrbitView.js · line 374»
-- SETTLE HERE «OrbitView.js · line 380»
-- ENDS THE JOURNEY «OrbitView.js · line 380»
-- SETTLE HERE «OrbitView.js · line 383»
-- DEEP SCAN FIRST «OrbitView.js · line 383»
+- [TEAM ALREADY WENT | SEND TEAM TO [site] | SEND TEAM DOWN] «OrbitView.js · line 335»
+- [ONE TRIP PER STOP | [n] · SEARCH THE SURFACE] «OrbitView.js · line 336»
+- DATE THE WRECK «OrbitView.js · line 342»
+- WITH THE DISC · NO COST «OrbitView.js · line 343»
+- LEAVE ORBIT «OrbitView.js · line 375»
+- FLY ON «OrbitView.js · line 375»
+- BREAK ORBIT «OrbitView.js · line 375»
+- RETURN TO MAP «OrbitView.js · line 375»
+- SETTLE HERE «OrbitView.js · line 381»
+- ENDS THE JOURNEY «OrbitView.js · line 381»
+- SETTLE HERE «OrbitView.js · line 384»
+- DEEP SCAN FIRST «OrbitView.js · line 384»
 
 ### The planet readout «OrbitView.js · render»
 _After a deep scan._
@@ -92,20 +92,20 @@ _One line per thing found: name, what it means, and how it is marked._
 ### The one site a team can visit «bundle.js · siteOf»
 _Shown on the orbit card; also used in "The lander crosses to [site]"._
 
-- **label** — THE WRECK «bundle.js · line 1663»
-- **note** — ONE OF OUR SHIPS «bundle.js · line 1663»
-- **label** — THE STRANGE SITE «bundle.js · line 1664»
-- **note** — SOMETHING HERE IS WRONG «bundle.js · line 1664»
-- **label** — THE BEACON «bundle.js · line 1665»
-- **note** — A BEACON STILL TRANSMITTING «bundle.js · line 1665»
-- **label** — THE DOME «bundle.js · line 1666»
-- **note** — SOMETHING GREEN UNDER GLASS «bundle.js · line 1666»
-- **label** — THE GRAVES «bundle.js · line 1667»
-- **note** — ROWS OF MARKERS «bundle.js · line 1667»
-- **label** — THE COLONY RUINS «bundle.js · line 1668»
-- **note** — A SETTLEMENT, EMPTY «bundle.js · line 1668»
-- **label** — THE WRECKAGE «bundle.js · line 1669»
-- **note** — A SHIP IN PIECES, IN ORBIT «bundle.js · line 1669»
+- **label** — THE WRECK «bundle.js · line 1820»
+- **note** — ONE OF OUR SHIPS «bundle.js · line 1820»
+- **label** — THE STRANGE SITE «bundle.js · line 1821»
+- **note** — SOMETHING HERE IS WRONG «bundle.js · line 1821»
+- **label** — THE BEACON «bundle.js · line 1822»
+- **note** — A BEACON STILL TRANSMITTING «bundle.js · line 1822»
+- **label** — THE DOME «bundle.js · line 1823»
+- **note** — SOMETHING GREEN UNDER GLASS «bundle.js · line 1823»
+- **label** — THE GRAVES «bundle.js · line 1824»
+- **note** — ROWS OF MARKERS «bundle.js · line 1824»
+- **label** — THE COLONY RUINS «bundle.js · line 1825»
+- **note** — A SETTLEMENT, EMPTY «bundle.js · line 1825»
+- **label** — THE WRECKAGE «bundle.js · line 1826»
+- **note** — A SHIP IN PIECES, IN ORBIT «bundle.js · line 1826»
 
 ### An old station «OrbitView.js · renderStation»
 
@@ -146,23 +146,24 @@ _Shown on the orbit card; also used in "The lander crosses to [site]"._
 ### Deep scan «bundle.js · handleScanAction»
 _The lines for the light are in sector-6.md._
 
-- Deep Scan started... «bundle.js · line 3777»
-- Sharp lock, but the laboratory is down: nobody can work the extra detail into data. «bundle.js · line 3779»
-- The scan picked up extra detail. +1 data. «bundle.js · line 3782»
-- Sharp lock: the scan picked up extra detail. +1 data. «bundle.js · line 3782»
-- Weak lock: the scan had to run twice. 1 extra energy spent. «bundle.js · line 3785»
-- A.U.R.A. tuned the scan. Adequate. «bundle.js · line 3787»
-- ⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior. «bundle.js · line 3800»
-- A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part." «bundle.js · line 3801»
-- Detailed surface analysis complete. Resource data available. «bundle.js · line 3804»
-- ⚡ OLD SIGNAL: a beacon on our own channel, still transmitting. «bundle.js · line 3811»
-- A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it." «bundle.js · line 3812»
-- 📜 ANCIENT RUINS: Structural remnants detected. Archaeological value confirmed. «bundle.js · line 3817»
-- Ancient scanner arrays still partially functional. +1 Energy recovered. «bundle.js · line 3820»
-- 🌿 BIOLOGICAL SIGNATURES: Stable ecosystem detected. EVA conditions favorable. «bundle.js · line 3825»
-- ⚙ TECHNOLOGICAL SIGNATURES: Machine presence confirmed. High salvage potential. «bundle.js · line 3830»
-- 🚀 DERELICT VESSEL: Non-Exodus ship wreckage detected. Investigate for salvage. «bundle.js · line 3835»
-- ⚠ INCOMING TRANSMISSION: Old distress signal detected... «bundle.js · line 3873»
+- Deep Scan started... «bundle.js · line 4005»
+- Sharp lock, but the laboratory is down: nobody can work the extra detail into data. «bundle.js · line 4007»
+- The scan picked up extra detail. +1 data. «bundle.js · line 4010»
+- Sharp lock: the scan picked up extra detail. +1 data. «bundle.js · line 4010»
+- Weak lock: the scan had to run twice. 1 extra energy spent. «bundle.js · line 4013»
+- A.U.R.A. tuned the scan. Adequate. «bundle.js · line 4015»
+- ⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior. «bundle.js · line 4028»
+- A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part." «bundle.js · line 4029»
+- Detailed scan of the station complete. Resource data available. «bundle.js · line 4033»
+- Detailed surface analysis complete. Resource data available. «bundle.js · line 4033»
+- ⚡ OLD SIGNAL: a beacon on our own channel, still transmitting. «bundle.js · line 4040»
+- A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it." «bundle.js · line 4041»
+- 📜 ANCIENT RUINS: Structural remnants detected. Archaeological value confirmed. «bundle.js · line 4046»
+- Ancient scanner arrays still partially functional. +1 Energy recovered. «bundle.js · line 4049»
+- 🌿 BIOLOGICAL SIGNATURES: Stable ecosystem detected. EVA conditions favorable. «bundle.js · line 4054»
+- ⚙ TECHNOLOGICAL SIGNATURES: Machine presence confirmed. High salvage potential. «bundle.js · line 4059»
+- 🚀 DERELICT VESSEL: Non-Exodus ship wreckage detected. Investigate for salvage. «bundle.js · line 4064»
+- ⚠ INCOMING TRANSMISSION: Old distress signal detected... «bundle.js · line 4102»
 
 ### Tuning the scan by hand «SignalTune.js · SignalTune»
 
@@ -182,138 +183,139 @@ _The lines for the light are in sector-6.md._
 ### Long-range scan from the map «bundle.js · handleRemoteScan»
 _Includes A.U.R.A.'s lying scan when she has turned._
 
-- BRIDGE OFFLINE: Remote scanning unavailable. «bundle.js · line 2319»
-- A.U.R.A.: "Scan complete, Commander. All readings normal." [READINGS UNRELIABLE] «bundle.js · line 2344»
-- Air: [unknown]. Gravity: [unknown]. «bundle.js · line 2358»
-- Long-range scan: [planet name]. Salvage: [metal level]. Energy: [energy level]. Signals: [signal str].[dish str] «bundle.js · line 2359»
+- BRIDGE OFFLINE: Remote scanning unavailable. «bundle.js · line 2480»
+- A.U.R.A.: "Scan complete, Commander. All readings normal." [READINGS UNRELIABLE] «bundle.js · line 2505»
+- Air: [unknown]. Gravity: [unknown]. «bundle.js · line 2519»
+- Long-range scan: [planet name]. Salvage: [metal level]. Energy: [energy level]. Signals: [signal str].[dish str] «bundle.js · line 2520»
 
 ## Probes
 
 ### Launching a probe «bundle.js · handleProbeAction»
 _The lines for the light are in sector-6.md._
 
-- ENGINEERING OFFLINE: Probe fabrication unavailable. «bundle.js · line 3902»
-- Probe Fabricated. Systems Operational. (-50 Salvage) «bundle.js · line 3908»
-- Not enough Salvage to fabricate Probe. «bundle.js · line 3912»
-- Probe launched to [planet name] surface... «bundle.js · line 3918»
-- STORAGE WARNING: Salvage capacity reached! «bundle.js · line 3945»
+- ENGINEERING OFFLINE: Probe fabrication unavailable. «bundle.js · line 4131»
+- Probe Fabricated. Systems Operational. (-50 Salvage) «bundle.js · line 4137»
+- Not enough Salvage to fabricate Probe. «bundle.js · line 4141»
+- Probe launched to [planet name]... «bundle.js · line 4147»
+- Probe launched to [planet name] surface... «bundle.js · line 4147»
+- STORAGE WARNING: Salvage capacity reached! «bundle.js · line 4174»
 
 ### Long-range probe from the map «bundle.js · handleRemoteProbe»
 
-- No target selected for remote probe. «bundle.js · line 3962»
-- Target must be scanned before remote probe deployment. «bundle.js · line 3968»
-- Already in orbit. Use standard probe deployment. «bundle.js · line 3974»
-- ENGINEERING OFFLINE: Probe fabrication unavailable. «bundle.js · line 3982»
-- Probe Fabricated. Systems Operational. (-50 Salvage) «bundle.js · line 3988»
-- Not enough Salvage to fabricate Probe. (50 required) «bundle.js · line 3990»
-- Not enough energy for remote probe. ([remote cost] required) «bundle.js · line 3998»
-- Launching long-range probe to [planet name]... (-[remote cost] Energy) «bundle.js · line 4002»
-- [name]: "Data link established. This is exciting — remote sampling!" «bundle.js · line 4008»
-- STORAGE WARNING: Salvage capacity reached! «bundle.js · line 4030»
+- No target selected for remote probe. «bundle.js · line 4191»
+- Target must be scanned before remote probe deployment. «bundle.js · line 4197»
+- Already in orbit. Use standard probe deployment. «bundle.js · line 4203»
+- ENGINEERING OFFLINE: Probe fabrication unavailable. «bundle.js · line 4211»
+- Probe Fabricated. Systems Operational. (-50 Salvage) «bundle.js · line 4217»
+- Not enough Salvage to fabricate Probe. (50 required) «bundle.js · line 4219»
+- Not enough energy for remote probe. ([remote cost] required) «bundle.js · line 4227»
+- Launching long-range probe to [planet name]... (-[remote cost] Energy) «bundle.js · line 4231»
+- [name]: "Data link established. This is exciting — remote sampling!" «bundle.js · line 4237»
+- STORAGE WARNING: Salvage capacity reached! «bundle.js · line 4259»
 
 ### What the probe reports «ProbeSystem.js · performProbe»
 
-- Normal atmospheric stress «ProbeSystem.js · line 11»
-- High Gravity Detected ([gravity]G) «ProbeSystem.js · line 19»
-- High turbulence encountered «ProbeSystem.js · line 25»
-- Extreme pressure/heat detected «ProbeSystem.js · line 29»
-- Hull corrosion warnings «ProbeSystem.js · line 32»
-- [Plating Mitigated] «ProbeSystem.js · line 39»
-- **message** — CRITICAL FAILURE: Probe crushed by environmental stress. Data lost. «ProbeSystem.js · line 47»
-- Artifact retrieved: [name]. «ProbeSystem.js · line 65»
-- [thematic] (+[n] Salvage) «ProbeSystem.js · line 74»
-- Extracted [n] Salvage. «ProbeSystem.js · line 75»
-- [thematic] (+[n] Energy) «ProbeSystem.js · line 79»
-- Siphoned [n] Energy units. «ProbeSystem.js · line 80»
-- DATA LOG: [text] (+[lore bonus] [bonus label] from signal decryption) «ProbeSystem.js · line 88»
-- No significant resources found. «ProbeSystem.js · line 93»
-- **message** — Probe returned ([risk msg]). [final message] [-[n]% HULL] «ProbeSystem.js · line 99»
+- Normal atmospheric stress «ProbeSystem.js · line 12»
+- High Gravity Detected ([gravity]G) «ProbeSystem.js · line 20»
+- High turbulence encountered «ProbeSystem.js · line 26»
+- Extreme pressure/heat detected «ProbeSystem.js · line 30»
+- Hull corrosion warnings «ProbeSystem.js · line 33»
+- [Plating Mitigated] «ProbeSystem.js · line 40»
+- **message** — CRITICAL FAILURE: Probe crushed by environmental stress. Data lost. «ProbeSystem.js · line 48»
+- Artifact retrieved: [name]. «ProbeSystem.js · line 66»
+- [thematic] (+[n] Salvage) «ProbeSystem.js · line 76»
+- Extracted [n] Salvage. «ProbeSystem.js · line 77»
+- [thematic] (+[n] Energy) «ProbeSystem.js · line 82»
+- Siphoned [n] Energy units. «ProbeSystem.js · line 83»
+- DATA LOG: [text] (+[lore bonus] [bonus label] from signal decryption) «ProbeSystem.js · line 91»
+- No significant resources found. «ProbeSystem.js · line 96»
+- **message** — Probe returned ([risk msg]). [final message] [-[n]% HULL] «ProbeSystem.js · line 102»
 
 ### What the probe reports, by planet «ProbeSystem.js · getThematicMessage»
 
-- **ROCKY · metals** — Raw iron deposits pried from fractured bedrock. «ProbeSystem.js · line 134»
-- **ROCKY · metals** — Mineral veins exposed by ancient tectonic shifts. «ProbeSystem.js · line 134»
-- **ROCKY · energy** — Trace radioactive isotopes harvested from surface dust. «ProbeSystem.js · line 135»
-- **ROCKY · energy** — Piezoelectric crystals yielded a modest charge. «ProbeSystem.js · line 135»
-- **GAS_GIANT · metals** — Metallic hydrogen recovered from the upper atmosphere. «ProbeSystem.js · line 138»
-- **GAS_GIANT · metals** — Dense alloy particles filtered from cloud layers. «ProbeSystem.js · line 138»
-- **GAS_GIANT · energy** — Electromagnetic storm energy siphoned successfully. «ProbeSystem.js · line 139»
-- **GAS_GIANT · energy** — Atmospheric turbines captured enormous current. «ProbeSystem.js · line 139»
-- **ICE_WORLD · metals** — Frozen ore cracked free from glacier formations. «ProbeSystem.js · line 142»
-- **ICE_WORLD · metals** — Sub-surface mineral deposits revealed beneath the permafrost. «ProbeSystem.js · line 142»
-- **ICE_WORLD · energy** — Thermal gradient between ice layers converted to power. «ProbeSystem.js · line 143»
-- **ICE_WORLD · energy** — Cryogenic fusion trace detected and harvested. «ProbeSystem.js · line 143»
-- **OCEANIC · metals** — Seafloor nodules extracted from hydrothermal vents. «ProbeSystem.js · line 146»
-- **OCEANIC · metals** — Dissolved mineral concentrations filtered from ocean currents. «ProbeSystem.js · line 146»
-- **OCEANIC · energy** — Tidal energy conversion yielded surplus power. «ProbeSystem.js · line 147»
-- **OCEANIC · energy** — Bio-luminescent organisms provided chemical energy. «ProbeSystem.js · line 147»
-- **DESERT · metals** — Sun-baked metal deposits scraped from dune formations. «ProbeSystem.js · line 150»
-- **DESERT · metals** — Ancient riverbeds revealed concentrated mineral sands. «ProbeSystem.js · line 150»
-- **DESERT · energy** — Solar radiation collection exceeded projections. «ProbeSystem.js · line 151»
-- **DESERT · energy** — Heat differentials between day/night cycles converted efficiently. «ProbeSystem.js · line 151»
-- **VOLCANIC · metals** — Molten alloy samples collected from active flows. «ProbeSystem.js · line 154»
-- **VOLCANIC · metals** — Volcanic glass fragments contained rare-earth elements. «ProbeSystem.js · line 154»
-- **VOLCANIC · energy** — Geothermal energy tapped from magma chamber proximity. «ProbeSystem.js · line 155»
-- **VOLCANIC · energy** — Superheated vents provided enormous power reserves. «ProbeSystem.js · line 155»
-- **TOXIC · metals** — Corrosion-resistant alloys precipitated from acid rain. «ProbeSystem.js · line 158»
-- **TOXIC · metals** — Metallic compounds isolated from toxic atmospheric soup. «ProbeSystem.js · line 158»
-- **TOXIC · energy** — Chemical energy harvested from exothermic atmospheric reactions. «ProbeSystem.js · line 159»
-- **TOXIC · energy** — Volatile gas pockets ignited for controlled energy release. «ProbeSystem.js · line 159»
-- **VITAL · metals** — Bio-mineralized deposits found in fossilized reef structures. «ProbeSystem.js · line 162»
-- **VITAL · metals** — Natural alloy formations discovered beneath grasslands. «ProbeSystem.js · line 162»
-- **VITAL · energy** — Bio-electric organisms yielded sustainable power. «ProbeSystem.js · line 163»
-- **VITAL · energy** — Photosynthetic efficiency captured as usable energy. «ProbeSystem.js · line 163»
-- **BIO_MASS · metals** — Calcified organic structures contained metallic compounds. «ProbeSystem.js · line 166»
-- **BIO_MASS · metals** — The organism's circulatory system carries liquid metal. «ProbeSystem.js · line 166»
-- **BIO_MASS · energy** — Bio-electrical discharge from the planetary organism. «ProbeSystem.js · line 167»
-- **BIO_MASS · energy** — Metabolic byproducts converted to enormous energy reserves. «ProbeSystem.js · line 167»
-- **MECHA · metals** — Salvaged armor plating from dormant war machines. «ProbeSystem.js · line 170»
-- **MECHA · metals** — Decommissioned weapons systems yielded refined alloys. «ProbeSystem.js · line 170»
-- **MECHA · energy** — Power cells extracted from ancient combat chassis. «ProbeSystem.js · line 171»
-- **MECHA · energy** — Dormant reactor cores still held residual charge. «ProbeSystem.js · line 171»
-- **SHATTERED · metals** — Exposed planetary core fragments — pure dense metals. «ProbeSystem.js · line 174»
-- **SHATTERED · metals** — Gravitational compression created ultra-dense alloy deposits. «ProbeSystem.js · line 174»
-- **SHATTERED · energy** — Core radiation leakage captured through shielded collectors. «ProbeSystem.js · line 175»
-- **SHATTERED · energy** — Gravitational anomaly converted to usable power. «ProbeSystem.js · line 175»
-- **TERRAFORMED · metals** — Precision-manufactured infrastructure components recovered. «ProbeSystem.js · line 178»
-- **TERRAFORMED · metals** — Perfectly preserved construction materials from terraforming arrays. «ProbeSystem.js · line 178»
-- **TERRAFORMED · energy** — Self-sustaining power grid still operational after millennia. «ProbeSystem.js · line 179»
-- **TERRAFORMED · energy** — Terraforming reactors yielded clean, stable energy. «ProbeSystem.js · line 179»
-- **CRYSTALLINE · metals** — Crystal lattice structures contained embedded metals. «ProbeSystem.js · line 182»
-- **CRYSTALLINE · metals** — Resonance mining shattered formations to reveal ore cores. «ProbeSystem.js · line 182»
-- **CRYSTALLINE · energy** — Harmonic crystals resonated into energy. Remarkable. «ProbeSystem.js · line 183»
-- **CRYSTALLINE · energy** — Piezoelectric output from crystal formations exceeded all models. «ProbeSystem.js · line 183»
-- **ROGUE · metals** — Dense core materials accessible through the frozen surface. «ProbeSystem.js · line 186»
-- **ROGUE · metals** — Ancient meteor impacts left rich metal deposits. «ProbeSystem.js · line 186»
-- **ROGUE · energy** — Residual thermal energy from the planet's dying core. «ProbeSystem.js · line 187»
-- **ROGUE · energy** — Radioactive decay provided faint but usable power. «ProbeSystem.js · line 187»
-- **TIDALLY_LOCKED · metals** — Mineral deposits concentrated along the twilight boundary. «ProbeSystem.js · line 190»
-- **TIDALLY_LOCKED · metals** — Extreme temperature cycling crystallized rare metals at the terminator. «ProbeSystem.js · line 190»
-- **TIDALLY_LOCKED · energy** — Permanent temperature differential yielded infinite thermal energy. «ProbeSystem.js · line 191»
-- **TIDALLY_LOCKED · energy** — Solar collection on the bright side exceeded all parameters. «ProbeSystem.js · line 191»
-- **HOLLOW · metals** — Shell material impossibly dense — unknown alloy composition. «ProbeSystem.js · line 194»
-- **HOLLOW · metals** — Interior scaffolding contained metals not on the periodic table. «ProbeSystem.js · line 194»
-- **HOLLOW · energy** — The interior star radiates harvestable energy continuously. «ProbeSystem.js · line 195»
-- **HOLLOW · energy** — Unknown energy source pulses from the hollow core. «ProbeSystem.js · line 195»
-- **SYMBIOTE_WORLD · metals** — The biosphere offered mineral deposits willingly. Unsettling. «ProbeSystem.js · line 198»
-- **SYMBIOTE_WORLD · metals** — Bio-manufactured alloys grew from the soil as we watched. «ProbeSystem.js · line 198»
-- **SYMBIOTE_WORLD · energy** — The planet converted our waste heat into gift energy. It wants us to stay. «ProbeSystem.js · line 199»
-- **SYMBIOTE_WORLD · energy** — Bio-electric tendrils connected to our collectors unprompted. «ProbeSystem.js · line 199»
-- **MIRROR · metals** — The reflective surface is a perfect metallic alloy — samples taken. «ProbeSystem.js · line 202»
-- **MIRROR · metals** — Sub-surface excavation revealed recursive mirror-metal layers. «ProbeSystem.js · line 202»
-- **MIRROR · energy** — Our own energy signature reflected back, amplified. Impossible physics. «ProbeSystem.js · line 203»
-- **MIRROR · energy** — Solar energy bounced infinitely between surface layers. «ProbeSystem.js · line 203»
-- **GRAVEYARD · metals** — Stripped hull plating from a crushed freighter. «ProbeSystem.js · line 206»
-- **GRAVEYARD · metals** — Compressed wreckage yielded dense salvageable alloys. «ProbeSystem.js · line 206»
-- **GRAVEYARD · metals** — Ship graveyard: millions of tons of recyclable metal. «ProbeSystem.js · line 206»
-- **GRAVEYARD · energy** — Dead reactor cores still held trace power. «ProbeSystem.js · line 207»
-- **GRAVEYARD · energy** — Emergency batteries from hundreds of ships — most still charged. «ProbeSystem.js · line 207»
-- **GRAVEYARD · energy** — Power conduits from an ancient vessel still flickered with current. «ProbeSystem.js · line 207»
-- **SINGING · metals** — Resonance-hardened minerals formed by millennia of harmonic vibration. «ProbeSystem.js · line 210»
-- **SINGING · metals** — The singing crystallized nearby metals into pure formations. «ProbeSystem.js · line 210»
-- **SINGING · energy** — Harmonic frequencies converted directly to electrical charge. «ProbeSystem.js · line 211»
-- **SINGING · energy** — The planet's song IS energy — we captured a chorus. «ProbeSystem.js · line 211»
-- **SINGING · energy** — Sound-to-energy conversion yielded unprecedented output. «ProbeSystem.js · line 211»
+- **ROCKY · metals** — Raw iron deposits pried from fractured bedrock. «ProbeSystem.js · line 146»
+- **ROCKY · metals** — Mineral veins exposed by ancient tectonic shifts. «ProbeSystem.js · line 146»
+- **ROCKY · energy** — Trace radioactive isotopes harvested from surface dust. «ProbeSystem.js · line 147»
+- **ROCKY · energy** — Piezoelectric crystals yielded a modest charge. «ProbeSystem.js · line 147»
+- **GAS_GIANT · metals** — Metallic hydrogen recovered from the upper atmosphere. «ProbeSystem.js · line 150»
+- **GAS_GIANT · metals** — Dense alloy particles filtered from cloud layers. «ProbeSystem.js · line 150»
+- **GAS_GIANT · energy** — Electromagnetic storm energy siphoned successfully. «ProbeSystem.js · line 151»
+- **GAS_GIANT · energy** — Atmospheric turbines captured enormous current. «ProbeSystem.js · line 151»
+- **ICE_WORLD · metals** — Frozen ore cracked free from glacier formations. «ProbeSystem.js · line 154»
+- **ICE_WORLD · metals** — Sub-surface mineral deposits revealed beneath the permafrost. «ProbeSystem.js · line 154»
+- **ICE_WORLD · energy** — Thermal gradient between ice layers converted to power. «ProbeSystem.js · line 155»
+- **ICE_WORLD · energy** — Cryogenic fusion trace detected and harvested. «ProbeSystem.js · line 155»
+- **OCEANIC · metals** — Seafloor nodules extracted from hydrothermal vents. «ProbeSystem.js · line 158»
+- **OCEANIC · metals** — Dissolved mineral concentrations filtered from ocean currents. «ProbeSystem.js · line 158»
+- **OCEANIC · energy** — Tidal energy conversion yielded surplus power. «ProbeSystem.js · line 159»
+- **OCEANIC · energy** — Bio-luminescent organisms provided chemical energy. «ProbeSystem.js · line 159»
+- **DESERT · metals** — Sun-baked metal deposits scraped from dune formations. «ProbeSystem.js · line 162»
+- **DESERT · metals** — Ancient riverbeds revealed concentrated mineral sands. «ProbeSystem.js · line 162»
+- **DESERT · energy** — Solar radiation collection exceeded projections. «ProbeSystem.js · line 163»
+- **DESERT · energy** — Heat differentials between day/night cycles converted efficiently. «ProbeSystem.js · line 163»
+- **VOLCANIC · metals** — Molten alloy samples collected from active flows. «ProbeSystem.js · line 166»
+- **VOLCANIC · metals** — Volcanic glass fragments contained rare-earth elements. «ProbeSystem.js · line 166»
+- **VOLCANIC · energy** — Geothermal energy tapped from magma chamber proximity. «ProbeSystem.js · line 167»
+- **VOLCANIC · energy** — Superheated vents provided enormous power reserves. «ProbeSystem.js · line 167»
+- **TOXIC · metals** — Corrosion-resistant alloys precipitated from acid rain. «ProbeSystem.js · line 170»
+- **TOXIC · metals** — Metallic compounds isolated from toxic atmospheric soup. «ProbeSystem.js · line 170»
+- **TOXIC · energy** — Chemical energy harvested from exothermic atmospheric reactions. «ProbeSystem.js · line 171»
+- **TOXIC · energy** — Volatile gas pockets ignited for controlled energy release. «ProbeSystem.js · line 171»
+- **VITAL · metals** — Bio-mineralized deposits found in fossilized reef structures. «ProbeSystem.js · line 174»
+- **VITAL · metals** — Natural alloy formations discovered beneath grasslands. «ProbeSystem.js · line 174»
+- **VITAL · energy** — Bio-electric organisms yielded sustainable power. «ProbeSystem.js · line 175»
+- **VITAL · energy** — Photosynthetic efficiency captured as usable energy. «ProbeSystem.js · line 175»
+- **BIO_MASS · metals** — Calcified organic structures contained metallic compounds. «ProbeSystem.js · line 178»
+- **BIO_MASS · metals** — The organism's circulatory system carries liquid metal. «ProbeSystem.js · line 178»
+- **BIO_MASS · energy** — Bio-electrical discharge from the planetary organism. «ProbeSystem.js · line 179»
+- **BIO_MASS · energy** — Metabolic byproducts converted to enormous energy reserves. «ProbeSystem.js · line 179»
+- **MECHA · metals** — Salvaged armor plating from dormant war machines. «ProbeSystem.js · line 182»
+- **MECHA · metals** — Decommissioned weapons systems yielded refined alloys. «ProbeSystem.js · line 182»
+- **MECHA · energy** — Power cells extracted from ancient combat chassis. «ProbeSystem.js · line 183»
+- **MECHA · energy** — Dormant reactor cores still held residual charge. «ProbeSystem.js · line 183»
+- **SHATTERED · metals** — Exposed planetary core fragments — pure dense metals. «ProbeSystem.js · line 186»
+- **SHATTERED · metals** — Gravitational compression created ultra-dense alloy deposits. «ProbeSystem.js · line 186»
+- **SHATTERED · energy** — Core radiation leakage captured through shielded collectors. «ProbeSystem.js · line 187»
+- **SHATTERED · energy** — Gravitational anomaly converted to usable power. «ProbeSystem.js · line 187»
+- **TERRAFORMED · metals** — Precision-manufactured infrastructure components recovered. «ProbeSystem.js · line 190»
+- **TERRAFORMED · metals** — Perfectly preserved construction materials from terraforming arrays. «ProbeSystem.js · line 190»
+- **TERRAFORMED · energy** — Self-sustaining power grid still operational after millennia. «ProbeSystem.js · line 191»
+- **TERRAFORMED · energy** — Terraforming reactors yielded clean, stable energy. «ProbeSystem.js · line 191»
+- **CRYSTALLINE · metals** — Crystal lattice structures contained embedded metals. «ProbeSystem.js · line 194»
+- **CRYSTALLINE · metals** — Resonance mining shattered formations to reveal ore cores. «ProbeSystem.js · line 194»
+- **CRYSTALLINE · energy** — Harmonic crystals resonated into energy. Remarkable. «ProbeSystem.js · line 195»
+- **CRYSTALLINE · energy** — Piezoelectric output from crystal formations exceeded all models. «ProbeSystem.js · line 195»
+- **ROGUE · metals** — Dense core materials accessible through the frozen surface. «ProbeSystem.js · line 198»
+- **ROGUE · metals** — Ancient meteor impacts left rich metal deposits. «ProbeSystem.js · line 198»
+- **ROGUE · energy** — Residual thermal energy from the planet's dying core. «ProbeSystem.js · line 199»
+- **ROGUE · energy** — Radioactive decay provided faint but usable power. «ProbeSystem.js · line 199»
+- **TIDALLY_LOCKED · metals** — Mineral deposits concentrated along the twilight boundary. «ProbeSystem.js · line 202»
+- **TIDALLY_LOCKED · metals** — Extreme temperature cycling crystallized rare metals at the terminator. «ProbeSystem.js · line 202»
+- **TIDALLY_LOCKED · energy** — Permanent temperature differential yielded infinite thermal energy. «ProbeSystem.js · line 203»
+- **TIDALLY_LOCKED · energy** — Solar collection on the bright side exceeded all parameters. «ProbeSystem.js · line 203»
+- **HOLLOW · metals** — Shell material impossibly dense — unknown alloy composition. «ProbeSystem.js · line 206»
+- **HOLLOW · metals** — Interior scaffolding contained metals not on the periodic table. «ProbeSystem.js · line 206»
+- **HOLLOW · energy** — The interior star radiates harvestable energy continuously. «ProbeSystem.js · line 207»
+- **HOLLOW · energy** — Unknown energy source pulses from the hollow core. «ProbeSystem.js · line 207»
+- **SYMBIOTE_WORLD · metals** — The biosphere offered mineral deposits willingly. Unsettling. «ProbeSystem.js · line 210»
+- **SYMBIOTE_WORLD · metals** — Bio-manufactured alloys grew from the soil as we watched. «ProbeSystem.js · line 210»
+- **SYMBIOTE_WORLD · energy** — The planet converted our waste heat into gift energy. It wants us to stay. «ProbeSystem.js · line 211»
+- **SYMBIOTE_WORLD · energy** — Bio-electric tendrils connected to our collectors unprompted. «ProbeSystem.js · line 211»
+- **MIRROR · metals** — The reflective surface is a perfect metallic alloy — samples taken. «ProbeSystem.js · line 214»
+- **MIRROR · metals** — Sub-surface excavation revealed recursive mirror-metal layers. «ProbeSystem.js · line 214»
+- **MIRROR · energy** — Our own energy signature reflected back, amplified. Impossible physics. «ProbeSystem.js · line 215»
+- **MIRROR · energy** — Solar energy bounced infinitely between surface layers. «ProbeSystem.js · line 215»
+- **GRAVEYARD · metals** — Stripped hull plating from a crushed freighter. «ProbeSystem.js · line 218»
+- **GRAVEYARD · metals** — Compressed wreckage yielded dense salvageable alloys. «ProbeSystem.js · line 218»
+- **GRAVEYARD · metals** — Ship graveyard: millions of tons of recyclable metal. «ProbeSystem.js · line 218»
+- **GRAVEYARD · energy** — Dead reactor cores still held trace power. «ProbeSystem.js · line 219»
+- **GRAVEYARD · energy** — Emergency batteries from hundreds of ships — most still charged. «ProbeSystem.js · line 219»
+- **GRAVEYARD · energy** — Power conduits from an ancient vessel still flickered with current. «ProbeSystem.js · line 219»
+- **SINGING · metals** — Resonance-hardened minerals formed by millennia of harmonic vibration. «ProbeSystem.js · line 222»
+- **SINGING · metals** — The singing crystallized nearby metals into pure formations. «ProbeSystem.js · line 222»
+- **SINGING · energy** — Harmonic frequencies converted directly to electrical charge. «ProbeSystem.js · line 223»
+- **SINGING · energy** — The planet's song IS energy — we captured a chorus. «ProbeSystem.js · line 223»
+- **SINGING · energy** — Sound-to-energy conversion yielded unprecedented output. «ProbeSystem.js · line 223»
 
 ### What the probe brings back «LootTables.js · LootTables»
 _Data logs and finds ("DATA LOG: …")._
@@ -366,13 +368,15 @@ _Data logs and finds ("DATA LOG: …")._
 ### Sending the team down «bundle.js · handleEvaAction»
 _The lines for the light are in sector-6.md._
 
-- A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished." «bundle.js · line 4096»
-- Aris: "Absolutely not. [name] needs treatment first. No one goes out there." «bundle.js · line 4108»
-- MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge. «bundle.js · line 4115»
-- EVA team deployed: [name] and [name]. «bundle.js · line 4144»
-- A.U.R.A.: "Team away, Commander. I have their vitals." «bundle.js · line 4149»
-- Mira insists the team stays out for a full day. -1 Ration. «bundle.js · line 4161»
-- The lander crosses to [site]. «bundle.js · line 4178»
+- A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished." «bundle.js · line 4325»
+- Aris: "Absolutely not. [name] needs treatment first. No one goes out there." «bundle.js · line 4342»
+- A.U.R.A.: "Nobody aboard can go down, Commander." «bundle.js · line 4349»
+- MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge. «bundle.js · line 4350»
+- EVA team deployed: [name]. «bundle.js · line 4379»
+- EVA team deployed: [name] and [name]. «bundle.js · line 4380»
+- A.U.R.A.: "Team away, Commander. I have their vitals." «bundle.js · line 4385»
+- Mira insists the team stays out for a full day. -1 Ration. «bundle.js · line 4397»
+- The lander crosses to [site]. «bundle.js · line 4415»
 
 ### Who goes, and the radio «AwayTeam.js · AwayTeam»
 _The crew picker, their chatter on the way down, and the return screen._
@@ -390,24 +394,24 @@ _The crew picker, their chatter on the way down, and the return screen._
 - Separation confirmed. See you soon, Commander. «AwayTeam.js · line 23»
 - Contact. Dust everywhere. «AwayTeam.js · line 23»
 - Two hundred metres to go. Eyes up. «AwayTeam.js · line 23»
-- [name] [m][Already on edge.] «AwayTeam.js · line 46»
-- AWAY TEAM — [THE SURFACE] «AwayTeam.js · line 50»
-- Who goes down? «AwayTeam.js · line 51»
-- Choose two. The commander stays with the ship. If something goes wrong down there, it goes wrong for one of them. «AwayTeam.js · line 52»
-- SEND THEM «AwayTeam.js · line 55»
-- NOT THIS TIME «AwayTeam.js · line 56»
-- AWAY TEAM — [planet name] «AwayTeam.js · line 108»
-- did not come back — [lost on the surface] «AwayTeam.js · line 138»
-- carried in, hurt «AwayTeam.js · line 138»
-- back aboard «AwayTeam.js · line 138»
-- [name] did not come back «AwayTeam.js · line 143»
-- They made it back. Barely. «AwayTeam.js · line 143»
-- Both back aboard «AwayTeam.js · line 143»
-- THE AIRLOCK CYCLES «AwayTeam.js · line 145»
-- A stasis pod is being prepared in the cargo hold. Everyone aboard felt it: stress +1. «AwayTeam.js · line 149»
-- The crew saw them carried in: stress +1 for everyone. «AwayTeam.js · line 149»
-- [CONTINUE] «AwayTeam.js · line 150»
-- CARRY ON «AwayTeam.js · line 152»
+- [name] [m][Already on edge.] «AwayTeam.js · line 53»
+- AWAY TEAM — [THE SURFACE] «AwayTeam.js · line 58»
+- [Who goes across? | Who goes down?] «AwayTeam.js · line 59»
+- Choose two. The commander stays with the ship. If something goes wrong [out there | down there], it goes wrong for one of them. «AwayTeam.js · line 60»
+- SEND THEM «AwayTeam.js · line 63»
+- NOT THIS TIME «AwayTeam.js · line 64»
+- AWAY TEAM — [planet name] «AwayTeam.js · line 116»
+- did not come back — [lost on the surface] «AwayTeam.js · line 146»
+- carried in, hurt «AwayTeam.js · line 146»
+- back aboard «AwayTeam.js · line 146»
+- [name] did not come back «AwayTeam.js · line 151»
+- They made it back. Barely. «AwayTeam.js · line 151»
+- Both back aboard «AwayTeam.js · line 151»
+- THE AIRLOCK CYCLES «AwayTeam.js · line 153»
+- A stasis pod is being prepared in the cargo hold. Everyone aboard felt it: stress +1. «AwayTeam.js · line 157»
+- The crew saw them carried in: stress +1 for everyone. «AwayTeam.js · line 157»
+- [CONTINUE] «AwayTeam.js · line 158»
+- CARRY ON «AwayTeam.js · line 160»
 
 ### Landing (the mini-game) «LanderGame.js · LanderGame»
 
@@ -425,97 +429,98 @@ _The crew picker, their chatter on the way down, and the return screen._
 - **crash · effect** — someone is hurt before the hatch even opens «LanderGame.js · line 49»
 - **label** — OFF THE MARK «LanderGame.js · line 51»
 - **effect** — down safely, but a long walk from the marked spot «LanderGame.js · line 51»
-- **word** — NONE «LanderGame.js · line 169»
-- **word** — WATER «LanderGame.js · line 170»
-- **word** — LAVA «LanderGame.js · line 170»
-- **word** — LEVEL «LanderGame.js · line 172»
-- **word** — SLOPE «LanderGame.js · line 173»
-- ..oowwwwwoo.. «LanderGame.js · line 329»
-- Land slowly where the ground reads LEVEL. «LanderGame.js · line 477»
-- Land slowly between the blinking lights. «LanderGame.js · line 477»
-- LANDING — [name] ABOARD «LanderGame.js · line 479»
-- [The surface] «LanderGame.js · line 479»
-- Hold ← or → ( A, D) to push, both to brake. [land] «LanderGame.js · line 490»
-- Push left «LanderGame.js · line 492»
-- Push right «LanderGame.js · line 493»
-- Let A.U.R.A. land «LanderGame.js · line 494»
-- ON IT «LanderGame.js · line 620»
+- **word** — NONE «LanderGame.js · line 170»
+- **word** — WATER «LanderGame.js · line 171»
+- **word** — LAVA «LanderGame.js · line 171»
+- **word** — LEVEL «LanderGame.js · line 173»
+- **word** — SLOPE «LanderGame.js · line 174»
+- ..oowwwwwoo.. «LanderGame.js · line 330»
+- Land slowly where the ground reads LEVEL. «LanderGame.js · line 478»
+- Land slowly between the blinking lights. «LanderGame.js · line 478»
+- LANDING — [name] ABOARD «LanderGame.js · line 480»
+- [The surface] «LanderGame.js · line 480»
+- Hold ← or → ( A, D) to push, both to brake. [land] «LanderGame.js · line 491»
+- Push left «LanderGame.js · line 493»
+- Push right «LanderGame.js · line 494»
+- Let A.U.R.A. land «LanderGame.js · line 495»
+- ON IT «LanderGame.js · line 621»
 
 ### How the landing went «bundle.js · applyLanding»
 
-- Soft landing. The team steps out steady. «bundle.js · line 4280»
-- Soft landing on the marked spot. The team steps out steady. «bundle.js · line 4280»
-- Down safely, but well away from the marked spot. It is a long walk. «bundle.js · line 4281»
-- WARNING: The lander came down hard. [name] is INJURED before the hatch even opens. «bundle.js · line 4287»
+- Jaxon: "I helped A.U.R.A. with the landing. We came down softer." «bundle.js · line 4611»
+- Soft landing. The team steps out steady. «bundle.js · line 4615»
+- Soft landing on the marked spot. The team steps out steady. «bundle.js · line 4615»
+- Down safely, but well away from the marked spot. It is a long walk. «bundle.js · line 4616»
+- WARNING: The lander came down hard. [name] is INJURED before the hatch even opens. «bundle.js · line 4623»
 
 ### Cutting into one of our wrecks (the mini-game) «Torch.js · Torch»
 _Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet._
 
-- **cut** — The cutting torch «Torch.js · line 60»
-- **frozen** — A frozen hatch «Torch.js · line 60»
-- **fuel** — A fuel line «Torch.js · line 60»
-- **already** — An open hatch «Torch.js · line 60»
-- **torn** — A split hull «Torch.js · line 60»
-- **panel** — A working airlock «Torch.js · line 60»
-- **hatch** — PRESS AND HOLD «Torch.js · line 69»
-- **hatch** — ON THE DOTTED LINE «Torch.js · line 69»
-- **hatch** — WHITE MEANS CUT «Torch.js · line 69»
-- **hatch** — FOLLOW THE LINE SLOWLY «Torch.js · line 69»
-- **disc** — PRESS AND HOLD ON A LINE «Torch.js · line 70»
-- **disc** — INSIDE THE DOTTED RING «Torch.js · line 70»
-- **melt** — PRESS AND HOLD «Torch.js · line 71»
-- **melt** — TO WARM THE FROST «Torch.js · line 71»
-- **melt** — MELT IT OFF «Torch.js · line 71»
-- **melt** — ALL ROUND THE HATCH «Torch.js · line 71»
-- twenty years · twenty years · a hundred years · two hundred years · three hundred years · four hundred years «Torch.js · line 144»
-- **hatch** — [hull]. Dead about [dead for]. The hatch has no power, so it won't open. «Torch.js · line 157»
-- **hatch** — Hold the torch on the line until it glows white, then move on. «Torch.js · line 158»
-- **fast** — Too fast. That's only marking the plate, not cutting it. «Torch.js · line 159»
-- **hot** — The plate's getting hot. Keep moving. «Torch.js · line 159»
-- **warp** — Too hot, and now it's warped. Let it cool a second. «Torch.js · line 160»
-- **stray** — You're off the seam. That's fuel we don't get back. «Torch.js · line 160»
-- **half** — Still nothing warm on the other side. «Torch.js · line 161»
-- **gap** — It's still holding somewhere. Find the bit you missed. «Torch.js · line 161»
-- **open** — Hold on. Something in there caught your light. «Torch.js · line 162»
-- **open** — [n][n] in the dark. Go slow in there. «Torch.js · line 162»
-- **frozen** — [hull]. Dead about [dead for]. The hatch is under thick frost. «Torch.js · line 163»
-- **frozen** — Hold the flame back and warm it. We can't cut what we can't see. «Torch.js · line 164»
-- **shows** — The ice has split most of the seal. Cut the bits that still hold. «Torch.js · line 165»
-- **frozenOpen** — It's iced over in there too. «Torch.js · line 166»
-- **frozenOpen** — Mind your gloves on that ice. It cuts. «Torch.js · line 166»
-- **fuel** — [hull]. Dead about [dead for]. A fuel line runs across the hatch. «Torch.js · line 167»
-- **fuel** — There's still frozen fuel in that line. Stop the flame where it crosses the seam. «Torch.js · line 168»
-- **line** — You hit the fuel line! Keep the flame off it. «Torch.js · line 169»
-- **fuelOpen** — The line's snapped. Only vapour left in it. «Torch.js · line 170»
-- **fuelOpen** — Keep your suit clear of the broken end. «Torch.js · line 170»
-- **hatchDry** — The tank is empty. The hatch still holds. «Torch.js · line 171»
-- **hatchDry** — Come back to the lander. We'll swap the tank. «Torch.js · line 171»
-- **handOver** — Give it here. I'll go slow so it cuts clean. «Torch.js · line 172»
-- **newTank** — A full tank. Pick up where you left off. «Torch.js · line 172»
-- **disc** — The disc is out of the hold, in front of the light. «Torch.js · line 173»
-- **disc** — Where the lines meet is home. Burn the centre, then cut each line inside the ring. «Torch.js · line 174»
-- **discHot** — The gold is too hot to cut. Wait for it to cool. «Torch.js · line 175»
-- **fig** — You pull the torch back from the figures. «Torch.js · line 175»
-- **done** — The map is gone, Commander. «Torch.js · line 176»
-- **clean** — Nobody can use it to find Earth now. «Torch.js · line 176»
-- **marked** — Scorched or not, nobody can use it to find Earth now. «Torch.js · line 177»
-- **discDry** — The tank is empty. The map is still there. «Torch.js · line 177»
-- **label** — Let [cutter] cut it «Torch.js · line 694»
-- **label** — Continue «Torch.js · line 695»
-- **label** — New tank «Torch.js · line 696»
-- FUEL LINE «Torch.js · line 1337»
-- OFF THE LINE «Torch.js · line 1339»
-- FUEL LINE «Torch.js · line 1340»
-- SLOW DOWN «Torch.js · line 1342»
-- MOVE ON «Torch.js · line 1343»
-- HEAT [n]% «Torch.js · line 1366»
-- FUEL [n]% «Torch.js · line 1368»
-- FROST [n]% «Torch.js · line 1430»
-- SEAM [pct]% «Torch.js · line 1430»
-- SCARS [scars] WARPS [n] «Torch.js · line 1431»
-- LINES [pad start] «Torch.js · line 1479»
-- **kicker** — EVA «Torch.js · line 1519»
-- **title** — The cutting torch «Torch.js · line 1519»
+- **cut** — The cutting torch «Torch.js · line 66»
+- **frozen** — A frozen hatch «Torch.js · line 66»
+- **fuel** — A fuel line «Torch.js · line 66»
+- **already** — An open hatch «Torch.js · line 66»
+- **torn** — A split hull «Torch.js · line 66»
+- **panel** — A working airlock «Torch.js · line 66»
+- **hatch** — PRESS AND HOLD «Torch.js · line 75»
+- **hatch** — ON THE DOTTED LINE «Torch.js · line 75»
+- **hatch** — WHITE MEANS CUT «Torch.js · line 75»
+- **hatch** — FOLLOW THE LINE SLOWLY «Torch.js · line 75»
+- **disc** — PRESS AND HOLD ON A LINE «Torch.js · line 76»
+- **disc** — INSIDE THE DOTTED RING «Torch.js · line 76»
+- **melt** — PRESS AND HOLD «Torch.js · line 77»
+- **melt** — TO WARM THE FROST «Torch.js · line 77»
+- **melt** — MELT IT OFF «Torch.js · line 77»
+- **melt** — ALL ROUND THE HATCH «Torch.js · line 77»
+- twenty years · twenty years · a hundred years · two hundred years · three hundred years · four hundred years «Torch.js · line 150»
+- **hatch** — [hull]. Dead about [dead for]. The hatch has no power, so it won't open. «Torch.js · line 166»
+- **hatch** — Hold the torch on the line until it glows white, then move on. «Torch.js · line 167»
+- **fast** — Too fast. That's only marking the plate, not cutting it. «Torch.js · line 168»
+- **hot** — The plate's getting hot. Keep moving. «Torch.js · line 168»
+- **warp** — Too hot, and now it's warped. Let it cool a second. «Torch.js · line 169»
+- **stray** — You're off the seam. That's fuel we don't get back. «Torch.js · line 169»
+- **half** — Still nothing warm on the other side. «Torch.js · line 170»
+- **gap** — It's still holding somewhere. Find the bit you missed. «Torch.js · line 170»
+- **open** — Hold on. Something in there caught your light. «Torch.js · line 171»
+- **open** — [n][n] in the dark. Go slow in there. «Torch.js · line 171»
+- **frozen** — [hull]. Dead about [dead for]. The hatch is under thick frost. «Torch.js · line 172»
+- **frozen** — Hold the flame back and warm it. We can't cut what we can't see. «Torch.js · line 173»
+- **shows** — The ice has split most of the seal. Cut the bits that still hold. «Torch.js · line 174»
+- **frozenOpen** — It's iced over in there too. «Torch.js · line 175»
+- **frozenOpen** — Mind your gloves on that ice. It cuts. «Torch.js · line 175»
+- **fuel** — [hull]. Dead about [dead for]. A fuel line runs across the hatch. «Torch.js · line 176»
+- **fuel** — There's still frozen fuel in that line. Stop the flame where it crosses the seam. «Torch.js · line 177»
+- **line** — You hit the fuel line! Keep the flame off it. «Torch.js · line 178»
+- **fuelOpen** — The line's snapped. Only vapour left in it. «Torch.js · line 179»
+- **fuelOpen** — Keep your suit clear of the broken end. «Torch.js · line 179»
+- **hatchDry** — The tank is empty. The hatch still holds. «Torch.js · line 180»
+- **hatchDry** — Come back to the lander. We'll swap the tank. «Torch.js · line 180»
+- **handOver** — Give it here. I'll go slow so it cuts clean. «Torch.js · line 181»
+- **newTank** — A full tank. Pick up where you left off. «Torch.js · line 181»
+- **disc** — The disc is out of the hold, in front of the light. «Torch.js · line 182»
+- **disc** — Where the lines meet is home. Burn the centre, then cut each line inside the ring. «Torch.js · line 183»
+- **discHot** — The gold is too hot to cut. Wait for it to cool. «Torch.js · line 184»
+- **fig** — You pull the torch back from the figures. «Torch.js · line 184»
+- **done** — The map is gone, Commander. «Torch.js · line 185»
+- **clean** — Nobody can use it to find Earth now. «Torch.js · line 185»
+- **marked** — Scorched or not, nobody can use it to find Earth now. «Torch.js · line 186»
+- **discDry** — The tank is empty. The map is still there. «Torch.js · line 186»
+- **label** — Let [cutter] cut it «Torch.js · line 710»
+- **label** — Continue «Torch.js · line 711»
+- **label** — New tank «Torch.js · line 712»
+- FUEL LINE «Torch.js · line 1380»
+- OFF THE LINE «Torch.js · line 1382»
+- FUEL LINE «Torch.js · line 1383»
+- SLOW DOWN «Torch.js · line 1385»
+- MOVE ON «Torch.js · line 1386»
+- HEAT [n]% «Torch.js · line 1409»
+- FUEL [n]% «Torch.js · line 1411»
+- FROST [n]% «Torch.js · line 1480»
+- SEAM [pct]% «Torch.js · line 1480»
+- SCARS [scars] WARPS [n] «Torch.js · line 1481»
+- LINES [pad start] «Torch.js · line 1529»
+- **kicker** — EVA «Torch.js · line 1569»
+- **title** — The cutting torch «Torch.js · line 1569»
 
 ### When the hatch is open «bundle.js · cutIntoWreck»
 
@@ -524,159 +529,161 @@ _(no text)_
 ### The choice card on the surface «bundle.js · showEventModal»
 _The card around every surface find (pools.md, Surface finds)._
 
-- **BIOLOGICAL** — Living things here are calm «bundle.js · line 4334»
-- **ALIEN SIGNAL** — Unknown signal nearby «bundle.js · line 4334»
-- **ANCIENT RUINS** — Old ruins, still solid «bundle.js · line 4334»
-- **TECHNOLOGICAL** — Working machines nearby «bundle.js · line 4335»
-- **DERELICT** — Unstable wreckage «bundle.js · line 4335»
-- **PREDATORY** — Something hunts here «bundle.js · line 4335»
-- **SOFT LANDING** — You put them down gently «bundle.js · line 4336»
-- **HARD LANDING** — The landing shook them up «bundle.js · line 4336»
-- **MIRA SCANNED IT** — Mira scanned the ground «bundle.js · line 4336»
-- **SCANNED** — Scanned from orbit first «bundle.js · line 4337»
-- **SHARP SCAN** — A sharp scan from orbit «bundle.js · line 4337»
-- **NOT SCANNED** — Never scanned from orbit «bundle.js · line 4337»
-- [type]: [n]% [more dangerous | safer] «bundle.js · line 4340»
-- **METALS** — +40 to 79 salvage «bundle.js · line 4345»
-- **METALS_HIGH** — +60 to 119 salvage «bundle.js · line 4345»
-- **ENERGY** — +[eva lo] to [eva hi] energy «bundle.js · line 4345»
-- energy already full «bundle.js · line 4347»
-- +[energy room] energy «bundle.js · line 4347»
-- +[eva lo] to [energy room] energy «bundle.js · line 4347»
-- an item[n] «bundle.js · line 4350»
-- +[n] data «bundle.js · line 4351»
-- Vance refuses «bundle.js · line 4361»
-- Mira overrides this «bundle.js · line 4361»
-- [total risk]% chance someone gets hurt «bundle.js · line 4361»
-- TEAM ON THE GROUND «bundle.js · line 4371»
-- [name] ON THE GROUND «bundle.js · line 4374»
-- GOING IN «bundle.js · line 4376»
-- Vance: “I am not risking anyone on something that dangerous.” «bundle.js · line 4377»
-- Mira: “The safe option gets us nothing. I am going in.” «bundle.js · line 4378»
-- WHAT DO THEY DO? «bundle.js · line 4379»
+- **BIOLOGICAL** — Living things here are calm «bundle.js · line 4673»
+- **ALIEN SIGNAL** — Unknown signal nearby «bundle.js · line 4673»
+- **ANCIENT RUINS** — Old ruins, still solid «bundle.js · line 4673»
+- **TECHNOLOGICAL** — Working machines nearby «bundle.js · line 4674»
+- **DERELICT** — Unstable wreckage «bundle.js · line 4674»
+- **PREDATORY** — Something hunts here «bundle.js · line 4674»
+- **SOFT LANDING** — You put them down gently «bundle.js · line 4675»
+- **HARD LANDING** — The landing shook them up «bundle.js · line 4675»
+- **MIRA SCANNED IT** — Mira scanned the ground «bundle.js · line 4675»
+- **SCANNED** — Scanned from orbit first «bundle.js · line 4676»
+- **SHARP SCAN** — A sharp scan from orbit «bundle.js · line 4676»
+- **NOT SCANNED** — Never scanned from orbit «bundle.js · line 4676»
+- **RIGHT TEAM** — The right people went down «bundle.js · line 4677»
+- **HURT GOES** — Someone hurt went down «bundle.js · line 4677»
+- [type]: [n]% [more dangerous | safer] «bundle.js · line 4680»
+- +[is high] salvage «bundle.js · line 4684»
+- **ENERGY** — +[eva lo] to [eva hi] energy «bundle.js · line 4685»
+- energy already full «bundle.js · line 4687»
+- +[energy room] energy «bundle.js · line 4687»
+- +[eva lo] to [energy room] energy «bundle.js · line 4687»
+- an item[n] «bundle.js · line 4690»
+- +[n] data «bundle.js · line 4691»
+- [total risk]% chance someone gets hurt[, a 1 in [one in] chance someone dies] «bundle.js · line 4702»
+- Vance refuses «bundle.js · line 4703»
+- Mira overrides this «bundle.js · line 4703»
+- TEAM ON THE GROUND «bundle.js · line 4713»
+- [name] ON THE GROUND «bundle.js · line 4716»
+- GOING IN «bundle.js · line 4718»
+- Vance: “I am not risking anyone on something that dangerous.” «bundle.js · line 4719»
+- Mira: “The safe option gets us nothing. I am going in.” «bundle.js · line 4720»
+- WHAT DO THEY DO? «bundle.js · line 4721»
 
 ### How the trip went «bundle.js · resolveEvaOutcome»
 _Dangers and results by planet type, deaths, injuries and rewards._
 
-- **VOLCANIC** — lava surge · pyroclastic blast · magma eruption · thermal vent «bundle.js · line 4415»
-- **ICE_WORLD** — crevasse collapse · flash freeze · ice shelf break · hypothermia «bundle.js · line 4416»
-- **TOXIC** — chemical burn · atmospheric leak · acid exposure · contamination «bundle.js · line 4417»
-- **DESERT** — sandstorm · heat stroke · dust suffocation · quicksand «bundle.js · line 4418»
-- **GAS_GIANT** — pressure shock · atmospheric turbulence · lightning strike · gravity fluctuation «bundle.js · line 4419»
-- **VITAL** — unknown disease · hostile plants · allergic reaction · spore exposure «bundle.js · line 4420»
-- **ROCKY** — rockslide · seismic shift · unstable terrain «bundle.js · line 4421»
-- **OCEANIC** — riptide · pressure breach · creature attack · storm surge «bundle.js · line 4422»
-- **GRAVEYARD** — hull collapse · decompression · debris impact · structural failure «bundle.js · line 4423»
-- **CRYSTALLINE** — resonance shatter · crystal impalement · harmonic injury · fracture cascade «bundle.js · line 4424»
-- **SHATTERED** — debris collision · impact trauma · void exposure «bundle.js · line 4425»
-- **BIO_MASS** — organism attack · absorption attempt · toxic secretion · parasitic infection «bundle.js · line 4426»
-- **MECHA** — security drone · automated defense · power surge · mechanical trap «bundle.js · line 4427»
-- **ROGUE** — extreme cold exposure · equipment malfunction · isolation psychosis · radiation burst «bundle.js · line 4428»
-- **TERRAFORMED** — terraformer malfunction · environmental collapse · system failure · containment breach «bundle.js · line 4429»
-- **_DEFAULT** — a bad fall «bundle.js · line 4430»
-- **_DEFAULT** — a suit breach «bundle.js · line 4430»
-- **_DEFAULT** — equipment failure «bundle.js · line 4430»
-- **_DEFAULT** — a collapse underfoot «bundle.js · line 4430»
-- ⚠ PREDATOR ALERT: Hostile organisms detected approaching EVA team! «bundle.js · line 4447»
-- predatory organisms «bundle.js · line 4469»
-- unknown world «bundle.js · line 4470»
-- CATASTROPHE: [name] killed by predatory organisms. The attack was coordinated. «bundle.js · line 4471»
-- The creatures didn't just kill — they hunted. [name] never had a chance. «bundle.js · line 4472»
-- unknown world «bundle.js · line 4476»
-- CATASTROPHE: [name] is dead. Cause: [hazard desc]. The other one carried them back to the lander. «bundle.js · line 4480»
-- FATAL: [name] did not survive ([hazard desc]). They are coming home in a stasis pod. «bundle.js · line 4481»
-- KIA: [name], [hazard desc]. The trip is over. There is a pod to rack in the hold. «bundle.js · line 4482»
-- CRITICAL: [name] mauled by predatory organisms. Emergency rescue! «bundle.js · line 4490»
-- Aris: "The wounds are severe. Whatever attacked them knew where to bite." «bundle.js · line 4491»
-- INCIDENT: [name] injured by [hazard desc]. Medical attention required. «bundle.js · line 4495»
-- CRITICAL: [hazard desc] wounded [name]. Emergency rescue! «bundle.js · line 4496»
-- WARNING: [name] sustained [hazard desc] injuries. Aborting EVA. «bundle.js · line 4497»
-- Crew morale shaken. «bundle.js · line 4509»
-- **VOLCANIC** — Extracted samples despite extreme heat. «bundle.js · line 4527»
-- **VOLCANIC** — Team navigated lava fields safely. «bundle.js · line 4527»
-- **VOLCANIC** — Heat shields held. Mission complete. «bundle.js · line 4527»
-- **ICE_WORLD** — Cryo-samples secured. Warming up. «bundle.js · line 4528»
-- **ICE_WORLD** — Team returned from the cold. «bundle.js · line 4528»
-- **ICE_WORLD** — Thermal suits performed well. «bundle.js · line 4528»
-- **TOXIC** — Decontamination complete. All clear. «bundle.js · line 4529»
-- **TOXIC** — Filters held. No exposure. «bundle.js · line 4529»
-- **TOXIC** — Hazmat protocols successful. «bundle.js · line 4529»
-- **DESERT** — Sand-blasted but intact. «bundle.js · line 4530»
-- **DESERT** — Team hydrated and returning. «bundle.js · line 4530»
-- **DESERT** — Survived the wastes. «bundle.js · line 4530»
-- **GAS_GIANT** — Atmospheric dive successful. «bundle.js · line 4531»
-- **GAS_GIANT** — Pressure held. Samples gained. «bundle.js · line 4531»
-- **GAS_GIANT** — Returned from the depths. «bundle.js · line 4531»
-- **VITAL** — Specimens secured safely. «bundle.js · line 4532»
-- **VITAL** — Life signs stable. Beautiful world. «bundle.js · line 4532»
-- **VITAL** — Biological samples obtained. «bundle.js · line 4532»
-- **ROCKY** — Geological survey complete. «bundle.js · line 4533»
-- **ROCKY** — Core samples extracted. «bundle.js · line 4533»
-- **ROCKY** — Terrain navigated successfully. «bundle.js · line 4533»
-- **OCEANIC** — Submersible mission success. «bundle.js · line 4534»
-- **OCEANIC** — Water samples secured. «bundle.js · line 4534»
-- **OCEANIC** — Aquatic EVA complete. «bundle.js · line 4534»
-- **GRAVEYARD** — Salvage extracted from wreckage. «bundle.js · line 4535»
-- **GRAVEYARD** — Ship graveyard yielded resources. «bundle.js · line 4535»
-- **GRAVEYARD** — Honored the dead. Took what we needed. «bundle.js · line 4535»
-- **CRYSTALLINE** — Crystal formations documented. «bundle.js · line 4536»
-- **CRYSTALLINE** — Resonance samples secured. «bundle.js · line 4536»
-- **CRYSTALLINE** — Harmonic data recorded. «bundle.js · line 4536»
-- **SHATTERED** — Debris field navigated. «bundle.js · line 4537»
-- **SHATTERED** — Fragment samples collected. «bundle.js · line 4537»
-- **SHATTERED** — Micro-gravity EVA success. «bundle.js · line 4537»
-- **BIO_MASS** — Organic samples contained. «bundle.js · line 4538»
-- **BIO_MASS** — Avoided the larger masses. «bundle.js · line 4538»
-- **BIO_MASS** — Biomatter secured for study. «bundle.js · line 4538»
-- **MECHA** — Avoided active defenses. «bundle.js · line 4539»
-- **MECHA** — Tech salvage gained. «bundle.js · line 4539»
-- **MECHA** — Machine world yielded components. «bundle.js · line 4539»
-- **ROGUE** — Survived the cold darkness. «bundle.js · line 4540»
-- **ROGUE** — Isolation protocols held. «bundle.js · line 4540»
-- **ROGUE** — Returned from the void. «bundle.js · line 4540»
-- **TERRAFORMED** — Former colony yielded resources. «bundle.js · line 4541»
-- **TERRAFORMED** — Reclaimed what was left behind. «bundle.js · line 4541»
-- **TERRAFORMED** — Terraformer data secured. «bundle.js · line 4541»
-- **_DEFAULT** — Operations complete. Team safe. «bundle.js · line 4542»
-- **_DEFAULT** — EVA successful. Returning. «bundle.js · line 4542»
-- **_DEFAULT** — Mission accomplished. «bundle.js · line 4542»
-- The survivor came back with empty hands. «bundle.js · line 4559»
-- Nothing brought back. -[retreat energy cost] Energy. «bundle.js · line 4562»
-- Nothing brought back. The team is shaken: +1 Stress. «bundle.js · line 4563»
-- Nothing brought back. «bundle.js · line 4564»
-- Mira's obsessive sampling yields extra. «bundle.js · line 4573»
-- Recovered [n] Salvage. «bundle.js · line 4579»
-- (Storage Cap Reached) «bundle.js · line 4581»
-- Siphoned [got] Energy. «bundle.js · line 4586»
-- Energy was already full. «bundle.js · line 4586»
-- +[learned] Data. «bundle.js · line 4591»
-- Secured Artifact: [name]. «bundle.js · line 4595»
-- Mira also recovered: [name]. «bundle.js · line 4601»
+- **VOLCANIC** — lava surge · pyroclastic blast · magma eruption · thermal vent «bundle.js · line 4793»
+- **ICE_WORLD** — crevasse collapse · flash freeze · ice shelf break · hypothermia «bundle.js · line 4794»
+- **TOXIC** — chemical burn · atmospheric leak · acid exposure · contamination «bundle.js · line 4795»
+- **DESERT** — sandstorm · heat stroke · dust suffocation · quicksand «bundle.js · line 4796»
+- **GAS_GIANT** — pressure shock · atmospheric turbulence · lightning strike · gravity fluctuation «bundle.js · line 4797»
+- **VITAL** — unknown disease · hostile plants · allergic reaction · spore exposure «bundle.js · line 4798»
+- **ROCKY** — rockslide · seismic shift · unstable terrain «bundle.js · line 4799»
+- **OCEANIC** — riptide · pressure breach · creature attack · storm surge «bundle.js · line 4800»
+- **GRAVEYARD** — hull collapse · decompression · debris impact · structural failure «bundle.js · line 4801»
+- **CRYSTALLINE** — resonance shatter · crystal impalement · harmonic injury · fracture cascade «bundle.js · line 4802»
+- **SHATTERED** — debris collision · impact trauma · void exposure «bundle.js · line 4803»
+- **BIO_MASS** — organism attack · absorption attempt · toxic secretion · parasitic infection «bundle.js · line 4804»
+- **MECHA** — security drone · automated defense · power surge · mechanical trap «bundle.js · line 4805»
+- **ROGUE** — extreme cold exposure · equipment malfunction · isolation psychosis · radiation burst «bundle.js · line 4806»
+- **TERRAFORMED** — terraformer malfunction · environmental collapse · system failure · containment breach «bundle.js · line 4807»
+- **_DEFAULT** — a bad fall «bundle.js · line 4808»
+- **_DEFAULT** — a suit breach «bundle.js · line 4808»
+- **_DEFAULT** — equipment failure «bundle.js · line 4808»
+- **_DEFAULT** — a collapse underfoot «bundle.js · line 4808»
+- ⚠ PREDATOR ALERT: Hostile organisms detected approaching EVA team! «bundle.js · line 4825»
+- predatory organisms «bundle.js · line 4852»
+- unknown world «bundle.js · line 4853»
+- CATASTROPHE: [name] killed by predatory organisms. The attack was coordinated. «bundle.js · line 4854»
+- The creatures didn't just kill — they hunted. [name] never had a chance. «bundle.js · line 4855»
+- unknown world «bundle.js · line 4859»
+- CATASTROPHE: [name] is dead. Cause: [hazard desc]. The other one carried them back to the lander. «bundle.js · line 4863»
+- FATAL: [name] did not survive ([hazard desc]). They are coming home in a stasis pod. «bundle.js · line 4864»
+- KIA: [name], [hazard desc]. The trip is over. There is a pod to rack in the hold. «bundle.js · line 4865»
+- CRITICAL: [name] mauled by predatory organisms. Emergency rescue! «bundle.js · line 4873»
+- Aris: "The wounds are severe. Whatever attacked them knew where to bite." «bundle.js · line 4874»
+- INCIDENT: [name] injured by [hazard desc]. Medical attention required. «bundle.js · line 4878»
+- CRITICAL: [hazard desc] wounded [name]. Emergency rescue! «bundle.js · line 4879»
+- WARNING: [name] sustained [hazard desc] injuries. Aborting EVA. «bundle.js · line 4880»
+- Crew morale shaken. «bundle.js · line 4892»
+- **VOLCANIC** — Extracted samples despite extreme heat. «bundle.js · line 4910»
+- **VOLCANIC** — Team navigated lava fields safely. «bundle.js · line 4910»
+- **VOLCANIC** — Heat shields held. Mission complete. «bundle.js · line 4910»
+- **ICE_WORLD** — Cryo-samples secured. Warming up. «bundle.js · line 4911»
+- **ICE_WORLD** — Team returned from the cold. «bundle.js · line 4911»
+- **ICE_WORLD** — Thermal suits performed well. «bundle.js · line 4911»
+- **TOXIC** — Decontamination complete. All clear. «bundle.js · line 4912»
+- **TOXIC** — Filters held. No exposure. «bundle.js · line 4912»
+- **TOXIC** — Hazmat protocols successful. «bundle.js · line 4912»
+- **DESERT** — Sand-blasted but intact. «bundle.js · line 4913»
+- **DESERT** — Team hydrated and returning. «bundle.js · line 4913»
+- **DESERT** — Survived the wastes. «bundle.js · line 4913»
+- **GAS_GIANT** — Atmospheric dive successful. «bundle.js · line 4914»
+- **GAS_GIANT** — Pressure held. Samples gained. «bundle.js · line 4914»
+- **GAS_GIANT** — Returned from the depths. «bundle.js · line 4914»
+- **VITAL** — Specimens secured safely. «bundle.js · line 4915»
+- **VITAL** — Life signs stable. Beautiful world. «bundle.js · line 4915»
+- **VITAL** — Biological samples obtained. «bundle.js · line 4915»
+- **ROCKY** — Geological survey complete. «bundle.js · line 4916»
+- **ROCKY** — Core samples extracted. «bundle.js · line 4916»
+- **ROCKY** — Terrain navigated successfully. «bundle.js · line 4916»
+- **OCEANIC** — Submersible mission success. «bundle.js · line 4917»
+- **OCEANIC** — Water samples secured. «bundle.js · line 4917»
+- **OCEANIC** — Aquatic EVA complete. «bundle.js · line 4917»
+- **GRAVEYARD** — Salvage extracted from wreckage. «bundle.js · line 4918»
+- **GRAVEYARD** — Ship graveyard yielded resources. «bundle.js · line 4918»
+- **GRAVEYARD** — Honored the dead. Took what we needed. «bundle.js · line 4918»
+- **CRYSTALLINE** — Crystal formations documented. «bundle.js · line 4919»
+- **CRYSTALLINE** — Resonance samples secured. «bundle.js · line 4919»
+- **CRYSTALLINE** — Harmonic data recorded. «bundle.js · line 4919»
+- **SHATTERED** — Debris field navigated. «bundle.js · line 4920»
+- **SHATTERED** — Fragment samples collected. «bundle.js · line 4920»
+- **SHATTERED** — Micro-gravity EVA success. «bundle.js · line 4920»
+- **BIO_MASS** — Organic samples contained. «bundle.js · line 4921»
+- **BIO_MASS** — Avoided the larger masses. «bundle.js · line 4921»
+- **BIO_MASS** — Biomatter secured for study. «bundle.js · line 4921»
+- **MECHA** — Avoided active defenses. «bundle.js · line 4922»
+- **MECHA** — Tech salvage gained. «bundle.js · line 4922»
+- **MECHA** — Machine world yielded components. «bundle.js · line 4922»
+- **ROGUE** — Survived the cold darkness. «bundle.js · line 4923»
+- **ROGUE** — Isolation protocols held. «bundle.js · line 4923»
+- **ROGUE** — Returned from the void. «bundle.js · line 4923»
+- **TERRAFORMED** — Former colony yielded resources. «bundle.js · line 4924»
+- **TERRAFORMED** — Reclaimed what was left behind. «bundle.js · line 4924»
+- **TERRAFORMED** — Terraformer data secured. «bundle.js · line 4924»
+- **_DEFAULT** — Operations complete. Team safe. «bundle.js · line 4925»
+- **_DEFAULT** — EVA successful. Returning. «bundle.js · line 4925»
+- **_DEFAULT** — Mission accomplished. «bundle.js · line 4925»
+- The survivor came back with empty hands. «bundle.js · line 4942»
+- The lander came home with nothing. «bundle.js · line 4942»
+- Nothing brought back. -[retreat energy cost] Energy. «bundle.js · line 4945»
+- Nothing brought back. The team is shaken: +1 Stress. «bundle.js · line 4946»
+- Nothing brought back. «bundle.js · line 4947»
+- Mira's obsessive sampling yields extra. «bundle.js · line 4955»
+- Recovered [n] Salvage. «bundle.js · line 4961»
+- (Storage Cap Reached) «bundle.js · line 4963»
+- Siphoned [got] Energy. «bundle.js · line 4968»
+- Energy was already full. «bundle.js · line 4968»
+- +[learned] Data. «bundle.js · line 4973»
+- Secured Artifact: [name]. «bundle.js · line 4977»
+- Mira also recovered: [name]. «bundle.js · line 4983»
 
 ### Paradise found «bundle.js · showEdenEvaModal»
 _A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one)._
 
-- Rest and recover «bundle.js · line 4624»
-- **desc** — Everyone sleeps properly for once. All stress gone, all injuries healed. «bundle.js · line 4624»
-- Gather fruit and fresh water «bundle.js · line 4625»
-- **desc** — +10 Rations. The land gives freely. «bundle.js · line 4625»
-- Explore the valley «bundle.js · line 4626»
-- **desc** — +50 Salvage from natural materials. Marks a colony site. «bundle.js · line 4626»
-- Remember what you are fighting for «bundle.js · line 4627»
-- **desc** — +20 Energy. All crew -1 Stress. «bundle.js · line 4627»
-- Settle here «bundle.js · line 4628»
-- **desc** — The journey ends on this world. The crew have their say first. «bundle.js · line 4628»
-- **kicker** — ON THE SURFACE «bundle.js · line 4632»
-- **context** — [name] and [name] step out into warm, sweet air, beside a clear stream. «bundle.js · line 4633»
-- **context** — Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass. «bundle.js · line 4634»
-- [name] and [name] found a quiet place by the stream. The whole crew rotated through in shifts. «bundle.js · line 4648»
-- For the first time in months, everyone truly rested. All stress cleared. All injuries healed. «bundle.js · line 4649»
-- The fruit was unlike anything from Earth, but it tasted like coming home. [+[got] Rations. | Rations already full.] «bundle.js · line 4654»
-- The valley stretches for kilometers. Clean soil, fresh water, gentle climate. This could be home. +50 Salvage. Colony site marked. «bundle.js · line 4660»
-- [name]: "This is why we left Earth. This is what we're looking for." «bundle.js · line 4670»
-- Renewed purpose fills the crew. [+[got] Energy. | Energy already full.] All crew -1 Stress. «bundle.js · line 4671»
-- [name]: "Commander... we're staying, aren't we?" «bundle.js · line 4684»
-- You nod. This is where the journey ends. «bundle.js · line 4685»
+- Rest and recover «bundle.js · line 5008»
+- **desc** — Everyone sleeps properly for once. All stress gone, all injuries healed. «bundle.js · line 5008»
+- Gather fruit and fresh water «bundle.js · line 5009»
+- **desc** — +10 Rations. The land gives freely. «bundle.js · line 5009»
+- Explore the valley «bundle.js · line 5010»
+- **desc** — +50 Salvage from natural materials. Marks a colony site. «bundle.js · line 5010»
+- Remember what you are fighting for «bundle.js · line 5011»
+- **desc** — +20 Energy. All crew -1 Stress. «bundle.js · line 5011»
+- Settle here «bundle.js · line 5012»
+- **desc** — The journey ends on this world. The crew have their say first. «bundle.js · line 5012»
+- **kicker** — ON THE SURFACE «bundle.js · line 5016»
+- **context** — [names] step out into warm, sweet air, beside a clear stream. «bundle.js · line 5017»
+- **context** — Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass. «bundle.js · line 5018»
+- [names] found a quiet place by the stream. The whole crew rotated through in shifts. «bundle.js · line 5032»
+- For the first time in months, everyone truly rested. All stress cleared. All injuries healed. «bundle.js · line 5033»
+- The fruit was unlike anything from Earth, but it tasted like coming home. [+[got] Rations. | Rations already full.] «bundle.js · line 5038»
+- The valley stretches for kilometers. Clean soil, fresh water, gentle climate. This could be home. +50 Salvage. Colony site marked. «bundle.js · line 5044»
+- [name]: "This is why we left Earth. This is what we're looking for." «bundle.js · line 5054»
+- Renewed purpose fills the crew. [+[got] Energy. | Energy already full.] All crew -1 Stress. «bundle.js · line 5055»
+- [name]: "Commander... we're staying, aren't we?" «bundle.js · line 5068»
+- You nod. This is where the journey ends. «bundle.js · line 5069»
 
 ## Boarding a station
 
@@ -717,7 +724,7 @@ _Rooms, crew perks, results. The diary on the crew deck depends on the station's
 - **SPECIALIST** — Carries the scanner. Sees what is in the next rooms, and dark rooms cost her nothing extra. «BoardingParty.js · line 60»
 - "Day 212. Still no reply from Earth. They said the radio would work." «BoardingParty.js · line 63»
 - "We found a dead ship of our own class today. Nobody wants to talk about it." «BoardingParty.js · line 63»
-- "They told us we were the ninth on this heading. We passed forty wrecks before breakfast." «BoardingParty.js · line 64»
+- "They said we'd be the first ship this far out. We passed forty wrecks before breakfast." «BoardingParty.js · line 64»
 - "The mission patch in locker 3 has a number on it. A very big number." «BoardingParty.js · line 64»
 - "The ship keeps steering us. Nobody set this course." «BoardingParty.js · line 65»
 - "It is not a planet we are looking for. I am sure of that now." «BoardingParty.js · line 65»

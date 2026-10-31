@@ -7,7 +7,8 @@
    anywhere, over the soil it piled up, stopping at lava, water or a cliff, and line up there.
    While they step out, the view closes in on them so the moment can be seen; LanderGame paints the close-up sharper
    (LanderScene.closeUp) once the camera has arrived. The walk, the timing and the camera are as before; only the drawing changed.
-     plan(g, s, colors, planet, now, ids) once at touchdown → crew (crew.duration: how long to hold the screen)
+     plan(g, s, colors, planet, now, ids) once at touchdown → crew (crew.duration: how long to hold the screen, at most 5.6 s;
+       the new look NEW_LOOK_ECONOMY.WALK_OUT_MS, 2 s, so the team is still stepping out when it ends)
      drawBehind / drawFront(ctx, crew, g, now, V, S) around the lander; view(crew, now) → the camera window (world px);
      final(crew) → the window the camera ends on. */
 
@@ -18,6 +19,15 @@
     const LANDER_HALF = 6;
     const HATCH_AT = 450, PUFF_LIFE = 1.0, FIRST_OUT = 950, STAGGER = 650, CLIMB_MS = 420;
     const WALK_PX_S = 15, SPACING = 7, CLEAR_OF_HULL = 11, ROAM = 30, LINGER = 800, MAX_MS = 5600, MAX_STEP_UP = 3, MAX_STEP_DOWN = 6;
+    /** How long the walk-out may hold the screen: the new look (?new=1) reads NEW_LOOK_ECONOMY.WALK_OUT_MS (bundle.js, read
+        when used; a click still skips it), the default game MAX_MS. */
+    function maxMs() {
+        if (!(typeof isNewScreen === 'function' && isNewScreen())) return MAX_MS;
+        const v = window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY.WALK_OUT_MS;
+        if (typeof v === 'number') return v;
+        console.error('LanderCrew: NEW_LOOK_ECONOMY.WALK_OUT_MS is missing; the walk-out keeps the default game\'s time');
+        return MAX_MS;
+    }
     const ZOOM = 2, ZOOM_AT = 150, ZOOM_MS = 750, MILD_C = [-15, 40];                // MILD_C: °C they can step out in without suits
     const PERSON_H = 6.4, HATCH_Y = 2.4, HATCH_W = 1.5, HATCH_H = 2.6;                // world px: a person's height; the hatch on the hull (from the lander's top y)
     const ORDER = ['jaxon', 'mira', 'aris', 'vance', 'cora'];
@@ -73,7 +83,7 @@
         const hatch = { x: s.x + dir * 0.4, y: s.y + HATCH_Y };
         const puff = Array.from({ length: isLight ? 7 : 18 }, () => ({ vx: dir * (12 + Math.random() * 30), vy: -(4 + Math.random() * 16), life: PUFF_LIFE * (0.5 + Math.random() * 0.5) }));
         const end = Math.max(...members.map(m => m.startAt + CLIMB_MS + m.walkMs)) + LINGER;
-        return { at: now, x, sx: s.x, top, dir, outX, hatch, puff, members, isLight, duration: Math.min(MAX_MS, end), ...frame(g, x, goal) };
+        return { at: now, x, sx: s.x, top, dir, outX, hatch, puff, members, isLight, duration: Math.min(maxMs(), end), ...frame(g, x, goal) };
     }
 
     /** The camera's goal: the lander, the walk and as much of the site as fits, at up to ZOOM×. */

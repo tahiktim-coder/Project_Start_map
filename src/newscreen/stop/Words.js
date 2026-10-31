@@ -11,8 +11,10 @@
      our ship, its risk ("risk 12%"); a visited one says "done". They keep below the room A.U.R.A. speaks in under the
      title (two lines) while they fit there. A click on a find (its tag or its mark) makes it where GO
      DOWN goes: its mark in brackets, and the shuttle's path ends there (NSGlass.aim). Pointing at it shows that path;
-   - the team's "GO DOWN" tag over the hatch (the two names, the risk where they go; "Go across" when the trip goes to a site
-     in orbit, the wreckage, where nobody lands), and over each of the two at the hatch their first name in their colour and
+   - the team's "GO DOWN" tag over the hatch (the two names, or the one left who can go; "hurt" when someone hurt goes; the
+     risk where they go and, where the trip could kill, "death 1 in N" (NSOrbit.teamOdds): these odds are never dropped
+     for want of room; "Go across" when the trip goes to a site in orbit, the wreckage, where nobody lands), and over each
+     of the two at the hatch their first name in their colour and
      why they go;
    - "Leave orbit" as a lit key on Cora's console (it glows as the next step once nothing but settling is left);
    - the note over someone pointed at: at the hatch what they are good for; at the window "Aris goes instead of Vance" and
@@ -29,7 +31,7 @@
    Loaded only when the new-screen switch is on, after stop/TagArt.js and stop/Tags.js, before stop/Stop.js.
 
    window.NSStopWords (frozen)
-     create(ctx) → words     ctx from Stop.js: { S, css, unit, t0, poseOf, picking, team, arrived, joinedLast, isWrongPlace,
+     create(ctx) → words     ctx from Stop.js: { S, css, unit, t0, poseOf, picking, team, need, arrived, joinedLast, isWrongPlace,
                              proposed, sweep() → ms into the scan's sweep | null, sprite(id), NAMES, TONE, CREW, OFFX, F,
                              HATCH, NAV, HELM } (frame px); S.finds: the world's finds (NewScreen.flow.finds)
      words.init(layer)       the tags and the stock in #ns-stop-words
@@ -92,7 +94,7 @@
         const drawnAt = new Map();      // a tag's key → the clock when it came on (its draw-in), staggered
         const shownWall = new Map();    // a tag's key → performance.now() when it came on (clicks wait GUARD_MS; A.U.R.A. TELL_AFTER_MS)
         const heads = new Map();        // id → the first painted row of their standing sprite
-        let riskKey = '', riskVal = null, lastL = null;
+        let oddsKey = '', oddsVal = null, lastL = null;
 
         function init(el) {
             layer = el;
@@ -185,15 +187,26 @@
         }
 
         // ── what each tag says ──
-        function teamRisk(ids) {
+        /** The odds GO DOWN shows with ids going down (NSOrbit.teamOdds: { hurt, death, deadly, oneIn }), or null. */
+        function teamOdds(ids) {
             const k = ids.join('+') + '@' + S.readAt;
-            if (k !== riskKey) { riskKey = k; try { riskVal = NS.flow && NS.flow.teamRisk ? NS.flow.teamRisk(ids) : null; } catch (err) { riskVal = null; } }
-            return riskVal;
+            if (k !== oddsKey) { oddsKey = k; try { oddsVal = NS.flow && NS.flow.teamOdds ? NS.flow.teamOdds(ids) : null; } catch (err) { oddsVal = null; } }
+            return oddsVal;
+        }
+        const need = () => (typeof ctx.need === 'function' ? ctx.need() : 2);   // two go down, or the one left who can go
+        /** Who at the hatch is hurt (fewer than two were well, so the hurt may go: NSOrbit.pool). */
+        function hurtIds() {
+            try { return NS.game.crew().filter(c => c.hurt).map(c => c.id); } catch (err) { return []; }
         }
         function teamChips() {
             const ids = ctx.team(), out = ids.map(id => ({ text: ctx.NAMES[id], tone: 'who', color: ctx.TONE[id] }));
-            if (ids.length < 2) out.push({ icon: 'slot', text: ids.length ? 'one more' : 'two more', tone: 'open' });
-            else { const r = teamRisk(ids); if (r != null) out.push({ icon: 'risk', text: `risk ${r}%`, tone: r >= 30 ? 'high' : 'risk' }); }
+            if (ids.length < need()) out.push({ icon: 'slot', text: ids.length || need() < 2 ? 'one more' : 'two more', tone: 'open' });
+            else {
+                if (ids.some(id => hurtIds().includes(id))) out.push({ icon: 'help', text: 'hurt', tone: 'high', odds: true });   // DRAFT: someone hurt goes (riskier)
+                const o = teamOdds(ids);
+                if (o) out.push({ icon: 'risk', text: `risk ${o.hurt}%`, tone: o.hurt >= 30 ? 'high' : 'risk', odds: true });
+                if (o && o.deadly && o.oneIn) out.push({ icon: 'danger', text: `death 1 in ${o.oneIn}`, tone: 'high', odds: true });   // DRAFT: this trip could kill
+            }
             return out;
         }
         const chipWords = list => (list || []).reduce((n, c) => n + wordsIn(c.text), 0);
@@ -236,13 +249,14 @@
             try { loss = (NS.flow && typeof NS.flow.lossOf === 'function' ? NS.flow.lossOf(id, mates) : '') || ''; } catch (err) { console.error('NewScreen stop: the loss failed', err); }
             const b = q => `<b style="--c:${ctx.TONE[q]}">${ctx.NAMES[q]}</b>`;
             const verb = goesAcross() ? 'goes across' : 'goes down';             // to the wreckage in orbit nobody lands
-            const html = S.lineup.length <= 2 ? `${b(id)} ${verb}` : out ? `${b(id)} goes instead of ${b(out)}` : team.length ? `${b(id)} goes with ${b(team[0])}` : `${b(id)} ${verb}`;
+            const html = out ? `${b(id)} goes instead of ${b(out)}` : team.length ? `${b(id)} goes with ${b(team[0])}` : `${b(id)} ${verb}`;
             const text = html.replace(/<[^>]+>/g, '');
             return { html, text, loss: loss ? cap(loss) + '.' : `Nothing aboard needs ${id === 'aris' || id === 'mira' ? 'her' : 'him'} this time.`, tone };
         }
 
         // ── the words budget: at most 40 on screen (the voice line counted, unless a note has stepped it back). The world's
-        //    name, the labels, the key and the stock always; then, while they fit: the kind line, the chosen find's chips, the
+        //    name, the labels, the key, the stock and GO DOWN's odds (its hurt chance, "hurt", a death chance: a trip that could
+        //    kill always says so before anyone goes) always; then, while they fit: the kind line, the chosen find's chips, the
         //    names at the hatch (both or neither), the team's chips, whether people could live there, the other finds' chips,
         //    each action's chips. Decided afresh only while nothing is pointed at: what is on screen holds still under the pointer
         //    (a click that chooses another find is the one exception: the player asked to see it) ──
@@ -261,6 +275,8 @@
             if (o.stock) budget -= window.NSStock.KEYS.length;
             if (o.name) budget -= wordsIn(o.name);
             if (o.note) budget -= wordsIn(o.note.name) + wordsIn(o.note.text || o.note.line) + wordsIn(o.note.loss);
+            const odds = o.team ? o.goChips.filter(c => c.odds) : [];
+            budget -= chipWords(odds);                                                       // GO DOWN's odds: always shown
             const dec = { act: {}, find: {}, keys: {}, aimed: aimedId };
             (o.keys || []).forEach(a => { dec.keys[a.key] = take(chipWords([].concat(...(a.chips || []).map(c => (Array.isArray(c) ? c : [c]))))); });   // what a held key costs: first
             dec.marks = !!(o.marks && o.marks.length) && take(o.marks.reduce((n, m) => n + 1 + wordsIn(m.text), 0));   // then what the fall did to each of them
@@ -268,7 +284,7 @@
             if (aimed) dec.find[aimed.id] = take(chipWords(aimed.chips));
             dec.who = !!o.team && take(o.whoIds.reduce((n, id) => n + 1 + wordsIn(S.pick.why[id] || ''), 0));
             const named = dec.who ? o.goChips.filter(c => c.tone === 'who' && o.whoIds.some(id => ctx.NAMES[id] === c.text)).length : 0;   // read once: the same names stand over their heads
-            dec.go = !!o.team && take(chipWords(o.goChips) - named);
+            dec.go = !!o.team && take(chipWords(o.goChips.filter(c => !c.odds)) - named);   // the names (the odds are counted above)
             dec.facts = !!o.live && take(chipWords(o.live));
             o.finds.forEach(f => { if (!(f.id in dec.find)) dec.find[f.id] = take(chipWords(f.chips)); });
             o.acts.forEach(a => { dec.act[a.key] = take(chipWords(a.chips)); });
@@ -410,10 +426,11 @@
                     room = Math.max(room, h, hatchNoteH(id, u));
                     whoBoxes.push({ id, tag, px: cx, x: clamp(Math.round(cx - w / 2), 2, SW - w - 2), y: headTop(id) - 4 - h, w, h });
                 });
-                T.go.set({ label: goesAcross() ? 'Go across' : 'Go down', chips: dec.go ? goChips : null });   // DRAFT 'Go across': to the wreckage in orbit, nobody lands
+                const goShown = dec.go ? goChips : goChips.filter(c => c.odds);   // GO DOWN's odds are never dropped
+                T.go.set({ label: goesAcross() ? 'Go across' : 'Go down', chips: goShown.length ? goShown : null });   // DRAFT 'Go across': to the wreckage in orbit, nobody lands
                 const heads = team.map(id => headTop(id)).concat(team.length ? [] : [headTop('vance')]);
                 const [w, h] = T.go.size(u), top = Math.min(...heads) - 4 - Math.max(room, 18) - 7 - h;
-                const go = { key: 'team', tag: T.go, kind: 'act', x: 34, y: top, w, h, tone: 'warm', icon: ICON.team, brackets: true, dim: team.length < 2 };
+                const go = { key: 'team', tag: T.go, kind: 'act', x: 34, y: top, w, h, tone: 'warm', icon: ICON.team, brackets: true, dim: team.length < need() };
                 go.anchor = anchorOf(teamAct, g, dc, site, [go.x, go.y, w, h]);
                 go.thread = threadTo([go.x, go.y, w, h], go.anchor);
                 L.items.push(go);

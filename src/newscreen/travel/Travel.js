@@ -95,7 +95,9 @@
     // ── the story worlds: each still ahead and not boarded wears a warm ring (Pictures), its note says why it matters, and
     //    A.U.R.A. names it once when it is first in sight (the first signal is named by the shell's first hint) ──
     const STORY_TAGS = { signal: 'One of our ships. Send the team aboard', wreck: 'One of our ships. Send the team aboard', course: 'Their last course led here' };
-    const RESERVE_TAG = 'We can only reach it on the reserve';                       // a story world never refused for energy (App.isStoryStop): said before the click
+    // a story world never refused for energy (App.isStoryStop): said before the click, with what the reserve costs the crew
+    // (App.coldNight). DRAFT: the second sentence
+    const RESERVE_TAG = 'We can only reach it on the reserve. The crew will have a cold night';
     /** Short of energy for this story world: the flight there runs on the reserve (bundle.js App.flyOnReserve). */
     function onReserve(nd) {
         const ns = NS(), st = ns && ns.app && ns.app.state;
