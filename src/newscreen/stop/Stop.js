@@ -135,12 +135,16 @@
         return tc;
     }
     /** The team leaves the bridge: both walk to the hatch and climb down, and only then does the shuttle drop toward the
-        world. Returns when the shuttle starts down. */
-    function sendOff(ids, t, gap) {
+        world. Returns when the shuttle starts down. LAST PORT (relay: the whole ship docks at the relay, App.flyRelay): no
+        shuttle; returns when they are down the hatch. */
+    function sendOff(ids, t, gap, relay) {
         const gone = ids.reduce((last, id, i) => Math.max(last, exitDown(id, t + 150 + i * gap)), t);
+        if (relay) { S.drop = null; return gone; }
         S.drop = { at: Math.max(gone + SHUTTLE_GAP, S.upEnd) };              // a shuttle still coming up docks first
         return S.drop.at;
     }
+    /** LAST PORT: the find the team goes to is the relay's (WorldFinds: the disc's wreck, reached by docking the ship). */
+    const isRelayAimed = () => S.finds.some(f => f.target && f.relay);
     function poseOf(id, t) {
         const pl = S.plans[id]; if (!pl || !pl.length) return null;
         const s = pl.find(q => t >= q.t0 && t < q.t1) || pl[pl.length - 1], lt = t - s.t0;
@@ -460,17 +464,20 @@
     function onTripDown(p) {
         const t = t0(), ids = (p && Array.isArray(p.ids) ? p.ids : (S.send && S.send.ids) || team()).filter(id => CREW.includes(id));
         if (S.trip) return;
-        S.trip = { ids: ids.slice() };
-        if (!S.send) sendOff(ids, t, 400);                              // the game sent them without our click: walk them out now
+        const relay = S.send ? !!S.send.relay : isRelayAimed();
+        S.trip = { ids: ids.slice(), relay };                            // (LAST PORT: the ship docks; no shuttle comes back up)
+        if (!S.send) sendOff(ids, t, 400, relay);                       // the game sent them without our click: walk them out now
         S.send = null; S.pick = freshPick(); S.lineup = []; S.aside = [];
     }
     function onTripBack(p) {
-        const t = t0(), ids = S.trip ? S.trip.ids : [], home = t + SHUTTLE_MS + 700;
+        const relay = !!(S.trip && S.trip.relay) || !!(S.send && S.send.relay);      // LAST PORT: the ship docked; they come in through the hatch
+        const t = t0(), ids = S.trip ? S.trip.ids : [], home = relay ? t + 300 : t + SHUTTLE_MS + 700;
         S.trip = null; S.send = null;
         if (p && p.failed) S.pick = Object.assign(freshPick(), { from: t + PROPOSE_AFTER * 4 });   // the game would not take them: they come back up, and two step forward again
         else S.pick = Object.assign(freshPick(), { from: t + PROPOSE_AFTER });   // another find still open: two step forward while the shuttle comes up
-        GL.shuttle('up', t + 300, SHUTTLE_MS + 200);
-        S.upEnd = t + 300 + SHUTTLE_MS + 200; S.back = {};
+        if (relay) S.upEnd = t;
+        else { GL.shuttle('up', t + 300, SHUTTLE_MS + 200); S.upEnd = t + 300 + SHUTTLE_MS + 200; }
+        S.back = {};
         crewNow = crewMap();
         ids.forEach((id, i) => {                                         // all who came back climb in once it is home; the hurt too, if they are wanted on the bridge
             if (crewOf(id) === 'dead') return;
@@ -548,7 +555,7 @@
             if (!went && !talking) say('The team stays aboard for now, Commander.');
             S.send = null; S.drop = null; S.pick = Object.assign(freshPick(), { from: t0() + PROPOSE_AFTER * 4 }); const t = t0();
             ids.forEach((id, i) => { if (crewOf(id) === 'well') enterTo(id, t + 300 + i * 600, SPOT_X[id], 'idle', 1); });
-            GL.shuttle('up', t, SHUTTLE_MS); S.upEnd = t + SHUTTLE_MS;
+            if (!s.relay) { GL.shuttle('up', t, SHUTTLE_MS); S.upEnd = t + SHUTTLE_MS; }   // (LAST PORT: no shuttle went)
         }
     }
 
@@ -686,7 +693,8 @@
         if (a.team) {
             const ids = team();
             if (ids.length < need()) { say(ids.length ? 'We need one more at the hatch, Commander.' : need() === 1 ? 'We need someone at the hatch, Commander.' : 'We need two at the hatch, Commander.'); return; }   // DRAFT: "someone" (one left who can go)
-            S.send = { ids, t0: t, fired: false, skipped: false, fireAt: sendOff(ids, t, 350) + SHUTTLE_MS };   // the trip begins once the shuttle is down
+            const relay = isRelayAimed();                                // LAST PORT: the ship docks at the relay itself; no shuttle
+            S.send = { ids, t0: t, fired: false, skipped: false, relay, fireAt: relay ? sendOff(ids, t, 350, true) : sendOff(ids, t, 350) + SHUTTLE_MS };   // the trip begins once the shuttle is down
             if (S.node && S.node.nsTrips > 0) skipSend(t);              // a trip from here before: nobody walks it again, the shuttle goes at once
             S.hover = null; setHot(null); setPointing(false);
             return;
@@ -708,6 +716,7 @@
     /** A click while the team is still walking out: they are down the hatch at once and the shuttle leaves now. */
     function skipSend(t) {
         const s = S.send;
+        if (s && s.relay && !s.fired && !s.skipped) { s.skipped = true; s.ids.forEach(hidePlan); s.fireAt = t; return; }   // LAST PORT: no shuttle; the dock opens now
         if (!s || s.fired || s.skipped || !S.drop) return;               // the shuttle is already on its way down
         s.skipped = true;
         s.ids.forEach(hidePlan);

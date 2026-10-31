@@ -206,7 +206,7 @@
         const s = app.state, hasDisc = !!(s && (s.hasDisc || (typeof ITEMS !== 'undefined' && ITEMS.DISC_DRAWING && (s.cargo || []).some(i => i.id === ITEMS.DISC_DRAWING.id))));
         const toDate = ours && !node.hasPage && !node.isFirstSignal && hasDisc && (s.sectorNodes || []).some(p => p.storyHidden);   // the disc dates it: where its crew went
         return { id: 'site', kind: 'site', site: site.tag, label: d.label, icon: d.icon, gives: gives.map(chip), risk: 0, at: spot(node, 'site', site),
-            done: !!node[site.done], hint: toDate ? 'date' : null, inSpace: !!site.inSpace };   // inSpace: in orbit, the lander crosses to it (GO DOWN says "Go across")
+            done: !!node[site.done], hint: toDate ? 'date' : null, inSpace: !!site.inSpace, relay: !!site.relay };   // inSpace: in orbit, the lander crosses to it (GO DOWN says "Go across"); relay (LAST PORT): the whole ship docks there (Stop.js: no shuttle)
     }
     function featureOf(node, own) {
         const tags = tagsOf(node), m = node.metrics || {};

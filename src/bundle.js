@@ -1308,7 +1308,9 @@ const TRY_PLACES = {
     },
 };
 // Last Port: the wreck stories that say the ship landed (SILENT SHIP, THE FENCE) cannot be the disc's ship, clamped to the relay
-const RELAY_UNFIT_STORIES = ['EXODUS_DEAD_CREW', 'EXODUS_PARTIAL'];
+// (2026-10-31 review: nor, until it has words for the relay, THE GROWTH: its 'Bring Aris down', 'stay with the lander' and
+// 'burned from orbit' while we are clamped beside it)
+const RELAY_UNFIT_STORIES = ['EXODUS_DEAD_CREW', 'EXODUS_PARTIAL', 'EXODUS_INFECTED'];
 // After the flight (Corridor.js THE DARK, MiniHost 'corridor-void'): the new look's jump into this sector goes dark round us
 // while we fly, once a run (sectors only go forward). What it costs (rations, stress) comes back in the flight's result.
 const DARK_JUMP_TO = 5;
@@ -1722,8 +1724,10 @@ class App {
     startTry(kind) {
         const s = this.state, place = TRY_PLACES[kind];
         s.init();
-        if (place) place(this, s);
-        else s.sectorNodes = PlanetGenerator.generateSector(1);
+        if (place) {
+            place(this, s);
+            s._tutorialWarpSeen = s._tutorialEvaSeen = s._tutorialDeckSeen = s._tutorialStressSeen = true;   // a placed moment is past the first-run lines, as a real run is by then
+        } else s.sectorNodes = PlanetGenerator.generateSector(1);
         this.renderNav();
         s.emitUpdates();
         if (document.getElementById('try-note')) return;
@@ -4575,9 +4579,10 @@ Then you're through.`,
         const siteNow = isNewScreen() && siteHere && siteHere.tag === 'ANOMALY' ? null : siteHere;   // the new screen: the ship flies to the strange site itself ("Fly closer")
         const site = find && find.kind !== 'site' ? null : siteNow;                  // the new look: another find chosen, the site waits for a trip of its own
         const isSiteTrip = !!(site && !planet[site.done]);
+        const isRelay = isSiteTrip && !!site.relay;                                  // Last Port: the ship docks at the relay, flown (flyRelay)
 
-        // Bark: crew reacts before EVA
-        if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
+        // Bark: crew reacts before EVA (Last Port: not at the relay; the lander and the ground are not in it)
+        if (typeof BarkSystem !== 'undefined' && window.BarkSystem && !isRelay) {
             window.BarkSystem.tryBark('BEFORE_EVA', this.state, { planet });
         }
 
@@ -4585,14 +4590,14 @@ Then you're through.`,
         if (evaTeam.length === 1) this.state.addLog(`EVA team deployed: ${evaTeam[0].name}.`);   // DRAFT: the new look, the one left who can go
         else this.state.addLog(`EVA team deployed: ${evaTeam[0].name} and ${evaTeam[1].name}.`);
 
-        // Tutorial: first EVA
-        if (!this.state._tutorialEvaSeen) {
+        // Tutorial: first EVA (Last Port: not at the relay, where the team only goes in once the ship has docked)
+        if (!this.state._tutorialEvaSeen && !isRelay) {
             this.state._tutorialEvaSeen = true;
             this.state.addLog('A.U.R.A.: "Team away, Commander. I have their vitals."');
         }
 
-        // A.U.R.A. commentary on EVA
-        if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+        // A.U.R.A. commentary on EVA (Last Port: not at the relay, as above)
+        if (typeof AuraSystem !== 'undefined' && window.AuraSystem && !isRelay) {
             window.AuraSystem.tryComment('EVA_DEPLOY', this.state);
         }
 
@@ -4617,7 +4622,6 @@ Then you're through.`,
         }
 
         // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
-        const isRelay = isSiteTrip && !!site.relay;                                  // Last Port: the ship docks at the relay, flown (flyRelay)
         const isCrossing = isSiteTrip && site.inSpace && !isRelay;                   // a strange site or wreckage in orbit: the lander crosses, nobody lands
         if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
         const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
@@ -4625,7 +4629,7 @@ Then you're through.`,
         const goDown = isRelay ? this.flyRelay(planet) : isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
             : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
         const landed = goDown.then(landing => this.applyLanding(landing, evaTeam));
-        const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam)) : landed;   // the new screen: the crisis aboard while they are down
+        const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam, { relay: isRelay })) : landed;   // the new screen: the crisis aboard while they are down
 
         if (isSiteTrip) {                                                           // the team goes where the scan pointed: the site's own story
             planet.hasEva = true;
