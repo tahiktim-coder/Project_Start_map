@@ -31,7 +31,16 @@
                                   calm }   lat and tilt: the replayed track until the touch, then as they were at it
      ext.debug()            what the last frame showed (for the headless checks)
      DockExterior.shotAt(grade, since, s)   which camera the edit wants (the wide for the glide, a strike and its bounce;
-                            the close for the last metre of a soft one and for the clamps; the wide again for the lights) */
+                            the close for the last metre of a soft one and for the clamps; the wide again for the lights)
+   LAST PORT (prototypes/ideas/last-port, approved 2026-10-31): create(AW, AH, shot, relay) with relay (window.DockRelay.exterior)
+   docks at the dark moon's relay instead: three of our own class stand clamped in the ring's other ports beside ours,
+   nose in, crooked in their clamps (relay.sag), dark (the game's Lander sprite, rusted); no lights wake round the ring.
+   From the lock the close camera holds all four of us: our windows lit, then each dead hull's, deck by deck, one hull
+   after another, slowly; then the small screen set into the ring beside our collar, dark glass until then, says SENT
+   (three slow blinks, then held). A hard dock tears the nearest one on the side we struck loose: it falls away towards
+   the moon (f.relay.moon), its windows dark, its berth left empty. beats(grade).relay and shotAt(grade, since, s, relay)
+   give the cut's last beats and its edit (a third camera, the mid, only for a hard dock's bounce). Each camera keeps its
+   own station (the dead ports' collars). Without relay nothing here changes. */
 (function () {
     'use strict';
     const P = window.NSPaint;
@@ -77,6 +86,8 @@
         wide: { pos: [-73.5, -RM - 87.5, 100.25], at: [0, -30, -10], f: 520, roll: 0.5, shift: 12 },
         close: { pos: [-27, -131, 47], at: [2, -96, 18], f: 520, roll: 0.5 },
     };
+    // LAST PORT (relay only): a third camera, nearer than the wide, on the row of hulls by our port (the windows beat)
+    const CAM_MID = { pos: [-31.5, -147.5, 63.5], at: [12, -95, 20], f: 520, roll: 0.42 };
     const CLOSE_AT = 1.3, HOLD_CLOSE = 1.3;      // and a rough or hard dock goes back to the close HOLD_CLOSE s into the ring's lights, to hold on what it broke
     const LIGHT = [-0.75, 0.3, 0.42];                                       // in the station's frame: in the picture, from the upper left and a little in front
     const SHADE = { amb: 0.05, pow: 1.15, gain: 0.8, fade: 0.36, shine: 22, spec: 0.46 };                    // the dark side's floor; how the light falls off; the far side dimmer
@@ -112,10 +123,20 @@
         const lt = x * -PS + y * PC, lr = x * PC + y * PS - RM;
         return Math.max(box3(lt, lr, z - (COL.top + COL.foot) / 2, COL.half, COL.half, (COL.top - COL.foot) / 2), -box3(lt, lr, z - COL.top, BAY.half, BAY.half, BAY.deep));
     };
+    // LAST PORT (relay): the dead ports' collars round the ring, the same block as ours at their own angles (set by create)
+    let EXTRA = [];
+    const collarAt = (x, y, z, pc, ps) => {
+        const lt = x * -ps + y * pc, lr = x * pc + y * ps - RM;
+        return Math.max(box3(lt, lr, z - (COL.top + COL.foot) / 2, COL.half, COL.half, (COL.top - COL.foot) / 2), -box3(lt, lr, z - COL.top, BAY.half, BAY.half, BAY.deep));
+    };
+    const extraD = (x, y, z) => { let d = Infinity; for (let k = 0; k < EXTRA.length; k++) d = Math.min(d, collarAt(x, y, z, EXTRA[k].c, EXTRA[k].s)); return d; };
+    /** The dead port whose collar a point is on (nearer its angle than ours), or null. */
+    const deadCollarOf = (x, y) => { const a = Math.atan2(y, x); let best = null, bd = Math.abs(wrapA(a - PU)); EXTRA.forEach(e => { const dd = Math.abs(wrapA(a - PU - e.d)); if (dd < bd) { bd = dd; best = e; } }); return best; };
     function sdf(x, y, z) {
         const q = Math.sqrt(x * x + y * y), tq = q - RM;
         let d = Math.sqrt(tq * tq + z * z) - RT;
         d = Math.min(d, collarD(x, y, z), hubD(x, y, z, q));
+        if (EXTRA.length) d = Math.min(d, extraD(x, y, z));
         if (q > HUB.r - 4 && q < RM - RT + 4) d = Math.min(d, Math.abs(z) > 4 ? Math.abs(z) - 2.6 : spokeD(x, y, z));
         return d;
     }
@@ -123,6 +144,7 @@
     /** Which part is at a point on the surface (the nearest), with the spoke frame it was found in. */
     function partAt(x, y, z) {
         const q = Math.sqrt(x * x + y * y), tq = q - RM, list = [[Math.sqrt(tq * tq + z * z) - RT, M_RING], [collarD(x, y, z), M_COLLAR]];
+        if (EXTRA.length) list.push([extraD(x, y, z), M_COLLAR]);
         if (q < 25) {
             const [ax, ay, az] = MAST.a, bx = MAST.b[0] - ax, by = MAST.b[1] - ay, bz = MAST.b[2] - az, px = x - ax, py = y - ay, pz = z - az;
             const h = clamp01((px * bx + py * by + pz * bz) / (bx * bx + by * by + bz * bz));
@@ -220,6 +242,7 @@
         bay's floor dark steel warmed by the thin lit frame round the dark door (two leaves), the light falling off into
         the recess; its walls in the frame's light; the collar's sides with one band. */
     function collarSurface(x, y, z, n, out) {
+        if (EXTRA.length) { const e = deadCollarOf(x, y); if (e) { deadCollarSurface(x, y, z, n, out, e); return; } }
         const lt = x * -PS + y * PC, lr = x * PC + y * PS - RM, m = Math.max(Math.abs(lt), Math.abs(lr)), up = n[2] > 0.7;
         if (up && z < COL.top - BAY.deep * 0.5 && m < BAY.half + 0.05) {                                    // the bay's floor
             if (m < BAY.door) { look(out, R.HULL, m > BAY.door - 0.14 ? 0.3 : Math.abs(lt) < 0.06 ? 0.13 : 0.03, true); return; }
@@ -234,6 +257,14 @@
             return;
         }
         look(out, R.HULL, z > COL.top - 1.4 && z < COL.top - 1.0 ? 0.45 : 0.82);
+    }
+    /** LAST PORT: a dead port's collar: the same plate and lip, its bay and door dark steel (a hull's nose sits in it). */
+    function deadCollarSurface(x, y, z, n, out, e) {
+        const lt = x * -e.s + y * e.c, lr = x * e.c + y * e.s - RM, m = Math.max(Math.abs(lt), Math.abs(lr)), up = n[2] > 0.7;
+        if (up && z < COL.top - BAY.deep * 0.5 && m < BAY.half + 0.05) { look(out, R.HULL, m < BAY.door ? 0.05 : 0.16); return; }
+        if (!up && z > COL.top - BAY.deep - 0.05 && m < BAY.half + 0.03) { look(out, R.HULL, 0.12); return; }
+        if (up) { const c = COL.half - m; look(out, R.HULL, c < 0.28 ? 1.0 : m < BAY.half + 0.22 ? 0.9 : 0.76 + 0.1 * (hash(Math.floor(lt / 1.2) + 19, Math.floor(lr / 1.2) + 9, 7) - 0.5)); return; }
+        look(out, R.HULL, z > COL.top - 1.4 && z < COL.top - 1.0 ? 0.45 : 0.78);
     }
     /** The ring's skin: twenty-four segments with dark joints, plates and their seams, weathering; rows of
         windows on its outer and inner walls, nearly all dead (dark slots), a few lit warm, some that wake with the lights
@@ -290,7 +321,24 @@
     /** The edit: which camera, `since` s after the touch (< 0 during the replay, s metres out). The wide for the glide,
         a strike and its bounce; the close for the last metre of a soft one, for a rough one's scrape from the touch and
         for the clamps; the wide again a moment before the ring's lights; a rough or hard one back to the close for what it left. */
-    function shotAt(grade, since, s) {
+    /** LAST PORT: the cut's last beats, from the lock, all on the close (it holds the four of us in a row, our windows lit,
+        and the screen): A.U.R.A.'s grade line as the clamps lock (said by the flight); then each dead hull's windows in
+        turn, slowly; then the screen's SENT (dark glass until then); Mira's line after SENT has had the frame to itself;
+        the chips under it, silently. */
+    function relayBeats(grade) {
+        const L = (BEATS[grade] || BEATS.soft).lock;
+        return { lock: L, report: L + 0.3, wins: [L + 1.6, L + 2.95, L + 4.3], sent: L + 5.8, mira: L + 8.7, chips: L + 10.5 };   // (Mira once the word holds)
+    }
+    /** LAST PORT, the edit: the wide for the glide (the close for a soft one's last metre); from the touch the close, but
+        a hard one's strike wide and its bounce (and the hull it tears loose) on the mid. */
+    function relayShot(grade, since, s) {
+        const b = BEATS[grade] || BEATS.soft;
+        if (since < 0) return grade === 'soft' && s < CLOSE_AT ? 'close' : 'wide';
+        if (grade === 'crash' && since < b.back - 0.4) return since >= 0.9 ? 'mid' : 'wide';
+        return 'close';
+    }
+    function shotAt(grade, since, s, relay) {
+        if (relay) return relayShot(grade, since, s);
         const b = BEATS[grade] || BEATS.soft;
         if (since < 0) return grade === 'soft' && s < CLOSE_AT ? 'close' : 'wide';
         if (grade !== 'soft' && since >= b.lights + HOLD_CLOSE) return 'close';
@@ -299,8 +347,11 @@
         return 'close';
     }
 
-    function create(AW, AH, shot) {
-        const isWide = shot !== 'close', cam = camera(AW, AH, isWide ? CAMS.wide : CAMS.close), N = AW * AH;
+    function create(AW, AH, shot, relay) {
+        const RX = relay || null;                                            // LAST PORT
+        const ownExtra = RX && RX.ports ? RX.ports.map(d => ({ d, c: Math.cos(PU + d), s: Math.sin(PU + d) })) : [];   // (LAST PORT: this camera's dead ports; set before every bake and draw)
+        EXTRA = ownExtra;
+        const isWide = shot !== 'close', cam = camera(AW, AH, RX && shot === 'mid' ? CAM_MID : isWide ? CAMS.wide : CAMS.close), N = AW * AH;
         const col = new Uint32Array(N), dep = new Float32Array(N).fill(Infinity);
         const mat = new Uint8Array(N), tone = new Float32Array(N), ndl = new Float32Array(N), rampOf = new Array(N);
         const wake = [], bayPx = [];                                         // [pixel, |angle| round the ring from the port]; [pixel, 0 floor | 1 frame]
@@ -375,6 +426,7 @@
         }
         function bake(ms) {
             if (done) return true;
+            EXTRA = ownExtra;                                                // LAST PORT: this camera's station (the dead ports' collars, or none)
             const t0 = performance.now(), end = t0 + ms;
             while (row < AH) {
                 for (let x = 0; x < AW; x++) pixel(x, row);
@@ -443,18 +495,18 @@
         // our Lander: the game's hull, side on, at the angle and size the camera sees it (baked once per angle and size),
         // a rim of light along the edge that faces it
         const sprites = new Map();
-        function lander(len, ht, deg) {
-            const key = len + '|' + ht + '|' + deg;
+        function lander(len, ht, deg, dead) {
+            const key = len + '|' + ht + '|' + deg + (dead ? '|d' + dead : '');
             let sp = sprites.get(key);
             if (sp) return sp;
             const half = Math.ceil(len / 2 + ht + 3), W = half * 2, p = P.painter(W, W, false), a = deg * Math.PI / 180;
-            const at = P.hull(p, { x: half, y: half, len, ht, angle: a, flip: true, seed: 9, anchor: 0.5, light: 0.86, flat: len < 130, mirror: Math.cos(a) - Math.sin(a) < 0 }, P.shapeL);
+            const at = P.hull(p, { x: half, y: half, len, ht, angle: a, flip: true, seed: dead ? 50 + dead : 9, anchor: 0.5, light: dead ? 0.6 : 0.86, rust: !!dead, flat: len < 130, mirror: Math.cos(a) - Math.sin(a) < 0 }, P.shapeL);
             const rel = pt => [pt[0] - half, pt[1] - half], src = new Uint32Array(p.data.buffer), d32 = new Uint32Array(src);
             const sx = Math.round(LS[0] * 1.2), sy = Math.round(LS[1] * 1.2), rimLum = R.HULL.lum[R.HULL.n - 2];
             for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
                 const i = y * W + x, X = x + sx, Y = y + sy;
                 if (!(src[i] >>> 24) || lum32(src[i]) >= rimLum) continue;
-                if (X < 0 || Y < 0 || X >= W || Y >= W || !(src[Y * W + X] >>> 24)) d32[i] = R.HULL.c32[level(R.HULL, 0.8, x, y)];
+                if (X < 0 || Y < 0 || X >= W || Y >= W || !(src[Y * W + X] >>> 24)) d32[i] = R.HULL.c32[level(R.HULL, dead ? 0.62 : 0.8, x, y)];
             }
             sp = { d32, w: W, half, ports: [0, 1, 2, 3, 4, 5].map(i => rel(at(P.DECK_U(i) + 0.054, -0.32))), deck: [0, 1, 2, 3, 4, 5].map(i => rel(at(P.DECK_U(i) + 0.05, -0.1))), lamp: rel(at(P.LANDER.NOSE + 0.06, -0.52)), bell: rel(at(1, 0)), skirt: rel(at(P.LANDER.BELL, 0)), nose: rel(at(0, 0)) };
             if (sprites.size > 60) sprites.delete(sprites.keys().next().value);
@@ -581,7 +633,7 @@
             if (b.late) events.push([b.late, 'late']);
             if (b.back) events.push([b.back, 'second']);
             events.push([b.lock, 'lock'], [b.lights, 'lights']);
-            return { lock: b.lock, lights: b.lights, events };
+            return RX ? { lock: b.lock, lights: b.lights, events, relay: relayBeats(grade) } : { lock: b.lock, lights: b.lights, events };
         }
         /** The Lander now (since: seconds after the touch, < 0 before it): s (metres above the port's face), lat (metres
             across it), tilt (rad), drive (its burn), brake (the nose thrusters), rattle. */
@@ -728,24 +780,203 @@
             }
         }
 
+        // ══ LAST PORT (relay): three of our class in the ring's other ports, nose in as we are, dark; their windows light in
+        //    turn once our clamps hold; a hard dock tears one loose and it falls towards the moon; the screen says SENT ══
+        const DP = RX ? RX.ports.map((d, k) => { const u = PU + d, c = Math.cos(u), s = Math.sin(u); return { k, d, PF: [RM * c, RM * s, COL.top], TAN: [-s, c, 0], RAD: [c, s, 0] }; }) : [];
+        // a dead hull sags a little in its clamps; the decks its windows light (the decks ours has lit); a torn one: when it
+        // breaks after the touch (s), how long it falls (s), how far (m), how it pops off (m up and out) and turns over (rad/s)
+        // (each deck a beat after the one above it, so they come on deck by deck, as ours are lit); a window's glow (art px),
+        // ours the same in the relay
+        const DEADH = { sag: 0.03, lit: [0, 2, 3, 4], step: 0.18, flick: 0.12 }, TORN = { at: 0.12, T: 9, far: 2600, lift: 7, out: 9, turn: 0.55, ease: 2.4, drift: 5.5, driftT: 3.5 };   // (up and out past the ring's edge, so it falls in front of it)
+        const winGlow = Math.max(3.2, 2.6 * FXS);
+        const relayInfo = { lit: 0, sent: false, torn: null };
+        const tornSparks = (() => { const r = rnd(91); return Array.from({ length: 26 }, () => ({ a: r() * 6.283, sp: 30 + r() * 90, life: 0.25 + r() * 0.6, at: r() * 0.15 })); })();
+        const sub3 = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+        /** Which way a picture point lies from the camera (unshifted art px). */
+        const rayOf = (x, y) => norm([0, 1, 2].map(k => cam.fw[k] * cam.F + cam.rt[k] * (x + 0.5 - cam.cx) - cam.up[k] * (y + 0.5 - cam.cy)));
+        /** Where a torn hull falls to: a point on the moon's disc inside the picture (f.relay.moon, in the picture's own px),
+            one the station does not cover (it ends a speck over the moon, not behind the ring), as near the middle as can be. */
+        function fallTarget(f, ox, oy) {
+            const m = f.relay && f.relay.moon;
+            if (!m) return add(cam.O, rayOf(AW * 0.86, AH * 0.9), TORN.far);
+            const mx = m[0] - ox, my = m[1] - oy, r = m[2], dx = AW / 2 - mx, dy = AH / 2 - my, dl = Math.hypot(dx, dy) || 1, pad = 22;
+            let open = null, od = Infinity;
+            const isSky = (x, y) => x < 0 || x >= AW || y < 0 || y >= AH || dep[y * AW + x] === Infinity;      // (and clear of the station by a margin)
+            for (let gy = -0.9; gy <= 0.9; gy += 0.1) for (let gx = -0.9; gx <= 0.9; gx += 0.1) {
+                const qx = Math.round(mx + gx * r), qy = Math.round(my + gy * r);
+                if (gx * gx + gy * gy > 0.72 || qx < pad || qx >= AW - pad || qy < pad || qy >= AH - pad || ![[0, 0], [16, 0], [-16, 0], [0, 16], [0, -16]].every(([a, b]) => isSky(qx + a, qy + b))) continue;
+                const d = Math.hypot(qx - AW / 2, qy - AH / 2);
+                if (d < od) { od = d; open = [qx, qy]; }
+            }
+            if (open) return add(cam.O, rayOf(open[0], open[1]), TORN.far);
+            let px = mx + dx / dl * Math.min(dl, r * 0.82), py = my + dy / dl * Math.min(dl, r * 0.82);
+            for (let a = 0; a <= 1; a += 0.01) { const qx = mx + dx * a, qy = my + dy * a; if (qx > pad && qx < AW - pad && qy > pad && qy < AH - pad) { if (Math.hypot(qx - mx, qy - my) < r * 0.9) { px = qx; py = qy; } break; } }
+            return add(cam.O, rayOf(px, py), TORN.far);
+        }
+        /** The dead hulls now: nose and tail (m), how far from the camera, whether it casts a shadow, which it is, torn. */
+        function deadPoses(f, since, grade, side) {
+            const tornK = grade === 'crash' ? RX.torn(side) : -1;
+            return DP.map(p => {
+                const sag = RX.sag ? RX.sag[p.k] : DEADH.sag * (p.k % 2 ? 1 : -1), axis0 = norm(add(UP, p.TAN, sag)), seat = add(p.PF, UP, -LANDER.seat);   // (crooked in its clamps, as the glass shows it)
+                let nose3 = seat, axis = axis0, tt = -1;
+                if (p.k === tornK && since > TORN.at) {
+                    tt = since - TORN.at;
+                    const s = Math.min(1, tt / TORN.T) ** TORN.ease, base = add(add(seat, UP, TORN.lift * (1 - Math.exp(-tt * 1.4))), p.RAD, TORN.out * (1 - Math.exp(-tt)));
+                    const T = fallTarget(f, Math.round(f.ox || 0), Math.round(f.oy || 0));
+                    // across the picture first (the part of the way to the moon that is not away from the camera), then away
+                    const v = sub3(T, base), rb = norm(sub3(base, cam.O)), along = dot3(v, rb), lat = norm(sub3(v, [rb[0] * along, rb[1] * along, rb[2] * along]));
+                    const drift = TORN.drift * Math.min(tt, TORN.driftT) + TORN.drift * 0.4 * Math.max(0, tt - TORN.driftT);
+                    nose3 = [0, 1, 2].map(i => base[i] + lat[i] * drift + (T[i] - base[i]) * s);
+                    const th = TORN.turn * tt; axis = norm([0, 1, 2].map(i => axis0[i] * Math.cos(th) + p.RAD[i] * Math.sin(th)));
+                }
+                const tail3 = add(nose3, axis, LANDER.len), mid3 = add(nose3, axis, LANDER.len / 2), d = [0, 1, 2].map(i => mid3[i] - cam.O[i]);
+                return { p, nose3, tail3, mid3, dist: Math.hypot(...d), shadow: tt < 0.6, tt, torn: p.k === tornK };
+            });
+        }
+        /** A sprite drawn only where the station is not nearer the camera (a hull falling away behind the ring). */
+        function blitSpriteZ(buf, sp, cx, cy, dist, ox, oy) {
+            const x0 = Math.round(cx) - sp.half, y0 = Math.round(cy) - sp.half;
+            for (let y = 0; y < sp.w; y++) {
+                const Y = y0 + y, sy = Y - oy; if (Y < 0 || Y >= AH) continue;
+                for (let x = 0; x < sp.w; x++) {
+                    const X = x0 + x, c = sp.d32[y * sp.w + x], sx = X - ox;
+                    if (X < 0 || X >= AW || !(c >>> 24)) continue;
+                    if (sx >= 0 && sx < AW && sy >= 0 && sy < AH && dep[sy * AW + sx] < dist - 3) continue;
+                    buf[Y * AW + X] = c;
+                }
+            }
+        }
+        /** One dead hull: its clamps (shut; a torn one's hang open), the game's Lander sprite dark and rusted, its tail end,
+            its windows (dark; lit in turn from wins[k], the decks ours has lit, each flickering on), its clamps' lamps with
+            them; a torn one's sparks where it broke. */
+        function drawDeadHull(buf, d, f, since, grade, th, ox, oy, shift) {
+            const { p } = d, pn = shift(cam.project(d.nose3)), pt = shift(cam.project(d.tail3)), pm = shift(cam.project(d.mid3));
+            if (!pn || !pt || !pm) return;
+            const rb = grade ? relayBeats(grade) : null, winAt = rb ? rb.wins[p.k] : Infinity;
+            const lenRaw = Math.hypot(pn[0] - pt[0], pn[1] - pt[1]), isOpen = d.torn && d.tt > 0;
+            const isLitAt = j => !d.torn && since >= winAt + j * DEADH.step && (since - winAt - j * DEADH.step > DEADH.flick || Math.floor((since - winAt) * 30) % 2 === 0);   // (a torn one stays dark)
+            // its clamps: shut on its hull, or (torn) hanging open where they let go
+            const toC0 = c => norm([c[0] - p.PF[0], c[1] - p.PF[1], 0]), hullAx = norm(sub3(d.tail3, d.nose3));
+            const arms = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b], j) => {
+                const root = add(add(p.PF, p.TAN, a * (COL.half - 0.55)), p.RAD, b * (COL.half - 0.55)), toC = toC0(root), k = isOpen ? 0.3 : 1;
+                const kneeOpen = add(add(root, toC, 0.7), UP, 1.6), tipOpen = add(add(root, toC, 1.5), UP, 2.5);
+                const grip = isOpen ? add(p.PF, UP, 2.4 - LANDER.seat) : add(d.nose3, hullAx, 2.4), kneeShut = add(add(root, toC, 0.2), UP, 1.4), tipShut = add(grip, toC, LANDER.d / 2 + 0.12);
+                const knee = [0, 1, 2].map(i => lerp(kneeOpen[i], kneeShut[i], k)), tip = [0, 1, 2].map(i => lerp(tipOpen[i], tipShut[i], k));
+                const r2 = shift(cam.project(root)), k2 = shift(cam.project(knee)), t2 = shift(cam.project(tip));
+                return r2 && k2 && t2 ? { root: r2, knee: k2, tip: t2, isLocked: !isOpen && isLitAt(0), behind: t2[2] > (d.torn ? Infinity : pm[2]), j } : null;
+            }).filter(Boolean);
+            clampSide(buf, arms.filter(m => m.behind), th);
+            if (lenRaw >= 6) {
+                const len = Math.max(8, Math.round(lenRaw)), ht = Math.max(4, Math.round(LANDER.d * cam.F / pm[2] * 2) / 2);
+                const deg = Math.round(Math.atan2(pn[1] - pt[1], pn[0] - pt[0]) * 180 / Math.PI), sp = lander(len, ht, deg, p.k + 1), cx = pm[0], cy = pm[1];
+                if (d.torn && d.tt > 0) blitSpriteZ(buf, sp, cx, cy, d.dist, ox, oy); else blitSprite(buf, sp, cx, cy);
+                const ratio = clamp01(lenRaw / (LANDER.len * cam.F / pm[2])), cosT = Math.sqrt(1 - ratio * ratio), ax = (pt[0] - pn[0]) / (lenRaw || 1), ay = (pt[1] - pn[1]) / (lenRaw || 1);
+                if (pt[2] < pn[2] && cosT > 0.15 && !(d.torn && d.tt > 0)) endCap(buf, sp, cx, cy, ax, ay, len, ht, cosT, 0);
+                DEADH.lit.forEach((j, o) => {
+                    if (!isLitAt(o)) return;
+                    const q = sp.ports[j], x = cx + q[0], y = cy + q[1];
+                    glow(buf, x, y, winGlow, R.WARM, 0.62);
+                    dotPx(buf, x, y, R.AMBER, 0.95, Math.max(2, DOT));
+                    relayInfo.lit++;
+                });
+            } else if (lenRaw >= 1.5) {                                                  // far off: a sliver, still lit by the station's light
+                const n = Math.ceil(lenRaw);
+                for (let q = 0; q <= n; q++) lightPx(buf, pn[0] + (pt[0] - pn[0]) * q / n, pn[1] + (pt[1] - pn[1]) * q / n, R.HULL, 0.55);
+                if (isLitAt(0)) lightPx(buf, pm[0], pm[1], R.AMBER, 0.85);
+            }
+            clampSide(buf, arms.filter(m => !m.behind), th);
+            if (d.torn && d.tt >= 0 && d.tt < 0.9) {                                   // where it broke from its clamps
+                const o = shift(cam.project(p.PF));
+                if (o) {
+                    if (d.tt < 0.2) glow(buf, o[0], o[1], 12 * FXS, R.SUN, 1.1 * (1 - d.tt / 0.2));
+                    tornSparks.forEach(sk => { const age = d.tt - sk.at; if (age < 0 || age > sk.life) return; const dx = Math.cos(sk.a), dy = Math.sin(sk.a) * 0.7 - 0.3; spark(buf, o[0] + dx * sk.sp * FX * age, o[1] + dy * sk.sp * FX * age, dx, dy, 1 - age / sk.life); });
+                }
+            }
+            if (d.torn) relayInfo.torn = { tt: +d.tt.toFixed(2), x: Math.round(pm[0]), y: Math.round(pm[1]), len: Math.round(lenRaw), dist: Math.round(d.dist) };
+        }
+        // the screen: a small panel set into the ring's front face beside our collar (the side the cameras are on, between
+        // us and 17,199). Recessed: a lip round it, dark on the side the light comes from and lit on the far side (a hollow
+        // in the steel, not a plate laid on it). Dark glass, faintly grained, from the first frame of the cut; at the beat
+        // SENT in the game's own 3 x 5 letters, dim ice blue (COLD's third step, its top step only as a blink comes on), the
+        // glass round them barely lit, a faint glow: three slow blinks, then held. The glass and its lip are in perspective;
+        // the letters are whole art pixels (cells of `cell` px, as big as the glass holds), upright, riding the panel's own
+        // slope, as a small screen's pixels read from across a dock. Half its width and height (m), how far along the ring
+        // from the port's middle, the lip (m); the blinks (s on, s off), the glow
+        const SCR = { w: 2.1, h: 1.1, along: -(COL.half + 3.1), lip: 0.17, blinks: 3, on: 0.8, off: 0.5, glow: 0.15 };
+        const SCR_C = add([PC * RM, PS * RM, RT + 0.06], TAN, SCR.along), SCR_N = UP, SCR_U = TAN, SCR_V = [-RAD[0], -RAD[1], 0];
+        const SENT_CELLS = (() => { const str = RX ? RX.sent : 'SENT', list = []; P.pixelText(str, 0, 0, (x, y) => list.push([x, y])); return { list, w: P.pixelTextWidth(str), h: 5 }; })();
+        const SCR_LU = LIGHT[0] * SCR_U[0] + LIGHT[1] * SCR_U[1], SCR_LV = LIGHT[0] * SCR_V[0] + LIGHT[1] * SCR_V[1];   // where the light comes from, along the panel
+        const glassAt = RX ? new Uint8Array(AW * AH) : null, glassList = [];                 // the glass's pixels this frame (the letters stay on it)
+        /** How lit the words are k s after the beat (0 dark .. 1 a blink coming on): three slow blinks, the last one held. */
+        function sentLevel(k) {
+            if (k < 0) return 0;
+            const per = SCR.on + SCR.off, n = Math.floor(k / per), ph = k - n * per, peak = q => 0.8 + 0.2 * Math.max(0, 1 - q / 0.3);
+            if (n >= SCR.blinks - 1) return peak(k - (SCR.blinks - 1) * per);
+            return ph < SCR.on ? peak(ph) : 0;
+        }
+        function sentScreen(buf, since, grade, ox, oy) {
+            const rb = grade ? relayBeats(grade) : null, lv = rb ? sentLevel(since - rb.sent) : 0;
+            relayInfo.sent = lv > 0;
+            if (dot3(sub3(cam.O, SCR_C), SCR_N) <= 0) return;
+            const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => cam.project(add(add(SCR_C, SCR_U, a * SCR.w), SCR_V, b * SCR.h)));
+            if (corners.some(c => !c)) return;
+            const xs = corners.map(c => c[0]), ys = corners.map(c => c[1]), inW = SCR.w - SCR.lip, inH = SCR.h - SCR.lip;
+            for (let y = Math.max(0, Math.floor(Math.min(...ys))); y <= Math.min(AH - 1, Math.ceil(Math.max(...ys))); y++) for (let x = Math.max(0, Math.floor(Math.min(...xs))); x <= Math.min(AW - 1, Math.ceil(Math.max(...xs))); x++) {
+                const dr = rayOf(x, y), den = dot3(dr, SCR_N);
+                if (Math.abs(den) < 1e-4) continue;
+                const t = dot3(sub3(SCR_C, cam.O), SCR_N) / den;
+                if (t <= 0 || Math.abs(dep[y * AW + x] - t) > 1.2) continue;               // the ring's face is what is there
+                const pt3 = add(cam.O, dr, t), rel = sub3(pt3, SCR_C), u = dot3(rel, SCR_U), w = dot3(rel, SCR_V);
+                if (Math.abs(u) > SCR.w || Math.abs(w) > SCR.h) continue;
+                const X = x + ox, Y = y + oy;
+                if (X < 0 || X >= AW || Y < 0 || Y >= AH) continue;
+                if (Math.abs(u) > inW || Math.abs(w) > inH) {                               // the lip: the wall facing the light lit, the other dark
+                    const du = Math.abs(u) > inW ? -Math.sign(u) * SCR_LU : 0, dv = Math.abs(w) > inH ? -Math.sign(w) * SCR_LV : 0;
+                    buf[Y * AW + X] = R.HULL.c32[level(R.HULL, du + dv > 0 ? 0.55 : 0.07, X, Y)];
+                    continue;
+                }
+                const i = Y * AW + X;
+                buf[i] = R.COLD.c32[level(R.COLD, lv > 0 ? 0.1 + 0.1 * lv : 0.06 + 0.06 * hash(X, Y, 23), X, Y)];
+                glassAt[i] = 1; glassList.push(i);
+            }
+            if (lv > 0) {                                                                    // the word: whole pixels, upright, along the panel's slope
+                const c0 = cam.project(SCR_C), pa = cam.project(add(SCR_C, SCR_U, -inW)), pb = cam.project(add(SCR_C, SCR_U, inW));
+                const span = Math.hypot(pb[0] - pa[0], pb[1] - pa[1]), cell = clamp(Math.floor(span / (SENT_CELLS.w + 2)), 1, 3), slope = (pb[1] - pa[1]) / ((pb[0] - pa[0]) || 1);
+                const x0 = Math.round(c0[0] + ox - SENT_CELLS.w * cell / 2), y0 = Math.round(c0[1] + oy - SENT_CELLS.h * cell / 2), v = 0.55 + 0.25 * lv;
+                SENT_CELLS.list.forEach(([gx, gy]) => {
+                    const bx = x0 + gx * cell, by = y0 + gy * cell + Math.round((bx + cell / 2 - c0[0] - ox) * slope);
+                    for (let j = 0; j < cell; j++) for (let k = 0; k < cell; k++) {
+                        const X = bx + k, Y = by + j, i = Y * AW + X;
+                        if (X >= 0 && X < AW && Y >= 0 && Y < AH && glassAt[i]) buf[i] = R.COLD.c32[level(R.COLD, v, X, Y)];
+                    }
+                });
+                glow(buf, c0[0] + ox, c0[1] + oy, SCR.w * 1.6 * cam.F / c0[2], R.COLD, SCR.glow * lv);
+            }
+            for (let n = 0; n < glassList.length; n++) glassAt[glassList[n]] = 0;
+            glassList.length = 0;
+        }
+
         /** One frame of the shot. */
         function draw(buf, f) {
             const te = f.te || 0, since = f.touch >= 0 ? te - f.touch : -1, grade = since >= 0 ? f.grade || 'soft' : null, b = BEATS[grade] || BEATS.soft;
             const ox = Math.round(f.ox || 0), oy = Math.round(f.oy || 0), side = Math.sign(f.lat || 1);
             if (grade && (!burst || burst.grade !== grade)) burst = makeBurst(grade, side);
-            if (isWide) drawDead(buf, f.turn || 0, ox, oy);                // far behind, wheeling with the sky
+            if (isWide && !RX) drawDead(buf, f.turn || 0, ox, oy);         // far behind, wheeling with the sky (LAST PORT: not there)
             for (let y = 0; y < AH; y++) {                                     // the station
                 const sy = y - oy; if (sy < 0 || sy >= AH) continue;
                 const row = y * AW, srow = sy * AW;
                 for (let x = 0; x < AW; x++) { const sx = x - ox; if (sx < 0 || sx >= AW) continue; const c = col[srow + sx]; if (c) buf[row + x] = c; }
             }
             const shift = p => (p ? [p[0] + ox, p[1] + oy, p[2]] : null);
-            const tick = Math.floor(te * 8), wave = grade ? since - b.lights : -1, home = grade ? clamp01((since - b.lock) / 0.6) : 0;
+            const tick = Math.floor(te * 8), wave = grade && !RX ? since - b.lights : -1, home = grade ? clamp01((since - b.lock) / 0.6) : 0;
             if (home > 0) dimBay(buf, home, ox, oy);
             // our Lander: where it is (its nose sits down in the bay once home), its shadow across the steel
             const ps = pose({ ...f, grade }, since), axis = [TAN[0] * Math.sin(ps.tilt), TAN[1] * Math.sin(ps.tilt), Math.cos(ps.tilt)];
             const nose3 = add(add(PF, TAN, ps.lat), UP, Math.max(0, ps.s) + Math.min(0, ps.s) * 0.5 - LANDER.seat), tail3 = add(nose3, axis, LANDER.len), mid3 = add(nose3, axis, LANDER.len / 2);
             const shadowPx = landerShadow(buf, nose3, tail3, ox, oy);
+            if (RX) relayInfo.lit = 0;
+            const dead = RX ? deadPoses(f, since, grade, side) : null;                                // LAST PORT: theirs too
+            if (dead) dead.forEach(d => { if (d.shadow) landerShadow(buf, d.nose3, d.tail3, ox, oy); });
             if (grade && grade !== 'soft') scars(buf, grade, since, f, side, shift);
             // the bay's light pooling a little round it (gone once we are home); the port's own lamps while we are lined
             // up (and from the lock on, on a soft dock; from the ring's lights on, on any)
@@ -781,6 +1012,7 @@
                 lightPx(buf, s[0], s[1], R.COLD, 0.7 + 0.3 * k);
                 if (l.big && size > 1.5) [[1, 0], [0, 1], [1, 1]].forEach(([a, c]) => lightPx(buf, s[0] + a, s[1] + c, R.COLD, 0.8 * k));
             });
+            if (RX) sentScreen(buf, since, grade, ox, oy);                                              // LAST PORT: the screen on our collar
             // our Lander: how big and at what angle the camera sees it
             const pn = shift(cam.project(nose3)), pt = shift(cam.project(tail3)), pm = shift(cam.project(mid3));
             const jit = ps.rattle && !f.calm ? Math.round(ps.rattle * 1.6 * Math.sin(te * 61)) : 0, lenRaw = Math.hypot(pn[0] - pt[0], pn[1] - pt[1]);
@@ -797,13 +1029,18 @@
                 const r2 = shift(cam.project(root)), k2 = shift(cam.project(knee)), t2 = shift(cam.project(tip));
                 return { root: r2, knee: k2, tip: t2, isLocked, behind: t2[2] > pm[2], j };
             });
+            if (dead) dead.forEach(d => { if (d.dist > pm[2]) drawDeadHull(buf, d, f, since, grade, th, ox, oy, shift); });   // LAST PORT: those behind us
             clampSide(buf, arms.filter(m => m.behind), th);
             blitSprite(buf, sp, cx, cy);
             const ax = (pt[0] - pn[0]) / (lenRaw || 1), ay = (pt[1] - pn[1]) / (lenRaw || 1), burn = ps.drive * (0.85 + 0.15 * Math.sin(te * 47));
             if (pt[2] < pn[2] && cosT > 0.15) endCap(buf, sp, cx, cy, ax, ay, len, ht, cosT, burn);
             warmWash(buf, sp, cx, cy, bay[0], bay[1], bayR * 2.2, 0.5 * clamp01(1 - Math.max(0, ps.s) / 5) * (1 - home));
             const broken = [...(f.holes || []), ...(f.broke >= 0 && since > 0 ? [f.broke] : [])];
-            sp.ports.forEach((p, j) => { if ((f.lit || [0, 2, 3, 4]).includes(j) && !broken.includes(j)) dotPx(buf, cx + p[0], cy + p[1], R.AMBER, 0.9, DOT); });   // our people's decks, lit from inside
+            sp.ports.forEach((p, j) => {                                                                                    // our people's decks, lit from inside
+                if (!(f.lit || [0, 2, 3, 4]).includes(j) || broken.includes(j)) return;
+                if (RX) { glow(buf, cx + p[0], cy + p[1], winGlow, R.WARM, 0.62); dotPx(buf, cx + p[0], cy + p[1], R.AMBER, 0.95, Math.max(2, DOT)); return; }   // LAST PORT: as theirs will be
+                dotPx(buf, cx + p[0], cy + p[1], R.AMBER, 0.9, DOT);
+            });
             broken.forEach(j => {                                                                                          // a torn hole in every broken deck
                 const p = sp.deck[j], ux = ax, uy = ay, hl = Math.max(1, len * 0.026), hw = Math.max(1.6, ht * 0.21), m = Math.ceil(hl + hw + 1);
                 for (let yy = -m; yy <= m; yy++) for (let xx = -m; xx <= m; xx++) {
@@ -836,8 +1073,9 @@
                 const n = Math.round(6 * FXS);
                 for (let k = 0; k < n; k++) dotPx(buf, nx - ax * k * 0.9 + ay * sd * k * 0.6, ny - ay * k * 0.9 - ax * sd * k * 0.6, R.PLUME, 0.85 - k / n * 0.7, k < n / 2 ? DOT : 1);
             });
+            if (dead) dead.forEach(d => { if (d.dist <= pm[2]) drawDeadHull(buf, d, f, since, grade, th, ox, oy, shift); });   // LAST PORT: those in front of us
             if (grade) drawStrike(buf, grade, since, f, side, shift, sp, cx, cy);
-            lastFrame = { te: +te.toFixed(2), since: +since.toFixed(2), s: +ps.s.toFixed(2), lat: +ps.lat.toFixed(2), len, ht, deg, cosT: +cosT.toFixed(2), shadowPx, shBox, home: +home.toFixed(2), lightsOn, portLit, wake: wake.length, holes: broken.length, clamps: arms.map(m => m.isLocked) };
+            lastFrame = { te: +te.toFixed(2), since: +since.toFixed(2), s: +ps.s.toFixed(2), lat: +ps.lat.toFixed(2), len, ht, deg, cosT: +cosT.toFixed(2), shadowPx, shBox, home: +home.toFixed(2), lightsOn, portLit, wake: wake.length, holes: broken.length, clamps: arms.map(m => m.isLocked), ...(RX ? { relay: { ...relayInfo } } : {}) };
         }
         /** The touch: a soft one breathes a little air out of the seal; a rough one knocks the rim (a flash, sparks off
             along it, more as it scrapes into place); a hard one strikes (a big flash, a burst of sparks, pieces that drift
