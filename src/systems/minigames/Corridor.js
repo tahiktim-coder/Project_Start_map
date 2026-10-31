@@ -8,6 +8,10 @@
    arrows); holding the mouse, Space, W or Shift opens the throttle, so the end comes sooner and the debris faster. Once through, A.U.R.A. says what the flight found, one
    line at a time. A.U.R.A. can fly: steady, never faster, and her slower way costs energy; a flight of your own with no
    scrape saves energy (THE STAKES, below). Quiet sound, only when the game's is on.
+   THE DARK (After the flight, 2026-10-31; the new look's jump into sector 5 only, MiniHost 'corridor-void'): in the middle of
+   the course the universe goes out round us WHILE WE FLY, the stars one at a time in a random order (never a ring), then the
+   sky, the light last as one warm pixel; we fly a long black by our own lamps; then it comes back, the light first and then
+   every star at once. Our ship keeps its size and place, its decks lit. See THE DARK below; without it the flight is as before.
    THE LOOK (2026-10-11) is the travel view's, drawn at density 1.5 (720 × 405 art pixels; the flight still thinks in 480 × 270
    units): each sector's sky is its place in sky F (the band, the rare colours and its enormous thing: the vast planet, the
    dark clouds and the spiral, the shell and its pulsar, the pillars, the eye, the ring of lit dust round the light); the light
@@ -28,7 +32,9 @@
            avoidHulls   optional: hull numbers the game has already used; the two hulls seen are never these when the range allows
            twin         optional: true when the disc is aboard; then on the jump into sector 6 the twin flies beside us
                         (missing or false: no twin)
-   result  { scrapes, auraFlew, energyDelta, beaconsHeard, shipsSeen, hulls, damagedRooms }
+           void         optional: true for THE DARK ('corridor-void' always passes it), or { seed } to fix the flight and the
+                        order the stars go in (tests). Missing: no dark
+   result  { scrapes, auraFlew, energyDelta, beaconsHeard, shipsSeen, hulls, damagedRooms, void? }
            scrapes      debris or hulls that touched the ship (A.U.R.A. too, rarely: in the thickest wave, OPEN_WAVE)
            auraFlew     A.U.R.A. had the stick for at least half the flight
            energyDelta  what the flight cost (negative) or saved (positive), as A.U.R.A. said it (STAKES); the game adds it.
@@ -37,7 +43,9 @@
            shipsSeen    hulls that came close enough to name (always 2)
            hulls        their hull numbers
            damagedRooms deck keys a breaking scrape turned red on the inset, in order: the game's shipDecks keys
-                        (bridge, lab, quarters, cargo, engineering), never a deck that was already red */
+                        (bridge, lab, quarters, cargo, engineering), never a deck that was already red
+           void         (THE DARK only) { hours, rations (negative), stress (each living crew member), blackSecs, darkHits }:
+                        what the dark cost; the game applies it (App.applyCorridorResult). A skip has no dark and no void */
 (function () {
     'use strict';
     const MiniLab = window.MiniLab, MiniShip = window.MiniShip, MiniHost = window.MiniHost;
@@ -155,6 +163,126 @@
         fast: n => `Fast and clean, Commander. That saved ${n} energy.`,                    // DRAFT: the throttle open most of the way
         one: n => `That still saved ${n} energy.`,                                          // DRAFT: after "One scrape on the hull."
     };
+    // ══ THE DARK (After the flight, 2026-10-31; the approved sketch, prototypes/ideas/void, with a black more than twice as
+    //    long): used only with opts.void, on the new look's jump into sector 5. The universe goes out round us while we fly,
+    //    and comes back. From course.from the drain (the stars one at a time, then the sky and the nebula, then the light last
+    //    as one warm pixel), keyed to how far through the course we are but never shorter than drainMin real seconds (so at
+    //    full throttle the stars still go one at a time); the black begins when the drain ends and lasts a fixed stretch of the
+    //    course (back - black: the faster we fly, the sooner we are out), flown by our own floodlights, its first stretch empty;
+    //    then the return, in real seconds, as the sketch's (the light first, then every star at once, then the sky). Nothing
+    //    new is drawn but our floodlights: the sky, the stars, the light and the debris are only turned down. ══
+    const VOID_DUR = 73;                                            // the dark jump's course seconds (sector 5 flies 56 without it): the 17 more are all in the black
+    const VOID = {
+        dur: VOID_DUR,
+        // shares of that course. from: the drain begins (19.6 s, as without the dark); black: where it ends at cruise (30.8 s;
+        // the black then lasts back - black, 30 s of course (the sketch's 12.9), wherever it begins); hull1, hull2: the hulls
+        // (19.0 s, as without the dark; 70.3 s, after the return, where 0.82 would be in the black). still: the black's first
+        // 9 s of course have no debris (only our lamps on the specks); what was due while the light died and in that stretch
+        // comes after it. after: the stretch after the return begins has none either (8.4 s: the light comes back alone).
+        // margin: course seconds round them. decide: a piece gets its part in the dark this far out (units), just before it
+        // can be drawn
+        course: { from: 19.6 / VOID_DUR, black: 30.8 / VOID_DUR, back: 60.8 / VOID_DUR, hull1: 19.04 / VOID_DUR, hull2: 70.32 / VOID_DUR,
+            still: 9 / VOID_DUR, after: 8.4 / VOID_DUR, margin: 0.6, decide: 132 },
+        // the debris of the dark jump (makeLeg, as SECTORS and WAVES are for the others): wave 1 where it is without the dark
+        // (9.5 s ± 5 of course, its pieces and their aim as many and as early: aimFrom), wave 2 over the black after its empty
+        // stretch (50.5 s ± 11, as thick as without the dark, so more of it), wave 3 in the return (gone with the light)
+        debris: 71, aimFrom: 6.72,
+        waves: [[9.52 / VOID_DUR, 5.04 / VOID_DUR, 0.237], [50.5 / VOID_DUR, 11 / VOID_DUR, 0.62], [64.8 / VOID_DUR, 2.24 / VOID_DUR, 0.143]],
+        drain: 10.8, drainMin: 9,                                   // the drain's timetable below is in drain seconds, 0 .. drain; at least drainMin real s
+        // the stars: the brightest `bright` in view go one at a time, in a seeded random order, the gaps easing from gaps[0] to
+        // gaps[1] (from .. to); every other star at its own seeded moment over faint[0] .. faint[1] (share gone = x ** curve).
+        // Each goes in two dither steps (half tone for `half`, then gone); a twinkler holds still `steady` before it goes.
+        stars: { from: 0.5, to: 7.2, gaps: [0.6, 0.04], bright: 38, faint: [0.7, 7.4], curve: 1, half: 0.125, steady: 0.25 },
+        sky: { at: 3.0, step: 0.6, steps: 8 },                     // the sky and the nebula to ink in eight even steps (3.0 .. 7.8); the slow motion stops at half
+        // the light: four smaller sizes (shares of its own), then one warm SUN pixel (step `tone`) for `pixel`, then nothing
+        // (7.8 .. 10.8). `big`: about this many screen pixels across at any window size (1 to 4 art pixels), so it never reads as dust.
+        // `shell`: our hull's outer shell turns down with the light's four steps to this share of ink (and back with its four
+        // opening steps), so the lit decks are our ship's only light in the black
+        light: { at: 7.8, step: 0.375, sizes: [0.7, 0.45, 0.25, 0.1], pixel: 1.5, tone: 5, big: 3, shell: 0.55 },
+        // the return, real seconds after the course reaches the black's end: our lamps go out (two flood.off steps), then one
+        // warm pixel alone until `open`, the light opening in four steps, every star at once (two dither steps), the sky in
+        // eight steps; then A.U.R.A.'s line about the hours at `close`. No crew line starts within `read` real s of the
+        // return, so the light comes back in silence
+        back: { open: 1.4, openStep: 1 / 3, opens: [0.25, 0.45, 0.7, 1], stars: 2.9, sky: 3.4, skyStep: 0.15, close: 5.2, read: 1.8 },
+        // our floodlights: two lamps under the bridge (`low` units below where we look from, `sep` either side), pointing
+        // straight ahead with the ship: only in the black, so the light's last pixel and its return are alone in the dark. On
+        // in two steps `on` real s into the black (`step` apart); off in two steps (`off` apart) as the return begins. Each
+        // beam: `w0` units wide at the lamp, widening `s` a unit ahead; full to `full` units ahead, none past `reach`.
+        // `spill`: near us (`near` units) a little reaches anything, so what rushes past shows for a moment. `haze`: the
+        // faint wedge each makes in the dust, rising from the picture's bottom edge towards the middle (its bright core `core`
+        // units wide at the lamp, widening `coreS`; full `hazeZ[0]` units out, none past `hazeZ[1]`, so it is gone before the
+        // aim box), as headlights in fog; it fades in over the picture's bottom `edge` share, so it rises out of the dark. `dust`:
+        // motes only our lamps show (the specks streaming past in the beams), only inside the haze (none past `dustZ` units, fading
+        // out from `dustFade`), each streak at most `dustTail` of its own depth long, so the middle stays black and nothing
+        // near us draws a line across the picture.
+        flood: { on: 0.9, step: 0.35, off: 0.25, low: 0.6, sep: 0.5, w0: 0.9, s: 0.1, full: 10, reach: 34, spill: 0.35, near: [3, 9],
+            haze: 0.32, core: 0.13, coreS: 0.04, hazeZ: [1.2, 5], edge: 0.14, dust: 36, dustZ: 5, dustFade: 2.5, dustTail: 0.5 },
+        // flying in the black: the cruise eases to `slow` over `ease` real s once Jaxon (or A.U.R.A.) says so (by `late` s into
+        // the black at the latest), and back once every star is back; the throttle still opens to BOOST. Its debris: what was
+        // due while the light dies and in the still stretch comes after it instead (its spacing times `push`); `keep` of it
+        // all; any that aims at us turns from `aimAt` units out (beyond our lights, so nothing swerves once lit), `spread`
+        // times wider, and `size` times bigger (fewer, but each one seen). A piece turns red (it will hit us where we are) only
+        // once our lights reach it (`lit`) and only `warn` course s out, or `warnReal` real s out when we fly faster than that:
+        // the faster we fly, the later it shows. `fast`: real seconds at full throttle in the black (without letting go) before
+        // Jaxon says it is too fast. `auraReact`: A.U.R.A. in the black dodges only what our lights show, this long after it
+        // turns red (a pilot's delay)
+        fly: { slow: 0.6, ease: 1.5, late: 7, keep: 0.75, push: 1, aimAt: 40, spread: 1.2, size: 1.4, lit: 0.4, warn: 0.8, warnReal: 0.6, fast: 1.2, auraReact: 0.45 },
+        // what the dark costs: hours (real seconds in the black ÷ hourSecs, within `hours`: an hour for every 4.2 s, so the
+        // longer black's bills are the sketch's: about 4, 6 and 11 hours, 1, 2 and 3 rations for five); rations: a day's food
+        // is a ration a living person, so ceil(living × hours ÷ day), at least one; and all crew +1 stress from `stress` hours on
+        cost: { hourSecs: 4.2, hours: [2, 14], day: 24, stress: 9 },
+        // a crew line in the dark leaves `quiet` s of silence after the last one's own time on screen (the long black is not
+        // all talk); the throttle hint shows again `hint` s after "Speed up"; a hit in the dark gets its line within `hitSay`
+        // s or not at all, and never over a line younger than `hitOver` s
+        quiet: 2.5, hint: 4, hitSay: 1.8, hitOver: 1.0,
+    };
+    // the crew react, one line at a time (docs/STYLE.md; A.U.R.A. without contractions). who: the speakers in order, the first
+    // alive says it (a third item: their own words); the dead and the absent never speak; Cora never speaks. in: the phase; at:
+    // drain seconds (drain) or real seconds into the black; after: only once that line was said; if / unless: what the pilot
+    // did, or a line already said; auto: what is said instead while A.U.R.A. is flying (and no hint then); hit: said for a hit
+    // in the dark, at once. The first that may be said is (the order below), when the last has had its time and the quiet.
+    const VOID_LINES = [
+        { id: 'stars', in: 'drain', at: 2.6, say: 'Commander, the stars are going out.',                                    // DRAFT (6)
+            who: [['SPECIALIST', 'Mira'], ['MEDIC', 'Aris'], ['SECURITY', 'Vance'], ['ENGINEER', 'Jaxon']] },
+        { id: 'lost', in: 'black', at: 0.4, say: 'I have lost the light, Commander.', who: [['AURA', 'A.U.R.A.']] },        // DRAFT (6)
+        { id: 'unseen', in: 'black', hit: 'unseen', say: 'We never even saw that one.',                                    // DRAFT (6): hit by a piece never marked
+            who: [['SECURITY', 'Vance'], ['SPECIALIST', 'Mira'], ['MEDIC', 'Aris']] },
+        { id: 'late', in: 'black', hit: 'late', who: [['ENGINEER', 'Jaxon', 'Our lights found it too late.'],              // DRAFT (6): hit by one our lights showed
+            ['SECURITY', 'Vance', 'Our lights found it too late.'], ['AURA', 'A.U.R.A.', 'Our lights found it too late, Commander.']] },   // DRAFT (7)
+        { id: 'fast', in: 'black', after: 'lost', if: 'fast', who: [['ENGINEER', 'Jaxon', "Too fast. We won't see it until it hits us."],   // DRAFT (9)
+            ['MEDIC', 'Aris', "Slow down, Commander. We can't see what's coming."]] },                                   // DRAFT (8)
+        { id: 'slow', in: 'black', after: 'lost', unless: 'fast', slows: true, who: [['ENGINEER', 'Jaxon', "I'm slowing us down. Our lights don't reach far."],   // DRAFT (9)
+            ['AURA', 'A.U.R.A.', 'I am slowing us down, Commander. Our lights do not reach far.']] },                    // DRAFT (11)
+        { id: 'radio', in: 'black', at: 6, after: 'lost', say: "The radio's gone quiet. No beacons at all.",              // DRAFT (8): in the empty stretch
+            who: [['SPECIALIST', 'Mira'], ['MEDIC', 'Aris']] },
+        { id: 'speed', in: 'black', after: 'slow', if: 'easy', unless: 'fast', hint: true, say: 'Speed up, Commander. Get us out of this.',   // DRAFT (7)
+            auto: 'Take the stick, Commander. Get us out of this.', who: [['SECURITY', 'Vance'], ['SPECIALIST', 'Mira']] },   // DRAFT (8): while A.U.R.A. flies
+        { id: 'food', in: 'black', after: 'slow', if: 'hungry', say: 'Every hour in here costs us food, Commander.',   // DRAFT (8): once the dark passes foodAt hours
+            who: [['MEDIC', 'Aris'], ['SPECIALIST', 'Mira'], ['AURA', 'A.U.R.A.']] },
+        { id: 'scared', in: 'black', at: 15, after: 'slow', if: 'long', say: "Everyone's scared, Commander. How much longer?",   // DRAFT (6)
+            who: [['MEDIC', 'Aris'], ['SPECIALIST', 'Mira']] },
+    ];
+    const VOID_FOOD_AT = 5;                                         // hours in the dark before "Every hour in here costs us food"
+    const VOID_HOURS = n => `We were in the dark for ${numberWord(n).toLowerCase()} hours, Commander.`;   // DRAFT (9): A.U.R.A., once every star is back
+    // the bills, as the game's chips ({ icon, text, tone }, src/newscreen/Orbit.js): the rations and stress under her line about
+    // the hours (what the dark cost); the energy and any broken deck under her last line at the end (what the flight cost)
+    const VOID_DECK = { bridge: 'Bridge', lab: 'Lab', quarters: 'Quarters', cargo: 'Hold', engineering: 'Engineering' };
+    const VOID_CHIPS = {                                                                                             // DRAFT
+        energy: n => ({ icon: 'energy', text: `${n > 0 ? '+' : '−'}${Math.abs(n)} energy`, tone: n > 0 ? 'gain' : 'loss' }),
+        rations: n => ({ icon: 'rations', text: `−${n} ration${n === 1 ? '' : 's'}`, tone: 'loss' }),
+        stress: n => ({ icon: 'stress', text: `All crew +${n} stress`, tone: 'loss' }),
+        deck: k => ({ icon: 'deck', text: `${VOID_DECK[k] || k} damaged`, tone: 'loss' }),
+    };
+    /** What the dark cost, for `living` people (A.U.R.A. never eats) after `blackSecs` real seconds in the black: its hours, a
+        ration a living person a day (at least one), and all crew +1 stress once it lasted VOID.cost.stress hours. */
+    function voidCostOf(living, blackSecs) {
+        const K = VOID.cost, hours = clamp(Math.round(blackSecs / K.hourSecs), K.hours[0], K.hours[1]);
+        return { hours, rations: Math.max(1, Math.ceil(living * hours / K.day)), stress: hours >= K.stress ? 1 : 0 };
+    }
+    /** THE DARK's course (makeLeg): VOID.dur course seconds, its own debris and waves, the hulls where VOID.course puts them. */
+    const voidCfg = () => ({ cfg: { dur: VOID.dur, debris: VOID.debris, waves: VOID.waves, aimFrom: VOID.aimFrom }, hullAt: [VOID.course.hull1, VOID.course.hull2] });
+    // a frame's look with the dark not (or no longer) playing: every layer as the flight has it
+    const VK_OFF = Object.freeze({ on: false, phase: 'off', dv: 0, back: -1, ink: 0, live: true, stars: 'all', light: 'glow', sunK: 1, amb: 1, flood: 0, shell: 0 });
     const hash = (n, s) => { const h = Math.imul(Math.imul(n, 374761393) ^ s, 1274126177); return ((h ^ (h >>> 15)) & 1023) / 1023; };
     let throttleTaught = false;                                 // the hint shows until the player first opens the throttle
     // what A.U.R.A. has already reported on earlier jumps this session: the head count (said again only when it changes)
@@ -914,10 +1042,11 @@
     }
     /** Where in the course (course seconds) a piece of loose debris comes, and in which wave: [at, wave index]. Never in the
         first stretch; the sector's waves are packed `tight`. */
-    function debrisAt(cfg, r) {
-        let pick = r(), k = WAVES.length - 1;
-        for (let i = 0; i < WAVES.length; i++) { if (pick < WAVES[i][2]) { k = i; break; } pick -= WAVES[i][2]; }
-        const [mid, half] = WAVES[k];
+    function debrisAt(cfg, r) {                                         // (void: the dark's own waves, cfg.waves)
+        const waves = cfg.waves || WAVES;
+        let pick = r(), k = waves.length - 1;
+        for (let i = 0; i < waves.length; i++) { if (pick < waves[i][2]) { k = i; break; } pick -= waves[i][2]; }
+        const [mid, half] = waves[k];
         return [clamp(mid + half * (cfg.tight || 1) * (r() + r() - 1), DEBRIS_FROM, 0.97) * cfg.dur, k];
     }
     /** What each line is and when: the sector's own, the living's only, after A.U.R.A. naming any hull no crew line names. */
@@ -931,10 +1060,10 @@
     /** The flight into `sector`: two hulls, the safe line, debris (some will set a course for wherever we are, and a cloud round
         each hull, none on the safe line but in the thickest wave, OPEN_WAVE), the twin (sector 6, only withTwin: the disc is
         aboard), the beacon count from `fromHeard` up to the sector's, and the lines. */
-    function makeLeg(sector, r, fromHeard, living, avoid, withTwin) {
-        const cfg = SECTORS[sector], frags = [];
+    function makeLeg(sector, r, fromHeard, living, avoid, withTwin, dark = null) {   // dark: THE DARK's course (voidCfg), else the sector's own
+        const cfg = dark ? { ...SECTORS[sector], ...dark.cfg } : SECTORS[sector], frags = [], hullAt = dark ? dark.hullAt : HULL_AT;
         let side = r() < 0.5 ? -1 : 1;
-        const hulls = hullNumbers(cfg.hulls, r, avoid).map((num, k) => makeHull(cfg, r, num, cfg.dur * HULL_AT[k] + (r() - 0.5) * 0.6, side = -side, k === 1 && sector >= 3));
+        const hulls = hullNumbers(cfg.hulls, r, avoid).map((num, k) => makeHull(cfg, r, num, cfg.dur * hullAt[k] + (r() - 0.5) * 0.6, side = -side, k === 1 && sector >= 3));
         const path = safeLine(hulls, r);
         const add = (at, x, y, rad, aimed, isOpen) => {
             const [px, py] = path(at), keep = SHIP_R[0] + rad + 0.2, dx = x - px, dy = y - py, d = Math.hypot(dx, dy);
@@ -943,7 +1072,7 @@
         };
         for (let k = 0; k < cfg.debris; k++) {
             const inBox = r() < 0.62, [at, wave] = debrisAt(cfg, r);
-            add(at, (r() * 2 - 1) * (inBox ? BOX[0] + 0.5 : 13), (r() * 2 - 1) * (inBox ? BOX[1] + 0.4 : 9), 0.1 + r() * r() * 0.35, inBox && at > cfg.dur * 0.12 && r() < cfg.aim, wave === OPEN_WAVE);
+            add(at, (r() * 2 - 1) * (inBox ? BOX[0] + 0.5 : 13), (r() * 2 - 1) * (inBox ? BOX[1] + 0.4 : 9), 0.1 + r() * r() * 0.35, inBox && at > (cfg.aimFrom != null ? cfg.aimFrom : cfg.dur * 0.12) && r() < cfg.aim, wave === OPEN_WAVE);   // (void: aimFrom)
         }
         hulls.forEach(h => { for (let k = 0; k < 16; k++) { const a = r() * 6.28, d = HULL_L * (0.5 + r() * 1.4); add(h.at + (r() - 0.5) * 1.6, h.x + Math.cos(a) * d, h.y + Math.sin(a) * d, 0.06 + r() * 0.2, false, false); } });
         const twin = cfg.twin && withTwin ? { side: r() < 0.5 ? -1 : 1, x: 0, y: 0, z: TWIN.behind, b: 0, q: -1, on: false, settled: false } : null;
@@ -1021,6 +1150,12 @@
         const energyNow = asInt(opts.energy);                                  // NaN when the game did not say: plenty (stakesOf)
         const avoid = Array.isArray(opts.avoidHulls) ? opts.avoidHulls.filter(Number.isFinite) : [];
         const withTwin = opts.twin === true;                                  // the disc is aboard: the twin can come (SECTORS twin)
+        // (void) THE DARK: VO its option ({} for true; { seed } fixes the flight), vd its state (null without it)
+        const VO = opts.void ? (typeof opts.void === 'object' ? opts.void : {}) : null;
+        const vd = VO ? { phase: 'off', seed: Number.isFinite(VO.seed) ? VO.seed >>> 0 : (Math.random() * 4294967295) >>> 0, dv: 0, drainAt: null, blackAt: null, backAt: null, blackT: null, backT: null, rate: 1,
+            blackSecs: 0, fastSecs: 0, fastRun: 0, darkHits: 0, darkThreats: 0, darkPassed: 0, hit: null, lastWho: null, slowAt: null, clearAt: null, hold: false, closed: false, hushed: false, darkSaid: false, said: [], hintUntil: -99, hintAfter: -99, outAt: null, glintOut: [], moteOut: [[], []],
+            bright: 0, shown: null, at0: null, corr: null, cost: null, screen: null, shadow: '', frameInk: 0 } : null;
+        const shellCache = new WeakMap();                                     // (void) MiniShip's painted look → its outer shell, turned down, per amount
         // the picture in art pixels (ui.art: 720 × 405 at density 1.5); the flight goes on thinking in 480 × 270 units
         const D = (ui.art && ui.art.d) || 1, AW = Math.round(W * D), AH = Math.round(H * D), FA = F * D;
         const img = ctx.createImageData(AW, AH), buf = new Uint32Array(img.data.buffer), depth = new Float32Array(AW * AH);
@@ -1037,7 +1172,7 @@
         let auto = false, cam = [0, 0], vel = [0, 0], look = [0, 0], roll = 0, jolt = 0, nearT = 0, threat = false;
         let pointer = null, aiming = false, pressed = false, th = 0, queue = [], nextLine = 0, pinged = SECTORS[from].heard, pingAt = -9;
         const trail = [], held = new Set();   // where we were lately (the twin copies it); throttle keys pressed since the flight began
-        const g = { heard: SECTORS[from].heard, heardAt: -9, seen: 0, hits: 0, damaged: startDamage(opts.damaged), hitRooms: [], nums: [], r: MiniLab.rng((Math.random() * 4294967295) >>> 0) };
+        const g = { heard: SECTORS[from].heard, heardAt: -9, seen: 0, hits: 0, damaged: startDamage(opts.damaged), hitRooms: [], nums: [], r: MiniLab.rng(VO && Number.isFinite(VO.seed) ? Math.imul(VO.seed >>> 0, 2654435761) >>> 0 : (Math.random() * 4294967295) >>> 0) };   // (void: a seed fixes the flight)
         const view = { cr: 1, sr: 0, zm: 1, lx: 0, ly: 0, ox: 0, oy: 0, sunX: CX, sunY: CY, sunR: 0 };
         const taps = new Map(), STEER = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'd'], THROTTLE = [' ', 'w', 'Shift'];
         // the feel (window.Juice, optional): a shake on trauma², a push into the seat, a hit-stop and a rattle on a scrape
@@ -1045,6 +1180,7 @@
         let shake = { dx: 0, dy: 0, rot: 0 }, kick = { at: -99, zoom: 0 }, stopUntil = -99, hitAt = -99, openKickAt = -99, endPlume = 0;
         const addTrauma = a => { if (shaker) shaker.add(a); };
         const pushKick = zoom => { kick = { at: clock, zoom: zoom * (isReduced() ? 0.5 : 1) }; };
+        let vk = VK_OFF;                                                      // (void) this frame's look in the dark (voidLook)
 
         // the sky: the sector's place (skyOf), fixed at infinity, so it only pans and tilts; dust in depth; streaks close by
         function seedSky(sector) {
@@ -1071,26 +1207,523 @@
         function start(isAuto) { mode = 'jump'; phaseT = 0; sound.jump(); setAuto(isAuto); addTrauma(TRAUMA.start); pushKick(0); }
         function arrive() {   // the flash clears on the new sector
             whiteAt = clock; seedSky(to);
-            leg = makeLeg(to, g.r, g.heard, living, avoid, withTwin); t = 0; mode = 'run';
+            leg = makeLeg(to, g.r, g.heard, living, avoid, withTwin, vd ? voidCfg() : null); t = 0; mode = 'run';   // (void: the longer course, hull 2 later)
+            if (vd) voidLeg(leg);                                              // (void) the lines she cannot say in the dark
             addTrauma(TRAUMA.drop); pushKick(KICK.drop);
         }
         /** Through: the ship cruises on into the light while A.U.R.A. reports, one line at a time. Only after her last line
             does the way on show, so a quick click (or a tap of Space for the throttle) cannot cut her off. */
         function reachEnd() {
             endPlume = plumeNow(); addTrauma(TRAUMA.through);
+            if (vd) { voidNameHulls(); queueLines(); }                              // (void) a hull passed unnamed in the return still counts, and its line is said
             mode = 'done'; phaseT = 0;
             const crew = headCount(aboard), tell = { crew: crew === told.crew ? '' : crew, count: !leg.lines.some(l => l.done && l.heard === g.heard), briefing: !told.briefing };
             paid = stakesOf(g.hits, auraT / leg.cfg.dur, fullT / leg.cfg.dur, energyNow, steered);
             report(to, g.heard, g.nums, g.hits, g.hitRooms, tell, paid).forEach(line => queue.push({ who: 'A.U.R.A.', line: () => line }));
+            if (vd && queue.length) queue[queue.length - 1].chips = voidBill();   // (void) the flight's bill under her last line
             told = { crew, briefing: told.briefing || (tell.count && g.heard > BRIEFED) };
             nextLine = Math.max(nextLine, clock + REPORT_DELAY);
             row([]);
         }
         function showContinue() { isEndReady = true; row([{ label: 'Continue', primary: true, onClick: end }]); }
         function end() {
-            ui.finish({ scrapes: g.hits, auraFlew: auraT >= leg.cfg.dur / 2, energyDelta: paid ? paid.delta : 0, beaconsHeard: g.heard, shipsSeen: g.seen, hulls: [...g.nums], damagedRooms: [...g.hitRooms] });
+            const c = vd && (vd.cost || (vd.phase !== 'off' ? voidCost() : null));   // (void) what the dark cost
+            ui.finish({ scrapes: g.hits, auraFlew: auraT >= leg.cfg.dur / 2, energyDelta: paid ? paid.delta : 0, beaconsHeard: g.heard, shipsSeen: g.seen, hulls: [...g.nums], damagedRooms: [...g.hitRooms],
+                ...(c ? { void: { hours: c.hours, rations: -c.rations, stress: c.stress, blackSecs: +vd.blackSecs.toFixed(2), darkHits: vd.darkHits } } : {}) });
         }
 
+        // ── THE DARK: the universe goes out while we fly, and comes back. Each frame voidTick works out where the course
+        //    is (vd.phase: off → drain → black → back → after) and this frame's look (vk): the drain by the course share (never
+        //    faster than VOID.drainMin real s), the black and the return by real seconds. Our ship keeps its size and place;
+        //    nothing pauses; nothing here is skipped. ──
+        const isAlive = role => role === 'AURA' || !living || living.has(role);
+        const livingCount = () => (Array.isArray(opts.crew) ? opts.crew.filter(c => c && c.status !== 'DEAD').length : CREW_SIZE + 1);
+        const isDarkNow = () => !!(vd && vd.phase !== 'off' && vd.phase !== 'after');   // from the drain's start until the return is over
+        const HINT_AFTER = 3.5;                                                    // the throttle hint waits this long after her line about the hours
+        const isHintHeld = () => isDarkNow() || !!(vd && clock < vd.hintAfter);
+        /** The flight into the dark (arrive): A.U.R.A.'s lines from the dark's start to the end of the return are not said (she
+            has lost the light), nor her naming of hull 2 (its tag names it, after the return). Hull 2 comes later (makeLeg's
+            hullAt). The debris gets its part in the dark as it comes (voidDecide). */
+        function voidLeg(lg) {
+            const C = VOID.course, d = lg.cfg.dur, a = C.from * d, b = (C.back + C.after) * d;
+            lg.lines = lg.lines.filter(l => !(l.role === 'AURA' && l.at && l.at * d >= a && l.at * d <= b) && !(!l.role && l.seen === 2));
+        }
+        /** The course reaches the dark: the order everything goes in is drawn, the picture's frame is found (it fades with the sky),
+            and what is already on its way to us keeps its part in the light. */
+        function voidBegin() {
+            vd.phase = 'drain'; vd.drainAt = clock;
+            const order = voidRanks(vd.seed);
+            vd.outAt = order.outAt; vd.bright = order.bright; vd.glintOut = order.glints; vd.moteOut = order.motes; vd.shown = order.shown;
+            vd.at0 = { sun: [view.sunX, view.sunY], ship: [shipL.cx * D, (shipL.top + shipL.height / 2) * D] };   // (for voidCorr)
+            vd.screen = (ui.canvas.closest && ui.canvas.closest('.mini-screen')) || null;   // the picture's frame line and shadow (minigames.css)
+            vd.shadow = vd.screen && window.getComputedStyle ? getComputedStyle(vd.screen).boxShadow || '' : '';
+            leg.frags.forEach(f => { if (zOf(f.at) < VOID.course.decide) f.vdec = true; });
+        }
+        /** When each star, glint and mote goes (drain seconds), on seed `seed`: the brightest VOID.stars.bright in view one at a
+            time in a random order, the gaps easing; every other at its own random moment. Nothing depends on where a star is, so
+            there is never a ring, an iris or a wipe (voidCorr checks it). shown: the stars in view, where they are now. */
+        function voidRanks(seed) {
+            const S = skyOf(here), list = S.B.stars, V = VOID.stars, n = list.length, outAt = new Float32Array(n);
+            const faint = u => V.faint[0] + (V.faint[1] - V.faint[0]) * u ** (1 / V.curve);
+            const shown = [];
+            for (let i = 0; i < n; i++) {
+                outAt[i] = faint(h32(i, 11, seed));
+                const [fx, fy] = sky(list[i].u, list[i].v), x = Math.round(fx), y = Math.round(fy);
+                if (x >= 1 && x < AW - 1 && y >= 1 && y < AH - 1) shown.push({ i, x, y });
+            }
+            // the brightest in view (crossed first), then in a random order, one at a time: gaps easing from gaps[0] to gaps[1],
+            // stretched to fill from .. to exactly
+            const bright = shown.slice().sort((a, b) => (list[b.i].arm ? 1 : 0) - (list[a.i].arm ? 1 : 0) || list[b.i].l - list[a.i].l).slice(0, V.bright)
+                .sort((a, b) => h32(a.i, 13, seed) - h32(b.i, 13, seed));
+            if (bright.length) {
+                const m = bright.length - 1, gaps = Array.from({ length: m }, (_, k) => V.gaps[0] * (V.gaps[1] / V.gaps[0]) ** (m > 1 ? k / (m - 1) : 0));
+                const total = gaps.reduce((s, gp) => s + gp, 0) || 1, fit = (V.to - V.from) / total;
+                let at = V.from;
+                bright.forEach((b, k) => { if (k) at += gaps[k - 1] * fit; outAt[b.i] = at; });
+            }
+            const glints = S.glints.map((gl, li) => gl.map((_, gi) => faint(h32(li * 64 + gi, 17, seed))));
+            const motes = [dust.map((_, i) => faint(h32(i, 19, seed))), streaks.map((_, i) => faint(h32(i, 23, seed)))];
+            return { outAt, bright: bright.length, glints, motes, shown };
+        }
+        /** (read only, the headless checks) Pearson's r between when a star in view goes and how far it was from the light, and
+            from our ship, as the drain began: about 0, so never a ring. Worked out when first asked, never in play. */
+        function voidCorr() {
+            if (vd.corr || !vd.shown || !vd.at0) return vd.corr;
+            const shown = vd.shown, [sunX, sunY] = vd.at0.sun, [shipX, shipY] = vd.at0.ship;
+            const corrOf = dist => {
+                const xs = shown.map(p => vd.outAt[p.i]), ys = shown.map(dist), N = xs.length || 1;
+                const mx = xs.reduce((s, v) => s + v, 0) / N, my = ys.reduce((s, v) => s + v, 0) / N;
+                let sxy = 0, sxx = 0, syy = 0;
+                xs.forEach((x, k) => { sxy += (x - mx) * (ys[k] - my); sxx += (x - mx) ** 2; syy += (ys[k] - my) ** 2; });
+                return sxx && syy ? +(sxy / Math.sqrt(sxx * syy)).toFixed(4) : 0;
+            };
+            vd.corr = { light: corrOf(p => Math.hypot(p.x - sunX, p.y - sunY)), ship: corrOf(p => Math.hypot(p.x - shipX, p.y - shipY)), stars: shown.length };
+            return vd.corr;
+        }
+        /** Each frame, before the flight moves (dt: real seconds): where the course is in the dark, who speaks, this frame's look. */
+        function voidTick(dt) {
+            if (vd.phase === 'after') { vk = VK_OFF; return; }
+            if (!leg || mode === 'ready' || mode === 'jump') return;
+            const C = VOID.course, share = mode === 'run' ? t / leg.cfg.dur : 1;
+            if (vd.phase === 'off' && share >= C.from) voidBegin();
+            if (vd.phase === 'drain') {
+                voidShellsAhead();
+                const byCourse = clamp((share - C.from) / (C.black - C.from), 0, 1) * VOID.drain, byClock = (clock - vd.drainAt) / VOID.drainMin * VOID.drain;
+                vd.dv = Math.min(byCourse, byClock, VOID.drain);
+                if (vd.dv >= VOID.light.at && !vd.hushed) { vd.hushed = true; queue = queue.filter(q => !q.dark); ui.clear(); clearChips(); }   // the light dies in silence
+                if (vd.dv >= VOID.drain) { vd.phase = 'black'; vd.blackAt = clock; vd.blackT = t; vd.backT = t + (C.back - C.black) * leg.cfg.dur; }
+            }
+            if (vd.phase === 'black') {
+                vd.blackSecs += dt;
+                if (th >= FULL_AT) { vd.fastSecs += dt; vd.fastRun += dt; } else vd.fastRun = 0;   // all told, and right now
+                if (vd.slowAt == null && clock - vd.blackAt >= VOID.fly.late) vd.slowAt = clock;   // nobody said it in time: slow anyway
+                if (t >= vd.backT) voidReturn();
+            }
+            if (vd.phase === 'back') {
+                const back = clock - vd.backAt;
+                if (vd.clearAt != null && clock >= vd.clearAt && !vd.closed) { ui.clear(); vd.clearAt = null; }
+                if (!vd.closed && back >= VOID.back.close) {                   // every star is back: A.U.R.A. says how long, before anyone else
+                    vd.closed = true;
+                    const c = vd.cost;
+                    queue.unshift({ who: 'A.U.R.A.', line: () => VOID_HOURS(c.hours), clear: true, hours: true, chips: voidDarkBill(c), onSay: () => { vd.hold = false; vd.hintAfter = clock + HINT_AFTER; } });
+                }
+                if (vd.closed && !vd.hold && back >= VOID.back.sky + VOID.sky.steps * VOID.back.skyStep) vd.phase = 'after';
+            }
+            if (mode === 'run' && isDarkNow()) voidDecide();
+            voidSpeak();
+            vk = isDarkNow() ? voidLook() : VK_OFF;
+            voidFrame(vk.ink);
+        }
+        /** Where on the course (course seconds) the dark's still stretches fall, as far as can be told now: `die` .. `open` (the
+            light dying, the pure black, our lamps coming on, and the black's first empty stretch, VOID.course.still) and `back` ..
+            `end` (the return). Between them the debris in the black. Before the black begins it is worked out from how fast we fly
+            now; a margin round each. */
+        function voidWindows() {
+            const C = VOID.course, d = leg.cfg.dur, rate = Math.max(0.3, vd.rate), L = VOID.flood;
+            let die = vd.blackT, black = vd.blackT;
+            if (vd.phase === 'drain') {
+                const perReal = Math.min(rate * VOID.drain / ((C.black - C.from) * d), VOID.drain / VOID.drainMin);   // drain seconds a real second
+                const at = x => t + Math.max(0, x - vd.dv) / perReal * rate;
+                die = at(VOID.light.at); black = at(VOID.drain);
+            }
+            const back = vd.backT != null ? vd.backT : black + (C.back - C.black) * d;
+            return { die: die - C.margin, open: Math.max(black + (L.on + 2 * L.step) * rate + C.margin, black + C.still * d), back: back - C.margin, end: back + C.after * d };
+        }
+        /** A piece about to come into view (still unseen) gets its part in the dark, by where the course will be when it reaches
+            us: what was due while the light dies, our lamps come on and in the black's first empty stretch comes after it instead
+            (later, so further off: still out of sight); none in the return (they go with the light, unseen); in the black,
+            VOID.fly.keep of them, bigger, and any that aims at us aiming from further out and wider. */
+        function voidDecide() {
+            const w = voidWindows(), K = VOID.fly;
+            leg.frags.forEach((f, i) => {
+                if (f.vdec || f.done || zOf(f.at) > VOID.course.decide) return;
+                f.vdec = true;
+                if (f.at >= w.die && f.at <= w.open) f.at = w.open + (f.at - w.die) * K.push;
+                const isDark = f.at > w.open && f.at < w.back, isStill = f.at >= w.back && f.at <= w.end;
+                if (isStill || (isDark && h32(i, 29, vd.seed) >= K.keep)) { f.done = true; f.gone = true; return; }
+                if (isDark) { f.rad *= K.size; if (f.aimed) f.darkAim = true; }
+            });
+        }
+        /** A piece reaches us in the dark (f touches us): true when it passes harmlessly, because nothing could light it (never
+            marked, and neither the light nor our lamps on: the light dying, the pure black, the return's first moments); else, in
+            the black, its line is due ("never saw it" if it was never marked red, "found it too late" if it was). */
+        function voidHit(f) {
+            if (!vk.on) return false;
+            if (f.redAt == null && vk.flood < 1 && vk.amb < VOID.fly.lit) return true;
+            if (vd.phase === 'black') vd.hit = { at: clock, kind: f.redAt == null ? 'unseen' : 'late' };
+            return false;
+        }
+        /** The course reaches the end of the dark: the return begins. A line from the black not yet said is not said in the light,
+            and the flight's own lines wait for A.U.R.A.'s about the hours. What the dark cost is fixed now. */
+        function voidReturn() {
+            vd.phase = 'back'; vd.backAt = clock; vd.hold = true; vd.hit = null;
+            queue = queue.filter(q => !q.dark);
+            vd.clearAt = Math.min(Math.max(clock, saidAt + VOID.back.read), clock + 2 * VOID.flood.off - 0.05);   // the last line from the black goes once read, and before the warm pixel shows: the light comes back in silence
+            vd.cost = voidCost();
+        }
+        const voidCost = () => voidCostOf(livingCount(), vd.blackSecs);
+        /** The course ends while the dark still holds (a fast pilot): a hull passed unnamed in it (its naming waits for the
+            return to end) is counted now, so A.U.R.A.'s report names it and the result has it. */
+        function voidNameHulls() {
+            leg.hulls.forEach(h => { if (h.seenAt < 0 && h.crossed) { h.seenAt = clock; leg.seen++; g.seen++; g.nums.push(h.num); } });
+        }
+        /** The dark's bill, under A.U.R.A.'s line about the hours: the rations and the stress it cost. */
+        const voidDarkBill = c => [VOID_CHIPS.rations(c.rations), ...(c.stress ? [VOID_CHIPS.stress(c.stress)] : [])];
+        /** The flight's bill, under A.U.R.A.'s last line: the energy it cost or saved, and any deck a scrape broke. */
+        function voidBill() {
+            const out = [];
+            if (paid && paid.delta) out.push(VOID_CHIPS.energy(paid.delta));
+            g.hitRooms.forEach(k => out.push(VOID_CHIPS.deck(k)));
+            return out;
+        }
+        /** A crew line in the dark when its moment comes, one at a time and never over another: a hit's line at once (or not at
+            all), else the first in VOID_LINES whose phase, time, order and condition hold. Never while the light dies, and none
+            starts within VOID.back.read real s of the return, so the light goes and comes back in silence. */
+        function voidSpeak() {
+            if (vd.phase !== 'drain' && vd.phase !== 'black') return;
+            if (vd.phase === 'drain' && vd.dv >= VOID.light.at) return;
+            if (vd.phase === 'black' && (vd.backT - t) / Math.max(0.3, vd.rate) < VOID.back.read + 0.2) { vd.hit = null; return; }
+            const was = id => vd.said.includes(id);
+            if (vd.hit) {                                                      // a hit in the dark: its line within hitSay s, over the gap of the last
+                const h = vd.hit, l = VOID_LINES.find(x => x.hit === h.kind);
+                if (clock - h.at > VOID.hitSay || !l || was(l.id)) vd.hit = null;
+                else if (clock - saidAt >= VOID.hitOver && !queue.some(q => q.isHit)) { vd.hit = null; if (sayLine(l, true)) return; }
+                else return;                                                   // the line in the way has only just begun
+            }
+            if (queue.length || clock < nextLine + VOID.quiet) return;
+            const now = vd.phase === 'drain' ? vd.dv : clock - vd.blackAt;
+            const is = { fast: !auto && vd.fastRun >= VOID.fly.fast, easy: th < 0.3, long: vd.fastSecs < 0.4 * vd.blackSecs, hungry: vd.blackSecs / VOID.cost.hourSecs >= VOID_FOOD_AT };
+            const l = VOID_LINES.find(x => !x.hit && !was(x.id) && x.in === vd.phase && now >= (x.at || 0) && (!x.after || was(x.after)) && (!x.if || is[x.if]) && !(x.unless && was(x.unless)));
+            if (l) sayLine(l, false);
+        }
+        /** Queue line l (at the front, at once, for a hit): the first of its speakers alive says it, not the same voice twice
+            running when another can; while A.U.R.A. flies she says her own "slowing us down", and "Speed up" is said to the
+            Commander as "Take the stick" (no hint then: the button is there). */
+        function sayLine(l, isNow) {
+            vd.said.push(l.id);
+            const alive = l.who.filter(([role]) => isAlive(role)), pool = auto && l.slows && alive.some(([r]) => r === 'AURA') ? alive.filter(([r]) => r === 'AURA') : alive;
+            const w = pool.find(x => x[1] !== vd.lastWho) || pool[0];
+            if (!w) return false;                                              // nobody left to say it
+            const text = (auto && l.auto) || w[2] || l.say, isHint = !!l.hint && !auto;
+            const item = { who: w[1], line: () => text, clear: true, dark: true, isHit: !!l.hit, onSay: () => {
+                vd.lastWho = w[1]; vd.darkSaid = true;
+                if (l.slows && vd.slowAt == null) vd.slowAt = clock;            // he says it, and the ship eases back
+                if (isHint) vd.hintUntil = clock + VOID.hint;                   // the throttle hint shows again a moment
+            } };
+            if (isNow) { queue.unshift(item); nextLine = clock; } else queue.push(item);
+            return true;
+        }
+        /** 0 .. 1: how far the cruise is eased back to VOID.fly.slow (from the word; back again once every star is back). */
+        function voidSlowK() {
+            if (!vd || vd.slowAt == null) return 0;
+            const V = VOID.fly, on = smooth(clamp((clock - vd.slowAt) / V.ease, 0, 1));
+            return vd.backAt == null ? on : on * (1 - smooth(clamp((clock - vd.backAt - VOID.back.stars) / V.ease, 0, 1)));
+        }
+        /** The radio hears nothing, and the far beacons are dark, from the sky's half step until every star is back. */
+        const isDeaf = () => !!(vd && vk.on && vk.ink >= 0.5 && vk.stars !== 'all');
+        /** The look this frame: how much of the sky is ink, the stars, the light, the light left on the debris (amb), our
+            floodlights, our hull's shell. */
+        function voidLook() {
+            const V = VOID, calm = isReduced(), ph = vd.phase, nShell = V.light.sizes.length;
+            let ink = 1, stars = 'none', light = 'none', sunK = 0, lightK = 0, shellN = nShell, flood = 0, back = -1;
+            if (ph === 'black') {                                               // a beat of pure black, then our lamps in two steps
+                const s = clock - vd.blackAt;
+                flood = s < V.flood.on ? 0 : Math.min(1, (Math.floor((s - V.flood.on) / V.flood.step) + 1) / 2);
+            }
+            if (ph === 'drain') {
+                const dv = vd.dv;
+                stars = dv >= V.stars.to + V.stars.half ? 'none' : 'drain';
+                ink = clamp(Math.floor((dv - V.sky.at) / V.sky.step), 0, V.sky.steps) / V.sky.steps;
+                light = 'glow'; sunK = lightK = 1; shellN = 0;
+                if (dv >= V.light.at) {                                         // smaller in four steps, one warm pixel, nothing
+                    const k = Math.floor((dv - V.light.at) / V.light.step);
+                    shellN = Math.min(nShell, k + 1);
+                    if (k < nShell) sunK = lightK = V.light.sizes[k];
+                    else if (dv < V.light.at + nShell * V.light.step + V.light.pixel) { light = 'pixel'; sunK = 0; lightK = 0.04; }
+                    else { light = 'none'; sunK = lightK = 0; }
+                }
+            } else if (ph === 'back') {
+                back = clock - vd.backAt;
+                if (back < 2 * V.flood.off) light = 'none';                     // our lamps go out first: then nothing at all
+                else if (back < V.back.open) { light = 'pixel'; lightK = 0.04; }   // one pixel alone, then the light opens in four steps
+                else {
+                    const j = Math.min(V.back.opens.length - 1, Math.floor((back - V.back.open) / V.back.openStep));
+                    light = 'glow'; sunK = lightK = V.back.opens[j]; shellN = Math.max(0, nShell - 1 - j);
+                }
+                stars = back < V.back.stars ? 'none' : back < V.back.stars + V.stars.half && !calm ? 'half' : 'all';   // every star at once
+                ink = 1 - clamp(Math.floor((back - V.back.sky) / V.back.skyStep), 0, V.sky.steps) / V.sky.steps;
+                flood = back < V.flood.off ? 0.5 : 0;                           // our lamps go out in two steps: the light comes back alone
+            }
+            return { on: true, phase: ph, dv: vd.dv, back, ink, live: ink < 0.5, stars, light, sunK, amb: lightK * (1 - 0.25 * ink), flood, shell: V.light.shell * shellN / nShell };
+        }
+        /** The aim box's brightness in the dark (a share of its own): down with the light's last steps, so the light's last pixel
+            is alone; a little up while our lamps are on (it is how we steer); bright again as the light opens on its return. */
+        function voidBoxK() {
+            if (!vk.on) return 1;
+            const V = VOID.light, low = 0.4;
+            if (vk.phase === 'drain') return vk.dv < V.at ? 1 : lerp(1, low, Math.min(1, (Math.floor((vk.dv - V.at) / V.step) + 1) / V.sizes.length));
+            if (vk.phase === 'black') return vk.flood >= 1 ? 0.75 : vk.flood > 0 ? 0.55 : low;
+            return vk.light === 'glow' ? 1 : low;
+        }
+        /** A star's state this frame: 0 shown, 1 half tone, 2 gone. */
+        function voidStar(i) {
+            if (vk.stars === 'none') return 2;
+            if (vk.stars === 'half') return 1;
+            if (vk.stars === 'all') return 0;
+            const at = vd.outAt[i];
+            return vk.dv >= at + (isReduced() ? 0 : VOID.stars.half) ? 2 : vk.dv >= at ? 1 : 0;
+        }
+        /** Glints and motes go on their own moments, and come back with the stars. */
+        const voidGone = at => (vk.stars === 'none' || vk.stars === 'half' ? true : vk.stars === 'all' ? false : vk.dv >= at);
+        /** Half a star: its colour halfway to the ink (the first of its two steps out, and back). */
+        function halfStar(j, c, l) {
+            const ink = R.STAR.rgb[0], r = ((c & 255) + ink[0]) >> 1, g2 = (((c >> 8) & 255) + ink[1]) >> 1, b = (((c >> 16) & 255) + ink[2]) >> 1;
+            if ((l >> 1) > lum32(buf[j])) buf[j] = (0xff000000 | (b << 16) | (g2 << 8) | r) >>> 0;
+        }
+        /** The sky to ink: every pixel turned share k of the way to the ink (k comes in even eighths), so each step darkens the
+            whole sky by one even step, each pixel down its own colour; never a screen door. Each channel through a table made
+            once a step (inkLut). */
+        const inkLut = { k: -1, r: new Uint32Array(256), g: new Uint32Array(256), b: new Uint32Array(256) };
+        function inkSky(k) {
+            if (inkLut.k !== k) {
+                const ink = R.STAR.rgb[0], keep = 1 - k, i0 = ink[0] * k, i1 = ink[1] * k, i2 = ink[2] * k;
+                for (let v = 0; v < 256; v++) { inkLut.r[v] = (v * keep + i0) | 0; inkLut.g[v] = ((v * keep + i1) | 0) << 8; inkLut.b[v] = ((v * keep + i2) | 0) << 16; }
+                inkLut.k = k;
+            }
+            const lr = inkLut.r, lg = inkLut.g, lb = inkLut.b;
+            for (let i = 0, n = AW * AH; i < n; i++) {
+                const p = buf[i];
+                buf[i] = (0xff000000 | lb[(p >> 16) & 255] | lg[(p >> 8) & 255] | lr[p & 255]) >>> 0;
+            }
+        }
+        /** The picture's frame line and its shadow (minigames.css .mini-screen) fade with the sky's steps, so in the black the dark
+            runs to the window's edge with no panel round it; they come back with the sky in the return. */
+        function voidFrame(ink) {
+            if (!vd.screen || vd.frameInk === ink) return;
+            vd.frameInk = ink;
+            const keep = 1 - ink, fade = (m, r, g2, b, a) => `rgba(${r}, ${g2}, ${b}, ${+((a == null ? 1 : Number(a)) * keep).toFixed(4)})`;
+            vd.screen.style.boxShadow = ink <= 0 ? '' : ink >= 1 || !vd.shadow || vd.shadow === 'none' ? 'none'
+                : vd.shadow.replace(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)/g, fade);
+        }
+        /** How much of our floodlights reaches a point (world units) at depth z: 0 .. 1. Two beams run straight ahead from under
+            the bridge (VOID.flood.low under where we look from, sep either side), widening a little, full near and gone past
+            their reach; near us a little spills onto anything (not onto the dust: isDust), so what rushes past shows a moment. */
+        function floodAt(x, y, z, isDust) {
+            if (!(vk.flood > 0) || !(z > 0)) return 0;
+            const L = VOID.flood, dx = x - cam[0], dy = y - cam[1] - L.low, d = Math.min(Math.hypot(dx - L.sep, dy), Math.hypot(dx + L.sep, dy)) / (L.w0 + L.s * z);
+            const beam = (1 - ss(L.full, L.reach, z)) * (1 - ss(0.6, 1, d));
+            return vk.flood * (isDust ? beam : Math.max(beam, L.spill * (1 - ss(L.near[0], L.near[1], z))));
+        }
+        /** Our floodlights' faint wedges in the dust: one from each lamp, rising from the picture's bottom edge towards the middle,
+            brightest nearest us, gone before the aim box (headlights in fog); they turn with the bank and the camera's look (the
+            lamps are bolted to the ship). For each art pixel's line of sight (ux, uy, 1): where it passes nearest each lamp's
+            beam (z*, the closest of two lines) and how far off its core it is there. Light that only adds, in the cold ramp and
+            the 8 × 8 grain; red a moment after a scrape. */
+        function drawBeam() {
+            const L = VOID.flood, isHit = jolt > 0, ramp = isHit ? R.RED : R.ICE, top = ramp.n - 1, k = L.haze * vk.flood * (isHit ? 1.2 : 1);
+            const cr = view.cr, sr = view.sr, izm = 1 / view.zm, ox = (CX + view.ox) * D, oy = (CY + view.oy) * D, fD = 1 / (F * D), lx = view.lx * D, ly = view.ly * D;
+            const low = L.low, z1 = L.hazeZ[1];
+            const part = (ux, uy, uu, xi) => {                                         // one lamp's haze on this line of sight
+                const zs = (ux * xi + uy * low) / uu;
+                if (zs <= 0.2 || zs >= z1) return 0;
+                const d = Math.abs(ux * low - uy * xi) / Math.sqrt(uu) / (L.core + L.coreS * zs);
+                return d >= 1 ? 0 : (1 - ss(L.hazeZ[0], z1, zs)) * (1 - ss(0.15, 1, d));
+            };
+            for (let y = 0; y < AH; y++) {
+                const b0 = y - oy, row = y * AW, by = (y & 7) << 3, kRow = k * Math.min(1, (AH - 1 - y) / (AH * L.edge));
+                if (((AW * sr + b0 * cr) * izm + ly) * fD <= 0.02 && ((-AW * sr + b0 * cr) * izm + ly) * fD <= 0.02) continue;   // the whole row is above the beams
+                for (let x = 0; x < AW; x++) {
+                    const a0 = x - ox, uy = ((b0 * cr - a0 * sr) * izm + ly) * fD;
+                    if (uy <= 0.02) continue;
+                    const ux = ((a0 * cr + b0 * sr) * izm + lx) * fD, uu = ux * ux + uy * uy, m = Math.max(part(ux, uy, uu, L.sep), part(ux, uy, uu, -L.sep));
+                    if (m <= 0) continue;
+                    const pos = kRow * m * top, lo = pos | 0, st = pos - lo > BAY8[by | (x & 7)] ? lo + 1 : lo;
+                    if (st && ramp.lum[st] > lum32(buf[row + x])) buf[row + x] = ramp.c32[st];
+                }
+            }
+        }
+        /** A mote the dark has taken, seen again only inside our floodlights' beam: cold, by how much of it reaches it. */
+        function voidMote(a, b, x, y, z, v) {
+            const fl = floodAt(x, y, z, true);
+            if (fl > 0.06) segZ(a[0], a[1], b[0], b[1], R.ICE, v * fl, v * fl * 0.35, z);
+        }
+        /** The specks only our lamps show: VOID.flood.dust motes round the beam, streaming past (moved with the dust). */
+        const vdustR = MiniLab.rng(4343), VD_SPREAD = [1.8, 1.3];
+        const newVdust = far => ({ x: cam[0] + (vdustR() * 2 - 1) * VD_SPREAD[0], y: cam[1] + VOID.flood.low + (vdustR() * 2 - 1) * VD_SPREAD[1], z: far ? VOID.flood.dustZ * (0.85 + 0.2 * vdustR()) : 1 + vdustR() * VOID.flood.dustZ });
+        const vdust = vd ? Array.from({ length: VOID.flood.dust }, () => newVdust(false)) : [];
+        function voidDustMove(step) {
+            for (let i = 0; i < vdust.length; i++) { vdust[i].z -= step; if (vdust[i].z < NEAR) vdust[i] = newVdust(true); }
+        }
+        function voidDust(mul) {
+            if (!(vk.flood > 0)) return;
+            const L = VOID.flood, tail = 0.25 + mul * 1.15;
+            for (let i = 0; i < vdust.length; i++) {
+                const m = vdust[i], a = proj(m.x, m.y, m.z), b = proj(m.x, m.y, m.z + Math.min(tail, m.z * L.dustTail));
+                voidMote(a, b, m.x, m.y, m.z, 0.75 * (1 - ss(L.dustFade, L.dustZ, m.z)));
+            }
+        }
+        /** A piece of debris as the dark leaves it: by what is left of the light ahead (vk.amb, the flight's own shading), or by
+            our floodlights from under the bridge: a one-pixel bright rim on the edge facing us, the face lit with a floor, the
+            far side ink (it still hides what is behind it); nothing where neither reaches. Red only once it can be seen. */
+        function drawFragDark(f, z, sx, sy) {
+            const amb = vk.amb, fl = floodAt(f.x, f.y, z);
+            if (amb <= 0.02 && fl <= 0.03) return;
+            const Rr = f.rad * FA * view.zm / z, RU = Rr / D, fog = fogAt(z, 14, FAR_FRAG), face = Math.cos(f.flip * clock + f.a0), af = Math.abs(face);
+            const isRust = (f.a0 * 1000) % 1 < rustShare, ramp = isRust ? R.RUST : R.HULL, keep = 1 - 0.8 * fog, glint = face > 0.97 && z < 95 && (amb > 0.5 || fl > 0.55);
+            const isOurs = fl > amb, faceK = fl * 1.6 * (0.35 + 0.8 * af);
+            if (RU < 1.4) {
+                if (glint) lightPx(sx, sy, R.STAR, Math.max(amb, fl));
+                else if (f.threat) lightPx(sx, sy, R.RED, 0.75);
+                else {
+                    const a = amb * (RU < 0.7 ? keep : 0.55 * keep), b = Math.min(1, faceK * 0.6) * keep;
+                    if (Math.max(a, b) > 0.04) lightPx(sx, sy, b > a ? R.HULL : RU < 0.7 ? R.HAZE : ramp, Math.max(a, b));
+                }
+                return;
+            }
+            const sq = 0.22 + 0.78 * af, lp = isOurs ? proj(cam[0], cam[1] + VOID.flood.low, 0.9) : null;   // tumbling: the plate turns edge-on and back
+            raster(sx, sy, Rr + 1, Rr + 1, Rr, f.a0 + f.spin * clock + roll, (u, v) => shardAt(f, u, v / sq), z, (x, y, i, edge, lean) => {
+                if (f.threat && edge) { buf[i] = R.RED.c32[level(R.RED, 0.75, x, y)]; return; }
+                let v, r = ramp;
+                if (isOurs) {                                                             // lit from our lamps (edge 1 faces them)
+                    const near = clamp((lean + 0.45) / 1.45, 0, 1);                       // 1 at the edge facing us, none past the far third
+                    if (edge === 1) { v = (0.55 + 0.4 * fl) * Math.min(1, fl * 2.5); r = R.HULL; }
+                    else v = edge === 2 ? 0 : faceK * (0.25 + 0.75 * near) * keep;
+                } else {
+                    v = (edge === 1 ? 0.8 : edge === 2 ? 0.06 : 0.18 + 0.22 * lean + 0.28 * af) * amb * keep;
+                    if (edge === 1) r = R.HULL;
+                }
+                if (v <= 0.02) { buf[i] = INK32; return; }                               // unlit: the ink, and it hides what is behind it
+                buf[i] = r.c32[level(r, v, x, y)];
+            }, lp);
+            if (!glint) return;
+            const gx = Math.round(sx + (view.sunX - sx) * 0.02), gy = Math.round(sy + (view.sunY - sy) * 0.02), arm = Math.min(5, Math.floor(Rr / 2)), gv = Math.max(amb, fl);
+            lightPx(gx, gy, R.STAR, gv);
+            for (let i = 1; i <= arm; i++) [[i, 0], [-i, 0], [0, i], [0, -i]].forEach(([dx, dy]) => lightPx(gx + dx, gy + dy, R.STAR, gv * (1 - i / (arm + 1))));
+        }
+        /** A.U.R.A. in the black: she sees only what our lights show. She dodges a piece VOID.fly.auraReact s after it turns red,
+            away from where it will cross (the other way at the box's edge); otherwise she holds her line, easing to the middle. */
+        function auraInDark() {
+            let f = null;
+            leg.frags.forEach(q => { if (q.threat && !q.done && !q.gone && q.redAt != null && clock - q.redAt >= VOID.fly.auraReact && (!f || q.at < f.at)) f = q; });
+            if (!f) return cam.map((c, i) => clamp(-c * 0.6, -MAXV[i], MAXV[i]));
+            const left = f.at - t, at = [f.x + f.vx * left, f.y + f.vy * left];
+            return [0, 1].map(i => {
+                const d = cam[i] - at[i];
+                let s = Math.abs(d) < 0.05 ? -Math.sign(cam[i]) || 1 : Math.sign(d);
+                if (Math.abs(cam[i]) > BOX[i] - 0.9 && Math.sign(cam[i]) === s) s = -s;
+                return s * MAXV[i];
+            });
+        }
+        /** Our hull's outer shell (MiniShip's painted look outside the decks: the dome, the cut walls, the skirt, the bell),
+            each pixel turned `amount` of the way to the ink in SHELL_STEPS dithered steps (the hull keeps its shading, never a
+            screen door). Made once per look and amount, then drawn over the ship as one image: the light that lit it has gone. */
+        const SHELL_STEPS = 6;
+        function shellImage(S, amount) {
+            let byAmount = shellCache.get(S);
+            if (!byAmount) { byAmount = new Map(); shellCache.set(S, byAmount); }
+            if (byAmount.has(amount)) return byAmount.get(amount);
+            if (!byAmount.px) byAmount.px = S.canvas.getContext('2d').getImageData(0, 0, S.canvas.width, S.canvas.height).data;   // read once per look
+            const src = S.canvas, w = src.width, h = src.height, px = byAmount.px;
+            const out = document.createElement('canvas');
+            out.width = w; out.height = h;
+            const o = out.getContext('2d'), shade = o.createImageData(w, h), q = shade.data, ink = R.STAR.rgb[0];
+            const inDeck = (x, y) => S.decks.some(dk => x >= dk.x0 && x < dk.x0 + dk.iw && y >= dk.y0 && y < dk.y0 + (dk.bottom - dk.top));
+            for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+                const i = (y * w + x) * 4;
+                if (!px[i + 3] || inDeck(x, y)) continue;
+                const X = S.bx0 + x, Y = S.by0 + y, a = Math.min(1, Math.floor(amount * SHELL_STEPS + BAY8[((Y & 7) << 3) | (X & 7)]) / SHELL_STEPS);
+                for (let c = 0; c < 3; c++) q[i + c] = Math.round(px[i + c] + (ink[c] - px[i + c]) * a);
+                q[i + 3] = 255;
+            }
+            o.putImageData(shade, 0, 0);
+            byAmount.set(amount, out);
+            return out;
+        }
+        /** The four turned-down shells (one for each of the light's steps), made one a frame from the drain's start, so the
+            light's last steps cost nothing extra. */
+        function voidShellsAhead() {
+            const S = shipL.cache, n = VOID.light.sizes.length;
+            if (!S || !S.canvas || !S.decks) return;
+            const made = shellCache.get(S);
+            for (let k = 1; k <= n; k++) {
+                const amount = VOID.light.shell * k / n;
+                if (!made || !made.has(amount)) { shellImage(S, amount); return; }
+            }
+        }
+        function voidShell(L, amount) {
+            const S = L.cache;
+            if (!(amount > 0) || !S || !S.canvas || !S.decks) return;
+            MiniLab.inArt(ctx, c => c.drawImage(shellImage(S, amount), S.bx0, S.by0));
+        }
+        /** Our floodlights on our own hull: a cold pixel each side under the bridge, on in the same two steps as the beam, a
+            second pixel of glow ahead of each once they are full. */
+        const rgbCss = c => `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
+        function voidLamps(L, k) {
+            const S = L.cache;
+            if (!(k > 0) || !S || !S.decks || !S.decks[0]) return;
+            MiniLab.inArt(ctx, (c, d) => {
+                const y = Math.round(S.decks[0].bottom), mid = L.cx * d, half = L.halfWidth(y / d) * d;
+                [-1, 1].forEach(side => {
+                    const x = side < 0 ? Math.round(mid - half) : Math.round(mid + half) - 1;
+                    c.fillStyle = rgbCss(R.ICE.rgb[k >= 1 ? 5 : 4]); c.fillRect(x, y, 1, 1);
+                    if (k >= 1) { c.fillStyle = rgbCss(R.ICE.rgb[3]); c.fillRect(x, y - 1, 1, 1); c.fillRect(x + side, y, 1, 1); }
+                });
+            });
+        }
+        /** The game's chip look (cards.css .enc-chips, as minigames.css .mini-host.is-void .void-chips): { icon, text, tone } each. */
+        function chipsEl(chips) {
+            const el = document.createElement('p');
+            el.className = 'void-chips';
+            chips.forEach(c => {
+                const i = document.createElement('i');
+                if (c.tone === 'gain' || c.tone === 'loss') i.className = 'is-' + c.tone;
+                i.dataset.icon = c.icon;
+                i.textContent = c.text;
+                el.append(i);
+            });
+            return el;
+        }
+        const talkEl = () => { const frame = ui.canvas.closest('.mini-frame'); return frame && frame.querySelector('.mini-talk'); };
+        /** A bill under the line just said (the next line takes it away). */
+        function showChips(chips) {
+            const talk = talkEl();
+            if (talk && chips.length) talk.append(chipsEl(chips));
+        }
+        function clearChips() {
+            const talk = talkEl();
+            if (talk) talk.querySelectorAll('.void-chips').forEach(el => el.remove());
+        }
+        /** (read only, for the headless checks) where the dark is. */
+        function voidState() {
+            const litZ = leg && mode === 'run' ? leg.frags.filter(f => !f.gone && !f.done).map(f => [f, zOf(f.at)]).filter(([f, z]) => z > NEAR && z < VOID.flood.reach && floodAt(f.x, f.y, z) > 0.03).map(([, z]) => z) : [];
+            const lit = litZ.length, litNear = litZ.filter(z => z < 14).length;
+            return { phase: vd.phase, dv: +vd.dv.toFixed(3), back: +vk.back.toFixed(3), blackSecs: +vd.blackSecs.toFixed(2), fastSecs: +vd.fastSecs.toFixed(2), darkHits: vd.darkHits, darkThreats: vd.darkThreats, darkPassed: vd.darkPassed,
+                slowK: +voidSlowK().toFixed(3), said: [...vd.said], cost: vd.cost, seed: vd.seed, corr: voidCorr(), bright: vd.bright, ink: vk.ink, stars: vk.stars,
+                light: vk.light, sunK: vk.sunK, amb: +vk.amb.toFixed(3), flood: vk.flood, shell: vk.shell, deaf: isDeaf(), hold: vd.hold, lit, litNear, rate: +vd.rate.toFixed(3),
+                blackShare: vd.blackT != null ? +(vd.blackT / leg.cfg.dur).toFixed(3) : null, backShare: vd.backT != null ? +(vd.backT / leg.cfg.dur).toFixed(3) : null, drainSecs: vd.blackAt != null ? +(vd.blackAt - vd.drainAt).toFixed(2) : null,
+                frame: vd.screen ? vd.screen.style.boxShadow : null, boxK: +voidBoxK().toFixed(2),
+                starsGone: vd.outAt && vk.on ? (vk.stars === 'drain' ? Array.from(vd.outAt).filter(a => vd.dv >= a + VOID.stars.half).length : vk.stars === 'all' ? 0 : vd.outAt.length) : 0 };
+        }
         // ── simulation ──
         /** The controls this frame: the arrows (a key counts while held, and for a moment after any press, so a quick tap between
             frames still steers), else where the pointer points; and whether the throttle is held. */
@@ -1122,7 +1755,7 @@
             if (auto && isRun && (ctl.keys || ctl.throttle)) setAuto(false);           // touching the controls takes the ship back
             const isAuto = auto && isRun, k = Math.min(1, dt * (isAuto ? 8 : 5));
             if (isRun && !auto && (ctl.keys || ctl.aim || ctl.throttle)) steered = true;
-            const want = !isRun ? [0, 0] : isAuto ? [0, 1].map(i => {                   // A.U.R.A. follows the safe line exactly
+            const want = !isRun ? [0, 0] : isAuto && vd && vd.phase === 'black' ? auraInDark() : isAuto ? [0, 1].map(i => {   // A.U.R.A. follows the safe line exactly (void: in the black, only what our lights show)
                 const p = leg.path(t)[i], q = leg.path(t + 0.05)[i];
                 return clamp((q - p) / 0.05 * rate + (p - cam[i]) * 5, -MAXV[i], MAXV[i]);
             }) : ctl.keys ? ctl.stick.map((s, i) => {                                   // soft edges: you ease off as you near them
@@ -1139,12 +1772,14 @@
         }
         function reach(f) {                                                              // a fragment reaches our plane: does it touch us?
             const e = ((cam[0] - f.x) / (SHIP_R[0] + f.rad)) ** 2 + ((cam[1] - f.y) / (SHIP_R[1] + f.rad)) ** 2;
+            if (vd && vd.phase === 'black') vd.darkPassed++;                            // (void, for the headless checks)
             f.done = true;                                                               // (whoever flies: A.U.R.A. can be clipped in OPEN_WAVE)
-            if (e < 1) { f.gone = true; scrape(); } else if (e < 2.4) nearT = 0.3;
+            if (e < 1) { f.gone = true; if (vd && voidHit(f)) return; scrape(); } else if (e < 2.4) nearT = 0.3;   // (void: nothing unseen hits while nothing can light it; a hit in the black gets its line)
         }
         function scrape() {                                                              // every perBreak-th scrape turns a room of the ship inset red
             const free = DECK_KEYS.filter(k => !g.damaged[k]);
             g.hits++; jolt = 0.45; sound.scrape();
+            if (vd && vd.phase === 'black') vd.darkHits++;                              // (void)
             addTrauma(TRAUMA.scrape); hitAt = clock;
             if (clock >= stopUntil) stopUntil = clock + HIT_STOP;                       // one hit-stop at a time
             if (!free.length || g.hits % perBreak || g.hitRooms.length >= maxBreaks) return;   // never more decks than the game allows
@@ -1153,9 +1788,9 @@
             g.hitRooms.push(room);
         }
         function drift(f, step) {                                                        // some debris sets a course for wherever we are
-            if (f.aimed && zOf(f.at) < (leg.cfg.aimAt || AIM_AT)) {                      // (most would hit a ship that sat still: SECTORS spread)
-                const left = f.at - t, [sx, sy] = leg.cfg.spread || [0.8, 0.45];
-                f.aimed = false; if (!auto) { f.vx = (cam[0] + (g.r() - 0.5) * 2 * sx - f.x) / left; f.vy = (cam[1] + (g.r() - 0.5) * 2 * sy - f.y) / left; }
+            if (f.aimed && zOf(f.at) < (f.darkAim ? VOID.fly.aimAt : leg.cfg.aimAt || AIM_AT)) {   // (most would hit a ship that sat still: SECTORS spread; void: from further out)
+                const left = f.at - t, [sx, sy] = (leg.cfg.spread || [0.8, 0.45]).map(s => s * (f.darkAim ? VOID.fly.spread : 1));   // (void: wider; in the black they aim at A.U.R.A. too)
+                f.aimed = false; if (!auto || f.darkAim) { f.vx = (cam[0] + (g.r() - 0.5) * 2 * sx - f.x) / left; f.vy = (cam[1] + (g.r() - 0.5) * 2 * sy - f.y) / left; }
             }
             f.x += f.vx * step; f.y += f.vy * step;
         }
@@ -1197,7 +1832,9 @@
             tw.settled = tw.settled || tw.q > TWIN.settled;
         }
         function runLeg(dt) {   // after the jump the ship drops out fast and settles to cruise, so far wrecks come up from the horizon
-            const pace = paceAt(t), rate = pace * (1 + (BOOST - 1) * smooth(th) * pace) * (1 + DROP * Math.exp(-(clock - whiteAt) / 0.6)), step = dt * rate;
+            const base = vd ? lerp(1, VOID.fly.slow, voidSlowK()) : 1;                  // (void) in the black the cruise eases back; the throttle still opens to BOOST
+            const pace = paceAt(t), rate = pace * (base + (BOOST - base) * smooth(th) * pace) * (1 + DROP * Math.exp(-(clock - whiteAt) / 0.6)), step = dt * rate;
+            if (vd && dt > 0) vd.rate = rate;                                          // (void) how fast the course goes now (the dark's real-time rules)
             t += step;
             if (auto) auraT += step;
             if (th >= FULL_AT) fullT += step;
@@ -1206,10 +1843,10 @@
             leg.frags.forEach(f => { if (!f.done) { drift(f, step); if (f.at <= t) reach(f); } else if (!f.gone) { f.x += f.vx * step; f.y += f.vy * step; } });
             leg.hulls.forEach(h => {
                 if (!h.crossed && h.at <= t) { h.crossed = true; if (hullHit(h, cam, t)) scrape(); }
-                if (h.seenAt < 0 && zOf(h.at) < SEE_AT) { h.seenAt = clock; leg.seen++; g.seen++; g.nums.push(h.num); sound.lock(); }
+                if (h.seenAt < 0 && zOf(h.at) < SEE_AT && !(vd && isDarkNow())) { h.seenAt = clock; leg.seen++; g.seen++; g.nums.push(h.num); sound.lock(); }   // (void: named only once the return is over)
             });
             moveTwin();
-            listen();
+            if (!isDeaf()) listen();                                                    // (void) the radio hears nothing in the dark
             queueLines();
             if (t >= leg.cfg.dur) reachEnd();
             return rate;
@@ -1243,12 +1880,20 @@
             const frameStart = clock;
             clock += dtReal; jolt = Math.max(0, jolt - dtReal); nearT = Math.max(0, nearT - dtReal);
             const dt = frameStart < stopUntil ? 0 : dtReal, prevTh = th;                // a hit-stop: the flight holds still for two frames
+            if (vd) voidTick(dtReal);                                                   // (void) where the course is in the dark, who speaks, its look
             const mul = simulate(dt);
             if (shaker) feel(dtReal, prevTh);
             return mul;
         }
         function simulate(dt) {
-            if (queue.length && clock >= nextLine) { const q = queue.shift(), s = q.line(); say(q.who, s, q.gap || gapFor(s)); }
+            if (queue.length && clock >= nextLine && !(vd && vd.hold && !queue[0].hours)) {   // (void: in the return, her line about the hours first)
+                const q = queue.shift(), s = q.line();
+                if (vd) clearChips();                                                    // (void) a bill goes with the line it was under
+                if (vd && q.clear) ui.clear();                                           // (void) one line at a time
+                say(q.who, s, q.gap || gapFor(s));
+                if (vd && q.chips) showChips(q.chips);                                   // (void) a bill under this line
+                if (vd && q.onSay) q.onSay();
+            }
             if (mode === 'done' && !isEndReady && !queue.length && phaseT > REPORT_DELAY && clock - saidAt > CONTINUE_BEAT) showContinue();
             const ctl = input();
             if (mode === 'ready' && ctl.keys) start(false);                              // the arrows on the start screen just go
@@ -1265,7 +1910,8 @@
             const mul = speedMul(rate), step = SPEED * mul * dt;
             for (let i = 0; i < dust.length; i++) { dust[i].z -= step; if (dust[i].z < NEAR) dust[i] = newDust(true); }
             for (let i = 0; i < streaks.length; i++) { streaks[i].z -= step; if (streaks[i].z < NEAR) streaks[i] = newStreak(true); }
-            sound.tick(mul, mode === 'run' || mode === 'jump' ? clamp((Math.log10(g.heard + 1) - 1.3) / 3, 0, 1) : 0);
+            if (vd) voidDustMove(step);                                                 // (void) the specks only our lamps show
+            sound.tick(mul, (mode === 'run' || mode === 'jump') && !isDeaf() ? clamp((Math.log10(g.heard + 1) - 1.3) / 3, 0, 1) : 0);   // (void: the murmur goes with the radio's count)
             return mul;
         }
 
@@ -1333,25 +1979,29 @@
         }
         /** The stars, one art pixel each (the brightest with a small cross, a few twinkling), where they outshine the sky. */
         function drawStars(S) {
-            const list = S.B.stars, step = Math.floor(clock * 1000 / 375);
+            const list = S.B.stars, step = Math.floor(clock * 1000 / 375), isVoid = !!(vd && vk.on && vk.stars !== 'all');   // (void)
+            if (isVoid && vk.stars === 'none') return;
             for (let i = 0; i < list.length; i++) {
                 const s = list[i], [fx, fy] = sky(s.u, s.v), x = Math.round(fx), y = Math.round(fy);
                 if (x < 1 || x >= AW - 1 || y < 1 || y >= AH - 1) continue;
                 const j = y * AW + x;
+                if (isVoid) { const st = voidStar(i); if (st === 2) continue; if (st === 1) { halfStar(j, s.c, s.l); continue; } }   // (void) gone, or half
                 if (s.l > lum32(buf[j])) buf[j] = s.c;
-                if (!s.arm || (s.tw && hash(i, step) < 0.25)) continue;
+                if (!s.arm || (s.tw && hash(i, step) < 0.25 && !(isVoid && vk.dv >= vd.outAt[i] - VOID.stars.steady))) continue;   // (void: a twinkler holds still before it goes)
                 [j - 1, j + 1, j - AW, j + AW].forEach(q => { if (s.al > lum32(buf[q])) buf[q] = s.arm; });
             }
         }
         /** The sky's slow motion, eight steps a second, fixed to the sky: glints of far wrecks, the pulsar's beams, comets, far flashes. */
         function drawLive(S) {
             const tq = Math.floor(clock * 8) * 125;
-            S.glints.forEach(list => list.forEach(gl => {
+            S.glints.forEach((list, li) => list.forEach((gl, gi) => {
+                if (vd && vk.on && voidGone(vd.glintOut[li][gi])) return;              // (void) the far glints go with the stars
                 const s = tq / 1000, ph = (tq + gl.ph) % gl.per, r = gl.warm ? R.WARM : R.STAR, [x, y] = sky(gl.x + gl.vx * s, gl.y + gl.vy * s);
                 if (ph < 125) { lightPx(x, y, r, 1); [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([a, b]) => lightPx(x + a, y + b, r, 0.5)); }
                 else lightPx(x, y, ph < 375 ? r : R.FAR, ph < 375 ? 0.75 : 0.6);
             }));
             (S.rec.live || []).forEach(l => {
+                if (vd && !vk.live) return;                                             // (void) the pulsar, comets and flashes stop at the sky's half step
                 if (l.kind === 'pulsar') {
                     const [cx, cy] = sky(l.x, l.y), a = (tq % l.period) / l.period * Math.PI + roll, ca = Math.cos(a), sa = Math.sin(a), len = l.len * D * view.zm;
                     for (let s = 2 * D; s < len; s += 0.5) for (const dir of [-1, 1]) for (let w = -2; w <= 2; w++) {
@@ -1386,13 +2036,27 @@
         /** How big the light at the end of the heading is: it grows through the flight (fastest late) and with every sector. */
         function sunAmount() {
             const [a, b] = SECTORS[here].sun;
-            if (mode === 'run') return a + (b - a) * progress() ** 1.5;
-            return mode === 'done' ? b * (1 + (DONE_SUN - 1) * smooth(Math.min(1, phaseT / 3))) : b;   // before the jump: the sector we leave
+            const k = vd ? vk.sunK : 1;                                                 // (void) smaller in steps, and back
+            if (mode === 'run') return (a + (b - a) * progress() ** 1.5) * k;
+            return (mode === 'done' ? b * (1 + (DONE_SUN - 1) * smooth(Math.min(1, phaseT / 3))) : b) * k;   // before the jump: the sector we leave
         }
         /** The light, as the travel view paints it (Paint.js lightGlow): a white-gold core, a soft halo, a thin streak across and
             four spikes, all turning with the bank. A point in the first sectors, a small glow by the middle, a warm bloom filling
             the view at the end. It only ever adds light. */
         function drawSun() {
+            if (vd && vk.light !== 'glow') {                                           // (void) one warm SUN pixel where the light was, or nothing
+                const x = Math.round(view.sunX), y = Math.round(view.sunY);
+                if (vk.light === 'pixel') {                                             // about VOID.light.big screen pixels across, whatever the window
+                    const box = ui.canvas.getBoundingClientRect ? ui.canvas.getBoundingClientRect() : null, ppa = box && box.width > 0 ? box.width / AW * (window.devicePixelRatio || 1) : 3;
+                    const n = clamp(Math.ceil(VOID.light.big / ppa), 1, 4), o = (n - 1) >> 1;
+                    for (let dy = 0; dy < n; dy++) for (let dx = 0; dx < n; dx++) {
+                        const px = x + dx - o, py = y + dy - o;
+                        if (px >= 0 && px < AW && py >= 0 && py < AH) buf[py * AW + px] = R.SUN.c32[VOID.light.tone];
+                    }
+                }
+                view.sunR = 0;
+                return 0;
+            }
             const amt = sunAmount(), rh = 4 + 112 * amt ** 1.5, sx = view.sunX, sy = view.sunY, cr = view.cr, sr = view.sr, z = view.zm * D;
             const core = (0.6 + 7 * amt ** 1.7) * z, halo = rh / 3.2 * z, spikes = (3 + 5 * Math.min(1, amt * 2)) * z, s = 0.85 + 0.15 * Math.min(1, amt * 3);
             const glowReach = halo * 3.2 + core + 8 * z, SUN = R.SUN, k1 = core * 0.5 + 1.4, k2 = halo * 0.32 + 1, k3 = halo * 1.1 + 1, k4 = halo * 0.9 + 8 * z;
@@ -1430,6 +2094,7 @@
             for (let i = 0; i < dust.length; i++) {
                 const d = dust[i], a = proj(d.x, d.y, d.z), b = mul > 1.5 ? proj(d.x, d.y, d.z + tail) : a;
                 if (a[0] < -30 * D || a[0] > AW + 30 * D || a[1] < -30 * D || a[1] > AH + 30 * D) { if (d.z < 80) dust[i] = newDust(true); continue; }
+                if (vd && vk.on && voidGone(vd.moteOut[0][i])) { voidMote(a, b, d.x, d.y, d.z, d.z < 90 ? 0.62 : 0.46); continue; }   // (void) only inside our lights
                 const lit = Math.exp(-Math.hypot(a[0] - view.sunX, a[1] - view.sunY) / reach), v = (d.z < 90 ? 0.62 : d.z > 240 ? 0.34 : 0.46);
                 if (lit > 0.35) segZ(a[0], a[1], b[0], b[1], R.SUN, v * (0.5 + 0.6 * lit), v * 0.3, d.z);
                 else segZ(a[0], a[1], b[0], b[1], d.z < 90 ? R.STAR : R.HAZE, d.z < 90 ? v : 0.9, d.z < 90 ? v * 0.4 : 0.5, d.z);
@@ -1437,6 +2102,7 @@
             for (let i = 0; i < streaks.length; i++) {
                 const s = streaks[i], a = proj(s.x, s.y, s.z), b = proj(s.x, s.y, s.z + tail);
                 if (a[0] < -60 * D || a[0] > AW + 60 * D || a[1] < -60 * D || a[1] > AH + 60 * D) { streaks[i] = newStreak(true); continue; }
+                if (vd && vk.on && voidGone(vd.moteOut[1][i])) { voidMote(a, b, s.x, s.y, s.z, 0.8 * clamp((56 - s.z) / 14, 0, 1)); continue; }   // (void) only inside our lights
                 const v = 0.9 * clamp((56 - s.z) / 14, 0, 1) * (s.z < 14 ? 1 : 0.75);
                 if (v > 0.05) segZ(a[0], a[1], b[0], b[1], R.STAR, v, v * 0.15, s.z);
             }
@@ -1446,9 +2112,9 @@
         /** Fill a shape centred on (sx, sy), turned by a, inside a box ex × ey; shape(u, v) works in units of `unit` art px and
             returns a material (0 = empty). paint(px, py, i, edge, lean, m, u, v, lv): edge 1 faces the false sun, 2 faces away,
             0 inside; lean is -1..1 towards the light; lv is the light's direction across the shape. */
-        function raster(sx, sy, ex, ey, unit, a, shape, z, paint) {
+        function raster(sx, sy, ex, ey, unit, a, shape, z, paint, lp) {             // (void: lp, the light's point: our lamps in the black)
             const ca = Math.cos(a), sa = Math.sin(a), inv = 1 / unit;
-            const lx0 = view.sunX - sx, ly0 = view.sunY - sy, ll = Math.hypot(lx0, ly0) || 1, Lx = lx0 / ll, Ly = ly0 / ll;
+            const lx0 = (lp ? lp[0] : view.sunX) - sx, ly0 = (lp ? lp[1] : view.sunY) - sy, ll = Math.hypot(lx0, ly0) || 1, Lx = lx0 / ll, Ly = ly0 / ll;
             const lv = -Lx * sa + Ly * ca, du = (Lx * ca + Ly * sa) * inv, dv = lv * inv;
             for (let py = Math.max(0, Math.floor(sy - ey)); py <= Math.min(AH - 1, Math.ceil(sy + ey)); py++) {
                 const dy = py - sy;
@@ -1490,13 +2156,15 @@
             for (const [ex, ey, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) for (let i = 0; i < arm; i++) { put(ex + i * dx, ey); put(ex, ey + i * dy); }
         }
         function drawHull(h, z, sx, sy, tags, sunAmt) {
+            const vdim = vd && vk.on ? vk.amb : 1;                                      // (void) the light that is left on it
+            if (vdim <= 0.02 && isDeaf()) return;                                       // (void) gone in the dark, beacon and all
             const unit = HULL_L * FA * view.zm / z, unitU = unit / D, fog = fogAt(z, 30, FAR_HULL * 0.85), a = h.a0 + h.spin * t + roll, ca = Math.cos(a), sa = Math.sin(a);
             const ex = Math.abs(ca) * unit + Math.abs(sa) * LEG_W * unit, ey = Math.abs(sa) * unit + Math.abs(ca) * LEG_W * unit + 2;
-            if (unitU < 3.2) lightPx(sx, sy, unitU < 2 ? R.HAZE : R.HULL, unitU < 2 ? 0.95 - fog * 0.4 : 0.5 - fog * 0.2);   // a point down the heading
+            if (unitU < 3.2) lightPx(sx, sy, unitU < 2 ? R.HAZE : R.HULL, (unitU < 2 ? 0.95 - fog * 0.4 : 0.5 - fog * 0.2) * vdim);   // a point down the heading
             else {
                 const o = { px: 1 / unit, ht: L_DIAM * unit, detail: unitU > 30 ? 2 : unitU > 11 ? 1 : 0 };
-                const rimWarm = sunAmt > 0.4 ? (sunAmt - 0.4) * 0.9 * (1 - fog) : 0;     // deep in, the light catches the edges
-                const cover = fog > 0.62 ? (fog - 0.62) * 2.2 : 0, keep = 1 - 0.82 * fog;   // the farthest thin out into the dark
+                const rimWarm = sunAmt > 0.4 ? (sunAmt - 0.4) * 0.9 * (1 - fog) * vdim : 0;     // deep in, the light catches the edges
+                const cover = fog > 0.62 ? (fog - 0.62) * 2.2 : 0, keep = (1 - 0.82 * fog) * vdim;   // the farthest thin out into the dark
                 raster(sx, sy, ex + 2, ey, unit, a, (u, v) => wreckAt(h, u, v, o), z, (x, y, i, edge, lean, m, u, v, lv) => {
                     const b = BAY8[((y & 7) << 3) | (x & 7)];
                     if (cover > b) return;
@@ -1507,7 +2175,8 @@
                     buf[i] = r.c32[level(r, tone * keep, x, y)];
                 });
             }
-            beacon(sx + h.bu * unit * ca, sy + h.bu * unit * sa, z, h);                // on the nose, or where the front broke off
+            if (!isDeaf()) beacon(sx + h.bu * unit * ca, sy + h.bu * unit * sa, z, h);   // on the nose, or where the front broke off (void: dark while the radio is quiet)
+            if (vdim < 0.3 || isDarkNow()) return;                                      // (void) no marks, no name, until the return is over
             if (h.seenAt < 0) { if (unitU < 14) brackets(sx, sy, (4 + unitU * 0.4) * D, (4 + unitU) * D, R.UI, 0.6, 3); return; }   // a contact, not yet named
             const since = clock - h.seenAt;
             if (since < 1.6 && Math.floor(since * 5) % 2 === 0) brackets(sx, sy, ex + 3, ey + 1, R.UI, 0.8, 6);
@@ -1589,15 +2258,19 @@
                 if (f.gone || z < NEAR || z > FAR_FRAG) return;
                 // red: it will hit us where we are (yours), or where A.U.R.A.'s line takes us when it arrives (hers: only
                 // what will really clip her, so you can take the stick from her in time)
-                const isNear = mode === 'run' && !f.done && left < WARN, [ax, ay] = isNear && auto ? leg.path(f.at) : cam;
+                const inBlack = !!(vd && vd.phase === 'black'), warnAt = inBlack ? Math.max(VOID.fly.warn, VOID.fly.warnReal * Math.max(0.3, vd.rate)) : WARN;   // (void) later in the black: fixed real seconds when we fly fast
+                const isNear = mode === 'run' && !f.done && left < warnAt, [ax, ay] = isNear && auto && !inBlack ? leg.path(f.at) : cam;   // (void: in the black she is not on her line)
                 f.threat = isNear && ((ax - f.x - f.vx * left) / (SHIP_R[0] + f.rad)) ** 2 + ((ay - f.y - f.vy * left) / (SHIP_R[1] + f.rad)) ** 2 < 1;
+                if (f.threat && vd && vk.on && Math.max(vk.amb, floodAt(f.x, f.y, z)) < VOID.fly.lit) f.threat = false;   // (void) red only once it can be seen
+                if (f.threat && vd && f.redAt == null) f.redAt = clock;                // (void) when it first turned red (A.U.R.A.'s delay, the hit's line)
+                if (f.threat && inBlack && !f.darkThreat) { f.darkThreat = true; vd.darkThreats++; }   // (void, for the headless checks)
                 threat = threat || f.threat;
                 vis.push([z, f, 0]);
             });
             vis.sort((p, q) => q[0] - p[0]).forEach(([z, w, kind]) => {
                 if (kind === 2) { drawTwin(w, sunAmt); return; }
                 const [sx, sy] = proj(w.x, w.y, z);
-                if (kind) drawHull(w, z, sx, sy, tags, sunAmt); else drawFrag(w, z, sx, sy);
+                if (kind) drawHull(w, z, sx, sy, tags, sunAmt); else if (vd && vk.on) drawFragDark(w, z, sx, sy); else drawFrag(w, z, sx, sy);   // (void: by what light is left)
             });
             return tags;
         }
@@ -1605,7 +2278,7 @@
         // ── drawing: what the pilot sees besides the view ──
         function drawBox() {   // our own size where things cross us: corner marks, turning with the bank
             const isWarn = jolt > 0 || (threat && (isReduced() || Math.floor(clock * 8) % 2));   // reduced motion: steady, no blink
-            const r = isWarn ? R.RED : R.UI, v = isWarn ? 0.75 : nearT > 0 ? 1 : 0.6;
+            const r = isWarn ? R.RED : R.UI, v = isWarn ? 0.75 : (nearT > 0 ? 1 : 0.6) * (vd ? voidBoxK() : 1);   // (void) down with the light's last pixel
             const c = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([kx, ky]) => proj(cam[0] + kx * SHIP_R[0], cam[1] + ky * SHIP_R[1], ZHIT));
             c.forEach((p, k) => [c[(k + 1) % 4], c[(k + 3) % 4]].forEach(q => {
                 const dx = q[0] - p[0], dy = q[1] - p[1], d = Math.hypot(dx, dy) || 1, Ln = Math.min(8 * D, d / 3);
@@ -1626,7 +2299,7 @@
                 if (q < 1) mixPx(x, y, ink, 0.85 * (1 - q) ** 0.6, 6);                 // the space behind our own ship goes quiet
             }
             const edge = jolt * 1.5 * (isReduced() ? 0.5 : 1);
-            if (jolt > 0) for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {      // a scrape: the edges flash (half as strong with reduced motion)
+            if (jolt > 0 && !(vd && vk.on && vk.ink >= 1)) for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {      // a scrape: the edges flash (half as strong with reduced motion) (void: not in the black, where the frame is gone)
                 const e = Math.min(x, y, AW - 1 - x, AH - 1 - y) / D;
                 if (e < 9) { const v = edge * (1 - e / 9); if (v > BAY8[((y & 7) << 3) | (x & 7)]) buf[y * AW + x] = R.RED.c32[level(R.RED, 0.45 + 0.4 * v, x, y)]; }
             }
@@ -1660,12 +2333,13 @@
         }
         function drawHud() {   // the radio's count; who flies; on the start screen how to steer; once, how to go faster
             note('flying', auto && (mode === 'run' || mode === 'jump') ? 'A.U.R.A. FLYING' : null, { x: W - 8, y: 8, align: 'right', tone: 'ui' });
-            const isCounting = mode !== 'done';
+            const isCounting = mode !== 'done' && !isDeaf();                            // (void) the radio's count goes while it hears nothing
             note('heard', isCounting ? 'BEACONS HEARD' : null, { x: W - 8, y: 232, align: 'right', tone: 'dim' });
             note('count', isCounting ? fmt(g.heard) : null, { x: W - 8, y: 242, align: 'right', tone: clock - g.heardAt < 0.35 ? 'ui' : 'text', size: 'm' });
             note('steer', mode === 'ready' ? 'STEER CLEAR OF THE DEBRIS' : null, { x: CX, y: 176, align: 'center', tone: 'text', size: 'm' });
             note('how', mode === 'ready' ? 'USE THE MOUSE OR THE ARROWS' : null, { x: CX, y: 192, align: 'center', tone: 'dim', size: 'm' });
-            note('faster', mode === 'run' && !auto && !throttleTaught && clock - whiteAt > 1.2 ? 'HOLD TO GO FASTER' : null, { x: 50, y: 246, tone: 'ui' });
+            const isAgain = !!(vd && clock < vd.hintUntil && th < 0.3);                 // (void) in the dark only for a moment after "Speed up"
+            note('faster', mode === 'run' && !auto && (isAgain || (!throttleTaught && clock - whiteAt > 1.2 && !isHintHeld())) ? 'HOLD TO GO FASTER' : null, { x: 50, y: 246, tone: 'ui' });
         }
         /** Our ship in the corner, its drive burning longer and brighter as the throttle opens. A scrape rattles the hull for
             RATTLE s (on the shaker's own noise) and its lights stutter for STUTTER s; reduced motion: half the rattle, no stutter. */
@@ -1675,20 +2349,24 @@
             const rx = Math.round(fade * (isHit ? J.noise(clock, 1.3, FEEL_SHAKE.hz) : 0)), ry = Math.round(fade * (isHit ? J.noise(clock, 4.2, FEEL_SHAKE.hz) : 0));
             const isDark = isHit && !isCalm && age < STUTTER && Math.floor(age / STUTTER_STEP) % 2 === 0;
             const opts = { damaged: g.damaged, labels: false, plume: plumeNow(), dim: isDark ? Object.fromEntries(shipL.rooms.map(r => [r.key, STUTTER_DIM])) : undefined };
-            if (!rx && !ry) { MiniShip.draw(ctx, shipL, clock * 1000, opts); return; }
+            const draw = () => { MiniShip.draw(ctx, shipL, clock * 1000, opts); if (vd && vk.on) { voidShell(shipL, vk.shell); voidLamps(shipL, vk.flood); } };   // (void) its outer shell dark while the light is gone; our lamps
+            if (!rx && !ry) { draw(); return; }
             const m = ctx.getTransform();
             ctx.setTransform(m.a, m.b, m.c, m.d, m.e + rx, m.f + ry);                   // whole art pixels, under the picture's scale
-            try { MiniShip.draw(ctx, shipL, clock * 1000, opts); } finally { ctx.setTransform(m); }
+            try { draw(); } finally { ctx.setTransform(m); }
         }
         function render(mul) {   // far to near: the sky, its stars and slow motion, the light, wrecks and debris, dust; then the instruments
             setView(); depth.fill(1e9);
             const S = skyOf(here), amt = sunAmount();
-            drawBackdrop(S, amt);
+            if (vd && vk.ink >= 1) buf.fill(INK32); else drawBackdrop(S, amt);          // (void) the sky all ink: nothing left to paint
+            if (vd && vk.ink > 0 && vk.ink < 1) inkSky(vk.ink);                         // (void) the sky steps down to ink
             drawStars(S);
             drawLive(S);
             drawSun();
+            if (vd && vk.flood > 0) drawBeam();                                         // (void) our floodlights' faint wedge under the bridge
             const tags = mode === 'run' ? drawField(amt) : [];
             drawMotes(mul);
+            if (vd && vk.on) voidDust(mul);                                             // (void) the specks in our lamps' beam
             if (mode === 'ready' || mode === 'run') drawBox();
             drawOverlays();
             ctx.putImageData(img, 0, 0);
@@ -1725,13 +2403,15 @@
         live = () => ({
             mode, auto, t, dur: leg ? leg.cfg.dur : 0, cam: [...cam], th, hits: g.hits, auraT, fullT, paid: paid && { ...paid },
             threats: mode !== 'run' ? [] : leg.frags.map((f, id) => (f.threat && !f.done && !f.gone ? { id, x: f.x + f.vx * (f.at - t), y: f.y + f.vy * (f.at - t), rad: f.rad, left: f.at - t } : null)).filter(Boolean),
+            ...(vd ? { void: voidState(), endReady: isEndReady, clock } : {}),       // (void)
         });
         seedSky(from);
         say('A.U.R.A.', to === FIRST_SECTOR + 1 ? OFFER_FIRST(STAKES.AURA) : OFFER, 0);   // the first flown jump: once, what her way costs
         row([{ label: 'Fly it myself', primary: true, onClick: () => start(false) }, { label: 'Let A.U.R.A. fly', onClick: () => start(true) }]);
         render(0.3);
         MiniLab.loop(dt => { render(update(dt)); skyOf(to, PAINT_AHEAD_MS); }, 30);   // the next sector's sky, a little each frame
-        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); live = null; };
+        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); live = null;
+            if (vd && vd.screen) vd.screen.style.boxShadow = ''; };                   // (void) the frame as the game draws it
     }
 
     window.Corridor = Object.freeze({ debug: Object.freeze({ state: () => (live ? live() : null) }) });
@@ -1742,12 +2422,25 @@
         hideHeader: true,                                   // a pilot sees the flight, not a game title over it
         density: DENSITY,                                   // 720 × 405 art pixels, the travel view's grain
         mount,
-        /** A skip (TEST_MODE, or a flight that would not start) is A.U.R.A.'s flight, never free: her cost, and the scrapes
-            she would take on her own safe line through this sector's debris. */
-        autoResult(opts) {
-            const o = opts || {}, { to } = readSectors(o), avoid = Array.isArray(o.avoidHulls) ? o.avoidHulls.filter(Number.isFinite) : [];
-            const leg = makeLeg(to, MiniLab.rng((Math.random() * 4294967295) >>> 0), SECTORS[to].heard, null, avoid, false);
-            return { scrapes: auraClips(leg), auraFlew: true, energyDelta: stakesOf(0, 1, 0, asInt(o.energy)).delta, beaconsHeard: SECTORS[to].heard, shipsSeen: SHIPS_PER_JUMP, hulls: leg.hulls.map(h => h.num), damagedRooms: [] };
-        },
+        autoResult: skipResult,
+    });
+    /** A skip (TEST_MODE, or a flight that would not start) is A.U.R.A.'s flight, never free: her cost, and the scrapes
+        she would take on her own safe line through this sector's debris. (THE DARK's too: no dark, nothing for it to cost.) */
+    function skipResult(opts) {
+        const o = opts || {}, { to } = readSectors(o), avoid = Array.isArray(o.avoidHulls) ? o.avoidHulls.filter(Number.isFinite) : [];
+        const leg = makeLeg(to, MiniLab.rng((Math.random() * 4294967295) >>> 0), SECTORS[to].heard, null, avoid, false);
+        return { scrapes: auraClips(leg), auraFlew: true, energyDelta: stakesOf(0, 1, 0, asInt(o.energy)).delta, beaconsHeard: SECTORS[to].heard, shipsSeen: SHIPS_PER_JUMP, hulls: leg.hulls.map(h => h.num), damagedRooms: [] };
+    }
+    // AFTER THE FLIGHT: the new look's jump into sector 5 (App.flyCorridor), the same flight with THE DARK always on. Its own id
+    // so its frame rules (minigames.css .mini-host.is-void: the words keep one height; the chips) are in place before mount().
+    MiniHost.register({
+        id: 'corridor-void',
+        title: 'Fly the corridor',
+        kicker: 'Sector jump',
+        hideHeader: true,                                   // a pilot sees the flight, not a game title over it
+        frameClass: 'is-void',
+        density: DENSITY,                                   // 720 × 405 art pixels, the travel view's grain
+        mount: (ctx, ui, opts) => mount(ctx, ui, { ...(opts || {}), void: opts && opts.void && typeof opts.void === 'object' ? opts.void : true }),
+        autoResult: skipResult,
     });
 })();

@@ -217,6 +217,17 @@
 .mini-btn[disabled] { color: var(--mg-faint); cursor: default; }
 .mini-btn[disabled]::before { color: #33373e; }
 
+/* ── AFTER THE FLIGHT (Corridor.js THE DARK, MiniHost 'corridor-void', frameClass 'is-void') ── the picture never moves:
+   the words under it keep one height whether a line, a bill or a row is there or not (the frame is centred in the window).
+   The bills under A.U.R.A.'s lines are the game's card chips (cards.css .enc-chips): plain mono words, gain amber, loss red,
+   never ship.css's boxes. */
+.mini-host.is-void .mini-talk { min-height: 104px; }
+.mini-host.is-void .mini-buttons { min-height: 44px; }
+.mini-host.is-void .void-chips { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding-top: 2px; }
+.mini-host.is-void .void-chips i { padding: 0; border: 0; border-radius: 0; letter-spacing: 0; font: 400 14px/1.3 var(--mg-f-num); font-style: normal; color: var(--mg-steel); white-space: nowrap; }
+.mini-host.is-void .void-chips .is-gain { color: var(--mg-amber); }
+.mini-host.is-void .void-chips .is-loss { color: #ff5468; }
+
 @media (max-width: 640px) {
     .mini-line { font-size: 17px; }
     .mini-btn { font-size: 16px; }
