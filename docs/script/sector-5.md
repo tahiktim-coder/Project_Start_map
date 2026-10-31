@@ -19,6 +19,50 @@ _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, ea
 **A.U.R.A.:** More debris ahead. Heavier than before.  
 **Vance:** [number] thousand beacons. So where are all the ships?  
 
+### The dark (the new look: After the flight) «Corridor.js · VOID_LINES»
+_The new look only. Midway through this flight the stars go out one by one, then the sky, the light last; we fly a long black by our own lamps; then the light comes back first and every star at once. One line at a time, with silences; the dead say nothing; never the word "void" on screen. In the order they can come:_
+
+- _stars: as the stars go out; the first alive says it_ «Corridor.js · line 245»
+  - **Mira (or Aris, Vance, Jaxon):** Commander, the stars are going out.
+- _lost: in the black_ «Corridor.js · line 247»
+  - **A.U.R.A.:** I have lost the light, Commander.
+- _unseen: in the black; after a hit by debris nobody saw; the first alive says it_ «Corridor.js · line 248»
+  - **Vance (or Mira, Aris):** We never even saw that one.
+- _late: in the black; after a hit by debris our lights found too late; the first alive says it_ «Corridor.js · line 250»
+  - **Jaxon:** Our lights found it too late.
+  - **Vance:** Our lights found it too late.
+  - **A.U.R.A.:** Our lights found it too late, Commander.
+- _fast: in the black; if the Commander flies flat out; never after "speed"; the first alive says it_ «Corridor.js · line 252»
+  - **Jaxon:** Too fast. We won't see it until it hits us.
+  - **Aris:** Slow down, Commander. We can't see what's coming.
+- _slow: in the black; never after "fast"; the first alive says it_ «Corridor.js · line 254»
+  - **Jaxon:** I'm slowing us down. Our lights don't reach far.
+  - **A.U.R.A.:** I am slowing us down, Commander. Our lights do not reach far.
+- _radio: in the black; the first alive says it_ «Corridor.js · line 256»
+  - **Mira (or Aris):** The radio's gone quiet. No beacons at all.
+- _speed: in the black; if the Commander goes easy; never after "fast"; the first alive says it_ «Corridor.js · line 258»
+  - **Vance (or Mira):** Speed up, Commander. Get us out of this.
+  - _while A.U.R.A. flies:_ **Vance:** Take the stick, Commander. Get us out of this.
+- _food: in the black; once the dark has cost a few hours; the first alive says it_ «Corridor.js · line 260»
+  - **Aris (or Mira, A.U.R.A.):** Every hour in here costs us food, Commander.
+- _scared: in the black; if the Commander has been slow; the first alive says it_ «Corridor.js · line 262»
+  - **Aris (or Mira):** Everyone's scared, Commander. How much longer?
+
+#### Once every star is back «Corridor.js · VOID_HOURS»
+
+**A.U.R.A.:** We were in the dark for [number] hours, Commander.  
+
+#### Its chips «Corridor.js · VOID_CHIPS»
+_Under her line about the hours, what the dark cost (rations; and stress after a long dark); under her last line at the end, what the flight cost._
+
+- **energy** — [+ | −][number] energy
+- **rations** — −[number] ration[s]
+- **stress** — All crew +[number] stress
+- **deck** — [deck] damaged
+
+In the log afterwards: *The dark cost [number] ration[s].* «bundle.js · applyCorridorResult»  
+
+
 ## The story beats (always here)
 
 ### The story planet: Iapetus-60 Minor «StoryPlanets.js · sector 5»
@@ -27,6 +71,37 @@ _A faint contact on the map from the start. Dating one of our wrecks here names 
 Map text: *A dark moon with an old station on it. One of our ships died there.*  
 On the disc's map: a moon with one lamp lit. Then:  
 **Mira:** There's a station on that moon. Its lamp is still on.  
+
+### Last Port: docking at the relay on the way in (the new look) «DockRelay.js · lines»
+_Going across to the wreck (the bridge's GO ACROSS), the ship docks at the old relay first, flown: Bring Her In's flight and words (10-away-team.md), with these instead. The grade line is the cause (if any) and then one of the four grade words. Then the team goes into the wreck through its airlock, which the relay still powers (10-away-team.md, the wreck doors), and the story card's picture is the relay._
+
+- **offer** — A relay on the dark moon, Commander. I can dock us for [n] energy. «DockRelay.js · line 78»
+- **offerFree** — A relay on the dark moon, Commander. I can dock us, if you prefer. «DockRelay.js · line 79»
+- **hold** — Relay ahead. Hold to close in. Let go to slow. «DockRelay.js · line 80»
+- **hulls** — They docked here and never left. «DockRelay.js · line 81»
+- **mira** — It sent something. Back the way we came. «DockRelay.js · line 82»
+- **soft** — The clamps take hold, Commander. «DockRelay.js · line 83»
+- **rough** — We scraped the ring. «DockRelay.js · line 83»
+- **crash** — The hull is damaged. «DockRelay.js · line 83»
+- **held** — The hull held. «DockRelay.js · line 83»
+
+On the glass, one after another as the radio finds them: EXODUS-17199 · EXODUS-17212 · EXODUS-17207 «DockRelay.js · glass»  
+On the relay's screen in the film cut: SENT «DockRelay.js · exterior.sent»
+
+### Its chips «DockRelay.js · chips»
+_Under Mira's line. A hard dock tears one of the other two hulls loose ("17212 torn loose"); never the disc's._
+
+- **soft** — Soft dock «DockRelay.js · line 417»
+- **rough** — Rough dock «DockRelay.js · line 417»
+- **crash** — Hard dock «DockRelay.js · line 417»
+- Soft dock «DockRelay.js · line 417»
+- decks broken «DockRelay.js · line 420»
+- A hull «DockRelay.js · line 421»
+- torn loose «DockRelay.js · line 421»
+- Energy + «DockRelay.js · line 423»
+- Energy − «DockRelay.js · line 423»
+
+_In the log after a rough or hard dock: BoardingParty's own lines with the moon's name (10-away-team.md, Boarding a station); after a soft dock flown all by hand: "Good flying: 3 energy saved."_
 
 ### The find: THE DISC «ExodusLogs.js · PAGE_DISC»
 _In the wreck on Iapetus-60 Minor. A gold disc the size of a dinner plate, with a star map cut into it. In the cargo hold it is called: The Disc._

@@ -392,8 +392,9 @@
         s.crew.forEach(c => { delete c._nsWeak; });                                          // the next team trip has gone: whoever was too weak missed it
         return true;
     }
-    /** While the team is down (bundle: after the landing, before their story): the crisis aboard, then the skills aboard. */
-    function whileDown(app, team) {
+    /** While the team is down (bundle: after the landing, before their story): the crisis aboard, then the skills aboard.
+        o.relay (Last Port): the ship docked at the relay; nobody scanned any ground for them, so Mira says nothing of it. */
+    function whileDown(app, team, o) {
         const s = app.state, n = s.currentSystem, c = n && n._nsCrisis, members = team || [];
         const hurtBefore = new Set(s.crew.filter(m => m.status !== 'HEALTHY').map(idOf));
         const aboardWell = tag => { const m = byRole(s, tag); return m && !members.includes(m) && isWell(m) ? m : null; };
@@ -417,7 +418,7 @@
             const vance = crisis === 'BREACH' ? aboardWell('SECURITY') : null, healer = hurtNow.length ? vance || aboardWell('MEDIC') : null;
             return healer ? treat(app, healer, hurtNow, (healer === vance ? LINES.vancePulled : LINES.arisTreated)(hurtNow.map(m => m.name).join(' and '))) : null;
         }).then(() => {
-            if (aboardWell('SPECIALIST')) { app._nsScanMod = econ('MIRA_ABOARD', -10); log(s, LINES.miraScanned); }
+            if (aboardWell('SPECIALIST') && !(o && o.relay)) { app._nsScanMod = econ('MIRA_ABOARD', -10); log(s, LINES.miraScanned); }
             s.emitUpdates();
         }).catch(err => console.error('NSOrbit: the crisis aboard failed', err)).then(() => { if (trip) trip.downDone = true; });
     }

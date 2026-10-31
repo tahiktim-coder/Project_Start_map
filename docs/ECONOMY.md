@@ -120,6 +120,9 @@ siding with someone reads as a purchase.
 - Corridor: every third scrape breaks a deck, but only when you fly. When A.U.R.A. flies there are no scrapes at all, so
   flying by hand has no upside. (Fixed 2026-10-21: every second scrape breaks a deck; A.U.R.A.'s flight costs 4 energy and
   she can be clipped in the thickest wave; your own flight saves 5 with no scrape, 7 at full throttle, 2 with one. Corridor.js STAKES.)
+  (2026-10-31, the new look's jump into sector 5, After the flight: the dark costs food by how long it lasts, an hour for every
+  4.2 s of black, a ration a living person a day of it, at least one: about 1 flat out, 2 careful, 3 slow or with A.U.R.A., and
+  all crew +1 stress from 9 hours; taken before the supper in sector 5. Corridor.js VOID.cost, App.applyCorridorResult.)
 - Warp plot: ±15–30% of the warp price. Small.
 
 ### A careful run, today's numbers

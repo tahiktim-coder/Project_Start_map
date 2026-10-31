@@ -50,9 +50,14 @@ function pickOnCard(rc, cfg) {
 /** MiniHost.play: a minigame's result for this player's pilot (models.js), and its seconds. */
 function minigame(rc, name, o) {
     const { style, rnd, cur } = rc;
-    if (name === 'corridor') {
+    if (name === 'corridor' || name === 'corridor-void') {                   // (corridor-void: After the flight, the jump into sector 5)
         rc.add(M.SECONDS.corridor[style.pilot] || 45, 'jump flight');
         const r = flightOff(rc) ? { scrapes: 0, energyDelta: 0, auraFlew: style.pilot === 'aura', damagedRooms: [], hulls: [] } : M.corridorResult(style.pilot, rnd);
+        if (name === 'corridor-void' && !flightOff(rc)) {                      // the dark's bill; the game applies it (App.applyCorridorResult)
+            rc.add(M.SECONDS.dark[style.pilot] || 28, 'the dark');
+            r.void = M.darkResult(style.pilot, ((o && o.crew) || []).filter(c => c && c.status !== 'DEAD').length);
+            sec(rc).dark = -r.void.rations;
+        }
         sec(rc).scrapes += r.scrapes; sec(rc).flight += r.energyDelta;
         return r;
     }
@@ -60,7 +65,22 @@ function minigame(rc, name, o) {
     if (name === 'breach') { rc.add(M.SECONDS.breach, 'breach'); cur.phase = 'breach'; return M.breachResult(style.pilot, rnd, o); }
     if (name === 'torch') { rc.add(M.SECONDS.torch, 'wreck door'); return { opened: true, door: (o && o.door) || 'cut', bySelf: false }; }
     if (name === 'disc') { rc.add(M.SECONDS.dating, 'dating'); return { dated: true, hull: o && o.wreck ? o.wreck.hull : 1, age: 100, ly: 12 }; }
+    if (name === 'dock-flight' && o && o.relay) return relayDock(rc, o);
     return null;
+}
+/** Last Port (App.flyRelay): the relay's dock on the way to the disc's wreck, the whole approach, graded as every flown dock
+    (models.js dockingGrade); its result as DockFlight gives it (DockRelay.js: A.U.R.A.'s share costs, a soft dock flown all by
+    hand gives, a rough or hard one breaks a deck within the allowance, a hard one tears a hull loose). The game applies it. */
+function relayDock(rc, o) {
+    const { ctx, style, rnd, state, R } = rc, DR = ctx.DockRelay;
+    rc.add(M.SECONDS.dock.full, 'relay dock');
+    const grade = M.dockingGrade(style.pilot, rnd, { id: 'last-port-relay' }), isAura = style.pilot === 'aura';
+    const free = Object.keys(state.shipDecks).filter(k => state.shipDecks[k].status === 'OPERATIONAL');
+    const broke = grade !== 'soft' && free.length ? [free[Math.floor(rnd() * free.length)]].slice(0, Number.isFinite(o.maxBreaks) ? o.maxBreaks : 1) : [];
+    if (grade === 'crash') R.decks.dockCrash += 1;
+    const cost = isAura ? Math.min(M.DOCK_AURA_ENERGY, Math.max(0, o.energy || 0)) : 0, torn = grade === 'crash';
+    const energyDelta = DR ? DR.energyDelta({ grade, cost, helped: isAura, auto: isAura }) : -cost;
+    return { grade, auto: isAura, scrapes: 0, damagedRooms: broke, energyDelta, hullHeld: grade === 'crash' && !broke.length, relay: true, torn, tornHull: torn && DR ? DR.exterior.nums[rnd() < 0.5 ? 0 : 1] : null };
 }
 
 /** LanderGame.play: the drop, flown by the player or by A.U.R.A. */
