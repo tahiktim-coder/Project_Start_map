@@ -315,10 +315,13 @@
         if (!kept || kept.w !== w || kept.h !== h) kept = extKept[slot] = { w, h, wide: X.create(w, h, 'wide', relay && relay.exterior), close: X.create(w, h, 'close', relay && relay.exterior) };   // (LAST PORT: relay)
         if (relay && !kept.mid) kept.mid = X.create(w, h, 'mid', relay.exterior);                   // LAST PORT: the row of hulls
         const { wide, close, mid } = kept;
-        if (mid) return { wide, close, mid, isDone: () => wide.isDone() && close.isDone() && mid.isDone(),
-            bake: ms => (!wide.isDone() ? wide : !close.isDone() ? close : mid).bake(ms),
-            finish: grade => { wide.bake(Infinity); close.bake(Infinity); if (grade === 'crash') mid.bake(Infinity); },   // (the mid is only a hard dock's; else it bakes on, a little a frame)
-            reset: () => { wide.reset(); close.reset(); mid.reset(); } };
+        if (mid) {
+            let midUnused = false;                                                                 // the grade is known and it is not a hard dock: the mid is never shown
+            return { wide, close, mid, isDone: () => wide.isDone() && close.isDone() && (midUnused || mid.isDone()),
+                bake: ms => (!wide.isDone() ? wide : !close.isDone() ? close : mid).bake(ms),
+                finish: grade => { wide.bake(Infinity); close.bake(Infinity); if (grade === 'crash') mid.bake(Infinity); else midUnused = true; },   // (the mid is only a hard dock's: else the cut never pays for it)
+                reset: () => { wide.reset(); close.reset(); mid.reset(); } };
+        }
         return { wide, close, isDone: () => wide.isDone() && close.isDone(),
             bake: ms => (wide.isDone() ? close : wide).bake(ms),                          // the wide first, then the close
             finish: () => { wide.bake(Infinity); close.bake(Infinity); }, reset: () => { wide.reset(); close.reset(); } };
@@ -2378,11 +2381,12 @@
             shown.set(id, key);
             ui.note(id, text, o);
         }
-        /** LAST PORT: the three hulls' names on the glass, as the jump names a wreck (EXODUS-17,207), following them. A name
+        /** LAST PORT: the three hulls' names on the glass, as the jump names a wreck (EXODUS-17207, as the story card does), following them. A name
             goes only where it is free (2026-10-31, the designer: they overlapped at 1366 wide and below): its box (its real
             width in the notes' own font, measured once) on the glass, over sky only (the depth under it empty at five
             points: no ring, no hull), clear of the port's marks, our ship in the corner, A.U.R.A.'s note and the names
-            already placed. Of its places (DockRelay.js: beside its hull, above, below, the other side) the one it had last
+            already placed, and only where it reads as its own hull's (DockRelay.owner: the edge nearest it is that hull's, and
+            near). Of its places (DockRelay.js: beside its hull, above, below, the other side) the one it had last
             frame first, so it does not hop; with none free it waits. At most NAMES.most at once (one on a glass under
             NAMES.narrow css px): a name waiting lets the oldest go once that has shown NAMES.hold s, and a name that has
             gone does not come back. (dockStyle fades each in as it first shows.) */
@@ -2410,6 +2414,7 @@
                 const p = tries.find(q => {
                     const cx = clamp(q[0], tw / 2 + 4, W - tw / 2 - 4), top = clamp(q[1] - TH / 2, TAG_TOP, TAG_BOTTOM), box = [cx - tw / 2 - 2, top - 2, cx + tw / 2 + 2, top + TH + 2];
                     if (Math.abs(cx - q[0]) > tw / 2 || [...keep, ...placed].some(b => hits(b, box)) || !isSky(box) || RELAY.covers(D, box)) return false;   // off the glass, or on something
+                    if (RELAY.owner(D, box) !== tg.k) return false;                                          // nearer another hull than its own, or far from it
                     placed.push(box); now.set(tg.k, { x: Math.round(cx), y: Math.round(top), s: tg.s, near: tg.near, at: tg.at.indexOf(q) });
                     return true;
                 });
@@ -2597,7 +2602,7 @@
             if (EXT && !EXT.isDone()) EXT.bake(bakeMs());
             if (isDock) { const xs = frameMs[mode] || (frameMs[mode] = []); xs.push(performance.now() - t0); if (xs.length > 900) frameMs[mode] = xs.slice(-600); }   // what a frame costs (headless checks)
         }, 30);   // the next sector's sky, a little each frame
-        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); live = null; };
+        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); live = null; if (RELAY) extKept.relay = null; };   // (LAST PORT: the relay is flown once a run: its three cameras' buffers, about 23 MB, let go)
     }
 
     // BRING HER IN: the frame keeps one size from the first frame to the last (the sketch page's own rules, scoped to the
@@ -2627,7 +2632,7 @@
         document.head.appendChild(st);
     })();
 
-    // LAST PORT: the relay's film cut and its moon made ready at idle before the dock opens (App.renderOrbit calls warm() when
+    // LAST PORT: the relay's film cut, its moon and its hulls made ready at idle before the dock opens (App.renderOrbit calls warm() when
     // the relay's bridge opens): the three cameras' station (several seconds of work in all) and the moon (about 0.13 s), at
     // most WARM_MS at a time in the browser's idle time, so the flight only has what is left to do (DockRelay.dock.bakeMs).
     const WARM_MS = 8;
@@ -2642,6 +2647,7 @@
             const ms = deadline && deadline.timeRemaining ? Math.min(WARM_MS, Math.max(2, deadline.timeRemaining() - 1)) : WARM_MS / 2;
             try {
                 if (!relay.paintMoon(DENSITY, ms)) { later(slice); return; }
+                if (!relay.paintHulls(ms)) { later(slice); return; }                             // (the three hulls' Landers, each length)
                 if (EXT && !EXT.isDone()) { EXT.bake(ms); later(slice); return; }
             } catch (err) { console.error('DockFlight: the relay\'s warm-up failed', err); }
             warming.done = true;
