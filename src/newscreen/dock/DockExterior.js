@@ -88,6 +88,7 @@
     };
     // LAST PORT (relay only): a third camera, nearer than the wide, on the row of hulls by our port (the windows beat)
     const CAM_MID = { pos: [-31.5, -147.5, 63.5], at: [12, -95, 20], f: 520, roll: 0.42 };
+    const RELAY_CHUNK = 96;                                                  // (and its bake looks at the clock every this many pixels, not every row)
     const CLOSE_AT = 1.3, HOLD_CLOSE = 1.3;      // and a rough or hard dock goes back to the close HOLD_CLOSE s into the ring's lights, to hold on what it broke
     const LIGHT = [-0.75, 0.3, 0.42];                                       // in the station's frame: in the picture, from the upper left and a little in front
     const SHADE = { amb: 0.05, pow: 1.15, gain: 0.8, fade: 0.36, shine: 22, spec: 0.46 };                    // the dark side's floor; how the light falls off; the far side dimmer
@@ -129,14 +130,19 @@
         const lt = x * -ps + y * pc, lr = x * pc + y * ps - RM;
         return Math.max(box3(lt, lr, z - (COL.top + COL.foot) / 2, COL.half, COL.half, (COL.top - COL.foot) / 2), -box3(lt, lr, z - COL.top, BAY.half, BAY.half, BAY.deep));
     };
-    const extraD = (x, y, z) => { let d = Infinity; for (let k = 0; k < EXTRA.length; k++) d = Math.min(d, collarAt(x, y, z, EXTRA[k].c, EXTRA[k].s)); return d; };
+    /** The nearest dead collar, or d0 if none is nearer (a collar further along the ring than d0 is never measured). */
+    const extraD = (x, y, z, d0 = Infinity) => {
+        let d = d0;
+        for (let k = 0; k < EXTRA.length; k++) { const e = EXTRA[k]; if (Math.abs(x * -e.s + y * e.c) - COL.half < d) d = Math.min(d, collarAt(x, y, z, e.c, e.s)); }
+        return d;
+    };
     /** The dead port whose collar a point is on (nearer its angle than ours), or null. */
     const deadCollarOf = (x, y) => { const a = Math.atan2(y, x); let best = null, bd = Math.abs(wrapA(a - PU)); EXTRA.forEach(e => { const dd = Math.abs(wrapA(a - PU - e.d)); if (dd < bd) { bd = dd; best = e; } }); return best; };
     function sdf(x, y, z) {
         const q = Math.sqrt(x * x + y * y), tq = q - RM;
         let d = Math.sqrt(tq * tq + z * z) - RT;
         d = Math.min(d, collarD(x, y, z), hubD(x, y, z, q));
-        if (EXTRA.length) d = Math.min(d, extraD(x, y, z));
+        if (EXTRA.length && Math.max(Math.abs(q - RM) - COL.half * 1.5, COL.foot - z, z - COL.top) < d) d = extraD(x, y, z, d);   // (only near the collars' band: further off, no collar can be nearer than d)
         if (q > HUB.r - 4 && q < RM - RT + 4) d = Math.min(d, Math.abs(z) > 4 ? Math.abs(z) - 2.6 : spokeD(x, y, z));
         return d;
     }
@@ -355,7 +361,7 @@
         const col = new Uint32Array(N), dep = new Float32Array(N).fill(Infinity);
         const mat = new Uint8Array(N), tone = new Float32Array(N), ndl = new Float32Array(N), rampOf = new Array(N);
         const wake = [], bayPx = [];                                         // [pixel, |angle| round the ring from the port]; [pixel, 0 floor | 1 frame]
-        let row = 0, done = false, bakeMs = 0;
+        let row = 0, rowAt = 0, done = false, bakeMs = 0;                 // (rowAt: LAST PORT, where in its row a relay camera's bake is)
         const L = cam.L, near = Math.hypot(...[0, 1, 2].map(i => [0, -RM, RT][i] - cam.O[i])), farD = near + 2.2 * RM;
         const out = { r: null, v: 0, glow: false, wake: -1, bay: -1 };
         function pixel(x, y) {
@@ -429,8 +435,15 @@
             EXTRA = ownExtra;                                                // LAST PORT: this camera's station (the dead ports' collars, or none)
             const t0 = performance.now(), end = t0 + ms;
             while (row < AH) {
-                for (let x = 0; x < AW; x++) pixel(x, row);
-                row++;
+                if (RX) {                                                    // LAST PORT: a relay row costs more, so its slices may end mid-row
+                    const stop = Math.min(AW, rowAt + RELAY_CHUNK);
+                    for (let x = rowAt; x < stop; x++) pixel(x, row);
+                    rowAt = stop;
+                    if (rowAt >= AW) { rowAt = 0; row++; }
+                } else {
+                    for (let x = 0; x < AW; x++) pixel(x, row);
+                    row++;
+                }
                 if (performance.now() > end) break;
             }
             if (row >= AH) { finish(); done = true; }

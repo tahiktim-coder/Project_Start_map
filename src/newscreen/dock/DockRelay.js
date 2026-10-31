@@ -27,7 +27,8 @@
                  tears loose (never the story wreck), SENT
      arrival(k)  the start of the docking for k (0..1, the throttle held lately): { dist, speed }
      lamp(k, t)  the lamp far off at k (0..1 of the run) and t s: { rad, tick }
-     prepare(D)  a new docking: the names start again; the moon painted once (about 0.1 s; the start screen)
+     prepare(D)  a new docking: the names and the hulls' sprites start again
+     paintMoon(D, ms)  paint the moon about ms more (a band at a time); true once it is ready (sky() goes on with it)
      sky(A)      the moon, into the frame (after the stars, before the station)
      glass(A, G) the three hulls through the glass; returns their name tags (with places to try, in units)
      covers(D, box)  whether this frame's hulls are in a box on the glass (units)
@@ -47,11 +48,14 @@
     //    debris half of sector 5's jump (SECTORS[5].debris 56: three clusters of eight and four between = 28), aimed a little
     //    less than Bring Her In's plates; no mast and no drifting hulls (the three on the ring are the hulls here). The
     //    ring turns slower (an old relay: spin, °/s). Rushing in: the throttle held lately (a mean over rushT s, from the
-    //    jump to the end of the run) brings the station nearer at the run's end (near, m: 80 for a careful pilot, 38 for one
+    //    jump to the end of the run) brings the station nearer at the run's end (near, m: 80 for a careful pilot, 50 for one
     //    who held it all the way; over the last nearLock course seconds it only ever comes nearer) and the docking starts
-    //    that much faster (startSpeed, m/s: DockingGame's 3 up to its top speed, 8). Let go at once and it can still dock
-    //    soft, with less time to line up; keep holding a second and a half and it strikes (the rules are DockingGame's:
-    //    braking at its THRUST, 1.2 m/s²). bakeMs: the film cut's three cameras, ms a frame on the start screen and after it.
+    //    that much faster (startSpeed, m/s: DockingGame's 3, up to 6). A slope, not a cliff (2026-10-31, lpv/tools/rush-sim.js:
+    //    DockingGame's own step, the careful bot, 400 rings a point, the throttle held through the run and then x s into
+    //    the docking): hard 34 % at 0.5 s, 41 % at 1.5, 64 % at 2.5, 71 % at 3, every time at 3.5 and all the way (the sketch's
+    //    80 → 38 m and 3 → 8 m/s: 55 % at 0.5 s, then every time from 1.75 s). The rules are DockingGame's (braking at its
+    //    THRUST, 1.2 m/s², up to 8 m/s). bakeMs: the film cut's three cameras, ms a frame on the start screen and after it
+    //    (most of the bake is done before: DockFlight.warm, at idle on the relay's bridge).
     //    The film cut: the sky turns cutTurn rad/s behind the station and starts at cutRoll (the
     //    moon low on the right). hullsSayAt: metres out when Aris speaks of the hulls (their names are on the glass by then);
     //    tagFrom/tagTo: the metres the names may show between; tagMinPx: a hull at least this many art px across before its
@@ -61,7 +65,7 @@
     const dock = Object.freeze({
         sector: SECTOR, dur: 26, aim: 0.24, aimAt: 24, perBreak: 2,
         clusters: [[0.24, 8], [0.5, 8], [0.76, 8]], clusterR: [2.4, 1.6], clusterT: 1.1, big: [0.24, 0.42], sprinkle: 4,
-        mast: null, parked: [], spin: [14, 20], near: [80, 38], nearLock: 3, startSpeed: [3, 8], rushT: 0.9, bakeMs: [16, 7],
+        mast: null, parked: [], spin: [14, 20], near: [80, 50], nearLock: 3, startSpeed: [3, 6], rushT: 1.2, bakeMs: [5, 5],
         cutTurn: 0.02, cutRoll: -1.74, hullsSayAt: 24, tagFrom: 40, tagTo: 0.4, tagMinPx: 16, tagStep: 0.8,
         lampR: [2.5, 8], lampHz: 0.6,
     });
@@ -97,32 +101,45 @@
     // at the end of the run (grow: its size at the start, a share of that); low on the left, our Lander's corner on its
     // night side; lit from behind, above and to the right (a thin lit rim of ice facets on the limb that faces the relay);
     // its colours: the type's own (NSWorlds.palette: BodyRenderer's CRYSTALLINE), the two darkest steps taken down
-    const MOON = { u: -170, v: 200, r: 200, grow: 0.74, L: [0.6, -0.5, -0.66], dim: 0.55, night: ['#08141a', '#0e2229'] };
-    let field = null;                                   // { D, W, rid, val, ramps } once painted
+    // (band: rows of the field painted at a time, about a fifteenth of it)
+    const MOON = { u: -170, v: 200, r: 200, grow: 0.74, L: [0.6, -0.5, -0.66], dim: 0.55, night: ['#08141a', '#0e2229'], band: 40 };
+    let field = null, painting = null;                  // { D, W, cell, frac, flat, ms } once painted; the paint under way
     /** A painter (NSPaint.painter's shape) that keeps each pixel's ramp and tone instead of its colour, so the grain can be
-        laid on screen later, per art pixel, whatever the sky's turn. */
+        laid on screen later, per art pixel, whatever the sky's turn. band: the rows it may write now ([y0, y1)), so the
+        world's painter can be run over it a band at a time (each run writes only its band; the painter is the same each time). */
     function capture(W, H) {
-        const rid = new Uint8Array(W * H), val = new Float32Array(W * H), ramps = [null], ids = new Map();
+        const rid = new Uint8Array(W * H), val = new Float32Array(W * H), ramps = [null], ids = new Map(), band = [0, H];
         const idOf = r => { let k = ids.get(r); if (!k) { k = ramps.length; ramps.push(r); ids.set(r, k); } return k; };
-        const store = (x, y, r, v) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < 0 || x >= W || y >= H) return; const i = y * W + x; rid[i] = idOf(r); val[i] = clamp01(v); };
+        const store = (x, y, r, v) => { x = Math.floor(x); y = Math.floor(y); if (x < 0 || y < band[0] || x >= W || y >= band[1]) return; const i = y * W + x; rid[i] = idOf(r); val[i] = clamp01(v); };
         const tone = (x, y, r, v) => { if (v > 0.02) store(x, y, r, v); };
-        const region = (x0, y0, x1, y1, fn) => { for (let y = Math.max(0, Math.floor(y0)); y < Math.min(H, Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(W, Math.ceil(x1)); x++) fn(x, y); };
+        const region = (x0, y0, x1, y1, fn) => { for (let y = Math.max(band[0], Math.floor(y0)); y < Math.min(band[1], Math.ceil(y1)); y++) for (let x = Math.max(0, Math.floor(x0)); x < Math.min(W, Math.ceil(x1)); x++) fn(x, y); };
         const ellipse = (cx, cy, rx, ry, fn) => region(cx - rx - 1, cy - ry - 1, cx + rx + 1, cy + ry + 1, (x, y) => { const q = ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2; if (q < 1) fn(x, y, q); });
         const line = (x0, y0, x1, y1, fn) => { const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0))); for (let k = 0; k <= n; k++) fn(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), k / n); };
-        return { W, H, rid, val, ramps, solid: store, tone, add: tone, over: tone, cover: (x, y, r, v, a) => { if (a > P.threshold(Math.floor(x) + 3, Math.floor(y) + 5)) tone(x, y, r, v); },
+        return { W, H, rid, val, ramps, band, solid: store, tone, add: tone, over: tone, cover: (x, y, r, v, a) => { if (a > P.threshold(Math.floor(x) + 3, Math.floor(y) + 5)) tone(x, y, r, v); },
             region, ellipse, line, set: () => {}, clear: () => {}, get: () => [0, 0, 0, 0] };
     }
-    /** A new docking: the names start again; the moon painted once (moonField). */
-    function prepare(D) { tagRun = null; return moonField(D); }
-    /** The moon, painted once at D art pixels a sky unit (one field cell an art pixel at its full size). */
-    function moonField(D) {
-        if (field && field.D === D) return field;
-        const t0 = performance.now(), rc = Math.round(MOON.r * D), W = 2 * (rc + 6), p = capture(W, W);
-        const base = Wd.palette(story.type).ramp.hex.slice(1), ramp = P.ramp(P.INK, MOON.night[0], MOON.night[1], ...base.slice(1, 5));
-        Wd.paint(p, { cx: W / 2, cy: W / 2, r: rc, type: story.type, seed: story.hull || 17207, sector: SECTOR, L: P.norm3(...MOON.L), dim: MOON.dim, ramp });
+    /** A new docking: the names start again, and the hulls' sprites (their sizes start over). The moon is kept. */
+    function prepare(D) { tagRun = null; sprites.clear(); lastSprite.fill(null); paintMoon(D, 0); }
+    /** The moon at D art pixels a sky unit (one field cell an art pixel at its full size), painted by the world painter a
+        band of MOON.band rows at a time for about ms (at least one band); true once it is ready. About 0.13 s in all: done
+        at idle on the bridge (DockFlight.warm) it never shows; otherwise sky() paints a band a frame and draws it when ready. */
+    function paintMoon(D, ms) {
+        if (field && field.D === D) return true;
+        if (!painting || painting.D !== D) {
+            const rc = Math.round(MOON.r * D), W = 2 * (rc + 6), base = Wd.palette(story.type).ramp.hex.slice(1);
+            painting = { D, W, rc, y: 0, ms: 0, p: capture(W, W), ramp: P.ramp(P.INK, MOON.night[0], MOON.night[1], ...base.slice(1, 5)) };
+        }
+        const g = painting, t0 = performance.now();
+        do {
+            g.p.band[0] = g.y; g.p.band[1] = Math.min(g.W, g.y + MOON.band);
+            Wd.paint(g.p, { cx: g.W / 2, cy: g.W / 2, r: g.rc, type: story.type, seed: story.hull || 17207, sector: SECTOR, L: P.norm3(...MOON.L), dim: MOON.dim, ramp: g.ramp });
+            g.y += MOON.band;
+        } while (g.y < g.W && performance.now() - t0 < ms);
+        g.ms += performance.now() - t0;
+        if (g.y < g.W) return false;
         // each cell kept as the colour it takes below its dither's threshold (an index into one flat table, each ramp's top
         // step written twice so the step above is always there) and how far towards the next step it is (0..255)
-        const at = [0], flat = [0];
+        const p = g.p, W = g.W, at = [0], flat = [0];
         p.ramps.forEach((r, id) => { if (!r) return; at[id] = flat.length; r.rgb.forEach(([a, b, c]) => flat.push((0xff000000 | (c << 16) | (b << 8) | a) >>> 0)); flat.push(flat[flat.length - 1]); });
         const N = W * W, cell = new Uint16Array(N), frac = new Uint8Array(N);
         for (let k = 0; k < N; k++) {
@@ -131,8 +148,9 @@
             const n = p.ramps[id].rgb.length, pos = p.val[k] * (n - 1), lo = Math.min(n - 1, pos | 0);
             cell[k] = at[id] + lo; frac[k] = Math.min(255, Math.round((pos - lo) * 256));
         }
-        field = { D, W, cell, frac, flat: Uint32Array.from(flat), ms: Math.round(performance.now() - t0) };
-        return field;
+        field = { D, W, cell, frac, flat: Uint32Array.from(flat), ms: Math.round(g.ms) };
+        painting = null;
+        return true;
     }
     let bay255 = null;                                  // the flight's 8 x 8 grain as 0..255 thresholds
     /** The moon into the frame: every art pixel inside its disc on screen looks up its cell through the sky's own turn
@@ -141,7 +159,8 @@
         and the debris come after. It grows as the run goes (A.grow(): 0 at the drop-out .. 1 at its end, and after). */
     let lastMoon = null;
     function sky(A) {
-        const F = moonField(A.D), v = A.view, D = A.D, zm = v.zm, sc = lerp(MOON.grow, 1, clamp01(A.grow ? A.grow() : 1));
+        if (!paintMoon(A.D, 4)) return;                                                     // (not painted yet: a band this frame)
+        const F = field, v = A.view, D = A.D, zm = v.zm, sc = lerp(MOON.grow, 1, clamp01(A.grow ? A.grow() : 1));
         const [mx, my] = A.sky(MOON.u, MOON.v), R = MOON.r * sc * zm * D;
         lastMoon = [mx, my, R];
         const cr = v.cr / zm / D, sr = v.sr / zm / D, ox = (A.CX + v.ox) * D, oy = (A.CY + v.oy) * D, half = F.W / 2, inv = 1 / sc;
@@ -169,33 +188,27 @@
     const cutFrame = () => ({ moon: lastMoon ? lastMoon.slice() : null });
 
     // ════════ the three hulls through the glass ════════
-    // In the face's own space (DockFace.js: its radius faceA / (metres + faceB) art px, so a pinhole faceB metres behind
-    // the hatch with the flight's focal length FA): each hull stands off the ring at its port, nose in, its tail towards
-    // us; DIAM and LEN in those units (the port is about 3.3 across). Drawn far to near as the corridor draws the twin
-    // (slices from the nose to the bell, at most maxSlices), each slice only where the nearer one does not cover it (its
-    // outer band), so a hull close up costs a few thousand pixels, not millions. Our class, dead: our Lander's own pale
-    // plating on the steel ramp (the travel view's HULL, as the sprite in the corner is painted), dimmed by about a third
-    // and unlit inside, rust in a few ragged patches; a lit edge where the side turns away from us; a dark window on every
-    // deck along the line that faces us; the skirt's underside and the bell's mouth in shadow, the bell's rim lit; the four
-    // legs splayed off the skirt with their feet, as our Lander stands. Lit from the upper left, as the face is. Far off
-    // (its bell under `tiny` art px), a dark notch by the lamp. A dark collar where its nose goes in. Dead, they hang
-    // crooked in their old clamps (LEAN: degrees off straight, which way along the ring, as outside), so the glass sees
-    // their sides, decks and windows, not only their tails; ours comes in straight.
-    const G3 = { DIAM: 1.7, LEN: 1.7 * 3.15, NEAR: 0.7, minRd: 5, tiny: 2.4, maxSlices: 80, light: [-0.6, -0.8] };
-    const TONE = { plate: [0.27, 0.44], deck: 0.025, seam: 0.74, rim: 0.82, shade: 0.1, window: 0.02, rust: 1.2, notch: 0.05 };
-    const LEG = { from: 0.8, to: 1.62, foot: 0.22, w: 0.075 };
-    const LEAN = [{ deg: 24, side: -1 }, { deg: 28, side: 1 }, { deg: 22, side: 1 }], LEAN_OUT = 0.45;
-    const L_NOSE = 0.215, L_SKIRT = 0.86, L_BELL = 0.94;
-    const deckU = i => L_NOSE + i * (L_SKIRT - L_NOSE) / 6;
-    const hash = (a, b, s) => { let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul(s | 0, 1274126177); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-    /** A ragged rust patch at lu along the hull and (ax, ay) round it (the hull's own turn taken out): big cells, a few
-        rusted, their edges eaten by a finer grain, so stains and not bands. Round the hull as a diamond angle (0..4), cheap. */
-    const isRustAt = (lu, ax, ay, k) => {
-        const s = Math.abs(ax) + Math.abs(ay) || 1, d = ay >= 0 ? (ax >= 0 ? ay / s : 1 - ax / s) : (ax < 0 ? 2 - ay / s : 3 + ax / s);
-        return hash(Math.floor(lu * 8 + d * 0.45), Math.floor(d * 3), 40 + k) < 0.2 && hash(Math.floor(lu * 46), Math.floor(d * 12.5), 90 + k) < 0.7;
-    };
+    // In the face's own space (DockFace.js: its radius faceA / (metres + faceB) art px, so a pinhole faceB metres behind the
+    // hatch with the flight's focal length FA): each hull stands off the ring at its port, nose in, its tail towards us,
+    // DIAM across and LEN long in those units (the port is about 3.3 across). Dead, they hang crooked in their old clamps
+    // (LEAN: degrees off straight, which way along the ring, and a little outward, as outside), so the glass sees their
+    // sides. Each is drawn as the film cut draws ours and theirs (2026-10-31, the designer: the sketch's slices read as rusty
+    // tubes): its nose and tail projected through the pinhole, the game's own Lander painted along that line (NSPaint.hull
+    // with shapeL: the nose cone, the decks and their dark portholes, the skirt and its folded legs, the bell), dimmed, in
+    // the painter's own light rust; seen nearly end on, the bell's mouth over its tail end (the cut's endCap). Each keeps the
+    // sprite it was last painted with until its length has moved SPRITE.step of itself or its angle SPRITE.deg, at most
+    // perFrame painted a frame. A Lander longer than SPRITE.max art px (closer than about 20 m) is painted at a whole
+    // fraction of its size and laid on the glass that many times bigger (its pixels 2 x 2 or more), so no paint costs more
+    // than about 12 ms (painting one 400 px long costs about 80). Far off (under tiny art px across), a dark notch by the lamp.
+    // A dark collar where its nose goes in.
+    const G3 = { DIAM: 1.7, LEN: 1.7 * 3.15, minRd: 5, tiny: 3, light: [-0.6, -0.8] };
+    const SPRITE = { step: 0.05, deg: 3, perFrame: 1, keep: 24, max: 160, light: 0.6, notch: 0.06, mouth: 0.04, rim: 0.7 };
+    const LEAN = [{ deg: 42, side: -1 }, { deg: 46, side: 1 }, { deg: 40, side: 1 }], LEAN_OUT = 0.45, REACH = 1.6;
+    const BELL_R = P.radiusL(1 - 1e-6);                                                    // the bell's mouth, a share of DIAM
     let glassInfo = [], tagRun = null;                    // tagRun: this approach's names, when each first could show and does
-    let stamp = null, stampN = 0, frameMark = 1, stampW = 0;   // which hull last painted each pixel (a hull is painted near to far, each pixel once); this frame's first
+    let stamp = null, stampN = 0, frameMark = 1, stampW = 0;   // which hull last painted each pixel; this frame's first mark
+    const sprites = new Map(), lastSprite = [null, null, null];   // painted sprites by size and angle; each hull's last
+    let paintedNow = 0;
     /** Whether a box on the glass (units, [x0, y0, x1, y1]) has any of this frame's hulls in it (a name is best beside one, not on it). */
     function covers(D, b) {
         if (!stamp) return false;
@@ -204,7 +217,7 @@
         return false;
     }
     function glass(A, G) {
-        glassInfo = []; frameMark = stampN + 1; stampW = A.AW;
+        glassInfo = []; frameMark = stampN + 1; stampW = A.AW; paintedNow = 0;
         if (!G || G.dist > dock.tagFrom + 4) tagRun = null;
         if (!G || G.rd < G3.minRd) return [];
         if (!tagRun) tagRun = { showAt: [-1, -1, -1], last: -99 };
@@ -220,16 +233,38 @@
             const isOn = ([x, y]) => x >= 0 && x < A.AW && y >= 0 && y < A.AH, at = isOn(info.tail) ? info.at : isOn(info.mid) ? info.atMid : null;
             if (!info.drawn || !at || info.r * 2 < dock.tagMinPx || G.dist >= dock.tagFrom || G.dist <= dock.tagTo) return;
             if (tagRun.showAt[k] < 0) { tagRun.showAt[k] = Math.max(now, tagRun.last + dock.tagStep); tagRun.last = tagRun.showAt[k]; }
-            if (now >= tagRun.showAt[k]) tags.push({ k, s: 'EXODUS-' + fmt(h.num), at, near: G.dist < 25 });
+            if (now >= tagRun.showAt[k]) tags.push({ k, s: 'EXODUS-' + fmt(h.num), at, near: G.dist < 25, since: tagRun.showAt[k] });
         });
         return tags;
     }
+    /** Hull k's Lander, len x ht art px, lying at deg (its tail to its nose), from the cache or painted now (perFrame a frame;
+        past that the hull keeps its last sprite for a frame or two). */
+    function spriteOf(k, len, ht, deg) {
+        const f = len > SPRITE.max ? Math.ceil(len / SPRITE.max) : 1, bl = len / f, step = Math.max(2, bl * SPRITE.step);   // (f: how many times bigger it is laid down)
+        const L = Math.max(8, Math.round(bl / step) * step), H = Math.max(3, Math.round(ht / f * 2) / 2), Dg = Math.round(deg / SPRITE.deg) * SPRITE.deg;
+        const key = k + '|' + f + '|' + L.toFixed(1) + '|' + H + '|' + Dg;
+        let sp = sprites.get(key);
+        if (!sp && (paintedNow < SPRITE.perFrame || !lastSprite[k])) {
+            paintedNow++;
+            const ang = Dg * RAD, half = Math.ceil(L / 2 + H + 3), W = half * 2, p = P.painter(W, W, false);
+            const at = P.hull(p, { x: half, y: half, len: L, ht: H, angle: ang, flip: true, seed: 50 + k, anchor: 0.5, light: SPRITE.light, rust: true, flat: L < 130, mirror: Math.cos(ang) - Math.sin(ang) < 0 }, P.shapeL);
+            const b = at(1, 0);
+            sp = { d32: new Uint32Array(p.data.buffer), w: W, half, f, bell: [(b[0] - half) * f, (b[1] - half) * f] };
+            if (sprites.size >= SPRITE.keep) sprites.delete(sprites.keys().next().value);
+            sprites.set(key, sp);
+        }
+        if (sp) lastSprite[k] = sp;
+        return sp || lastSprite[k];
+    }
     function drawHull(A, G, f, Zf, Lx, Ly, roll, k, Tx, Ty) {
-        const { buf, depth, AW, AH, R, level } = A, mx = G.mx, my = G.my, HR = R.HULL, RU = R.RUST;
+        const { buf, depth, AW, AH, R, level } = A, mx = G.mx, my = G.my, HR = R.HULL;
         const proj = z => [mx + (Lx + Tx * (Zf - z)) * f / z, my + (Ly + Ty * (Zf - z)) * f / z, f / z];
-        const [nx, ny, ns] = proj(Zf), zTail = Math.max(G3.NEAR, Zf - G3.LEN), [tx, ty] = proj(zTail);
-        const n = clamp(Math.ceil(Math.hypot(tx - nx, ty - ny) * 1.3), 24, G3.maxSlices), faceK = Math.round(n * (1 - L_BELL));
-        const isTiny = P.radiusL(L_BELL - 1e-3) * G3.DIAM * f / zTail < G3.tiny;
+        const zT = Zf - G3.LEN, zM = Zf - G3.LEN / 2, [nx, ny, ns] = proj(Zf), [tx, ty, ts] = proj(zT), [, , ms] = proj(zM);
+        const len = Math.hypot(tx - nx, ty - ny), ht = G3.DIAM * ms, cx = (nx + tx) / 2, cy = (ny + ty) / 2, isTiny = ht < G3.tiny;
+        if (!stamp || stamp.length !== AW * AH) stamp = new Uint32Array(AW * AH);
+        const st = stamp, mark = ++stampN;
+        let drawn = 0;
+        const put = (x, y, r, v) => { x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= AW || y >= AH) return; const i = y * AW + x; buf[i] = r.c32[level(r, v, x, y)]; depth[i] = zM; st[i] = mark; drawn++; };
         const lx = G3.light[0], ly = G3.light[1];
         // the collar its nose sits in: a dark block round it on the ring, its upper left edge lit
         const cr = G3.DIAM * 0.72 * ns;
@@ -242,98 +277,47 @@
                 buf[y * AW + x] = HR.c32[level(HR, edge ? (lit ? 0.62 : 0.08) : 0.16, x, y)];
             }
         }
-        // the side that shows is the one the slices move away from as they near us (their drift on the glass: outward from
-        // the middle, and the way it leans)
-        const z0 = depth, rl = Math.hypot(tx - nx, ty - ny) || 1, rx = (tx - nx) / rl, ry = (ty - ny) / rl;
-        const WIN = [0, 1, 2, 3, 4, 5].map(d => deckU(d) + 0.054), cR = Math.cos(-roll), sR = Math.sin(-roll);
-        if (!stamp || stamp.length !== AW * AH) stamp = new Uint32Array(AW * AH);
-        const st = stamp, mark = ++stampN;
-        let prev = null, drawn = 0, tailPt = null, tailR = 0, midPt = null, midR = 0;
-        const put = (x, y, r, v, z) => { const i = y * AW + x; buf[i] = r.c32[level(r, v, x, y)]; z0[i] = z; st[i] = mark; drawn++; };
-        for (let i = 0; i <= n; i++) {                                                    // near (the bell) to far (the nose): each pixel shaded once, by the nearest slice
-            const lu = 1 - i / n, z = Zf - lu * G3.LEN;
-            if (z < G3.NEAR) continue;
-            const s = f / z, cx = mx + (Lx + Tx * (Zf - z)) * s, cy = my + (Ly + Ty * (Zf - z)) * s, rad = P.radiusL(i === faceK ? L_BELL - 1e-3 : lu) * G3.DIAM * s;
-            if (!tailPt) tailPt = [cx, cy];
-            tailR = Math.max(tailR, rad);
-            if (!midPt && lu <= 0.5) { midPt = [cx, cy]; midR = rad; }
-            if (rad < 0.4 || cx + rad < 0 || cx - rad >= AW || cy + rad < 0 || cy - rad >= AH) { prev = { cx, cy, rad }; continue; }
-            const full = !prev || i === faceK, band = full ? rad + 1 : Math.abs(cx - prev.cx) + Math.abs(cy - prev.cy) + Math.abs(rad - prev.rad) + 1.2;
-            const inner = Math.max(0, rad - band), R2 = rad * rad, I2 = inner * inner, E2 = Math.max(0, rad - 1.3) ** 2, inv = 1 / (rad || 1);
-            const seam = [0, 1, 2, 3, 4, 5, 6].some(d => Math.abs(lu - deckU(d)) < 1.2 / n), deck = [0, 1, 2, 3, 4, 5].findIndex(d => lu < deckU(d + 1)) % 2 ? 1 : -1;
-            const isMouth = i === 0;
-            for (let y = Math.max(0, Math.floor(cy - rad)); y <= Math.min(AH - 1, Math.ceil(cy + rad)); y++) {
-                const dy = y + 0.5 - cy, dy2 = dy * dy;
-                if (dy2 > R2) continue;
-                // only this row's spans of the ring (or of the whole disc): a slice close up is wide, its band is thin
-                const ow = Math.sqrt(R2 - dy2), iw = !full && dy2 < I2 ? Math.sqrt(I2 - dy2) : -1;
-                let xa = Math.max(0, Math.floor(cx - ow - 0.5)), xb = Math.min(AW - 1, Math.ceil(cx + ow));
-                if (!full) {                                                               // a body slice's far side is the nearer slices': only the half facing back along the drift
-                    const T = 0.2 * rad - dy * ry;
-                    if (rx > 0.02) xb = Math.min(xb, Math.ceil(cx - 0.5 + T / rx)); else if (rx < -0.02) xa = Math.max(xa, Math.floor(cx - 0.5 + T / rx)); else if (T < 0) continue;
-                }
-                const ia = iw < 0 ? xb + 1 : Math.ceil(cx - iw - 0.5), ib = iw < 0 ? xb + 1 : Math.floor(cx + iw - 0.5);
-                if (xa >= ia && xa < ib) xa = ib;                                          // (starting inside the ring: from its far edge)
-                for (let x = xa; x <= xb; x++) {
-                    if (x === ia && ib > ia) x = ib;                                       // skip the inside of the ring
-                    const dx = x + 0.5 - cx, d2 = dx * dx + dy2;
-                    if (d2 > R2 || (!full && d2 < I2) || st[y * AW + x] === mark) continue;   // (or a nearer slice has it)
-                    if (isTiny) { put(x, y, HR, TONE.notch, z); continue; }               // far off: a dark notch
-                    const nxp = dx * inv, nyp = dy * inv, c = nxp * lx + nyp * ly, sOut = nxp * rx + nyp * ry, isRim = d2 > E2;
-                    if (i === faceK) {                                                     // the skirt's underside, round the bell, in shadow
-                        const q = Math.sqrt(d2) * inv;
-                        put(x, y, HR, isRim ? (c > 0.25 ? 0.62 : 0.16) : Math.abs(q - 0.5) < 0.05 ? 0.26 : 0.11 + 0.1 * q + 0.06 * Math.max(0, c), z);
-                        continue;
+        if (isTiny) {                                                                       // far off: a dark notch from its nose to its tail
+            const n = Math.max(1, Math.ceil(len));
+            for (let q = 0; q <= n; q++) put(nx + (tx - nx) * q / n, ny + (ty - ny) * q / n, HR, SPRITE.notch);
+        } else {
+            const sp = spriteOf(k, len, ht, Math.atan2(ny - ty, nx - tx) / RAD), sf = sp.f, x0 = Math.round(cx) - sp.half * sf, y0 = Math.round(cy) - sp.half * sf;
+            for (let y = 0; y < sp.w; y++) {
+                const row = y * sp.w;
+                for (let x = 0; x < sp.w; x++) {
+                    const c = sp.d32[row + x];
+                    if (!(c >>> 24)) continue;
+                    for (let j = 0; j < sf; j++) {                                          // (each sprite pixel sf x sf art px)
+                        const Y = y0 + y * sf + j; if (Y < 0 || Y >= AH) continue;
+                        for (let q = 0; q < sf; q++) { const X = x0 + x * sf + q; if (X < 0 || X >= AW) continue; const i = Y * AW + X; buf[i] = c; depth[i] = zM; st[i] = mark; drawn++; }
                     }
-                    if (isMouth) { put(x, y, HR, isRim ? (c > 0 ? 0.7 : 0.2) : Math.sqrt(d2) * inv > 0.78 ? 0.12 : 0.02, z); continue; }   // the bell's mouth: its rim lit, dark inside
-                    if (lu >= L_BELL) { put(x, y, HR, isRim && c > 0.2 ? 0.66 : 0.1 + 0.22 * Math.max(0, c), z); continue; }   // the bell: cold, its edge lit
-                    if (!full && sOut > 0.2) continue;                                     // the far side: the nearer slices cover it
-                    if (isRim && Math.abs(sOut) < 0.24) { put(x, y, HR, c > 0.15 ? TONE.rim : TONE.shade, z); continue; }   // the edge that turns away: lit, or dark
-                    const hl = 0.5 + 0.5 * c, lit = hl * (0.7 + 0.3 * hl), tone =(TONE.plate[0] + TONE.plate[1] * lit) * (seam ? TONE.seam : 1) + TONE.deck * deck;
-                    if (isRustAt(lu, nxp * cR - nyp * sR, nxp * sR + nyp * cR, k)) put(x, y, RU, tone * TONE.rust, z);
-                    else put(x, y, HR, tone, z);
                 }
             }
-            if (i === faceK && !isTiny) for (let q = 0; q < 4; q++) {                     // the four legs, splayed off the skirt, and their feet
-                const la = Math.PI / 4 + q * Math.PI / 2 + roll, w = Math.max(1, rad * LEG.w), ux = Math.cos(la), uy = Math.sin(la);
-                const lit = ux * lx + uy * ly, step = 0.5 / Math.max(4, rad);
-                for (let e = LEG.from; e <= LEG.to; e += step) for (let t = -w; t <= w; t += 0.7) {
-                    const X = Math.round(cx + ux * rad * e - uy * t), Y = Math.round(cy + uy * rad * e + ux * t);
-                    if (X >= 0 && X < AW && Y >= 0 && Y < AH && st[Y * AW + X] !== mark) put(X, Y, HR, 0.28 + 0.16 * lit + (t * (-uy * lx + ux * ly) > 0 ? 0.24 : 0), z);
-                }
-                const fx = cx + ux * rad * LEG.to, fy = cy + uy * rad * LEG.to, fw = rad * LEG.foot;    // the foot: a short pad across the leg
-                for (let t = -fw; t <= fw; t += 0.6) for (let e = -w; e <= w * 0.6; e += 0.7) {
-                    const X = Math.round(fx + ux * e - uy * t), Y = Math.round(fy + uy * e + ux * t);
-                    if (X >= 0 && X < AW && Y >= 0 && Y < AH && st[Y * AW + X] !== mark) put(X, Y, HR, e < 0 ? 0.5 + 0.2 * lit : 0.22, z);
+            // seen nearly end on (much shorter on the glass than it is): the bell's mouth over its tail end, dark inside, its
+            // rim lit on the side the light comes from
+            const full = G3.LEN * ms, cosT = Math.sqrt(Math.max(0, 1 - Math.min(1, len / (full || 1)) ** 2));
+            if (cosT > 0.15) {
+                const ax = (tx - nx) / (len || 1), ay = (ty - ny) / (len || 1), bx = Math.round(cx) + sp.bell[0], by = Math.round(cy) + sp.bell[1];
+                const Ra = BELL_R * G3.DIAM * ts, Rb = Math.max(0.7, Ra * cosT), m = Math.ceil(Ra + 1), rimQ = (1 - Math.min(0.45, 1.3 / Rb)) ** 2;
+                for (let yy = -m; yy <= m; yy++) for (let xx = -m; xx <= m; xx++) {
+                    const along = xx * ax + yy * ay, across = -xx * ay + yy * ax, q = (across / Ra) ** 2 + (along / Rb) ** 2;
+                    if (q > 1) continue;
+                    const lit = (xx * -lx + yy * -ly) / (Math.hypot(xx, yy) || 1);           // (the far side of the mouth's rim catches the light)
+                    put(bx + xx, by + yy, HR, q > rimQ ? (lit > 0.1 ? SPRITE.rim : 0.2) : SPRITE.mouth);
                 }
             }
-            prev = { cx, cy, rad };
         }
-        // its portholes, after the slices: one a deck, a dark round port down the middle of the side we see (only where that
-        // part of the side is what shows: the depth there is that deck's), its lower lip catching a little light
-        if (!isTiny) WIN.forEach(w => {
-            const z = Zf - w * G3.LEN;
-            if (z < G3.NEAR) return;
-            const s = f / z, rad = P.radiusL(w) * G3.DIAM * s, rr = Math.max(0.9, rad * 0.1), tol = G3.LEN * 0.07;
-            const cx = mx + (Lx + Tx * (Zf - z)) * s - rx * rad * 0.88, cy = my + (Ly + Ty * (Zf - z)) * s - ry * rad * 0.88;
-            for (let y = Math.max(0, Math.floor(cy - rr)); y <= Math.min(AH - 1, Math.ceil(cy + rr)); y++) for (let x = Math.max(0, Math.floor(cx - rr)); x <= Math.min(AW - 1, Math.ceil(cx + rr)); x++) {
-                const ex = x + 0.5 - cx, ey = y + 0.5 - cy, d = Math.hypot(ex, ey), i = y * AW + x;
-                if (d > rr || Math.abs(z0[i] - z) > tol) continue;
-                buf[i] = HR.c32[level(HR, d > rr - 0.9 && ex * lx + ey * ly < 0 ? 0.42 : TONE.window, x, y)];
-            }
-        });
         // where its name may go (units): just outside the hull away from the middle of the glass, else above it, below it,
-        // or on its other side (the flight takes the first that is free)
-        // (and the same round its middle, for when its tail has passed out of the glass)
+        // or on its other side (the flight takes the first that is free); the same round its middle, for when its tail has
+        // passed out of the glass
         const placesBy = (pt, reach) => {
             const ox = pt[0] - mx, oy = pt[1] - my, on = Math.hypot(ox, oy) || 1, ux = ox / on, uy = oy / on;
             return [[ux * (reach + 30), uy * (reach + 14)], [0, -(reach + 12)], [0, reach + 12], [-ux * (reach + 30), -uy * (reach + 14)]]
                 .map(([dx, dy]) => [(pt[0] + dx) / A.D, (pt[1] + dy) / A.D]);
         };
-        if (!tailPt) tailPt = [tx, ty];
-        const mid = midPt || tailPt;
-        return { nose: [Math.round(nx), Math.round(ny)], tail: [Math.round(tailPt[0]), Math.round(tailPt[1])], mid: [Math.round(mid[0]), Math.round(mid[1])], r: Math.round(tailR), drawn,
-            at: placesBy(tailPt, tailR * LEG.to), atMid: placesBy(mid, midR * 1.1), tiny: isTiny };
+        const tailR = Math.max(ht, G3.DIAM * ts) / 2, tail = [tx, ty], mid = [cx, cy];
+        return { nose: [Math.round(nx), Math.round(ny)], tail: tail.map(Math.round), mid: mid.map(Math.round), r: Math.round(Math.max(tailR, len / 4)), drawn,
+            at: placesBy(tail, tailR * REACH), atMid: placesBy(mid, Math.max(tailR, len / 2) * 1.1), tiny: isTiny };
     }
 
     // ════════ the chips (the game's format: { icon, text, tone }; DRAFT words) ════════
@@ -362,11 +346,12 @@
     // the dead ports round the ring from ours (rad: the glass's order, packed closer, so outside they stand in a row beside
     // us and the camera at our port holds all four), their numbers; which of them a hard dock tears loose (the nearest on
     // the side we struck: 1 for +, 0 for −; never 2, the story wreck); SENT
-    // (sag: each one's lean outside, along the ring, the glass's LEAN a little gentler: OUT_LEAN of its angle)
-    const OUT_AT = [-11, 11, 22], OUT_LEAN = 0.7;
+    // (sag: each one's lean outside, along the ring: OUT_LEAN of the glass's angle, so the cut keeps the gentle lean it was
+    // approved with, about 18-21 degrees, while the glass's 40-46 show their sides)
+    const OUT_AT = [-11, 11, 22], OUT_LEAN = 0.45;
     const exterior = Object.freeze({ ports: OUT_AT.map(d => d * RAD), nums: NUMS.slice(), torn: side => (side > 0 ? 1 : 0), sent: 'SENT', sag: LEAN.map(l => l.side * Math.tan(l.deg * RAD * OUT_LEAN)) });
 
-    const debug = () => ({ moonMs: field ? field.ms : null, moon: lastMoon && lastMoon.map(Math.round), glass: glassInfo.map(g => g && { tail: g.tail, r: g.r, drawn: g.drawn, tiny: g.tiny }) });
+    const debug = () => ({ moonMs: field ? field.ms : null, sprites: sprites.size, moon: lastMoon && lastMoon.map(Math.round), glass: glassInfo.map(g => g && { tail: g.tail, r: g.r, drawn: g.drawn, tiny: g.tiny }) });
 
-    window.DockRelay = Object.freeze({ dock, lines, who, hulls, exterior, arrival, lamp, prepare, sky, glass, covers, cutFrame, chips, energyDelta, debug });
+    window.DockRelay = Object.freeze({ dock, lines, who, hulls, exterior, arrival, lamp, prepare, paintMoon, sky, glass, covers, cutFrame, chips, energyDelta, debug });
 })();

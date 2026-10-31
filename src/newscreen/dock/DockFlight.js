@@ -300,6 +300,9 @@
     let live = null;                                            // the open flight's debug state (Corridor.debug.state), or null
     // BRING HER IN: the exterior shot's station (DockExterior.js), baked once per picture size and kept for the next dock
     let extKept = null;
+    // LAST PORT: the names over the glass: most at once (one on a glass under narrow css px wide), and how long the oldest
+    // shows before one waiting may take its turn (s)
+    const NAMES = { most: 2, narrow: 1100, hold: 3 };
     let skyForDock = false;                                     // the sky being painted is the dock's (no planetary ring in it)
     /** LAST PORT: the relay's numbers and drawing (window.DockRelay) for a dock with opts.relay, else null. */
     const relayOf = o => (o && o.kind === 'dock' && o.relay === true && window.DockRelay) || null;
@@ -311,7 +314,8 @@
         const { wide, close, mid } = extKept;
         if (mid) return { wide, close, mid, isDone: () => wide.isDone() && close.isDone() && mid.isDone(),
             bake: ms => (!wide.isDone() ? wide : !close.isDone() ? close : mid).bake(ms),
-            finish: () => { wide.bake(Infinity); close.bake(Infinity); mid.bake(Infinity); }, reset: () => { wide.reset(); close.reset(); mid.reset(); } };
+            finish: grade => { wide.bake(Infinity); close.bake(Infinity); if (grade === 'crash') mid.bake(Infinity); },   // (the mid is only a hard dock's; else it bakes on, a little a frame)
+            reset: () => { wide.reset(); close.reset(); mid.reset(); } };
         return { wide, close, isDone: () => wide.isDone() && close.isDone(),
             bake: ms => (wide.isDone() ? close : wide).bake(ms),                          // the wide first, then the close
             finish: () => { wide.bake(Infinity); close.bake(Infinity); }, reset: () => { wide.reset(); close.reset(); } };
@@ -1645,7 +1649,7 @@
         /** The film cut, at the touch: the glass gives way to a camera outside (DockExterior.js), which shows the last
             seconds again from there (the track the player flew, from where it was a few metres out), then the touch. */
         function startCut(grade) {
-            EXT.finish();                                                                      // (long done: they bake a little every frame from the start screen)
+            EXT.finish(grade);                                                                 // (long done: they bake a little every frame from the start screen)
             EXT.reset();
             const s = dock.s, R = DOCK.cut.replay, tr = dock.track, end = clock;
             let i = 0;
@@ -2371,32 +2375,71 @@
             shown.set(id, key);
             ui.note(id, text, o);
         }
-        /** LAST PORT: the three hulls' names on the glass, as the jump names a wreck (EXODUS-17,207), following them. Each
-            takes the first of its places (DockRelay.js: beside its hull, above, below, the other side) that is on the glass,
-            clear of the names already placed, the port's marks and our ship in the corner; the place it had last frame first,
-            so a name does not hop. One with no free place waits. (The page fades each in as it first shows.) */
+        /** LAST PORT: the three hulls' names on the glass, as the jump names a wreck (EXODUS-17,207), following them. A name
+            goes only where it is free (2026-10-31, the designer: they overlapped at 1366 wide and below): its box (its real
+            width in the notes' own font, measured once) on the glass, over sky only (the depth under it empty at five
+            points: no ring, no hull), clear of the port's marks, our ship in the corner, A.U.R.A.'s note and the names
+            already placed. Of its places (DockRelay.js: beside its hull, above, below, the other side) the one it had last
+            frame first, so it does not hop; with none free it waits. At most NAMES.most at once (one on a glass under
+            NAMES.narrow css px): a name waiting lets the oldest go once that has shown NAMES.hold s, and a name that has
+            gone does not come back. (dockStyle fades each in as it first shows.) */
         function relayNotes(tags) {
-            const pxPerUnit = ui.canvas.getBoundingClientRect().width / W || 3, TH = 16 / pxPerUnit, v = dock && dock.view;
+            const pxu = pxPerUnit(), TH = 16 / pxu, v = dock && dock.view, most = pxu * W < NAMES.narrow ? 1 : NAMES.most;
             const pad = (b, p) => [b[0] - p, b[1] - p, b[2] + p, b[3] + p], hits = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
             const keep = [[shipL.cx - 22, shipL.top - 4, shipL.cx + 22, H]];                                              // our ship in the corner
             if (v && tags.length) { const m = markPts(v.mx, v.my, v.rd).map(([x, y]) => [x / D, y / D]); keep.push(pad([Math.min(...m.map(p => p[0])), Math.min(...m.map(p => p[1])), Math.max(...m.map(p => p[0])), Math.max(...m.map(p => p[1]))], 6)); }
-            const placed = [], now = new Map();
-            for (const tg of tags) {
-                const tw = (tg.s.length * 7.6 + 4) / pxPerUnit, last = relayShown.get(tg.k), tries = last != null ? [tg.at[last], ...tg.at] : tg.at;
-                const place = isStrict => tries.find(p => {                                   // beside a hull first; on one only when nothing else is free
-                    const cx = clamp(p[0], tw / 2 + 4, W - tw / 2 - 4), top = clamp(p[1] - TH / 2, TAG_TOP, TAG_BOTTOM), box = [cx - tw / 2 - 2, top - 2, cx + tw / 2 + 2, top + TH + 2];
-                    if (Math.abs(cx - p[0]) > tw / 2 || [...keep, ...placed].some(b => hits(b, box)) || (isStrict && RELAY.covers(D, box))) return false;   // off the glass, or on something
-                    placed.push(box); now.set(tg.k, { x: Math.round(cx), y: Math.round(top), s: tg.s, near: tg.near, at: tg.at.indexOf(p) });
+            if (auto) keep.push([W - 8 - noteWidth('A.U.R.A. FLYING') / pxu - 4, 4, W, 8 + TH + 4]);                     // her note, top right
+            const isSky = b => [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]], [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]].every(([x, y]) => {
+                const X = Math.round(x * D), Y = Math.round(y * D);
+                return X >= 0 && X < AW && Y >= 0 && Y < AH && depth[Y * AW + X] >= 1e9;
+            });
+            // who may show: those showing (while they are still offered), then the waiting ones by when they came, the oldest
+            // letting a waiting one in once it has had its time
+            const offered = tags.filter(tg => !relayGone.has(tg.k)), on = offered.filter(tg => relayShown.has(tg.k)), waiting = offered.filter(tg => !relayShown.has(tg.k)).sort((p, q) => p.since - q.since);
+            while (waiting.length && on.length >= most) {
+                const oldest = on.slice().sort((p, q) => relayFirst.get(p.k) - relayFirst.get(q.k))[0];
+                if (clock - relayFirst.get(oldest.k) < NAMES.hold) break;
+                relayGone.add(oldest.k); on.splice(on.indexOf(oldest), 1);
+            }
+            const list = on.concat(waiting.slice(0, Math.max(0, most - on.length))), placed = [], now = new Map();
+            for (const tg of list) {
+                const tw = (noteWidth(tg.s) + 4) / pxu, last = relayShown.get(tg.k), tries = last != null && last >= 0 ? [tg.at[last], ...tg.at] : tg.at;
+                const p = tries.find(q => {
+                    const cx = clamp(q[0], tw / 2 + 4, W - tw / 2 - 4), top = clamp(q[1] - TH / 2, TAG_TOP, TAG_BOTTOM), box = [cx - tw / 2 - 2, top - 2, cx + tw / 2 + 2, top + TH + 2];
+                    if (Math.abs(cx - q[0]) > tw / 2 || [...keep, ...placed].some(b => hits(b, box)) || !isSky(box) || RELAY.covers(D, box)) return false;   // off the glass, or on something
+                    placed.push(box); now.set(tg.k, { x: Math.round(cx), y: Math.round(top), s: tg.s, near: tg.near, at: tg.at.indexOf(q) });
                     return true;
                 });
-                if (!place(true)) place(false);
+                if (!p && relayShown.has(tg.k)) now.set(tg.k, null);                                // (no room this frame: it waits, keeping its turn)
             }
             relayShown.clear();
             [0, 1, 2].forEach(k => {
                 const t = now.get(k);
-                if (t) relayShown.set(k, t.at);
+                if (now.has(k)) relayShown.set(k, t ? t.at : -1);
+                if (t && !relayFirst.has(k)) relayFirst.set(k, clock);
                 note('relay ' + k, t ? t.s : null, t ? { x: t.x, y: t.y, align: 'center', tone: t.near ? 'text' : 'dim' } : {});
             });
+        }
+        /** A note's width in css px: the notes' own font (MiniHost's .mini-note, 13 px Plex Mono, 0.02em apart), measured once
+            a string (never under 8.1 px a character, the font's own width, in case it has not loaded yet). */
+        function noteWidth(str) {
+            let w = noteWidths.get(str);
+            if (w != null) return w;
+            try {
+                if (!noteMeasure) {
+                    const host = ui.canvas.closest('.mini-host'), fam = (host && getComputedStyle(host).getPropertyValue('--mg-f-num').trim()) || 'ui-monospace, monospace';
+                    noteMeasure = document.createElement('canvas').getContext('2d'); noteMeasure.font = '400 13px ' + fam;
+                }
+                w = noteMeasure.measureText(str).width + str.length * 13 * 0.02;
+            } catch (err) { w = 0; }
+            w = Math.max(w, str.length * 8.1);
+            noteWidths.set(str, w);
+            return w;
+        }
+        /** Css px a picture unit, read from the page once a second (not every frame: no layout work in the loop). */
+        function pxPerUnit() {
+            if (clock - pxuAt > 1 || !pxuNow) { pxuNow = ui.canvas.getBoundingClientRect().width / W || 3; pxuAt = clock; }
+            return pxuNow;
         }
         function drawTags(tags) {
             const placed = [], named = new Set(), pxPerUnit = ui.canvas.getBoundingClientRect().width / W || 3, sunU = [view.sunX / D, view.sunY / D];
@@ -2527,7 +2570,9 @@
         // LAST PORT: what DockRelay.js draws with (the flight's own buffers, ramps, grain and camera); the moon painted once
         // (the run's share flown, for the moon and the lamp to grow by; the rows the face will cover; the flight's clock)
         let relayRush = 0, relayNear = RELAY ? RELAY.dock.near[0] : 0, relayTags = [];             // the throttle held lately (0..1); where the run ends (m); the names DockRelay offers
-        const relayShown = new Map();                                                          // hull → which of its places its name took last frame
+        const relayShown = new Map(), relayFirst = new Map(), relayGone = new Set();            // hull → which of its places its name took last frame; when it first showed; gone
+        const noteWidths = new Map();
+        let noteMeasure = null, pxuNow = 0, pxuAt = -9;
         const relayGrow = () => (mode === 'run' && leg ? clamp(t / leg.cfg.dur, 0, 1) : mode === 'ready' || mode === 'jump' ? 0 : 1);
         const RA = RELAY ? { buf, depth, AW, AH, D, FA, CX, CY, R, BAY8, level, lightPx, view, sky, faceB: DOCK.faceB, grow: relayGrow, faceSpan, now: () => clock } : null;
         if (RELAY) { RELAY.prepare(D); const host = ui.canvas.closest('.mini-host'); if (host) host.classList.add('is-relay'); }   // (the names' fade: dockStyle)
@@ -2579,7 +2624,28 @@
         document.head.appendChild(st);
     })();
 
-    window.DockFlight = Object.freeze({ debug: Object.freeze({ state: () => (live ? live() : null) }) });
+    // LAST PORT: the relay's film cut and its moon made ready at idle before the dock opens (App.renderOrbit calls warm() when
+    // the relay's bridge opens): the three cameras' station (several seconds of work in all) and the moon (about 0.13 s), at
+    // most WARM_MS at a time in the browser's idle time, so the flight only has what is left to do (DockRelay.dock.bakeMs).
+    const WARM_MS = 8;
+    let warming = null;
+    function warm() {
+        const relay = relayOf({ kind: 'dock', relay: true });
+        if (!relay || warming) return;
+        const AW = Math.round(W * DENSITY), AH = Math.round(H * DENSITY), EXT = exteriorFor(AW, AH, relay);
+        warming = { done: false };
+        const later = window.requestIdleCallback ? fn => window.requestIdleCallback(fn, { timeout: 400 }) : fn => setTimeout(() => fn(null), 50);
+        const slice = deadline => {
+            const ms = deadline && deadline.timeRemaining ? Math.min(WARM_MS, Math.max(2, deadline.timeRemaining() - 1)) : WARM_MS / 2;
+            try {
+                if (!relay.paintMoon(DENSITY, ms)) { later(slice); return; }
+                if (EXT && !EXT.isDone()) { EXT.bake(ms); later(slice); return; }
+            } catch (err) { console.error('DockFlight: the relay\'s warm-up failed', err); }
+            warming.done = true;
+        };
+        later(slice);
+    }
+    window.DockFlight = Object.freeze({ debug: Object.freeze({ state: () => (live ? live() : null) }), warm, warmed: () => !!(warming && warming.done) });
     MiniHost.register({
         id: 'dock-flight',
         title: 'Bring her in',                                  // DRAFT (the header is hidden, as the corridor's is)

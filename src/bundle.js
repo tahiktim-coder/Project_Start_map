@@ -6320,6 +6320,7 @@ Then you're through.`,
         const mainView = document.getElementById('main-view');
         mainView.innerHTML = '';
         if (isNewScreen()) {                                                               // the new screen: the bridge, not today's orbit view
+            if (here && !here.exodusInvestigated && this.isRelayStop(here) && window.DockFlight.warm) window.DockFlight.warm();   // Last Port: the relay's cut and moon made ready at idle
             if (window.NewScreen.stop(this)) return;
             window.NewScreen.hide();                                                       // no stop module: today's orbit view, as in checkpoint A
         }
