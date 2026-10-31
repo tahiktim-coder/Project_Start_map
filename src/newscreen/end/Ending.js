@@ -363,7 +363,7 @@
         R.resolve();
     }
     function newGame() {
-        try { localStorage.removeItem('silentExodus_save'); } catch (err) { /* storage blocked: the reload still starts fresh */ }
+        try { localStorage.removeItem(window.SAVE_KEY || 'silentExodus_save'); } catch (err) { /* storage blocked: the reload still starts fresh */ }   // (a try tab: its own key)
         location.reload();                                                          // like every end screen: nothing from this run survives
     }
 

@@ -109,7 +109,7 @@
         document.body.appendChild(overlay);
         const again = overlay.querySelector('.end-again');
         again.addEventListener('click', () => {
-            try { localStorage.removeItem('silentExodus_save'); } catch (e) { /* storage blocked: the reload still restarts */ }
+            try { localStorage.removeItem(window.SAVE_KEY || 'silentExodus_save'); } catch (e) { /* storage blocked: the reload still restarts */ }   // (a try tab: its own key)
             location.reload();
         });
         again.focus({ preventScroll: true }); // keep the title in view, not the button

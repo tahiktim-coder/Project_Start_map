@@ -9,6 +9,13 @@
 // It exists only for testers: index.html?test=1 turns it on (and shows the TEST button). Players never see it.
 const IS_TEST_BUILD = new URLSearchParams(location.search).get('test') === '1';
 window.TEST_MODE = IS_TEST_BUILD;
+// A try tab, for the designer and testers: ?try=<kind> (the new look: App.startTry places a fresh run at that moment, no
+// title). Read from the address every load and never kept. Every save in a try tab goes to its own key, so the real save
+// is never read, written or erased there (SAVE_KEY: every place that names the save uses it; window.SAVE_KEY for the
+// end screens' files).
+const TRY_RUN = new URLSearchParams(location.search).get('try') || null;
+const SAVE_KEY = TRY_RUN ? 'silentExodus_try' : 'silentExodus_save';
+window.SAVE_KEY = SAVE_KEY;
 
 /**
  * Test-aware random function.
@@ -326,7 +333,7 @@ class GameState {
         };
 
         try {
-            localStorage.setItem('silentExodus_save', JSON.stringify(saveData));
+            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
             return true;
         } catch (e) {
             console.error('Failed to save game:', e);
@@ -339,7 +346,7 @@ class GameState {
      */
     loadGame() {
         try {
-            const saveStr = localStorage.getItem('silentExodus_save');
+            const saveStr = localStorage.getItem(SAVE_KEY);
             if (!saveStr) return false;
 
             const saveData = JSON.parse(saveStr);
@@ -442,14 +449,14 @@ class GameState {
      * Check if a save exists
      */
     hasSave() {
-        return localStorage.getItem('silentExodus_save') !== null;
+        return localStorage.getItem(SAVE_KEY) !== null;
     }
 
     /**
      * Delete save
      */
     deleteSave() {
-        localStorage.removeItem('silentExodus_save');
+        localStorage.removeItem(SAVE_KEY);
     }
 
     /**
@@ -457,7 +464,7 @@ class GameState {
      */
     getSaveInfo() {
         try {
-            const saveStr = localStorage.getItem('silentExodus_save');
+            const saveStr = localStorage.getItem(SAVE_KEY);
             if (!saveStr) return null;
             const data = JSON.parse(saveStr);
             return {
@@ -1276,6 +1283,21 @@ const NEW_LOOK_ECONOMY = Object.freeze({
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
+// A try tab's moments (App.startTry, ?try=<kind>): each places a fresh run (the state just made by init()).
+const TRY_PLACES = {
+    /** Last Port: sector 5 as a careful run reaches it (the disc drawing aboard, the crew well, one dock flown), the disc's
+        moon named and its course free: click it on the map, then the bridge's mark in orbit, then "Go across". */
+    lastport(app, s) {
+        s.currentSector = 5;
+        s.sectorNodes = PlanetGenerator.generateSector(5);
+        app.plantSectorPage();
+        const moon = s.sectorNodes.find(p => p.isStoryPlanet && p.hasPage === 'PAGE_DISC');
+        if (moon) { moon.storyHidden = false; moon.courseKnown = true; }
+        if (typeof ITEMS !== 'undefined' && ITEMS.DISC_DRAWING) s.cargo.push({ ...ITEMS.DISC_DRAWING });
+        s.energy = 60; s.rations = 14; s._docksFlown = 1;
+        s.addLog(`Sector 5${typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[5] ? ' — ' + SECTOR_CONFIG[5].name : ''}`);
+    },
+};
 // Last Port: the wreck stories that say the ship landed (SILENT SHIP, THE FENCE) cannot be the disc's ship, clamped to the relay
 const RELAY_UNFIT_STORIES = ['EXODUS_DEAD_CREW', 'EXODUS_PARTIAL'];
 const SCRAPES_PER_BROKEN_DECK = 2; // flying the jump (Corridor): every second scrape breaks a deck (was 3). Measured over a run's
@@ -1341,8 +1363,9 @@ class App {
         // True while a warp or sector jump is playing out; blocks re-entrant travel requests
         this._isInTransit = false;
 
-        // Show start menu first
-        this.showStartMenu();
+        // Show start menu first (a try tab: straight into its moment)
+        if (TRY_RUN && isNewScreen()) { if (window.AudioSystem) window.AudioSystem.init(); this.init(false); }
+        else this.showStartMenu();
     }
 
     showStartMenu() {
@@ -1663,8 +1686,9 @@ class App {
         // Anomaly teleportation handler (visual effect + view refresh)
         window.addEventListener('anomaly-teleport', (e) => this.handleAnomalyTeleport(e.detail));
 
-        // Either load save or start new game
-        if (loadSave && this.state.loadGame()) {
+        // Either load save or start new game (a try tab: a fresh run placed at its moment, never the real save)
+        if (TRY_RUN && isNewScreen()) this.startTry(TRY_RUN);
+        else if (loadSave && this.state.loadGame()) {
             this.state.addLog("=== SAVE LOADED ===");
             this.state.addLog(`Resuming mission in Sector ${this.state.currentSector}.`);
             this.resumeWhereSaved();
@@ -1676,6 +1700,25 @@ class App {
             // A.U.R.A.'s opening briefing (in-universe tutorial)
             this.showOpeningBriefing();
         }
+    }
+
+    /**
+     * A try tab (?try=<kind>, the new look): a fresh run placed at one moment, saved only under the try key (SAVE_KEY), with a
+     * small corner note. TRY_PLACES[kind] places it; an unknown kind is a fresh run from the start. Reload to try it again.
+     */
+    startTry(kind) {
+        const s = this.state, place = TRY_PLACES[kind];
+        s.init();
+        if (place) place(this, s);
+        else s.sectorNodes = PlanetGenerator.generateSector(1);
+        this.renderNav();
+        s.emitUpdates();
+        if (document.getElementById('try-note')) return;
+        const note = document.createElement('p');
+        note.id = 'try-note';
+        note.textContent = 'Try run. Your save is safe.';                                  // DRAFT (2026-10-31)
+        note.style.cssText = "position: fixed; right: 16px; bottom: 12px; z-index: 6001; margin: 0; font: 400 12px/1.2 'IBM Plex Mono', ui-monospace, Consolas, monospace; color: #5a6168; pointer-events: none;";
+        document.body.appendChild(note);
     }
 
     /**
@@ -3933,7 +3976,7 @@ Then you're through.`,
         // New game button
         const newGameBtn = modal.querySelector('#btn-new-game');
         newGameBtn.onclick = () => {
-            try { localStorage.removeItem('silentExodus_save'); } catch (e) { /* storage blocked: the reload still starts fresh */ }
+            try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* storage blocked: the reload still starts fresh */ }
             location.reload();                                                           // like the other end screens: nothing from this run survives
             return;
             modal.remove();
@@ -5868,7 +5911,7 @@ Then you're through.`,
                 </div>
             </div>
 
-            <button onclick="localStorage.removeItem('silentExodus_save'); location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
+            <button onclick="localStorage.removeItem('${SAVE_KEY}'); location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
                 REBOOT SIMULATION
             </button>
         `;
