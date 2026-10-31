@@ -32,7 +32,7 @@ _The new look only. Midway through this flight the stars go out one by one, then
   - **Jaxon:** Our lights found it too late.
   - **Vance:** Our lights found it too late.
   - **A.U.R.A.:** Our lights found it too late, Commander.
-- _fast: in the black; if the Commander flies flat out; the first alive says it_ «Corridor.js · line 252»
+- _fast: in the black; if the Commander flies flat out; never after "speed"; the first alive says it_ «Corridor.js · line 252»
   - **Jaxon:** Too fast. We won't see it until it hits us.
   - **Aris:** Slow down, Commander. We can't see what's coming.
 - _slow: in the black; never after "fast"; the first alive says it_ «Corridor.js · line 254»
@@ -75,31 +75,31 @@ On the disc's map: a moon with one lamp lit. Then:
 ### Last Port: docking at the relay on the way in (the new look) «DockRelay.js · lines»
 _Going across to the wreck (the bridge's GO ACROSS), the ship docks at the old relay first, flown: Bring Her In's flight and words (10-away-team.md), with these instead. The grade line is the cause (if any) and then one of the four grade words. Then the team goes into the wreck through its airlock, which the relay still powers (10-away-team.md, the wreck doors), and the story card's picture is the relay._
 
-- **offer** — A relay on the dark moon, Commander. I can dock us for [n] energy. «DockRelay.js · line 76»
-- **offerFree** — A relay on the dark moon, Commander. I can dock us, if you prefer. «DockRelay.js · line 77»
-- **hold** — Relay ahead. Hold to close in. Let go to slow. «DockRelay.js · line 78»
-- **hulls** — They docked here and never left. «DockRelay.js · line 79»
-- **mira** — It sent something. Back the way we came. «DockRelay.js · line 80»
-- **soft** — The clamps take hold, Commander. «DockRelay.js · line 81»
-- **rough** — We scraped the ring. «DockRelay.js · line 81»
-- **crash** — The hull is damaged. «DockRelay.js · line 81»
-- **held** — The hull held. «DockRelay.js · line 81»
+- **offer** — A relay on the dark moon, Commander. I can dock us for [n] energy. «DockRelay.js · line 78»
+- **offerFree** — A relay on the dark moon, Commander. I can dock us, if you prefer. «DockRelay.js · line 79»
+- **hold** — Relay ahead. Hold to close in. Let go to slow. «DockRelay.js · line 80»
+- **hulls** — They docked here and never left. «DockRelay.js · line 81»
+- **mira** — It sent something. Back the way we came. «DockRelay.js · line 82»
+- **soft** — The clamps take hold, Commander. «DockRelay.js · line 83»
+- **rough** — We scraped the ring. «DockRelay.js · line 83»
+- **crash** — The hull is damaged. «DockRelay.js · line 83»
+- **held** — The hull held. «DockRelay.js · line 83»
 
-On the glass, one after another as the radio finds them: EXODUS-17,199 · EXODUS-17,212 · EXODUS-17,207 «DockRelay.js · glass»  
+On the glass, one after another as the radio finds them: EXODUS-17199 · EXODUS-17212 · EXODUS-17207 «DockRelay.js · glass»  
 On the relay's screen in the film cut: SENT «DockRelay.js · exterior.sent»
 
 ### Its chips «DockRelay.js · chips»
-_Under Mira's line. A hard dock tears one of the other two hulls loose ("17,212 torn loose"); never the disc's._
+_Under Mira's line. A hard dock tears one of the other two hulls loose ("17212 torn loose"); never the disc's._
 
-- **soft** — Soft dock «DockRelay.js · line 332»
-- **rough** — Rough dock «DockRelay.js · line 332»
-- **crash** — Hard dock «DockRelay.js · line 332»
-- Soft dock «DockRelay.js · line 332»
-- decks broken «DockRelay.js · line 335»
-- A hull «DockRelay.js · line 336»
-- torn loose «DockRelay.js · line 336»
-- Energy + «DockRelay.js · line 338»
-- Energy − «DockRelay.js · line 338»
+- **soft** — Soft dock «DockRelay.js · line 417»
+- **rough** — Rough dock «DockRelay.js · line 417»
+- **crash** — Hard dock «DockRelay.js · line 417»
+- Soft dock «DockRelay.js · line 417»
+- decks broken «DockRelay.js · line 420»
+- A hull «DockRelay.js · line 421»
+- torn loose «DockRelay.js · line 421»
+- Energy + «DockRelay.js · line 423»
+- Energy − «DockRelay.js · line 423»
 
 _In the log after a rough or hard dock: BoardingParty's own lines with the moon's name (10-away-team.md, Boarding a station); after a soft dock flown all by hand: "Good flying: 3 energy saved."_
 
