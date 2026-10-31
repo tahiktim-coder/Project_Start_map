@@ -1314,6 +1314,9 @@ const RELAY_UNFIT_STORIES = ['EXODUS_DEAD_CREW', 'EXODUS_PARTIAL', 'EXODUS_INFEC
 // After the flight (Corridor.js THE DARK, MiniHost 'corridor-void'): the new look's jump into this sector goes dark round us
 // while we fly, once a run (sectors only go forward). What it costs (rations, stress) comes back in the flight's result.
 const DARK_JUMP_TO = 5;
+// The new look: a jump's talk that says "after this jump" is had before it, once the jump is chosen and before the flight
+// opens (App.talkBeforeJump), and is that jump's only talk (2026-11-01 check: NO WAY BACK came right after the dark)
+const NEW_LOOK_BEFORE_JUMP_TALKS = ['CF_LAST_CHANCE'];
 const NEW_LOOK_NO_ANOMALY = ['ANOMALY_HUNGER'];   // the Dark Patch (beacons in a starless patch, going out one by one): the dark's image, used once
 const SCRAPES_PER_BROKEN_DECK = 2; // flying the jump (Corridor): every second scrape breaks a deck (was 3). Measured over a run's
                                    // four flown jumps (2026-10-21): a careful pilot loses about 0.6 decks (a slower one, 1.5), a
@@ -3014,14 +3017,25 @@ class App {
         // The flight, then what the crew makes of it, then the campfire. Into sector 3 the burn stalls and the throw plays instead
         // (the new look: on the travel view itself, then the sea of ships, then the arrival: src/newscreen/throw/Throw.js).
         const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
+        let hadTalk = false;                                                         // the new look: a talk had before the jump is this jump's talk
         const fly = () => this.showWarpAnimation(() => {
             if (this.state.gameOver) return;                                         // the run ended in the flight: nothing more follows
             const afterFlight = isThrow ? (isNewScreen() && window.NSThrow ? window.NSThrow.play(this) : window.TheThrow.play(this))
-                : this.reactToSectorJump().then(() => new Promise(done => this.showCampfireEvent(done)));
+                : this.reactToSectorJump().then(() => (hadTalk ? null : new Promise(done => this.showCampfireEvent(done))));
             afterFlight.then(() => this.enterNextSector());
         }, isThrow);
-        if (isNewScreen() && !isThrow) window.NewScreen.playJump().then(fly);           // the new screen: the burn and the flash first
-        else fly();
+        if (isNewScreen() && !isThrow) {                                            // the new screen: a talk about this jump, then the burn and the flash first
+            this.talkBeforeJump().then(had => { hadTalk = had; return window.NewScreen.playJump(); }).then(fly);
+        } else fly();
+    }
+
+    /** The new look: a talk that says "after this jump" (NEW_LOOK_BEFORE_JUMP_TALKS) is had once the jump is chosen, before the
+        flight opens, once a run. Resolves true once its outcome is read (the flight never opens under it); false, at once, when
+        there is none. */
+    talkBeforeJump() {
+        if (window.TEST_MODE) return Promise.resolve(false);
+        return new Promise(done => this.showCampfireEvent(had => done(!!had), true))
+            .catch(err => { console.error('The talk before the jump failed; the jump goes on', err); return false; });
     }
 
     /** The header line for a sector, named as SECTOR_CONFIG names it: "/// SECTOR 3: THE SIGNAL". */
@@ -3115,7 +3129,9 @@ class App {
         });
     }
 
-    showCampfireEvent(onComplete) {
+    /** The jump's talk, after the flight. isBeforeJump (the new look, talkBeforeJump): only a talk of NEW_LOOK_BEFORE_JUMP_TALKS
+        not had yet, and onComplete(true) waits until its outcome is read. After the flight the new look never has those talks. */
+    showCampfireEvent(onComplete, isBeforeJump = false) {
         // TEST_MODE: Skip campfire events entirely for faster testing
         if (window.TEST_MODE) {
             this.state.addLog("[TEST MODE] Skipping campfire event...");
@@ -3127,8 +3143,10 @@ class App {
         const fromSector = this.state.currentSector;
         const toSector = fromSector + 1;
 
+        const isNew = isNewScreen(), isBefore = e => isNew && NEW_LOOK_BEFORE_JUMP_TALKS.includes(e.id);
         const eligible = (typeof CAMPFIRE_EVENTS !== 'undefined' ? CAMPFIRE_EVENTS : []).filter(e => {
             if (fromSector < e.sectorRange[0] || fromSector > e.sectorRange[1]) return false;
+            if (isBefore(e) !== isBeforeJump) return false;                          // the new look: "after this jump" is said before it
             if (e.condition && !e.condition(this.state)) return false;
             return true;
         });
@@ -3143,7 +3161,11 @@ class App {
         // Weighted by priority (story talks are likelier, not guaranteed), and never the same talk twice in one run
         this.state._seenCampfires = this.state._seenCampfires || [];
         const fresh = eligible.filter(e => !this.state._seenCampfires.includes(e.id));
-        const candidates = fresh.length ? fresh : eligible;
+        const candidates = fresh.length || isBeforeJump ? fresh : eligible;                // a talk before the jump is had once
+        if (candidates.length === 0) {
+            onComplete();
+            return;
+        }
         const topPriority = Math.max(...candidates.map(e => e.priority || 1));               // a priority-3 talk is the act break: it always fires
         const pool = candidates.filter(e => (e.priority || 1) === topPriority);
         const event = pool[Math.floor(Math.random() * pool.length)];
@@ -3172,7 +3194,10 @@ class App {
                 dialogue: event.dialogue,
                 choices: event.choices,
                 onChoiceMade: () => {
-                    onComplete();
+                    const EC = window.EncounterCard;
+                    if (!isBeforeJump) onComplete();
+                    else if (EC && typeof EC.whenFree === 'function') EC.whenFree(() => onComplete(true));   // the flight waits for the outcome
+                    else onComplete(true);
                 }
             });
             return;

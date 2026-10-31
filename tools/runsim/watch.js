@@ -27,9 +27,9 @@ function watch(rc) {
     const realReserve = app.flyOnReserve;
     app.flyOnReserve = function () { R.counts.reserveWarps += 1; sec(rc).reserve += 1; return realReserve.call(this); };
     const realCampfire = app.showCampfireEvent;
-    app.showCampfireEvent = function (done) {                                       // its card is told apart from the others while it is up
-        cur.campfire = true;
-        return realCampfire.call(this, (...a) => { cur.campfire = false; return done(...a); });
+    app.showCampfireEvent = function (done, ...rest) {                              // its card is told apart from the others while it is up
+        cur.campfire = true;                                                        // (rest: the new look's talk before the jump, App.talkBeforeJump)
+        return realCampfire.call(this, (...a) => { cur.campfire = false; return done(...a); }, ...rest);
     };
 }
 
