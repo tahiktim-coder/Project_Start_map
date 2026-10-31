@@ -299,7 +299,8 @@
     let dockTold = { hold: false, roll: false, lights: false };
     let live = null;                                            // the open flight's debug state (Corridor.debug.state), or null
     // BRING HER IN: the exterior shot's station (DockExterior.js), baked once per picture size and kept for the next dock
-    let extKept = null;
+    // (LAST PORT: the relay's kept apart, so neither throws the other's bake away)
+    const extKept = { plain: null, relay: null };
     // LAST PORT: the names over the glass: most at once (one on a glass under narrow css px wide), and how long the oldest
     // shows before one waiting may take its turn (s)
     const NAMES = { most: 2, narrow: 1100, hold: 3 };
@@ -309,9 +310,11 @@
     const exteriorFor = (w, h, relay) => {
         const X = window.DockExterior;
         if (!X) return null;
-        if (!extKept || extKept.w !== w || extKept.h !== h || extKept.relay !== relay) extKept = { w, h, relay, wide: X.create(w, h, 'wide', relay && relay.exterior), close: X.create(w, h, 'close', relay && relay.exterior) };   // (LAST PORT: relay)
-        if (relay && !extKept.mid) extKept.mid = X.create(w, h, 'mid', relay.exterior);              // LAST PORT: the row of hulls
-        const { wide, close, mid } = extKept;
+        const slot = relay ? 'relay' : 'plain';
+        let kept = extKept[slot];
+        if (!kept || kept.w !== w || kept.h !== h) kept = extKept[slot] = { w, h, wide: X.create(w, h, 'wide', relay && relay.exterior), close: X.create(w, h, 'close', relay && relay.exterior) };   // (LAST PORT: relay)
+        if (relay && !kept.mid) kept.mid = X.create(w, h, 'mid', relay.exterior);                   // LAST PORT: the row of hulls
+        const { wide, close, mid } = kept;
         if (mid) return { wide, close, mid, isDone: () => wide.isDone() && close.isDone() && mid.isDone(),
             bake: ms => (!wide.isDone() ? wide : !close.isDone() ? close : mid).bake(ms),
             finish: grade => { wide.bake(Infinity); close.bake(Infinity); if (grade === 'crash') mid.bake(Infinity); },   // (the mid is only a hard dock's; else it bakes on, a little a frame)
@@ -2631,7 +2634,7 @@
     let warming = null;
     function warm() {
         const relay = relayOf({ kind: 'dock', relay: true });
-        if (!relay || warming) return;
+        if (!relay || (warming && !warming.done)) return;                                    // (one at a time; again if something is left)
         const AW = Math.round(W * DENSITY), AH = Math.round(H * DENSITY), EXT = exteriorFor(AW, AH, relay);
         warming = { done: false };
         const later = window.requestIdleCallback ? fn => window.requestIdleCallback(fn, { timeout: 400 }) : fn => setTimeout(() => fn(null), 50);
