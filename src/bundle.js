@@ -1297,9 +1297,22 @@ const TRY_PLACES = {
         s.energy = 60; s.rations = 14; s._docksFlown = 1;
         s.addLog(`Sector 5${typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[5] ? ' — ' + SECTOR_CONFIG[5].name : ''}`);
     },
+    /** After the flight: sector 4 as a careful run reaches it (the crew well), its worlds still ahead: click the light ahead
+        (then "Go anyway" if asked) and the jump into sector 5 is flown through the dark, then the supper in sector 5. */
+    void(app, s) {
+        s.currentSector = DARK_JUMP_TO - 1;
+        s.sectorNodes = PlanetGenerator.generateSector(s.currentSector);
+        app.plantSectorPage();
+        s.energy = 60; s.rations = 14;
+        s.addLog(`Sector ${s.currentSector}${typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[s.currentSector] ? ' — ' + SECTOR_CONFIG[s.currentSector].name : ''}`);
+    },
 };
 // Last Port: the wreck stories that say the ship landed (SILENT SHIP, THE FENCE) cannot be the disc's ship, clamped to the relay
 const RELAY_UNFIT_STORIES = ['EXODUS_DEAD_CREW', 'EXODUS_PARTIAL'];
+// After the flight (Corridor.js THE DARK, MiniHost 'corridor-void'): the new look's jump into this sector goes dark round us
+// while we fly, once a run (sectors only go forward). What it costs (rations, stress) comes back in the flight's result.
+const DARK_JUMP_TO = 5;
+const NEW_LOOK_NO_ANOMALY = ['ANOMALY_HUNGER'];   // the Dark Patch (beacons in a starless patch, going out one by one): the dark's image, used once
 const SCRAPES_PER_BROKEN_DECK = 2; // flying the jump (Corridor): every second scrape breaks a deck (was 3). Measured over a run's
                                    // four flown jumps (2026-10-21): a careful pilot loses about 0.6 decks (a slower one, 1.5), a
                                    // ship that never moves all of them, one at full throttle the whole way about five. At 3: 0.2, 5, 3
@@ -2671,12 +2684,14 @@ class App {
     }
 
     /** The sector jump, flown (Corridor). Resolves once the flight is over and what it cost is applied; it never rejects.
-        twin: with the disc aboard, a copy of our ship flies beside us on the jump into the last sector (Corridor's SECTORS). */
+        twin: with the disc aboard, a copy of our ship flies beside us on the jump into the last sector (Corridor's SECTORS).
+        The new look's jump into DARK_JUMP_TO is After the flight ('corridor-void'): never in TEST_MODE, where nothing is flown. */
     flyCorridor() {
         const from = this.state.currentSector;
         const damaged = Object.fromEntries(Object.entries(this.state.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
         const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: this.state.energy, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
-        return window.MiniHost.play('corridor', opts)
+        const isDark = isNewScreen() && from + 1 === DARK_JUMP_TO && !window.TEST_MODE && window.MiniHost.has('corridor-void');
+        return window.MiniHost.play(isDark ? 'corridor-void' : 'corridor', isDark ? { ...opts, void: true } : opts)
             .then(result => this.applyCorridorResult(result), err => console.error(err));
     }
 
@@ -2694,8 +2709,17 @@ class App {
     }
 
     applyCorridorResult(result) {
+        this._jumpWasDark = false;
         if (!result) return;
         this.noteReliance(!!result.auraFlew);
+        const dark = result.void;
+        if (dark && !window.TEST_MODE) {                                               // After the flight: what the dark cost, as its chips said
+            const rations = Number.isFinite(dark.rations) ? Math.max(0, Math.round(-dark.rations)) : 0;
+            this.state.rations = Math.max(0, this.state.rations - rations);
+            if (dark.stress > 0) this.state.crew.filter(c => c.status !== 'DEAD').forEach(c => this.state.hungerStress(c));   // +1, never past 2
+            this.state.addLog(`The dark cost ${rations} ration${rations === 1 ? '' : 's'}.`);   // DRAFT
+            this._jumpWasDark = true;
+        }
         const energyDelta = Number.isFinite(result.energyDelta) ? Math.round(result.energyDelta) : 0;
         if (energyDelta && !window.TEST_MODE) {                                        // tests spend no energy (consumeEnergy is off there too)
             this.state.energy = Math.max(0, Math.min(100, this.state.energy + energyDelta));
@@ -3037,8 +3061,10 @@ class App {
      * and the drive may fault. Resolves once any fault card is dealt with.
      */
     reactToSectorJump() {
-        if (window.BarkSystem) window.BarkSystem.tryBark('SECTOR_JUMP', this.state);
-        if (window.AuraSystem) window.AuraSystem.tryComment('SECTOR_JUMP', this.state);
+        const wasDark = !!this._jumpWasDark;                                           // After the flight: the crew have just been through the dark
+        this._jumpWasDark = false;
+        if (window.BarkSystem && !wasDark) window.BarkSystem.tryBark('SECTOR_JUMP', this.state);
+        if (window.AuraSystem && !wasDark) window.AuraSystem.tryComment('SECTOR_JUMP', this.state);
         const malfunction = typeof rollShipMalfunction !== 'undefined' ? rollShipMalfunction(this.state, 'sector_jump') : null;
         return malfunction ? this.showShipMalfunctionModal(malfunction) : Promise.resolve();
     }
@@ -3564,7 +3590,7 @@ class App {
 
         // Select by weight: only places this sector has reached (minSector), and never the same strange place twice in a run
         this.state._seenAnomalies = this.state._seenAnomalies || [];
-        const reached = encounters.filter(e => this.hasReachedSector(e));
+        const reached = encounters.filter(e => this.hasReachedSector(e) && !(isNewScreen() && NEW_LOOK_NO_ANOMALY.includes(e.id)));
         const allowed = reached.filter(e => !this.state._seenAnomalies.includes(e.id));
         const pool = allowed.length ? allowed : reached;
         const totalWeight = pool.reduce((sum, e) => sum + e.weight, 0);
