@@ -21,7 +21,8 @@ const BEFORE_BUNDLE = [
     'src/generators/PlanetGenerator.js', 'src/views/NavView.js',
 ];
 const BUNDLE = 'src/bundle.js';
-const AFTER_BUNDLE = ['src/systems/minigames/TorchDoors.js', 'src/newscreen/Route.js', 'src/newscreen/Scan.js', 'src/newscreen/WorldFinds.js', 'src/newscreen/Orbit.js'];
+const AFTER_BUNDLE = ['src/systems/minigames/TorchDoors.js', 'src/newscreen/Route.js', 'src/newscreen/Scan.js', 'src/newscreen/WorldFinds.js', 'src/newscreen/Orbit.js',
+    'src/newscreen/art/Paint.js', 'src/newscreen/dock/DockRelay.js'];                // Last Port's numbers and chips (DockRelay.js; its painting never runs here, so the world painter is a stand-in)
 const noop = () => {};
 
 /** Small, fast, seedable dice (mulberry32). */
@@ -152,10 +153,11 @@ function newLookStubs(ctx, hooks, bus, modeBox) {
     };
     ctx.NSSupper = { settle: () => hooks.supper(ctx.app), pending: () => !!(ctx.app && ctx.app.state && ctx.app.state._nsSupper), busy: () => false, tick: noop, choosing: () => false, pick: () => false, tagFor: () => null, debug: () => ({}) };
     ctx.MiniHost = {
-        has: name => ['breach', 'torch', 'disc', 'corridor', 'burn'].includes(name),
+        has: name => ['breach', 'torch', 'disc', 'corridor', 'burn', 'dock-flight'].includes(name),   // (dock-flight: only Last Port's relay reaches it; BoardingParty is stood in)
         play: (name, opts) => Promise.resolve(hooks.mini(name, opts)),
     };
     ctx.TheThrow = { play: () => Promise.resolve() };
+    ctx.NSWorlds = { paint: noop, palette: () => ({ ramp: { hex: [] } }) };
     ctx.NSThrow = { play: () => Promise.resolve(), card: () => Promise.resolve() };
     ctx.NarrativeModal = {};
 }

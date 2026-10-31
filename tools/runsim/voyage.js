@@ -8,7 +8,7 @@ const M = require('./models');
 const P = require('./policy');
 const { sec, startSector, closeSector } = require('./runlog');
 const { repairs } = require('./stop');
-const { serveSupper, board } = require('./hands');
+const { serveSupper } = require('./hands');
 
 /** Travel: a held crew moment opens once it is calm (NSOrbit's own rule), the faint contact may be named, the next world. */
 async function travel(rc) {
@@ -55,9 +55,10 @@ async function jump(rc) {
     cur.phase = 'travel';
 }
 
-/** At the start of sector 5: the dark leg (--void) and Last Port (--port), when asked for. */
+/** At the start of sector 5: the dark leg (--void), when asked for. (Last Port is in the game now: the relay's dock on the
+    story trip to the disc's wreck, hands.js relayDock.) */
 function standIns(rc) {
-    const { game, app, state, styleName, seed, opts } = rc;
+    const { state, styleName, opts } = rc;
     if (state.currentSector !== 5) return Promise.resolve();
     if (opts.void) {                                                             // the dark leg (agreed 2026-10-29): wait it out, or push through
         rc.beat();
@@ -65,10 +66,6 @@ function standIns(rc) {
         if (['careful', 'aura', 'optimizer'].includes(styleName)) state.rations = Math.max(0, state.rations - eaters);
         else state.damageDeck('cargo', 'The dark broke the hold.');
         state.emitUpdates();
-    }
-    if (opts.port) {                                                             // Last Port (not approved): one more station to dock at
-        const port = { id: `last-port-${seed}`, name: 'Last Port', isStation: true, type: 'STATION' };
-        return Promise.resolve(board(rc, port)).then(r => { if (r && r.reachedCommand) app.showStationEncounter(port); return game.drain(); });
     }
     return Promise.resolve();
 }

@@ -28,6 +28,37 @@ Map text: *A dark moon with an old station on it. One of our ships died there.*
 On the disc's map: a moon with one lamp lit. Then:  
 **Mira:** There's a station on that moon. Its lamp is still on.  
 
+### Last Port: docking at the relay on the way in (the new look) «DockRelay.js · lines»
+_Going across to the wreck (the bridge's GO ACROSS), the ship docks at the old relay first, flown: Bring Her In's flight and words (10-away-team.md), with these instead. The grade line is the cause (if any) and then one of the four grade words. Then the team goes into the wreck through its airlock, which the relay still powers (10-away-team.md, the wreck doors), and the story card's picture is the relay._
+
+- **offer** — A relay on the dark moon, Commander. I can dock us for [n] energy. «DockRelay.js · line 76»
+- **offerFree** — A relay on the dark moon, Commander. I can dock us, if you prefer. «DockRelay.js · line 77»
+- **hold** — Relay ahead. Hold to close in. Let go to slow. «DockRelay.js · line 78»
+- **hulls** — They docked here and never left. «DockRelay.js · line 79»
+- **mira** — It sent something. Back the way we came. «DockRelay.js · line 80»
+- **soft** — The clamps take hold, Commander. «DockRelay.js · line 81»
+- **rough** — We scraped the ring. «DockRelay.js · line 81»
+- **crash** — The hull is damaged. «DockRelay.js · line 81»
+- **held** — The hull held. «DockRelay.js · line 81»
+
+On the glass, one after another as the radio finds them: EXODUS-17,199 · EXODUS-17,212 · EXODUS-17,207 «DockRelay.js · glass»  
+On the relay's screen in the film cut: SENT «DockRelay.js · exterior.sent»
+
+### Its chips «DockRelay.js · chips»
+_Under Mira's line. A hard dock tears one of the other two hulls loose ("17,212 torn loose"); never the disc's._
+
+- **soft** — Soft dock «DockRelay.js · line 332»
+- **rough** — Rough dock «DockRelay.js · line 332»
+- **crash** — Hard dock «DockRelay.js · line 332»
+- Soft dock «DockRelay.js · line 332»
+- decks broken «DockRelay.js · line 335»
+- A hull «DockRelay.js · line 336»
+- torn loose «DockRelay.js · line 336»
+- Energy + «DockRelay.js · line 338»
+- Energy − «DockRelay.js · line 338»
+
+_In the log after a rough or hard dock: BoardingParty's own lines with the moon's name (10-away-team.md, Boarding a station); after a soft dock flown all by hand: "Good flying: 3 energy saved."_
+
 ### The find: THE DISC «ExodusLogs.js · PAGE_DISC»
 _In the wreck on Iapetus-60 Minor. A gold disc the size of a dinner plate, with a star map cut into it. In the cargo hold it is called: The Disc._
 

@@ -463,6 +463,17 @@ function storyPlanetMd(def) {
         `On the disc's map: ${PLACE_SHOWN[def.reward.kind]}${def.reward.label ? `, labelled ${def.reward.label.toUpperCase()}` : ''}. Then:  `,
         `${lineOf(FULL_NAME[line.who] || line.who, line.text)}  `, ''];
 }
+/** Last Port (the new look): on the way to the disc's wreck the ship docks at the old relay on the moon, flown (Bring Her In's
+    flight, DockRelay.js): its lines, its chips, the names on the glass and the word on the relay's screen. */
+function relayMd(def) {
+    const RELAY = 'src/newscreen/dock/DockRelay.js', nums = [17199, 17212, def.hull].map(n => 'EXODUS-' + n.toLocaleString('en-US'));
+    return [...textSection(3, 'Last Port: docking at the relay on the way in (the new look)', block(RELAY, /^\s*const lines = Object\.freeze\(/m, 'lines'),
+        `Going across to the wreck (the bridge's GO ACROSS), the ship docks at the old relay first, flown: Bring Her In's flight and words (10-away-team.md), with these instead. The grade line is the cause (if any) and then one of the four grade words. Then the team goes into the wreck through its airlock, which the relay still powers (10-away-team.md, the wreck doors), and the story card's picture is the relay.`),
+        `On the glass, one after another as the radio finds them: ${nums.join(' · ')}${tag('DockRelay.js', 'glass')}  `,
+        `On the relay's screen in the film cut: SENT${tag('DockRelay.js', 'exterior.sent')}`, '',
+        ...textSection(3, 'Its chips', method(RELAY, 'chips'), 'Under Mira\'s line. A hard dock tears one of the other two hulls loose ("17,212 torn loose"); never the disc\'s.'),
+        '_In the log after a rough or hard dock: BoardingParty\'s own lines with the moon\'s name (10-away-team.md, Boarding a station); after a soft dock flown all by hand: "Good flying: 3 energy saved."_', ''];
+}
 /** Sector 5's find (ExodusLogs PAGE_DISC): the disc itself. Its card (App.showDiscFound), then the disc page as the real object. */
 function discFindMd(page, where) {
     const c = page.card || {}, take = c.take || {}, D = sandbox.window.DiscDocument || {}, real = D.REAL || {};
@@ -539,6 +550,7 @@ for (let sector = 1; sector <= 6; sector++) {
     }
     const story = STORY_PLANETS.find(d => d.sector === sector);
     if (story) b.push(...storyPlanetMd(story));
+    if (story && story.page === 'PAGE_DISC') b.push(...relayMd(story));
     PAGES.filter(p => p.sector === sector).forEach(page => {
         const where = story && story.page === page.id ? `In the wreck on ${story.name}.` : 'In one wreck in this sector.';
         if (page.kind === 'disc') { b.push(...discFindMd(page, where)); return; }

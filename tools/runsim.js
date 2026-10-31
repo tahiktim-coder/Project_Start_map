@@ -8,7 +8,8 @@
                                 [--out report.txt] [--log runs.jsonl] [--label today] [--from a.jsonl,b.jsonl]
      --void   the dark leg stand-in at the start of sector 5 (careful, A.U.R.A.-heavy and the optimizer wait: one ration a
               person; greedy and reckless push through: the hold breaks)
-     --port   Last Port stand-in: one more station to dock at in sector 5 (not approved; report it with and without)
+     --port   no longer changes anything: Last Port is in the game (2026-10-31: the relay's dock on the story trip to the
+              disc's wreck, runsim/hands.js relayDock); kept so older pass scripts still run
      --unlock no longer changes anything: since depth step 4 the game itself never locks a trip card (App.tripChoices keeps
               the careful way open) nor a team trip (NSOrbit.pool); kept so older pass scripts still run
      --off    rules cardsim.js left out, turned off (tools/runsim/switches.js): only for the check against its tables
@@ -89,7 +90,7 @@ async function main() {
         for (const style of o.styles || STYLE_ORDER) {
             const runs = [];
             for (let i = 0; i < o.runs; i++) {
-                const r = await playRun(game, style, o.seed + i, { void: o.void, port: o.port, unlock: o.unlock, off: o.off });
+                const r = await playRun(game, style, o.seed + i, { void: o.void, unlock: o.unlock, off: o.off });
                 runs.push(r);
                 if (log) log.write(JSON.stringify(r) + '\n');
                 if ((i + 1) % 250 === 0) process.stderr.write(`  ${style}: ${i + 1}/${o.runs} (${Math.round((Date.now() - t0) / 1000)} s)\n`);
@@ -99,7 +100,7 @@ async function main() {
         if (log) await new Promise(resolve => log.end(resolve));
     }
     const meta = { label: o.label, when: new Date().toISOString().slice(0, 16).replace('T', ' '), runs: o.runs, seed: o.seed, secs: o.from ? `re-read from ${String(o.from).split(',').map(f => path.basename(f)).join(', ')}` : `${Math.round((Date.now() - t0) / 1000)} s`,
-        standIns: [o.void ? 'the dark leg' : null, o.port ? 'Last Port' : null, o.unlock ? 'never lock (--unlock)' : null].filter(Boolean).join(', ') || 'none',
+        standIns: [o.void ? 'the dark leg' : null, o.unlock ? 'never lock (--unlock)' : null].filter(Boolean).join(', ') || 'none',
         off: [...o.off].map(k => `${k}: ${SWITCHES[k]}`), stories: storiesBy, notes: NOTES };
     const out = report.text(results, meta);
     if (o.out) { fs.mkdirSync(path.dirname(path.resolve(o.out)), { recursive: true }); fs.writeFileSync(o.out, out); }
