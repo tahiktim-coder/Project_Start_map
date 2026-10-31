@@ -1917,7 +1917,28 @@ class App {
     /** Last Port (the new look): the disc's moon (the story planet whose page is the disc) has an old relay in orbit with three
         of our ships clamped to its ring, one of them the disc's; the team gets to it by docking there, flown (flyRelay). */
     isRelayStop(planet) {
-        return !!(planet && isNewScreen() && planet.isStoryPlanet && planet.hasPage === 'PAGE_DISC' && window.DockRelay && window.MiniHost && window.MiniHost.has('dock-flight'));
+        return !!(planet && planet.isStoryPlanet && planet.hasPage === 'PAGE_DISC' && this.hasRelay());
+    }
+
+    /** The new look with Last Port's files loaded: the disc's moon will be a relay stop (isRelayStop). */
+    hasRelay() {
+        return isNewScreen() && !!(window.DockRelay && window.MiniHost && window.MiniHost.has('dock-flight'));
+    }
+
+    /**
+     * Last Port (the new look): while the relay is still ahead, the last wreck story it can tell (a whole ship's, not one of
+     * RELAY_UNFIT_STORIES) that nobody has heard yet is kept for it, so the relay never tells a story again (2026-11-01 check:
+     * with four told before sector 5, 60 % of relays did). Returns the story ids no other wreck may take now: that one, or none.
+     */
+    relayStoryKept() {
+        const s = this.state, disc = (typeof STORY_PLANETS !== 'undefined' ? STORY_PLANETS : []).find(p => p.page === 'PAGE_DISC');
+        if (!disc || !this.hasRelay() || s.currentSector > disc.sector) return [];
+        const moon = s.currentSector === disc.sector ? (s.sectorNodes || []).find(p => this.isRelayStop(p)) : null;
+        if (moon && (moon.exodusInvestigated || (moon.wreckEncounter && !RELAY_UNFIT_STORIES.includes(moon.wreckEncounter)))) return [];   // boarded, or its story already picked
+        const told = s._encounteredExodus || [];
+        const untold = (typeof EXODUS_ENCOUNTERS !== 'undefined' ? EXODUS_ENCOUNTERS : [])
+            .filter(e => !e.noHatch && !RELAY_UNFIT_STORIES.includes(e.id) && !told.includes(e.id));
+        return untold.length === 1 ? [untold[0].id] : [];
     }
 
     /**
@@ -3285,10 +3306,11 @@ class App {
      */
     wreckEncounterFor(planet) {
         const all = typeof EXODUS_ENCOUNTERS !== 'undefined' ? EXODUS_ENCOUNTERS : [];
-        const skip = this.isRelayStop(planet) ? RELAY_UNFIT_STORIES : [];                   // Last Port: clamped to the relay, it never landed
+        const isRelay = this.isRelayStop(planet);
+        const skip = isRelay ? RELAY_UNFIT_STORIES : [];                                     // Last Port: clamped to the relay, it never landed
         const kept = planet.wreckEncounter && all.find(e => e.id === planet.wreckEncounter && !skip.includes(e.id));
         if (kept) return kept;
-        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal, skip);
+        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal, isRelay ? skip : this.relayStoryKept());   // any other wreck leaves the relay a story
         if (picked) planet.wreckEncounter = picked.id;
         return picked;
     }
