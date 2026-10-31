@@ -91,7 +91,7 @@ function skipExpr(src, i) {
     }
     return i;
 }
-const PLACEHOLDERS = [[/wrongNames|deadNames|names\.join/, 'their names'], [/commander\./, "commander's surname"], [/\bsite\./, 'site'], [/shipDecks|deck|\.label\b/i, 'deck'], [/\.type\b/, 'type'],
+const PLACEHOLDERS = [[/=== 1 \?/, 's'], [/wrongNames|deadNames|names\.join/, 'their names'], [/commander\./, "commander's surname"], [/\bsite\./, 'site'], [/shipDecks|deck|\.label\b/i, 'deck'], [/\.type\b/, 'type'],
     [/ship/i, 'ship name'], [/planet|system/i, 'planet name'], [/sectorName/, 'sector name'], [/sector/i, 'sector'], [/\bname\b|Name\b/, 'name'], [/^\s*temp\s*$|temperature/, 'temperature'],
     [/viability/, 'how good the world is'], [/Math\.|amount|cost|[cC]ount|dmg|damage|loss|gain|\d|length|[pP]op\b|Until|jumps/, 'n']];
 const IDLE_WORDS = new Set('map join filter find some includes toUpperCase toLowerCase toFixed toLocaleString toString floor round max min trim replace slice length this state window Math String esc c n i e x o t s d r p k v el'.split(' '));
@@ -356,6 +356,32 @@ function corridorLines(sector) {
     let m; while ((m = re.exec(row[1]))) out.push(lineOf(ROLE_SPEAKER[m[1]] || m[1], words(m[2])) + '  ');
     return out;
 }
+// After the flight (the new look's jump into sector 5, Corridor.js THE DARK): its lines, A.U.R.A.'s about the hours, the chips
+const VOID_BLOCKS = () => [...[/^\s*const VOID_LINES = /m, /^\s*const VOID_HOURS = /m, /^\s*const VOID_CHIPS = /m].map(re => block(CORRIDOR, re)),
+    between(CORRIDOR, /AFTER THE FLIGHT: the new look's jump into sector 5/, /^\}\)\(\);/m, 'corridor-void')];   // (and its registration: the same title)
+const templateWords = s => s.replace(/\$\{[^}]*=== 1 \? '' : 's'\}/g, '[s]').replace(/\$\{[^}]*\? '\+' : '−'\}/g, '[+ | −]').replace(/\$\{VOID_DECK[^}]*\}/g, '[deck]').replace(/\$\{[^}]*\}/g, '[number]');
+function darkSection() {
+    const src = read(CORRIDOR), lineNo = re => { const m = re.exec(src); return m ? lineAt(src, m.index) : null; };
+    const listM = /const VOID_LINES = (\[[\s\S]*?\n {4}\]);/.exec(src), list = listM ? vm.runInNewContext(listM[1]) : [];
+    const WHEN = { fast: 'if the Commander flies flat out', easy: 'if the Commander goes easy', hungry: 'once the dark has cost a few hours', long: 'if the Commander has been slow' };
+    const when = l => [l.in === 'drain' ? 'as the stars go out' : 'in the black', l.hit === 'unseen' ? 'after a hit by debris nobody saw' : l.hit === 'late' ? 'after a hit by debris our lights found too late' : '',
+        l.if ? WHEN[l.if] || l.if : '', l.unless ? `never after "${l.unless}"` : '', l.who.length > 1 ? 'the first alive says it' : ''].filter(Boolean).join('; ');
+    const out = [`### The dark (the new look: After the flight)${tag('Corridor.js', 'VOID_LINES')}`,
+        '_The new look only. Midway through this flight the stars go out one by one, then the sky, the light last; we fly a long black by our own lamps; then the light comes back first and every star at once. One line at a time, with silences; the dead say nothing; never the word "void" on screen. In the order they can come:_', ''];
+    list.forEach(l => {
+        out.push(`- _${l.id}: ${when(l)}_${tag('Corridor.js', `line ${lineNo(new RegExp(`\\{ id: '${l.id}'`))}`)}`);
+        const shared = l.who.filter(w => !w[2]), others = shared.slice(1).map(w => w[1]);           // the same words: the first alive says them
+        if (shared.length) out.push(`  - ${lineOf(shared[0][1] + (others.length ? ` (or ${others.join(', ')})` : ''), l.say)}`);
+        l.who.filter(w => w[2]).forEach(w => out.push(`  - ${lineOf(w[1], w[2])}`));
+        if (l.auto) out.push(`  - _while A.U.R.A. flies:_ ${lineOf(l.who[0][1], l.auto)}`);
+    });
+    const hours = /const VOID_HOURS = n => `([^`]*)`/.exec(src), chips = /const VOID_CHIPS = \{([\s\S]*?)\n {4}\};/.exec(src), log = /addLog\(`(The dark cost [^`]*)`\)/.exec(BUNDLE);
+    out.push('', `#### Once every star is back${tag('Corridor.js', 'VOID_HOURS')}`, '', `${lineOf('A.U.R.A.', templateWords(hours ? hours[1] : ''))}  `, '',
+        `#### Its chips${tag('Corridor.js', 'VOID_CHIPS')}`, "_Under her line about the hours, what the dark cost (rations; and stress after a long dark); under her last line at the end, what the flight cost._", '');
+    if (chips) { const re = /^\s*(\w+): [^\n`]*`([^`]*)`/gm; let m; while ((m = re.exec(chips[1]))) out.push(`- **${m[1]}** — ${templateWords(m[2])}`); }
+    if (log) out.push('', `In the log afterwards: *${clean(templateWords(log[1]))}*${tag('bundle.js', 'applyCorridorResult')}  `);
+    return [...out, ''];
+}
 function coachLines() {
     const src = read('src/systems/Coach.js'), obj = /const SECTOR_LINE = \{([\s\S]*?)\};/.exec(src), lines = {};
     if (obj) { const re = /(\d):\s*'((?:\\'|[^'])*)'/g; let m; while ((m = re.exec(obj[1]))) lines[m[1]] = m[2].replace(/\\'/g, "'"); }
@@ -535,6 +561,7 @@ for (let sector = 1; sector <= 6; sector++) {
             b.push(`### The jump that does not finish${tag('TheThrow.js', 'BEATS')}`, '', ...throwBeats(), '', ...textSection(4, 'The card when it ends', method('src/systems/TheThrow.js', 'play'), 'Also the log lines. Mira says the line; A.U.R.A. says hers if Mira is dead.'));
             b.push(`Card line: *${clean(arrivalLines()[sector] || '')}*${tag('bundle.js', `SECTOR_ARRIVAL_LINES.${sector}`)}  `);
         } else b.push(`### Flying the jump${tag('Corridor.js', `LINES.${sector}`)}`, '_The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_', '', ...corridorLines(sector));
+        if (sector === 5) b.push('', ...darkSection());
         if (sector === 2) b.push('', ...textSection(4, 'A.U.R.A. on who has been flying', bm('getRelianceVoice'), 'In the log after every jump from here on, once she has seen four or more burns and flights: one line if she flew most of them, the other if you did. She says nothing when this jump went against the pattern.'));
         const shot = sector === 3 ? null : `jump${sector}`;
         if (shot && reelCaptions(shot).length) b.push('', `Closing shot${tag('StoryReel.js', shot)}: ${reelCaptions(shot).join(' ')}  `, reelSource(shot));
@@ -756,7 +783,7 @@ function councilMd() {
     [['handleWarp', 'Warping to a planet'], ['handleSectorJump', 'Jumping to the next sector']].forEach(([n, title]) => { const p = bm(n); b.push(...textSection(3, title, p, 'The lines for the light are in sector-6.md.', outside(...lightRanges(p)))); });
     b.push(...textSection(3, 'Breaking orbit', BREAK_ORBIT, '', outside(...lightRanges(BREAK_ORBIT))), ...textSection(3, 'After the burn', bm('applyPlotResult'), 'After every warp and jump plot.'));
     b.push(...textSection(3, 'Plotting the burn (the mini-game)', whole('src/systems/WarpPlot.js'), 'Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to how it went.'));
-    b.push(...textSection(3, 'Flying a sector jump (the mini-game)', whole(CORRIDOR), 'Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck.', isSaid));
+    b.push(...textSection(3, 'Flying a sector jump (the mini-game)', whole(CORRIDOR), 'Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck. The dark on the new look\'s jump into sector 5 (After the flight) is in sector-5.md.', t => isSaid(t) && outside(...VOID_BLOCKS().map(span))(t)));
     b.push('## Game over', '', ...textSection(3, 'All hands lost, hull breach', bm('checkLoseConditions'), ''), ...textSection(3, 'Stranded', bm('checkStranded'), 'No energy and no way out.'));
     b.push(...textSection(3, 'The game-over screen', block('src/systems/EndScreens.js', /function gameOver/), ''), ...textSection(3, 'The dead, on that screen', block('src/systems/EndScreens.js', /function memorialHtml/), ''));
     b.push(...textSection(3, 'The numbers, on that screen', block('src/systems/EndScreens.js', /function statsHtml/), ''));

@@ -55,18 +55,9 @@ async function jump(rc) {
     cur.phase = 'travel';
 }
 
-/** At the start of sector 5: the dark leg (--void), when asked for. (Last Port is in the game now: the relay's dock on the
-    story trip to the disc's wreck, hands.js relayDock.) */
-function standIns(rc) {
-    const { state, styleName, opts } = rc;
-    if (state.currentSector !== 5) return Promise.resolve();
-    if (opts.void) {                                                             // the dark leg (agreed 2026-10-29): wait it out, or push through
-        rc.beat();
-        const eaters = state.crew.filter(c => c.status !== 'DEAD').length;       // 1 ration a living person, the commander too (as GameState.supperNeed counts)
-        if (['careful', 'aura', 'optimizer'].includes(styleName)) state.rations = Math.max(0, state.rations - eaters);
-        else state.damageDeck('cargo', 'The dark broke the hold.');
-        state.emitUpdates();
-    }
+/** At the start of a sector: nothing is stood in any more. (The dark leg is in the game: After the flight, the dark on the
+    jump into sector 5, hands.js 'corridor-void'. Last Port too: the relay's dock on the story trip, hands.js relayDock.) */
+function standIns() {
     return Promise.resolve();
 }
 

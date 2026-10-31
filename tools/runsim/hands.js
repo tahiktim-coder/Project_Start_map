@@ -50,9 +50,14 @@ function pickOnCard(rc, cfg) {
 /** MiniHost.play: a minigame's result for this player's pilot (models.js), and its seconds. */
 function minigame(rc, name, o) {
     const { style, rnd, cur } = rc;
-    if (name === 'corridor') {
+    if (name === 'corridor' || name === 'corridor-void') {                   // (corridor-void: After the flight, the jump into sector 5)
         rc.add(M.SECONDS.corridor[style.pilot] || 45, 'jump flight');
         const r = flightOff(rc) ? { scrapes: 0, energyDelta: 0, auraFlew: style.pilot === 'aura', damagedRooms: [], hulls: [] } : M.corridorResult(style.pilot, rnd);
+        if (name === 'corridor-void' && !flightOff(rc)) {                      // the dark's bill; the game applies it (App.applyCorridorResult)
+            rc.add(M.SECONDS.dark[style.pilot] || 28, 'the dark');
+            r.void = M.darkResult(style.pilot, ((o && o.crew) || []).filter(c => c && c.status !== 'DEAD').length);
+            sec(rc).dark = -r.void.rations;
+        }
         sec(rc).scrapes += r.scrapes; sec(rc).flight += r.energyDelta;
         return r;
     }

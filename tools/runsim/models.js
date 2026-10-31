@@ -40,6 +40,15 @@ function corridorResult(pilot, rnd) {
     const saved = Math.max(0, Math.min(7, Math.round(4.7 + gauss(rnd) * 1.2) - scrapes));
     return { scrapes, energyDelta: saved, auraFlew: false, damagedRooms: [], hulls: [] };
 }
+/** After the flight (the new look's jump into sector 5, Corridor.js THE DARK): how many hours the black lasts, by who flies,
+    measured 2026-10-31 through the real game in muted Chrome (pilot bots; scratchpad lpv/final.log): careful 26-27 s of black
+    (6 hours), flat out 17 s (4 hours), slow or A.U.R.A. 46 s (11 hours). Its bill is the flight's own rule (VOID.cost): a
+    ration a living person a day of it, at least one; all crew +1 stress from 9 hours. The result's void, as the flight gives it. */
+const DARK = Object.freeze({ hours: { good: 6, poor: 4, aura: 11 }, day: 24, stress: 9 });
+function darkResult(pilot, living) {
+    const hours = DARK.hours[pilot] || DARK.hours.good;
+    return { hours, rations: -Math.max(1, Math.ceil(living * hours / DARK.day)), stress: hours >= DARK.stress ? 1 : 0, blackSecs: 0, darkHits: 0 };
+}
 /** The landing (LanderGame). Player grades are assumptions (the plan's D1): good 60/35/5 soft/rough/crash, poor 15/45/40.
     A.U.R.A.'s: her own autopilot run headless on that world's own ground (tools/runsim/lander.js); 'rough' if that fails. */
 function landingResult(pilot, rnd, unmarked, planet) {
@@ -98,6 +107,7 @@ const SECONDS = Object.freeze({
                                                      //   (careful 59 / 59, A.U.R.A. 20, careful 21-22, careless 15)
                                                      //   (station was 75 with DockingGame's dock in it)
     leave: 3, jumpBurn: 6, corridor: { good: 49, poor: 30, aura: 45 }, jumpFault: 14, campfire: 40,   // corridor: measured flight times
+    dark: { good: 28, poor: 20, aura: 65 },          // After the flight: the dark jump's seconds over an ordinary flight (measured 2026-10-31)
     supper: 8, supperShort: 14, supperTable: 8, supperMore: 5,   // supper; short; the table moment (Aris, two chips); a second pick
     throwSequence: 95, burnGauge: 25, breach: 50, reserveCard: 8, askJump: 4,
 });
@@ -109,4 +119,4 @@ const CUTS = { autoScan: true, walkOut: true, repeatTrip: true, bridgeHold: true
 // A.U.R.A.'s whole dock in the new look (Bring Her In, src/newscreen/dock/DockFlight.js DOCK.energy): her share of the flying
 const DOCK_AURA_ENERGY = 4;
 
-module.exports = { STYLES, STYLE_ORDER, VALUE, SAFE_TRIP_RISK, corridorResult, landingResult, breachResult, burnResult, dockingGrade, SECONDS, CUTS, DOCK_AURA_ENERGY };
+module.exports = { STYLES, STYLE_ORDER, VALUE, SAFE_TRIP_RISK, corridorResult, darkResult, landingResult, breachResult, burnResult, dockingGrade, SECONDS, CUTS, DOCK_AURA_ENERGY };

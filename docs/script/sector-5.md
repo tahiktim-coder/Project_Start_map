@@ -19,6 +19,50 @@ _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, ea
 **A.U.R.A.:** More debris ahead. Heavier than before.  
 **Vance:** [number] thousand beacons. So where are all the ships?  
 
+### The dark (the new look: After the flight) «Corridor.js · VOID_LINES»
+_The new look only. Midway through this flight the stars go out one by one, then the sky, the light last; we fly a long black by our own lamps; then the light comes back first and every star at once. One line at a time, with silences; the dead say nothing; never the word "void" on screen. In the order they can come:_
+
+- _stars: as the stars go out; the first alive says it_ «Corridor.js · line 245»
+  - **Mira (or Aris, Vance, Jaxon):** Commander, the stars are going out.
+- _lost: in the black_ «Corridor.js · line 247»
+  - **A.U.R.A.:** I have lost the light, Commander.
+- _unseen: in the black; after a hit by debris nobody saw; the first alive says it_ «Corridor.js · line 248»
+  - **Vance (or Mira, Aris):** We never even saw that one.
+- _late: in the black; after a hit by debris our lights found too late; the first alive says it_ «Corridor.js · line 250»
+  - **Jaxon:** Our lights found it too late.
+  - **Vance:** Our lights found it too late.
+  - **A.U.R.A.:** Our lights found it too late, Commander.
+- _fast: in the black; if the Commander flies flat out; the first alive says it_ «Corridor.js · line 252»
+  - **Jaxon:** Too fast. We won't see it until it hits us.
+  - **Aris:** Slow down, Commander. We can't see what's coming.
+- _slow: in the black; never after "fast"; the first alive says it_ «Corridor.js · line 254»
+  - **Jaxon:** I'm slowing us down. Our lights don't reach far.
+  - **A.U.R.A.:** I am slowing us down, Commander. Our lights do not reach far.
+- _radio: in the black; the first alive says it_ «Corridor.js · line 256»
+  - **Mira (or Aris):** The radio's gone quiet. No beacons at all.
+- _speed: in the black; if the Commander goes easy; never after "fast"; the first alive says it_ «Corridor.js · line 258»
+  - **Vance (or Mira):** Speed up, Commander. Get us out of this.
+  - _while A.U.R.A. flies:_ **Vance:** Take the stick, Commander. Get us out of this.
+- _food: in the black; once the dark has cost a few hours; the first alive says it_ «Corridor.js · line 260»
+  - **Aris (or Mira, A.U.R.A.):** Every hour in here costs us food, Commander.
+- _scared: in the black; if the Commander has been slow; the first alive says it_ «Corridor.js · line 262»
+  - **Aris (or Mira):** Everyone's scared, Commander. How much longer?
+
+#### Once every star is back «Corridor.js · VOID_HOURS»
+
+**A.U.R.A.:** We were in the dark for [number] hours, Commander.  
+
+#### Its chips «Corridor.js · VOID_CHIPS»
+_Under her line about the hours, what the dark cost (rations; and stress after a long dark); under her last line at the end, what the flight cost._
+
+- **energy** — [+ | −][number] energy
+- **rations** — −[number] ration[s]
+- **stress** — All crew +[number] stress
+- **deck** — [deck] damaged
+
+In the log afterwards: *The dark cost [number] ration[s].* «bundle.js · applyCorridorResult»  
+
+
 ## The story beats (always here)
 
 ### The story planet: Iapetus-60 Minor «StoryPlanets.js · sector 5»
