@@ -1727,6 +1727,8 @@ class App {
         if (place) {
             place(this, s);
             s._tutorialWarpSeen = s._tutorialEvaSeen = s._tutorialDeckSeen = s._tutorialStressSeen = true;   // a placed moment is past the first-run lines, as a real run is by then
+            const tells = Object.keys((window.NSOrbit && window.NSOrbit.TELL) || {}).map(k => 'act:' + k).concat('act:farscan', ((window.NSStock && window.NSStock.KEYS) || []).map(k => 'stock:' + k));
+            s.reliance = Object.assign(s.reliance || { auto: 0, manual: 0 }, { nsTold: tells });   // and past A.U.R.A.'s once-a-run teaching (Voice.once)
         } else s.sectorNodes = PlanetGenerator.generateSector(1);
         this.renderNav();
         s.emitUpdates();
