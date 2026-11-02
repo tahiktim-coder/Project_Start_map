@@ -11,7 +11,11 @@
      standing still at their bunk in the quarters; nobody stays on a red deck (they wait at the galley table, or in the
      med bay when the quarters are red); Aris tends whoever is in the med bay bed while she is in there; Mira works at her
      bench while a star fix waits there (NSOrbit.datable); too weak from a missed supper, they stay seated at the galley
-     table (Vance on his bunk) until the next team trip has gone.
+     table (Vance on his bunk) until the next team trip has gone. Stress shows through the person, never as a meter (depth
+     step 8): anyone well at stress 1 or more lives ShipRoutine's restless day: Jaxon and Aris lie awake in their bunk
+     after the meal (the night beat; CrewEngine's 'awake' pose), Vance and Mira pace by their station (it starts and ends
+     out of sight, or where both days meet, so nobody jumps); and the first time each reaches 1 they say so once
+     (GameState.stressOneBarks, BarkSystem's STRESS_ONE).
    - Supper after a jump (tower/Supper.js, which this module drives): while it is due the crew's day is held at its meal,
      everyone at the galley table (set while the tower is out of sight); short of food, pointing at someone says
      "<name> goes without" and a click picks them; while the table moment waits (NSSupper.atTable), a click on them does nothing.
@@ -47,7 +51,7 @@
      personAt(id) → { x, y } | null   CSS px over that person's head
      fit() → { ts, tTop, tLeft, tY0, rows, devW, devH, wDev }   the tower's frame (ts device px per tower px; tY0, wDev
                                  device px); wDev is the tower's width on screen
-     debug() → { fit, k, dark, E, decks, crew, people: [{ id, deck, x, act, say }], chips }
+     debug() → { fit, k, dark, E, decks, crew, people: [{ id, deck, x, act, say }], chips, restless: ids living the restless day }
    }
    Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' (a rumble building to the flash) 'jump:flash'.
    Uses, if present: window.Juice (the tremor; without it nothing shakes).
@@ -104,6 +108,7 @@
     const spot = name => (name === 'mealStand' ? MEAL_STAND : S[name]);
     // Supper after a jump (tower/Supper.js): the crew's day is held at its meal, everyone at the galley table, while it is due.
     const SUPPER_AT = 128000;                                              // ms into ShipRoutine's lap: all five at the table (they get up at 140 s)
+    const SAME_SPOT_PX = 4;                                                // the restless day may start or end in view only where it and the plain day are this close
     // too weak from a missed supper (GameState.serveSupper): they stay seated at the table; Vance, who eats standing, lies on his bunk
     const WEAK = { jaxon: ['seatL2', 'sit'], aris: ['seatL1', 'sit'], mira: ['seatR1', 'sit'], vance: ['bedVance', 'sleep'] };
 
@@ -118,7 +123,7 @@
         tendX: null, hover: null, chips: null, words: null, quality: 'high', scaleN: 0, scaleMs: 0,
         tag: null, toldRed: new Set(), tellRed: null, stock: null, costs: {},
         shake: null, tremor: null, spd: 0, spdIn: 0, spdAt: -1e9, braceT: null, flick: {}, burnT0: null, newRed: new Set(), readOnce: false,
-        routine: { off: 0, held: null },   // the crew's day runs at t + off; held: kept at that moment (supper)
+        routine: { off: 0, held: null, restless: null },   // the crew's day runs at t + off; held: kept at that moment (supper); restless: who lives the restless day (stepRestless)
         stall: null,                       // the jump that stalls: NSStall.view() this frame (throw/Stall.js), or null
     };
     function stallView() { const S = window.NSStall; try { return S && typeof S.view === 'function' ? S.view() : null; } catch (err) { console.error('Tower: the stall view failed', err); return null; } }
@@ -174,7 +179,7 @@
     // People: the crew's day, bent by the real state
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     function stay(id, s, act, t, say) {
-        const lying = act === 'sleep';
+        const lying = act === 'sleep' || act === 'awake';
         return { id, deck: s.deck, x: s.x, y: A.floorY(s.deck) - (lying ? s.h || 0 : 0), act, facing: s.facing, ms: t, say,
             z: lying ? 1 : act === 'sit' && (s === S.seatL2 || s === S.seatR2) ? 1.5 : 2 };
     }
@@ -223,10 +228,32 @@
             id, deck: 0, x: G0[id].x, y, act: sv.turned[id] ? 'idle' : 'stand', facing: G0[id].facing, ms: t, z: 2, say: 'stall', lit: true,
         }));
     }
+    /** Who should live the restless day (ShipRoutine's RESTLESS: stress shows through the person): well, at stress 1 or more,
+        not too weak from a missed supper (they sit it out at the table). */
+    function restless() {
+        return (SIM.RESTLESS_IDS || []).filter(id => { const c = V.real.crew[id]; return !!c && c.status === 'well' && c.stress >= 1 && !c.weak; });
+    }
+    /** Who lives it now (V.routine.restless), latched: someone starts or stops it only while the tower is out of sight, or at a
+        moment both days put them on the same spot (the meal, a shared stop, the lap's end), so nobody jumps decks when their
+        stress crosses 1 in view (a travel card, a crew moment). */
+    function stepRestless(t, seen) {
+        const want = restless(), had = V.routine.restless;
+        if (!had || !seen) { V.routine.restless = want; return; }
+        if (want.length === had.length && want.every(id => had.includes(id))) return;
+        const lap = V.routine.held != null ? V.routine.held : t + V.routine.off;
+        const same = (id, a, b) => {
+            const p = SIM.at('travel', lap, a).find(q => q.id === id), q = SIM.at('travel', lap, b).find(r => r.id === id);
+            return !!p && !!q && p.deck === q.deck && Math.abs(p.x - q.x) <= SAME_SPOT_PX;
+        };
+        let next = had.slice();
+        had.filter(id => !want.includes(id)).forEach(id => { const less = next.filter(x => x !== id); if (same(id, next, less)) next = less; });
+        want.filter(id => !had.includes(id)).forEach(id => { const more = next.concat(id); if (same(id, next, more)) next = more; });
+        V.routine.restless = next;
+    }
     function peopleNow(t) {
         if (V.stall && V.stall.gather) return gathered(t);
         const bed = bedOf(), moved = new Set(), held = V.stall ? null : V.routine.held;   // the stall: their day as it is, not the supper still due
-        const day = SIM.at('travel', held != null ? held : t + V.routine.off)
+        const day = SIM.at('travel', held != null ? held : t + V.routine.off, V.routine.restless || restless())
             .map(p => (held != null && !MOVING[p.act] && p.act !== 'climb' ? Object.assign({}, p, { ms: t }) : p));   // held: still alive, not a statue
         const list = day.map(p => { const o = override(p, t, bed); if (o !== p) moved.add(p.id); return o; }).filter(Boolean);
         return unstack(list, moved);
@@ -430,6 +457,7 @@
         if (V.flood && MK.floodDone({ t, flood: V.flood })) V.flood = null;
         if (V.slide.start != null && t >= V.slide.start + SLIDE_MS) V.slide = { closedUntil: 0, start: null };
         if (!V.stall) stepSupper(dt, t, slideK(t) >= 1 && !V.dark && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
+        stepRestless(t, slideK(t) > 0 && !V.dark && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
         V.people = peopleNow(t);
         if (V.chips && (V.stall || modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || V.real.decks[V.chips.deck] !== 'red')) hideChips();
         const tagGone = V.tag && (V.tag.who ? !(window.NSSupper && window.NSSupper.choosing()) : V.real.decks[V.tag.deck] !== 'red');
@@ -770,7 +798,7 @@
     function personAt(id) {
         const d = V.drawn.find(p => p.id === id);
         if (!d || !V.fit) return null;
-        const head = d.act === 'sleep' ? d.y - 26 : d.act === 'sit' ? d.y - 84 : d.y - 104;
+        const head = d.act === 'sleep' || d.act === 'awake' ? d.y - 26 : d.act === 'sit' ? d.y - 84 : d.y - 104;
         const [x, y] = toCss(d.x, head);
         if (x < 0 || y < -10 || y > V.fit.devH / V.fit.dpr) return null;
         return { x, y };
@@ -779,7 +807,7 @@
     function debug() {
         return { fit: fit(), quality: V.quality, k: slideK(now()), dark: V.dark, E: V.E, decks: Object.assign({}, V.real.decks), datable: V.real.datable,
             crew: JSON.parse(JSON.stringify(V.real.crew)), people: V.people.map(p => ({ id: p.id, deck: p.deck, x: p.x, act: p.act, say: p.say })),
-            chips: V.chips ? V.chips.deck : null, stock: Object.assign({}, ST.val),
+            chips: V.chips ? V.chips.deck : null, stock: Object.assign({}, ST.val), restless: (V.routine.restless || []).slice(),
             feel: { trauma: V.shake ? V.shake.level() : null, speed: V.spd, flick: Object.keys(V.flick), off: V.tremor ? { dx: V.tremor.dx, dy: V.tremor.dy } : null } };
     }
     window.NSTower = Object.freeze({ jolt, speed, hit: hitDeck });

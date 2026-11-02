@@ -38,7 +38,7 @@
                                                   ways? (an event: [{ way: 'careful' | 'bold', idx: the card's index, short,
                                                   prize: { salvage, energy, rations, data, cure } | null, gives: [{ icon, text:
                                                   '+45 salvage' }], hurt, death, oneIn, deadly, struck: 'PARANOID' | 'RECKLESS'
-                                                  | null }]), way? (an event: the card's index the team takes: node.nsWay[id]
+                                                  | null: a trait of one of ids, App.wayStrikes }]), way? (an event: the card's index the team takes: node.nsWay[id]
                                                   (NSOrbit.way), else the first row no stress trait strikes, the careful one
                                                   or the bold where only it shows); its risk is that way's hurt chance }
      target(app, node) → find | null               where GO DOWN takes the team: the one chosen, else a clue, else the first not done
@@ -158,11 +158,12 @@
     }
     /** A find's ways as rows for the glass, careful first: { way, idx, short, prize, gives, hurt, death, oneIn, deadly, struck }.
         odds: each choice's (eventOdds, by the card's index). The prize is the find's own, drawn once (App.findPrizes); struck:
-        a stress trait that may strike the way on the card (App.wayStrikes). Where the careful way brings nothing (a walk-away),
-        only the bold row is given. */
-    function wayRows(app, node, id, ev, odds) {
+        a stress trait that strikes the way on the card with ids going down (App.wayStrikes: only a trait whose holder is one
+        of them; ids left out, the team down now). Where the careful way brings nothing (a walk-away), only the bold row is
+        given. */
+    function wayRows(app, node, id, ev, odds, ids) {
         if (typeof app.wayOf !== 'function' || typeof app.findPrizes !== 'function') return [];
-        const prizes = app.findPrizes(node, id, ev) || {}, strikes = typeof app.wayStrikes === 'function' ? app.wayStrikes(ev) : [];
+        const prizes = app.findPrizes(node, id, ev) || {}, strikes = typeof app.wayStrikes === 'function' ? app.wayStrikes(ev, ids) : [];
         const rows = (ev.choices || []).map((c, idx) => {
             const way = app.wayOf(ev, idx), prize = prizes[way] || null, o = odds[idx] || {};
             return { way, idx, short: c.short || c.text, prize, gives: wayGives(app, prize), hurt: typeof o.hurt === 'number' ? o.hurt : null,
@@ -171,10 +172,11 @@
         const careful = rows.find(r => r.way === 'careful');
         return careful && !careful.prize && rows.length > 1 ? rows.filter(r => r !== careful) : rows;
     }
-    /** Mira scans the ground from aboard while she is well and not one of the two going down (NSOrbit.whileDown's rule). */
+    /** Mira scans the ground from aboard while she is well and not one of the two going down (NSOrbit.whileDown's rule); not
+        under stress (RECKLESS): then she isn't watching the ground. */
     function miraAboard(app, ids) {
         const s = app && app.state, m = s && (s.crew || []).find(c => (c.tags || []).includes('SPECIALIST'));
-        if (!m || m.status !== 'HEALTHY' || (m.tags || []).includes('CONFINED') || (m.tags || []).includes('SEDATED')) return false;
+        if (!m || m.status !== 'HEALTHY' || (m.tags || []).includes('CONFINED') || (m.tags || []).includes('SEDATED') || m.trait === 'RECKLESS') return false;
         return !(ids || []).includes('mira');
     }
     const ROLE_OF = { jaxon: 'ENGINEER', aris: 'MEDIC', vance: 'SECURITY', mira: 'SPECIALIST' };
@@ -254,7 +256,7 @@
     function eventFind(app, node, id, ev, ids, feature) {
         const f = feature ? FEATURE[feature] : null, find = { id, kind: 'event', event: ev.id, feature: feature || null };
         const odds = (ev.choices || []).map((c, idx) => eventOdds(app, node, ev, ids, { way: idx, find }));
-        const ways = wayRows(app, node, id, ev, odds), chosen = node.nsWay ? node.nsWay[id] : null;
+        const ways = wayRows(app, node, id, ev, odds, ids), chosen = node.nsWay ? node.nsWay[id] : null;
         const row = ways.find(r => r.idx === chosen && !r.struck) || ways.find(r => !r.struck) || null;   // the way taken: chosen, else the first row no trait strikes
         const mods = (ev.choices || []).map(c => Number(c.riskMod) || 0), least = mods.indexOf(Math.min(...mods)), careful = odds[least];
         // every row struck (a walk-away find's one row, while Vance won't risk it): the careful way, which the card keeps open

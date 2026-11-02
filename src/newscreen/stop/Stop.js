@@ -40,7 +40,7 @@
             'trip:back'  'flow:go' { id } (bakes ahead)  'hidden'  'hull:hit' { deck } (NSOrbit: the bridge jolts and the lamps dip,
             HIT; reduced motion: one dip only)
    Emits:   'dive:plated' { dir }  'stop:shown' { id }  'stop:hidden' { id }  'stop:pick' { ids }
-   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id), .way(id, idx), .scanDue()
+   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id), .way(id, idx, ids), .scanDue()
    Anchors (CSS px, while open): 'stop:person:<id>', 'stop:aura', 'stop:glass', 'stop:site'
 */
 (function () {
@@ -694,7 +694,7 @@
         marked and GO DOWN's odds follow at once. */
     function chooseWay(id, idx, t) {
         let ok = false;
-        try { ok = !!(NS.flow && typeof NS.flow.way === 'function' && NS.flow.way(id, idx)); } catch (err) { console.error('NewScreen stop: choosing the way failed', err); }
+        try { ok = !!(NS.flow && typeof NS.flow.way === 'function' && NS.flow.way(id, idx, team())); } catch (err) { console.error('NewScreen stop: choosing the way failed', err); }
         if (ok) { S.readAt = t - READ_MS; readFinds(t); }
     }
     function say(text) { const v = NS.mods.voice; if (v && v.say) { try { v.say({ id: 'aura', who: 'A.U.R.A.', text }); } catch (err) { console.error('NewScreen stop: voice failed', err); } } }

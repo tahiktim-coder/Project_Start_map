@@ -156,11 +156,13 @@
         if (p.groggy) groggy(p.id);
         if (p.by === 'player' || p.groggy) S.talk.firsts.push({ key: 'first:' + p.id, who: NAMES[p.id], text: DRAFT.first[p.id][p.groggy ? 1 : 0] });
     }
-    /** +1 stress, once (the real crew; at 1 nothing more happens: GameState.applyStressTraits works from 2). */
+    /** +1 stress, once (the real crew; at 1 nothing more happens: GameState.applyStressTraits works from 2). Their groggy first
+        line is their stress-1 line too: GameState.stressOneBarks says no second one (_nsStressSaid). */
     function groggy(id) {
         const s = state(), m = member(id);
         if (!s || !m || m.status === 'DEAD') return;
         m.stress = Math.min(3, (m.stress || 0) + 1);
+        m._nsStressSaid = true;
         try { if (typeof s.applyStressTraits === 'function') s.applyStressTraits(); if (typeof s.emitUpdates === 'function') s.emitUpdates(); } catch (err) { console.error('NSPods: the stress update failed', err); }
     }
 

@@ -23,7 +23,7 @@
             sit.seat 22             seat top, rows above the floor; the hips are over x + sit.hipX
             tend.hipX, tend.hands   hips over x + hipX; hands work at about row `hands` (patient's chest)
             wall.reach 13           the bulkhead face is at x + reach (facing right)
-            sleep.w × sleep.h       the lying cell (104 × 48); x = the hips, floorY = the mattress top
+            sleep.w × sleep.h       the lying cell (104 × 48); x = the hips, floorY = the mattress top (awake: the same cell)
    register(person)                  called once by each person file (shape below)
    frameAt(action, ms)               the frame that plays at time ms
    sprite(id, action, frame, { blink, warm, rim, screen })
@@ -56,7 +56,8 @@
              keys and blink to reuse front's. Missing views fall back: down → front, back → a hair-only back made from
              ramps.hair, lying → front turned on its side with the blink colours. No heads at all → a placeholder.
              Views: front (idle walk sit carry), down (console tend wall), back (climb), lying (sleep, drawn in the
-             lying cell: head to the left, face up).
+             lying cell: head to the left, face up). awake is drawn lying too, with the front head turned on its side, its
+             eyes open: they lie awake (the new look, depth step 8: stress 1 shows on the ship, tower/Tower.js).
      decorate(api, P) optional, after the body is lit and before the head. P: { action, frame, view 'side'|'back',
              lying, hip, lean, up(dy), neck, shN, shF, legs: [{ h, knee, ankle, part }], arms: [{ s, el, wr, part }],
              build }. Coordinates are the standing cell's, facing right (sleep is turned afterwards).
@@ -96,6 +97,7 @@
         wave:    { frames: 4, ms: 240, head: 'front' },
         brace:   { frames: 2, ms: [170, 230], head: 'front' },   // knees bent, arms up in front: holding on through a jolt (stop/Copy.js)
         stand:   { frames: 2, ms: [1500, 1300], head: 'back' },  // seen from behind, standing still, arms down: before they turn to us (throw/Stall.js)
+        awake:   { frames: 2, ms: [2600, 1900], head: 'lying', w: SH, h: SW, bed: 40, open: true },   // lying awake: a knee up, a hand under the head, eyes open (tower/Tower.js: stress 1)
     });
 
     // ── small helpers ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -249,6 +251,19 @@
         sleep(P, b, A, f) {
             P.lying = true; P.pack = false; P.breath = f; P.stance = 'hang';
             P.feet = [v2(HIPX - 1.5, ANKLE), v2(HIPX + 1.5, ANKLE)];
+        },
+        /** Lying awake on the back (drawn in the lying cell, as sleep): the near knee up, the foot flat on the mattress, the near
+            hand under the head; the far arm along the body. The knee sways a little between the frames (restless, not asleep). */
+        awake(P, b, A, f) {
+            P.lying = true; P.pack = false; P.breath = f * 0.6; P.stance = 'hang';
+            const hipN = v2(HIPX - 2.2, HIPY + 0.5), back = HIPX - b.pelvis[0] - 0.5, lean = [0.95, 0.88][f];
+            const knee = v2(hipN.x + Math.sin(lean) * THIGH, hipN.y + Math.cos(lean) * THIGH);
+            const ankle = v2(back + b.foot + 1, knee.y + Math.sqrt(Math.max(0, SHIN * SHIN - (knee.x - back - b.foot - 1) ** 2)));
+            P.legs = [
+                { h: hipN, knee, ankle, foot: { heel: v2(back + b.foot * 0.6, ankle.y - 0.5), toe: v2(back + b.foot * 0.6, ankle.y + b.toe + 1) } },
+                { h: v2(HIPX + 2.4, HIPY), knee: v2(HIPX + 1.2, HIPY + THIGH), ankle: v2(HIPX + 1.5, ANKLE), planted: true },
+            ];
+            P.hands = { target: [v2(HIPX - 6, HIPY + b.neckY - 7), null] };
         },
         tend(P, b, A, f) {
             const hx = HIPX + A.hipX, hy = 80;
@@ -578,12 +593,13 @@
         let hands = pr.arms.map(a => v2(Math.round(a.wr.x), Math.round(a.wr.y))), neck = v2(P.neck.x, P.neck.y);
         let origin = v2(HIPX, FLOOR), cw = W, chh = H;
         if (P.lying) {
-            if (!C.heads.lying) pasteHead(C.heads.front, P.neck, out, W, H, true);
+            if (ACTIONS[action].open) pasteHead(C.heads.front, P.neck, out, W, H, o.blink);   // awake: the front head turned with the body, eyes open
+            else if (!C.heads.lying) pasteHead(C.heads.front, P.neck, out, W, H, true);
             const L = layDown(out, W, H, ACTIONS.sleep.bed);
             out = L.out; cw = L.w; chh = L.h;
             const turn = p => v2(p.y, W - 1 - p.x + L.dy);
             neck = turn(neck); hands = hands.map(turn); origin = v2(Math.round(HIPY), ACTIONS.sleep.bed);
-            if (C.heads.lying) pasteHead(C.heads.lying, neck, out, cw, chh, false);
+            if (C.heads.lying && !ACTIONS[action].open) pasteHead(C.heads.lying, neck, out, cw, chh, false);
         } else {
             pasteHead(C.heads[ACTIONS[action].head] || C.heads.front, P.neck, out, W, H, o.blink);
         }

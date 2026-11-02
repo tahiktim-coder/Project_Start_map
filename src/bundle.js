@@ -965,7 +965,8 @@ class GameState {
     /**
      * Repair a specific deck.
      */
-    /** What repairing a deck costs now: its price, -30% with Jaxon (Engineer) alive, +50% while engineering is down. */
+    /** What repairing a deck costs now: its price, -30% with Jaxon (Engineer) alive, +50% while engineering is down. The new
+        look: ×NEW_LOOK_ECONOMY.HOARDER_REPAIR (rounded up) while Jaxon is under stress (HOARDER: he keeps parts back). */
     repairCostOf(deckKey) {
         const deck = this.shipDecks[deckKey];
         if (!deck) return 0;
@@ -975,6 +976,7 @@ class GameState {
         if (deckKey !== 'engineering' && this.shipDecks.engineering.status === 'DAMAGED') {
             cost = Math.floor(cost * 1.5);
         }
+        if (isNewScreen() && this.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD' && c.trait === 'HOARDER')) cost = Math.ceil(cost * NEW_LOOK_ECONOMY.HOARDER_REPAIR);
         return cost;
     }
 
@@ -1021,7 +1023,7 @@ class GameState {
      * Called after any stress change.
      */
     applyStressTraits() {
-        if (isNewScreen()) this.oneBreakdown();
+        if (isNewScreen()) { this.oneBreakdown(); this.stressOneBarks(); }
         this.crew.forEach(c => {
             if (c.status === 'DEAD') return;
 
@@ -1049,7 +1051,8 @@ class GameState {
                         break;
                     case 'SURVIVOR':   // Vance
                         c.trait = 'PARANOID';
-                        this.addLog(`${c.name}: "I'm not sending anyone into that deathtrap."`);
+                        if (isNewScreen()) this.addLog(`${c.name}: "I'm not taking the dangerous way. If you want it, send someone else."`);   // DRAFT: the new look strikes his way only with him down (App.teamTraits)
+                        else this.addLog(`${c.name}: "I'm not sending anyone into that deathtrap."`);
                         break;
                     case 'HUMANIST':   // Aris
                         c.trait = 'BLEEDING_HEART';
@@ -1081,6 +1084,19 @@ class GameState {
                 c.trait = null;
                 c.breakdownFired = false;
             }
+        });
+    }
+
+    /** The new look: the first time someone (not the commander) reaches stress 1 they say one line about it (BarkSystem's
+        STRESS_ONE; the ship shows it too: they lie awake or pace, tower/Tower.js). Once a person a run (_nsStressSaid, saved),
+        marked only once the bark is said: its cooldown spreads several out over the next actions. Someone already at 2 says
+        their trait's line instead (below), so they are only marked. */
+    stressOneBarks() {
+        const B = typeof window !== 'undefined' ? window.BarkSystem : null;
+        this.crew.forEach(c => {
+            if (c.status === 'DEAD' || c._nsStressSaid || (c.tags || []).includes('LEADER') || (c.stress || 0) < 1) return;
+            if ((c.stress || 0) >= 2) { c._nsStressSaid = true; return; }
+            if (B && typeof B.tryBark === 'function' && B.tryBark('STRESS_ONE', this, { speaker: c })) c._nsStressSaid = true;
         });
     }
 
@@ -1161,6 +1177,25 @@ class GameState {
      */
     hasActiveTrait(traitName) {
         return this.crew.some(c => c.status !== 'DEAD' && c.trait === traitName);
+    }
+
+    /** A stress trait that works through its holder (the new look, depth step 8): true while a living holder of it is one of
+        team (crew members): Vance's PARANOID and Mira's RECKLESS strike a way, and Mira's OBSESSED keeps the team out a day,
+        only when they are down with it. The default game: anyone living holds it (hasActiveTrait), as before. */
+    traitDown(traitName, team) {
+        if (!isNewScreen()) return this.hasActiveTrait(traitName);
+        return (team || []).some(c => c && c.status !== 'DEAD' && c.trait === traitName);
+    }
+
+    /** The new look: who is down on the team trip now (App.currentEvaTeam while NSOrbit has a trip out: a site's story, a
+        landing's card), else null. The site stories read it (data/ExodusDerelicts.js, data/DerelictEncounters.js): who a
+        choice needs, and who it can hurt, is the team that went, not anyone aboard. null in the default game. */
+    tripTeam() {
+        if (!isNewScreen() || typeof window === 'undefined') return null;
+        const app = window.app, O = window.NSOrbit;
+        let out = null;
+        try { out = app && O && typeof O.trip === 'function' && O.trip() ? app.currentEvaTeam || null : null; } catch (err) { console.error('GameState: the trip team failed', err); }
+        return out ? out.slice() : null;
     }
 
     /** Items the hold takes right now: racks add a pallet, a broken cargo deck halves everything. */
@@ -1309,6 +1344,11 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     }),
     RISKY_FROM: 15,          // a way's row on the glass (stop/Words.js) says "low risk" under this hurt chance, "risky" from it,
                              //   and "could die" wherever it can kill (DEATH_FLOOR and up); GO DOWN says the numbers
+    // Salvage sinks (depth step 8): a dead station's fuel pump, once a station after docking (NSOrbit's "Fuel depot"), turns
+    // salvage into energy; Jaxon under stress (HOARDER) makes every repair cost more (GameState.repairCostOf)
+    DEPOT_SALVAGE: 25,       // the pump's parts: offered only with this much salvage aboard
+    DEPOT_ENERGY: 20,        //   and what it pumps (energy still tops out at 100: the chip says what fits)
+    HOARDER_REPAIR: 1.25,    // HOARDER: repairs cost a quarter more while Jaxon keeps parts back (the default game's fabricator rule)
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
 // The new look's short result card (App.tripResultWords), when nobody was hit: one of the team says it (A.U.R.A. if none is left)
@@ -4673,8 +4713,9 @@ Then you're through.`,
         const evaTeam = this._pickedEvaTeam || this.selectEvaTeam();
         this._pickedEvaTeam = null;
 
-        // A team trip costs no energy (docs/ECONOMY.md). OBSESSED (Mira at stress 3) keeps the team out a full day, which costs a ration.
-        const isObsessed = this.state.hasActiveTrait('OBSESSED');
+        // A team trip costs no energy (docs/ECONOMY.md). OBSESSED (Mira at stress 3) keeps the team out a full day, which costs a ration
+        // (the new look: only when she is down with them, GameState.traitDown)
+        const isObsessed = this.state.traitDown('OBSESSED', evaTeam);
         const siteHere = this.siteOf(planet);
         const siteNow = isNewScreen() && siteHere && siteHere.tag === 'ANOMALY' ? null : siteHere;   // the new screen: the ship flies to the strange site itself ("Fly closer")
         const site = find && find.kind !== 'site' ? null : siteNow;                  // the new look: another find chosen, the site waits for a trip of its own
@@ -4815,17 +4856,30 @@ Then you're through.`,
         so the card never strikes the way GO DOWN vouched for). App.wayOdds and App.tripChoices read it; resolveEvaOutcome
         drops it. findId: the find they went to (its prize: App.tripPrize); way: the card's index chosen for it on the glass as
         they went (NSWorldFinds' find.way: node.nsWay, else its default; null on a blind trip: App.tripCardPlan); label: its
-        name on the glass (the result card's title). */
+        name on the glass (the result card's title). The traits are the team's own (App.teamTraits), and Mira under stress
+        (RECKLESS) aboard scans no ground (NSOrbit.whileDown says so). */
     tripContext(planet, team, find) {
         const s = this.state, O = window.NSOrbit, ids = team.map(crewIdOf);
         const mira = s.crew.find(c => (c.tags || []).includes('SPECIALIST'));
-        const miraAboard = !!mira && !team.includes(mira) && mira.status === 'HEALTHY' && !mira.tags.includes('CONFINED') && !mira.tags.includes('SEDATED');
+        const miraAboard = !!mira && !team.includes(mira) && mira.status === 'HEALTHY' && !mira.tags.includes('CONFINED') && !mira.tags.includes('SEDATED') && mira.trait !== 'RECKLESS';
         let fit = 0;
         try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(this, planet, ids, find) : 0; } catch (err) { console.error('App: the team fit failed', err); }
+        const traits = this.teamTraits(team);
         return { findId: (find && find.id) || 'kind', way: find && Number.isInteger(find.way) ? find.way : null, label: (find && find.label) || null,
             shownBase: this.tripRisk(planet, { mira: miraAboard ? NEW_LOOK_ECONOMY.MIRA_ABOARD : 0 }).risk, fit,
             hunted: this.isHunted(planet), hurtGoes: team.some(m => m.status === 'INJURED'), vance: this.vanceCovers(team),
-            paranoid: s.hasActiveTrait('PARANOID'), reckless: s.hasActiveTrait('RECKLESS') };
+            paranoid: traits.paranoid, reckless: traits.reckless };
+    }
+
+    /** The stress traits that strike a trip's ways: { paranoid, reckless }. The new look (depth step 8) works them through the
+        person: Vance's PARANOID and Mira's RECKLESS count only while they are down on the team (GameState.traitDown). team: crew
+        members or their ids ('vance'); left out, the team down now (GameState.tripTeam), else nobody. The default game: whoever
+        holds them, as before. */
+    teamTraits(team) {
+        const s = this.state;
+        if (!isNewScreen()) return { paranoid: s.hasActiveTrait('PARANOID'), reckless: s.hasActiveTrait('RECKLESS') };
+        const list = (team == null ? s.tripTeam() || [] : team).map(m => (typeof m === 'string' ? s.crew.find(c => crewIdOf(c) === m) : m)).filter(Boolean);
+        return { paranoid: s.traitDown('PARANOID', list), reckless: s.traitDown('RECKLESS', list) };
     }
 
     /** Something hunts on this world (a plain landing there: TripOdds' hunted share). The scan reveals the tag. */
@@ -4861,14 +4915,16 @@ Then you're through.`,
     }
 
     /** The trip card's ways: [{ choice, idx, odds, struck: 'PARANOID' | 'RECKLESS' | null }] and whether a stress trait struck
-        any. Vance under stress (PARANOID) will not take a way at 30 or more; Mira under stress (RECKLESS) half the time will
-        not take the careful one. The new look never locks the card: when every way is struck, the careful way stays open;
-        and its traits are those of when the team went down (App.tripContext). odds: App.wayOdds (the new look), else null.
+        any. Vance under stress (PARANOID) will not take a way at 30 or more; Mira under stress (RECKLESS) will not take the
+        careful one (the default game: half the time). The new look never locks the card: when every way is struck, the
+        careful way stays open; and its traits are the team's, as they went down (App.tripContext: only a trait whose holder
+        went counts). odds: App.wayOdds (the new look), else null.
         vanceSays, miraSays: the card shows their line (not when the way kept open is the one they refused, and no other). */
     tripChoices(event, riskBase) {
-        const t = isNewScreen() && this._nsTrip ? this._nsTrip : null, has = trait => (t && t[trait] != null ? t[trait] : this.state.hasActiveTrait(trait.toUpperCase()));
+        const t = isNewScreen() && this._nsTrip ? this._nsTrip : null, now = t ? null : this.teamTraits();
+        const has = trait => (t && t[trait] != null ? !!t[trait] : !!(now || this.teamTraits())[trait]);
         const isParanoid = has('paranoid');
-        const recklessBlocksSafe = has('reckless') && Math.random() > 0.5;           // 50% chance to block safe option
+        const recklessBlocksSafe = has('reckless') && (isNewScreen() || Math.random() > 0.5);   // the new look: decided; the default game: 50% chance to block safe option
         const ways = event.choices.map((choice, idx) => ({
             choice, idx, odds: this.wayOdds(choice, riskBase),
             struck: isParanoid && choice.riskMod >= 30 ? 'PARANOID' : recklessBlocksSafe && choice.riskMod === 0 ? 'RECKLESS' : null,
@@ -4883,24 +4939,25 @@ Then you're through.`,
         return { ways, isParanoid, recklessBlocksSafe, allStruck, vanceSays: says(isParanoid, 'PARANOID'), miraSays: says(recklessBlocksSafe, 'RECKLESS') };
     }
 
-    /** The new look: the way GO DOWN vouches for, as an index on the event's card: the safest way the card is sure to leave
-        open (tripChoices always strikes PARANOID's ways at 30 or more, but RECKLESS's careful way only half the time, so that
-        one is not sure; when no way is sure, the careful way it keeps open). GO DOWN shows this way's odds (NSOrbit.teamOdds),
-        so a trip that may leave no safe way on its card says "could die" before anyone goes down. */
-    sureWay(event) {
-        const isParanoid = this.state.hasActiveTrait('PARANOID'), isReckless = this.state.hasActiveTrait('RECKLESS');
+    /** The new look: the way GO DOWN vouches for, as an index on the event's card: the safest way the card leaves open for
+        team (tripChoices strikes PARANOID's ways at 30 or more and RECKLESS's careful way, each only while its holder goes
+        down: App.teamTraits; team left out, the team down now; when no way is left, the careful way it keeps open). GO DOWN
+        shows this way's odds (NSOrbit.teamOdds), so a trip that leaves no safe way on its card says "could die" before
+        anyone goes down. */
+    sureWay(event, team) {
+        const { paranoid: isParanoid, reckless: isReckless } = this.teamTraits(team);
         const byRisk = ((event && event.choices) || []).map((choice, idx) => ({ choice, idx }))
             .sort((a, b) => (a.choice.riskMod || 0) - (b.choice.riskMod || 0) || a.idx - b.idx);
         const sure = byRisk.find(w => !(isParanoid && w.choice.riskMod >= 30) && !(isReckless && w.choice.riskMod === 0));
         return (sure || byRisk[0] || { idx: 0 }).idx;
     }
 
-    /** The new look: the stress trait that may strike each way of an event's card, before anyone goes down (the glass's rows,
-        NSWorldFinds): Vance's PARANOID every way at 30 or more, Mira's RECKLESS the way at 0 (the card strikes that one half
-        the time: App.tripChoices). Never every way: the careful one stays open, as on the card. By the card's index:
-        ['PARANOID' | 'RECKLESS' | null]. */
-    wayStrikes(event) {
-        const isParanoid = this.state.hasActiveTrait('PARANOID'), isReckless = this.state.hasActiveTrait('RECKLESS');
+    /** The new look: the stress trait that strikes each way of an event's card with team going down, before they go (the
+        glass's rows, NSWorldFinds): Vance's PARANOID every way at 30 or more, Mira's RECKLESS the way at 0, each only while
+        its holder is one of team (App.teamTraits: crew members or ids; left out, the team down now, else nobody). Never every
+        way: the careful one stays open, as on the card. By the card's index: ['PARANOID' | 'RECKLESS' | null]. */
+    wayStrikes(event, team) {
+        const { paranoid: isParanoid, reckless: isReckless } = this.teamTraits(team);
         const choices = (event && event.choices) || [];
         const out = choices.map(c => (isParanoid && c.riskMod >= 30 ? 'PARANOID' : isReckless && c.riskMod === 0 ? 'RECKLESS' : null));
         if (out.length && out.every(Boolean)) out[choices.findIndex((c, idx) => this.wayOf(event, idx) === 'careful')] = null;
@@ -5472,8 +5529,8 @@ Then you're through.`,
         }
 
         // 2. Reward
-        // OBSESSED bonus: +50% resources or double items
-        const isObsessed = this.state.hasActiveTrait('OBSESSED');
+        // OBSESSED bonus: +50% resources or double items (the new look: only with Mira on the team, GameState.traitDown)
+        const isObsessed = this.state.traitDown('OBSESSED', evaTeam);
 
         if (isTeamMemberLost) {
             logMsg += evaTeam.some(m => m.status !== 'DEAD') ? 'The survivor came back with empty hands.' : 'The lander came home with nothing.';   // DRAFT: one went alone
