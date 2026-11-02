@@ -481,7 +481,7 @@ class GameState {
     }
 
     /**
-     * What warping to this place costs right now, the one price the map shows (docs/ECONOMY.md): 4-6 energy by distance (5-8 in the new look),
+     * What warping to this place costs right now, the one price the map shows (docs/ECONOMY.md): 4-6 energy by distance (6-9 in the new look),
      * then bridge damage, burnt capacitors (this sector only) and charts found on the way. No energy comes back on arrival.
      * Free: the orbit the ship is parked at, the light, and a story planet whose course a dated wreck gave us.
      */
@@ -505,7 +505,7 @@ class GameState {
     /** A warp's price before damage and charts: the further across the map from where the ship is, the more it costs. */
     warpDistanceCost(planet) {
         const isNew = isNewScreen(), WARP_NEAR = isNew ? NEW_LOOK_ECONOMY.WARP_NEAR : 4, WARP_FAR = isNew ? NEW_LOOK_ECONOMY.WARP_FAR : 6;
-        const MAP_DISTANCE_PER_STEP = 30;   // every 30 (in map widths %) costs one more, up to WARP_FAR: 4, 5, 6 (the new look: 5 to 8)
+        const MAP_DISTANCE_PER_STEP = 30;   // every 30 (in map widths %) costs one more, up to WARP_FAR: 4, 5, 6 (the new look: 6 to 9)
         const map = typeof NavView !== 'undefined' ? NavView : null;
         const to = map && map.mapPlace(planet);
         if (!to) return WARP_NEAR + 1;
@@ -797,7 +797,7 @@ class GameState {
         this._nsSupper = null;
         this.crew.forEach(c => { delete c._nsWeak; if (c.status !== 'INJURED') delete c._nsHungerSick; });   // last supper's weakness is over
         const living = this.crew.filter(c => c.status !== 'DEAD');
-        living.forEach(c => { if (rests && !skips.includes(c) && c.stress > 0) c.stress--; });
+        living.forEach(c => { if (rests && !skips.includes(c) && c.stress > 0) c.stress = Math.max(0, c.stress - E.SUPPER_REST); });
         if (share) living.forEach(c => this.hungerStress(c));
         const names = list => list.map(c => c.name).join(' and ');
         if (!short) this.addLog(`The crew ate ${ate} rations at supper. ${this.rations} left.`);
@@ -1277,7 +1277,8 @@ const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, 
  * The new look's economy (?new=1 only; tuned 2026-10-17 against docs/ECONOMY.md §1-2, retuned 2026-10-30 so losses bite:
  * smaller card gains and landing salvage, fewer crises aboard, and the reserve costs a cold night; then a trip's odds, shared
  * with the model through src/data/TripOdds.js: no death under 15 % hurt, the right crew make it safer, and every death chance
- * is shown on the card first; measured with the node run model, tools/runsim.js, which reads this same table). Every number
+ * is shown on the card first; measured with the node run model, tools/runsim.js, which reads this same table; retuned again
+ * 2026-11-02 with the designer's four open calls, against the depth plan's D4 table, 2,000 runs per player). Every number
  * the new look spends or gives differently from the default game is here, with why. The default game keeps the numbers above
  * and its own card amounts.
  * The new screen's files read it as window.NEW_LOOK_ECONOMY. Two rules go with it, with no number: a story world (one of our
@@ -1286,18 +1287,22 @@ const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, 
  */
 const NEW_LOOK_ECONOMY = Object.freeze({
     START_ENERGY: 100,       // a full tank (the cap stays 100)
-    WARP_NEAR: 5,            // a warp costs 5 to 8 by distance on the map (was 4 to 6): each extra world is a real price, so a
-    WARP_FAR: 8,             //   careful player cannot take every world the route offers; the dated story world stays free
+    WARP_NEAR: 6,            // a warp costs 6 to 9 by distance on the map (was 4 to 6, then 5 to 8): each extra world is a real
+    WARP_FAR: 9,             //   price, so a careful player cannot take every world the route offers, and a player with energy
+                             //   to spare spends it on worlds (2026-11-02); the dated story world stays free. 9 is the most the
+                             //   map allows (its farthest two places are about 97 apart: 6 + 97 / 30)
     JUMP: 6,                 // the sector jump, doubled with engineering down (was 8): every run pays five, so the story path
                              //   (a wreck and a jump a sector) costs a little less than before while each extra costs more
-    SKIM: 20,                // "Refuel" at a gas giant, once per giant (was 15): about three warps, so the giant can pay for a stop
+    SKIM: 25,                // "Refuel" at a gas giant, once per giant (was 15, then 20): about three warps, so the giant can pay for
+                             //   a stop. 25 since 2026-11-03: ship faults cost their full price again (no card cost cap), and at
+                             //   20 the careful player flew on the reserve in 54 % of runs and lost the ship in 5 % (25: 48 %, 4 %)
     EVA_ENERGY_MIN: 8,       // what a plain landing's energy find brings (was 30 to 49: one landing paid for six warps, so
     EVA_ENERGY_MAX: 12,      //   energy never got tight for anyone who landed on bare worlds)
-    EVA_METALS: Object.freeze([20, 39]),       // what a plain landing's salvage find brings (was 40 to 79: landings paid for
-    EVA_METALS_HIGH: Object.freeze([35, 64]),  //   every repair); the rich find (was 60 to 119). App.evaSalvageRange
-    CARD_ENERGY_MAX: 12,     // no single card choice gives more energy than this (was 20, and up to 70 before that); no more
-    CARD_RATIONS_MAX: 3,     //   rations than this (sealed rations count, opened) and no more salvage than this either (salvage was
-    CARD_SALVAGE_MAX: 40,    //   up to 120). Its chips say what it really gives (EncounterCard.capGains, EncounterCard.apply).
+    EVA_METALS: Object.freeze([15, 29]),       // what a plain landing's salvage find brings (was 40 to 79: landings paid for
+    EVA_METALS_HIGH: Object.freeze([35, 64]),  //   every repair; then 20 to 39); the rich find (was 60 to 119). App.evaSalvageRange
+    CARD_ENERGY_MAX: 5,      // no single card choice gives more energy than this (was 20, then 12; 70 before that); no more
+    CARD_RATIONS_MAX: 2,     //   rations than this (sealed rations count, opened; was 3) and no more salvage than this either
+    CARD_SALVAGE_MAX: 20,    //   (was 40, and up to 120). Its chips say what it really gives (EncounterCard.capGains, .apply).
     CARD_COST_CAP: Object.freeze({ energy: 4, rations: 1 }),   // no single card choice costs more than this (2026-11-02, the
                              //   designer's open call 2), so a kind pick is not paid for many times over: its chips and result
                              //   line say what it really costs (EncounterCard.apply). Salvage costs are trades (a station's
@@ -1318,8 +1323,16 @@ const NEW_LOOK_ECONOMY = Object.freeze({
                              //   warns at the table and the player chooses it over "Not yet" (tower/Supper.js); with nobody
                              //   else to go without, the food is shared out instead
     HUNGER_STRESS_HOLD: 2,   // going without, or a supper shared out: +1 stress, never past 2 (hunger never sets off a breakdown)
-    FOOD_PACK_RATIONS: 2,    // sealed rations found on a card are opened at once (the new look has no hold to open them from):
-                             //   "+2 Sealed Rations" is +4, a little under one supper, so a find helps but does not end the hunger
+    DANGER_STRESS_FROM: 4,   // arriving at a world this dangerous (its dangerLevel) unsettles one of the crew: +1 stress
+                             //   (App.handleWarp; the default game from 2, which fired on most arrivals from sector 3: 8 times a
+                             //   run in the run model, the most stress of all)
+    BACKGROUND_STRESS_HOLD: 2,   // background stress (that arrival, and sector 2's empty space: SectorConfig ISOLATION) never takes
+                             //   anyone past 2, as hunger and the cold night: a breakdown comes from something that happened
+    SUPPER_REST: 2,          // a rested supper takes this much stress off everyone who ate (was 1; GameState.serveSupper): a run
+                             //   with suppers in a working crew quarters recovers, so a breakdown is less sure. With 1, more broke,
+                             //   Mira's OBSESSED cost a ration on most of her trips, and the optimizer beat the careful player
+    FOOD_PACK_RATIONS: 1,    // sealed rations found on a card are opened at once (the new look has no hold to open them from):
+                             //   "+2 Sealed Rations" is +2 (was +4), so a find helps but the pragmatic picks do not end the hunger
     FAR_SCAN: 2,             // "Scan" in a world's note in travel (src/newscreen/Scan.js): what a world holds before we fly there.
                              //   Under half the cheapest warp, so scanning both worlds of a fork costs less than one more stop,
                              //   while scanning every world ahead adds up to one (the default game's map scan is free)
@@ -1338,16 +1351,17 @@ const NEW_LOOK_ECONOMY = Object.freeze({
                              //   player who goes at 25 % or less never lost anyone); every way that can kill shows "death 1 in N"
                              //   on its row and on GO DOWN
     DEATH_FULL_AT: 30,       // from DEATH_FLOOR up to here only a small part of the share kills: DEATH_NEAR_FLOOR of it at the
-    DEATH_NEAR_FLOOR: 0.3,   //   floor, climbing evenly to all of it here (15 % hurt: 1 in 222; 25 %: 1 in 52; 30 %: 1 in 33)
-    DEATH_SHARE: 10,         // at 30 % or more: 10 % of hits kill, one more for each point of hurt past DEATH_PAST (as before)
-    DEATH_PAST: 40,          //   (the default game's HIGH_RISK_FLOOR)
+    DEATH_NEAR_FLOOR: 0.3,   //   floor, climbing evenly to all of it here (15 % hurt: 1 in 278; 25 %: 1 in 65; 30 %: 1 in 42)
+    DEATH_SHARE: 8,          // at 30 % or more: 8 % of hits kill (was 10), one more for each point of hurt past DEATH_PAST
+    DEATH_PAST: 47,          //   (was 40, the default game's HIGH_RISK_FLOOR: a greedy player lost someone in 2 runs of 3)
     DEATH_SHARE_HUNTED: 25,  //   where something hunts (PREDATORY), 25 % of hits kill (was a hidden 40 % attack roll on top)
     VANCE_DEATH_SHARE: 0.5,  // Vance down and well with a partner takes the partner's hit, so only a hit on him can kill: half
     HURT_MAX: 75,            // a trip's hurt chance is never more than this (the card's bar and the death share stay readable)
     PREDATOR_RISK: 30,       // something hunts here: +30 % hurt, all of it shown (was +15 % shown and that hidden roll)
-    HURT_GOES_RISK: 10,      // fewer than two are well, so someone hurt goes down: +10 % hurt (no trip is ever locked)
+    HURT_GOES_RISK: 25,      // fewer than two are well, so someone hurt goes down: +25 % hurt (was 10; no trip is ever locked,
+                             //   but sending the hurt is a real gamble: GO DOWN's "hurt" chip and its odds say so)
     FIT_PER_POINT: 5,        // the right people for the find (NSOrbit's fit: Vance where something hunts, Aris in sick air ...):
-    FIT_MAX: 10,             //   5 % safer a point of fit, 10 % at most
+    FIT_MAX: 15,             //   5 % safer a point of fit, 15 % at most (was 10: a team of three points of fit counts in full)
     FIT_MIRA_ABOARD: 1,      // the crew's proposal (NSOrbit.propose): Mira's ground scan from aboard is worth a point of fit
     FIT_JAXON_LANDS: 0,      //   and Jaxon's step on A.U.R.A.'s landing this many while she lands us. 0 for now: her autopilot
                              //   lands soft on 99.9 % of worlds (tools/runsim/lander.js), so his step almost never changes a
@@ -1359,9 +1373,9 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     // energy or data keeps the plain landing's own (EVA_METALS, EVA_ENERGY_MIN ...).
     BOLD_PRIZE: Object.freeze({
         TIER_FROM: Object.freeze([35, 50]),     // the riskMod where T2 and T3 start (the careful way of THE WELCOME, 0, is T1)
-        SALVAGE: Object.freeze([Object.freeze([35, 54]), Object.freeze([45, 69]), Object.freeze([60, 89])]),   // TECH, GEO, WEAPON, ARTIFACT
-        ENERGY: Object.freeze([15, 20, 25]),     // ENERGY
-        RATIONS: Object.freeze([2, 3, 4]),       // BIO, RATION
+        SALVAGE: Object.freeze([Object.freeze([20, 34]), Object.freeze([30, 44]), Object.freeze([40, 59])]),   // TECH, GEO, WEAPON, ARTIFACT
+        ENERGY: Object.freeze([10, 15, 20]),     // ENERGY      (2026-11-02: each a tier lower than the plan's 35-54 / 45-69 / 60-89,
+        RATIONS: Object.freeze([1, 2, 3]),       // BIO, RATION  15 / 20 / 25 and +2 / +3 / +4: a greedy player ended full of all three)
         LORE_DATA: 1,                            // LORE: +1 data, and salvage one tier lower (T1: a plain landing's EVA_METALS)
         CURE_STRESS: 1,                          // CURE: the hurt aboard are well, and the most stressed takes this much off
     }),
@@ -1374,7 +1388,7 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     // Salvage sinks (depth step 8): a dead station's fuel pump, once a station after docking (NSOrbit's "Fuel depot"), turns
     // salvage into energy; Jaxon under stress (HOARDER) makes every repair cost more (GameState.repairCostOf)
     DEPOT_SALVAGE: 25,       // the pump's parts: offered only with this much salvage aboard
-    DEPOT_ENERGY: 20,        //   and what it pumps (energy still tops out at 100: the chip says what fits)
+    DEPOT_ENERGY: 15,        //   and what it pumps (was 20; energy still tops out at 100: the chip says what fits)
     HOARDER_REPAIR: 1.25,    // HOARDER: repairs cost a quarter more while Jaxon keeps parts back (the default game's fabricator rule)
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
@@ -2263,12 +2277,13 @@ class App {
                 this.state.addLog(`The fuel scoop took ${scoop} energy from the atmosphere.`);
             }
 
-            // Dangerous planet stress: dangerLevel 2+ → +1 stress to a random crew member
-            if ((planet.dangerLevel || 0) >= 2) {
+            // Dangerous planet stress: dangerLevel 2+ → +1 stress to a random crew member (the new look: from DANGER_STRESS_FROM,
+            // never past BACKGROUND_STRESS_HOLD)
+            if ((planet.dangerLevel || 0) >= (isNewScreen() ? NEW_LOOK_ECONOMY.DANGER_STRESS_FROM : 2)) {
                 const living = this.state.crew.filter(c => c.status !== 'DEAD');
                 if (living.length > 0) {
-                    const victim = living[Math.floor(Math.random() * living.length)];
-                    victim.stress = Math.min(3, (victim.stress || 0) + 1);
+                    const victim = living[Math.floor(Math.random() * living.length)], was = victim.stress || 0;
+                    victim.stress = isNewScreen() ? Math.max(was, Math.min(NEW_LOOK_ECONOMY.BACKGROUND_STRESS_HOLD, was + 1)) : Math.min(3, was + 1);
                     this.state.addLog(`${victim.name}: Unsettled by hostile readings.`);
                 }
             }
@@ -5109,7 +5124,7 @@ Then you're through.`,
         (NSWorldFinds) and the trip card say it with these. */
     prizeParts(prize) {
         if (!prize) return [];
-        const out = ['salvage', 'energy', 'rations', 'data'].filter(k => prize[k] > 0).map(k => ({ kind: k, n: prize[k], text: `+${prize[k]} ${k}` }));   // DRAFT: the chips
+        const out = ['salvage', 'energy', 'rations', 'data'].filter(k => prize[k] > 0).map(k => ({ kind: k, n: prize[k], text: `+${prize[k]} ${k === 'rations' && prize[k] === 1 ? 'ration' : k}` }));   // DRAFT: the chips
         if (prize.cure) out.push({ kind: 'cure', n: 0, text: 'healing' });           // DRAFT
         return out;
     }
@@ -5136,7 +5151,7 @@ Then you're through.`,
         if (prize.rations) {
             const got = Math.max(0, Math.min(more(prize.rations), s.maxRations - s.rations));
             s.rations += got;
-            said.push(got ? `+${got} Rations.` : 'The galley is already full.');   // DRAFT (both)
+            said.push(got ? `+${got} ${got === 1 ? 'Ration' : 'Rations'}.` : 'The galley is already full.');   // DRAFT (both)
         }
         if (prize.data) { s.gainData(prize.data); said.push(`+${prize.data} Data.`); }
         if (prize.cure) {

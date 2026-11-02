@@ -63,8 +63,9 @@ const SECTOR_CONFIG = {
                 // +1 stress to random living crew on each warp
                 const living = state.crew.filter(c => c.status !== 'DEAD' && !(c.tags || []).includes('LEADER')); // the commander is the player, and does not get lines
                 if (living.length > 0) {
-                    const target = living[Math.floor(Math.random() * living.length)];
-                    target.stress = Math.min(3, (target.stress || 0) + 1);
+                    const target = living[Math.floor(Math.random() * living.length)], was = target.stress || 0;
+                    const isNew = typeof isNewScreen === 'function' && isNewScreen();   // the new look: background stress never breaks anyone
+                    target.stress = isNew ? Math.max(was, Math.min(NEW_LOOK_ECONOMY.BACKGROUND_STRESS_HOLD, was + 1)) : Math.min(3, was + 1);
                     state.addLog(`${target.name}: "Nothing else is out here. It's starting to get to me."`);
                 }
             },
