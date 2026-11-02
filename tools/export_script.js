@@ -746,9 +746,9 @@ function councilMd() {
     const pois = G('LATE_GAME_POIS') || {};
     b.push(...poolHead('Late places'), ...wrap('handleLateGamePOI'));
     Object.values(pois).forEach(poi => b.push(sceneMd(poi, 'LateGamePOIs.js', { sector: 5 }), ''));
-    const events = G('EVENTS') || [];
-    b.push(...poolHead('Surface finds', events.length), '_What the team finds when there is no site. Two choices each: the safe one and the risky one. The card they are shown on, and how the trip ends, are in [10-away-team.md](10-away-team.md)._', '');
-    events.forEach(ev => b.push(`- **${clean(ev.title)}** — ${clean(ev.desc)}${tag('Events.js', ev.id)}  \n  1. ${clean((ev.choices[0] || {}).text)} · 2. ${clean((ev.choices[1] || {}).text)}`));
+    const events = G('EVENTS') || [], wayText = c => clean((c || {}).text) + (c && c.short ? ` (${clean(c.short)})` : '');   // (short: the way's name on the glass)
+    b.push(...poolHead('Surface finds', events.length), '_What the team finds when there is no site. Two choices each: the safe one and the risky one, each with the short name it has on the glass in the new look, in brackets. The card they are shown on, and how the trip ends, are in [10-away-team.md](10-away-team.md)._', '');
+    events.forEach(ev => b.push(`- **${clean(ev.title)}** — ${clean(ev.desc)}${tag('Events.js', ev.id)}  \n  1. ${wayText(ev.choices[0])} · 2. ${wayText(ev.choices[1])}`));
     const barks = G('BARK_DATA') || {};
     b.push('', '## Crew remarks in the log', '_Short lines the crew say when things happen. Grouped by moment, then by person (PESSIMIST = Jaxon, HUMANIST = Aris, SURVIVOR = Vance, CURIOUS = Mira), then by how stressed they are (0 calm → 3 breaking)._', '');
     Object.entries(barks).forEach(([trigger, byType]) => {
@@ -813,7 +813,17 @@ function councilMd() {
     b.push(...textSection(3, 'Who goes, and the radio', whole('src/systems/AwayTeam.js'), 'The crew picker, their chatter on the way down, and the return screen.'));
     b.push(...textSection(3, 'Landing (the mini-game)', whole('src/systems/LanderGame.js'), ''), ...textSection(3, 'How the landing went', bm('applyLanding'), ''));
     b.push(...textSection(3, 'Cutting into one of our wrecks (the mini-game)', whole(`${MINI}Torch.js`), "Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet.", isSaid), ...textSection(3, 'When the hatch is open', bm('cutIntoWreck'), ''));
-    b.push(...textSection(3, 'The choice card on the surface', bm('showEventModal'), 'The card around every surface find (pools.md, Surface finds).'), ...textSection(3, 'How the trip went', bm('resolveEvaOutcome'), 'Dangers and results by planet type, deaths, injuries and rewards.'));
+    b.push(...textSection(3, 'The choice card on the surface', bm('showEventModal'), 'The card around every surface find (pools.md, Surface finds).'), ...textSection(3, 'How the trip went', bm('resolveEvaOutcome'), 'Dangers and results by planet type, deaths, injuries and rewards.'),
+        ...textSection(3, 'What the trip brings home (the new look)', bm('payPrize'), 'The prize its find showed on the glass, paid at once: salvage, energy, rations, data, or medicine for the hurt aboard.'),
+        ...textSection(3, 'A find seen before: the short result card (the new look)', bm('tripResultWords'), 'The first time a find\'s event shows in a run, the choice card above plays. After that there are no buttons: the way chosen on the glass is taken, and a short card shows the find\'s name, the event\'s first sentence, the way, one line (the hit\'s own line from the trip above, or one below from the team) and these chips, then CONTINUE. A breakdown on that trip shows too: the first sentence of its line (Breakdowns, above) in place of the event\'s. A trip that would walk away plays the choice card again, so its cost shows.'),
+        ...textSection(3, 'Its line when nobody was hit', block('src/bundle.js', /^const TRIP_BACK_LINES = /m, 'TRIP_BACK_LINES'), 'Said by one of the team who went down.'));
+    const SW = 'src/newscreen/stop/Words.js';                                         // the new look: the bridge's glass at a world with finds
+    const RISKY = (/\bRISKY_FROM:\s*(\d+)/.exec(BUNDLE) || [])[1] || '?';             // NEW_LOOK_ECONOMY.RISKY_FROM, as the game has it
+    b.push(...textSection(3, 'The ways on the glass (the new look)', block(SW, /^\s*const RISK_WORDS = /m, 'RISK_WORDS'), `Each way of the find the team goes to is a row: its short name (pools.md, Surface finds, in brackets), its prize, and one of these: under ${RISKY} % hurt, from ${RISKY} %, and (in red) wherever it can kill. The numbers are on GO DOWN only.`),
+        ...textSection(3, 'A way a stress trait strikes', block(SW, /^\s*const STRUCK_LINE = /m, 'STRUCK_LINE'), 'In place of its prize and risk word; it takes no click.'),
+        ...textSection(3, 'Pointing at someone at the hatch or the window', block(SW, /^\s*const FIT_LINE = /m, 'FIT_LINE'), 'Whether they make this trip safer.'),
+        ...textSection(3, 'What each one really does for a trip', block(SW, /^\s*const GOOD = \{/m, 'GOOD'), 'Under that line, at the hatch.'),
+        ...textSection(3, "A.U.R.A.'s first-time lines on the bridge", block('src/newscreen/Orbit.js', /^\s*const TELL = /m, 'TELL'), 'Each said once a run, when what it explains first shows.'));
     b.push(...textSection(3, 'Paradise found', bm('showEdenEvaModal'), 'A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one).'));
     b.push('## Boarding a station', '', ...textSection(3, 'Docking (the mini-game)', whole('src/systems/DockingGame.js'), "The old look. Its grade line is the new look's too."));
     const DOCK = 'src/newscreen/dock/DockFlight.js';                                     // the new look: Bring Her In (the rest of the file is the corridor's)

@@ -9,15 +9,15 @@ _Can turn up in: sectors 1, 2, 3, 4, 5._
 
 #### Card words: handleExodusAction «bundle.js · handleExodusAction»
 
-- No Exodus wreck signal detected at this location. «bundle.js · line 3322»
-- We already searched this wreck. «bundle.js · line 3326»
-- ERROR: Exodus encounter data unavailable. «bundle.js · line 3332»
-- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 3338»
+- No Exodus wreck signal detected at this location. «bundle.js · line 3367»
+- We already searched this wreck. «bundle.js · line 3371»
+- ERROR: Exodus encounter data unavailable. «bundle.js · line 3377»
+- Exodus transponder locked. Deploying team to investigate... «bundle.js · line 3383»
 
 #### Names on the hulls «bundle.js · getWreckName»
 _Every wreck card is titled EXODUS-[number] "[CALLSIGN]". The number range grows with the sector; the callsign is picked from this list._
 
-- EXODUS-[hull] "[callsign]" «bundle.js · line 3254»
+- EXODUS-[hull] "[callsign]" «bundle.js · line 3299»
 
 #### A second list of ship names «ExodusDerelicts.js · EXODUS_SHIP_NAMES»
 _Defined in the wreck file; the wreck titles use the list above._
@@ -167,10 +167,10 @@ _Can turn up in: any sector._
 
 #### Card words: handleDerelictAction «bundle.js · handleDerelictAction»
 
-- There is no wreck here. «bundle.js · line 3581»
-- We already searched this wreck. «bundle.js · line 3585»
-- ERROR: Derelict encounter data unavailable. «bundle.js · line 3591»
-- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3606»
+- There is no wreck here. «bundle.js · line 3626»
+- We already searched this wreck. «bundle.js · line 3630»
+- ERROR: Derelict encounter data unavailable. «bundle.js · line 3636»
+- Wreck found: [ship name]. Deploying investigation team... «bundle.js · line 3651»
 
 ### MINING CRAFT «DerelictEncounters.js · DERELICT_MINING»
 
@@ -286,16 +286,16 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showStationEncounter «bundle.js · showStationEncounter»
 
-- ERROR: Station encounter data unavailable. «bundle.js · line 2336»
-- Unknown Station «bundle.js · line 2350»
-- **kicker** — INSIDE THE STATION «bundle.js · line 2353»
-- STATION: [result] «bundle.js · line 2358»
+- ERROR: Station encounter data unavailable. «bundle.js · line 2381»
+- Unknown Station «bundle.js · line 2395»
+- **kicker** — INSIDE THE STATION «bundle.js · line 2398»
+- STATION: [result] «bundle.js · line 2403»
 
 #### Card words: handleStationAction «bundle.js · handleStationAction»
 
-- No station detected at this location. «bundle.js · line 2370»
-- We already searched this station. «bundle.js · line 2374»
-- Starting docking procedure with [name]... «bundle.js · line 2378»
+- No station detected at this location. «bundle.js · line 2415»
+- We already searched this station. «bundle.js · line 2419»
+- Starting docking procedure with [name]... «bundle.js · line 2423»
 
 ### MINING PLATFORM «SpaceStations.js · STATION_MINING»
 
@@ -422,11 +422,11 @@ _Can turn up in: sectors 3, 4._
 
 #### Card words: handleFailedColonyAction «bundle.js · handleFailedColonyAction»
 
-- No colony ruins detected at this location. «bundle.js · line 3525»
-- Colony ruins already investigated. «bundle.js · line 3529»
-- ERROR: Colony encounter data unavailable. «bundle.js · line 3535»
-- Colony ruins detected. Deploying investigation team... «bundle.js · line 3553»
-- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3566»
+- No colony ruins detected at this location. «bundle.js · line 3570»
+- Colony ruins already investigated. «bundle.js · line 3574»
+- ERROR: Colony encounter data unavailable. «bundle.js · line 3580»
+- Colony ruins detected. Deploying investigation team... «bundle.js · line 3598»
+- **context** — COLONY RUINS: [title] [planet name] «bundle.js · line 3611»
 
 ### THE DOME «FailedColonyEncounters.js · FC_ABANDONED_DOME»
 
@@ -537,11 +537,11 @@ _Can turn up in: any sector (one is always placed in every sector; some only fro
 
 #### Card words: handleAnomalyAction «bundle.js · handleAnomalyAction»
 
-- There is nothing strange here. «bundle.js · line 3635»
-- We have already been there. «bundle.js · line 3639»
-- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3645»
-- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3674»
-- **context** — ANOMALY: [title] [context] «bundle.js · line 3686»
+- There is nothing strange here. «bundle.js · line 3680»
+- We have already been there. «bundle.js · line 3684»
+- ERROR: Anomaly encounter data unavailable. «bundle.js · line 3690»
+- SOMETHING STRANGE: [title]. Approach with caution... «bundle.js · line 3719»
+- **context** — ANOMALY: [title] [context] «bundle.js · line 3731»
 
 ### THE SAME PLANET TWICE «AnomalyEncounters.js · ANOMALY_FOLD»
 _Only from sector 3._
@@ -773,7 +773,7 @@ _THE FOLD can throw the ship here. A sector of copies; two ways out._
 ### Arriving «bundle.js · handleAnomalyTeleport»
 _The sector header, and the old names the code still has for sectors._
 
-- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 6227»
+- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 6500»
 
 ### In orbit «OrbitView.js · updateCommandDeck · wrong place»
 _The two buttons instead of BREAK ORBIT._
@@ -786,36 +786,36 @@ _The two buttons instead of BREAK ORBIT._
 
 ### Fight to escape «bundle.js · handleWrongPlaceEscape»
 
-- **title** — TEAR THROUGH REALITY «bundle.js · line 3704»
-- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3706»
-- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3716»
-- We made it «bundle.js · line 3720»
-- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3721»
-- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3724»
+- **title** — TEAR THROUGH REALITY «bundle.js · line 3749»
+- **context** — THE WRONG PLACE You gather every scrap of energy. Every bit of salvage goes into the engines. The crew pushes themselves beyond breaking. A.U.R.A.: "I have found a way out, Commander. It will take every bit of power we have." The ship screams. Reality screams louder. For a moment, you exist in two places at once. Then you're through. «bundle.js · line 3751»
+- **A.U.R.A.:** We are back in normal space, Commander. The stars are where they should be. «bundle.js · line 3761»
+- We made it «bundle.js · line 3765»
+- **desc** — Return to a random sector, but at great cost. «bundle.js · line 3766»
+- You escaped THE WRONG PLACE. The memories remain. -50 Energy, -30 Salvage. All crew +1 Stress. «bundle.js · line 3769»
 
 ### Accept your fate (an ending) «bundle.js · handleWrongPlaceAccept»
 
-- **title** — A COPY OF SOMEWHERE «bundle.js · line 3775»
-- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3777»
-- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3778»
-- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3779»
-- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3780»
+- **title** — A COPY OF SOMEWHERE «bundle.js · line 3820»
+- You stop fighting it. The drive goes quiet. The crew gather on the bridge and look at stars that stand in rows. «bundle.js · line 3822»
+- It is a copy of somewhere. Made by something that had read that somewhere completely, and got the grass wrong. «bundle.js · line 3823»
+- You land. The air is breathable and tastes of nothing. Jaxon names the place, and the name does not stick, and he tries again. «bundle.js · line 3824»
+- Four figures walk the decks of the ship in orbit. You count them from the ground every night. There are always four. «bundle.js · line 3825»
 
 ## Asteroid fields (6)
 _Can turn up in: any sector._
 
 #### Card words: showAsteroidEncounter «bundle.js · showAsteroidEncounter»
 
-- ERROR: Asteroid encounter data unavailable. «bundle.js · line 2429»
-- Unknown Field «bundle.js · line 2442»
-- **kicker** — ASTEROID FIELD «bundle.js · line 2445»
-- MINING: [result] «bundle.js · line 2450»
+- ERROR: Asteroid encounter data unavailable. «bundle.js · line 2474»
+- Unknown Field «bundle.js · line 2487»
+- **kicker** — ASTEROID FIELD «bundle.js · line 2490»
+- MINING: [result] «bundle.js · line 2495»
 
 #### Card words: handleAsteroidAction «bundle.js · handleAsteroidAction»
 
-- No asteroid field detected at this location. «bundle.js · line 2402»
-- Asteroid field already mined. «bundle.js · line 2406»
-- Entering [name]. Mining systems online... «bundle.js · line 2410»
+- No asteroid field detected at this location. «bundle.js · line 2447»
+- Asteroid field already mined. «bundle.js · line 2451»
+- Entering [name]. Mining systems online... «bundle.js · line 2455»
 
 ### RICH MINERAL DEPOSIT «AsteroidFields.js · ASTEROID_RICH»
 
@@ -953,10 +953,10 @@ _Can turn up in: any sector (some only from a later sector, as marked)._
 
 #### Card words: showDistressSignal «bundle.js · showDistressSignal»
 
-- **kicker** — DISTRESS SIGNAL «bundle.js · line 2474»
-- **facts** — Nobody can tell when «bundle.js · line 2475»
-- **facts** — [signal age] years ago «bundle.js · line 2475»
-- SIGNAL: [result] «bundle.js · line 2479»
+- **kicker** — DISTRESS SIGNAL «bundle.js · line 2519»
+- **facts** — Nobody can tell when «bundle.js · line 2520»
+- **facts** — [signal age] years ago «bundle.js · line 2520»
+- SIGNAL: [result] «bundle.js · line 2524»
 
 ### AUTOMATED DISTRESS BEACON «DistressSignals.js · DISTRESS_BEACON»
 
@@ -1090,10 +1090,10 @@ _Can turn up in: any sector (on warps and jumps, never on the approach to the li
 
 #### Card words: showShipMalfunctionModal «bundle.js · showShipMalfunctionModal»
 
-- **kicker** — SHIP ALERT «bundle.js · line 6486»
-- Deal with it «bundle.js · line 6488»
-- DEAL WITH IT «bundle.js · line 6488»
-- MALFUNCTION RESOLVED: [result] «bundle.js · line 6491»
+- **kicker** — SHIP ALERT «bundle.js · line 6759»
+- Deal with it «bundle.js · line 6761»
+- DEAL WITH IT «bundle.js · line 6761»
+- MALFUNCTION RESOLVED: [result] «bundle.js · line 6764»
 
 ### Power Surge «ShipEvents.js · POWER_SURGE»
 
@@ -1216,10 +1216,10 @@ _Can turn up in: sectors 4, 5, 6 (the beacon and the dome from sector 4, the gra
 
 #### Card words: handleLateGamePOI «bundle.js · handleLateGamePOI»
 
-- No [poi type] detected at this location. «bundle.js · line 3791»
-- [poi type] already investigated. «bundle.js · line 3797»
-- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3803»
-- Approaching [name]... «bundle.js · line 3807»
+- No [poi type] detected at this location. «bundle.js · line 3836»
+- [poi type] already investigated. «bundle.js · line 3842»
+- ERROR: [poi type] encounter data unavailable. «bundle.js · line 3848»
+- Approaching [name]... «bundle.js · line 3852»
 
 ### THE LIGHTHOUSE «LateGamePOIs.js · THE_LIGHTHOUSE»
 _Only from sector 4._
@@ -1287,84 +1287,84 @@ Choices:
 ## Surface finds (38)
 _Can turn up in: any sector._
 
-_What the team finds when there is no site. Two choices each: the safe one and the risky one. The card they are shown on, and how the trip ends, are in [10-away-team.md](10-away-team.md)._
+_What the team finds when there is no site. Two choices each: the safe one and the risky one, each with the short name it has on the glass in the new look, in brackets. The card they are shown on, and how the trip ends, are in [10-away-team.md](10-away-team.md)._
 
 - **CRASHED SHIP** — The signal is coming from a crashed ship. Its hull is cracked and could give way at any moment. «Events.js · DERELICT»  
-  1. Cut panels off the outside · 2. Go inside the hull
+  1. Cut panels off the outside (Cut panels off) · 2. Go inside the hull (Go inside the hull)
 - **SOMETHING HUGE** — The life signal is one enormous animal, and it's moving toward the team. «Events.js · BIO_HORROR»  
-  1. Keep back and take readings · 2. Get close and take a tissue sample
+  1. Keep back and take readings (Take readings from afar) · 2. Get close and take a tissue sample (Take a tissue sample)
 - **RICH VEIN** — There's a dense pocket of metal ore on the edge of a crumbling canyon. «Events.js · MINERAL_VEIN»  
-  1. Dig at the surface · 2. Drill deep into the ridge
+  1. Dig at the surface (Dig at the surface) · 2. Drill deep into the ridge (Drill into the ridge)
 - **SOLAR FLARE COMING** — The star is about to flare. Radiation on the surface is rising fast. «Events.js · SOLAR_FLARE»  
-  1. Collect power under the radiation shield · 2. Leave the collectors out in the open
+  1. Collect power under the radiation shield (Collect under the shield) · 2. Leave the collectors out in the open (Leave the collectors out)
 - **SILENT SHIP** — A ship lies on the ground here, nose first. It isn't sending any ID code, and nobody aboard is alive. «Events.js · GHOST_SHIP»  
-  1. Call it once, then leave · 2. Go aboard
+  1. Call it once, then leave (Call it, then leave) · 2. Go aboard (Go aboard)
 - **RINGING TOWER** — A huge crystal tower sticks up out of the ice. It gives off a low ringing sound. «Events.js · CRYSTAL_SPIRE»  
-  1. Scan it from a distance · 2. Cut out its core
+  1. Scan it from a distance (Scan it from afar) · 2. Cut out its core (Cut out its core)
 - **SLOW CLOCKS** — The gravity here is so strong it slows time. One hour on the surface is a whole day up on the ship. «Events.js · TIME_DILATION»  
-  1. Call the team back now · 2. Stay longer and collect samples
+  1. Call the team back now (Call the team back) · 2. Stay longer and collect samples (Stay and collect samples)
 - **CITIES ON THE HORIZON** — The team can see cities like Earth's on the horizon. The sensors say there's nothing there. «Events.js · MIRAGE_VISION»  
-  1. Trust the sensors and stay put · 2. Walk out toward the cities
+  1. Trust the sensors and stay put (Stay put) · 2. Walk out toward the cities (Walk to the cities)
 - **EARTHQUAKE** — The ground under the landing site is splitting open. «Events.js · TECTONIC_SHIFT»  
-  1. Take off right now (energy cost) · 2. Hold steady and keep mining
+  1. Take off right now (energy cost) (Take off now) · 2. Hold steady and keep mining (Keep mining)
 - **SINGING PLANTS** — The plants are all making the same sound together, and it's drowning out our radios. «Events.js · HIVE_MIND»  
-  1. Burn them back and harvest · 2. Play their sound back to them
+  1. Burn them back and harvest (Burn them and harvest) · 2. Play their sound back to them (Play their sound back)
 - **OLD SLEEP POD** — There's a working sleep pod frozen into the ice. We can't tell whether the person inside is alive. «Events.js · CRYOSLEEP_POD»  
-  1. Take the parts around the pod · 2. Thaw the pod and open it
+  1. Take the parts around the pod (Take the parts) · 2. Thaw the pod and open it (Open the pod)
 - **ARMED TURRET** — An old defence turret on the ridge has locked on to the team. «Events.js · ROGUE_AI»  
-  1. Dodge it and keep going · 2. Try to break into its controls
+  1. Dodge it and keep going (Dodge it) · 2. Try to break into its controls (Break into its controls)
 - **THE TWILIGHT STRIP** — Only a strip about 200 km wide is safe to walk on. One side burns and the other side freezes. «Events.js · TERMINATOR_WALK»  
-  1. Search along the twilight strip · 2. Cross into the frozen dark side
+  1. Search along the twilight strip (Search the twilight strip) · 2. Cross into the frozen dark side (Cross into the dark)
 - **INSIDE THE PLANET** — The team found a way in. The planet is hollow, with a small sun in the middle and ruined buildings on the inside walls. «Events.js · INNER_WORLD»  
-  1. Take photos from the entrance · 2. Climb down inside
+  1. Take photos from the entrance (Photograph the entrance) · 2. Climb down inside (Climb down inside)
 - **THE WELCOME** — The plants are growing paths for the team to walk on. Fruit appears at their feet, and it smells like home. «Events.js · SYMBIOTE_EMBRACE»  
-  1. Take the fruit, but stay careful · 2. Send one of them deeper in alone
+  1. Take the fruit, but stay careful (Take the fruit) · 2. Send one of them deeper in alone (Send one deeper in)
 - **THE REFLECTION** — The team finds themselves: bodies in our suits, long dead, laid in a circle around the landing site. The sensors say nothing is there. «Events.js · THE_REFLECTION»  
-  1. Leave right now (morale loss) · 2. Go and look at the bodies
+  1. Leave right now (morale loss) (Leave right now) · 2. Go and look at the bodies (Look at the bodies)
 - **THE SCRAP HEAP** — Hundreds of ships are crushed together into one huge heap, and the team is walking on their hulls. The salvage is incredible, but the pile could collapse. «Events.js · SHIP_GRAVEYARD»  
-  1. Strip the hulls on top · 2. Cut down into the middle
+  1. Strip the hulls on top (Strip the top hulls) · 2. Cut down into the middle (Cut into the middle)
 - **THE HUM** — The planet gives off a hum that makes people happy. The team has stopped talking and is smiling. One of them has closed their eyes. «Events.js · THE_FREQUENCY»  
-  1. Record the hum and leave · 2. Stay and listen longer
+  1. Record the hum and leave (Record it and leave) · 2. Stay and listen longer (Stay and listen)
 - **OLD FACTORY** — A huge automatic factory is still running on standby power. Its security system is switched on. «Events.js · MECHA_SALVAGE»  
-  1. Search around the outside · 2. Break into the control room
+  1. Search around the outside (Search the outside) · 2. Break into the control room (Raid the control room)
 - **SPORE STORM** — The air is filling with glowing spores. They drift toward anything warm. «Events.js · BIO_SAMPLES»  
-  1. Flush the lander's vents (energy cost) · 2. Collect some spores
+  1. Flush the lander's vents (energy cost) (Flush the vents) · 2. Collect some spores (Collect some spores)
 - **NAMES IN THE STATIC** — It's very quiet here. The team says they can hear their own names in the radio static. «Events.js · VOID_WHISPERS»  
-  1. Bring them back to rest (morale loss) · 2. Record the static and study it
+  1. Bring them back to rest (morale loss) (Bring them back) · 2. Record the static and study it (Record the static)
 - **SHAKING CRYSTALS** — The crystals here vibrate hard enough to shatter glass, and maybe bone. «Events.js · PRISM_SONG»  
-  1. Pad the lander's hull (energy cost) · 2. Record the sound up close
+  1. Pad the lander's hull (energy cost) (Pad the hull) · 2. Record the sound up close (Record it up close)
 - **GLOWING MUSHROOMS** — The ground is covered in glowing mushrooms. Their spores make people see things that aren't there. «Events.js · FUNGAL_BLOOM»  
-  1. Go back to the lander · 2. Harvest some to study
+  1. Go back to the lander (Back to the lander) · 2. Harvest some to study (Harvest some to study)
 - **HEAVY GRAVITY** — Gravity here just tripled. Equipment is being crushed, and the team can barely stand. «Events.js · GRAVITY_WELL»  
-  1. Pull the team out now · 2. Crawl to the target anyway
+  1. Pull the team out now (Pull the team out) · 2. Crawl to the target anyway (Crawl to the target)
 - **DUST STORM** — A huge dust storm is rolling in. The grit is wearing holes in the suits. «Events.js · DUST_STORM»  
-  1. Take shelter and wait · 2. Push on through the storm
+  1. Take shelter and wait (Shelter and wait) · 2. Push on through the storm (Push through the storm)
 - **GRAVES BELOW THE WRECK** — There are rows of graves here, and a wrecked ship in orbit above them. The dates on the graves are older than the wreck. «Events.js · MASS_BURIAL»  
-  1. Record the names and leave · 2. Dig one of them up
+  1. Record the names and leave (Record the names) · 2. Dig one of them up (Dig one up)
 - **ACID RAIN** — It's raining acid. The outside of the lander is being eaten away as we stand here. «Events.js · ACID_RAIN»  
-  1. Call off the trip · 2. Grab what we can, fast
+  1. Call off the trip (Call off the trip) · 2. Grab what we can, fast (Grab what we can)
 - **MAGNETIC STORM** — A magnetic storm is burning out our electronics. The radio and navigation are both down. «Events.js · MAGNETIC_STORM»  
-  1. Wait for it to pass · 2. Keep going without navigation
+  1. Wait for it to pass (Wait it out) · 2. Keep going without navigation (Go on without navigation)
 - **CAVES** — Scans show huge caves under the surface. Something is moving around down there in the dark. «Events.js · CAVE_SYSTEM»  
-  1. Stay on the surface · 2. Go deep into the caves
+  1. Stay on the surface (Stay on the surface) · 2. Go deep into the caves (Go into the caves)
 - **UNDER THE ICE** — Something is swimming under the frozen surface, circling the landing site. «Events.js · FROZEN_LAKE»  
-  1. Stay away from the edge · 2. Drop a camera through the ice
+  1. Stay away from the edge (Keep from the edge) · 2. Drop a camera through the ice (Drop a camera in)
 - **MOVING METAL** — The ground here is metal, and it's moving. It's building something around the lander. «Events.js · LIVING_METAL»  
-  1. Leave before we're walled in · 2. Let it finish building
+  1. Leave before we're walled in (Leave while we can) · 2. Let it finish building (Let it finish)
 - **THE SETTLEMENT** — Human buildings, abandoned decades ago. The doors are still locked from the inside. «Events.js · OLD_COLONY»  
-  1. Strip metal from the outside walls · 2. Break down a door
+  1. Strip metal from the outside walls (Strip the outside walls) · 2. Break down a door (Break down a door)
 - **NO SIGNAL** — The team has lost all radio contact with the ship. Something down here is blocking the signal. «Events.js · RADIO_SILENCE»  
-  1. Head back to the lander right away · 2. Find what's blocking the signal
+  1. Head back to the lander right away (Head back now) · 2. Find what's blocking the signal (Find what's blocking it)
 - **THE SPHERE** — A perfect sphere, 10 metres across, made of something we can't identify. It's warm, and it hums. «Events.js · PERFECT_SPHERE»  
-  1. Photograph it and stay back · 2. Touch it
+  1. Photograph it and stay back (Photograph it) · 2. Touch it (Touch it)
 - **POISON GAS** — The ground is leaking poisonous gas. The suit filters won't last long. «Events.js · GAS_POCKET»  
-  1. Pull back now · 2. Rush in and grab the ore
+  1. Pull back now (Pull back now) · 2. Rush in and grab the ore (Rush in for ore)
 - **SOMEONE WAS HERE** — There are human footprints in the dust, but no wreck and no bodies. The prints just stop. «Events.js · FOOTPRINTS»  
-  1. Log them and leave · 2. Follow the footprints
+  1. Log them and leave (Log them and leave) · 2. Follow the footprints (Follow the footprints)
 - **OLD RUINS** — Walls and roofs, half buried in the dust. Nobody has lived here for a very long time. «Events.js · OLD_RUINS»  
-  1. Map the walls and leave · 2. Dig under the walls
+  1. Map the walls and leave (Map the walls) · 2. Dig under the walls (Dig under the walls)
 - **DISTRESS CALL** — A weak distress call keeps repeating from a field of wreckage. «Events.js · DISTRESS_BEACON»  
-  1. Scan it from where we are · 2. Search through the wreckage
+  1. Scan it from where we are (Scan from here) · 2. Search through the wreckage (Search the wreckage)
 
 ## Crew remarks in the log
 _Short lines the crew say when things happen. Grouped by moment, then by person (PESSIMIST = Jaxon, HUMANIST = Aris, SURVIVOR = Vance, CURIOUS = Mira), then by how stressed they are (0 calm → 3 breaking)._
