@@ -10,10 +10,16 @@
                 machines, the first the world has whose event is not its own event again
    Finds show once a scan has read the world (the bridge's, or travel's far scan); unscanned, the team takes one blind trip as
    today (the site if there is one, else the world's own event). A trip marks its find done; another find is another trip.
-   The risk on a find is the chance someone is hurt on its careful way (TripOdds: App.tripRisk, which the trip card starts
-   from, the careful choice's own, the fit of the two going down, anyone hurt going): the card's careful choice shows the
-   same number, before how the landing went. A site's own story never adds the world's danger: its risk is 0, and its card
-   says the risk of each choice.
+   The risk on a find is the chance someone is hurt on the way the team takes (TripOdds: App.tripRisk, which the trip card
+   starts from, the way's own, the fit of the two going down, anyone hurt going): the card shows the same number for that
+   way, before how the landing went. A site's own story and Eden's valley never add the world's danger: their risk is null
+   (no number on the glass), and their own card says the risk of each choice.
+   Its ways (2026-11-01, the depth plan's step 6): an event find has a row per way, careful first, each with its short name
+   (Events.js `short`), its prize and its odds. The prize is drawn once, seeded by the world and the find, as the world is
+   read (App.findPrizes: node.nsPrize), and the trip pays exactly that (resolveEvaOutcome): supplies only, a bold way's
+   growing with its risk (NEW_LOOK_ECONOMY.BOLD_PRIZE). Where the careful way brings nothing (a walk-away), only the bold
+   row shows: going down is the gamble, and the card offers walking away. The way the team takes is the first row no stress
+   trait strikes; GO DOWN shows its odds.
    A clue: in sectors 2 to 6, while the sector's story world is still a faint contact, one side world carries a clue toward it
    on one of its finds (a survivor's note, a beacon's last course, a star fix); the trip there names the story world
    (App.revealStoryPlanet, as a dated wreck does), and A.U.R.A. says where the clue came from.
@@ -24,10 +30,16 @@
      known(node) → bool                            a scan has read it: its finds can show
      list(app, node, ids?) → [find]                its finds (site, kind, feature); [] while not known. ids: the two going down
                                                   (Mira aboard scans the ground: less risk). A find: { id, kind: 'site' | 'event'
-                                                  | 'eden', label, icon, gives: [{ icon, text }], risk, at: [u, v] (on the world,
-                                                  in its radii from the centre), done, target, hint ('note' | 'course' | 'fix'
-                                                  | 'date': our wreck the disc can date | null), event?, site?, art?, inSpace?
-                                                  (a site in orbit: the team crosses to it, nobody lands) }
+                                                  | 'eden', label, icon, gives: [{ icon, text }], risk (null: a site, Eden), at:
+                                                  [u, v] (on the world, in its radii from the centre), done, target, hint ('note'
+                                                  | 'course' | 'fix' | 'date': our wreck the disc can date | null), event?,
+                                                  site?, art?, inSpace? (a site in orbit: the team crosses to it, nobody lands),
+                                                  ways? (an event: [{ way: 'careful' | 'bold', idx: the card's index, short,
+                                                  prize: { salvage, energy, rations, data, cure } | null, gives: [{ icon, text:
+                                                  '+45 salvage' }], hurt, death, oneIn, deadly, struck: 'PARANOID' | 'RECKLESS'
+                                                  | null }]), way? (an event: the card's index the team takes: the first row
+                                                  no stress trait strikes, the careful one or the bold where only it shows);
+                                                  its risk is that way's hurt chance }
      target(app, node) → find | null               where GO DOWN takes the team: the one chosen, else a clue, else the first not done
      blind(app, node) → find | null                where a blind trip goes before a scan (the site, else its own event)
      aim(app, node, id) → bool                     choose where the team goes (kept on the world: node.nsTarget)
@@ -130,17 +142,32 @@
         return k ? { name: k[0], line: k[1], text: `${k[0]}. ${k[1]}` } : null;
     }
 
-    // ── what each find gives ──
+    // ── what each find gives: its ways' prizes (App.findPrizes), supplies only ──
     const chip = text => ({ icon: GIVE_ICON[text] || 'gives', text });
-    function eventGives(ev) {
+    const PRIZE_WORD = { salvage: 'salvage', energy: 'energy', rations: 'rations', data: 'data', cure: 'healing' };
+    const partsOf = (app, prize) => (app && typeof app.prizeParts === 'function' ? app.prizeParts(prize) : []);
+    /** One way's prize as chips, with its numbers ('+45 salvage', App.prizeParts): its row on the glass. */
+    function wayGives(app, prize) { return partsOf(app, prize).map(p => ({ icon: GIVE_ICON[PRIZE_WORD[p.kind]] || 'gives', text: p.text })); }
+    /** What a find gives, in words: what its rows bring, at most MAX_GIVES. */
+    function eventGives(app, rows) {
         const out = [];
-        (ev.choices || []).forEach(c => {
-            const r = c.reward || {};
-            const t = r.type === 'ITEM' ? 'an item' : r.type === 'DATA' ? 'data'
-                : r.type === 'RESOURCE' && r.val && r.val !== 'NOTHING' ? (String(r.val).includes('METALS') ? 'salvage' : 'energy') : null;   // resolveEvaOutcome's own rule
-            if (t && !out.includes(t)) out.push(t);
-        });
-        return out.sort((a, b) => (a === 'an item') - (b === 'an item')).slice(0, MAX_GIVES).map(chip);   // supplies first
+        rows.forEach(r => partsOf(app, r.prize).forEach(p => { const t = PRIZE_WORD[p.kind]; if (t && !out.includes(t)) out.push(t); }));
+        return out.slice(0, MAX_GIVES).map(chip);
+    }
+    /** A find's ways as rows for the glass, careful first: { way, idx, short, prize, gives, hurt, death, oneIn, deadly, struck }.
+        odds: each choice's (eventOdds, by the card's index). The prize is the find's own, drawn once (App.findPrizes); struck:
+        a stress trait that may strike the way on the card (App.wayStrikes). Where the careful way brings nothing (a walk-away),
+        only the bold row is given. */
+    function wayRows(app, node, id, ev, odds) {
+        if (typeof app.wayOf !== 'function' || typeof app.findPrizes !== 'function') return [];
+        const prizes = app.findPrizes(node, id, ev) || {}, strikes = typeof app.wayStrikes === 'function' ? app.wayStrikes(ev) : [];
+        const rows = (ev.choices || []).map((c, idx) => {
+            const way = app.wayOf(ev, idx), prize = prizes[way] || null, o = odds[idx] || {};
+            return { way, idx, short: c.short || c.text, prize, gives: wayGives(app, prize), hurt: typeof o.hurt === 'number' ? o.hurt : null,
+                death: o.death || 0, oneIn: o.oneIn || null, deadly: !!o.deadly, struck: strikes[idx] || null };
+        }).sort((a, b) => (a.way === 'bold') - (b.way === 'bold') || a.idx - b.idx);
+        const careful = rows.find(r => r.way === 'careful');
+        return careful && !careful.prize && rows.length > 1 ? rows.filter(r => r !== careful) : rows;
     }
     /** Mira scans the ground from aboard while she is well and not one of the two going down (NSOrbit.whileDown's rule). */
     function miraAboard(app, ids) {
@@ -205,7 +232,7 @@
         if (ours && (node.hasPage || node.isFirstSignal)) gives = ['a page', 'salvage'];
         const s = app.state, hasDisc = !!(s && (s.hasDisc || (typeof ITEMS !== 'undefined' && ITEMS.DISC_DRAWING && (s.cargo || []).some(i => i.id === ITEMS.DISC_DRAWING.id))));
         const toDate = ours && !node.hasPage && !node.isFirstSignal && hasDisc && (s.sectorNodes || []).some(p => p.storyHidden);   // the disc dates it: where its crew went
-        return { id: 'site', kind: 'site', site: site.tag, label: d.label, icon: d.icon, gives: gives.map(chip), risk: 0, at: spot(node, 'site', site),
+        return { id: 'site', kind: 'site', site: site.tag, label: d.label, icon: d.icon, gives: gives.map(chip), risk: null, at: spot(node, 'site', site),
             done: !!node[site.done], hint: toDate ? 'date' : null, inSpace: !!site.inSpace, relay: !!site.relay };   // inSpace: in orbit, the lander crosses to it (GO DOWN says "Go across"); relay (LAST PORT): the whole ship docks there (Stop.js: no shuttle)
     }
     function featureOf(node, own) {
@@ -220,9 +247,15 @@
         return null;
     }
     function eventFind(app, node, id, ev, ids, feature) {
-        const f = feature ? FEATURE[feature] : null;
-        return { id, kind: 'event', event: ev.id, label: LABELS[ev.id] || sentence(ev.title), icon: f ? f.icon : 'pin', art: f ? f.art : null, gives: eventGives(ev),
-            risk: eventRisk(app, node, ev, ids, { find: { id, kind: 'event', event: ev.id, feature: feature || null } }), at: spot(node, id), done: false, hint: null, feature: feature || null };
+        const f = feature ? FEATURE[feature] : null, find = { id, kind: 'event', event: ev.id, feature: feature || null };
+        const odds = (ev.choices || []).map((c, idx) => eventOdds(app, node, ev, ids, { way: idx, find }));
+        const ways = wayRows(app, node, id, ev, odds);
+        const row = ways.find(r => !r.struck) || null;                                    // the way taken: the first row no trait strikes
+        const mods = (ev.choices || []).map(c => Number(c.riskMod) || 0), least = mods.indexOf(Math.min(...mods)), careful = odds[least];
+        // every row struck (a walk-away find's one row, while Vance won't risk it): the careful way, which the card keeps open
+        return { id, kind: 'event', event: ev.id, label: LABELS[ev.id] || sentence(ev.title), icon: f ? f.icon : 'pin', art: f ? f.art : null, gives: eventGives(app, ways),
+            risk: row && typeof row.hurt === 'number' ? row.hurt : careful ? careful.hurt : null, ways, way: row ? row.idx : least >= 0 && mods.length ? least : null,
+            at: spot(node, id), done: false, hint: null, feature: feature || null };
     }
 
     /** Every find on a known world, in order, with what is done and which is the target. unread: the same before a scan (the
@@ -234,7 +267,7 @@
         const done = (node.nsDone || []).concat(legacy ? ['kind'] : []);
         if (site) out.push(site);
         if (node.type === 'EDEN' || node.isEden) {
-            out.push({ id: 'kind', kind: 'eden', label: 'Green valley', icon: 'life', gives: ['rations', 'rest'].map(chip), risk: 0, at: spot(node, 'eden'), done: false, hint: null });
+            out.push({ id: 'kind', kind: 'eden', label: 'Green valley', icon: 'life', gives: ['rations', 'rest'].map(chip), risk: null, at: spot(node, 'eden'), done: false, hint: null });
         } else if (node.type !== 'GAS_GIANT') {                                            // a gas giant has no ground: only a site in orbit
             const own = typeof app.landingEventOf === 'function' ? app.landingEventOf(node) : null;
             if (own) out.push(eventFind(app, node, 'kind', own, ids));

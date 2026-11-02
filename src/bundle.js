@@ -1280,8 +1280,32 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     FIT_JAXON_LANDS: 0,      //   and Jaxon's step on A.U.R.A.'s landing this many while she lands us. 0 for now: her autopilot
                              //   lands soft on 99.9 % of worlds (tools/runsim/lander.js), so his step almost never changes a
                              //   landing; raise it if the browser check's 50 autopilot landings show rough or crashed ones
+    // What a find's way brings home (App.drawPrize): drawn once, seeded by the world and the find, when the world is read
+    // (node.nsPrize), so its row on the glass and the trip pay the same. Supplies only: the new look has no hold, so a way
+    // that brought back an item brings supplies instead, by the item's first tag (PRIZE_OF_TAG) and how risky the way is
+    // (its riskMod: T1 under 35, T2 35 to 45, T3 50 and up), so a bold prize grows with its risk. A way that gives salvage,
+    // energy or data keeps the plain landing's own (EVA_METALS, EVA_ENERGY_MIN ...).
+    BOLD_PRIZE: Object.freeze({
+        TIER_FROM: Object.freeze([35, 50]),     // the riskMod where T2 and T3 start (the careful way of THE WELCOME, 0, is T1)
+        SALVAGE: Object.freeze([Object.freeze([35, 54]), Object.freeze([45, 69]), Object.freeze([60, 89])]),   // TECH, GEO, WEAPON, ARTIFACT
+        ENERGY: Object.freeze([15, 20, 25]),     // ENERGY
+        RATIONS: Object.freeze([2, 3, 4]),       // BIO, RATION
+        LORE_DATA: 1,                            // LORE: +1 data, and salvage one tier lower (T1: a plain landing's EVA_METALS)
+        CURE_STRESS: 1,                          // CURE: the hurt aboard are well, and the most stressed takes this much off
+    }),
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
+// The new look: what a way that brought back an item gives instead, by the item's first tag (App.drawPrize; how much is
+// NEW_LOOK_ECONOMY.BOLD_PRIZE's). Any other tag gives salvage.
+const PRIZE_OF_TAG = Object.freeze({ TECH: 'salvage', GEO: 'salvage', WEAPON: 'salvage', ARTIFACT: 'salvage', ENERGY: 'energy', BIO: 'rations', RATION: 'rations', LORE: 'lore', CURE: 'cure' });
+/** A number from 0 to just under 1 for a key, the same every time for the same key (FNV-1a, then mixed): a prize drawn once
+    stays drawn (App.drawPrize). */
+function seededUnit(key) {
+    let h = 2166136261; const s = String(key);
+    for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+    h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909);   // spread every bit into the high ones
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
 // A try tab's moments (App.startTry, ?try=<kind>): each places a fresh run (the state just made by init()).
 const TRY_PLACES = {
@@ -4768,14 +4792,15 @@ Then you're through.`,
         someone hurt went down, whether Vance covers his partner, and the stress traits that strike ways as they stood when
         the team went down (GO DOWN's odds counted those: App.sureWay; one gained while they are down waits for the next trip,
         so the card never strikes the way GO DOWN vouched for). App.wayOdds and App.tripChoices read it; resolveEvaOutcome
-        drops it. */
+        drops it. findId: the find they went to (its prize: App.tripPrize). */
     tripContext(planet, team, find) {
         const s = this.state, O = window.NSOrbit, ids = team.map(crewIdOf);
         const mira = s.crew.find(c => (c.tags || []).includes('SPECIALIST'));
         const miraAboard = !!mira && !team.includes(mira) && mira.status === 'HEALTHY' && !mira.tags.includes('CONFINED') && !mira.tags.includes('SEDATED');
         let fit = 0;
         try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(this, planet, ids, find) : 0; } catch (err) { console.error('App: the team fit failed', err); }
-        return { shownBase: this.tripRisk(planet, { mira: miraAboard ? NEW_LOOK_ECONOMY.MIRA_ABOARD : 0 }).risk, fit,
+        return { findId: (find && find.id) || 'kind',
+            shownBase: this.tripRisk(planet, { mira: miraAboard ? NEW_LOOK_ECONOMY.MIRA_ABOARD : 0 }).risk, fit,
             hunted: this.isHunted(planet), hurtGoes: team.some(m => m.status === 'INJURED'), vance: this.vanceCovers(team),
             paranoid: s.hasActiveTrait('PARANOID'), reckless: s.hasActiveTrait('RECKLESS') };
     }
@@ -4847,6 +4872,18 @@ Then you're through.`,
         return (sure || byRisk[0] || { idx: 0 }).idx;
     }
 
+    /** The new look: the stress trait that may strike each way of an event's card, before anyone goes down (the glass's rows,
+        NSWorldFinds): Vance's PARANOID every way at 30 or more, Mira's RECKLESS the way at 0 (the card strikes that one half
+        the time: App.tripChoices). Never every way: the careful one stays open, as on the card. By the card's index:
+        ['PARANOID' | 'RECKLESS' | null]. */
+    wayStrikes(event) {
+        const isParanoid = this.state.hasActiveTrait('PARANOID'), isReckless = this.state.hasActiveTrait('RECKLESS');
+        const choices = (event && event.choices) || [];
+        const out = choices.map(c => (isParanoid && c.riskMod >= 30 ? 'PARANOID' : isReckless && c.riskMod === 0 ? 'RECKLESS' : null));
+        if (out.length && out.every(Boolean)) out[choices.findIndex((c, idx) => this.wayOf(event, idx) === 'careful')] = null;
+        return out;
+    }
+
     /** Why A.U.R.A. marks no landing spot here (LanderGame's opts.unmarked): never in the default game; in the new look
         'unscanned' (no deep scan from the bridge) or 'weak' (a weak lock), else null: the spot is marked. */
     unmarkedWhy(planet) {
@@ -4905,6 +4942,105 @@ Then you're through.`,
         return isHigh ? [60, 119] : [40, 79];
     }
 
+    // ── the new look: a find's two ways and what each brings home (src/newscreen/WorldFinds.js rows, resolveEvaOutcome) ──
+    /** Which way a choice on a find's card is: 'careful', the way with the least risk (the first of equals), else 'bold';
+        null: no such choice. */
+    wayOf(event, idx) {
+        const choices = (event && event.choices) || [];
+        if (!choices[idx]) return null;
+        const mods = choices.map(c => Number(c.riskMod) || 0);
+        return mods.indexOf(Math.min(...mods)) === idx ? 'careful' : 'bold';
+    }
+
+    /** What one way of a find brings home, drawn from its own seed (the world, the find, the way: the same world always gives
+        the same), never from the dice. Supplies only (NEW_LOOK_ECONOMY.BOLD_PRIZE): a way that brought back an item gives
+        salvage, energy, rations or data instead, by the item's first tag (PRIZE_OF_TAG) and the way's risk tier; salvage,
+        energy and data keep a plain landing's own. { salvage, energy, rations, data, cure } (only what it gives), or null. */
+    drawPrize(node, findId, way, choice) {
+        const r = (choice && choice.reward) || {}, E = NEW_LOOK_ECONOMY, P = E.BOLD_PRIZE, seed = `${node && node.id}:${findId}:${way}`;
+        const pick = (range, what) => range[0] + Math.floor(seededUnit(`${seed}:${what}`) * (range[1] - range[0] + 1));
+        if (r.type === 'DATA') return { data: Number(r.val) || 1 };
+        if (r.type === 'RESOURCE') {
+            if (!r.val || r.val === 'NOTHING') return null;
+            return String(r.val).includes('METALS') ? { salvage: pick(this.evaSalvageRange(r.val === 'METALS_HIGH'), 'salvage') } : { energy: pick(this.evaEnergyRange(), 'energy') };
+        }
+        if (r.type !== 'ITEM') return null;
+        const mod = Number(choice.riskMod) || 0, tier = P.TIER_FROM.filter(from => mod >= from).length;   // 0, 1, 2: T1, T2, T3
+        const kind = PRIZE_OF_TAG[(r.tags || [])[0]] || 'salvage';
+        if (kind === 'energy') return { energy: P.ENERGY[tier] };
+        if (kind === 'rations') return { rations: P.RATIONS[tier] };
+        if (kind === 'lore') return { data: P.LORE_DATA, salvage: pick(tier ? P.SALVAGE[tier - 1] : E.EVA_METALS, 'salvage') };
+        if (kind === 'cure') return { cure: true };
+        return { salvage: pick(P.SALVAGE[tier], 'salvage') };
+    }
+
+    /** A find's prizes, { event, careful, bold } (App.drawPrize), drawn once and kept on the world (node.nsPrize[findId], saved
+        with the map): NSWorldFinds draws them as a scan reads the world, and its row, the trip card and the trip then say and
+        pay the same. Kept for another event (an old save), they are drawn again for this one. */
+    findPrizes(node, findId, event) {
+        if (!node || !findId || !event) return null;
+        const kept = node.nsPrize && node.nsPrize[findId];
+        if (kept && kept.event === event.id) return kept;
+        const drawn = { event: event.id, careful: null, bold: null };
+        (event.choices || []).forEach((choice, idx) => { const way = this.wayOf(event, idx); if (way) drawn[way] = this.drawPrize(node, findId, way, choice); });
+        node.nsPrize = Object.assign({}, node.nsPrize, { [findId]: drawn });
+        return drawn;
+    }
+
+    /** What the way the team took brings home (choice: the card's): its find's prize (App.findPrizes; the find is
+        App.tripContext's, else the one whose prize is for this event, else the world's own), or null: nothing. */
+    tripPrize(choice, planet) {
+        const ev = choice && planet && typeof EVENTS !== 'undefined' ? EVENTS.find(e => (e.choices || []).includes(choice)) : null;
+        if (!ev) return null;
+        const kept = planet.nsPrize || {};
+        const findId = (this._nsTrip && this._nsTrip.findId) || Object.keys(kept).find(id => kept[id] && kept[id].event === ev.id) || 'kind';
+        const prizes = this.findPrizes(planet, findId, ev);
+        return (prizes && prizes[this.wayOf(ev, ev.choices.indexOf(choice))]) || null;
+    }
+
+    /** A prize part by part: [{ kind, n, text }], '+45 salvage', '+3 rations' ... (a cure: 'healing'). The glass's chips
+        (NSWorldFinds) and the trip card say it with these. */
+    prizeParts(prize) {
+        if (!prize) return [];
+        const out = ['salvage', 'energy', 'rations', 'data'].filter(k => prize[k] > 0).map(k => ({ kind: k, n: prize[k], text: `+${prize[k]} ${k}` }));   // DRAFT: the chips
+        if (prize.cure) out.push({ kind: 'cure', n: 0, text: 'healing' });           // DRAFT
+        return out;
+    }
+
+    /** The team is home with its prize (App.tripPrize), used at once, as sealed rations are (GameState.openFoodPacks): each
+        supply up to what the ship holds, the data learned; a cure makes the hurt aboard well (not whoever was hit on this trip,
+        nor the hunger-sick: only food mends that) and takes BOLD_PRIZE.CURE_STRESS off the most stressed. OBSESSED (Mira at
+        stress 3) brings half as much again of each supply, as in the default game. Returns what the log says. */
+    payPrize(prize, isObsessed, hitCrew) {
+        const s = this.state, said = [];
+        if (!prize) return 'Nothing brought back.';
+        const more = n => (isObsessed ? Math.floor(n * 1.5) : n);
+        if (isObsessed && (prize.salvage || prize.energy || prize.rations)) said.push("Mira's obsessive sampling yields extra.");
+        if (prize.salvage) {
+            const was = s.salvage, amount = more(prize.salvage);
+            s.salvage = Math.min(s.maxSalvage, was + amount);
+            said.push(`Recovered ${amount} Salvage.${s.salvage === s.maxSalvage && was < s.maxSalvage ? ' (Storage Cap Reached)' : ''}`);
+        }
+        if (prize.energy) {
+            const amount = more(prize.energy), got = Math.max(0, Math.min(amount, 100 - Math.round(s.energy)));   // energy tops out at 100: say what fitted
+            s.energy = Math.min(100, s.energy + amount);
+            said.push(got ? `Siphoned ${got} Energy.` : 'Energy was already full.');
+        }
+        if (prize.rations) {
+            const got = Math.max(0, Math.min(more(prize.rations), s.maxRations - s.rations));
+            s.rations += got;
+            said.push(got ? `+${got} Rations.` : 'The galley is already full.');   // DRAFT (both)
+        }
+        if (prize.data) { s.gainData(prize.data); said.push(`+${prize.data} Data.`); }
+        if (prize.cure) {
+            const hurt = s.crew.filter(c => c.status === 'INJURED' && c !== hitCrew && c.trait !== 'CATATONIC' && !c._nsHungerSick);
+            if (hurt.length) { s.mend(hurt); said.push(`${hurt.map(c => c.name).join(' and ')} ${hurt.length === 1 ? 'is' : 'are'} well again.`); }   // DRAFT
+            const most = s.crew.filter(c => c.status !== 'DEAD' && (c.stress || 0) > 0).sort((a, b) => b.stress - a.stress)[0];
+            if (most) most.stress = Math.max(0, most.stress - NEW_LOOK_ECONOMY.BOLD_PRIZE.CURE_STRESS);
+        }
+        return said.join(' ');
+    }
+
     /** How dangerous a plain landing is from the world itself, before how it is flown and who scans it: 5 % to 30 % by its
         danger level, then its signals, each a line on the trip's card. The new look's scan tags read the total (Scan.js). */
     planetRisk(planet) {
@@ -4953,6 +5089,10 @@ Then you're through.`,
         const energyWords = energyRoom <= 0 ? 'energy already full' : energyRoom < EVA_LO ? `+${energyRoom} energy` : energyRoom < EVA_HI ? `+${EVA_LO} to ${energyRoom} energy` : REWARD_WORDS.ENERGY;
         const rewardWords = (choice) => {
             const r = choice.reward || {};
+            if (isNewScreen() && !(r.type === 'RESOURCE' && r.val === 'NOTHING')) {           // the new look: the find's own prize (App.tripPrize), as its row on the glass
+                const parts = this.prizeParts(this.tripPrize(choice, planet)).map(p => (p.kind !== 'energy' ? p.text : energyRoom <= 0 ? 'energy already full' : `+${Math.min(p.n, energyRoom)} energy`));
+                return parts.length ? parts.join(' · ') : 'nothing';
+            }
             if (r.type === 'ITEM') return `an item${r.tags && r.tags.length ? ' · ' + String(r.tags[0]).toLowerCase() : ''}`;
             if (r.type === 'DATA') return `+${r.val || 1} data`;
             const isEnergy = r.type === 'RESOURCE' && r.val !== 'NOTHING' && !String(r.val || '').includes('METALS');   // resolveEvaOutcome's own rule
@@ -5046,7 +5186,8 @@ Then you're through.`,
 
     /** A plain landing's outcome: whether someone is hit, then what the way brings home. The new look rolls the way's own odds
         (wayOdds: App.wayOdds, the numbers its card showed; TripOdds): the hurt chance, then a death only at the shown odds,
-        and only on someone Vance does not cover (App.tripHit). The default game keeps its own rule. */
+        and only on someone Vance does not cover (App.tripHit); then it pays the prize the find's row showed, exactly
+        (App.tripPrize, App.payPrize: supplies only). The default game keeps its own rule. */
     resolveEvaOutcome(choice, baseRisk, wayOdds) {
         const planet = this.state.currentSystem;
         const odds = isNewScreen() ? wayOdds || this.wayOdds(choice, baseRisk) : null;
@@ -5094,7 +5235,7 @@ Then you're through.`,
 
         // 1. Hazard Check — only EVA team members (2 crew) can be hit
         const HIGH_RISK_FLOOR = 40, RETREAT_ENERGY_COST = 10;
-        let isTeamMemberLost = false;
+        let isTeamMemberLost = false, hitCrew = null;
         const evaTeam = this.currentEvaTeam || [];
         if ((roll < totalRisk || predatoryAttack) && evaTeam.length > 0) {
             // INJURY or DEATH — pick randomly from the 2-person EVA team
@@ -5149,6 +5290,7 @@ Then you're through.`,
                 }
                 window.dispatchEvent(new CustomEvent('crew-injury', { detail: { crew: targetCrew } }));
             }
+            hitCrew = targetCrew;
             // Stress: EVA casualty witnessed — +1 stress to all living crew
             this.state.crew.forEach(c => {
                 if (c.status !== 'DEAD') {
@@ -5211,6 +5353,8 @@ Then you're through.`,
             if (/Lose Fuel|Energy Cost/i.test(choice.text)) { this.state.energy = Math.max(0, this.state.energy - RETREAT_ENERGY_COST); logMsg += `Nothing brought back. -${RETREAT_ENERGY_COST} Energy.`; }
             else if (/Morale Loss/i.test(choice.text)) { evaTeam.forEach(m => { if (m.status !== 'DEAD') m.stress = Math.min(3, (m.stress || 0) + 1); }); logMsg += 'Nothing brought back. The team is shaken: +1 Stress.'; }
             else logMsg += 'Nothing brought back.';
+        } else if (isNewScreen()) {                                                   // the new look: the find's own prize, drawn when the world was read (its row said it)
+            logMsg += this.payPrize(this.tripPrize(choice, planet), isObsessed, hitCrew);
         } else if (choice.reward.type === 'RESOURCE') {
             const isMetals = choice.reward.val === 'METALS' || choice.reward.val === 'METALS_HIGH';
             const [lo, hi] = isMetals ? this.evaSalvageRange(choice.reward.val === 'METALS_HIGH') : this.evaEnergyRange();   // salvage, else energy

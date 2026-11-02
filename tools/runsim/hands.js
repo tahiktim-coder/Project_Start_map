@@ -95,8 +95,8 @@ function land(rc, planet, o) {
 
 /** App.showEventModal's rules without its page, through the game's own methods: the risk going in (App.tripGoingIn), each
     way's odds and the stress traits that strike a way (App.tripChoices: TripOdds' hurt and death chance, as the card shows
-    them; Vance's PARANOID strikes every way at 30+, Mira's RECKLESS half the time the 0 way), the pick, then resolveEvaOutcome
-    with the odds the card showed. The new look never locks the card: with every way struck the careful way stays open
+    them; Vance's PARANOID strikes every way at 30+, Mira's RECKLESS half the time the 0 way), each way's prize (App.tripPrize:
+    the find's own, drawn once; the trip pays exactly that), the pick, then resolveEvaOutcome with the odds the card showed. The new look never locks the card: with every way struck the careful way stays open
     (counted as 'locked' all the same: R.counts.locked, R.locked.unlocked). --unlock no longer changes anything. */
 function tripCard(rc, event, planet) {
     const { app, style, rnd, R, cur, game } = rc;
@@ -110,10 +110,11 @@ function tripCard(rc, event, planet) {
         R.counts.locked += 1;
         if (!R.locked) R.locked = { sector: rc.state.currentSector, world: cur.node ? cur.node.name : null, event: event.id, title: String(event.title || ''), team: cur.trip ? cur.trip.team : null, struck, unlocked: true };
     }
-    let open = ways.filter(w => !w.struck).map(w => ({ c: w.choice, i: w.idx, odds: w.odds }));
+    const prizeOf = w => (typeof app.tripPrize === 'function' ? app.tripPrize(w.choice, planet) : undefined);   // what the way pays (the find's own, drawn once)
+    let open = ways.filter(w => !w.struck).map(w => ({ c: w.choice, i: w.idx, odds: w.odds, prize: prizeOf(w) }));
     if (!open.length) {                                                            // never in the new look (App.tripChoices keeps one open)
         game.hooks.error(new Error('tripCard: every way struck'), 'tripCard');
-        open = [{ c: ways[0].choice, i: 0, odds: ways[0].odds }];
+        open = [{ c: ways[0].choice, i: 0, odds: ways[0].odds, prize: prizeOf(ways[0]) }];
     }
     const idx = P.pickWay(open, style, riskBase, rc.evaRange, rnd), way = ways[idx], choice = way.choice, odds = way.odds || {};
     const byRisk = event.choices.map(c => c.riskMod || 0), lo = Math.min(...byRisk), hi = Math.max(...byRisk);

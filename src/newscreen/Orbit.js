@@ -34,12 +34,12 @@
                                    too only if the player adds them at the hatch)
      teamRisk(app, ids, way?) → 25 | null  the chosen find's hurt chance with ids down (TripOdds with App.tripRisk, the
                                    way's own risk, the fit and anyone hurt going; way: the card's index, left out the way
-                                   GO DOWN vouches for, the careful one, its mark's number, unless a stress trait may
-                                   strike it); before a scan, the blind trip's; null where a blind trip meets a site's own
-                                   story or Eden's card
-     teamOdds(app, ids, way?) → { hurt, death, deadly, oneIn } | null   the same find's odds (TripOdds), for the way GO DOWN
-                                   vouches for (App.sureWay) unless way is given: GO DOWN shows its hurt chance and, where it
-                                   can kill, its death chance
+                                   the find takes, as teamOdds); before a scan, the blind trip's; null where the team goes to a site's own
+                                   story or Eden's card (their own card says the odds: no number on the glass)
+     teamOdds(app, ids, way?) → { hurt, death, deadly, oneIn } | null   the same find's odds (TripOdds), for the way the find
+                                   takes (its first row no stress trait strikes: NSWorldFinds' find.way) unless way is given;
+                                   before a scan, the way GO DOWN vouches for (App.sureWay): GO DOWN shows its hurt chance
+                                   and, where it can kill, its death chance
      fitOf(app, node, ids, find?) → 3   the team's fit points for a find (TripOdds' fit; the tables are TripOdds.FIT)
      hasTeamAction(planet) → bool  this place has a team trip still to take: a find still open, or before a scan one blind
                                    trip (handleWarp defers the breach, the hull hit, to it)
@@ -544,22 +544,21 @@
         return { ids: best.ids.slice(), why };
     }
     /** The odds GO DOWN shows with ids going down (TripOdds: { hurt, death, deadly, oneIn }): the chosen find's (WorldFinds.js:
-        App.tripRisk, the way's own risk, the team's fit, someone hurt going, something hunting there, Vance's cover; its mark
-        shows the careful way's hurt chance); before a scan, the blind trip's plain landing the same way. way: the way's index
-        on its card; left out, the way GO DOWN vouches for (App.sureWay: the careful one, unless a stress trait may strike it).
-        null: a site's own story or Eden's card. */
+        App.tripRisk, the way's own risk, the team's fit, someone hurt going, something hunting there, Vance's cover), for the
+        way the find takes (its find.way: its first row no stress trait strikes); before a scan, the blind trip's plain
+        landing, for the way GO DOWN vouches for (App.sureWay: the careful one, unless a stress trait may strike it). way: the
+        way's index on its card, to ask about another. null: a site's own story or Eden's card. */
     function teamOdds(app, ids, way) {
         const s = app && app.state, n = s && s.currentSystem, F = window.NSWorldFinds;
         if (!n || !isPlanet(n) || !F || typeof F.oddsOf !== 'function' || typeof app.tripRisk !== 'function') return null;
         let ev = null, find = null;
         if (F.known(n)) {
             find = F.list(app, n, ids).find(x => x.target) || null;
-            if (!find || typeof find.risk !== 'number') return null;
-            if (find.kind !== 'event') return { hurt: find.risk, death: 0, deadly: false, oneIn: null };   // a site's or Eden's own card says its odds (its mark's number, as before)
+            if (!find || find.kind !== 'event' || typeof find.risk !== 'number') return null;   // a site's or Eden's own card says its odds (no number on the glass)
             ev = typeof EVENTS !== 'undefined' ? EVENTS.find(e => e.id === find.event) || null : null;
         } else if (!teamSite(app, n) && n.type !== 'EDEN') ev = typeof app.landingEventOf === 'function' ? app.landingEventOf(n) : null;
         if (!ev) return null;
-        const idx = way != null ? way : typeof app.sureWay === 'function' ? app.sureWay(ev) : null;
+        const idx = way != null ? way : find && Number.isInteger(find.way) ? find.way : typeof app.sureWay === 'function' ? app.sureWay(ev) : null;
         return F.oddsOf(app, n, ev, ids, { way: idx, find });
     }
     /** The hurt chance of teamOdds (GO DOWN's "risk N%"). */

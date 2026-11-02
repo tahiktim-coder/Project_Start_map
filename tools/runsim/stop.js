@@ -57,7 +57,8 @@ async function atStop(rc, node) {
         const open = finds.known(node) ? finds.list(app, node, proposed).filter(f => !f.done && !declined.has(f.id)) : [];
         const eventTrips = (node.nsDone || []).filter(id => id !== 'site').length;
         const wayOdds = (f, ev, way) => (typeof finds.oddsOf === 'function' ? finds.oddsOf(app, node, ev, proposed, { way, find: f }) : null);   // the game's own odds
-        const want = open.find(f => P.wantsFind(f, style, { eventOf: id => (G('EVENTS') || []).find(e => e.id === id), evaRange: rc.evaRange, eventTrips, tripsHere: node.nsTrips || 0, wayOdds }));
+        const wayPrize = (f, ev, way) => { const p = typeof app.findPrizes === 'function' ? app.findPrizes(node, f.id, ev) : null; return p ? p[app.wayOf(ev, way)] || null : undefined; };   // and its prize
+        const want = open.find(f => P.wantsFind(f, style, { eventOf: id => (G('EVENTS') || []).find(e => e.id === id), evaRange: rc.evaRange, eventTrips, tripsHere: node.nsTrips || 0, wayOdds, wayPrize }));
         if (want && has('team')) { if (!(await trip(rc, node, want))) declined.add(want.id); continue; }
         if (want) {                                                              // a find wanted, but nobody can go (or Aris will not)
             if (!stuckHere) { stuckHere = true; R.counts.stuck += 1; R.counts[orbit.eligible(app).length < 1 ? 'stuckFew' : 'stuckAris'] += 1; }
