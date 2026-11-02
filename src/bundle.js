@@ -1369,6 +1369,8 @@ const NEW_LOOK_ECONOMY = Object.freeze({
                              //   and, wherever it can kill (DEATH_FLOOR and up), GO DOWN's red "death 1 in N"; GO DOWN says the
                              //   hurt chance. With DEATH_FLOOR at 15 too, every way from 15 can kill, so "risky" never shows
                              //   (waiting on the designer: RISKY_FROM below the floor, or no middle word)
+    FINDS_MAX: 2,            // finds a world shows (NSWorldFinds.list; 2026-11-02, the designer's open call 4: shorter runs): its
+                             //   site and its own event, or its own event and a feature; a third only when it carries the clue
     // Salvage sinks (depth step 8): a dead station's fuel pump, once a station after docking (NSOrbit's "Fuel depot"), turns
     // salvage into energy; Jaxon under stress (HOARDER) makes every repair cost more (GameState.repairCostOf)
     DEPOT_SALVAGE: 25,       // the pump's parts: offered only with this much salvage aboard

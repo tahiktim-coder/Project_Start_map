@@ -1,6 +1,6 @@
 /* ═══ Silent Exodus · new screen (?new=1) · WorldFinds.js: what kind a world is, and what a scan finds on it ════════════
    What it is: the new look's words for a world's kind (one plain line each, docs/STYLE.md, at most ten words: the travel note
-   and the first line under the name on the bridge's glass) and its finds: the places on it a team can go, 1 to 3, each with
+   and the first line under the name on the bridge's glass) and its finds: the places on it a team can go, 1 or 2, each with
    what it can give and its risk (designer playtest, 2026-10-17: "scan is useless", "planets look generic"). A find comes from
    what the world really has:
      'site'     its one site (App.siteOf): one of our ships, an empty colony, wreckage in orbit, an old beacon, a garden under
@@ -8,6 +8,8 @@
      'kind'     its own landing event (App.landingEventOf, kept on the world: Events.js KIND_EVENTS first); Eden: its valley
      'feature'  one feature as a second event (Events.js FEATURE_EVENTS): old ruins, an old signal (one of our beacons), life,
                 machines, the first the world has whose event is not its own event again
+   Two finds at most (2026-11-02, NEW_LOOK_ECONOMY.FINDS_MAX: shorter runs): a third, the feature, shows only when it
+   carries the clue (or an old save already went there).
    Finds show once a scan has read the world (the bridge's, or travel's far scan); unscanned, the team takes one blind trip as
    today (the site if there is one, else the world's own event). A trip marks its find done; another find is another trip.
    The risk on a find is the chance someone is hurt on the way the team takes (TripOdds: App.tripRisk, which the trip card
@@ -115,6 +117,14 @@
         fix: name => `A.U.R.A.: "The team brought back an old star fix. One of our ships is at ${name}, Commander."`,
     };
     const SITE_AT = [-0.6, 0.1], ORBIT_AT = [-1.22, 0.4], EDEN_AT = [-0.55, 0.12], MAX_GIVES = 2;
+    let findsWarned = false;
+    /** How many finds a world shows (NEW_LOOK_ECONOMY.FINDS_MAX, bundle.js), read when used; missing, it is logged and 2 used. */
+    function findsMax() {
+        const v = window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY.FINDS_MAX;
+        if (typeof v === 'number') return v;
+        if (!findsWarned) { findsWarned = true; console.error('NSWorldFinds: NEW_LOOK_ECONOMY.FINDS_MAX is missing; using 2'); }
+        return 2;
+    }
     /** Mira's ground scan from aboard (NSOrbit.whileDown sets the same): bundle.js NEW_LOOK_ECONOMY, read when used. */
     function miraScan() {
         const v = window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY.MIRA_ABOARD;
@@ -284,6 +294,8 @@
         out.forEach(f => { if (done.includes(f.id)) f.done = true; });
         const clue = clueWorld(app.state) === node ? (out.find(f => f.id === 'feature') || out.find(f => f.id === 'kind')) : null;
         if (clue && !clue.done) clue.hint = clue.feature ? FEATURE[clue.feature].clue : 'fix';
+        const most = findsMax();                                                            // two finds a world: one past that only with the clue
+        for (let i = out.length - 1; i >= most; i--) if (!out[i].hint && !out[i].done) out.splice(i, 1);   // (or where an old save went)
         const open = out.filter(f => !f.done), aimed = open.find(f => f.id === node.nsTarget) || open.find(f => f.hint) || open[0] || null;   // a clue first: its chips say so
         out.forEach(f => { f.target = f === aimed; });
         return out;
