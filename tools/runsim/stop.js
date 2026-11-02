@@ -11,7 +11,7 @@ const { checkDeaths } = require('./watch');
 
 const DECKS = ['bridge', 'lab', 'quarters', 'cargo', 'engineering'];
 const TICK_MS = 250, TRIP_TICKS = 400, MAX_ACTS = 24;
-const BRIDGE_ORDER = ['skim', 'dock', 'mine', 'scan', 'date', 'call'];
+const BRIDGE_ORDER = ['skim', 'dock', 'depot', 'mine', 'scan', 'date', 'call'];   // depot: only when the player wants it (policy.wantsDepot)
 
 /** A stop: the warp, the bridge's actions in the player's order, the trips, then the decks, then leave. */
 async function visit(rc, node) {
@@ -50,7 +50,7 @@ async function atStop(rc, node) {
     const declined = new Set();
     let stuckHere = false;
     for (let k = 0; k < MAX_ACTS && !state.gameOver && !R.ending && state.currentSystem === node; k++) {
-        const acts = orbit.actions(app), has = key => acts.find(a => a.key === key);
+        const acts = orbit.actions(app), has = key => acts.find(a => a.key === key) && (key !== 'depot' || wantsDepot(rc));
         const did = BRIDGE_ORDER.find(has);
         if (did) { await act(rc, did); continue; }
         const proposed = (orbit.propose(app) || {}).ids;
@@ -70,10 +70,17 @@ async function atStop(rc, node) {
     }
 }
 
+/** The fuel depot shows here (NSOrbit.actions) and this player takes it (policy.wantsDepot). */
+function wantsDepot(rc) {
+    const { state, style, ECON } = rc, n = state.currentSystem;
+    const gain = Math.min(ECON.DEPOT_ENERGY, Math.max(0, Math.round(100 - state.energy)));
+    return !!n && P.wantsDepot(style, state, gain, ECON.DEPOT_SALVAGE, ECON);
+}
 async function act(rc, key) {
     const { game, app, state, R, cur, orbit } = rc;
-    rc.add({ skim: M.SECONDS.skim, scan: M.CUTS.autoScan ? 0 : M.SECONDS.scan, date: 0, call: 0, dock: 0, mine: 0, strange: 0 }[key] || 0, 'bridge');
+    rc.add({ skim: M.SECONDS.skim, depot: M.SECONDS.depot, scan: M.CUTS.autoScan ? 0 : M.SECONDS.scan, date: 0, call: 0, dock: 0, mine: 0, strange: 0 }[key] || 0, 'bridge');
     if (key === 'call') R.counts.calls += 1;
+    if (key === 'depot') R.counts.depots += 1;
     cur.src = 'act:' + key;
     rc.beat();
     try { orbit.act(app, key); } catch (err) { game.hooks.error(err, 'act:' + key); }
@@ -94,12 +101,15 @@ async function trip(rc, node, find) {
     const again = (node.nsTrips || 0) > 0;
     rc.add(M.SECONDS.teamPick + (again ? (M.CUTS.repeatTrip ? M.SECONDS.secondTripCut + M.SECONDS.bridgeAgainCut : M.SECONDS.secondTrip + M.SECONDS.bridgeAgain) : 0), 'hatch');
     const traitOn = ['PARANOID', 'RECKLESS', 'BLEEDING_HEART', 'OBSESSED'].some(t => state.hasActiveTrait(t));
+    const team = ids.map(id => state.crew.find(c => P.idOf(c) === id)).filter(Boolean);   // step 8: a trait works through its holder
+    const traitDown = ['PARANOID', 'RECKLESS', 'OBSESSED'].some(t => state.traitDown(t, team));
     cur.trip = { sector: state.currentSector, world: node.name, kind: worldWords(node), find: find.label, findKind: find.kind, site: find.site || null,
         ids: ids.slice(), team: rc.nameList(ids), fit: fitOf(rc, node, ids), mark: typeof mark === 'number' ? mark : null, landing: null, phase: 'hatch',
         alone: ids.length === 1, hurtGoes: ids.some(id => (state.crew.find(c => P.idOf(c) === id) || {}).status === 'INJURED'),
         goHurt: go ? go.hurt : null, goDeath: go ? go.death : 0, goOneIn: go ? go.oneIn : null,
-        shown: null, death: null, oneIn: null, deadly: false, safeOpen: null, wayText: null, wayKind: null, prize: null, hurt: [], died: [], traitOn };
+        shown: null, death: null, oneIn: null, deadly: false, safeOpen: null, wayText: null, wayKind: null, prize: null, hurt: [], died: [], traitOn, traitDown };
     if (traitOn) R.counts.tripsWithTrait += 1;
+    if (traitDown) R.counts.tripsTraitDown += 1;
     const pair = ids.slice().sort().join('+');
     R.pairs[pair] = (R.pairs[pair] || 0) + 1;
     let ok = false;
@@ -128,7 +138,7 @@ function glassWay(rc, node, find, ids) {
     const open = ev ? f.ways.filter(r => !r.struck).map(r => ({ c: ev.choices[r.idx], i: r.idx, odds: { hurt: r.hurt || 0, death: r.death || 0 }, prize: r.prize })) : [];
     if (!open.length) return;
     const idx = P.pickWay(open, style, 0, rc.evaRange, rnd);
-    if (idx === f.way || !orbit.way(app, node, f.id, idx)) return;
+    if (idx === f.way || !orbit.way(app, node, f.id, idx, ids)) return;                   // the rows the two at the hatch see (their own traits)
     R.counts.wayPicks += 1;
     rc.add(M.SECONDS.wayPick, 'hatch');
 }

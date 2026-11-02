@@ -85,6 +85,16 @@ function expected(choice, riskBase, evaRange, odds, prize) {
     prize given, a resource that is not nothing. */
 const isSupply = o => (o.prize !== undefined ? !!(o.prize && (o.prize.salvage || o.prize.energy || o.prize.rations))
     : (o.c.reward || {}).type === 'RESOURCE' && (o.c.reward || {}).val !== 'NOTHING');
+/** The fuel depot at a docked station (step 8: NSOrbit's "Fuel depot", DEPOT_SALVAGE salvage for up to DEPOT_ENERGY energy):
+    whether this player takes it now. gain: the energy that fits; cost: its salvage; econ: NEW_LOOK_ECONOMY. */
+function wantsDepot(style, state, gain, cost, econ) {
+    const left = (state.salvage || 0) - cost;
+    if (left < 0 || gain <= 0) return false;
+    if (style.depot === 'always') return true;
+    if (style.depot === 'low') return (state.energy || 0) <= 60 && left >= 40;                 // a repair's worth kept back
+    if (style.depot === 'payoff') return gain >= econ.DEPOT_ENERGY * 0.75 && left >= 30;
+    return false;
+}
 /** The choice's index among `open` ({ c, i, odds, prize } not struck by a trait; odds: App.wayOdds, as the card shows them;
     prize: App.tripPrize, what the way pays). */
 function pickWay(open, style, riskBase, evaRange, rnd) {
@@ -247,4 +257,4 @@ function pickBoarder(state, style, rnd) {
     return well.slice().sort((a, b) => pref.findIndex(t => tagsOf(a).includes(t)) - pref.findIndex(t => tagsOf(b).includes(t)))[0];
 }
 
-module.exports = { pickCard, pickWay, pickWorld, wantsFind, pickTeam, supperPlan, deckPlan, pickBoarder, idOf, tagsOf, SETTLE, expected, rewardValue, prizeValue, isSupply };
+module.exports = { pickCard, pickWay, pickWorld, wantsFind, pickTeam, supperPlan, deckPlan, pickBoarder, wantsDepot, idOf, tagsOf, SETTLE, expected, rewardValue, prizeValue, isSupply };

@@ -103,6 +103,7 @@ function finish(rc) {
     state.crew.forEach(c => { if (c.status === 'DEAD' && !R.deaths.some(d => d.who === c.name)) noteDeath(rc, c); });
     noteInjuries(rc);
     R.stress.reached2 = Object.values(R.stress.peak).filter(v => v >= 2).length;
+    R.stress.reached1 = Object.values(R.stress.peak).filter(v => v >= 1).length;
     const evs = R.stress.breakdowns.map(b => b.ev);                                  // a second breakdown from the same event
     R.stress.sameEvent = evs.filter((e, i) => evs.indexOf(e) !== i).length;
     R.minutes = Math.round(R.secs / 6) / 10;

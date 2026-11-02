@@ -11,11 +11,13 @@ const { auraDocking } = require('./docking');
 // without. decks: what a broken deck gets. worlds: which worlds of the route are taken. trips: which finds get a trip.
 // strange: "Fly closer" at a strange site. pilot: who flies the landings, the jumps and the breach.
 const STYLES = Object.freeze({
-    careful: { label: 'Careful', cards: 'kind', way: 'careful', team: 'proposal', supper: 'rotate', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'good' },
-    greedy: { label: 'Greedy', cards: 'resources', way: 'boldForSupply', team: 'proposal', supper: 'accept', decks: 'cheap', worlds: 'all', trips: 'all', strange: true, pilot: 'good' },
-    reckless: { label: 'Reckless', cards: 'random', way: 'bold', team: 'random', supper: 'same', decks: 'never', worlds: 'random', trips: 'all', strange: true, pilot: 'poor' },
-    aura: { label: 'A.U.R.A.-heavy', cards: 'first', way: 'careful', team: 'proposal', supper: 'accept', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'aura' },
-    optimizer: { label: 'Optimizer', cards: 'net', way: 'expected', team: 'lowestRisk', supper: 'best', decks: 'cheapest', worlds: 'payoff', trips: 'payoff', strange: false, pilot: 'good' },
+    careful: { label: 'Careful', cards: 'kind', way: 'careful', team: 'proposal', supper: 'rotate', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'good', depot: 'low' },
+    greedy: { label: 'Greedy', cards: 'resources', way: 'boldForSupply', team: 'proposal', supper: 'accept', decks: 'cheap', worlds: 'all', trips: 'all', strange: true, pilot: 'good', depot: 'always' },
+    reckless: { label: 'Reckless', cards: 'random', way: 'bold', team: 'random', supper: 'same', decks: 'never', worlds: 'random', trips: 'all', strange: true, pilot: 'poor', depot: 'never' },
+    aura: { label: 'A.U.R.A.-heavy', cards: 'first', way: 'careful', team: 'proposal', supper: 'accept', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'aura', depot: 'never' },
+    optimizer: { label: 'Optimizer', cards: 'net', way: 'expected', team: 'lowestRisk', supper: 'best', decks: 'cheapest', worlds: 'payoff', trips: 'payoff', strange: false, pilot: 'good', depot: 'payoff' },
+    // depot (step 8, NSOrbit's "Fuel depot" at a docked station): 'low' when energy is low and a repair's salvage is left,
+    // 'always', 'never' (the plan's "extras: —"), 'payoff' when most of its energy fits and some salvage is left (policy.wantsDepot)
     // two more, only to check the model against cardsim.js's tables (tension/out/model-final2.txt): its careful/pragmatic (cardsim's
     // own worth(), policy.js cardsimWorth) and lean/kind; carefulPragmatic is also the plan's "pragmatic" in the card-gap guard
     carefulPragmatic: { label: 'Careful, pragm.', cards: 'cardsim', way: 'careful', team: 'proposal', supper: 'rotate', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'good' },
@@ -103,6 +105,7 @@ const SECONDS = Object.freeze({
     secondTrip: 6, secondTripCut: 2,                 // the hatch again for another find at the same stop (C5: nobody walks to it)
     wreck: 35, torch: 20, page: 20, dating: 25,      // our wrecks: the story card, the door, a found page, dating the disc
     site: 30, strange: 30, station: 45, stationCard: 20, mine: 20, skim: 4, call: 25, moment: 25, deckChoice: 5,   // station: the picker and the walk
+    depot: 4,                                        // the fuel depot (step 8): a click, like Refuel
     dock: { full: 59, quick: 21 },                   // the new look's flown dock (Bring Her In), Dock click to Continue: the first of a run
                                                      //   (or a story station's) the whole approach, the rest routine; measured 2026-10-30
                                                      //   (careful 59 / 59, A.U.R.A. 20, careful 21-22, careless 15)

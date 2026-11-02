@@ -71,6 +71,7 @@ function measureCrew(runs) {
         lostAny: pct(runs, r => r.deaths.length > 0), lost2: pct(runs, r => r.deaths.length >= 2), lostMean: mean(runs, r => r.deaths.length),
         phases: tally(runs.flatMap(r => r.deaths), d => d.phase),
         stress2: pct(runs, r => r.stress.reached2 > 0), stress2Mean: mean(runs, r => r.stress.reached2),
+        stress1Mean: mean(runs, r => r.stress.reached1 || 0), stress1Sector: quantile(runs.flatMap(r => (r.stress.first1 || []).map(x => x.sector)), 0.5),
         stressUp: perRun(runs, r => r.stress.up), stressDown: perRun(runs, r => r.stress.down),
         breakdownAny: pct(runs, r => r.stress.breakdowns.length > 0), breakdownMean: mean(runs, r => r.stress.breakdowns.length),
         twoBreakdownsOneEvent: runs.reduce((a, r) => a + (r.stress.sameEvent || 0), 0),
@@ -85,6 +86,7 @@ function measureShip(runs) {
         crises: mean(runs, r => r.counts.crises), calls: mean(runs, r => r.counts.calls), moments: mean(runs, r => r.cards.moment || 0), campfires: mean(runs, r => r.cards.campfire || 0),
         storyMissed: mean(runs, r => r.counts.storyMissed), storyMissedFew: mean(runs, r => r.counts.storyMissedFew),
         stations: mean(runs, r => r.counts.stations), strange: mean(runs, r => r.counts.strange), pages: mean(runs, r => r.end.pages),
+        depots: mean(runs, r => r.counts.depots || 0), depotAny: pct(runs, r => (r.counts.depots || 0) > 0),
     };
 }
 /** Team trips: how many, who, the traits, the stuck stops, the trip deaths and what the card showed. */
@@ -94,6 +96,7 @@ function measureTrips(runs) {
     return {
         trips: mean(runs, r => r.trips.length), topPair: Math.round(100 * mean(runs, topPairShare)),
         traitTrips: share(traitOn, trips.length), struckTrips: share(runs.reduce((a, r) => a + r.counts.struck, 0), traitOn),
+        traitDownTrips: share(runs.reduce((a, r) => a + (r.counts.tripsTraitDown || 0), 0), trips.length),   // step 8: the holder went down
         resultCards: mean(runs, r => r.counts.resultCards || 0), wayPicks: mean(runs, r => r.counts.wayPicks || 0),   // step 6: a find seen before; a way chosen on the glass
         fitMean: fitted.length ? Math.round(100 * fitted.reduce((a, x) => a + x.fit.total, 0) / fitted.length) / 100 : null,
         stuck: mean(runs, r => r.counts.stuck), stuckFew: mean(runs, r => r.counts.stuckFew), stuckAris: mean(runs, r => r.counts.stuckAris),
@@ -232,6 +235,7 @@ function perPlayer(L, results, order) {
     row('every way struck (careful kept open): runs / per run', m => `${m.lockedAny}% / ${m.lockedMean}`);
     row('reserve used (runs) / times per run', m => `${m.reserveAny}% / ${m.reserveMean}`);
     row('  reserve jumps / reserve warps', m => `${m.reserveJumps} / ${m.reserveWarps}`);
+    row('people who reached stress 1 per run / median sector of the first time', m => `${m.stress1Mean} / ${or(m.stress1Sector)}`);
     row('someone at stress 2 / people per run', m => `${m.stress2}% / ${m.stress2Mean}`);
     row('a breakdown / per run', m => `${m.breakdownAny}% / ${m.breakdownMean}`);
     row('two breakdowns from one event (count)', m => m.twoBreakdownsOneEvent);
@@ -245,8 +249,10 @@ function perPlayer(L, results, order) {
     row('most common pair, share of its trips', m => `${m.topPair}%`);
     row('result cards (a find seen before) / ways picked on the glass, per run', m => `${m.resultCards} / ${m.wayPicks}`);
     row('trips with a trait on / way struck (of those)', m => `${m.traitTrips}% / ${m.struckTrips}%`);
+    row('trips with a trait holder down (step 8: traits work through the person)', m => `${m.traitDownTrips}%`);
     row('crises / calls / crew moments / campfires', m => `${m.crises}/${m.calls}/${m.moments}/${m.campfires}`);
     row('stations / strange sites / pages', m => `${m.stations}/${m.strange}/${m.pages}`);
+    row('fuel depot: runs that used it / uses per run', m => `${m.depotAny}% / ${m.depots}`);
     row('injuries per run / stops each lasted', m => `${m.injuriesPerRun} / ${m.injuryStops}`);
     row('trip deaths / shown risk 30%+ / median', m => `${m.tripDeaths} / ${or(m.tripDeathsShown30, '%')} / ${or(m.tripDeathShownMedian)}`);
     row('trip deaths with a death chance shown', m => or(m.tripDeathsDeadly, '%'));

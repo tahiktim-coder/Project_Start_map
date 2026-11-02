@@ -59,6 +59,7 @@ function watchStock(rc) {
             const v = c.stress || 0, d = v - (lastStress[c.name] || 0);
             if (d) { const book = d > 0 ? R.stress.up : R.stress.down; book[src] = (book[src] || 0) + Math.abs(d); }
             lastStress[c.name] = v;
+            if (v >= 1 && !(R.stress.peak[c.name] >= 1)) R.stress.first1.push({ who: c.name, sector: this.currentSector, at: v, src });   // the stress-1 line (GameState.stressOneBarks; at 2 the trait's own)
             R.stress.peak[c.name] = Math.max(R.stress.peak[c.name] || 0, v);
         });
     };
