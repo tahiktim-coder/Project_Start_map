@@ -53,6 +53,7 @@ const CAMPFIRE_EVENTS = [
             {
                 text: "Strip it for parts.",
                 desc: "+15 Salvage. -5 Energy on every jump in the next sector.",
+                fullCost: true,   // the new look: paid later, on each warp (GameState.getWarpCost), so no card cost cap (EncounterCard)
                 effect: (state) => {
                     state.salvage = Math.min(state.maxSalvage, state.salvage + 15);
                     state._damagedCapacitors = state.currentSector + 1; // the sector we are jumping into; read by GameState.getWarpCost

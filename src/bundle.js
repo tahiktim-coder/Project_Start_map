@@ -1284,8 +1284,13 @@ const NEW_LOOK_ECONOMY = Object.freeze({
     CARD_ENERGY_MAX: 12,     // no single card choice gives more energy than this (was 20, and up to 70 before that); no more
     CARD_RATIONS_MAX: 3,     //   rations than this (sealed rations count, opened) and no more salvage than this either (salvage was
     CARD_SALVAGE_MAX: 40,    //   up to 120). Its chips say what it really gives (EncounterCard.capGains, EncounterCard.apply).
-                             //   Card costs are not capped: a 12 cap left the kind and pragmatic picks 62 energy apart in the
-                             //   run model (61 without it), so closing that gap waits on the designer
+    CARD_COST_CAP: Object.freeze({ energy: 4, rations: 1 }),   // no single card choice costs more than this (2026-11-02, the
+                             //   designer's open call 2), so a kind pick is not paid for many times over: its chips and result
+                             //   line say what it really costs (EncounterCard.apply). Salvage costs are trades (a station's
+                             //   parts, a repair) and keep their price, and so do a cost paid later ("-5 Energy on every jump")
+                             //   and a ship fault (no card choice: showShipMalfunctionModal). It does not close the card gap:
+                             //   the kind and the pragmatic card picks still end far apart in the run model, because the gap is
+                             //   what the pragmatic picks gain, not what the kind ones cost (waiting on the designer)
     CRISIS_CHANCE: 0.35,    // how likely a sign aboard turns into a crisis while the team is down (was 0.5: about 1 trip in 3)
     MIRA_ABOARD: -5,         // Mira scanning the ground from aboard while the team is down: 5 % safer (was 10 %, so sending
                              //   her down is sometimes worth more). NSOrbit.whileDown and NSWorldFinds' marks read it
@@ -6823,7 +6828,7 @@ Then you're through.`,
             context: event.context, dialogue,
             choices: [{ text: isNewScreen() ? 'Deal with it' : 'DEAL WITH IT' }],
             onPick: () => {
-                const result = window.EncounterCard.apply(event, this.state);
+                const result = window.EncounterCard.apply({ ...event, fullCost: true }, this.state);   // a fault is no card choice: the new look's card cost cap leaves it be
                 if (result) this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
                 this.state.emitUpdates();
                 resolve();
