@@ -175,6 +175,8 @@ class GameState {
         this._breachDone = false;  // sector 1's hole in the hull (Breach) happens once per run
         this._paidWarps = 0;       // warps to a new place (free courses too), so the breach never comes on the first one
         this._docksFlown = 0;      // the new look: docks flown this run; the first plays the whole approach (App.flyDock)
+        this._nsTypesLanded = {};  // the new look: kind of world → { grade, auto } of its last full drop this run (App.isFullDrop, App.flyLanding)
+        this._nsDrops = 0;         // the new look: landings flown this run (the meteor's first-landing help and its later tiers)
         this._wreckDoors = [];     // the doors of the wrecks boarded this run, in order (App.wreckDoorFor, TorchDoors.pick)
         this._kindsScanned = [];   // the new look: the kinds of world scanned this run (the first of each kind is +1 data, App.noteNewKind)
 
@@ -278,6 +280,8 @@ class GameState {
             _breachDone: !!this._breachDone,
             _paidWarps: this._paidWarps || 0,
             _docksFlown: this._docksFlown || 0,
+            _nsTypesLanded: this._nsTypesLanded || {},
+            _nsDrops: this._nsDrops || 0,
             _nsSupper: this._nsSupper || null,     // the new look: a supper still due after the jump (eaten after a reload too)
             _hungerChain: 1,                       // missed suppers counted by the hunger chain (loadGame: older counts never kill)
             aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
@@ -377,6 +381,8 @@ class GameState {
             this._breachDone = !!saveData._breachDone;
             this._paidWarps = saveData._paidWarps || 0;
             this._docksFlown = saveData._docksFlown || 0;            // saves from before the flown docking have none
+            this._nsTypesLanded = landedTypesFrom(saveData._nsTypesLanded);   // saves from before the meteor have none ({}, 0)
+            this._nsDrops = Number.isFinite(saveData._nsDrops) && saveData._nsDrops >= 0 ? Math.floor(saveData._nsDrops) : 0;
             this._nsSupper = saveData._nsSupper || null;
             if (saveData.aura && window.AuraSystem) {
                 window.AuraSystem.ethicsScore = saveData.aura.ethicsScore || 0;
@@ -1342,6 +1348,20 @@ const REEL_HULLS = [7, 2207];   // the hulls the jump films show drifting (Story
 const WRECK_CALLSIGNS = ['PIONEER', 'COVENANT', 'SOJOURN', 'REQUIEM', 'LAZARUS', 'ICARUS', 'MERIDIAN', 'ORPHEUS', 'HALCYON', 'VESPER', 'TANTALUS', 'EMBER'];
 const CREW_ID_BY_TAG = { LEADER: 'you', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' }; // the minigames' names for the crew
 const crewIdOf = member => CREW_ID_BY_TAG[(member.tags || []).find(tag => CREW_ID_BY_TAG[tag])];
+// The new look: with Jaxon on the team, A.U.R.A.'s landing comes down a step softer (App.applyLanding, and the meteor's routine
+// drop when it carries her landing: App.flyLanding)
+const LANDING_LIFT = Object.freeze({ crash: 'rough', rough: 'soft' });
+/** A save's record of the kinds of world landed on (GameState _nsTypesLanded): only kinds with a known grade, auto a boolean;
+    an old save's none is {}. */
+function landedTypesFrom(raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    Object.keys(raw).forEach(type => {
+        const v = raw[type];
+        if (typeof type === 'string' && v && ['soft', 'rough', 'crash'].includes(v.grade)) out[type] = { grade: v.grade, auto: !!v.auto };
+    });
+    return out;
+}
 /** The wake-up talk, one copy: today's "Good morning, Commander" card builds from it, and so does the new screen's talk
     (start/Wake.js). mapNote and rules[1] belong to the card only (the new screen has no map and no stop count). */
 const OPENING_TALK = Object.freeze({
@@ -1730,8 +1750,9 @@ class App {
         if (place) {
             place(this, s);
             s._tutorialWarpSeen = s._tutorialEvaSeen = s._tutorialDeckSeen = s._tutorialStressSeen = true;   // a placed moment is past the first-run lines, as a real run is by then
-            const tells = Object.keys((window.NSOrbit && window.NSOrbit.TELL) || {}).map(k => 'act:' + k).concat('act:farscan', ((window.NSStock && window.NSStock.KEYS) || []).map(k => 'stock:' + k));
-            s.reliance = Object.assign(s.reliance || { auto: 0, manual: 0 }, { nsTold: tells });   // and past A.U.R.A.'s once-a-run teaching (Voice.once)
+            const tells = Object.keys((window.NSOrbit && window.NSOrbit.TELL) || {}).map(k => 'act:' + k).concat('act:farscan', ((window.NSStock && window.NSStock.KEYS) || []).map(k => 'stock:' + k), 'land:first');
+            s.reliance = Object.assign(s.reliance || { auto: 0, manual: 0 }, { nsTold: tells });   // and past A.U.R.A.'s once-a-run teaching (Voice.once; the meteor's keycaps: App.flyLanding)
+            s._nsDrops = Math.max(s._nsDrops || 0, 6);                                       // and past the meteor's first-landing help (its later tiers by landings flown)
         } else s.sectorNodes = PlanetGenerator.generateSector(1);
         this.renderNav();
         s.emitUpdates();
@@ -4670,6 +4691,11 @@ Then you're through.`,
             c._tripsDown = (c._tripsDown || 0) + 1;
             if (planet.isEden || planet.type === 'EDEN') c._walkedEden = true;
         });
+        // The new look's landing (App.flyLanding): the whole meteor or its routine drop (App.isFullDrop), and the find it flies to (a
+        // blind trip: the site, else the world's own event). Read before markDone: the odds and the blind find read the chosen find
+        const isFull = isNew && !(isSiteTrip && site.inSpace) ? this.isFullDrop(planet, find, evaTeam, { wreck: isSiteTrip && site.tag === 'EXODUS_WRECK' }) : true;
+        let landFind = find;
+        if (!landFind && isNew && window.NSWorldFinds) { try { landFind = window.NSWorldFinds.blind(this, planet); } catch (err) { console.error('App: the blind find failed', err); } }
         if (isNewScreen()) {                                                         // the new look: this find is visited (a blind trip: the site, else the world's own event)
             if (window.NSWorldFinds) window.NSWorldFinds.keepOld(this, planet);      //   (a save from before finds: its one trip stays counted)
             planet.nsTrips = (planet.nsTrips || 0) + 1;                              //   and the trip has really gone (NSOrbit.send reads it)
@@ -4681,9 +4707,10 @@ Then you're through.`,
         if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
         const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
         const siteArt = isSiteTrip ? site.art : (find && find.art) || null;          // a find of its own (old ruins, a beacon) is drawn by the mark too
-        const goDown = isRelay ? this.flyRelay(planet) : isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
-            : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
-        const landed = goDown.then(landing => this.applyLanding(landing, evaTeam));
+        const flown = isRelay || isCrossing ? null : this.flyLanding(planet, evaTeam, { find: landFind, site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet), full: isFull });   // the new look: the meteor (null: LanderGame)
+        const goDown = isRelay ? this.flyRelay(planet) : isCrossing ? Promise.resolve(null) : flown || (window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
+            : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null));
+        const landed = goDown.then(landing => this.applyLanding(landing, evaTeam, planet));
         const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam, { relay: isRelay })) : landed;   // the new screen: the crisis aboard while they are down
 
         if (isSiteTrip) {                                                           // the team goes where the scan pointed: the site's own story
@@ -4863,17 +4890,73 @@ Then you're through.`,
         return planet.nsLock === 'sharp' ? NEW_LOOK_ECONOMY.RISK_SHARP_LOCK : NEW_LOOK_ECONOMY.RISK_FAIR_LOCK;
     }
 
+    /** The new look: does this landing fly the whole meteor, or its ~10 s routine drop (depth plan, step 7)? The whole one: the
+        first landing on this kind of world this run (state._nsTypesLanded), a story world or Eden, one of our wrecks (o.wreck),
+        the bold way (App.isBoldWay, once PR #31 brings it), or odds where someone could die (what GO DOWN showed:
+        NSOrbit.teamOdds). Read before markDone: the odds read the chosen find. */
+    isFullDrop(planet, find, team, o = {}) {
+        if (!planet || !planet.type || !(this.state._nsTypesLanded || {})[planet.type]) return true;
+        if (planet.isStoryPlanet || planet.isEden || o.wreck) return true;
+        if (find && typeof this.isBoldWay === 'function' && this.isBoldWay(planet, find.id)) return true;
+        const O = window.NSOrbit;
+        let odds = null;
+        try { odds = O && typeof O.teamOdds === 'function' ? O.teamOdds(this, (team || []).map(crewIdOf)) : null; } catch (err) { console.error('App: the drop odds failed', err); }
+        return !!(odds && odds.deadly);
+    }
+
+    /**
+     * The new look's landing (handleEvaAction asks first): THE METEOR, one fall from the release to the touchdown in one close
+     * camera (src/newscreen/land/LandFall.js, MiniHost 'land-fall'). o.full: the whole fall (App.isFullDrop); else the routine
+     * drop: you line it up and A.U.R.A. sets it down at the grade carried from the last full drop on this kind of world (her
+     * landing a step softer with Jaxon on the team). Resolves as LanderGame.play does ({ grade, auto, offMark, marked }, and raw,
+     * lifted, hurt, routine for App.applyLanding) and never rejects; a meteor that could not fly (its bakes not ready in time)
+     * is LanderGame's. null when this is not the new look or the world has no ground for it: the caller plays LanderGame.
+     * o: { find (the game's find, or the blind trip's), site, wreck, unmarked (as LanderGame gets them), full }.
+     */
+    flyLanding(planet, team, o = {}) {
+        const M = window.MiniHost, LFall = window.LandFall;
+        if (!isNewScreen() || !M || !M.has('land-fall') || !LFall || !LFall.canFly(planet)) return null;
+        const s = this.state, members = team || [], last = (s._nsTypesLanded || {})[planet.type], full = !!o.full || !last;
+        const jaxon = members.some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD');
+        const carried = full ? null : last.auto && jaxon && LANDING_LIFT[last.grade] ? { grade: LANDING_LIFT[last.grade], raw: last.grade, auto: true, lifted: true }
+            : { grade: last.grade, raw: last.grade, auto: !!last.auto, lifted: false };
+        const tally = s.reliance || (s.reliance = { auto: 0, manual: 0 });
+        if (!Array.isArray(tally.nsTold)) tally.nsTold = [];
+        const first = !tally.nsTold.includes('land:first');                          // the keycaps and the aim line: once a run (as Voice.once)
+        if (first) tally.nsTold.push('land:first');
+        const find = o.find || null, trip = this._nsTrip || {}, SC = window.ShipCutaway;
+        const colorOf = m => { const c = SC && typeof SC.colorOf === 'function' ? SC.colorOf(m) : null; return Array.isArray(c) ? `rgb(${c.join(',')})` : null; };
+        const opts = {
+            planet, sector: s.currentSector, find, site: o.site || null, wreck: o.wreck || null, unmarked: o.unmarked || null,
+            team: members.map(m => ({ id: crewIdOf(m), status: m.status, color: colorOf(m) })),
+            aboard: s.crew.filter(c => c.status !== 'DEAD' && !members.includes(c)).map(crewIdOf).filter(Boolean),
+            full, carried, jaxon, drops: s._nsDrops || 0, first, energy: s.energy,
+            risk: find && typeof find.risk === 'number' ? find.risk : trip.shownBase,
+        };
+        const lander = () => (window.LanderGame ? window.LanderGame.play(this, planet, members, { site: o.site, wreck: o.wreck, unmarked: o.unmarked }) : null);
+        return M.play('land-fall', opts)
+            .then(r => (r && r.fallback ? lander() : r), err => { console.error(err); return lander(); })
+            .catch(err => { console.error(err); return null; });
+    }
+
     /** Consequences of the landing: a soft one makes the trip safer, a crash hurts someone before they step out. The new look:
-        with Jaxon on the team, A.U.R.A.'s landing is one step better (a crash is rough, a rough one soft): he flies with her. */
-    applyLanding(landing, evaTeam) {
+        with Jaxon on the team, A.U.R.A.'s landing is one step better (a crash is rough, a rough one soft): he flies with her.
+        The meteor (App.flyLanding) has shown his step already (landing.lifted), and names who a crash hurts (landing.hurt); a
+        full drop's grade is what a routine drop on that kind of world carries, and a routine drop is not counted as flown by
+        hand or by A.U.R.A. */
+    applyLanding(landing, evaTeam, planet) {
         this._landingRiskMod = 0;
         if (!landing || !window.LanderGame) return;
-        this.noteReliance(!!landing.auto);
+        const routine = isNewScreen() && !!landing.routine, raw = landing.raw || landing.grade;   // the meteor (App.flyLanding): a routine drop, the grade before Jaxon's step
+        if (!routine) this.noteReliance(!!landing.auto);                              // a routine drop is A.U.R.A.'s set-down, not a choice to fly or hand over
         if (isNewScreen()) {
-            this.state._nsLandAuto = !!landing.auto;                                  // NSOrbit.propose: Jaxon's step counts while A.U.R.A. lands
-            const lift = { crash: 'rough', rough: 'soft' }[landing.grade];
-            if (landing.auto && lift && (evaTeam || []).some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD')) {
-                landing = Object.assign({}, landing, { grade: lift });
+            const s = this.state;
+            s._nsLandAuto = !!landing.auto;                                           // NSOrbit.propose: Jaxon's step counts while A.U.R.A. lands
+            s._nsDrops = (s._nsDrops || 0) + 1;                                       // the meteor's tiers (App.flyLanding)
+            if (!routine && planet && planet.type && window.LanderGame.GRADES[raw]) s._nsTypesLanded = Object.assign({}, s._nsTypesLanded, { [planet.type]: { grade: raw, auto: !!landing.auto } });   // a full drop (LanderGame's too): what a routine drop on this kind carries (App.isFullDrop)
+            const lift = LANDING_LIFT[landing.grade];
+            if (landing.lifted || (landing.auto && lift && (evaTeam || []).some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD'))) {
+                if (!landing.lifted) landing = Object.assign({}, landing, { grade: lift });   // (the meteor showed his step already: landing.lifted)
                 this.state.addLog('Jaxon: "I helped A.U.R.A. with the landing. We came down softer."');   // DRAFT
             }
         }
@@ -4882,7 +4965,8 @@ Then you're through.`,
         if (landing.offMark) this.state.addLog("Down safely, but well away from the marked spot. It is a long walk.");
         if (landing.grade === 'crash') {
             const fit = evaTeam.filter(m => m.status === 'HEALTHY');
-            const hurt = fit[Math.floor(Math.random() * fit.length)];
+            const named = landing.hurt ? fit.find(m => crewIdOf(m) === landing.hurt) : null;   // the meteor: the one its picture showed hurt
+            const hurt = named || fit[Math.floor(Math.random() * fit.length)];
             if (hurt) {
                 hurt.status = 'INJURED';
                 delete hurt._nsMendAt;                                               // the new look: a new injury, not one Aris already saw to
