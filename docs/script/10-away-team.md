@@ -92,20 +92,20 @@ _One line per thing found: name, what it means, and how it is marked._
 ### The one site a team can visit «bundle.js · siteOf»
 _Shown on the orbit card; also used in "The lander crosses to [site]"._
 
-- **label** — THE WRECK «bundle.js · line 1990»
-- **note** — ONE OF OUR SHIPS «bundle.js · line 1990»
-- **label** — THE STRANGE SITE «bundle.js · line 1991»
-- **note** — SOMETHING HERE IS WRONG «bundle.js · line 1991»
-- **label** — THE BEACON «bundle.js · line 1992»
-- **note** — A BEACON STILL TRANSMITTING «bundle.js · line 1992»
-- **label** — THE DOME «bundle.js · line 1993»
-- **note** — SOMETHING GREEN UNDER GLASS «bundle.js · line 1993»
-- **label** — THE GRAVES «bundle.js · line 1994»
-- **note** — ROWS OF MARKERS «bundle.js · line 1994»
-- **label** — THE COLONY RUINS «bundle.js · line 1995»
-- **note** — A SETTLEMENT, EMPTY «bundle.js · line 1995»
-- **label** — THE WRECKAGE «bundle.js · line 1996»
-- **note** — A SHIP IN PIECES, IN ORBIT «bundle.js · line 1996»
+- **label** — THE WRECK «bundle.js · line 2031»
+- **note** — ONE OF OUR SHIPS «bundle.js · line 2031»
+- **label** — THE STRANGE SITE «bundle.js · line 2032»
+- **note** — SOMETHING HERE IS WRONG «bundle.js · line 2032»
+- **label** — THE BEACON «bundle.js · line 2033»
+- **note** — A BEACON STILL TRANSMITTING «bundle.js · line 2033»
+- **label** — THE DOME «bundle.js · line 2034»
+- **note** — SOMETHING GREEN UNDER GLASS «bundle.js · line 2034»
+- **label** — THE GRAVES «bundle.js · line 2035»
+- **note** — ROWS OF MARKERS «bundle.js · line 2035»
+- **label** — THE COLONY RUINS «bundle.js · line 2036»
+- **note** — A SETTLEMENT, EMPTY «bundle.js · line 2036»
+- **label** — THE WRECKAGE «bundle.js · line 2037»
+- **note** — A SHIP IN PIECES, IN ORBIT «bundle.js · line 2037»
 
 ### An old station «OrbitView.js · renderStation»
 
@@ -146,24 +146,24 @@ _Shown on the orbit card; also used in "The lander crosses to [site]"._
 ### Deep scan «bundle.js · handleScanAction»
 _The lines for the light are in sector-6.md._
 
-- Deep Scan started... «bundle.js · line 4355»
-- Sharp lock, but the laboratory is down: nobody can work the extra detail into data. «bundle.js · line 4357»
-- The scan picked up extra detail. +1 data. «bundle.js · line 4360»
-- Sharp lock: the scan picked up extra detail. +1 data. «bundle.js · line 4360»
-- Weak lock: the scan had to run twice. 1 extra energy spent. «bundle.js · line 4363»
-- A.U.R.A. tuned the scan. Adequate. «bundle.js · line 4365»
-- ⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior. «bundle.js · line 4378»
-- A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part." «bundle.js · line 4379»
-- Detailed scan of the station complete. Resource data available. «bundle.js · line 4383»
-- Detailed surface analysis complete. Resource data available. «bundle.js · line 4383»
-- ⚡ OLD SIGNAL: a beacon on our own channel, still transmitting. «bundle.js · line 4390»
-- A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it." «bundle.js · line 4391»
-- 📜 ANCIENT RUINS: Structural remnants detected. Archaeological value confirmed. «bundle.js · line 4396»
-- Ancient scanner arrays still partially functional. +1 Energy recovered. «bundle.js · line 4399»
-- 🌿 BIOLOGICAL SIGNATURES: Stable ecosystem detected. EVA conditions favorable. «bundle.js · line 4404»
-- ⚙ TECHNOLOGICAL SIGNATURES: Machine presence confirmed. High salvage potential. «bundle.js · line 4409»
-- 🚀 DERELICT VESSEL: Non-Exodus ship wreckage detected. Investigate for salvage. «bundle.js · line 4414»
-- ⚠ INCOMING TRANSMISSION: Old distress signal detected... «bundle.js · line 4452»
+- Deep Scan started... «bundle.js · line 4397»
+- Sharp lock, but the laboratory is down: nobody can work the extra detail into data. «bundle.js · line 4399»
+- The scan picked up extra detail. +1 data. «bundle.js · line 4402»
+- Sharp lock: the scan picked up extra detail. +1 data. «bundle.js · line 4402»
+- Weak lock: the scan had to run twice. 1 extra energy spent. «bundle.js · line 4405»
+- A.U.R.A. tuned the scan. Adequate. «bundle.js · line 4407»
+- ⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior. «bundle.js · line 4420»
+- A.U.R.A.: "Something down there hunts, Commander. The green is not the safe part." «bundle.js · line 4421»
+- Detailed scan of the station complete. Resource data available. «bundle.js · line 4425»
+- Detailed surface analysis complete. Resource data available. «bundle.js · line 4425»
+- ⚡ OLD SIGNAL: a beacon on our own channel, still transmitting. «bundle.js · line 4432»
+- A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it." «bundle.js · line 4433»
+- 📜 ANCIENT RUINS: Structural remnants detected. Archaeological value confirmed. «bundle.js · line 4438»
+- Ancient scanner arrays still partially functional. +1 Energy recovered. «bundle.js · line 4441»
+- 🌿 BIOLOGICAL SIGNATURES: Stable ecosystem detected. EVA conditions favorable. «bundle.js · line 4446»
+- ⚙ TECHNOLOGICAL SIGNATURES: Machine presence confirmed. High salvage potential. «bundle.js · line 4451»
+- 🚀 DERELICT VESSEL: Non-Exodus ship wreckage detected. Investigate for salvage. «bundle.js · line 4456»
+- ⚠ INCOMING TRANSMISSION: Old distress signal detected... «bundle.js · line 4494»
 
 ### Tuning the scan by hand «SignalTune.js · SignalTune»
 
@@ -183,35 +183,35 @@ _The lines for the light are in sector-6.md._
 ### Long-range scan from the map «bundle.js · handleRemoteScan»
 _Includes A.U.R.A.'s lying scan when she has turned._
 
-- BRIDGE OFFLINE: Remote scanning unavailable. «bundle.js · line 2703»
-- A.U.R.A.: "Scan complete, Commander. All readings normal." [READINGS UNRELIABLE] «bundle.js · line 2728»
-- Air: [unknown]. Gravity: [unknown]. «bundle.js · line 2742»
-- Long-range scan: [planet name]. Salvage: [metal level]. Energy: [energy level]. Signals: [signal str].[dish str] «bundle.js · line 2743»
+- BRIDGE OFFLINE: Remote scanning unavailable. «bundle.js · line 2745»
+- A.U.R.A.: "Scan complete, Commander. All readings normal." [READINGS UNRELIABLE] «bundle.js · line 2770»
+- Air: [unknown]. Gravity: [unknown]. «bundle.js · line 2784»
+- Long-range scan: [planet name]. Salvage: [metal level]. Energy: [energy level]. Signals: [signal str].[dish str] «bundle.js · line 2785»
 
 ## Probes
 
 ### Launching a probe «bundle.js · handleProbeAction»
 _The lines for the light are in sector-6.md._
 
-- ENGINEERING OFFLINE: Probe fabrication unavailable. «bundle.js · line 4481»
-- Probe Fabricated. Systems Operational. (-50 Salvage) «bundle.js · line 4487»
-- Not enough Salvage to fabricate Probe. «bundle.js · line 4491»
-- Probe launched to [planet name]... «bundle.js · line 4497»
-- Probe launched to [planet name] surface... «bundle.js · line 4497»
-- STORAGE WARNING: Salvage capacity reached! «bundle.js · line 4524»
+- ENGINEERING OFFLINE: Probe fabrication unavailable. «bundle.js · line 4523»
+- Probe Fabricated. Systems Operational. (-50 Salvage) «bundle.js · line 4529»
+- Not enough Salvage to fabricate Probe. «bundle.js · line 4533»
+- Probe launched to [planet name]... «bundle.js · line 4539»
+- Probe launched to [planet name] surface... «bundle.js · line 4539»
+- STORAGE WARNING: Salvage capacity reached! «bundle.js · line 4566»
 
 ### Long-range probe from the map «bundle.js · handleRemoteProbe»
 
-- No target selected for remote probe. «bundle.js · line 4541»
-- Target must be scanned before remote probe deployment. «bundle.js · line 4547»
-- Already in orbit. Use standard probe deployment. «bundle.js · line 4553»
-- ENGINEERING OFFLINE: Probe fabrication unavailable. «bundle.js · line 4561»
-- Probe Fabricated. Systems Operational. (-50 Salvage) «bundle.js · line 4567»
-- Not enough Salvage to fabricate Probe. (50 required) «bundle.js · line 4569»
-- Not enough energy for remote probe. ([remote cost] required) «bundle.js · line 4577»
-- Launching long-range probe to [planet name]... (-[remote cost] Energy) «bundle.js · line 4581»
-- [name]: "Data link established. This is exciting — remote sampling!" «bundle.js · line 4587»
-- STORAGE WARNING: Salvage capacity reached! «bundle.js · line 4609»
+- No target selected for remote probe. «bundle.js · line 4583»
+- Target must be scanned before remote probe deployment. «bundle.js · line 4589»
+- Already in orbit. Use standard probe deployment. «bundle.js · line 4595»
+- ENGINEERING OFFLINE: Probe fabrication unavailable. «bundle.js · line 4603»
+- Probe Fabricated. Systems Operational. (-50 Salvage) «bundle.js · line 4609»
+- Not enough Salvage to fabricate Probe. (50 required) «bundle.js · line 4611»
+- Not enough energy for remote probe. ([remote cost] required) «bundle.js · line 4619»
+- Launching long-range probe to [planet name]... (-[remote cost] Energy) «bundle.js · line 4623»
+- [name]: "Data link established. This is exciting — remote sampling!" «bundle.js · line 4629»
+- STORAGE WARNING: Salvage capacity reached! «bundle.js · line 4651»
 
 ### What the probe reports «ProbeSystem.js · performProbe»
 
@@ -368,15 +368,15 @@ _Data logs and finds ("DATA LOG: …")._
 ### Sending the team down «bundle.js · handleEvaAction»
 _The lines for the light are in sector-6.md._
 
-- A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished." «bundle.js · line 4675»
-- Aris: "Absolutely not. [name] needs treatment first. No one goes out there." «bundle.js · line 4692»
-- A.U.R.A.: "Nobody aboard can go down, Commander." «bundle.js · line 4699»
-- MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge. «bundle.js · line 4700»
-- EVA team deployed: [name]. «bundle.js · line 4731»
-- EVA team deployed: [name] and [name]. «bundle.js · line 4732»
-- A.U.R.A.: "Team away, Commander. I have their vitals." «bundle.js · line 4737»
-- Mira insists the team stays out for a full day. -1 Ration. «bundle.js · line 4749»
-- The lander crosses to [site]. «bundle.js · line 4767»
+- A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished." «bundle.js · line 4717»
+- Aris: "Absolutely not. [name] needs treatment first. No one goes out there." «bundle.js · line 4734»
+- A.U.R.A.: "Nobody aboard can go down, Commander." «bundle.js · line 4741»
+- MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge. «bundle.js · line 4742»
+- EVA team deployed: [name]. «bundle.js · line 4773»
+- EVA team deployed: [name] and [name]. «bundle.js · line 4774»
+- A.U.R.A.: "Team away, Commander. I have their vitals." «bundle.js · line 4779»
+- Mira insists the team stays out for a full day. -1 Ration. «bundle.js · line 4791»
+- The lander crosses to [site]. «bundle.js · line 4809»
 
 ### Who goes, and the radio «AwayTeam.js · AwayTeam»
 _The crew picker, their chatter on the way down, and the return screen._
@@ -447,11 +447,11 @@ _The crew picker, their chatter on the way down, and the return screen._
 
 ### How the landing went «bundle.js · applyLanding»
 
-- Jaxon: "I helped A.U.R.A. with the landing. We came down softer." «bundle.js · line 4994»
-- Soft landing. The team steps out steady. «bundle.js · line 4998»
-- Soft landing on the marked spot. The team steps out steady. «bundle.js · line 4998»
-- Down safely, but well away from the marked spot. It is a long walk. «bundle.js · line 4999»
-- WARNING: The lander came down hard. [name] is INJURED before the hatch even opens. «bundle.js · line 5006»
+- Jaxon: "I helped A.U.R.A. with the landing. We came down softer." «bundle.js · line 5036»
+- Soft landing. The team steps out steady. «bundle.js · line 5040»
+- Soft landing on the marked spot. The team steps out steady. «bundle.js · line 5040»
+- Down safely, but well away from the marked spot. It is a long walk. «bundle.js · line 5041»
+- WARNING: The lander came down hard. [name] is INJURED before the hatch even opens. «bundle.js · line 5048»
 
 ### Cutting into one of our wrecks (the mini-game) «Torch.js · Torch»
 _Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet._
@@ -529,168 +529,168 @@ _(no text)_
 ### The choice card on the surface «bundle.js · showEventModal»
 _The card around every surface find (pools.md, Surface finds)._
 
-- **BIOLOGICAL** — Living things here are calm «bundle.js · line 5258»
-- **ALIEN SIGNAL** — Unknown signal nearby «bundle.js · line 5258»
-- **ANCIENT RUINS** — Old ruins, still solid «bundle.js · line 5258»
-- **TECHNOLOGICAL** — Working machines nearby «bundle.js · line 5259»
-- **DERELICT** — Unstable wreckage «bundle.js · line 5259»
-- **PREDATORY** — Something hunts here «bundle.js · line 5259»
-- **SOFT LANDING** — You put them down gently «bundle.js · line 5260»
-- **HARD LANDING** — The landing shook them up «bundle.js · line 5260»
-- **MIRA SCANNED IT** — Mira scanned the ground «bundle.js · line 5260»
-- **SCANNED** — Scanned from orbit first «bundle.js · line 5261»
-- **SHARP SCAN** — A sharp scan from orbit «bundle.js · line 5261»
-- **NOT SCANNED** — Never scanned from orbit «bundle.js · line 5261»
-- **RIGHT TEAM** — The right people went down «bundle.js · line 5262»
-- **HURT GOES** — Someone hurt went down «bundle.js · line 5262»
-- [type]: [n]% [more dangerous | safer] «bundle.js · line 5265»
-- +[is high] salvage «bundle.js · line 5269»
-- **ENERGY** — +[eva lo] to [eva hi] energy «bundle.js · line 5270»
-- energy already full «bundle.js · line 5272»
-- +[energy room] energy «bundle.js · line 5272»
-- +[eva lo] to [energy room] energy «bundle.js · line 5272»
-- energy already full «bundle.js · line 5276»
-- +[n] energy «bundle.js · line 5276»
-- an item[n] «bundle.js · line 5279»
-- +[n] data «bundle.js · line 5280»
-- [total risk]% chance someone gets hurt[, a 1 in [one in] chance someone dies] «bundle.js · line 5291»
-- Vance refuses «bundle.js · line 5292»
-- Mira overrides this «bundle.js · line 5292»
-- TEAM ON THE GROUND «bundle.js · line 5303»
-- [name] ON THE GROUND «bundle.js · line 5306»
-- GOING IN «bundle.js · line 5308»
-- Vance: “I am not risking anyone on something that dangerous.” «bundle.js · line 5309»
-- Mira: “The safe option gets us nothing. I am going in.” «bundle.js · line 5310»
-- WHAT DO THEY DO? «bundle.js · line 5311»
+- **BIOLOGICAL** — Living things here are calm «bundle.js · line 5300»
+- **ALIEN SIGNAL** — Unknown signal nearby «bundle.js · line 5300»
+- **ANCIENT RUINS** — Old ruins, still solid «bundle.js · line 5300»
+- **TECHNOLOGICAL** — Working machines nearby «bundle.js · line 5301»
+- **DERELICT** — Unstable wreckage «bundle.js · line 5301»
+- **PREDATORY** — Something hunts here «bundle.js · line 5301»
+- **SOFT LANDING** — You put them down gently «bundle.js · line 5302»
+- **HARD LANDING** — The landing shook them up «bundle.js · line 5302»
+- **MIRA SCANNED IT** — Mira scanned the ground «bundle.js · line 5302»
+- **SCANNED** — Scanned from orbit first «bundle.js · line 5303»
+- **SHARP SCAN** — A sharp scan from orbit «bundle.js · line 5303»
+- **NOT SCANNED** — Never scanned from orbit «bundle.js · line 5303»
+- **RIGHT TEAM** — The right people went down «bundle.js · line 5304»
+- **HURT GOES** — Someone hurt went down «bundle.js · line 5304»
+- [type]: [n]% [more dangerous | safer] «bundle.js · line 5307»
+- +[is high] salvage «bundle.js · line 5311»
+- **ENERGY** — +[eva lo] to [eva hi] energy «bundle.js · line 5312»
+- energy already full «bundle.js · line 5314»
+- +[energy room] energy «bundle.js · line 5314»
+- +[eva lo] to [energy room] energy «bundle.js · line 5314»
+- energy already full «bundle.js · line 5318»
+- +[n] energy «bundle.js · line 5318»
+- an item[n] «bundle.js · line 5321»
+- +[n] data «bundle.js · line 5322»
+- [total risk]% chance someone gets hurt[, a 1 in [one in] chance someone dies] «bundle.js · line 5333»
+- Vance refuses «bundle.js · line 5334»
+- Mira overrides this «bundle.js · line 5334»
+- TEAM ON THE GROUND «bundle.js · line 5345»
+- [name] ON THE GROUND «bundle.js · line 5348»
+- GOING IN «bundle.js · line 5350»
+- Vance: “I am not risking anyone on something that dangerous.” «bundle.js · line 5351»
+- Mira: “The safe option gets us nothing. I am going in.” «bundle.js · line 5352»
+- WHAT DO THEY DO? «bundle.js · line 5353»
 
 ### How the trip went «bundle.js · resolveEvaOutcome»
 _Dangers and results by planet type, deaths, injuries and rewards._
 
-- **VOLCANIC** — lava surge · pyroclastic blast · magma eruption · thermal vent «bundle.js · line 5385»
-- **ICE_WORLD** — crevasse collapse · flash freeze · ice shelf break · hypothermia «bundle.js · line 5386»
-- **TOXIC** — chemical burn · atmospheric leak · acid exposure · contamination «bundle.js · line 5387»
-- **DESERT** — sandstorm · heat stroke · dust suffocation · quicksand «bundle.js · line 5388»
-- **GAS_GIANT** — pressure shock · atmospheric turbulence · lightning strike · gravity fluctuation «bundle.js · line 5389»
-- **VITAL** — unknown disease · hostile plants · allergic reaction · spore exposure «bundle.js · line 5390»
-- **ROCKY** — rockslide · seismic shift · unstable terrain «bundle.js · line 5391»
-- **OCEANIC** — riptide · pressure breach · creature attack · storm surge «bundle.js · line 5392»
-- **GRAVEYARD** — hull collapse · decompression · debris impact · structural failure «bundle.js · line 5393»
-- **CRYSTALLINE** — resonance shatter · crystal impalement · harmonic injury · fracture cascade «bundle.js · line 5394»
-- **SHATTERED** — debris collision · impact trauma · void exposure «bundle.js · line 5395»
-- **BIO_MASS** — organism attack · absorption attempt · toxic secretion · parasitic infection «bundle.js · line 5396»
-- **MECHA** — security drone · automated defense · power surge · mechanical trap «bundle.js · line 5397»
-- **ROGUE** — extreme cold exposure · equipment malfunction · isolation psychosis · radiation burst «bundle.js · line 5398»
-- **TERRAFORMED** — terraformer malfunction · environmental collapse · system failure · containment breach «bundle.js · line 5399»
-- **_DEFAULT** — a bad fall «bundle.js · line 5400»
-- **_DEFAULT** — a suit breach «bundle.js · line 5400»
-- **_DEFAULT** — equipment failure «bundle.js · line 5400»
-- **_DEFAULT** — a collapse underfoot «bundle.js · line 5400»
-- ⚠ PREDATOR ALERT: Hostile organisms detected approaching EVA team! «bundle.js · line 5417»
-- predatory organisms «bundle.js · line 5445»
-- unknown world «bundle.js · line 5446»
-- CATASTROPHE: [name] killed by predatory organisms. The attack was coordinated. «bundle.js · line 5447»
-- The creatures didn't just kill — they hunted. [name] never had a chance. «bundle.js · line 5448»
-- unknown world «bundle.js · line 5452»
-- CATASTROPHE: [name] is dead. Cause: [hazard desc]. The other one carried them back to the lander. «bundle.js · line 5456»
-- FATAL: [name] did not survive ([hazard desc]). They are coming home in a stasis pod. «bundle.js · line 5457»
-- KIA: [name], [hazard desc]. The trip is over. There is a pod to rack in the hold. «bundle.js · line 5458»
-- CRITICAL: [name] mauled by predatory organisms. Emergency rescue! «bundle.js · line 5466»
-- Aris: "The wounds are severe. Whatever attacked them knew where to bite." «bundle.js · line 5467»
-- INCIDENT: [name] injured by [hazard desc]. Medical attention required. «bundle.js · line 5471»
-- CRITICAL: [hazard desc] wounded [name]. Emergency rescue! «bundle.js · line 5472»
-- WARNING: [name] sustained [hazard desc] injuries. Aborting EVA. «bundle.js · line 5473»
-- Crew morale shaken. «bundle.js · line 5486»
-- **VOLCANIC** — Extracted samples despite extreme heat. «bundle.js · line 5504»
-- **VOLCANIC** — Team navigated lava fields safely. «bundle.js · line 5504»
-- **VOLCANIC** — Heat shields held. Mission complete. «bundle.js · line 5504»
-- **ICE_WORLD** — Cryo-samples secured. Warming up. «bundle.js · line 5505»
-- **ICE_WORLD** — Team returned from the cold. «bundle.js · line 5505»
-- **ICE_WORLD** — Thermal suits performed well. «bundle.js · line 5505»
-- **TOXIC** — Decontamination complete. All clear. «bundle.js · line 5506»
-- **TOXIC** — Filters held. No exposure. «bundle.js · line 5506»
-- **TOXIC** — Hazmat protocols successful. «bundle.js · line 5506»
-- **DESERT** — Sand-blasted but intact. «bundle.js · line 5507»
-- **DESERT** — Team hydrated and returning. «bundle.js · line 5507»
-- **DESERT** — Survived the wastes. «bundle.js · line 5507»
-- **GAS_GIANT** — Atmospheric dive successful. «bundle.js · line 5508»
-- **GAS_GIANT** — Pressure held. Samples gained. «bundle.js · line 5508»
-- **GAS_GIANT** — Returned from the depths. «bundle.js · line 5508»
-- **VITAL** — Specimens secured safely. «bundle.js · line 5509»
-- **VITAL** — Life signs stable. Beautiful world. «bundle.js · line 5509»
-- **VITAL** — Biological samples obtained. «bundle.js · line 5509»
-- **ROCKY** — Geological survey complete. «bundle.js · line 5510»
-- **ROCKY** — Core samples extracted. «bundle.js · line 5510»
-- **ROCKY** — Terrain navigated successfully. «bundle.js · line 5510»
-- **OCEANIC** — Submersible mission success. «bundle.js · line 5511»
-- **OCEANIC** — Water samples secured. «bundle.js · line 5511»
-- **OCEANIC** — Aquatic EVA complete. «bundle.js · line 5511»
-- **GRAVEYARD** — Salvage extracted from wreckage. «bundle.js · line 5512»
-- **GRAVEYARD** — Ship graveyard yielded resources. «bundle.js · line 5512»
-- **GRAVEYARD** — Honored the dead. Took what we needed. «bundle.js · line 5512»
-- **CRYSTALLINE** — Crystal formations documented. «bundle.js · line 5513»
-- **CRYSTALLINE** — Resonance samples secured. «bundle.js · line 5513»
-- **CRYSTALLINE** — Harmonic data recorded. «bundle.js · line 5513»
-- **SHATTERED** — Debris field navigated. «bundle.js · line 5514»
-- **SHATTERED** — Fragment samples collected. «bundle.js · line 5514»
-- **SHATTERED** — Micro-gravity EVA success. «bundle.js · line 5514»
-- **BIO_MASS** — Organic samples contained. «bundle.js · line 5515»
-- **BIO_MASS** — Avoided the larger masses. «bundle.js · line 5515»
-- **BIO_MASS** — Biomatter secured for study. «bundle.js · line 5515»
-- **MECHA** — Avoided active defenses. «bundle.js · line 5516»
-- **MECHA** — Tech salvage gained. «bundle.js · line 5516»
-- **MECHA** — Machine world yielded components. «bundle.js · line 5516»
-- **ROGUE** — Survived the cold darkness. «bundle.js · line 5517»
-- **ROGUE** — Isolation protocols held. «bundle.js · line 5517»
-- **ROGUE** — Returned from the void. «bundle.js · line 5517»
-- **TERRAFORMED** — Former colony yielded resources. «bundle.js · line 5518»
-- **TERRAFORMED** — Reclaimed what was left behind. «bundle.js · line 5518»
-- **TERRAFORMED** — Terraformer data secured. «bundle.js · line 5518»
-- **_DEFAULT** — Operations complete. Team safe. «bundle.js · line 5519»
-- **_DEFAULT** — EVA successful. Returning. «bundle.js · line 5519»
-- **_DEFAULT** — Mission accomplished. «bundle.js · line 5519»
-- The survivor came back with empty hands. «bundle.js · line 5536»
-- The lander came home with nothing. «bundle.js · line 5536»
-- Nothing brought back. -[retreat energy cost] Energy. «bundle.js · line 5539»
-- Nothing brought back. The team is shaken: +1 Stress. «bundle.js · line 5540»
-- Nothing brought back. «bundle.js · line 5541»
-- Mira's obsessive sampling yields extra. «bundle.js · line 5551»
-- Recovered [n] Salvage. «bundle.js · line 5557»
-- (Storage Cap Reached) «bundle.js · line 5559»
-- Siphoned [got] Energy. «bundle.js · line 5564»
-- Energy was already full. «bundle.js · line 5564»
-- +[learned] Data. «bundle.js · line 5569»
-- Secured Artifact: [name]. «bundle.js · line 5573»
-- Mira also recovered: [name]. «bundle.js · line 5579»
+- **VOLCANIC** — lava surge · pyroclastic blast · magma eruption · thermal vent «bundle.js · line 5427»
+- **ICE_WORLD** — crevasse collapse · flash freeze · ice shelf break · hypothermia «bundle.js · line 5428»
+- **TOXIC** — chemical burn · atmospheric leak · acid exposure · contamination «bundle.js · line 5429»
+- **DESERT** — sandstorm · heat stroke · dust suffocation · quicksand «bundle.js · line 5430»
+- **GAS_GIANT** — pressure shock · atmospheric turbulence · lightning strike · gravity fluctuation «bundle.js · line 5431»
+- **VITAL** — unknown disease · hostile plants · allergic reaction · spore exposure «bundle.js · line 5432»
+- **ROCKY** — rockslide · seismic shift · unstable terrain «bundle.js · line 5433»
+- **OCEANIC** — riptide · pressure breach · creature attack · storm surge «bundle.js · line 5434»
+- **GRAVEYARD** — hull collapse · decompression · debris impact · structural failure «bundle.js · line 5435»
+- **CRYSTALLINE** — resonance shatter · crystal impalement · harmonic injury · fracture cascade «bundle.js · line 5436»
+- **SHATTERED** — debris collision · impact trauma · void exposure «bundle.js · line 5437»
+- **BIO_MASS** — organism attack · absorption attempt · toxic secretion · parasitic infection «bundle.js · line 5438»
+- **MECHA** — security drone · automated defense · power surge · mechanical trap «bundle.js · line 5439»
+- **ROGUE** — extreme cold exposure · equipment malfunction · isolation psychosis · radiation burst «bundle.js · line 5440»
+- **TERRAFORMED** — terraformer malfunction · environmental collapse · system failure · containment breach «bundle.js · line 5441»
+- **_DEFAULT** — a bad fall «bundle.js · line 5442»
+- **_DEFAULT** — a suit breach «bundle.js · line 5442»
+- **_DEFAULT** — equipment failure «bundle.js · line 5442»
+- **_DEFAULT** — a collapse underfoot «bundle.js · line 5442»
+- ⚠ PREDATOR ALERT: Hostile organisms detected approaching EVA team! «bundle.js · line 5459»
+- predatory organisms «bundle.js · line 5487»
+- unknown world «bundle.js · line 5488»
+- CATASTROPHE: [name] killed by predatory organisms. The attack was coordinated. «bundle.js · line 5489»
+- The creatures didn't just kill — they hunted. [name] never had a chance. «bundle.js · line 5490»
+- unknown world «bundle.js · line 5494»
+- CATASTROPHE: [name] is dead. Cause: [hazard desc]. The other one carried them back to the lander. «bundle.js · line 5498»
+- FATAL: [name] did not survive ([hazard desc]). They are coming home in a stasis pod. «bundle.js · line 5499»
+- KIA: [name], [hazard desc]. The trip is over. There is a pod to rack in the hold. «bundle.js · line 5500»
+- CRITICAL: [name] mauled by predatory organisms. Emergency rescue! «bundle.js · line 5508»
+- Aris: "The wounds are severe. Whatever attacked them knew where to bite." «bundle.js · line 5509»
+- INCIDENT: [name] injured by [hazard desc]. Medical attention required. «bundle.js · line 5513»
+- CRITICAL: [hazard desc] wounded [name]. Emergency rescue! «bundle.js · line 5514»
+- WARNING: [name] sustained [hazard desc] injuries. Aborting EVA. «bundle.js · line 5515»
+- Crew morale shaken. «bundle.js · line 5528»
+- **VOLCANIC** — Extracted samples despite extreme heat. «bundle.js · line 5546»
+- **VOLCANIC** — Team navigated lava fields safely. «bundle.js · line 5546»
+- **VOLCANIC** — Heat shields held. Mission complete. «bundle.js · line 5546»
+- **ICE_WORLD** — Cryo-samples secured. Warming up. «bundle.js · line 5547»
+- **ICE_WORLD** — Team returned from the cold. «bundle.js · line 5547»
+- **ICE_WORLD** — Thermal suits performed well. «bundle.js · line 5547»
+- **TOXIC** — Decontamination complete. All clear. «bundle.js · line 5548»
+- **TOXIC** — Filters held. No exposure. «bundle.js · line 5548»
+- **TOXIC** — Hazmat protocols successful. «bundle.js · line 5548»
+- **DESERT** — Sand-blasted but intact. «bundle.js · line 5549»
+- **DESERT** — Team hydrated and returning. «bundle.js · line 5549»
+- **DESERT** — Survived the wastes. «bundle.js · line 5549»
+- **GAS_GIANT** — Atmospheric dive successful. «bundle.js · line 5550»
+- **GAS_GIANT** — Pressure held. Samples gained. «bundle.js · line 5550»
+- **GAS_GIANT** — Returned from the depths. «bundle.js · line 5550»
+- **VITAL** — Specimens secured safely. «bundle.js · line 5551»
+- **VITAL** — Life signs stable. Beautiful world. «bundle.js · line 5551»
+- **VITAL** — Biological samples obtained. «bundle.js · line 5551»
+- **ROCKY** — Geological survey complete. «bundle.js · line 5552»
+- **ROCKY** — Core samples extracted. «bundle.js · line 5552»
+- **ROCKY** — Terrain navigated successfully. «bundle.js · line 5552»
+- **OCEANIC** — Submersible mission success. «bundle.js · line 5553»
+- **OCEANIC** — Water samples secured. «bundle.js · line 5553»
+- **OCEANIC** — Aquatic EVA complete. «bundle.js · line 5553»
+- **GRAVEYARD** — Salvage extracted from wreckage. «bundle.js · line 5554»
+- **GRAVEYARD** — Ship graveyard yielded resources. «bundle.js · line 5554»
+- **GRAVEYARD** — Honored the dead. Took what we needed. «bundle.js · line 5554»
+- **CRYSTALLINE** — Crystal formations documented. «bundle.js · line 5555»
+- **CRYSTALLINE** — Resonance samples secured. «bundle.js · line 5555»
+- **CRYSTALLINE** — Harmonic data recorded. «bundle.js · line 5555»
+- **SHATTERED** — Debris field navigated. «bundle.js · line 5556»
+- **SHATTERED** — Fragment samples collected. «bundle.js · line 5556»
+- **SHATTERED** — Micro-gravity EVA success. «bundle.js · line 5556»
+- **BIO_MASS** — Organic samples contained. «bundle.js · line 5557»
+- **BIO_MASS** — Avoided the larger masses. «bundle.js · line 5557»
+- **BIO_MASS** — Biomatter secured for study. «bundle.js · line 5557»
+- **MECHA** — Avoided active defenses. «bundle.js · line 5558»
+- **MECHA** — Tech salvage gained. «bundle.js · line 5558»
+- **MECHA** — Machine world yielded components. «bundle.js · line 5558»
+- **ROGUE** — Survived the cold darkness. «bundle.js · line 5559»
+- **ROGUE** — Isolation protocols held. «bundle.js · line 5559»
+- **ROGUE** — Returned from the void. «bundle.js · line 5559»
+- **TERRAFORMED** — Former colony yielded resources. «bundle.js · line 5560»
+- **TERRAFORMED** — Reclaimed what was left behind. «bundle.js · line 5560»
+- **TERRAFORMED** — Terraformer data secured. «bundle.js · line 5560»
+- **_DEFAULT** — Operations complete. Team safe. «bundle.js · line 5561»
+- **_DEFAULT** — EVA successful. Returning. «bundle.js · line 5561»
+- **_DEFAULT** — Mission accomplished. «bundle.js · line 5561»
+- The survivor came back with empty hands. «bundle.js · line 5578»
+- The lander came home with nothing. «bundle.js · line 5578»
+- Nothing brought back. -[retreat energy cost] Energy. «bundle.js · line 5581»
+- Nothing brought back. The team is shaken: +1 Stress. «bundle.js · line 5582»
+- Nothing brought back. «bundle.js · line 5583»
+- Mira's obsessive sampling yields extra. «bundle.js · line 5593»
+- Recovered [n] Salvage. «bundle.js · line 5599»
+- (Storage Cap Reached) «bundle.js · line 5601»
+- Siphoned [got] Energy. «bundle.js · line 5606»
+- Energy was already full. «bundle.js · line 5606»
+- +[learned] Data. «bundle.js · line 5611»
+- Secured Artifact: [name]. «bundle.js · line 5615»
+- Mira also recovered: [name]. «bundle.js · line 5621»
 
 ### What the trip brings home (the new look) «bundle.js · payPrize»
 _The prize its find showed on the glass, paid at once: salvage, energy, rations, data, or medicine for the hurt aboard._
 
-- Nothing brought back. «bundle.js · line 5096»
-- Mira's obsessive sampling yields extra. «bundle.js · line 5098»
-- Recovered [n] Salvage.[(Storage Cap Reached)] «bundle.js · line 5102»
-- Siphoned [got] Energy. «bundle.js · line 5107»
-- Energy was already full. «bundle.js · line 5107»
-- +[got] Rations. «bundle.js · line 5112»
-- The galley is already full. «bundle.js · line 5112»
-- +[data] Data. «bundle.js · line 5114»
-- [name] [is | are] well again. «bundle.js · line 5117»
+- Nothing brought back. «bundle.js · line 5138»
+- Mira's obsessive sampling yields extra. «bundle.js · line 5140»
+- Recovered [n] Salvage.[(Storage Cap Reached)] «bundle.js · line 5144»
+- Siphoned [got] Energy. «bundle.js · line 5149»
+- Energy was already full. «bundle.js · line 5149»
+- +[got] [Ration | Rations]. «bundle.js · line 5154»
+- The galley is already full. «bundle.js · line 5154»
+- +[data] Data. «bundle.js · line 5156»
+- [name] [is | are] well again. «bundle.js · line 5159»
 
 ### A find seen before: the short result card (the new look) «bundle.js · tripResultWords»
 _The first time a find's event shows in a run, the choice card above plays. After that there are no buttons: the way chosen on the glass is taken, and a short card shows the find's name, the event's first sentence, the way, one line (the hit's own line from the trip above, or one below from the team) and these chips, then CONTINUE. A breakdown on that trip shows too: the first sentence of its line (Breakdowns, above) in place of the event's. A trip that would walk away plays the choice card again, so its cost shows._
 
-- salvage · energy · rations · data «bundle.js · line 5221»
-- [kind] full «bundle.js · line 5223»
-- everyone +1 stress «bundle.js · line 5224»
-- [deck] damaged «bundle.js · line 5227»
+- salvage · energy · rations · data «bundle.js · line 5263»
+- [kind] full «bundle.js · line 5265»
+- everyone +1 stress «bundle.js · line 5266»
+- [deck] damaged «bundle.js · line 5269»
 
 ### Its line when nobody was hit «bundle.js · TRIP_BACK_LINES»
 _Said by one of the team who went down._
 
-- **got** — Got it. We're coming back up. «bundle.js · line 1356»
-- **back** — We're coming back up. «bundle.js · line 1357»
+- **got** — Got it. We're coming back up. «bundle.js · line 1397»
+- **back** — We're coming back up. «bundle.js · line 1398»
 
 ### The ways on the glass (the new look) «Words.js · RISK_WORDS»
-_Each way of the find the team goes to is a row: its short name (pools.md, Surface finds, in brackets), its prize, and one of these: under 15 % hurt, from 15 %, and (in red) wherever it can kill. The numbers are on GO DOWN only._
+_Each way of the find the team goes to is a row: its short name (pools.md, Surface finds, in brackets), its prize, and its risk: the first word under 15 % hurt, the second from 15 %. Wherever the way can kill (from 15 % hurt), the row shows GO DOWN's own red "death 1 in N" instead; the third word only if there is no number to say. A way can kill from 15 % hurt, so today "risky" never shows. The hurt chance is on GO DOWN only._
 
 - low risk · risky · could die «Words.js · line 71»
 
@@ -768,27 +768,27 @@ _A.U.R.A., once the pump runs._
 ### Paradise found «bundle.js · showEdenEvaModal»
 _A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one)._
 
-- Rest and recover «bundle.js · line 5604»
-- **desc** — Everyone sleeps properly for once. All stress gone, all injuries healed. «bundle.js · line 5604»
-- Gather fruit and fresh water «bundle.js · line 5605»
-- **desc** — +10 Rations. The land gives freely. «bundle.js · line 5605»
-- Explore the valley «bundle.js · line 5606»
-- **desc** — +50 Salvage from natural materials. Marks a colony site. «bundle.js · line 5606»
-- Remember what you are fighting for «bundle.js · line 5607»
-- **desc** — +20 Energy. All crew -1 Stress. «bundle.js · line 5607»
-- Settle here «bundle.js · line 5608»
-- **desc** — The journey ends on this world. The crew have their say first. «bundle.js · line 5608»
-- **kicker** — ON THE SURFACE «bundle.js · line 5612»
-- **context** — [names] step out into warm, sweet air, beside a clear stream. «bundle.js · line 5613»
-- **context** — Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass. «bundle.js · line 5614»
-- [names] found a quiet place by the stream. The whole crew rotated through in shifts. «bundle.js · line 5628»
-- For the first time in months, everyone truly rested. All stress cleared. All injuries healed. «bundle.js · line 5629»
-- The fruit was unlike anything from Earth, but it tasted like coming home. [+[got] Rations. | Rations already full.] «bundle.js · line 5634»
-- The valley stretches for kilometers. Clean soil, fresh water, gentle climate. This could be home. +50 Salvage. Colony site marked. «bundle.js · line 5640»
-- [name]: "This is why we left Earth. This is what we're looking for." «bundle.js · line 5650»
-- Renewed purpose fills the crew. [+[got] Energy. | Energy already full.] All crew -1 Stress. «bundle.js · line 5651»
-- [name]: "Commander... we're staying, aren't we?" «bundle.js · line 5664»
-- You nod. This is where the journey ends. «bundle.js · line 5665»
+- Rest and recover «bundle.js · line 5646»
+- **desc** — Everyone sleeps properly for once. All stress gone, all injuries healed. «bundle.js · line 5646»
+- Gather fruit and fresh water «bundle.js · line 5647»
+- **desc** — +10 Rations. The land gives freely. «bundle.js · line 5647»
+- Explore the valley «bundle.js · line 5648»
+- **desc** — +50 Salvage from natural materials. Marks a colony site. «bundle.js · line 5648»
+- Remember what you are fighting for «bundle.js · line 5649»
+- **desc** — +20 Energy. All crew -1 Stress. «bundle.js · line 5649»
+- Settle here «bundle.js · line 5650»
+- **desc** — The journey ends on this world. The crew have their say first. «bundle.js · line 5650»
+- **kicker** — ON THE SURFACE «bundle.js · line 5654»
+- **context** — [names] step out into warm, sweet air, beside a clear stream. «bundle.js · line 5655»
+- **context** — Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass. «bundle.js · line 5656»
+- [names] found a quiet place by the stream. The whole crew rotated through in shifts. «bundle.js · line 5670»
+- For the first time in months, everyone truly rested. All stress cleared. All injuries healed. «bundle.js · line 5671»
+- The fruit was unlike anything from Earth, but it tasted like coming home. [+[got] Rations. | Rations already full.] «bundle.js · line 5678»
+- The valley stretches for kilometers. Clean soil, fresh water, gentle climate. This could be home. +50 Salvage. Colony site marked. «bundle.js · line 5684»
+- [name]: "This is why we left Earth. This is what we're looking for." «bundle.js · line 5694»
+- Renewed purpose fills the crew. [+[got] Energy. | Energy already full.] All crew -1 Stress. «bundle.js · line 5695»
+- [name]: "Commander... we're staying, aren't we?" «bundle.js · line 5708»
+- You nod. This is where the journey ends. «bundle.js · line 5709»
 
 ## Boarding a station
 
@@ -837,8 +837,8 @@ _Under A.U.R.A.'s grade line, with every deck broken (Hold broken) and her cost 
 
 ### In the log afterwards «bundle.js · applyDockResult»
 
-- A.U.R.A. docked us: [energy delta] more energy. «bundle.js · line 2915»
-- Good flying: [energy delta] energy saved. «bundle.js · line 2918»
+- A.U.R.A. docked us: [energy delta] more energy. «bundle.js · line 2957»
+- Good flying: [energy delta] energy saved. «bundle.js · line 2960»
 
 ### Inside «BoardingParty.js · BoardingParty»
 _Rooms, crew perks, results. The diary on the crew deck depends on the station's age: the first list is for sectors 1-3, then 4, 5 and 6._
