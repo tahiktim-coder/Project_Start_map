@@ -812,6 +812,9 @@ function councilMd() {
     });
     b.push(...textSection(3, 'Who goes, and the radio', whole('src/systems/AwayTeam.js'), 'The crew picker, their chatter on the way down, and the return screen.'));
     b.push(...textSection(3, 'Landing (the mini-game)', whole('src/systems/LanderGame.js'), ''), ...textSection(3, 'How the landing went', bm('applyLanding'), ''));
+    const LAND = 'src/newscreen/land/LandWords.js';                                      // the new look: the meteor (LandFall.js)
+    b.push(...textSection(3, 'Landing, flown (the new look: the meteor)', block(LAND, /^\s*const LINES = /m, 'LINES'), "The whole fall on a new kind of world, a story world, our wreck, the bold way or odds that could kill; else the short one. The aim line and the keycaps are said once a run."),
+        ...textSection(3, 'Its keycaps', block(LAND, /^\s*const KEY_WORDS = /m, 'KEY_WORDS'), ''));
     b.push(...textSection(3, 'Cutting into one of our wrecks (the mini-game)', whole(`${MINI}Torch.js`), "Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet.", isSaid), ...textSection(3, 'When the hatch is open', bm('cutIntoWreck'), ''));
     b.push(...textSection(3, 'The choice card on the surface', bm('showEventModal'), 'The card around every surface find (pools.md, Surface finds).'), ...textSection(3, 'How the trip went', bm('resolveEvaOutcome'), 'Dangers and results by planet type, deaths, injuries and rewards.'));
     b.push(...textSection(3, 'Paradise found', bm('showEdenEvaModal'), 'A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one).'));
