@@ -823,7 +823,10 @@ function councilMd() {
         ...textSection(3, 'A way a stress trait strikes', block(SW, /^\s*const STRUCK_LINE = /m, 'STRUCK_LINE'), 'In place of its prize and risk word; it takes no click.'),
         ...textSection(3, 'Pointing at someone at the hatch or the window', block(SW, /^\s*const FIT_LINE = /m, 'FIT_LINE'), 'Whether they make this trip safer.'),
         ...textSection(3, 'What each one really does for a trip', block(SW, /^\s*const GOOD = \{/m, 'GOOD'), 'Under that line, at the hatch.'),
-        ...textSection(3, "A.U.R.A.'s first-time lines on the bridge", block('src/newscreen/Orbit.js', /^\s*const TELL = /m, 'TELL'), 'Each said once a run, when what it explains first shows.'));
+        ...textSection(3, "A.U.R.A.'s first-time lines on the bridge", block('src/newscreen/Orbit.js', /^\s*const TELL = /m, 'TELL'), 'Each said once a run, when what it explains first shows.'),
+        ...textSection(3, 'At a world: the log (the new look)', block('src/newscreen/Orbit.js', /^\s*const LINES = \{/m, 'LINES'), 'Who can go down, the team away, a distress call, small fixes aboard, Mira\'s ground scan, Aris staying with the hurt.'),
+        ...textSection(3, 'The fuel depot (the new look)', between('src/newscreen/Orbit.js', /add\('depot', 'Fuel depot'/, null, 'actions · depot'), 'At a docked station, once, with salvage to spare: its action word and chips.'),
+        ...textSection(3, 'Its result', block('src/newscreen/Orbit.js', /^\s*const DEPOT_DONE = /m, 'DEPOT_DONE'), 'A.U.R.A., once the pump runs.'));
     b.push(...textSection(3, 'Paradise found', bm('showEdenEvaModal'), 'A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one).'));
     b.push('## Boarding a station', '', ...textSection(3, 'Docking (the mini-game)', whole('src/systems/DockingGame.js'), "The old look. Its grade line is the new look's too."));
     const DOCK = 'src/newscreen/dock/DockFlight.js';                                     // the new look: Bring Her In (the rest of the file is the corridor's)
