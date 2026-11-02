@@ -13,7 +13,8 @@
          someone hurt went down (fewer than two were well)
          hurt  = base + wayMod - min(FIT_MAX, FIT_PER_POINT x fit) (+ HURT_GOES_RISK), held to 0..HURT_MAX (%)
          share = 0 under DEATH_FLOOR, else DEATH_SHARE (DEATH_SHARE_HUNTED where something hunts) + 1 a point of hurt past
-                 DEATH_PAST (%)
+                 DEATH_PAST (%); from DEATH_FLOOR up to DEATH_FULL_AT only a part of that, DEATH_NEAR_FLOOR of it at the
+                 floor, climbing evenly to all of it (a small death chance, always shown: "death 1 in N")
          death = hurt x share / 100 (x VANCE_DEATH_SHARE with Vance) (%);  deadly: death > 0;  oneIn: 100 / death, rounded (null: no death)
      afterLanding(shown, landed) → { hurt, death, deadly, oneIn, kill }
          shown: odds() as GO DOWN showed them (before the landing); landed: odds() after it (how it was flown, who scanned).
@@ -34,10 +35,15 @@
         return 0;
     }
 
-    /** The share of hits that kill at this hurt chance (%): none under the floor; more where something hunts and past 40. */
+    /** The share of hits that kill at this hurt chance (%): none under the floor; a small part of it just over the floor,
+        climbing to all of it at DEATH_FULL_AT; more where something hunts and past DEATH_PAST. */
     function shareAt(hurt, hunted) {
-        if (hurt < num('DEATH_FLOOR')) return 0;
-        return (hunted ? num('DEATH_SHARE_HUNTED') : num('DEATH_SHARE')) + Math.max(0, hurt - num('DEATH_PAST'));
+        const floor = num('DEATH_FLOOR'), fullAt = num('DEATH_FULL_AT');
+        if (hurt < floor) return 0;
+        const full = (hunted ? num('DEATH_SHARE_HUNTED') : num('DEATH_SHARE')) + Math.max(0, hurt - num('DEATH_PAST'));
+        if (hurt >= fullAt || fullAt <= floor) return full;
+        const near = clamp(num('DEATH_NEAR_FLOOR'), 0, 1);
+        return full * (near + (1 - near) * (hurt - floor) / (fullAt - floor));
     }
     const oneInOf = death => (death > 0 ? Math.max(1, Math.round(100 / death)) : null);
 

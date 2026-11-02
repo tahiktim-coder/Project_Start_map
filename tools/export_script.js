@@ -819,7 +819,9 @@ function councilMd() {
         ...textSection(3, 'Its line when nobody was hit', block('src/bundle.js', /^const TRIP_BACK_LINES = /m, 'TRIP_BACK_LINES'), 'Said by one of the team who went down.'));
     const SW = 'src/newscreen/stop/Words.js';                                         // the new look: the bridge's glass at a world with finds
     const RISKY = (/\bRISKY_FROM:\s*(\d+)/.exec(BUNDLE) || [])[1] || '?';             // NEW_LOOK_ECONOMY.RISKY_FROM, as the game has it
-    b.push(...textSection(3, 'The ways on the glass (the new look)', block(SW, /^\s*const RISK_WORDS = /m, 'RISK_WORDS'), `Each way of the find the team goes to is a row: its short name (pools.md, Surface finds, in brackets), its prize, and one of these: under ${RISKY} % hurt, from ${RISKY} %, and (in red) wherever it can kill. The numbers are on GO DOWN only.`),
+    const FLOOR = (/\bDEATH_FLOOR:\s*(\d+)/.exec(BUNDLE) || [])[1] || '?';            // NEW_LOOK_ECONOMY.DEATH_FLOOR: where a way can start to kill
+    const neverRisky = Number(RISKY) >= Number(FLOOR) ? ` A way can kill from ${FLOOR} % hurt, so today "risky" never shows.` : '';
+    b.push(...textSection(3, 'The ways on the glass (the new look)', block(SW, /^\s*const RISK_WORDS = /m, 'RISK_WORDS'), `Each way of the find the team goes to is a row: its short name (pools.md, Surface finds, in brackets), its prize, and its risk: the first word under ${RISKY} % hurt, the second from ${RISKY} %. Wherever the way can kill (from ${FLOOR} % hurt), the row shows GO DOWN's own red "death 1 in N" instead; the third word only if there is no number to say.${neverRisky} The hurt chance is on GO DOWN only.`),
         ...textSection(3, 'A way a stress trait strikes', block(SW, /^\s*const STRUCK_LINE = /m, 'STRUCK_LINE'), 'In place of its prize and risk word; it takes no click.'),
         ...textSection(3, 'Pointing at someone at the hatch or the window', block(SW, /^\s*const FIT_LINE = /m, 'FIT_LINE'), 'Whether they make this trip safer.'),
         ...textSection(3, 'What each one really does for a trip', block(SW, /^\s*const GOOD = \{/m, 'GOOD'), 'Under that line, at the hatch.'),

@@ -1262,7 +1262,7 @@ const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, 
 /**
  * The new look's economy (?new=1 only; tuned 2026-10-17 against docs/ECONOMY.md §1-2, retuned 2026-10-30 so losses bite:
  * smaller card gains and landing salvage, fewer crises aboard, and the reserve costs a cold night; then a trip's odds, shared
- * with the model through src/data/TripOdds.js: no death under 30 % hurt, the right crew make it safer, and every death chance
+ * with the model through src/data/TripOdds.js: no death under 15 % hurt, the right crew make it safer, and every death chance
  * is shown on the card first; measured with the node run model, tools/runsim.js, which reads this same table). Every number
  * the new look spends or gives differently from the default game is here, with why. The default game keeps the numbers above
  * and its own card amounts.
@@ -1315,7 +1315,11 @@ const NEW_LOOK_ECONOMY = Object.freeze({
                              //   world, so the picture is seen first): NewScreen.js
     // A team trip's odds (src/data/TripOdds.js, read by the game and the run model): how likely someone is hurt, and how likely
     // that kills. A trip can kill only where its card shows the death chance first ("1 in 14"), and a landing never raises it.
-    DEATH_FLOOR: 30,         // under 30 % hurt, a trip never kills (it did 10 % of all hits before, however small the risk)
+    DEATH_FLOOR: 15,         // under 15 % hurt, a trip never kills (2026-11-02, the designer's open call 1: was 30, so a careful
+                             //   player who goes at 25 % or less never lost anyone); every way that can kill shows "death 1 in N"
+                             //   on its row and on GO DOWN
+    DEATH_FULL_AT: 30,       // from DEATH_FLOOR up to here only a small part of the share kills: DEATH_NEAR_FLOOR of it at the
+    DEATH_NEAR_FLOOR: 0.3,   //   floor, climbing evenly to all of it here (15 % hurt: 1 in 222; 25 %: 1 in 52; 30 %: 1 in 33)
     DEATH_SHARE: 10,         // at 30 % or more: 10 % of hits kill, one more for each point of hurt past DEATH_PAST (as before)
     DEATH_PAST: 40,          //   (the default game's HIGH_RISK_FLOOR)
     DEATH_SHARE_HUNTED: 25,  //   where something hunts (PREDATORY), 25 % of hits kill (was a hidden 40 % attack roll on top)
@@ -1343,7 +1347,9 @@ const NEW_LOOK_ECONOMY = Object.freeze({
         CURE_STRESS: 1,                          // CURE: the hurt aboard are well, and the most stressed takes this much off
     }),
     RISKY_FROM: 15,          // a way's row on the glass (stop/Words.js) says "low risk" under this hurt chance, "risky" from it,
-                             //   and "could die" wherever it can kill (DEATH_FLOOR and up); GO DOWN says the numbers
+                             //   and, wherever it can kill (DEATH_FLOOR and up), GO DOWN's red "death 1 in N"; GO DOWN says the
+                             //   hurt chance. With DEATH_FLOOR at 15 too, every way from 15 can kill, so "risky" never shows
+                             //   (waiting on the designer: RISKY_FROM below the floor, or no middle word)
     // Salvage sinks (depth step 8): a dead station's fuel pump, once a station after docking (NSOrbit's "Fuel depot"), turns
     // salvage into energy; Jaxon under stress (HOARDER) makes every repair cost more (GameState.repairCostOf)
     DEPOT_SALVAGE: 25,       // the pump's parts: offered only with this much salvage aboard
@@ -4942,7 +4948,7 @@ Then you're through.`,
     /** The new look: the way GO DOWN vouches for, as an index on the event's card: the safest way the card leaves open for
         team (tripChoices strikes PARANOID's ways at 30 or more and RECKLESS's careful way, each only while its holder goes
         down: App.teamTraits; team left out, the team down now; when no way is left, the careful way it keeps open). GO DOWN
-        shows this way's odds (NSOrbit.teamOdds), so a trip that leaves no safe way on its card says "could die" before
+        shows this way's odds (NSOrbit.teamOdds), so a trip that leaves no safe way on its card says "death 1 in N" before
         anyone goes down. */
     sureWay(event, team) {
         const { paranoid: isParanoid, reckless: isReckless } = this.teamTraits(team);

@@ -9,11 +9,11 @@
    - Scan is one click: the glass sweeps the world, then each find (WorldFinds.js, 1 to 3: the places a team can go) is a
      glass tag in the sky beside the world, its thread to its mark ON the world: what it is, its best prize and a clue toward
      our ship; a visited one says "done". The find GO DOWN goes to shows its ways instead (2026-11-02, the depth plan's step
-     6), a row each: its short name, its prize, a risk word ("low risk", "risky", a red "could die"; the numbers are GO
-     DOWN's), the way the team takes marked; a click on a row chooses that way (NSOrbit.way); a way a stress trait strikes
-     says why ("Vance won't risk it.") and takes no click. They keep below the room A.U.R.A. speaks in under the
-     title (two lines) while they fit there. A click on a find (its tag or its mark) makes it where GO
-     DOWN goes: its mark in brackets, and the shuttle's path ends there (NSGlass.aim). Pointing at it shows that path;
+     6), a row each: its short name, its prize, a risk word ("low risk", "risky", or where it can kill GO DOWN's red
+     "death 1 in N"; the hurt chance is GO DOWN's), the way the team takes marked; a click on a row chooses that way
+     (NSOrbit.way); a way a stress trait strikes says why ("Vance won't risk it.") and takes no click. They keep below the
+     room A.U.R.A. speaks in under the title (two lines) while they fit there. A click on a find (its tag or its mark)
+     makes it where GO DOWN goes: its mark in brackets, and the shuttle's path ends there (NSGlass.aim). Pointing at it shows that path;
    - the team's "GO DOWN" tag over the hatch (the two names, or the one left who can go; "hurt" when someone hurt goes; the
      risk where they go and, where the trip could kill, "death 1 in N" (NSOrbit.teamOdds): these odds are never dropped
      for want of room; "Go across" when the trip goes to a site in orbit, the wreckage, where nobody lands), and over each
@@ -68,7 +68,7 @@
     };
     const FIT_LINE = { yes: 'Safer with me.', no: 'No help down there.' };   // DRAFT: pointing at someone: do they make the trip safer (NSOrbit.helps)
     // a way's row on a find (WorldFinds.js rows): [its short name][its prize][a risk word], or, struck by a stress trait, why
-    const RISK_WORDS = ['low risk', 'risky', 'could die'];                  // DRAFT: under RISKY_FROM / from it / where it can kill
+    const RISK_WORDS = ['low risk', 'risky', 'could die'];                  // DRAFT: under RISKY_FROM / from it / where it can kill (with no odds to say)
     const STRUCK_LINE = { PARANOID: "Vance won't risk it.", RECKLESS: "Mira won't play it safe." };   // DRAFT (App.wayStrikes)
     let riskyWarned = false;
     /** NEW_LOOK_ECONOMY.RISKY_FROM (bundle.js, the one place it is set), read when used; missing, it is logged and 15 used. */
@@ -78,9 +78,11 @@
         if (!riskyWarned) { riskyWarned = true; console.error('NSStopWords: NEW_LOOK_ECONOMY.RISKY_FROM is missing; using 15'); }
         return 15;
     }
-    /** A way's risk word: "could die" (red) where it can kill, "low risk" under RISKY_FROM, else "risky". The numbers are GO DOWN's. */
+    /** A way's risk word: where it can kill, GO DOWN's own red "death 1 in N" (2026-11-02: a death chance always shows as one,
+        however small; "could die" only with no number to say), "low risk" under RISKY_FROM, else "risky". The hurt chance
+        is GO DOWN's. */
     function riskChip(r) {
-        if (r.deadly) return { icon: 'danger', text: RISK_WORDS[2], tone: 'high' };
+        if (r.deadly) return { icon: 'danger', text: r.oneIn ? `death 1 in ${r.oneIn}` : RISK_WORDS[2], tone: 'high' };   // GO DOWN's chip (teamChips)
         return typeof r.hurt === 'number' && r.hurt >= riskyFrom() ? { icon: 'risk', text: RISK_WORDS[1], tone: 'risk' } : { text: RISK_WORDS[0], tone: 'cool' };
     }
     /** One way's row: its short name, its prize, its risk word; struck, its name and why. lean: the name and the risk word
@@ -95,7 +97,7 @@
     /** What a find shows under its label. The find GO DOWN goes to (target), an event: a row per way (wayRow, the one taken
         marked; a clue on a row of its own first), and the same rows lean. Another find: its best prize (the bold way's) and a
         clue; a site or Eden: what it gives; a visited one: "done". hover: the card's index of a row pointed at.
-        { chips } | { rows, lean }; a row: { chips, cls, idx? } */
+        { chips, clue? } | { rows, lean }; a row: { chips, cls, idx? } */
     function findChips(f, hover) {
         if (f.done) return { chips: [{ icon: 'done', text: 'done', tone: 'done' }] };
         const clue = f.hint ? { icon: 'where', text: 'a clue', tone: 'gain' } : null;
@@ -108,7 +110,7 @@
         const best = ways.filter(r => r.prize).slice(-1)[0];                  // careful first: the last row with a prize is the boldest
         const out = (best ? best.gives : f.gives || []).map(c => ({ icon: c.icon, text: c.text }));
         if (clue) out.push(clue);
-        return { chips: out };
+        return { chips: out, clue };                                          // clue: the chip that may show alone (decide)
     }
     const WEAK_LINE = "I went without supper. I'm too weak to go this time.";   // too weak for this trip (GameState.serveSupper)
     const DESK = [334, 429], KEY_Y = 290;                                 // Cora's console front (frame px): the helm key sits on it
@@ -316,9 +318,10 @@
 
         // ── the words budget: at most 40 on screen (the voice line counted, unless a note has stepped it back). The world's
         //    name, the labels, the key, the stock and GO DOWN's odds (its hurt chance, "hurt", a death chance: a trip that could
-        //    kill always says so before anyone goes) always; then, while they fit: the chosen find's ways (each row whole, else
-        //    each row's name and risk word only), the kind line, the names at the hatch (both or neither), the team's chips,
-        //    whether people could live there, the other finds' chips, each action's chips. Decided afresh only
+        //    kill always says so before anyone goes) always; then, while they fit: the chosen find's ways, each row's name and
+        //    risk word only; the names at the hatch (both or neither) and the team's chips (who goes on the trip whose odds show);
+        //    another find's "a clue" (a third find shows only for it: WorldFinds.js); the chosen find's rows whole (its prizes);
+        //    the kind line, whether people could live there, the other finds' chips, each action's chips. Decided afresh only
         //    while nothing is pointed at: what is on screen holds still under the pointer (a click that chooses another find or
         //    another way is the one exception: the player asked to see it, and GO DOWN's odds change with it) ──
         let frozen = null;
@@ -342,14 +345,20 @@
             const dec = { act: {}, find: {}, keys: {}, aimed: aimedKey };
             (o.keys || []).forEach(a => { dec.keys[a.key] = take(chipWords([].concat(...(a.chips || []).map(c => (Array.isArray(c) ? c : [c]))))); });   // what a held key costs: first
             dec.marks = !!(o.marks && o.marks.length) && take(o.marks.reduce((n, m) => n + 1 + wordsIn(m.text), 0));   // then what the fall did to each of them
-            if (aimed && aimed.rows) dec.find[aimed.id] = take(rowWords(aimed.rows)) ? 'rows' : take(rowWords(aimed.lean)) ? 'lean' : false;   // its ways: the gamble, before the kind line
+            const leanWords = aimed && aimed.rows ? rowWords(aimed.lean) : 0;
+            if (aimed && aimed.rows) dec.find[aimed.id] = take(leanWords) ? 'lean' : false;   // its ways, lean: the gamble first
             else if (aimed) dec.find[aimed.id] = take(chipWords(aimed.chips));
-            dec.kind = !!o.kind && take(wordsIn(o.kind));
             dec.who = !!o.team && take(o.whoIds.reduce((n, id) => n + 1 + wordsIn(S.pick.why[id] || ''), 0));
             const named = dec.who ? o.goChips.filter(c => c.tone === 'who' && o.whoIds.some(id => ctx.NAMES[id] === c.text)).length : 0;   // read once: the same names stand over their heads
             dec.go = !!o.team && take(chipWords(o.goChips.filter(c => !c.odds)) - named);   // the names (the odds are counted above)
+            o.finds.forEach(f => { if (f !== aimed && f.clue && !(f.id in dec.find) && take(wordsIn(f.clue.text))) dec.find[f.id] = 'clue'; });   // another find's clue
+            if (aimed && dec.find[aimed.id] === 'lean' && take(rowWords(aimed.rows) - leanWords)) dec.find[aimed.id] = 'rows';   // its rows whole, prizes and all
+            dec.kind = !!o.kind && take(wordsIn(o.kind));
             dec.facts = !!o.live && take(chipWords(o.live));
-            o.finds.forEach(f => { if (!(f.id in dec.find)) dec.find[f.id] = take(chipWords(f.chips)); });
+            o.finds.forEach(f => {
+                if (!(f.id in dec.find)) dec.find[f.id] = take(chipWords(f.chips));
+                else if (dec.find[f.id] === 'clue' && take(chipWords(f.chips) - wordsIn(f.clue.text))) dec.find[f.id] = true;   // its prize beside its clue
+            });
             o.acts.forEach(a => { dec.act[a.key] = take(chipWords(a.chips)); });
             frozen = dec;
             return dec;
@@ -438,7 +447,7 @@
             // where it can be; the actions under them (or, with no finds, starting by the landing site as before)
             const column = finds.map(v => {
                 v.shownRows = v.rows ? (dec.find[v.id] === 'rows' ? v.rows : dec.find[v.id] === 'lean' ? v.lean : null) : null;   // the chosen find's ways, whole or lean
-                v.tag.set({ label: v.label, rows: v.shownRows, chips: !v.rows && dec.find[v.id] ? v.chips : null });
+                v.tag.set({ label: v.label, rows: v.shownRows, chips: !v.rows && dec.find[v.id] ? (dec.find[v.id] === 'clue' ? [v.clue] : v.chips) : null });
                 const [w, h] = v.tag.size(u); return { v, w, h, at: GL.spot(t, S.shownAt, v.f.at) };
             })
                 .sort((a, b) => a.at[1] - b.at[1]);
