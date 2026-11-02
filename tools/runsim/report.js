@@ -68,6 +68,9 @@ function measureCrew(runs) {
         tablesMean: mean(runs, r => r.suppers.reduce((a, s) => a + (s.tables || 0), 0)),
         hungerWeak: mean(runs, r => r.suppers.reduce((a, s) => a + (s.weak || []).length, 0)),
         hungerSick: mean(runs, r => r.suppers.reduce((a, s) => a + (s.sick || []).length, 0)), sickAny: pct(runs, r => r.suppers.some(s => (s.sick || []).length > 0)),
+        sickMended: runs.reduce((a, r) => a + (r.counts.hungerSickMended || 0), 0), sickElsewhere: runs.reduce((a, r) => a + (r.counts.hungerSickElsewhere || 0), 0),   // open call 3
+        healsOnSick: runs.reduce((a, r) => a + (r.counts.healsOnHungerSick || 0), 0),
+        healsOnSickAt: runs.reduce((o, r) => { Object.entries(r.healsOnHungerSick || {}).forEach(([k, n]) => { o[k] = (o[k] || 0) + n; }); return o; }, {}),
         lostAny: pct(runs, r => r.deaths.length > 0), lost2: pct(runs, r => r.deaths.length >= 2), lostMean: mean(runs, r => r.deaths.length),
         phases: tally(runs.flatMap(r => r.deaths), d => d.phase),
         stress2: pct(runs, r => r.stress.reached2 > 0), stress2Mean: mean(runs, r => r.stress.reached2),
@@ -333,6 +336,11 @@ function guards(L, results, order) {
     g('Readable deaths (all runs)', `${verdict(readable === tripDeaths)} ${readable} of ${tripDeaths} trip deaths were readable: the card showed the death chance, and GO DOWN said it could kill (${sum('tripDeathsGo')}) or the card left a way that could not [all]`);
     const hungerAll = sum('hungerDeathsAll'), hungerChosen = sum('hungerDeathsChosen');
     g('Hunger deaths chosen at the table', `${verdict(hungerChosen === hungerAll)} ${hungerChosen} of ${hungerAll} hunger deaths came after Aris warned and the player chose "Go without" [all]`);
+    const mended = sum('sickMended'), elsewhere = sum('sickElsewhere');
+    g('Hunger sickness mended only at supper', `${verdict(elsewhere === 0)} ${mended} got over it by eating at a supper, ${elsewhere} anywhere else [none elsewhere]`);
+    const missed = sum('healsOnSick'), missedAt = order.reduce((o, k) => { Object.entries(results[k].healsOnSickAt || {}).forEach(([w, n]) => { o[w] = (o[w] || 0) + n; }); return o; }, {});
+    const missedTop = Object.entries(missedAt).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([w, n]) => `${w} ${n}`).join(', ');
+    g('No treatment on the hunger-sick', `${verdict(missed === 0)} ${missed} treatments landed on someone sick from hunger and were undone${missedTop ? ` (${missedTop})` : ''} [none]`);
     const twice = order.reduce((a, k) => a + results[k].twoBreakdownsOneEvent, 0);
     g('One breakdown per event (all runs)', `${verdict(twice === 0)} ${twice} second breakdowns from one event`);
     order.forEach(k => { const m = results[k]; if (m.traitTrips) g(`Traits matter: ${STYLES[k].label}`, `${verdict(m.struckTrips >= 30 && m.struckTrips <= 60)} way struck on ${m.struckTrips}% of trips with a trait on [30-60]`); });

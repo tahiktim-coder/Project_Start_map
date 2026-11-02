@@ -125,7 +125,7 @@ The door is open, because the real place had an open door.`,
                 effect: (state) => {
                     // Heal and destress all crew
                     state.crew.forEach(c => {
-                        if (c.status === 'INJURED') c.status = 'HEALTHY';
+                        if (state.treatable(c)) c.status = 'HEALTHY';                 // the new look's hunger-sick: only food mends them
                         c.stress = Math.max(0, (c.stress || 0) - 2);
                         c.healCounter = 0;
                     });

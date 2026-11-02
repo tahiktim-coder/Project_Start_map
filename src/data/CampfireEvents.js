@@ -401,7 +401,7 @@ const CAMPFIRE_EVENTS = [
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 10);
                     state.crew.forEach(c => {
-                        if (c.status === 'INJURED') c.status = 'HEALTHY';
+                        if (state.treatable(c)) c.status = 'HEALTHY';                 // the new look's hunger-sick: only food mends them
                         if (c.status !== 'DEAD') c.stress = Math.max(0, (c.stress || 0) - 1);
                     });
                     return "The crew ride out the jump together, braced and safe. Injured crew healed. All crew -1 Stress. -10 Energy.";
@@ -421,7 +421,7 @@ const CAMPFIRE_EVENTS = [
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     state.gainData(2);
-                    const injured = state.crew.find(c => c.status === 'INJURED');
+                    const injured = state.crew.find(c => state.treatable(c));
                     if (injured) {
                         injured.status = 'HEALTHY';
                         return `Half to the sensors, half to the hull. ${injured.name} is back on their feet. +2 Data. -5 Energy.`;

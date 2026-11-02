@@ -42,13 +42,31 @@ function catchErrors(game, R) {
     };
 }
 
-/** GameState.emitUpdates, wrapped: where energy, food and salvage came from and went, and each person's stress. */
+/** GameState.emitUpdates, wrapped: where energy, food and salvage came from and went, each person's stress, and who got
+    over hunger sickness where (open call 3: only a supper they eat mends it; anywhere else is counted as a rule error). */
 function watchStock(rc) {
     const { state, R, cur, lastStock, lastStress } = rc;
-    const realEmit = state.emitUpdates;
+    const realEmit = state.emitUpdates, sick = new Set();
+    const realKeep = state.keepHungerSick;                                          // a treatment that landed on the hunger-sick (and was
+    if (typeof realKeep === 'function') state.keepHungerSick = function () {        //   undone): every one picks with treatable(), so none should
+        const back = realKeep.call(this) || [];
+        back.forEach(() => {
+            R.counts.healsOnHungerSick += 1;
+            const at = (cur.lastCard && cur.lastCard.title) || cur.src || (cur.trip ? 'trip' : cur.phase);
+            R.healsOnHungerSick[at] = (R.healsOnHungerSick[at] || 0) + 1;
+        });
+        return back;
+    };
     state.emitUpdates = function () {
         realEmit.call(this);
         const src = cur.src || (cur.trip ? 'trip' : cur.phase);
+        this.crew.forEach(c => {
+            if (c._nsHungerSick && c.status === 'INJURED') { sick.add(c.name); return; }
+            if (!sick.has(c.name)) return;
+            sick.delete(c.name);
+            if (c.status === 'DEAD') return;
+            R.counts[src === 'supper' ? 'hungerSickMended' : 'hungerSickElsewhere'] += 1;
+        });
         ['energy', 'rations', 'salvage'].forEach(k => {
             const v = Math.round(Number(this[k]) || 0), d = v - lastStock[k];
             if (d) R.flow[k][src] = (R.flow[k][src] || 0) + d;

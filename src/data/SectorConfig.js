@@ -214,7 +214,7 @@ const SECTOR_CONFIG = {
                         {
                             action: 'heal',
                             execute: function(s) {
-                                const injured = s.crew.filter(c => c.status === 'INJURED');
+                                const injured = s.crew.filter(c => s.treatable(c));   // the new look's hunger-sick: only food mends them
                                 if (injured.length > 0) {
                                     const target = injured[Math.floor(Math.random() * injured.length)];
                                     target.status = 'HEALTHY';
@@ -293,7 +293,7 @@ const SECTOR_CONFIG = {
                 const roll = window.TEST_MODE ? 0.05 : Math.random();
                 if (roll < 0.15) {
                     // Blessing
-                    const injured = state.crew.filter(c => c.status === 'INJURED');
+                    const injured = state.crew.filter(c => state.treatable(c));   // the new look's hunger-sick: only food mends them
                     if (injured.length > 0) {
                         injured[0].status = 'HEALTHY';
                         state.addLog(`${injured[0].name}'s wounds closed overnight. Nobody can say how.`);

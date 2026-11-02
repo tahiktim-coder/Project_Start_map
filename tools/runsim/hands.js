@@ -213,7 +213,10 @@ function serveSupper(rc) {
     const plan = short ? P.supperPlan(state, style, run) : { picks: [], confirmed: [], share: false, tables: 0 };
     rc.add(short ? M.SECONDS.supperShort + plan.tables * M.SECONDS.supperTable + Math.max(0, plan.picks.length - 1) * M.SECONDS.supperMore : M.SECONDS.supper, 'supper');
     rc.beat();
+    const was = rc.cur.src;
+    rc.cur.src = 'supper';                                                           // what it moves is the supper's (watch.js), wherever it is served
     const r = state.serveSupper(plan.picks, { share: plan.share, confirmed: plan.confirmed });
+    rc.cur.src = was;
     const names = list => (list || []).map(c => c.name);
     r.died.forEach(c => { const d = R.deaths.find(x => x.who === c.name); if (d) d.supper = { chosen: plan.confirmed.includes(c), tables: plan.tables }; });
     R.suppers.push({ sector: state.currentSector, need, food, short, many, without: names(r.without), share: !!r.share, tables: plan.tables,

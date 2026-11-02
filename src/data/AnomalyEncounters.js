@@ -201,7 +201,7 @@ const ANOMALY_ENCOUNTERS = [
                     } else {
                         // Good: too calm
                         listener.stress = 0;
-                        if (listener.status === 'INJURED') listener.status = 'HEALTHY';
+                        if (state.treatable(listener)) listener.status = 'HEALTHY';      // the new look's hunger-sick: only food mends them
                         state.addLog(`${listener.name}: "It just said my name, nothing else. I feel better than I have in weeks."`);
                         return `${listener.name} came back calm and unhurt. Stress 0.`;
                     }
@@ -456,7 +456,7 @@ const ANOMALY_ENCOUNTERS = [
                     if (roll < 0.33) {
                         // Repairs
                         state.probeIntegrity = 100;
-                        const injured = state.crew.find(c => c.status === 'INJURED');
+                        const injured = state.crew.find(c => state.treatable(c));   // the new look's hunger-sick: only food mends them
                         if (injured) injured.status = 'HEALTHY';
                         state.addLog("It spreads over the hull, then lets go. Where it touched, the metal is new. The probe is whole again, and so is whoever was hurt.");
                         return "The garden repaired the probe and healed one injury.";

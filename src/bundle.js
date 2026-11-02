@@ -818,8 +818,7 @@ class GameState {
 
     /** The new look: what going without supper does to each of them (serveSupper), by their count over the run: the first time
         too weak for the next team trip (_nsWeak, read by NSOrbit); the second sick in bed (INJURED, _nsHungerSick: only a
-        supper they eat makes them well, never Aris's "up by the next stop" or the autodoc; a card's, an item's or a station's
-        treatment still can); each time +1 stress, never past 2, and no rest.
+        supper they eat makes them well, nothing else: keepHungerSick); each time +1 stress, never past 2, and no rest.
         The third time (HUNGER_DEATH_AT) they die: listed in died, and serveSupper calls dieOfHunger once its other lines are
         told. Returns { weak, sick, died }. */
     goWithout(skips) {
@@ -861,11 +860,26 @@ class GameState {
             : `A.U.R.A.: "${c.name} is sick from hunger, Commander. ${He} stays in bed until ${he} eats."`;   // DRAFT
     }
 
-    /** The new look: the hunger-sick mark (_nsHungerSick) belongs to the sickness it caused. Once something else has made
-        them well (a card, an item, a station), it goes, so a later injury is a plain one: Aris's "up by the next stop" and a
-        shared-out supper treat it as such. emitUpdates calls it. */
-    dropStaleHunger() {
-        this.crew.forEach(c => { if (c._nsHungerSick && c.status !== 'INJURED') delete c._nsHungerSick; });
+    /** The new look: hunger sickness is mended only by eating at a later supper (2026-11-02, the designer's open call 3; mend()
+        at serveSupper drops the mark). Anything else that made them well (a card's treatment, an item, a station, Eden's
+        rest, the autodoc) leaves them sick in bed: back to INJURED here. Every treatment picks its patient with treatable(),
+        and Aris's "up by the next stop", the autodoc and a CURE prize pass them by, so this only catches what slips past.
+        The dead lose the mark. emitUpdates calls it. Returns who it put back to bed (the run model counts them). */
+    keepHungerSick() {
+        const back = [];
+        this.crew.forEach(c => {
+            if (!c._nsHungerSick) return;
+            if (c.status === 'DEAD') delete c._nsHungerSick;
+            else if (c.status !== 'INJURED') { c.status = 'INJURED'; back.push(c); }
+        });
+        return back;
+    }
+
+    /** Whether a treatment (a card's med bay, a station's aisle, an item, a blessing, Eden's rest) can make c well: hurt, and
+        in the new look not sick from hunger, which only a supper they eat mends (keepHungerSick). A treatment with nobody
+        treatable takes its "nobody is hurt" branch. */
+    treatable(c) {
+        return !!c && c.status === 'INJURED' && !(isNewScreen() && c._nsHungerSick);
     }
 
     /** The new look: the hurt are well again (supper, Aris's next stop). */
@@ -1233,7 +1247,7 @@ class GameState {
     }
 
     emitUpdates() {
-        if (isNewScreen()) { this.openFoodPacks(); this.dropStaleHunger(); }
+        if (isNewScreen()) { this.openFoodPacks(); this.keepHungerSick(); }
         this.enforceCargoLimit();
         this.applyStressTraits();
         this.checkLoseConditions();
@@ -5628,17 +5642,19 @@ Then you're through.`,
                 const action = options[idx].key;
 
                 switch (action) {
-                    case 'rest':
-                        // Full recovery - stress and injuries
+                    case 'rest': {
+                        // Full recovery - stress and injuries (the new look: not hunger sickness, which only a supper they eat mends)
                         this.state.crew.forEach(c => {
                             if (c.status !== 'DEAD') {
                                 c.stress = 0;
-                                if (c.status === 'INJURED') c.status = 'HEALTHY';
+                                if (this.state.treatable(c)) c.status = 'HEALTHY';
                             }
                         });
                         this.state.addLog(`${names} found a quiet place by the stream. The whole crew rotated through in shifts.`);
                         this.state.addLog("For the first time in months, everyone truly rested. All stress cleared. All injuries healed.");
+                        this.state.crew.filter(c => c._nsHungerSick && c.status === 'INJURED').forEach(c => this.state.addLog(this.state.sickLine(c)));   // still in bed
                         break;
+                    }
                     case 'gather': {
                         const got = Math.min(10, Math.max(0, this.state.maxRations - this.state.rations));   // what fits: the chip says the same (EncounterCard.capGains)
                         this.state.rations += got;

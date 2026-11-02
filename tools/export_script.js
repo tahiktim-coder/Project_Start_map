@@ -40,6 +40,7 @@ function mockState(sector) {
         addLog: m => logs.push(String(m)), emitUpdates() {}, noteStanding() {}, hasStanding() { return false; }, isDeckOperational() { return true; },
         consumeRation() {}, consumeEnergy() { return true; }, damageRandomDeck() { return 'lab'; }, hasActiveTrait() { return false; },
         getStopsLeft() { return 2; }, addColonyKnowledge() {}, gainData() {}, revealStoryWorld() { return null; }, isSilentSpeaker() { return false; }, repairDeck() {}, adjustStress() {},
+        treatable: c => !!c && c.status === 'INJURED',   // GameState.treatable (nobody here is sick from hunger)
     };
     return { state, logs };
 }

@@ -319,10 +319,10 @@ const SPACE_STATION_ENCOUNTERS = [
             {
                 text: "Open the medical aisle",
                 desc: "-5 Energy. Heals one injured crew member. Otherwise +1 Medkit, or +3 Rations.",
-                descNow: (state) => state.crew.some(c => c.status === 'INJURED') ? "-5 Energy. Heals one injured crew member." : "-5 Energy. Nobody is hurt: +1 Medkit.",
+                descNow: (state) => state.crew.some(c => state.treatable(c)) ? "-5 Energy. Heals one injured crew member." : "-5 Energy. Nobody is hurt: +1 Medkit.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    const injured = state.crew.filter(c => c.status === 'INJURED');
+                    const injured = state.crew.filter(c => state.treatable(c));   // the new look's hunger-sick: only food mends them
                     if (injured.length > 0) {
                         injured[0].status = 'HEALTHY';
                         state.addLog(`Working medical gear on the shelf. ${injured[0].name} is treated.`);
