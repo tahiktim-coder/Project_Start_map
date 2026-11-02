@@ -99,6 +99,7 @@ const SECONDS = Object.freeze({
     teamPick: 5, landingFull: 22, landingAura: 16,   // the hatch; the drop flown by the player, or watched
     walkOut: 5.6,                                    // the walk-out after touchdown (C4: the game's NEW_LOOK_ECONOMY.WALK_OUT_MS)
     tripCard: 16, resultCard: 9, tripBack: 4,        // the trip's card; a repeat's result card (step 6); the shuttle home
+    wayPick: 2,                                      // a way chosen on the glass other than the one it marks (step 6: a click on its row)
     secondTrip: 6, secondTripCut: 2,                 // the hatch again for another find at the same stop (C5: nobody walks to it)
     wreck: 35, torch: 20, page: 20, dating: 25,      // our wrecks: the story card, the door, a found page, dating the disc
     site: 30, strange: 30, station: 45, stationCard: 20, mine: 20, skim: 4, call: 25, moment: 25, deckChoice: 5,   // station: the picker and the walk
@@ -113,8 +114,9 @@ const SECONDS = Object.freeze({
 });
 // which of the plan's routine cuts are live: step 3's four are (C1 autoScan, C4 walkOut, C5 repeatTrip, C6 bridgeHold);
 // C4 and C6 take their seconds from the game's table (NEW_LOOK_ECONOMY.WALK_OUT_MS, HOLD_SEEN_MS: rc.ECON), never a copy;
-// step 6 turns on resultCard. The scan itself always runs as the game runs it (stop.js visit): only its seconds follow C1
-const CUTS = { autoScan: true, walkOut: true, repeatTrip: true, bridgeHold: true, resultCard: false };
+// step 6's resultCard is live too: an event seen before this run has no card, the way chosen on the glass resolves into a short
+// result card (App.tripCardPlan). The scan itself always runs as the game runs it (stop.js visit): only its seconds follow C1
+const CUTS = { autoScan: true, walkOut: true, repeatTrip: true, bridgeHold: true, resultCard: true };
 
 // A.U.R.A.'s whole dock in the new look (Bring Her In, src/newscreen/dock/DockFlight.js DOCK.energy): her share of the flying
 const DOCK_AURA_ENERGY = 4;

@@ -54,7 +54,7 @@ function runContext(game, styleName, seed, opts, R) {
         orbit: ctx.NSOrbit, finds: ctx.NSWorldFinds, route: ctx.NSRoute, EC: ctx.EncounterCard, ECON: G('NEW_LOOK_ECONOMY'), Gen: G('PlanetGenerator'),
         evaRange: { energy: app.evaEnergyRange(), salvage: app.evaSalvageRange(false), salvageHigh: app.evaSalvageRange(true) },   // policy.js rewardValue
         cur: { sector: 1, node: null, trip: null, phase: 'start', src: null, lastCard: null, campfire: false, strange: false, stop: 0, beat: 0, opening: null },
-        lastStress: {}, seenEvents: new Set(), lastStock: { energy: 100, rations: 24, salvage: 50 }, injuredAt: {}, run: { supperVictim: null },
+        lastStress: {}, lastStock: { energy: 100, rations: 24, salvage: 50 }, injuredAt: {}, run: { supperVictim: null },
     };
     rc.beat = () => { rc.cur.beat += 1; return rc.cur.beat; };                     // a new event: a card picked, an action, a trip, a warp, a jump ...
     rc.add = (secs, what) => { R.secs += secs; const k = what || rc.cur.timeKind || 'other'; R.time[k] = (R.time[k] || 0) + secs; };

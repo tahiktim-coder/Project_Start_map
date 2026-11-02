@@ -13,7 +13,7 @@ function newLog(style, seed) {
         sectors: [], suppers: [], trips: [], deaths: [], injuries: [], cards: {}, locked: null,
         stress: { peak: {}, reached2: 0, breakdowns: [], sameEvent: 0, up: {}, down: {} },
         decks: { broken: 0, fixed: 0, patched: 0, lived: 0, wanted: 0, dockCrash: 0 },
-        counts: { crises: 0, calls: 0, reserveWarps: 0, reserveJumps: 0, stuck: 0, stuckFew: 0, stuckAris: 0, locked: 0, storyMissed: 0, storyMissedFew: 0, storyMissedOther: 0, forced: 0, strange: 0, stations: 0, refused: 0, storyLost: 0, struck: 0, tripsWithTrait: 0 },
+        counts: { crises: 0, calls: 0, reserveWarps: 0, reserveJumps: 0, stuck: 0, stuckFew: 0, stuckAris: 0, locked: 0, storyMissed: 0, storyMissedFew: 0, storyMissedOther: 0, forced: 0, strange: 0, stations: 0, refused: 0, storyLost: 0, struck: 0, tripsWithTrait: 0, resultCards: 0, wayPicks: 0 },
         pairs: {}, time: {}, flow: { energy: {}, rations: {}, salvage: {} }, end: null,
     };
 }

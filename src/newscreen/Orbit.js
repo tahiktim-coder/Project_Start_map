@@ -34,13 +34,21 @@
                                    too only if the player adds them at the hatch)
      teamRisk(app, ids, way?) → 25 | null  the chosen find's hurt chance with ids down (TripOdds with App.tripRisk, the
                                    way's own risk, the fit and anyone hurt going; way: the card's index, left out the way
-                                   the find takes, as teamOdds); before a scan, the blind trip's; null where the team goes to a site's own
+                                   chosen on the glass, as teamOdds); before a scan, the blind trip's; null where the team goes to a site's own
                                    story or Eden's card (their own card says the odds: no number on the glass)
-     teamOdds(app, ids, way?) → { hurt, death, deadly, oneIn } | null   the same find's odds (TripOdds), for the way the find
-                                   takes (its first row no stress trait strikes: NSWorldFinds' find.way) unless way is given;
-                                   before a scan, the way GO DOWN vouches for (App.sureWay): GO DOWN shows its hurt chance
-                                   and, where it can kill, its death chance
+     teamOdds(app, ids, way?) → { hurt, death, deadly, oneIn } | null   the same find's odds (TripOdds), for the way chosen on
+                                   the glass (the find's way: way()) unless way is given; before a scan, the way GO DOWN
+                                   vouches for (App.sureWay): GO DOWN shows its hurt chance and, where it can kill, its death
+                                   chance. A find seen before has no card (App.tripCardPlan): this is the way that is taken
+     way(app, node, findId, idx) → bool   choose a find's way on the glass (stop/Words.js rows): kept on the world
+                                   (node.nsWay[findId] = the card's index, saved with the map). Only a row the glass shows that
+                                   no stress trait strikes; unchosen, a find takes its careful way, or its bold one where only
+                                   that one shows (NSWorldFinds' find.way). GO DOWN, the meteor landing (App.isBoldWay) and a
+                                   repeat's result card follow it
      fitOf(app, node, ids, find?) → 3   the team's fit points for a find (TripOdds' fit; the tables are TripOdds.FIT)
+     helps(app, ids, id) → bool | null   id makes the trip ids would take safer: its odds against the same trip without what
+                                   id brings (NSWorldFinds.oddsOf's without); null where a site's or Eden's own card says the
+                                   odds. The note over someone pointed at says it (stop/Words.js: "Safer with me.")
      hasTeamAction(planet) → bool  this place has a team trip still to take: a find still open, or before a scan one blind
                                    trip (handleWarp defers the breach, the hull hit, to it)
      opened(app)                   the bridge is up: the crisis sign is decided (once per place) and said; a sign comes
@@ -117,6 +125,7 @@
     const TELL = Object.freeze({
         scan: 'I scan each world as we arrive. The marks show where the team can go.',   // DRAFT: said once, during the first sweep (Stop.js)
         find: 'Pick a mark, Commander. The team goes there.',
+        way: 'Pick how the team does it, Commander. Go down shows the odds.',   // DRAFT: once, when a find's two ways first show (stop/Words.js)
         team: '{team} are ready at the hatch. Click anyone to change who goes.',   // {team}: "Vance and Mira" (Stop.js fills it in)
         skim: 'Refuel scoops gas from the clouds. Free energy, once per giant.',
         date: 'Date the wreck to learn where its crew went. It costs nothing.',
@@ -545,10 +554,30 @@
     }
     /** The odds GO DOWN shows with ids going down (TripOdds: { hurt, death, deadly, oneIn }): the chosen find's (WorldFinds.js:
         App.tripRisk, the way's own risk, the team's fit, someone hurt going, something hunting there, Vance's cover), for the
-        way the find takes (its find.way: its first row no stress trait strikes); before a scan, the blind trip's plain
-        landing, for the way GO DOWN vouches for (App.sureWay: the careful one, unless a stress trait may strike it). way: the
-        way's index on its card, to ask about another. null: a site's own story or Eden's card. */
+        way chosen on the glass (its find.way: node.nsWay, else its default; a find seen before resolves that way with no card);
+        before a scan, the blind trip's plain landing, for the way GO DOWN vouches for (App.sureWay: the careful one, unless a
+        stress trait may strike it). way: the way's index on its card, to ask about another. null: a site's own story or Eden's
+        card. */
     function teamOdds(app, ids, way) {
+        const t = tripFor(app, ids, way);
+        return t ? window.NSWorldFinds.oddsOf(app, t.n, t.ev, ids, { way: t.idx, find: t.find }) : null;
+    }
+    /** Whether id makes the trip GO DOWN shows safer (stop/Words.js: "Safer with me." / "No help down there."): its odds with
+        ids going down (id one of them) against the same trip with id's own part left out (NSWorldFinds.oddsOf's without:
+        their fit, under FIT_MAX with their partner's; their cover, if they are Vance; their going down hurt; and Mira left out
+        scans from aboard). Safer: a lower death chance, else a lower hurt chance at the same death chance. null: no odds to
+        compare (a site's or Eden's own card says them). */
+    function helps(app, ids, id) {
+        const t = (ids || []).includes(id) ? tripFor(app, ids) : null;
+        if (!t) return null;
+        const F = window.NSWorldFinds, opts = { way: t.idx, find: t.find };
+        const go = F.oddsOf(app, t.n, t.ev, ids, opts), not = F.oddsOf(app, t.n, t.ev, ids, Object.assign({ without: id }, opts));
+        if (!go || !not) return null;
+        return go.death < not.death || (go.death === not.death && go.hurt < not.hurt);
+    }
+    /** The trip teamOdds and helps ask about: { n: the world, ev: its event, find (null before a scan), idx: the way's index on
+        the card }, or null (a site's own story, Eden, nothing to land on). */
+    function tripFor(app, ids, way) {
         const s = app && app.state, n = s && s.currentSystem, F = window.NSWorldFinds;
         if (!n || !isPlanet(n) || !F || typeof F.oddsOf !== 'function' || typeof app.tripRisk !== 'function') return null;
         let ev = null, find = null;
@@ -559,7 +588,20 @@
         } else if (!teamSite(app, n) && n.type !== 'EDEN') ev = typeof app.landingEventOf === 'function' ? app.landingEventOf(n) : null;
         if (!ev) return null;
         const idx = way != null ? way : find && Number.isInteger(find.way) ? find.way : typeof app.sureWay === 'function' ? app.sureWay(ev) : null;
-        return F.oddsOf(app, n, ev, ids, { way: idx, find });
+        return { n, ev, find, idx };
+    }
+    /** A find's way chosen on the glass (stop/Words.js rows, through NewScreen.flow.way): kept on the world, node.nsWay[findId]
+        = the card's index (a new object each time; saved with the map). Only a row the glass shows for a find still open, and
+        not one a stress trait strikes (NSWorldFinds' row.struck). → bool */
+    function way(app, node, findId, idx) {
+        const F = window.NSWorldFinds;
+        if (!app || !node || !F || !F.known(node) || !Number.isInteger(idx)) return false;
+        let find = null;
+        try { find = F.list(app, node).find(f => f.id === findId && !f.done) || null; } catch (err) { console.error('NSOrbit: the find\'s way failed', err); return false; }
+        const row = find && (find.ways || []).find(r => r.idx === idx);
+        if (!row || row.struck) return false;
+        node.nsWay = Object.assign({}, node.nsWay, { [findId]: idx });
+        return true;
     }
     /** The hurt chance of teamOdds (GO DOWN's "risk N%"). */
     function teamRisk(app, ids, way) { const o = teamOdds(app, ids, way); return o ? o.hurt : null; }
@@ -750,7 +792,7 @@
     }
 
     window.NSOrbit = Object.freeze({
-        actions, act, eligible, weak, holdLoss, lossOf, propose, teamRisk, teamOdds, fitOf, hasTeamAction, opened, signed, beforeLeave, whileDown, tripOver, tick, offerCall, fixIn, canDate, datable,
+        actions, act, eligible, weak, holdLoss, lossOf, propose, teamRisk, teamOdds, way, fitOf, helps, hasTeamAction, opened, signed, beforeLeave, whileDown, tripOver, tick, offerCall, fixIn, canDate, datable,
         breakPatched, deckChoices, deckCost, deckChoose, sign, scanDue, TELL, pool: app => evaCrew(app).slice(),
         trip: () => (trip ? { ids: trip.ids.slice(), aboard: trip.aboard.slice() } : null),
         debug: () => ({ trip: trip ? { ids: trip.ids, downDone: trip.downDone, over: !!trip.over, quiet: Math.round(trip.quiet) } : null, call: call ? call.title || true : null, breach: pendingBreach ? Math.round(pendingBreach.wait) : null, held: moments.held.map(e => e.id || e.title) }),

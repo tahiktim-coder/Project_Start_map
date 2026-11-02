@@ -323,28 +323,37 @@
         return out.length > OUT_MAX ? out.slice(0, OUT_MAX - 1).concat(out[out.length - 1]) : out;
     }
 
-    const ALARM = /^(?:⚠\s*)?(?:WARNING|INCIDENT|CRITICAL|CATASTROPHE|FATAL|KIA|PREDATOR ALERT):\s*/i;   // the team card's result lines: the alarm word goes, the news stays
+    const ALARM = /^(?:⚠\s*)?(?:WARNING|INCIDENT|CRITICAL|CATASTROPHE|FATAL|KIA|PREDATOR ALERT|ALERT):\s*/i;   // the team card's result lines: the alarm word goes, the news stays
     /**
      * The new look, for a panel that is not an EncounterCard (the team-on-the-ground card, bundle.js showEventModal): runs the
      * choice (run), then shows what it did in place of the panel's choices, in showOutcome's look, then CONTINUE (done: close
      * the panel). Nothing else opens meanwhile. With nothing to show, or the panel gone, it closes at once.
+     * opts.result (the new look's short result card, bundle.js showTripResult): called once the choice has run, it gives what
+     * the card says instead of the logged lines: { say: { speaker, text }, also: [logged line], lean, chips: [{ text, loss }] },
+     * one line, any line of the log it keeps (a breakdown's: cleaned as the logged lines are) and the chips; lean: the panel's
+     * found line (.eva-found) gives way too, to keep the card short.
      */
-    function outcomeIn(app, panel, picked, run, done) {
+    function outcomeIn(app, panel, picked, run, done, opts) {
         gate.held += 1;
-        let said = [];
+        let said = [], short = null;
         try { said = captureLog(run); } catch (err) { console.error('EncounterCard: the choice failed', err); }
-        const lines = outcomeLines(said.map(m => String(m || '').replace(ALARM, '').replace(/^\w/, c => c.toUpperCase())));
+        if (opts && typeof opts.result === 'function') { try { short = opts.result(); } catch (err) { console.error('EncounterCard: the short result failed', err); } }
+        const clean = list => outcomeLines(list.map(m => String(m || '').replace(ALARM, '').replace(/^\w/, c => c.toUpperCase())));
+        const lines = short && short.say ? [short.say].concat(clean(short.also || [])) : clean(said);
+        const chips = short && short.say ? short.chips || [] : [];
+        const keep = short && short.say && short.lean ? 'header, .eva-team' : 'header, .eva-team, .eva-found';
         let isDone = false;
         const finish = () => { if (isDone) return; isDone = true; try { done(); } catch (err) { console.error('EncounterCard: closing the panel failed', err); } releaseGate(); };
         if (!lines.length || !panel || !panel.isConnected) { finish(); return; }
         const pick = String(picked || '').replace(/<[^>]*>/g, '').replace(MARKUP, '');
-        [...panel.children].forEach(el => { if (!el.matches('header, .eva-team, .eva-found')) el.style.display = 'none'; });   // the choices give way to what happened
+        [...panel.children].forEach(el => { if (!el.matches(keep)) el.style.display = 'none'; });   // the choices give way to what happened
         const box = document.createElement('div');
         box.className = 'enc-decide eva-outcome';
         box.innerHTML = `
             <div class="enc-outcome" aria-live="polite">
                 <p class="enc-outcome-pick">${esc(pick)}</p>
                 ${lines.map(l => (l.speaker ? `<div class="enc-line enc-outcome-say is-in">${lineHtml(app, { speaker: l.speaker, text: markRewards(esc(l.text)) })}</div>` : `<p class="enc-outcome-line">${markRewards(esc(l.text))}</p>`)).join('')}
+                ${chips.length ? `<p class="enc-outcome-line enc-outcome-chips"><span class="enc-chips">${chips.map(c => `<i class="${c.loss ? 'is-loss' : 'is-gain'}">${esc(c.text)}</i>`).join('')}</span></p>` : ''}
             </div>
             <footer class="enc-flow enc-outcome-flow"><button class="enc-next enc-outcome-go" type="button">CONTINUE ›</button></footer>`;
         panel.appendChild(box);

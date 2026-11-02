@@ -18,8 +18,9 @@
    (Events.js `short`), its prize and its odds. The prize is drawn once, seeded by the world and the find, as the world is
    read (App.findPrizes: node.nsPrize), and the trip pays exactly that (resolveEvaOutcome): supplies only, a bold way's
    growing with its risk (NEW_LOOK_ECONOMY.BOLD_PRIZE). Where the careful way brings nothing (a walk-away), only the bold
-   row shows: going down is the gamble, and the card offers walking away. The way the team takes is the first row no stress
-   trait strikes; GO DOWN shows its odds.
+   row shows: going down is the gamble, and the card the first time offers walking away. The way the team takes is chosen
+   on the glass (NSOrbit.way: node.nsWay), else the first row no stress trait strikes; GO DOWN shows its odds, and a find
+   whose event was seen before this run takes it with no card (App.tripCardPlan).
    A clue: in sectors 2 to 6, while the sector's story world is still a faint contact, one side world carries a clue toward it
    on one of its finds (a survivor's note, a beacon's last course, a star fix); the trip there names the story world
    (App.revealStoryPlanet, as a dated wreck does), and A.U.R.A. says where the clue came from.
@@ -37,9 +38,9 @@
                                                   ways? (an event: [{ way: 'careful' | 'bold', idx: the card's index, short,
                                                   prize: { salvage, energy, rations, data, cure } | null, gives: [{ icon, text:
                                                   '+45 salvage' }], hurt, death, oneIn, deadly, struck: 'PARANOID' | 'RECKLESS'
-                                                  | null }]), way? (an event: the card's index the team takes: the first row
-                                                  no stress trait strikes, the careful one or the bold where only it shows);
-                                                  its risk is that way's hurt chance }
+                                                  | null }]), way? (an event: the card's index the team takes: node.nsWay[id]
+                                                  (NSOrbit.way), else the first row no stress trait strikes, the careful one
+                                                  or the bold where only it shows); its risk is that way's hurt chance }
      target(app, node) → find | null               where GO DOWN takes the team: the one chosen, else a clue, else the first not done
      blind(app, node) → find | null                where a blind trip goes before a scan (the site, else its own event)
      aim(app, node, id) → bool                     choose where the team goes (kept on the world: node.nsTarget)
@@ -49,7 +50,8 @@
      riskOf(app, node, event, ids, opts?) → n      a plain landing's hurt chance with that event (TripOdds; opts.way: the
                                                   card's index, else the careful one; opts.find: the find, for the fit)
      oddsOf(app, node, event, ids, opts?) → { hurt, death, deadly, oneIn }   the same way's odds, its death chance too
-                                                  (something hunting there, Vance's cover): what its card will show
+                                                  (something hunting there, Vance's cover): what its card will show.
+                                                  opts.without: one of ids whose own part is left out (NSOrbit.helps)
      noteLines(app, node, withSite) → ['Worth a trip: Old ruins (a clue) · The hum', 'People could live here']   travel's note
 */
 (function () {
@@ -184,21 +186,24 @@
     /** A plain landing's odds going in (before the landing), as the card will show them for that way: App.tripRisk, the way's
         own risk (opts.way: its index on the card; left out, the careful choice's), the team's fit for the find (NSOrbit.fitOf;
         opts.find, else the world's own event), anyone hurt going down (fewer than two were well: NSOrbit.pool), something
-        hunting there (App.isHunted) and Vance's cover (App.vanceCovers), through TripOdds: { hurt, death, deadly, oneIn }. */
+        hunting there (App.isHunted) and Vance's cover (App.vanceCovers), through TripOdds: { hurt, death, deadly, oneIn }.
+        opts.without: one of ids whose own part is left out (NSOrbit.helps): their fit, their going down hurt and, for Vance,
+        his cover; Mira left out scans from aboard again. */
     function eventOdds(app, node, ev, ids, opts) {
         if (!app || typeof app.tripRisk !== 'function' || !ev) return null;
-        const o = opts || {}, base = app.tripRisk(node, { mira: miraAboard(app, ids) ? miraScan() : 0 }).risk;
+        const o = opts || {}, goes = o.without ? (ids || []).filter(id => id !== o.without) : ids;
+        const base = app.tripRisk(node, { mira: miraAboard(app, goes) ? miraScan() : 0 }).risk;
         const mods = (ev.choices || []).map(c => Number(c.riskMod) || 0), least = mods.length ? Math.min(...mods) : 0;
         const wayMod = o.way != null && mods[o.way] != null ? mods[o.way] : least;
         const T = window.TripOdds, O = window.NSOrbit;
         if (!T) return { hurt: Math.max(0, Math.min(100, Math.round(base + wayMod))), death: 0, deadly: false, oneIn: null };
         const find = o.find || { id: 'kind', kind: 'event', feature: null, event: ev.id };
         let fit = 0;
-        try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(app, node, ids, find) : 0; } catch (err) { console.error('NSWorldFinds: the fit failed', err); }
+        try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(app, node, goes, find) : 0; } catch (err) { console.error('NSWorldFinds: the fit failed', err); }
         const team = teamOf(app, ids);
         const hunted = typeof app.isHunted === 'function' ? app.isHunted(node) : tagsOf(node).includes('PREDATORY');
-        const vance = typeof app.vanceCovers === 'function' ? app.vanceCovers(team) : false;
-        return T.odds({ base, wayMod, fit, hunted, vance, hurtGoes: team.some(c => c.status === 'INJURED') });
+        const vance = o.without !== 'vance' && typeof app.vanceCovers === 'function' ? app.vanceCovers(team) : false;
+        return T.odds({ base, wayMod, fit, hunted, vance, hurtGoes: teamOf(app, goes).some(c => c.status === 'INJURED') });
     }
     /** The hurt chance of eventOdds: a find's "risk N%". */
     function eventRisk(app, node, ev, ids, opts) { const o = eventOdds(app, node, ev, ids, opts); return o ? o.hurt : null; }
@@ -249,8 +254,8 @@
     function eventFind(app, node, id, ev, ids, feature) {
         const f = feature ? FEATURE[feature] : null, find = { id, kind: 'event', event: ev.id, feature: feature || null };
         const odds = (ev.choices || []).map((c, idx) => eventOdds(app, node, ev, ids, { way: idx, find }));
-        const ways = wayRows(app, node, id, ev, odds);
-        const row = ways.find(r => !r.struck) || null;                                    // the way taken: the first row no trait strikes
+        const ways = wayRows(app, node, id, ev, odds), chosen = node.nsWay ? node.nsWay[id] : null;
+        const row = ways.find(r => r.idx === chosen && !r.struck) || ways.find(r => !r.struck) || null;   // the way taken: chosen, else the first row no trait strikes
         const mods = (ev.choices || []).map(c => Number(c.riskMod) || 0), least = mods.indexOf(Math.min(...mods)), careful = odds[least];
         // every row struck (a walk-away find's one row, while Vance won't risk it): the careful way, which the card keeps open
         return { id, kind: 'event', event: ev.id, label: LABELS[ev.id] || sentence(ev.title), icon: f ? f.icon : 'pin', art: f ? f.art : null, gives: eventGives(app, ways),

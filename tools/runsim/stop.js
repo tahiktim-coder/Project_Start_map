@@ -88,6 +88,7 @@ async function trip(rc, node, find) {
     finds.aim(app, node, find.id);
     const ids = P.pickTeam(find, style, { orbit, app, rnd, finds, node });
     if (!ids) { R.counts.stuck += 1; return false; }
+    glassWay(rc, node, find, ids);
     const mark = (finds.list(app, node, ids).find(f => f.id === find.id) || {}).risk;
     const go = typeof orbit.teamOdds === 'function' ? orbit.teamOdds(app, ids) : null;   // what GO DOWN shows before they go
     const again = (node.nsTrips || 0) > 0;
@@ -114,6 +115,22 @@ async function trip(rc, node, find) {
     R.trips.push(cur.trip);
     cur.trip = null;
     return true;
+}
+
+/** The way this player chooses on the glass for an event find (stop/Words.js rows: the rows NSWorldFinds gives with the pair
+    going down, their odds and prizes as shown; a struck row takes no click), kept on the world (NSOrbit.way); one other than
+    the way the glass marks costs its click (models.js SECONDS.wayPick). GO DOWN's odds and a repeat's result card follow it. */
+function glassWay(rc, node, find, ids) {
+    const { app, finds, orbit, style, rnd, R, G } = rc;
+    const f = finds.list(app, node, ids).find(x => x.id === find.id);
+    if (!f || f.kind !== 'event' || !(f.ways || []).length || typeof orbit.way !== 'function') return;
+    const ev = (G('EVENTS') || []).find(e => e.id === f.event);
+    const open = ev ? f.ways.filter(r => !r.struck).map(r => ({ c: ev.choices[r.idx], i: r.idx, odds: { hurt: r.hurt || 0, death: r.death || 0 }, prize: r.prize })) : [];
+    if (!open.length) return;
+    const idx = P.pickWay(open, style, 0, rc.evaRange, rnd);
+    if (idx === f.way || !orbit.way(app, node, f.id, idx)) return;
+    R.counts.wayPicks += 1;
+    rc.add(M.SECONDS.wayPick, 'hatch');
 }
 
 /** The team's fit for this find (NSOrbit.fitOf, the points TripOdds counts): { total, by: { id: points } }, or null. */

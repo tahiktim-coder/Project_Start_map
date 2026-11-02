@@ -177,6 +177,7 @@ class GameState {
         this._docksFlown = 0;      // the new look: docks flown this run; the first plays the whole approach (App.flyDock)
         this._wreckDoors = [];     // the doors of the wrecks boarded this run, in order (App.wreckDoorFor, TorchDoors.pick)
         this._kindsScanned = [];   // the new look: the kinds of world scanned this run (the first of each kind is +1 data, App.noteNewKind)
+        this._nsEventsSeen = [];   // the new look: the landing events whose full card was shown this run (App.tripCardPlan: a repeat is a short result card)
 
         // --- Legacy aliases for systems that still reference old names ---
         // TODO: Remove these once all systems are updated
@@ -314,6 +315,7 @@ class GameState {
             _boardedHulls: this._boardedHulls || [],
             _wreckDoors: this._wreckDoors || [],
             _kindsScanned: this._kindsScanned || [],
+            _nsEventsSeen: this._nsEventsSeen || [],
             _standing: this._standing || null,
             _countSceneSeen: !!this._countSceneSeen,
             _tutorialWarpSeen: !!this._tutorialWarpSeen,   // A.U.R.A.'s first-time lines are said once per run, not once per load
@@ -403,6 +405,7 @@ class GameState {
             this._boardedHulls = saveData._boardedHulls || [];
             this._wreckDoors = Array.isArray(saveData._wreckDoors) ? saveData._wreckDoors : this._boardedHulls.map(() => 'cut');   // older saves: every hatch was cut
             this._kindsScanned = Array.isArray(saveData._kindsScanned) ? saveData._kindsScanned : [];
+            this._nsEventsSeen = Array.isArray(saveData._nsEventsSeen) ? saveData._nsEventsSeen : [];   // older saves: every event's full card once more
             this._standing = saveData._standing || null;
             this._countSceneSeen = !!saveData._countSceneSeen;
             this._tutorialWarpSeen = !!saveData._tutorialWarpSeen;
@@ -532,10 +535,20 @@ class GameState {
         if (this.logs.length > this.maxLogs) {
             this.logs.shift();
         }
+        if (this._heard) this._heard.push(message);                                  // GameState.heard is listening
 
         window.dispatchEvent(new CustomEvent('log-updated', {
             detail: { message }
         }));
+    }
+
+    /** Runs fn and returns the log lines it added, in order (logged as ever). The new look keeps what a breakdown says this
+        way (applyStressTraits: _nsBroke), so a trip's short result card can show it (App.tripResultWords). */
+    heard(fn) {
+        const outer = this._heard, said = [];
+        this._heard = said;
+        try { fn(); } finally { this._heard = outer || null; if (outer) outer.push(...said); }
+        return said;
     }
 
     /**
@@ -1058,7 +1071,8 @@ class GameState {
             // Stress 3: Breakdown events (fire once). The new look: one at most per event (oneBreakdown held the rest at 2)
             if (stress >= 3 && !c.breakdownFired) {
                 c.breakdownFired = true;
-                this.triggerBreakdown(c);
+                if (isNewScreen()) this._nsBroke = { crew: c, said: this.heard(() => this.triggerBreakdown(c)) };   // who broke and what it said (App.tripResultWords)
+                else this.triggerBreakdown(c);
             }
 
             // Remove trait if stress drops below 2
@@ -1293,8 +1307,15 @@ const NEW_LOOK_ECONOMY = Object.freeze({
         LORE_DATA: 1,                            // LORE: +1 data, and salvage one tier lower (T1: a plain landing's EVA_METALS)
         CURE_STRESS: 1,                          // CURE: the hurt aboard are well, and the most stressed takes this much off
     }),
+    RISKY_FROM: 15,          // a way's row on the glass (stop/Words.js) says "low risk" under this hurt chance, "risky" from it,
+                             //   and "could die" wherever it can kill (DEATH_FLOOR and up); GO DOWN says the numbers
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
+// The new look's short result card (App.tripResultWords), when nobody was hit: one of the team says it (A.U.R.A. if none is left)
+const TRIP_BACK_LINES = Object.freeze({
+    got: "Got it. We're coming back up.",   // DRAFT: the prize, or some of it, came home
+    back: "We're coming back up.",          // DRAFT: nothing came home (it did not fit)
+});
 // The new look: what a way that brought back an item gives instead, by the item's first tag (App.drawPrize; how much is
 // NEW_LOOK_ECONOMY.BOLD_PRIZE's). Any other tag gives salvage.
 const PRIZE_OF_TAG = Object.freeze({ TECH: 'salvage', GEO: 'salvage', WEAPON: 'salvage', ARTIFACT: 'salvage', ENERGY: 'energy', BIO: 'rations', RATION: 'rations', LORE: 'lore', CURE: 'cure' });
@@ -4792,14 +4813,16 @@ Then you're through.`,
         someone hurt went down, whether Vance covers his partner, and the stress traits that strike ways as they stood when
         the team went down (GO DOWN's odds counted those: App.sureWay; one gained while they are down waits for the next trip,
         so the card never strikes the way GO DOWN vouched for). App.wayOdds and App.tripChoices read it; resolveEvaOutcome
-        drops it. findId: the find they went to (its prize: App.tripPrize). */
+        drops it. findId: the find they went to (its prize: App.tripPrize); way: the card's index chosen for it on the glass as
+        they went (NSWorldFinds' find.way: node.nsWay, else its default; null on a blind trip: App.tripCardPlan); label: its
+        name on the glass (the result card's title). */
     tripContext(planet, team, find) {
         const s = this.state, O = window.NSOrbit, ids = team.map(crewIdOf);
         const mira = s.crew.find(c => (c.tags || []).includes('SPECIALIST'));
         const miraAboard = !!mira && !team.includes(mira) && mira.status === 'HEALTHY' && !mira.tags.includes('CONFINED') && !mira.tags.includes('SEDATED');
         let fit = 0;
         try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(this, planet, ids, find) : 0; } catch (err) { console.error('App: the team fit failed', err); }
-        return { findId: (find && find.id) || 'kind',
+        return { findId: (find && find.id) || 'kind', way: find && Number.isInteger(find.way) ? find.way : null, label: (find && find.label) || null,
             shownBase: this.tripRisk(planet, { mira: miraAboard ? NEW_LOOK_ECONOMY.MIRA_ABOARD : 0 }).risk, fit,
             hunted: this.isHunted(planet), hurtGoes: team.some(m => m.status === 'INJURED'), vance: this.vanceCovers(team),
             paranoid: s.hasActiveTrait('PARANOID'), reckless: s.hasActiveTrait('RECKLESS') };
@@ -5041,6 +5064,21 @@ Then you're through.`,
         return said.join(' ');
     }
 
+    /** Whether the team takes a find's bold way: the way chosen for it (node.nsWay[findId], the card's index), else its
+        default (the careful way, or the bold one where only that one shows on the glass: NSWorldFinds' rows). Before a scan
+        (a blind trip: no rows on the glass), the way GO DOWN vouched for (App.sureWay), as App.tripCardPlan takes it. false
+        when unknown: no such find, a site or Eden, the default game. The meteor landing reads it. */
+    isBoldWay(node, findId) {
+        const F = window.NSWorldFinds;
+        if (!isNewScreen() || !node || !findId || !F) return false;
+        let find = null;
+        try { find = F.list(this, node, null, true).find(f => f.id === findId) || null; } catch (err) { console.error('App: the find\'s way failed', err); }
+        const ev = find && find.kind === 'event' && typeof EVENTS !== 'undefined' ? EVENTS.find(e => e.id === find.event) : null;
+        if (!ev) return false;
+        const way = F.known(node) ? find.way : this.sureWay(ev);
+        return way != null && this.wayOf(ev, way) === 'bold';
+    }
+
     /** How dangerous a plain landing is from the world itself, before how it is flown and who scans it: 5 % to 30 % by its
         danger level, then its signals, each a line on the trip's card. The new look's scan tags read the total (Scan.js). */
     planetRisk(planet) {
@@ -5056,11 +5094,90 @@ Then you're through.`,
         return { risk, mods };
     }
 
-    showEventModal(event, planet) {
+    /** The new look: how a plain landing's card plays (showEventModal; the run model's trip card asks the same). The first time
+        an event shows this run: its full card, the way chosen on the glass lit; it is remembered (state._nsEventsSeen, saved).
+        After that: no buttons, the glass's way resolves straight into a short result card (App.showTripResult). The glass's
+        way is App.tripContext's (NSWorldFinds' find.way as the team went), else the way GO DOWN vouched for (App.sureWay: a
+        blind trip); a way the card strikes (App.tripChoices) gives way to the safest one it leaves open. A walk-away is never a
+        row on the glass (its find shows the bold row only), so where that is the way taken (a blind trip, or the one row
+        struck), the full card plays again: it says what walking away costs, and the player may still choose.
+        ways: tripChoices'. { repeat, way: the card's index } (way null: the default game, or a card with no trip behind it). */
+    tripCardPlan(event, ways) {
+        const s = this.state, t = this._nsTrip, list = ways || [];
+        if (!isNewScreen() || !t || !event || !event.id || !list.length) return { repeat: false, way: null };
+        const open = list.filter(w => !w.struck).sort((a, b) => (a.choice.riskMod || 0) - (b.choice.riskMod || 0) || a.idx - b.idx);
+        const glass = list[Number.isInteger(t.way) ? t.way : this.sureWay(event)];
+        const way = glass && !glass.struck ? glass.idx : open.length ? open[0].idx : 0;
+        const r = (list[way] && list[way].choice && list[way].choice.reward) || {}, walks = r.type === 'RESOURCE' && r.val === 'NOTHING';
+        const seen = s._nsEventsSeen || [];
+        if (seen.includes(event.id)) return { repeat: !walks, way };
+        s._nsEventsSeen = seen.concat(event.id);
+        return { repeat: false, way };
+    }
+
+    /** The new look, an event seen before this run (App.tripCardPlan): no buttons. The way chosen on the glass resolves at once
+        and a short result card says how it went (EncounterCard.outcomeIn): the find's name, the event's first sentence, the
+        way, what happened in a crew or A.U.R.A. voice, what came home as chips, CONTINUE: about 25 words. A breakdown on the
+        trip shows too (App.tripResultWords). way: tripChoices'. */
+    showTripResult(event, planet, way, riskBase) {
+        const t = this._nsTrip || {}, choice = way.choice, team = (this.currentEvaTeam || []).slice();
+        const title = String(event.title || '');
+        const label = t.label || title.charAt(0) + title.slice(1).toLowerCase();
+        const first = (String(event.desc || '').match(/^[^.!?]+[.!?]+/) || [String(event.desc || '')])[0].trim();
+        const prize = this.tripPrize(choice, planet), before = this.stockNow(), down = this.decksDown();
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.style.zIndex = '2000';
+        modal.innerHTML = `
+            <section class="modal-content deck-panel eva-panel eva-result" role="dialog" aria-label="${label}">
+                <header class="deck-panel-head"><h3>${label}</h3></header>
+                <p class="eva-found">“${first}”</p>
+            </section>`;
+        document.body.appendChild(modal);
+        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(modal.querySelector('.eva-panel'), []);
+        const run = () => { this.state._nsBroke = null; this.resolveEvaOutcome(choice, riskBase, way.odds); };   // a breakdown it sets off: GameState._nsBroke
+        const EC = window.EncounterCard;
+        if (!EC || typeof EC.outcomeIn !== 'function') { run(); modal.remove(); return; }
+        EC.outcomeIn(this, modal.querySelector('.eva-panel'), choice.short || choice.text, run, () => modal.remove(),
+            { result: () => this.tripResultWords(team, before, prize, down) });
+    }
 
+    /** The ship's stores now, to see what a trip brought home: { salvage, energy, rations, data }. */
+    stockNow() {
+        const s = this.state;
+        return { salvage: s.salvage || 0, energy: Math.round(s.energy || 0), rations: s.rations || 0, data: s._colonyKnowledge || 0 };
+    }
+
+    /** The decks out of order now (damaged), by key: a short result card names one the trip's breakdown broke. */
+    decksDown() {
+        const decks = this.state.shipDecks || {};
+        return Object.keys(decks).filter(k => decks[k].status !== 'OPERATIONAL');
+    }
+
+    /** What a short result card says after the trip (App.showTripResult): one line in a voice (the hit's own, App.tripHit;
+        else one of the team), and chips: what came home ("+47 salvage"), what did not fit ("energy full"), the stress a hit
+        costs everyone and a deck that went down. A breakdown the trip set off (GameState._nsBroke: one at most) says its first
+        sentence on a line of its own (also), and the event's sentence makes room for it (lean), so the card stays short and
+        nothing that happened is left off. before: App.stockNow as they went; prize: the way's (App.tripPrize); down:
+        App.decksDown as they went. { say: { speaker, text }, also: [line], lean, chips: [{ text, loss }] } */
+    tripResultWords(team, before, prize, down) {
+        const s = this.state, now = this.stockNow(), hit = this._nsLastHit, broke = s._nsBroke, KINDS = ['salvage', 'energy', 'rations', 'data'];
+        const chips = KINDS.filter(kind => now[kind] !== before[kind]).map(kind => { const n = now[kind] - before[kind]; return { text: `${n > 0 ? '+' : ''}${n} ${kind}`, loss: n < 0 }; });   // DRAFT: the chips
+        if (!hit || !hit.died) KINDS.filter(kind => prize && prize[kind] > 0 && now[kind] === before[kind]).forEach(kind => chips.push({ text: `${kind} full`, loss: true }));   // DRAFT: nothing of it fitted
+        if (hit) chips.push({ text: 'everyone +1 stress', loss: true });                    // DRAFT: a casualty shakes the whole crew
+        const decks = s.shipDecks || {};
+        Object.keys(decks).filter(k => decks[k].status !== 'OPERATIONAL' && !(down || []).includes(k))
+            .forEach(k => chips.push({ text: `${String(decks[k].label || k).toLowerCase()} damaged`, loss: true }));   // DRAFT: a deck the breakdown broke
+        const said = broke && broke.said && broke.said.length ? String(broke.said[0]) : '';
+        const also = said ? [(said.match(/^[^.!?]+[.!?]+/) || [said])[0].trim()] : [];   // the breakdown's own line, its first sentence
+        s._nsBroke = null;
+        const voiced = hit && /^(A\.U\.R\.A\.|[A-Z][a-z]+): "(.*)"$/.exec(hit.line);
+        if (hit) return { say: voiced ? { speaker: voiced[1], text: voiced[2] } : { speaker: 'A.U.R.A.', text: hit.line }, also, lean: also.length > 0, chips };
+        const who = team.find(m => m.status !== 'DEAD'), got = chips.some(c => !c.loss);
+        return { say: { speaker: who ? who.name : 'A.U.R.A.', text: got ? TRIP_BACK_LINES.got : TRIP_BACK_LINES.back }, also, lean: also.length > 0, chips };
+    }
+
+    showEventModal(event, planet) {
         // === SIGNAL TYPE RISK MODIFIERS === the world's own, how the landing went (LanderGame), Mira's ground scan from aboard,
         // the bridge's scan: App.tripRisk, the same number the new look's mark on the world showed (held to 0..50)
         const goingIn = this.tripGoingIn(planet);
@@ -5069,6 +5186,15 @@ Then you're through.`,
 
         // Stress trait checks (App.tripChoices: the new look never locks the card) and each way's odds (App.wayOdds, the new look)
         const { ways, vanceSays, miraSays } = this.tripChoices(event, riskBase);
+
+        // The new look: an event seen before this run has no buttons, the way chosen on the glass resolves into a short result
+        // card; the first time, this full card, with that way lit (App.tripCardPlan). Sites, story finds and Eden have their own
+        const plan = this.tripCardPlan(event, ways);
+        if (plan.repeat) { this.showTripResult(event, planet, ways[plan.way], riskBase); return; }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '2000';
 
         // Build signal modifier display string
         const PLAIN_SIGNAL = {
@@ -5107,7 +5233,8 @@ Then you're through.`,
             const isDisabled = paranoidBlocked || recklessBlocked;
             const odd = `${totalRisk}% chance someone gets hurt${odds && odds.deadly ? `, a 1 in ${odds.oneIn} chance someone dies` : ''}`;   // DRAFT: the death chance (the new look)
             const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : odd);
-            return `<button class="deck-action choice-btn eva-choice" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
+            const isGlass = idx === plan.way && !isDisabled;                     // the new look: the way chosen on the glass, lit (the player may still switch)
+            return `<button class="deck-action choice-btn eva-choice${isGlass ? ' is-glass' : ''}" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
                         <span>${choice.text}<em class="eva-gets">${rewardWords(choice)}</em></span>
                         <small style="color:${isDisabled ? 'var(--red)' : riskColor}">${note}<i class="eva-risk"><b style="width:${totalRisk}%; background:${riskColor}"></b></i></small>
                     </button>`;
@@ -5191,6 +5318,7 @@ Then you're through.`,
     resolveEvaOutcome(choice, baseRisk, wayOdds) {
         const planet = this.state.currentSystem;
         const odds = isNewScreen() ? wayOdds || this.wayOdds(choice, baseRisk) : null;
+        this._nsLastHit = null;                                                      // the new look: who was hit, for the short result card (App.tripResultWords)
         let totalRisk = odds ? odds.hurt : baseRisk + choice.riskMod;
         const roll = Math.random() * 100;
         let logMsg = "";
@@ -5248,6 +5376,7 @@ Then you're through.`,
 
             if (odds) {                                                              // the new look: TripOdds, Vance's cover, one line in a voice
                 const hit = this.tripHit(odds, evaTeam, targetCrew, planet, hazardDesc, severity);
+                this._nsLastHit = hit;
                 targetCrew = hit.crew;
                 isTeamMemberLost = hit.died;
                 this.state.addLog(hit.line);                                         // its own line: the card shows it with the speaker's face

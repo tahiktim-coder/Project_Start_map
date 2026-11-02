@@ -34,6 +34,8 @@
        scan(id) → bool        run it (travel only);  facts(id) → { site, gives, danger, live, tier } | null   what our scans read
        findNote(id, withSite) → ['Old ruins · The hum', 'People could live here'] | null   travel's note once scanned (WorldFinds.js)
        finds(ids) → [find]    the finds on the world we orbit (WorldFinds.list; ids: the two at the hatch);  aim(id) → bool  choose one
+       way(id, idx) → bool    choose that find's way on the glass (NSOrbit.way)
+       helps(ids, id) → bool | null   id makes the trip ids would take safer (NSOrbit.helps; null: a site's or Eden's own card)
        actions() → [{ key, words, near, team, run() }]          what this stop offers now (NSOrbit.actions)
        act(key, ids?) → bool  run one (ids: the two picked for 'team');  eligible() → ids fit to go
        weak() → ids too weak from a missed supper for this trip;  holdLoss(id, picked) → what the ship loses while id is down
@@ -372,6 +374,8 @@
             try { return F.list(theApp(), node, ids); } catch (err) { console.error('NewScreen: the finds failed', err); return []; }
         },
         aim(id) { const F = window.NSWorldFinds, s = st(), node = s && s.currentSystem; return !!(F && node && mode === 'stop' && !blocked() && !leaving && F.aim(theApp(), node, id)); },
+        way(id, idx) { const s = st(), node = s && s.currentSystem; return !!(node && mode === 'stop' && !blocked() && !leaving && ask('way', theApp(), node, id, idx)); },
+        helps(ids, id) { const h = ask('helps', theApp(), ids, id); return typeof h === 'boolean' ? h : null; },
         // ── the stop (BUILD_B §3, §4) ──
         actions: () => (mode === 'stop' ? ask('actions', theApp()) || [] : []),
         act(key, ids) {

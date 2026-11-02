@@ -94,6 +94,7 @@ function measureTrips(runs) {
     return {
         trips: mean(runs, r => r.trips.length), topPair: Math.round(100 * mean(runs, topPairShare)),
         traitTrips: share(traitOn, trips.length), struckTrips: share(runs.reduce((a, r) => a + r.counts.struck, 0), traitOn),
+        resultCards: mean(runs, r => r.counts.resultCards || 0), wayPicks: mean(runs, r => r.counts.wayPicks || 0),   // step 6: a find seen before; a way chosen on the glass
         fitMean: fitted.length ? Math.round(100 * fitted.reduce((a, x) => a + x.fit.total, 0) / fitted.length) / 100 : null,
         stuck: mean(runs, r => r.counts.stuck), stuckFew: mean(runs, r => r.counts.stuckFew), stuckAris: mean(runs, r => r.counts.stuckAris),
         tripDeaths: tripDeaths.length, tripDeathsShown30: tripDeaths.length ? Math.round(100 * tripDeaths.filter(d => (d.trip.shown || 0) >= 30).length / tripDeaths.length) : null,
@@ -242,6 +243,7 @@ function perPlayer(L, results, order) {
     row('worlds: stopped at (not story) / passed', m => `${m.stops} / ${m.skipped}`);
     row('team trips per run / mean pair fit', m => `${m.trips} / ${or(m.fitMean)}`);
     row('most common pair, share of its trips', m => `${m.topPair}%`);
+    row('result cards (a find seen before) / ways picked on the glass, per run', m => `${m.resultCards} / ${m.wayPicks}`);
     row('trips with a trait on / way struck (of those)', m => `${m.traitTrips}% / ${m.struckTrips}%`);
     row('crises / calls / crew moments / campfires', m => `${m.crises}/${m.calls}/${m.moments}/${m.campfires}`);
     row('stations / strange sites / pages', m => `${m.stations}/${m.strange}/${m.pages}`);
