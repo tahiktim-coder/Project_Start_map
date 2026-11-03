@@ -27,11 +27,12 @@
    A tag draws in from its corners, its label types on, its thread reaches out (80 ms apart, 125 ms steps); pointed at, it
    brightens, its thread turns solid with a pulse at the anchor, and the glass shows what it does (stop/TagArt.js).
    At most 40 words on screen (the voice line counted): the world's name, the labels, the key and the stock first, then
-   the chosen find's ways (whole, else each row's name and risk word), the kind line, the names at the hatch, the team's
+   the chosen find's ways (whole, else each row's name and risk word; while A.U.R.A. says how to choose a way, at least each
+   way's name), the kind line, the names at the hatch, the team's
    chips, whether people could live there, the other finds' chips, the actions' chips. Decided afresh only while nothing is pointed at: nothing moves under the pointer
    (but a click that chooses another find shows its chips at once). Words never sit over the world's disc or a person. Settle here is cool grey, never warm.
    The first time an action shows, A.U.R.A. says once what it does (NSOrbit.TELL), one at a time, the pointed-at first; and
-   once how to choose a find, and once how to choose its way.
+   once how to choose a find, and once how to choose its way (only where the ways' names fit beside her line).
    Loaded only when the new-screen switch is on, after stop/TagArt.js and stop/Tags.js, before stop/Stop.js.
 
    window.NSStopWords (frozen)
@@ -95,9 +96,10 @@
         return { chips: [name].concat(prize, [risk]), lean: [name, risk], cls, idx: r.idx, struck: false };
     }
     /** What a find shows under its label. The find GO DOWN goes to (target), an event: a row per way (wayRow, the one taken
-        marked; a clue on a row of its own first), and the same rows lean. Another find: its best prize (the bold way's) and a
-        clue; a site or Eden: what it gives; a visited one: "done". hover: the card's index of a row pointed at.
-        { chips, clue? } | { rows, lean }; a row: { chips, cls, idx? } */
+        marked; a clue on a row of its own first), the same rows lean, and each way's name alone (names, no clue row). Another
+        find: its best prize (the bold way's) and a clue; a site or Eden: what it gives; a visited one: "done". hover: the
+        card's index of a row pointed at.
+        { chips, clue? } | { rows, lean, names }; a row: { chips, cls, idx? } */
     function findChips(f, hover) {
         if (f.done) return { chips: [{ icon: 'done', text: 'done', tone: 'done' }] };
         const clue = f.hint ? { icon: 'where', text: 'a clue', tone: 'gain' } : null;
@@ -105,7 +107,8 @@
         if (f.target && ways.length) {
             const rows = ways.map(r => wayRow(r, f.way, hover));
             const head = clue ? [{ chips: [clue], cls: '' }] : [];
-            return { rows: head.concat(rows.map(r => ({ chips: r.chips, cls: r.cls, idx: r.idx, struck: r.struck }))), lean: head.concat(rows.map(r => ({ chips: r.lean, cls: r.cls, idx: r.idx, struck: r.struck }))) };
+            return { rows: head.concat(rows.map(r => ({ chips: r.chips, cls: r.cls, idx: r.idx, struck: r.struck }))), lean: head.concat(rows.map(r => ({ chips: r.lean, cls: r.cls, idx: r.idx, struck: r.struck }))),
+                names: rows.map(r => ({ chips: r.chips.slice(0, 1), cls: r.cls, idx: r.idx, struck: r.struck })) };   // names: each way's name alone (A.U.R.A. teaching the ways: decide)
         }
         const best = ways.filter(r => r.prize).slice(-1)[0];                  // careful first: the last row with a prize is the boldest
         const out = (best ? best.gives : f.gives || []).map(c => ({ icon: c.icon, text: c.text }));
@@ -319,7 +322,9 @@
         // ── the words budget: at most 40 on screen (the voice line counted, unless a note has stepped it back). The world's
         //    name, the labels, the key, the stock and GO DOWN's odds (its hurt chance, "hurt", a death chance: a trip that could
         //    kill always says so before anyone goes) always; then, while they fit: the chosen find's ways, each row's name and
-        //    risk word only; the names at the hatch (both or neither) and the team's chips (who goes on the trip whose odds show);
+        //    risk word only (while A.U.R.A. says how to choose a way, TELL.way, and those do not fit beside her line: each way's
+        //    name alone, GO DOWN's odds as she says; she says it only where those fit: wayRoom, explain()); the names at the
+        //    hatch (both or neither) and the team's chips (who goes on the trip whose odds show);
         //    another find's "a clue" (a third find shows only for it: WorldFinds.js); the chosen find's rows whole (its prizes);
         //    the kind line, whether people could live there, the other finds' chips, each action's chips. Decided afresh only
         //    while nothing is pointed at: what is on screen holds still under the pointer (a click that chooses another find or
@@ -329,7 +334,8 @@
             const aimed = o.finds.find(f => f.target), aimedKey = aimed ? `${aimed.id}:${aimed.f ? aimed.f.way : ''}` : null;
             if ((S.hot || S.hover) && frozen && frozen.aimed === aimedKey) return frozen;   // a click that chose another find or way: decided once more, its chips show
             const voice = !o.note && NS.mods.voice && NS.mods.voice.current ? NS.mods.voice.current() : null;
-            let budget = MAX_WORDS - (voice ? wordsIn(voice.who) + wordsIn(voice.line) : 0);
+            const voiceWords = voice ? wordsIn(voice.who) + wordsIn(voice.line) : 0;
+            let budget = MAX_WORDS - voiceWords;
             const take = n => { if (n <= 0) return true; if (budget - n >= 0) { budget -= n; return true; } return false; };
             o.acts.forEach(a => { budget -= wordsIn(a.words); });
             o.finds.forEach(f => { budget -= wordsIn(f.label); });
@@ -345,8 +351,11 @@
             const dec = { act: {}, find: {}, keys: {}, aimed: aimedKey };
             (o.keys || []).forEach(a => { dec.keys[a.key] = take(chipWords([].concat(...(a.chips || []).map(c => (Array.isArray(c) ? c : [c]))))); });   // what a held key costs: first
             dec.marks = !!(o.marks && o.marks.length) && take(o.marks.reduce((n, m) => n + 1 + wordsIn(m.text), 0));   // then what the fall did to each of them
-            const leanWords = aimed && aimed.rows ? rowWords(aimed.lean) : 0;
-            if (aimed && aimed.rows) dec.find[aimed.id] = take(leanWords) ? 'lean' : false;   // its ways, lean: the gamble first
+            const leanWords = aimed && aimed.rows ? rowWords(aimed.lean) : 0, nameWords = aimed && aimed.names ? rowWords(aimed.names) : 0;
+            const wayLine = String(((window.NSOrbit && window.NSOrbit.TELL) || {}).way || '').trim();
+            const teaching = !!voice && !!wayLine && voice.line === wayLine;                // A.U.R.A. is saying how to choose a way (TELL.way)
+            dec.wayRoom = !!(aimed && aimed.rows) && budget + voiceWords - wordsIn('A.U.R.A.') - wordsIn(wayLine) >= nameWords;   // were she to say it now, the names would fit
+            if (aimed && aimed.rows) dec.find[aimed.id] = take(leanWords) ? 'lean' : teaching && take(nameWords) ? 'names' : false;   // its ways, lean: the gamble first; while she teaches them, at least their names
             else if (aimed) dec.find[aimed.id] = take(chipWords(aimed.chips));
             dec.who = !!o.team && take(o.whoIds.reduce((n, id) => n + 1 + wordsIn(S.pick.why[id] || ''), 0));
             const named = dec.who ? o.goChips.filter(c => c.tone === 'who' && o.whoIds.some(id => ctx.NAMES[id] === c.text)).length : 0;   // read once: the same names stand over their heads
@@ -413,6 +422,7 @@
             if (busy) allFinds.filter(f => f.target).forEach(f => L.marks.push({ at: GL.spot(t, S.shownAt, f.at), state: 'target' }));   // where they are going stays marked
             const settleOn = !!settleAct && !busy && !wrong && !S.trip && homeable();   // Settle here, under Leave orbit (below)
             const dec = decide({ acts, finds, team: !!teamAct, leave: leaveOn, settle: settleOn, keys: busy ? [] : keyActs, marks, stock: L.stock, note, goChips, whoIds, name: nameText, kind, live });
+            L.wayRoom = !!dec.wayRoom;                                       // A.U.R.A. tells how to choose a way only when its names stay beside her line (explain)
 
             // the glass's title: the world's name, what kind of world it is, and once scanned whether people could live there
             let titleBox = null, voiceFloor = null;
@@ -446,7 +456,7 @@
             // the finds first, in the order of their marks (top to bottom: no thread crosses another), each level with its mark
             // where it can be; the actions under them (or, with no finds, starting by the landing site as before)
             const column = finds.map(v => {
-                v.shownRows = v.rows ? (dec.find[v.id] === 'rows' ? v.rows : dec.find[v.id] === 'lean' ? v.lean : null) : null;   // the chosen find's ways, whole or lean
+                v.shownRows = v.rows ? (dec.find[v.id] === 'rows' ? v.rows : dec.find[v.id] === 'lean' ? v.lean : dec.find[v.id] === 'names' ? v.names : null) : null;   // the chosen find's ways, whole, lean or their names
                 v.tag.set({ label: v.label, rows: v.shownRows, chips: !v.rows && dec.find[v.id] ? (dec.find[v.id] === 'clue' ? [v.clue] : v.chips) : null });
                 const [w, h] = v.tag.size(u); return { v, w, h, at: GL.spot(t, S.shownAt, v.f.at) };
             })
@@ -749,13 +759,14 @@
             const isWays = it => isFind(it) && (it.rowWays || []).filter(w => w && !w.struck).length >= 2;   // a find whose ways can be chosen ('way')
             const shown = lastL.items.filter(it => (it.kind === 'act' || it.kind === 'key') && seen(it) && ready(it.key) && !(copy && (it.key === 'scan' || (CPY && CPY.used(it.key))))).map(it => it.key)   // the copy: A.U.R.A.'s scan line is its own; a key pressed needs no telling
                 .concat(lastL.items.some(it => isFind(it) && seen(it)) ? ['find'] : [])
-                .concat(lastL.items.some(it => isWays(it) && seen(it)) ? ['way'] : []);
+                .concat(lastL.wayRoom && lastL.items.some(it => isWays(it) && seen(it)) ? ['way'] : []);   // only while the ways' names would stay beside her line
             const key = (S.hot && shown.includes(S.hot) ? [S.hot] : []).concat(shown).find(k => tell[k] && !v.told('act:' + k));
             if (!key) return;
             telling = true;
             const text = String(tell[key]).replace('{team}', team.map(id => ctx.NAMES[id]).join(' and '));
             const done = () => { telling = false; };
-            const stillThere = () => S.open && !S.dive && !!lastL && lastL.items.some(it => (key === 'find' ? isFind(it) : key === 'way' ? isWays(it) : it.key === key) && it.tag.on) && ready(key);
+            const stillThere = () => S.open && !S.dive && !!lastL && lastL.items.some(it => (key === 'find' ? isFind(it) : key === 'way' ? isWays(it) : it.key === key) && it.tag.on) && ready(key)
+                && (key !== 'way' || lastL.wayRoom);
             v.once('act:' + key, text, stillThere).then(done, err => { done(); console.error('NewScreen stop: the voice failed', err); });
         }
         const debug = () => (T ? allTags().filter(tag => tag.on).map(tag => ({ key: tag.key0, text: tag.el.textContent, rect: (r => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)])(tag.el.getBoundingClientRect()) })) : []);
