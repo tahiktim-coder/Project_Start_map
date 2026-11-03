@@ -49,11 +49,12 @@
     // the timings: the full meteor takes its time on the first two landings; a routine landing is quick
     const FULL_T = { release: 2.6, streak: 1.2, walk: 3.4, result: 0.8 }, FULL_LATER = { release: 1.8, streak: 0.8, walk: 2.6, result: 0.6 }, ROUTINE_T = { release: 1.0, streak: 0.45, walk: 2.2, result: 0.4 };
     const RISKY = 25, FADE_S = 0.45;
-    const FLARE_BURN_S = 60, NOTE_S = 1.8, HELM_S = 1.6, SPUTTER_FUEL = 20, CUE_S = 1.4, CATCH_FLAME_S = 0.6;
+    const FLARE_BURN_S = 60, NOTE_S = 1.8, HELM_S = 1.6, SPUTTER_FUEL = 20, CUE_S = 1.4, CATCH_FLAME_S = 0.6, CALM_JOLT = 0.3;   // CALM_JOLT: a routine drop's catch (GAME, the check)
     // GAME: the end (LanderGame's RESULT_HOLD_MS, SKIP_AFTER_MS); the wait for the bakes says so after WAIT_SAY_S and gives up
     // (LanderGame instead) after READY_MAX_S; a routine drop is set down within SET_ROOM px of a level stretch's middle;
     // Jaxon's step on A.U.R.A.'s landing (App.applyLanding's LANDING_LIFT)
     const RESULT_HOLD_S = 1.7, SKIP_AFTER_S = 0.5, WAIT_SAY_S = 0.6, READY_MAX_S = 10, SET_ROOM = 3, LIFT = { crash: 'rough', rough: 'soft' };
+    const SET_VX = 40, SET_VY = 10, SET_T = 0.3, SET_TAU = 0.12;               // GAME (the check): setDownGuide (px/s, px/s, s, s)
     // GAME (the review): ERR_FRAMES frames failing in a row end the landing (never a frozen picture); after the hand-off the
     // frame's foot follows the ground the shuttle comes down on (eased over LOCK_TAU s); A.U.R.A. sets down SITE_CLEAR px
     // clear of the site's art; the place is let go FREE_AFTER_MS after the close (never in the fade back to the bridge).
@@ -353,7 +354,7 @@
         let y = sw.y - sy / d;
         const ex = y - (lock - LOCK_M);
         y = ex <= 0 ? y : ex >= 2 * LOCK_M ? lock : lock - LOCK_M + ex - ex * ex / (4 * LOCK_M);   // the ground settles in the frame (a soft stop; the fix round: one that arrives, so the far land's row and the field's meet)
-        return { x, y };
+        return { x, y, lo, hi, field };
     }
     /** GAME (the review): the ground the frame's foot holds to: the find's own in the fall; after the hand-off the ground the
         shuttle comes down on when it lies lower (eased: never a jump), so its feet and the ground under them stay in frame. */
@@ -372,6 +373,9 @@
         const t = camTarget(sw, c.d);
         if (falling || (S.phase === 'land' && !S.touch) || dt === 0) { c.x = t.x; c.y = t.y; }
         else { const k = 1 - Math.exp(-dt * 2.2); c.x += (t.x - c.x) * k; c.y += (t.y - c.y) * k; }   // the walk: a slow pan
+        // GAME (the check): the pan never shows past the field's edges. After a touchdown the scale still eases to D_LAND, so the
+        // edges' limits move faster than the slow pan follows: near the field's right side the sky and the limb showed in a strip
+        if (t.field >= 1) c.x = Math.max(t.lo, Math.min(t.hi, c.x));
         S.camShX = (sw.x - c.x) * c.d; S.camShY = (sw.y + SH.BELL - c.y) * c.d;   // the bell on screen (no shake)
         if (S.phase !== 'release') S.bellNow = [S.camShX, S.camShY, c.d];
     }
@@ -408,8 +412,11 @@
         if (vy > FALL.CATCH_VY) {                                              // too fast out of the deck: A.U.R.A. catches it (the faster, the harder and dearer)
             const want = FALL.CATCH_FUEL + (vy - FALL.CATCH_VY) * FALL.CATCH_PER, pay = Math.min(e.fuel, firstLanding() ? want : FALL.CATCH_FUEL_MAX, want), k = firstLanding() ? 1 : want > 0 ? pay / want : 0;   // too fast for what she can pay: only slowed (a crash); the first landing of a run: always whole
             e.fuel -= pay; vy = lerp(vy, FALL.CATCH_TO, k);
-            S.entry.caught = k > 0 && e.vy > 120; S.entry.helped = k > 0; S.entry.catchFuel = +pay.toFixed(1); S.catchAt = S.clock;
-            S.jolt = 0.6 + 1.4 * smooth(FALL.CATCH_VY, 300, e.vy); if (e.vy > 120) { S.helmUntil = S.clock + HELM_S; S.talking = S.clock + 1.2; S.braceAt = S.clock; speak(LINES.brace(RUN.picked[0])); }   // a hard catch: a crew reaction, never "There's the light." 
+            // GAME (the check): a routine drop is A.U.R.A.'s own set-down at the grade it carries: her catch is quiet (no "Brace!",
+            // never reported as "Came in fast"), unless that grade is a crash
+            const calm = !S.full && !(RUN.carried && RUN.carried.grade === 'crash');
+            S.entry.caught = !calm && k > 0 && e.vy > 120; S.entry.helped = k > 0; S.entry.catchFuel = +pay.toFixed(1); S.catchAt = S.clock;
+            S.jolt = calm ? CALM_JOLT : 0.6 + 1.4 * smooth(FALL.CATCH_VY, 300, e.vy); if (!calm && e.vy > 120) { S.helmUntil = S.clock + HELM_S; S.talking = S.clock + 1.2; S.braceAt = S.clock; speak(LINES.brace(RUN.picked[0])); }   // a hard catch: a crew reaction, never "There's the light." 
         }
         const s = I.startState(G.g);
         Object.assign(s, { x: Math.max(I.LANDER_HALF + 1, Math.min(LG.W - I.LANDER_HALF - 2, e.x)), y: S.topY - e.a, vx: e.vx, vy, fuel: e.fuel, isReleased: true, altitude: 100, keys: { left: false, right: false } });
@@ -422,6 +429,15 @@
         if (S.aura) { s.fuel += LF.LAND.AURA_FUEL; s.isAuto = true; s.autoTarget = S.setDown ? levelBy(s.x) : null; }   // GAME: to the mark when one is marked (LanderGame's autopilot); a routine drop: the level ground where you came down
         if (s.fuel <= 0) openReserve(s);
         if (G.mark === 'none' && !S.aura && RUN.aboard.includes('mira')) S.flatAt = S.clock + 0.6;   // GAME: Mira aboard and alive reads the ground
+    }
+    /** GAME (the check): a routine set-down (A.U.R.A.'s) flies straight to the level ground she chose (s.autoTarget) and is over
+        it before the touchdown, its descent slowed when that is far (with the fall's sideways speed carried on and LanderGame's
+        autopilot alone, it came down on water by the shore and hopped off it). */
+    function setDownGuide(s, dt) {
+        const dx = s.autoTarget.cx - s.x, alt = Math.max(0.5, s.altitude), tg = alt / Math.max(SET_VY, s.vy);
+        const want = Math.max(-SET_VX, Math.min(SET_VX, dx / Math.max(SET_T, tg * 0.7)));
+        s.vx += (want - s.vx) * Math.min(1, dt / SET_TAU);
+        if (Math.abs(dx) > 1.5 && Math.abs(dx) / SET_VX > tg * 0.7) s.vy = Math.min(s.vy, Math.max(SET_VY, alt / (Math.abs(dx) / SET_VX + SET_T)));
     }
     /** GAME: the level stretch nearest x with room (LanderGame's pickLevelTarget off the mark), its room held to SET_ROOM, so
         A.U.R.A. settles near its middle (never on the lip at its end). */
@@ -468,6 +484,7 @@
             else { s.keys.left = k.left || k.up; s.keys.right = k.right || k.up; }
             let left = dt, landed = null;
             if (t < 0.8 && Math.abs(s.vx) > 20) s.vx -= (s.vx - Math.sign(s.vx) * 20) * Math.min(1, dt * 4);   // the fall's sideways speed, carried in, bleeds off
+            if (S.setDown && s.autoTarget) setDownGuide(s, dt);
             while (left > 1e-6 && !landed) { const h = Math.min(1 / 60, left); landed = LF.landStep(s, G, S.env, h); left -= h; if (s.fuel <= 0 && !S.reserve) openReserve(s); }
             if (!landed && s.y < G.cloudBase + 4) { s.y = G.cloudBase + 4; s.vy = Math.max(0, s.vy); }   // the deck's floor is the ceiling now
             const thrust = s.fuel > 0 && (s.keys.left || s.keys.right);
