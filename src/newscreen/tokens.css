@@ -2,8 +2,12 @@
    What it is: every colour, face, size, space, motion step and ground of the new look, named by meaning, declared once on
    :root under html.ns-on. #ns-root, the card overlays, .mini-host, the films, the endings, BoardingParty and LanderGame all
    read these values; their hand copies become var() references, each in its own batch.
-   Loaded first under the switch (index.html's switch script writes the link before any other new-look sheet); with the
-   switch off it is never requested, so the old look keeps style.css's own --dim and --faint.
+   Loaded first under the switch (index.html's switch script writes the link in <head>, before every other sheet: html.ns-on
+   beats style.css's :root wherever it sits); with the switch off it is never requested, so the old look keeps style.css's
+   own --dim and --faint. Under the switch, today's screens that still show (the game-over screen, the light reel, the old
+   orbit fallback) read these --dim and --faint too: their quiet labels turn the neutral #8b8d90, easier to read than the
+   phosphor at 40%, and a disabled old button's words are a solid --faint, not 15% phosphor. That is on purpose (B01
+   review), not a leak.
    Floors: reading text is 14 px or more at 1280 (--fs-floor); every text colour is 4.5:1 or more on its ground (ratios
    below are on --ink); no text below opacity 1 (use --dim); words over art sit on the dither shade or a plate; radius 0
    except the frame keycap (2 px) and the captain's log glass; every appear and disappear uses steps(); never a blur.

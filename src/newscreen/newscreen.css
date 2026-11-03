@@ -1,8 +1,8 @@
 /* ═══ Silent Exodus · new screen (?new=1) · newscreen.css ═══════════════════════════════════════════════════════════════
    What it is: the new screen's page (#ns-root and its layers, which show by mode: docs/BUILD_B.md §1), the rules that hide
-   today's map and orbit screens (docs/BUILD_A.md §1), the loading line and the boot failure (index.html's switch script),
-   and the try note. Every colour, face and size comes from tokens.css (the one token sheet, loaded just before this file);
-   #ns-root keeps only the travel note's own two sizes. Loaded only when the switch is on. body.ns-travel stays on in orbit
+   today's map and orbit screens (docs/BUILD_A.md §1), and the try note. Every colour, face and size comes from tokens.css
+   (the one token sheet, linked first in <head>); #ns-root keeps only the travel note's own two sizes, and takes --t from
+   :root (NewScreen.js writes the window's value there). Loaded only when the switch is on. body.ns-travel stays on in orbit
    too (the bridge is the orbit screen now); only a missing stop module falls back to today's orbit layout.
    Source: the <style> of prototypes/slice/index.html and the voice of prototypes/screens/game-screen/reading.css. */
 
@@ -12,7 +12,6 @@ html.ns-on .coach { display: none !important; }        /* old chrome: Coach.js d
 
 /* ── the view: under every card (1000+), reel (5000) and minigame (6000) ── */
 #ns-root {
-    --t: 1;   /* NewScreen.js writes the window's value here and on :root */
     --fs-note-name: calc(17px + 3px * var(--t)); --fs-note-line: calc(15px + 2px * var(--t));   /* the travel note (Travel.js) */
     position: fixed; inset: 0; z-index: 900; overflow: hidden; outline: none; touch-action: none;
     background: var(--ink); color: var(--text); font: 400 15px/1.4 var(--f-text);
@@ -55,20 +54,9 @@ html.ns-on #try-note {
 }
 html.ns-on body:has(> #ns-root[data-mode="travel"]:not([hidden])) #try-note { display: block; }
 
-/* ── before the first screen: the loading line, and the page that says the game did not load (index.html) ── */
-html.ns-on .ns-boot { position: fixed; left: clamp(32px, 8vw, 160px); z-index: 10000; margin: 0; text-shadow: var(--shadow); }   /* the title block's x (start/Title.js) */
-html.ns-on .ns-waking { bottom: var(--s8); font: 400 var(--fs-floor)/1.2 var(--f-num); color: var(--dim); }
-html.ns-on .ns-waking[hidden], html.ns-on .ns-boot-fail[hidden] { display: none; }
-html.ns-on .ns-waking::after { content: ''; display: inline-block; width: 0.6em; height: 1.05em; margin-left: 0.3em; vertical-align: -0.2em; background: currentColor; animation: ns-caret 1060ms steps(1, end) infinite; }
-@keyframes ns-caret { 50% { visibility: hidden; } }
-html.ns-on .ns-boot-fail {
-    top: 50%; transform: translateY(-50%); display: grid; justify-items: start; gap: var(--s4);
-    --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--faint); --mg-amber: var(--warm); --mg-amber-br: var(--warm-br);
-    --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: var(--ease);   /* the frame key (.mini-btn, minigames.css) reads these */
-}
-html.ns-on .ns-boot-fail p { margin: 0; font: 400 18px/1.4 var(--f-text); color: var(--text); }
+/* (before the first screen, the loading line and the boot failure: their rules are in index.html's <head> <style>, so they
+   wait for the token sheet only, never for this file) */
 
 @media (prefers-reduced-motion: reduce) {
     #ns-root .ns-voice { transition: none; }
-    html.ns-on .ns-waking::after { animation: none; }
 }

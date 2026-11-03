@@ -5,26 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Silent Exodus</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap"
-        rel="stylesheet">
-    <!-- Styles -->
-    <link rel="stylesheet" href="style.css?v=5">
-    <link rel="stylesheet" href="dither.css?v=2">
-    <link rel="stylesheet" href="ship.css?v=10">
-    <link rel="stylesheet" href="warp.css?v=10">
-    <link rel="stylesheet" href="log.css?v=6">
-    <link rel="stylesheet" href="theme.css?v=62">
-    <link rel="stylesheet" href="src/systems/minigames/minigames.css?v=4">
-    <!-- The new screen (?new=1, html.ns-on is set first thing in <body>): today's page never paints, not even while the scripts load -->
-    <style>html.ns-on .app-container { visibility: hidden; } html.ns-on, html.ns-on body { background: #05070a; }</style>
-</head>
-
-<body>
-    <!-- The new screen (docs/BUILD_A.md §1): ?new=1 turns it on for this browser tab's session, ?new=0 turns it off.
-         Nothing is kept in localStorage or in the save; a new tab is the default game again. -->
+    <!-- The new look's switch (docs/BUILD_A.md §1): ?new=1 turns it on for this browser tab's session, ?new=0 turns it off.
+         Nothing is kept in localStorage or in the save; a new tab is the default game again. It runs first, before any style
+         sheet, so nothing here waits on them: html.ns-on is set before the first paint, the token sheet and the Plex faces are
+         the page's first requests, and the loading line counts its 1.5 s from the page's start. -->
     <script>
         (function () {
             var q = new URLSearchParams(location.search), on = q.get('new') === '1';
@@ -36,41 +20,53 @@
             window.NEW_SCREEN = on;
             if (on) document.documentElement.classList.add('ns-on');   // the cards' new look (src/newscreen/cards.css) is scoped under html.ns-on
             if (!on) return;
-            // The one token sheet first, then the new screen's own sheet (the loading line and the boot failure need both before any
-            // script has run). The fonts start now without holding the scripts up (media="print" until loaded); the new screen's
-            // block at the end of the body links the same URL again, so its scripts still run with the faces declared.
-            // Every Plex face the token sheet names is fetched at once (NS_PRELOAD), not on first use: the title's first frame is Plex.
+            // The one token sheet first of all (it declares only html.ns-on's custom properties, which win over style.css's :root
+            // ones wherever it sits), then the font sheet, which holds nothing up (media="print" until loaded). The new screen's
+            // block at the end of the body links the same font URL again, so its scripts still run with the faces declared.
+            // Every Plex face the token sheet names is fetched up front (NS_PRELOAD), not on first use: the title's first frame is Plex.
+            // The faces the first screens draw with go first (the loading line's Mono, the title's Condensed 500/600 and Sans 400),
+            // so on a slow line the loading line's face is in by about 1.5 s; the other four follow when those are in.
             window.NS_FONTS = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,400&family=Courier+Prime&display=swap';
             window.NS_PRELOAD = function () {
                 if (!document.fonts || !document.fonts.load) return;
-                ['400', '500', '600'].forEach(function (w) { document.fonts.load(w + " 1em 'IBM Plex Sans Condensed'").catch(function () {}); });
-                ['300', '400', '500', 'italic 400'].forEach(function (w) { document.fonts.load(w + " 1em 'IBM Plex Sans'").catch(function () {}); });
-                document.fonts.load("400 1em 'IBM Plex Mono'").catch(function () {});
+                var C = " 1em 'IBM Plex Sans Condensed'", S = " 1em 'IBM Plex Sans'";
+                function all(fonts) { return Promise.all(fonts.map(function (f) { return document.fonts.load(f).catch(function () {}); })); }
+                all(["400 1em 'IBM Plex Mono'", '500' + C, '600' + C, '400' + S]).then(function () {
+                    all(['400' + C, '300' + S, '500' + S, 'italic 400' + S]);
+                });
             };
-            window.NS_PRELOAD();   // now: minigames.css (head) has declared every face but the italic; the font sheet's onload asks again
-            document.write('<link rel="stylesheet" href="src/newscreen/tokens.css?v=1">'
-                + '<link rel="stylesheet" href="src/newscreen/newscreen.css?v=5">'
+            document.write('<link rel="stylesheet" href="src/newscreen/tokens.css?v=2">'
                 + '<link rel="stylesheet" href="' + window.NS_FONTS + '" media="print" onload="this.media=&quot;all&quot;; window.NS_PRELOAD()">');
-            // Before the first screen: ink, and 1.5 s after the page started with nothing up, the loading line (newscreen.css
-            // .ns-waking). This script itself waits for the head's style sheets, so the 1.5 s count from the page's start.
-            var waking = document.createElement('p'), poll = 0;
-            waking.className = 'ns-boot ns-waking';
-            waking.hidden = true;
-            waking.textContent = 'Waking the ship';                                       // DRAFT (look pass)
-            document.body.appendChild(waking);
+            // Before the first screen: ink, and 1.5 s after the page started with nothing up, the loading line. Its rules are in the
+            // <style> below, so it waits for the token sheet only, never for newscreen.css or the head's other sheets. It also waits
+            // for the Plex Mono face that will draw it, so its first frame is Plex, not the fallback; past 3 s it shows without it.
+            var WAKE_MS = 1500, FACE_WAIT_MS = 1500, POLL_MS = 100, STUCK_MS = 3000, waking = null, poll = 0, mono = 'ask', seen = false;
             function screenUp() {
                 var root = document.getElementById('ns-root');
                 return !!(document.querySelector('#start-menu, .ns-film, .modal-overlay, .mini-host, .end-screen, .story-reel, .ns-boot-fail') || (root && !root.hidden));
             }
-            function stopWaking() { clearInterval(poll); poll = 0; if (waking.parentNode) waking.parentNode.removeChild(waking); }
-            setTimeout(function () {
-                if (screenUp()) { stopWaking(); return; }
-                poll = setInterval(function () {
-                    if (screenUp()) { stopWaking(); return; }
-                    if (waking.hidden && getComputedStyle(waking).position === 'fixed') waking.hidden = false;   // only once its sheet is in
-                }, 100);
-            }, Math.max(0, 1500 - (window.performance ? performance.now() : 0)));
-            // bundle.js did not load (its script tag's onerror): one line and the frame key that reloads.
+            function tokensIn() { return getComputedStyle(document.documentElement).getPropertyValue('--f-num') !== ''; }
+            function monoIn() {                       // load() asks for the face that matches now (the last declared), so it is the one drawn
+                if (mono === 'ask' && document.fonts && document.fonts.load) {
+                    mono = 'wait';
+                    document.fonts.load("400 14px 'IBM Plex Mono'").then(function () { mono = 'in'; tick(); }, function () { mono = 'in'; tick(); });
+                }
+                return mono !== 'wait' || performance.now() > WAKE_MS + FACE_WAIT_MS;
+            }
+            function stopWaking() { clearInterval(poll); poll = 0; if (waking && waking.parentNode) waking.parentNode.removeChild(waking); }
+            function tick() {                         // from the page's start until the first screen is seen
+                if (screenUp()) { seen = true; stopWaking(); return; }
+                if (waking || performance.now() < WAKE_MS || !document.body || !tokensIn() || !monoIn()) return;
+                waking = document.createElement('p');
+                waking.className = 'ns-boot ns-waking';
+                waking.textContent = 'Waking the ship';                                       // DRAFT (look pass)
+                document.body.appendChild(waking);
+            }
+            poll = setInterval(tick, POLL_MS);
+            // The game did not come up: one line and the frame key that reloads. bundle.js calls it when it does not load (its
+            // script tag's onerror). If a script threw or did not load instead, no screen has ever been up 3 s after the page's
+            // load event (the title mounts on DOMContentLoaded, before it), so the line shows then; a screen seen once is enough,
+            // so a gap between two screens never shows it.
             window.NS_BOOT_FAIL = function () {
                 if (document.querySelector('.ns-boot-fail')) return;
                 stopWaking();
@@ -87,7 +83,48 @@
                 document.body.appendChild(box);
                 key.focus();
             };
+            addEventListener('load', function () { setTimeout(function () { if (!seen && !screenUp()) window.NS_BOOT_FAIL(); }, STUCK_MS); });
         })();
+    </script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Share+Tech+Mono&display=swap"
+        rel="stylesheet">
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="dither.css?v=2">
+    <link rel="stylesheet" href="ship.css?v=10">
+    <link rel="stylesheet" href="warp.css?v=10">
+    <link rel="stylesheet" href="log.css?v=6">
+    <link rel="stylesheet" href="theme.css?v=62">
+    <link rel="stylesheet" href="src/systems/minigames/minigames.css?v=4">
+    <!-- The new look (html.ns-on, set by the switch above): today's page never paints, not even while the scripts load. And the
+         loading line and the boot failure (the switch makes them), here so that they wait for the token sheet only. -->
+    <style>
+        html.ns-on .app-container { visibility: hidden; } html.ns-on, html.ns-on body { background: #05070a; }
+        html.ns-on .ns-boot { position: fixed; left: clamp(32px, 8vw, 160px); z-index: 10000; margin: 0; text-shadow: var(--shadow); }   /* the title block's x (start/Title.js) */
+        html.ns-on .ns-waking { bottom: var(--s8); font: 400 var(--fs-floor)/1.2 var(--f-num); color: var(--dim); }
+        html.ns-on .ns-waking::after { content: ''; display: inline-block; width: 0.6em; height: 1.05em; margin-left: 0.3em; vertical-align: -0.2em; background: currentColor; animation: ns-caret 1060ms steps(1, end) infinite; }
+        @keyframes ns-caret { 50% { visibility: hidden; } }
+        html.ns-on .ns-boot-fail {
+            top: 50%; transform: translateY(-50%); display: grid; justify-items: start; gap: var(--s4);
+            --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--faint); --mg-amber: var(--warm); --mg-amber-br: var(--warm-br);
+            --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: var(--ease);   /* the frame key (.mini-btn, minigames.css) reads these */
+        }
+        html.ns-on .ns-boot-fail p { margin: 0; font: 400 18px/1.4 var(--f-text); color: var(--text); }
+        /* the Reload key gets its focus from a script, and whether :focus-visible matches that is up to the browser's heuristics:
+           :focus says it outright, so the key always looks pointed at */
+        html.ns-on .ns-boot-fail .mini-btn:focus:not(:active) { outline: none; color: var(--warm); transform: translateX(3px); border-color: var(--warm); background: color-mix(in srgb, var(--warm) 16%, transparent); text-decoration: underline 1px; text-underline-offset: 5px; }
+        html.ns-on .ns-boot-fail .mini-btn:focus::before { color: var(--warm); }
+        @media (prefers-reduced-motion: reduce) { html.ns-on .ns-waking::after { animation: none; } }
+    </style>
+</head>
+
+<body>
+    <!-- The new look's own sheet (the switch itself is in <head>): after today's sheets, so its rules win the ties -->
+    <script>
+        if (window.NEW_SCREEN) document.write('<link rel="stylesheet" href="src/newscreen/newscreen.css?v=6">');
     </script>
     <div class="app-container">
         <!-- background visuals (scanlines, vignette) -->
@@ -302,7 +339,7 @@
                 'dock/DockRelay.js?v=3', 'dock/DockFace.js?v=1', 'dock/DockExterior.js?v=3', 'dock/DockFlight.js?v=6', 'land/LandWords.js?v=2', 'land/LandArt.js?v=2', 'land/LandArtAir.js?v=1', 'land/LandFlight.js?v=1', 'land/LandWorlds.js?v=1', 'land/LandGround.js?v=6', 'land/LandSite.js?v=2', 'land/LandGroundDraw.js?v=2', 'land/MeteorArt.js?v=1', 'land/MeteorLand.js?v=4', 'land/LandFallFlight.js?v=3', 'land/LandFallScene.js?v=2', 'land/LandFall.js?v=5'
             ];
             if (/[?&]look=1(&|$)/.test(location.search)) files.push('LookCheck.js?v=1');   // the look floors, checked on the live page (test only)
-            var html = '<link rel="stylesheet" href="' + window.NS_FONTS + '">'           // tokens.css and newscreen.css load first (the switch script)
+            var html = '<link rel="stylesheet" href="' + window.NS_FONTS + '">'           // tokens.css (<head>) and newscreen.css (top of <body>) are in
                 + '<link rel="stylesheet" href="src/newscreen/cards.css?v=12">';
             for (var i = 0; i < files.length; i++) html += '<script src="src/newscreen/' + files[i] + '"><\/script>';
             document.write(html);
