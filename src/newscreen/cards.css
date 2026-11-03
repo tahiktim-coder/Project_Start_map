@@ -380,9 +380,11 @@ html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action:active:no
 html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action[disabled] { opacity: 1; color: var(--dim); }
 html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action-repair { color: var(--warm); }
 html.ns-on .modal-overlay .eva-choice { text-align: left; }
-html.ns-on .modal-overlay .eva-choice > span { align-items: flex-start; text-align: left; }
+html.ns-on .modal-overlay .eva-choice > span { align-items: flex-start; text-align: left; flex: 1 1 0; min-width: 0; }
 html.ns-on .modal-overlay .eva-choice .eva-gets { font: 400 14px/1.3 var(--f-num); letter-spacing: 0; text-transform: none; color: var(--warm); }
-html.ns-on .modal-overlay .eva-choice small { min-width: 170px; gap: 6px; white-space: nowrap; }
+/* the odds in a column of their own, the same width on every row (each risk bar starts where the one above does); a death
+   chance makes them long, so they wrap, balanced: "25% chance someone gets hurt," over "a 1 in 130 chance someone dies" */
+html.ns-on .modal-overlay .eva-choice small { flex: 0 0 32ch; gap: 6px; text-align: left; text-wrap: balance; }
 html.ns-on .modal-overlay .eva-risk { height: 2px; background: rgba(201, 209, 214, 0.14); }
 /* the first time a find's event shows: the way chosen on the glass is lit, as if pointed at (the player may still switch) */
 html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .eva-choice.is-glass { background: rgba(240, 140, 46, 0.07); color: var(--warm); box-shadow: inset 2px 0 0 var(--warm); }
