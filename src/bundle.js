@@ -176,7 +176,7 @@ class GameState {
         this._paidWarps = 0;       // warps to a new place (free courses too), so the breach never comes on the first one
         this._docksFlown = 0;      // the new look: docks flown this run; the first plays the whole approach (App.flyDock)
         this._nsTypesLanded = {};  // the new look: kind of world → { grade, auto } of its last full drop this run (App.isFullDrop, App.flyLanding)
-        this._nsDrops = 0;         // the new look: landings flown this run (the meteor's first-landing help and its later tiers)
+        this._nsDrops = 0;         // the new look: the meteor's landings flown this run (its first-landing help and its later tiers; LanderGame's not counted)
         this._wreckDoors = [];     // the doors of the wrecks boarded this run, in order (App.wreckDoorFor, TorchDoors.pick)
         this._kindsScanned = [];   // the new look: the kinds of world scanned this run (the first of each kind is +1 data, App.noteNewKind)
 
@@ -4693,9 +4693,10 @@ Then you're through.`,
         });
         // The new look's landing (App.flyLanding): the whole meteor or its routine drop (App.isFullDrop), and the find it flies to (a
         // blind trip: the site, else the world's own event). Read before markDone: the odds and the blind find read the chosen find
-        const isFull = isNew && !(isSiteTrip && site.inSpace) ? this.isFullDrop(planet, find, evaTeam, { wreck: isSiteTrip && site.tag === 'EXODUS_WRECK' }) : true;
+        // (a blind trip asks the bold way of the blind find: App.isBoldWay answers it with the way GO DOWN vouched for)
         let landFind = find;
         if (!landFind && isNew && window.NSWorldFinds) { try { landFind = window.NSWorldFinds.blind(this, planet); } catch (err) { console.error('App: the blind find failed', err); } }
+        const isFull = isNew && !(isSiteTrip && site.inSpace) ? this.isFullDrop(planet, find || landFind, evaTeam, { wreck: isSiteTrip && site.tag === 'EXODUS_WRECK' }) : true;
         if (isNewScreen()) {                                                         // the new look: this find is visited (a blind trip: the site, else the world's own event)
             if (window.NSWorldFinds) window.NSWorldFinds.keepOld(this, planet);      //   (a save from before finds: its one trip stays counted)
             planet.nsTrips = (planet.nsTrips || 0) + 1;                              //   and the trip has really gone (NSOrbit.send reads it)
@@ -4893,14 +4894,15 @@ Then you're through.`,
     /** The new look: does this landing fly the whole meteor, or its ~10 s routine drop (depth plan, step 7)? The whole one: the
         first landing on this kind of world this run (state._nsTypesLanded), a story world or Eden, one of our wrecks (o.wreck),
         the bold way (App.isBoldWay, once PR #31 brings it), or odds where someone could die (what GO DOWN showed:
-        NSOrbit.teamOdds). Read before markDone: the odds read the chosen find. */
+        NSOrbit.teamOdds). Read before markDone: the odds read the chosen find. find: the chosen find, or a blind trip's
+        (NSWorldFinds.blind); team: crew members or their ids (the meteor's warm-up asks with the two put forward). */
     isFullDrop(planet, find, team, o = {}) {
         if (!planet || !planet.type || !(this.state._nsTypesLanded || {})[planet.type]) return true;
         if (planet.isStoryPlanet || planet.isEden || o.wreck) return true;
-        if (find && typeof this.isBoldWay === 'function' && this.isBoldWay(planet, find.id)) return true;
+        try { if (find && typeof this.isBoldWay === 'function' && this.isBoldWay(planet, find.id)) return true; } catch (err) { console.error('App: the bold way failed', err); }
         const O = window.NSOrbit;
         let odds = null;
-        try { odds = O && typeof O.teamOdds === 'function' ? O.teamOdds(this, (team || []).map(crewIdOf)) : null; } catch (err) { console.error('App: the drop odds failed', err); }
+        try { odds = O && typeof O.teamOdds === 'function' ? O.teamOdds(this, (team || []).map(m => (typeof m === 'string' ? m : crewIdOf(m)))) : null; } catch (err) { console.error('App: the drop odds failed', err); }
         return !!(odds && odds.deadly);
     }
 
@@ -4922,8 +4924,7 @@ Then you're through.`,
             : { grade: last.grade, raw: last.grade, auto: !!last.auto, lifted: false };
         const tally = s.reliance || (s.reliance = { auto: 0, manual: 0 });
         if (!Array.isArray(tally.nsTold)) tally.nsTold = [];
-        const first = !tally.nsTold.includes('land:first');                          // the keycaps and the aim line: once a run (as Voice.once)
-        if (first) tally.nsTold.push('land:first');
+        const first = !tally.nsTold.includes('land:first');                          // the keycaps and the aim line: once a run (as Voice.once), told once the meteor has flown (below)
         const find = o.find || null, trip = this._nsTrip || {}, SC = window.ShipCutaway;
         const colorOf = m => { const c = SC && typeof SC.colorOf === 'function' ? SC.colorOf(m) : null; return Array.isArray(c) ? `rgb(${c.join(',')})` : null; };
         const opts = {
@@ -4934,8 +4935,12 @@ Then you're through.`,
             risk: find && typeof find.risk === 'number' ? find.risk : trip.shownBase,
         };
         const lander = () => (window.LanderGame ? window.LanderGame.play(this, planet, members, { site: o.site, wreck: o.wreck, unmarked: o.unmarked }) : null);
+        const flew = r => {                                                          // the meteor's own landing (not LanderGame's, not a skip): its teaching has been shown
+            if (first && r && !r.skipped && !tally.nsTold.includes('land:first')) tally.nsTold.push('land:first');
+            return r;
+        };
         return M.play('land-fall', opts)
-            .then(r => (r && r.fallback ? lander() : r), err => { console.error(err); return lander(); })
+            .then(r => (r && r.fallback ? lander() : flew(r)), err => { console.error(err); return lander(); })
             .catch(err => { console.error(err); return null; });
     }
 
@@ -4952,7 +4957,7 @@ Then you're through.`,
         if (isNewScreen()) {
             const s = this.state;
             s._nsLandAuto = !!landing.auto;                                           // NSOrbit.propose: Jaxon's step counts while A.U.R.A. lands
-            s._nsDrops = (s._nsDrops || 0) + 1;                                       // the meteor's tiers (App.flyLanding)
+            if (landing.routine !== undefined && !landing.skipped) s._nsDrops = (s._nsDrops || 0) + 1;   // the meteor's tiers (App.flyLanding): its own landings only (LanderGame's, or a skip, never spend its first-landing care)
             if (!routine && planet && planet.type && window.LanderGame.GRADES[raw]) s._nsTypesLanded = Object.assign({}, s._nsTypesLanded, { [planet.type]: { grade: raw, auto: !!landing.auto } });   // a full drop (LanderGame's too): what a routine drop on this kind carries (App.isFullDrop)
             const lift = LANDING_LIFT[landing.grade];
             if (landing.lifted || (landing.auto && lift && (evaTeam || []).some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD'))) {
