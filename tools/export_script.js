@@ -791,6 +791,12 @@ function councilMd() {
     b.push(...textSection(3, 'Breaking orbit', BREAK_ORBIT, '', outside(...lightRanges(BREAK_ORBIT))), ...textSection(3, 'After the burn', bm('applyPlotResult'), 'After every warp and jump plot.'));
     b.push(...textSection(3, 'Plotting the burn (the mini-game)', whole('src/systems/WarpPlot.js'), 'Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to how it went.'));
     b.push(...textSection(3, 'Flying a sector jump (the mini-game)', whole(CORRIDOR), 'Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck. The dark on the new look\'s jump into sector 5 (After the flight) is in sector-5.md.', t => isSaid(t) && outside(...VOID_BLOCKS().map(span))(t)));
+    const TRAVEL = 'src/newscreen/travel/Travel.js';                                   // the new look: pointing at worlds in travel (look pass B05)
+    b.push(...textSection(3, 'Under a world the story waits on (the new look)', block(TRAVEL, /^\s*const STORY_TAGS = \{/m, 'STORY_TAGS'), 'In its note in travel, under its name.'),
+        ...textSection(3, 'One only the reserve can reach', block(TRAVEL, /^\s*const RESERVE_TAG = /m, 'RESERVE_TAG'), 'The same note, short of energy: the flight there runs on the reserve.'),
+        ...textSection(3, 'A course refused (the new look)', block('src/newscreen/Route.js', /^[ \t]*const LINES = /m, 'LINES'), "A.U.R.A., when a world can't be flown to; its ring blinks twice."),
+        ...textSection(3, 'The SCAN key, when it is off', block('src/newscreen/travel/Note.js', /^\s*const WHY = /m, 'WHY'), 'Its chip says why.'),
+        ...textSection(3, 'Sector names in the sky (the new look)', block('src/newscreen/travel/SectorLooks.js', /^\s*const NEW_TITLES = /m, 'NEW_TITLES'), "The sector title in travel, where it differs from the sector's own name."));
     b.push('## Game over', '', ...textSection(3, 'All hands lost, hull breach', bm('checkLoseConditions'), ''), ...textSection(3, 'Stranded', bm('checkStranded'), 'No energy and no way out.'));
     b.push(...textSection(3, 'The game-over screen', block('src/systems/EndScreens.js', /function gameOver/), ''), ...textSection(3, 'The dead, on that screen', block('src/systems/EndScreens.js', /function memorialHtml/), ''));
     b.push(...textSection(3, 'The numbers, on that screen', block('src/systems/EndScreens.js', /function statsHtml/), ''));
