@@ -1886,8 +1886,7 @@ class App {
         const note = document.createElement('p');
         note.id = 'try-note';
         note.textContent = 'Try run. Your save is safe.';                                  // DRAFT (2026-10-31)
-        note.style.cssText = "position: fixed; right: 16px; bottom: 12px; z-index: 6001; margin: 0; font: 400 12px/1.2 'IBM Plex Mono', ui-monospace, Consolas, monospace; color: #5a6168; pointer-events: none;";
-        document.body.appendChild(note);
+        document.body.appendChild(note);                                                  // its look: newscreen.css #try-note (travel only, under every card and minigame)
     }
 
     /**

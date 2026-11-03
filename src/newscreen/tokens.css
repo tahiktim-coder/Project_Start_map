@@ -1,0 +1,83 @@
+/* ═══ Silent Exodus · new screen (?new=1) · tokens.css: the one token sheet ════════════════════════════════════════════
+   What it is: every colour, face, size, space, motion step and ground of the new look, named by meaning, declared once on
+   :root under html.ns-on. #ns-root, the card overlays, .mini-host, the films, the endings, BoardingParty and LanderGame all
+   read these values; their hand copies become var() references, each in its own batch.
+   Loaded first under the switch (index.html's switch script writes the link before any other new-look sheet); with the
+   switch off it is never requested, so the old look keeps style.css's own --dim and --faint.
+   Floors: reading text is 14 px or more at 1280 (--fs-floor); every text colour is 4.5:1 or more on its ground (ratios
+   below are on --ink); no text below opacity 1 (use --dim); words over art sit on the dither shade or a plate; radius 0
+   except the frame keycap (2 px) and the captain's log glass; every appear and disappear uses steps(); never a blur.
+   --t (0..1) is (innerWidth - 1280) / 640: NewScreen.js writes the window's value here, on load and on resize.
+   Source: the look-pass plan (DESIGN.md section 4.1) and the designer's calls C18 (Vance) and C19 (Cora). */
+
+html.ns-on {
+    --t: 1;
+
+    /* ── ink and text ── */
+    --ink: #05070a;
+    --text: #e4e4e0;                /* 15.8:1 */
+    --text-2: #b9bdc0;              /* 10.6:1: consequences, end lines */
+    --narr: #c9cccd;                /* 12.5:1: narration, the scene itself */
+    --dim: #8b8d90;                 /* 6.1:1: quiet words, and every disabled text */
+    --faint: #5a6168;               /* 3.2:1: art strokes only, never text */
+
+    /* ── steel ── */
+    --ui: #c9d1d6;                  /* A.U.R.A., plain chips */
+    --cool: #a9b6bc;                /* the glass's cool, labels over art, the scan sweep */
+
+    /* ── warm ── */
+    --warm: #f08c2e;                /* gain, hover, the lit way, Jaxon */
+    --warm-br: #ffc27a;             /* pressed, ends the journey, Aris */
+
+    /* ── red ── */
+    --loss: #ff5468;                /* every cost, risk or death in text (6.5:1) */
+    --alarm: #e2574c;               /* art: alarm lamps, words painted on a hull */
+    --wash: #d4402c;                /* art: the deck wash */
+
+    /* ── crew tones (a speaker's name, ring and pip) ── */
+    --tone-jaxon: var(--warm);
+    --tone-aris: var(--warm-br);
+    --tone-vance: #d9773f;          /* C18: the same hue as before, 6:1 or more */
+    --tone-mira: #e8836a;
+    --tone-cora: #f2e2c4;           /* C19: cream everywhere; steel belongs to A.U.R.A. */
+    --tone-aura: var(--ui);
+
+    /* ── faces (index.html loads exactly these weights: Condensed 400/500/600, Sans 300/400/500 and italic 400, Mono 400) ── */
+    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
+    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
+    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+    --f-paper: 'Courier Prime', 'Courier New', monospace;
+
+    /* ── sizes on --t (1280 → 1920) ── */
+    --fs-floor: 14px;                                   /* the reading floor: the try note, the loading line */
+    --fs-voice: calc(19px + 5px * var(--t));            /* a spoken or narrated line, 19-24 */
+    --fs-who: calc(14px + 1px * var(--t));              /* a speaker's name, 14-15 */
+    --fs-key: calc(17px + 2px * var(--t));              /* a frame key, 17-19 */
+    --fs-chip: calc(14px + 1px * var(--t));             /* a number chip, 14-15 */
+    --fs-conseq: calc(15px + 1px * var(--t));           /* a consequence under a key, 15-16 */
+    --fs-prev: calc(15px + 1px * var(--t));             /* the line before, 15-16 */
+    --fs-readout: calc(14px + 1px * var(--t));          /* a readout over a picture, 14-15 */
+    --fs-skip: 14px;                                    /* the corner skip hint */
+    --fs-tag: calc(14px + 2px * var(--t));              /* a glass key's label, 14-16 */
+    --fs-title: calc(34px + 12px * var(--t));           /* the end card, 34-46 */
+    --fs-place: calc(34px + 12px * var(--t));           /* the sector title and the wake card, 34-46 */
+
+    /* ── space ── */
+    --s1: 4px;
+    --s2: 8px;
+    --s3: 12px;
+    --s4: 16px;
+    --s6: 24px;
+    --s8: 32px;
+    --measure: calc(470px + 150px * var(--t));          /* a voice line's width, 470-620 */
+
+    /* ── motion: text steps 60 ms, art steps 125 ms (the art's 8 fps); --ease only for camera moves (push, brake) ── */
+    --step-ui: 60ms;
+    --step-art: 125ms;
+    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+    /* ── ground ── */
+    --shadow: 0 1px 0 var(--ink);                       /* every word over art */
+    --halo: 0 0 6px var(--ink);                         /* numbers on art */
+    --veil: repeating-conic-gradient(rgba(5, 7, 10, 0.94) 0 25%, rgba(5, 7, 10, 0.55) 0 50%) 0 0 / 4px 4px;   /* the house dither, never a blur */
+}

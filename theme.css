@@ -265,7 +265,7 @@
     align-items: flex-start;
 }
 
-#start-menu button {
+html:not(.ns-on) #start-menu button {   /* the old title only: under the switch the new title's words keep IBM Plex (start/Title.js) */
     border-width: 1px !important;
     border-radius: 3px;
     font-family: var(--font-display) !important;

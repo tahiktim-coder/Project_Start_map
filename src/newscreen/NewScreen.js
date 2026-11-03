@@ -105,6 +105,11 @@
     let inFrame = false, frameBlocked = false, frameN = 0, jumping = false, hintGiven = false;
     let mode = 'travel', stopId = null, watch = null, leaving = false;                   // leaving: flow.leave() waits on beforeLeave (the bridge holds)
     let stopShownAt = -1e9, travelShownAt = -1e9, lastDown = -1e9, stopHoldMs = HOLD_STOP_MS;
+    /** --t, 0..1: how far the window is from 1280 toward 1920 wide. Set on :root (tokens.css) on load and on every resize,
+        so the title, the films and the cards size on it before the view is ever shown; #ns-root keeps its own copy too. */
+    const windowT = () => Math.max(0, Math.min(1, (innerWidth - 1280) / 640));
+    function setRootT() { document.documentElement.style.setProperty('--t', String(windowT())); }
+    if (ON) { setRootT(); addEventListener('resize', setRootT); }
     const theApp = () => app || window.app || null;
     const st = () => { const a = theApp(); return (a && a.state) || null; };
     const orbit = () => window.NSOrbit || null;
@@ -198,7 +203,7 @@
         G.toCss = (ax, ay) => [ax * G.k / dpr, ay * G.k / dpr];
         G.stale = false;
         if (root) {
-            root.style.setProperty('--t', String(Math.max(0, Math.min(1, (innerWidth - 1280) / 640))));
+            root.style.setProperty('--t', String(windowT()));                                // the same value as :root's (setRootT)
             root.style.setProperty('--px', (G.k / dpr) + 'px');
             root.style.setProperty('--bpx', (G.bk / dpr) + 'px');
         }

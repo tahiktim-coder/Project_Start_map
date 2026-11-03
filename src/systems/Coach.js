@@ -1,9 +1,11 @@
 /* Coach — one short line above the mission log that always says what to do NEXT, worked out from the game state.
    Sector 1 teaches the controls in place instead of in a wall of text. From sector 2 on it is the ship's business:
-   what this sector is for, and what is left to find in it. It never blocks input, and "hide tips" is remembered. */
+   what this sector is for, and what is left to find in it. It never blocks input, and "hide tips" is remembered.
+   Old look only: under the new-screen switch (html.ns-on) it never starts, so there is no bar, no timer and no stored flag. */
 
 (function () {
     'use strict';
+    if (document.documentElement.classList.contains('ns-on')) return;
     const STORAGE_KEY = 'psm-coach-hidden';
     const CHECK_MS = 600;
 
