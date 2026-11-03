@@ -416,32 +416,36 @@ _Every sector jump except the one into sector 3 (that one stalls: sector-3.md), 
 ### Under a world the story waits on (the new look) «Travel.js · STORY_TAGS»
 _In its note in travel, under its name._
 
-- **signal** — One of our ships is down there. «Travel.js · line 112» **DRAFT (look pass)**
-- **wreck** — One of our ships is down there. «Travel.js · line 113» **DRAFT (look pass)**
-- **course** — Their last course led here. «Travel.js · line 114» **DRAFT (look pass)**
+- **signal** — One of our ships. Send the team aboard «Travel.js · line 109»
+- **wreck** — One of our ships. Send the team aboard «Travel.js · line 109»
+- **course** — Their last course led here «Travel.js · line 109»
 
 ### One only the reserve can reach «Travel.js · RESERVE_TAG»
 _The same note, short of energy: the flight there runs on the reserve._
 
-- Only the reserve can reach it. «Travel.js · line 117» **DRAFT (look pass)**
+- We can only reach it on the reserve. The crew will have a cold night «Travel.js · line 112» **DRAFT**
 
 ### A course refused (the new look) «Route.js · LINES»
 _A.U.R.A., when a world can't be flown to; its ring blinks twice._
 
-- **contact** — A.U.R.A.: "We can't plot a course to that contact yet, Commander." «Route.js · line 42» **DRAFT (look pass)**
-- **passed** — A.U.R.A.: "We passed it, Commander. We can't turn back." «Route.js · line 43»
-- **cost** — A.U.R.A.: "That flight costs [n] energy, Commander. We have [have]." «Route.js · line 44» **DRAFT (look pass)**
+- **contact** — A.U.R.A.: "That contact is too faint to plot a course to, Commander." «Route.js · line 43»
+- **passed** — A.U.R.A.: "We passed it, Commander. We can't turn back." «Route.js · line 44»
+- **cost** — A.U.R.A.: "We can't afford that one, Commander." «Route.js · line 45»
 
 ### The SCAN key, when it is off «Note.js · WHY»
 _Its chip says why._
 
-- **energy** — no power «Note.js · line 29» **DRAFT (look pass)**
-- **bridge** — bridge down «Note.js · line 29» **DRAFT (look pass)**
+- **bridge** — bridge down «Note.js · line 38» **DRAFT (look pass)**
+
+### Energy short (the new look) «Note.js · ENERGY_OF»
+_A chip beside a world refused for energy (A.U.R.A. says the line above), and on a SCAN key off for energy._
+
+- [have] of [n] energy «Note.js · line 39» **DRAFT (look pass)**
 
 ### Sector names in the sky (the new look) «SectorLooks.js · NEW_TITLES»
-_The sector title in travel, where it differs from the sector's own name._
+_The sector title in travel and the sector's log header, where it differs from the sector's own name._
 
-- **2** — The Drift «SectorLooks.js · line 37» **DRAFT (look pass)**
+- **2** — The Drift «SectorLooks.js · line 38» **DRAFT (look pass)**
 
 ## Game over
 
