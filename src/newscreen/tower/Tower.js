@@ -70,9 +70,10 @@
                                  within a second); the reactor beats up to 30 % faster
      hit(deck)                   a deck name (DECKS): trauma += 0.5 and that deck's red light stutters for 360 ms. The
                                  tower calls it itself for a deck newly red, on the first frame it is in view
-   Anchors: 'person:<id>' for the five, 'tower:deck:<name>' for the six decks (CSS px, [] when not in view).
+   Anchors: 'person:<id>' for the five, 'tower:deck:<name>' for the six decks, 'tower:speaker' under A.U.R.A.'s speaker (CSS px, [] when not in view).
    Uses, if present: NewScreen.mode() (only 'travel' takes clicks), NewScreen.mods.voice.speaking() → 'aura' | id | null
-   (the computer's speaker glows while A.U.R.A. talks), NewScreen.flow.{ person(id), bench(), datable(), deckChoices(key),
+   (the computer's speaker glows while A.U.R.A. talks, and while NSConsole.lit(t) or pointed at: a click on it opens the ship's
+   console, Console.js, which crops the bridge deck from this picture: mod.crop), NewScreen.flow.{ person(id), bench(), datable(), deckChoices(key),
    deckChoose(key, i) } (key: the game's deck key, the hold is 'cargo'); NSOrbit.{ datable, deckChoices } as a fallback.
 */
 (function () {
@@ -96,6 +97,7 @@
     const ROWS = FRAME.BOT - FRAME.TOP, HULL_OUT = L.CX + L.HO + 9, OFF_W = HULL_OUT - FRAME.LEFT + 2, MAX_SHARE = 0.45;
     const BENCH = { deck: 1, x0: 350, x1: 582, y0: F - DESK - 34 };              // Mira's bench (the lab)
     const SLATE = { x: 440, y: A.deckTop(1) + F - DESK - 6 };                     // the star fix, waiting on the bench
+    const SPEAKER = { x0: 590, x1: 628, y0: F - 150, y1: F - 102, cx: 608, bot: F - 118 };   // A.U.R.A.'s speaker on the bridge (ShipRooms: grille 602-614 x F-134..F-118), room round it to point at
 
     // ── where people go when the real state moves them (tower art px; deck 2 is the galley and the bunks) ──
     const BUNK = { cora: 'bedCora', jaxon: 'bedJaxon', aris: 'bedAris', vance: 'bedVance', mira: 'bedMira' };
@@ -417,6 +419,7 @@
             return [{ x: a.x, y, side: 'above', align: 'center' }, { x: a.x + 20, y: a.y + 30, side: 'right' }, { x: Math.max(20, (f.wDev + V.slideX) / f.dpr + 12), y: a.y, side: 'right' }];
         }));
         DECKS.forEach((name, i) => NS.anchors.set('tower:deck:' + name, () => deckAnchor(i)));
+        NS.anchors.set('tower:speaker', () => (V.stall ? [] : deckAnchor(0, SPEAKER.cx, SPEAKER.bot, 'below')));
         document.addEventListener('pointerdown', e => { if (V.chips && !V.chips.el.contains(e.target)) hideChips(); }, true);
         readReal(now());
     }
@@ -427,10 +430,10 @@
         V.burnT0 = null; V.stockOut = false;                                // the stock comes back once the tower is in again
         if (p.first) closeTower(t, OPEN_FALLBACK_MS);                       // a new sector: from black, the title; then the tower
     }
-    function deckAnchor(i) {
+    function deckAnchor(i, x = 460, y = 60, side = 'above') {
         if (!V.fit || slideK(now()) < 1 || V.dark) return [];
-        const [cx, cy] = toCss(460, A.deckTop(i) + 60);
-        return [{ x: cx, y: cy, side: 'above', align: 'center' }];
+        const [cx, cy] = toCss(x, A.deckTop(i) + y);
+        return [{ x: cx, y: cy, side, align: 'center' }];
     }
     function resize(g) {
         const cv = canvas();
@@ -479,7 +482,8 @@
         o.imageSmoothingEnabled = false;
         const sv = V.stall, lit = sv ? V.people.filter(p => p.lit) : [], others = sv ? V.people.filter(p => !p.lit) : V.people;
         const fxOff = sv ? sv.dark.map(d => d >= 0.5) : null;
-        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: braced(others, t), auraTalking: auraTalking() && !sv, fxOff, driveOff: !!(sv && sv.cold) });
+        const aura = auraTalking() || (V.hover && V.hover.what === 'speaker') || !!(window.NSConsole && window.NSConsole.lit(t));   // her speaker: talking, pointed at, the console up or a save's blink
+        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: braced(others, t), auraTalking: aura && !sv, fxOff, driveOff: !!(sv && sv.cold) });
         V.drawn = TW.drawn.slice();
         const sunY = (0.4 * f.devH - f.tY0) / f.ts;                       // level with the light (Field's light sits at 40 % of the height)
         const view = { t, G: { W: OFF_W, H: ROWS }, offX: -f.tLeft, cam: f.tTop, decks: V.real.decks, engDown: V.real.engDown, E: V.Eshown, beat: V.beat,
@@ -519,6 +523,7 @@
         if (who) return who === 'mira' && V.real.datable ? { what: 'bench', id: 'mira' } : { what: 'person', id: who };
         const deck = Math.floor((wy - L.TOP0) / L.PITCH), local = wy - A.deckTop(deck);
         if (deck < 0 || deck >= L.N || wx < L.IL - 2 || wx > L.IR + 2 || local >= F) return null;
+        if (deck === 0 && window.NSConsole && wx >= SPEAKER.x0 && wx < SPEAKER.x1 && local >= SPEAKER.y0 && local < SPEAKER.y1) return { what: 'speaker', id: 'aura' };
         if (deck === BENCH.deck && V.real.datable && wx >= BENCH.x0 && wx < BENCH.x1 && local >= BENCH.y0) return { what: 'bench', id: 'bench' };
         const name = DECKS[deck];
         if (V.real.decks[name] === 'red' && GAME_KEY[name]) return { what: 'deck', id: name };
@@ -552,6 +557,7 @@
         if (h.what === 'person') flowCall('person', h.id);
         else if (h.what === 'bench') flowCall('bench');
         else if (h.what === 'deck') showChips(h.id, e);
+        else if (h.what === 'speaker') window.NSConsole.open('speaker');
         return true;
     }
 
@@ -804,6 +810,8 @@
         return { x, y };
     }
     function fit() { return V.fit ? Object.assign({}, V.fit) : null; }
+    /** The tower's last picture (tower px x, y, w, h) into ctx at 0, 0: the console's bridge deck. Nothing yet: nothing drawn. */
+    function crop(ctx, x, y, w, h) { if (V.off && V.fit) ctx.drawImage(V.off, x - V.fit.tLeft, y - V.fit.tTop, w, h, 0, 0, w, h); }
     function debug() {
         return { fit: fit(), quality: V.quality, k: slideK(now()), dark: V.dark, E: V.E, decks: Object.assign({}, V.real.decks), datable: V.real.datable,
             crew: JSON.parse(JSON.stringify(V.real.crew)), people: V.people.map(p => ({ id: p.id, deck: p.deck, x: p.x, act: p.act, say: p.say })),
@@ -812,7 +820,7 @@
     }
     window.NSTower = Object.freeze({ jolt, speed, hit: hitDeck });
 
-    const mod = Object.freeze({ init, resize, update, render, pointer, occupied, beat, personAt, fit, debug });
+    const mod = Object.freeze({ init, resize, update, render, pointer, occupied, beat, personAt, fit, crop, debug });
     function attach() {
         NS = window.NewScreen;
         if (!NS) { console.error('Tower: NewScreen is missing; the tower is not registered'); return; }

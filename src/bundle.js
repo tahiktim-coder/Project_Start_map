@@ -16,6 +16,8 @@ window.TEST_MODE = IS_TEST_BUILD;
 const TRY_RUN = new URLSearchParams(location.search).get('try') || null;
 const SAVE_KEY = TRY_RUN ? 'silentExodus_try' : 'silentExodus_save';
 window.SAVE_KEY = SAVE_KEY;
+/** The new look's ship's console (src/newscreen/Console.js) saved and asked for the title: true for the one load right after. */
+const TITLE_ASKED = (() => { try { const v = sessionStorage.getItem('se-to-title') === '1'; sessionStorage.removeItem('se-to-title'); return v; } catch (err) { return false; } })();
 
 /**
  * Test-aware random function.
@@ -1527,8 +1529,8 @@ class App {
         // True while a warp or sector jump is playing out; blocks re-entrant travel requests
         this._isInTransit = false;
 
-        // Show start menu first (a try tab: straight into its moment)
-        if (TRY_RUN && isNewScreen()) { if (window.AudioSystem) window.AudioSystem.init(); this.init(false); }
+        // Show start menu first (a try tab: straight into its moment, unless the ship's console just saved and asked for the title)
+        if (TRY_RUN && isNewScreen() && !TITLE_ASKED) { if (window.AudioSystem) window.AudioSystem.init(); this.init(false); }
         else this.showStartMenu();
     }
 
@@ -1721,6 +1723,7 @@ class App {
             audioStatus.textContent = this.soundLabel();
             audioBtn.textContent = window.AudioSystem.muted ? 'TURN ON' : 'TURN OFF';
             this.syncSoundButton();
+            if (isNewScreen() && window.NSConsole) window.NSConsole.remember();             // the new look keeps it, as the ship's console does
         };
     }
 
@@ -1851,11 +1854,12 @@ class App {
         window.addEventListener('anomaly-teleport', (e) => this.handleAnomalyTeleport(e.detail));
 
         // Either load save or start new game (a try tab: a fresh run placed at its moment, never the real save)
-        if (TRY_RUN && isNewScreen()) this.startTry(TRY_RUN);
-        else if (loadSave && this.state.loadGame()) {
+        if (TRY_RUN && isNewScreen() && !loadSave) this.startTry(TRY_RUN);
+        else if (loadSave && this.state.loadGame()) {                                    // a try tab's Continue (its title comes from the ship's console) loads its own save
             this.state.addLog("=== SAVE LOADED ===");
             this.state.addLog(`Resuming mission in Sector ${this.state.currentSector}.`);
             this.resumeWhereSaved();
+            if (TRY_RUN && isNewScreen()) this.tryNote();
         } else {
             // New game
             this.state.init();
@@ -1882,6 +1886,10 @@ class App {
         } else s.sectorNodes = PlanetGenerator.generateSector(1);
         this.renderNav();
         s.emitUpdates();
+        this.tryNote();
+    }
+    /** The try tab's corner note (once). */
+    tryNote() {
         if (document.getElementById('try-note')) return;
         const note = document.createElement('p');
         note.id = 'try-note';
@@ -1893,7 +1901,9 @@ class App {
      * Auto-save the game (called after significant actions)
      */
     autoSave() {
-        if (this.state.saveGame() && !isNewScreen()) {                                       // the new screen: saved quietly, no green pill
+        const saved = this.state.saveGame();
+        if (saved && isNewScreen() && window.NewScreen.bus) window.NewScreen.bus.emit('saved', {});   // the new screen: no pill; A.U.R.A.'s speaker blinks (Console.js)
+        if (saved && !isNewScreen()) {
             // Subtle save indicator
             const indicator = document.createElement('div');
             indicator.style.cssText = `

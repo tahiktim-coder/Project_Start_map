@@ -53,7 +53,7 @@
        deckChoices(key) → [{ words, note }]   a red deck clicked: fix, patch, live with it
        deckCost(key) → [{ icon, text, tone }]   what a red deck costs while it stays broken (the tower's tag shows it)
        deckChoose(key, i) → bool
-     show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, playJump() → Promise
+     show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, idle() → bool (the console may open), playJump() → Promise
      wake(on) → bool         the wake-up after the launch film (start/Pods.js): on, the 'wake' module has the screen (travel
                              and the tower are not drawn, cards wait, the travel view's first show waits); off, the travel
                              view opens as on a sector's first show (from black, its title, the tower sliding in)
@@ -84,7 +84,7 @@
     const FIRST_HINT = 'A.U.R.A.: "One of our ships is calling, Commander. Point at a world to fly there."';
     const ORDER = ['travel', 'tower', 'stop', 'wake', 'voice'];
     const OUTSIDE = new Set(['travel', 'dive-in', 'dive-out']);                          // travel and the tower are drawn only then
-    const BLOCKERS = '.modal-overlay:not(.ns-held), .story-reel, .mini-host, .warp-plot, .throw-veil, .end-screen, #start-menu, #narrative-modal.active, .ns-film';
+    const BLOCKERS = '.modal-overlay:not(.ns-held), .story-reel, .mini-host, .warp-plot, .throw-veil, .end-screen, #start-menu, #narrative-modal.active, .ns-film, .ns-console';
     const COVERS = '.ns-film, #start-menu, .story-reel, .end-screen';   // opaque over the whole screen: nothing under them is drawn (a stale frame would show when they go)
     const CREW_BY_TAG = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
 
@@ -275,8 +275,11 @@
         const m = mode === 'travel' ? mods.travel : mode === 'wake' ? mods.wake : mods.stop;
         let used = false;
         try { used = !!(m && m.key && m.key(e)); } catch (err) { console.error('NewScreen: key failed', err); }
+        if (!used && e.key === 'Escape' && !e.repeat && window.NSConsole) used = window.NSConsole.open('esc');   // the ship's console (Console.js), when idle()
         if (used) e.preventDefault();
     }
+    /** Travel or the bridge with nothing over them: no card, film, minigame or ending, not jumping, not leaving orbit (Console.js). */
+    function idle() { return shown && (mode === 'travel' || mode === 'stop') && !blocked() && !jumping && !leaving; }
 
     // ── game: the real state, read only ──
     const game = {
@@ -631,6 +634,6 @@
         on: ON, G, clock, bus, anchors, mods, game, flow, debug, register, sizeCanvas,
         get app() { return theApp(); },
         mode: () => mode,
-        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, playJump, wake,
+        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, idle, playJump, wake,
     });
 })();
