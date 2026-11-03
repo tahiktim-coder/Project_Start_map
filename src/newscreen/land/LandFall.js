@@ -9,7 +9,7 @@
    routine } (the contract: App.flyLanding). A routine drop (App.isFullDrop false) is the short one: you line it up and
    A.U.R.A. sets it down, at the grade carried from the last full drop on that kind of world. Its bakes are warmed while
    the bridge idles at a stop (warm) and let go when it closes and when the stop is left (forget).
-   window.LandFall (frozen): canFly(planet), warm(), forget(), debug { state, stats, resetStats, landProbe, landLog, passStats }
+   window.LandFall (frozen): canFly(planet), warm(), forget(), flies() (GO DOWN here flies the meteor: Stop.js), debug { state, stats, resetStats, landProbe, landLog, passStats }
 */
 /* ═══ Silent Exodus · prototypes · landing-meteor/landing.js: THE METEOR ══════════════════════════════════════════════
    The landing dummy (../landing/, kept as it was for comparison) rebuilt as one continuous fall. The designer chose this
@@ -109,6 +109,11 @@
     // (LanderGame instead) after READY_MAX_S; a routine drop is set down within SET_ROOM px of a level stretch's middle;
     // Jaxon's step on A.U.R.A.'s landing (App.applyLanding's LANDING_LIFT)
     const RESULT_HOLD_S = 1.7, SKIP_AFTER_S = 0.5, WAIT_SAY_S = 0.6, READY_MAX_S = 10, SET_ROOM = 3, LIFT = { crash: 'rough', rough: 'soft' };
+    // GAME (the review): ERR_FRAMES frames failing in a row end the landing (never a frozen picture); after the hand-off the
+    // frame's foot follows the ground the shuttle comes down on (eased over LOCK_TAU s); a touchdown with both pads more than
+    // PERCH px over the ground, or one OVERHANG px over a drop, slides off (at most SETTLE_X px, over SETTLE_S s); A.U.R.A. sets down SITE_CLEAR px
+    // clear of the site's art; the place is let go FREE_AFTER_MS after the close (never in the fade back to the bridge)
+    const ERR_FRAMES = 30, LOCK_TAU = 0.35, PERCH = 2.5, OVERHANG = 5, SETTLE_X = 9, SETTLE_S = 0.35, SITE_CLEAR = I.LANDER_HALF + 2, FREE_AFTER_MS = 900, EDGE_PAD = 3;
     const CELL = { HIT_X: 20, HIT_Y: 26, HEAT: 30 };                          // the storm's lightning cells in the fall: steer round them
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -313,12 +318,13 @@
         const w = world(), f = find(), G = S.G0;                                 // GAME: the place mount() prepared (warm() may have it ready)
         if (!G) return;
         if (!readyToGo(w, G)) {
-            if (S.waitAt == null) S.waitAt = S.clock;                            // GAME: urgent once, at mount
+            if (S.waitAt == null) { S.waitAt = S.clock; S.waitReal = performance.now(); }   // GAME: urgent once, at mount
             S.waitDown = true;
-            if (!S.saidWait && S.clock - S.waitAt >= WAIT_SAY_S) { S.saidWait = true; speak(LINES.waitDown, true); }   // GAME: said only when the wait is a real one
-            if (S.clock - S.waitAt >= READY_MAX_S) { end({ fallback: true }); return; }   // GAME: never stuck: LanderGame instead (App.flyLanding)
+            const waited = Math.max(S.clock - S.waitAt, (performance.now() - S.waitReal) / 1000);   // GAME: by the real clock too (a long bake in a frame never stretches the wait)
+            if (!S.saidWait && waited >= WAIT_SAY_S) { S.saidWait = true; speak(LINES.waitDown, true); }   // GAME: said only when the wait is a real one
+            if (waited >= READY_MAX_S) { end({ fallback: true }); return; }   // GAME: never stuck: LanderGame instead (App.flyLanding)
             const core = G.main && G.main.done && G.E && G.E.done && G.M && G.M.done && RELEASE_R.every(r => A.globe(w, r).done);   // (the fix round: never stuck in orbit: after READY_WAIT_S the land far below falls back to the field's own picture)
-            if (!(core && S.clock - S.waitAt >= READY_WAIT_S)) return;
+            if (!(core && waited >= READY_WAIT_S)) return;
         }
         S.waitDown = false;
         held.clear();                                                            // the key that went down never counts as a hold
@@ -336,7 +342,7 @@
         const lp = LG.lightAt(G), vx0 = FALL.VX0 * (S.full ? 1 : 0.6), err = S.eps = startEps(S.full, !(w.atm > 0));   // round 3: the start from the plain fall's own end, off by ε
         S.lightX = lp.x; S.lightPt = { x: lp.x, y: lp.y }; S.anchorY = lp.y + 2; /* round 3: the projection hangs from the light's own ground (a light up a mast or a hill still sits in its break) */ S.aimX = G.g.mark ? G.g.mark.cx : lp.x; S.aimOff = Math.max(-AIM_OFF, Math.min(AIM_OFF, lp.x - S.aimX)); S.groundY = G.g.mark ? G.g.mark.y : lp.y; S.horizonY = Math.min(126, S.groundY - 20);   // aimX: the level ground by the light (A.U.R.A. comes down over it)
         const under = Math.max(8, S.groundY - (S.full ? HAND : HAND_ROUTINE) - G.cloudBase), drift = LF.predDrift({ routine: !S.full, vx: vx0, atm: w.atm, under });   // the hand-off: HAND px over the find's ground (the fix round: the drift for this very depth)
-        const level = (S.full && RUN.L <= FAIR_L) || !S.full ? (G.g.level || []).filter(l => l.c1 - l.c0 >= 4).map(l => [l.c0, l.c1, 0.5 * Math.abs(l.cx - S.aimX)]) : null;   // the fix round: the first landings ease a miss onto level ground (the find's own stretch preferred)
+        const level = (S.full && RUN.L <= FAIR_L) || !S.full ? siteFree(G, (G.g.level || []).filter(l => l.c1 - l.c0 >= 4)).map(l => [l.c0, l.c1, 0.5 * Math.abs(l.cx - S.aimX)]) : null;   // GAME: clear of the site's art   // the fix round: the first landings ease a miss onto level ground (the find's own stretch preferred)
         S.e = LF.fall({ routine: !S.full, tank, x: lp.x - S.aimOff - drift + err, vx: vx0, atm: w.atm, under, mark: lp.x, level, fairAlways: !S.full });   // (the final fix round: a routine drop is eased onto level ground in the deck even while you steer)
         S.x0 = S.e.x;
         S.topY = G.cloudBase - S.e.deck;                                        // the deck's top in the field's world y
@@ -583,16 +589,28 @@
     }
     function camTarget(sw, d) {
         const G = S.G, V = G.V, deep = smooth(S.topY - 700, G.cloudBase + 4, sw.y), sy = lerp(SY_DIVE, SY_DEEP, deep);
-        const field = smooth(S.topY - 200, G.cloudBase, sw.y), lo = V.ox, hi = Math.max(lo, LG.W - FW / d);   // the field's edges hold the frame only once the field can show
+        // the field's edges hold the frame only once the field can show (GAME, the review: where the field is drawn: 1:1, pinned
+        // at the shuttle (renderScene's fieldAt), so while the camera's scale is still easing to D_LAND its edges are not at d)
+        const k = D_LAND / d, right = V.ox + V.w / D_LAND, bottom = V.oy + V.h / D_LAND;
+        const field = smooth(S.topY - 200, G.cloudBase, sw.y), lo = sw.x - (sw.x - V.ox) * k + EDGE_PAD / d, hi = Math.max(lo, sw.x + (right - sw.x) * k - (FW + EDGE_PAD) / d);   // (EDGE_PAD: a jolt's shake never shows the edge)
         const free = (S.camFocus ? S.camFocus.x : sw.x) - SX_FALL / d, x = lerp(free, Math.max(lo, Math.min(hi, free)), field);
-        const lock = Math.min(S.groundY + GROUND_UP, V.oy + V.h / D_LAND) - FH / d;
+        const ay = S.anchorY != null ? S.anchorY : S.groundY, foot = S.phase === 'fall' || S.phase === 'release' ? bottom : ay + (bottom - ay) * k;
+        const lock = Math.min((S.lockG != null ? S.lockG : S.groundY) + GROUND_UP, foot) - FH / d;   // GAME: the ground under the shuttle after the hand-off (stepLock)
         let y = sw.y - sy / d;
         const ex = y - (lock - LOCK_M);
         y = ex <= 0 ? y : ex >= 2 * LOCK_M ? lock : lock - LOCK_M + ex - ex * ex / (4 * LOCK_M);   // the ground settles in the frame (a soft stop; the fix round: one that arrives, so the far land's row and the field's meet)
         return { x, y };
     }
+    /** GAME (the review): the ground the frame's foot holds to: the find's own in the fall; after the hand-off the ground the
+        shuttle comes down on when it lies lower (eased: never a jump), so its feet and the ground under them stay in frame. */
+    function stepLock(dt) {
+        if (S.phase === 'fall' || S.phase === 'release' || !S.s) { S.lockG = S.groundY; return; }
+        const want = Math.min(S.G.V.oy + S.G.V.h / D_LAND, Math.max(S.groundY, groundUnder(S.s.x)));
+        S.lockG = S.lockG == null ? S.groundY : S.lockG + (want - S.lockG) * (1 - Math.exp(-dt / LOCK_TAU));
+    }
     function stepCam(dt) {
         const sw = shuttleWorld(); if (!sw || !S.G) return;
+        stepLock(dt);
         const falling = S.phase === 'fall' || S.phase === 'release', c = S.cam;
         const want = falling ? lerp(dWant(sw.v), D_LAND, smooth(S.topY - 200, S.G.cloudBase - 20, sw.y)) : D_LAND;
         if (dt > 0) c.d += (want - c.d) * (1 - Math.exp(-dt / CAM_TAU));
@@ -886,9 +904,23 @@
     /** GAME: the level stretch nearest x with room (LanderGame's pickLevelTarget off the mark), its room held to SET_ROOM, so
         A.U.R.A. settles near its middle (never on the lip at its end). */
     function levelBy(x) {
-        const all = S.G.g.level || [], roomy = all.filter(l => l.room >= 4), pool = roomy.length ? roomy : all;
+        const all = siteFree(S.G, S.G.g.level || []), roomy = all.filter(l => l.room >= 4), pool = roomy.length ? roomy : all;
         const l = pool.reduce((b, q) => (!b || Math.abs(q.cx - x) < Math.abs(b.cx - x) ? q : b), null);
         return l ? Object.assign({}, l, { room: Math.min(l.room, SET_ROOM) }) : null;
+    }
+    /** GAME (the review): the level stretches cut to where the shuttle stands SITE_CLEAR px clear of the site's art (LanderSites'
+        x0..x1: the dome, the ruins, the wreck), so A.U.R.A. never sets it down against them (a stretch the site stands over
+        keeps its longer clear side); all of them as they were if none is clear. */
+    function siteFree(G, list) {
+        const st = G.siteKind && G.g.site;
+        if (!st || !(st.x1 > st.x0)) return list;
+        const a = st.x0 - SITE_CLEAR, b = st.x1 + SITE_CLEAR, clear = [];
+        list.forEach(l => {
+            if (l.c1 < a || l.c0 > b) { clear.push(l); return; }
+            const lo = [l.c0, Math.min(l.c1, a)], hi = [Math.max(l.c0, b), l.c1], [c0, c1] = lo[1] - lo[0] >= hi[1] - hi[0] ? lo : hi;
+            if (c1 - c0 >= 2) clear.push(Object.assign({}, l, { c0, c1, cx: (c0 + c1) / 2, room: (c1 - c0) / 2, x0: c0 - I.LANDER_HALF, x1: c1 + I.LANDER_HALF }));
+        });
+        return clear.length ? clear : list;
     }
     function openReserve(s) { if (S.reserve) return; S.reserve = true; s.fuel = LF.LAND.RESERVE; }
     function stepLand(dt) {
@@ -967,8 +999,23 @@
             hideLine(S.lastLine); S.lines.light = true;                          // silence over the crash (the hurt line follows)
         } else S.crash = null;
         S.flown = Object.assign({}, S.flown || {}, { landAura: S.aura });
+        if (grade !== 'crash' && !S.touch.slideV) { S.touch.settle = settleOf(s); if (S.touch.settle) S.jolt = Math.max(S.jolt || 0, 0.5); }   // GAME (the review): never left standing on a peak
         const mayHop = spotDistance() > LF.LAND.SPOT_PX && s.fuel >= LF.LAND.HOP_FUEL && !S.aura;
         if (grade !== 'crash' && !S.touch.slideV && !mayHop) { ensureSite(); const plan = walkPlan(performance.now()); S.camFocus = plan && plan.focus ? plan.focus : null; }
+    }
+    /** GAME (the review): a touchdown on a peak (the ground under both pads more than PERCH px below where it touched) or on a
+        lip (one pad OVERHANG px or more over a drop) slides off it to the nearest place within SETTLE_X px, never higher, where
+        both pads stand on the ground ({ x0, y0, x1, y1 }), else null. */
+    function settleOf(s) {
+        const h = S.G.g.heights, hot = S.G.g.hot, hAt = x => h[Math.max(0, Math.min(LG.W - 1, Math.round(x)))], pad = A.SH.PAD;
+        const bad = x => { const top = groundUnder(x), l = hAt(x - pad) - top, r = hAt(x + pad) - top; return (l > PERCH && r > PERCH) || Math.max(l, r) >= OVERHANG; };
+        if (!bad(s.x)) return null;
+        const top0 = groundUnder(s.x);
+        for (let k = 1; k <= SETTLE_X; k++) for (const x of [s.x - k, s.x + k]) {
+            if (x < I.LANDER_HALF + 1 || x > LG.W - I.LANDER_HALF - 2 || bad(x) || hot[Math.round(x)] || groundUnder(x) > LG.H || groundUnder(x) < top0 - 1) continue;
+            return { x0: s.x, y0: s.y, x1: x, y1: groundUnder(x) - LT_TALL };
+        }
+        return null;
     }
     function spotDistance() {
         const G = S.G, s = S.s, m = G.g.mark;
@@ -978,6 +1025,12 @@
     function afterTouch(dt) {
         const Tt = S.touch, s = S.s, since = S.clock - Tt.at;
         if (Tt.slideV && since < LF.LAND.ICE_SLIDE_S) { s.x += Tt.slideV * (1 - since / LF.LAND.ICE_SLIDE_S) * dt; return; }
+        if (Tt.settle) {                                                          // GAME: off the peak (it tips and slides down onto its feet)
+            const st = Tt.settle, q = clamp01(since / SETTLE_S), e = smooth(0, 1, q);
+            s.x = lerp(st.x0, st.x1, e); s.y = lerp(st.y0, st.y1, e * e);
+            if (q < 1) return;
+            Tt.settle = null; Tt.x0 = s.x;
+        }
         if (Tt.grade === 'crash') {
             if (!S.lines.hurt && since > 1.1) { S.lines.hurt = true; if (Tt.helper && Tt.hurt) speak(LINES.hurt(Tt.helper, Tt.hurt)); }   // GAME: a team of two only
             if (since > (S.full ? 4.2 : 3.4)) finish();
@@ -1009,12 +1062,13 @@
         if (S.phase === 'result') return;
         const s = S.s, Tt = S.touch || { grade: s.grade, fuel: s.fuel };
         const far = Tt.grade === 'crash' ? 0 : spotDistance(), where = far <= LF.LAND.SPOT_PX ? 'spot' : far <= LF.LAND.WALK_PX ? 'walk' : 'long';
-        const auraLanded = !!(S.flown && S.flown.landAura), caught = !!(S.entry && S.entry.caught);
+        const auraLanded = !!(S.flown && S.flown.landAura), caught = !!(S.entry && S.entry.caught && !S.entry.saved);   // GAME: her save() line said it already: the result never reports the same catch again
         const line = Tt.grade === 'crash' ? (Tt.helper && Tt.hurt ? LINES.hurt(Tt.helper, Tt.hurt) : null) : LINES.result(Tt.grade, where, auraLanded, caught);
         // GAME: no chips and no costs here: the game's own rules apply what this landing means (App.applyLanding). A long walk
-        // from a marked spot counts rough, as LanderGame's "off the mark" (the screen already said "Long walk from here")
+        // from a marked spot counts rough, as LanderGame's "off the mark" (the screen already said "Long walk from here"); as
+        // there, Jaxon's step comes after it (lifted false: App.applyLanding gives it, from rough)
         const marked = !RUN.unmarked, offMark = marked && Tt.grade !== 'crash' && where === 'long';
-        S.result = { grade: offMark ? 'rough' : Tt.grade, raw: offMark ? 'rough' : S.raw || Tt.grade, auto: S.full ? auraLanded : !!(RUN.carried && RUN.carried.auto), lifted: !!S.lifted, offMark, marked,
+        S.result = { grade: offMark ? 'rough' : Tt.grade, raw: offMark ? 'rough' : S.raw || Tt.grade, auto: S.full ? auraLanded : !!(RUN.carried && RUN.carried.auto), lifted: !offMark && !!S.lifted, offMark, marked,
             hurt: Tt.grade === 'crash' ? Tt.hurt || null : null, routine: !S.full, through: S.through === undefined ? null : S.through, seconds: +(S.clock - S.releaseAt).toFixed(1), where, line: line ? line.say : null };
         RUN.landings.push(Object.assign({ world: S.w.id, kind: S.f.kind, L: RUN.L }, S.result));
         S.phase = 'result'; S.resultAt = S.clock; showKeys(false); showAura(false);
@@ -1064,7 +1118,7 @@
     function render(now) {
         ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.imageSmoothingEnabled = false;
         if (S.phase === 'orbit' || S.phase === 'boot') { drawOrbit(now); warmPics(); }
-        else if (S.phase === 'release') drawRelease(now);
+        else if (S.phase === 'release') { drawRelease(now); warmPics(); }   // GAME (the review): a place the bridge warmed is ready at once (the orbit is one frame), so its pictures' first draws go in the release, never in the fall
         else renderScene(now);
         if (tOn) tLast = performance.now();
         WD.shadeUnder(ctx, [say.classList.contains('is-in') ? say : null, keysEl, auraEl], FR, K, FW, FH);   // GAME: no tower drawn after it
@@ -1093,7 +1147,15 @@
     }
     const FRAME_BUDGET_MS = 10, WAIT_BUDGET_MS = 40, STARVED_FRAMES = 4;
     let last = 0, starved = 0, bootAt = 0, prev = { work: 0, what: '', phase: '' }, holdA = null;
-    let live = false, raf = null;                                            // GAME: one landing at a time; FrameClock (it still ticks in a hidden tab)
+    let live = false, raf = null, errs = 0;                                  // GAME: one landing at a time; FrameClock (it still ticks in a hidden tab)
+    /** GAME (the review): the frame has failed ERR_FRAMES times in a row: the landing ends (never a frozen picture with no way on).
+        Before the touchdown LanderGame takes it (App.flyLanding); after it, what this landing came to (or A.U.R.A.'s, as a skip). */
+    function giveUp() {
+        errs = 0;
+        let r = S.result || null;
+        if (!r && S.touch) { try { finish(); r = S.result || null; } catch (err) { console.error('Meteor: the result failed', err); } }
+        end(S.touch ? r || autoResult(RUN.opts) : { fallback: true });
+    }
     function frame(now) {
         if (!live) return;
         raf = window.FrameClock ? window.FrameClock.request(frame) : requestAnimationFrame(frame);
@@ -1102,7 +1164,7 @@
         const dt = Math.min(0.05, (S.lastStep ? now - S.lastStep : 16) / 1000);
         S.lastStep = now;
         const held0 = holdA != null && S.phase === 'fall' && S.e && S.e.a <= holdA;   // (test only: LandingProto.hold, the fall stopped at a height)
-        try { if (tOn) tLast = performance.now(); if (!held0) update(dt); if (!live) return; tick('update'); render(now); } catch (e) { console.error('Meteor:', e); }   // GAME: the landing may have ended in update()
+        try { if (tOn) tLast = performance.now(); if (!held0) update(dt); if (!live) return; tick('update'); render(now); errs = 0; } catch (e) { console.error('Meteor:', e); if (++errs >= ERR_FRAMES) { giveUp(); return; } }   // GAME: the landing may have ended in update()
         const used = performance.now() - t0;
         let what = 'render ' + used.toFixed(1), n = 0;
         const budget = S.waitDown ? WAIT_BUDGET_MS : FRAME_BUDGET_MS, falling = S.phase === 'fall';   // (the polish round: the fall runs only its own bakes, in budget; the rest waits for the landing)
@@ -1277,8 +1339,19 @@
     }
 
     // ── mount: one landing (App.flyLanding's opts: the contract is there) ──
+    // GAME (the review): the frame rules hide MiniHost's own way out ("This would not start" and Continue), so mount never
+    // throws: anything that fails in it hands the landing to LanderGame (App.flyLanding), and cleanup lets go of what was set
     function mount(ctx0, ui, opts) {
-        const o = opts || {};
+        finishFn = ui.finish;
+        errs = 0;
+        try { return start(ui, opts || {}); } catch (err) {
+            console.error('LandFall: the landing could not start', err);
+            live = false;
+            setTimeout(() => end({ fallback: true }), 0);
+            return cleanup;
+        }
+    }
+    function start(ui, o) {
         const host = (ui.canvas && ui.canvas.closest('.mini-host')) || document.body;
         root = document.createElement('div');
         root.className = 'land-stage'; root.tabIndex = -1;
@@ -1294,7 +1367,7 @@
         Object.assign(RUN, { L: (Number.isFinite(o.drops) ? Math.max(0, Math.floor(o.drops)) : 0) + 1, energy: Number.isFinite(o.energy) ? o.energy : 60,
             picked: team.map(m => m.id), colors: team.map(m => m.color || '#f08c2e'), aboard: Array.isArray(o.aboard) ? o.aboard.slice() : [],
             first: !!o.first, full: o.full !== false, carried: o.full !== false ? null : c, jaxon: !!o.jaxon, unmarked: o.unmarked || null,
-            hurt: well.length ? well[Math.floor(Math.random() * well.length)].id : null, landings: [] });
+            hurt: well.length ? well[Math.floor(Math.random() * well.length)].id : null, landings: [], opts: o });
         Object.keys(S).forEach(k => { delete S[k]; });
         Object.assign(S, { phase: 'orbit', t: 0, clock: 0, cam: { x: 0, y: 0, d: D_LAND }, lines: {}, waitAt: null });
         held.clear(); pointer = null;
@@ -1309,7 +1382,6 @@
         stage.addEventListener('pointerdown', onPointerDown); stage.addEventListener('pointermove', onPointerMove);
         ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(t => stage.addEventListener(t, clearPointer));
         auraEl.addEventListener('pointerdown', onAuraDown);
-        finishFn = ui.finish;
         live = true; last = 0; starved = 0; prev = { work: 0, what: '', phase: '' }; bootAt = performance.now();
         WD.frameStats.reset();
         try { stage.focus({ preventScroll: true }); } catch (err) { stage.focus(); }
@@ -1325,7 +1397,7 @@
         clearTimeout(rt);
         window.removeEventListener('keyup', onKeyUp, true); window.removeEventListener('blur', onBlur); window.removeEventListener('resize', onResize);
         held.clear(); pointer = null; finishFn = null;
-        freePlace(null);
+        setTimeout(() => { if (!live && warmKey == null) freePlace(null); }, FREE_AFTER_MS);   // GAME (the review): after the fade back to the bridge (the warm-up, if it has begun, lets go itself)
         root = null; stage = frameEl = art = ctx = say = keysEl = auraEl = null;
         Object.keys(S).forEach(k => { delete S[k]; });
         Object.assign(S, { phase: 'orbit', t: 0, clock: 0, cam: { x: 0, y: 0, d: D_LAND } });
@@ -1362,10 +1434,24 @@
         if (!f) return null;
         const site = f.kind === 'site' && typeof app.siteOf === 'function' ? app.siteOf(node) : null;
         if (site && (site.inSpace || site.relay)) return null;                   // a crossing or the relay: nobody lands
-        const ours = !!(site && site.tag === 'EXODUS_WRECK'), wreck = ours ? node.wreckEncounter || null : null, art0 = site ? site.art || null : f.art || null;
+        // GAME (the review): our wreck's story is picked here, as the trip would pick it (App.wreckEncounterFor: once, kept on the
+        // planet), so the warmed place is the wreck the landing draws
+        const ours = !!(site && site.tag === 'EXODUS_WRECK'), art0 = site ? site.art || null : f.art || null;
+        let wreck = ours ? node.wreckEncounter || null : null;
+        if (ours && !wreck && typeof app.wreckEncounterFor === 'function') { const enc = app.wreckEncounterFor(node); wreck = enc ? enc.id : null; }
         const unmarked = typeof app.unmarkedWhy === 'function' ? app.unmarkedWhy(node) : null, L = (s._nsDrops || 0) + 1;
-        const full = !(s._nsTypesLanded || {})[node.type] || !!(node.isStoryPlanet || node.isEden || ours), risk = Number.isFinite(f.risk) ? f.risk : 15;
-        return { node, sector: s.currentSector, find: f, site: art0, wreck, unmarked, L, full, risk, key: [node.id, f.id, art0, wreck, unmarked, L >= 20, risk >= 30].join('|') };
+        const risk = Number.isFinite(f.risk) ? f.risk : 15;
+        return { node, sector: s.currentSector, find: f, site: art0, wreck, unmarked, L, risk, ours, key: [node.id, f.id, art0, wreck, unmarked, L >= 20, risk >= 30].join('|') };
+    }
+    /** GAME (the review): the whole fall or the routine drop, as the trip will decide it (App.isFullDrop, with the two the crew put
+        forward: NSOrbit.propose), so the first sizes of the land it needs are painted first. */
+    function warmFull(app, t) {
+        const s = app.state;
+        if (typeof app.isFullDrop === 'function') {
+            try { const O = window.NSOrbit, p = O && typeof O.propose === 'function' ? O.propose(app) : null; return !!app.isFullDrop(t.node, t.find, p && Array.isArray(p.ids) ? p.ids : [], { wreck: t.ours }); }
+            catch (err) { console.error('LandFall: the warm-up could not tell the drop', err); }
+        }
+        return !(s._nsTypesLanded || {})[t.node.type] || !!(t.node.isStoryPlanet || t.node.isEden || t.ours);
     }
     function warmTick() {
         warmT = null;
@@ -1381,7 +1467,7 @@
             freePlace(t ? t.node.id : null);
             if (!t) return;
             try {
-                Object.assign(RUN, { L: t.L, full: t.full });
+                Object.assign(RUN, { L: t.L, full: warmFull(NS.app, t) });
                 const w = LW.worldOf(t.node, t.sector), f = LW.findOf(w, t.find, { unmarked: t.unmarked, risk: t.risk });
                 A.orbitSky(w.sector);
                 RELEASE_R.forEach(r => A.globe(w, r));
@@ -1411,8 +1497,15 @@
         window.NewScreen.bus.on('stop:hidden', () => forget());
     }
 
+    /** GAME (the review): does GO DOWN at this stop fly the meteor (a world it can land on; not the relay, not a crossing)?
+        Stop.js then sends the team without the glass's own shuttle drop first (the meteor's release is the shuttle leaving). */
+    function flies() {
+        const NS = window.NewScreen;
+        try { return !!(NS && window.MiniHost.has('land-fall') && warmTarget(NS.app)); } catch (err) { console.error('LandFall: could not tell the trip', err); return false; }
+    }
+
     window.LandFall = Object.freeze({
-        canFly: LW.canFly, warm, forget,
+        canFly: LW.canFly, warm, forget, flies,
         debug: Object.freeze({
             state: () => (live ? Object.assign({ phase: S.phase }, stateNow()) : null), stats: phase => WD.frameStats.stats(phase), resetStats: () => WD.frameStats.reset(), run: () => RUN.landings.slice(),
             landProbe: on => { probeOn = !!on; lastPx = null; }, landLog: () => probeLog.splice(0, probeLog.length),
