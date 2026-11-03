@@ -376,7 +376,6 @@ _The lines for the light are in sector-6.md._
 - EVA team deployed: [name] and [name]. «bundle.js · line 4667»
 - A.U.R.A.: "Team away, Commander. I have their vitals." «bundle.js · line 4672»
 - Mira insists the team stays out for a full day. -1 Ration. «bundle.js · line 4684»
-- App: the blind find failed «bundle.js · line 4698»
 - The lander crosses to [site]. «bundle.js · line 4708»
 
 ### Who goes, and the radio «AwayTeam.js · AwayTeam»
@@ -467,19 +466,21 @@ _The whole fall on a new kind of world, a story world, our wreck, the bold way o
 - **say** — I've got us, Commander. «LandWords.js · line 68»
 - **say** — There's the light. «LandWords.js · line 69»
 - **say** — Flat ground, [side] of you. «LandWords.js · line 70»
-- **say** — 's hurt. I've got [hurt]. «LandWords.js · line 71»
-- **say** — Came in fast. I caught us, Commander. «LandWords.js · line 72»
-- **say** — I set us down, Commander. «LandWords.js · line 72»
-- **say** — Down soft, Commander. «LandWords.js · line 72»
-- **say** — Down hard, Commander. «LandWords.js · line 72»
-- **spot** — Right on it. «LandWords.js · line 72»
-- **walk** — A short walk from here. «LandWords.js · line 72»
-- **long** — Long walk from here. «LandWords.js · line 72»
+- **say** — [name]'s hurt. I've got [him or her]. «LandWords.js · line 71»
+- **say** — I'm hurt. I can still walk. «LandWords.js · line 72»
+- **say** — Came in fast. I caught us, Commander. «LandWords.js · line 73»
+- **say** — I set us down, Commander. «LandWords.js · line 73»
+- **say** — Down soft, Commander. «LandWords.js · line 73»
+- **say** — Down hard, Commander. «LandWords.js · line 73»
+- **spot** — Right on it. «LandWords.js · line 73»
+- **walk** — A short walk from here. «LandWords.js · line 73»
+- **long** — Long walk from here. «LandWords.js · line 73»
 
 ### Its keycaps «LandWords.js · KEY_WORDS»
 
-- **hold** — or the mouse: hold to pull up «LandWords.js · line 75»
-- **aura** — Let A.U.R.A. land «LandWords.js · line 75»
+- **hold** — or the mouse: hold to pull up «LandWords.js · line 76»
+- **steer** — steer «LandWords.js · line 76»
+- **aura** — Let A.U.R.A. land «LandWords.js · line 76»
 
 ### Cutting into one of our wrecks (the mini-game) «Torch.js · Torch»
 _Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet._

@@ -156,7 +156,7 @@ function concatTail(src, e) {                                                   
     }
     return [text, e];
 }
-const SILENT_CALLS = /^(setAttribute|querySelector|querySelectorAll|getElementById|closest|matches|addEventListener|removeEventListener|dispatchEvent|CustomEvent|Event|createElement|getItem|setItem|removeItem|toggle|contains|includes|startsWith|endsWith|indexOf|split|join|replace|test|tryBark|tryComment|toLocaleString|toLocaleDateString|adjustEthics|noteStanding|hasStanding)$/;   // their strings are never shown
+const SILENT_CALLS = /^(setAttribute|querySelector|querySelectorAll|getElementById|closest|matches|addEventListener|removeEventListener|dispatchEvent|CustomEvent|Event|createElement|getItem|setItem|removeItem|toggle|contains|includes|startsWith|endsWith|indexOf|split|join|replace|test|tryBark|tryComment|toLocaleString|toLocaleDateString|adjustEthics|noteStanding|hasStanding|console)$/;   // their strings are never shown (console: console.error and the rest, the developer's own messages)
 /** Every run of text in a stretch of source: { text, at, path (the keys it sits under), key, frame, markup }. */
 function scanRaw(src, base = 0) {
     const out = [], frames = [{ open: '', other: 0 }];
@@ -194,7 +194,7 @@ function scanRaw(src, base = 0) {
         }
         if ('{[('.includes(ch)) {
             const before = src.slice(Math.max(0, i - 80), i), fromKey = /:\s*$/.test(before);
-            const named = fromKey ? top().key : ((/([A-Za-z_$][\w$]*)\s*=\s*$/.exec(before) || /([A-Za-z_$][\w$]*)\s*$/.exec(before) || [])[1] || null);
+            const named = fromKey ? top().key : ch === '(' && /\bconsole\.\w+\s*$/.test(before) ? 'console' : ((/([A-Za-z_$][\w$]*)\s*=\s*$/.exec(before) || /([A-Za-z_$][\w$]*)\s*$/.exec(before) || [])[1] || null);
             frames.push({ name: named, fromKey: fromKey && named != null, open: ch, other: 0, key: null });
             i++; prevSig = ch; prevWord = ''; continue;
         }
@@ -249,8 +249,9 @@ function lightRanges(piece) {
 const HIDDEN_KEYS = /^(id|art|tone|color|icon|portraitId|reason)$/;   // values the player never reads
 const ROLE_SPEAKER = { ENGINEER: 'Jaxon', MEDIC: 'Aris', SECURITY: 'Vance', SPECIALIST: 'Mira', AURA: 'A.U.R.A.', LEADER: 'Commander' };
 const STRUCTURAL = /^(choices|dialogue|beats|draw|style|text|speaker|detail)$/, LABEL_KEYS = /^(title|kicker|label|heading|close|button|name|word|text)$/;   // keys not worth printing; keys whose single word is still text
-/** Markdown bullets for every line of text in a piece of source, each tagged with the line it is on. */
-function bulletsOf(piece, keep = () => true) {
+/** Markdown bullets for every line of text in a piece of source, each tagged with the line it is on. loose: every string is
+    text, a single word too (a table of short words, such as a minigame's keycaps). */
+function bulletsOf(piece, keep = () => true, loose = false) {
     const file = path.basename(piece.rel);
     const items = scanRaw(piece.src).map(t => ({ ...t, line: piece.line ? piece.line + lineAt(piece.src, t.at) - 1 : null })).filter(t => t.text && !HIDDEN_KEYS.test(t.key || '') && keep(t));
     const byFrame = new Map(); items.forEach(t => byFrame.set(t.frame, (byFrame.get(t.frame) || []).concat(t)));
@@ -269,14 +270,14 @@ function bulletsOf(piece, keep = () => true) {
         }
         const isPair = t.frame.open === '[' && byFrame.get(t.frame).length === 2 && ROLE_SPEAKER[t.text] && next && next.frame === t.frame;
         if (isPair) { out.push(`- ${label(t)}${lineOf(ROLE_SPEAKER[t.text], printed(next.text))}${at(t)}`); k++; continue; }   // ['ENGINEER', 'line']
-        if (!isText(t.text, listy || LABEL_KEYS.test(t.key || '')) || NAMES.has(t.text)) continue;
+        if (!isText(t.text, loose || listy || LABEL_KEYS.test(t.key || '')) || NAMES.has(t.text)) continue;
         out.push(`- ${label(t)}${printed(t.text)}${at(t)}`);
     }
     return out;
 }
 /** A heading, a line on when it plays, and the bullets. */
-function textSection(level, title, piece, where, keep) {
-    const bullets = bulletsOf(piece, keep);
+function textSection(level, title, piece, where, keep, loose) {
+    const bullets = bulletsOf(piece, keep, loose);
     return [`${'#'.repeat(level)} ${title}${tag(path.basename(piece.rel), piece.id)}`, ...(where ? [`_${where}_`] : []), '', ...(bullets.length ? bullets : ['_(no text)_']), ''];
 }
 
@@ -814,7 +815,7 @@ function councilMd() {
     b.push(...textSection(3, 'Landing (the mini-game)', whole('src/systems/LanderGame.js'), ''), ...textSection(3, 'How the landing went', bm('applyLanding'), ''));
     const LAND = 'src/newscreen/land/LandWords.js';                                      // the new look: the meteor (LandFall.js)
     b.push(...textSection(3, 'Landing, flown (the new look: the meteor)', block(LAND, /^\s*const LINES = /m, 'LINES'), "The whole fall on a new kind of world, a story world, our wreck, the bold way or odds that could kill; else the short one. The aim line and the keycaps are said once a run."),
-        ...textSection(3, 'Its keycaps', block(LAND, /^\s*const KEY_WORDS = /m, 'KEY_WORDS'), ''));
+        ...textSection(3, 'Its keycaps', block(LAND, /^\s*const KEY_WORDS = /m, 'KEY_WORDS'), '', undefined, true));   // (loose: "steer" is one word)
     b.push(...textSection(3, 'Cutting into one of our wrecks (the mini-game)', whole(`${MINI}Torch.js`), "Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet.", isSaid), ...textSection(3, 'When the hatch is open', bm('cutIntoWreck'), ''));
     b.push(...textSection(3, 'The choice card on the surface', bm('showEventModal'), 'The card around every surface find (pools.md, Surface finds).'), ...textSection(3, 'How the trip went', bm('resolveEvaOutcome'), 'Dangers and results by planet type, deaths, injuries and rewards.'));
     b.push(...textSection(3, 'Paradise found', bm('showEdenEvaModal'), 'A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one).'));

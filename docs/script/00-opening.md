@@ -14,7 +14,6 @@ Everything else on the title screen:
 - NEW GAME «bundle.js · line 1487»
 - Erase the saved run? «bundle.js · line 1496»
 - [TURN OFF | TURN ON] «bundle.js · line 1512»
-- The new title could not start its picture «bundle.js · line 1525»
 - TURN ON «bundle.js · line 1596»
 - TURN OFF «bundle.js · line 1596»
 
