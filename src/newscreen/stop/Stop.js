@@ -55,7 +55,7 @@
     const ASIDE = [{ x: 600, facing: -1 }, { x: 574, facing: -1 }];       // too weak from a missed supper: apart, by the suit locker
     const HELM = 360, NAV = 488, HATCH = L.LX, WALK = CE.ACTIONS.walk, CLIMB = CE.ACTIONS.climb;
     const NAMES = { cora: 'Cora', jaxon: 'Jaxon', aris: 'Aris', vance: 'Vance', mira: 'Mira' };
-    const TONE = { cora: '#c9d1d6', jaxon: '#f08c2e', aris: '#ffc27a', vance: '#c4622a', mira: '#e8836a' };   // as the voice lines
+    const TONE = Object.fromEntries(['cora', 'jaxon', 'aris', 'vance', 'mira'].map(id => [id, getComputedStyle(document.documentElement).getPropertyValue('--tone-' + id).trim()]));   // as the voice lines (tokens.css --tone-*)
     const CREW = ['jaxon', 'aris', 'vance', 'mira'];
     const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, READ_MS = 250, GATHER_LEAD = 2600, PROPOSE_AFTER = 450, CLICK_GAP = 300;
     // the meteor (land/LandFall.js) flies this trip: the team is sent the moment they are down the hatch (its release is the shuttle

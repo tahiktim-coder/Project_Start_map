@@ -70,8 +70,8 @@
 .nse-voice.is-narr .nse-who { display: none; }
 .nse-say { font: 400 calc(19px + 5px * var(--t))/1.36 var(--f-text); color: var(--text); text-wrap: pretty; }
 .nse-voice.is-narr .nse-say { font-style: italic; color: #d6d8d5; }
-.nse-voice.tone-cora { --tone: #f2e2c4; } .nse-voice.tone-jaxon { --tone: #f08c2e; } .nse-voice.tone-aris { --tone: #ffc27a; }
-.nse-voice.tone-vance { --tone: #c4622a; } .nse-voice.tone-mira { --tone: #e8836a; } .nse-voice.tone-aura { --tone: var(--ui); }
+.nse-voice.tone-cora { --tone: var(--tone-cora); } .nse-voice.tone-jaxon { --tone: var(--tone-jaxon); } .nse-voice.tone-aris { --tone: var(--tone-aris); }
+.nse-voice.tone-vance { --tone: var(--tone-vance); } .nse-voice.tone-mira { --tone: var(--tone-mira); } .nse-voice.tone-aura { --tone: var(--ui); }
 .nse-keep { position: absolute; right: max(16px, 6vw); bottom: 9vh; text-shadow: var(--shadow); opacity: 0; transition: opacity 300ms var(--ease); }
 .nse-keep.is-in { opacity: 1; }
 .nse-keep[hidden], .nse-card[hidden] { display: none; }

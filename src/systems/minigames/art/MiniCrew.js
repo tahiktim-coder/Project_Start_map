@@ -31,8 +31,11 @@
     const INK = '#05070a';
     const IDS = ['cora', 'jaxon', 'aris', 'vance', 'mira'];
     const NAMES = { cora: 'Cora', jaxon: 'Jaxon', aris: 'Aris', vance: 'Vance', mira: 'Mira' };
-    // the voice colours (prototypes/screens/game-screen/reading.css): people are warm, A.U.R.A. is steel
-    const TONE = Object.freeze({ cora: '#f2e2c4', jaxon: '#f08c2e', aris: '#ffc27a', vance: '#c4622a', mira: '#e8836a', aura: '#c9d1d6' });
+    // the voice colours (prototypes/screens/game-screen/reading.css): people are warm, A.U.R.A. is steel. The new look reads
+    // them from its token sheet (tokens.css --tone-*: C18 Vance, C19 Cora); the old look keeps these.
+    const NS_CSS = document.documentElement.classList.contains('ns-on') ? getComputedStyle(document.documentElement) : null;
+    const voiceTone = (id, old) => (NS_CSS && NS_CSS.getPropertyValue('--tone-' + id).trim()) || old;
+    const TONE = Object.freeze({ cora: voiceTone('cora', '#f2e2c4'), jaxon: voiceTone('jaxon', '#f08c2e'), aris: voiceTone('aris', '#ffc27a'), vance: voiceTone('vance', '#c4622a'), mira: voiceTone('mira', '#e8836a'), aura: voiceTone('aura', '#c9d1d6') });
     // the old minigame figure colours (MiniShip.CREW before 2026-10-11), so old callers that pass a colour still get a person
     const OLD_COLOURS = { '#ffffff': 'cora', '#40c8ff': 'aris', '#d070ff': 'mira', '#ff5050': 'vance', '#f0a030': 'jaxon' };
     const PERSON_ART_H = 95;

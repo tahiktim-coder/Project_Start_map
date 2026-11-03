@@ -51,7 +51,7 @@
     };
     const CARD_TEXT = 'Sixty-one years later';
     const NAMES = { cora: 'Cora', jaxon: 'Jaxon', aris: 'Aris', vance: 'Vance', mira: 'Mira' };
-    const TONE = { cora: '#c9d1d6', jaxon: '#f08c2e', aris: '#ffc27a', vance: '#c4622a', mira: '#e8836a' };   // as the voice lines
+    const TONE = Object.fromEntries(['cora', 'jaxon', 'aris', 'vance', 'mira'].map(id => [id, getComputedStyle(document.documentElement).getPropertyValue('--tone-' + id).trim()]));   // as the voice lines (tokens.css --tone-*)
     const TAG = { cora: 'LEADER', jaxon: 'ENGINEER', aris: 'MEDIC', vance: 'SECURITY', mira: 'SPECIALIST' };
     const KEYS = ['warm', 'flush', 'wake'];
     const ORDERS = [['warm', 'flush', 'wake'], ['flush', 'warm', 'wake'], ['wake', 'warm', 'flush'], ['warm', 'wake', 'flush'], ['flush', 'wake', 'warm'], ['wake', 'flush', 'warm']];

@@ -79,12 +79,12 @@ html.ns-on .modal-overlay .enc-line p { font: 400 clamp(17px, 1.15vw, 20px)/1.45
 html.ns-on .modal-overlay .enc-line b {
     margin-bottom: 6px; font: 500 14px/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text) !important;
 }
-/* the crew's warm tones, A.U.R.A. in steel (EncounterCard writes today's colour inline; each is matched here) */
-html.ns-on .modal-overlay .enc-line b[style*="#74d99a"] { color: var(--ui) !important; }
-html.ns-on .modal-overlay .enc-line b[style*="#f0a030"] { color: #f08c2e !important; }
-html.ns-on .modal-overlay .enc-line b[style*="#40c8ff"] { color: #ffc27a !important; }
-html.ns-on .modal-overlay .enc-line b[style*="#ff5050"] { color: #c4622a !important; }
-html.ns-on .modal-overlay .enc-line b[style*="#d070ff"] { color: #e8836a !important; }
+/* the crew's warm tones, A.U.R.A. in steel (EncounterCard writes today's colour inline; each is matched here; tokens.css) */
+html.ns-on .modal-overlay .enc-line b[style*="#74d99a"] { color: var(--tone-aura) !important; }
+html.ns-on .modal-overlay .enc-line b[style*="#f0a030"] { color: var(--tone-jaxon) !important; }
+html.ns-on .modal-overlay .enc-line b[style*="#40c8ff"] { color: var(--tone-aris) !important; }
+html.ns-on .modal-overlay .enc-line b[style*="#ff5050"] { color: var(--tone-vance) !important; }
+html.ns-on .modal-overlay .enc-line b[style*="#d070ff"] { color: var(--tone-mira) !important; }
 
 /* ── NEXT and skip: words, not buttons ── */
 html.ns-on .modal-overlay .enc-flow { padding: 16px 28px 0; }
@@ -354,8 +354,8 @@ html.ns-on .modal-overlay .eva-team .deck-panel-mood { display: none; }         
 html.ns-on .modal-overlay .deck-panel-mood { font: 400 13px/1.2 var(--f-num); letter-spacing: 0; color: var(--dim); }
 html.ns-on .modal-overlay .eva-found { padding: 6px 28px 16px; font: 400 clamp(17px, 1.15vw, 20px)/1.5 var(--f-text); color: var(--text); text-wrap: pretty; }
 html.ns-on .modal-overlay .eva-voice { padding: 0 28px 14px; font: 400 16px/1.45 var(--f-text); }
-html.ns-on .modal-overlay .eva-voice[style*="#ff5050"] { color: #c4622a !important; }
-html.ns-on .modal-overlay .eva-voice[style*="#d070ff"] { color: #e8836a !important; }
+html.ns-on .modal-overlay .eva-voice[style*="#ff5050"] { color: var(--tone-vance) !important; }
+html.ns-on .modal-overlay .eva-voice[style*="#d070ff"] { color: var(--tone-mira) !important; }
 html.ns-on .modal-overlay .deck-panel-facts { grid-template-columns: auto 1fr; gap: 6px 16px; padding: 0 28px 16px; font: 400 15px/1.55 var(--f-text); }
 html.ns-on .modal-overlay .deck-panel-facts dt { font: 500 13px/1.6 var(--f-ui); letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim); padding-top: 0; }
 html.ns-on .modal-overlay .deck-panel-facts dd { color: #b9bdc0; }

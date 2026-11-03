@@ -165,6 +165,7 @@
 .mini-host .tone-aris { --tone: #ffc27a; }
 .mini-host .tone-mira { --tone: #e8836a; }
 .mini-host .tone-aura { --tone: var(--mg-steel); }
+html.ns-on .mini-host .tone-vance { --tone: var(--tone-vance); }   /* the new look's Vance (tokens.css, C18) */
 
 /* ── the choices: plain words, a small mark before each; pointed at, they warm and step in ── */
 .mini-buttons {
