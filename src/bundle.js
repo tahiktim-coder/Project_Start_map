@@ -3353,7 +3353,7 @@ class App {
         if (window.NarrativeModal) {
             const plainName = name => String(name || '').toLowerCase().replace(/(^|\s)([a-z])/g, (m, a, b) => a + b.toUpperCase()).replace(/^The /, 'the ');
             const sectorHeader = isNewScreen()                                                 // the new screen: plain words, no code-like caps
-                ? `[whisper]Into ${plainName(SECTOR_NAMES[toSector] || 'the dark')}[/whisper]`
+                ? `[whisper]Into ${plainName((window.NSLooks && window.NSLooks.titleOf(toSector)) || SECTOR_NAMES[toSector] || 'the dark')}[/whisper]`   // the sky's own names (C62: sector 2 is The Drift)
                 : `[whisper]S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}[/whisper]`;
             this.showNarrativeEncounter({
                 title: event.title,
@@ -4362,13 +4362,13 @@ Then you're through.`,
 
     /** The new look: the first scan of each kind of world this run (from the bridge, or from travel for 2 energy) adds 1 data,
         what the colony will know. Returns A.U.R.A.'s "a new kind of world" line for the scan to say (null: a kind seen before).
-        Her line on a data milestone (GameState.addColonyKnowledge) follows it. */
+        Her line on a data milestone (GameState.addColonyKnowledge) follows it, but for the first: hers says it (C29). */
     noteNewKind(planet) {
         if (!isNewScreen() || !planet || !planet.type || planet.isStructure || planet._isWrongPlace || planet.ghost || planet.isStation || planet.isAsteroidField) return null;
         const kinds = this.state._kindsScanned = this.state._kindsScanned || [];
         if (kinds.includes(planet.type)) return null;
         this.state._kindsScanned = kinds.concat(planet.type);
-        this.state.addColonyKnowledge(1);
+        this.state.addColonyKnowledge(1, (this.state._colonyKnowledge || 0) < 1);   // the first data: her new-kind line already says it is filed (one filing line, C29)
         const line = window.AuraSystem && typeof window.AuraSystem.line === 'function' ? window.AuraSystem.line('FIRST_LANDING') : null;
         return line || 'A new kind of world, Commander. I will record everything.';
     }

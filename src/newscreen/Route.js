@@ -33,15 +33,15 @@
      A fresh plan on a sector already played (a save from the default game, loaded with ?new=1 on) marks where we have
      been: the orbit we are parked at, a wreck boarded, a station searched; the rest follows as if we had flown there.
      find(state, id) → node | null         a node of the sector by id ('light' gives the structure in sector 6)
-     LINES                                 the refusal lines (docs/STYLE.md)
+     LINES                                 the refusal lines (docs/STYLE.md); cost(n, have) says the real numbers (L-10)
 */
 (function () {
     'use strict';
 
     const LINES = Object.freeze({
-        contact: 'A.U.R.A.: "That contact is too faint to plot a course to, Commander."',
+        contact: 'A.U.R.A.: "We can\'t plot a course to that contact yet, Commander."',   // DRAFT (look pass)
         passed: 'A.U.R.A.: "We passed it, Commander. We can\'t turn back."',
-        cost: 'A.U.R.A.: "We can\'t afford that one, Commander."',
+        cost: (n, have) => `A.U.R.A.: "That flight costs ${n} energy, Commander. We have ${have}."`,   // DRAFT (look pass)
     });
     const isStructure = n => !!(n && (n.isStructure || n.type === 'STRUCTURE'));
     const isGiant = n => n && n.type === 'GAS_GIANT';
@@ -157,7 +157,7 @@
         if (node.ghost) return { ok: true, say: null, kind: 'ghost' };
         const cost = typeof state.getWarpCost === 'function' ? state.getWarpCost(node) : 0;
         const isStory = !!(window.app && typeof window.app.isStoryStop === 'function' && window.app.isStoryStop(node));   // flown on the reserve if need be
-        if (cost > state.energy && !window.TEST_MODE && !isStory) return { ok: false, say: LINES.cost, kind: 'cost' };
+        if (cost > state.energy && !window.TEST_MODE && !isStory) return { ok: false, say: LINES.cost(cost, Math.max(0, Math.floor(state.energy))), kind: 'cost' };
         return { ok: true, say: null, kind: 'world' };
     }
 

@@ -32,7 +32,7 @@
        click, canGo, refuse, go, arrive, light, contact, ghost   travel (BUILD_A §4)
        scanOffer(id) → { cost, ok, why } | null   the long-range scan offered in a world's note (Scan.js NSScan.offer)
        scan(id) → bool        run it (travel only);  facts(id) → { site, gives, danger, live, tier } | null   what our scans read
-       findNote(id, withSite) → ['Old ruins · The hum', 'People could live here'] | null   travel's note once scanned (WorldFinds.js)
+       findNote(id, withSite) → [{ icon, text, clue, live }] | null   travel's note once scanned, as tags (WorldFinds.js)
        finds(ids) → [find]    the finds on the world we orbit (WorldFinds.list; ids: the two at the hatch);  aim(id) → bool  choose one
        way(id, idx, ids?) → bool   choose that find's way on the glass (NSOrbit.way; ids: the two at the hatch, whose own
                               stress traits strike its rows)

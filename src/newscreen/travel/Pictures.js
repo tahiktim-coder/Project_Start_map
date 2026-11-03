@@ -21,6 +21,8 @@
                                     o (optional) { cold: no plume, lamp: ms its red lamp has been on, still } (the jump that stalls)
      stream(which, vp, speed, flowPos, front)   space streaming past; which: 'back' | 'front'
      rogue(A, t0, t) · jump(A, s) · stretch(A, k) · dark(t) · dimAll(amount) · shade(rect)   stretch: the stall's (0..1)
+     bloom(k) → canvas | null       the jump's flash, step k 0..3 (a dithered bloom out of the light); k -1 paints the next one
+     leader(a, b, hex) · ring(x, y, r, hex, th)   a note's dotted leader to its world; a refused world's ring
 */
 (function () {
     'use strict';
@@ -56,7 +58,7 @@
         return best;
     }
     function bakeOne() { const it = queue.entries().next(); if (it.done) return; queue.delete(it.value[0]); try { it.value[1](); } catch (err) { console.error('NewScreen travel: a bake failed', err); } }
-    function clear() { sprites.clear(); fams.clear(); queue.clear(); landerCache.clear(); glowCache.clear(); arts.clear(); shadeCache.clear(); darkArt = null; patCache.length = 0; }
+    function clear() { sprites.clear(); fams.clear(); queue.clear(); landerCache.clear(); glowCache.clear(); arts.clear(); shadeCache.clear(); darkArt = null; patCache.length = 0; blooms.length = 0; }
 
     const litOf = id => { const p = F.rest(id), LP = LPx(), e = F.entry(id); return P.lightVector(p.x, p.y, LP[0], LP[1], (e && e.kind === 'giant' ? 0.258 : 0.5) * Math.hypot(LP[0] - p.x, LP[1] - p.y)); };
     const shadowL = L => P.norm3(L[0], L[1], -0.62);                                  // the light behind the world: a crescent on the far side
@@ -195,6 +197,7 @@
             if (acc.length && RN) RN.accents = acc.filter(a => a.kind !== 'comet' && a.kind !== 'blink').map(a => Object.assign({}, a, { x: a.ax - ox, y: a.ay - oy }));
             try { sky = S2.build(G.W, G.H, ox, oy, n, light, 'f'); } finally { if (acc.length && RN) RN.accents = keep; }
             if (sky && look.divider) sky.thing = null;                                   // 1: the giant is the one enormous thing; 2: the rogue world
+            if (sky && n >= 3) rampEdge(sky.B, ox);                                     // no cut edge in open space while the tower is away (the title)
         }
         const strip = P.spaceStrip(G.W + 200, G.H, look.seed, look.dust, look.haze * (sky ? sky.haze : 1), look.stars), L = lightOf(n, 1), lit = new Float32Array(G.W * G.H);
         for (let y = 0; y < G.H; y++) for (let x = 0; x < G.W; x++) lit[y * G.W + x] = Math.exp(-Math.hypot(x - LP[0], (y - LP[1]) * 1.15) / (L.halo * 0.85 + 6));
@@ -203,6 +206,32 @@
         const A = { n, sky, strip, lit, bp, canvas, g: canvas.getContext('2d'), key: null, bright: [], keep: L.halo * 0.9 + L.core + 8, own };
         arts.set(n, A);
         return A;
+    }
+    /** The left edge of a sector 3-6 sky stage (look pass, travel-rest): what the stage paints from its edge on (the garden's
+        pillars and their glow start at a straight column) ends in an 8 x 8 Bayer ramp to ink over EDGE_RAMP art px at 1080p
+        (80 CSS px, and as wide on screen at every window size: 80 art px at 1366 and 1280), so no cut edge shows in open
+        space before the tower slides in. The edge is the first column a solid part of the stage starts at
+        (left of the stage's own left, under the tower); a row is ramped only where something starts at that column (the star
+        field and the galaxy's band run on across it, untouched). In the far sky's buffer, so it slides with it. */
+    const EDGE_RAMP = 40, EDGE_WOBBLE = 16, EDGE_LOOK = 4, EDGE_JUMP = 6;
+    function rampEdge(B, ox) {
+        if (!B || !B.block) return;
+        const u = Math.max(1, 2 * G.dpr / G.k), RAMP = Math.round(EDGE_RAMP * u), WOB = Math.round(EDGE_WOBBLE * u);   // CSS px per art px, against 1080p's 2
+        let e = -1;
+        for (let x = 0; x < Math.min(B.W, ox + 8) && e < 0; x++) for (let y = 0; y < B.H; y++) if (B.block[y * B.W + x]) { e = x; break; }
+        if (e < 1) return;                                                             // nothing solid starts left of the stage: no edge
+        const lumAt = (x, y) => (x < 0 || x >= B.W ? 0 : B.lum[y * B.W + x]);
+        for (let y = 0; y < B.H; y++) {
+            let inside = 0, outside = 0, solid = false;
+            for (let d = 0; d < EDGE_LOOK; d++) { inside += lumAt(e + d, y); outside += lumAt(e - 1 - d, y); if (B.block[y * B.W + e + d]) solid = true; }
+            if (!solid && inside - outside < EDGE_JUMP * EDGE_LOOK) continue;          // no step at the edge in this row
+            const w = Math.round(P.fbm(3.7, y / (13 * u), 41, 2) * WOB);              // where the ramp starts wobbles a little row by row: no ruled line
+            for (let x = e; x < Math.min(B.W, e + w + RAMP); x++) {
+                if ((x - e - w + 0.5) / RAMP > threshold(x, y)) continue;              // kept: the ramp thins toward the edge
+                const i = y * B.W + x;
+                B.lum[i] = 0; B.block[i] = 0; B.ext[i] = 0; B.rgb[i * 3] = 0; B.rgb[i * 3 + 1] = 0; B.rgb[i * 3 + 2] = 0;
+            }
+        }
     }
     /** The far comet: a pale jade head and a thin tail pointing away from the light. */
     function cometSprite(a) {
@@ -420,10 +449,10 @@
         else { flowInto(L, FLOWS.streaks, vp, speed, flowPos); flowInto(L, FLOWS.near, vp, speed, flowPos); }
         L.draw(ctx, G.hull, 0);
     }
-    /** The jump: the burn runs to full (s < 1.5 s), every star stretches toward the light, white-gold, then black. */
+    /** The jump: the burn runs to full (s < 1.5 s), every star stretches toward the light; the flash blooms over it (bloom(),
+        shown by Travel in its flash layer over the tower too), then black. */
     function jump(A, s) {
         if (s < 1500) return;
-        if (s >= 2250) { ctx.fillStyle = RP.SUN.hex[6 - Math.min(3, Math.floor((s - 2250) / 100))]; ctx.fillRect(0, 0, G.W, G.H); return; }   // white-gold, then warm steps (Travel washes the tower too)
         const LP = LPx(), k = Math.min(6, Math.floor((s - 1500) / TICK) + 1), L = fullLayer();
         dimAll(k / 8);
         A.bright.forEach(st => { const dx = LP[0] - st.x, dy = LP[1] - st.y, d = Math.hypot(dx, dy) || 1, len = Math.min(d, k * k * 2.6 * sc * (0.5 + st.mag)); for (let i = 0; i < len; i++) L.tone(st.x + dx / d * i, st.y + dy / d * i, RP.STAR, (0.45 + 0.5 * st.mag) * (1 - i / len)); });
@@ -437,6 +466,53 @@
         dimAll(Math.floor(kk) / 8 * 0.75);
         A.bright.forEach(st => { const dx = LP[0] - st.x, dy = LP[1] - st.y, d = Math.hypot(dx, dy) || 1, len = Math.min(d, kk * kk * 2.6 * sc * (0.5 + st.mag)); for (let i = 0; i < len; i++) L.tone(st.x + dx / d * i, st.y + dy / d * i, RP.STAR, (0.45 + 0.5 * st.mag) * (1 - i / len)); });
         L.draw(ctx);
+    }
+    /** The jump's flash (look pass, travel-jump): a bloom out of the light in four steps of the 8 x 8 Bayer dither, painted at
+        the world's own pixels: warm-br round the light; warm-br in, warm out, over most of the screen; the whole screen warm (the
+        tower too); then ink falling in from the edges, a warm core left (the corridor's dark keeps a warm smudge there). Colours
+        are the tokens (--warm-br, --warm, --ink). Where a step leaves a pixel empty, what is under it shows (the burn, the
+        tower). k 0..3: that step's frame (painted now if it is not yet); k -1: paint the next one not yet painted (one an idle
+        frame, during the burn), → null. */
+    const BLOOM = [{ core: 0.12, mid: 0.12, edge: 0.48 }, { core: 0.28, mid: 0.5, edge: 0.9 }, { core: 0.2, mid: 0.75, edge: 1.6, floor: 0.82 }, { ink: true }];
+    const BLOOM_TOP = 0.94;                                                        // never a flat fill: even the core keeps a dither
+    const blooms = [];
+    function tokenRgb(name, fallback) {
+        let v = '';
+        try { v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); } catch (err) { v = ''; }
+        return /^#[0-9a-f]{6}$/i.test(v) ? P.hexRgb(v) : P.hexRgb(fallback);
+    }
+    function bloomFrame(k) {
+        const LP = LPx(), W = G.W, H = G.H, S = BLOOM[k], img = new ImageData(W, H), d = img.data;
+        const br = tokenRgb('--warm-br', RP.SUN.hex[5]), wm = tokenRgb('--warm', RP.SUN.hex[4]), ink = P.hexRgb(INK);
+        const far = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - LP[0], y - LP[1])));
+        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+            const r = Math.hypot(x - LP[0], y - LP[1]) / far, th = threshold(x, y);
+            let c = null;
+            if (S.ink) c = smooth(0.04, 0.6, r) * 0.92 + 0.08 > th ? ink : r < 0.14 && 1 - smooth(0.05, 0.14, r) > th ? br : wm;
+            else if (BLOOM_TOP * (1 - smooth(S.core * 0.6, S.mid, r)) > th) c = br;
+            else if (BLOOM_TOP * Math.max(S.floor || 0, 1 - smooth(S.mid * 0.8, S.edge, r)) > th) c = wm;
+            if (!c) continue;
+            const o = (y * W + x) * 4; d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+        }
+        const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.getContext('2d').putImageData(img, 0, 0);
+        return cv;
+    }
+    function bloom(k) {
+        if (k < 0) { const next = BLOOM.findIndex((_, i) => !blooms[i]); if (next >= 0) blooms[next] = bloomFrame(next); return null; }
+        if (!blooms[k]) blooms[k] = bloomFrame(k);
+        return blooms[k];
+    }
+    /** The 1 art px dotted leader from a world's note to the world's rim (a and b art px), one dot on, one off. */
+    function leader(a, b, hex) {
+        const n = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+        ctx.fillStyle = hex;
+        for (let i = 0; i <= n; i += 2) ctx.fillRect(Math.round(a[0] + (b[0] - a[0]) * i / (n || 1)), Math.round(a[1] + (b[1] - a[1]) * i / (n || 1)), 1, 1);
+    }
+    /** A ring of whole pixels round (x, y) at radius r, th art px thick (a refused world's blink). */
+    function ring(x, y, r, hex, th) {
+        const n = Math.max(16, Math.ceil(r * 2 * Math.PI)), w = Math.max(1, th || 1);
+        ctx.fillStyle = hex;
+        for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; ctx.fillRect(Math.round(x + Math.cos(a) * r - w / 2), Math.round(y + Math.sin(a) * r - w / 2), w, w); }
     }
     /** After the flash: jump space is dark, not empty: a faint teal haze down the corridor, the far light a warm smudge. */
     let darkArt = null;
@@ -475,6 +551,6 @@
 
     window.NSPictures = Object.freeze({
         setup, clear, setLive: on => { live = !!on; }, art, backdrop, glow, preglow, lightOf, item, rims, prebake, bakeOne, queued: () => queue.size,
-        lander, stream, rogue, jump, stretch, dark, dimAll, shade,
+        lander, stream, rogue, jump, bloom, stretch, dark, dimAll, shade, leader, ring,
     });
 })();

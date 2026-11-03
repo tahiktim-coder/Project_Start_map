@@ -53,7 +53,7 @@
                                  device px); wDev is the tower's width on screen
      debug() → { fit, k, dark, E, decks, crew, people: [{ id, deck, x, act, say }], chips, restless: ids living the restless day }
    }
-   Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' (a rumble building to the flash) 'jump:flash'.
+   Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' (a rumble building to the flash) 'jump:words' 'jump:flash'.
    Uses, if present: window.Juice (the tremor; without it nothing shakes).
 
    window.NSStock (frozen): the ship's stock, read from the real game (never written)
@@ -116,7 +116,7 @@
     const V = {
         cv: null, ctx: null, off: null, offCtx: null, jobs: [], inited: false, fit: null,
         people: [], drawn: [], slideX: 0,
-        slide: { closedUntil: 0, start: null }, dark: false,
+        slide: { closedUntil: 0, start: null }, dark: false, stockOut: false,
         beat: { phase: 0, n: 0, val: 0, onsets: [] },
         E: null, Eshown: 100, coreSet: null, flood: null,
         real: { crew: {}, decks: {}, engDown: false, datable: false }, readAt: -1e9, dirty: true,
@@ -410,6 +410,7 @@
         bus.on('opening:done', () => openTower(now()));
         bus.on('jump:burn', () => { V.flood = { kind: 'jump', t0: now() }; V.burnT0 = now(); hideChips(); });
         bus.on('jump:flash', () => { V.dark = true; V.burnT0 = null; });
+        bus.on('jump:words', () => { V.stockOut = true; });                  // look pass (B05): no stock number over the flash (steps: travel/Note.js)
         IDS.forEach(id => NS.anchors.set('person:' + id, () => {
             const a = personAt(id);
             if (!a) return [];
@@ -425,6 +426,7 @@
         V.dirty = true;
         V.dark = false;
         V.burnT0 = null;
+        V.stockOut = false;                                                 // the stock comes back once the tower is in again
         if (p.first) closeTower(t, OPEN_FALLBACK_MS);                       // a new sector: from black, the title; then the tower
     }
     function deckAnchor(i) {
@@ -463,7 +465,7 @@
         const tagGone = V.tag && (V.tag.who ? !(window.NSSupper && window.NSSupper.choosing()) : V.real.decks[V.tag.deck] !== 'red');
         if (V.tag && (V.stall || modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || tagGone || V.chips)) hideTag();
         if (!V.stall) tellRed();
-        if (V.stall || modeNow() !== 'travel' || V.dark || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame; out with the power
+        if (V.stall || modeNow() !== 'travel' || V.dark || V.stockOut || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame; out with the power
         stockTick();
     }
     function render(t) {
@@ -494,7 +496,7 @@
         const s0 = performance.now(), sh = V.tremor;                          // the tremor: smooth-scaled, so not rounded
         c.drawImage(V.off, 0, 0, OFF_W, ROWS, V.slideX + (sh ? sh.dx * f.ts : 0), f.tY0 + (sh ? sh.dy * f.ts : 0), OFF_W * f.ts, ROWS * f.ts);
         watchScale(performance.now() - s0);
-        placeStock(k >= 1 && !V.stall && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
+        placeStock(k >= 1 && !V.stall && !V.stockOut && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
     }
     /** 'high' scaling where it is cheap (a GPU canvas); a machine where it costs over 3 ms a frame on average gets 'low'
         (bilinear: at these scales the two look nearly the same, checked at 1080p and 720p). */
