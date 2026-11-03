@@ -14,15 +14,15 @@ _Only with ?new=1: the first line shows when nothing is up 1.5 s after the page 
 *SILENT EXODUS — EIGHT WENT BEFORE YOU. NONE OF THEM CALLED HOME.* «bundle.js · start menu»
 
 Everything else on the title screen:
-- [GAS_GIANT] «bundle.js · line 1564»
-- EXODUS PROGRAM // VESSEL 9 «bundle.js · line 1578»
-- SILENT EXODUS «bundle.js · line 1583»
-- Sector [sector] • [crew] crew alive «bundle.js · line 1603»
-- NEW GAME «bundle.js · line 1613»
-- Erase the saved run? «bundle.js · line 1622»
-- [TURN OFF | TURN ON] «bundle.js · line 1638»
-- TURN ON «bundle.js · line 1722»
-- TURN OFF «bundle.js · line 1722»
+- [GAS_GIANT] «bundle.js · line 1567»
+- EXODUS PROGRAM // VESSEL 9 «bundle.js · line 1581»
+- SILENT EXODUS «bundle.js · line 1586»
+- Sector [sector] • [crew] crew alive «bundle.js · line 1606»
+- NEW GAME «bundle.js · line 1616»
+- Erase the saved run? «bundle.js · line 1625»
+- [TURN OFF | TURN ON] «bundle.js · line 1641»
+- TURN ON «bundle.js · line 1725»
+- TURN OFF «bundle.js · line 1725»
 
 ## The briefing film «StoryReel.js · program»
 _Source on screen: EXODUS PROGRAMME · CREW BRIEFING FILM_
@@ -43,6 +43,8 @@ _Card kicker: EXODUS-9 · 61 YEARS OUT FROM EARTH / THE BRIDGE / FOUND IN [ship 
 **Jaxon:** It is a glitch. She slept sixty years too. Let it go.  
 **A.U.R.A.:** ${reason} Jump anyway?  
 **A.U.R.A.:** I can run the drive on the reserve, Commander. The crew quarters will lose power.  
+**Jaxon:** Then we freeze for a night. I've done worse. **DRAFT (look pass)**  
+**A.U.R.A.:** We need ${jumpCost} energy to jump, Commander. We have ${have}. **DRAFT (look pass)**  
 **A.U.R.A.:** If we land for good, the journey ends here, Commander. Settle anyway?  
 
 Choice:
@@ -56,9 +58,10 @@ Choice:
 8. **Jump now** — Whatever is left here is gone for good.
 9. **Jump on the reserve** — Uses all the energy left. The crew quarters are damaged.
 10. **Not yet** — Probes and wrecks can still bring energy back.
-11. **Not now** — You can still do it from the command deck while we are in orbit.
-12. **Not yet** — Stay in orbit. The journey goes on.
-13. **Settle here** — The journey ends on this world.
+11. **Not yet** — Stay in this sector. **DRAFT (look pass)**
+12. **Not now** — You can still do it from the command deck while we are in orbit.
+13. **Not yet** — Stay in orbit. The journey goes on.
+14. **Settle here** — The journey ends on this world.
 
 Then in the log:
 - A.U.R.A.: "Systems online. Waiting for your orders, Commander."

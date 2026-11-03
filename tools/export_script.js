@@ -330,14 +330,16 @@ function methodSource(name) {
     const end = BUNDLE.indexOf('\n    }\n', start);
     return BUNDLE.slice(start, end < 0 ? undefined : end);
 }
+/** The DRAFT note on the source line a match sits on, as the other sweeps print it ('' when none). */
+const draftAt = (src, at) => { const end = src.indexOf('\n', at), d = /\/\/.*?\b(DRAFT(?: \([^)]*\))?)/.exec(src.slice(at, end < 0 ? undefined : end)); return d ? ` **${d[1]}**` : ''; };
 function dialogueFrom(src) {
     const re = /speaker:\s*'([^']+)',\s*text:\s*(?:'((?:\\.|[^'\\])*)'|`((?:\\.|[^`\\])*)`)/g, out = [];
-    let m; while ((m = re.exec(src))) out.push(lineOf(m[1], (m[2] != null ? m[2] : m[3]).replace("${names.join('. ')}", 'Jaxon Mercer. Aris Novak. Kael Vance. Mira Chen').replace(/\\'/g, "'")) + '  ');
+    let m; while ((m = re.exec(src))) out.push(lineOf(m[1], (m[2] != null ? m[2] : m[3]).replace("${names.join('. ')}", 'Jaxon Mercer. Aris Novak. Kael Vance. Mira Chen').replace(/\\'/g, "'")) + draftAt(src, m.index) + '  ');
     return out;
 }
 function choicesFrom(src) {
     const re = /\{\s*text:\s*'((?:\\.|[^'\\])*)',\s*desc:\s*'((?:\\.|[^'\\])*)'/g, out = [];
-    let m, i = 1; while ((m = re.exec(src))) out.push(`${i++}. **${m[1].replace(/\\'/g, "'")}** — ${m[2].replace(/\\'/g, "'")}`);
+    let m, i = 1; while ((m = re.exec(src))) out.push(`${i++}. **${m[1].replace(/\\'/g, "'")}** — ${m[2].replace(/\\'/g, "'")}${draftAt(src, m.index)}`);
     return out;
 }
 function logsFrom(src) {
