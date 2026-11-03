@@ -57,6 +57,10 @@
     const TONE = { cora: '#c9d1d6', jaxon: '#f08c2e', aris: '#ffc27a', vance: '#c4622a', mira: '#e8836a' };   // as the voice lines
     const CREW = ['jaxon', 'aris', 'vance', 'mira'];
     const SHUTTLE_GAP = 250, SHUTTLE_MS = 2200, READ_MS = 250, GATHER_LEAD = 2600, PROPOSE_AFTER = 450, CLICK_GAP = 300;
+    // the meteor (land/LandFall.js) flies this trip: the team is sent the moment they are down the hatch (its release is the shuttle
+    // leaving: the glass's own drop never plays first), and the glass's shuttle goes once the meteor's frame covers it
+    const METEOR_COVER_MS = 300;
+    const meteorFlies = () => { const LFall = window.LandFall; try { return !!(LFall && typeof LFall.flies === 'function' && LFall.flies()); } catch (err) { console.error('NewScreen stop: the meteor check failed', err); return false; } };
     const SETTLE_HOLD_MS = 1400;                                          // settling ends the journey: the key is held, not clicked
     const SWEEP_MS = 1750;                                                // Scan: the glass sweeps the world's face once, then the finds show
     // the hull hit (review fix, 2026-10-30: the strike was only told): the bridge jolts (up to `shake` art px, easing out over
@@ -507,7 +511,7 @@
             }
         }
         if (S.open && !S.dive && S.fadeAt != null && t - S.fadeAt >= DISSOLVE && !S.shownSent) shown();
-        if (S.drop && t >= S.drop.at) { GL.shuttle('down', S.drop.at, SHUTTLE_MS); S.drop = null; }   // the team is down the hatch: the shuttle goes
+        if (S.drop && t >= S.drop.at) { GL.shuttle('down', S.drop.at + (S.send && S.send.meteor ? METEOR_COVER_MS : 0), SHUTTLE_MS); S.drop = null; }   // the team is down the hatch: the shuttle goes
         if (S.send && !S.send.fired && t >= S.send.fireAt && !NS.blocked()) fireSend();   // a card came up meanwhile: they wait below
         if (S.autoScan && !S.sweep && !S.send && !S.trip && GL.settled(t, S.shownAt) && !NS.blocked()) { S.autoScan = false; S.sweep = { t0: t }; tellScan(); }   // the world has braked in: it is scanned
         if (S.sweep && t - S.sweep.t0 >= SWEEP_MS && !NS.blocked()) { S.sweep = null; runAct('scan', t); }   // the glass has swept the world: the scan reads it
@@ -555,7 +559,8 @@
             if (!went && !talking) say('The team stays aboard for now, Commander.');
             S.send = null; S.drop = null; S.pick = Object.assign(freshPick(), { from: t0() + PROPOSE_AFTER * 4 }); const t = t0();
             ids.forEach((id, i) => { if (crewOf(id) === 'well') enterTo(id, t + 300 + i * 600, SPOT_X[id], 'idle', 1); });
-            if (!s.relay) { GL.shuttle('up', t, SHUTTLE_MS); S.upEnd = t + SHUTTLE_MS; }   // (LAST PORT: no shuttle went)
+            if (s.meteor) GL.shuttle(null);                               // the meteor's trip: the shuttle never left its clamp
+            else if (!s.relay) { GL.shuttle('up', t, SHUTTLE_MS); S.upEnd = t + SHUTTLE_MS; }   // (LAST PORT: no shuttle went)
         }
     }
 
@@ -694,7 +699,8 @@
             const ids = team();
             if (ids.length < need()) { say(ids.length ? 'We need one more at the hatch, Commander.' : need() === 1 ? 'We need someone at the hatch, Commander.' : 'We need two at the hatch, Commander.'); return; }   // DRAFT: "someone" (one left who can go)
             const relay = isRelayAimed();                                // LAST PORT: the ship docks at the relay itself; no shuttle
-            S.send = { ids, t0: t, fired: false, skipped: false, relay, fireAt: relay ? sendOff(ids, t, 350, true) : sendOff(ids, t, 350) + SHUTTLE_MS };   // the trip begins once the shuttle is down
+            const meteor = !relay && meteorFlies();
+            S.send = { ids, t0: t, fired: false, skipped: false, relay, meteor, fireAt: relay ? sendOff(ids, t, 350, true) : sendOff(ids, t, 350) + (meteor ? 0 : SHUTTLE_MS) };   // the trip begins once the shuttle is down (the meteor's: as it leaves)
             if (S.node && S.node.nsTrips > 0) skipSend(t);              // a trip from here before: nobody walks it again, the shuttle goes at once
             S.hover = null; setHot(null); setPointing(false);
             return;
@@ -721,7 +727,7 @@
         s.skipped = true;
         s.ids.forEach(hidePlan);
         S.drop = { at: Math.max(t, S.upEnd) };                            // still coming up: it docks, then goes straight down
-        s.fireAt = S.drop.at + SHUTTLE_MS;
+        s.fireAt = S.drop.at + (s.meteor ? 0 : SHUTTLE_MS);
     }
     function leave() {
         S.hover = null; setHot(null); setPointing(false);
