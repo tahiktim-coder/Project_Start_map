@@ -19,7 +19,8 @@
    so the same place is also painted at six smaller sizes (LADDER x D, smallest first, each after the one before, the
    field's own first), each a fifth smaller than the next at most (the release globe's rule), so the land grows to its
    landing size with no swap; outside the field (x < OX, x > W) each is carried on by the far hills' textures (farBake),
-   with a 12 px seam in the grain. Under the deck the sky keeps a faint haze (UNDER_HAZE of the scene's own), not black.
+   with a 12 px seam in the grain (GAME, the final check: by the field's own picture mirrored, no seam: margins). Under the
+   deck the sky keeps a faint haze (UNDER_HAZE of the scene's own), not black.
    (The old header:)
    What it is: the landing dummy's field. Today's landing place (LanderGame's ground, LanderScene's picture, LanderSites'
    sites, LanderCrew's walk-out), loaded as it is and never changed, with a sky screen above it: a 320 x 360 field (world
@@ -71,8 +72,7 @@
     const SIGN = { ice: 'geyser', haze: 'vent', dunes: 'devil', green: 'smoke', sea: 'smoke' };
     const BOLT = ramp(INK, '#16222e', '#3c5a78', '#9cc4e8', '#f2fbff');   // Worlds.js GLOW.bolt
     const FAR_TOP = 46, STRETCH_MIN_X = 64, POOL_ALT = 150;
-    const LADDER = [0.26, 0.33, 0.41, 0.51, 0.64, 0.8], UNDER_HAZE = 0.25, SEAM = 12;   // DRAFT (round 3; meteor-land.js K.LADDER is the same list)
-    const SKY_JIT = 4;                                                       // GAME (the review): the margins' sky: each pixel from the edge's rows up to this many px off its own
+    const LADDER = [0.26, 0.33, 0.41, 0.51, 0.64, 0.8], UNDER_HAZE = 0.25;   // DRAFT (round 3; meteor-land.js K.LADDER is the same list)
     const clampX = x => Math.max(0, Math.min(W - 1, x));
     const rgbMix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
     const hexOf = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
@@ -264,24 +264,25 @@
         G.ladderNow = paintView(G, Vk, G.tag, !!G.isUrgent, false, core => margins(G, i, core));   // (the polish round: the next landing's sizes go first, from their first job)
         if (G.isUrgent) G.ladderNow.urgent = true;
     }
-    /** The core of one size laid in a wider picture whose margins (MK world px each side, at most 600) are the far hills:
-        their outline eases from the field's own edge into a rolling range, the near ground's texture under it, the far
-        range above, the field's own sky carried on (its edge 8 px tiled, the grain kept), a 12 px Bayer seam at the join. */
+    /** The core of one size laid in a wider picture whose margins (MK world px each side, at most 600) carry the field's own
+        picture on, mirrored at its edge and back again (GAME, the final check: the far hills' textures read as a pasted-on
+        strip, a hard seam where they began, a dark hole at the foot): its ground line, its grain and its sky run on with no
+        seam. What must not be seen twice is left out of the mirrored copies (the site's art, the colony's pad, the machines'
+        posts: excluded), the ground line kept level across each cut (marginPath). Drawn by the canvas, a few copies each. */
     function margins(G, i, core, kOwn, onDone) {
         const L = G.ladder[i], go = () => {
-            if (!G.far.done) { G.far.then.push(() => A.later(go, G.tag, !!G.isUrgent, 'ladder margins ' + i)); return; }
             const k = kOwn || LADDER[i], dk = D * k, Vc = core.V, MK = Math.min(600, Math.ceil(FW / dk)), MP = Math.round(MK * dk), w = Vc.w + 2 * MP, h = Vc.h;
             const V2 = { d: dk, ox: Vc.ox - MP / dk, oy: Vc.oy, w, h };
-            // (the polish round: each margin painted in slices of SLICE columns, one per queue slot: no job holds a frame up)
-            const srcs = core.dark ? [core.lit, core.dark] : [core.lit], out = srcs.map(() => null), SLICE = 96, jobs = [];
-            srcs.forEach((src, si) => {
-                jobs.push(() => { const c = document.createElement('canvas'); c.width = w; c.height = h; const cg = c.getContext('2d'); cg.drawImage(src, MP, 0); out[si] = { c, cg, edge: readPx(src, 0, 0, 8, h), edgeR: readPx(src, Vc.w - 8, 0, 8, h) }; });
-                for (let s0 = 0; s0 < MP; s0 += SLICE) [true, false].forEach(left => jobs.push(() => {
-                    const o = out[si], n = Math.min(SLICE, MP - s0), img = o.cg.createImageData(n, h), base = left ? 0 : MP + Vc.w;
-                    fill(G, img.data, left ? o.edge : o.edgeR, base, MP, V2, h, dk, left, src === core.dark, s0, s0 + n);
-                    o.cg.putImageData(img, base + s0, 0);
-                }));
-            });
+            const srcs = core.dark ? [core.lit, core.dark] : [core.lit], out = srcs.map(() => null), jobs = [], path = { left: null, right: null };
+            jobs.push(() => { const keep = keptColumns(G, Vc, dk); path.left = marginPath(G, Vc, dk, keep, MP, true); path.right = marginPath(G, Vc, dk, keep, MP, false); });
+            srcs.forEach((src, si) => jobs.push(() => {
+                const c = document.createElement('canvas'); c.width = w; c.height = h;
+                const cg = c.getContext('2d'); cg.imageSmoothingEnabled = false;
+                cg.drawImage(src, MP, 0);
+                [path.left, path.right].forEach(pieces => pieces.forEach(q => mirrorPiece(cg, src, q, h)));
+                out[si] = { c };
+            }));
+            srcs.forEach((src, si) => jobs.push(() => smoothFar(G, out[si].c, Vc, dk, MP, path)));   // GAME (the final check): no ruled rows or blocks where it is drawn shrunk
             srcs.forEach((src, si) => jobs.push(() => fadeSky(G, out[si].c, V2, true)));   // (the final fix round: each picture's sky cut in its own queue slot: never one long job in the release)
             jobs.push(() => { const pic = { V: V2, lit: out[0].c, dark: out[1] ? out[1].c : null, done: true, k }; if (onDone) onDone(pic); else { L.pic = pic; L.done = true; paintLadder(G, i + 1); } });
             const step = j => A.later(() => { jobs[j](); if (j + 1 < jobs.length) step(j + 1); }, G.tag, !!G.isUrgent, 'ladder margins ' + i + '.' + j);
@@ -307,35 +308,71 @@
         }
         return c;
     }
-    /** A region of a picture's pixels, through one scratch canvas kept for reading (no read back of the picture itself). */
-    let rb = null;
-    function readPx(src, sx, sy, w, h) {
-        if (!rb) { const c = document.createElement('canvas'); rb = c.getContext('2d', { willReadFrequently: true }); }
-        if (rb.canvas.width < w) rb.canvas.width = w;
-        if (rb.canvas.height < h) rb.canvas.height = h;
-        rb.clearRect(0, 0, w, h); rb.drawImage(src, sx, sy, w, h, 0, 0, w, h);
-        return rb.getImageData(0, 0, w, h).data;
+    /** GAME (the final check): the core's columns (art px) the margins may copy: all but the site's art (LandSite.js siteSpan),
+        the colony's pad and the machines' posts and plates, MIRROR_SKIP world px kept off each. → [[from, to), ...] */
+    const MIRROR_SKIP = 2, MIRROR_SHIFT = 30;                                 // world px; MIRROR_SHIFT: the most the ground line is moved to stay level
+    function keptColumns(G, Vc, dk) {
+        const cw = Vc.w, m = G.g.mark, parts = window.LandingGroundParts, skip = [], out = [];
+        const span = parts && parts.siteSpan ? parts.siteSpan(G) : null;
+        if (span) skip.push(span);
+        if (G.mark === 'colony' && m) skip.push([m.x0, m.x1]);
+        if (G.mark === 'machines' && G.posts) skip.push([Math.min(...G.posts.map(q => q.x)) - 10, Math.max(...G.posts.map(q => q.x)) + 12]);
+        const cols = skip.map(([a, b]) => [Math.max(0, Math.floor((a - MIRROR_SKIP - Vc.ox) * dk)), Math.min(cw, Math.ceil((b + MIRROR_SKIP - Vc.ox) * dk))]).filter(([a, b]) => b > a).sort((p, q) => p[0] - q[0]);
+        let at = 0;
+        cols.forEach(([a, b]) => { if (a > at) out.push([at, a]); at = Math.max(at, b); });
+        if (at < cw) out.push([at, cw]);
+        return out.length ? out : [[0, cw]];
     }
-    /** One margin's pixels (art columns ax0 .. ax0 + mw of the wide picture), from the core's edge block (8 px, its grain);
-        the polish round: only its columns xa .. xb when given, into a buffer that wide. */
-    function fill(G, out, edge, ax0, mw, V2, h, dk, left, dark, xa, xb) {
-        const xs = xa || 0, xe = xb == null ? mw : xb, ow = xe - xs;
-        const S = G.S, g = G.g, T = G.far, near = T.nearPx || (T.nearPx = readPx(T.near, 0, 0, FW, FAR_H)), hills = T.hillsPx || (T.hillsPx = readPx(T.hills, 0, 0, FW, HILL_H));
-        const wxE = left ? OX + 0.5 / dk : W - 0.5, edgeTop = U.hAt(g, wxE), skyMax = Math.max(0, Math.floor((edgeTop - V2.oy) * dk) - 2), gy = G.groundY;
-        for (let x = xs; x < xe; x++) {
-            const ax = ax0 + x, wx = V2.ox + (ax + 0.5) / dk, dist = Math.abs(wx - wxE), dpx = left ? mw - 1 - x : x;
-            const blend = smooth(0, 60, dist), top = edgeTop + (gy - 8 + 0.9 * hillY(S, wx) - edgeTop) * blend, topAy = (top - V2.oy) * dk;
-            const farAy = (top - 14 - 4 * blend + 0.7 * hillY(S, wx * 1.6 + 50) * blend - V2.oy) * dk, tx = ((ax % FW) + FW) % FW, ex = left ? (((x - mw) % 8) + 8) % 8 : x % 8;
-            for (let y = 0; y < h; y++) {
-                const o = (y * ow + x - xs) * 4;
-                let r, gg, b;
-                if (dpx < SEAM && threshold(ax, y) < (SEAM - dpx) / SEAM) { const s = (y * 8 + ex) * 4; r = edge[s]; gg = edge[s + 1]; b = edge[s + 2]; }   // the seam: the field's own edge, dithered in
-                else if (y >= topAy) { const s = (Math.min(FAR_H - 1, Math.floor(y - topAy)) * FW + tx) * 4; r = near[s]; gg = near[s + 1]; b = near[s + 2]; if (dark) { r *= 0.42; gg *= 0.42; b *= 0.45; } }
-                else if (y >= farAy) { const s = (Math.min(HILL_H - 1, Math.floor(y - farAy)) * FW + tx) * 4; r = hills[s]; gg = hills[s + 1]; b = hills[s + 2]; if (dark) { r *= 0.5; gg *= 0.5; b *= 0.52; } }
-                else { const jy = Math.max(0, Math.min(skyMax, Math.min(y, skyMax - SKY_JIT) + Math.round((hash(ax & 255, y & 255, 223) - 0.5) * 2 * SKY_JIT))), s = (jy * 8 + Math.floor(hash(ax & 255, y & 255, 227) * 8)) * 4; r = edge[s]; gg = edge[s + 1]; b = edge[s + 2]; }   // GAME (the review): its pixels drawn from the edge's rows near it at random, never the edge's 8 px tiled row by row (that read as scanline streaks)
-                out[o] = r; out[o + 1] = gg; out[o + 2] = b; out[o + 3] = 255;
-            }
+    /** One margin as pieces of the core: walking in from the edge through the kept columns and back again (a mirror at each
+        end), each piece { sx, n (its columns), dx (where it goes in the wide picture), flip, dy }; where the walk skips what is
+        left out, the next piece moves up or down (dy, art px) so the ground line runs on level. MP: the margin's width. */
+    function marginPath(G, Vc, dk, keep, MP, left) {
+        const g = G.g, cw = Vc.w, rowOf = c => (U.hAt(g, Vc.ox + (c + 0.5) / dk) - Vc.oy) * dk, lim = MIRROR_SHIFT * dk, out = [];
+        const up = keep.map(([s, e]) => ({ s, e, dir: 1 })), down = keep.slice().reverse().map(([s, e]) => ({ s, e, dir: -1 })), cycle = left ? up.concat(down) : down.concat(up);
+        let dx = left ? MP : MP + cw, need = MP, last = left ? 0 : cw - 1, off = 0;
+        for (let i = 0; need > 0 && i < 4000; i++) {
+            const q = cycle[i % cycle.length], n = Math.min(q.e - q.s, need), first = q.dir > 0 ? q.s : q.e - 1;
+            if (Math.abs(first - last) > 1) off = Math.max(-lim, Math.min(lim, off + rowOf(last) - rowOf(first)));
+            const sx = q.dir > 0 ? q.s : q.e - n;
+            out.push({ sx, n, dx: left ? dx - n : dx, flip: left ? q.dir > 0 : q.dir < 0, dy: Math.round(off) });
+            dx = left ? dx - n : dx + n; need -= n;
+            last = q.dir > 0 ? q.s + n - 1 : q.e - n;
         }
+        return out;
+    }
+    /** One piece of a margin drawn (mirrored when flip); moved by dy, the rows it uncovers keep the piece unmoved under it. */
+    function mirrorPiece(cg, src, q, h) {
+        const draw = dy => {
+            if (!q.flip) { cg.drawImage(src, q.sx, 0, q.n, h, q.dx, dy, q.n, h); return; }
+            cg.save(); cg.translate(q.dx + q.n, 0); cg.scale(-1, 1); cg.drawImage(src, q.sx, 0, q.n, h, 0, dy, q.n, h); cg.restore();
+        };
+        if (q.dy) draw(0);
+        draw(q.dy);
+    }
+    /** GAME (the final check): a far picture's grain averaged over 2 x 2 px deeper than DEEP world px under the drawn ground
+        line and higher than ABOVE over it (the sky band it keeps). Both are dithered row by row; drawn shrunk, nearest
+        neighbour, rows and columns drop out in a beat and read as ruled rows, a row of dark blocks under the planet's edge, a
+        bright dashed row at the frame's foot. The ground's line and its lit edge keep their grain (what stands over it, a
+        site's art too, is softened a little, as far off). c: the wide picture (its core at MP, its margins as path). */
+    const DEEP = 3, ABOVE = 1.5;
+    let farC = null;
+    function smoothFar(G, c, Vc, dk, MP, path) {
+        const w = c.width, h = c.height, g = G.g, rowOf = col => (U.hAt(g, Vc.ox + (col + 0.5) / dk) - Vc.oy) * dk;
+        const line = new Float32Array(w);
+        for (let x = 0; x < Vc.w; x++) line[MP + x] = rowOf(x);
+        [path.left, path.right].forEach(pieces => pieces.forEach(q => { for (let j = 0; j < q.n; j++) line[q.dx + j] = rowOf(q.flip ? q.sx + q.n - 1 - j : q.sx + j) + q.dy; }));
+        if (!farC) farC = [document.createElement('canvas'), document.createElement('canvas')].map(cv => cv.getContext('2d'));
+        const [a, b] = farC;
+        [a, b].forEach(t => { if (t.canvas.width !== w || t.canvas.height !== h) { t.canvas.width = w; t.canvas.height = h; } t.globalAlpha = 1; t.clearRect(0, 0, w, h); });
+        a.drawImage(c, 0, 0); a.globalAlpha = 0.5; a.drawImage(c, 1, 0); a.globalAlpha = 1;   // each px with the one to its left
+        b.drawImage(a.canvas, 0, 0); b.globalAlpha = 0.5; b.drawImage(a.canvas, 0, 1); b.globalAlpha = 1;   // and with the row above
+        const cg = c.getContext('2d'), deep = DEEP * dk, above = ABOVE * dk, at = x => Math.min(w - 1, x);
+        cg.save(); cg.beginPath();
+        cg.moveTo(0, h); for (let x = 0; x <= w; x += 2) cg.lineTo(x, Math.min(h, line[at(x)] + deep)); cg.lineTo(w, h); cg.closePath();   // the deep ground
+        cg.moveTo(0, 0); for (let x = 0; x <= w; x += 2) cg.lineTo(x, Math.max(0, line[at(x)] - above)); cg.lineTo(w, 0); cg.closePath();   // the sky band
+        cg.clip();
+        cg.drawImage(b.canvas, 0, 0);
+        cg.restore();
     }
 
     // ── a picture of the place for one view: columns of LanderScene.backdrop, one job at a time; the marks; the night copy ──
@@ -551,9 +588,9 @@
         return out;
     }
     const hillY = (S, wx) => 9 * Math.sin(wx * 0.019 + S.seed) + 5 * Math.sin(wx * 0.047 + S.seed * 0.7) + (P.vnoise(wx / 8, 3, S.seed + 5) - 0.5) * 5;
-    // (the split) for LandSite.js and LandGroundDraw.js
-    window.LandingGroundParts = Object.freeze({
+    // (the split) for LandSite.js and LandGroundDraw.js (LandSite.js adds where the shuttle may stand; LandGroundDraw.js freezes it)
+    window.LandingGroundParts = {
         P, RP, ramp, INK, clampX, H, U, clamp01, SITES, W, LAVA_DIM, V, LG, POOL_ALT, threshold, A, LS, OX, hash, BOLT, OY, D, TOWER, FW, FH, FAR_TOP, hillY,
-        HILL_H, FAR_H, LADDER, SIGN, MARK, tame, lightAt, prepare, urgent, freeLadder, closeUp, spot, levelNear, levelStretches, markOf
-    });
+        HILL_H, FAR_H, LADDER, SIGN, MARK, tame, lightAt, prepare, urgent, freeLadder, closeUp, spot, levelNear, levelStretches, markOf,
+    };
 })();

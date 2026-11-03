@@ -68,7 +68,8 @@
         save: () => ({ who: 'aura', say: "I've got us, Commander." }),             // DRAFT: the first landing of a run: she catches what would have been a crash
         light: who => ({ who, say: "There's the light." }),                         // DRAFT
         flat: side => ({ who: 'mira', say: 'Flat ground, ' + side + ' of you.' }),   // DRAFT: Mira aboard reads the ground (no light to aim at)
-        hurt: (who, hurt) => ({ who, say: NAME[hurt] + "'s hurt. I've got " + HIM[hurt] + '.' }),   // DRAFT: a crash, a team of two only
+        hurt: (who, hurt) => { const hurtName = NAME[hurt], himOrHer = HIM[hurt]; return { who, say: `${hurtName}'s hurt. I've got ${himOrHer}.` }; },   // DRAFT: a crash, a team of two (GAME: the same words, written so the script export reads them whole)
+        hurtAlone: who => ({ who, say: "I'm hurt. I can still walk." }),        // DRAFT (GAME, new): a crash, a team of one: the one who went down
         result: (grade, where, auraLanded, caught) => ({ who: 'aura', say: (caught ? 'Came in fast. I caught us, Commander.' : auraLanded ? 'I set us down, Commander.' : grade === 'soft' ? 'Down soft, Commander.' : 'Down hard, Commander.') + ' ' + ({ spot: 'Right on it.', walk: 'A short walk from here.', long: 'Long walk from here.' })[where] }),   // DRAFT (all of them)
     };
     // GAME: the keycaps' words (the sketch's index.html): hold and steer are DRAFT; aura is LanderGame's own button (LanderGame.js), not new

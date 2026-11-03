@@ -423,15 +423,17 @@
         const x = V.shX + (Vp.ox - V.xA) * V.sigL + sx, y = V.Yg + (Vp.oy - (o.anchorY == null ? G.groundY : o.anchorY)) * V.sigL + sy, w = Vp.w * r, h = Vp.h * r;
         const clipY = V.a > 0 ? Math.max(0, Math.floor(V.nearTop + K.CV.CREST - 1 + (o.shake ? o.shake[1] : 0))) : o.clipTop != null ? Math.max(0, Math.floor(o.clipTop)) : 0;   // (the fix round: inside the deck the deck itself covers the land; the polish round: never above the deck's own top: no flood of land at a = 0; the final fix round: above the deck, never above its solid far edge: no ruled band of land between its heaps)
         const X0 = Math.round(x), Y0 = Math.round(y), W0 = Math.round(x + w) - X0, H0 = Math.round(y + h) - Y0;
-        ctx.save();
-        ctx.beginPath(); ctx.rect(0, clipY, FW, FH - clipY); ctx.clip();
-        if (o.probe) keyed(ctx, o.probe, c => drawPic(c, src, X0, Y0, W0, H0, clipY));
+        const fade = o.airless && !o.probe, dst = fade ? landTmp() : ctx;          // GAME (the final check): airless, the land's top dissolves into what is behind it
+        if (fade) dst.clearRect(0, 0, FW, FH);
+        dst.save();
+        dst.beginPath(); dst.rect(0, clipY, FW, FH - clipY); dst.clip();
+        if (o.probe) keyed(dst, o.probe, c => drawPic(c, src, X0, Y0, W0, H0, clipY));
         else {                                                                   // (the polish round: only the part of the picture on screen, by the same transform: much less to scale)
-            ctx.imageSmoothingEnabled = false;
-            drawPic(ctx, src, X0, Y0, W0, H0, clipY);
+            dst.imageSmoothingEnabled = false;
+            drawPic(dst, src, X0, Y0, W0, H0, clipY);
         }
-        ctx.restore();
-        if (o.airless && !o.probe) A.dissolve && fadeBand(ctx, clipY);
+        dst.restore();
+        if (fade) { fadeBand(dst, clipY); ctx.drawImage(dst.canvas, 0, 0); }
         return { x: X0, y: Y0, w: W0, h: H0, clipY, k };
     }
     /** The polish round (probe only): what draw(ctx) puts down, in the key colour (its alpha kept). */
@@ -443,21 +445,31 @@
         keyC.globalCompositeOperation = 'source-in'; keyC.fillStyle = key; keyC.fillRect(0, 0, FW, FH); keyC.globalCompositeOperation = 'source-over';
         ctx.drawImage(keyC.canvas, 0, 0);
     }
+    const FOOT_ROWS = 8;
     function drawPic(ctx, src, X0, Y0, W0, H0, clipY) {
         const kx = src.width / W0, ky = src.height / H0, vx0 = Math.max(X0, 0), vx1 = Math.min(X0 + W0, FW), vy0 = Math.max(Y0, clipY), vy1 = Math.min(Y0 + H0, FH);
         if (vx1 <= vx0 || vy1 <= vy0) return;
         const sx0 = Math.max(0, Math.floor((vx0 - X0) * kx)), sx1 = Math.min(src.width, Math.ceil((vx1 - X0) * kx)), sy0 = Math.max(0, Math.floor((vy0 - Y0) * ky)), sy1 = Math.min(src.height, Math.ceil((vy1 - Y0) * ky));
         if (sx1 > sx0 && sy1 > sy0) ctx.drawImage(src, sx0, sy0, sx1 - sx0, sy1 - sy0, X0 + sx0 / kx, Y0 + sy0 / ky, (sx1 - sx0) / kx, (sy1 - sy0) / ky);
+        // GAME (the final check): a picture that ends above the frame's foot runs on down, its last FOOT_ROWS rows again (the deep
+        // ground): never what lies behind it showing through at the foot (a bright dashed row, the limb's own grain)
+        const band = Math.min(src.height, FOOT_ROWS), bh = band / ky;
+        for (let y = Y0 + H0, i = 0; y < FH && sx1 > sx0 && i < 60; y += bh, i++) ctx.drawImage(src, sx0, src.height - band, sx1 - sx0, band, X0 + sx0 / kx, y, (sx1 - sx0) / kx, bh);
     }
-    let fadeC = null;
-    function fadeBand(ctx, y) {                                                      // airless: the land's top dissolves into the limb (fadeTop's recipe)
+    let fadeC = null, landC = null;
+    /** GAME (the final check): airless, the land's top dissolves into the limb and the stars behind it: the land is drawn on
+        its own canvas (landTmp) and its top FADE_ROWS rows are cut away in white noise, thinning out (it was an ink band over
+        the limb and the sky: a dark bar and a row of dark blocks under the planet's edge). */
+    const FADE_ROWS = 16;
+    const landTmp = () => { if (!landC) { const c = document.createElement('canvas'); c.width = FW; c.height = FH; landC = c.getContext('2d'); } return landC; };
+    function fadeBand(g2, y) {
         if (!fadeC) {
-            const c = document.createElement('canvas'); c.width = FW; c.height = 16;
-            const g = c.getContext('2d'), img = g.createImageData(FW, 16), ink = P.hexRgb(P.INK);
-            for (let r = 0; r < 16; r++) { const kk = 1 - r / 16; for (let x = 0; x < FW; x++) if (P.threshold(x, r) < kk) { const i = (r * FW + x) * 4; img.data[i] = ink[0]; img.data[i + 1] = ink[1]; img.data[i + 2] = ink[2]; img.data[i + 3] = 255; } }
+            const c = document.createElement('canvas'); c.width = FW; c.height = FADE_ROWS;
+            const g = c.getContext('2d'), img = g.createImageData(FW, FADE_ROWS);
+            for (let r = 0; r < FADE_ROWS; r++) { const kk = 1 - (r + 0.5) / FADE_ROWS; for (let x = 0; x < FW; x++) if (P.hash(x & 255, r, 241) < kk) img.data[(r * FW + x) * 4 + 3] = 255; }
             g.putImageData(img, 0, 0); fadeC = c;
         }
-        ctx.drawImage(fadeC, 0, Math.round(y));
+        g2.globalCompositeOperation = 'destination-out'; g2.drawImage(fadeC, 0, Math.round(y)); g2.globalCompositeOperation = 'source-over';
     }
     /** The find's light at P, crisp (never hazed, never smaller than before): through its break, under the cover (a
         smudge), or up through the deck when blind. o: { now, night, kind, cloud, out, burn, shake, sigL }. */

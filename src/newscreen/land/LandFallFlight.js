@@ -55,10 +55,12 @@
     // Jaxon's step on A.U.R.A.'s landing (App.applyLanding's LANDING_LIFT)
     const RESULT_HOLD_S = 1.7, SKIP_AFTER_S = 0.5, WAIT_SAY_S = 0.6, READY_MAX_S = 10, SET_ROOM = 3, LIFT = { crash: 'rough', rough: 'soft' };
     // GAME (the review): ERR_FRAMES frames failing in a row end the landing (never a frozen picture); after the hand-off the
-    // frame's foot follows the ground the shuttle comes down on (eased over LOCK_TAU s); a touchdown with both pads more than
-    // PERCH px over the ground, or one OVERHANG px over a drop, slides off (at most SETTLE_X px, over SETTLE_S s); A.U.R.A. sets down SITE_CLEAR px
-    // clear of the site's art; the place is let go FREE_AFTER_MS after the close (never in the fade back to the bridge)
-    const ERR_FRAMES = 30, LOCK_TAU = 0.35, PERCH = 2.5, OVERHANG = 5, SETTLE_X = 9, SETTLE_S = 0.35, SITE_CLEAR = I.LANDER_HALF + 2, FREE_AFTER_MS = 900, EDGE_PAD = 3;
+    // frame's foot follows the ground the shuttle comes down on (eased over LOCK_TAU s); A.U.R.A. sets down SITE_CLEAR px
+    // clear of the site's art; the place is let go FREE_AFTER_MS after the close (never in the fade back to the bridge).
+    // GAME (the final check): a touchdown comes to rest on both pads, clear of the site's art (LandSite.js restAt): it slides
+    // there (at most SETTLE_X px, over SETTLE_S s), or off the site it hops (HOP_ARC px up, HOP_PX_S px a second, at most
+    // HOP_MAX_S s); where nothing near will do, a pad of soil is laid under its feet
+    const ERR_FRAMES = 30, LOCK_TAU = 0.35, SETTLE_X = 9, SETTLE_S = 0.35, HOP_ARC = 5, HOP_PX_S = 60, HOP_MAX_S = 1.1, SITE_CLEAR = I.LANDER_HALF + 2, FREE_AFTER_MS = 900, EDGE_PAD = 3;
     const CELL = { HIT_X: 20, HIT_Y: 26, HEAT: 30 };                          // the storm's lightning cells in the fall: steer round them
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -119,6 +121,7 @@
         if (G.preworked) return;
         G.preworked = true;
         A.later(() => { MA.warm(ML.LIGHT_RAMP[G.mark]); ML.warm(); revNoise(); }, G.tag, false, 'warm');
+        A.later(() => LG.siteSpan(G), G.tag, false, 'site span');               // GAME (the final check): measured ahead, never on the click (goDown's siteFree)
         A.later(() => { if (G.E && G.E.air && !G.E.veil && !G.E.veilQueued) { G.E.veilQueued = true; bakeVeil(G.E, G.tod === 'night' ? 0.62 : 1, G.tag); } }, G.tag, false, 'air veil');   // (the polish round: never built on the fall's first frames)
         [true, false].forEach(routine => A.later(() => { const o = { routine, vx: FALL.VX0 * (routine ? 0.6 : 1), atm: G.world.atm, under: underOf(G, routine) }; LF.predDrift(o); LF.fall(Object.assign({ mark: 0 }, o)); }, 'drift', true, 'fall tables'));
     }
@@ -427,13 +430,14 @@
         const l = pool.reduce((b, q) => (!b || Math.abs(q.cx - x) < Math.abs(b.cx - x) ? q : b), null);
         return l ? Object.assign({}, l, { room: Math.min(l.room, SET_ROOM) }) : null;
     }
-    /** GAME (the review): the level stretches cut to where the shuttle stands SITE_CLEAR px clear of the site's art (LanderSites'
-        x0..x1: the dome, the ruins, the wreck), so A.U.R.A. never sets it down against them (a stretch the site stands over
-        keeps its longer clear side); all of them as they were if none is clear. */
+    /** GAME (the review): the level stretches cut to where the shuttle stands SITE_CLEAR px clear of the site's art (the final
+        check: the columns its art covers, LandSite.js siteSpan: a hut and its mast's wires, a dome, a wreck, graves, ruins;
+        LanderSites' own x0..x1 is narrower than what it paints), so A.U.R.A. never sets it down on or against them (a stretch
+        the site stands over keeps its longer clear side); all of them as they were if none is clear (restAt moves it off). */
     function siteFree(G, list) {
         const st = G.siteKind && G.g.site;
         if (!st || !(st.x1 > st.x0)) return list;
-        const a = st.x0 - SITE_CLEAR, b = st.x1 + SITE_CLEAR, clear = [];
+        const span = LG.siteSpan(G) || [st.x0, st.x1], a = span[0] - SITE_CLEAR, b = span[1] + SITE_CLEAR, clear = [];
         list.forEach(l => {
             if (l.c1 < a || l.c0 > b) { clear.push(l); return; }
             const lo = [l.c0, Math.min(l.c1, a)], hi = [Math.max(l.c0, b), l.c1], [c0, c1] = lo[1] - lo[0] >= hi[1] - hi[0] ? lo : hi;
@@ -511,9 +515,9 @@
         if (S.phaseAt && S.phaseAt.touch == null) S.phaseAt.touch = +(S.clock - S.releaseAt).toFixed(2);
         S.fresh = false;
         if (grade === 'crash') {
-            const hurt = RUN.hurt;                                               // GAME: one who is well (App.flyLanding), the one App.applyLanding hurts
-            S.touch.hurt = hurt; S.touch.helper = hurt ? RUN.picked.find(id => id !== hurt) || null : null;   // GAME: a team of one, or nobody well: nobody says it
-            S.crash = { hurt: hurt || RUN.picked[0], helper: S.touch.helper || RUN.picked[0], mild: !!(LC && LC.isMild && LC.isMild(G.planet)) };
+            const hurt = RUN.hurt, down = hurt || RUN.picked[0] || null;          // GAME: one who is well (App.flyLanding), the one App.applyLanding hurts (nobody well: the first, hurt already)
+            S.touch.hurt = hurt; S.touch.helper = down ? RUN.picked.find(id => id !== down) || null : null;   // GAME (the final check): a team of one climbs out alone, and says so
+            S.crash = { hurt: down, helper: S.touch.helper, mild: !!(LC && LC.isMild && LC.isMild(G.planet)) };
             S.camFocus = LG.crashFocus(G, s);
             hideLine(S.lastLine); S.lines.light = true;                          // silence over the crash (the hurt line follows)
         } else S.crash = null;
@@ -522,19 +526,23 @@
         const mayHop = spotDistance() > LF.LAND.SPOT_PX && s.fuel >= LF.LAND.HOP_FUEL && !S.aura;
         if (grade !== 'crash' && !S.touch.slideV && !mayHop) { ensureSite(); const plan = walkPlan(performance.now()); S.camFocus = plan && plan.focus ? plan.focus : null; }
     }
-    /** GAME (the review): a touchdown on a peak (the ground under both pads more than PERCH px below where it touched) or on a
-        lip (one pad OVERHANG px or more over a drop) slides off it to the nearest place within SETTLE_X px, never higher, where
-        both pads stand on the ground ({ x0, y0, x1, y1 }), else null. */
+    /** GAME (the final check): where the touchdown comes to rest (LandSite.js restAt): on both pads on the ground as it is
+        drawn, clear of the site's art; within SETTLE_X px it slides there (never up onto higher ground), off the site it hops
+        to the nearest clear place, and where nothing near will do a pad of soil is laid under its feet (padUnder, at once).
+        → { x0, y0, x1, y1, t0, dur, hop } to move there, or null where it stands. */
     function settleOf(s) {
-        const h = S.G.g.heights, hot = S.G.g.hot, hAt = x => h[Math.max(0, Math.min(LG.W - 1, Math.round(x)))], pad = A.SH.PAD;
-        const bad = x => { const top = groundUnder(x), l = hAt(x - pad) - top, r = hAt(x + pad) - top; return (l > PERCH && r > PERCH) || Math.max(l, r) >= OVERHANG; };
-        if (!bad(s.x)) return null;
-        const top0 = groundUnder(s.x);
-        for (let k = 1; k <= SETTLE_X; k++) for (const x of [s.x - k, s.x + k]) {
-            if (x < I.LANDER_HALF + 1 || x > LG.W - I.LANDER_HALF - 2 || bad(x) || hot[Math.round(x)] || groundUnder(x) > LG.H || groundUnder(x) < top0 - 1) continue;
-            return { x0: s.x, y0: s.y, x1: x, y1: groundUnder(x) - LT_TALL };
-        }
-        return null;
+        const r = LG.restAt(S.G, s.x, groundUnder(s.x), SETTLE_X);
+        if (!r) return null;
+        if (r.pad) LG.padUnder(S.G, r.pad);
+        const dx = Math.abs(r.x - s.x), hop = dx > SETTLE_X;
+        if (dx < 0.01 && Math.abs(r.y - s.y) < 1) { s.y = r.y; return null; }   // on its feet where it touched: set on the drawn ground at once (under a px)
+        return { x0: s.x, y0: s.y, x1: r.x, y1: r.y, t0: S.clock, dur: hop ? Math.min(HOP_MAX_S, SETTLE_S + dx / HOP_PX_S) : SETTLE_S, hop };
+    }
+    /** GAME (the final check): the crash's line: the other one's for the one who went down (a team of two), or their own. */
+    function crashLine() {
+        const c = S.crash;
+        if (!c || !c.hurt) return null;
+        return c.helper ? LINES.hurt(c.helper, c.hurt) : LINES.hurtAlone(c.hurt);
     }
     function spotDistance() {
         const G = S.G, s = S.s, m = G.g.mark;
@@ -544,14 +552,15 @@
     function afterTouch(dt) {
         const Tt = S.touch, s = S.s, since = S.clock - Tt.at;
         if (Tt.slideV && since < LF.LAND.ICE_SLIDE_S) { s.x += Tt.slideV * (1 - since / LF.LAND.ICE_SLIDE_S) * dt; return; }
-        if (Tt.settle) {                                                          // GAME: off the peak (it tips and slides down onto its feet)
-            const st = Tt.settle, q = clamp01(since / SETTLE_S), e = smooth(0, 1, q);
-            s.x = lerp(st.x0, st.x1, e); s.y = lerp(st.y0, st.y1, e * e);
+        if (Tt.slideV && !Tt.slid) { Tt.slid = true; Tt.settle = settleOf(s); }   // GAME (the final check): where the ice slide stops, it rests on its pads too
+        if (Tt.settle) {                                                          // GAME: off the peak (it tips and slides down onto its feet), or off the site's art (a hop)
+            const st = Tt.settle, q = clamp01((S.clock - st.t0) / st.dur), e = smooth(0, 1, q);
+            s.x = lerp(st.x0, st.x1, e); s.y = lerp(st.y0, st.y1, e * e) - (st.hop ? HOP_ARC * Math.sin(Math.PI * e) : 0);
             if (q < 1) return;
             Tt.settle = null; Tt.x0 = s.x;
         }
         if (Tt.grade === 'crash') {
-            if (!S.lines.hurt && since > 1.1) { S.lines.hurt = true; if (Tt.helper && Tt.hurt) speak(LINES.hurt(Tt.helper, Tt.hurt)); }   // GAME: a team of two only
+            if (!S.lines.hurt && since > 1.1) { S.lines.hurt = true; const line = crashLine(); if (line) speak(line); }   // GAME (the final check): a team of one too
             if (since > (S.full ? 4.2 : 3.4)) finish();
             return;
         }
@@ -582,7 +591,7 @@
         const s = S.s, Tt = S.touch || { grade: s.grade, fuel: s.fuel };
         const far = Tt.grade === 'crash' ? 0 : spotDistance(), where = far <= LF.LAND.SPOT_PX ? 'spot' : far <= LF.LAND.WALK_PX ? 'walk' : 'long';
         const auraLanded = !!(S.flown && S.flown.landAura), caught = !!(S.entry && S.entry.caught && !S.entry.saved);   // GAME: her save() line said it already: the result never reports the same catch again
-        const line = Tt.grade === 'crash' ? (Tt.helper && Tt.hurt ? LINES.hurt(Tt.helper, Tt.hurt) : null) : LINES.result(Tt.grade, where, auraLanded, caught);
+        const line = Tt.grade === 'crash' ? crashLine() : LINES.result(Tt.grade, where, auraLanded, caught);
         // GAME: no chips and no costs here: the game's own rules apply what this landing means (App.applyLanding). A long walk
         // from a marked spot counts rough, as LanderGame's "off the mark" (the screen already said "Long walk from here"); as
         // there, Jaxon's step comes after it (lifted false: App.applyLanding gives it, from rough)

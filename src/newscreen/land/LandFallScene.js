@@ -380,7 +380,8 @@
     }
     /** The place (and, after the hand-off, the shuttle on it) into c, in the picture's own art px. sFall: the fall's shuttle
         as the place sees it (its shadow only: the fall draws the shuttle itself). */
-    const nozzlesNow = s => (S.catchAt != null && S.clock - S.catchAt < CATCH_FLAME_S && !s.grade ? [[s.x - A.SH.PODS, s.y + A.SH.POD_Y], [s.x + A.SH.PODS, s.y + A.SH.POD_Y]] : nozzlesOf(s));   // A.U.R.A.'s catch: both burn
+    const hopping = () => !!(S.touch && S.touch.settle && S.touch.settle.hop);   // GAME (the final check): the hop off the site's art (LandFallFlight.js settleOf)
+    const nozzlesNow = s => ((S.catchAt != null && S.clock - S.catchAt < CATCH_FLAME_S && !s.grade) || hopping() ? [[s.x - A.SH.PODS, s.y + A.SH.POD_Y], [s.x + A.SH.PODS, s.y + A.SH.POD_Y]] : nozzlesOf(s));   // A.U.R.A.'s catch, or the hop: both burn
     function drawField(c, now, pic, sFall) {
         const G = S.G, s = sFall || S.s, nz = sFall ? [] : nozzlesNow(s);
         LG.draw(c, G, s, now, { pic, nozzles: nz, flash: S.flash > 0, bolt: S.flash > 0 ? S.bolt : null, gust: S.gust, out: lightOut(), burn: flareBurn() });

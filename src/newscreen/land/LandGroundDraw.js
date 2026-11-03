@@ -312,13 +312,15 @@
         if (walk <= 0) {
             const [hx, hy] = at(x0 + away * 2), [kx, ky] = at(x0 + away * 5.5);
             MC.small(ctx, c.hurt, hx, hy, { h, pose: 'lie', facing: away, suit, light });
-            MC.small(ctx, c.helper, kx, ky, { h, pose: 'kneel', facing: -away, suit, light });
+            if (c.helper) MC.small(ctx, c.helper, kx, ky, { h, pose: 'kneel', facing: -away, suit, light });   // GAME (the final check): a team of one: nobody kneels by them
             return;
         }
         const [hx, hy] = at(hurtX), [px, py] = at(helpX), limp = Math.abs(Math.sin(walk * 5)) * d * 0.6;
-        MC.small(ctx, c.helper, px, py, { h, pose: 'walk', t: walk * 1000, facing: away, suit, light });
+        if (c.helper) MC.small(ctx, c.helper, px, py, { h, pose: 'walk', t: walk * 1000, facing: away, suit, light });   // GAME: a team of one limps out alone
         MC.small(ctx, c.hurt, hx, hy + limp, { h, pose: 'walk', t: walk * 450, facing: away, suit, light });
     }
 
-    window.LandingGround = Object.freeze({ V, D, OX, OY, W, H, LADDER, prepare, urgent, freeLadder, closeUp, draw, drawShuttle, farGround, groundTopY, crashFocus, spot, levelNear, lightAt, toA, levelStretches, markOf, SIGN, MARK });
+    const { siteSpan, restAt, padUnder } = Z;                                 // GAME (the final check): where the shuttle may stand (LandSite.js)
+    Object.freeze(Z);
+    window.LandingGround = Object.freeze({ V, D, OX, OY, W, H, LADDER, prepare, urgent, freeLadder, closeUp, draw, drawShuttle, farGround, groundTopY, crashFocus, spot, levelNear, lightAt, toA, levelStretches, markOf, SIGN, MARK, siteSpan, restAt, padUnder });
 })();
