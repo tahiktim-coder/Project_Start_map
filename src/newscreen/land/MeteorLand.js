@@ -173,8 +173,9 @@
     const { RP, fbm, vnoise, hash, smooth } = P, FW = A.FW, FH = A.FH, TOWER = A.TOWER_W;
     const BAYER = new Float32Array(64);
     for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) BAYER[y * 8 + x] = P.threshold(x, y);
-    const MW = Math.round(2 * K.MAP_X / K.CELL) + 2, MH = Math.round((K.MAP_V1 - K.MAP_V0) / K.CELL) + 2, rowE = new Float32Array(MW + 2), rowSh = new Float32Array(MW + 2), rowH = new Float32Array(MW + 2), YBUF = new Int16Array(640), AO_TAB = new Float32Array(64), RIM_T = Float32Array.of(1, 0.6, 0.25), WNT = new Float32Array(64 * 64);
+    const MW = Math.round(2 * K.MAP_X / K.CELL) + 2, MH = Math.round((K.MAP_V1 - K.MAP_V0) / K.CELL) + 2, rowE = new Float32Array(MW + 2), rowSh = new Float32Array(MW + 2), rowH = new Float32Array(MW + 2), rowHF = new Float32Array(MW + 2), YBUF = new Int16Array(640), AO_TAB = new Float32Array(64), RIM_T = Float32Array.of(1, 0.6, 0.25), WNT = new Float32Array(64 * 64);
     for (let i = 0; i < WNT.length; i++) WNT[i] = hash(i & 63, i >> 6, 97);       // (a white-noise threshold: soft gradients, never a lattice)
+    const EDGE_T = WNT, EDGE_PX = 10;                                            // GAME (the check): an opening's edge torn px by px (EDGE_T at an offset of its own), at most EDGE_PX px wide
     for (let k = 0; k < 64; k++) AO_TAB[k] = K.CV.AO * Math.pow(Math.min(1, k / K.CV.AO_PX), 1.3);   // a face's shade by how far below its silhouette (px)
     const DIS = new Float32Array(64 * 64);                                       // a smooth tiling noise, 0..1 (the polish round: the haze's veils, the lips' arcs, the edges' softness)
     { let lo = 1, hi = 0; for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) { const u = x / 64, v = y / 64, f = (a, b) => fbm(a / 7, b / 5, 77, 3), n = (f(x, y) * (1 - u) + f(x - 64, y) * u) * (1 - v) + (f(x, y - 64) * (1 - u) + f(x - 64, y - 64) * u) * v; DIS[y * 64 + x] = n; lo = Math.min(lo, n); hi = Math.max(hi, n); } for (let i = 0; i < DIS.length; i++) DIS[i] = (DIS[i] - lo) / (hi - lo || 1); }
@@ -235,10 +236,11 @@
                 let l = 0;
                 if (eff[i] > 0) for (let k = 1; k <= 3 && r + k < MH; k++) if (eff[(r + k) * MW + c] < 0) { l = k; break; }
                 lip[i] = l;
-                if (h < 0) { sh[i] = 0; continue; }
+                // GAME (the check): an open cell is shaded as the cloud thinned to nothing there (it was 0: the cloud drawn by an
+                // opening's edge read its light half from the open cell, so the edge's pixels were near black: rows of dark blocks)
                 const hl = Math.max(0, hg[row + Math.max(0, c - 1)]), hr = Math.max(0, hg[row + Math.min(MW - 1, c + 1)]), hf = Math.max(0, hg[up + c]), hn = Math.max(0, hg[dn + c]);
                 const toUs = (hf - hn) / (2 * K.CELL), side = (hl - hr) / (2 * K.CELL) * ls, steep = Math.hypot(toUs, side);   // toUs > 0: the top falls toward us here (a face turned to us); side > 0: it faces the sun
-                const hn01 = h / C.HMAX;
+                const hn01 = Math.max(0, h) / C.HMAX;
                 sh[i] = Math.max(C.V_MIN, Math.min(C.V_MAX, C.V0 + C.VH * Math.pow(hn01, 0.8) + C.FLAT * Math.max(0, 1 - steep * 1.6) - C.FACE * Math.max(0, toUs) + C.SUN * Math.max(-1, Math.min(1, side)) + C.GRAIN * (map.puff[i] - 0.5)));
             }
         }
@@ -333,26 +335,34 @@
             y = Math.max(yBase, yA - step + 1);
             const yc = 0.5 * (y + yA);
             const s = V.sigC * Math.max(0.5, 1 + K.PERSP * (yc + 0.5 - Yg) / FH), v = (yc + 0.5 - Yg) / s, rf0 = (v - K.MAP_V0) / K.CELL, rf = rf0 < 0 ? 0 : rf0 > MH - 1.001 ? MH - 1.001 : rf0, r = rf | 0, fy = rf - r, row = r * MW, rowB = row + MW, rowN = Math.round(rf) * MW;
-            const dc = 1 / (s * K.CELL), cB = (V.xA - shX / s - map.x0) / K.CELL, hs = s * C.HK;
+            const dc = 1 / (s * K.CELL), cB = (V.xA - shX / s - map.x0) / K.CELL, hs = s * C.HK, dvr = dc;   // (dvr: map rows a screen row)
             let cA = Math.floor(cB + (TOWER + 0.5) * dc) - 1, cZ = Math.floor(cB + (FW + 0.5) * dc) + 2;
             if (cA < 0) cA = 0; if (cZ > cMax) cZ = cMax;
             let hMax = 0;
-            for (let c = cA; c <= cZ; c++) { rowE[c] = eff[row + c] + (eff[rowB + c] - eff[row + c]) * fy; const hh = hgt[row + c] + (hgt[rowB + c] - hgt[row + c]) * fy; rowH[c] = hh; if (hh > hMax) hMax = hh; rowSh[c] = shd[row + c] + (shd[rowB + c] - shd[row + c]) * fy; }
+            // GAME (the check): the next farther sample's heights (rowHF): a heap's top is lit (its rim) only where that one drops
+            // away behind it (a silhouette); on a face turned to us every sample's top was lit, and the slope read as ruled rows
+            const rfF0 = rf - step * dc, rfF = rfF0 < 0 ? 0 : rfF0, rF = rfF | 0, fyF = rfF - rF, rowF = rF * MW, rowFB = Math.min(MH - 1, rF + 1) * MW, silD = step / hs;
+            for (let c = cA; c <= cZ; c++) { rowE[c] = eff[row + c] + (eff[rowB + c] - eff[row + c]) * fy; const hh = hgt[row + c] + (hgt[rowB + c] - hgt[row + c]) * fy; rowH[c] = hh; if (hh > hMax) hMax = hh; rowSh[c] = shd[row + c] + (shd[rowB + c] - shd[row + c]) * fy; rowHF[c] = hgt[rowF + c] + (hgt[rowFB + c] - hgt[rowF + c]) * fyF; }
             const far = 1 - clamp01((yc - nT) / S.FAR_ROWS), farK = S.FAR * far * far, farV = S.FAR_V * farK, hzRow = o.probe ? 0 : farK * S.FAR_AIR, rimK = rimC * (1 - farK);
-            const crest = yc < crestY, crestRow = yc < crestY + CREST_TEAR, hzRowT = ((((rf * 1.3) | 0) + 17) & 63) * 64, reach = Math.floor(yc + 0.5 - (crestRow ? Math.max(hMax, CREST_HUMP) : hMax) * hs) - 1, ty = (y & 7) << 3;   // GAME: crestRow
+            const crest = yc < crestY, crestRow = yc < crestY + CREST_TEAR, hzRowT = ((((rf * 1.3) | 0) + 17) & 63) * 64, reach = Math.floor(yc + 0.5 - (crestRow ? Math.max(hMax, CREST_HUMP) : hMax) * hs) - 1;   // GAME: crestRow
             let cf = cB + (TOWER + 1) * dc;                                      // (the map read once per two columns, each pixel its own dither: the cover's budget is 3 ms)
             for (let x = TOWER; x < FW; x += 2, cf += 2 * dc) {
                 const yb = YBUF[x];
                 if (yb <= reach) continue;                                       // covered above anything this row can reach
                 let c = cf < 0 ? 0 : cf | 0;
                 if (c >= cMax) c = cMax - 1;
-                const fx = cf - c, th = BAYER[ty | (x & 7)], x1 = x + 1, tbA = x & 7, tbB = x1 & 7;
+                const fx = cf - c, x1 = x + 1, tbA = x & 7, tbB = x1 & 7;
                 let ev = rowE[c] + (rowE[c + 1] - rowE[c]) * fx;
                 let cn = (cf + 0.5) | 0; if (cn > cMax) cn = cMax;
                 const i = rowN + cn, inL = rid && rid[i] === lightId;
-                let humped = false;                                               // GAME: a far edge forced over an opening (its heaps, torn)
+                let humped = false, edge = 0, sf = C.SOFT;                        // GAME: a far edge forced over an opening (its heaps, torn)
+                // GAME (the check): an opening's edge is torn soft pixel by pixel (edge 2: each px open where ev + (its own
+                // threshold − ½) · SOFT < 0). It was one Bayer threshold per sample, and the samples' columns are all even: the
+                // threshold went with the row's parity, so a wide soft edge came out as ruled rows, cloud and land by turns.
+                // Its width on screen at most EDGE_PX (sf: SOFT, less where the cloud thins slowly): never a wide grey smear.
                 if (crest || (crestRow && yc < crestY + CREST_TEAR * tearOf(cf))) { if (ev < C.CREST_E) { ev = C.CREST_E; humped = true; } }   // the far edge: solid cloud against the sky
-                else if (ev + (th - 0.5) * C.SOFT < 0) {                          // open (its edge torn soft): the land far below, under the haze in veils
+                else { sf = Math.min(C.SOFT, EDGE_PX * (Math.abs(rowE[c + 1] - rowE[c]) * dc + Math.abs(eff[rowB + c] - eff[row + c]) * dvr)); if (ev + 0.5 * sf < 0) edge = 1; else if (ev - 0.5 * sf < 0) edge = 2; }
+                if (edge) {                                                       // open (its edge torn soft): the land far below, under the haze in veils
                     if (y < yb) {
                         YBUF[x] = YBUF[x1] = y;
                         const veil = 0.55 + 0.9 * DIS[hzRowT + (((cf * 1.1) | 0) & 63)];
@@ -362,6 +372,7 @@
                         const wv = (C.WALL_V + 0.08 * veil) * nc, wl = wv | 0, wf = wv - wl;   // where the land is not (beside or under its picture): the hole's own deep wall, dark cloud
                         const upK = LB && yc < landTop + EDGE ? clamp01((landTop + EDGE - yc) / C.DAY_H) : -1;   // over the land's own top: the day under the deck, pale by the land's edge, darker up toward the far wall
                         for (let yy = y; yy < yb; yy++) for (let xx = x; xx <= x1; xx++) {
+                            if (edge === 2 && ev + (EDGE_T[(((yy + 23) & 63) << 6) | ((xx + 41) & 63)] - 0.5) * sf >= 0) continue;   // GAME: cloud here (the heap below draws it)
                             const t = BAYER[((yy & 7) << 3) | (xx & 7)];
                             if (fade > 0 && MT[((yy + moy) & 127) * 128 + ((xx - mox) & 127)] + (t - 0.5) * 0.1 < fade) continue;
                             if (lid > 0 && BAYER[(((yy + 2) & 7) << 3) | ((xx + 6) & 7)] < lid * 1.05) {
@@ -371,7 +382,7 @@
                             if (h > 0 && BAYER[(((yy + 5) & 7) << 3) | ((xx + 3) & 7)] < h) { const k = lo + (fr > t ? 1 : 0); d[yy * FW + xx] = ap[k > atop ? atop : k]; }
                         }
                     }
-                    continue;
+                    if (edge === 1) continue;
                 }
                 let hh = rowH[c] + (rowH[c + 1] - rowH[c]) * fx;
                 if (humped) hh = Math.max(hh, CREST_HUMP * tearOf(cf * 0.7 + 11));   // GAME
@@ -384,13 +395,16 @@
                 const gr = inL ? map.rr[i] : 9;
                 let sv = ((rowSh[c] + (rowSh[c + 1] - rowSh[c]) * fx) * (1 - farK) + farV) * (1 - C.FADE_DARK * fade) + (gr < 1.5 ? gapRim * clamp01(1 - Math.abs(gr - 1.1) / 0.35) : 0);
                 if (sv < 0) sv = 0;
-                const rm = yb - top >= 3 ? rimK : 0, lit0 = sv + rm > litV;      // a heap's top lit by the sky along its silhouette (rm, over its first 3 px); its face darker the farther down it goes (by px: the shading follows the silhouette)
+                const hF = rowHF[c] + (rowHF[c + 1] - rowHF[c]) * fx, sil = crestRow || hF < 0 || hF < (hh > 0 ? hh : 0) - silD;   // GAME (the check)
+                const rm = yb - top >= 3 && sil ? rimK : 0, lit0 = sv + rm > litV;      // a heap's top lit by the sky along its silhouette (rm, over its first 3 px); its face darker the farther down it goes (by px: the shading follows the silhouette)
+                const gate = fade > 0 || edge === 2;
                 for (let yy = top, k = 0, o2 = top * FW + x; yy < yb; yy++, k++, o2 += FW) {
                     const tr = (yy & 7) << 3, t0 = BAYER[tr | tbA], t1 = BAYER[tr | tbB];
                     const val = sv - AOT[k > 63 ? 63 : k] + (k < 3 ? rm * RIM_T[k] : 0);
-                    if (fade > 0) {                                               // the dissolve into the deck close (its own mist)
-                        const mr = ((yy + moy) & 127) * 128;
-                        const inA = MT[mr + ((x - mox) & 127)] + (t0 - 0.5) * 0.1 >= fade, inB = MT[mr + ((x1 - mox) & 127)] + (t1 - 0.5) * 0.1 >= fade;
+                    if (gate) {                                                   // the dissolve into the deck close (its own mist); GAME: an opening's edge, its open px left as drawn
+                        let inA = true, inB = true;
+                        if (edge === 2 && yy >= y) { const er = ((yy + 23) & 63) << 6; inA = ev + (EDGE_T[er | ((x + 41) & 63)] - 0.5) * sf >= 0; inB = ev + (EDGE_T[er | ((x1 + 41) & 63)] - 0.5) * sf >= 0; }
+                        if (fade > 0) { const mr = ((yy + moy) & 127) * 128; inA = inA && MT[mr + ((x - mox) & 127)] + (t0 - 0.5) * 0.1 >= fade; inB = inB && MT[mr + ((x1 - mox) & 127)] + (t1 - 0.5) * 0.1 >= fade; }
                         if (!inA && !inB) continue;
                         if (lit0 && val > litV) { const av = (S.LIT_AIR + (val - litV) * 0.6) * na, lo = av | 0, fr = av - lo; if (inA) d[o2] = ap[lo + (fr > t0 ? 1 : 0)]; if (inB) d[o2 + 1] = ap[lo + (fr > t1 ? 1 : 0)]; continue; }
                         const cv = val > 0 ? val * nc : 0, lo = cv | 0, fr = cv - lo;
