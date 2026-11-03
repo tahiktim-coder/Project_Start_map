@@ -280,6 +280,7 @@
                 const cg = c.getContext('2d'); cg.imageSmoothingEnabled = false;
                 cg.drawImage(src, MP, 0);
                 [path.left, path.right].forEach(pieces => pieces.forEach(q => mirrorPiece(cg, src, q, h)));
+                [path.left, path.right].forEach((pieces, k) => pieces.forEach(q => { if (q.join) joinPiece(cg, src, q, h, k === 0, Math.round(JOIN_W * dk)); }));   // GAME (the check)
                 out[si] = { c };
             }));
             srcs.forEach((src, si) => jobs.push(() => smoothFar(G, out[si].c, Vc, dk, MP, path)));   // GAME (the final check): no ruled rows or blocks where it is drawn shrunk
@@ -329,12 +330,13 @@
     function marginPath(G, Vc, dk, keep, MP, left) {
         const g = G.g, cw = Vc.w, rowOf = c => (U.hAt(g, Vc.ox + (c + 0.5) / dk) - Vc.oy) * dk, lim = MIRROR_SHIFT * dk, out = [];
         const up = keep.map(([s, e]) => ({ s, e, dir: 1 })), down = keep.slice().reverse().map(([s, e]) => ({ s, e, dir: -1 })), cycle = left ? up.concat(down) : down.concat(up);
-        let dx = left ? MP : MP + cw, need = MP, last = left ? 0 : cw - 1, off = 0;
+        let dx = left ? MP : MP + cw, need = MP, last = left ? 0 : cw - 1, off = 0, prev = null;
         for (let i = 0; need > 0 && i < 4000; i++) {
-            const q = cycle[i % cycle.length], n = Math.min(q.e - q.s, need), first = q.dir > 0 ? q.s : q.e - 1;
-            if (Math.abs(first - last) > 1) off = Math.max(-lim, Math.min(lim, off + rowOf(last) - rowOf(first)));
-            const sx = q.dir > 0 ? q.s : q.e - n;
-            out.push({ sx, n, dx: left ? dx - n : dx, flip: left ? q.dir > 0 : q.dir < 0, dy: Math.round(off) });
+            const q = cycle[i % cycle.length], n = Math.min(q.e - q.s, need), first = q.dir > 0 ? q.s : q.e - 1, jump = Math.abs(first - last) > 1;
+            if (jump) off = Math.max(-lim, Math.min(lim, off + rowOf(last) - rowOf(first)));
+            const sx = q.dir > 0 ? q.s : q.e - n, piece = { sx, n, dx: left ? dx - n : dx, flip: left ? q.dir > 0 : q.dir < 0, dy: Math.round(off) };
+            if (jump && prev) piece.join = { last, dir: prev.dir, dy: prev.dy, s: prev.s, e: prev.e };   // GAME (the check)
+            out.push(piece); prev = { dir: q.dir, dy: piece.dy, s: q.s, e: q.e };
             dx = left ? dx - n : dx + n; need -= n;
             last = q.dir > 0 ? q.s + n - 1 : q.e - n;
         }
@@ -348,6 +350,25 @@
         };
         if (q.dy) draw(0);
         draw(q.dy);
+    }
+    /** GAME (the check): a jump in a margin's walk (over what is left out) was a straight cut: the piece moved up or down to
+        keep the ground line level, its deep ground's strata and its sky stepped there, a vertical seam. The piece before the
+        jump runs on over the next one's first n columns, mirrored at its end (so nothing left out comes back), and dissolves
+        into it in white noise. left: the left margin (its walk runs leftward). */
+    const JOIN_W = 14;                                                        // world px
+    let joinC = null;
+    function joinPiece(cg, src, q, h, left, T) {
+        const j = q.join, n = Math.min(T, q.n, j.dir > 0 ? j.last - j.s + 1 : j.e - j.last), rdir = -j.dir;
+        if (n < 2) return;
+        if (!joinC) joinC = [document.createElement('canvas'), document.createElement('canvas')].map(c => c.getContext('2d'));
+        const [tg, mg] = joinC;
+        [tg, mg].forEach(c => { if (c.canvas.width !== n || c.canvas.height !== h) { c.canvas.width = n; c.canvas.height = h; } c.globalCompositeOperation = 'source-over'; c.clearRect(0, 0, n, h); c.imageSmoothingEnabled = false; });
+        mirrorPiece(tg, src, { sx: rdir > 0 ? j.last : j.last - n + 1, n, dx: 0, flip: left ? rdir > 0 : rdir < 0, dy: j.dy }, h);
+        const img = mg.createImageData(n, h), dx0 = left ? q.dx + q.n - n : q.dx;
+        for (let c = 0; c < n; c++) { const keep = 1 - ((left ? n - 1 - c : c) + 0.5) / n, hx = (dx0 + c) & 255; for (let y = 0; y < h; y++) if (hash(hx, y & 255, 233) < keep) img.data[(y * n + c) * 4 + 3] = 255; }
+        mg.putImageData(img, 0, 0);
+        tg.globalCompositeOperation = 'destination-in'; tg.drawImage(mg.canvas, 0, 0); tg.globalCompositeOperation = 'source-over';
+        cg.drawImage(tg.canvas, dx0, 0);
     }
     /** GAME (the final check): a far picture's grain averaged over 2 x 2 px deeper than DEEP world px under the drawn ground
         line and higher than ABOVE over it (the sky band it keeps). Both are dithered row by row; drawn shrunk, nearest
@@ -378,7 +399,7 @@
     // ── a picture of the place for one view: columns of LanderScene.backdrop, one job at a time; the marks; the night copy ──
     // Columns COL_ART art px wide: each job paints at most COL_ART x 48 px (LanderScene's band), so none holds a frame up,
     // and a whole number of 8 x 8 Bayer cells, so the grain runs on across the seams.
-    const COL_ART = 48;
+    const COL_ART = 48, NIGHT_SLOPE = 0.8, NIGHT_REACH = 70;               // GAME (the check): the night copy's envelope (world px: its slope, how far it looks)
     function paintView(G, Vx, tag, soon, isMainView, after) {
         const { scene, g } = G, site = g.site, pic = { V: Vx, lit: null, dark: null, done: false, urgent: false };
         const canvas = document.createElement('canvas'); canvas.width = Vx.w; canvas.height = Vx.h;
@@ -416,9 +437,15 @@
                 dg.drawImage(canvas, 0, 0);
                 dg.globalCompositeOperation = 'multiply';
                 const STEPS = [[56, '#c2c4cb'], [51, '#c2c4cb'], [46, '#c2c4cb'], [41, '#c2c4cb'], [36, '#c2c4cb'], [20, '#c8c9ce']];   // stacked: about a quarter of the light at the ground
+                // GAME (the check): their tops follow the ground through a soft envelope (never steeper than NIGHT_SLOPE): over a
+                // cliff they stepped straight up through the sky, a vertical seam in the land far below (the airless ice at night);
+                // and they reach the last column (an odd width left it lit: a bright line where the far land is mirrored)
+                const xs = [], env = [];
+                for (let x = 0; ; x += 2) { xs.push(Math.min(x, Vx.w)); if (x >= Vx.w) break; }
+                xs.forEach(x => { const wx = Vx.ox + x / Vx.d; let m = U.hAt(g, wx); for (let k = 1; k <= NIGHT_REACH; k++) m = Math.min(m, U.hAt(g, wx - k) + k * NIGHT_SLOPE, U.hAt(g, wx + k) + k * NIGHT_SLOPE); env.push(m); });
                 STEPS.forEach(([up, ink]) => {
                     dg.beginPath(); dg.moveTo(0, Vx.h);
-                    for (let x = 0; x <= Vx.w; x += 2) { const wx = Vx.ox + x / Vx.d; dg.lineTo(x, Math.max(0, (U.hAt(g, wx) - up - Vx.oy) * Vx.d)); }
+                    xs.forEach((x, j) => dg.lineTo(x, Math.max(0, (env[j] - up - Vx.oy) * Vx.d)));
                     dg.lineTo(Vx.w, Vx.h); dg.closePath(); dg.fillStyle = ink; dg.fill();
                 });
                 dg.globalCompositeOperation = 'source-over';
