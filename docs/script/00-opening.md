@@ -14,15 +14,15 @@ _Only with ?new=1: the first line shows when nothing is up 1.5 s after the page 
 *SILENT EXODUS — EIGHT WENT BEFORE YOU. NONE OF THEM CALLED HOME.* «bundle.js · start menu»
 
 Everything else on the title screen:
-- [GAS_GIANT] «bundle.js · line 1564»
-- EXODUS PROGRAM // VESSEL 9 «bundle.js · line 1578»
-- SILENT EXODUS «bundle.js · line 1583»
-- Sector [sector] • [crew] crew alive «bundle.js · line 1603»
-- NEW GAME «bundle.js · line 1613»
-- Erase the saved run? «bundle.js · line 1622»
-- [TURN OFF | TURN ON] «bundle.js · line 1638»
-- TURN ON «bundle.js · line 1722»
-- TURN OFF «bundle.js · line 1722»
+- [GAS_GIANT] «bundle.js · line 1566»
+- EXODUS PROGRAM // VESSEL 9 «bundle.js · line 1580»
+- SILENT EXODUS «bundle.js · line 1585»
+- Sector [sector] • [crew] crew alive «bundle.js · line 1605»
+- NEW GAME «bundle.js · line 1615»
+- Erase the saved run? «bundle.js · line 1624»
+- [TURN OFF | TURN ON] «bundle.js · line 1640»
+- TURN ON «bundle.js · line 1724»
+- TURN OFF «bundle.js · line 1724»
 
 ## The briefing film «StoryReel.js · program»
 _Source on screen: EXODUS PROGRAMME · CREW BRIEFING FILM_

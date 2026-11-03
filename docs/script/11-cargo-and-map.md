@@ -106,8 +106,8 @@ _Every item: its name, its description, and what using it says. The disc drawing
 
 ### Reading a found page again (or taking out the disc) «bundle.js · pageItem»
 
-- You take the disc out again. «bundle.js · line 2114»
-- You read it again. «bundle.js · line 2115»
+- You take the disc out again. «bundle.js · line 2124»
+- You read it again. «bundle.js · line 2125»
 
 ## The fabricator «Upgrades.js · UPGRADES»
 _Each part: name, description, what it changes, where it shows on the ship._
