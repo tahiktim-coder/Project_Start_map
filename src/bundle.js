@@ -5052,13 +5052,14 @@ Then you're through.`,
 
     /** The new look: does this landing fly the whole meteor, or its ~10 s routine drop (depth plan, step 7)? The whole one: the
         first landing on this kind of world this run (state._nsTypesLanded), a story world or Eden, one of our wrecks (o.wreck),
-        the bold way (App.isBoldWay, once PR #31 brings it), or odds where someone could die (what GO DOWN showed:
-        NSOrbit.teamOdds). Read before markDone: the odds read the chosen find. find: the chosen find, or a blind trip's
-        (NSWorldFinds.blind); team: crew members or their ids (the meteor's warm-up asks with the two put forward). */
+        the find's bold way (App.isBoldWay: the way chosen on the glass, else its default; a blind trip, the way GO DOWN
+        vouched for), or odds where someone could die on the way taken (what GO DOWN showed: NSOrbit.teamOdds). Read before
+        markDone: the odds read the chosen find. find: the chosen find, or a blind trip's (NSWorldFinds.blind); team: crew
+        members or their ids (the meteor's warm-up asks with the two put forward). */
     isFullDrop(planet, find, team, o = {}) {
         if (!planet || !planet.type || !(this.state._nsTypesLanded || {})[planet.type]) return true;
         if (planet.isStoryPlanet || planet.isEden || o.wreck) return true;
-        try { if (find && typeof this.isBoldWay === 'function' && this.isBoldWay(planet, find.id)) return true; } catch (err) { console.error('App: the bold way failed', err); }
+        try { if (find && this.isBoldWay(planet, find.id)) return true; } catch (err) { console.error('App: the bold way failed', err); }
         const O = window.NSOrbit;
         let odds = null;
         try { odds = O && typeof O.teamOdds === 'function' ? O.teamOdds(this, (team || []).map(m => (typeof m === 'string' ? m : crewIdOf(m)))) : null; } catch (err) { console.error('App: the drop odds failed', err); }
