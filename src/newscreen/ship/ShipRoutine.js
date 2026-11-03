@@ -5,13 +5,18 @@
    picture. The lines are docs/STYLE.md's: plain, one idea, 20 words at most; Cora never speaks, A.U.R.A. answers.
    Source: prototypes/screens/layouts/variant-a/sim-a.js (itself a copy of crew-hires/ship-sim.js). Changes: ShipSimA is
    now ShipRoutine. The tower overrides these poses with the real crew (dead, hurt, confined, asleep): see BUILD_A.md §6.
+   Restless (the new look, depth step 8: someone at stress 1 or more, tower/Tower.js): the same day with their own stops
+   (RESTLESS): Jaxon and Aris lie awake in their bunk after the meal, the night beat (Jaxon never paces: docs/CREW_BIBLE.md);
+   Vance and Mira pace up and down by their station where they would work. Each set of restless people is planned as a whole
+   day of its own (the ladder well stays clear), built once and kept.
    Load after ShipReactor.js.
 
    window.ShipRoutine (frozen)
      STATES                  [{ id: 'travel', name, cycle: 200000, pair, looks }]
-     at(stateId, t) → [{ id, deck, x, y, act, facing, ms, z, say, screen?, awake? }]   everyone's pose at t (ms)
+     at(stateId, t, restless?) → [{ id, deck, x, y, act, facing, ms, z, say, screen?, awake? }]   everyone's pose at t (ms);
+                             restless: the ids at stress 1 or more (their RESTLESS stops)
      line(stateId, id, say) → { who, text }   what someone says (who: their first name, or 'A.U.R.A.' for Cora)
-     build(stateId), stateOf(stateId), NAMES { id → first name }, REACT [[id, say, from s, to s]]
+     build(stateId, restless?), stateOf(stateId), NAMES { id → first name }, REACT [[id, say, from s, to s]], RESTLESS_IDS
 */
 (function (root) {
     'use strict';
@@ -30,6 +35,22 @@
                 ['seatL1', 'sit', 140, { say: 'meal' }], ['counterStand', 'idle', 160, { say: 'clean' }], ['medCabinet', 'idle', 200, { say: 'work' }]],
         },
     };
+    // the restless day: a person's stops at stress 1 or more ('awake': lying awake in the bunk, CrewEngine's pose; 'pace': up
+    // and down by the spot, PACE). Each list ends where the plain one ends, so the lap still closes
+    const RESTLESS = {
+        travel: {
+            jaxon: [['gauges', 'idle', 60, { say: 'work' }], ['seatL2', 'sit', 140, { say: 'meal' }], ['bedJaxon', 'awake', 166, { say: 'work' }], ['gauges', 'idle', 200, { say: 'work' }]],
+            aris: [['medCabinet', 'idle', 40, { say: 'work' }], ['medBedside', 'idle', 64, { say: 'work' }], ['seatL1', 'sit', 106, { say: 'meal' }], ['port2', 'idle', 120, { say: 'chronos' }],
+                ['seatL1', 'sit', 140, { say: 'meal' }], ['bedAris', 'awake', 182, { say: 'work' }], ['medCabinet', 'idle', 200, { say: 'work' }]],
+            vance: [['navDesk', 'pace', 58, { say: 'nav' }], ['mealStand', 'idle', 140, { say: 'meal' }], ['navDesk', 'pace', 200, { say: 'nav' }]],
+            mira: [['bench', 'console', 33, { say: 'work' }], ['window', 'idle', 62, { say: 'titan' }], ['bench', 'pace', 80, { say: 'work' }], ['seatR1', 'sit', 140, { say: 'meal' }],
+                ['bench', 'pace', 200, { say: 'work' }]],
+        },
+    };
+    // pacing: from the spot PACE.steps walk frames away from what they face and back, a stop at each end (ms); only whole
+    // rounds, so they are on the spot again when the stay ends (no jump)
+    const PACE = { steps: 6, atSpot: 1700, atEnd: 1200 };
+    const LYING = { sleep: 1, awake: 1 };
     const EXTRA = {                                                             // spots only this layout needs
         navDesk: { deck: 0, x: 512, facing: 1 },                                // the chart desk on the bridge: hands on its monitor (x 526)
         port2: { deck: 2, x: 330, facing: 1 },                                  // under the galley porthole
@@ -47,7 +68,7 @@
         if (name === 'tend') { const P = S.patient; return { deck: P.deck, x: tendX(id, P.x), facing: 1 }; }
         const s = spot(name);
         if (!s) throw new Error('ShipRoutine: no spot called ' + name);
-        return { deck: s.deck, x: s.x, facing: s.facing, h: act === 'sleep' ? s.h : 0 };
+        return { deck: s.deck, x: s.x, facing: s.facing, h: LYING[act] ? s.h : 0 };
     }
     function walkPiece(deck, x0, x1, t0, carry) {
         const a = carry ? ACT.carry : ACT.walk, n = Math.ceil(Math.abs(x1 - x0) / a.move);
@@ -104,31 +125,48 @@
         return out;
     }
     const built = new Map();
-    function build(stateId) {
-        if (built.has(stateId)) return built.get(stateId);
-        const st = stateOf(stateId), R = ROUTINES[st.id], out = {}, well = ladderWell(st.cycle);
+    /** Everyone's day as timed pieces; restless: the ids whose RESTLESS stops replace theirs (one plan per set, kept). */
+    function build(stateId, restless) {
+        const st = stateOf(stateId), R = ROUTINES[st.id], own = RESTLESS[st.id] || {};
+        const set = (restless || []).filter(id => own[id] && R[id]).sort(), key = st.id + (set.length ? '|' + set.join('+') : '');
+        if (built.has(key)) return built.get(key);
+        const out = {}, well = ladderWell(st.cycle);
         Object.keys(R).forEach(id => {
-            const stops = R[id], pieces = [];
+            const stops = set.includes(id) ? own[id] : R[id], pieces = [];
             let t = 0, cur = place(id, stops[stops.length - 1]);
             stops.forEach(stop => {
                 const to = place(id, stop), ex = stop[3] || {};
                 if (!ex.snap) travel(cur, to, t, !!ex.carry, well).forEach(p => { pieces.push(p); t = p.t1; });
                 const until = stop[2] * 1000;
-                if (until > t) pieces.push({ kind: 'stay', deck: to.deck, x: to.x, facing: to.facing, h: to.h, act: stop[1], t0: t, t1: until, say: ex.say || stop[1], screen: ex.screen, awake: ex.awake });
+                if (until > t && stop[1] === 'pace') pieces.push({ kind: 'pace', deck: to.deck, x: to.x, facing: to.facing, act: 'idle', t0: t, t1: until, say: ex.say || 'work' });
+                else if (until > t) pieces.push({ kind: 'stay', deck: to.deck, x: to.x, facing: to.facing, h: to.h, act: stop[1], t0: t, t1: until, say: ex.say || stop[1], screen: ex.screen, awake: ex.awake });
                 else if (typeof console !== 'undefined') console.warn(`ShipRoutine: ${st.id}/${id} reaches ${stop[0]} late (${(t / 1000).toFixed(1)} s > ${stop[2]} s)`);
                 t = Math.max(t, until); cur = to;
             });
             out[id] = pieces;
         });
-        built.set(stateId, out);
+        built.set(key, out);
         return out;
+    }
+    /** Pacing at t (lap ms): whole rounds of [on the spot, facing it; PACE.steps frames away; a stop; back], then on the spot. */
+    function pacePose(id, p, t) {
+        const W = ACT.walk, leg = PACE.steps * W.ms, round = PACE.atSpot + leg + PACE.atEnd + leg, away = -p.facing, far = p.x + away * PACE.steps * W.move;
+        const lt = t - p.t0, rounds = Math.floor((p.t1 - p.t0) / round), y = A.floorY(p.deck);
+        const still = (x, facing, ms) => ({ id, deck: p.deck, x, y, act: 'idle', facing, ms, z: 2, say: p.say });
+        if (lt >= rounds * round) return still(p.x, p.facing, t);
+        const c = lt % round, walk = (x0, dir, k) => ({ id, deck: p.deck, x: x0 + dir * Math.min(PACE.steps, Math.floor(k / W.ms)) * W.move, y, act: 'walk', facing: dir, ms: k, z: 3, say: 'move' });
+        if (c < PACE.atSpot) return still(p.x, p.facing, t);
+        if (c < PACE.atSpot + leg) return walk(p.x, away, c - PACE.atSpot);
+        if (c < PACE.atSpot + leg + PACE.atEnd) return still(far, -away, t);
+        return walk(far, -away, c - PACE.atSpot - leg - PACE.atEnd);
     }
 
     const deckAtY = y => Math.max(0, Math.min(L.N - 1, Math.floor((y - L.TOP0 - 1) / L.PITCH)));
     function poseOf(id, p, t) {
         const lt = t - p.t0;
+        if (p.kind === 'pace') return pacePose(id, p, t);
         if (p.kind === 'stay') {
-            const lying = p.act === 'sleep';
+            const lying = !!LYING[p.act];
             return { id, deck: p.deck, x: p.x, y: A.floorY(p.deck) - (lying ? p.h : 0), act: p.act, facing: p.facing, ms: t, z: lying ? 1 : p.act === 'sit' && (p.x === S.seatL2.x || p.x === S.seatR2.x) ? 1.5 : 2,
                 say: p.say, screen: p.screen, awake: p.awake };
         }
@@ -146,7 +184,7 @@
     function lanes(people, gone) {
         // walkers going opposite ways pass too: the one walking left (toward us, by convention) takes the front lane
         const moving = q => q.act === 'walk' || q.act === 'carry';
-        const still = people.filter(q => !moving(q) && q.act !== 'climb' && !(q.act === 'sleep' && q.y < A.floorY(q.deck) - 8) && !gone.includes(q.id));
+        const still = people.filter(q => !moving(q) && q.act !== 'climb' && !(LYING[q.act] && q.y < A.floorY(q.deck) - 8) && !gone.includes(q.id));
         return people.map(p => {
             if (!moving(p)) return p;
             const others = still.concat(p.facing < 0 ? people.filter(q => q !== p && moving(q) && q.facing > 0 && !gone.includes(q.id)) : []);
@@ -155,8 +193,8 @@
             return k > 0 ? Object.assign({}, p, { y: p.y + Math.round(k * LANE), z: 4 }) : p;
         });
     }
-    function at(stateId, t) {
-        const st = stateOf(stateId), B = build(st.id), tt = ((t % st.cycle) + st.cycle) % st.cycle;
+    function at(stateId, t, restless) {
+        const st = stateOf(stateId), B = build(st.id, restless), tt = ((t % st.cycle) + st.cycle) % st.cycle;
         return lanes(Object.keys(B).map(id => {
             const P = B[id], p = P.find(q => tt >= q.t0 && tt < q.t1) || P[P.length - 1];
             return poseOf(id, p, tt);
@@ -185,5 +223,6 @@
         return { who: id === 'cora' ? 'A.U.R.A.' : NAMES[id], text };
     }
 
-    root.ShipRoutine = Object.freeze({ STATES, at, line, build, stateOf, NAMES, REACT });
+    const RESTLESS_IDS = Object.freeze(Object.keys(RESTLESS.travel));
+    root.ShipRoutine = Object.freeze({ STATES, at, line, build, stateOf, NAMES, REACT, RESTLESS_IDS });
 })(typeof window !== 'undefined' ? window : globalThis);

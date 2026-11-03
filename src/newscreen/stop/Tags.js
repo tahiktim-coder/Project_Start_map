@@ -11,9 +11,12 @@
    window.NSTags (frozen)
      make(layer, kind) → tag
        tag.el, tag.kind, tag.w, tag.h      the element; its size in bridge px (after size())
-       tag.set({ label, chips: [{ icon, text, tone }], rows: [[chip]], name, why, line, loss, html, tone, cls }) → bool (changed)
-                                                     a chip's tone 'kind' is the world's kind line (a quiet sentence)
+       tag.set({ label, chips: [{ icon, text, tone }], rows: [[chip] | { chips: [chip], cls }], name, why, line, loss, html, tone, cls }) → bool (changed)
+                                                     a chip's tone 'kind' is the world's kind line (a quiet sentence), 'way' a
+                                                     way's short name on a find's row; a row's cls: 'is-way' (a way, with its
+                                                     box: chosen 'is-pick', pointed at 'is-hover', struck 'is-struck')
        tag.size(unit, maxArt?) → [w, h]   bridge px, the content measured at unit CSS px per bridge px (cached)
+       tag.rowsAt → [[top, h]]            bridge px from the tag's top: each row of chips, as last measured (a click on a row)
        tag.place(cssX, cssY), tag.show(on), tag.flag(cls, on), tag.type(now, still)
      PAD                                   { kind: [left, top, right, bottom] } bridge px round the words
      gen() → n                             bumped when the web fonts come in (every size is measured again)
@@ -64,6 +67,15 @@
 #ns-stop-words .tg.is-title .tg-l { font-weight: 500; letter-spacing: .14em; color: var(--ui); }
 #ns-stop-words .tg-cs.is-rows { display: grid; gap: 3px; }
 #ns-stop-words .tg-row { display: flex; gap: 2px calc(var(--bpx, 3px) * 4); }
+#ns-stop-words .tg-c.is-way { color: #d8d5cc; font-weight: 500; }
+#ns-stop-words .tg-row.is-way { align-items: center; gap: 2px calc(var(--bpx, 3px) * 3); opacity: .72; transition: opacity 120ms steps(2, end); }
+#ns-stop-words .tg-row.is-way::before { content: ''; flex: none; width: calc(var(--bpx, 3px) * 3); height: calc(var(--bpx, 3px) * 3); box-sizing: border-box; border: 1px solid var(--amber-dim); }
+#ns-stop-words .tg-row.is-pick, #ns-stop-words .tg-row.is-hover { opacity: 1; }
+#ns-stop-words .tg-row.is-pick::before { background: var(--amber); border-color: var(--amber); }
+#ns-stop-words .tg-row.is-pick .tg-c.is-way { color: var(--amber-br); }
+#ns-stop-words .tg-row.is-hover:not(.is-pick)::before { border-color: var(--amber); }
+#ns-stop-words .tg-row.is-struck { opacity: .5; }
+#ns-stop-words .tg-row.is-struck .tg-c.is-way { text-decoration: line-through; }
 #ns-stop-words .tg.is-title .tg-cs { color: #8f989c; font-weight: 400; }
 #ns-stop-words .tg.is-key .tg-l { font-size: calc(13px + 1px * var(--t, 1)); color: #d89048; }
 #ns-stop-words .tg.is-key.is-next .tg-l { color: var(--amber-br); }
@@ -102,7 +114,7 @@
         tag.set = o => {
             const html = kind === 'who' ? `<b class="tg-n">${esc(o.name)}</b><span class="tg-why">${esc(o.why)}</span>`
                 : kind === 'note' ? `${o.name ? `<b class="tg-n">${esc(o.name)}</b>` : ''}<span class="tg-line">${o.html || esc(o.line)}</span><span class="tg-loss">${esc(o.loss || '')}</span>`
-                : `<b class="tg-l"></b>${o.rows && o.rows.length ? `<div class="tg-cs is-rows">${o.rows.map(r => `<div class="tg-row">${chipsHtml(r)}</div>`).join('')}</div>`
+                : `<b class="tg-l"></b>${o.rows && o.rows.length ? `<div class="tg-cs is-rows">${o.rows.map(r => `<div class="tg-row${!Array.isArray(r) && r.cls ? ' ' + esc(r.cls) : ''}">${chipsHtml(Array.isArray(r) ? r : r.chips)}</div>`).join('')}</div>`
                     : o.chips && o.chips.length ? `<div class="tg-cs">${chipsHtml(o.chips)}</div>` : ''}`;
             const key = html + '|' + (o.label || '') + '|' + (o.wrap || '');
             if (o.tone) el.style.setProperty('--who', o.tone);
@@ -128,6 +140,7 @@
             tag.w = pad[0] + Math.ceil((w + slack) / unit - 0.02) + pad[2];
             tag.h = Math.max(minArtH || 0, pad[1] + Math.ceil(h / unit - 0.02) + pad[3]);
             tag.lh = lb ? Math.min(tag.h, pad[1] + Math.ceil(lb / unit) + 1) : 0;   // a key with chips: how far down its word's row reaches (art px)
+            tag.rowsAt = [...inner.querySelectorAll('.tg-row')].map(r => [pad[1] + r.offsetTop / unit, r.offsetHeight / unit]);   // the rows of chips (a click on one), measured unpadded: from the tag's top
             el.style.padding = `${pad[1] * unit}px ${pad[2] * unit}px 0 ${pad[0] * unit}px`;
             el.style.width = (tag.w * unit) + 'px'; el.style.height = (tag.h * unit) + 'px';
             tag.sized = k;

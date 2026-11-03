@@ -47,7 +47,7 @@
         else { ctx.save(); ctx.translate(X + 1, 0); ctx.scale(-1, 1); ctx.drawImage(cv, -Sp.origin.x, Y); ctx.restore(); }
     }
     const blinking = (ms, seed) => ((ms + seed * 1700) % 4300) < 140;
-    const STILL = { idle: 1, sit: 1, console: 1, wall: 1, tend: 1, sleep: 1 };
+    const STILL = { idle: 1, sit: 1, console: 1, wall: 1, tend: 1, sleep: 1, awake: 1 };   // awake: lying awake (stress 1, ShipRoutine's restless day)
     function spriteOf(p, ll) {
         const ms = STILL[p.act] ? p.ms + SEED(p.id) * 977 : p.ms;
         return CE.sprite(p.id, p.act, CE.frameAt(p.act, ms), { blink: p.act !== 'sleep' && blinking(ms, SEED(p.id)), warm: ll.warm, rim: ll.rim * p.facing, screen: p.screen === undefined ? p.act === 'console' : p.screen });

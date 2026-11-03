@@ -11,10 +11,11 @@ function newLog(style, seed) {
     return {
         style, seed, ending: null, gameOver: null, secs: 0, minutes: 0, errors: [],
         sectors: [], suppers: [], trips: [], deaths: [], injuries: [], cards: {}, locked: null,
-        stress: { peak: {}, reached2: 0, breakdowns: [], sameEvent: 0, up: {}, down: {} },
+        stress: { peak: {}, reached2: 0, reached1: 0, first1: [], breakdowns: [], sameEvent: 0, up: {}, down: {} },   // first1: who first reached 1, when (the stress-1 line)
         decks: { broken: 0, fixed: 0, patched: 0, lived: 0, wanted: 0, dockCrash: 0 },
-        counts: { crises: 0, calls: 0, reserveWarps: 0, reserveJumps: 0, stuck: 0, stuckFew: 0, stuckAris: 0, locked: 0, storyMissed: 0, storyMissedFew: 0, storyMissedOther: 0, forced: 0, strange: 0, stations: 0, refused: 0, storyLost: 0, struck: 0, tripsWithTrait: 0 },
+        counts: { hungerSickMended: 0, hungerSickElsewhere: 0, healsOnHungerSick: 0, depots: 0, tripsTraitDown: 0, crises: 0, calls: 0, reserveWarps: 0, reserveJumps: 0, stuck: 0, stuckFew: 0, stuckAris: 0, locked: 0, storyMissed: 0, storyMissedFew: 0, storyMissedOther: 0, forced: 0, strange: 0, stations: 0, refused: 0, storyLost: 0, struck: 0, tripsWithTrait: 0, resultCards: 0, wayPicks: 0 },
         pairs: {}, time: {}, flow: { energy: {}, rations: {}, salvage: {} }, end: null,
+        healsOnHungerSick: {},   // where a treatment landed on the hunger-sick and was undone (watch.js): the card's title, else the phase
     };
 }
 

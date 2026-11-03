@@ -39,7 +39,10 @@
 
     // ── what a choice really gives: energy tops out at 100, rations at the store's size (state.maxRations), and in the new
     //    look salvage at the hold's (state.maxSalvage). cap: the new look's most one choice may give (NEW_LOOK_ECONOMY).
-    //    Costs are never cut: a loss costs what it says ──
+    //    Costs: the new look's most one choice may cost of energy or rations (NEW_LOOK_ECONOMY.CARD_COST_CAP), and its chips
+    //    and result line say what it really costs; salvage costs are trades (a station's parts, a repair) and stay as they
+    //    are, and so does a choice marked fullCost (a cost paid later by another rule, "-5 Energy on every jump"; a ship
+    //    fault, which is no card choice: App.showShipMalfunctionModal). The default game never cuts a cost ──
     const STOCKS = [
         { key: 'energy', re: /(^|[^\d.])([+\-−])(\d+)(\s+Energy)\b/g, ranged: /(^|[^\d.])([+\-−])(\d+)(?:-(\d+))?(\s+Energy)\b/g,
             top: () => 100, full: 'Energy already full', cap: 'CARD_ENERGY_MAX' },
@@ -55,6 +58,15 @@
     const newLook = () => (window.NEW_SCREEN && window.NewScreen && window.NSRoute && window.NEW_LOOK_ECONOMY) || null;   // bundle.js isNewScreen()'s own test
     const stocksNow = () => (newLook() ? STOCKS : STOCKS.filter(st => !st.newOnly));
     const PACKS = /\+(\d+) Sealed Rations\b/g;
+    /** Sealed rations as the new look opens them (FOOD_PACK_RATIONS each): "+2 Sealed Rations" reads "+2 Rations" (one: "+1 Ration"). */
+    const opened = (look, text) => String(text).replace(PACKS, (m, n) => { const k = Number(n) * look.FOOD_PACK_RATIONS; return `+${k} ${k === 1 ? 'Ration' : 'Rations'}`; });
+    /** The most one choice may cost of a stock: the new look's NEW_LOOK_ECONOMY.CARD_COST_CAP for it (energy, rations), else
+        no limit (the default game; salvage; a choice marked fullCost). */
+    function costCapOf(st, choice) {
+        if (choice && choice.fullCost) return Infinity;
+        const look = newLook(), caps = look && look.CARD_COST_CAP, v = caps ? Number(caps[st.key]) : NaN;
+        return Number.isFinite(v) && v >= 0 ? v : Infinity;
+    }
     /** How high a choice's gain may take a stock that stands at `start`: its own top, and in the new look no more than its
         cap above where it started. */
     function topOf(st, state, start) {
@@ -65,14 +77,21 @@
      * A text's own energy, rations or salvage numbers replayed in order from `start`: a cost first leaves room for a gain
      * after it, and a gain is cut to what fits under the top ("+25 Energy" with room for 5 reads "+5 Energy"; with no room,
      * the stock's "already full"). Returns { text, end, cut }. Ranges ("+25-45") and percentages are left alone (the new
-     * look cuts a range too, by its highest number).
+     * look cuts a range too, by its highest number). costCap (the new look, costCapOf): each cost says no more than it, as
+     * apply() holds it (with an energy cap of 4, "-15 Energy" reads "-4 Energy" and "-3-10 Energy" reads "-3-4 Energy").
      */
-    function fitStock(text, stock, start, top) {
+    function fitStock(text, stock, start, top, costCap = Infinity) {
         let v = start, cut = false;
         const ranged = !!newLook();
         const out = String(text).replace(ranged ? stock.ranged : stock.re, (m, pre, sign, n, ...rest) => {
             const unit = ranged ? rest[1] : rest[0], k = parseInt((ranged && rest[0]) || n, 10);
-            if (sign !== '+') { v = Math.max(0, v - k); return m; }
+            if (sign !== '+') {
+                const lose = Math.min(k, costCap), lo = Math.min(parseInt(n, 10), lose);
+                v = Math.max(0, v - lose);
+                if (lose === k) return m;
+                cut = true;
+                return `${pre}-${lo < lose ? `${lo}-` : ''}${lose}${lose === 1 ? unit.replace(/Rations$/, 'Ration') : unit}`;
+            }
             const got = Math.max(0, Math.min(k, top - v));
             v += got;
             if (got === k) return m;
@@ -82,19 +101,20 @@
         return { text: out, end: v, cut };
     }
     /** A choice's words as they stand now: a gain of energy or rations (the new look: salvage too) says what fits (a card
-        never promises more). */
-    function capGains(desc, state) {
+        never promises more), and a cost what it really costs (choice: its fullCost, costCapOf). */
+    function capGains(desc, state, choice) {
         if (!state || !desc) return desc;
-        const look = newLook(), text = look ? String(desc).replace(PACKS, (m, n) => `+${Number(n) * look.FOOD_PACK_RATIONS} Rations`) : String(desc);
+        const look = newLook(), text = look ? opened(look, desc) : String(desc);
         return stocksNow().reduce((out, st) => {
             const start = stockOf(state, st.key), top = topOf(st, state, start);
-            return Number.isFinite(top) ? fitStock(out, st, start, top).text : out;
+            return Number.isFinite(top) ? fitStock(out, st, start, top, costCapOf(st, choice)).text : out;
         }, text);
     }
     /**
      * Runs a choice's effect (choice.effect(state, ...args)) and returns its result line as it really went: a gain of
      * energy or rations (the new look: salvage too) that hit the top is said as what fitted. The new look holds each stock
-     * to its cap above where it stood (never below that), sealed rations opened first; a cost is never cut. The words
+     * to its cap above where it stood (never below that), sealed rations opened first, and no more than its cost cap
+     * below it (CARD_COST_CAP: energy and rations; not a fullCost choice; the default game never cuts a cost). The words
      * change only when replaying the line's own numbers from the ship's numbers before lands where the ship is now;
      * otherwise the line is left as the effect wrote it.
      */
@@ -104,14 +124,18 @@
         let text = choice.effect(state, ...args);
         if (look) {
             if (typeof state.openFoodPacks === 'function') state.openFoodPacks(true);           // opened now: they count toward the cap, and the line below says what fitted
-            stocks.forEach((st, i) => { const most = Math.max(tops[i], before[i]); if (Number(state[st.key]) > most) state[st.key] = most; });
-            if (typeof text === 'string') text = text.replace(PACKS, (m, n) => `+${Number(n) * look.FOOD_PACK_RATIONS} Rations`);
+            stocks.forEach((st, i) => {
+                const most = Math.max(tops[i], before[i]), least = before[i] - costCapOf(st, choice);
+                if (Number(state[st.key]) > most) state[st.key] = most;
+                else if (Number(state[st.key]) < least) state[st.key] = least;                  // a cost held to its cap
+            });
+            if (typeof text === 'string') text = opened(look, text);
         }
         if (typeof text !== 'string' || !text) return text;
         return stocks.reduce((out, st, i) => {
             const top = tops[i];
             if (!Number.isFinite(top)) return out;
-            const r = fitStock(out, st, before[i], top);
+            const r = fitStock(out, st, before[i], top, costCapOf(st, choice));
             return r.cut && r.end === stockOf(state, st.key) ? r.text : out;
         }, text);
     }
@@ -123,7 +147,7 @@
         if (choice && typeof choice.descNow === 'function') {
             try { text = String(choice.descNow(state) || ''); } catch (e) { console.error('EncounterCard: descNow failed', e); }
         }
-        return capGains(text, state);
+        return capGains(text, state, choice);
     }
 
     function memberFor(app, speaker) {
@@ -323,28 +347,37 @@
         return out.length > OUT_MAX ? out.slice(0, OUT_MAX - 1).concat(out[out.length - 1]) : out;
     }
 
-    const ALARM = /^(?:⚠\s*)?(?:WARNING|INCIDENT|CRITICAL|CATASTROPHE|FATAL|KIA|PREDATOR ALERT):\s*/i;   // the team card's result lines: the alarm word goes, the news stays
+    const ALARM = /^(?:⚠\s*)?(?:WARNING|INCIDENT|CRITICAL|CATASTROPHE|FATAL|KIA|PREDATOR ALERT|ALERT):\s*/i;   // the team card's result lines: the alarm word goes, the news stays
     /**
      * The new look, for a panel that is not an EncounterCard (the team-on-the-ground card, bundle.js showEventModal): runs the
      * choice (run), then shows what it did in place of the panel's choices, in showOutcome's look, then CONTINUE (done: close
      * the panel). Nothing else opens meanwhile. With nothing to show, or the panel gone, it closes at once.
+     * opts.result (the new look's short result card, bundle.js showTripResult): called once the choice has run, it gives what
+     * the card says instead of the logged lines: { say: { speaker, text }, also: [logged line], lean, chips: [{ text, loss }] },
+     * one line, any line of the log it keeps (a breakdown's: cleaned as the logged lines are) and the chips; lean: the panel's
+     * found line (.eva-found) gives way too, to keep the card short.
      */
-    function outcomeIn(app, panel, picked, run, done) {
+    function outcomeIn(app, panel, picked, run, done, opts) {
         gate.held += 1;
-        let said = [];
+        let said = [], short = null;
         try { said = captureLog(run); } catch (err) { console.error('EncounterCard: the choice failed', err); }
-        const lines = outcomeLines(said.map(m => String(m || '').replace(ALARM, '').replace(/^\w/, c => c.toUpperCase())));
+        if (opts && typeof opts.result === 'function') { try { short = opts.result(); } catch (err) { console.error('EncounterCard: the short result failed', err); } }
+        const clean = list => outcomeLines(list.map(m => String(m || '').replace(ALARM, '').replace(/^\w/, c => c.toUpperCase())));
+        const lines = short && short.say ? [short.say].concat(clean(short.also || [])) : clean(said);
+        const chips = short && short.say ? short.chips || [] : [];
+        const keep = short && short.say && short.lean ? 'header, .eva-team' : 'header, .eva-team, .eva-found';
         let isDone = false;
         const finish = () => { if (isDone) return; isDone = true; try { done(); } catch (err) { console.error('EncounterCard: closing the panel failed', err); } releaseGate(); };
         if (!lines.length || !panel || !panel.isConnected) { finish(); return; }
         const pick = String(picked || '').replace(/<[^>]*>/g, '').replace(MARKUP, '');
-        [...panel.children].forEach(el => { if (!el.matches('header, .eva-team, .eva-found')) el.style.display = 'none'; });   // the choices give way to what happened
+        [...panel.children].forEach(el => { if (!el.matches(keep)) el.style.display = 'none'; });   // the choices give way to what happened
         const box = document.createElement('div');
         box.className = 'enc-decide eva-outcome';
         box.innerHTML = `
             <div class="enc-outcome" aria-live="polite">
                 <p class="enc-outcome-pick">${esc(pick)}</p>
                 ${lines.map(l => (l.speaker ? `<div class="enc-line enc-outcome-say is-in">${lineHtml(app, { speaker: l.speaker, text: markRewards(esc(l.text)) })}</div>` : `<p class="enc-outcome-line">${markRewards(esc(l.text))}</p>`)).join('')}
+                ${chips.length ? `<p class="enc-outcome-line enc-outcome-chips"><span class="enc-chips">${chips.map(c => `<i class="${c.loss ? 'is-loss' : 'is-gain'}">${esc(c.text)}</i>`).join('')}</span></p>` : ''}
             </div>
             <footer class="enc-flow enc-outcome-flow"><button class="enc-next enc-outcome-go" type="button">CONTINUE ›</button></footer>`;
         panel.appendChild(box);

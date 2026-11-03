@@ -54,7 +54,7 @@ function runContext(game, styleName, seed, opts, R) {
         orbit: ctx.NSOrbit, finds: ctx.NSWorldFinds, route: ctx.NSRoute, EC: ctx.EncounterCard, ECON: G('NEW_LOOK_ECONOMY'), Gen: G('PlanetGenerator'),
         evaRange: { energy: app.evaEnergyRange(), salvage: app.evaSalvageRange(false), salvageHigh: app.evaSalvageRange(true) },   // policy.js rewardValue
         cur: { sector: 1, node: null, trip: null, phase: 'start', src: null, lastCard: null, campfire: false, strange: false, stop: 0, beat: 0, opening: null },
-        lastStress: {}, seenEvents: new Set(), lastStock: { energy: 100, rations: 24, salvage: 50 }, injuredAt: {}, run: { supperVictim: null },
+        lastStress: {}, lastStock: { energy: 100, rations: 24, salvage: 50 }, injuredAt: {}, run: { supperVictim: null },
     };
     rc.beat = () => { rc.cur.beat += 1; return rc.cur.beat; };                     // a new event: a card picked, an action, a trip, a warp, a jump ...
     rc.add = (secs, what) => { R.secs += secs; const k = what || rc.cur.timeKind || 'other'; R.time[k] = (R.time[k] || 0) + secs; };
@@ -103,6 +103,7 @@ function finish(rc) {
     state.crew.forEach(c => { if (c.status === 'DEAD' && !R.deaths.some(d => d.who === c.name)) noteDeath(rc, c); });
     noteInjuries(rc);
     R.stress.reached2 = Object.values(R.stress.peak).filter(v => v >= 2).length;
+    R.stress.reached1 = Object.values(R.stress.peak).filter(v => v >= 1).length;
     const evs = R.stress.breakdowns.map(b => b.ev);                                  // a second breakdown from the same event
     R.stress.sameEvent = evs.filter((e, i) => evs.indexOf(e) !== i).length;
     R.minutes = Math.round(R.secs / 6) / 10;

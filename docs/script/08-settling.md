@@ -103,20 +103,20 @@ _Sector 6, a good world, after the truth:_
 ## Pressing SETTLE HERE «bundle.js · _executeColony»
 _A.U.R.A. refuses an unscanned world; otherwise the flight-recorder card comes up before the colony card._
 
-- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 5929»
-- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 5980»
-- AVG STRESS «bundle.js · line 5992»
-- COLONY RATING «bundle.js · line 6000»
-- [YES | NO] «bundle.js · line 6021»
-- Type: [type] | Sector [sector] «bundle.js · line 6039»
-- CREW MODIFICATIONS «bundle.js · line 6042»
-- Symbiotes: [symbiotes] «bundle.js · line 6044»
-- Cyborgs: [cyborgs] «bundle.js · line 6045»
-- Touched: [wrong place] «bundle.js · line 6046»
-- COLONY DESIGNATION «bundle.js · line 6054»
-- FINAL CREW ROSTER «bundle.js · line 6066»
-- EXODUS PROGRAM RECORD #[n] «bundle.js · line 6083»
-- REBOOT SIMULATION «bundle.js · line 6088»
+- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 6303»
+- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 6354»
+- AVG STRESS «bundle.js · line 6366»
+- COLONY RATING «bundle.js · line 6374»
+- [YES | NO] «bundle.js · line 6395»
+- Type: [type] | Sector [sector] «bundle.js · line 6413»
+- CREW MODIFICATIONS «bundle.js · line 6416»
+- Symbiotes: [symbiotes] «bundle.js · line 6418»
+- Cyborgs: [cyborgs] «bundle.js · line 6419»
+- Touched: [wrong place] «bundle.js · line 6420»
+- COLONY DESIGNATION «bundle.js · line 6428»
+- FINAL CREW ROSTER «bundle.js · line 6440»
+- EXODUS PROGRAM RECORD #[n] «bundle.js · line 6457»
+- REBOOT SIMULATION «bundle.js · line 6462»
 
 ## The second chance (from colony notes)
 

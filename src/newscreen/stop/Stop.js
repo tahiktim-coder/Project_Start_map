@@ -21,7 +21,8 @@
    sweeps it (no click lands meanwhile; the first time in a run A.U.R.A. says what that is, NSOrbit.TELL.scan), then the
    game scans it and its finds show as tags with marks on the world (stop/Words.js, WorldFinds.js). Only the copy of Earth
    still has a Scan tag (one click, the same sweep). A click on a find (its tag or its mark) is where GO DOWN goes: the
-   shuttle aims there (NSGlass.aim), never while it is flying.
+   shuttle aims there (NSGlass.aim), never while it is flying. A click on one of its ways' rows is how they do it there
+   (NewScreen.flow.way): GO DOWN's odds are that way's, and a find seen before takes it with no card (App.tripCardPlan).
    Every action calls the REAL game through NewScreen.flow (Orbit.js): costs, events, rewards and saves are today's.
    Anyone too weak from a missed supper is not put forward and stands apart, by the suit locker; pointing says why.
    A card that turns up while the bridge is up takes no click for 400 ms (ChoiceGuard).
@@ -39,7 +40,7 @@
             'trip:back'  'flow:go' { id } (bakes ahead)  'hidden'  'hull:hit' { deck } (NSOrbit: the bridge jolts and the lamps dip,
             HIT; reduced motion: one dip only)
    Emits:   'dive:plated' { dir }  'stop:shown' { id }  'stop:hidden' { id }  'stop:pick' { ids }
-   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id), .scanDue()
+   Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id), .way(id, idx, ids), .scanDue()
    Anchors (CSS px, while open): 'stop:person:<id>', 'stop:aura', 'stop:glass', 'stop:site'
 */
 (function () {
@@ -79,6 +80,7 @@
         apart: [],           // who has stood apart this stop: they stay there (by the suit locker) until we leave
         pick: freshPick(),   // slots: who stands at the hatch's two places; order: as they joined; why: id → why they go
         hover: null, hot: null, hotAt: 0, clickAt: 0,
+        wayHover: null,      // { id, idx }: a way's row of the chosen find under the pointer (stop/Words.js marks it)
         send: null,          // { ids, t0, fireAt, fired, skipped } between the click and flow.act
         drop: null,          // { at }: the shuttle leaves when the team has climbed down the hatch
         upEnd: -1e9,         // when the shuttle coming up is home: it never turns back down before then
@@ -407,7 +409,7 @@
     const currentNode = () => { try { const s = NS.game.state(); return s ? s.currentSystem : null; } catch (err) { return null; } };
     function freshStop(id, node) {
         S.id = id; S.node = node; S.plans = {}; S.drawn = []; S.atWindow = new Set(); S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.pick = freshPick();
-        S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9; S.finds = []; S.sweep = null; S.autoScan = false; S.hold = null; S.upEnd = -1e9; S.back = {};
+        S.hover = null; S.wayHover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null; S.shownSent = false; S.readAt = -1e9; S.finds = []; S.sweep = null; S.autoScan = false; S.hold = null; S.upEnd = -1e9; S.back = {};
         GL.shuttle(null);
         GL.place(node);
         crewNow = crewMap();
@@ -539,7 +541,7 @@
     function close(tell) {
         const id = S.id;
         if (S.node && S.shownSent) S.node._nsSeen = true;                // a world seen: NewScreen.js holds a card a shorter time when we come back
-        S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.pick = freshPick(); S.hover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null;
+        S.dive = null; S.open = false; S.fadeAt = null; S.id = null; S.node = null; S.pick = freshPick(); S.hover = null; S.wayHover = null; S.hot = null; S.send = null; S.drop = null; S.trip = null;
         S.shownSent = false; S.actions = []; S.lineup = []; S.aside = []; S.apart = []; S.finds = []; S.sweep = null; S.autoScan = false; S.hold = null; S.upEnd = -1e9; S.back = {};
         GL.shuttle(null); GL.place(null);
         registerAnchors(false); W.hide(); setPointing(false);
@@ -638,10 +640,12 @@
         const fit = who && S.lineup.includes(who) ? who : null, weak = who && S.aside.includes(who) ? who : null;   // too weak to go: pointing says why, a click does nothing
         const actKey = hit && hit.kind === 'act' ? hit.key : null, onLeave = !!(hit && hit.kind === 'leave'), onSettle = !!(hit && hit.kind === 'settle');
         const onFight = !!(hit && hit.kind === 'fight'), settleKey = onSettle ? hit.key || 'settle' : null;   // the copy of Earth: Fight to escape, Go down
-        const find = hit && hit.kind === 'find' ? hit : null;            // a find's tag or its mark on the world
-        return { fit, weak, actKey, onLeave, onSettle, onFight, settleKey, find, on: !!actKey || onLeave || onSettle || onFight || !!find || (!!fit && choosable()) };
+        const way = hit && hit.kind === 'way' ? hit : null;              // a way's row on the chosen find: a click chooses it (one a trait strikes, none)
+        const find = hit && (hit.kind === 'find' || way) ? hit : null;   // a find's tag or its mark on the world
+        return { fit, weak, actKey, onLeave, onSettle, onFight, settleKey, find, way, on: !!actKey || onLeave || onSettle || onFight || (!!find && !(way && way.struck)) || (!!fit && choosable()) };
     }
     function pointAt(u) {
+        S.wayHover = u.way && !u.way.struck ? { id: u.way.id, idx: u.way.idx } : null;
         setHot(u.actKey || (u.find ? u.find.key : null) || (u.onLeave ? 'leave' : null) || u.settleKey || (u.onFight ? 'escape' : null));
         if (S.hold && !u.onSettle) S.hold = null;                        // slid off the settle key: nothing is decided
         if (CP && !u.onFight) CP.holdFight(false);                       // slid off the fight key: it drifts back
@@ -667,9 +671,9 @@
     function pointer(type, e) {
         ptr = type === 'leave' ? null : { x: e.clientX, y: e.clientY };
         if (CP && CP.falling()) { if (type === 'down' && !NS.blocked()) CP.hurry(); return type === 'down'; }   // the fall: a click hurries it
-        if (!S.open || S.dive || S.fadeAt != null && t0() - S.fadeAt < DISSOLVE || NS.blocked()) { if (type === 'move' || type === 'leave') { S.hover = null; setHot(null); setPointing(false); } return false; }
+        if (!S.open || S.dive || S.fadeAt != null && t0() - S.fadeAt < DISSOLVE || NS.blocked()) { if (type === 'move' || type === 'leave') { S.hover = null; S.wayHover = null; setHot(null); setPointing(false); } return false; }
         const t = t0(), cx = e.clientX, cy = e.clientY;
-        if (type === 'leave') { S.hover = null; setHot(null); setPointing(false); return false; }
+        if (type === 'leave') { S.hover = null; S.wayHover = null; setHot(null); setPointing(false); return false; }
         if (S.send) { setPointing(false); if (type === 'down') skipSend(t); return type === 'down'; }   // the team is leaving: a click hurries it
         if (S.sweep) { S.hover = null; setHot(null); setPointing(false); return type === 'down'; }    // the glass is sweeping the world: a moment
         const u = under(cx, cy), { fit, actKey, onLeave, onSettle, find } = u;
@@ -680,6 +684,7 @@
         if (onSettle && !W.fresh(u.settleKey)) { S.clickAt = t; holdSettle(t, u.settleKey); return true; }
         if (u.onFight && !W.fresh('escape')) { S.clickAt = t; if (CP) holdFight(); else doAct('escape', t); return true; }   // without stop/Copy.js: the old escape card
         if (actKey && !W.fresh(actKey)) { S.clickAt = t; doAct(actKey, t); return true; }
+        if (u.way && !W.fresh(u.way.key)) { S.clickAt = t; if (!u.way.struck) chooseWay(u.way.id, u.way.idx, t); return true; }
         if (find && !W.fresh(find.key)) { S.clickAt = t; aimAt(find.id, t); return true; }
         if (fit) { S.clickAt = t; return pickPerson(fit, t); }
         return false;
@@ -689,6 +694,13 @@
         let ok = false;
         try { ok = !!(NS.flow && typeof NS.flow.aim === 'function' && NS.flow.aim(id)); } catch (err) { console.error('NewScreen stop: choosing the find failed', err); }
         if (ok) { S.readAt = t - READ_MS; readFinds(t); }               // read again now: the marks and GO DOWN's risk follow at once
+    }
+    /** A click on a way's row of the chosen find: the team takes that way there (NewScreen.flow.way: node.nsWay); its row is
+        marked and GO DOWN's odds follow at once. */
+    function chooseWay(id, idx, t) {
+        let ok = false;
+        try { ok = !!(NS.flow && typeof NS.flow.way === 'function' && NS.flow.way(id, idx, team())); } catch (err) { console.error('NewScreen stop: choosing the way failed', err); }
+        if (ok) { S.readAt = t - READ_MS; readFinds(t); }
     }
     function say(text) { const v = NS.mods.voice; if (v && v.say) { try { v.say({ id: 'aura', who: 'A.U.R.A.', text }); } catch (err) { console.error('NewScreen stop: voice failed', err); } } }
     function doAct(key, t) {
@@ -833,7 +845,7 @@
         hatch: S.pick.slots.slice(), picked: team(), arrived: team().filter(arrived), why: Object.assign({}, S.pick.why), manual: S.pick.manual, joinedLast: joinedLast(), hover: S.hover, hot: S.hot,
         send: S.send ? S.send.ids.slice() : null, trip: S.trip ? S.trip.ids.slice() : null, drawn: S.drawn.map(d => d.id), glass: GL.current(), atWindow: [...S.atWindow], t: Math.round(t0()),
         sweep: !!S.sweep, autoScan: S.autoScan, skipped: S.send ? !!S.send.skipped : null, aimed: GL.aimed(),
-        finds: S.finds.map(f => { const p = S.id && geo ? GL.spot(t0(), S.shownAt, f.at) : null, c = p ? css(p[0], p[1]) : null; return { id: f.id, label: f.label, done: !!f.done, target: !!f.target, risk: f.risk, hint: f.hint, event: f.event || f.site || f.kind, mark: c ? c.map(Math.round) : null }; }),
+        finds: S.finds.map(f => { const p = S.id && geo ? GL.spot(t0(), S.shownAt, f.at) : null, c = p ? css(p[0], p[1]) : null; return { id: f.id, label: f.label, done: !!f.done, target: !!f.target, risk: f.risk, hint: f.hint, event: f.event || f.site || f.kind, mark: c ? c.map(Math.round) : null, way: f.way != null ? f.way : null, ways: (f.ways || []).map(r => ({ idx: r.idx, short: r.short, struck: r.struck })) }; }),
         plans: Object.fromEntries(Object.entries(S.plans).map(([k, v]) => [k, v.map(q => q.kind + '@' + Math.round(q.t0) + (q.x != null ? ':' + q.x : ''))])),
         words: W ? W.debug() : [],
         people: S.drawn.map(d => { const [x, y] = css(d.X, d.Y + d.Sp.h * 0.5); return { id: d.id, x: Math.round(x), y: Math.round(y) }; }),
