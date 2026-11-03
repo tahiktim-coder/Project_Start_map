@@ -773,7 +773,7 @@ _THE FOLD can throw the ship here. A sector of copies; two ways out._
 ### Arriving «bundle.js · handleAnomalyTeleport»
 _The sector header, and the old names the code still has for sectors._
 
-- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 6311»
+- /// SECTOR ???: THE WRONG PLACE «bundle.js · line 6316»
 
 ### In orbit «OrbitView.js · updateCommandDeck · wrong place»
 _The two buttons instead of BREAK ORBIT._
@@ -1090,10 +1090,10 @@ _Can turn up in: any sector (on warps and jumps, never on the approach to the li
 
 #### Card words: showShipMalfunctionModal «bundle.js · showShipMalfunctionModal»
 
-- **kicker** — SHIP ALERT «bundle.js · line 6570»
-- Deal with it «bundle.js · line 6572»
-- DEAL WITH IT «bundle.js · line 6572»
-- MALFUNCTION RESOLVED: [result] «bundle.js · line 6575»
+- **kicker** — SHIP ALERT «bundle.js · line 6575»
+- Deal with it «bundle.js · line 6577»
+- DEAL WITH IT «bundle.js · line 6577»
+- MALFUNCTION RESOLVED: [result] «bundle.js · line 6580»
 
 ### Power Surge «ShipEvents.js · POWER_SURGE»
 

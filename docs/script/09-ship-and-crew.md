@@ -199,17 +199,17 @@ _When someone reaches stress 3. The commander breaking is game over._
 ### Bringing someone back «bundle.js · handleRevivalAction»
 _Using Pulsing Spores or an Ancient Neural Link from the cargo hold._
 
-- **title** — INVALID TARGET «bundle.js · line 5791»
-- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 5792»
-- CANCEL «bundle.js · line 5793»
-- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 5803»
-- Select subject for integration with [name]. «bundle.js · line 5805»
-- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 5806»
-- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 5838»
-- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 5839»
-- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 5842»
-- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 5843»
-- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 5850»
+- **title** — INVALID TARGET «bundle.js · line 5796»
+- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 5797»
+- CANCEL «bundle.js · line 5798»
+- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 5808»
+- Select subject for integration with [name]. «bundle.js · line 5810»
+- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 5811»
+- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 5843»
+- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 5844»
+- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 5847»
+- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 5848»
+- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 5855»
 
 ## Food, damage and data
 
@@ -424,8 +424,8 @@ _Every sector jump except the one into sector 3 (that one stalls: sector-3.md), 
 ### Stranded «bundle.js · checkStranded»
 _No energy and no way out._
 
-- **title** — STRANDED «bundle.js · line 6477»
-- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 6478»
+- **title** — STRANDED «bundle.js · line 6482»
+- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 6483»
 
 ### The game-over screen «EndScreens.js · gameOver»
 
