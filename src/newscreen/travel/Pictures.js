@@ -212,27 +212,27 @@
         pillars and their glow start at a straight column) ends in an 8 x 8 Bayer ramp to ink over EDGE_RAMP art px at 1080p
         (80 CSS px, and as wide on screen at every window size: 80 art px at 1366 and 1280), so no cut edge shows in open
         space before the tower slides in. The edge is the first column a solid part of the stage starts at
-        (left of the stage's own left, under the tower). A row is ramped where something steps at that column (a solid part,
-        or a glow that brightens there; the star field and the galaxy's band run on across it, untouched), and that is
-        spread over EDGE_SOFT rows up and down (widened, then blurred, as how far a row is ramped), so a glow whose step comes
-        and goes row by row is ramped as one piece, never in alternate rows (no comb). In the far sky's buffer, so it slides
-        with it. */
-    const EDGE_RAMP = 40, EDGE_WOBBLE = 16, EDGE_LOOK = 4, EDGE_JUMP = 6, EDGE_SOFT = 8;
+        (left of the stage's own left, under the tower). A row where a solid part starts there is ramped fully. A glow that
+        brightens there steps only in some rows, so how far a row is ramped follows how many rows near it step (over
+        EDGE_SOFT rows up and down, blurred): where most do (the sector-4 glow), the rows between are ramped too and the glow
+        ends as one piece, no comb; a stray row that steps in the star field or the galaxy's band (a few in a hundred) is left
+        alone, so the band runs on across the edge. In the far sky's buffer, so it slides with it. */
+    const EDGE_RAMP = 40, EDGE_WOBBLE = 16, EDGE_LOOK = 4, EDGE_JUMP = 6, EDGE_SOFT = 8, EDGE_DENSE = [0.15, 0.4];
     function rampEdge(B, ox) {
         if (!B || !B.block) return;
         const u = Math.max(1, 2 * G.dpr / G.k), RAMP = Math.round(EDGE_RAMP * u), WOB = Math.round(EDGE_WOBBLE * u), SOFT = Math.round(EDGE_SOFT * u);   // CSS px per art px, against 1080p's 2
         let e = -1;
         for (let x = 0; x < Math.min(B.W, ox + 8) && e < 0; x++) for (let y = 0; y < B.H; y++) if (B.block[y * B.W + x]) { e = x; break; }
         if (e < 1) return;                                                             // nothing solid starts left of the stage: no edge
-        const lumAt = (x, y) => (x < 0 || x >= B.W ? 0 : B.lum[y * B.W + x]), step = new Float32Array(B.H);
+        const lumAt = (x, y) => (x < 0 || x >= B.W ? 0 : B.lum[y * B.W + x]), step = new Float32Array(B.H), solidRow = new Uint8Array(B.H);
         for (let y = 0; y < B.H; y++) {
             let inside = 0, outside = 0, solid = false;
             for (let d = 0; d < EDGE_LOOK; d++) { inside += lumAt(e + d, y); outside += lumAt(e - 1 - d, y); if (B.block[y * B.W + e + d]) solid = true; }
-            step[y] = solid || inside - outside >= EDGE_JUMP * EDGE_LOOK ? 1 : 0;           // a step at the edge in this row (a band running on across it: none)
+            step[y] = inside - outside >= EDGE_JUMP * EDGE_LOOK ? 1 : 0; solidRow[y] = solid ? 1 : 0;   // a step at the edge in this row
         }
-        const wgt = spread(step, SOFT);
+        const near = tent(step, SOFT);                                                 // how many rows near it step, 0..1
         for (let y = 0; y < B.H; y++) {
-            const k = wgt[y];
+            const k = solidRow[y] ? 1 : smooth(EDGE_DENSE[0], EDGE_DENSE[1], near[y]);
             if (k < 0.02) continue;                                                    // no step near this row
             const w = Math.round(P.fbm(3.7, y / (13 * u), 41, 2) * WOB);              // where the ramp starts wobbles a little row by row: no ruled line
             for (let x = e; x < Math.min(B.W, e + w + RAMP); x++) {
@@ -242,12 +242,10 @@
             }
         }
     }
-    /** A row weight widened over r rows each way (the most near it), then blurred twice over as many (a tent): 0..1. */
-    function spread(a, r) {
-        const n = a.length, wide = new Float32Array(n);
-        for (let y = 0; y < n; y++) { let m = 0; for (let d = Math.max(0, y - r); d <= Math.min(n - 1, y + r); d++) m = Math.max(m, a[d]); wide[y] = m; }
-        const box = src => { const out = new Float32Array(n); for (let y = 0; y < n; y++) { let s = 0, c = 0; for (let d = Math.max(0, y - r); d <= Math.min(n - 1, y + r); d++) { s += src[d]; c++; } out[y] = s / c; } return out; };
-        return box(box(wide));
+    /** A row value averaged over r rows each way, twice (a tent): 0..1. */
+    function tent(a, r) {
+        const n = a.length, box = src => { const out = new Float32Array(n); for (let y = 0; y < n; y++) { let s = 0, c = 0; for (let d = Math.max(0, y - r); d <= Math.min(n - 1, y + r); d++) { s += src[d]; c++; } out[y] = s / c; } return out; };
+        return box(box(a));
     }
     /** The far comet: a pale jade head and a thin tail pointing away from the light. */
     function cometSprite(a) {
