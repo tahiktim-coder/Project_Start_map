@@ -13,6 +13,7 @@
      accentRamps()         → the ramps the far colours use (sky F's ACC plus three of the slice's own)
      titleOf(n)            → 'The Graveyard' (SECTOR_CONFIG name in title case; a plain fallback if it is missing); the new
                              look's own name where it differs (sector 2: 'The Drift', C62)
+     renamed(n)            → that new-look name, or null where it is SECTOR_CONFIG's own (bundle.js: the sector's log header)
 */
 (function () {
     'use strict';
@@ -83,5 +84,5 @@
     };
     function farColours(n, R) { const make = FAR[n]; return make ? make(R || accentRamps()) : null; }
 
-    window.NSLooks = Object.freeze({ of, farColours, accentRamps, titleOf });
+    window.NSLooks = Object.freeze({ of, farColours, accentRamps, titleOf, renamed: n => NEW_TITLES[n] || null });
 })();

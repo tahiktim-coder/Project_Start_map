@@ -409,8 +409,7 @@
         bus.on('hud', () => { V.dirty = true; });
         bus.on('opening:done', () => openTower(now()));
         bus.on('jump:burn', () => { V.flood = { kind: 'jump', t0: now() }; V.burnT0 = now(); hideChips(); });
-        bus.on('jump:flash', () => { V.dark = true; V.burnT0 = null; });
-        bus.on('jump:words', () => { V.stockOut = true; });                  // look pass (B05): no stock number over the flash (steps: travel/Note.js)
+        bus.on('jump:flash', () => { V.dark = true; V.burnT0 = null; }); bus.on('jump:words', () => { V.stockOut = true; });   // jump:words (B05): no stock number over the flash
         IDS.forEach(id => NS.anchors.set('person:' + id, () => {
             const a = personAt(id);
             if (!a) return [];
@@ -425,8 +424,7 @@
         const t = now();
         V.dirty = true;
         V.dark = false;
-        V.burnT0 = null;
-        V.stockOut = false;                                                 // the stock comes back once the tower is in again
+        V.burnT0 = null; V.stockOut = false;                                // the stock comes back once the tower is in again
         if (p.first) closeTower(t, OPEN_FALLBACK_MS);                       // a new sector: from black, the title; then the tower
     }
     function deckAnchor(i) {

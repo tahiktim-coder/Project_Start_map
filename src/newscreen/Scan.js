@@ -2,9 +2,10 @@
    What it is: the new look's two scans and what they teach (designer playtests, 2026-10-17: "we almost know nothing about
    planets anymore", "scan is useless"). In travel, the SCAN key in a world's hover note is the long-range scan:
    NEW_LOOK_ECONOMY.FAR_SCAN energy, no minigame, one A.U.R.A. line, and from then on the note names the world's finds
-   (WorldFinds.js); the key shows its own cost, so A.U.R.A. no longer explains it (look pass, L-13). On the bridge, "Scan"
+   (WorldFinds.js); A.U.R.A. explains it once a run (TELL; cutting it is the designer's call, L-13). On the bridge, "Scan"
    is one click: the glass sweeps the world, then its finds show as marks on it (bundle.js handleScanAction, no tuning);
-   the scan marks the landing spot and makes a plain landing safer (bundle.js unmarkedWhy, scanRiskMod). The first scan of each kind of world is +1 data (bundle.js noteNewKind).
+   the scan marks the landing spot and makes a plain landing safer (bundle.js unmarkedWhy, scanRiskMod). The first scan of
+   each kind of world is +1 data (bundle.js noteNewKind).
    The facts read the game's own rules, so they stay true: App.siteOf (what is down there), App.landingEventOf (the event a
    plain landing finds, kept on the world from the first look: what it gives), App.planetRisk (the danger the trip's card
    starts from: how rough the ground is) and EndingSystem.getPlanetViability through SETTLE_COUNCIL.SCAN_TIER (the tier the
@@ -14,14 +15,16 @@
    and the line under the world's name on the bridge; both reach the game through NewScreen.flow (scanOffer, scan, facts).
 
    window.NSScan (frozen)
-     offer(state, id) → { cost, ok, why } | null   the long-range scan of a landable world ahead that no scan has read (null:
-                                 none); ok false: why 'energy' (not enough) or 'bridge' (the bridge deck is down: no long-range scans)
+     offer(state, id) → { cost, ok, why, have } | null   the long-range scan of a landable world ahead that no scan has read
+                                 (null: none); ok false: why 'energy' (not enough) or 'bridge' (the bridge deck is down: no
+                                 long-range scans); have: our energy, whole (the off key's chip shows it against the cost)
      far(app, id) → bool         run it: the energy, node.remoteScanned, the sector's scan hazard, the landing event kept, a new
                                  kind's data, A.U.R.A.'s line said (kept through a hover note) and logged
      facts(app, node | id) → { site, gives, danger, live, tier } | null   what our scans read (null: nothing yet); each a few
                                  lower-case words or null (a weak lock alone: danger 'ground unclear', gives null)
      deep(app, node, newKind)    the bridge's scan is done (bundle.js): A.U.R.A. says one line (a new kind of world, or how
                                  many places are worth a trip; whether people could live here), logged
+     TELL                        { far }: what A.U.R.A. says once a run, the first time the long-range scan is offered
 */
 (function () {
     'use strict';
@@ -40,6 +43,7 @@
     const NO_GROUND = 'There is no ground to land on.', NOTHING_HERE = 'Nothing down there is worth a trip, Commander.';
     const COUNT = ['no', 'one', 'two', 'three', 'four'];
     const places = n => `${COUNT[n] || n} ${n === 1 ? 'place' : 'places'} worth a trip`;
+    const TELL = Object.freeze({ far: `Scan shows what a world holds before we fly there. It costs ${COST} energy, Commander.` });
 
     const aura = text => `A.U.R.A.: "${text}"`;
     const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
@@ -110,7 +114,7 @@
         if (!state || !isWorld(node) || node.remoteScanned || node.scanned || node.storyHidden || !window.NSRoute || !window.NSRoute.ahead(state, node)) return null;
         const bridge = typeof state.isDeckOperational !== 'function' || state.isDeckOperational('bridge');   // the default game's rule too: the bridge runs long-range scans
         const energy = !!window.TEST_MODE || state.energy >= COST;
-        return { cost: COST, ok: bridge && energy, why: !bridge ? 'bridge' : !energy ? 'energy' : null };
+        return { cost: COST, ok: bridge && energy, why: !bridge ? 'bridge' : !energy ? 'energy' : null, have: Math.max(0, Math.floor(state.energy || 0)) };
     }
     /** "Three places worth a trip on Kryos-12 Major. People could live there, Commander." (the note names them) */
     function farLine(app, node, f) {
@@ -145,5 +149,5 @@
         speak(s, [first, newKind && !world ? NO_GROUND : '', newKind ? '' : LIVE_HERE[tier] || ''].filter(Boolean).join(' '));   // a new kind: its own line is enough
     }
 
-    window.NSScan = Object.freeze({ offer, far, facts, deep });
+    window.NSScan = Object.freeze({ offer, far, facts, deep, TELL });
 })();

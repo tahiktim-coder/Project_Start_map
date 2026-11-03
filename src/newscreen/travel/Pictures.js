@@ -21,8 +21,9 @@
                                     o (optional) { cold: no plume, lamp: ms its red lamp has been on, still } (the jump that stalls)
      stream(which, vp, speed, flowPos, front)   space streaming past; which: 'back' | 'front'
      rogue(A, t0, t) · jump(A, s) · stretch(A, k) · dark(t) · dimAll(amount) · shade(rect)   stretch: the stall's (0..1)
-     bloom(k) → canvas | null       the jump's flash, step k 0..3 (a dithered bloom out of the light); k -1 paints the next one
-     leader(a, b, hex) · ring(x, y, r, hex, th)   a note's dotted leader to its world; a refused world's ring
+     bloom(k) → canvas | null       the jump's flash, step k 0..3 (a dithered bloom out of the light); k -1 paints the next
+                                    band of rows of the next one not yet painted (an idle frame's share)
+     leader(a, b, hex, th) · ring(x, y, r, hex, th)   a note's dotted leader to its world; a refused world's ring (th art px)
 */
 (function () {
     'use strict';
@@ -211,27 +212,42 @@
         pillars and their glow start at a straight column) ends in an 8 x 8 Bayer ramp to ink over EDGE_RAMP art px at 1080p
         (80 CSS px, and as wide on screen at every window size: 80 art px at 1366 and 1280), so no cut edge shows in open
         space before the tower slides in. The edge is the first column a solid part of the stage starts at
-        (left of the stage's own left, under the tower); a row is ramped only where something starts at that column (the star
-        field and the galaxy's band run on across it, untouched). In the far sky's buffer, so it slides with it. */
-    const EDGE_RAMP = 40, EDGE_WOBBLE = 16, EDGE_LOOK = 4, EDGE_JUMP = 6;
+        (left of the stage's own left, under the tower). A row is ramped where something steps at that column (a solid part,
+        or a glow that brightens there; the star field and the galaxy's band run on across it, untouched), and that is
+        spread over EDGE_SOFT rows up and down (widened, then blurred, as how far a row is ramped), so a glow whose step comes
+        and goes row by row is ramped as one piece, never in alternate rows (no comb). In the far sky's buffer, so it slides
+        with it. */
+    const EDGE_RAMP = 40, EDGE_WOBBLE = 16, EDGE_LOOK = 4, EDGE_JUMP = 6, EDGE_SOFT = 8;
     function rampEdge(B, ox) {
         if (!B || !B.block) return;
-        const u = Math.max(1, 2 * G.dpr / G.k), RAMP = Math.round(EDGE_RAMP * u), WOB = Math.round(EDGE_WOBBLE * u);   // CSS px per art px, against 1080p's 2
+        const u = Math.max(1, 2 * G.dpr / G.k), RAMP = Math.round(EDGE_RAMP * u), WOB = Math.round(EDGE_WOBBLE * u), SOFT = Math.round(EDGE_SOFT * u);   // CSS px per art px, against 1080p's 2
         let e = -1;
         for (let x = 0; x < Math.min(B.W, ox + 8) && e < 0; x++) for (let y = 0; y < B.H; y++) if (B.block[y * B.W + x]) { e = x; break; }
         if (e < 1) return;                                                             // nothing solid starts left of the stage: no edge
-        const lumAt = (x, y) => (x < 0 || x >= B.W ? 0 : B.lum[y * B.W + x]);
+        const lumAt = (x, y) => (x < 0 || x >= B.W ? 0 : B.lum[y * B.W + x]), step = new Float32Array(B.H);
         for (let y = 0; y < B.H; y++) {
             let inside = 0, outside = 0, solid = false;
             for (let d = 0; d < EDGE_LOOK; d++) { inside += lumAt(e + d, y); outside += lumAt(e - 1 - d, y); if (B.block[y * B.W + e + d]) solid = true; }
-            if (!solid && inside - outside < EDGE_JUMP * EDGE_LOOK) continue;          // no step at the edge in this row
+            step[y] = solid || inside - outside >= EDGE_JUMP * EDGE_LOOK ? 1 : 0;           // a step at the edge in this row (a band running on across it: none)
+        }
+        const wgt = spread(step, SOFT);
+        for (let y = 0; y < B.H; y++) {
+            const k = wgt[y];
+            if (k < 0.02) continue;                                                    // no step near this row
             const w = Math.round(P.fbm(3.7, y / (13 * u), 41, 2) * WOB);              // where the ramp starts wobbles a little row by row: no ruled line
             for (let x = e; x < Math.min(B.W, e + w + RAMP); x++) {
-                if ((x - e - w + 0.5) / RAMP > threshold(x, y)) continue;              // kept: the ramp thins toward the edge
+                if (1 - k * (1 - clamp01((x - e - w + 0.5) / RAMP)) > threshold(x, y)) continue;   // kept: the ramp thins toward the edge, as far as the row's weight
                 const i = y * B.W + x;
                 B.lum[i] = 0; B.block[i] = 0; B.ext[i] = 0; B.rgb[i * 3] = 0; B.rgb[i * 3 + 1] = 0; B.rgb[i * 3 + 2] = 0;
             }
         }
+    }
+    /** A row weight widened over r rows each way (the most near it), then blurred twice over as many (a tent): 0..1. */
+    function spread(a, r) {
+        const n = a.length, wide = new Float32Array(n);
+        for (let y = 0; y < n; y++) { let m = 0; for (let d = Math.max(0, y - r); d <= Math.min(n - 1, y + r); d++) m = Math.max(m, a[d]); wide[y] = m; }
+        const box = src => { const out = new Float32Array(n); for (let y = 0; y < n; y++) { let s = 0, c = 0; for (let d = Math.max(0, y - r); d <= Math.min(n - 1, y + r); d++) { s += src[d]; c++; } out[y] = s / c; } return out; };
+        return box(box(wide));
     }
     /** The far comet: a pale jade head and a thin tail pointing away from the light. */
     function cometSprite(a) {
@@ -471,42 +487,70 @@
         the world's own pixels: warm-br round the light; warm-br in, warm out, over most of the screen; the whole screen warm (the
         tower too); then ink falling in from the edges, a warm core left (the corridor's dark keeps a warm smudge there). Colours
         are the tokens (--warm-br, --warm, --ink). Where a step leaves a pixel empty, what is under it shows (the burn, the
-        tower). k 0..3: that step's frame (painted now if it is not yet); k -1: paint the next one not yet painted (one an idle
-        frame, during the burn), → null. */
+        tower). k 0..3: that step's frame (finished now if it is not yet); k -1: paint the next BLOOM_BANDS-th of the rows of
+        the next frame not yet done (one band an idle frame, during the burn), → null.
+        The cost (B05 review): a frame's levels depend only on the distance from the light, so they are read from a table of
+        BLOOM_BINS distances, and a pixel is one 32-bit write. One band is under 1 ms at 1366 x 768 (node: about 0.7 ms; the
+        whole frame about 5.5 ms, against about 50 ms before), and the 4 x 8 bands are done well before the flash. */
     const BLOOM = [{ core: 0.12, mid: 0.12, edge: 0.48 }, { core: 0.28, mid: 0.5, edge: 0.9 }, { core: 0.2, mid: 0.75, edge: 1.6, floor: 0.82 }, { ink: true }];
-    const BLOOM_TOP = 0.94;                                                        // never a flat fill: even the core keeps a dither
+    const BLOOM_TOP = 0.94, BLOOM_BINS = 1024, BLOOM_BANDS = 8;                    // never a flat fill: even the core keeps a dither
+    const BAYER = new Float32Array(P.BAYER_RAW.map(v => (v + 0.5) / 64));          // threshold(x, y), as a table the loop reads
     const blooms = [];
     function tokenRgb(name, fallback) {
         let v = '';
         try { v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); } catch (err) { v = ''; }
         return /^#[0-9a-f]{6}$/i.test(v) ? P.hexRgb(v) : P.hexRgb(fallback);
     }
-    function bloomFrame(k) {
-        const LP = LPx(), W = G.W, H = G.H, S = BLOOM[k], img = new ImageData(W, H), d = img.data;
-        const br = tokenRgb('--warm-br', RP.SUN.hex[5]), wm = tokenRgb('--warm', RP.SUN.hex[4]), ink = P.hexRgb(INK);
-        const far = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - LP[0], y - LP[1])));
-        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-            const r = Math.hypot(x - LP[0], y - LP[1]) / far, th = threshold(x, y);
-            let c = null;
-            if (S.ink) c = smooth(0.04, 0.6, r) * 0.92 + 0.08 > th ? ink : r < 0.14 && 1 - smooth(0.05, 0.14, r) > th ? br : wm;
-            else if (BLOOM_TOP * (1 - smooth(S.core * 0.6, S.mid, r)) > th) c = br;
-            else if (BLOOM_TOP * Math.max(S.floor || 0, 1 - smooth(S.mid * 0.8, S.edge, r)) > th) c = wm;
-            if (!c) continue;
-            const o = (y * W + x) * 4; d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+    const pack = c => ((255 << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0;      // RGBA in one little-endian word
+    /** Step k's levels by distance (0..1 of the farthest corner): a pixel takes colour 1 where a > its threshold, else colour 2
+        where b > it, else stays empty (b -1: never). The ink step fills every pixel: ink, else warm-br at the core, else warm. */
+    function bloomLevels(S) {
+        const a = new Float32Array(BLOOM_BINS + 1), b = new Float32Array(BLOOM_BINS + 1);
+        for (let i = 0; i <= BLOOM_BINS; i++) {
+            const r = i / BLOOM_BINS;
+            if (S.ink) { a[i] = smooth(0.04, 0.6, r) * 0.92 + 0.08; b[i] = r < 0.14 ? 1 - smooth(0.05, 0.14, r) : -1; }
+            else { a[i] = BLOOM_TOP * (1 - smooth(S.core * 0.6, S.mid, r)); b[i] = BLOOM_TOP * Math.max(S.floor || 0, 1 - smooth(S.mid * 0.8, S.edge, r)); }
         }
-        const cv = document.createElement('canvas'); cv.width = W; cv.height = H; cv.getContext('2d').putImageData(img, 0, 0);
-        return cv;
+        return { a, b };
+    }
+    function bloomStart(k) {
+        const LP = LPx(), W = G.W, H = G.H, S = BLOOM[k], img = new ImageData(W, H), cv = document.createElement('canvas');
+        const br = pack(tokenRgb('--warm-br', RP.SUN.hex[5])), wm = pack(tokenRgb('--warm', RP.SUN.hex[4])), ink = pack(tokenRgb('--ink', INK));
+        const far = Math.max(...[[0, 0], [W, 0], [0, H], [W, H]].map(([x, y]) => Math.hypot(x - LP[0], y - LP[1])));
+        cv.width = W; cv.height = H;
+        return { cv, cx: cv.getContext('2d'), img, px: new Uint32Array(img.data.buffer), lv: bloomLevels(S), LP, inv: BLOOM_BINS / far, y: 0,
+            c1: S.ink ? ink : br, c2: S.ink ? br : wm, c3: S.ink ? wm : 0 };
+    }
+    /** Paints rows of a frame from where it got to (all of them: rows Infinity), and puts them on its canvas. */
+    function bloomRows(f, rows) {
+        const W = G.W, y1 = Math.min(G.H, f.y + rows), { a, b } = f.lv, px = f.px, lx = f.LP[0], ly = f.LP[1], inv = f.inv, c1 = f.c1, c2 = f.c2, c3 = f.c3;
+        for (let y = f.y; y < y1; y++) {
+            const dy2 = (y - ly) * (y - ly), row = y * W, tr = (y & 7) << 3;
+            for (let x = 0; x < W; x++) {
+                const dx = x - lx, i = (Math.sqrt(dx * dx + dy2) * inv + 0.5) | 0, th = BAYER[tr | (x & 7)];
+                px[row + x] = a[i] > th ? c1 : b[i] > th ? c2 : c3;
+            }
+        }
+        if (y1 > f.y) f.cx.putImageData(f.img, 0, 0, 0, f.y, W, y1 - f.y);
+        f.y = y1;
+        return f.y >= G.H;
     }
     function bloom(k) {
-        if (k < 0) { const next = BLOOM.findIndex((_, i) => !blooms[i]); if (next >= 0) blooms[next] = bloomFrame(next); return null; }
-        if (!blooms[k]) blooms[k] = bloomFrame(k);
-        return blooms[k];
+        if (k < 0) {
+            const next = BLOOM.findIndex((_, i) => !blooms[i] || blooms[i].y < G.H);
+            if (next >= 0) { blooms[next] = blooms[next] || bloomStart(next); bloomRows(blooms[next], Math.ceil(G.H / BLOOM_BANDS)); }
+            return null;
+        }
+        blooms[k] = blooms[k] || bloomStart(k);
+        if (blooms[k].y < G.H) bloomRows(blooms[k], Infinity);
+        return blooms[k].cv;
     }
-    /** The 1 art px dotted leader from a world's note to the world's rim (a and b art px), one dot on, one off. */
-    function leader(a, b, hex) {
-        const n = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
+    /** The dotted leader from a world's note to the world's rim (a and b art px), th art px dots (2 CSS px at every size),
+        one dot on, one off. */
+    function leader(a, b, hex, th) {
+        const w = Math.max(1, th || 1), n = Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1]));
         ctx.fillStyle = hex;
-        for (let i = 0; i <= n; i += 2) ctx.fillRect(Math.round(a[0] + (b[0] - a[0]) * i / (n || 1)), Math.round(a[1] + (b[1] - a[1]) * i / (n || 1)), 1, 1);
+        for (let i = 0; i <= n; i += 2 * w) ctx.fillRect(Math.round(a[0] + (b[0] - a[0]) * i / (n || 1) - (w - 1) / 2), Math.round(a[1] + (b[1] - a[1]) * i / (n || 1) - (w - 1) / 2), w, w);
     }
     /** A ring of whole pixels round (x, y) at radius r, th art px thick (a refused world's blink). */
     function ring(x, y, r, hex, th) {

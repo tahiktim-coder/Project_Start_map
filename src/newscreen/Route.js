@@ -24,6 +24,7 @@
             (Eden in the light's own band, beside it: no fork mate, never a world "ahead" for onlyStoryLeft)
      canGo(state, id) → { ok, say, kind }  kind: 'world' | 'ghost' | 'contact' | 'light' | 'passed' | 'cost' | 'none';
                                            say: the one line A.U.R.A. says when it is no (null when ok). Pure: says nothing.
+                                           'cost' also gives { cost, have }: the flight's energy and ours, whole (Travel shows them)
                                            A story world (App.isStoryStop) is never 'cost': short of energy, it is flown on the reserve
      arrive(state, id)                     we pulled in at id: it is 'visited', its fork mate 'gone', anything ahead in a
                                            nearer band 'passed'
@@ -33,15 +34,15 @@
      A fresh plan on a sector already played (a save from the default game, loaded with ?new=1 on) marks where we have
      been: the orbit we are parked at, a wreck boarded, a station searched; the rest follows as if we had flown there.
      find(state, id) → node | null         a node of the sector by id ('light' gives the structure in sector 6)
-     LINES                                 the refusal lines (docs/STYLE.md); cost(n, have) says the real numbers (L-10)
+     LINES                                 the refusal lines (docs/STYLE.md; the designer's rewrites, L-10, wait in CALLS.md)
 */
 (function () {
     'use strict';
 
     const LINES = Object.freeze({
-        contact: 'A.U.R.A.: "We can\'t plot a course to that contact yet, Commander."',   // DRAFT (look pass)
+        contact: 'A.U.R.A.: "That contact is too faint to plot a course to, Commander."',
         passed: 'A.U.R.A.: "We passed it, Commander. We can\'t turn back."',
-        cost: (n, have) => `A.U.R.A.: "That flight costs ${n} energy, Commander. We have ${have}."`,   // DRAFT (look pass)
+        cost: 'A.U.R.A.: "We can\'t afford that one, Commander."',
     });
     const isStructure = n => !!(n && (n.isStructure || n.type === 'STRUCTURE'));
     const isGiant = n => n && n.type === 'GAS_GIANT';
@@ -157,7 +158,7 @@
         if (node.ghost) return { ok: true, say: null, kind: 'ghost' };
         const cost = typeof state.getWarpCost === 'function' ? state.getWarpCost(node) : 0;
         const isStory = !!(window.app && typeof window.app.isStoryStop === 'function' && window.app.isStoryStop(node));   // flown on the reserve if need be
-        if (cost > state.energy && !window.TEST_MODE && !isStory) return { ok: false, say: LINES.cost(cost, Math.max(0, Math.floor(state.energy))), kind: 'cost' };
+        if (cost > state.energy && !window.TEST_MODE && !isStory) return { ok: false, say: LINES.cost, kind: 'cost', cost: Math.ceil(cost), have: Math.max(0, Math.floor(state.energy)) };
         return { ok: true, say: null, kind: 'world' };
     }
 

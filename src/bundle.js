@@ -3233,8 +3233,8 @@ class App {
         // Auto-save after sector jump
         this.autoSave();
 
-        // Sector name from config
-        const sectorName = enterConfig ? enterConfig.name : '';
+        // Sector name from config (the new look's own where it renames one: NSLooks.renamed, C62; caps as the config's)
+        const renamed = isNewScreen() && window.NSLooks && typeof window.NSLooks.renamed === 'function' ? window.NSLooks.renamed(nextSector) : null, sectorName = renamed ? renamed.toUpperCase() : enterConfig ? enterConfig.name : '';
         this.state.addLog(`Sector ${nextSector}${sectorName ? ' — ' + sectorName : ''}`);   // MissionLog turns this into the new stop's header
 
         // Dispatch sector entered event for audio
@@ -4362,13 +4362,13 @@ Then you're through.`,
 
     /** The new look: the first scan of each kind of world this run (from the bridge, or from travel for 2 energy) adds 1 data,
         what the colony will know. Returns A.U.R.A.'s "a new kind of world" line for the scan to say (null: a kind seen before).
-        Her line on a data milestone (GameState.addColonyKnowledge) follows it, but for the first: hers says it (C29). */
+        Her line on a data milestone (GameState.addColonyKnowledge) follows it. */
     noteNewKind(planet) {
         if (!isNewScreen() || !planet || !planet.type || planet.isStructure || planet._isWrongPlace || planet.ghost || planet.isStation || planet.isAsteroidField) return null;
         const kinds = this.state._kindsScanned = this.state._kindsScanned || [];
         if (kinds.includes(planet.type)) return null;
         this.state._kindsScanned = kinds.concat(planet.type);
-        this.state.addColonyKnowledge(1, (this.state._colonyKnowledge || 0) < 1);   // the first data: her new-kind line already says it is filed (one filing line, C29)
+        this.state.addColonyKnowledge(1);
         const line = window.AuraSystem && typeof window.AuraSystem.line === 'function' ? window.AuraSystem.line('FIRST_LANDING') : null;
         return line || 'A new kind of world, Commander. I will record everything.';
     }
