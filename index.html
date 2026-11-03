@@ -47,6 +47,7 @@
                 ['300', '400', '500', 'italic 400'].forEach(function (w) { document.fonts.load(w + " 1em 'IBM Plex Sans'").catch(function () {}); });
                 document.fonts.load("400 1em 'IBM Plex Mono'").catch(function () {});
             };
+            window.NS_PRELOAD();   // now: minigames.css (head) has declared every face but the italic; the font sheet's onload asks again
             document.write('<link rel="stylesheet" href="src/newscreen/tokens.css?v=1">'
                 + '<link rel="stylesheet" href="src/newscreen/newscreen.css?v=5">'
                 + '<link rel="stylesheet" href="' + window.NS_FONTS + '" media="print" onload="this.media=&quot;all&quot;; window.NS_PRELOAD()">');
