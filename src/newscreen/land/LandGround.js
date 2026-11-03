@@ -68,6 +68,7 @@
     const BOLT = ramp(INK, '#16222e', '#3c5a78', '#9cc4e8', '#f2fbff');   // Worlds.js GLOW.bolt
     const FAR_TOP = 46, STRETCH_MIN_X = 64, POOL_ALT = 150;
     const LADDER = [0.26, 0.33, 0.41, 0.51, 0.64, 0.8], UNDER_HAZE = 0.25, SEAM = 12;   // DRAFT (round 3; meteor-land.js K.LADDER is the same list)
+    const SKY_JIT = 4;                                                       // GAME (the review): the margins' sky: each pixel from the edge's rows up to this many px off its own
     const clampX = x => Math.max(0, Math.min(W - 1, x));
     const rgbMix = (a, b, k) => [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k];
     const hexOf = c => '#' + c.map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
@@ -285,7 +286,7 @@
         A.later(go, G.tag, !!core.urgent, 'ladder margins ' + i);
     }
     /** The land far below shows no sky of its own: its rows FADE_TOP..FADE_FULL world px over the find's ground dissolve
-        (the Bayer grain, picture-locked), everything over them is cut; the field 1:1 (the landing) keeps its sky. inPlace:
+        (GAME: in white noise, picture-locked), everything over them is cut; the field 1:1 (the landing) keeps its sky. inPlace:
         cut the canvas itself, else a copy. */
     const FADE_TOP = 62, FADE_FULL = 42;
     function fadeSky(G, src, Vx, inPlace) {
@@ -296,7 +297,7 @@
         if (y1 > y0) {
             const m = document.createElement('canvas'); m.width = c.width; m.height = y1 - y0;
             const mg = m.getContext('2d'), img = mg.createImageData(m.width, m.height);
-            for (let y = 0; y < m.height; y++) { const keep = (y + 0.5) / m.height; for (let x = 0; x < m.width; x++) if (threshold(x, y + y0) >= keep) img.data[(y * m.width + x) * 4 + 3] = 255; }
+            for (let y = 0; y < m.height; y++) { const keep = (y + 0.5) / m.height; for (let x = 0; x < m.width; x++) if (hash(x & 255, (y + y0) & 255, 229) >= keep) img.data[(y * m.width + x) * 4 + 3] = 255; }   // GAME (the review): white noise, not the Bayer lattice: these pictures are drawn shrunk, nearest neighbour, and the lattice beat into scanline bars
             mg.putImageData(img, 0, 0);
             g.globalCompositeOperation = 'destination-out'; g.drawImage(m, 0, y0); g.globalCompositeOperation = 'source-over';
         }
@@ -327,7 +328,7 @@
                 if (dpx < SEAM && threshold(ax, y) < (SEAM - dpx) / SEAM) { const s = (y * 8 + ex) * 4; r = edge[s]; gg = edge[s + 1]; b = edge[s + 2]; }   // the seam: the field's own edge, dithered in
                 else if (y >= topAy) { const s = (Math.min(FAR_H - 1, Math.floor(y - topAy)) * FW + tx) * 4; r = near[s]; gg = near[s + 1]; b = near[s + 2]; if (dark) { r *= 0.42; gg *= 0.42; b *= 0.45; } }
                 else if (y >= farAy) { const s = (Math.min(HILL_H - 1, Math.floor(y - farAy)) * FW + tx) * 4; r = hills[s]; gg = hills[s + 1]; b = hills[s + 2]; if (dark) { r *= 0.5; gg *= 0.5; b *= 0.52; } }
-                else { const s = (Math.min(y, skyMax) * 8 + ex) * 4; r = edge[s]; gg = edge[s + 1]; b = edge[s + 2]; }
+                else { const jy = Math.max(0, Math.min(skyMax, Math.min(y, skyMax - SKY_JIT) + Math.round((hash(ax & 255, y & 255, 223) - 0.5) * 2 * SKY_JIT))), s = (jy * 8 + Math.floor(hash(ax & 255, y & 255, 227) * 8)) * 4; r = edge[s]; gg = edge[s + 1]; b = edge[s + 2]; }   // GAME (the review): its pixels drawn from the edge's rows near it at random, never the edge's 8 px tiled row by row (that read as scanline streaks)
                 out[o] = r; out[o + 1] = gg; out[o + 2] = b; out[o + 3] = 255;
             }
         }

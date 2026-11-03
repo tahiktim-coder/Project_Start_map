@@ -2,7 +2,8 @@
    Copied from prototypes/landing-meteor/meteor-land.js (sha1 d121a9754ce5, the sketch as polished 2026-11-03; round 3 is
    not yet approved by the designer). Every game change is marked // GAME: (a later round of the sketch folds in with a plain
    diff against that file).
-   Unchanged: it reads LandingArt.TOWER_W, 0 in the game (LandArt.js), so the cover and the land fill the frame.
+   It reads LandingArt.TOWER_W, 0 in the game (LandArt.js), so the cover and the land fill the frame. GAME (the review): the
+   far edge of the cover over an opening is torn heaps (CREST_TEAR, CREST_HUMP), never a ruled band.
 */
 /* ═══ Silent Exodus · prototypes · landing-meteor/meteor-land.js: the land far below, seen from the first frame ═══════════
    Round 3 (2026-10-31), the designer's verdict word for word: "i think we should see a bit further because when land
@@ -62,6 +63,10 @@
     const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
     const lerp = (a, b, k) => a + (b - a) * k;
     const smoother = k => { k = clamp01(k); return k * k * k * (k * (k * 6 - 15) + 10); };
+    // GAME (the review): where the cover's far edge lies over an opening it was forced solid with no height (a ruled band
+    // across the gap, cutting a beacon's mast): there it reaches CREST_TEAR rows further down, torn by column, and stands up
+    // to CREST_HUMP world px in heaps (tearOf: 0..1 along the map's columns)
+    const CREST_TEAR = 5, CREST_HUMP = 5, tearOf = c => 0.5 + 0.3 * Math.sin(c * 0.57 + 0.4) + 0.2 * Math.sin(c * 0.19 + 2.1);
     /** The size (0..1, 1 = the landing's own) of something dist world px below the shuttle: 1/h, landing size from H1. */
     const sOf = dist => Math.min(1, (K.C + K.H1) / (K.C + (dist <= K.H1 ? K.H1 : dist < K.H1 + K.S_SOFT ? K.H1 + (dist - K.H1) * (dist - K.H1) / (2 * K.S_SOFT) : dist - K.S_SOFT / 2)));   // (the polish round: eased into the landing size over the last S_SOFT px, never more than about 1 % a frame)
     /** The horizon's row in the fall: low at the top of a full drop (y 236), up to 150 by the deck; a routine drop's from 200,
@@ -334,7 +339,7 @@
             let hMax = 0;
             for (let c = cA; c <= cZ; c++) { rowE[c] = eff[row + c] + (eff[rowB + c] - eff[row + c]) * fy; const hh = hgt[row + c] + (hgt[rowB + c] - hgt[row + c]) * fy; rowH[c] = hh; if (hh > hMax) hMax = hh; rowSh[c] = shd[row + c] + (shd[rowB + c] - shd[row + c]) * fy; }
             const far = 1 - clamp01((yc - nT) / S.FAR_ROWS), farK = S.FAR * far * far, farV = S.FAR_V * farK, hzRow = o.probe ? 0 : farK * S.FAR_AIR, rimK = rimC * (1 - farK);
-            const crest = yc < crestY, hzRowT = ((((rf * 1.3) | 0) + 17) & 63) * 64, reach = Math.floor(yc + 0.5 - hMax * hs) - 1, ty = (y & 7) << 3;
+            const crest = yc < crestY, crestRow = yc < crestY + CREST_TEAR, hzRowT = ((((rf * 1.3) | 0) + 17) & 63) * 64, reach = Math.floor(yc + 0.5 - (crestRow ? Math.max(hMax, CREST_HUMP) : hMax) * hs) - 1, ty = (y & 7) << 3;   // GAME: crestRow
             let cf = cB + (TOWER + 1) * dc;                                      // (the map read once per two columns, each pixel its own dither: the cover's budget is 3 ms)
             for (let x = TOWER; x < FW; x += 2, cf += 2 * dc) {
                 const yb = YBUF[x];
@@ -345,7 +350,8 @@
                 let ev = rowE[c] + (rowE[c + 1] - rowE[c]) * fx;
                 let cn = (cf + 0.5) | 0; if (cn > cMax) cn = cMax;
                 const i = rowN + cn, inL = rid && rid[i] === lightId;
-                if (crest) { if (ev < C.CREST_E) ev = C.CREST_E; }                 // the far edge: solid cloud against the sky
+                let humped = false;                                               // GAME: a far edge forced over an opening (its heaps, torn)
+                if (crest || (crestRow && yc < crestY + CREST_TEAR * tearOf(cf))) { if (ev < C.CREST_E) { ev = C.CREST_E; humped = true; } }   // the far edge: solid cloud against the sky
                 else if (ev + (th - 0.5) * C.SOFT < 0) {                          // open (its edge torn soft): the land far below, under the haze in veils
                     if (y < yb) {
                         YBUF[x] = YBUF[x1] = y;
@@ -367,7 +373,9 @@
                     }
                     continue;
                 }
-                const hh = rowH[c] + (rowH[c + 1] - rowH[c]) * fx, tf = yc + 0.5 - (hh > 0 ? hh : 0) * hs;
+                let hh = rowH[c] + (rowH[c + 1] - rowH[c]) * fx;
+                if (humped) hh = Math.max(hh, CREST_HUMP * tearOf(cf * 0.7 + 11));   // GAME
+                const tf = yc + 0.5 - (hh > 0 ? hh : 0) * hs;
                 let top = tf >= 0 ? tf | 0 : Math.floor(tf);
                 if (top > y) top = y;
                 if (top >= yb) continue;
