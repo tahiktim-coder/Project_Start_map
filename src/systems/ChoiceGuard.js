@@ -5,7 +5,9 @@
      ChoiceGuard.place({...})               where a card goes so its choices sit clear of the avoid boxes without scrolling
      ChoiceGuard.offClick(card, buttons)    how far a card must move so none of its buttons sits on the last press
      ChoiceGuard.keepOffClick(card, buttons) a follow-up card (a found page, the disc, the team's choice) slides off the last
-                                            press, or ignores clicks a while longer when no slide fits
+                                            press, or ignores clicks a while longer when no slide fits (the new look: it
+                                            never moves, it waits; the frame, cards/Frame.js, keeps its talk keys right and its
+                                            choices left instead of placing the card)
    ChoiceGuard.lastClickBox() is a small box around the last place the player pressed, for a guard with no NEXT to avoid. */
 
 (function () {
@@ -124,9 +126,12 @@
     }
 
     /** A follow-up card opens with no button under the last press: it slides off it (a transform, so the page's own centring
-        is kept), or, when no slide fits, ignores clicks for LONG_LOCK_MS. Returns the slide (0: none needed, null: held). */
+        is kept), or, when no slide fits, ignores clicks for LONG_LOCK_MS. Returns the slide (0: none needed, null: held).
+        The new look (html.ns-on): nothing ever moves (the frame's top is fixed, DESIGN 1.1); a button under the press waits
+        LONG_LOCK_MS instead, and the return is null. */
     function keepOffClick(card, buttons) {
         const d = offClick(card, buttons);
+        if (d !== 0 && document.documentElement.classList.contains('ns-on')) { hold(card, LONG_LOCK_MS); return null; }
         if (d) card.style.transform = `translateY(${d}px)`;
         else if (d === null) hold(card, LONG_LOCK_MS);
         return d;

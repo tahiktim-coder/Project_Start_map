@@ -161,6 +161,7 @@
         if (mode === 'wake') return true;                                                    // the wake-up first: a card waits for the travel view
         if (!shown || now - lastDown < CLICK_GRACE_MS) return false;
         if (mode === 'dive-in' || mode === 'dive-out') return true;
+        if (document.querySelector('#ns-world-words .nst-title:not([hidden])')) return true;   // the sector title first: a card never covers it (look pass B02)
         if (mode === 'stop') return now - stopShownAt < stopHoldMs;
         return !!pendingShown || now - travelShownAt < HOLD_TRAVEL_MS;
     }

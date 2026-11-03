@@ -1,6 +1,6 @@
 /* ═══ Silent Exodus · new screen (?new=1) · cards.css: the cards and pages in the new look ════════════════════════════
-   What it is: under the switch (html.ns-on, set by index.html's switch script), the encounter cards (EncounterCard.js:
-   distress calls, stations, mining, wrecks, crew moments, malfunctions, the head count, the settle council), the found
+   What it is: under the switch (html.ns-on, set by index.html's switch script), every event card is the frame (cards/
+   Frame.js, look pass B02; its rules are the last block of this file, on tokens.css), and the found
    pages (FoundPage.js) and the disc page (DiscDocument.js) take the slice's type and colours instead of the green
    dashboard: IBM Plex, ink #05070a, text #e4e4e0, dim #8b8d90, warm #f08c2e; a dark dithered backing over the scene in
    place of the bordered green panel, the glow and the blur; gains warm, losses a clear rose red (#ff5468, never mistaken for the warm). Every size to read is at
@@ -15,7 +15,6 @@
    Loaded only when the switch is on (index.html, after newscreen.css). */
 
 /* ── the tokens: the old variables the cards read are pointed at the new colours, on these overlays only ── */
-html.ns-on .modal-overlay:has(> .enc-card),
 html.ns-on .modal-overlay.disc-doc {
     --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --loss: #ff5468;
     --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
@@ -31,8 +30,7 @@ html.ns-on .modal-overlay.disc-doc {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ── the card: ink, no green border, no glow ── */
-html.ns-on .modal-overlay .enc-card,
+/* ── the page: ink, no green border, no glow ── */
 html.ns-on .modal-overlay .disc-doc-card {
     background: var(--ink) !important;
     border: 0 !important;
@@ -41,16 +39,7 @@ html.ns-on .modal-overlay .disc-doc-card {
     color: var(--text);
     scrollbar-color: rgba(201, 209, 214, 0.2) transparent;
 }
-html.ns-on .modal-overlay .enc-card { width: min(600px, calc(100vw - 32px)); max-width: 600px; }
-
-/* the accent of each card, in the new colours: a call for help red, A.U.R.A.'s and the station's warm, a crew moment steel */
-html.ns-on .enc-card[style*="#74d99a"],
-html.ns-on .enc-card[style*="#e08a3c"],
-html.ns-on .enc-card[style*="#d9a24a"] { --enc: var(--warm) !important; }
-html.ns-on .enc-card[style*="#d85a4e"] { --enc: var(--loss) !important; }
-html.ns-on .enc-card[style*="#c8c2b0"] { --enc: var(--ui) !important; }
-
-/* ── the head: a small line of caps, the title ── */
+/* ── the head of a page: a small line of caps, the title ── */
 html.ns-on .modal-overlay .enc-head { padding: 24px 28px 6px; }
 html.ns-on .modal-overlay .enc-kicker {
     gap: 4px 16px; margin: 0 0 8px;
@@ -60,15 +49,8 @@ html.ns-on .modal-overlay .enc-kicker span { color: var(--dim); letter-spacing: 
 html.ns-on .modal-overlay .enc-head h3 {
     font: 600 clamp(24px, 1.7vw, 30px)/1.15 var(--f-ui); letter-spacing: 0.02em; color: var(--text);
 }
-html.ns-on .modal-overlay .enc-signal { border-block: 0; opacity: 0.9; width: calc(100% - 56px); margin: 10px 28px 0; }
-html.ns-on .modal-overlay .enc-art { border-bottom: 0; }
 
-/* ── the talk: one line at a time, the speaker's first name over it ── */
-html.ns-on .modal-overlay .enc-stage { padding: 14px 28px 0; }
-html.ns-on .modal-overlay .enc-context { margin: 0 0 18px; font: 400 15px/1.6 var(--f-text); color: #b9bdc0; }
-html.ns-on .modal-overlay .enc-more { color: var(--ui); border-bottom-color: rgba(201, 209, 214, 0.4); }
-html.ns-on .modal-overlay .enc-more:hover,
-html.ns-on .modal-overlay .enc-more:focus-visible { color: var(--warm); border-bottom-color: var(--warm); outline: none; }
+/* ── a spoken line on a page or a trip's result: the face, the speaker's first name over the line ── */
 html.ns-on .modal-overlay .enc-face { border: 0; border-radius: 0; background: #0b0e12; }
 html.ns-on .modal-overlay .enc-face-aura { position: relative; font-size: 0; color: transparent; }
 html.ns-on .modal-overlay .enc-face-aura::before {
@@ -79,6 +61,10 @@ html.ns-on .modal-overlay .enc-line p { font: 400 clamp(17px, 1.15vw, 20px)/1.45
 html.ns-on .modal-overlay .enc-line b {
     margin-bottom: 6px; font: 500 14px/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text) !important;
 }
+/* the gains and costs marked inside a line are words of the line, never a name's row (EncounterCard markRewards; the name is .enc-who) */
+html.ns-on .modal-overlay .enc-line b:is(.is-gain, .is-loss) { display: inline; margin: 0; font: 400 1em/1 var(--f-num); letter-spacing: 0; text-transform: none; }
+html.ns-on .modal-overlay .enc-line b.is-gain { color: var(--warm) !important; }
+html.ns-on .modal-overlay .enc-line b.is-loss { color: var(--loss) !important; }
 /* the crew's warm tones, A.U.R.A. in steel (EncounterCard writes today's colour inline; each is matched here; tokens.css) */
 html.ns-on .modal-overlay .enc-line b[style*="#74d99a"] { color: var(--tone-aura) !important; }
 html.ns-on .modal-overlay .enc-line b[style*="#f0a030"] { color: var(--tone-jaxon) !important; }
@@ -86,46 +72,25 @@ html.ns-on .modal-overlay .enc-line b[style*="#40c8ff"] { color: var(--tone-aris
 html.ns-on .modal-overlay .enc-line b[style*="#ff5050"] { color: var(--tone-vance) !important; }
 html.ns-on .modal-overlay .enc-line b[style*="#d070ff"] { color: var(--tone-mira) !important; }
 
-/* ── NEXT and skip: words, not buttons ── */
+/* ── a trip result's CONTINUE: a word, not a button (the frame's keys are .mini-btn, never these rules) ── */
 html.ns-on .modal-overlay .enc-flow { padding: 16px 28px 0; }
-html.ns-on .modal-overlay .enc-pips i { width: 6px; height: 6px; background: rgba(201, 209, 214, 0.18); }
-html.ns-on .modal-overlay .enc-pips i.is-on { background: var(--enc); }
-html.ns-on .modal-overlay .enc-skip { font: 400 13px/1 var(--f-num); color: var(--dim); }
-html.ns-on .modal-overlay .enc-skip:hover,
-html.ns-on .modal-overlay .enc-skip:focus-visible { color: var(--text); outline: none; }
-html.ns-on .modal-overlay .enc-next {
+html.ns-on .modal-overlay .enc-next:not(.mini-btn) {
     padding: 10px 4px 10px 12px; background: none; border: 0; border-radius: 0;
     font: 500 16px/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text);
     transition: color 140ms ease, transform 140ms ease;
 }
-html.ns-on .modal-overlay .enc-next:hover,
-html.ns-on .modal-overlay .enc-next:focus-visible { background: none; color: var(--warm); transform: translateX(3px); outline: none; }
+html.ns-on .modal-overlay .enc-next:not(.mini-btn):hover,
+html.ns-on .modal-overlay .enc-next:not(.mini-btn):focus-visible { background: none; color: var(--warm); transform: translateX(3px); outline: none; }
 
-/* ── the choices: a verb first, what it costs and gives on the right; pointing at one turns it warm ── */
-html.ns-on .modal-overlay .enc-decide { margin-top: 18px; padding-top: 12px; border-top: 0; }
-html.ns-on .modal-overlay .enc-choices { gap: 2px; padding: 0 20px; }
-html.ns-on .modal-overlay .enc-choice {
-    gap: 6px 16px; padding: 10px 8px; background: none; border: 0; border-radius: 0;
-    font: 400 clamp(17px, 1.1vw, 19px)/1.3 var(--f-text); letter-spacing: 0; color: var(--text);
-    transition: color 140ms ease, transform 140ms ease, background 140ms ease;
-}
-html.ns-on .modal-overlay .enc-choice:hover:not([disabled]),
-html.ns-on .modal-overlay .enc-choice:focus-visible {
-    background: rgba(240, 140, 46, 0.07); border-color: transparent; color: var(--warm); transform: translateX(3px); outline: none;
-}
-html.ns-on .modal-overlay .enc-choice:active:not([disabled]) { color: var(--warm-br); transform: translateX(0); }
-html.ns-on .modal-overlay .enc-choice[disabled] { opacity: 1; color: var(--dim); border-style: none; }
+/* ── a trip result's chips (EncounterCard outcomeIn): plain Mono numbers, gains warm, costs red ── */
+html.ns-on .modal-overlay .enc-decide:not(.ef-choices) { margin-top: 18px; padding-top: 12px; border-top: 0; }
 html.ns-on .modal-overlay .enc-chips { gap: 4px 14px; }
 html.ns-on .modal-overlay .enc-chips i { padding: 0; border: 0; border-radius: 0; font: 400 14px/1.3 var(--f-num); color: var(--ui); }
 html.ns-on .modal-overlay .enc-chips .is-gain { color: var(--warm); border: 0; }
 html.ns-on .modal-overlay .enc-chips .is-loss { color: var(--loss); border: 0; }
-/* long tags wrap inside the card instead of pushing it sideways (the ending card scrolled sideways, its reasons cut off) */
-html.ns-on .modal-overlay .enc-choice > span:first-child { flex: 1 1 14em; min-width: 0; }
 html.ns-on .modal-overlay .enc-chips { flex: 0 1 auto; min-width: 0; max-width: 100%; }
 html.ns-on .modal-overlay .enc-chips i { white-space: normal; overflow-wrap: anywhere; }
-html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips { flex-basis: 100%; }                  /* why it is closed: its own quiet line under the words */
-html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips i { font: 400 14px/1.4 var(--f-text); color: #c98a7c; }
-html.ns-on .modal-overlay .modal-content, html.ns-on .modal-overlay .enc-card { overflow-x: hidden; }
+html.ns-on .modal-overlay .modal-content { overflow-x: hidden; }
 /* ── what a choice did: it takes the choices' place, then CONTINUE (EncounterCard showOutcome) ── */
 html.ns-on .modal-overlay .enc-outcome { display: grid; gap: 12px; padding: 0 28px; }
 html.ns-on .modal-overlay .enc-outcome-pick { margin: 0 0 2px; font: 500 12px/1.4 var(--f-num); letter-spacing: .12em; text-transform: uppercase; color: var(--warm); }
@@ -133,17 +98,23 @@ html.ns-on .modal-overlay .enc-outcome-line { margin: 0; font: 400 clamp(16px, 1
 html.ns-on .modal-overlay .enc-outcome .is-gain { color: var(--warm); }
 html.ns-on .modal-overlay .enc-outcome .is-loss { color: var(--loss); }
 html.ns-on .modal-overlay .enc-outcome-flow { display: flex; justify-content: flex-end; margin-top: 18px; }
-/* the place the gap or the fold throws us to arrives behind a quiet veil (the old cyan and red flashes are gone) */
-html.ns-on .ns-fold-veil { position: fixed; inset: 0; z-index: 9000; pointer-events: none; background: #f2eee4; animation: ns-fold 1.6s ease-out forwards; }
-html.ns-on .ns-fold-veil.is-wrong { background: #1d050b; }
-@keyframes ns-fold { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { html.ns-on .ns-fold-veil { animation-duration: 10ms; } }
-/* the note on the choice you point at: under a hairline, quieter than the choices, and it names its choice */
-html.ns-on .modal-overlay .enc-detail { margin: 10px 28px 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.08); font: italic 400 14px/1.5 var(--f-text); color: #9a9fa3; }
-html.ns-on .modal-overlay .enc-detail:empty { border-top-color: transparent; }
-html.ns-on .modal-overlay .enc-detail-of { margin-right: 8px; font: 500 12px/1.5 var(--f-num); letter-spacing: .08em; text-transform: uppercase; color: var(--warm); }
-html.ns-on .modal-overlay .enc-detail .is-gain { color: var(--warm); }
-html.ns-on .modal-overlay .enc-detail .is-loss { color: var(--loss); }
+/* the gap throws us on (C82): a dithered bloom from the gap's seam, warm-br into ink, 6 steps of 150 ms (the peak is one step;
+   the new sector is drawn under it at 250 ms, bundle.js handleAnomalyTeleport), gone before the new sector's first line */
+html.ns-on .ns-fold-veil {
+    position: fixed; inset: 0; z-index: 9000; pointer-events: none;
+    background: repeating-conic-gradient(var(--warm-br) 0 25%, var(--ink) 0 50%) 0 0 / 4px 4px;
+    animation: ns-fold calc(15 * var(--step-ui)) steps(1, end) forwards;
+}
+@keyframes ns-fold {
+    0% { clip-path: inset(0 46% 0 46%); }
+    16.66% { clip-path: inset(0 0 0 0); }
+    33.33% { clip-path: inset(0 0 0 0); background: conic-gradient(var(--warm-br) 0 25%, var(--ink) 0) 0 0 / 4px 4px; }
+    50% { clip-path: inset(0 0 0 0); background: conic-gradient(var(--warm-br) 0 25%, var(--ink) 0) 0 0 / 8px 8px; }
+    66.66% { clip-path: inset(0 0 0 0); background: var(--ink); }
+    83.33% { clip-path: inset(0 0 0 0); background: repeating-conic-gradient(var(--ink) 0 25%, transparent 0 50%) 0 0 / 4px 4px; }
+    100% { clip-path: inset(0 0 0 0); background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) { html.ns-on .ns-fold-veil { background: var(--ink); animation: none; } }
 
 /* ── a found page and the disc: the object on the left, its words on the right ── */
 html.ns-on .modal-overlay .disc-doc-card .enc-kicker { color: var(--dim) !important; }
@@ -394,11 +365,10 @@ html.ns-on .modal-overlay .enc-outcome-chips .enc-chips i { font-size: 15px; }
 
 @media (max-height: 820px) {
     html.ns-on .modal-overlay .enc-head { padding: 16px 28px 4px; }
-    html.ns-on .modal-overlay .enc-context { margin-bottom: 12px; }
-    html.ns-on .modal-overlay .enc-decide { margin-top: 10px; padding-top: 8px; }
+    html.ns-on .modal-overlay .enc-decide:not(.ef-choices) { margin-top: 10px; padding-top: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    html.ns-on .modal-overlay .enc-choice, html.ns-on .modal-overlay .enc-next, html.ns-on .modal-overlay .disc-doc-note,
+    html.ns-on .modal-overlay .enc-next:not(.mini-btn), html.ns-on .modal-overlay .disc-doc-note,
     html.ns-on .modal-overlay .disc-doc-card .deck-action, html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action { transition: none; }
 }
 
@@ -418,3 +388,144 @@ html.ns-on .item-toast b { margin-bottom: 3px; font: 600 12px/1.2 'IBM Plex Sans
 html.ns-on .item-toast.is-leaving { opacity: 0; transform: none; transition: opacity 300ms steps(3, end); }
 @keyframes ns-toast-in { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { html.ns-on .item-toast { animation: none; } }
+
+/* ═══ the frame (cards/Frame.js, look pass B02, DESIGN.md 1.1): every event card ══════════════════════════════════════════
+   One column over the house dither: the picture (480 x 160 at a whole scale, a hairline, one readout), the line before, who
+   and the line, then the keys: minigames.css .mini-btn (their own rules; only the --mg-* words they read are set here), each
+   with its chips and its consequence under it. Every colour, face, size and step is a tokens.css token. Kept class names:
+   .modal-overlay .enc-decide .enc-choice .enc-next .enc-skip (ship.css still styles those for the old look: the few of its
+   properties .mini-btn does not set are put back below). */
+
+/* on the bridge no tag and no console key shows round a frame (Stop.js leaves their canvas half out while a card is up) */
+html.ns-on body:has(.modal-overlay:not(.ns-held)) #ns-stop-words { visibility: hidden; }
+
+html.ns-on .modal-overlay.ef-veil {
+    display: flex; align-items: flex-start; justify-content: center; overflow-x: hidden; overflow-y: auto;
+    background: var(--veil) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    color: var(--text); font-family: var(--f-text); text-align: left; -webkit-font-smoothing: antialiased;
+}
+html.ns-on .ef-veil:not(.is-in) { opacity: 0; }
+html.ns-on .ef-veil.is-in { animation: ef-step calc(3 * var(--step-ui)) steps(3, end) both; }
+html.ns-on .ef-veil.is-out { animation: ef-gone calc(3 * var(--step-ui)) steps(3, end) calc(3 * var(--step-ui)) both; }
+html.ns-on .ef-veil.is-out .enc-frame { animation: ef-gone calc(3 * var(--step-ui)) steps(3, end) both; }
+@keyframes ef-step { from { opacity: 0; } }
+@keyframes ef-gone { to { opacity: 0; } }
+
+html.ns-on .enc-frame {
+    --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--dim); --mg-steel: var(--ui); --mg-amber: var(--warm); --mg-amber-br: var(--warm-br);
+    --mg-f-ui: var(--f-ui); --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: var(--ease);
+    --pic-w: 960px; --pic-h: 320px; --pic-k: 2; --pic-crop: 0px;
+    --face: 64px;
+    position: relative; display: grid; gap: var(--s4); margin: 0 0 var(--s4); padding: 0;
+    width: max(var(--pic-w), min(var(--measure), calc(100vw - 2 * var(--s4))));
+    color: var(--text);
+}
+
+/* ── the picture: whole art pixels, a hairline, one readout in its corner ── */
+html.ns-on .enc-frame .ef-pic { position: relative; width: var(--pic-w); height: var(--pic-h); overflow: hidden; background: var(--ink); box-shadow: 0 0 0 1px rgba(201, 209, 214, 0.07); }
+html.ns-on .enc-frame .ef-pic canvas {
+    position: absolute; left: 0; top: calc(-1 * var(--pic-crop)); width: var(--pic-w); height: calc(var(--pic-k) * 160px);
+    image-rendering: pixelated; image-rendering: crisp-edges;
+}
+html.ns-on .ef-veil.is-in .ef-pic.is-alarm { animation: ef-alarm calc(4 * var(--step-art)) steps(1, end) calc(3 * var(--step-ui)) 2; }   /* a call, the air, the reserve: the hairline blinks twice */
+@keyframes ef-alarm { 0% { box-shadow: 0 0 0 1px var(--loss); } 50% { box-shadow: 0 0 0 1px rgba(201, 209, 214, 0.07); } }
+html.ns-on .enc-frame .ef-readout {
+    position: absolute; left: var(--s2); top: var(--s2); z-index: 1; margin: 0; padding: 3px 6px 2px;
+    font: 400 var(--fs-readout)/1.2 var(--f-num); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: var(--ui);
+    background: repeating-conic-gradient(rgba(5, 7, 10, 0.92) 0 25%, rgba(5, 7, 10, 0.62) 0 50%) 0 0 / 2px 2px; text-shadow: var(--shadow);
+}
+
+/* ── the words: the line before (dim), who (a ring, the name in their tone), the line; narration in the real italic ── */
+html.ns-on .enc-frame .ef-words { position: relative; display: grid; align-content: start; gap: var(--s2); }
+html.ns-on .enc-frame .ef-prev {
+    min-height: calc(var(--fs-prev) * 1.3); max-width: var(--measure); margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    font: 400 var(--fs-prev)/1.3 var(--f-text); color: var(--dim); text-shadow: var(--shadow);
+}
+html.ns-on .enc-frame .ef-prev.is-narr { font-style: italic; }
+html.ns-on .enc-frame .ef-prev:empty, html.ns-on .enc-frame .ef-prev.is-gone { visibility: hidden; }
+html.ns-on .enc-frame .ef-prev b { margin-right: 0.6em; font: 500 var(--fs-who)/1 var(--f-ui); font-style: normal; letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--dim)); }
+html.ns-on .enc-frame .ef-say { position: relative; display: grid; align-content: start; gap: 6px; max-width: var(--measure); }
+html.ns-on .enc-frame .ef-say[hidden], html.ns-on .enc-frame .ef-out[hidden] { display: none; }
+html.ns-on .enc-frame .ef-out { display: grid; align-content: start; gap: var(--s3); }
+html.ns-on .enc-frame .ef-who {
+    display: flex; align-items: center; gap: var(--s2); min-height: var(--fs-who); margin: 0;
+    font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--text)); text-shadow: var(--shadow);
+}
+html.ns-on .enc-frame .ef-ring { flex: none; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }
+html.ns-on .enc-frame .ef-say.is-narr .ef-who { visibility: hidden; }
+html.ns-on .enc-frame .ef-line { margin: 0; font: 400 var(--fs-voice)/1.36 var(--f-text); color: var(--text); text-wrap: balance; text-shadow: var(--shadow); }
+html.ns-on .enc-frame .ef-say.is-narr .ef-line { font-style: italic; color: var(--narr); }
+/* the portrait (C02) beside the column, never inside it: the words keep the picture's left edge */
+html.ns-on .enc-frame .ef-face { position: absolute; top: 0; left: calc(-1 * (var(--face) + var(--s6))); width: var(--face); height: var(--face); object-fit: cover; image-rendering: pixelated; }
+html.ns-on .enc-frame .ef-face.is-dead { filter: grayscale(1) brightness(0.5); }
+html.ns-on .enc-frame .tone-jaxon { --tone: var(--tone-jaxon); }
+html.ns-on .enc-frame .tone-aris { --tone: var(--tone-aris); }
+html.ns-on .enc-frame .tone-vance { --tone: var(--tone-vance); }
+html.ns-on .enc-frame .tone-mira { --tone: var(--tone-mira); }
+html.ns-on .enc-frame .tone-cora { --tone: var(--tone-cora); }
+html.ns-on .enc-frame .tone-aura { --tone: var(--tone-aura); }
+html.ns-on .enc-frame .tone-none { --tone: var(--text); }
+
+/* ── chips: numbers in Mono, gains warm, costs and risk red, a capped gain dim; a feeling (C04) is a word, in Sans ── */
+html.ns-on .enc-frame .ef-chips { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--s3); margin: 0; font: 400 var(--fs-chip)/1.3 var(--f-num); text-shadow: var(--shadow); }
+html.ns-on .enc-frame .ef-chip { font-style: normal; color: var(--ui); white-space: nowrap; }
+html.ns-on .enc-frame .ef-chip.is-gain { color: var(--warm); }
+html.ns-on .enc-frame .ef-chip.is-loss { color: var(--loss); }
+html.ns-on .enc-frame .ef-chip.is-dim { color: var(--dim); }
+html.ns-on .enc-frame .ef-chip.is-word { font: 400 var(--fs-conseq)/1.3 var(--f-text); }
+
+/* ── the keys: choices at the left, the talk keys at the right end of the same row ── */
+html.ns-on .enc-frame .ef-keys { display: flex; align-items: flex-start; gap: var(--s4) var(--s8); }
+html.ns-on .enc-frame .ef-keys > [hidden] { display: none; }
+html.ns-on .enc-frame .enc-decide { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--s3) var(--s8); flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; animation: none; outline: none; }
+html.ns-on .enc-frame .ef-talk { display: flex; align-items: center; gap: var(--s6); margin-left: auto; }
+html.ns-on .enc-frame .ef-go { display: flex; }
+html.ns-on .enc-frame .ef-key { display: grid; justify-items: start; align-content: start; gap: var(--s1); max-width: max(14em, calc((var(--pic-w) - 2 * var(--s8)) / 3)); }   /* three keys to a row */
+html.ns-on .enc-frame .mini-btn { font-size: var(--fs-key); transition: none; }
+html.ns-on .enc-frame .mini-btn::before { transition: none; }
+html.ns-on .enc-frame .mini-btn:focus-visible { text-decoration: none; }
+/* ship.css's old-look .enc-choice, put back to the key */
+html.ns-on .enc-frame .enc-choice { flex-wrap: nowrap; justify-content: flex-start; text-align: left; white-space: normal; }
+html.ns-on .enc-frame .enc-choice:not(.is-primary) { border-radius: 0; }
+html.ns-on .enc-frame .enc-choice:not(.is-primary):is(:hover, :focus, :focus-visible) { background: none; }
+html.ns-on .enc-frame .enc-choice[disabled] { opacity: 1; cursor: default; }
+/* focus looks exactly like pointing, and pointing at a key's chips is pointing at the key */
+html.ns-on .enc-frame .mini-btn:focus:not(:active):not([disabled]),
+html.ns-on .enc-frame .ef-key.is-pointed .mini-btn:not([disabled]) { color: var(--warm); transform: translateX(3px); outline: none; }
+html.ns-on .enc-frame .mini-btn:focus:not(:active):not([disabled])::before,
+html.ns-on .enc-frame .ef-key.is-pointed .mini-btn:not([disabled])::before { color: var(--warm); }
+html.ns-on .enc-frame .mini-btn.is-primary:focus:not(:active):not([disabled]),
+html.ns-on .enc-frame .ef-key.is-pointed .mini-btn.is-primary:not([disabled]) { border-color: var(--warm); background: color-mix(in srgb, var(--warm) 16%, transparent); }
+/* the consequence: words in Sans under the chips, shown for the key pointed at (one at a time; its room is always kept) */
+html.ns-on .enc-frame .ef-conseq {
+    display: flex; align-items: baseline; gap: var(--s2); max-width: 100%; margin: 0; visibility: hidden;
+    font: 400 var(--fs-conseq)/1.35 var(--f-text); color: var(--text-2); text-wrap: pretty; text-shadow: var(--shadow);
+}
+html.ns-on .enc-frame .ef-key.is-pointed .ef-conseq, html.ns-on .enc-frame .ef-key.is-locked .ef-conseq { visibility: visible; }
+html.ns-on .enc-frame .ef-conseq.is-loss { color: var(--loss); }
+html.ns-on .enc-frame .ef-conseq.is-end { color: var(--warm-br); }
+html.ns-on .enc-frame .ef-conseq.is-lock { color: var(--dim); }
+html.ns-on .enc-frame .ef-lock { flex: none; align-self: center; }
+html.ns-on .enc-frame .ef-n { font: 400 0.94em/1 var(--f-num); }
+html.ns-on .enc-frame .ef-n.is-gain { color: var(--warm); }
+html.ns-on .enc-frame .ef-n.is-loss { color: var(--loss); }
+html.ns-on .enc-frame .ef-n.is-ui { color: var(--ui); }
+/* a final key is held (C06): its mark fills ○ ◔ ◑ ◕ ● over 1.7 s; picked, ● in --warm-br while the others step to --dim */
+html.ns-on .enc-frame .mini-btn.is-hold::before { font-size: var(--fs-chip); }   /* the mark at the reading floor, so its fill steps show */
+html.ns-on .enc-frame .mini-btn.is-hold[data-fill="1"]::before { content: '\25D4'; }
+html.ns-on .enc-frame .mini-btn.is-hold[data-fill="2"]::before { content: '\25D1'; }
+html.ns-on .enc-frame .mini-btn.is-hold[data-fill="3"]::before { content: '\25D5'; }
+html.ns-on .enc-frame .ef-key.is-holding .mini-btn, html.ns-on .enc-frame .ef-key.is-holding .mini-btn::before { color: var(--warm-br); }
+html.ns-on .enc-frame .ef-key.is-picked .mini-btn { color: var(--warm-br); transform: none; }
+html.ns-on .enc-frame .mini-btn.is-hold[data-fill="4"]::before,
+html.ns-on .enc-frame .ef-key.is-picked .mini-btn::before { content: '\25CF'; color: var(--warm-br); }
+html.ns-on .enc-frame .ef-key.is-dim .mini-btn, html.ns-on .enc-frame .ef-key.is-dim .mini-btn::before, html.ns-on .enc-frame .ef-key.is-dim .ef-chip { color: var(--dim); }
+
+/* ── motion: the words 2 steps once the picture is half in, the keys left to right 60 ms apart; a new line 2 steps ── */
+html.ns-on .ef-veil.is-in .ef-words { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) var(--words-at, 0ms) both; }
+html.ns-on .ef-veil.is-in .ef-talk,
+html.ns-on .ef-veil.is-in .enc-decide.is-open .ef-key { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) calc(var(--keys-at, 0ms) + var(--k, 0) * var(--step-ui)) both; }
+html.ns-on .enc-frame .ef-say.is-step, html.ns-on .enc-frame .ef-out.is-step { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) both; }
+@media (prefers-reduced-motion: reduce) {
+    html.ns-on .ef-veil.is-in, html.ns-on .ef-veil.is-in *, html.ns-on .ef-veil.is-out, html.ns-on .ef-veil.is-out * { animation: none !important; }
+}

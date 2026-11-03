@@ -179,6 +179,7 @@ class GameState {
         this._nsDrops = 0;         // the new look: the meteor's landings flown this run (its first-landing help and its later tiers; LanderGame's not counted)
         this._wreckDoors = [];     // the doors of the wrecks boarded this run, in order (App.wreckDoorFor, TorchDoors.pick)
         this._kindsScanned = [];   // the new look: the kinds of world scanned this run (the first of each kind is +1 data, App.noteNewKind)
+        this._seenCards = [];      // the new look: the frames seen this run (EncounterCard openFrame: a repeat says only its last line)
         this._nsEventsSeen = [];   // the new look: the landing events whose full card was shown this run (App.tripCardPlan: a repeat is a short result card)
 
         // --- Legacy aliases for systems that still reference old names ---
@@ -330,6 +331,7 @@ class GameState {
             _encounteredShipNames: this._encounteredShipNames || [],
             _encounteredExodus: this._encounteredExodus || [],
             _seenCampfires: this._seenCampfires || [],
+            _seenCards: this._seenCards || [],   // the new look: the frames seen ('kind:id', EncounterCard openFrame)
             _followedSignal: !!this._followedSignal,
             _lighthouseBonus: !!this._lighthouseBonus,
             _damagedCapacitors: this._damagedCapacitors || null,
@@ -422,6 +424,7 @@ class GameState {
             this._encounteredShipNames = saveData._encounteredShipNames || [];
             this._encounteredExodus = saveData._encounteredExodus || [];
             this._seenCampfires = saveData._seenCampfires || [];
+            this._seenCards = Array.isArray(saveData._seenCards) ? saveData._seenCards : [];
             this._followedSignal = !!saveData._followedSignal;
             this._lighthouseBonus = !!saveData._lighthouseBonus;
             this._damagedCapacitors = saveData._damagedCapacitors || null;
@@ -2016,6 +2019,7 @@ class App {
         names.push((leader && leader.realName) || 'Cora Moon');          // she names the commander too, not "you": five names, "four crew"
         window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE', title: 'Head count',
+            picture: { kind: 'deck', deck: 'bridge' }, deck: 'bridge', seenKey: 'count:head', readout: 'Bridge',   // DRAFT (look pass): the readout (DESIGN 1.2)
             context: isNewScreen() ? 'Vance is frowning at the crew screen.' : 'Back on the bridge, Vance is frowning at the crew screen.',   // the new screen opens it in travel, off the bridge
             dialogue: [
                 { speaker: 'Vance', text: 'There are five of us on this ship. She keeps saying four.' },
@@ -2157,6 +2161,7 @@ class App {
         if (!window.EncounterCard) return showDisc();
         return new Promise(resolve => window.EncounterCard.open(this, {
             tone: 'story', zIndex: 2600, kicker: `FOUND IN ${shipName}`, title: card.title || page.name,
+            picture: { kind: 'scene', art: 'EXODUS_WRECK' }, readout: shipName, seenKey: `disc:${page.id}`,
             context: card.context, dialogue: line ? [line] : [],
             choices: [card.take || { text: 'Bring it aboard', desc: '' }],
             onPick: () => showDisc().then(resolve),
@@ -2499,6 +2504,7 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'INSIDE THE STATION', title: selected.title,
             facts: [['WHERE', stationName]],
+            picture: { kind: 'world', node: station }, readout: stationName, seenKey: `station:${selected.id}`,
             context: selected.context(stationName), dialogue: selected.dialogue, choices: selected.choices,
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(selected.choices[idx], this.state);   // the result says what really fitted
@@ -2591,6 +2597,7 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'rock', kicker: 'ASTEROID FIELD', title: selected.title,
             facts: [['WHERE', fieldName]],
+            picture: { kind: 'world', node: field }, readout: fieldName, seenKey: `asteroid:${selected.id}`,
             context: selected.context(fieldName), dialogue: selected.dialogue, choices: selected.choices,
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(selected.choices[idx], this.state);
@@ -2620,6 +2627,7 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'distress', kicker: 'DISTRESS SIGNAL', title: encounter.title, hasSignal: true,
             facts: [['SENT', signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `${signalAge} years ago`]],
+            picture: { kind: 'world', node: this.state.currentSystem }, readout: signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `Sent ${signalAge} years ago`, seenKey: `distress:${encounter.id}`,
             context: encounter.context(signalAge), dialogue: encounter.dialogue, choices: encounter.choices,
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(encounter.choices[idx], this.state);
@@ -2677,15 +2685,15 @@ class App {
 
         const crew = event.targetCrew;
         const inState = v => (typeof v === 'function' ? v(this.state) : v);   // a scene may word itself from what the crew has seen
-        const colors = {
+        const color = isNewScreen() ? undefined : ({                                  // the new look: the frame's tones (tokens.css), no colour table
             'jaxon': '#f0a030', 'aris': '#40c8ff', 'vance': '#ff5050',
             'mira': '#d070ff', 'commander': '#ffffff'
-        };
-        const color = colors[event.crewId] || '#ffffff';
+        })[event.crewId] || '#ffffff';
 
         window.EncounterCard.open(this, {
             tone: 'crew', color, kicker: (crew.tags || []).includes('LEADER') ? 'A NIGHT ON THE BRIDGE' : `A MOMENT WITH ${String(crew.name || '').toUpperCase()}`, title: event.title,
             context: inState(event.context), dialogue: inState(event.dialogue),
+            picture: { kind: 'deck', who: event.crewId }, seenKey: `crew:${event.id || event.title}`,
             choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c), descNow: c.descNow })),
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(event.choices[idx], this.state, crew);
@@ -3049,7 +3057,8 @@ class App {
         const isStop = p => !p.storyHidden && !(p.isStructure || p.type === 'STRUCTURE') && state.getWarpCost(p) <= state.energy;
         if (!said.length && nodes.some(p => ahead(p) && isStop(p))) said.push({ who: 'Jaxon', text: "There are still worlds ahead we haven't seen. One of them could be the place to stop." });
         if (!said.length) return null;
-        return { speaker: this.ableSpeaker(said[0].who), text: said.map(s => s.text).join(' ') };
+        const left = course ? course.name : wrecks.length ? `${wrecks[0].name} · wreck` : contact ? 'Faint contact' : 'Worlds ahead';   // DRAFT (look pass): the frame's readout
+        return { speaker: this.ableSpeaker(said[0].who), text: said.map(s => s.text).join(' '), lines: said.map(x => ({ speaker: this.ableSpeaker(x.who), text: x.text })), left };
     }
 
     /** Who can say a line now: the one asked for if awake and free, else the next of the crew who is, else A.U.R.A. */
@@ -3065,7 +3074,8 @@ class App {
         if (reason && typeof reason === 'object') {
             window.EncounterCard.open(this, {
                 tone: 'station', kicker: 'SECTOR JUMP', title: 'Jump now?', zIndex: 2800,
-                dialogue: [{ speaker: reason.speaker, text: reason.text }],
+                dialogue: reason.lines || [{ speaker: reason.speaker, text: reason.text }],
+                shape: 'ask', final: [1], readout: reason.left || '', picture: { kind: 'view', blink: true }, seenKey: `jump:${reason.text}`,
                 choices: [
                     { text: 'Not yet', desc: 'Stay in this sector.' },
                     { text: 'Go anyway', desc: 'Whatever is left here is gone for good.' },
@@ -3077,6 +3087,7 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'SECTOR JUMP', title: 'Jump now?', zIndex: 2800,
             dialogue: [{ speaker: 'A.U.R.A.', text: `${reason} Jump anyway?` }],
+            shape: 'ask', final: [1], picture: { kind: 'view', blink: true }, seenKey: `jump:${reason}`,
             choices: [
                 { text: 'Not yet', desc: 'Stay in this sector.' },
                 { text: 'Jump now', desc: 'Whatever is left here is gone for good.' },
@@ -3095,12 +3106,24 @@ class App {
     jumpNow(jumpCost) {
         if (this._isInTransit) return;
         if (this.state.energy < jumpCost && !window.TEST_MODE) { this.offerReserveJump(jumpCost); return; }
+        if (isNewScreen()) {                                                         // the new look: the talk before the jump comes before the bill
+            this.talkBeforeJump(true).then(had => { if (had !== 'stay') this.payAndJump(jumpCost, had === true); });
+            return;
+        }
+        this.payAndJump(jumpCost);
+    }
+
+    /** The jump paid, then flown. hadTalk (the new look): whether its talk was had already (talkBeforeJump); the talk's choice
+        may have spent some energy, so the jump takes what it costs, or what is left. */
+    payAndJump(jumpCost, hadTalk) {
+        if (this._isInTransit) return;
         if (this.state._driveReinforced) {
             this.state._driveReinforced = false;                                    // single use
             this.state.addLog(`Drive reinforcement active: Jump cost reduced by ${this.sectorJumpCost() - jumpCost} energy.`);
         }
-        this.state.consumeEnergy(jumpCost);
-        this.startSectorJump();
+        if (hadTalk == null) this.state.consumeEnergy(jumpCost);
+        else if (!window.TEST_MODE) { this.state.energy = Math.max(0, this.state.energy - jumpCost); this.state.emitUpdates(); }
+        this.startSectorJump(hadTalk == null ? undefined : { hadTalk });
     }
 
     /**
@@ -3110,19 +3133,28 @@ class App {
      */
     offerReserveJump(jumpCost) {
         if (!window.EncounterCard) { this.state.addLog('WARNING: Not enough Energy!'); return; }
-        const isNew = isNewScreen();
-        const choices = [
-            { text: 'Jump on the reserve', desc: 'Uses all the energy left. The crew quarters are damaged.' },
-            { text: 'Not yet', desc: 'Probes and wrecks can still bring energy back.' },
-        ];
-        if (isNew) choices[0] = Object.assign({}, choices[0], { desc: `${choices[0].desc} All crew +1 Stress.` });   // DRAFT chip: the cold night (coldNight)
+        const isNew = isNewScreen(), have = this.state.energy;
+        const reserve = { text: 'Jump on the reserve', desc: 'Uses all the energy left. The crew quarters are damaged.' };
+        const notYet = { text: 'Not yet', desc: 'Probes and wrecks can still bring energy back.' };
+        const choices = isNew ? [notYet, Object.assign({}, reserve, { desc: `${reserve.desc} All crew +1 Stress.`,   // DRAFT chip: the cold night (coldNight)
+            chips: [{ text: 'Quarters dark', tone: 'loss', word: true }, { text: 'Crew tense', tone: 'loss', word: true }] })]   // DRAFT (look pass): the reserve's chips (DESIGN 1.2)
+            : [reserve, notYet];
+        const RESERVE = isNew ? 1 : 0, reacts = this.ableSpeaker('Jaxon');            // the new look: "Not yet" first (C05)
+        const aura = { speaker: 'A.U.R.A.', text: 'I can run the drive on the reserve, Commander. The crew quarters will lose power.' };
+        const freeze = { speaker: 'Jaxon', text: `Then we freeze for a night. I've done worse.` };   // DRAFT (look pass): L-37 (said by whoever can: ableSpeaker)
         window.EncounterCard.open(this, {
             tone: 'alert', kicker: 'SHIP ALERT', title: 'Not enough energy to jump', zIndex: 2800,
-            context: `The jump needs ${jumpCost} energy. We have ${this.state.energy}.`,
-            dialogue: [{ speaker: 'A.U.R.A.', text: 'I can run the drive on the reserve, Commander. The crew quarters will lose power.' }],
+            context: isNew ? '' : `The jump needs ${jumpCost} energy. We have ${this.state.energy}.`,
+            dialogue: isNew ? [
+                { speaker: 'A.U.R.A.', text: `We need ${jumpCost} energy to jump, Commander. We have ${have}.` },   // DRAFT (look pass): L-37
+                aura,
+                reacts !== 'A.U.R.A.' && Object.assign({}, freeze, { speaker: reacts }),
+            ].filter(Boolean) : [aura],
+            shape: 'ask', alarm: true, final: [RESERVE], deck: 'quarters', picture: { kind: 'deck', deck: 'quarters' }, seenKey: 'jump:reserve',
+            readout: `Energy ${have} of ${jumpCost}`,                                   // DRAFT (look pass): the readout (DESIGN 1.2)
             choices,
             onPick: idx => {
-                if (idx !== 0) return;
+                if (idx !== RESERVE) return;
                 this.state.energy = 0;
                 if (isNew) this.coldNight();
                 this.state.damageDeck('quarters', 'The drive ran on the reserve. The crew quarters have lost power.');
@@ -3160,7 +3192,7 @@ class App {
     }
 
     /** The sector jump, paid for: the flight, the crew, the campfire, then the new sector. */
-    startSectorJump() {
+    startSectorJump(opts) {
         this._isInTransit = true;
         this.state.addLog("Starting Sector Jump...");
         if (isNewScreen() && window.NSOrbit) window.NSOrbit.breakPatched(this.state);      // the new screen: a patched deck breaks again on the jump
@@ -3193,16 +3225,17 @@ class App {
             afterFlight.then(() => this.enterNextSector());
         }, isThrow);
         if (isNewScreen() && !isThrow) {                                            // the new screen: a talk about this jump, then the burn and the flash first
-            this.talkBeforeJump().then(had => { hadTalk = had; return window.NewScreen.playJump(); }).then(fly);
+            const talk = opts && typeof opts.hadTalk === 'boolean' ? Promise.resolve(opts.hadTalk) : this.talkBeforeJump();
+            talk.then(had => { hadTalk = had === true; return window.NewScreen.playJump(); }).then(fly);
         } else fly();
     }
 
     /** The new look: a talk that says "after this jump" (NEW_LOOK_BEFORE_JUMP_TALKS) is had once the jump is chosen, before the
         flight opens, once a run. Resolves true once its outcome is read (the flight never opens under it); false, at once, when
         there is none. */
-    talkBeforeJump() {
+    talkBeforeJump(canStay = false) {
         if (window.TEST_MODE) return Promise.resolve(false);
-        return new Promise(done => this.showCampfireEvent(had => done(!!had), true))
+        return new Promise(done => this.showCampfireEvent(had => done(had === 'stay' ? 'stay' : !!had), true, canStay))
             .catch(err => { console.error('The talk before the jump failed; the jump goes on', err); return false; });
     }
 
@@ -3299,7 +3332,7 @@ class App {
 
     /** The jump's talk, after the flight. isBeforeJump (the new look, talkBeforeJump): only a talk of NEW_LOOK_BEFORE_JUMP_TALKS
         not had yet, and onComplete(true) waits until its outcome is read. After the flight the new look never has those talks. */
-    showCampfireEvent(onComplete, isBeforeJump = false) {
+    showCampfireEvent(onComplete, isBeforeJump = false, canStay = false) {
         // TEST_MODE: Skip campfire events entirely for faster testing
         if (window.TEST_MODE) {
             this.state.addLog("[TEST MODE] Skipping campfire event...");
@@ -3355,13 +3388,19 @@ class App {
             const sectorHeader = isNewScreen()                                                 // the new screen: plain words, no code-like caps
                 ? `[whisper]Into ${plainName(SECTOR_NAMES[toSector] || 'the dark')}[/whisper]`
                 : `[whisper]S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}[/whisper]`;
+            const stay = isBeforeJump && canStay && isNewScreen();                 // nothing is paid yet: "Not yet" stays in this sector
+            const choices = stay ? [{ text: 'Not yet', desc: 'Stay in this sector.', effect: () => '' }].concat(event.choices) : event.choices;   // DRAFT (look pass): C05
             this.showNarrativeEncounter({
                 title: event.title,
                 speaker: 'NARRATOR',
                 context: `[highlight]${event.title}[/highlight]\n${sectorHeader}\n\n${event.context}`,
                 dialogue: event.dialogue,
-                choices: event.choices,
-                onChoiceMade: () => {
+                choices,
+                readout: isBeforeJump ? `Sector ${toSector}` : SECTOR_NAMES[toSector] || '',   // DRAFT (look pass): the readout (DESIGN 1.2)
+                picture: isBeforeJump ? { kind: 'view', focus: 'light' } : { kind: 'deck', deck: 'galley' }, deck: 'galley', seenKey: `campfire:${event.id}`,
+                shape: stay ? 'ask' : undefined, final: stay ? choices.map((c, i) => i).slice(1) : undefined,
+                onChoiceMade: (idx) => {
+                    if (stay && idx === 0) { this.state._seenCampfires = this.state._seenCampfires.filter(id => id !== event.id); onComplete('stay'); return; }   // asked again next time
                     const EC = window.EncounterCard;
                     if (!isBeforeJump) onComplete();
                     else if (EC && typeof EC.whenFree === 'function') EC.whenFree(() => onComplete(true));   // the flight waits for the outcome
@@ -4012,7 +4051,9 @@ Then you're through.`,
             planet._lightCouncilHeard = true;
             window.EncounterCard.open(this, {
                 color: '#ffd27a', kicker: council.kicker, title: council.title, zIndex: 3000, context: council.context,
-                dialogue: council.dialogue, choices: council.choices,
+                dialogue: council.dialogue, choices: council.choices.map((c, i) => (council.doors[i] ? Object.assign({}, c, { tone: 'end' }) : c)),
+                shape: 'ask', final: council.doors.map((d, i) => (d ? i : -1)).filter(i => i >= 0), noContext: true, seenKey: 'light:council',
+                picture: { kind: 'view', focus: 'light' }, readout: 'The light',             // DRAFT (look pass): the readout (DESIGN 1.2)
                 onPick: idx => {
                     this._lightCardOpen = false;
                     const door = council.doors[idx];
@@ -4271,6 +4312,8 @@ Then you're through.`,
 
         window.EncounterCard.open(this, {
             tone: config.tone || 'story', zIndex: 2600, art: config.art,
+            readout: config.readout != null ? config.readout : headline && !headline.includes(config.title) ? headline : (this.state.currentSystem && this.state.currentSystem.name) || '',
+            seenKey: config.seenKey || `story:${config.title}`, shape: config.shape, final: config.final, deck: config.deck, picture: config.picture,
             // a headline that repeats the title ("COLONY RUINS: <title>") gives its extra words to the kicker instead
             kicker: config.kicker || subline || (headline && headline.includes(config.title) ? headline.replace(config.title, '').replace(/[:\s—-]+$/, '') : ''),
             title: headline && !headline.includes(config.title) ? `${config.title} — ${headline}` : config.title,
@@ -4295,7 +4338,8 @@ Then you're through.`,
         const ventCount = this.state._auraVentCount;
 
         const jaxonAlive = this.state.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD');
-        const hasTechFragment = this.state.cargo.some(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
+        const FRAGMENT = isNewScreen() ? ['tech_frag', 'tech_fragment', 'TECH_FRAGMENT'] : ['tech_fragment', 'TECH_FRAGMENT'];   // the new look: the real item is 'tech_frag' (Items.js)
+        const hasTechFragment = this.state.cargo.some(i => FRAGMENT.includes(i.id));
 
         const cost = ventCount >= 3 ? 'She will empty the whole ship. Everyone dies.'
             : ventCount === 2 ? 'One of the crew will die before the air comes back.'
@@ -4303,11 +4347,13 @@ Then you're through.`,
         const options = [
             jaxonAlive && { key: 'jaxon', text: 'Jaxon: "I can shut her out!"', desc: 'He cuts her off from the air system. A.U.R.A. goes back to neutral.' },
             hasTechFragment && { key: 'tech', text: 'Plug in the Tech Fragment', desc: 'Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment.' },
-            { key: 'accept', text: 'Do nothing and wait', desc: cost },
+            { key: 'accept', text: 'Do nothing and wait', desc: cost, tone: 'loss' },
         ].filter(Boolean);
 
         window.EncounterCard.open(this, {
             tone: 'distress', kicker: ventCount > 1 ? `AIR ALERT — TIME NUMBER ${ventCount}` : 'AIR ALERT', title: 'A.U.R.A. is letting the air out', zIndex: 3000,
+            shape: 'ask', alarm: true, final: [options.findIndex(o => o.key === 'accept')], deck: 'quarters', picture: { kind: 'deck', deck: 'quarters' }, seenKey: `vent:${ventCount}`,
+            readout: 'Quarters · air',                                                    // DRAFT (look pass): the readout (DESIGN 1.2)
             context: 'The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself.'
                 + (ventCount >= 2 ? ' She is not giving warnings any more.' : ''),
             choices: options,
@@ -4318,7 +4364,7 @@ Then you're through.`,
                     this.state._auraVentCount = 0; // Reset escalation on override
                 } else if (action === 'tech' && typeof AuraSystem !== 'undefined') {
                     // Remove tech fragment from cargo
-                    const idx = this.state.cargo.findIndex(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
+                    const idx = this.state.cargo.findIndex(i => FRAGMENT.includes(i.id));
                     if (idx !== -1) this.state.cargo.splice(idx, 1);
                     window.AuraSystem.applyTechFragment(this.state);
                     this.state._auraVentCount = 0; // Reset escalation on tech fix
@@ -4511,6 +4557,7 @@ Then you're through.`,
             const distress = rollDistressSignal(this.state, 'scan');
             if (distress) {
                 setTimeout(() => {
+                    if (isNewScreen() && window.NSOrbit) { window.NSOrbit.offerCall(this, distress); return; }   // the new screen: it waits on the bridge, never over SETTLE HERE
                     this.state.addLog("⚠ INCOMING TRANSMISSION: Old distress signal detected...");
                     this.queueModal('distress', distress);
                 }, 1000);
@@ -5741,6 +5788,7 @@ Then you're through.`,
 
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'ON THE SURFACE', title: planet.name,
+            picture: { kind: 'scene', art: 'GARDEN' }, readout: planet.name, seenKey: 'eden:surface',
             context: `${names} step${evaTeam.length === 1 ? 's' : ''} out into warm, sweet air, beside a clear stream. `   // DRAFT: "steps", one who went alone (the new look)
                 + 'Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass.',
             choices: options,
@@ -6268,7 +6316,8 @@ Then you're through.`,
         planet._settleCouncilHeard = true;   // asked again about this world, only A.U.R.A.'s question repeats
         window.EncounterCard.open(this, {
             tone: 'station', kicker: council.kicker, title: council.title, zIndex: 2800,
-            dialogue: council.dialogue, choices: council.choices,
+            dialogue: council.dialogue, choices: council.choices.map((c, i) => (i === 1 ? Object.assign({}, c, { tone: 'end' }) : c)),
+            shape: 'ask', final: [1], readout: planet.name, picture: { kind: 'world', node: planet }, seenKey: `settle:${planet.id || planet.name}`,
             onPick: idx => {
                 if (idx !== 1) { if (onStay) onStay(); return; }
                 // Sectors 1-2 (SECTOR_CONFIG colonyWarning): settling this early goes against A.U.R.A.'s advice
@@ -6626,10 +6675,10 @@ Then you're through.`,
             return;
         }
         if (isNewScreen()) {                       // the new look: the choice's outcome card first, then a quiet fold, then the new place
-            const FOLD_PEAK_MS = 400, FOLD_MS = 1600;
+            const FOLD_PEAK_MS = 250, FOLD_MS = 900;                               // cards.css .ns-fold-veil: 6 steps of 150 ms
             const fold = () => {
                 const veil = document.createElement('div');
-                veil.className = 'ns-fold-veil' + (type === 'WRONG_PLACE' ? ' is-wrong' : '');
+                veil.className = 'ns-fold-veil';                                        // (the copy's fall never comes here: Copy.js plays it)
                 document.body.appendChild(veil);
                 setTimeout(() => { if (type === 'FOLD_SUCCESS') this.renderNav(); else { this.state.emitUpdates(); this.renderOrbit(); } }, FOLD_PEAK_MS);
                 setTimeout(() => veil.remove(), FOLD_MS);
@@ -6947,7 +6996,7 @@ Then you're through.`,
         const dialogue = typeof event.dialogue === 'function' ? event.dialogue(this.state) : event.dialogue;
         return new Promise(resolve => window.EncounterCard.open(this, {
             tone: 'alert', kicker: 'SHIP ALERT', title: event.title, zIndex: 2800,
-            context: event.context, dialogue,
+            context: event.context, dialogue, seenKey: `fault:${event.id || event.title}`,
             choices: [{ text: isNewScreen() ? 'Deal with it' : 'DEAL WITH IT' }],
             onPick: () => {
                 const result = window.EncounterCard.apply({ ...event, fullCost: true }, this.state);   // a fault is no card choice: the new look's card cost cap leaves it be

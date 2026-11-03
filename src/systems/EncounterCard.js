@@ -29,6 +29,7 @@
     const MARKUP = /\[\/?[a-z]+\]/gi; // NarrativeModal-style [highlight] / [whisper] tags in older event text
     const DRAIN_MS = 300;             // the new look: what waited behind an outcome card comes one at a time, this often
     const DETAIL_MIN_WORDS = 3;       // a sentence that is only its chips ("-5 Energy.", "All crew +1 Stress.") is not repeated under the list
+    const DEFERRED = /^\s+(?:saved\b|on every\b|on each\b|every\b|per\b)/;   // "+4 Energy saved on the next jump", "-5 Energy on every jump": paid later
 
     const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     /** The sign of the number decides: a cost is a loss, more stress or damage is a loss, less of it is a gain. */
@@ -85,6 +86,7 @@
         const ranged = !!newLook();
         const out = String(text).replace(ranged ? stock.ranged : stock.re, (m, pre, sign, n, ...rest) => {
             const unit = ranged ? rest[1] : rest[0], k = parseInt((ranged && rest[0]) || n, 10);
+            if (ranged && sign === '+' && DEFERRED.test(rest[rest.length - 1].slice(rest[rest.length - 2] + m.length))) return m;   // the new look: "+4 Energy saved on the next jump" is no gain now
             if (sign !== '+') {
                 const lose = Math.min(k, costCap), lo = Math.min(parseInt(n, 10), lose);
                 v = Math.max(0, v - lose);
@@ -170,12 +172,13 @@
         return member && member.portraitId ? `<img class="enc-face" src="assets/crew/${esc(member.portraitId)}.png" alt="">` : '<span class="enc-face"></span>';
     }
 
-    /** The speaker as the crew list names them: an old titled label ("Tech Mira") still shows the first name. */
+    /** The speaker as the crew list names them: an old titled label ("Tech Mira") still shows the first name. The new look:
+        the name is <b class="enc-who">, so its style never reaches the gains and costs marked in the line (cards.css). */
     function lineHtml(app, d) {
         const member = d.speaker === 'A.U.R.A.' ? null : memberFor(app, d.speaker);
         const name = (member && member.name) || d.speaker;
         const color = SPEAKER_COLORS[name] || 'var(--bone)';
-        return `${faceHtml(app, d.speaker)}<p><b style="color:${color}">${esc(name)}</b>${d.text}</p>`;
+        return `${faceHtml(app, d.speaker)}<p><b${newLook() ? ' class="enc-who"' : ''} style="color:${color}">${esc(name)}</b>${d.text}</p>`;
     }
 
     /** First two sentences up front; anything after that waits behind "more". */
@@ -327,21 +330,25 @@
         try { run(); } finally { capturing -= 1; removeEventListener('log-updated', hear); }
         return said;
     }
-    const OUT_SKIP = /^(?:={2,}|\/{2,}|⚠|☠|ERROR\b|WARNING\b|STORAGE WARNING\b|Now entering\b|SOMETHING STRANGE\b|Deploying\b|\[[^\]]*\]$)/i;
+    // (a jump's "Starting Sector Jump..." is the flight's, and the gap's tally says again what A.U.R.A. just said: both stay in the log)
+    const OUT_SKIP = /^(?:={2,}|\/{2,}|⚠|☠|ERROR\b|WARNING\b|STORAGE WARNING\b|Now entering\b|SOMETHING STRANGE\b|Deploying\b|Starting Sector Jump\b|Through the gap\. We jumped\b|\[[^\]]*\]$)/i;
     const OUT_PREFIX = /^(?:CREW|MINING|STATION|SIGNAL|SCAN|PROBE|MALFUNCTION RESOLVED|REPAIR COMPLETE|FABRICATION COMPLETE):\s*/;
     const OUT_SPEAKER = /^(A\.U\.R\.A\.|Jaxon|Aris|Vance|Mira|Cora)\s*:\s*(.+)$/;
     const OUT_MAX = 4;
     const unquote = s => { const t = s.trim(), m = /^["“'‘](.*)["”'’]$/.exec(t); return m && !/["“”]/.test(m[1]) ? m[1] : t; };
+    const tokensOf = text => (String(text).match(new RegExp(REWARD_PATTERN.source, 'g')) || []).map(t => t.trim().toLowerCase());
     /** The lines worth showing from what a choice logged: speech and what happened, no system banners, each once, at most four
-        (the first few and the last, which is usually the tally). */
+        (the first few and the last, which is usually the tally). A line whose numbers all repeat an earlier line's is the same
+        news twice ("Power surge. -8 Energy lost" / "Power surge under control. -8 Energy."): it goes. */
     function outcomeLines(said) {
-        const out = [], seen = new Set();
+        const out = [], seen = new Set(), counted = new Set();
         said.forEach(raw => {
             const m = String(raw || '').replace(MARKUP, '').replace(/\s+/g, ' ').trim().replace(OUT_PREFIX, '');
             if (!m || OUT_SKIP.test(m)) return;
             const sp = OUT_SPEAKER.exec(m), item = sp ? { speaker: sp[1], text: unquote(sp[2]) } : { text: m };
-            const key = item.text.toLowerCase();
-            if (seen.has(key)) return;
+            const key = item.text.toLowerCase(), toks = tokensOf(m);
+            if (seen.has(key) || (!sp && toks.length && toks.every(t => counted.has(t)))) return;
+            toks.forEach(t => counted.add(t));
             seen.add(key); out.push(item);
         });
         return out.length > OUT_MAX ? out.slice(0, OUT_MAX - 1).concat(out[out.length - 1]) : out;
@@ -388,12 +395,178 @@
         box.focus({ preventScroll: true });
     }
 
+    // ── the new look: every card is a frame (src/newscreen/cards/Frame.js, DESIGN.md 1.1). This half turns a card's cfg into the
+    //    frame's model (who says what; each key with its chips and consequence) and runs a pick; the frame draws and plays it ──
+    const FEEL = /^(?:(All crew|Jaxon|Aris|Vance|Mira) )?([+\-−])\d+(?:-\d+)?\s+Stress$/;
+    const FULL = /\b(Energy|Rations?|Salvage) already full\b/g;
+    const LOSS_WORDS = /\b(?:die|dies|died|death|killed|gone for good|lost for good)\b/i;   // a consequence that kills or loses for good
+    const CREW_TONE = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
+    const DEATH = /^☠\s*DEATH:\s*([A-Z][a-z]+)/;
+    const NARR_MAX_WORDS = 20, PAGE_ITEMS = 2, PAGE_WORDS = 30;
+    const wordCount = s => String(s).split(/\s+/).filter(w => /[A-Za-z0-9]/.test(w)).length;
+    const cleanText = s => String(s == null ? '' : s).replace(/<[^>]*>/g, '').replace(MARKUP, '').replace(/\s+/g, ' ').trim();
+    /** Sentences, with A.U.R.A.'s dots kept whole. */
+    function sentencesIn(text) {
+        const HOLD = '\u0001', clean = cleanText(text).replace(/A\.U\.R\.A\./g, HOLD);
+        return (clean.match(/[^.!?…]+[.!?…]+["'”’)\]]*\s*|[^.!?…]+$/g) || []).map(s => s.split(HOLD).join('A.U.R.A.').trim()).filter(Boolean);
+    }
+    /** The scene, said as narration: its sentences, two short ones to a line (the renderer never cuts a written line). */
+    function narrationOf(context) {
+        const out = [];
+        sentencesIn(context).forEach(s => {
+            const last = out[out.length - 1], n = wordCount(s);
+            if (last && last.k < 2 && last.n + n <= NARR_MAX_WORDS) Object.assign(last, { text: `${last.text} ${s}`, n: last.n + n, k: last.k + 1 });
+            else out.push({ text: s, n, k: 1 });
+        });
+        return out.map(o => ({ narr: true, text: o.text }));
+    }
+    /** One line of talk for the frame: the first name, the tone (tokens.css --tone-*), the portrait (C02: A.U.R.A. has none). */
+    function frameLine(app, d) {
+        const isAura = d.speaker === 'A.U.R.A.', member = isAura ? null : memberFor(app, d.speaker);
+        const tag = member && (member.tags || []).find(t => CREW_TONE[t]);
+        const name = (member && member.name) || d.speaker;
+        const tone = isAura ? 'aura' : tag ? CREW_TONE[tag] : String(name || '').toLowerCase();
+        return { speaker: name, text: cleanText(d.text), tone, face: member && member.portraitId ? `assets/crew/${member.portraitId}.png` : null };
+    }
+    /** A number becomes a chip; a stress number becomes a feeling (C04: the crew report it, not a scorecard). */
+    function chipOf(token) {
+        const f = FEEL.exec(token);
+        if (!f) return { text: token, tone: isLoss(token) ? 'loss' : 'gain' };
+        const who = !f[1] || f[1] === 'All crew' ? 'Crew' : f[1], up = f[2] !== '-' && f[2] !== '−';
+        return { text: `${who} ${up ? 'tense' : 'calmer'}`, tone: up ? 'loss' : 'gain', word: true };   // DRAFT (look pass): C04's feeling words
+    }
+    const fullChip = unit => ({ text: `${/^Ration/.test(unit) ? 'Rations' : unit} full`, tone: 'dim' });   // DRAFT (look pass): a capped gain ("Energy full")
+    /**
+     * A key's chips and consequence (DESIGN 1.1): numbers as chips (a cost inside a chance clause is not one, nor a gain paid
+     * later, "+4 Energy saved on the next jump"); a chance of harm as "20% risk"; a capped gain as a dim "Energy full". The
+     * consequence is what the chips do not say, in words, the designer's own sentences (a chip at a sentence's head is left
+     * out; a chance stays whole). Returns { chips, text, html }.
+     */
+    function keyParts(desc) {
+        const text = cleanText(desc), chips = [], had = new Set(), tokens = new Set();
+        const add = c => { const k = c.text.toLowerCase(); if (!had.has(k)) { had.add(k); chips.push(c); } };
+        const chances = [...text.matchAll(CHANCE_PATTERN)].map(m => {
+            const end = text.slice(m.index).search(/[.!?](\s|$)/);
+            return { m, a: m.index, b: end < 0 ? text.length : m.index + end + 1 };
+        });
+        for (const m of text.matchAll(new RegExp(REWARD_PATTERN.source, 'g'))) {
+            if (chances.some(c => m.index >= c.a && m.index < c.b) || DEFERRED.test(text.slice(m.index + m[0].length))) continue;
+            tokens.add(m[0].trim().toLowerCase());
+            add(chipOf(m[0].trim()));
+        }
+        const risks = new Set();
+        chances.forEach(c => {
+            const clause = text.slice(c.a, c.b), isOnlyLoss = /[\-−]\d/.test(clause) && !/\+\d/.test(clause);
+            if (/risk$/i.test(c.m[0]) || RISKY.test(clause) || isOnlyLoss) { risks.add(c.m[0].toLowerCase()); add({ text: c.m[0].trim().replace(/chance$/i, 'risk'), tone: 'loss' }); }
+        });
+        for (const m of text.matchAll(FULL)) add(fullChip(m[1]));
+        const head = new RegExp(`^(${REWARD_PATTERN.source})`);
+        const said = sentencesIn(text).map(s => {
+            if (new RegExp(CHANCE_PATTERN.source, 'i').test(s)) return s;
+            let r = s.replace(FULL, '').trim(), m;
+            while ((m = head.exec(r)) && tokens.has(m[1].trim().toLowerCase())) r = r.slice(m[0].length).replace(/^\s*(?:,|and\b|&)?\s*/i, '');
+            r = r.replace(/^[:;,.\s]+/, '').trim();
+            return /[A-Za-z]{2,}/.test(r.replace(new RegExp(REWARD_PATTERN.source, 'g'), '')) ? r.charAt(0).toUpperCase() + r.slice(1) : '';
+        }).filter(Boolean).join(' ');
+        const html = esc(said).replace(new RegExp(REWARD_PATTERN.source, 'g'), hit => `<b class="ef-n ${isLoss(hit) ? 'is-loss' : 'is-gain'}">${hit}</b>`)
+            .replace(new RegExp(CHANCE_PATTERN.source, 'gi'), hit => `<b class="ef-n ${risks.has(hit.toLowerCase()) ? 'is-loss' : 'is-ui'}">${hit}</b>`);
+        return { chips, text: said, html };
+    }
+    /** A key: its label (sentence case, no full stop), its chips, its consequence and its role (final: held, C06; primary: the
+        framed warm keycap, the safe or only way on). A locked key keeps its reason. */
+    function frameKey(app, c, desc, isFinal, count) {
+        const label = cleanText(c.text).replace(/\.$/, '');
+        const primary = c.primary != null ? !!c.primary : count === 1 || /^not (?:yet|now)$/i.test(label);
+        const locked = !!c.disabled || (typeof c.requires === 'function' && !c.requires(app.state));
+        if (locked) return { label, chips: [], conseqHtml: esc(c.requiresLabel || ''), conseqTone: 'lock', locked: true, final: false, primary: false };
+        const p = keyParts(desc);
+        return { label, chips: Array.isArray(c.chips) ? c.chips : p.chips, conseqHtml: p.html, conseqTone: c.tone || (LOSS_WORDS.test(p.text) ? 'loss' : ''), final: !!isFinal, primary };
+    }
+    /**
+     * What a pick did, for the frame's slots (DESIGN 1.1 "outcome"): what was said and what happened as lines, every number as
+     * one chip row (rewards inside a spoken line come out of it: "Vance: 'Good.' Jaxon goes to check…" is Vance's line, then the
+     * narration, then the chips), in pages of two lines. A death and nothing else said: "Aris did not make it." A card never
+     * closes with nothing said; with nothing at all to show, null. → { pages: [[item]], chips } | null
+     */
+    function outcomeOf(app, said) {
+        const items = [], chips = [], seen = new Set(), counted = new Set(), dead = [];
+        const addItem = it => { const k = it.text.toLowerCase(); if (it.text && !seen.has(k)) { seen.add(k); items.push(it); } };
+        said.forEach(raw => {
+            const m = cleanText(raw).replace(OUT_PREFIX, '');
+            const death = DEATH.exec(m);
+            if (death) { dead.push(death[1]); return; }
+            if (!m || OUT_SKIP.test(m)) return;
+            const sp = OUT_SPEAKER.exec(m), toks = tokensOf(m);
+            if (!sp && toks.length && toks.every(t => counted.has(t))) return;                      // the same news twice
+            (m.match(new RegExp(REWARD_PATTERN.source, 'g')) || []).forEach(t => { const k = t.trim().toLowerCase(); if (!counted.has(k)) { counted.add(k); chips.push(chipOf(t.trim())); } });
+            for (const f of m.matchAll(FULL)) { const c = fullChip(f[1]); if (!chips.some(x => x.text === c.text)) chips.push(c); }
+            const q = sp ? /^(["“'‘])(.+?)(["”'’])(?:\s+(.*))?$/.exec(sp[2].trim()) : null;
+            if (sp) addItem(Object.assign(frameLine(app, { speaker: sp[1] }), { text: q ? q[2] : unquote(sp[2]) }));
+            const rest = keyParts(sp ? (q ? q[4] || '' : '') : m).text;
+            if (rest) addItem({ narr: true, text: rest });
+        });
+        if (!items.length && dead.length) {
+            const who = frameLine(app, { speaker: dead[0] });
+            items.push({ narr: true, text: `${dead[0]} did not make it.`, face: who.face, dead: true });   // DRAFT (look pass): a death-only outcome (DESIGN 1.1)
+        }
+        if (!items.length && !chips.length) return null;
+        const pages = [];
+        items.slice(0, OUT_MAX).forEach(it => {
+            const page = pages[pages.length - 1], n = wordCount(it.text);
+            if (page && page.length < PAGE_ITEMS && page.n + n <= PAGE_WORDS) { page.push(it); page.n += n; } else { const p = [it]; p.n = n; pages.push(p); }
+        });
+        return { pages: pages.length ? pages : [[]], chips };
+    }
+    /** The picture a card asks for (DESIGN 1.2): its own, a SceneArt scene, or the view ahead; a call carries its wave. */
+    function pictureOf(cfg) {
+        const base = cfg.picture ? Object.assign({}, cfg.picture) : hasArt(cfg) ? { kind: 'scene', art: cfg.art } : { kind: 'view' };
+        if (base.kind === 'scene' && !base.art) base.art = cfg.art;
+        if (cfg.hasSignal) base.signal = true;
+        return base;
+    }
+    /** The new look's card: the frame. Repeats are known by cfg.seenKey (state._seenCards, saved). */
+    function openFrame(app, cfg) {
+        const state = app && app.state, choices = cfg.choices || [];
+        const talk = (cfg.noContext ? [] : narrationOf(cfg.context)).concat(livingLines(app, cfg.dialogue).map(d => frameLine(app, d)));
+        const final = new Set(cfg.final || []);
+        const keys = choices.map((c, i) => frameKey(app, c, descOf(c, state), final.has(i), choices.length));
+        const seen = state ? (state._seenCards = Array.isArray(state._seenCards) ? state._seenCards : []) : [];
+        const isRepeat = !!cfg.seenKey && seen.includes(cfg.seenKey);
+        if (cfg.seenKey && !isRepeat) seen.push(cfg.seenKey);
+        const aria = [cfg.kicker, cfg.title].map(cleanText).filter(Boolean).join(' · ');
+        let picked = false;
+        return window.NSFrame.open(app, {
+            aria, zIndex: cfg.zIndex || 2000, shape: cfg.shape || (choices.length === 1 ? 'report' : 'decide'), alarm: !!cfg.alarm || cfg.tone === 'distress',
+            picture: pictureOf(cfg), readout: cleanText(cfg.readout), deck: cfg.deck || null, lines: talk, keys, isRepeat,
+        }, {
+            pick(idx) {
+                picked = true;
+                gate.held += 1;                                                       // nothing else opens until the outcome is read
+                let said = [];
+                quiet = false;
+                try { said = captureLog(() => cfg.onPick(idx)); } catch (err) { console.error('EncounterCard: the choice failed', err); }
+                const isQuiet = quiet;
+                quiet = false;
+                return isQuiet ? null : outcomeOf(app, said);
+            },
+            done() { if (picked) releaseGate(); },
+        });
+    }
+
     /**
      * @param {object} cfg { tone | color, kicker, title, facts:[[label, value]], context, dialogue:[{speaker, text}],
      *                       choices:[{text, desc, descNow(state), disabled, requires, requiresLabel}], onPick(idx), hasSignal, art, zIndex }
+     *        The new look's frame also reads: shape 'decide' | 'ask' | 'report', final [index] (held, C06), readout (three words
+     *        over the picture), picture { kind: 'scene' | 'view' | 'world' | 'deck', ... }, seenKey ('kind:id'), deck, alarm,
+     *        noContext (the scene is not said), and per choice: tone 'loss' | 'end', chips [{ text, tone, word }], primary.
      */
     function open(app, cfg) {
-        if (newLook() && mustWait()) { gate.waiting.push(() => open(app, cfg)); return null; }   // the last choice's outcome is still up
+        if (newLook() && mustWait()) {                                                   // the last choice's outcome is still up
+            gate.waiting.push(() => open(app, cfg));
+            if (window.NSFramePics) window.NSFramePics.prewarm(pictureOf(cfg));          // its picture is painted while it waits
+            return null;
+        }
+        if (newLook() && window.NSFrame) return openFrame(app, cfg);
         const color = cfg.color || TONES[cfg.tone] || TONES.crew;
         const lines = livingLines(app, cfg.dialogue), context = splitContext(cfg.context);
         const facts = (cfg.facts || []).filter(f => f && f[1] != null && f[1] !== '');
@@ -573,5 +746,6 @@
         return modal;
     }
 
-    window.EncounterCard = { open, outcomeIn, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, noOutcome, capturing: () => capturing > 0 };
+    window.EncounterCard = { open, outcomeIn, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, noOutcome, capturing: () => capturing > 0,
+        keyParts, outcomeOf, narrationOf };   // the last three: the new look's frame model (node checks read them)
 })();

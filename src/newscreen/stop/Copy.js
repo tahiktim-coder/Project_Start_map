@@ -466,7 +466,9 @@
         const fl = flags(n), cards = WD.council(a.state, !!fl.council);
         fl.council = true;
         window.EncounterCard.open(a, {
-            tone: 'station', kicker: cards.kicker, title: cards.title, zIndex: 2800, dialogue: cards.dialogue, choices: cards.choices,
+            tone: 'station', kicker: cards.kicker, title: cards.title, zIndex: 2800, dialogue: cards.dialogue,
+            choices: cards.choices.map((c, i) => (i === 1 ? Object.assign({}, c, { tone: 'end' }) : c)),
+            shape: 'ask', final: [1], picture: { kind: 'world', node: n }, seenKey: 'copy:council', readout: 'Earth?',   // DRAFT (look pass): the readout (DESIGN 1.2)
             onPick: idx => { if (idx === 1 && typeof a.endOnTheCopy === 'function') a.endOnTheCopy(); },   // "Not yet": back to the window, nothing spent
         });
     }
