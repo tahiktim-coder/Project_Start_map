@@ -5,22 +5,28 @@
      Opening    a click on the speaker (Tower.js), or Esc in travel or on the bridge (NewScreen.js) when NewScreen.idle(): never
                 over a frame, a film, a minigame, an ending, the title, the dive, the jump or the stall.
      The frame  the Report shape of the card frame (cards/Frame.js, DESIGN 1.1), drawn here because its keys act in place: the
-                house dither over the scene; the picture, 480 x 160 at a whole scale (2x from 1040 px wide; the middle 120 rows
-                under 640 px tall), the bridge deck: in travel cropped from the tower's own picture, live at the art's 8 fps
-                (the crew at work, her speaker lit while the console is up); on the bridge the room's painting alone. One
-                readout `A.U.R.A.`; then the keys (minigames.css .mini-btn): [› Resume] framed and focused, › Sound off /
-                › Sound on, › Volume with its step as a Mono chip (three steps), › Save and return to title. The words over
-                the scene (#ns-words: the bridge's tags and keys, voice lines, notes) hide while it is up.
+                house dither over the scene, and the frame's own near-ink ground under the picture and the keys (the keys never
+                sit straight on the art behind the veil); the picture, 480 x 160 at a whole scale (2x from 1040 px wide; the
+                middle 120 rows under 640 px tall), the bridge deck, live at the art's 8 fps: in travel cropped from the
+                tower's own picture (the crew at work, her speaker lit while the console is up); on the bridge cropped from the
+                bridge itself (the crew at the glass, the desks). One readout `A.U.R.A.`; then the keys (minigames.css
+                .mini-btn): [› Resume] framed and focused, › Sound off / › Sound on, › Volume with its step as a Mono chip
+                (three steps), › Save and return to title. The words over the scene (#ns-words: the bridge's tags and keys,
+                voice lines, notes) hide while it is up, and the bridge leaves its tags' pixels out (Stop.js: NS.blocked()).
      Keys       Esc or Resume close it; Tab, Shift+Tab and the arrows move; Enter or Space press. Pointing at a key focuses it,
-                so focus looks exactly like pointing. Nothing is taken in the first 400 ms (ChoiceGuard).
+                so focus looks exactly like pointing, but only once the pointer has really moved since the console opened: a
+                key that appears under a resting cursor never takes the focus from Resume (Esc, then Enter, resumes), and a
+                key under the cursor that does not have the focus stays plain (one warm key). Nothing is taken in the first
+                400 ms (ChoiceGuard).
      Sound      the game's own AudioSystem (toggleMute, setMusicVolume, the master gain, as the old sound panel did); the
                 choice is kept in localStorage 'psm-muted' (the key AudioSystem reads on load) and 'psm-volume', so a
                 return to the title keeps it.
      Title      saves (GameState.saveGame, the autosave's own call), then reloads into the title, the way every end screen
                 goes back; a try tab asks bundle.js for its title once (sessionStorage 'se-to-title': TITLE_ASKED).
      Saved      bundle.js autoSave emits 'saved'; once the tower is in view (and has been for 600 ms) the speaker and its ring
-                blink twice in art steps, and the first time in a session only a Mono 14 chip `saved` shows under the
-                speaker for 1.5 s.
+                blink twice in art steps (Tower.js draws glow() while lit(t): the grille's slats lit and a dithered ring round
+                it, big enough to see at 720p; pointing at the speaker lights it the same way), and the first time in a
+                session only a Mono 14 chip `saved` shows under the speaker for 1.5 s.
      Motion     steps only: the veil 3 steps in and out, the picture's Bayer reveal 2 art steps, the chip 2 steps.
    Loaded only when the new-screen switch is on, after tower/Tower.js.
 
@@ -29,28 +35,31 @@
      close()
      isOpen() → bool
      lit(t) → bool        the speaker lit at NewScreen.clock.t (the console up, or a save's blink on its on step): Tower.js
+     glow(ctx, cx, bot)   her speaker lit up in the tower's picture (tower art px: the grille's middle and its foot): Tower.js
      remember()           keeps the mute choice and puts the volume step back over AudioSystem's full gain (the title's toggle)
-     debug() → { open, step, muted, focus, sound, volume, pending, blinking, chipShown, saves }
+     debug() → { open, step, muted, focus, sound, volume, pending, blinking, chipShown, saves, moved }
 */
 (function () {
     'use strict';
     if (!window.NEW_SCREEN) return;
     const PIC_W = 480, PIC_H = 160, WHOLE_AT = 1040, CROP_UNDER = 640, CROP_ROWS = 120;
     const CROP = { x: 172, y: 32 };                       // the bridge deck (deck 0), tower px from its top: both windows' bays, the desks, the speaker
+    const BRIDGE = { x: 40, y: 168 };                     // on the bridge: the room itself (Stop.js's 640 x 360 frame px): the glass's foot, the crew, the desks
+    const GRILLE = { half: 6, h: 16, ring: 13, n: 84 };   // her speaker in the tower's art (ShipRooms deck 0: grille 602-614 x F-134..F-118, its lamp at F-138)
     const STEP_UI = 60, STEP_ART = 125, VEIL_STEPS = 3, REVEAL_STEPS = 2, CHIP_STEPS = 2, GUARD_MS = 400;
     const BLINK = [1, 1, 0, 0, 1, 1];                     // the save blink, in art steps: on, off, on (twice)
     const CHIP_MS = 1500, SETTLE_MS = 600, WATCH_MS = 100, STAR_N = 70, STAR_SEED = 33366;
     const VOLUME = [0.3, 0.6, 1], MASTER = 0.3, MUSIC = 0.15;   // three steps of the old sound panel's full scale (master 0.3, music 0.15)
     const STORE = { muted: 'psm-muted', volume: 'psm-volume', title: 'se-to-title' };
     const WORDS = Object.freeze({                         // C10 (CALLS.md): the keys, the readout, the saved chip
-        resume: 'Resume', soundOff: 'Sound off', soundOn: 'Sound on', volume: 'Volume', title: 'Save and return to title',
-        readout: 'A.U.R.A.', saved: 'saved', aria: "The ship's console",
+        resume: 'Resume', soundOff: 'Sound off', soundOn: 'Sound on', volume: 'Volume', title: 'Save and return to title',   // DRAFT (look pass): C10's keys
+        readout: 'A.U.R.A.', saved: 'saved', aria: "The ship's console",   // DRAFT (look pass): C10's readout and chip; aria is read aloud only
     });
     const BAYER = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
         3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21].map(v => (v + 0.5) / 64);
 
     const S = { el: null, btns: [], keys: null, art: null, cover: null, open: false, closing: false, leaving: false, timers: new Set(), paintId: 0,
-        step: VOLUME.length, pending: false, watchId: 0, seenAt: null, blinkT0: null, chipDone: false, chip: null, saves: 0 };
+        step: VOLUME.length, pending: false, watchId: 0, seenAt: null, blinkT0: null, chipDone: false, chip: null, saves: 0, ptr: null, rest: null, moved: false };
     const NS = () => window.NewScreen || null;
     const AS = () => window.AudioSystem || null;
     const reduced = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -100,8 +109,7 @@
     function label() {
         if (!S.el) return;
         const a = AS(), muted = !!(a && a.muted), sound = S.el.querySelector('[data-act="sound"]');
-        sound.querySelector('.nc-w').textContent = muted ? WORDS.soundOn : WORDS.soundOff;
-        sound.setAttribute('aria-pressed', String(!muted));
+        sound.querySelector('.nc-w').textContent = muted ? WORDS.soundOn : WORDS.soundOff;   // the key says what it does: no aria-pressed beside it
         S.el.querySelector('.nc-chip').textContent = `${S.step}/${VOLUME.length}`;
     }
     function layout() {
@@ -133,10 +141,32 @@
         ctx.drawImage(stars(), 0, 0);
         if (!A) return;
         try {
+            if (N && N.mode() === 'stop' && fromBridge(ctx)) return;      // on the bridge: the room as it is now (the tower is not drawn there: an old crew would show)
             const R = window.ShipRoutine, look = R ? ((R.stateOf('travel').looks || {})[0] || {}) : {};   // the tower's own look: its cached painting
-            ctx.drawImage(A.deck(0, look).canvas, CROP.x, CROP.y, PIC_W, PIC_H, 0, 0, PIC_W, PIC_H);         // the room (on the bridge the tower is not drawn: an old crew would show)
+            ctx.drawImage(A.deck(0, look).canvas, CROP.x, CROP.y, PIC_W, PIC_H, 0, 0, PIC_W, PIC_H);         // the room
             if (N && N.mode() === 'travel' && T && typeof T.crop === 'function') T.crop(ctx, CROP.x, A.deckTop(0) + CROP.y, PIC_W, PIC_H);   // in travel, as the tower draws it now: the crew, the lit speaker
         } catch (err) { console.error('NSConsole: the picture failed', err); }
+    }
+    /** The bridge's own canvas (Stop.js: the 640 x 360 frame at 1:1, centred on canvas#ns-bridge) at BRIDGE; false: not there. */
+    function fromBridge(ctx) {
+        const cv = document.getElementById('ns-bridge'), GL = window.NSGlass;
+        if (!cv || !GL || cv.width < GL.SW || cv.height < GL.SH) return false;
+        ctx.drawImage(cv, Math.floor((cv.width - GL.SW) / 2) + BRIDGE.x, Math.floor((cv.height - GL.SH) / 2) + BRIDGE.y, PIC_W, PIC_H, 0, 0, PIC_W, PIC_H);
+        return true;
+    }
+    /** Her speaker lit up, in the tower's picture (tower art px; cx, bot: the grille's middle and foot): the grille's slats lit
+        and a dithered ring round grille and lamp. TowerArt lights the lamp itself; this is what reads at 0.54x (720p). */
+    function glow(ctx, cx, bot) {
+        const A = window.ShipArt, hex = A && A.R && A.R.SCR ? A.R.SCR.hex : null;
+        if (!ctx || !hex) return;
+        ctx.fillStyle = hex[4];
+        for (let y = bot - GRILLE.h; y < bot; y += 2) ctx.fillRect(cx - GRILLE.half, y, GRILLE.half * 2, 1);
+        const cy = bot - GRILLE.h / 2 - 2;
+        ctx.fillStyle = hex[3];
+        for (let i = 0; i < GRILLE.n; i += 2) {
+            const a = (i / GRILLE.n) * Math.PI * 2;
+            ctx.fillRect(Math.round(cx + Math.cos(a) * GRILLE.ring), Math.round(cy + Math.sin(a) * GRILLE.ring), 1, 1);
+        }
     }
     /** The picture's Bayer reveal: step k of n shows the art where the matrix is under k / n, ink elsewhere. */
     function coverAt(k, n) {
@@ -167,9 +197,10 @@
         document.body.appendChild(el);
         Object.assign(S, { el, open: true, closing: false, leaving: false, keys: el.querySelector('.nc-keys'), art: el.querySelector('.nc-art'), cover: el.querySelector('.nc-cover') });
         S.btns = [...el.querySelectorAll('.mini-btn')];
+        Object.assign(S, { rest: S.ptr ? S.ptr.slice() : null, moved: false });   // where the cursor rests as it opens: a key there is not pointed at yet
         S.btns.forEach(b => {
             b.addEventListener('click', () => press(b.dataset.act));
-            b.addEventListener('mouseenter', () => { if (!S.closing) b.focus({ preventScroll: true }); });   // pointing is focusing: one warm key
+            b.addEventListener('pointermove', e => point(b, e));          // pointing is focusing: one warm key
         });
         label(); layout(); paint();
         const rm = reduced();
@@ -213,6 +244,17 @@
         else if (act === 'sound') toggleSound();
         else if (act === 'volume') nextVolume();
         else if (act === 'title') toTitle();
+    }
+    /** A pointer move over key b focuses it once the pointer has really moved since the console opened (a key that came up
+        under a resting cursor, or the browser's own hover update, takes nothing from Resume). */
+    function point(b, e) {
+        if (S.closing || S.leaving) return;
+        if (!S.moved) {
+            if (!S.rest) { S.rest = [e.clientX, e.clientY]; return; }   // nothing seen before it opened: this one is where it rests
+            if (Math.abs(e.clientX - S.rest[0]) < 1 && Math.abs(e.clientY - S.rest[1]) < 1) return;
+            S.moved = true;
+        }
+        if (document.activeElement !== b) b.focus({ preventScroll: true });
     }
     function move(d) {
         const at = S.btns.indexOf(document.activeElement), n = S.btns.length;
@@ -292,7 +334,14 @@ html.ns-on .nc-frame {
     --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--dim); --mg-steel: var(--ui); --mg-amber: var(--warm); --mg-amber-br: var(--warm-br);
     --mg-f-ui: var(--f-ui); --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: var(--ease);
     --pic-w: 960px; --pic-h: 320px; --pic-k: 2; --pic-crop: 0px;
-    display: grid; gap: var(--s4); width: var(--pic-w); margin: var(--s4) 0;
+    position: relative; display: grid; gap: var(--s4); width: var(--pic-w); margin: calc(2 * var(--s4)) 0; isolation: isolate;
+}
+html.ns-on .nc-frame::before {
+    content: ''; position: absolute; z-index: -1; pointer-events: none; inset: calc(-1 * var(--s4));
+    border: var(--s1) solid transparent;
+    background:
+        repeating-conic-gradient(color-mix(in srgb, var(--ink) 97%, transparent) 0 25%, color-mix(in srgb, var(--ink) 90%, transparent) 0 50%) 0 0 / 2px 2px padding-box,
+        repeating-conic-gradient(color-mix(in srgb, var(--ink) 94%, transparent) 0 25%, transparent 0 50%) 0 0 / 4px 4px border-box;
 }
 html.ns-on .nc-pic { position: relative; width: var(--pic-w); height: var(--pic-h); overflow: hidden; background: var(--ink); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ui) 7%, transparent); }
 html.ns-on .nc-pic canvas { position: absolute; left: 0; top: calc(-1 * var(--pic-crop)); width: var(--pic-w); height: calc(var(--pic-k) * ${PIC_H}px); image-rendering: pixelated; image-rendering: crisp-edges; }
@@ -304,6 +353,9 @@ html.ns-on .nc-frame .mini-btn:focus-visible { text-decoration: none; }
 html.ns-on .nc-frame .mini-btn:focus:not(:active) { color: var(--warm); transform: translateX(3px); outline: none; }
 html.ns-on .nc-frame .mini-btn:focus:not(:active)::before { color: var(--warm); }
 html.ns-on .nc-frame .mini-btn.is-primary:focus:not(:active) { border-color: var(--warm); background: color-mix(in srgb, var(--warm) 16%, transparent); }
+html.ns-on .nc-frame .mini-btn:hover:not(:focus) { color: var(--mg-words); transform: none; }
+html.ns-on .nc-frame .mini-btn:not(.is-primary):hover:not(:focus)::before { color: var(--mg-faint); }
+html.ns-on .nc-frame .mini-btn.is-primary:hover:not(:focus) { border-color: color-mix(in srgb, var(--warm) 55%, transparent); background: color-mix(in srgb, var(--warm) 8%, transparent); }
 html.ns-on .nc-chip { font: 400 var(--fs-chip)/1 var(--f-num); font-style: normal; letter-spacing: 0; color: var(--ui); }
 html.ns-on #ns-ship-words .nc-saved { position: absolute; left: 0; top: 0; margin: 0; padding: 2px 5px 1px; font: 400 var(--fs-floor)/1.2 var(--f-num); font-style: normal; color: var(--ui); background: ${shade}; text-shadow: var(--shadow); white-space: nowrap; pointer-events: none; }
 html.ns-on #ns-ship-words .nc-saved.is-in { animation: nc-in calc(${CHIP_STEPS} * var(--step-ui)) steps(${CHIP_STEPS}, end) both; }
@@ -314,6 +366,7 @@ html.ns-on #ns-ship-words .nc-saved.is-out { animation: nc-out calc(${CHIP_STEPS
 
     // ── at load: the look, the kept volume step, the bus ──
     style();
+    addEventListener('pointermove', e => { S.ptr = [e.clientX, e.clientY]; }, { capture: true, passive: true });   // where the cursor rests (open: point)
     const kept = Number(read(STORE.volume));
     if (kept >= 1 && kept < VOLUME.length) { S.step = kept; applyVolume(); }
     function attach() {
@@ -329,7 +382,7 @@ html.ns-on #ns-ship-words .nc-saved.is-out { animation: nc-out calc(${CHIP_STEPS
         const a = AS(), f = document.activeElement;
         return { open: S.open, step: S.step, muted: a ? !!a.muted : null, focus: S.btns.includes(f) ? f.dataset.act : null,
             sound: S.el ? S.el.querySelector('[data-act="sound"]').textContent : null, volume: S.el ? S.el.querySelector('.nc-chip').textContent : null,
-            pending: S.pending, blinking: S.blinkT0 != null, chipShown: !!S.chip, chipDone: S.chipDone, saves: S.saves };
+            pending: S.pending, blinking: S.blinkT0 != null, chipShown: !!S.chip, chipDone: S.chipDone, saves: S.saves, moved: S.moved };
     }
-    window.NSConsole = Object.freeze({ open, close, isOpen: () => S.open, lit, remember, debug, WORDS });
+    window.NSConsole = Object.freeze({ open, close, isOpen: () => S.open, lit, glow, remember, debug, WORDS });
 })();

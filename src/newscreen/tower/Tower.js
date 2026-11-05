@@ -482,8 +482,9 @@
         o.imageSmoothingEnabled = false;
         const sv = V.stall, lit = sv ? V.people.filter(p => p.lit) : [], others = sv ? V.people.filter(p => !p.lit) : V.people;
         const fxOff = sv ? sv.dark.map(d => d >= 0.5) : null;
-        const aura = auraTalking() || (V.hover && V.hover.what === 'speaker') || !!(window.NSConsole && window.NSConsole.lit(t));   // her speaker: talking, pointed at, the console up or a save's blink
+        const heard = (V.hover && V.hover.what === 'speaker') || !!(window.NSConsole && window.NSConsole.lit(t)), aura = auraTalking() || heard;   // her speaker: talking, pointed at, the console up or a save's blink
         TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: braced(others, t), auraTalking: aura && !sv, fxOff, driveOff: !!(sv && sv.cold) });
+        if (heard && !sv) window.NSConsole.glow(o, SPEAKER.cx - f.tLeft, A.deckTop(0) + SPEAKER.bot - f.tTop);   // for the console: the grille lit and her ring (Console.js)
         V.drawn = TW.drawn.slice();
         const sunY = (0.4 * f.devH - f.tY0) / f.ts;                       // level with the light (Field's light sits at 40 % of the height)
         const view = { t, G: { W: OFF_W, H: ROWS }, offX: -f.tLeft, cam: f.tTop, decks: V.real.decks, engDown: V.real.engDown, E: V.Eshown, beat: V.beat,
@@ -810,8 +811,7 @@
         return { x, y };
     }
     function fit() { return V.fit ? Object.assign({}, V.fit) : null; }
-    /** The tower's last picture (tower px x, y, w, h) into ctx at 0, 0: the console's bridge deck. Nothing yet: nothing drawn. */
-    function crop(ctx, x, y, w, h) { if (V.off && V.fit) ctx.drawImage(V.off, x - V.fit.tLeft, y - V.fit.tTop, w, h, 0, 0, w, h); }
+    function crop(ctx, x, y, w, h) { if (V.off && V.fit) ctx.drawImage(V.off, x - V.fit.tLeft, y - V.fit.tTop, w, h, 0, 0, w, h); }   // the last picture (tower px) at 0, 0: the console's bridge deck
     function debug() {
         return { fit: fit(), quality: V.quality, k: slideK(now()), dark: V.dark, E: V.E, decks: Object.assign({}, V.real.decks), datable: V.real.datable,
             crew: JSON.parse(JSON.stringify(V.real.crew)), people: V.people.map(p => ({ id: p.id, deck: p.deck, x: p.x, act: p.act, say: p.say })),

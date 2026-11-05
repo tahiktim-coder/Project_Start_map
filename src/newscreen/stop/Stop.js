@@ -588,7 +588,7 @@
         }
         if (cv && cv.fadeJ != null) j = Math.min(j, cv.fadeJ);           // the light coming back after the fall, slowly
         if (j <= 0) { vis(bridgeC, false); W.hide(); return; }
-        const words = j >= STEPS && !(d && d.dir === 'out') && !(cv && cv.noWords) ? W.layout(t) : null;   // the tags only once the bridge is whole
+        const words = j >= STEPS && !(d && d.dir === 'out') && !(cv && cv.noWords) && !NS.blocked() ? W.layout(t) : null;   // the tags only once the bridge is whole, and never round a card (look pass B02)
         composeBridge(t, words, cv);
         if (j < STEPS) { actx.globalCompositeOperation = 'destination-in'; actx.drawImage(mask(j - 1), 0, 0); actx.globalCompositeOperation = 'source-over'; }
         bctx.clearRect(0, 0, geo.CW, geo.CH);
