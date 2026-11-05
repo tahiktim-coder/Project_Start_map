@@ -202,7 +202,10 @@ function choicesFrom(src) {
 }
 function logsFrom(src) {
     const re = /addLog\((['"`])((?:\\.|(?!\1)[^\\])*)\1\)/g, out = [];
-    let m; while ((m = re.exec(src))) out.push(`- ${clean(m[2].replace(/\\(["'])/g, '$1').replace(/\$\{([^}]*)\}/g, (_, e) => `[${placeholderFor(e)}]`))}`);
+    let m; while ((m = re.exec(src))) {
+        const eol = src.indexOf('\n', m.index), d = (/\/\/.*?\b(DRAFT(?: \([^)]*\))?)/.exec(src.slice(m.index, eol < 0 ? undefined : eol)) || [])[1];   // a line still waiting for the designer's words
+        out.push(`- ${clean(m[2].replace(/\\(["'])/g, '$1').replace(/\$\{([^}]*)\}/g, (_, e) => `[${placeholderFor(e)}]`))}` + (d ? ` **${d}**` : ''));
+    }
     return out;
 }
 const kickerOf = src => scanRaw(src).filter(t => t.key === 'kicker' && isText(t.text, true)).map(t => printed(t.text)).join(' / ');
@@ -274,7 +277,9 @@ function frameSection() {
     const bullets = over.flatMap(p => bulletsOf(p, drafted(p), true));
     return ['## Every card (the new look)', '', ...textSection(3, "The frame's own words", between(FRAME, /const PRESS_AGAIN = /, /\/\*\* --ink/, 'PRESS_AGAIN · KEY_WORDS'), 'The keys while the crew talk and after a pick; under a held key when motion is reduced.', undefined, true),
         ...textSection(3, 'Numbers a card says in words', model, 'Stress as a feeling (C04), a gain that did not fit, a death with nothing else said.', drafted(model, true), true),
-        '### Over a card\'s picture: readouts and chips', '_The readout in the picture\'s corner (three words or fewer), and chips a card sets itself._', '', ...(bullets.length ? bullets : ['_(no text)_']), ''];
+        '### Over a card\'s picture: readouts and chips', '_The readout in the picture\'s corner (three words or fewer), and chips a card sets itself._', '', ...(bullets.length ? bullets : ['_(no text)_']), '',
+        ...textSection(3, 'A ship fault: no card (look pass B03)', block('src/newscreen/tower/Fault.js', /^\s*const WORDS = /m, 'WORDS'), 'One voice line (A.U.R.A.\'s in the fault, else the first crew line, their words) and one chip at the faulted deck. The chip is the result\'s first number; with none, one of these.', undefined, true),
+        ...textSection(3, 'The sector-3 arrival: no card (look pass B03)', block('src/newscreen/throw/Throw.js', /^\s*const LABEL = /m, 'LABEL'), 'A readout counts the beacons heard (the void\'s words), then Mira\'s line (A.U.R.A.\'s if she is dead), then the arrival line as narration, a sentence at a time.', undefined, true)];
 }
 
 // ── when things happen ──
