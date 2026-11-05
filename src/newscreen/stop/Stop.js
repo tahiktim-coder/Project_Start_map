@@ -36,10 +36,9 @@
      isOpen() → bool        the dive or the bridge is on screen
      discs() → [[x, y, r]]  CSS px: the world in the glass and the people on the bridge (words keep off them)
      noteUp() → bool        a person's note is up (the voice steps back meanwhile)
-   Listens: 'card:speaker' { name } and 'card:closed' (look pass B03: whoever speaks in a card is lit, A.U.R.A.'s console glows)
-            'dive:start' { id }  'dive:cancel'  'stop:open' { id, dived }  'stop:refresh'  'dive:back'  'trip:down' { ids }
+   Listens: 'dive:start' { id }  'dive:cancel'  'stop:open' { id, dived }  'stop:refresh'  'dive:back'  'trip:down' { ids }
             'trip:back'  'flow:go' { id } (bakes ahead)  'hidden'  'hull:hit' { deck } (NSOrbit: the bridge jolts and the lamps dip,
-            HIT; reduced motion: one dip only)
+            HIT; reduced motion: one dip only). Reads NSTowerCard.room() (B03: the one speaking in a card is lit, A.U.R.A.'s console glows)
    Emits:   'dive:plated' { dir }  'stop:shown' { id }  'stop:hidden' { id }  'stop:pick' { ids }
    Calls:   NewScreen.flow.actions(), .act(key, ids), .eligible(), .weak(), .propose(), .leave(), .finds(ids), .aim(id), .way(id, idx, ids), .scanDue()
    Anchors (CSS px, while open): 'stop:person:<id>', 'stop:aura', 'stop:glass', 'stop:site'
@@ -266,7 +265,7 @@
             const X = o.x + OFFX, Y = o.y - B.Y0;
             if (Y < 0 || Y > SH) return;
             if (o.kind === 'led') { if (((t + o.x * 37) % o.period) < o.period * 0.55) f.px(X, Y, o.color); }
-            else if (o.kind === 'aura') { const sp = speaking() === 'aura' || S.cardSpk === 'aura', v = sp ? 0.8 + 0.2 * Math.sin(t / 90) : 0.55 + 0.4 * Math.sin(t / 1700); f.px(X, Y, R.SCR.hex[v > 0.75 ? 5 : v > 0.45 ? 4 : 3], 3, 1); }
+            else if (o.kind === 'aura') { const sp = speaking() === 'aura' || cardSpeaker() === 'aura', v = sp ? 0.8 + 0.2 * Math.sin(t / 90) : 0.55 + 0.4 * Math.sin(t / 1700); f.px(X, Y, R.SCR.hex[v > 0.75 ? 5 : v > 0.45 ? 4 : 3], 3, 1); }
             else if (o.kind === 'screen') {
                 for (let r = 1; r < o.h; r += 2) { const n = Math.floor(P.hash(r & 255, (tick >> 2) & 255, 3) * (o.w - 1)); for (let k = 0; k < n; k++) if (P.hash(k & 255, (r + tick) & 255, 5) > 0.3) f.px(X + k, Y + r, R.SCR.hex[(k + r) % 4 ? 2 : 3]); }
             }
@@ -290,7 +289,7 @@
             const ready = pk && arrived(id), hot = pk && S.hover === id && (S.lineup.includes(id) || S.aside.includes(id));
             const still = p.act === 'idle' || p.act === 'console', ms = still ? p.ms + (CREW.indexOf(id) + 1) * 977 : p.ms;
             const blink = ((ms + (CREW.indexOf(id) + 2) * 1700) % 4300) < 140;
-            const spk = S.cardSpk === id, lit = spk || (hot && S.lineup.includes(id)) ? 3 : ready ? Math.max(2, lightFor(p.x)) : lightFor(p.x);
+            const spk = cardSpeaker() === id, lit = spk || (hot && S.lineup.includes(id)) ? 3 : ready ? Math.max(2, lightFor(p.x)) : lightFor(p.x);
             const Sp = CE.sprite(id, p.act, CE.frameAt(p.act, ms), { blink, warm: lit, rim: p.facing, screen: p.act === 'console' });
             const X = Math.round(p.x) + OFFX, Y = Math.round(p.y) - Sp.origin.y;
             if (spk || ready || (hot && S.lineup.includes(id))) floorGlow(c, X, Math.round(p.y), hot || spk ? 0.5 : 0.34);
@@ -364,7 +363,7 @@
         if (d.lab === 'red') c.drawImage(washes.lab, 0, 0);
         if (d.engineering === 'red' && t % 2900 < 160) { c.fillStyle = 'rgba(5,7,10,0.45)'; c.fillRect(0, 0, SW, SH); }
     }
-    const speaking = () => { const v = NS.mods.voice; try { return v && v.speaking ? v.speaking() : null; } catch (err) { return null; } };
+    const speaking = () => { const v = NS.mods.voice; try { return v && v.speaking ? v.speaking() : null; } catch (err) { return null; } }, cardSpeaker = () => { const r = window.NSTowerCard ? window.NSTowerCard.room() : null; return r ? r.speaker : null; };
 
     // ═══ 4. what we can do here: the game's own list (Orbit.js), read every 250 ms ═══
     /** flow.actions() once the bridge is up; while it dissolves in (the shell still says 'dive-in') the same list straight
@@ -828,8 +827,6 @@
         NS.bus.on('stop:close', () => { if (S.open || S.dive) close(false); });
         NS.bus.on('stop:skim', () => GL.skim(t0()));
         NS.bus.on('hull:hit', () => { hitAt = t0(); });
-        NS.bus.on('card:speaker', p => { S.cardSpk = window.NSTowerCard ? window.NSTowerCard.idOf(p && p.name) : null; });
-        NS.bus.on('card:closed', () => { S.cardSpk = null; });
         new MutationObserver(guardCards).observe(document.body, { childList: true });
         D.later(D.pic(1, 1, [() => mask(0), () => { A.deck(1); }]));
     }

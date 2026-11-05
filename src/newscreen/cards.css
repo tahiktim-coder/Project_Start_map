@@ -410,8 +410,8 @@ html.ns-on .item-toast.is-found.is-leaving { opacity: 1; transition: none; anima
     position: absolute; right: var(--s8); bottom: 14vh; display: grid; justify-items: end; gap: var(--s1); margin: 0; padding: var(--s2) var(--s3);
     pointer-events: none; text-shadow: var(--shadow); background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 92%, transparent) 0 25%, color-mix(in srgb, var(--ink) 62%, transparent) 0 50%) 0 0 / 2px 2px; opacity: 0;
 }
-#ns-root .ns-heard span { font: 500 var(--fs-floor)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
-#ns-root .ns-heard b { font: 400 calc(16px + 2px * var(--t))/1 var(--f-num); color: var(--text); }
+#ns-root .ns-heard span { font: 400 var(--fs-readout)/1 var(--f-num); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }   /* the void's and the frame's readout: Mono caps */
+#ns-root .ns-heard b { font: 400 var(--fs-count)/1 var(--f-num); color: var(--text); }
 #ns-root .ns-heard.is-in { opacity: 1; animation: ef-step calc(3 * var(--step-ui)) steps(3, end) both; }
 #ns-root .ns-heard.is-out { opacity: 1; animation: ef-gone calc(3 * var(--step-ui)) steps(3, end) both; }
 @media (prefers-reduced-motion: reduce) { #ns-root .ns-fault-chip, #ns-root .ns-heard { animation: none !important; } }
@@ -481,7 +481,7 @@ html.ns-on .enc-frame .ef-print .find-art { top: 0; }   /* the paper's own canva
 html.ns-on .enc-frame .ef-print .find-stage.is-list { --obj-w: calc(150px * var(--pic-k)); --obj-h: calc(var(--pic-h) - 2 * var(--s3)); }
 html.ns-on .enc-frame .find-paper.is-list { font-size: max(var(--fs-floor), calc(9px * var(--pic-k))); }
 html.ns-on .enc-frame .find-paper.is-list .find-line { margin: 0 0 0.3em; }
-html.ns-on .enc-frame .ef-out.is-after { visibility: hidden; }
+html.ns-on .enc-frame .ef-out.is-after, html.ns-on .enc-frame .ef-go.is-after { visibility: hidden; }   /* Continue comes with the line */
 
 /* ── the words: the line before (dim), who (a ring, the name in their tone), the line; narration in the real italic ── */
 html.ns-on .enc-frame .ef-words { position: relative; display: grid; align-content: start; gap: var(--s2); }
@@ -584,7 +584,7 @@ html.ns-on .enc-frame .ef-key.is-dim .mini-btn.is-hold::before { background: var
 html.ns-on .ef-veil.is-in .ef-words { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) var(--words-at, 0ms) both; }
 html.ns-on .ef-veil.is-in .ef-talk,
 html.ns-on .ef-veil.is-in .enc-decide.is-open .ef-key { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) calc(var(--keys-at, 0ms) + var(--k, 0) * var(--step-ui)) both; }
-html.ns-on .enc-frame .ef-say.is-step, html.ns-on .enc-frame .ef-out.is-step { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) both; }
+html.ns-on .enc-frame .ef-say.is-step, html.ns-on .enc-frame .ef-out.is-step, html.ns-on .enc-frame .ef-go.is-step { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) both; }
 @media (prefers-reduced-motion: reduce) {
     html.ns-on .ef-veil.is-in, html.ns-on .ef-veil.is-in *, html.ns-on .ef-veil.is-out, html.ns-on .ef-veil.is-out * { animation: none !important; }
 }

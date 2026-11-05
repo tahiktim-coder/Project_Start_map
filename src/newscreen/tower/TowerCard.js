@@ -6,18 +6,23 @@
                 The galley table: everyone alive seated round it, whoever speaks lit. The head count: the five on the bridge,
                 its crew screen reading CREW 4 in the 3 x 5 stencil (NSPaint.pixelText).
      the room   while a frame is up (bus card:deck, card:speaker, card:closed) the tower dims every deck but the card's and
-                the speaker's, and the one speaking is drawn again over the dim, lit
-     the fault  flash(deck, tone): the deck flashes a stepped Bayer wash twice (--wash for a loss, --warm-br for a find); the
-                chip beside it is tower/Fault.js's, docked at edge(deck)
-   Tower.js hands it the tower's own state (its cardLook: the clock, the people, the marks) and calls draw() after its
-   marks. It never writes game state. Loaded only when the new-screen switch is on, after TowerMarks.js, before Tower.js.
+                the speaker's, and the one speaking is drawn again over the dim, lit. A card whose picture is a deck has its
+                speaker in that picture: the tower lights them only if they stand in that deck too (one person lit in one room)
+     the fault  flash(deck, tone): the deck flashes a stepped Bayer wash twice (--wash for a loss, --warm for a find), never
+                over words (the stock readouts, a red deck's costs, a voice line over the deck keep their ground); the chip
+                beside it is tower/Fault.js's, docked at edge(deck)
+   Tower.render calls draw() after its marks with its marks' view and its people; that last frame is what crop() draws from
+   (the clock read live). It never writes game state. Loaded only when the new-screen switch is on, after TowerMarks.js,
+   before Tower.js.
 
    window.NSTowerCard (frozen)
      W, H                         480, 160 (tower px)
-     crop(look, deck, ctx, opts) → bool   deck: bridge | lab | quarters | galley | medbay | hold | cargo | engineering;
+     crop(deck, ctx, opts) → bool  deck: bridge | lab | quarters | galley | medbay | hold | cargo | engineering;
                                   opts { who: a crew id, crew: 'all' (the five, on the bridge), table: true (the galley
-                                  table), screen: words on the bridge's crew screen }; ctx is 480 x 160, its sky drawn
-     draw(o, v)                   into the tower's offscreen canvas o; v { t, camY, offX, W, H, people } as Tower.render's
+                                  table), screen: words on the bridge's crew screen }; ctx is 480 x 160, its sky drawn;
+                                  false before the tower has drawn a frame (the caller paints the room alone)
+     draw(o, view, people)        into the tower's offscreen canvas o; view is Tower.render's marks view (t, G, offX, cam,
+                                  sunY, decks, engDown, E, beat, flood, flick, reduced), people its V.people
      flash(deck, tone)            'loss' (default) or 'gain'
      edge(deck) → { x, y, inX, inY } | null   CSS px: the outer hull edge level with that deck's middle, and a point inside
                                   it by its floor (where a find is put down); null while the tower is not in view
@@ -31,6 +36,7 @@
     const L = A.L, S = A.SPOTS, F = L.DECK_FLOOR;
     const W = 480, H = 160, CROP_Y = 34, X_MIN = 56, X_MAX = L.IR + 16 - W, X_PLAIN = 120;   // the room's middle; its floor at the bottom edge
     const DIM = 0.5, ROOM_DIM = 0.65, STEP_ART = 125, FLASH_STEPS = [0.25, 0.5, 0.25, 0, 0.25, 0.5, 0.25, 0];   // two flashes, 125 ms a step
+    const WORDS_SEL = '#ns-ship-words .nss.on, #ns-ship-words .nss.on i, #ns-ship-words .nsk-cost.on, #ns-root .ns-voice.is-in p', WORD_PAD = 4;   // words over the tower (CSS px pad): a flash keeps off them
     const DECK_I = { bridge: 0, lab: 1, quarters: 2, galley: 2, medbay: 3, hold: 4, cargo: 4, engineering: 5 };
     const DECK_NAMES = MK.DECKS;                                           // the tower's own names, by index (its anchors 'tower:deck:<name>')
     const IDS = ['cora', 'jaxon', 'aris', 'vance', 'mira'];
@@ -50,6 +56,7 @@
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
     const NS = () => window.NewScreen || null;
     const token = (name, art) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || art;
+    const auraTalking = () => { const ns = NS(), v = ns && ns.mods && ns.mods.voice; try { return !!(v && typeof v.speaking === 'function' && v.speaking() === 'aura'); } catch (err) { return false; } };
     /** A speaker's name as the frame says it ('Jaxon', 'A.U.R.A.', 'Cora') → a crew id, 'aura', or null. */
     function idOf(name) {
         const n = String(name || '').trim().toLowerCase();
@@ -82,11 +89,20 @@
         ctx.fillRect(Math.round(x), Math.round(y), Math.ceil(w), Math.ceil(h));
         ctx.restore();
     }
-    /** Lay a dither over what is already drawn (source-atop: never on the clear sky round the hull). */
-    function shade(ctx, x, y, w, h, d, hex) {
+    /** Lay a dither over what is already drawn (source-atop: never on the clear sky round the hull), except in the holes
+        [[x, y, w, h]] (the same px as x, y): what is under them keeps its own ground. */
+    let wash = null;
+    function shade(ctx, x, y, w, h, d, hex, holes) {
         if (d <= 0 || w <= 0 || h <= 0) return;
+        const X = Math.round(x), Y = Math.round(y), WW = Math.ceil(w), HH = Math.ceil(h);
+        if (!wash) wash = document.createElement('canvas');
+        if (wash.width !== WW || wash.height !== HH) { wash.width = WW; wash.height = HH; }
+        const g = wash.getContext('2d');
+        g.clearRect(0, 0, WW, HH);
+        g.drawImage(dither(WW, HH, d, hex), 0, 0);
+        (holes || []).forEach(([hx, hy, hw, hh]) => g.clearRect(Math.floor(hx - X), Math.floor(hy - Y), Math.ceil(hw) + 1, Math.ceil(hh) + 1));
         ctx.save(); ctx.globalCompositeOperation = 'source-atop';
-        ctx.drawImage(dither(Math.ceil(w), Math.ceil(h), d, hex), Math.round(x), Math.round(y));
+        ctx.drawImage(wash, X, Y);
         ctx.restore();
     }
 
@@ -129,8 +145,15 @@
         const tw = P.pixelTextWidth(words, 1);
         P.pixelText(words, X + Math.round((SCREEN.w - tw) / 2), Y + Math.round((SCREEN.h - 5) / 2), (cx, cy) => ctx.fillRect(cx, cy, 1, 1), 1);
     }
-    function crop(look, deck, ctx, opts) {
-        const i = DECK_I[deck];
+    // ── the tower's last frame (draw), for the crop: its marks' view and its people; the clock is read live ──
+    let last = null;
+    function lookNow() {
+        if (!last) return null;
+        const ns = NS(), v = last.view;
+        return { t: ns && ns.clock ? ns.clock.t : v.t, people: last.people, auraTalking: auraTalking(), sunRow: v.sunY + v.cam, marks: v };
+    }
+    function crop(deck, ctx, opts) {
+        const i = DECK_I[deck], look = lookNow();
         if (i == null || !ctx || !look || !Array.isArray(look.people)) return false;
         const o = opts || {}, t = look.t, { cast, lit, whole } = castOf(look, i, o);
         const castIds = new Set(cast.map(p => p.id));
@@ -157,14 +180,28 @@
     function flash(deck, tone) {
         const i = DECK_I[deck];
         if (i == null) return;
-        flashing = { i, hex: tone === 'gain' ? token('--warm-br', '') : token('--wash', ''), t0: performance.now() };
+        flashing = { i, hex: tone === 'gain' ? token('--warm', '') : token('--wash', ''), t0: performance.now() };
     }
-    function draw(o, v) {
-        if (!o || !v) return;
+    /** Words over the tower now (its stock readouts with their deltas, a red deck's costs, a voice line's name and line: the
+        words' own boxes) as boxes in the offscreen canvas's px (the tower fully in: Tower.toCss with no slide). */
+    function wordBoxes() {
+        const ns = NS(), tw = ns && ns.mods && ns.mods.tower, f = tw && typeof tw.fit === 'function' ? tw.fit() : null;
+        if (!f || !f.ts) return [];
+        const k = f.dpr / f.ts, range = document.createRange();
+        const box = el => { range.selectNodeContents(el); const r = range.getBoundingClientRect(); return r.width ? r : el.getBoundingClientRect(); };
+        return [...document.querySelectorAll(WORDS_SEL)].map(box).filter(r => r.width && r.height)
+            .map(r => [(r.left - WORD_PAD) * k, ((r.top - WORD_PAD) * f.dpr - f.tY0) / f.ts, (r.width + 2 * WORD_PAD) * k, (r.height + 2 * WORD_PAD) * k]);
+    }
+    function draw(o, view, people) {
+        if (!o || !view || !view.G) return;
+        last = { view, people: Array.isArray(people) ? people : [] };
+        const v = { t: view.t, camY: view.cam, offX: view.offX, W: view.G.W, H: view.G.H };
         const deckRect = i => [L.IL + v.offX, A.deckTop(i) - v.camY, L.IR - L.IL, F];
         if (ROOM.up && (ROOM.deck || ROOM.speaker)) {
-            const sp = ROOM.speaker && ROOM.speaker !== 'aura' ? v.people.find(p => p.id === ROOM.speaker) : null;
-            const keep = new Set([DECK_I[ROOM.deck], sp ? sp.deck : ROOM.speaker === 'aura' ? 0 : undefined].filter(n => n != null));
+            const cardDeck = DECK_I[ROOM.deck];
+            const who = ROOM.speaker && ROOM.speaker !== 'aura' ? last.people.find(p => p.id === ROOM.speaker) : null;
+            const sp = who && (cardDeck == null || who.deck === cardDeck) ? who : null;   // a deck card poses its speaker in its picture: lit there, not in a second room
+            const keep = new Set([cardDeck, sp ? sp.deck : ROOM.speaker === 'aura' ? 0 : undefined].filter(n => n != null));
             o.save(); o.beginPath(); o.rect(0, 0, v.W, v.H);
             keep.forEach(i => { const [x, y, w, h] = deckRect(i); o.rect(x, y, w, h); });   // the lit decks cut out (even-odd)
             o.clip('evenodd');
@@ -176,7 +213,7 @@
             const k = Math.floor((performance.now() - flashing.t0) / STEP_ART);
             if (k >= FLASH_STEPS.length || !flashing.hex) { flashing = null; return; }
             const [x, y, w, h] = deckRect(flashing.i);
-            shade(o, x, y, w, h, FLASH_STEPS[k], flashing.hex);
+            shade(o, x, y, w, h, FLASH_STEPS[k], flashing.hex, FLASH_STEPS[k] > 0 ? wordBoxes() : null);
         }
     }
 

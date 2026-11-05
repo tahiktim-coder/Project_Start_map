@@ -65,8 +65,6 @@
      board(layer) → { put(key, x, y, align), hide() }   the readouts in a word layer; put places one at CSS px (x, y
                                  its top-left, or top-right with align 'right') and shows it
    window.NSTower (frozen): the ship feels the flight (picture only; ignored while the tower is closed, sliding or dark)
-     crop(deck, ctx, opts) → bool  one deck as an event card's picture (480 x 160 tower px, tower/TowerCard.js), the crew
-                                 as the tower has them now; flash(deck, tone): a fault's stepped wash, twice (look pass B03)
      jolt(s)                     s 0..1: the tremor's trauma += s; at 0.3 or more the standing crew's knees give
      speed(k)                    k 0..1: how hard we fly now, called every frame (eased, tau 400 ms; no calls: back to 0
                                  within a second); the reactor beats up to 30 % faster
@@ -486,8 +484,7 @@
         const sunY = (0.4 * f.devH - f.tY0) / f.ts;                       // level with the light (Field's light sits at 40 % of the height)
         const view = { t, G: { W: OFF_W, H: ROWS }, offX: -f.tLeft, cam: f.tTop, decks: V.real.decks, engDown: V.real.engDown, E: V.Eshown, beat: V.beat,
             flood: V.flood, sunY, fix: V.real.datable && !sv ? SLATE : null, flick: V.flick, reduced: reduced(), cold: !!(sv && sv.reactorCold) };
-        MK.draw(o, view);
-        if (!sv && window.NSTowerCard) window.NSTowerCard.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, people: V.people });   // a card up: its deck and speaker lit (B03)
+        MK.draw(o, view); if (!sv && window.NSTowerCard) window.NSTowerCard.draw(o, view, V.people);   // a card up: its room lit; a fault's flash (B03, tower/TowerCard.js)
         if (sv && window.NSStallArt) {                                     // the stall: the dead decks, their red lamps, the crew in that light
             window.NSStallArt.draw(o, { camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS, t, dark: sv.dark, red: sv.red, still: sv.still });
             if (lit.length) { TW.drawPeople(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: ROWS }, lit, window.NSStallArt.lit); V.drawn = TW.drawn.slice(); }
@@ -792,12 +789,6 @@
         return on;
     }
     function beat() { return V.beat.val; }
-    /** The tower's own state for an event card's deck picture (tower/TowerCard.js): its clock, its people, its marks. */
-    function cardLook() {
-        const f = V.fit;
-        return { t: now(), people: V.people, auraTalking: auraTalking(), sunRow: f ? (0.4 * f.devH - f.tY0) / f.ts + f.tTop : null,
-            marks: { decks: V.real.decks, engDown: V.real.engDown, E: V.Eshown, beat: V.beat, flood: V.flood, flick: V.flick, reduced: reduced() } };
-    }
     /** The highest head (CSS y) among the people on the same floor as this one. */
     function rowTop(id, y) {
         const me = V.drawn.find(p => p.id === id);
@@ -819,9 +810,7 @@
             chips: V.chips ? V.chips.deck : null, stock: Object.assign({}, ST.val), restless: (V.routine.restless || []).slice(),
             feel: { trauma: V.shake ? V.shake.level() : null, speed: V.spd, flick: Object.keys(V.flick), off: V.tremor ? { dx: V.tremor.dx, dy: V.tremor.dy } : null } };
     }
-    window.NSTower = Object.freeze({ jolt, speed, hit: hitDeck,
-        crop: (deck, ctx, opts) => !!window.NSTowerCard && window.NSTowerCard.crop(cardLook(), deck, ctx, opts || {}),
-        flash: (deck, tone) => { if (window.NSTowerCard) window.NSTowerCard.flash(deck, tone); } });
+    window.NSTower = Object.freeze({ jolt, speed, hit: hitDeck });
 
     const mod = Object.freeze({ init, resize, update, render, pointer, occupied, beat, personAt, fit, debug });
     function attach() {

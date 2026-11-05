@@ -10,7 +10,7 @@
               field of rocks by the glass's own painters (NSGlass.paintStation, paintField: the same seed, so the station in
               the card is the one in the window), the copy of Earth (NSEarthArt); the Structure is the light itself. The light
               sits small and high at the right.
-     'deck'   one deck of our Lander, live: the tower's own room and crew (NSTower.crop, tower/TowerCard.js) over this
+     'deck'   one deck of our Lander, live: the tower's own room and crew (NSTowerCard.crop, tower/TowerCard.js) over this
               sector's sky in its windows, at the art's 8 fps, drawn whole. deck { bridge, lab, quarters (galley), medbay, hold
               (cargo), engineering } or who (a crew id: where that person works); who also lights that person, posed where it
               happens; table: the crew round the galley table; crew 'all' and screen: the head count's bridge (C47). Without
@@ -155,11 +155,11 @@
     }
     const inkFill = ctx => { ctx.fillStyle = token('--ink', P() ? P().INK : ctx.fillStyle); ctx.fillRect(0, 0, W, H); };
     /** A deck of our Lander, live: this sector's sky in its windows (the deck leaves them clear), then the tower's own room and
-        crew over it (NSTower.crop: the person the card is about lit); without the tower, the room alone, still. */
+        crew over it (NSTowerCard.crop: the person the card is about lit); without the tower, the room alone, still. */
     function mountDeck(canvas, ctx, s) {
         let sky = null;
         try { sky = paintView({ sector: s.sector, focus: 'heading' }); } catch (err) { console.warn('NSFramePics: no sky for the deck windows', err); }
-        const T = window.NSTower, opts = { who: s.who, crew: s.crew, table: s.table, screen: s.screen };
+        const T = window.NSTowerCard, opts = { who: s.who, crew: s.crew, table: s.table, screen: s.screen };
         let still = null;
         return run(canvas, t => {
             ctx.imageSmoothingEnabled = false;

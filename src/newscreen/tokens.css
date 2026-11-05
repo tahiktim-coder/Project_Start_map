@@ -61,6 +61,7 @@ html.ns-on {
     --fs-conseq: calc(15px + 1px * var(--t));           /* a consequence under a key, 15-16 */
     --fs-prev: calc(15px + 1px * var(--t));             /* the line before, 15-16 */
     --fs-readout: calc(14px + 1px * var(--t));          /* a readout over a picture, 14-15 */
+    --fs-count: calc(16px + 2px * var(--t));            /* the count under a readout's label (BEACONS HEARD), 16-18 */
     --fs-skip: 14px;                                    /* the corner skip hint */
     --fs-tag: calc(14px + 2px * var(--t));              /* a glass key's label, 14-16 */
     --fs-title: calc(34px + 12px * var(--t));           /* the end card, 34-46 */

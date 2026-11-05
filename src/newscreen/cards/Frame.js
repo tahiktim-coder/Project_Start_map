@@ -324,18 +324,24 @@
             restep(outEl);
             (pages[p] || []).forEach(l => { if (!l.narr) emit('card:speaker', { name: l.speaker, tone: l.tone }); });
         }
-        /** The printout (DESIGN 1.1): the document itself on the picture, its lines typed one by one; the outcome's line after. */
+        /** The printout (DESIGN 1.1): the document itself on the picture, its lines typed one by one; the outcome's line and
+            Continue after (until then a key types the rest at once: F.typing). */
         function showPrintout(p) {
             const NF = window.NSFinds;
             if (!NF || !NF.isOn() || !Array.isArray(p.lines)) return;
             const v = NF.page({ kind: 'list', id: 'list', lines: p.lines }, { lineMs: PRINT_MS }), box = document.createElement('div');
             box.className = 'ef-print'; box.appendChild(v.el); pic.appendChild(box);
             v.mount(); F.printout = v;
-            outEl.classList.add('is-after');
-            NF.pace(v, overlay, PRINT_MS, () => { outEl.classList.remove('is-after'); restep(outEl); });
+            outEl.classList.add('is-after'); goEl.classList.add('is-after');
+            const all = NF.pace(v, overlay, PRINT_MS, () => {
+                F.typing = null; F.outAt = now();
+                outEl.classList.remove('is-after'); goEl.classList.remove('is-after'); restep(outEl); restep(goEl); settleFocus(goBtn);
+            });
+            if (outEl.classList.contains('is-after')) F.typing = all;
         }
         function go() {
             if (F.state !== 'outcome' || F.closing || guarded(F.outAt)) return;
+            if (F.typing) { const all = F.typing; F.typing = null; all(); return; }   // the list typed at once; Continue next
             if (F.page < F.out.pages.length - 1) { showPage(F.page + 1); F.outAt = now(); return; }
             close();
         }

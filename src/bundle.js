@@ -2688,9 +2688,10 @@ class App {
     showCrewPersonalEvent(event) {
         if (!event || !event.targetCrew) return;
         const CREW_DECK = { commander: 'bridge', jaxon: 'engineering', aris: 'medbay', vance: 'hold', mira: 'lab' };   // the new look: where each of them works
-        const DECK_READOUT = { bridge: 'Bridge', engineering: 'Engineering', medbay: 'Med bay', hold: 'Hold', lab: 'Lab' };   // DRAFT (look pass): the readout (DESIGN 1.2)
+        const DECK_READOUT = { bridge: 'Bridge', engineering: 'Engineering', medbay: 'Med bay', hold: 'Hold', lab: 'Lab', hangar: 'Hangar' };   // DRAFT (look pass): the readout (DESIGN 1.2)
         // where the moment happens, as its first line says (look pass B03: the deck picture), else where they work
-        const PLACES = [[/cargo bay|armory/i, 'hold'], [/med bay/i, 'medbay'], [/scanner console|the bridge|command chair/i, 'bridge'], [/sensor console|terminal|\blab\b/i, 'lab'], [/galley/i, 'quarters'], [/engine room|reactor/i, 'engineering']];
+        // (the ship has no hangar deck: the hold, the big bay, stands in for it, and the readout says what the line says)
+        const PLACES = [[/cargo bay|armory/i, 'hold'], [/hangar/i, 'hold', 'hangar'], [/med bay/i, 'medbay'], [/scanner console|the bridge|command chair/i, 'bridge'], [/sensor console|terminal|\blab\b/i, 'lab'], [/galley/i, 'quarters'], [/engine room|reactor/i, 'engineering']];
 
         const crew = event.targetCrew;
         const inState = v => (typeof v === 'function' ? v(this.state) : v);   // a scene may word itself from what the crew has seen
@@ -2705,7 +2706,7 @@ class App {
             tone: 'crew', color, kicker: (crew.tags || []).includes('LEADER') ? 'A NIGHT ON THE BRIDGE' : `A MOMENT WITH ${String(crew.name || '').toUpperCase()}`, title: event.title,
             context: inState(event.context), dialogue: inState(event.dialogue),
             picture: { kind: 'deck', deck, who }, deck, seenKey: `crew:${event.id || event.title}`,
-            readout: DECK_READOUT[deck] || '',
+            readout: DECK_READOUT[(place && place[2]) || deck] || '',
             choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c), descNow: c.descNow })),
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(event.choices[idx], this.state, crew);
@@ -3286,7 +3287,9 @@ class App {
         // Special barks for sector entries
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
             if (nextSector === 3) {
-                window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
+                const bark = () => window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
+                if (isNewScreen() && window.NSThrow && window.NSThrow.afterArrival) window.NSThrow.afterArrival(bark);   // the new look: after the arrival's lines
+                else bark();
             } else if (nextSector === FINAL_SECTOR) {
                 window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state); // key kept for saves; the lines are about the LAST sector
             }

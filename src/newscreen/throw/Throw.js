@@ -8,7 +8,8 @@
      3. the arrival, with no card (look pass B03, DESIGN 1.1, C01): the travel view of sector 3 opens from black as on any
         first show (the stall's veil stays until then, Stall.release), its sky title says "The Signal" once; then a readout
         in the void's style counts the beacons heard (BEACONS HEARD, Corridor.js's own count for sector 3), Mira says her
-        line (A.U.R.A. hers if Mira is dead), and the arrival line follows as narration, a sentence at a time
+        line (A.U.R.A. hers if Mira is dead), and the arrival line follows as narration, a sentence at a time; only then
+        does anything said on entering the sector (bundle.js enterNextSector's SECTOR_3_ENTRY bark) come: afterArrival
    Its words and log lines are TheThrow's. Every step can be skipped (a click, Esc, Enter or Space), and nothing here ever
    leaves the game stuck: a step that fails is passed over.
    Loaded only when the new-screen switch is on, after throw/Stall.js and throw/SeaFilm.js.
@@ -16,6 +17,8 @@
    window.NSThrow (frozen)
      play(app) → Promise     resolves once the film is over; the arrival follows sector 3's sky title (never rejects)
      card(app) → Promise     the arrival alone, now (the headless runs); resolves when its last line has left the screen
+     afterArrival(fn)        fn once the arrival a throw has set off is over (its lines said, or no arrival after all); at
+                             once when no arrival is waiting
 */
 (function () {
     'use strict';
@@ -68,13 +71,21 @@
         };
         return sayAll().catch(err => console.error('NSThrow: the arrival lines failed', err)).then(off);
     }
+    // what waits for the arrival (afterArrival): null when no arrival is on its way
+    let waiting = null;
+    function afterArrival(fn) { if (typeof fn !== 'function') return; if (waiting) waiting.push(fn); else fn(); }
+    function arrived() {
+        const list = waiting || [];
+        waiting = null;
+        list.forEach(fn => { try { fn(); } catch (err) { console.error('NSThrow: what waited for the arrival failed', err); } });
+    }
     /** After the throw: the arrival waits for sector 3's own sky title to end (its first show's 'opening:done'). */
     function arriveAfterTitle(app) {
         const ns = NS();
-        if (!ns || !ns.bus) return;
+        if (!ns || !ns.bus) { arrived(); return; }
         ns.bus.once('opening:done', () => setTimeout(() => {
             const s = app && app.state;
-            if (s && s.currentSector === SECTOR) card(app);
+            if (s && s.currentSector === SECTOR) card(app).then(arrived); else arrived();
         }, AFTER_TITLE_MS));
     }
 
@@ -88,15 +99,17 @@
                 if (F) F.prepare(PREPARE_AFTER_MS);                                       // the film's pictures, worked out while the ship stands still
                 if (S) await S.play(app).catch(err => console.error('NSThrow: the stall failed', err));
                 if (F) await F.play(app).catch(err => console.error('NSThrow: the sea of ships failed', err));
+                waiting = [];                                                         // what is said on entering sector 3 waits for it
                 arriveAfterTitle(app);                                                // no card: sector 3 opens, its title once, then the arrival
                 if (S) S.release(false);                                              // the stall's picture goes; its veil stays until sector 3 shows
             } catch (err) {
                 console.error('NSThrow: the throw failed; the jump finishes', err);
                 if (S) S.release(true);
+                arrived();
             } finally { playing = null; }
         })();
         return playing;
     }
 
-    window.NSThrow = Object.freeze({ play, card, isPlaying: () => !!playing });
+    window.NSThrow = Object.freeze({ play, card, afterArrival, isPlaying: () => !!playing });
 })();
