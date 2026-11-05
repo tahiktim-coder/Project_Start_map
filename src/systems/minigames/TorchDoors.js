@@ -399,6 +399,9 @@
     const readFor = words => clamp(1 + 0.22 * words.split(' ').length, READ_MIN, 3.6);
     const SCENES = {};
 
+    const isNew = () => document.documentElement.classList.contains('ns-on');   // the new look (look pass B09): 'Go in' is the framed key; no cycle readout
+    /** The way in when it is the only one: the framed key in the new look, the quiet word in the old. */
+    const goIn = finish => [{ label: 'Go in', quiet: !isNew(), primary: isNew(), onClick: finish }];
     function mountBeat(ctx, ui, setup) {
         const d = (ui.art && ui.art.d) || MiniLab.density || 1, { AW, AH } = K.sizeOf(d), cv = ui.canvas;
         const env = {
@@ -450,7 +453,7 @@
             else if (k === ' ' && !onButton && !scene.press) skip();   // the panel reads a held Space itself
         });
         ui.clear();                                              // no empty speaker until the first line
-        ui.buttons(scene.buttons ? scene.buttons() : [{ label: 'Go in', quiet: true, onClick: env.finish }]);
+        ui.buttons(scene.buttons ? scene.buttons() : goIn(env.finish));
         MiniLab.loop(frame, BEAT_FPS);
         frame(0);
         return () => { env.snd.drop(); cv.style.cursor = ''; };
@@ -634,7 +637,7 @@
         function cycle(t) {
             cycledAt = t; held = false;
             env.snd.hum(0); env.snd.clunk();
-            ui.buttons([{ label: 'Go in', quiet: true, onClick: env.finish }]);
+            ui.buttons(goIn(env.finish));
             env.note('cycle', null);
             env.say(t + UNLOCK + 0.9, setup.spotter, "There's still a light on inside.");
         }
@@ -714,7 +717,10 @@
                 const moving = !!TG && t > GO[0] && t < GO[1] - 0.2;
                 person(env, env.jaxId, me, { pose: t >= GO[1] - 0.2 ? 'reach' : moving ? 'walk' : TG ? 'stand' : 'float', t: t * 1000 });
                 drawSparks(env, sparks); art(g => env.over.draw(g));
-                if (offered && cycledAt === null) {              // how far it has cycled; a nudge if nobody holds the switch
+                if (offered && cycledAt === null && isNew()) {   // (new look) the panel's lamps show how far; the held key's box fills with them
+                    const key = ui.canvas.closest('.mini-frame') && ui.canvas.closest('.mini-frame').querySelector('.mini-btn.is-hold');
+                    if (key) key.style.setProperty('--fill', (Math.floor(charge * LIGHTS) / LIGHTS).toFixed(3));
+                } else if (offered && cycledAt === null) {       // how far it has cycled; a nudge if nobody holds the switch
                     env.note('cycle', 'CYCLE ' + Math.round(charge * 100) + '%', { x: 8, y: K.H - 8 - 13 * 1.3 * (K.W / (ui.canvas.getBoundingClientRect().width || 960)), tone: charge > 0 ? 'ui' : 'text' });
                     env.note('hold', hintT > 1.2 && charge < 0.05 ? 'PRESS AND HOLD' : null, { x: PANEL.box[0] - 4, y: PANEL.box[1] - 14, align: 'right', tone: 'ui', size: 'm' });   // over the panel, where it is
                 } else env.note('hold', null);

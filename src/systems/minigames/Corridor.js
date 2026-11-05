@@ -17,6 +17,12 @@
    dark clouds and the spiral, the shell and its pulsar, the pillars, the eye, the ring of lit dust round the light); the light
    is the travel view's false sun; the wrecks and the twin are our own Lander; the corner shows our Lander with its decks lit,
    its blue drive burning with the throttle. The readouts are the frame's quiet notes. See THE LOOK below.
+   THE NEW LOOK (look pass B09, html.ns-on only; the old look is unchanged): the first offer in two beats (L-47); one etched
+   control tag under the reticle's lower bracket on the start screen, gone after the first move; BEACONS HEARD only once a
+   beacon is heard; hull tags EXODUS-33366 (no comma); "Hold Space to go faster" once, a tag on a leader to the inset's
+   flame; A.U.R.A. FLYING beside the inset; the nearest piece marked red drawn 6 x 6 art px or more with a red ring; the
+   report's bill (energy, decks) as word-first chips under her last line, as the dark's; in the dark the quiet "Let A.U.R.A.
+   fly" goes once the light comes back.
 
    const result = await MiniHost.play('corridor', { fromSector: 2, toSector: 3, crew: state.crew, damaged: { bridge: true } });
    opts    toSector     2..6, the sector the ship jumps to (if missing: fromSector + 1)
@@ -155,6 +161,11 @@
     //    contractions). Her offer before the flight: on the first flown jump (into sector 2) she says once what her way costs.
     const OFFER = 'Debris on the heading, Commander. I can fly us through, if you prefer.';
     const OFFER_FIRST = n => `Debris on the heading, Commander. I can fly us through, but slower. It costs ${n} more energy.`;   // DRAFT
+    // (new look, B09) the same offer in two beats, one idea each (CALLS.md L-47, call C51); and the etched control tags
+    const OFFER_FIRST_A = 'Debris on the heading, Commander.';                                // DRAFT (look pass): L-47, beat one
+    const OFFER_FIRST_B = n => `I can fly us through. It costs ${n} more energy.`;              // DRAFT (look pass): L-47, beat two
+    const TAGS = { steer: 'Mouse or arrows to steer', faster: 'Hold Space to go faster' };      // DRAFT (look pass): the etched control tags
+    const TAG_FOR = 6, MARK_R = 3, MARK_RING = 3;   // (new look) the steer tag's longest stay after the start (s); the marked piece's least radius and its ring's gap (art px)
     // what the flight cost or saved, said after the scrapes (STAKES; n is what the game can really take or give)
     const PAID = {
         aura: n => `I took the long way round, Commander. It cost ${n} more energy.`,      // DRAFT (the brief's own line)
@@ -268,9 +279,9 @@
     // the hours (what the dark cost); the energy and any broken deck under her last line at the end (what the flight cost)
     const VOID_DECK = { bridge: 'Bridge', lab: 'Lab', quarters: 'Quarters', cargo: 'Hold', engineering: 'Engineering' };
     const VOID_CHIPS = {                                                                                             // DRAFT
-        energy: n => ({ icon: 'energy', text: `${n > 0 ? '+' : '−'}${Math.abs(n)} energy`, tone: n > 0 ? 'gain' : 'loss' }),
-        rations: n => ({ icon: 'rations', text: `−${n} ration${n === 1 ? '' : 's'}`, tone: 'loss' }),
-        stress: n => ({ icon: 'stress', text: `All crew +${n} stress`, tone: 'loss' }),
+        energy: n => ({ icon: 'energy', text: `Energy ${n > 0 ? '+' : '−'}${Math.abs(n)}`, tone: n > 0 ? 'gain' : 'loss' }),   // DRAFT (look pass): word first
+        rations: n => ({ icon: 'rations', text: `Rations −${n}`, tone: 'loss' }),                                         // DRAFT (look pass)
+        stress: n => ({ icon: 'stress', text: `Stress +${n}, all crew`, tone: 'loss' }),                                   // DRAFT (look pass)
         deck: k => ({ icon: 'deck', text: `${VOID_DECK[k] || k} damaged`, tone: 'loss' }),
     };
     /** What the dark cost, for `living` people (A.U.R.A. never eats) after `blackSecs` real seconds in the black: its hours, a
@@ -1150,6 +1161,8 @@
         const energyNow = asInt(opts.energy);                                  // NaN when the game did not say: plenty (stakesOf)
         const avoid = Array.isArray(opts.avoidHulls) ? opts.avoidHulls.filter(Number.isFinite) : [];
         const withTwin = opts.twin === true;                                  // the disc is aboard: the twin can come (SECTORS twin)
+        const NEW = document.documentElement.classList.contains('ns-on');     // the new look (look pass B09): its readouts, tags and chips
+        let moved = false, startedAt = -99, nearThreat = null, nearZ = 0;             // (new look) the first move after the start; the nearest piece marked red
         // (void) THE DARK: VO its option ({} for true; { seed } fixes the flight), vd its state (null without it)
         const VO = opts.void ? (typeof opts.void === 'object' ? opts.void : {}) : null;
         const vd = VO ? { phase: 'off', seed: Number.isFinite(VO.seed) ? VO.seed >>> 0 : (Math.random() * 4294967295) >>> 0, dv: 0, drainAt: null, blackAt: null, backAt: null, blackT: null, backT: null, rate: 1,
@@ -1202,9 +1215,10 @@
         const say = (who, line, gap) => { ui.say(who, line); saidAt = clock; nextLine = clock + gap; };
         function setAuto(on) {
             auto = on; say('A.U.R.A.', on ? 'I have the ship, Commander.' : 'You have the ship, Commander.', 2);
-            row([{ label: on ? 'Take the stick' : 'Let A.U.R.A. fly', primary: on, onClick: () => setAuto(!auto) }]);
+            const isBack = !!vd && (vd.phase === 'back' || vd.phase === 'after');   // (void) the light is back: no quiet "Let A.U.R.A. fly" any more
+            row(isBack && !on ? [] : [{ label: on ? 'Take the stick' : 'Let A.U.R.A. fly', primary: on, onClick: () => setAuto(!auto) }]);
         }
-        function start(isAuto) { mode = 'jump'; phaseT = 0; sound.jump(); setAuto(isAuto); addTrauma(TRAUMA.start); pushKick(0); }
+        function start(isAuto) { queue = queue.filter(q => !q.offer); startedAt = clock; mode = 'jump'; phaseT = 0; sound.jump(); setAuto(isAuto); addTrauma(TRAUMA.start); pushKick(0); }   // (new look: an offer's beat not yet said is dropped)
         function arrive() {   // the flash clears on the new sector
             whiteAt = clock; seedSky(to);
             leg = makeLeg(to, g.r, g.heard, living, avoid, withTwin, vd ? voidCfg() : null); t = 0; mode = 'run';   // (void: the longer course, hull 2 later)
@@ -1220,7 +1234,7 @@
             const crew = headCount(aboard), tell = { crew: crew === told.crew ? '' : crew, count: !leg.lines.some(l => l.done && l.heard === g.heard), briefing: !told.briefing };
             paid = stakesOf(g.hits, auraT / leg.cfg.dur, fullT / leg.cfg.dur, energyNow, steered);
             report(to, g.heard, g.nums, g.hits, g.hitRooms, tell, paid).forEach(line => queue.push({ who: 'A.U.R.A.', line: () => line }));
-            if (vd && queue.length) queue[queue.length - 1].chips = voidBill();   // (void) the flight's bill under her last line
+            if ((vd || NEW) && queue.length) queue[queue.length - 1].chips = voidBill();   // (void; new look) the flight's bill under her last line
             told = { crew, briefing: told.briefing || (tell.count && g.heard > BRIEFED) };
             nextLine = Math.max(nextLine, clock + REPORT_DELAY);
             row([]);
@@ -1377,6 +1391,7 @@
             and the flight's own lines wait for A.U.R.A.'s about the hours. What the dark cost is fixed now. */
         function voidReturn() {
             vd.phase = 'back'; vd.backAt = clock; vd.hold = true; vd.hit = null;
+            if (!auto) row([]);                                                  // the quiet "Let A.U.R.A. fly" goes with the dark
             queue = queue.filter(q => !q.dark);
             vd.clearAt = Math.min(Math.max(clock, saidAt + VOID.back.read), clock + 2 * VOID.flood.off - 0.05);   // the last line from the black goes once read, and before the warm pixel shows: the light comes back in silence
             vd.cost = voidCost();
@@ -1389,12 +1404,13 @@
         }
         /** The dark's bill, under A.U.R.A.'s line about the hours: the rations and the stress it cost. */
         const voidDarkBill = c => [VOID_CHIPS.rations(c.rations), ...(c.stress ? [VOID_CHIPS.stress(c.stress)] : [])];
-        /** The flight's bill, under A.U.R.A.'s last line: the energy it cost or saved, and any deck a scrape broke. */
+        /** The flight's bill, under A.U.R.A.'s last line: any deck a scrape broke, and only what that line does not say itself
+            (the look pass: no chip repeats the line above it). Her last line is the energy line whenever the flight cost or
+            saved any, so the energy is never a chip; the decks are named in the scrape line, so their chips show only under the
+            energy line that follows it. */
         function voidBill() {
-            const out = [];
-            if (paid && paid.delta) out.push(VOID_CHIPS.energy(paid.delta));
-            g.hitRooms.forEach(k => out.push(VOID_CHIPS.deck(k)));
-            return out;
+            const isPaidLast = !!(paid && paid.delta && PAID[paid.kind]);
+            return isPaidLast ? g.hitRooms.map(k => VOID_CHIPS.deck(k)) : [];
         }
         /** A crew line in the dark when its moment comes, one at a time and never over another: a hit's line at once (or not at
             all), else the first in VOID_LINES whose phase, time, order and condition hold. Never while the light dies, and none
@@ -1692,6 +1708,7 @@
         }
         /** The game's chip look (cards.css .enc-chips, as minigames.css .mini-host.is-void .void-chips): { icon, text, tone } each. */
         function chipsEl(chips) {
+            if (NEW && MiniHost.chipsEl) return MiniHost.chipsEl(chips, 'void-chips');   // (new look) words in Condensed, numbers in Mono
             const el = document.createElement('p');
             el.className = 'void-chips';
             chips.forEach(c => {
@@ -1888,10 +1905,10 @@
         function simulate(dt) {
             if (queue.length && clock >= nextLine && !(vd && vd.hold && !queue[0].hours)) {   // (void: in the return, her line about the hours first)
                 const q = queue.shift(), s = q.line();
-                if (vd) clearChips();                                                    // (void) a bill goes with the line it was under
+                if (vd || NEW) clearChips();                                             // (void; new look) a bill goes with the line it was under
                 if (vd && q.clear) ui.clear();                                           // (void) one line at a time
                 say(q.who, s, q.gap || gapFor(s));
-                if (vd && q.chips) showChips(q.chips);                                   // (void) a bill under this line
+                if ((vd || NEW) && q.chips) showChips(q.chips);                          // (void; new look) a bill under this line
                 if (vd && q.onSay) q.onSay();
             }
             if (mode === 'done' && !isEndReady && !queue.length && phaseT > REPORT_DELAY && clock - saidAt > CONTINUE_BEAT) showContinue();
@@ -2181,7 +2198,7 @@
             const since = clock - h.seenAt;
             if (since < 1.6 && Math.floor(since * 5) % 2 === 0) brackets(sx, sy, ex + 3, ey + 1, R.UI, 0.8, 6);
             const ux = sx / D, top = (sy - ey) / D, bottom = (sy + ey) / D;
-            if (ux > -20 && ux < W + 20 && top < H - 24 && bottom > 24) tags.push({ z, s: 'EXODUS-' + fmt(h.num), sx: ux, sy: top - 14 < TAG_TOP && bottom + 4 < TAG_BOTTOM ? bottom + 4 : top - 14, below: bottom + 4, fresh: since < 1.6 });
+            if (ux > -20 && ux < W + 20 && top < H - 24 && bottom > 24) tags.push({ z, s: 'EXODUS-' + (NEW ? String(h.num) : fmt(h.num)), sx: ux, sy: top - 14 < TAG_TOP && bottom + 4 < TAG_BOTTOM ? bottom + 4 : top - 14, below: bottom + 4, fresh: since < 1.6 });
         }
         /** One slice of the twin, a disc at depth z. Seen from behind with the light ahead, the hull is dark; its outline (where
             the slice's edge turns side-on to us) catches the light. face: the skirt's underside, in shadow; tone: a deck's shade. */
@@ -2229,7 +2246,8 @@
             }
         }
         function drawFrag(f, z, sx, sy) {
-            const Rr = f.rad * FA * view.zm / z, RU = Rr / D, fog = fogAt(z, 14, FAR_FRAG), face = Math.cos(f.flip * clock + f.a0), glint = face > 0.97 && z < 95;  // face-on to the light
+            const isMarked = NEW && f === nearThreat;                                  // (new look) the nearest red piece is never a speck
+            const Rr = isMarked ? Math.max(MARK_R, f.rad * FA * view.zm / z) : f.rad * FA * view.zm / z, RU = Rr / D, fog = fogAt(z, 14, FAR_FRAG), face = Math.cos(f.flip * clock + f.a0), glint = face > 0.97 && z < 95;  // face-on to the light
             const isRust = (f.a0 * 1000) % 1 < rustShare, ramp = isRust ? R.RUST : R.HULL, keep = 1 - 0.8 * fog;
             if (RU < 1.4) {
                 if (glint) lightPx(sx, sy, R.STAR, 1);
@@ -2243,14 +2261,23 @@
                 const tone = edge === 1 ? 0.8 : edge === 2 ? 0.06 : 0.18 + 0.22 * lean + 0.28 * Math.abs(face), r = edge === 1 ? R.HULL : ramp;
                 buf[i] = r.c32[level(r, tone * keep, x, y)];
             });
+            if (isMarked) markRing(sx, sy, Rr + MARK_RING);
             if (!glint) return;                                                         // a glint: a point and a small cross that fades
             const gx = Math.round(sx + (view.sunX - sx) * 0.02), gy = Math.round(sy + (view.sunY - sy) * 0.02), arm = Math.min(5, Math.floor(Rr / 2));
             lightPx(gx, gy, R.STAR, 1);
             for (let i = 1; i <= arm; i++) [[i, 0], [-i, 0], [0, i], [0, -i]].forEach(([dx, dy]) => lightPx(gx + dx, gy + dy, R.STAR, 1 - i / (arm + 1)));
         }
+        /** (new look) A red ring round the marked piece, one art pixel thick, r art px out. */
+        function markRing(cx, cy, r) {
+            const n = Math.ceil(2 * Math.PI * r * 1.5), c = R.RED.c32[level(R.RED, 0.75, 0, 0)];
+            for (let k = 0; k < n; k++) {
+                const a = (k / n) * 2 * Math.PI, x = Math.round(cx + Math.cos(a) * r), y = Math.round(cy + Math.sin(a) * r);
+                if (x >= 0 && x < AW && y >= 0 && y < AH) buf[y * AW + x] = c;
+            }
+        }
         function drawField(sunAmt) {   // far to near; kind 0 debris, 1 a hull, 2 the twin
             const vis = [], tags = [];
-            threat = false;
+            threat = false; nearThreat = null;
             leg.hulls.forEach(h => { const z = zOf(h.at); if (z > NEAR && z < FAR_HULL) vis.push([z, h, 1]); });
             if (leg.twin && leg.twin.on && leg.twin.z + 2 * HULL_L > NEAR) vis.push([leg.twin.z + HULL_L, leg.twin, 2]);
             leg.frags.forEach(f => {
@@ -2265,6 +2292,7 @@
                 if (f.threat && vd && f.redAt == null) f.redAt = clock;                // (void) when it first turned red (A.U.R.A.'s delay, the hit's line)
                 if (f.threat && inBlack && !f.darkThreat) { f.darkThreat = true; vd.darkThreats++; }   // (void, for the headless checks)
                 threat = threat || f.threat;
+                if (f.threat && (!nearThreat || z < nearZ)) { nearThreat = f; nearZ = z; }   // (new look) the one to mark
                 vis.push([z, f, 0]);
             });
             vis.sort((p, q) => q[0] - p[0]).forEach(([z, w, kind]) => {
@@ -2320,7 +2348,7 @@
         function drawTags(tags) {
             const placed = [], named = new Set(), pxPerUnit = ui.canvas.getBoundingClientRect().width / W || 3, sunU = [view.sunX / D, view.sunY / D];
             for (const tag of tags.sort((p, q) => p.z - q.z)) {               // nearest first gets the space
-                const tw = (tag.s.length * 7.6 + 4) / pxPerUnit, cx = clamp(tag.sx, tw / 2 + 4, W - tw / 2 - 4);
+                const tw = (tag.s.length * (NEW ? 8.4 : 7.6) + 4) / pxPerUnit, cx = clamp(tag.sx, tw / 2 + 4, W - tw / 2 - 4);   // (a 14 px Mono character in the new look)
                 const onSun = Math.abs(sunU[0] - cx) < tw / 2 + 6 && Math.abs(sunU[1] - tag.sy - 5) < 12;   // never cover the light
                 const y = Math.round(clamp(onSun ? tag.below : tag.sy, TAG_TOP, TAG_BOTTOM));
                 if (placed.some(p => Math.abs(cx - p[0]) < (tw + p[2]) / 2 + 4 && Math.abs(y - p[1]) < 14)) continue;
@@ -2332,6 +2360,7 @@
             shown.forEach((v, id) => { if (id.startsWith('hull ') && v !== null && !named.has(id.slice(5))) note(id, null); });
         }
         function drawHud() {   // the radio's count; who flies; on the start screen how to steer; once, how to go faster
+            if (NEW) { drawHudNew(); return; }
             note('flying', auto && (mode === 'run' || mode === 'jump') ? 'A.U.R.A. FLYING' : null, { x: W - 8, y: 8, align: 'right', tone: 'ui' });
             const isCounting = mode !== 'done' && !isDeaf();                            // (void) the radio's count goes while it hears nothing
             note('heard', isCounting ? 'BEACONS HEARD' : null, { x: W - 8, y: 232, align: 'right', tone: 'dim' });
@@ -2340,6 +2369,23 @@
             note('how', mode === 'ready' ? 'USE THE MOUSE OR THE ARROWS' : null, { x: CX, y: 192, align: 'center', tone: 'dim', size: 'm' });
             const isAgain = !!(vd && clock < vd.hintUntil && th < 0.3);                 // (void) in the dark only for a moment after "Speed up"
             note('faster', mode === 'run' && !auto && (isAgain || (!throttleTaught && clock - whiteAt > 1.2 && !isHintHeld())) ? 'HOLD TO GO FASTER' : null, { x: 50, y: 246, tone: 'ui' });
+        }
+        /** (new look, B09) The same readouts in the frame's new language: A.U.R.A. FLYING beside our ship in the corner; the
+            radio's count (label and number) only once a beacon is heard; one etched tag under the reticle's lower bracket on
+            the start screen, until the first move after the start; "Hold Space to go faster" once, on a leader to our drive. */
+        function drawHudNew() {
+            const insetR = shipL.x + shipL.width + 4, flame = { x: shipL.cx, y: shipL.top + shipL.height + 3 };
+            note('flying', auto && (mode === 'run' || mode === 'jump') ? 'A.U.R.A. FLYING' : null, { x: insetR, y: shipL.top + shipL.height - 14, tone: 'ui', label: true });
+            const isCounting = mode !== 'done' && !isDeaf() && g.heard > 0;              // (void) the radio's count goes while it hears nothing
+            note('heard', isCounting ? 'BEACONS HEARD' : null, { x: W - 8, y: 230, align: 'right', tone: 'dim', label: true });
+            note('count', isCounting ? fmt(g.heard) : null, { x: W - 8, y: 242, align: 'right', tone: clock - g.heardAt < 0.35 ? 'ui' : 'text', size: 'm' });
+            const isSteer = mode === 'ready' || (!moved && !auto && (mode === 'jump' || mode === 'run') && clock - startedAt < TAG_FOR);
+            const box = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([kx, ky]) => proj(cam[0] + kx * SHIP_R[0], cam[1] + ky * SHIP_R[1], ZHIT));   // the reticle as drawn
+            const bracket = Math.max(...box.map(p => p[1])) / D, boxX = box.reduce((a, p) => a + p[0], 0) / 4 / D;   // its lowest corner; its middle (units)
+            note('steer', isSteer ? TAGS.steer : null, { x: Math.round(boxX), y: Math.round(bracket + 5), align: 'center', tag: true });
+            const isAgain = !!(vd && clock < vd.hintUntil && th < 0.3);                 // (void) in the dark only for a moment after "Speed up"
+            const isFaster = mode === 'run' && !auto && !isSteer && (isAgain || (!throttleTaught && clock - whiteAt > 1.2 && !isHintHeld()));
+            note('faster', isFaster ? TAGS.faster : null, { x: insetR + 6, y: shipL.top + shipL.height - 20, tag: true, leader: flame });
         }
         /** Our ship in the corner, its drive burning longer and brighter as the throttle opens. A scrape rattles the hull for
             RATTLE s (on the shaker's own noise) and its lights stutter for STUTTER s; reduced motion: half the rattle, no stutter. */
@@ -2376,7 +2422,7 @@
         }
 
         // ── input: the pointer steers wherever it is over the picture; holding the button (or Space, W, Shift) is the throttle ──
-        ui.canvas.onpointermove = e => { pointer = ui.toPixel(e); aiming = true; };
+        ui.canvas.onpointermove = e => { pointer = ui.toPixel(e); aiming = true; if (mode !== 'ready') moved = true; };   // (new look: the steer tag goes)
         ui.canvas.onpointerleave = () => { if (!pressed) pointer = null; };
         ui.canvas.onpointerdown = e => {
             if (e.button) return;                                                       // the main button (or a touch) only
@@ -2390,7 +2436,7 @@
         window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release);
         MiniLab.onKey((k, e) => {
             const isRepeat = !!(e && e.repeat), isOnButton = !!(e && e.target && e.target.tagName === 'BUTTON');
-            if (STEER.includes(k)) { taps.set(k, clock + 0.12); return; }
+            if (STEER.includes(k)) { taps.set(k, clock + 0.12); moved = true; return; }
             if (THROTTLE.includes(k) && mode !== 'ready' && !isRepeat && !(k === ' ' && isOnButton)) held.add(k);
             const isGo = k === ' ' || k === 'Enter';
             if (!isGo || isOnButton || isRepeat) return;                                // a focused button handles its own
@@ -2406,7 +2452,8 @@
             ...(vd ? { void: voidState(), endReady: isEndReady, clock } : {}),       // (void)
         });
         seedSky(from);
-        say('A.U.R.A.', to === FIRST_SECTOR + 1 ? OFFER_FIRST(STAKES.AURA) : OFFER, 0);   // the first flown jump: once, what her way costs
+        if (NEW && to === FIRST_SECTOR + 1) { say('A.U.R.A.', OFFER_FIRST_A, gapFor(OFFER_FIRST_A)); queue.push({ who: 'A.U.R.A.', line: () => OFFER_FIRST_B(STAKES.AURA), offer: true }); }   // (new look) two beats
+        else say('A.U.R.A.', to === FIRST_SECTOR + 1 ? OFFER_FIRST(STAKES.AURA) : OFFER, 0);   // the first flown jump: once, what her way costs
         row([{ label: 'Fly it myself', primary: true, onClick: () => start(false) }, { label: 'Let A.U.R.A. fly', onClick: () => start(true) }]);
         render(0.3);
         MiniLab.loop(dt => { render(update(dt)); skyOf(to, PAINT_AHEAD_MS); }, 30);   // the next sector's sky, a little each frame

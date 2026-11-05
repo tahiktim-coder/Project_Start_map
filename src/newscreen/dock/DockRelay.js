@@ -77,7 +77,7 @@
     const lines = Object.freeze({
         offer: n => `A relay on the dark moon, Commander. I can dock us for ${n} energy.`,  // DRAFT: on the start screen
         offerFree: 'A relay on the dark moon, Commander. I can dock us, if you prefer.',     // DRAFT (2026-10-31): the same with no energy left to charge
-        hold: 'Relay ahead. Hold to close in. Let go to slow.',                              // DRAFT: as the run starts (every time: it teaches the rush)
+        hold: 'Relay ahead, Commander.',                                                     // DRAFT (look pass): as L-50, the controls on the hold tag (every time: it teaches the rush)
         hulls: 'They docked here and never left.',                                           // DRAFT (Aris): the three hulls, named
         mira: 'It sent something. Back the way we came.',                                    // DRAFT (the idea's own line): after SENT
         grade: Object.freeze({ soft: 'The clamps take hold, Commander.', rough: 'We scraped the ring.', crash: 'The hull is damaged.', held: 'The hull held.' }),   // DRAFT (2026-10-31)
@@ -258,7 +258,7 @@
             const isOn = ([x, y]) => x >= 0 && x < A.AW && y >= 0 && y < A.AH, at = isOn(info.tail) ? info.at : isOn(info.mid) ? info.atMid : null;
             if (!info.drawn || !at || info.r * 2 < dock.tagMinPx || G.dist >= dock.tagFrom || G.dist <= dock.tagTo) return;
             if (tagRun.showAt[k] < 0) { tagRun.showAt[k] = Math.max(now, tagRun.last + dock.tagStep); tagRun.last = tagRun.showAt[k]; }
-            if (now >= tagRun.showAt[k]) tags.push({ k, s: 'EXODUS-' + fmt(h.num), at, near: G.dist < 25, since: tagRun.showAt[k] });
+            if (now >= tagRun.showAt[k]) tags.push({ k, s: 'EXODUS-' + fmt(h.num), at, near: G.dist < 25, since: tagRun.showAt[k], port: [px / A.D, py / A.D] });   // port: its hatch on the ring (units), the name's leader
         });
         return tags;
     }
@@ -414,11 +414,11 @@
     const DECK_WORD = { bridge: 'Bridge', lab: 'Lab', quarters: 'Quarters', cargo: 'Hold', engineering: 'Engine room' };
     const chip = (icon, text, tone) => Object.freeze(tone ? { icon, text, tone } : { icon, text });
     function chips(o) {
-        const out = [chip('dock', { soft: 'Soft dock', rough: 'Rough dock', crash: 'Hard dock' }[o.grade] || 'Soft dock')];   // (the game's dock chips)
+        const out = [chip('dock', { soft: 'Soft dock', rough: 'Rough dock', crash: 'Hard dock' }[o.grade] || 'Soft dock', 'aura')];   // (the game's dock chips: A.U.R.A.'s word, C52b)
         const rooms = o.rooms || [];
-        if (rooms.length === 1) out.push(chip('deck', (DECK_WORD[rooms[0]] || 'Deck') + ' broken', 'loss'));
-        else if (rooms.length > 1) out.push(chip('deck', rooms.length + ' decks broken', 'loss'));
-        if (o.torn) out.push(chip('hull', (o.tornNum ? fmt(o.tornNum) : 'A hull') + ' torn loose', 'loss'));   // DRAFT
+        if (rooms.length === 1) out.push(chip('deck', (DECK_WORD[rooms[0]] || 'Deck') + ' damaged', 'loss'));   // DRAFT (look pass): one damage word
+        else if (rooms.length > 1) out.push(chip('deck', rooms.length + ' decks damaged', 'loss'));              // DRAFT (look pass)
+        if (o.torn) out.push(chip('hull', (o.tornNum ? 'EXODUS-' + fmt(o.tornNum) : 'A hull') + ' torn loose', 'loss'));   // DRAFT (look pass): the hull's tag
         const e = energyDelta(o);
         if (e) out.push(chip('energy', (e > 0 ? 'Energy +' : 'Energy −') + Math.abs(e), e > 0 ? 'gain' : 'loss'));
         return out;

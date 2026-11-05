@@ -20,7 +20,11 @@
    minigames' copy of src/newscreen/art/Paint.js): its deep-field sky, an old-gold disc cut like a record, the sector map's
    worlds lit from the end of the heading, our Lander flying with its drive lit, the wreck broken in two with its red
    beacon, the light as the false sun. Words are MiniHost readouts (ui.note): few, small, quiet. The rules, the controls,
-   the timing, the lines and the result are unchanged; they still think in 480 × 270 picture units. */
+   the timing, the lines and the result are unchanged; they still think in 480 × 270 picture units.
+   THE NEW LOOK (look pass B09, html.ns-on only; the old look is unchanged): the readouts 14 px (minigames.css); the header
+   label EXODUS-2210 (no comma, no space); LIGHT YEARS OUT on the axis and LIGHT YEARS in the row; no MARKS or LINES counter
+   (C49b: the marks lighting on the disc are the feedback); on the map every note keeps 12 css px clear of the sprites, in
+   picture units for this window's scale, and the WHERE … WAS GOING kicker goes when the picture is under 2 px a unit. */
 (function () {
     'use strict';
 
@@ -63,6 +67,7 @@
     const FLASH = 0.8, LINE_GAP = 2.6, TO_MAP = 2.2, READY_AFTER = 1.2, WIPE = 0.75, ZOOM = 0.9, TREND = 1.3, REACH = 1.8, END_ZOOM = 1.5;
     const T_LINE = 0.8, LINE_DUR = 1.5, T_FOUND = 2.3, T_PORT = 2.9, T_AURA = 3.6, BEND = 0.9, FADE = 0.7;   // the map's beats (s)
     const IR = 34, PORT = [434, 218], TEXT_X = 392, GLOW_MAP = 62, GLOW_END = 30, BREATH = 4;
+    const CLEAR_PX = 12, NOTE_PX = 14, NAME_PX = 16, KICKER_SCALE = 2;   // (new look) css px between a note and a sprite; the notes' sizes; the scale the kicker needs
 
     // Fourteen pulsars: angle (degrees), line length, notch as a fraction of the length (round two's numbers, × 1.5).
     const PULSARS = [
@@ -490,6 +495,9 @@
         const talk = talkFor(wreck, plotted, canSpeak), M = reward && withNames(mapFor(wreck.sector, reward.kind), opts.names);
         const K = recipes(), RP = K.RP, cv = ui.canvas, art = fn => MiniLab.inArt(ctx, fn), glowOf = makeGlows(K);
         const smoothing = ctx.imageSmoothingEnabled;
+        const NEW = document.documentElement.classList.contains('ns-on');   // the new look (look pass B09)
+        const pxu = () => { const r = cv.getBoundingClientRect(); return r.width > 0 ? r.width / W : 2; };   // css px a picture unit, now
+        const gapU = () => CLEAR_PX / pxu(), lineU = px => (px * 1.25) / pxu();      // (new look) 12 css px, and a note's line, in units
         ctx.imageSmoothingEnabled = false;
         const SKY = { seed: 1977, dust: 0.1, haze: 0.85, stars: 1, light: [AW + 40, -30] };
         const bg = (() => {                                 // space, the chart's clear ground, the disc
@@ -645,16 +653,16 @@
             drawTrend(g, b, o, opts);
             if (c) { aline(g, c.x, top.y, c.x, o.y - 1, RP.UI.hex[2], 0.6); aline(g, o.x + 1, c.y, top.x, c.y, RP.UI.hex[2], 0.6); }
             aline(g, o.x, o.y, top.x, o.y, RP.HULL.hex[3]); aline(g, o.x, top.y, o.x, o.y, RP.HULL.hex[3]);
-            note('c-ly', 'LY DOWN THE HEADING', { x: u(o.x), y: u(top.y) - 13 });
+            note('c-ly', NEW ? 'LIGHT YEARS OUT' : 'LY DOWN THE HEADING', { x: u(o.x), y: u(top.y) - (NEW ? 3 + lineU(NOTE_PX) : 13) });
             note('c-lmax', String(Math.round(view.l)), { x: u(o.x) - 4, y: u(top.y) - 3, align: 'right' });
-            note('c-0', '0', { x: u(o.x) - 1, y: u(o.y) + 3 });
+            if (!NEW) note('c-0', '0', { x: u(o.x) - 1, y: u(o.y) + 3 });   // (new look: US marks the origin)
             note('c-yd', 'YEARS DEAD', { x: (u(o.x) + u(top.x)) / 2, y: u(o.y) + 3, align: 'center' });
             note('c-ymax', String(Math.round(view.y)), { x: u(top.x), y: u(o.y) + 3, align: 'right' });
             adisc(g, o.x + 0.5, o.y + 0.5, 3.2, 1, C.ui); note('c-us', 'US', { x: u(o.x) - 6, y: u(o.y) - 3, align: 'right', tone: 'ui' });   // us: alive, and where we started
             points.forEach((wk, i) => {
                 const q = toChart(b, wk.age, wk.ly), right = q.x / D + 5 + wk.num.length * 2.6 > u(top.x);
                 adisc(g, q.x + 0.5, q.y + 0.5, 2.6, 1, C.text); fill(g, q.x, q.y, C.star);
-                note('c-p' + i, wk.num, { x: u(q.x) + (right ? -4 : 4), y: u(q.y) - 10, align: right ? 'right' : 'left' });
+                note('c-p' + i, NEW ? String(wk.hull) : wk.num, { x: u(q.x) + (right ? -4 : 4), y: u(q.y) - 10, align: right ? 'right' : 'left' });
             });
             if (!c) return;
             const col = s.locked || s.dragging ? C.uiBright : C.ui;
@@ -663,12 +671,21 @@
             if (!s.moved && !s.locked && Math.floor(clock * 2) % 2) aring(g, c.x, c.y, A(7), C.uiBright, 0.7);   // this is the thing you move
         }
         function drawHud(lines, marks) {                    // the wreck, and the two counts the player needs, in small quiet words
+            if (NEW) { drawHudNew(); return; }
             const nb = ' ';
             note('h-hull', 'EXODUS' + nb + wreck.num, { x: 10, y: 8, tone: 'text', size: 'm' });
             note('h-sector', 'SECTOR' + nb + wreck.sector, { x: 10, y: 20 });
             [['YEARS', s.v.y, 'MARKS', marks, 178], ['LY', s.v.l, 'LINES', lines, 189]].forEach(([axis, v, what, n, y]) => {
                 note('h-' + axis, axis.padEnd(6, nb) + String(v).padStart(4, nb), { x: PAD.x - 22, y, tone: s.locked ? 'ui' : 'text' });
                 note('h-' + what, what + nb + two(n) + '/14', { x: W - 10, y, align: 'right', tone: n === 14 ? 'ui' : 'dim' });
+            });
+            if (s.locked) note('h-dated', 'DATED', { x: W - 10, y: 8, align: 'right', tone: 'ui', size: 'm' });
+        }
+        /** (new look) The wreck by its tag and the two values the point gives, no counters (C49b). */
+        function drawHudNew() {
+            note('h-hull', 'EXODUS-' + wreck.hull, { x: 10, y: 8, tone: 'text', size: 'm' });   // (the sector is the map's, not the chart's)
+            [['YEARS', s.v.y, 178], ['LIGHT YEARS', s.v.l, 178 + lineU(NOTE_PX) + 1]].forEach(([axis, v, y]) => {
+                note('h-' + axis, axis.padEnd(12, '\u00a0') + String(v).padStart(4, '\u00a0'), { x: PAD.x - 22, y, tone: s.locked ? 'ui' : 'text' });
             });
             if (s.locked) note('h-dated', 'DATED', { x: W - 10, y: 8, align: 'right', tone: 'ui', size: 'm' });
         }
@@ -738,7 +755,8 @@
                 const x = Math.round(cx + sx * hs), y = Math.round(cy + sy * hs);
                 aline(g, x, y, x - sx * arm, y, col); aline(g, x, y, x, y - sy * arm, col);
             });
-            if (fb === 1 && !M.final) note('m-place', reward.name.toUpperCase(), { x: Dd.x, y: Dd.y - Dd.r - 17, align: 'center', tone: hover ? 'warm' : 'text' });
+            const isNamed = NEW && m.t - T_FOUND >= 0.3;                // (new look) the panel names it now: one name on screen, not two
+            if (fb === 1 && !M.final && !isNamed) note('m-place', reward.name.toUpperCase(), { x: Dd.x, y: NEW ? Dd.y - Dd.r - 8 - gapU() - lineU(NOTE_PX) : Dd.y - Dd.r - 17, align: 'center', tone: hover ? 'warm' : 'text' });   // (new look: 12 px over its brackets)
         }
         function drawPorthole(g) {                          // a close look at the place, opening beside the words
             const gr = clamp((m.t - T_PORT) / 0.35, 0, 1), kind = M.dest.kind, ix = A(PORT[0]), iy = A(PORT[1]), ir = A(IR);
@@ -755,9 +773,18 @@
             aring(g, ix, iy, ir * gr + 1, RP.HULL.hex[3]); aring(g, ix, iy, ir * gr + 2.5, RP.HULL.hex[2], 0.7);
         }
         function drawPanel(g) {                             // what the fix says, in words
-            const f = m.t - T_FOUND, x = M.final ? W - 10 : TEXT_X, y = PORT[1] - 16;
+            const f = m.t - T_FOUND, x = M.final ? W - 10 : NEW ? PORT[0] - IR - 3 - gapU() : TEXT_X, y = PORT[1] - 16;   // (new look: 12 px clear of the porthole's rim)
             if (f < 0.3) return;
             const name = reward.name.toUpperCase();
+            if (NEW) {                                       // (new look) lines a note's height apart; the kicker only at 2 px a unit or more
+                const kick = pxu() >= KICKER_SCALE, y0 = PORT[1] - (lineU(NOTE_PX) + lineU(NAME_PX) + lineU(NOTE_PX)) / 2 - (kick ? lineU(NOTE_PX) / 2 : 0);
+                if (kick) note('m-sub', 'WHERE EXODUS-' + wreck.hull + ' WAS GOING', { x, y: y0, align: 'right' });
+                const yn = y0 + (kick ? lineU(NOTE_PX) : 0);
+                note('m-name', name.slice(0, Math.floor((f - 0.3) / 0.05)) || ' ', { x, y: yn, align: 'right', tone: 'text', size: 'm' });
+                if (m.t >= T_AURA) note('m-read', M.dest.readout, { x, y: yn + lineU(NAME_PX), align: 'right', tone: 'ui' });
+                drawPorthole(g);
+                return;
+            }
             note('m-sub', 'WHERE EXODUS-' + wreck.num + ' WAS GOING', { x, y, align: 'right' });
             note('m-name', name.slice(0, Math.floor((f - 0.3) / 0.05)) || ' ', { x, y: y + 6, align: 'right', tone: 'text', size: 'm' });
             if (m.t >= T_AURA) note('m-read', M.dest.readout, { x, y: y + 15, align: 'right', tone: 'ui' });
@@ -777,7 +804,7 @@
             for (let d = 0; d < plume; d++) { const hw = 1.6 * (1 - d / plume * 0.6); for (let k = -Math.ceil(hw); k <= Math.ceil(hw); k++) { const v = (1 - d / plume) ** 0.8 * (1 - (k / (hw + 0.01)) ** 2); if (v > 0.06) fr.tone(bx - ca * d - sa * k, by - sa * d + ca * k, RP.PLUME, v); } }
             g.drawImage(ours.canvas, x - ours.half, y - ours.half);
             ours.ports.forEach(([px, py], i) => fill(g, x + px, y + py, RP.AMBER.hex[i === 0 ? 4 : 3]));   // people aboard: the ports are lit
-            note('m-us', 'EXODUS-9', { x: V.us.x - 8, y: V.us.y + 7, tone: 'ui' });
+            note('m-us', 'EXODUS-9', { x: V.us.x - 8, y: NEW ? V.us.y + 5 + gapU() : V.us.y + 7, tone: 'ui' });   // (new look: 12 px under our Lander)
         }
         function renderMap(g) {
             const V = mapView();
@@ -789,9 +816,15 @@
             });
             const wb = V.beacon, red = clock % 2.4 < 0.3;   // the wreck's own beacon: still blinking red
             if (red) { adisc(g, wb[0] + 0.5, wb[1] + 0.5, 3.5, d => 0.55 * (1 - d), RP.RED.hex[2]); fill(g, wb[0], wb[1], RP.RED.hex[4]); } else fill(g, wb[0], wb[1], RP.RED.hex[2]);
-            note('m-wreck', 'EXODUS-' + wreck.num, { x: V.wreck.x + 9, y: V.wreck.y - 2 });
-            note('m-age', wreck.age + ' YEARS', { x: V.wreck.x + 9, y: V.wreck.y + 4 });
-            M.planets.forEach(([name, x, y, r], k) => note('m-planet' + k, name, { x, y: y + r + 3, align: 'center' }));
+            if (NEW) {                                       // (new look) under the broken hull, 12 px clear of both halves
+                const wy = V.wreck.y + 11 + gapU();
+                note('m-wreck', 'EXODUS-' + wreck.hull, { x: V.wreck.x + 2, y: wy });
+                note('m-age', wreck.age + ' YEARS', { x: V.wreck.x + 2, y: wy + lineU(NOTE_PX) });
+            } else {
+                note('m-wreck', 'EXODUS-' + wreck.num, { x: V.wreck.x + 9, y: V.wreck.y - 2 });
+                note('m-age', wreck.age + ' YEARS', { x: V.wreck.x + 9, y: V.wreck.y + 4 });
+            }
+            if (!NEW || m.t < T_FOUND) M.planets.forEach(([name, x, y, r], k) => note('m-planet' + k, name, { x, y: y + r + (NEW ? gapU() : 3), align: 'center' }));   // (new look: the other worlds' names step away once the place is found)
             if (M.final) drawLight(g);
             drawWreckCourse(g, V); drawRoute(g, V); drawPlace(g); drawUs(g, V);
             drawPanel(g);

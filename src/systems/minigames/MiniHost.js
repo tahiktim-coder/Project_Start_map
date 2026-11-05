@@ -27,7 +27,10 @@
      buttons(defs)        replace the choices. def: { label, onClick } or { label, hold: true, onDown, onUp }; primary, quiet, disabled optional
      note(id, text, o)    a small quiet readout over the picture (the few the player needs): o = { x, y (units), align:
                           'left' | 'right' | 'center', tone: 'dim' | 'text' | 'ui' | 'warm' | 'danger', size: 's' | 'm' }.
-                          The same id updates it in place; text null removes it.
+                          The same id updates it in place; text null removes it. The new look (html.ns-on) also takes
+                          label: true (a readout's label: Condensed caps), tag: true (the etched tag: a control or a name
+                          on a dither plate; it steps out when removed) and leader: { x, y } (units: a 1 px line from the
+                          note's nearest edge to that point, the thing it names).
      clearNotes()         remove every readout
      toPixel(e)           where a pointer event landed on the picture, in picture units: { x, y }
      toArt(e)             the same in art pixels
@@ -35,7 +38,11 @@
      canvas               the canvas element; set onpointerdown etc. on it (it is thrown away on close)
      finish(result)       close and resolve play() with result; only the first call counts
    }
-   While the frame is open every key goes to the minigame (MiniLab.keys, MiniLab.onKey) and none reaches the game. */
+   While the frame is open every key goes to the minigame (MiniLab.keys, MiniLab.onKey) and none reaches the game.
+   THE NEW LOOK (look pass B09, html.ns-on only; the old look keeps everything above as it was): one picture scale per window
+   for every minigame (fitShared: whole when that keeps 90% of the room), the frame's top fixed so the picture never moves
+   as the words change; no header; a mount that fails closes to travel and A.U.R.A. says so (L-46). MiniHost.chipsEl(chips)
+   makes the chip row the corridor and the dock put under a line (words Condensed, numbers Mono). */
 
 (function () {
     'use strict';
@@ -55,6 +62,10 @@
         textDim: '--mg-dim', ui: '--mg-ui', uiBright: '--mg-ui-br', uiDim: '--mg-ui-dim', warm: '--mg-warm',
     };
     const NOTE_TONES = ['dim', 'text', 'ui', 'warm', 'danger'];
+    const isNew = () => document.documentElement.classList.contains('ns-on');   // the new look (html.ns-on): the B09 frame
+    const WHOLE_KEEPS = 0.9;        // (new look) a whole picture scale when it keeps this share of the room
+    const TAG_OUT_MS = 200;         // (new look) an etched tag steps out (minigames.css mini-tag-out) before it goes
+    const WONT_START = 'That system will not start, Commander.';   // DRAFT (look pass): L-46, A.U.R.A. when a minigame fails to open
 
     const games = new Map();
     let current = null;             // id of the minigame on screen
@@ -113,12 +124,13 @@
         q('.mini-kicker').textContent = opts.kicker || own.kicker || def.kicker || '';
         q('.mini-title').textContent = opts.title || own.title || def.title;
         if (def.hideHeader && !opts.title && !opts.kicker) q('.mini-head').classList.add('is-hidden');   // the title still names the dialog for screen readers
-        return { overlay, frame: q('.mini-frame'), canvas: q('canvas'), notes: q('.mini-notes'), prev: q('.mini-prev'), who: q('.mini-who'), name: q('.mini-name'), line: q('.mini-line'), row: q('.mini-buttons') };
+        return { overlay, frame: q('.mini-frame'), canvas: q('canvas'), notes: q('.mini-notes'), talk: q('.mini-talk'), prev: q('.mini-prev'), who: q('.mini-who'), name: q('.mini-name'), line: q('.mini-line'), row: q('.mini-buttons') };
     }
 
     /** Scale the picture to fit the window, aspect kept. Whole device pixels per art pixel when that costs little room,
         so every dither dot comes out the same size. */
     function fitCanvas(els) {
+        if (isNew()) { fitShared(els); return; }
         const { frame, canvas } = els, AW = canvas.width, AH = canvas.height, dpr = window.devicePixelRatio || 1;
         const cs = getComputedStyle(frame), px = name => parseFloat(cs[name]) || 0;
         const chromeW = px('paddingLeft') + px('paddingRight') + px('borderLeftWidth') + px('borderRightWidth');
@@ -128,6 +140,22 @@
         const scale = crisp >= room * CRISP_MIN_FILL ? crisp : room;
         canvas.style.width = `${AW * scale}px`;
         canvas.style.height = `${AH * scale}px`;
+    }
+
+    /** (new look) One scale for every minigame's picture (480 × 270 units, whatever its density): the room the window leaves
+        once the words keep their height (the talk and key rows' min-heights, not what they hold now), whole when that keeps
+        WHOLE_KEEPS of it. The frame's top is set once for that height, so the picture never moves when a line wraps or chips
+        come. */
+    function fitShared(els) {
+        const { frame, canvas, talk, row } = els, fs = getComputedStyle(frame), gap = parseFloat(fs.rowGap) || 0;
+        const shown = [...frame.children].filter(el => getComputedStyle(el).display !== 'none').length;
+        const chromeH = (parseFloat(getComputedStyle(talk).minHeight) || 0) + (parseFloat(getComputedStyle(row).minHeight) || 0) + gap * Math.max(0, shown - 1);
+        const roomH = window.innerHeight - 2 * MARGIN - chromeH, room = Math.max(MIN_SCALE, Math.min((window.innerWidth - 2 * MARGIN) / MiniLab.W, roomH / MiniLab.H));
+        const whole = Math.floor(room + ROUNDING_SLACK), scale = whole >= 1 && whole >= room * WHOLE_KEEPS ? whole : room;
+        const w = Math.round(MiniLab.W * scale), h = Math.round(MiniLab.H * scale);
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        frame.style.marginTop = Math.max(0, Math.floor((window.innerHeight - 2 * MARGIN - h - chromeH) / 2)) + 'px';
     }
 
     function makeButton(def) {
@@ -157,7 +185,31 @@
 
     function makeUi(els, finish, density) {
         let speaking = '';
-        const notes = new Map();
+        const notes = new Map(), leaders = new Map();
+        let svg = null;
+        /** (new look) A tag steps out before it goes (its leader at once); any other note goes at once. */
+        const dropNote = (el, id) => {
+            const line = leaders.get(id);
+            if (line) { line.remove(); leaders.delete(id); }
+            if (!isNew() || !el.classList.contains('is-tag')) { el.remove(); return; }
+            el.classList.add('is-going');
+            setTimeout(() => el.remove(), TAG_OUT_MS);
+        };
+        /** (new look) The 1 px leader from note el's nearest edge to the point it names (units), or none. */
+        const leaderOf = (id, el, to) => {
+            let line = leaders.get(id);
+            if (!to || !Number.isFinite(to.x) || !Number.isFinite(to.y)) { if (line) { line.remove(); leaders.delete(id); } return; }
+            if (!svg) {
+                svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('class', 'mini-leaders'); svg.setAttribute('viewBox', `0 0 ${MiniLab.W} ${MiniLab.H}`); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+                els.notes.prepend(svg);
+            }
+            if (!line) { line = document.createElementNS('http://www.w3.org/2000/svg', 'line'); leaders.set(id, line); svg.append(line); }
+            const box = els.notes.getBoundingClientRect(), r = el.getBoundingClientRect(), ux = MiniLab.W / (box.width || 1), uy = MiniLab.H / (box.height || 1);
+            const x0 = (r.left - box.left) * ux, x1 = (r.right - box.left) * ux, y0 = (r.top - box.top) * uy, y1 = (r.bottom - box.top) * uy;
+            const fx = Math.min(Math.max(to.x, x0), x1), fy = Math.min(Math.max(to.y, y0), y1);
+            [['x1', fx], ['y1', fy], ['x2', to.x], ['y2', to.y]].forEach(([k, v]) => line.setAttribute(k, v.toFixed(2)));
+        };
         const art = Object.freeze({ w: els.canvas.width, h: els.canvas.height, d: density });
         const toPixel = e => {
             const r = els.canvas.getBoundingClientRect();
@@ -182,15 +234,16 @@
             buttons(defs) { els.row.replaceChildren(...(defs || []).map(makeButton)); },
             note(id, text, o = {}) {
                 let el = notes.get(id);
-                if (text == null || text === '') { if (el) { el.remove(); notes.delete(id); } return; }
+                if (text == null || text === '') { if (el) { dropNote(el, id); notes.delete(id); } return; }
                 if (!el) { el = document.createElement('p'); notes.set(id, el); els.notes.append(el); }
                 const align = ['right', 'center'].includes(o.align) ? o.align : 'left', tone = NOTE_TONES.includes(o.tone) ? o.tone : 'dim';
-                el.className = `mini-note is-${align} is-${tone}` + (o.size === 'm' ? ' is-m' : '');
+                el.className = `mini-note is-${align} is-${tone}` + (o.size === 'm' ? ' is-m' : '') + (isNew() && o.label ? ' is-label' : '') + (isNew() && o.tag ? ' is-tag' : '');
                 el.style.left = `${((o.x == null ? 6 : o.x) / MiniLab.W) * 100}%`;
                 el.style.top = `${((o.y == null ? 6 : o.y) / MiniLab.H) * 100}%`;
                 if (el.textContent !== String(text)) el.textContent = String(text);
+                if (isNew()) leaderOf(id, el, o.leader);
             },
-            clearNotes() { notes.forEach(el => el.remove()); notes.clear(); },
+            clearNotes() { notes.forEach((el, id) => dropNote(el, id)); notes.clear(); },
             toPixel,
             toArt(e) { const p = toPixel(e); return { x: p.x * density, y: p.y * density }; },
             art,
@@ -228,8 +281,37 @@
 
     /** mount() threw: say so, and let the player carry on as if A.U.R.A. had played it. */
     function offerWayOut(ui, def, opts) {
+        if (isNew()) { ui.finish(def.autoResult(opts)); setTimeout(() => auraSays(WONT_START), LEAVE_MS + 60); return; }
         ui.say('', 'This would not start.');
         ui.buttons([{ label: 'Continue', primary: true, onClick: () => ui.finish(def.autoResult(opts)) }]);
+    }
+
+    /** (new look) A.U.R.A. says a line in travel (or on the bridge), by the game's own voice; else into the log, which the
+        voice reads out once the view shows. */
+    function auraSays(text) {
+        const NS = window.NewScreen, voice = NS && NS.mods && NS.mods.voice, app = window.app;
+        try {
+            if (voice && typeof voice.say === 'function' && NS.isShown && NS.isShown()) { voice.say({ id: 'aura', text }); return; }
+            if (app && app.state && typeof app.state.addLog === 'function') app.state.addLog(`A.U.R.A.: "${text}"`);
+        } catch (e) { console.error(e); }
+    }
+
+    /** (new look) The chip row under a line, as the corridor's bill and the dock's result show it: { icon, text, tone } each
+        (tone 'gain' | 'loss' | 'aura': A.U.R.A.'s own word, the dock's grade); words in Condensed, numbers in Mono. */
+    function chipsEl(chips, className) {
+        const el = document.createElement('p');
+        el.className = className || 'void-chips';
+        (chips || []).forEach(c => {
+            const i = document.createElement('i');
+            if (['gain', 'loss', 'aura'].includes(c.tone)) i.className = 'is-' + c.tone;
+            if (c.icon) i.dataset.icon = c.icon;
+            String(c.text).split(/(EXODUS-\d+|(?<![\w-])[+\u2212-]?\d(?:[\d,.]*\d)?%?)/).forEach((part, k) => {   // a hull's tag whole; a sign only at a word's start
+                if (!part) return;
+                if (k % 2) { const n = document.createElement('span'); n.className = 'mini-n'; n.textContent = part; i.append(n); } else i.append(part);
+            });
+            el.append(i);
+        });
+        return el;
     }
 
     function open(def, opts, resolve) {
@@ -274,7 +356,7 @@
     }
 
     window.MiniHost = {
-        register, play,
+        register, play, chipsEl,
         has: id => games.has(id),
         /** The id of the minigame on screen, or null. */
         get current() { return current; },
