@@ -346,72 +346,78 @@ _Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to h
 ### Flying a sector jump (the mini-game) «Corridor.js · Corridor»
 _Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck. The dark on the new look's jump into sector 5 (After the flight) is in sector-5.md._
 
-- zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen «Corridor.js · line 118»
-- **2 · say** — I'll count every beacon we hear, Commander. «Corridor.js · line 130»
-- **2 · say** — That's one of the eight. «Corridor.js · line 131»
-- **2 · say** — Debris ahead, Commander. «Corridor.js · line 132»
-- **2 · say** — Eight beacons. That's every ship they told us about. «Corridor.js · line 133»
-- **3 · say** — That can't be right. They told us eight. «Corridor.js · line 134»
-- **3 · say** — Hull [n]. We're hull nine. «Corridor.js · line 135»
-- **3 · say** — More debris ahead, Commander. «Corridor.js · line 136»
-- **3 · say** — That one's been dead about a hundred years. «Corridor.js · line 137»
-- **4 · say** — That one's been out here about two hundred years. «Corridor.js · line 138»
-- **4 · say** — Heavy debris ahead, Commander. «Corridor.js · line 139»
-- **4 · say** — I've been writing every ship down. I can't keep up. «Corridor.js · line 140»
-- **5 · say** — More debris ahead. Heavier than before. «Corridor.js · line 141»
-- **5 · say** — thousand beacons. So where are all the ships? «Corridor.js · line 142»
-- **6 · say** — The light ahead is getting bigger, Commander. «Corridor.js · line 143»
-- **6 · say** — That ship is exactly like ours, Commander. «Corridor.js · line 144»
-- **6 · say** — It turns when we turn, a quarter of a second late. «Corridor.js · line 145»
-- **6 · say** — Debris ahead, Commander. The heaviest yet. «Corridor.js · line 146»
-- **6 · say** — That light ahead. I'm reading no heat off it. «Corridor.js · line 147»
-- **6 · say** — Last of the debris ahead, Commander. «Corridor.js · line 148»
-- **bridge** — the bridge «Corridor.js · line 150»
-- **lab** — the lab «Corridor.js · line 150»
-- **quarters** — the crew quarters «Corridor.js · line 150»
-- **cargo** — the cargo hold «Corridor.js · line 150»
-- **2** — We're through, Commander. «Corridor.js · line 153»
-- **3** — We're clear, Commander. «Corridor.js · line 153»
-- **4** — We made it through, Commander. «Corridor.js · line 153»
-- **5** — Out of the debris, Commander. «Corridor.js · line 153»
-- **6** — All clear, Commander. «Corridor.js · line 153»
-- Debris on the heading, Commander. I can fly us through, if you prefer. «Corridor.js · line 156»
-- Debris on the heading, Commander. I can fly us through, but slower. It costs [n] more energy. «Corridor.js · line 157» **DRAFT**
-- **aura** — I took the long way round, Commander. It cost [n] more energy. «Corridor.js · line 160» **DRAFT (the brief's own line)**
-- **part** — I flew part of it the long way round. That cost [n] more energy. «Corridor.js · line 161» **DRAFT**
-- **clean** — A clean line, Commander. That saved [n] energy. «Corridor.js · line 162» **DRAFT**
-- **fast** — Fast and clean, Commander. That saved [n] energy. «Corridor.js · line 163» **DRAFT**
-- **one** — That still saved [n] energy. «Corridor.js · line 164» **DRAFT**
-- [alive] crew, [injured | no injuries]. «Corridor.js · line 315»
-- and [n] «Corridor.js · line 318»
-- [n] beacons heard, as the briefing said. «Corridor.js · line 327»
-- [heard] beacons heard. The briefing said eight. «Corridor.js · line 328»
-- [heard] beacons heard. «Corridor.js · line 328»
-- We passed [hulls | hull] [hulls]. «Corridor.js · line 329»
-- [broke] [are | is] damaged. «Corridor.js · line 331»
-- [n] [scrapes | scrape] on the hull.[n] «Corridor.js · line 332»
-- No scrapes on the hull. «Corridor.js · line 332»
-- below us «Corridor.js · line 1055»
-- on our left «Corridor.js · line 1055»
-- on our right «Corridor.js · line 1055»
-- **say** — Hull number [num], [h]. «Corridor.js · line 1057»
-- ArrowLeft · ArrowRight · ArrowUp · ArrowDown «Corridor.js · line 1177»
-- Shift «Corridor.js · line 1177»
-- I have the ship, Commander. «Corridor.js · line 1204»
-- You have the ship, Commander. «Corridor.js · line 1204»
-- **label** — Take the stick «Corridor.js · line 1205»
-- **label** — Let A.U.R.A. fly «Corridor.js · line 1205»
-- **label** — Continue «Corridor.js · line 1228»
-- hull [tag] «Corridor.js · line 2330»
-- A.U.R.A. FLYING «Corridor.js · line 2335»
-- BEACONS HEARD «Corridor.js · line 2337»
-- STEER CLEAR OF THE DEBRIS «Corridor.js · line 2339»
-- USE THE MOUSE OR THE ARROWS «Corridor.js · line 2340»
-- HOLD TO GO FASTER «Corridor.js · line 2342»
-- **label** — Fly it myself «Corridor.js · line 2410»
-- **label** — Let A.U.R.A. fly «Corridor.js · line 2410»
-- **title** — Fly the corridor «Corridor.js · line 2420»
-- **kicker** — Sector jump «Corridor.js · line 2421»
+- zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen «Corridor.js · line 124»
+- **2 · say** — I'll count every beacon we hear, Commander. «Corridor.js · line 136»
+- **2 · say** — That's one of the eight. «Corridor.js · line 137»
+- **2 · say** — Debris ahead, Commander. «Corridor.js · line 138»
+- **2 · say** — Eight beacons. That's every ship they told us about. «Corridor.js · line 139»
+- **3 · say** — That can't be right. They told us eight. «Corridor.js · line 140»
+- **3 · say** — Hull [n]. We're hull nine. «Corridor.js · line 141»
+- **3 · say** — More debris ahead, Commander. «Corridor.js · line 142»
+- **3 · say** — That one's been dead about a hundred years. «Corridor.js · line 143»
+- **4 · say** — That one's been out here about two hundred years. «Corridor.js · line 144»
+- **4 · say** — Heavy debris ahead, Commander. «Corridor.js · line 145»
+- **4 · say** — I've been writing every ship down. I can't keep up. «Corridor.js · line 146»
+- **5 · say** — More debris ahead. Heavier than before. «Corridor.js · line 147»
+- **5 · say** — thousand beacons. So where are all the ships? «Corridor.js · line 148»
+- **6 · say** — The light ahead is getting bigger, Commander. «Corridor.js · line 149»
+- **6 · say** — That ship is exactly like ours, Commander. «Corridor.js · line 150»
+- **6 · say** — It turns when we turn, a quarter of a second late. «Corridor.js · line 151»
+- **6 · say** — Debris ahead, Commander. The heaviest yet. «Corridor.js · line 152»
+- **6 · say** — That light ahead. I'm reading no heat off it. «Corridor.js · line 153»
+- **6 · say** — Last of the debris ahead, Commander. «Corridor.js · line 154»
+- **bridge** — the bridge «Corridor.js · line 156»
+- **lab** — the lab «Corridor.js · line 156»
+- **quarters** — the crew quarters «Corridor.js · line 156»
+- **cargo** — the cargo hold «Corridor.js · line 156»
+- **2** — We're through, Commander. «Corridor.js · line 159»
+- **3** — We're clear, Commander. «Corridor.js · line 159»
+- **4** — We made it through, Commander. «Corridor.js · line 159»
+- **5** — Out of the debris, Commander. «Corridor.js · line 159»
+- **6** — All clear, Commander. «Corridor.js · line 159»
+- Debris on the heading, Commander. I can fly us through, if you prefer. «Corridor.js · line 162»
+- Debris on the heading, Commander. I can fly us through, but slower. It costs [n] more energy. «Corridor.js · line 163» **DRAFT**
+- Debris on the heading, Commander. «Corridor.js · line 165» **DRAFT (look pass)**
+- I can fly us through. It costs [n] more energy. «Corridor.js · line 166» **DRAFT (look pass)**
+- **steer** — Mouse or arrows to steer «Corridor.js · line 167» **DRAFT (look pass)**
+- **faster** — Hold Space to go faster «Corridor.js · line 167» **DRAFT (look pass)**
+- **aura** — I took the long way round, Commander. It cost [n] more energy. «Corridor.js · line 171» **DRAFT (the brief's own line)**
+- **part** — I flew part of it the long way round. That cost [n] more energy. «Corridor.js · line 172» **DRAFT**
+- **clean** — A clean line, Commander. That saved [n] energy. «Corridor.js · line 173» **DRAFT**
+- **fast** — Fast and clean, Commander. That saved [n] energy. «Corridor.js · line 174» **DRAFT**
+- **one** — That still saved [n] energy. «Corridor.js · line 175» **DRAFT**
+- [alive] crew, [injured | no injuries]. «Corridor.js · line 326»
+- and [n] «Corridor.js · line 329»
+- [n] beacons heard, as the briefing said. «Corridor.js · line 338»
+- [heard] beacons heard. The briefing said eight. «Corridor.js · line 339»
+- [heard] beacons heard. «Corridor.js · line 339»
+- We passed [hulls | hull] [hulls]. «Corridor.js · line 340»
+- [broke] [are | is] damaged. «Corridor.js · line 342»
+- [n] [scrapes | scrape] on the hull.[n] «Corridor.js · line 343»
+- No scrapes on the hull. «Corridor.js · line 343»
+- below us «Corridor.js · line 1066»
+- on our left «Corridor.js · line 1066»
+- on our right «Corridor.js · line 1066»
+- **say** — Hull number [num], [h]. «Corridor.js · line 1068»
+- ArrowLeft · ArrowRight · ArrowUp · ArrowDown «Corridor.js · line 1190»
+- Shift «Corridor.js · line 1190»
+- I have the ship, Commander. «Corridor.js · line 1217»
+- You have the ship, Commander. «Corridor.js · line 1217»
+- **label** — Take the stick «Corridor.js · line 1219»
+- **label** — Let A.U.R.A. fly «Corridor.js · line 1219»
+- **label** — Continue «Corridor.js · line 1242»
+- hull [tag] «Corridor.js · line 2358»
+- A.U.R.A. FLYING «Corridor.js · line 2364»
+- BEACONS HEARD «Corridor.js · line 2366»
+- STEER CLEAR OF THE DEBRIS «Corridor.js · line 2368»
+- USE THE MOUSE OR THE ARROWS «Corridor.js · line 2369»
+- HOLD TO GO FASTER «Corridor.js · line 2371»
+- A.U.R.A. FLYING «Corridor.js · line 2378»
+- BEACONS HEARD «Corridor.js · line 2380»
+- **label** — Fly it myself «Corridor.js · line 2457»
+- **label** — Let A.U.R.A. fly «Corridor.js · line 2457»
+- **title** — Fly the corridor «Corridor.js · line 2467»
+- **kicker** — Sector jump «Corridor.js · line 2468»
 
 ### Under a world the story waits on (the new look) «Travel.js · STORY_TAGS»
 _In its note in travel, under its name._

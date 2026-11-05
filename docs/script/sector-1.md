@@ -289,52 +289,55 @@ _A card after the wreck. Mira asks; A.U.R.A. if Mira is dead._
 ### Dating it (the mini-game) «DiscDating.js · DiscDating»
 _The reactions by depth play the first time a wreck that deep is dated; after that A.U.R.A. says the age._
 
-- Fewer years «DiscDating.js · line 81»
-- More years «DiscDating.js · line 81»
-- EXODUS-[num]'s last star fix, Commander. It can tell us when the ship died. «DiscDating.js · line 85»
-- Move the point on the chart until the wreck's lines and marks fit the disc. «DiscDating.js · line 86»
-- Commander, move the point on the chart until the wreck's lines and marks fit the disc. «DiscDating.js · line 87»
-- [age] years, Commander. «DiscDating.js · line 88»
-- **locked** — [age] years. We were still asleep when they died. «DiscDating.js · line 92»
-- **intro** — Hull [num]. Only eight ships launched before us. «DiscDating.js · line 94»
-- **locked** — [age] years. That can't be right. A higher number should be newer. «DiscDating.js · line 95»
-- **intro** — Hull [num]. How many ships did they send? «DiscDating.js · line 97»
-- **locked** — [age] years ago there was no Exodus programme. «DiscDating.js · line 98»
-- **locked** — [age] years, Commander. The reading is correct. «DiscDating.js · line 99»
-- Every one of them was going where we're going. «DiscDating.js · line 101»
-- Our heading has not changed, Commander. «DiscDating.js · line 101»
-- **beacon · readout** — BEARING 012 «DiscDating.js · line 105»
-- **beacon · aura** — [name], Commander. A moon, bearing zero one two. «DiscDating.js · line 106»
-- **graves · readout** — BEARING 004 «DiscDating.js · line 107»
-- **graves · aura** — [name], Commander. Bearing zero zero four. There are graves. «DiscDating.js · line 108»
-- **light · readout** — BEARING 000 · NO RANGE «DiscDating.js · line 109»
-- **light · aura** — Bearing zero. I cannot give you a distance. «DiscDating.js · line 110»
-- **planets** — HELIOS-12 MINOR «DiscDating.js · line 116»
-- **planets** — KRYOS-7 IV «DiscDating.js · line 116»
-- **planets** — ZEPHYR-40 X «DiscDating.js · line 116»
-- **planets** — EREBUS-21 PRIME «DiscDating.js · line 117»
-- **planets** — NYX-14 IV «DiscDating.js · line 117»
-- **planets** — ATLAS-3 PRIME «DiscDating.js · line 118»
-- **planets** — NYX-52 IV «DiscDating.js · line 118»
-- **planets** — HYPERION-9 X «DiscDating.js · line 118»
-- **planets** — PHOEBE-33 IV «DiscDating.js · line 119»
-- **planets** — KRYOS-90 MINOR «DiscDating.js · line 120»
-- **planets** — ATLAS-71 X «DiscDating.js · line 120»
-- **planets** — CHRONOS-6 MINOR «DiscDating.js · line 121»
-- **planets** — TITAN-81 X «DiscDating.js · line 121»
-- a hundred «DiscDating.js · line 164»
-- and [n] «DiscDating.js · line 165»
-- DiscDating needs MiniPaint (src/systems/minigames/art/MiniPaint.js, loaded by MiniLab.js) «DiscDating.js · line 237»
-- Set course «DiscDating.js · line 604»
-- Back to the chart «DiscDating.js · line 604»
-- **label** — Not now «DiscDating.js · line 609»
-- LY DOWN THE HEADING «DiscDating.js · line 648»
-- YEARS DEAD «DiscDating.js · line 651»
-- WHERE EXODUS-[num] WAS GOING «DiscDating.js · line 761»
-- SECTOR [sector] «DiscDating.js · line 798»
-- COURSE SET «DiscDating.js · line 799»
-- **title** — Date it with the disc «DiscDating.js · line 875»
-- **kicker** — Star fix «DiscDating.js · line 876»
+- Fewer years «DiscDating.js · line 86»
+- More years «DiscDating.js · line 86»
+- EXODUS-[num]'s last star fix, Commander. It can tell us when the ship died. «DiscDating.js · line 90»
+- Move the point on the chart until the wreck's lines and marks fit the disc. «DiscDating.js · line 91»
+- Commander, move the point on the chart until the wreck's lines and marks fit the disc. «DiscDating.js · line 92»
+- [age] years, Commander. «DiscDating.js · line 93»
+- **locked** — [age] years. We were still asleep when they died. «DiscDating.js · line 97»
+- **intro** — Hull [num]. Only eight ships launched before us. «DiscDating.js · line 99»
+- **locked** — [age] years. That can't be right. A higher number should be newer. «DiscDating.js · line 100»
+- **intro** — Hull [num]. How many ships did they send? «DiscDating.js · line 102»
+- **locked** — [age] years ago there was no Exodus programme. «DiscDating.js · line 103»
+- **locked** — [age] years, Commander. The reading is correct. «DiscDating.js · line 104»
+- Every one of them was going where we're going. «DiscDating.js · line 106»
+- Our heading has not changed, Commander. «DiscDating.js · line 106»
+- **beacon · readout** — BEARING 012 «DiscDating.js · line 110»
+- **beacon · aura** — [name], Commander. A moon, bearing zero one two. «DiscDating.js · line 111»
+- **graves · readout** — BEARING 004 «DiscDating.js · line 112»
+- **graves · aura** — [name], Commander. Bearing zero zero four. There are graves. «DiscDating.js · line 113»
+- **light · readout** — BEARING 000 · NO RANGE «DiscDating.js · line 114»
+- **light · aura** — Bearing zero. I cannot give you a distance. «DiscDating.js · line 115»
+- **planets** — HELIOS-12 MINOR «DiscDating.js · line 121»
+- **planets** — KRYOS-7 IV «DiscDating.js · line 121»
+- **planets** — ZEPHYR-40 X «DiscDating.js · line 121»
+- **planets** — EREBUS-21 PRIME «DiscDating.js · line 122»
+- **planets** — NYX-14 IV «DiscDating.js · line 122»
+- **planets** — ATLAS-3 PRIME «DiscDating.js · line 123»
+- **planets** — NYX-52 IV «DiscDating.js · line 123»
+- **planets** — HYPERION-9 X «DiscDating.js · line 123»
+- **planets** — PHOEBE-33 IV «DiscDating.js · line 124»
+- **planets** — KRYOS-90 MINOR «DiscDating.js · line 125»
+- **planets** — ATLAS-71 X «DiscDating.js · line 125»
+- **planets** — CHRONOS-6 MINOR «DiscDating.js · line 126»
+- **planets** — TITAN-81 X «DiscDating.js · line 126»
+- a hundred «DiscDating.js · line 169»
+- and [n] «DiscDating.js · line 170»
+- DiscDating needs MiniPaint (src/systems/minigames/art/MiniPaint.js, loaded by MiniLab.js) «DiscDating.js · line 242»
+- Set course «DiscDating.js · line 612»
+- Back to the chart «DiscDating.js · line 612»
+- **label** — Not now «DiscDating.js · line 617»
+- LIGHT YEARS OUT «DiscDating.js · line 656»
+- LY DOWN THE HEADING «DiscDating.js · line 656»
+- YEARS DEAD «DiscDating.js · line 659»
+- LIGHT YEARS «DiscDating.js · line 687»
+- WHERE EXODUS-[hull] WAS GOING «DiscDating.js · line 781»
+- WHERE EXODUS-[num] WAS GOING «DiscDating.js · line 788»
+- SECTOR [sector] «DiscDating.js · line 831»
+- COURSE SET «DiscDating.js · line 832»
+- **title** — Date it with the disc «DiscDating.js · line 908»
+- **kicker** — Star fix «DiscDating.js · line 909»
 
 ### In the log afterwards «bundle.js · dateWreck»
 

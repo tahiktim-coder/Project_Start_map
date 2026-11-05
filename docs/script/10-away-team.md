@@ -485,71 +485,71 @@ _The whole fall on a new kind of world, a story world, our wreck, the bold way o
 ### Cutting into one of our wrecks (the mini-game) «Torch.js · Torch»
 _Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet._
 
-- **cut** — The cutting torch «Torch.js · line 66»
-- **frozen** — A frozen hatch «Torch.js · line 66»
-- **fuel** — A fuel line «Torch.js · line 66»
-- **already** — An open hatch «Torch.js · line 66»
-- **torn** — A split hull «Torch.js · line 66»
-- **panel** — A working airlock «Torch.js · line 66»
-- **hatch** — PRESS AND HOLD «Torch.js · line 75»
-- **hatch** — ON THE DOTTED LINE «Torch.js · line 75»
-- **hatch** — WHITE MEANS CUT «Torch.js · line 75»
-- **hatch** — FOLLOW THE LINE SLOWLY «Torch.js · line 75»
-- **disc** — PRESS AND HOLD ON A LINE «Torch.js · line 76»
-- **disc** — INSIDE THE DOTTED RING «Torch.js · line 76»
-- **melt** — PRESS AND HOLD «Torch.js · line 77»
-- **melt** — TO WARM THE FROST «Torch.js · line 77»
-- **melt** — MELT IT OFF «Torch.js · line 77»
-- **melt** — ALL ROUND THE HATCH «Torch.js · line 77»
-- twenty years · twenty years · a hundred years · two hundred years · three hundred years · four hundred years «Torch.js · line 150»
-- **hatch** — [hull]. Dead about [dead for]. The hatch has no power, so it won't open. «Torch.js · line 166»
-- **hatch** — Hold the torch on the line until it glows white, then move on. «Torch.js · line 167»
-- **fast** — Too fast. That's only marking the plate, not cutting it. «Torch.js · line 168»
-- **hot** — The plate's getting hot. Keep moving. «Torch.js · line 168»
-- **warp** — Too hot, and now it's warped. Let it cool a second. «Torch.js · line 169»
-- **stray** — You're off the seam. That's fuel we don't get back. «Torch.js · line 169»
-- **half** — Still nothing warm on the other side. «Torch.js · line 170»
-- **gap** — It's still holding somewhere. Find the bit you missed. «Torch.js · line 170»
-- **open** — Hold on. Something in there caught your light. «Torch.js · line 171»
-- **open** — [n][n] in the dark. Go slow in there. «Torch.js · line 171»
-- **frozen** — [hull]. Dead about [dead for]. The hatch is under thick frost. «Torch.js · line 172»
-- **frozen** — Hold the flame back and warm it. We can't cut what we can't see. «Torch.js · line 173»
-- **shows** — The ice has split most of the seal. Cut the bits that still hold. «Torch.js · line 174»
-- **frozenOpen** — It's iced over in there too. «Torch.js · line 175»
-- **frozenOpen** — Mind your gloves on that ice. It cuts. «Torch.js · line 175»
-- **fuel** — [hull]. Dead about [dead for]. A fuel line runs across the hatch. «Torch.js · line 176»
-- **fuel** — There's still frozen fuel in that line. Stop the flame where it crosses the seam. «Torch.js · line 177»
-- **line** — You hit the fuel line! Keep the flame off it. «Torch.js · line 178»
-- **fuelOpen** — The line's snapped. Only vapour left in it. «Torch.js · line 179»
-- **fuelOpen** — Keep your suit clear of the broken end. «Torch.js · line 179»
-- **hatchDry** — The tank is empty. The hatch still holds. «Torch.js · line 180»
-- **hatchDry** — Come back to the lander. We'll swap the tank. «Torch.js · line 180»
-- **handOver** — Give it here. I'll go slow so it cuts clean. «Torch.js · line 181»
-- **newTank** — A full tank. Pick up where you left off. «Torch.js · line 181»
-- **disc** — The disc is out of the hold, in front of the light. «Torch.js · line 182»
-- **disc** — Where the lines meet is home. Burn the centre, then cut each line inside the ring. «Torch.js · line 183»
-- **discHot** — The gold is too hot to cut. Wait for it to cool. «Torch.js · line 184»
-- **fig** — You pull the torch back from the figures. «Torch.js · line 184»
-- **done** — The map is gone, Commander. «Torch.js · line 185»
-- **clean** — Nobody can use it to find Earth now. «Torch.js · line 185»
-- **marked** — Scorched or not, nobody can use it to find Earth now. «Torch.js · line 186»
-- **discDry** — The tank is empty. The map is still there. «Torch.js · line 186»
-- **label** — Let [cutter] cut it «Torch.js · line 710»
-- **label** — Continue «Torch.js · line 711»
-- **label** — New tank «Torch.js · line 712»
-- FUEL LINE «Torch.js · line 1380»
-- OFF THE LINE «Torch.js · line 1382»
-- FUEL LINE «Torch.js · line 1383»
-- SLOW DOWN «Torch.js · line 1385»
-- MOVE ON «Torch.js · line 1386»
-- HEAT [n]% «Torch.js · line 1409»
-- FUEL [n]% «Torch.js · line 1411»
-- FROST [n]% «Torch.js · line 1480»
-- SEAM [pct]% «Torch.js · line 1480»
-- SCARS [scars] WARPS [n] «Torch.js · line 1481»
-- LINES [pad start] «Torch.js · line 1529»
-- **kicker** — EVA «Torch.js · line 1569»
-- **title** — The cutting torch «Torch.js · line 1569»
+- **cut** — The cutting torch «Torch.js · line 70»
+- **frozen** — A frozen hatch «Torch.js · line 70»
+- **fuel** — A fuel line «Torch.js · line 70»
+- **already** — An open hatch «Torch.js · line 70»
+- **torn** — A split hull «Torch.js · line 70»
+- **panel** — A working airlock «Torch.js · line 70»
+- **hatch** — PRESS AND HOLD «Torch.js · line 79»
+- **hatch** — ON THE DOTTED LINE «Torch.js · line 79»
+- **hatch** — WHITE MEANS CUT «Torch.js · line 79»
+- **hatch** — FOLLOW THE LINE SLOWLY «Torch.js · line 79»
+- **disc** — PRESS AND HOLD ON A LINE «Torch.js · line 80»
+- **disc** — INSIDE THE DOTTED RING «Torch.js · line 80»
+- **melt** — PRESS AND HOLD «Torch.js · line 81»
+- **melt** — TO WARM THE FROST «Torch.js · line 81»
+- **melt** — MELT IT OFF «Torch.js · line 81»
+- **melt** — ALL ROUND THE HATCH «Torch.js · line 81»
+- twenty years · twenty years · a hundred years · two hundred years · three hundred years · four hundred years «Torch.js · line 156»
+- **hatch** — [hull]. Dead about [dead for]. The hatch has no power, so it won't open. «Torch.js · line 172»
+- **hatch** — Hold the torch on the line until it glows white, then move on. «Torch.js · line 173»
+- **fast** — Too fast. That's only marking the plate, not cutting it. «Torch.js · line 174»
+- **hot** — The plate's getting hot. Keep moving. «Torch.js · line 174»
+- **warp** — Too hot, and now it's warped. Let it cool a second. «Torch.js · line 175»
+- **stray** — You're off the seam. That's fuel we don't get back. «Torch.js · line 175»
+- **half** — Still nothing warm on the other side. «Torch.js · line 176»
+- **gap** — It's still holding somewhere. Find the bit you missed. «Torch.js · line 176»
+- **open** — Hold on. Something in there caught your light. «Torch.js · line 177»
+- **open** — [n][n] in the dark. Go slow in there. «Torch.js · line 177»
+- **frozen** — [hull]. Dead about [dead for]. The hatch is under thick frost. «Torch.js · line 178»
+- **frozen** — Hold the flame back and warm it. We can't cut what we can't see. «Torch.js · line 179»
+- **shows** — The ice has split most of the seal. Cut the bits that still hold. «Torch.js · line 180»
+- **frozenOpen** — It's iced over in there too. «Torch.js · line 181»
+- **frozenOpen** — Mind your gloves on that ice. It cuts. «Torch.js · line 181»
+- **fuel** — [hull]. Dead about [dead for]. A fuel line runs across the hatch. «Torch.js · line 182»
+- **fuel** — There's still frozen fuel in that line. Stop the flame where it crosses the seam. «Torch.js · line 183»
+- **line** — You hit the fuel line! Keep the flame off it. «Torch.js · line 184»
+- **fuelOpen** — The line's snapped. Only vapour left in it. «Torch.js · line 185»
+- **fuelOpen** — Keep your suit clear of the broken end. «Torch.js · line 185»
+- **hatchDry** — The tank is empty. The hatch still holds. «Torch.js · line 186»
+- **hatchDry** — Come back to the lander. We'll swap the tank. «Torch.js · line 186»
+- **handOver** — Give it here. I'll go slow so it cuts clean. «Torch.js · line 187»
+- **newTank** — A full tank. Pick up where you left off. «Torch.js · line 187»
+- **disc** — The disc is out of the hold, in front of the light. «Torch.js · line 188»
+- **disc** — Where the lines meet is home. Burn the centre, then cut each line inside the ring. «Torch.js · line 189»
+- **discHot** — The gold is too hot to cut. Wait for it to cool. «Torch.js · line 190»
+- **fig** — You pull the torch back from the figures. «Torch.js · line 190»
+- **done** — The map is gone, Commander. «Torch.js · line 191»
+- **clean** — Nobody can use it to find Earth now. «Torch.js · line 191»
+- **marked** — Scorched or not, nobody can use it to find Earth now. «Torch.js · line 192»
+- **discDry** — The tank is empty. The map is still there. «Torch.js · line 192»
+- **label** — Let [cutter] cut it «Torch.js · line 717»
+- **label** — Continue «Torch.js · line 718»
+- **label** — New tank «Torch.js · line 719»
+- FUEL LINE «Torch.js · line 1405»
+- OFF THE LINE «Torch.js · line 1407»
+- FUEL LINE «Torch.js · line 1408»
+- SLOW DOWN «Torch.js · line 1410»
+- MOVE ON «Torch.js · line 1411»
+- HEAT [n]% «Torch.js · line 1441»
+- FUEL [n]% «Torch.js · line 1443»
+- FROST [n]% «Torch.js · line 1512»
+- SEAM [pct]% «Torch.js · line 1512»
+- SCARS [scars] WARPS [n] «Torch.js · line 1513»
+- LINES [pad start] «Torch.js · line 1561»
+- **kicker** — EVA «Torch.js · line 1601»
+- **title** — The cutting torch «Torch.js · line 1601»
 
 ### When the hatch is open «bundle.js · cutIntoWreck»
 
@@ -843,26 +843,32 @@ _The old look. Its grade line is the new look's too._
 ### Docking, flown (the new look: Bring Her In) «DockFlight.js · DOCK_LINES»
 _The hold and roll lines and Vance's are said once a session; the grade line is DockingGame's (above)._
 
-- **offer** — A station ahead, Commander. I can dock us for [n] energy. «DockFlight.js · line 274» **DRAFT**
-- **offerFree** — A station ahead, Commander. I can dock us, if you prefer. «DockFlight.js · line 275» **DRAFT (2026-10-30)**
-- **hold** — Station ahead. Hold to close in. Let go to slow. «DockFlight.js · line 276» **DRAFT (the brief's own line)**
-- **roll** — Roll with the ring, Commander. Keep the lit port in the corners. «DockFlight.js · line 277» **DRAFT**
-- **fast** — We are coming in too fast, Commander. «DockFlight.js · line 278» **DRAFT**
-- **lights** — Who turned the lights on? «DockFlight.js · line 279» **DRAFT (Vance, the idea's own line)**
-- **cause · speed** — We came in too fast. «DockFlight.js · line 281»
-- **cause · port** — We were not lined up with the port. «DockFlight.js · line 281»
-- **cause · roll** — We were not rolling with the ring. «DockFlight.js · line 281»
-- **held** — The hull held. Whoever goes in starts with 3 less air. «DockFlight.js · line 282» **DRAFT (2026-10-30)**
+- **offer** — A station ahead, Commander. I can dock us for [n] energy. «DockFlight.js · line 281» **DRAFT**
+- **offerFree** — A station ahead, Commander. I can dock us, if you prefer. «DockFlight.js · line 282» **DRAFT (2026-10-30)**
+- **hold** — Station ahead, Commander. «DockFlight.js · line 283» **DRAFT (look pass)**
+- **roll** — Roll with the ring, Commander. Keep the lit port inside the brackets. «DockFlight.js · line 284» **DRAFT (look pass)**
+- **fast** — We are coming in too fast, Commander. «DockFlight.js · line 285» **DRAFT**
+- **lights** — Who turned the lights on? «DockFlight.js · line 286» **DRAFT (Vance, the idea's own line)**
+- **cause · speed** — We came in too fast. «DockFlight.js · line 288»
+- **cause · port** — We were not lined up with the port. «DockFlight.js · line 288»
+- **cause · roll** — We were not rolling with the ring. «DockFlight.js · line 288»
+- **held** — The hull held. Whoever goes in starts with 3 less air. «DockFlight.js · line 289» **DRAFT (2026-10-30)**
+
+### Its tags «DockFlight.js · DOCK_TAGS»
+_Small tags over the picture: the station's name (by its lamp, until it is near; this word when the game has no name), how to steer on the start screen, how to close in once the run starts._
+
+- **steer** — Mouse or arrows to steer «DockFlight.js · line 293» **DRAFT (look pass)**
+- **hold** — Hold to close in, let go to slow «DockFlight.js · line 293» **DRAFT (look pass)**
 
 ### Its chips «DockFlight.js · DOCK_GRADE_CHIPS»
-_Under A.U.R.A.'s grade line, with every deck broken (Hold broken) and her cost (Energy −4)._
+_Under A.U.R.A.'s grade line, with every deck broken (Hold damaged) and her cost (Energy −4)._
 
-- **soft** — Soft dock «DockFlight.js · line 287» **DRAFT**
-- **soft** — Air full «DockFlight.js · line 287» **DRAFT**
-- **rough** — Rough dock «DockFlight.js · line 288» **DRAFT**
-- **rough** — Air −2 «DockFlight.js · line 288» **DRAFT**
-- **crash** — Hard dock «DockFlight.js · line 289» **DRAFT**
-- **crash** — Air −3 «DockFlight.js · line 289» **DRAFT**
+- **soft** — Soft dock «DockFlight.js · line 299» **DRAFT**
+- **soft** — Air full «DockFlight.js · line 299» **DRAFT**
+- **rough** — Rough dock «DockFlight.js · line 300» **DRAFT**
+- **rough** — Air −2 «DockFlight.js · line 300» **DRAFT**
+- **crash** — Hard dock «DockFlight.js · line 301» **DRAFT**
+- **crash** — Air −3 «DockFlight.js · line 301» **DRAFT**
 
 ### In the log afterwards «bundle.js · applyDockResult»
 

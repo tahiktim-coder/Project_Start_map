@@ -32,6 +32,22 @@ _The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, ea
 **A.U.R.A.:** Debris ahead, Commander.  
 **Aris:** Eight beacons. That's every ship they told us about.  
 
+#### A.U.R.A.'s offer before the flight, and the control tags «Corridor.js · OFFER»
+_On the start screen of every flown jump; the first flown jump (into sector 2) says what her way costs. The new look says that one in two beats, and shows the controls on small tags over the picture (under the aim marks; by our ship for the throttle)._
+
+- Debris on the heading, Commander. I can fly us through, if you prefer. «Corridor.js · line 162»
+- Debris on the heading, Commander. I can fly us through, but slower. It costs [n] more energy. «Corridor.js · line 163» **DRAFT**
+- Debris on the heading, Commander. «Corridor.js · line 165» **DRAFT (look pass)**
+- I can fly us through. It costs [n] more energy. «Corridor.js · line 166» **DRAFT (look pass)**
+- **steer** — Mouse or arrows to steer «Corridor.js · line 167» **DRAFT (look pass)**
+- **faster** — Hold Space to go faster «Corridor.js · line 167» **DRAFT (look pass)**
+
+#### When a mini-game will not start «MiniHost.js · WONT_START»
+_The new look: the frame closes and A.U.R.A. says this in travel._
+
+- That system will not start, Commander. «MiniHost.js · line 68» **DRAFT (look pass)**
+
+
 #### A.U.R.A. on who has been flying «bundle.js · getRelianceVoice»
 _In the log after every jump from here on, once she has seen four or more burns and flights: one line if she flew most of them, the other if you did. She says nothing when this jump went against the pattern._
 
