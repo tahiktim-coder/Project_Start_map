@@ -124,7 +124,8 @@
             frames.set(fr, (frames.get(fr) || 0) + n);
             const f = faceIssue(cs);
             if (f) faces.push({ sel, text, issue: f.issue, note: f.note, family: cs.fontFamily.split(',')[0].trim(), weight: cs.fontWeight, style: cs.fontStyle });
-            const box = el.getBoundingClientRect(), scale = el.offsetWidth > 0 ? box.width / el.offsetWidth : 1;
+            // a transform's scale; offsetWidth is a whole px, so a width within 1 px of it is no scale (an inline chip at 14 px read 13.9)
+            const box = el.getBoundingClientRect(), scale = el.offsetWidth > 0 && Math.abs(box.width - el.offsetWidth) > 1 ? box.width / el.offsetWidth : 1;
             const px = Math.round(parseFloat(cs.fontSize) * scale * 10) / 10;
             if (px < FLOOR_PX) small.push({ sel, text, px });
             const fg = parseColor(cs.color);

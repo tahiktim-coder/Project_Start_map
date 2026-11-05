@@ -294,7 +294,7 @@
     <script src="src/systems/StoryReel.js?v=55"></script>
     <script src="src/systems/TheThrow.js?v=52"></script>
     <script src="src/systems/SceneArt.js?v=6"></script>
-    <script src="src/systems/EncounterCard.js?v=76"></script>
+    <script src="src/systems/EncounterCard.js?v=77"></script>
     <script src="src/systems/EndScreens.js?v=60"></script>
     <script src="src/systems/RosterPanel.js?v=50"></script>
     <script src="src/systems/WarpPlot.js?v=51"></script>
@@ -307,7 +307,7 @@
     <script src="src/views/OrbitView.js?v=59"></script>
     <script src="src/generators/PlanetGenerator.js?v=41"></script>
     <script src="src/views/NavView.js?v=63"></script>
-    <script src="src/bundle.js?v=125" onerror="window.NS_BOOT_FAIL && window.NS_BOOT_FAIL()"></script>
+    <script src="src/bundle.js?v=126" onerror="window.NS_BOOT_FAIL && window.NS_BOOT_FAIL()"></script>
     <script src="src/systems/MissionLog.js?v=41"></script>
     <script src="src/systems/Coach.js?v=61"></script>
     <!-- Minigames: the Sim Bay sketches, played over the game by MiniHost (the four games are added one by one) -->
@@ -326,11 +326,11 @@
         if (window.NEW_SCREEN) (function () {
             var files = [
                 'art/Paint.js?v=3', 'art/Sky.js?v=1', 'art/Sky2.js?v=2', 'art/Worlds.js?v=5',
-                'cards/FramePictures.js?v=1', 'cards/Frame.js?v=1',
+                'cards/FramePictures.js?v=2', 'cards/Frame.js?v=2',
                 'crew/CrewEngine.js?v=5', 'start/Dress.js?v=2',
                 'crew/Cora.js?v=1', 'crew/Jaxon.js?v=1', 'crew/Aris.js?v=1', 'crew/Vance.js?v=1', 'crew/Mira.js?v=1',
                 'ship/ShipArt.js?v=1', 'ship/ShipRooms.js?v=2', 'ship/ShipReactor.js?v=1', 'ship/ShipRoutine.js?v=2', 'ship/TowerArt.js?v=3',
-                'NewScreen.js?v=21', 'Route.js?v=5', 'Scan.js?v=2', 'WorldFinds.js?v=12', 'Orbit.js?v=28', 'Voice.js?v=14',
+                'NewScreen.js?v=22', 'Route.js?v=5', 'Scan.js?v=2', 'WorldFinds.js?v=12', 'Orbit.js?v=28', 'Voice.js?v=14',
                 'travel/SectorLooks.js?v=4', 'travel/Field.js?v=4', 'travel/Pictures.js?v=10', 'travel/Travel.js?v=15',
                 'tower/TowerMarks.js?v=6', 'tower/Supper.js?v=6', 'tower/Tower.js?v=19',
                 'stop/BridgeArt.js?v=1', 'stop/Dive.js?v=2', 'stop/Glass.js?v=5', 'stop/TagArt.js?v=5', 'stop/Tags.js?v=7', 'stop/Words.js?v=18', 'stop/EarthArt.js?v=2', 'stop/CopyWords.js?v=2', 'stop/Copy.js?v=4', 'stop/Stop.js?v=27', 'throw/Gauge.js?v=2', 'throw/StallArt.js?v=1', 'throw/Stall.js?v=1', 'throw/SeaArt.js?v=3', 'throw/SeaFilm.js?v=3', 'throw/Throw.js?v=1',
@@ -339,9 +339,9 @@
                 'finds/FindArt.js?v=1', 'finds/Finds.js?v=2',
                 'dock/DockRelay.js?v=3', 'dock/DockFace.js?v=1', 'dock/DockExterior.js?v=3', 'dock/DockFlight.js?v=6', 'land/LandWords.js?v=2', 'land/LandArt.js?v=2', 'land/LandArtAir.js?v=1', 'land/LandFlight.js?v=1', 'land/LandWorlds.js?v=1', 'land/LandGround.js?v=6', 'land/LandSite.js?v=2', 'land/LandGroundDraw.js?v=2', 'land/MeteorArt.js?v=1', 'land/MeteorLand.js?v=4', 'land/LandFallFlight.js?v=3', 'land/LandFallScene.js?v=2', 'land/LandFall.js?v=6'
             ];
-            if (/[?&]look=1(&|$)/.test(location.search)) files.push('LookCheck.js?v=1');   // the look floors, checked on the live page (test only)
+            if (/[?&]look=1(&|$)/.test(location.search)) files.push('LookCheck.js?v=2');   // the look floors, checked on the live page (test only)
             var html = '<link rel="stylesheet" href="' + window.NS_FONTS + '">'           // tokens.css (<head>) and newscreen.css (top of <body>) are in
-                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=14">';
+                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=15">';
             for (var i = 0; i < files.length; i++) html += '<script src="src/newscreen/' + files[i] + '"><\/script>';
             document.write(html);
         })();

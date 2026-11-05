@@ -73,6 +73,7 @@
     const JUMP_FALLBACK_MS = 5000, REFUSE_GAP_MS = 4000, DIVE_WATCH_MS = 4500;
     const BLOCKED_RENDER_EVERY = 12;                      // under a card or a minigame the picture is drawn only every 12th frame (it is covered)
     const HOLD_STOP_MS = 4000, HOLD_TRAVEL_MS = 1800, CLICK_GRACE_MS = 700;   // a card that turns up on its own waits until the picture has been seen
+    const OPENING_MAX_MS = 8000;              // a first arrival's sector title: a card waits for 'opening:done', or this long at most (look pass B02)
     /** How long such a card waits on a world whose bridge we saw before (stop/Stop.js marks it _nsSeen as it closes): less,
         NEW_LOOK_ECONOMY.HOLD_SEEN_MS (bundle.js, read when used; without it the full hold) */
     function holdSeenMs() {
@@ -104,7 +105,7 @@
     let pendingShown = null, carryFirst = false, orbitFrom = null, seenIds = new Set();
     let inFrame = false, frameBlocked = false, frameN = 0, jumping = false, hintGiven = false;
     let mode = 'travel', stopId = null, watch = null, leaving = false;                   // leaving: flow.leave() waits on beforeLeave (the bridge holds)
-    let stopShownAt = -1e9, travelShownAt = -1e9, lastDown = -1e9, stopHoldMs = HOLD_STOP_MS;
+    let stopShownAt = -1e9, travelShownAt = -1e9, lastDown = -1e9, stopHoldMs = HOLD_STOP_MS, openingUntil = -1e9;
     /** --t, 0..1: how far the window is from 1280 toward 1920 wide. Set on :root (tokens.css) on load and on every resize,
         so the title, the films and the cards size on it before the view is ever shown; #ns-root keeps its own copy too. */
     const windowT = () => Math.max(0, Math.min(1, (innerWidth - 1280) / 640));
@@ -152,6 +153,8 @@
         each('init');
         measure();
         new MutationObserver(onAdded).observe(document.body, { childList: true });
+        bus.on('opening:done', () => { openingUntil = -1e9; });
+        bus.on('hidden', () => { openingUntil = -1e9; });
     }
 
     // ── a card that turns up on its own (a crew moment, a story card, the head count) waits, hidden, until the dive is over
@@ -161,9 +164,15 @@
         if (mode === 'wake') return true;                                                    // the wake-up first: a card waits for the travel view
         if (!shown || now - lastDown < CLICK_GRACE_MS) return false;
         if (mode === 'dive-in' || mode === 'dive-out') return true;
-        if (document.querySelector('#ns-world-words .nst-title:not([hidden])')) return true;   // the sector title first: a card never covers it (look pass B02)
+        if (now < openingUntil || document.querySelector('#ns-world-words .nst-title:not([hidden])')) return true;   // the sector title first, from the arrival to its fade's end: a card never covers it (look pass B02)
         if (mode === 'stop') return now - stopShownAt < stopHoldMs;
         return !!pendingShown || now - travelShownAt < HOLD_TRAVEL_MS;
+    }
+    /** The travel view is shown: a first arrival plays its sector title (travel/Travel.js) until it says 'opening:done'. */
+    function emitShown(p) {
+        travelShownAt = performance.now();
+        if (p && p.first) openingUntil = travelShownAt + OPENING_MAX_MS;
+        bus.emit('shown', p);
     }
     function onAdded(list) {
         if (!holding()) return;
@@ -231,7 +240,7 @@
         frameBlocked = !!document.querySelector(BLOCKERS);                                   // once a frame: every module asks
         inFrame = true;
         try {
-            if (pendingShown && !frameBlocked && mode === 'travel') { const p = pendingShown; pendingShown = null; carryFirst = false; travelShownAt = performance.now(); bus.emit('shown', p); }
+            if (pendingShown && !frameBlocked && mode === 'travel') { const p = pendingShown; pendingShown = null; carryFirst = false; emitShown(p); }
             checkWatch(dt);
             const o = orbit();
             if (o && typeof o.tick === 'function') { try { o.tick(dt, frameBlocked); } catch (err) { console.error('NewScreen: NSOrbit.tick failed', err); } }
@@ -568,7 +577,7 @@
         if (mode !== 'wake') return false;
         setMode('travel');
         const s = st(), p = { sector: s ? s.currentSector : 1, first: true, from: null };
-        if (shown && !blocked()) { pendingShown = null; carryFirst = false; travelShownAt = performance.now(); bus.emit('shown', p); }
+        if (shown && !blocked()) { pendingShown = null; carryFirst = false; emitShown(p); }
         else pendingShown = p;
         return true;
     }

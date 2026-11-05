@@ -2627,7 +2627,8 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'distress', kicker: 'DISTRESS SIGNAL', title: encounter.title, hasSignal: true,
             facts: [['SENT', signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `${signalAge} years ago`]],
-            picture: { kind: 'world', node: this.state.currentSystem }, readout: signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `Sent ${signalAge} years ago`, seenKey: `distress:${encounter.id}`,
+            picture: { kind: 'world', node: this.state.currentSystem }, seenKey: `distress:${encounter.id}`,
+            readout: signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `Sent ${signalAge} years ago`,   // DRAFT (look pass): the readout (DESIGN 1.2)
             context: encounter.context(signalAge), dialogue: encounter.dialogue, choices: encounter.choices,
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(encounter.choices[idx], this.state);
@@ -2682,6 +2683,8 @@ class App {
      */
     showCrewPersonalEvent(event) {
         if (!event || !event.targetCrew) return;
+        const CREW_DECK = { commander: 'bridge', jaxon: 'engineering', aris: 'medbay', vance: 'hold', mira: 'lab' };   // the new look: where each of them works
+        const DECK_READOUT = { bridge: 'Bridge', engineering: 'Engineering', medbay: 'Med bay', hold: 'Hold', lab: 'Lab' };   // DRAFT (look pass): the readout (DESIGN 1.2)
 
         const crew = event.targetCrew;
         const inState = v => (typeof v === 'function' ? v(this.state) : v);   // a scene may word itself from what the crew has seen
@@ -2693,7 +2696,8 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'crew', color, kicker: (crew.tags || []).includes('LEADER') ? 'A NIGHT ON THE BRIDGE' : `A MOMENT WITH ${String(crew.name || '').toUpperCase()}`, title: event.title,
             context: inState(event.context), dialogue: inState(event.dialogue),
-            picture: { kind: 'deck', who: event.crewId }, seenKey: `crew:${event.id || event.title}`,
+            picture: { kind: 'deck', deck: CREW_DECK[event.crewId] }, deck: CREW_DECK[event.crewId], seenKey: `crew:${event.id || event.title}`,
+            readout: DECK_READOUT[CREW_DECK[event.crewId]] || '',
             choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c), descNow: c.descNow })),
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(event.choices[idx], this.state, crew);
@@ -3144,14 +3148,12 @@ class App {
         const freeze = { speaker: 'Jaxon', text: `Then we freeze for a night. I've done worse.` };   // DRAFT (look pass): L-37 (said by whoever can: ableSpeaker)
         window.EncounterCard.open(this, {
             tone: 'alert', kicker: 'SHIP ALERT', title: 'Not enough energy to jump', zIndex: 2800,
-            context: isNew ? '' : `The jump needs ${jumpCost} energy. We have ${this.state.energy}.`,
-            dialogue: isNew ? [
-                { speaker: 'A.U.R.A.', text: `We need ${jumpCost} energy to jump, Commander. We have ${have}.` },   // DRAFT (look pass): L-37
-                aura,
-                reacts !== 'A.U.R.A.' && Object.assign({}, freeze, { speaker: reacts }),
-            ].filter(Boolean) : [aura],
+            context: `The jump needs ${jumpCost} energy. We have ${this.state.energy}.`,
+            dialogue: isNew ? [aura, reacts !== 'A.U.R.A.' && Object.assign({}, freeze, { speaker: reacts })].filter(Boolean) : [aura],
             shape: 'ask', alarm: true, final: [RESERVE], deck: 'quarters', picture: { kind: 'deck', deck: 'quarters' }, seenKey: 'jump:reserve',
             readout: `Energy ${have} of ${jumpCost}`,                                   // DRAFT (look pass): the readout (DESIGN 1.2)
+            readoutNow: s => `Energy ${s.energy} of ${jumpCost}`,                     // DRAFT (look pass): the readout once the reserve is spent
+            outcomeDrop: [/^The drive ran on the reserve\./],                          // the outcome says the reserve once (A.U.R.A.'s cold night); the log keeps this line
             choices,
             onPick: idx => {
                 if (idx !== RESERVE) return;
@@ -3398,7 +3400,7 @@ class App {
                 choices,
                 readout: isBeforeJump ? `Sector ${toSector}` : SECTOR_NAMES[toSector] || '',   // DRAFT (look pass): the readout (DESIGN 1.2)
                 picture: isBeforeJump ? { kind: 'view', focus: 'light' } : { kind: 'deck', deck: 'galley' }, deck: 'galley', seenKey: `campfire:${event.id}`,
-                shape: stay ? 'ask' : undefined, final: stay ? choices.map((c, i) => i).slice(1) : undefined,
+                shape: stay ? 'ask' : undefined, final: stay ? choices.map((c, i) => i).slice(1) : undefined, repeatLine: stay ? 0 : undefined,
                 onChoiceMade: (idx) => {
                     if (stay && idx === 0) { this.state._seenCampfires = this.state._seenCampfires.filter(id => id !== event.id); onComplete('stay'); return; }   // asked again next time
                     const EC = window.EncounterCard;
@@ -4052,7 +4054,7 @@ Then you're through.`,
             window.EncounterCard.open(this, {
                 color: '#ffd27a', kicker: council.kicker, title: council.title, zIndex: 3000, context: council.context,
                 dialogue: council.dialogue, choices: council.choices.map((c, i) => (council.doors[i] ? Object.assign({}, c, { tone: 'end' }) : c)),
-                shape: 'ask', final: council.doors.map((d, i) => (d ? i : -1)).filter(i => i >= 0), noContext: true, seenKey: 'light:council',
+                shape: 'ask', final: council.doors.map((d, i) => (d ? i : -1)).filter(i => i >= 0), seenKey: 'light:council',
                 picture: { kind: 'view', focus: 'light' }, readout: 'The light',             // DRAFT (look pass): the readout (DESIGN 1.2)
                 onPick: idx => {
                     this._lightCardOpen = false;
@@ -4313,7 +4315,7 @@ Then you're through.`,
         window.EncounterCard.open(this, {
             tone: config.tone || 'story', zIndex: 2600, art: config.art,
             readout: config.readout != null ? config.readout : headline && !headline.includes(config.title) ? headline : (this.state.currentSystem && this.state.currentSystem.name) || '',
-            seenKey: config.seenKey || `story:${config.title}`, shape: config.shape, final: config.final, deck: config.deck, picture: config.picture,
+            seenKey: config.seenKey || `story:${config.title}`, shape: config.shape, final: config.final, deck: config.deck, picture: config.picture, repeatLine: config.repeatLine,
             // a headline that repeats the title ("COLONY RUINS: <title>") gives its extra words to the kicker instead
             kicker: config.kicker || subline || (headline && headline.includes(config.title) ? headline.replace(config.title, '').replace(/[:\s—-]+$/, '') : ''),
             title: headline && !headline.includes(config.title) ? `${config.title} — ${headline}` : config.title,
@@ -6675,7 +6677,7 @@ Then you're through.`,
             return;
         }
         if (isNewScreen()) {                       // the new look: the choice's outcome card first, then a quiet fold, then the new place
-            const FOLD_PEAK_MS = 250, FOLD_MS = 900;                               // cards.css .ns-fold-veil: 6 steps of 150 ms
+            const FOLD_PEAK_MS = 450, FOLD_MS = 900;                               // cards.css .ns-fold-veil: 6 steps of 150 ms, the dark at 450
             const fold = () => {
                 const veil = document.createElement('div');
                 veil.className = 'ns-fold-veil';                                        // (the copy's fall never comes here: Copy.js plays it)

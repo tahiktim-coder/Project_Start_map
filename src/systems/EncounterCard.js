@@ -402,7 +402,11 @@
     const LOSS_WORDS = /\b(?:die|dies|died|death|killed|gone for good|lost for good)\b/i;   // a consequence that kills or loses for good
     const CREW_TONE = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
     const DEATH = /^☠\s*DEATH:\s*([A-Z][a-z]+)/;
-    const NARR_MAX_WORDS = 20, PAGE_ITEMS = 2, PAGE_WORDS = 30;
+    const NARR_MAX_WORDS = 20, PAGE_ITEMS = 2, PAGE_WORDS = 30, TALLY_WORDS = 5, CONSEQ_MIN_WORDS = 2;
+    const OTHERWISE = /^(?:otherwise|or)\b/i;                                    // "Otherwise plain ice: +10 Energy.": a branch, never certain
+    const NOTHING = /^(?:otherwise\s+|or\s+)?nothing\b[^,;:]*[.!?]?$/i;          // a branch where nothing happens
+    const HARM = /hurt|injured|damag|\blost\b|is gone|walks through|changed by|Stress 3|strike|gas pocket|discharge/i;   // a roll that harms (RISKY without the stress a good roll may bring)
+    const CHANCE_WORDS =/\b\d+%\s+(?:chance|risk)(?:\s+each)?(?:\s+(?:of|for each crew member))?\s*:?\s*/gi;
     const wordCount = s => String(s).split(/\s+/).filter(w => /[A-Za-z0-9]/.test(w)).length;
     const cleanText = s => String(s == null ? '' : s).replace(/<[^>]*>/g, '').replace(MARKUP, '').replace(/\s+/g, ' ').trim();
     /** Sentences, with A.U.R.A.'s dots kept whole. */
@@ -429,48 +433,75 @@
         return { speaker: name, text: cleanText(d.text), tone, face: member && member.portraitId ? `assets/crew/${member.portraitId}.png` : null };
     }
     /** A number becomes a chip; a stress number becomes a feeling (C04: the crew report it, not a scorecard). */
-    function chipOf(token) {
+    function chipOf(token, named) {
         const f = FEEL.exec(token);
         if (!f) return { text: token, tone: isLoss(token) ? 'loss' : 'gain' };
-        const who = !f[1] || f[1] === 'All crew' ? 'Crew' : f[1], up = f[2] !== '-' && f[2] !== '−';
+        const who = named || (!f[1] || f[1] === 'All crew' ? 'Crew' : f[1]), up = f[2] !== '-' && f[2] !== '−';
         return { text: `${who} ${up ? 'tense' : 'calmer'}`, tone: up ? 'loss' : 'gain', word: true };   // DRAFT (look pass): C04's feeling words
     }
-    const fullChip = unit => ({ text: `${/^Ration/.test(unit) ? 'Rations' : unit} full`, tone: 'dim' });   // DRAFT (look pass): a capped gain ("Energy full")
+    const FULL_WORDS = { Energy: 'Energy full', Rations: 'Rations full', Salvage: 'Salvage full' };   // DRAFT (look pass): a capped gain's dim chip
+    const fullChip = unit => ({ text: FULL_WORDS[/^Ration/.test(unit) ? 'Rations' : unit] || `${unit} full`, tone: 'dim' });
+    /** A sentence with its numbers taken out (they are chips): the words left, or '' when only numbers or a stray word were
+        there. "20% chance of a gas pocket: -4 Energy, and someone may get hurt." reads "A gas pocket: someone may get hurt." */
+    function wordsOf(sentence) {
+        const M = '\u0002', JOIN = '(?:,|and|or|but|&)';
+        const r = String(sentence).replace(CHANCE_WORDS, ' ')
+            .replace(/\b(?:and\s+)?(?:all crew|commander|they get|he gets|she gets|whoever goes (?:in|aboard) gets)\s+(?=[+\-−]\d)/gi, ' ')   // "and they get +1 Stress"
+            .replace(new RegExp(`(?:${REWARD_PATTERN.source})(?![^.,;:!?]*?${DEFERRED.source.slice(1)})[^.,;:!?()]*`, 'g'), M)   // a number and the words that go with it ("-2 Rations to keep them"), not a gain paid later
+            .replace(FULL, M).replace(new RegExp(`\\(\\s*${M}\\s*\\)`, 'g'), M)
+            .replace(new RegExp(`${M}(?:\\s*${JOIN}?\\s*${M})+`, 'gi'), M)                                    // "M, M" "M and M"
+            .replace(new RegExp(`^\\s*${M}\\s*[,:;]?\\s*(?:(?:and|or|but)\\b\\s*)?`, 'i'), '')                  // at the head
+            .replace(new RegExp(`\\s*[,:;]?\\s*(?:(?:and|or|but)\\s+)?${M}\\s*(?=[.!?;]|$)`, 'gi'), '')            // at a clause's end
+            .replace(new RegExp(`([,:;])\\s*${M}\\s*,?\\s*(?:(?:and|or|but)\\b\\s*)?`, 'gi'), '$1 ')            // "a gas pocket: M, and someone…"
+            .replace(new RegExp(`\\s*${M}\\s*`, 'g'), ' ')
+            .replace(/\s+/g, ' ').replace(/\s+([,.:;!?])/g, '$1').replace(/([,:;])[,:;]+/g, '$1').replace(/[,:;]+(?=[.!?]|$)/g, '')
+            .replace(/;(?=\s*(?:[.!?]|$))/g, '').replace(/^[\s,:;.!?]+/, '').replace(/^(?:and|or|but)\b[\s,:;]*/i, '').trim();
+        return wordCount(r.replace(/[.!?]+$/, '')) >= CONSEQ_MIN_WORDS ? r.charAt(0).toUpperCase() + r.slice(1) : '';
+    }
     /**
-     * A key's chips and consequence (DESIGN 1.1): numbers as chips (a cost inside a chance clause is not one, nor a gain paid
-     * later, "+4 Energy saved on the next jump"); a chance of harm as "20% risk"; a capped gain as a dim "Energy full". The
-     * consequence is what the chips do not say, in words, the designer's own sentences (a chip at a sentence's head is left
-     * out; a chance stays whole). Returns { chips, text, html }.
+     * A key's chips and consequence (DESIGN 1.1). Chips are numbers only: what is certain (a cost inside a chance or an
+     * "Otherwise" branch is not one, nor a gain paid later, "+4 Energy saved on the next jump"); a chance of harm as "20% risk";
+     * a good chance with gains as "40% +5 Rations", or, when it is the only other side of the card's risk (80% against a 20%
+     * risk), its gains as plain chips beside the risk ("+40 Energy +15 Salvage 20% risk", cards-2.md); a good chance of words
+     * alone as "40% chance"; a capped gain as a dim "Energy full". The consequence is words only: the designer's sentences
+     * with the numbers taken out (they are the chips), a sentence of numbers alone left out. An "Otherwise" branch takes the
+     * odds the chances leave. Returns { chips, text, html }.
      */
     function keyParts(desc) {
-        const text = cleanText(desc), chips = [], had = new Set(), tokens = new Set();
+        const text = cleanText(desc), chips = [], had = new Set(), sents = [];
         const add = c => { const k = c.text.toLowerCase(); if (!had.has(k)) { had.add(k); chips.push(c); } };
-        const chances = [...text.matchAll(CHANCE_PATTERN)].map(m => {
+        let from = 0;
+        sentencesIn(text).forEach(x => { const a = text.indexOf(x, from); sents.push({ x, a, b: a + x.length }); from = a + x.length; });
+        const branches = [...text.matchAll(CHANCE_PATTERN)].map(m => {
             const end = text.slice(m.index).search(/[.!?](\s|$)/);
-            return { m, a: m.index, b: end < 0 ? text.length : m.index + end + 1 };
+            return { pct: parseInt(m[0], 10), word: m[0], a: m.index, b: end < 0 ? text.length : m.index + end + 1 };
         });
+        const left = 100 - branches.reduce((n, c) => n + (/each/i.test(text.slice(c.a, c.b)) ? 0 : c.pct), 0);
+        sents.filter(x => OTHERWISE.test(x.x)).forEach(x => branches.push({ pct: branches.length && left > 0 && left < 100 ? left : null, a: x.a, b: x.b }));   // a branch with no odds: no chip
+        const inBranch = i => branches.some(c => i >= c.a && i < c.b);
         for (const m of text.matchAll(new RegExp(REWARD_PATTERN.source, 'g'))) {
-            if (chances.some(c => m.index >= c.a && m.index < c.b) || DEFERRED.test(text.slice(m.index + m[0].length))) continue;
-            tokens.add(m[0].trim().toLowerCase());
-            add(chipOf(m[0].trim()));
+            if (inBranch(m.index) || DEFERRED.test(text.slice(m.index + m[0].length))) continue;
+            add(chipOf(m[0].trim(), /\bCommander\s*$/.test(text.slice(0, m.index)) ? 'Commander' : null));   // "Commander +1 Stress": not the crew's
         }
-        const risks = new Set();
-        chances.forEach(c => {
-            const clause = text.slice(c.a, c.b), isOnlyLoss = /[\-−]\d/.test(clause) && !/\+\d/.test(clause);
-            if (/risk$/i.test(c.m[0]) || RISKY.test(clause) || isOnlyLoss) { risks.add(c.m[0].toLowerCase()); add({ text: c.m[0].trim().replace(/chance$/i, 'risk'), tone: 'loss' }); }
+        branches.forEach(c => {
+            const clause = text.slice(c.a, c.b), tokens = (clause.match(new RegExp(REWARD_PATTERN.source, 'g')) || []).map(t => t.trim());
+            c.gains = tokens.filter(t => !isLoss(t) && !FEEL.test(t));                // what a good roll gives (its costs and stress are not chips)
+            c.isRisk = /risk/i.test(c.word || '') || HARM.test(clause) || (!c.gains.length && tokens.some(isLoss));
+            c.words = wordsOf(clause);
+        });
+        const riskPct = branches.reduce((n, c) => n + (c.isRisk && c.pct ? c.pct : 0), 0);
+        const good = branches.filter(c => c.pct != null && !c.isRisk && c.gains.length);
+        const isOtherSide = c => good.length === 1 && good[0] === c && riskPct > 0 && c.pct + riskPct === 100 && c.pct >= riskPct;   // never a 30% gain beside a 70% risk
+        branches.filter(c => !c.isRisk).concat(branches.filter(c => c.isRisk)).forEach(c => {   // the gains first, the risk last
+            if (c.pct == null) return;
+            if (c.isRisk) add({ text: `${c.pct}% risk`, tone: 'loss' });
+            else if (isOtherSide(c)) c.gains.forEach(t => add(chipOf(t)));     // the gains unless the risk comes up
+            else if (c.gains.length) add({ text: `${c.pct}% ${c.gains.join(' ')}`, tone: 'gain' });
+            else if (c.words && !NOTHING.test(c.words)) add({ text: `${c.pct}% chance`, tone: 'ui' });   // "Otherwise nothing." gets no chip
         });
         for (const m of text.matchAll(FULL)) add(fullChip(m[1]));
-        const head = new RegExp(`^(${REWARD_PATTERN.source})`);
-        const said = sentencesIn(text).map(s => {
-            if (new RegExp(CHANCE_PATTERN.source, 'i').test(s)) return s;
-            let r = s.replace(FULL, '').trim(), m;
-            while ((m = head.exec(r)) && tokens.has(m[1].trim().toLowerCase())) r = r.slice(m[0].length).replace(/^\s*(?:,|and\b|&)?\s*/i, '');
-            r = r.replace(/^[:;,.\s]+/, '').trim();
-            return /[A-Za-z]{2,}/.test(r.replace(new RegExp(REWARD_PATTERN.source, 'g'), '')) ? r.charAt(0).toUpperCase() + r.slice(1) : '';
-        }).filter(Boolean).join(' ');
-        const html = esc(said).replace(new RegExp(REWARD_PATTERN.source, 'g'), hit => `<b class="ef-n ${isLoss(hit) ? 'is-loss' : 'is-gain'}">${hit}</b>`)
-            .replace(new RegExp(CHANCE_PATTERN.source, 'gi'), hit => `<b class="ef-n ${risks.has(hit.toLowerCase()) ? 'is-loss' : 'is-ui'}">${hit}</b>`);
-        return { chips, text: said, html };
+        const said = sents.map(x => wordsOf(x.x)).filter(Boolean).join(' ');
+        return { chips, text: said, html: esc(said) };
     }
     /** A key: its label (sentence case, no full stop), its chips, its consequence and its role (final: held, C06; primary: the
         framed warm keycap, the safe or only way on). A locked key keeps its reason. */
@@ -492,7 +523,7 @@
         const items = [], chips = [], seen = new Set(), counted = new Set(), dead = [];
         const addItem = it => { const k = it.text.toLowerCase(); if (it.text && !seen.has(k)) { seen.add(k); items.push(it); } };
         said.forEach(raw => {
-            const m = cleanText(raw).replace(OUT_PREFIX, '');
+            const isTally = OUT_PREFIX.test(cleanText(raw)), m = cleanText(raw).replace(OUT_PREFIX, '');
             const death = DEATH.exec(m);
             if (death) { dead.push(death[1]); return; }
             if (!m || OUT_SKIP.test(m)) return;
@@ -503,11 +534,12 @@
             const q = sp ? /^(["“'‘])(.+?)(["”'’])(?:\s+(.*))?$/.exec(sp[2].trim()) : null;
             if (sp) addItem(Object.assign(frameLine(app, { speaker: sp[1] }), { text: q ? q[2] : unquote(sp[2]) }));
             const rest = keyParts(sp ? (q ? q[4] || '' : '') : m).text;
-            if (rest) addItem({ narr: true, text: rest });
+            if (rest) addItem({ narr: true, text: rest, tally: isTally && wordCount(rest) <= TALLY_WORDS });
         });
+        if (items.some(it => !it.tally)) items.splice(0, items.length, ...items.filter(it => !it.tally));   // "Melted ice for fuel." after the line that said so
         if (!items.length && dead.length) {
-            const who = frameLine(app, { speaker: dead[0] });
-            items.push({ narr: true, text: `${dead[0]} did not make it.`, face: who.face, dead: true });   // DRAFT (look pass): a death-only outcome (DESIGN 1.1)
+            const name = dead[0], who = frameLine(app, { speaker: name });
+            items.push({ narr: true, text: `${name} did not make it.`, face: who.face, dead: true });   // DRAFT (look pass): a death-only outcome (DESIGN 1.1)
         }
         if (!items.length && !chips.length) return null;
         const pages = [];
@@ -527,7 +559,9 @@
     /** The new look's card: the frame. Repeats are known by cfg.seenKey (state._seenCards, saved). */
     function openFrame(app, cfg) {
         const state = app && app.state, choices = cfg.choices || [];
-        const talk = (cfg.noContext ? [] : narrationOf(cfg.context)).concat(livingLines(app, cfg.dialogue).map(d => frameLine(app, d)));
+        const narr = cfg.noContext ? [] : narrationOf(cfg.context), living = livingLines(app, cfg.dialogue);
+        const talk = narr.concat(living.map(d => frameLine(app, d)));
+        const own = cfg.repeatLine != null && cfg.dialogue ? living.indexOf(cfg.dialogue[cfg.repeatLine]) : -1;
         const final = new Set(cfg.final || []);
         const keys = choices.map((c, i) => frameKey(app, c, descOf(c, state), final.has(i), choices.length));
         const seen = state ? (state._seenCards = Array.isArray(state._seenCards) ? state._seenCards : []) : [];
@@ -538,6 +572,7 @@
         return window.NSFrame.open(app, {
             aria, zIndex: cfg.zIndex || 2000, shape: cfg.shape || (choices.length === 1 ? 'report' : 'decide'), alarm: !!cfg.alarm || cfg.tone === 'distress',
             picture: pictureOf(cfg), readout: cleanText(cfg.readout), deck: cfg.deck || null, lines: talk, keys, isRepeat,
+            repeatIndex: own >= 0 ? narr.length + own : null,
         }, {
             pick(idx) {
                 picked = true;
@@ -547,7 +582,11 @@
                 try { said = captureLog(() => cfg.onPick(idx)); } catch (err) { console.error('EncounterCard: the choice failed', err); }
                 const isQuiet = quiet;
                 quiet = false;
-                return isQuiet ? null : outcomeOf(app, said);
+                if (isQuiet) return null;
+                const drop = [].concat(cfg.outcomeDrop || []);
+                const res = outcomeOf(app, said.filter(m => !drop.some(re => re.test(cleanText(m)))));
+                if (res && typeof cfg.readoutNow === 'function') { try { res.readout = cleanText(cfg.readoutNow(state)); } catch (err) { console.error('EncounterCard: readoutNow failed', err); } }
+                return res;
             },
             done() { if (picked) releaseGate(); },
         });
@@ -558,7 +597,9 @@
      *                       choices:[{text, desc, descNow(state), disabled, requires, requiresLabel}], onPick(idx), hasSignal, art, zIndex }
      *        The new look's frame also reads: shape 'decide' | 'ask' | 'report', final [index] (held, C06), readout (three words
      *        over the picture), picture { kind: 'scene' | 'view' | 'world' | 'deck', ... }, seenKey ('kind:id'), deck, alarm,
-     *        noContext (the scene is not said), and per choice: tone 'loss' | 'end', chips [{ text, tone, word }], primary.
+     *        noContext (the scene is not said), repeatLine (the dialogue line a repeat shows; default the last), readoutNow(state)
+     *        (the readout once a pick has run), outcomeDrop [RegExp] (logged lines the outcome leaves to the log), and per
+     *        choice: tone 'loss' | 'end', chips [{ text, tone, word }], primary.
      */
     function open(app, cfg) {
         if (newLook() && mustWait()) {                                                   // the last choice's outcome is still up

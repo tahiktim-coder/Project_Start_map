@@ -3,12 +3,17 @@
    and kept moving at the art's 8 fps until the frame leaves.
      'scene'  SceneArt's own picture (cfg.art): the wreck, the colony, the ruins, an anomaly, the gap, Eden.
      'view'   the sky ahead in this sector's sky F (NSSky / NSSky2): the heading and the light on it. Every card without a
-              scene gets at least this; 'world' and 'deck' (look pass B03) show it until their painters come.
-              Options: focus 'light' (the light big, for the light and the last jump), signal (a call's carrier wave, a
-              whole-pixel dithered trace in --loss across the lower band), blink (what the jump leaves behind, a warm point
-              blinking at the left edge).
-   A view's still part is painted once per sector and focus and cached; prewarm() paints it in an idle moment while a card
-   waits its turn at EncounterCard's gate, so the frame opens on a picture that is already there.
+              scene gets at least this. Options: focus 'light' (the light big, for the light and the last jump), signal (a
+              call's carrier wave, a whole-pixel dithered trace in --loss across the lower band), blink (what the jump leaves
+              behind, a warm point blinking at the left edge).
+     'world'  the world the card is about, in that sky: a planet as the bridge glass paints it (NSWorlds), a station
+              (NSPaint.drawStation), a field of rocks, the copy of Earth (NSEarthArt); the Structure is the light itself. The
+              light sits small and high at the right, so the world in the card is the one in the window.
+     'deck'   one deck of our Lander as the tower paints it (ShipArt.deck): deck { bridge, lab, quarters (galley), medbay,
+              hold (cargo), engineering } or who (a crew id: where that person works). The room only, for now: the people
+              in it and the deck lit live are look pass B03's.
+   A view's still part is painted once per sector and focus and cached, a world once per world; prewarm() paints a view in
+   an idle moment while a card waits its turn at EncounterCard's gate, so the frame opens on a picture that is already there.
    Loaded only when the new-screen switch is on, after art/Sky2.js and before cards/Frame.js.
 
    window.NSFramePics (frozen)
@@ -16,36 +21,47 @@
      mount(canvas, spec) → stop()   paints spec into canvas (480 x 160) and keeps it moving; stops by itself once the
                                     canvas has been on the page and left it
      prewarm(spec)              paints a view's still part in an idle moment (a scene needs nothing)
-     specOf(spec, state)        the spec as it will be painted: { kind: 'scene' | 'view', art, sector, focus, signal, blink }
+     specOf(spec, state)        the spec as it will be painted: { kind: 'scene' | 'view' | 'world' | 'deck', art, sector,
+                                focus, signal, blink, node, deck }
 */
 (function () {
     'use strict';
     if (!window.NEW_SCREEN) return;
     const W = 480, H = 160, TICK_MS = 125, NEVER_ATTACHED_MS = 5000;
-    const LOSS = '#ff5468';                                   // the call's wave: --loss (tokens.css), drawn in whole art pixels
-    const WARM = ['#4a2e12', '#e9a25e', '#fff3dc'];           // the point that blinks at the edge: RP.SUN's own steps
-    const cache = new Map();                                  // 'view:<sector>:<focus>' → { canvas, sky }
+    const WARM = ['#4a2e12', '#e9a25e', '#fff3dc'];           // the point that blinks at the edge: RP.SUN's own steps (art, not text)
+    const WORLD_AT = { x: 0.4, y: 0.54, r: 56 }, ASIDE = { x: 0.84, y: 0.24 };   // a world left of centre; the light small, high right
+    const DECKS = { bridge: 0, lab: 1, quarters: 2, galley: 2, medbay: 3, hold: 4, cargo: 4, engineering: 5 };
+    const WHO_DECK = { commander: 'bridge', cora: 'bridge', jaxon: 'engineering', aris: 'medbay', vance: 'hold', mira: 'lab' };
+    const DECK_CROP = { x: 120, y: 34 };                      // the room inside the hull plates, its floor at the bottom edge
+    const cache = new Map();                                  // 'view:<sector>:<focus>' → { canvas, sky } · 'world:<id>:<sector>' → canvas
 
     const P = () => window.NSPaint || null;
     const SKY = () => window.NSSky || null;
+    /** A tokens.css value (a colour the canvas draws in words' meaning: --loss, --ink), or the art's own ink before the sheet. */
+    const token = (name, art) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || art;
+    const hashId = s => { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
 
-    /** What will be painted: a scene SceneArt knows, else the view (a 'world' or 'deck' asked for before B03 has its painter). */
+    /** What will be painted: a scene SceneArt knows, a world with a node, a deck the ship has, else the view. */
     function specOf(spec, state) {
         const s = spec || {}, SA = window.SceneArt;
         if (s.kind === 'scene' && s.art && SA && SA.has(s.art)) return { kind: 'scene', art: s.art };
         const sector = Math.max(1, Math.min(6, Number(s.sector) || Number(state && state.currentSector) || 1));
-        return { kind: 'view', sector, focus: s.focus === 'light' ? 'light' : 'heading', signal: !!s.signal, blink: !!s.blink };
+        const deck = s.kind === 'deck' ? (DECKS[s.deck] != null ? s.deck : WHO_DECK[String(s.who || '').toLowerCase()]) : null;
+        if (deck && window.ShipArt && typeof window.ShipArt.deck === 'function') return { kind: 'deck', deck, sector };
+        const isLight = s.kind === 'world' && s.node && s.node.isStructure;
+        if (s.kind === 'world' && s.node && !isLight) return { kind: 'world', node: s.node, sector, signal: !!s.signal };
+        return { kind: 'view', sector, focus: s.focus === 'light' || isLight ? 'light' : 'heading', signal: !!s.signal, blink: !!s.blink };
     }
     const keyOf = v => `view:${v.sector}:${v.focus}`;
 
-    /** The still part of a view: sector n's sky F, the dust and stars over it, and the light on the heading. */
+    /** The still part of a view: sector n's sky F, the dust and stars over it, and the light (on the heading, big, or aside). */
     function paintView(v) {
         const k = keyOf(v);
         if (cache.has(k)) return cache.get(k);
         const p = P();
         if (!p) return null;
-        const big = v.focus === 'light';
-        const lx = Math.round(W * (big ? 0.62 : 0.74)), ly = Math.round(H * (big ? 0.5 : 0.44));
+        const big = v.focus === 'light', aside = v.focus === 'aside';
+        const lx = Math.round(W * (aside ? ASIDE.x : big ? 0.62 : 0.74)), ly = Math.round(H * (aside ? ASIDE.y : big ? 0.5 : 0.44));
         const ox = lx - 320, oy = ly - 180;                                       // the 640 x 360 stage with its light on ours
         let sky = null;
         try { sky = SKY() ? SKY().build(W, H, ox, oy, v.sector, [320, 180]) : null; } catch (err) { console.warn('NSFramePics: no sky F for the view', err); }
@@ -60,10 +76,48 @@
         return out;
     }
 
-    /** A call's carrier wave: steady at the left, breaking up to the right, one art pixel wide, in the lower band. */
+    /** What kind of place a node is, as the bridge glass reads it. */
+    function placeKind(node) {
+        const G = window.NSGlass;
+        try { if (G && typeof G.kindOf === 'function') return G.kindOf(node) || 'world'; } catch (err) { /* the glass's own guess failed: ours */ }
+        if (node.isStation || node.type === 'STATION') return 'station';
+        if (node.isAsteroidField || node.type === 'ASTEROID_FIELD') return 'field';
+        if (node._isWrongPlace || node.type === 'WRONG_PLACE') return 'wrong';
+        return 'world';
+    }
+    /** The world on its own layer (clear around it), lit from the light aside, as the bridge glass paints it. */
+    function paintWorld(v) {
+        const node = v.node, k = `world:${node.id != null ? node.id : node.name}:${v.sector}`;
+        if (cache.has(k)) return cache.get(k);
+        const p = P();
+        if (!p) return null;
+        const sp = p.painter(W, H, false), cx = Math.round(W * WORLD_AT.x), cy = Math.round(H * WORLD_AT.y), seed = hashId(node.id != null ? node.id : node.name);
+        const L = p.norm3(0.42, -0.36, 0.83), kind = placeKind(node), NW = window.NSWorlds, EA = window.NSEarthArt;
+        if (kind === 'station') p.drawStation(sp, cx, cy - 4, 2.2, seed % 7 + 1, 1);
+        else if (kind === 'field') {
+            const r = WORLD_AT.r + 6;
+            for (let i = 0; i < 5; i++) {
+                const a = (i / 5) * Math.PI * 2 + p.hash(i, 3, seed & 255) * 1.2, d = (i === 0 ? 0 : 0.5 + 0.45 * p.hash(i, 5, seed & 255)) * r;
+                const rr = Math.max(3, Math.round(r * (i === 0 ? 0.34 : 0.12 + 0.14 * p.hash(i, 7, seed & 255))));
+                p.sphere(sp, { cx: cx + Math.cos(a) * d * 1.3, cy: cy + Math.sin(a) * d * 0.62, r: rr, ramp: p.RP.STONE, L, dim: 1, surface: p.surfaceFor('rock', (seed + i) & 1023, L), rim: 0.12, ambient: 0.01, gain: 0.84 });
+            }
+        } else if (kind === 'wrong' && EA && typeof EA.paint === 'function') {
+            EA.paint(sp, { cx, cy, r: WORLD_AT.r, L, lon: EA.VIEW.lon, lat: EA.VIEW.lat, clouds: 0, dim: 1, lattice: null });
+        } else if (NW && typeof NW.paint === 'function') {
+            const reach = Math.max(1, Number(NW.reach(node, v.sector)) || 1);
+            NW.paint(sp, { cx, cy, r: Math.max(24, Math.min(WORLD_AT.r, Math.floor((H * 0.5) / reach))), node, sector: v.sector, L });
+        } else {
+            p.sphere(sp, { cx, cy, r: WORLD_AT.r, ramp: p.RP.STONE, L, dim: 1, surface: p.surfaceFor('rock', seed & 1023, L), rim: 0.12, ambient: 0.012, gain: 0.84 });
+        }
+        const out = sp.canvas();
+        cache.set(k, out);
+        return out;
+    }
+
+    /** A call's carrier wave: steady at the left, breaking up to the right, one art pixel wide, in the lower band (--loss). */
     function drawWave(ctx, t) {
         const p = P(), phase = Math.floor(t / TICK_MS) * 0.55, base = H - 26;
-        ctx.fillStyle = LOSS;
+        ctx.fillStyle = token('--loss', ctx.fillStyle);
         for (let x = 6; x < W - 6; x++) {
             const decay = x / W;
             const y = Math.round(base + Math.sin(x * 0.09 + phase) * 7 * (1 - decay * 0.45) + Math.sin(x * 0.31 + phase * 1.7) * 2 * decay);
@@ -80,14 +134,31 @@
         ctx.fillStyle = WARM[2]; ctx.fillRect(x, y, 1, 1);
     }
 
+    /** A deck of our Lander, still: the tower's own painting of it, the room's middle 480 x 160, with this sector's sky in
+        its windows (the deck canvas leaves them clear). */
+    function mountDeck(canvas, ctx, s) {
+        try {
+            const d = window.ShipArt.deck(DECKS[s.deck], {});
+            let sky = null;
+            try { sky = paintView({ sector: s.sector, focus: 'heading' }); } catch (err) { console.warn('NSFramePics: no sky for the deck windows', err); }
+            if (sky) ctx.drawImage(sky.canvas, 0, 0); else { ctx.fillStyle = token('--ink', P() ? P().INK : ctx.fillStyle); ctx.fillRect(0, 0, W, H); }
+            ctx.drawImage(d.canvas, DECK_CROP.x, DECK_CROP.y, W, H, 0, 0, W, H);
+        } catch (err) { console.error('NSFramePics: the deck could not be painted', err); }
+        return () => {};
+    }
+
     /** Draws and animates until the frame closes (the canvas may be attached after this is called). */
     function mount(canvas, spec) {
         const ctx = canvas && canvas.getContext && canvas.getContext('2d');
         if (!ctx) return () => {};
         const s = specOf(spec, window.app && window.app.state);
         if (s.kind === 'scene') { window.SceneArt.mount(canvas, s.art); return () => {}; }
-        let view = null;
-        try { view = paintView(s); } catch (err) { console.error('NSFramePics: the view could not be painted', err); }
+        if (s.kind === 'deck') return mountDeck(canvas, ctx, s);
+        let view = null, world = null;
+        try {
+            view = paintView(s.kind === 'world' ? { sector: s.sector, focus: 'aside' } : s);
+            if (s.kind === 'world') world = paintWorld(s);
+        } catch (err) { console.error('NSFramePics: the picture could not be painted', err); }
         const startedAt = performance.now();
         let wasAttached = false, timer = 0;
         const stop = () => { clearInterval(timer); timer = 0; };
@@ -96,8 +167,9 @@
             if (canvas.isConnected) wasAttached = true;
             else if (wasAttached || t > NEVER_ATTACHED_MS) { stop(); return; }
             try {
-                if (view) ctx.drawImage(view.canvas, 0, 0); else { ctx.fillStyle = '#05070a'; ctx.fillRect(0, 0, W, H); }
+                if (view) ctx.drawImage(view.canvas, 0, 0); else { ctx.fillStyle = token('--ink', P() ? P().INK : ctx.fillStyle); ctx.fillRect(0, 0, W, H); }
                 if (view && view.sky && typeof view.sky.live === 'function') view.sky.live(ctx, t, 0);
+                if (world) ctx.drawImage(world, 0, 0);
                 if (s.signal) drawWave(ctx, t);
                 if (s.blink) drawBlink(ctx, t);
             } catch (err) { stop(); console.error('NSFramePics: a frame of the view failed', err); }
@@ -110,9 +182,11 @@
     /** A view's still part painted ahead, in an idle moment (a card waiting at the gate). */
     function prewarm(spec) {
         const s = specOf(spec, window.app && window.app.state);
-        if (s.kind !== 'view' || cache.has(keyOf(s))) return;
+        if (s.kind !== 'view' && s.kind !== 'world') return;
+        const v = s.kind === 'world' ? { sector: s.sector, focus: 'aside' } : s;
+        if (cache.has(keyOf(v)) && s.kind !== 'world') return;
         const later = window.requestIdleCallback ? fn => window.requestIdleCallback(fn, { timeout: 800 }) : fn => setTimeout(fn, 60);
-        later(() => { try { paintView(s); } catch (err) { console.warn('NSFramePics: prewarm failed', err); } });
+        later(() => { try { paintView(v); if (s.kind === 'world') paintWorld(s); } catch (err) { console.warn('NSFramePics: prewarm failed', err); } });
     }
 
     window.NSFramePics = Object.freeze({ W, H, mount, prewarm, specOf });

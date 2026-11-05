@@ -6,14 +6,15 @@
    (minigames.css .mini-btn), each with its chips and its consequence under it. No kicker, no title (aria-label only).
    EncounterCard.js builds the model and runs the pick; this file draws it and plays it.
      Shapes   decide: the talk, then the choices, then the outcome. ask (an end or a jump): "Not yet" first, framed and focused;
-              a final key is held 1.7 s (its mark fills ○ ◔ ◑ ◕ ●; let go early, it drains), "press again" under reduced
-              motion. report: one key, framed.
+              a final key is held 1.7 s (C06: its seven ticks show before it is pressed; the first lights at the press, all
+              seven at 1.7 s; let go early, they drain and blink once), "press again" under reduced motion. report: one key.
      Places   the talk keys (Skip, Next) at the right end of the key row, the choices at the left, so the finger that pressed
               Next is never on a choice. The top is fixed: the talk, the choices and the outcome are laid out once, hidden, and
               the tallest sets the height.
      Keys     talk: Enter, Space, → or a click on the frame for the next line; Esc skips to the choices. choices: ← → and Tab
               move; 1-9 pick; Enter or Space picks; Esc means "Not yet" in an ask. outcome: Enter, Space or Esc go on. Nothing
-              is taken in the first 400 ms (ChoiceGuard). Focus looks like pointing.
+              is taken in the first 400 ms (ChoiceGuard). Focus looks like pointing; Tab never leaves the frame (aria-modal),
+              and a focus given as the frame opens is given again after the browser's first paint, which can drop it.
      Motion   steps only: the veil 3 steps, the picture's Bayer reveal 8 steps of 125 ms (2 on a repeat), the words 2 steps, the
               keys left to right 60 ms apart; a pick lights its key 2 steps; out in 3 steps, the veil last.
      Room     a frame that turns up on its own waits while NewScreen holds it (ns-held: the dive, the sector title); the bus
@@ -23,21 +24,27 @@
 
    window.NSFrame (frozen)
      open(app, model, hooks) → overlay
-       model { aria, zIndex, shape, alarm, picture, readout, deck, isRepeat,
+       model { aria, zIndex, shape, alarm, picture, readout, deck, isRepeat, repeatIndex (the line a repeat shows; default the last),
                lines: [{ speaker, text, tone, face, narr }],
                keys: [{ label, chips: [{ text, tone, word }], conseqHtml, conseqTone, locked, final, primary }] }
-       hooks { pick(i) → { pages: [[line]], chips } | null, done() }   pick runs the choice; done once the frame is gone
+       hooks { pick(i) → { pages: [[line]], chips, readout? } | null, done() }   pick runs the choice (readout: the picture's
+                                                                         readout after it, '' for none); done once it is gone
      debug() → the top frame's state, for the capture harness
 */
 (function () {
     'use strict';
     if (!window.NEW_SCREEN) return;
-    const STEP_UI = 60, STEP_ART = 125, HOLD_MS = 1700, HOLD_STEPS = 4, AGAIN_MS = 4000, GUARD_MS = 400, FLOOR_PX = 16, RESIZE_MS = 150;
+    const STEP_UI = 60, STEP_ART = 125, HOLD_MS = 1700, HOLD_STEPS = 7, NUDGE_MS = 4 * 60, AGAIN_MS = 4000, GUARD_MS = 400, FLOOR_PX = 16, RESIZE_MS = 150, FOCUS_AGAIN_MS = 120;
     const PIC_W = 480, PIC_H = 160, WHOLE_AT = 1040, CROP_UNDER = 640, CROP_ROWS = 120, FACE_PX = 64;
     const REVEAL_FIRST = 8, REVEAL_REPEAT = 2, VEIL_STEPS = 3, OUT_STEPS = 3;
     const PRESS_AGAIN = 'Press again';                       // DRAFT (look pass): a held key under reduced motion (DESIGN 1.1)
     const KEY_WORDS = { next: 'Next', skip: 'Skip', go: 'Continue' };   // the frame keys (DESIGN 1.1: [› Next], › Skip, [› Continue])
-    const INK = [5, 7, 10];
+    /** --ink (tokens.css) as rgb, for the picture's reveal; the art's own ink (NSPaint.INK, the same value) before the sheet has loaded. */
+    function inkRgb() {
+        const v = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim(), m = /^#([0-9a-f]{6})$/i.exec(v);
+        const hex = m ? m[1] : String((window.NSPaint && window.NSPaint.INK) || '').replace('#', '');
+        return [0, 2, 4].map(i => parseInt(hex.substr(i, 2), 16) || 0);
+    }
     const BAYER = [0, 32, 8, 40, 2, 34, 10, 42, 48, 16, 56, 24, 50, 18, 58, 26, 12, 44, 4, 36, 14, 46, 6, 38, 60, 28, 52, 20, 62, 30, 54, 22,
         3, 35, 11, 43, 1, 33, 9, 41, 51, 19, 59, 27, 49, 17, 57, 25, 15, 47, 7, 39, 13, 45, 5, 37, 63, 31, 55, 23, 61, 29, 53, 21].map(v => (v + 0.5) / 64);
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -86,7 +93,7 @@
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         if (k >= n) { ctx.clearRect(0, 0, PIC_W, PIC_H); return; }
-        const img = ctx.createImageData(PIC_W, PIC_H), d = img.data, lim = k / n;
+        const img = ctx.createImageData(PIC_W, PIC_H), d = img.data, lim = k / n, INK = inkRgb();
         for (let y = 0; y < PIC_H; y++) for (let x = 0; x < PIC_W; x++) {
             if (BAYER[((y & 7) << 3) | (x & 7)] < lim) continue;
             const o = (y * PIC_W + x) * 4;
@@ -97,7 +104,8 @@
 
     function open(app, model, hooks) {
         const m = Object.assign({ shape: 'decide', keys: [], lines: [] }, model), keys = m.keys;
-        const talk = m.isRepeat ? m.lines.slice(-1) : m.lines.slice();               // a repeat: only the line nearest the decision
+        const at = m.repeatIndex != null && m.lines[m.repeatIndex] ? m.repeatIndex : m.lines.length - 1;
+        const talk = m.isRepeat ? m.lines.slice(at, at + 1) : m.lines.slice();      // a repeat: one line, the one nearest the decision (or the card's own pick)
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay ef-veil';
         overlay.style.zIndex = String(m.zIndex || 2000);
@@ -130,6 +138,16 @@
             prevEl.innerHTML = l ? `${l.narr ? '' : `<b>${esc(l.speaker)}</b>`}${esc(l.text)}` : '';
         }
         const restep = el => { el.classList.remove('is-step'); void el.offsetWidth; el.classList.add('is-step'); };
+        /** Focus given in the task that opened the frame can be dropped by the browser's focus fixup at its first paint (the
+            key then shows no focus and Enter does nothing): given again after a tick and after the next two frames, unless
+            the frame has moved on or the focus is already somewhere in it. */
+        function settleFocus(el) {
+            if (!el) return;
+            const st = F.state, again = () => { if (!F.finished && !F.closing && F.state === st && !isOwn(document.activeElement)) el.focus({ preventScroll: true }); };
+            el.focus({ preventScroll: true });
+            later(0, again); later(FOCUS_AGAIN_MS, again);
+            requestAnimationFrame(() => requestAnimationFrame(again));
+        }
         function showTalk(i) {
             F.index = i;
             setPrev(i > 0 ? talk[i - 1] : null);
@@ -187,7 +205,7 @@
             if (rm) coverAt(cover, 1, 1);
             else for (let s = 1; s <= steps; s++) later(VEIL_STEPS * STEP_UI + (s - 1) * STEP_ART, () => coverAt(cover, s, steps));
             if (talk.length <= 1) openChoices(true);
-            else { nextEl.focus({ preventScroll: true }); setTimeout(() => { if (F.state === 'talk' && !F.closing && !isOwn(document.activeElement)) nextEl.focus({ preventScroll: true }); }, 0); if (talk[F.index] && !talk[F.index].narr) emit('card:speaker', { name: talk[F.index].speaker, tone: talk[F.index].tone }); }
+            else { settleFocus(nextEl); if (talk[F.index] && !talk[F.index].narr) emit('card:speaker', { name: talk[F.index].speaker, tone: talk[F.index].tone }); }
         }
 
         // ── the talk ──
@@ -214,14 +232,14 @@
             if (window.ChoiceGuard) window.ChoiceGuard.hold(choicesEl);
             choicesEl.tabIndex = -1;
             const safe = safeIndex();
-            if (m.shape === 'ask' && safe >= 0) btns[safe].focus({ preventScroll: true });   // an ask: "Not yet" has the focus
-            else if (m.shape === 'report' && keys.length === 1 && !btns[0].disabled && !keys[0].final) btns[0].focus({ preventScroll: true });
-            else choicesEl.focus({ preventScroll: true });                       // a decide: the row, so a leftover Enter never picks unread
+            if (m.shape === 'ask' && safe >= 0) settleFocus(btns[safe]);        // an ask: "Not yet" has the focus
+            else if (m.shape === 'report' && keys.length === 1 && !btns[0].disabled && !keys[0].final) settleFocus(btns[0]);
+            else settleFocus(choicesEl);                                         // a decide: the row, so a leftover Enter never picks unread
             point();
         }
         /** The key pointed at or focused shows its consequence (focus looks like pointing); one at a time. */
         function point() {
-            const fi = btns.indexOf(document.activeElement), i = F.hovered >= 0 ? F.hovered : fi;
+            const fi = btns.indexOf(document.activeElement), i = F.hold ? F.hold.i : F.hovered >= 0 ? F.hovered : fi;   // a key being held is the one pointed
             keyEls.forEach((el, j) => el.classList.toggle('is-pointed', j === i || (F.again && F.again.i === j)));
         }
         function activate(i) {
@@ -229,33 +247,40 @@
             if (keys[i].final) { if (reduced()) pressAgain(i); return; }       // a final key is held, never clicked
             pick(i);
         }
-        function setFill(i, k) { btns[i].dataset.fill = String(k); keyEls[i].classList.toggle('is-holding', k > 0); }
+        function setFill(i, k) { btns[i].dataset.fill = String(k); btns[i].style.setProperty('--fill', String(k)); keyEls[i].classList.toggle('is-holding', k > 0); }
+        /** A held key let go before it filled: its ticks blink once, so a click on it is never met with nothing. */
+        function nudge(i) {
+            keyEls[i].classList.remove('is-nudge'); void keyEls[i].offsetWidth; keyEls[i].classList.add('is-nudge');
+            later(NUDGE_MS, () => keyEls[i].classList.remove('is-nudge'));
+        }
         function startHold(i, by) {
             if (F.state !== 'choices' || F.picked || !btns[i] || btns[i].disabled || !keys[i].final || guarded(F.choicesAt)) return;
             if (reduced()) { pressAgain(i); return; }
             stopHold(false);
+            if (document.activeElement !== btns[i]) btns[i].focus({ preventScroll: true });   // held is pointed: its consequence shows
             const t0 = now();
+            setFill(i, 1);                                                       // the first tick at the press
             F.hold = { i, by, t0, timer: setInterval(() => {
-                const k = Math.min(HOLD_STEPS, Math.floor((now() - t0) / (HOLD_MS / HOLD_STEPS)));
-                setFill(i, k);
-                if (k >= HOLD_STEPS) { stopHold(true); pick(i); }
+                const ms = now() - t0;
+                setFill(i, Math.min(HOLD_STEPS, 1 + Math.floor(ms * HOLD_STEPS / HOLD_MS)));
+                if (ms >= HOLD_MS) { stopHold(true); pick(i); }
             }, STEP_UI) };
+            point();
         }
         function stopHold(isDone) {
             const h = F.hold;
             if (!h) return;
             clearInterval(h.timer);
             F.hold = null;
-            if (!isDone) setFill(h.i, 0);                                        // let go early: it drains in one step
+            if (!isDone) { setFill(h.i, 0); nudge(h.i); point(); }                // let go early: it drains in one step and blinks
         }
         /** Reduced motion: a final key asks to be pressed again (DESIGN 1.1). */
         function pressAgain(i) {
             if (F.again && F.again.i === i && now() - F.again.t < AGAIN_MS) { F.again = null; pick(i); return; }
-            const el = keyEls[i].querySelector('.ef-conseq span'), was = el ? el.innerHTML : null;
-            F.again = { i, t: now(), restore: () => { if (el && was != null) el.innerHTML = was; } };
-            if (el) el.textContent = PRESS_AGAIN;
-            else keyEls[i].insertAdjacentHTML('beforeend', `<p class="ef-conseq is-again"><span>${PRESS_AGAIN}</span></p>`);
-            setFill(i, 2);
+            keyEls[i].insertAdjacentHTML('beforeend', `<p class="ef-conseq is-again"><span>${PRESS_AGAIN}</span></p>`);
+            const line = keyEls[i].lastElementChild;
+            F.again = { i, t: now(), restore: () => line.remove() };
+            setFill(i, Math.ceil(HOLD_STEPS / 2));
             point();
             const mine = F.again;
             later(AGAIN_MS, () => { if (F.again === mine) { mine.restore(); F.again = null; setFill(i, 0); point(); } });
@@ -281,11 +306,13 @@
             choicesEl.hidden = true; talkEl.hidden = true; goEl.hidden = false;
             prevEl.classList.add('is-gone');
             sayEl.hidden = true; outEl.hidden = false;
+            const ro = $('.ef-readout');
+            if (ro && typeof res.readout === 'string') { ro.textContent = res.readout; ro.hidden = !res.readout; }   // a readout the pick made untrue
             showPage(0);
             F.outAt = now();
             const guard = window.ChoiceGuard;
             if (guard) { guard.hold(goEl); if (typeof guard.keepOffClick === 'function') guard.keepOffClick(goEl, [goBtn]); }   // never moves: it waits
-            goBtn.focus({ preventScroll: true });
+            settleFocus(goBtn);
         }
         function showPage(p) {
             F.page = p;
@@ -340,6 +367,7 @@
             if (!isLive()) return;
             const k = e.key, onButton = e.target && e.target.tagName === 'BUTTON' && isOwn(e.target);
             const own = () => { e.preventDefault(); e.stopPropagation(); };
+            if (k === 'Tab') { own(); cycle(e.shiftKey ? -1 : 1); return; }           // aria-modal: nothing behind the frame takes the focus
             if (F.state === 'talk') {
                 if (k === 'Escape') { own(); if (!e.repeat && !guarded(F.shownAt)) skip(); }
                 else if ((k === 'Enter' || k === ' ' || k === 'ArrowRight') && !(onButton && k !== 'ArrowRight')) { own(); if (!e.repeat && !guarded(F.shownAt)) advance(); }
@@ -358,6 +386,13 @@
                 return;
             }
             if (F.state === 'outcome' && (k === 'Escape' || ((k === 'Enter' || k === ' ') && !onButton))) { own(); if (!e.repeat) go(); }
+        }
+        /** Tab and Shift+Tab: round the frame's own keys that show now. */
+        function cycle(d) {
+            const list = [...overlay.querySelectorAll('button')].filter(b => !b.disabled && b.getClientRects().length && getComputedStyle(b).visibility === 'visible');
+            if (!list.length) return;
+            const at = list.indexOf(document.activeElement);
+            list[at < 0 ? (d > 0 ? 0 : list.length - 1) : (at + d + list.length) % list.length].focus({ preventScroll: true });
         }
         function onKeyUp(e) { if (F.hold && F.hold.by === `key:${e.key}`) { e.preventDefault(); stopHold(false); } }
         function onPointerUp() { if (F.hold && F.hold.by === 'pointer') stopHold(false); }
