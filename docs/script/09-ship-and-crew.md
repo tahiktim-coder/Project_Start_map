@@ -450,13 +450,13 @@ _The sector title in travel and the sector's log header, where it differs from t
 ### The ship's console (the new look) «Console.js · WORDS»
 _A click on A.U.R.A.'s speaker in the top deck, or Esc: its keys (the picture's readout is her name). saved: under her speaker the first time the game saves. aria: read aloud only._
 
-- **resume** — Resume «Console.js · line 46»
-- **soundOff** — Sound off «Console.js · line 46»
-- **soundOn** — Sound on «Console.js · line 46»
-- **volume** — Volume «Console.js · line 46»
-- **title** — Save and return to title «Console.js · line 46»
-- **saved** — saved «Console.js · line 47»
-- **aria** — The ship's console «Console.js · line 47»
+- **resume** — Resume «Console.js · line 55» **DRAFT (look pass)**
+- **soundOff** — Sound off «Console.js · line 55» **DRAFT (look pass)**
+- **soundOn** — Sound on «Console.js · line 55» **DRAFT (look pass)**
+- **volume** — Volume «Console.js · line 55» **DRAFT (look pass)**
+- **title** — Save and return to title «Console.js · line 55» **DRAFT (look pass)**
+- **saved** — saved «Console.js · line 56» **DRAFT (look pass)**
+- **aria** — The ship's console «Console.js · line 56» **DRAFT (look pass)**
 
 ## Game over
 
