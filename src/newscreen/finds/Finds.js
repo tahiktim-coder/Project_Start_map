@@ -2,6 +2,8 @@
    What it is: in the new look a found page is the object, big, with its words on it (FoundPage.js and DiscDocument.js ask
    for a view here and keep their own pacing, guards and closing):
      a printed page (kind 'paper')  the page itself, turned a little, Earth's letterhead and a stamp, the lines typed on it
+     a printout (kind 'list')       the same paper with a short list typed on it, no letterhead: the crew list on the frame's
+                                    picture (cards/Frame.js, look pass B03)
      a captain's log (kind 'log')   a dead ship's log screen in its housing, the lines typed out in phosphor with a cursor
      the crew plate (kind 'plate')  the names cast into the metal, a slow glint; its three lines quietly under it
      the disc drawing / the disc    the disc in pencil on a logbook page, or the gold disc itself; the notes are written on the
@@ -172,9 +174,10 @@
     }
     function paperView(page, o) {
         const el = document.createElement('div'), lines = page.lines || [], look = PAPER_LOOK[page.id] || { seed: 11, corner: 'br' };
-        el.className = 'find-stage';
+        const isList = page.kind === 'list';
+        el.className = `find-stage${isList ? ' is-list' : ''}`;
         el.innerHTML = `
-            <div class="find-object find-paper">
+            <div class="find-object find-paper${isList ? ' is-list' : ''}">
                 <canvas class="find-art" aria-hidden="true"></canvas>
                 <div class="find-face" aria-hidden="true">
                     ${page.letterhead ? `<header class="find-letterhead"><canvas class="find-emblem"></canvas><span>${esc(page.letterhead)}</span></header>` : ''}

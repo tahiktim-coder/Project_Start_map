@@ -27,14 +27,15 @@
        model { aria, zIndex, shape, alarm, picture, readout, deck, isRepeat, repeatIndex (the line a repeat shows; default the last),
                lines: [{ speaker, text, tone, face, narr }],
                keys: [{ label, chips: [{ text, tone, word }], conseqHtml, conseqTone, locked, final, primary }] }
-       hooks { pick(i) → { pages: [[line]], chips, readout? } | null, done() }   pick runs the choice (readout: the picture's
-                                                                         readout after it, '' for none); done once it is gone
+       hooks { pick(i) → { pages: [[line]], chips, readout?, printout? } | null, done() }   pick runs the choice (readout: the
+                    picture's readout after it, '' for none; printout { lines }: a document shown as itself over the picture,
+                    typed (Finds.js 'list'), the outcome's line after it, look pass B03); done once it is gone
      debug() → the top frame's state, for the capture harness
 */
 (function () {
     'use strict';
     if (!window.NEW_SCREEN) return;
-    const STEP_UI = 60, STEP_ART = 125, HOLD_MS = 1700, HOLD_STEPS = 7, NUDGE_MS = 4 * 60, AGAIN_MS = 4000, GUARD_MS = 400, FLOOR_PX = 16, RESIZE_MS = 150, FOCUS_AGAIN_MS = 120;
+    const PRINT_MS = 260, STEP_UI = 60, STEP_ART = 125, HOLD_MS = 1700, HOLD_STEPS = 7, NUDGE_MS = 4 * 60, AGAIN_MS = 4000, GUARD_MS = 400, FLOOR_PX = 16, RESIZE_MS = 150, FOCUS_AGAIN_MS = 120;
     const PIC_W = 480, PIC_H = 160, WHOLE_AT = 1040, CROP_UNDER = 640, CROP_ROWS = 120, FACE_PX = 64;
     const REVEAL_FIRST = 8, REVEAL_REPEAT = 2, VEIL_STEPS = 3, OUT_STEPS = 3;
     const PRESS_AGAIN = 'Press again';                       // DRAFT (look pass): a held key under reduced motion (DESIGN 1.1)
@@ -309,6 +310,7 @@
             const ro = $('.ef-readout');
             if (ro && typeof res.readout === 'string') { ro.textContent = res.readout; ro.hidden = !res.readout; }   // a readout the pick made untrue
             showPage(0);
+            if (res.printout) showPrintout(res.printout);
             F.outAt = now();
             const guard = window.ChoiceGuard;
             if (guard) { guard.hold(goEl); if (typeof guard.keepOffClick === 'function') guard.keepOffClick(goEl, [goBtn]); }   // never moves: it waits
@@ -321,6 +323,16 @@
             goBtn.textContent = isLast ? KEY_WORDS.go : KEY_WORDS.next;
             restep(outEl);
             (pages[p] || []).forEach(l => { if (!l.narr) emit('card:speaker', { name: l.speaker, tone: l.tone }); });
+        }
+        /** The printout (DESIGN 1.1): the document itself on the picture, its lines typed one by one; the outcome's line after. */
+        function showPrintout(p) {
+            const NF = window.NSFinds;
+            if (!NF || !NF.isOn() || !Array.isArray(p.lines)) return;
+            const v = NF.page({ kind: 'list', id: 'list', lines: p.lines }, { lineMs: PRINT_MS }), box = document.createElement('div');
+            box.className = 'ef-print'; box.appendChild(v.el); pic.appendChild(box);
+            v.mount(); F.printout = v;
+            outEl.classList.add('is-after');
+            NF.pace(v, overlay, PRINT_MS, () => { outEl.classList.remove('is-after'); restep(outEl); });
         }
         function go() {
             if (F.state !== 'outcome' || F.closing || guarded(F.outAt)) return;
@@ -346,6 +358,7 @@
             removeEventListener('resize', onResize);
             if (heldWatch) heldWatch.disconnect();
             if (typeof F.stopPic === 'function') F.stopPic();
+            if (F.printout) F.printout.destroy();
             overlay.remove();
             const at = stack.indexOf(F);
             if (at >= 0) stack.splice(at, 1);

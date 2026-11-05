@@ -2017,9 +2017,12 @@ class App {
         const names = [['Jaxon', 'Jaxon Mercer'], ['Aris', 'Aris Novak'], ['Vance', 'Kael Vance'], ['Mira', 'Mira Chen']].filter(([first]) => alive(first)).map(([, full]) => full);
         const leader = this.state.crew.find(c => (c.tags || []).includes('LEADER'));
         names.push((leader && leader.realName) || 'Cora Moon');          // she names the commander too, not "you": five names, "four crew"
+        const printed = ['Cora Moon', 'Jaxon Mercer', 'Aris Novak', 'Kael Vance', 'Mira Chen'];   // the paper copy in the bridge locker: all five, as printed
+        const isNew = isNewScreen();
         window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE', title: 'Head count',
-            picture: { kind: 'deck', deck: 'bridge' }, deck: 'bridge', seenKey: 'count:head', readout: 'Bridge',   // DRAFT (look pass): the readout (DESIGN 1.2)
+            picture: { kind: 'deck', deck: 'bridge', crew: 'all', screen: 'CREW 4' }, deck: 'bridge', seenKey: 'count:head', readout: 'Bridge',   // DRAFT (look pass): the readout (DESIGN 1.2); the bridge with five in it, its crew screen reading CREW 4 (C47)
+            outcomeDrop: isNew ? [/^The printed crew list/] : undefined,    // the new look shows the list itself (the printout), not a sentence about it
             context: isNewScreen() ? 'Vance is frowning at the crew screen.' : 'Back on the bridge, Vance is frowning at the crew screen.',   // the new screen opens it in travel, off the bridge
             dialogue: [
                 { speaker: 'Vance', text: 'There are five of us on this ship. She keeps saying four.' },
@@ -2031,7 +2034,7 @@ class App {
             choices: [
                 { text: 'Let it go', desc: 'Jaxon is probably right. It is only a number.' },
                 { text: 'Ask her why', desc: 'Vance wants an answer.' },
-                { text: 'Read the printed crew list', desc: 'There is a paper copy in the bridge locker.' },
+                { text: 'Read the printed crew list', desc: 'There is a paper copy in the bridge locker.', printout: isNew ? { lines: printed } : undefined },
             ],
             onPick: (idx) => {
                 if (idx === 0) { this.state.noteStanding('jaxon'); this.state.addLog('A.U.R.A.: "Thank you, Commander."'); }
@@ -2039,6 +2042,7 @@ class App {
                 if (idx === 2) {
                     this.state.noteStanding('aris');
                     this.state.addLog('The printed crew list has five names: Cora Moon, Jaxon Mercer, Aris Novak, Kael Vance, Mira Chen.');
+                    if (isNew && alive('Vance')) this.state.addLog('Vance: "Five names on the paper. Not four."');   // DRAFT (look pass): his line under the printed list (B03)
                 }
                 this.state.emitUpdates();
             }
@@ -2685,9 +2689,13 @@ class App {
         if (!event || !event.targetCrew) return;
         const CREW_DECK = { commander: 'bridge', jaxon: 'engineering', aris: 'medbay', vance: 'hold', mira: 'lab' };   // the new look: where each of them works
         const DECK_READOUT = { bridge: 'Bridge', engineering: 'Engineering', medbay: 'Med bay', hold: 'Hold', lab: 'Lab' };   // DRAFT (look pass): the readout (DESIGN 1.2)
+        // where the moment happens, as its first line says (look pass B03: the deck picture), else where they work
+        const PLACES = [[/cargo bay|armory/i, 'hold'], [/med bay/i, 'medbay'], [/scanner console|the bridge|command chair/i, 'bridge'], [/sensor console|terminal|\blab\b/i, 'lab'], [/galley/i, 'quarters'], [/engine room|reactor/i, 'engineering']];
 
         const crew = event.targetCrew;
         const inState = v => (typeof v === 'function' ? v(this.state) : v);   // a scene may word itself from what the crew has seen
+        const place = PLACES.find(([re]) => re.test(String(inState(event.context) || '')));
+        const deck = place ? place[1] : CREW_DECK[event.crewId], who = event.crewId === 'commander' ? 'cora' : event.crewId;
         const color = isNewScreen() ? undefined : ({                                  // the new look: the frame's tones (tokens.css), no colour table
             'jaxon': '#f0a030', 'aris': '#40c8ff', 'vance': '#ff5050',
             'mira': '#d070ff', 'commander': '#ffffff'
@@ -2696,8 +2704,8 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'crew', color, kicker: (crew.tags || []).includes('LEADER') ? 'A NIGHT ON THE BRIDGE' : `A MOMENT WITH ${String(crew.name || '').toUpperCase()}`, title: event.title,
             context: inState(event.context), dialogue: inState(event.dialogue),
-            picture: { kind: 'deck', deck: CREW_DECK[event.crewId] }, deck: CREW_DECK[event.crewId], seenKey: `crew:${event.id || event.title}`,
-            readout: DECK_READOUT[CREW_DECK[event.crewId]] || '',
+            picture: { kind: 'deck', deck, who }, deck, seenKey: `crew:${event.id || event.title}`,
+            readout: DECK_READOUT[deck] || '',
             choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c), descNow: c.descNow })),
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(event.choices[idx], this.state, crew);
@@ -3399,7 +3407,7 @@ class App {
                 dialogue: event.dialogue,
                 choices,
                 readout: isBeforeJump ? `Sector ${toSector}` : SECTOR_NAMES[toSector] || '',   // DRAFT (look pass): the readout (DESIGN 1.2)
-                picture: isBeforeJump ? { kind: 'view', focus: 'light' } : { kind: 'deck', deck: 'galley' }, deck: 'galley', seenKey: `campfire:${event.id}`,
+                picture: isBeforeJump ? { kind: 'view', focus: 'light' } : { kind: 'deck', deck: 'galley', table: true }, deck: 'galley', seenKey: `campfire:${event.id}`,
                 shape: stay ? 'ask' : undefined, final: stay ? choices.map((c, i) => i).slice(1) : undefined, repeatLine: stay ? 0 : undefined,
                 onChoiceMade: (idx) => {
                     if (stay && idx === 0) { this.state._seenCampfires = this.state._seenCampfires.filter(id => id !== event.id); onComplete('stay'); return; }   // asked again next time
@@ -6992,8 +7000,10 @@ Then you're through.`,
     // ═══════════════════════════════════════════════════════════════
     // SHIP MALFUNCTION MODAL
     // ═══════════════════════════════════════════════════════════════
-    /** A ship fault card. Resolves once it is dealt with. */
+    /** A ship fault card. Resolves once it is dealt with. The new look: no card (look pass B03, C01): one voice line, one chip
+        at the faulted deck, and the deck flashes (src/newscreen/tower/Fault.js). */
     showShipMalfunctionModal(event) {
+        if (isNewScreen() && window.NSFault) return window.NSFault.report(this, event);
         // dialogue can be an array or a function that returns one
         const dialogue = typeof event.dialogue === 'function' ? event.dialogue(this.state) : event.dialogue;
         return new Promise(resolve => window.EncounterCard.open(this, {

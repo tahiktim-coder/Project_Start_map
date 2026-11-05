@@ -556,11 +556,15 @@
         if (cfg.hasSignal) base.signal = true;
         return base;
     }
+    /** Who stands in a deck picture (B03): the one a moment is about, or all (the head count, the galley table); no portrait for them, the room lights them (DESIGN 1.1 "who"). */
+    const inPicture = pic => (!pic || pic.kind !== 'deck' ? () => false
+        : l => !!l && !l.narr && l.tone !== 'aura' && (pic.crew === 'all' || pic.table ? ['cora', 'jaxon', 'aris', 'vance', 'mira'].includes(l.tone) : l.tone === String(pic.who || '').toLowerCase()));
     /** The new look's card: the frame. Repeats are known by cfg.seenKey (state._seenCards, saved). */
     function openFrame(app, cfg) {
         const state = app && app.state, choices = cfg.choices || [];
         const narr = cfg.noContext ? [] : narrationOf(cfg.context), living = livingLines(app, cfg.dialogue);
-        const talk = narr.concat(living.map(d => frameLine(app, d)));
+        const inPic = inPicture(pictureOf(cfg)), unface = l => (inPic(l) ? Object.assign({}, l, { face: null }) : l);
+        const talk = narr.concat(living.map(d => unface(frameLine(app, d))));
         const own = cfg.repeatLine != null && cfg.dialogue ? living.indexOf(cfg.dialogue[cfg.repeatLine]) : -1;
         const final = new Set(cfg.final || []);
         const keys = choices.map((c, i) => frameKey(app, c, descOf(c, state), final.has(i), choices.length));
@@ -584,8 +588,11 @@
                 quiet = false;
                 if (isQuiet) return null;
                 const drop = [].concat(cfg.outcomeDrop || []);
-                const res = outcomeOf(app, said.filter(m => !drop.some(re => re.test(cleanText(m)))));
+                let res = outcomeOf(app, said.filter(m => !drop.some(re => re.test(cleanText(m)))));
                 if (res && typeof cfg.readoutNow === 'function') { try { res.readout = cleanText(cfg.readoutNow(state)); } catch (err) { console.error('EncounterCard: readoutNow failed', err); } }
+                if (res && res.pages) res.pages = res.pages.map(p => p.map(unface));
+                const print = choices[idx] && choices[idx].printout;                      // a document shown as itself (look pass B03: the crew list)
+                if (print) res = Object.assign(res || { pages: [[]], chips: [] }, { printout: print });
                 return res;
             },
             done() { if (picked) releaseGate(); },
@@ -599,7 +606,7 @@
      *        over the picture), picture { kind: 'scene' | 'view' | 'world' | 'deck', ... }, seenKey ('kind:id'), deck, alarm,
      *        noContext (the scene is not said), repeatLine (the dialogue line a repeat shows; default the last), readoutNow(state)
      *        (the readout once a pick has run), outcomeDrop [RegExp] (logged lines the outcome leaves to the log), and per
-     *        choice: tone 'loss' | 'end', chips [{ text, tone, word }], primary.
+     *        choice: tone 'loss' | 'end', chips [{ text, tone, word }], primary, printout { lines } (B03: a document typed on the picture).
      */
     function open(app, cfg) {
         if (newLook() && mustWait()) {                                                   // the last choice's outcome is still up
@@ -787,6 +794,6 @@
         return modal;
     }
 
-    window.EncounterCard = { open, outcomeIn, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, noOutcome, capturing: () => capturing > 0,
+    window.EncounterCard = { open, outcomeIn, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, noOutcome, capturing: () => capturing > 0, captureLog,
         keyParts, outcomeOf, narrationOf };   // the last three: the new look's frame model (node checks read them)
 })();

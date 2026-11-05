@@ -5,49 +5,77 @@
         one room turn to look at us, "Nobody answers." again and again; then ink
      2. the sea of ships (throw/SeaFilm.js): our dark Lander among wrecks of our own class, the camera pulling back until we
         are one red dot in a sea of thousands; the drive relights, white
-     3. the arrival: an EncounterCard with the sector's name, its arrival line and Mira's line (A.U.R.A.'s if Mira is
-        dead), "Continue"; the travel view of sector 3 then opens from black as on any first show (the stall's veil stays
-        until then, Stall.release)
+     3. the arrival, with no card (look pass B03, DESIGN 1.1, C01): the travel view of sector 3 opens from black as on any
+        first show (the stall's veil stays until then, Stall.release), its sky title says "The Signal" once; then a readout
+        in the void's style counts the beacons heard (BEACONS HEARD, Corridor.js's own count for sector 3), Mira says her
+        line (A.U.R.A. hers if Mira is dead), and the arrival line follows as narration, a sentence at a time
    Its words and log lines are TheThrow's. Every step can be skipped (a click, Esc, Enter or Space), and nothing here ever
    leaves the game stuck: a step that fails is passed over.
    Loaded only when the new-screen switch is on, after throw/Stall.js and throw/SeaFilm.js.
 
    window.NSThrow (frozen)
-     play(app) → Promise     resolves once the arrival card is dismissed (never rejects)
-     card(app) → Promise     the arrival card alone (for the headless runs)
+     play(app) → Promise     resolves once the film is over; the arrival follows sector 3's sky title (never rejects)
+     card(app) → Promise     the arrival alone, now (the headless runs); resolves when its last line has left the screen
 */
 (function () {
     'use strict';
     if (!window.NEW_SCREEN) return;
-    const SECTOR = 3, CARD_Z = 2800, PREPARE_AFTER_MS = 3600;
+    const SECTOR = 3, PREPARE_AFTER_MS = 3600, AFTER_TITLE_MS = 400, COUNT_STEPS = 12, STEP_ART = 125, HOLD_MS = 900;
+    const HEARD = 687;                                                     // Corridor.js SECTORS[3].heard: the beacons heard arriving in sector 3
+    const LABEL = 'BEACONS HEARD';                                         // the void's readout (Corridor.js)
     const MIRA = 'Commander, there are a lot more than eight ships out here.';
     const AURA = 'Burn complete, Commander. There are many more ship beacons ahead than expected.';
 
     function hush() { const v = window.NewScreen && window.NewScreen.mods && window.NewScreen.mods.voice; if (v && typeof v.hush === 'function') { try { v.hush(); } catch (err) { /* nothing to hush */ } } }
 
-    /** The arrival (TheThrow's card, in the new look): the sector's name, its arrival line, Mira's line, Continue. */
+    const NS = () => window.NewScreen || null;
+    const fmt = n => n.toLocaleString('en-US');
+    /** The void's readout (BEACONS HEARD over its count, Mono), low at the right, counting up in the art's steps. → remove() */
+    function readout() {
+        const root = document.getElementById('ns-root');
+        if (!root) return () => {};
+        let layer = document.getElementById('ns-card-words');
+        if (!layer) { layer = document.createElement('div'); layer.id = 'ns-card-words'; layer.className = 'ns-layer'; root.appendChild(layer); }
+        const el = document.createElement('div'), n = document.createElement('b');
+        el.className = 'ns-heard'; el.setAttribute('role', 'status');
+        el.innerHTML = `<span>${LABEL}</span>`; n.textContent = '0'; el.appendChild(n);
+        layer.appendChild(el);
+        requestAnimationFrame(() => el.classList.add('is-in'));
+        let k = 0;
+        const timer = setInterval(() => { k += 1; n.textContent = fmt(Math.round(HEARD * Math.min(1, k / COUNT_STEPS))); if (k >= COUNT_STEPS) clearInterval(timer); }, STEP_ART);
+        return () => { clearInterval(timer); el.classList.remove('is-in'); el.classList.add('is-out'); setTimeout(() => el.remove(), 3 * 60); };
+    }
+    /** The arrival (TheThrow's words, in the new look): no card. The readout, then Mira's line (A.U.R.A.'s if Mira is dead),
+        then the arrival line as narration, a sentence at a time; the readout goes with the last line. */
     function card(app) {
-        return new Promise(resolve => {
-            const state = app && app.state, EC = window.EncounterCard;
-            const title = window.NSLooks ? window.NSLooks.titleOf(SECTOR) : 'The Signal';
-            const line = (typeof SECTOR_ARRIVAL_LINES !== 'undefined' && SECTOR_ARRIVAL_LINES[SECTOR]) || '';   // eslint-disable-line no-undef
-            const mira = state && (state.crew || []).find(c => c.name && c.name.includes('Mira') && c.status !== 'DEAD');
-            const voice = mira ? { name: 'Mira', text: MIRA } : { name: 'A.U.R.A.', text: AURA };
-            if (state && state.addLog) { state.addLog('The burn finishes. You were in the warp the whole time.'); state.addLog(`${voice.name}: "${voice.text}"`); }
-            hush();                                                                   // the card says Mira's line: the voice must not say it again after
-            if (!EC || typeof EC.open !== 'function') { resolve(); return; }
-            let done = false;
-            const finish = () => { if (done) return; done = true; resolve(); };
-            try {
-                const modal = EC.open(app, {
-                    tone: 'story', kicker: '', title, context: line, zIndex: CARD_Z,
-                    dialogue: [{ speaker: voice.name, text: voice.text }],
-                    choices: [{ text: 'Continue', desc: '' }],
-                    onPick: finish,
-                });
-                if (modal) modal.classList.add('ns-arrival');
-            } catch (err) { console.error('NSThrow: the arrival card failed', err); finish(); }
-        });
+        const state = app && app.state, ns = NS(), v = ns && ns.mods && ns.mods.voice;
+        const line = (typeof SECTOR_ARRIVAL_LINES !== 'undefined' && SECTOR_ARRIVAL_LINES[SECTOR]) || '';   // eslint-disable-line no-undef
+        const mira = state && (state.crew || []).find(c => c.name && c.name.includes('Mira') && c.status !== 'DEAD');
+        const voice = mira ? { id: 'mira', name: 'Mira', text: MIRA } : { id: 'aura', name: 'A.U.R.A.', text: AURA };
+        const EC = window.EncounterCard, log = () => {
+            if (!state || !state.addLog) return;
+            state.addLog('The burn finishes. You were in the warp the whole time.');
+            state.addLog(`${voice.name}: "${voice.text}"`);
+            if (line) state.addLog(line);
+        };
+        try { if (EC && typeof EC.captureLog === 'function') EC.captureLog(log); else { log(); hush(); } } catch (err) { console.error('NSThrow: the arrival log failed', err); }   // the log keeps them; the voice says them below, once
+        if (!v || typeof v.say !== 'function') return Promise.resolve();
+        const off = readout(), parts = String(line).match(/[^.!?]+[.!?]+/g) || (line ? [line] : []);
+        const sayAll = async () => {
+            await new Promise(r => setTimeout(r, COUNT_STEPS * STEP_ART + HOLD_MS));          // the count first
+            await v.say({ id: voice.id, who: voice.name, text: voice.text });
+            for (const p of parts) await v.say({ narration: true, text: p.trim() });
+        };
+        return sayAll().catch(err => console.error('NSThrow: the arrival lines failed', err)).then(off);
+    }
+    /** After the throw: the arrival waits for sector 3's own sky title to end (its first show's 'opening:done'). */
+    function arriveAfterTitle(app) {
+        const ns = NS();
+        if (!ns || !ns.bus) return;
+        ns.bus.once('opening:done', () => setTimeout(() => {
+            const s = app && app.state;
+            if (s && s.currentSector === SECTOR) card(app);
+        }, AFTER_TITLE_MS));
     }
 
     let playing = null;
@@ -60,8 +88,8 @@
                 if (F) F.prepare(PREPARE_AFTER_MS);                                       // the film's pictures, worked out while the ship stands still
                 if (S) await S.play(app).catch(err => console.error('NSThrow: the stall failed', err));
                 if (F) await F.play(app).catch(err => console.error('NSThrow: the sea of ships failed', err));
-                await card(app);
-                if (S) S.release(false);                                              // once the card is read: the stall's picture goes; its veil stays until sector 3 shows
+                arriveAfterTitle(app);                                                // no card: sector 3 opens, its title once, then the arrival
+                if (S) S.release(false);                                              // the stall's picture goes; its veil stays until sector 3 shows
             } catch (err) {
                 console.error('NSThrow: the throw failed; the jump finishes', err);
                 if (S) S.release(true);

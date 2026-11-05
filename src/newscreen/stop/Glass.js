@@ -28,6 +28,9 @@
      skim(t)                           the stream for a few seconds
      draw(ctx, t, { shownAt, call })   the glass into the frame canvas (clipped to the window)
      disc(t, shownAt) → [x, y, r]      the world's disc, frame px (words keep off it)
+     paintStation(sp, cx, cy, s, node, dim?) → its window   the station as the glass paints it, into any painter (the frame's
+                                       'world' picture, cards/FramePictures.js, 480 x 160): the same seed, so the same station
+     paintField(sp, cx, cy, r, node, dim?)   the field of rocks as the glass paints it (five rocks round cx, cy, radius r)
 */
 (function () {
     'use strict';
@@ -159,6 +162,15 @@
             rimRamp: wrong ? RP.RED : undefined, ambient: 0.012, gain: 0.84, atmo: { ramp: wrong ? RP.RED : pal.atmo, w } });
         if (node.isFirstSignal) { const k = r / 118, X = half - 0.6 * r, Y = half + 0.1 * r; sp.line(X + 3 * k, Y + k, X + 16 * k, Y - 2 * k, (x, y) => sp.solid(x, y, RP.STONE, 0.02)); }   // the furrow the wreck cut
     }
+    /** The station and the field of rocks as the glass paints them, at any size, into any painter (look pass B03). */
+    function stationAt(sp, cx, cy, s, seed, dim) { return P.drawStation(sp, cx, cy, s, seed % 7 + 1, dim); }
+    function fieldAt(sp, cx, cy, r, seed, dim) {
+        for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * Math.PI * 2 + hash(i, 3, seed & 255) * 1.2, d = (i === 0 ? 0 : 0.5 + 0.45 * hash(i, 5, seed & 255)) * r;
+            const rr = Math.max(2, Math.round(r * (i === 0 ? 0.34 : 0.12 + 0.14 * hash(i, 7, seed & 255))));
+            P.sphere(sp, { cx: cx + Math.cos(a) * d, cy: cy + Math.sin(a) * d * 0.7, r: rr, ramp: RP.STONE, L: LW, dim, surface: P.surfaceFor('rock', (seed + i) & 1023, LW), rim: 0.12, ambient: 0.01, gain: 0.84 });
+        }
+    }
     function worldPic(j, place0) {
         const pl = place0 || cur, key = pl.id + ':' + pl.kind + ':' + j;
         if (pics.has(key)) return pics.get(key);
@@ -171,19 +183,11 @@
             p.disc = [cx + WIN.x0, cy + WIN.y0, R0]; p.fixed = true;
         } else if (pl.kind === 'station') {
             const s = 3.6 * f, half = Math.ceil(27 * s + 4);
-            p = D.pic(half * 2, half * 2, [g => { const sp = P.painter(half * 2, half * 2, false); p.win = P.drawStation(sp, half, half, s, seed % 7 + 1, 0.75 + 0.25 * f); g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0); }]);
+            p = D.pic(half * 2, half * 2, [g => { const sp = P.painter(half * 2, half * 2, false); p.win = stationAt(sp, half, half, s, seed, 0.75 + 0.25 * f); g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0); }]);
             p.half = half; p.r = 24 * s;
         } else if (pl.kind === 'field') {
             const r = Math.round(ORBIT.r * f * 0.9), half = Math.ceil(r * 1.25) + 4;
-            p = D.pic(half * 2, half * 2, [g => {
-                const sp = P.painter(half * 2, half * 2, false);
-                for (let i = 0; i < 5; i++) {
-                    const a = (i / 5) * Math.PI * 2 + hash(i, 3, seed & 255) * 1.2, d = (i === 0 ? 0 : 0.5 + 0.45 * hash(i, 5, seed & 255)) * r;
-                    const rr = Math.max(2, Math.round(r * (i === 0 ? 0.34 : 0.12 + 0.14 * hash(i, 7, seed & 255))));
-                    P.sphere(sp, { cx: half + Math.cos(a) * d, cy: half + Math.sin(a) * d * 0.7, r: rr, ramp: RP.STONE, L: LW, dim: 0.7 + 0.3 * f, surface: P.surfaceFor('rock', (seed + i) & 1023, LW), rim: 0.12, ambient: 0.01, gain: 0.84 });
-                }
-                g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0);
-            }]);
+            p = D.pic(half * 2, half * 2, [g => { const sp = P.painter(half * 2, half * 2, false); fieldAt(sp, half, half, r, seed, 0.7 + 0.3 * f); g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0); }]);
             p.half = half; p.r = r;
         } else if (pl.kind === 'light') {
             p = D.pic(1, 1, []); p.half = 0; p.r = 0; p.none = true;
@@ -328,5 +332,7 @@
         site: (t, shownAt) => site(t, shownAt), callAt: () => CALL.slice(), shuttleState: () => (sh ? Object.assign({}, sh) : null),
         spot: (t, shownAt, uv) => spotOf(geom(t, shownAt), uv), target: (t, shownAt) => targetOf(geom(t, shownAt)), aimed: () => (aimAt ? aimAt.slice() : null),
         skim: t => { skimAt = t; }, current: () => (cur ? { id: cur.id, kind: cur.kind } : null),
+        paintStation: (sp, cx, cy, s, node, dim = 1) => stationAt(sp, cx, cy, s, hashId(node && node.id), dim),
+        paintField: (sp, cx, cy, r, node, dim = 1) => fieldAt(sp, cx, cy, r, hashId(node && node.id), dim),
     });
 })();
