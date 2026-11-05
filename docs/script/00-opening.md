@@ -68,6 +68,7 @@ Then in the log:
 - A.U.R.A.: "Thank you, Commander."
 - A.U.R.A.: "Four crew, Commander. I have checked."
 - The printed crew list has five names: Cora Moon, Jaxon Mercer, Aris Novak, Kael Vance, Mira Chen.
+- Vance: "Five names on the paper. Not four." **DRAFT (look pass)**
 - In [ship name]: [desc]
 - SIGNAL INTERFERENCE: [name] was a phantom reading. The signal dissolves.
 - [name]: "The readings just... vanished. The signal is playing games with our instruments."
@@ -91,7 +92,7 @@ Then in the log:
 - ⚠ INCOMING TRANSMISSION: Old distress signal detected...
 - [A.U.R.A.'s reading was right.]
 - [name] was caught in the breach and is injured.
-- Micrometeorite strike. The hull held.
+- Micrometeorite strike. The hull held. **DRAFT (log only)**
 - ERROR: Station encounter data unavailable.
 - STATION: [result]
 - No station detected at this location.
@@ -109,14 +110,14 @@ Then in the log:
 - Long-range scan: [planet name]. Salvage: [metal level]. Energy: [energy level]. Signals: [signal str].[dish str]
 - Bad burn — the shielded core soaked it up. No extra fuel lost.
 - A.U.R.A. plotted the jump. Safe. Unremarkable.
-- The dark cost [rations] ration[s].
+- The dark cost [rations] ration[s]. **DRAFT**
 - A.U.R.A.: "[text]"
-- A.U.R.A. docked us: [energy delta] more energy.
-- Good flying: [energy delta] energy saved.
+- A.U.R.A. docked us: [energy delta] more energy. **DRAFT (no sign: the dock's chip already said it)**
+- Good flying: [energy delta] energy saved. **DRAFT**
 - A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light."
 - Drive reinforcement active: Jump cost reduced by [sector] energy.
 - WARNING: Not enough Energy!
-- A.U.R.A.: "We fly on the reserve. It will be a cold night, Commander."
+- A.U.R.A.: "We fly on the reserve. It will be a cold night, Commander." **DRAFT**
 - Starting Sector Jump...
 - Crew Quarters: Rest cycle complete. Stress levels reduced.
 - Sector [sector][sector name]
@@ -201,14 +202,14 @@ Then in the log:
 - A.U.R.A.: "There is no ground to land on, Commander. There is only the light."
 - A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished."
 - Aris: "Absolutely not. [name] needs treatment first. No one goes out there."
-- A.U.R.A.: "Nobody aboard can go down, Commander."
+- A.U.R.A.: "Nobody aboard can go down, Commander." **DRAFT**
 - MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge.
-- EVA team deployed: [name].
+- EVA team deployed: [name]. **DRAFT**
 - EVA team deployed: [name] and [name].
 - A.U.R.A.: "Team away, Commander. I have their vitals."
 - Mira insists the team stays out for a full day. -1 Ration.
 - The lander crosses to [site].
-- Jaxon: "I helped A.U.R.A. with the landing. We came down softer."
+- Jaxon: "I helped A.U.R.A. with the landing. We came down softer." **DRAFT**
 - Down safely, but well away from the marked spot. It is a long walk.
 - WARNING: The lander came down hard. [name] is INJURED before the hatch even opens.
 - ⚠ PREDATOR ALERT: Hostile organisms detected approaching EVA team!

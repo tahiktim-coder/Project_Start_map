@@ -31,7 +31,7 @@ Objective lines (the tip above the log, one at a time, whichever fits what you a
 ### The marked beacon — the first wreck «bundle.js · findDiscDrawing»
 _The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), always a whole ship, so the team cuts its hatch first (10-away-team.md). It is named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_
 
-- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 3463»
+- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 3471»
 
 #### The drawing of the gold disc «DiscDocument.js · NOTES»
 _A card with the drawing. Point at each label to read its note._
@@ -87,6 +87,7 @@ What each choice says in the log:
 - A.U.R.A.: "Thank you, Commander."
 - A.U.R.A.: "Four crew, Commander. I have checked."
 - The printed crew list has five names: Cora Moon, Jaxon Mercer, Aris Novak, Kael Vance, Mira Chen.
+- Vance: "Five names on the paper. Not four." **DRAFT (look pass)**
 - In [ship name]: [desc]
 - SIGNAL INTERFERENCE: [name] was a phantom reading. The signal dissolves.
 - [name]: "The readings just... vanished. The signal is playing games with our instruments."
@@ -110,7 +111,7 @@ What each choice says in the log:
 - ⚠ INCOMING TRANSMISSION: Old distress signal detected...
 - [A.U.R.A.'s reading was right.]
 - [name] was caught in the breach and is injured.
-- Micrometeorite strike. The hull held.
+- Micrometeorite strike. The hull held. **DRAFT (log only)**
 - ERROR: Station encounter data unavailable.
 - STATION: [result]
 - No station detected at this location.
@@ -128,14 +129,14 @@ What each choice says in the log:
 - Long-range scan: [planet name]. Salvage: [metal level]. Energy: [energy level]. Signals: [signal str].[dish str]
 - Bad burn — the shielded core soaked it up. No extra fuel lost.
 - A.U.R.A. plotted the jump. Safe. Unremarkable.
-- The dark cost [rations] ration[s].
+- The dark cost [rations] ration[s]. **DRAFT**
 - A.U.R.A.: "[text]"
-- A.U.R.A. docked us: [energy delta] more energy.
-- Good flying: [energy delta] energy saved.
+- A.U.R.A. docked us: [energy delta] more energy. **DRAFT (no sign: the dock's chip already said it)**
+- Good flying: [energy delta] energy saved. **DRAFT**
 - A.U.R.A.: "Nothing is charted past this sector, Commander. The heading ends at the light."
 - Drive reinforcement active: Jump cost reduced by [sector] energy.
 - WARNING: Not enough Energy!
-- A.U.R.A.: "We fly on the reserve. It will be a cold night, Commander."
+- A.U.R.A.: "We fly on the reserve. It will be a cold night, Commander." **DRAFT**
 - Starting Sector Jump...
 - Crew Quarters: Rest cycle complete. Stress levels reduced.
 - Sector [sector][sector name]
@@ -220,14 +221,14 @@ What each choice says in the log:
 - A.U.R.A.: "There is no ground to land on, Commander. There is only the light."
 - A.U.R.A.: "I would not send anyone out here, Commander. The ground is a copy, and it is not finished."
 - Aris: "Absolutely not. [name] needs treatment first. No one goes out there."
-- A.U.R.A.: "Nobody aboard can go down, Commander."
+- A.U.R.A.: "Nobody aboard can go down, Commander." **DRAFT**
 - MISSION ABORTED: Minimum 2 Healthy Crew required for EVA. Commander remains on bridge.
-- EVA team deployed: [name].
+- EVA team deployed: [name]. **DRAFT**
 - EVA team deployed: [name] and [name].
 - A.U.R.A.: "Team away, Commander. I have their vitals."
 - Mira insists the team stays out for a full day. -1 Ration.
 - The lander crosses to [site].
-- Jaxon: "I helped A.U.R.A. with the landing. We came down softer."
+- Jaxon: "I helped A.U.R.A. with the landing. We came down softer." **DRAFT**
 - Down safely, but well away from the marked spot. It is a long walk.
 - WARNING: The lander came down hard. [name] is INJURED before the hatch even opens.
 - ⚠ PREDATOR ALERT: Hostile organisms detected approaching EVA team!
@@ -277,16 +278,16 @@ _The story planet before it is named: a faint dot labelled UNIDENTIFIED. Clickin
 ### The offer «bundle.js · offerDiscDating»
 _A card after the wreck. Mira asks; A.U.R.A. if Mira is dead._
 
-- **kicker** — THE DISC «bundle.js · line 3631»
-- **title** — Date this wreck «bundle.js · line 3631»
-- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 3632»
-- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 3634»
-- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 3635»
-- Date this wreck with the disc «bundle.js · line 3637»
-- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 3637»
-- **desc** — No cost. Shows when it died. «bundle.js · line 3637»
-- Not now «bundle.js · line 3638»
-- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 3638»
+- **kicker** — THE DISC «bundle.js · line 3639»
+- **title** — Date this wreck «bundle.js · line 3639»
+- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 3640»
+- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 3642»
+- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 3643»
+- Date this wreck with the disc «bundle.js · line 3645»
+- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 3645»
+- **desc** — No cost. Shows when it died. «bundle.js · line 3645»
+- Not now «bundle.js · line 3646»
+- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 3646»
 
 ### Dating it (the mini-game) «DiscDating.js · DiscDating»
 _The reactions by depth play the first time a wreck that deep is dated; after that A.U.R.A. says the age._
@@ -340,16 +341,16 @@ _The reactions by depth play the first time a wreck that deep is dated; after th
 
 ### In the log afterwards «bundle.js · dateWreck»
 
-- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3659»
-- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3663»
+- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3667»
+- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3671»
 
-- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3691»
-- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3692»
+- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3699»
+- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3700»
 
 ### When nobody dated a wreck «bundle.js · revealLateStoryPlanet»
 _Back on the map with one stop left._
 
-- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3707»
+- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3715»
 
 ## The hole in the hull (the mini-game) «Breach.js · Breach»
 _Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time._
@@ -431,9 +432,9 @@ _Once per run, on a warp in sector 1 that costs energy, never the first. It take
 
 ### In the log afterwards «bundle.js · applyBreachResult»
 
-- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 2439»
-- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 2440»
-- [name] was caught in the breach and is injured. «bundle.js · line 2444»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 2443»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 2444»
+- [name] was caught in the breach and is injured. «bundle.js · line 2448»
 
 ## The hull hit (the new look, instead of the mini-game) «bundle.js · HULL_HIT_LINES»
 _The same moment in the new look: one deck sealed (the hold, the engine room or the quarters), nobody hurt. A.U.R.A. first, then the one whose deck it is (else whoever is aboard)._
@@ -446,8 +447,8 @@ _The same moment in the new look: one deck sealed (the hold, the engine room or 
 
 ### In the log afterwards (the new look) «bundle.js · hullHit»
 
-- Micrometeorite strike. The hull held. «bundle.js · line 2462» **DRAFT (log only)**
-- Micrometeorite strike. A.U.R.A. sealed off the [deck]. «bundle.js · line 2467» **DRAFT (log only)**
+- Micrometeorite strike. The hull held. «bundle.js · line 2466» **DRAFT (log only)**
+- Micrometeorite strike. A.U.R.A. sealed off the [deck]. «bundle.js · line 2471» **DRAFT (log only)**
 
 ### How every found page is shown (all sectors) «FoundPage.js · FoundPage»
 _The card around each found page (sector 5's find is the disc itself: sector-5.md)._
