@@ -504,7 +504,7 @@ function relayMd(def) {
         `Going across to the wreck (the bridge's GO ACROSS), the ship docks at the old relay first, flown: Bring Her In's flight and words (10-away-team.md), with these instead. The grade line is the cause (if any) and then one of the four grade words. Then the team goes into the wreck through its airlock, which the relay still powers (10-away-team.md, the wreck doors), and the story card's picture is the relay.`),
         `On the glass, one after another as the radio finds them: ${nums.join(' · ')}${tag('DockRelay.js', 'glass')}  `,
         `On the relay's screen in the film cut: SENT${tag('DockRelay.js', 'exterior.sent')}`, '',
-        ...textSection(3, 'Its chips', method(RELAY, 'chips'), 'Under Mira\'s line. A hard dock tears one of the other two hulls loose ("17212 torn loose"); never the disc\'s.'),
+        ...textSection(3, 'Its chips', method(RELAY, 'chips'), 'Under Mira\'s line. A hard dock tears one of the other two hulls loose ("EXODUS-17212 torn loose"); never the disc\'s.'),
         '_In the log after a rough or hard dock: BoardingParty\'s own lines with the moon\'s name (10-away-team.md, Boarding a station); after a soft dock flown all by hand: "Good flying: 3 energy saved."_', ''];
 }
 /** Sector 5's find (ExodusLogs PAGE_DISC): the disc itself. Its card (App.showDiscFound), then the disc page as the real object. */
@@ -569,6 +569,8 @@ for (let sector = 1; sector <= 6; sector++) {
             b.push(`Card line: *${clean(arrivalLines()[sector] || '')}*${tag('bundle.js', `SECTOR_ARRIVAL_LINES.${sector}`)}  `);
         } else b.push(`### Flying the jump${tag('Corridor.js', `LINES.${sector}`)}`, '_The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_', '', ...corridorLines(sector));
         if (sector === 5) b.push('', ...darkSection());
+        if (sector === 2) b.push('', ...textSection(4, "A.U.R.A.'s offer before the flight, and the control tags", between(CORRIDOR, /^\s*const OFFER = /m, /^\s*\/\/ what the flight cost or saved/m, 'OFFER'), 'On the start screen of every flown jump; the first flown jump (into sector 2) says what her way costs. The new look says that one in two beats, and shows the controls on small tags over the picture (under the aim marks; by our ship for the throttle).'),
+            ...textSection(4, 'When a mini-game will not start', block(`${MINI}MiniHost.js`, /^\s*const WONT_START = /m, 'WONT_START'), 'The new look: the frame closes and A.U.R.A. says this in travel.'));
         if (sector === 2) b.push('', ...textSection(4, 'A.U.R.A. on who has been flying', bm('getRelianceVoice'), 'In the log after every jump from here on, once she has seen four or more burns and flights: one line if she flew most of them, the other if you did. She says nothing when this jump went against the pattern.'));
         const shot = sector === 3 ? null : `jump${sector}`;
         if (shot && reelCaptions(shot).length) b.push('', `Closing shot${tag('StoryReel.js', shot)}: ${reelCaptions(shot).join(' ')}  `, reelSource(shot));
@@ -851,7 +853,8 @@ function councilMd() {
     b.push('## Boarding a station', '', ...textSection(3, 'Docking (the mini-game)', whole('src/systems/DockingGame.js'), "The old look. Its grade line is the new look's too."));
     const DOCK = 'src/newscreen/dock/DockFlight.js';                                     // the new look: Bring Her In (the rest of the file is the corridor's)
     b.push(...textSection(3, 'Docking, flown (the new look: Bring Her In)', block(DOCK, /^\s*const DOCK_LINES = /m, 'DOCK_LINES'), "The hold and roll lines and Vance's are said once a session; the grade line is DockingGame's (above)."));
-    b.push(...textSection(3, 'Its chips', block(DOCK, /^\s*const DOCK_GRADE_CHIPS = /m, 'DOCK_GRADE_CHIPS'), "Under A.U.R.A.'s grade line, with every deck broken (Hold broken) and her cost (Energy −4)."), ...textSection(3, 'In the log afterwards', bm('applyDockResult'), ''));
+    b.push(...textSection(3, 'Its tags', block(DOCK, /^\s*const DOCK_TAGS = /m, 'DOCK_TAGS'), 'Small tags over the picture: the station\'s name (by its lamp, until it is near; this word when the game has no name), how to steer on the start screen, how to close in once the run starts.'));
+    b.push(...textSection(3, 'Its chips', block(DOCK, /^\s*const DOCK_GRADE_CHIPS = /m, 'DOCK_GRADE_CHIPS'), "Under A.U.R.A.'s grade line, with every deck broken (Hold damaged) and her cost (Energy −4)."), ...textSection(3, 'In the log afterwards', bm('applyDockResult'), ''));
     b.push(...textSection(3, 'Inside', whole('src/systems/BoardingParty.js'), 'Rooms, crew perks, results. The diary on the crew deck depends on the station\'s age: the first list is for sectors 1-3, then 4, 5 and 6.'));
     write('10-away-team.md', 'Orbit, scans and away teams — any sector', b);
 }
