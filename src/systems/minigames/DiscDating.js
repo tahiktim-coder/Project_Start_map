@@ -658,7 +658,7 @@
             if (!NEW) note('c-0', '0', { x: u(o.x) - 1, y: u(o.y) + 3 });   // (new look: US marks the origin)
             note('c-yd', 'YEARS DEAD', { x: (u(o.x) + u(top.x)) / 2, y: u(o.y) + 3, align: 'center' });
             note('c-ymax', String(Math.round(view.y)), { x: u(top.x), y: u(o.y) + 3, align: 'right' });
-            adisc(g, o.x + 0.5, o.y + 0.5, 3.2, 1, C.ui); note('c-us', 'US', { x: u(o.x) - 6, y: u(o.y) - 3, align: 'right', tone: 'ui' });   // us: alive, and where we started
+            adisc(g, o.x + 0.5, o.y + 0.5, 3.2, 1, C.ui); if (!NEW) note('c-us', 'US', { x: u(o.x) - 6, y: u(o.y) - 3, align: 'right', tone: 'ui' });   // us: alive, and where we started (new look: the steel dot alone, the words within 40)
             points.forEach((wk, i) => {
                 const q = toChart(b, wk.age, wk.ly), right = q.x / D + 5 + wk.num.length * 2.6 > u(top.x);
                 adisc(g, q.x + 0.5, q.y + 0.5, 2.6, 1, C.text); fill(g, q.x, q.y, C.star);
