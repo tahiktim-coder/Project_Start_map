@@ -44,7 +44,6 @@ _Card kicker: EXODUS-9 · 61 YEARS OUT FROM EARTH / THE BRIDGE / FOUND IN [ship 
 **A.U.R.A.:** ${reason} Jump anyway?  
 **A.U.R.A.:** I can run the drive on the reserve, Commander. The crew quarters will lose power.  
 **Jaxon:** Then we freeze for a night. I've done worse. **DRAFT (look pass)**  
-**A.U.R.A.:** We need ${jumpCost} energy to jump, Commander. We have ${have}. **DRAFT (look pass)**  
 **A.U.R.A.:** If we land for good, the journey ends here, Commander. Settle anyway?  
 
 Choice:

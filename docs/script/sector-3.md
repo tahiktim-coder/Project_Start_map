@@ -16,8 +16,8 @@ Objective line: only where to look (the lines listed in sector 2), while the pag
 ### The burn that stalls «bundle.js · plotStalledBurn»
 _The jump is plotted (the burn mini-game, 09-ship-and-crew.md) and its card says only this._
 
-- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 3325»
-- **line** — The jump did not finish. «bundle.js · line 3325»
+- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 3327»
+- **line** — The jump did not finish. «bundle.js · line 3327»
 
 ### The jump that does not finish «TheThrow.js · BEATS»
 
