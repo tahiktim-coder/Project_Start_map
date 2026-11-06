@@ -292,10 +292,10 @@
         }
         const n = opt.ticks | 0;
         if (n > 0) {                                                       // a held key: its ticks under its word (the hold, seen before it is pressed), lit as it fills
-            const ty = y + h - 2;                                          // along its foot, just over its lower edge: clear of the letters
+            const ty = y + h - 1;                                          // notches in its lower edge: two rows clear of the letters
             for (let i = 0; i < n; i++) {
-                const k = (i + 1) / (n + 1), tx = x + 1 + Math.round((w - 2) * k);
-                c.fillStyle = at(r, fill >= k ? 3 : opt.hot ? 2 : 1); c.fillRect(tx, ty - 1, 1, 2);   // seen at rest, brighter while pointed at
+                const k = (i + 1) / (n + 1), tx = x + Math.round((w - 2) * k);
+                c.fillStyle = at(r, fill >= k ? 3 : opt.hot ? 2 : 1); c.fillRect(tx, ty, 2, 1);   // seen at rest, brighter while pointed at
             }
         }
     }
