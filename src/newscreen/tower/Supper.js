@@ -13,8 +13,10 @@
    EncounterCard; the picture the galley table): Aris says at the table that it would kill them (A.U.R.A. when Aris cannot),
    then "Not yet" first and focused (back to picking), "Share it out" too when nobody else can go without, and "Go without",
    held, its chip naming who dies in --loss. A click on the crew while it waits shows it again. A death chosen there has its
-   beat in the ship: the galley light goes down two steps, the chair stays empty, A.U.R.A. says it, then one person names
-   them (L-20); the light comes back. Whoever went without is said in travel (A.U.R.A., L-21). With nobody left to offer,
+   beat in the ship: the galley light goes down two steps and the chair stays empty while the game's own death lines are
+   said (GameState.dieOfHunger: BarkSystem's and AuraSystem's CREW_DEATH, the designer's words, through the log and the
+   voice; CALLS.md L-20's rewrite stays a proposal there); then the light comes back. Whoever went without is said in
+   travel (A.U.R.A., L-21). With nobody left to offer,
    "Share it out" waits on the plate instead; with too few left who could go without at all, nobody is asked
    (GameState.serveSupper would share the food out anyway). Setting a course first keeps the offer (settle): whoever offers
    goes without, or the food is shared out; a death is only ever the one chosen at the table.
@@ -47,11 +49,12 @@
 
     const CREW_BY_TAG = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
     const OFFER_ORDER = ['vance', 'jaxon', 'aris', 'mira'];                  // Vance offers first; if he cannot, the next one does
-    const NAMERS = ['aris', 'jaxon', 'mira', 'vance'];                       // who names the dead at the table: Aris, else the next who can
     const SEATED_MS = 1200;                                                  // the table in view a moment before anyone speaks
     const QUIET_MAX_MS = 7000;                                               // a line on screen (a new sector's news) finishes first, up to this long
     const OFFER_GAP_MS = 350;                                                // after A.U.R.A.'s line, the offer
-    const BEAT = { step: 250, say: 700, gap: 300, back: 250 };               // the death's beat: the light down in two steps, then the words
+    // the death's beat: the light down in two steps; held at least `hold`, then until the voice has been quiet `quiet` (the
+    // death lines said), `max` at most; back up in two steps
+    const BEAT = { step: 250, hold: 1500, quiet: 700, max: 12000, back: 250 };
     const LINES = {                                                          // one plain idea each (docs/STYLE.md)
         aura: ['Not enough for everyone tonight, Commander.', 'Not enough for everyone again, Commander.'],
         more: 'One more, Commander.',                                        // DRAFT: two go without, after the first pick
@@ -66,8 +69,6 @@
         warnSelf: "I can't go without again, Commander. It would kill me.",
         warnAura: (name, him) => `${name} can't go without again, Commander. It would kill ${him}.`,
         went: names => `${names} went without tonight, Commander.`,          // DRAFT (look pass): L-21, A.U.R.A.
-        dead: name => `${name} is dead, Commander.`,                         // DRAFT (look pass): L-20, A.U.R.A.
-        named: (He, his) => `${He} gave ${his} share away. Every night.`,    // DRAFT (look pass): L-20, Aris (or the next who can)
     };
     const KEYS = {                                                           // the plate's one key: the commander's reply (C42)
         accept: name => ({ act: 'accept', label: `All right, ${name}`, chips: [{ text: `${name} goes without`, word: true }] }),   // DRAFT (look pass): L-22
@@ -110,7 +111,7 @@
         S.phase = null; S.offered = false; S.offerer = null; S.picks = []; S.confirmed = []; S.table = null; S.frame = false; S.pointing = null; S.seq += 1;   // the next supper asks again
     }
     /** Supper is served: GameState.serveSupper's rules (the picks, or the food shared out), the save, the scene ends; then who
-        went without is said (L-21), or a death has its beat (L-20). */
+        went without is said (L-21), or a death has its beat (the light; GameState.dieOfHunger's own lines say it). */
     function serve(share) {
         const s = state(), a = app();
         if (!s || typeof s.serveSupper !== 'function') { reset(); return; }
@@ -123,7 +124,7 @@
         const ids = list => ((r && r[list]) || []).map(idOf);
         NS.bus.emit('supper:served', { short: wasShort, without: ids('without'), share: !!(r && r.share), died: ids('died') });
         const died = (r && r.died) || [], lived = ((r && r.without) || []).filter(c => !died.includes(c));
-        if (died.length) S.beat = { dead: died[0], at: null, said: false, endAt: null };
+        if (died.length) S.beat = { dead: died[0], at: null, quietAt: null, endAt: null };
         else if (lived.length) say('aura', 'A.U.R.A.', LINES.went(lived.map(c => c.name).join(' and ')));
     }
 
@@ -269,20 +270,15 @@
     }
     function reshow() { if (atTable() && !S.frame) openFrame(); }
 
-    // ── a death at the table: its beat in the ship (L-20) ──
+    // ── a death at the table: its beat in the ship (the light; the words are GameState.dieOfHunger's own) ──
     function stepBeat(open) {
         const B = S.beat;
         if (!B || !open) return;
-        const now = performance.now();
+        const now = performance.now(), v = voice(), talking = !!(v && typeof v.current === 'function' && v.current());
         if (B.at == null) B.at = now;
-        if (!B.said && now - B.at >= BEAT.say) {
-            B.said = true;
-            const c = B.dead, He = c.gender === 'F' ? 'She' : 'He', his = c.gender === 'F' ? 'her' : 'his';
-            const namer = NAMERS.map(member).find(m => m && m !== c && awake(m));
-            say('aura', 'A.U.R.A.', LINES.dead(c.name)).then(() => wait(BEAT.gap))
-                .then(() => (namer ? say(idOf(namer), namer.name, LINES.named(He, his)) : true))
-                .then(() => { if (S.beat === B) B.endAt = performance.now(); });
-        }
+        if (talking) B.quietAt = null; else if (B.quietAt == null) B.quietAt = now;
+        const said = B.quietAt != null && now - B.quietAt >= BEAT.quiet;            // the death lines have come and gone
+        if (B.endAt == null && now - B.at >= BEAT.hold && (said || now - B.at >= BEAT.max)) B.endAt = now;
         if (B.endAt != null && now - B.endAt >= BEAT.back * 2) S.beat = null;
     }
     function dim() {

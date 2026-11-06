@@ -282,17 +282,17 @@ function frameSection() {
         ...textSection(3, 'The sector-3 arrival: no card (look pass B03)', block('src/newscreen/throw/Throw.js', /^\s*const LABEL = /m, 'LABEL'), 'A readout counts the beacons heard (the void\'s words), then Mira\'s line (A.U.R.A.\'s if she is dead), then the arrival line as narration, a sentence at a time.', undefined, true)];
 }
 
-/** The new look's ship in travel (look pass B04): the repair plate, a broken deck said once, supper at the galley table, the
-    crew clicked in the tower, the rations line. */
+/** The new look's ship in travel (look pass B04): a broken deck said once, the repair plate, supper at the galley table, the
+    crew clicked in the tower, the stock's first changes. */
 function shipSection() {
     const KEY = 'src/newscreen/tower/ShipKey.js', SUP = 'src/newscreen/tower/Supper.js', TW = 'src/newscreen/tower/Tower.js', SR = 'src/newscreen/ship/ShipRoutine.js';
     return ['## The ship in travel (the new look)', '',
-        ...textSection(3, 'A broken deck: A.U.R.A., once (look pass B04)', block(TW, /^\s*const RED_LINE = /m, 'RED_LINE'), 'The first time a deck breaks, in the ship: "The engine room is broken, Commander." / "The quarters are broken, Commander."', undefined, true),
+        ...textSection(3, 'A broken deck: A.U.R.A., once', block(TW, /^\s*const RED_LINE = /m, 'RED_LINE'), 'The first time a deck breaks, in the ship. The deck\'s words: The bridge, The lab, The quarters, The hold, The engine room.', undefined, true),
         ...textSection(3, 'The repair plate: its rule chips and what is said after (look pass B04)', between(KEY, /const RULE = /, /\/\/ ── the icons/, 'RULE · FIXED · PATCHED · LIVE'), 'Click a red deck: Fix it, Patch it, Live with it. Each deck\'s rule chip shows under "Live with it" and while the deck is pointed at. Fix and Patch are said by Jaxon (A.U.R.A. when he cannot); Live with it by A.U.R.A.', undefined, true),
-        ...textSection(3, 'Supper at the galley table (look pass B04)', between(SUP, /const LINES = \{/, /const S = \{/, 'LINES · KEYS · TABLE · TAG_LAST'), 'After a jump, short of food: A.U.R.A., the one who offers, and the commander\'s reply on the plate. The table moment is a frame with "Not yet" first. A death there: A.U.R.A., then one person names them.', undefined, true),
+        ...textSection(3, 'Supper at the galley table (look pass B04)', between(SUP, /const LINES = \{/, /const S = \{/, 'LINES · KEYS · TABLE · TAG_LAST'), 'After a jump, short of food: A.U.R.A., the one who offers, and the commander\'s reply on the plate. The table moment is a frame with "Not yet" first. A death there: the galley light goes down while the crew\'s and A.U.R.A.\'s CREW_DEATH lines are said (pools.md).', undefined, true),
         ...textSection(3, 'The crew clicked in the tower', between(SR, /const LINES = \{/, /const REACT = /, 'LINES'), 'One line each; a second click in the same sector says nothing.', undefined, true),
         ...textSection(3, 'The crew clicked, by their state (look pass B04)', between(SR, /const BY_STATE = \{/, /function line\(/, 'BY_STATE'), 'Hurt, too weak from a missed supper, shut in their bunk; asleep (sedated): A.U.R.A. answers.', undefined, true),
-        ...textSection(3, 'Rations low (look pass B04)', block(TW, /^\s*const RATIONS_LINE = /m, 'RATIONS_LINE'), 'A.U.R.A., once a run, the first time the rations run low.', undefined, true)];
+        ...textSection(3, 'The stock: A.U.R.A., once each', block(TW, /^\s*const STOCK_TELL = /m, 'STOCK_TELL'), 'The first time each number beside its room changes.', undefined, true)];
 }
 
 // ── when things happen ──

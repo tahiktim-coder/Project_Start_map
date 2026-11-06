@@ -3,8 +3,10 @@
    screen height: all six decks, the nose's shoulder and the top of the engine bell (tower rows L.TOP0 - 40 .. L.TAIL0 + 48,
    1336 rows), both hull walls. It is drawn in its own pixels into an offscreen canvas, then onto canvas#ns-ship (sized in
    device px) scaled by ts = screen height / 1336 with smooth, high-quality scaling (0.81 at 1080p): the crew are about 84
-   px tall at 1080p. Below 0.7 (1366 x 768, 1280 x 720) the tower is re-cut (look pass B04, ship/TowerArt.js cut()): shown
-   at the whole scale 1/2, never smoothed, and the deck stencils stamped again at their own 3 x 5 size. No scrolling: the wheel does nothing. Space keeps the rest of the width
+   px tall at 1080p. Below 0.7 (G.tCut: 1280 x 720 to 1600 x 900) the tower is re-cut (look pass B04, ship/TowerArt.js
+   cut()) at the whole scale 1/2, never smoothed, the deck stencils stamped again at their own 3 x 5 size: shown 1:1 where
+   that shrinks it 15 % or less (ts 0.5: 1366 x 768, 1280 x 720), else scaled up to the fit, pixelated (1440 x 900 keeps
+   its size). No scrolling: the wheel does nothing. Space keeps the rest of the width
    (the tower takes about 26 %; never more than 45 %, then ts shrinks and the tower centres vertically).
    It reads the REAL game through NewScreen.game and never writes game state; clicks go to NewScreen.flow.
    - People: ShipRoutine.at('travel', t), bent by the real crew: dead not drawn; hurt in the med bay bed (a second hurt in
@@ -27,7 +29,7 @@
      who style and a 1-art-px light rim on the sprite); Mira or her bench while a fix waits → flow.bench(); a red deck → the
      repair plate at its hull edge (tower/ShipKey.js: Fix it, Patch it, Live with it, each with its cost chip). Pointing at a
      red deck shows its name and its one rule chip ("jumps ×2") where the plate opens: the rule words are on screen only then
-     (look pass B04, C84). The first time a deck goes red, A.U.R.A. says so once, in travel (L-15).
+     (look pass B04, C84). The first time a deck goes red, A.U.R.A. says so once, in travel (RED_LINE, the designer's words).
    - A new sector: closed until 'opening:done' (5 s at most), then it slides in (1.2 s).
    - The jump into sector 3 stalls (throw/Stall.js, read through window.NSStall.view() each frame): the decks go dark one by
      one, one red lamp left on each (throw/StallArt.js paints them), their screens and lamps dead; the reactor goes cold and
@@ -37,7 +39,7 @@
      crates, data in the lab, as lit numbers in #ns-ship-words (label Sans 14-15, number Mono 17-19 on the halo). A change
      flashes (warm up, red down, the difference beside it for 1.6 s). Low (energy 20, rations 4 or under) is --loss, its
      glow blinking in two slow steps, and the art says it too: the reactor dims with the energy, the galley cupboard stands
-     open and bare (C26). The first time rations are low, A.U.R.A. says how many jumps they last (L-14). Stop.js shows the
+     open and bare (C26). The first time each changes, A.U.R.A. says once what it is for (STOCK_TELL). Stop.js shows the
      same four on the bridge wall.
    Source: prototypes/slice/ship.js (minus the price charge, signs, asks, meal, plates and pages).
    Load after the art files and TowerMarks.js, and after NewScreen.js (it registers itself as 'tower').
@@ -86,7 +88,7 @@
     const DECKS = MK.DECKS;
     const GAME_KEY = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', medbay: null, hold: 'cargo', engineering: 'engineering' };
     const KEY = () => window.NSShipKey || null;                            // the glass keys on the decks (tower/ShipKey.js)
-    const CUT_TS = 0.5, CUT_STEP_MS = 125;                                 // the re-cut's whole scale (NewScreen.measure snaps G.ts to it); made at the art's 8 fps
+    const CUT_TS = 0.5, CUT_STEP_MS = 125;                                 // the re-cut's whole scale (G.tCut; NewScreen.measure snaps G.ts to it at 1366, 1280); made at the art's 8 fps
 
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
     const ease = k => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
@@ -167,15 +169,16 @@
         V.real = { crew, decks, engDown: decks.engineering === 'red', datable: datable() };
         V.readAt = t; V.dirty = false;
     }
-    /** A deck just went red: A.U.R.A. says so once, in travel (the voice, not the log): one plain, plural-aware line (L-15). */
+    /** A deck just went red: A.U.R.A. says so once, in travel (the voice, not the log). */
     function tellRed() {
         const k = V.tellRed, v = NS.mods && NS.mods.voice, K = KEY();
         if (!k || modeNow() !== 'travel' || (NS.blocked && NS.blocked()) || slideK(now()) < 1 || !v || typeof v.say !== 'function') return;
         V.tellRed = null;
         if (V.real.decks[k] !== 'red') return;
-        try { v.say({ id: 'aura', who: 'A.U.R.A.', text: RED_LINE(K ? K.deckWord(k) : 'A deck', K && K.isPlural(k)) }); } catch (err) { console.error('Tower: the voice failed', err); }
+        try { v.say({ id: 'aura', who: 'A.U.R.A.', text: RED_LINE(K ? K.deckWord(k) : 'A deck') }); } catch (err) { console.error('Tower: the voice failed', err); }
     }
-    const RED_LINE = (deck, plural) => `${deck} ${plural ? 'are' : 'is'} broken, Commander.`;   // DRAFT (look pass): L-15
+    // the designer's line, word for word (CALLS.md L-15's rewrite is a proposal there, not in the code)
+    const RED_LINE = deck => `${deck} is broken, Commander. Click it in the ship to fix it.`;
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     // People: the crew's day, bent by the real state
@@ -287,7 +290,7 @@
             if ((HULL_OUT - tLeft) * ts > MAX_SHARE * devW) ts = MAX_SHARE * devW / (HULL_OUT - tLeft);
             tY0 = Math.round((devH - ROWS * ts) / 2);
         }
-        const cut = ts === CUT_TS, extra = cut ? Math.max(0, Math.ceil(tY0 / ts)) : 0;   // the re-cut fills the height: more nose above, more bell below
+        const cut = g.tCut === true || ts === CUT_TS, extra = cut ? Math.max(0, Math.ceil(tY0 / ts)) : 0;   // the re-cut fills the height: more nose above, more bell below
         return { ts, tTop: tTop - extra, tLeft, tY0: tY0 - Math.round(extra * ts), rows: ROWS + 2 * extra, dpr, devW, devH, wDev: Math.ceil((HULL_OUT - tLeft) * ts), cut };
     }
     /** Tower px → CSS px, through the fit and the slide. */
@@ -501,7 +504,7 @@
             if (lit.length) { TW.drawPeople(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: f.rows }, lit, window.NSStallArt.lit); V.drawn = TW.drawn.slice(); }
         }
         const s0 = performance.now(), sh = V.tremor;                          // the tremor: smooth-scaled, so not rounded (the re-cut: whole px)
-        if (f.cut && V.cutCv) {                                             // 1366 x 768, 1280 x 720: the re-cut at 1/2, never smoothed
+        if (f.cut && V.cutCv) {                                             // a fit from 0.5 to 0.7: the re-cut at 1/2, never smoothed
             try { TW.cut(o, V.cutCv, { offX: -f.tLeft, camY: f.tTop }); } catch (err) { console.error('Tower: the re-cut failed', err); }
             V.cutMs = V.cutMs == null ? performance.now() - s0 : V.cutMs * 0.9 + (performance.now() - s0) * 0.1;   // what one cut costs (debug)
             V.cutAt = t; V.cutKey = cutKey();
@@ -518,9 +521,10 @@
         or on news) or the galley's light changes. */
     function cutKey() { const S = window.NSSupper; return V.hotId + '|' + V.readAt + '|' + (S && typeof S.dim === 'function' ? S.dim() : 0); }
     function blitCut(c, f) {
-        const sh = V.tremor;
+        const sh = V.tremor, s = f.ts / CUT_TS, x = Math.round(V.slideX + (sh ? sh.dx * f.ts : 0)), y = Math.round(f.tY0 + (sh ? sh.dy * f.ts : 0));
         c.imageSmoothingEnabled = false;
-        c.drawImage(V.cutCv, Math.round(V.slideX + (sh ? sh.dx * f.ts : 0)), Math.round(f.tY0 + (sh ? sh.dy * f.ts : 0)));
+        if (s === 1) c.drawImage(V.cutCv, x, y);
+        else c.drawImage(V.cutCv, x, y, Math.round(V.cutCv.width * s), Math.round(V.cutCv.height * s));   // a fit over 0.5 (1440 x 900): the cut scaled up, nearest-neighbour
     }
     /** 'high' scaling where it is cheap (a GPU canvas); a machine where it costs over 3 ms a frame on average gets 'low'
         (bilinear: at these scales the two look nearly the same, checked at 1080p and 720p). */
@@ -652,13 +656,14 @@
     // The ship's stock: small lit numbers beside the rooms they belong to (here) and on the bridge wall (Stop.js)
     // ════════════════════════════════════════════════════════════════════════════════════════════════════════════
     const STOCK_KEYS = Object.freeze(['energy', 'rations', 'salvage', 'data']);
+    // the designer's lines, word for word: said once each, at its first change (CALLS.md L-14's rewrite is a proposal there)
+    const STOCK_TELL = {
+        energy: 'Energy runs the drive. Every flight costs some, Commander.',
+        rations: 'Rations feed the crew. We eat on every jump, Commander.',
+        salvage: 'Salvage fixes the ship. Mining and wrecks bring more, Commander.',
+        data: 'Data is what we learn on the way. It helps our colony survive, Commander.',
+    };
     const STOCK_LOW = { energy: 20, rations: 4, salvage: -1, data: -1 };     // at or under: low (--loss, its glow blinking; the art: lowArt)
-    /** Rations low, said once a run: how many jumps they last (L-14, C30: the four lines that taught the stock are gone). */
-    function rationsLine(r) {
-        const s = call('state', null), need = s && typeof s.supperNeed === 'function' ? s.supperNeed() : 0;
-        return RATIONS_LINE(r, need > 0 ? Math.floor(r / need) : 0);
-    }
-    const RATIONS_LINE = (r, j) => (j >= 1 ? `We have ${r} rations. That's ${j === 1 ? 'one jump' : j + ' jumps'}, Commander.` : `We have ${r} rations. That's less than one jump, Commander.`);   // DRAFT (look pass): L-14
     const STOCK_FLASH_MS = 1600, STOCK_SETTLE_MS = 1300;
     // where each sits in the tower (tower art px, top-left; align 'right': top-right): by the reactor's top, over the galley
     // table, over the crates, in the lab over its cabinet (right-aligned to the lab's wall, so a longer number grows inward)
@@ -679,7 +684,7 @@
             ST.val = Object.assign({}, ST.val, { [k]: now[k] });
             ST.flash = Object.assign({}, ST.flash, { [k]: { at: performance.now(), d } });
             const v = NS.mods && NS.mods.voice;
-            if (k === 'rations' && d < 0 && now.rations <= STOCK_LOW.rations && v && typeof v.once === 'function') v.once('stock:rations-low', rationsLine(now.rations)).catch(err => console.error('NSStock: the voice failed', err));
+            if (v && typeof v.once === 'function') v.once('stock:' + k, STOCK_TELL[k]).catch(err => console.error('NSStock: the voice failed', err));
         });
     }
     /** Are the numbers in view now (the tower's or the bridge wall's, nothing over them)? */
