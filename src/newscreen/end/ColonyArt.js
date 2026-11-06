@@ -140,7 +140,9 @@
     /** Our Lander, standing on its legs beside the habitat. */
     function paintLander(g, W, H, x, y, night) {
         if (!SHIP || typeof SHIP.lander !== 'function') return;
-        try { SHIP.lander(g, { x, y, len: 34, angle: Math.PI / 2, legs: 'down', anchor: 1.1, sunDir: [1, -0.25], light: night ? 0.4 : 0.8 }); } catch (err) { console.warn('NSColonyArt: no Lander', err); }
+        const o = { x, y, len: 34, angle: Math.PI / 2, legs: 'down', anchor: 1.1, light: night ? 0.35 : 0.8 };
+        if (!night) o.sunDir = [1, -0.25];                                         // the low sun on its side; at night no sun, no warm rim
+        try { SHIP.lander(g, o); } catch (err) { console.warn('NSColonyArt: no Lander', err); }
     }
     function group(W, ids) {
         const set = new Set(ids || []), live = PLACES.filter(id => set.has(id)), gap = W * 0.062, left = W * 0.27 - (live.length - 1) * gap / 2;
