@@ -15,6 +15,9 @@
    (NewScreen.hint), once.
    Source: bundle.js's OPENING_TALK (window.OPENING_TALK, the one copy the card also builds from; unchanged words,
    docs/STYLE.md), the one-at-a-time talk of prototypes/slice/script.js (sayLines, startOpening, cutOpening).
+   Look pass B11: every line is said in one place, by our Lander (C17: the name's tone says who); the rules are said one
+   sentence at a time, the words as they are (C15): "Six sectors ahead.", then "Energy moves the ship." while the reactor's
+   readout lights, then "Rations feed the crew." while the galley's does (the tower's stock numbers, NSStock).
    Loaded only when the new-screen switch is on, after start/Pods.js. Needs NewScreen (its bus, voice and state).
 
    window.NSWake (frozen)
@@ -27,21 +30,36 @@
     if (!window.NEW_SCREEN || !NS || !NS.on) return;
 
     const NARRATION = '';                                                                   // a line with no speaker: the card's context
-    const rulesOf = T => (Array.isArray(T.rules) ? [T.rules[0], T.rules[2]].filter(Boolean).join(' ') : '');
-    /** The talk, from the card's own words (bundle.js OPENING_TALK): [who, text]; who '' is narration. */
+    const ROOM_OF = [[/^Energy\b/, 'energy'], [/^Rations\b/, 'rations']];                  // a rule's room: the tower's readout that lights while it is said
+    /** The rules (minus the stop count), one sentence a line (C15), the words as the card has them: [who, text, room]. */
+    function rulesOf(T) {
+        const said = Array.isArray(T.rules) ? [T.rules[0], T.rules[2]].filter(Boolean) : [];
+        return said.join(' ').split(/(?<=[.!?])\s+/).filter(Boolean).map(text => ['A.U.R.A.', text, (ROOM_OF.find(([re]) => re.test(text)) || [])[1] || null]);
+    }
+    /** The talk, from the card's own words (bundle.js OPENING_TALK): [who, text, room]; who '' is narration. */
     function linesOf() {
         const T = window.OPENING_TALK;
         if (!T || !Array.isArray(T.dialogue)) { console.error('NSWake: OPENING_TALK is missing'); return []; }
-        const rules = rulesOf(T);
-        return [[NARRATION, T.context]].concat(T.dialogue.map(l => [l.speaker, l.text]), rules ? [['A.U.R.A.', rules]] : []).filter(([, text]) => !!text);
+        return [[NARRATION, T.context]].concat(T.dialogue.map(l => [l.speaker, l.text]), rulesOf(T)).filter(([, text]) => !!text);
     }
     /** After the wake-up: what the hold did not say, with the rules before Vance's doubt (his question and her answer, the
         old beacon, lead straight into the first hint), else at the end. */
     function restOf(rest) {
-        const T = window.OPENING_TALK, rules = T ? rulesOf(T) : '', list = (Array.isArray(rest) ? rest : []).map(([who, text, key]) => ({ who, text, key }));
-        const at = list.findIndex(l => l.key === 'vance8');
-        if (rules) list.splice(at < 0 ? list.length : at, 0, { who: 'A.U.R.A.', text: rules });
-        return list.map(l => [l.who, l.text]).filter(([, text]) => !!text);
+        const T = window.OPENING_TALK, rules = T ? rulesOf(T) : [], list = Array.isArray(rest) ? rest : [];
+        const at = list.findIndex(l => l[2] === 'vance8'), lines = list.map(([who, text]) => [who, text]);
+        lines.splice(at < 0 ? lines.length : at, 0, ...rules);
+        return lines.filter(([, text]) => !!text);
+    }
+    /** While a rule is said, its room's readout in the tower lights (the stock number and its word, warm). */
+    function roomLit(room, on) {
+        const el = room ? document.querySelector(`#ns-ship-words .nss[data-stock="${room}"]`) : null;
+        if (el) el.classList.toggle('is-said', !!on);
+    }
+    function style() {
+        if (document.getElementById('ns-wake-talk-style')) return;
+        const st = document.createElement('style'); st.id = 'ns-wake-talk-style';
+        st.textContent = '#ns-root .nss.is-said b { color: var(--warm-br); transition-timing-function: steps(2, end); } #ns-root .nss.is-said span { color: var(--text); }';
+        document.head.appendChild(st);
     }
     /** The wake-up at the pods (start/Pods.js), or nothing (it is not there, or it failed): resolves either way. */
     function pods(app) {
@@ -96,13 +114,17 @@
     }
 
     const logged = (who, text) => (who ? `${who}: "${text}"` : text);                        // narration is logged as the card's context was
-    /** One line: said beside the speaker, then logged (Voice skips a logged line it is already saying). Resolves when it has gone. */
-    async function sayOne(app, who, text) {
+    /** One line: said by our Lander (C17), then logged (Voice skips a logged line it is already saying). Resolves when it has gone. */
+    async function sayOne(app, who, text, room) {
         const v = NS.mods.voice;
         if (!v || typeof v.say !== 'function') { app.state.addLog(logged(who, text)); return; }
         let spoken = null;
-        try { spoken = v.say(who ? { id: IDS[who] || 'aura', who, text } : { id: 'narr', narration: true, text }); } catch (err) { console.error('NSWake: the voice failed', err); }
+        try { spoken = v.say(who ? { id: IDS[who] || 'aura', who, text, anchor: 'ship' } : { id: 'narr', narration: true, text, anchor: 'ship' }); } catch (err) { console.error('NSWake: the voice failed', err); }
         app.state.addLog(logged(who, text));
+        if (room) { style(); roomLit(room, true); }
+        try { await heard(v, spoken, text); } finally { roomLit(room, false); }
+    }
+    async function heard(v, spoken, text) {
         if (spoken && typeof spoken.then === 'function') { await Promise.race([spoken, run ? run.cutP : Promise.resolve()]); return; }   // no poller: the cut settles it
         // the voice gives no promise: the line is done once it is no longer the one on screen (it ages only while shown and free)
         const start = performance.now();
@@ -116,11 +138,11 @@
     async function talk(r) {
         if (!(await until(towerIn))) return;
         for (; r.i < r.lines.length; r.i++) {
-            const [who, text] = r.lines[r.i];
+            const [who, text, room] = r.lines[r.i];
             if (who && !alive(r.app, who)) continue;
             if (!(await until(free))) return;
             if (moved(r)) { cut(); return; }
-            await sayOne(r.app, who, text);
+            await sayOne(r.app, who, text, room);
             if (r.cut) return;
             await after(GAP_MS);
         }

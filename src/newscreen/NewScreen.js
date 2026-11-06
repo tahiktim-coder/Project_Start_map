@@ -609,14 +609,61 @@
         },
     };
 
-    /** Sector 1, nothing visited yet: the Coach's first tip, said once in the travel view instead (the Coach is hidden there). */
+    /** Sector 1, nothing visited yet: the Coach's first tip, said once in the travel view instead (the Coach is hidden there).
+        Look pass B11 (C16): its two sentences one after the other, by our Lander; while they are said the calling world (it
+        wears the story's warm ring) carries a one-word glass chip, SIGNAL, on a dotted leader from its rim. A course set
+        stops it. */
     function firstHint() {
         const s = st(), v = mods.voice;
-        if (hintGiven || !shown || mode !== 'travel' || !s || s.currentSector !== 1 || !v || typeof v.sayLine !== 'function') return;
+        if (hintGiven || !shown || mode !== 'travel' || !s || s.currentSector !== 1 || !v || typeof v.say !== 'function') return;
         const p = window.NSRoute.plan(s), signal = (s.sectorNodes || []).find(n => n.isFirstSignal && !n.exodusInvestigated);
         if (p.at !== 0 || !signal) return;
         hintGiven = true;
-        try { v.sayLine(FIRST_HINT); } catch (err) { console.error('NewScreen: the first hint failed', err); }
+        const said = (/"(.+)"/.exec(FIRST_HINT) || [])[1] || '', beats = said.split(/(?<=[.!?])\s+/).filter(Boolean), chip = signalChip(signal.id);
+        beats.reduce((at, text) => at.then(() => (chip.live() ? v.say({ id: 'aura', who: 'A.U.R.A.', text, anchor: 'ship' }) : false)), Promise.resolve())
+            .catch(err => console.error('NewScreen: the first hint failed', err))
+            .then(() => chip.done());
+    }
+    const SIGNAL_WORD = 'Signal';                                                       // DRAFT (look pass): C16, the calling world's one-word chip (shown in capitals)
+    const SIGNAL_CSS = '#ns-root .ns-signal { position: absolute; left: 0; top: 0; display: flex; align-items: center; pointer-events: none; opacity: 0; transition: opacity 180ms steps(3, end); }'
+        + ' #ns-root .ns-signal.is-in { opacity: 1; } #ns-root .ns-signal.is-left { flex-direction: row-reverse; }'
+        + ' #ns-root .ns-signal i { width: var(--s4); border-top: 1px dotted var(--warm); }'
+        + ' #ns-root .ns-signal b { padding: var(--s1) var(--s2); font: 500 var(--fs-tag)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--warm); text-shadow: var(--shadow); background: var(--veil); }'
+        + ' @media (prefers-reduced-motion: reduce) { #ns-root .ns-signal { transition: none; } }';
+    /** The SIGNAL chip by world `id`, placed each frame beside its rim (left of it when the right has no room), hidden while a
+        note or a frame is up; it steps out on done(), a course set, the view hidden or a change of mode. → { live(), done() } */
+    function signalChip(id) {
+        const words = document.getElementById('ns-words');
+        if (!words) return { live: () => true, done() {} };
+        if (!document.getElementById('ns-signal-css')) { const css = document.createElement('style'); css.id = 'ns-signal-css'; css.textContent = SIGNAL_CSS; document.head.appendChild(css); }
+        const el = document.createElement('div');
+        el.className = 'ns-signal'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<i></i><b></b>'; el.lastChild.textContent = SIGNAL_WORD;
+        words.appendChild(el);
+        const request = fn => (window.FrameClock ? window.FrameClock.request(fn) : requestAnimationFrame(fn));
+        let on = true, fid = null, pos = '';
+        const offs = ['flow:go', 'hidden', 'mode', 'jump:burn'].map(name => bus.on(name, () => done()));
+        function place() {
+            fid = null;
+            if (!on) return;
+            const a = debug.placeAt(id), t = mods.travel, note = !!(t && typeof t.noteUp === 'function' && t.noteUp()), see = !!(a && a.shown) && !note && !blocked();
+            if (see) {
+                const w = el.offsetWidth, h = el.offsetHeight, out = a.r * 1.45 + 4, right = a.x + out + w <= innerWidth - 16;   // out: clear of the warm ring at its widest pulse
+                const x = right ? a.x + out : a.x - out - w, at = `translate(${Math.round(x)}px, ${Math.round(a.y - h / 2)}px)`;
+                el.classList.toggle('is-left', !right);
+                if (at !== pos) { el.style.transform = at; pos = at; }
+            }
+            el.classList.toggle('is-in', see);
+            fid = request(place);
+        }
+        function done() {
+            if (!on) return;
+            on = false; offs.forEach(off => off());
+            if (fid != null) (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(fid);
+            el.classList.remove('is-in');
+            setTimeout(() => el.remove(), 400);
+        }
+        place();
+        return { live: () => on, done };
     }
     /** The wake-up talk is still going (start/Wake.js): it calls hint() itself when it ends. */
     const talking = () => { const w = window.NSWake; try { return !!(w && typeof w.pending === 'function' && w.pending()); } catch (err) { return false; } };
