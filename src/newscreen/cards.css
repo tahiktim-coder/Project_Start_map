@@ -202,11 +202,11 @@ html.ns-on .modal-overlay .find-pen path { fill: none; stroke: #1d2656; stroke-w
 html.ns-on .modal-overlay .find-stamp {
     position: absolute; right: 7%; top: 4.6%; margin: 0; padding: 0.34em 0.62em 0.28em 0.82em;
     border: 3px solid currentColor; outline: 1.5px solid currentColor; outline-offset: 3px;
-    color: #ad3328; font: 600 clamp(14px, calc(var(--obj-w) * 0.036), 23px)/1 var(--f-ui); letter-spacing: 0.2em; text-align: center;
-    transform: rotate(-8deg); opacity: 0.8; mix-blend-mode: multiply;
+    color: #93261c; font: 600 clamp(14px, calc(var(--obj-w) * 0.036), 23px)/1 var(--f-ui); letter-spacing: 0.2em; text-align: center;   /* B12: with no title, the stamp says it: 4.5:1 or more */
+    transform: rotate(-8deg); opacity: 0.9; mix-blend-mode: multiply;
     -webkit-mask-size: 256px 256px; mask-size: 256px 256px;
 }
-html.ns-on .modal-overlay .find-stamp.is-long { max-width: 9.5em; font-size: clamp(12px, calc(var(--obj-w) * 0.028), 18px); line-height: 1.12; transform: rotate(-6deg); top: 3.4%; right: 6%; }
+html.ns-on .modal-overlay .find-stamp.is-long { max-width: 9.5em; font-size: clamp(14px, calc(var(--obj-w) * 0.028), 18px); line-height: 1.12; transform: rotate(-6deg); top: 3.4%; right: 6%; }
 
 /* a captain's log: a dead ship's screen in its housing, the lines typed out in steel on blue-black glass (look pass B12: space
    colours, not green), a block cursor, scanlines, a roll and a flicker; the glass is as tall as its words and two lines (Finds.js) */
@@ -269,12 +269,12 @@ html.ns-on .modal-overlay .find-note.is-pen > span { font: 500 clamp(16px, calc(
 /* pointing at a part: it and its note stand out, the others step back (look pass B12: in colour, at 4.5:1 or more on their
    ground, never in opacity; the paper keeps its colour and the part gets a pencil ring, FindArt.sketchFocus) */
 html.ns-on .modal-overlay .find-sketch[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]),
-html.ns-on .modal-overlay .find-sketch[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]) b { color: #5f5b52; }   /* pencil, 4.7:1 on the page */
-html.ns-on .modal-overlay .find-sketch[data-focus]:not([data-focus=""]) .find-note.is-pen.is-in:not([aria-pressed="true"]) { color: #4f5a8c; }   /* pen, 4.6:1 */
+html.ns-on .modal-overlay .find-sketch[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]) b { color: #514d45; }   /* pencil, 4.6:1 on the page where it is darkest */
+html.ns-on .modal-overlay .find-sketch[data-focus]:not([data-focus=""]) .find-note.is-pen.is-in:not([aria-pressed="true"]) { color: #3d477a; }   /* pen, 4.6:1 at the darkest */
 html.ns-on .modal-overlay .find-gold[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]) b { color: #a08a5e; }   /* 5.9:1 on the ink */
 html.ns-on .modal-overlay .find-gold[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]) > span { color: var(--dim); }
 html.ns-on .modal-overlay .find-sketch .find-note[aria-pressed="true"] { color: #16140f; }
-html.ns-on .modal-overlay .find-sketch .find-note[aria-pressed="true"] b { color: #943a28; }   /* the red head, 5:1 on the page */
+html.ns-on .modal-overlay .find-sketch .find-note[aria-pressed="true"] b { color: #85301f; }   /* the red head, about 5:1 on the page (4.6:1 at the darkest) */
 html.ns-on .modal-overlay .find-object[data-focus="disc"] .find-leaders g:not([data-key="disc"]),
 html.ns-on .modal-overlay .find-object[data-focus="map"] .find-leaders g:not([data-key="map"]),
 html.ns-on .modal-overlay .find-object[data-focus="figures"] .find-leaders g:not([data-key="figures"]),
