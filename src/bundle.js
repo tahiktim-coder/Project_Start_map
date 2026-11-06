@@ -5184,6 +5184,7 @@ Then you're through.`,
         if (!routine) this.noteReliance(!!landing.auto);                              // a routine drop is A.U.R.A.'s set-down, not a choice to fly or hand over
         if (isNewScreen()) {
             const s = this.state;
+            if (this._nsTrip) this._nsTrip.site = landing.site || null;               // the trip card's picture (cards/TripCard.js): the place as they stood on it
             s._nsLandAuto = !!landing.auto;                                           // NSOrbit.propose: Jaxon's step counts while A.U.R.A. lands
             if (landing.routine !== undefined && !landing.skipped) s._nsDrops = (s._nsDrops || 0) + 1;   // the meteor's tiers (App.flyLanding): its own landings only (LanderGame's, or a skip, never spend its first-landing care)
             if (!routine && planet && planet.type && window.LanderGame.GRADES[raw]) s._nsTypesLanded = Object.assign({}, s._nsTypesLanded, { [planet.type]: { grade: raw, auto: !!landing.auto } });   // a full drop (LanderGame's too): what a routine drop on this kind carries (App.isFullDrop)
@@ -5377,26 +5378,16 @@ Then you're through.`,
         way, what happened in a crew or A.U.R.A. voice, what came home as chips, CONTINUE: about 25 words. A breakdown on the
         trip shows too (App.tripResultWords). way: tripChoices'. */
     showTripResult(event, planet, way, riskBase) {
-        const t = this._nsTrip || {}, choice = way.choice, team = (this.currentEvaTeam || []).slice();
-        const title = String(event.title || '');
-        const label = t.label || title.charAt(0) + title.slice(1).toLowerCase();
-        const first = (String(event.desc || '').match(/^[^.!?]+[.!?]+/) || [String(event.desc || '')])[0].trim();
-        const prize = this.tripPrize(choice, planet), before = this.stockNow(), down = this.decksDown();
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
-        modal.innerHTML = `
-            <section class="modal-content deck-panel eva-panel eva-result" role="dialog" aria-label="${label}">
-                <header class="deck-panel-head"><h3>${label}</h3></header>
-                <p class="eva-found">“${first}”</p>
-            </section>`;
-        document.body.appendChild(modal);
-        if (window.ChoiceGuard && window.ChoiceGuard.keepOffClick) window.ChoiceGuard.keepOffClick(modal.querySelector('.eva-panel'), []);
-        const run = () => { this.state._nsBroke = null; this.resolveEvaOutcome(choice, riskBase, way.odds); };   // a breakdown it sets off: GameState._nsBroke
-        const EC = window.EncounterCard;
-        if (!EC || typeof EC.outcomeIn !== 'function') { run(); modal.remove(); return; }
-        EC.outcomeIn(this, modal.querySelector('.eva-panel'), choice.short || choice.text, run, () => modal.remove(),
-            { result: () => this.tripResultWords(team, before, prize, down) });
+        const choice = way.choice;
+        let was = null;
+        const run = () => {                                                          // what they had as they went, then the way (a breakdown it sets off: GameState._nsBroke)
+            was = { team: (this.currentEvaTeam || []).slice(), before: this.stockNow(), prize: this.tripPrize(choice, planet), down: this.decksDown() };
+            this.state._nsBroke = null;
+            this.resolveEvaOutcome(choice, riskBase, way.odds);
+        };
+        const C = window.NSTripCard;                                                  // look pass B08: the frame's report (cards/TripCard.js)
+        if (!C || !C.ready()) { run(); return; }
+        C.report(this, { event, planet, run, result: () => (was ? this.tripResultWords(was.team, was.before, was.prize, was.down) : null) });
     }
 
     /** The ship's stores now, to see what a trip brought home: { salvage, energy, rations, data }. */
@@ -5416,21 +5407,24 @@ Then you're through.`,
         costs everyone and a deck that went down. A breakdown the trip set off (GameState._nsBroke: one at most) says its first
         sentence on a line of its own (also), and the event's sentence makes room for it (lean), so the card stays short and
         nothing that happened is left off. before: App.stockNow as they went; prize: the way's (App.tripPrize); down:
-        App.decksDown as they went. { say: { speaker, text }, also: [line], lean, chips: [{ text, loss }] } */
+        App.decksDown as they went. { say: { speaker, text }, also: [line], lean, chips: [{ text, tone, word }] } (the frame's chips) */
     tripResultWords(team, before, prize, down) {
         const s = this.state, now = this.stockNow(), hit = this._nsLastHit, broke = s._nsBroke, KINDS = ['salvage', 'energy', 'rations', 'data'];
-        const chips = KINDS.filter(kind => now[kind] !== before[kind]).map(kind => { const n = now[kind] - before[kind]; return { text: `${n > 0 ? '+' : ''}${n} ${kind}`, loss: n < 0 }; });   // DRAFT: the chips
-        if (!hit || !hit.died) KINDS.filter(kind => prize && prize[kind] > 0 && now[kind] === before[kind]).forEach(kind => chips.push({ text: `${kind} full`, loss: true }));   // DRAFT: nothing of it fitted
-        if (hit) chips.push({ text: 'everyone +1 stress', loss: true });                    // DRAFT: a casualty shakes the whole crew
+        const nums = KINDS.filter(kind => now[kind] !== before[kind]).map(kind => { const n = now[kind] - before[kind]; return { text: `${n > 0 ? '+' : ''}${n} ${kind}`, tone: n < 0 ? 'loss' : 'gain' }; });   // DRAFT: the chips
+        if (!hit || !hit.died) KINDS.filter(kind => prize && prize[kind] > 0 && now[kind] === before[kind]).forEach(kind => nums.push({ text: `${kind.charAt(0).toUpperCase()}${kind.slice(1)} full`, tone: 'dim' }));   // DRAFT: nothing of it fitted (the frame's capped chip)
+        const chips = [];                                                                   // the frame's chips (look pass B08): the words first, then the numbers
+        if (hit && !hit.died && hit.crew) chips.push({ text: `${hit.crew.name} hurt`, tone: 'loss', word: true });   // DRAFT (look pass): who was hit
+        if (hit) chips.push({ text: 'Crew tense', tone: 'loss', word: true });                 // DRAFT (look pass): C04, a casualty shakes the whole crew (was a stress number)
         const decks = s.shipDecks || {};
         Object.keys(decks).filter(k => decks[k].status !== 'OPERATIONAL' && !(down || []).includes(k))
-            .forEach(k => chips.push({ text: `${String(decks[k].label || k).toLowerCase()} damaged`, loss: true }));   // DRAFT: a deck the breakdown broke
+            .forEach(k => chips.push({ text: `${String(decks[k].label || k)} damaged`, tone: 'loss', word: true }));   // DRAFT: a deck the breakdown broke
+        chips.push(...nums);
         const said = broke && broke.said && broke.said.length ? String(broke.said[0]) : '';
         const also = said ? [(said.match(/^[^.!?]+[.!?]+/) || [said])[0].trim()] : [];   // the breakdown's own line, its first sentence
         s._nsBroke = null;
         const voiced = hit && /^(A\.U\.R\.A\.|[A-Z][a-z]+): "(.*)"$/.exec(hit.line);
         if (hit) return { say: voiced ? { speaker: voiced[1], text: voiced[2] } : { speaker: 'A.U.R.A.', text: hit.line }, also, lean: also.length > 0, chips };
-        const who = team.find(m => m.status !== 'DEAD'), got = chips.some(c => !c.loss);
+        const who = team.find(m => m.status !== 'DEAD'), got = chips.some(c => c.tone === 'gain');
         return { say: { speaker: who ? who.name : 'A.U.R.A.', text: got ? TRIP_BACK_LINES.got : TRIP_BACK_LINES.back }, also, lean: also.length > 0, chips };
     }
 
@@ -5481,6 +5475,26 @@ Then you're through.`,
             const isEnergy = r.type === 'RESOURCE' && r.val !== 'NOTHING' && !String(r.val || '').includes('METALS');   // resolveEvaOutcome's own rule
             return isEnergy ? energyWords : REWARD_WORDS[r.val] || 'nothing';
         };
+        const VANCE_SAYS = 'I am not risking anyone on something that dangerous.', MIRA_SAYS = 'The safe option gets us nothing. I am going in.';
+        const STRUCK_SAYS = { PARANOID: 'Vance refuses', RECKLESS: 'Mira overrides this' };   // a way a stress trait strikes, under its key
+        const C = window.NSTripCard;
+        if (isNewScreen() && C && C.ready()) {                                         // look pass B08: the frame (cards/TripCard.js), in place of the deck panel
+            const prize = choice => (choice.reward && choice.reward.type === 'RESOURCE' && choice.reward.val === 'NOTHING' ? []
+                : this.prizeParts(this.tripPrize(choice, planet)).map(p => (p.kind === 'cure' ? { text: p.text, tone: 'gain', word: true }
+                    : p.kind !== 'energy' ? { text: p.text, tone: 'gain' } : energyRoom <= 0 ? { text: 'Energy full', tone: 'dim' } : { text: `+${Math.min(p.n, energyRoom)} energy`, tone: 'gain' })));   // DRAFT (look pass): "Energy full", the frame's capped chip
+            let was = null;
+            C.decide(this, {
+                event, planet, ways, way: plan.way, mods: signalModifiers, plain: PLAIN_SIGNAL, vanceSays, miraSays, lines: { vance: VANCE_SAYS, mira: MIRA_SAYS, struck: STRUCK_SAYS }, prize,
+                run: idx => {
+                    const choice = event.choices[idx];
+                    was = { team: (this.currentEvaTeam || []).slice(), before: this.stockNow(), prize: this.tripPrize(choice, planet), down: this.decksDown() };
+                    this.state._nsBroke = null;
+                    this.resolveEvaOutcome(choice, riskBase, ways[idx].odds);
+                },
+                result: () => (was ? this.tripResultWords(was.team, was.before, was.prize, was.down) : null),
+            });
+            return;
+        }
         const evaChoice = (choice, idx) => {
             const way = ways[idx], odds = way.odds;                              // odds: the new look's (TripOdds), else null
             const totalRisk = odds ? odds.hurt : Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
@@ -5489,7 +5503,7 @@ Then you're through.`,
             const recklessBlocked = way.struck === 'RECKLESS';                   // RECKLESS: Mira overrides the safe option
             const isDisabled = paranoidBlocked || recklessBlocked;
             const odd = `${totalRisk}% chance someone gets hurt${odds && odds.deadly ? `, a 1 in ${odds.oneIn} chance someone dies` : ''}`;   // DRAFT: the death chance (the new look)
-            const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : odd);
+            const note = paranoidBlocked ? STRUCK_SAYS.PARANOID : (recklessBlocked ? STRUCK_SAYS.RECKLESS : odd);
             const isGlass = idx === plan.way && !isDisabled;                     // the new look: the way chosen on the glass, lit (the player may still switch)
             return `<button class="deck-action choice-btn eva-choice${isGlass ? ' is-glass' : ''}" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
                         <span>${choice.text}<em class="eva-gets">${rewardWords(choice)}</em></span>
@@ -5506,8 +5520,8 @@ Then you're through.`,
                 <ul class="deck-panel-crew eva-team">${(this.currentEvaTeam || []).map(m => `<li><img class="deck-panel-face" src="assets/crew/${m.portraitId}.png" alt=""><span class="deck-panel-name">${m.name}</span><span class="deck-panel-mood">ON THE GROUND</span></li>`).join('')}</ul>
                 <p class="eva-found">“${event.desc}”</p>
                 ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>GOING IN</dt><dd>${signalModDisplay}</dd></dl>` : ''}
-                ${vanceSays ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
-                ${miraSays ? '<p class="eva-voice" style="color:#d070ff">Mira: “The safe option gets us nothing. I am going in.”</p>' : ''}
+                ${vanceSays ? `<p class="eva-voice" style="color:#ff5050">Vance: “${VANCE_SAYS}”</p>` : ''}
+                ${miraSays ? `<p class="eva-voice" style="color:#d070ff">Mira: “${MIRA_SAYS}”</p>` : ''}
                 <h4>WHAT DO THEY DO?</h4>
                 <div class="deck-panel-actions">${event.choices.map(evaChoice).join('')}</div>
             </section>
@@ -5523,11 +5537,6 @@ Then you're through.`,
                 if (isPicked) return;
                 isPicked = true;
                 const choice = event.choices[btn.dataset.idx];
-                const EC = window.EncounterCard;
-                if (isNewScreen() && EC && typeof EC.outcomeIn === 'function') {             // the new look: what happened shows in the card, then CONTINUE
-                    EC.outcomeIn(this, modal.querySelector('.eva-panel'), choice.text, () => this.resolveEvaOutcome(choice, riskBase, ways[btn.dataset.idx].odds), () => modal.remove());
-                    return;
-                }
                 this.resolveEvaOutcome(choice, riskBase, ways[btn.dataset.idx].odds);
                 modal.remove();
             });

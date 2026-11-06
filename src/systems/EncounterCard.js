@@ -354,47 +354,6 @@
         return out.length > OUT_MAX ? out.slice(0, OUT_MAX - 1).concat(out[out.length - 1]) : out;
     }
 
-    const ALARM = /^(?:⚠\s*)?(?:WARNING|INCIDENT|CRITICAL|CATASTROPHE|FATAL|KIA|PREDATOR ALERT|ALERT):\s*/i;   // the team card's result lines: the alarm word goes, the news stays
-    /**
-     * The new look, for a panel that is not an EncounterCard (the team-on-the-ground card, bundle.js showEventModal): runs the
-     * choice (run), then shows what it did in place of the panel's choices, in showOutcome's look, then CONTINUE (done: close
-     * the panel). Nothing else opens meanwhile. With nothing to show, or the panel gone, it closes at once.
-     * opts.result (the new look's short result card, bundle.js showTripResult): called once the choice has run, it gives what
-     * the card says instead of the logged lines: { say: { speaker, text }, also: [logged line], lean, chips: [{ text, loss }] },
-     * one line, any line of the log it keeps (a breakdown's: cleaned as the logged lines are) and the chips; lean: the panel's
-     * found line (.eva-found) gives way too, to keep the card short.
-     */
-    function outcomeIn(app, panel, picked, run, done, opts) {
-        gate.held += 1;
-        let said = [], short = null;
-        try { said = captureLog(run); } catch (err) { console.error('EncounterCard: the choice failed', err); }
-        if (opts && typeof opts.result === 'function') { try { short = opts.result(); } catch (err) { console.error('EncounterCard: the short result failed', err); } }
-        const clean = list => outcomeLines(list.map(m => String(m || '').replace(ALARM, '').replace(/^\w/, c => c.toUpperCase())));
-        const lines = short && short.say ? [short.say].concat(clean(short.also || [])) : clean(said);
-        const chips = short && short.say ? short.chips || [] : [];
-        const keep = short && short.say && short.lean ? 'header, .eva-team' : 'header, .eva-team, .eva-found';
-        let isDone = false;
-        const finish = () => { if (isDone) return; isDone = true; try { done(); } catch (err) { console.error('EncounterCard: closing the panel failed', err); } releaseGate(); };
-        if (!lines.length || !panel || !panel.isConnected) { finish(); return; }
-        const pick = String(picked || '').replace(/<[^>]*>/g, '').replace(MARKUP, '');
-        [...panel.children].forEach(el => { if (!el.matches(keep)) el.style.display = 'none'; });   // the choices give way to what happened
-        const box = document.createElement('div');
-        box.className = 'enc-decide eva-outcome';
-        box.innerHTML = `
-            <div class="enc-outcome" aria-live="polite">
-                <p class="enc-outcome-pick">${esc(pick)}</p>
-                ${lines.map(l => (l.speaker ? `<div class="enc-line enc-outcome-say is-in">${lineHtml(app, { speaker: l.speaker, text: markRewards(esc(l.text)) })}</div>` : `<p class="enc-outcome-line">${markRewards(esc(l.text))}</p>`)).join('')}
-                ${chips.length ? `<p class="enc-outcome-line enc-outcome-chips"><span class="enc-chips">${chips.map(c => `<i class="${c.loss ? 'is-loss' : 'is-gain'}">${esc(c.text)}</i>`).join('')}</span></p>` : ''}
-            </div>
-            <footer class="enc-flow enc-outcome-flow"><button class="enc-next enc-outcome-go" type="button">CONTINUE ›</button></footer>`;
-        panel.appendChild(box);
-        const go = box.querySelector('.enc-outcome-go'), guard = window.ChoiceGuard;
-        if (guard && typeof guard.keepOffClick === 'function') guard.keepOffClick(panel, [go]);   // the click that chose never lands on CONTINUE
-        go.addEventListener('click', finish);
-        box.tabIndex = -1;
-        box.focus({ preventScroll: true });
-    }
-
     // ── the new look: every card is a frame (src/newscreen/cards/Frame.js, DESIGN.md 1.1). This half turns a card's cfg into the
     //    frame's model (who says what; each key with its chips and consequence) and runs a pick; the frame draws and plays it ──
     const FEEL = /^(?:(All crew|Jaxon|Aris|Vance|Mira) )?([+\-−])\d+(?:-\d+)?\s+Stress$/;
@@ -511,7 +470,7 @@
         const locked = !!c.disabled || (typeof c.requires === 'function' && !c.requires(app.state));
         if (locked) return { label, chips: [], conseqHtml: esc(c.requiresLabel || ''), conseqTone: 'lock', locked: true, final: false, primary: false };
         const p = keyParts(desc);
-        return { label, chips: Array.isArray(c.chips) ? c.chips : p.chips, conseqHtml: p.html, conseqTone: c.tone || (LOSS_WORDS.test(p.text) ? 'loss' : ''), final: !!isFinal, primary };
+        return { label, chips: Array.isArray(c.chips) ? c.chips : p.chips, conseqHtml: p.html, conseqTone: c.tone || (LOSS_WORDS.test(p.text) ? 'loss' : ''), final: !!isFinal, primary, lit: !!c.lit };
     }
     /**
      * What a pick did, for the frame's slots (DESIGN 1.1 "outcome"): what was said and what happened as lines, every number as
@@ -572,11 +531,16 @@
         const isRepeat = !!cfg.seenKey && seen.includes(cfg.seenKey);
         if (cfg.seenKey && !isRepeat) seen.push(cfg.seenKey);
         const aria = [cfg.kicker, cfg.title].map(cleanText).filter(Boolean).join(' · ');
-        let picked = false;
+        let picked = false, straight = null;
+        if (typeof cfg.report === 'function') {                                   // B08: a report opens on what happened; nothing else opens until it is read
+            picked = true; gate.held += 1;
+            const said = captureLog(() => { try { straight = cfg.report(); } catch (err) { console.error('EncounterCard: the report failed', err); } });
+            straight = straight || outcomeOf(app, said) || { pages: [[]], chips: [] };
+        }
         return window.NSFrame.open(app, {
             aria, zIndex: cfg.zIndex || 2000, shape: cfg.shape || (choices.length === 1 ? 'report' : 'decide'), alarm: !!cfg.alarm || cfg.tone === 'distress',
-            picture: pictureOf(cfg), readout: cleanText(cfg.readout), deck: cfg.deck || null, lines: talk, keys, isRepeat,
-            repeatIndex: own >= 0 ? narr.length + own : null,
+            picture: pictureOf(cfg), readout: cleanText(cfg.readout), deck: cfg.deck || null, lines: straight ? [] : talk, keys: straight ? [] : keys, isRepeat,
+            repeatIndex: own >= 0 ? narr.length + own : null, notes: cfg.notes || null, outcome: straight,
         }, {
             pick(idx) {
                 picked = true;
@@ -588,7 +552,9 @@
                 quiet = false;
                 if (isQuiet) return null;
                 const drop = [].concat(cfg.outcomeDrop || []);
-                let res = outcomeOf(app, said.filter(m => !drop.some(re => re.test(cleanText(m)))));
+                let res = null;
+                try { res = typeof cfg.outcomeNow === 'function' ? cfg.outcomeNow(idx, said) : null; } catch (err) { console.error('EncounterCard: outcomeNow failed', err); }   // B08: in the card's own words
+                if (!res) res = outcomeOf(app, said.filter(m => !drop.some(re => re.test(cleanText(m)))));
                 if (res && typeof cfg.readoutNow === 'function') { try { res.readout = cleanText(cfg.readoutNow(state)); } catch (err) { console.error('EncounterCard: readoutNow failed', err); } }
                 if (res && res.pages) res.pages = res.pages.map(p => p.map(unface));
                 const print = choices[idx] && choices[idx].printout;                      // a document shown as itself (look pass B03: the crew list)
@@ -606,7 +572,8 @@
      *        over the picture), picture { kind: 'scene' | 'view' | 'world' | 'deck', ... }, seenKey ('kind:id'), deck, alarm,
      *        noContext (the scene is not said), repeatLine (the dialogue line a repeat shows; default the last), readoutNow(state)
      *        (the readout once a pick has run), outcomeDrop [RegExp] (logged lines the outcome leaves to the log), and per
-     *        choice: tone 'loss' | 'end', chips [{ text, tone, word }], primary, printout { lines } (B03: a document typed on the picture).
+     *        choice: tone 'loss' | 'end', chips [{ text, tone, word }], primary, printout { lines } (B03: a document typed on the picture),
+     *        lit (B08). B08: notes [chip], outcomeNow(idx, said) and report() → { pages, chips } | null (cards/TripCard.js).
      */
     function open(app, cfg) {
         if (newLook() && mustWait()) {                                                   // the last choice's outcome is still up
@@ -794,6 +761,6 @@
         return modal;
     }
 
-    window.EncounterCard = { open, outcomeIn, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, noOutcome, capturing: () => capturing > 0, captureLog,
-        keyParts, outcomeOf, narrationOf };   // the last three: the new look's frame model (node checks read them)
+    window.EncounterCard = { open, SPEAKER_COLORS, descOf, chipsOf, detailOf, capGains, apply, whenFree, noOutcome, capturing: () => capturing > 0, captureLog,
+        keyParts, outcomeOf, narrationOf, frameLine, OUT_MAX };   // the new look's frame model (node checks and cards/TripCard.js read them)
 })();

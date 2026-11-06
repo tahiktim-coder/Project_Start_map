@@ -26,7 +26,10 @@
      open(app, model, hooks) → overlay
        model { aria, zIndex, shape, alarm, picture, readout, deck, isRepeat, repeatIndex (the line a repeat shows; default the last),
                lines: [{ speaker, text, tone, face, narr }],
-               keys: [{ label, chips: [{ text, tone, word }], conseqHtml, conseqTone, locked, final, primary }] }
+               keys: [{ label, chips: [{ text, tone, word }], conseqHtml, conseqTone, locked, final, primary, lit }],
+               notes: [chip] (a row of word chips under the line while it is read and decided: a trip's GOING IN, look pass B08),
+               outcome: { pages, chips, readout? } (a report that opens on what happened, with Continue: a trip seen before, B08) }
+               lit: the key already chosen elsewhere (the way picked on the glass): a warm tick at its left, never the focus
        hooks { pick(i) → { pages: [[line]], chips, readout?, printout? } | null, done() }   pick runs the choice (readout: the
                     picture's readout after it, '' for none; printout { lines }: a document shown as itself over the picture,
                     typed (Finds.js 'list'), the outcome's line after it, look pass B03); done once it is gone
@@ -69,7 +72,7 @@
         const cls = ['mini-btn', 'enc-choice', k.primary ? 'is-primary' : '', k.final ? 'is-hold' : ''].filter(Boolean).join(' ');
         const lock = k.locked ? '<svg class="ef-lock" viewBox="0 0 7 9" width="10" height="13" aria-hidden="true"><path d="M1 4V2.5a2.5 2.5 0 0 1 5 0V4" fill="none" stroke="currentColor"/><rect x="0" y="4" width="7" height="5" fill="currentColor"/></svg>' : '';
         const conseq = k.conseqHtml ? `<p class="ef-conseq${k.conseqTone ? ` is-${esc(k.conseqTone)}` : ''}" id="ef-c-${i}">${lock}<span>${k.conseqHtml}</span></p>` : '';
-        return `<div class="ef-key${k.locked ? ' is-locked' : ''}" data-idx="${i}" style="--k:${i}">`
+        return `<div class="ef-key${k.locked ? ' is-locked' : ''}${k.lit && !k.locked ? ' is-lit' : ''}" data-idx="${i}" style="--k:${i}">`
             + `<button type="button" class="${cls}" data-idx="${i}"${k.locked ? ' disabled' : ''}${conseq ? ` aria-describedby="ef-c-${i}"` : ''}>${esc(k.label)}</button>`
             + `${chipsHtml(k.chips)}${conseq}</div>`;
     }
@@ -79,6 +82,7 @@
             <div class="ef-words">
                 <p class="ef-prev"></p>
                 <div class="${sayClass(null)}" aria-live="polite">${sayHtml(null)}</div>
+                ${m.notes && m.notes.length ? `<div class="ef-notes">${chipsHtml(m.notes)}</div>` : ''}
                 <div class="ef-out" aria-live="polite" hidden></div>
             </div>
             <div class="ef-keys">
@@ -175,7 +179,8 @@
             const wordsH = [];
             outEl.hidden = true; sayEl.hidden = false;
             talk.forEach((l, i) => { setPrev(i > 0 ? talk[i - 1] : null); setSay(sayEl, l); wordsH.push(wordsEl.offsetHeight); });
-            const longest = talk.reduce((a, l) => (l && l.text.length > (a ? a.text.length : 0) ? l : a), null);
+            const told = m.outcome && m.outcome.pages ? [].concat(...m.outcome.pages) : [];   // a report: its own lines set the room
+            const longest = talk.concat(told).reduce((a, l) => (l && l.text && l.text.length > (a ? a.text.length : 0) ? l : a), null);
             setPrev(null); setSay(sayEl, longest); wordsH.push(wordsEl.offsetHeight);
             sayEl.hidden = true; outEl.hidden = false;                                                     // the outcome: a line and its chip row (a longer one grows down)
             outEl.innerHTML = `<div class="${sayClass({ tone: 'aura' })}">${sayHtml({ speaker: 'A', text: (longest && longest.text) || 'A' })}</div>${chipsHtml([{ text: '+0 Energy', tone: 'gain' }])}`;
@@ -205,7 +210,8 @@
             if (m.isRepeat) sec.classList.add('is-repeat');
             if (rm) coverAt(cover, 1, 1);
             else for (let s = 1; s <= steps; s++) later(VEIL_STEPS * STEP_UI + (s - 1) * STEP_ART, () => coverAt(cover, s, steps));
-            if (talk.length <= 1) openChoices(true);
+            if (m.outcome) showOutcome(m.outcome);                               // a report: what happened, then Continue
+            else if (talk.length <= 1) openChoices(true);
             else { settleFocus(nextEl); if (talk[F.index] && !talk[F.index].narr) emit('card:speaker', { name: talk[F.index].speaker, tone: talk[F.index].tone }); }
         }
 
@@ -307,6 +313,8 @@
             choicesEl.hidden = true; talkEl.hidden = true; goEl.hidden = false;
             prevEl.classList.add('is-gone');
             sayEl.hidden = true; outEl.hidden = false;
+            const notesEl = $('.ef-notes');
+            if (notesEl) notesEl.hidden = true;                                  // what it was going in to is past
             const ro = $('.ef-readout');
             if (ro && typeof res.readout === 'string') { ro.textContent = res.readout; ro.hidden = !res.readout; }   // a readout the pick made untrue
             showPage(0);

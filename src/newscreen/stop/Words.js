@@ -287,8 +287,8 @@
         // ── the words budget: at most 40 on screen (the voice line counted, unless a note has stepped it back). The world's
         //    name, the labels, the key, the stock and GO DOWN's odds (its hurt chance, "hurt", a death chance: a trip that could
         //    kill always says so before anyone goes) always; then, while they fit: the chosen find's ways, each row's name and
-        //    risk word only (while A.U.R.A. says how to choose a way, TELL.way, and those do not fit beside her line: each way's
-        //    name alone, GO DOWN's odds as she says; she says it only where those fit: wayRoom, explain()); the names at the
+        //    risk word only (when those do not fit, each way's name alone, GO DOWN's odds beside: look pass B08; A.U.R.A. says how
+        //    to choose a way, TELL.way, only where the names fit beside her line: wayRoom, explain()); the names at the
         //    hatch (both or neither) and the team's chips (who goes on the trip whose odds show);
         //    another find's "a clue" (a third find shows only for it: WorldFinds.js); the chosen find's rows whole (its prizes);
         //    the kind line, whether people could live there, the other finds' chips, each action's chips. Decided afresh only
@@ -323,9 +323,8 @@
             if (keep) { budget -= rowWords(keep === 'rows' ? aimed.rows : keep === 'names' ? aimed.names : aimed.lean); dec.find[aimed.id] = keep; }
             const leanWords = aimed && aimed.rows ? rowWords(aimed.lean) : 0, nameWords = aimed && aimed.names ? rowWords(aimed.names) : 0;
             const wayLine = String(((window.NSOrbit && window.NSOrbit.TELL) || {}).way || '').trim();
-            const teaching = !!voice && !!wayLine && voice.line === wayLine;                // A.U.R.A. is saying how to choose a way (TELL.way)
             dec.wayRoom = !!(aimed && aimed.rows) && budget + voiceWords - wordsIn('A.U.R.A.') - wordsIn(wayLine) >= nameWords;   // were she to say it now, the names would fit
-            if (keep) { /* kept as it was */ } else if (aimed && aimed.rows) dec.find[aimed.id] = take(leanWords) ? 'lean' : teaching && take(nameWords) ? 'names' : false;   // its ways, lean: the gamble first; while she teaches them, at least their names
+            if (keep) { /* kept as it was */ } else if (aimed && aimed.rows) dec.find[aimed.id] = take(leanWords) ? 'lean' : take(nameWords) ? 'names' : false;   // its ways, lean: the gamble first; else at least their names, so a way can be chosen (look pass B08)
             else if (aimed) dec.find[aimed.id] = take(chipWords(aimed.chips));
             dec.who = !!o.team && take(o.whoIds.reduce((n, id) => n + 1 + wordsIn(S.pick.why[id] || ''), 0));
             dec.go = !!o.team && take(chipWords(o.goChips.filter(c => !c.odds)));   // "one more" (the odds are counted above)

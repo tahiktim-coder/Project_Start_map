@@ -201,7 +201,21 @@
         if (S.phase === 'fall' && S.passMs) { passLog.push(S.passMs); if (passLog.length > 4000) passLog.shift(); }
         if (probeOn && (S.phase === 'fall' || S.phase === 'release' || S.phase === 'land')) { try { probeFrame(); } catch (err) { console.error('Meteor probe:', err); } }
         if (capA.length && S.phase === 'fall' && S.e && S.e.a <= capA[0]) { const want = capA.shift(); capOut.push({ a: want, at: +S.e.a.toFixed(1), url: art.toDataURL(), probe: probeOn && probeC ? probeC.canvas.toDataURL() : null }); }   // (test only: the picture at these heights, and the probe's)
+        if (S.phase === 'result' && S.result && S.result.site === undefined) S.result.site = siteShot();   // look pass B08: the trip card's picture
         if (S.phase !== S.seenPhase) { S.seenPhase = S.phase; S.phaseChangedAt = S.clock; if (S.phase === 'release') S.phaseAt = {}; if (S.phaseAt && S.phaseAt[S.phase] == null) S.phaseAt[S.phase] = +(S.clock - (S.releaseAt || 0)).toFixed(2); }
+    }
+    /** The landing site as the team stood on it (look pass B08: the trip card's picture, cards/FramePictures.js 'site'): the
+        art as it was drawn, 480 x 160 from the foot of the frame, round the shuttle. null when it cannot be read. */
+    const SITE_W = 480, SITE_H = 160;
+    function siteShot() {
+        try {
+            const c = document.createElement('canvas'), x = Math.round(clamp01(((S.shAX != null ? S.shAX : FW / 2) - SITE_W / 2) / (FW - SITE_W)) * (FW - SITE_W));
+            c.width = SITE_W; c.height = SITE_H;
+            const cx = c.getContext('2d');
+            cx.imageSmoothingEnabled = false;
+            cx.drawImage(art, x, FH - SITE_H, SITE_W, SITE_H, 0, 0, SITE_W, SITE_H);
+            return c;
+        } catch (err) { console.error('Meteor: the landing site could not be kept', err); return null; }
     }
     // ── round 3, probe mode only (off by default): the land's share of the picture, frame by frame ──
     let probeOn = false, probeC = null, lastPx = null;
@@ -268,7 +282,7 @@
         + '<p class="who" id="land-who"><span class="ring" id="land-who-ring" hidden></span><span id="land-who-name"></span></p><p class="say" id="land-line"></p></div></div></div>'
         + '<div id="land-keys" class="land-keys" hidden><span class="key-pair"><kbd>Space</kbd><span class="key-word" id="land-key-hold"></span></span>'
         + '<span class="key-pair"><kbd>&larr;</kbd><kbd>&rarr;</kbd><span class="key-word" id="land-key-steer"></span></span></div>'
-        + '<button type="button" id="land-aura" class="land-aura" tabindex="-1" hidden><kbd>H</kbd><span id="land-aura-word"></span></button>'
+        + '<button type="button" id="land-aura" class="land-aura mini-btn" tabindex="-1" hidden><span id="land-aura-word"></span></button>'
         + '</div></div>';
     // the frame's rules (MiniHost frameClass 'is-land'): the overlay is the stage, edge to edge, ink, no blur and no MiniHost
     // frame; the sketch's tokens and its #say, #keys and kbd rules, and the parts of reading.css the voice uses, all scoped
@@ -277,14 +291,12 @@
         if (document.getElementById('land-fall-style')) return;
         const st = document.createElement('style'); st.id = 'land-fall-style';
         st.textContent = [
-            '.mini-host.is-land { padding: 0; overflow: hidden; background: #05070a; -webkit-backdrop-filter: none; backdrop-filter: none; }',
+            '.mini-host.is-land { padding: 0; overflow: hidden; background: var(--ink); -webkit-backdrop-filter: none; backdrop-filter: none; }',
             '.mini-host.is-land .mini-frame { display: none; }',
-            '.land-stage { position: absolute; inset: 0; overflow: hidden; outline: none; touch-action: none; background: #05070a; user-select: none; -webkit-user-select: none; color-scheme: dark;',
-            '  --t: 1; --px: 3px; --k: 3; --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --danger: #e0453a;',
-            "  --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; --f-text: 'IBM Plex Sans', system-ui, sans-serif; --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;",
-            '  --fs-voice: calc(18px + 4px * var(--t)); --fs-who: calc(13px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));',
-            '  --shadow: 0 1px 0 #05070a; --ease: cubic-bezier(0.2, 0.7, 0.2, 1);',
-            '  color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }',
+            // look pass B08: every colour, face and size is the token sheet's (tokens.css, on html.ns-on): no copies here
+            '.land-stage { position: absolute; inset: 0; overflow: hidden; outline: none; touch-action: none; background: var(--ink); user-select: none; -webkit-user-select: none; color-scheme: dark;',
+            '  --px: 3px; --k: 3;',
+            '  color: var(--text); font: 400 var(--fs-conseq)/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }',
             '.land-stage p { margin: 0; }',
             '.land-stage .land-frame { position: absolute; overflow: hidden; }',
             '.land-stage .land-art { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }',
@@ -292,7 +304,7 @@
             '.land-stage .land-words > * { position: absolute; }',
             '.land-stage .tone-cora { --tone: var(--tone-cora); } .land-stage .tone-jaxon { --tone: var(--tone-jaxon); } .land-stage .tone-vance { --tone: var(--tone-vance); }',
             '.land-stage .tone-aris { --tone: var(--tone-aris); } .land-stage .tone-mira { --tone: var(--tone-mira); } .land-stage .tone-aura { --tone: var(--ui); }',
-            '.land-stage .voice { left: 0; top: 0; display: grid; gap: 6px; width: max-content; max-width: var(--measure); text-shadow: var(--shadow); pointer-events: none; opacity: 0; transition: opacity 160ms var(--ease); }',
+            '.land-stage .voice { left: 0; top: 0; display: grid; gap: 6px; width: max-content; max-width: var(--measure); text-shadow: var(--shadow); pointer-events: none; opacity: 0; transition: opacity calc(2 * var(--step-ui)) steps(2, end); }',
             '.land-stage .voice.is-in { opacity: 1; }',
             '.land-stage .who { display: flex; align-items: center; gap: 8px; margin: 0; font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--warm)); }',
             '.land-stage .who .ring { flex: none; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }',
@@ -305,11 +317,14 @@
             '.land-stage #land-say { --face: calc(var(--k) * 20px); max-width: min(calc(560px + 160px * var(--t)), 70%); }',
             '.land-stage .land-keys { display: flex; gap: 26px; pointer-events: none; align-items: center; }',
             '.land-stage .land-keys .key-pair { display: inline-flex; gap: 6px; align-items: center; }',
-            '.land-stage .key-word { font: 400 var(--fs-hint)/1 var(--f-text); color: var(--text); text-shadow: var(--shadow); margin-left: 4px; }',
-            '.land-stage kbd { min-width: 2.2em; padding: 3px 7px; border: 1px solid #33373e; border-radius: 3px; background: rgba(5, 7, 10, 0.55); font: 400 13px/1.2 var(--f-num); color: var(--ui); text-align: center; }',
-            '.land-stage .land-aura { display: inline-flex; align-items: center; gap: 9px; padding: 0; margin: 0; background: none; border: 0; cursor: pointer; pointer-events: auto; font: 400 var(--fs-hint)/1 var(--f-text); color: var(--dim); text-shadow: var(--shadow); transition: color 140ms var(--ease); }',
-            '.land-stage .land-aura:hover { color: var(--text); }',
-            '.land-stage .land-aura:active { color: var(--warm-br); }',
+            '.land-stage .key-word { font: 400 var(--fs-chip)/1 var(--f-text); color: var(--text); text-shadow: var(--shadow); margin-left: 4px; }',
+            // a keycap that does not act is a word in Mono on the shade under the keys (LandWords shadeUnder), never a box (look pass B08)
+            '.land-stage kbd { padding: 0; border: 0; border-radius: 0; background: none; font: 400 var(--fs-chip)/1.2 var(--f-num); color: var(--ui); text-shadow: var(--shadow); }',
+            // A.U.R.A.'s hand-off: the frame's quiet key in --warm, as the void's "Let A.U.R.A. fly" (minigames.css .mini-btn)
+            '.land-stage .land-aura.mini-btn { padding: 6px 0; margin: 0; pointer-events: auto; font: 400 var(--fs-key)/1.25 var(--f-text); color: var(--warm); text-shadow: var(--shadow); transition: none; }',
+            '.land-stage .land-aura.mini-btn::before { color: var(--warm); transition: none; }',
+            '.land-stage .land-aura.mini-btn:hover, .land-stage .land-aura.mini-btn:hover::before { color: var(--warm-br); transform: none; }',
+            '.land-stage .land-aura.mini-btn:active, .land-stage .land-aura.mini-btn:active::before { color: var(--warm-br); }',
             '@media (prefers-reduced-motion: reduce) { .land-stage .voice, .land-stage .land-aura { transition: none; } }',
         ].join('\n');
         document.head.appendChild(st);

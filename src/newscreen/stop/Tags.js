@@ -14,8 +14,9 @@
        tag.el, tag.kind, tag.w, tag.h      the element; its size in bridge px (after size())
        tag.set({ label, chips: [{ icon, text, tone }], rows: [[chip] | { chips: [chip], cls }], name, why, line, loss, html, tone, cls }) → bool (changed)
                                                      a chip's tone 'kind' is the world's kind line (a quiet sentence), 'way' a
-                                                     way's short name on a find's row; a row's cls: 'is-way' (a way, with its
-                                                     box: chosen 'is-pick', pointed at 'is-hover', struck 'is-struck')
+                                                     way's short name on a find's row; a row's cls: 'is-way' (a way: chosen
+                                                     'is-pick', a 1 px warm tick; pointed at 'is-hover', a quiet tick; struck
+                                                     'is-struck', solid --dim with its reason; look pass B08)
        tag.size(unit, maxArt?) → [w, h]   bridge px, the content measured at unit CSS px per bridge px (cached)
        tag.rowsAt → [[top, h]]            bridge px from the tag's top: each row of chips, as last measured (a click on a row)
        tag.place(cssX, cssY), tag.show(on), tag.flag(cls, on), tag.type(now, still)
@@ -64,14 +65,13 @@
 #ns-stop-words .tg.is-title .tg-l { font-weight: 500; letter-spacing: .14em; color: var(--ui); }
 #ns-stop-words .tg-cs.is-rows { display: grid; gap: 3px; }
 #ns-stop-words .tg-row { display: flex; gap: 2px calc(var(--bpx, 3px) * 4); }
-#ns-stop-words .tg-c.is-way { color: var(--text-2); font-weight: 500; }
+#ns-stop-words .tg-c.is-way { color: var(--text); font-weight: 500; }
 #ns-stop-words .tg-row.is-way { align-items: center; gap: 2px calc(var(--bpx, 3px) * 3); }
-#ns-stop-words .tg-row.is-way::before { content: ''; flex: none; width: calc(var(--bpx, 3px) * 3); height: calc(var(--bpx, 3px) * 3); box-sizing: border-box; border: 1px solid var(--dim); }
-#ns-stop-words .tg-row.is-pick::before { background: var(--warm); border-color: var(--warm); }
-#ns-stop-words .tg-row.is-pick .tg-c.is-way, #ns-stop-words .tg-row.is-hover .tg-c.is-way { color: var(--warm-br); }
-#ns-stop-words .tg-row.is-hover:not(.is-pick)::before { border-color: var(--warm); }
+#ns-stop-words .tg-row.is-way::before { content: ''; flex: none; align-self: stretch; width: 1px; background: transparent; }
+#ns-stop-words .tg-row.is-pick::before { background: var(--warm); }
+#ns-stop-words .tg-row.is-pick .tg-c.is-way { color: var(--warm); }
+#ns-stop-words .tg-row.is-hover:not(.is-pick)::before { background: var(--text-2); }
 #ns-stop-words .tg-row.is-struck .tg-c { color: var(--dim); }
-#ns-stop-words .tg-row.is-struck .tg-c.is-way { text-decoration: line-through; }
 #ns-stop-words .tg.is-key .tg-l { font-size: var(--fs-chip); color: var(--warm); }
 #ns-stop-words .tg.is-key.is-next .tg-l { color: var(--warm-br); }
 #ns-stop-words .tg.is-key.is-hot .tg-l, #ns-stop-words .tg.is-key.is-cool.is-hot .tg-l { color: var(--text); }

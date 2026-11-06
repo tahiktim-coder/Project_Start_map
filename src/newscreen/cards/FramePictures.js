@@ -10,6 +10,8 @@
               field of rocks by the glass's own painters (NSGlass.paintStation, paintField: the same seed, so the station in
               the card is the one in the window), the copy of Earth (NSEarthArt); the Structure is the light itself. The light
               sits small and high at the right.
+     'site'   the landing site (look pass B08): the meteor's own landed frame, a still 480 x 160 crop kept as the team walked
+              out (LandFall.js: the result's site; App._nsTrip.site), the field and the find's light; without it, the world.
      'deck'   one deck of our Lander, live: the tower's own room and crew (NSTowerCard.crop, tower/TowerCard.js) over this
               sector's sky in its windows, at the art's 8 fps, drawn whole. deck { bridge, lab, quarters (galley), medbay, hold
               (cargo), engineering } or who (a crew id: where that person works); who also lights that person, posed where it
@@ -24,7 +26,7 @@
      mount(canvas, spec) → stop()   paints spec into canvas (480 x 160) and keeps it moving; stops by itself once the
                                     canvas has been on the page and left it
      prewarm(spec)              paints a view's still part in an idle moment (a scene needs nothing)
-     specOf(spec, state)        the spec as it will be painted: { kind: 'scene' | 'view' | 'world' | 'deck', art, sector,
+     specOf(spec, state)        the spec as it will be painted: { kind: 'scene' | 'site' | 'view' | 'world' | 'deck', art, canvas, sector,
                                 focus, signal, blink, node, deck, who, crew, table, screen }
 */
 (function () {
@@ -45,10 +47,13 @@
     const token = (name, art) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || art;
     const hashId = s => { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
 
-    /** What will be painted: a scene SceneArt knows, a world with a node, a deck the ship has, else the view. */
+    /** What will be painted: a scene SceneArt knows, a landing site kept whole, a world with a node, a deck the ship has, else the view. */
+    const isSite = c => !!c && c.width === W && c.height === H && typeof c.getContext === 'function';
     function specOf(spec, state) {
         const s = spec || {}, SA = window.SceneArt;
         if (s.kind === 'scene' && s.art && SA && SA.has(s.art)) return { kind: 'scene', art: s.art };
+        if (s.kind === 'site' && isSite(s.canvas)) return { kind: 'site', canvas: s.canvas };
+        if (s.kind === 'site' && s.node) return specOf({ kind: 'world', node: s.node, sector: s.sector }, state);   // no landed frame (LanderGame, a skip): the world
         const sector = Math.max(1, Math.min(6, Number(s.sector) || Number(state && state.currentSector) || 1));
         const deck = s.kind === 'deck' ? (DECKS[s.deck] != null ? s.deck : WHO_DECK[String(s.who || '').toLowerCase()]) : null;
         if (deck && window.ShipArt && typeof window.ShipArt.deck === 'function') return { kind: 'deck', deck, sector, who: s.who ? String(s.who).toLowerCase() : null, crew: s.crew || null, table: !!s.table, screen: s.screen || null };
@@ -176,6 +181,7 @@
         if (!ctx) return () => {};
         const s = specOf(spec, window.app && window.app.state);
         if (s.kind === 'scene') { window.SceneArt.mount(canvas, s.art); return () => {}; }
+        if (s.kind === 'site') { ctx.imageSmoothingEnabled = false; ctx.drawImage(s.canvas, 0, 0); return () => {}; }   // a still: the place as the team stood on it
         if (s.kind === 'deck') return mountDeck(canvas, ctx, s);
         let view = null, world = null;
         try {
