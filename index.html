@@ -35,7 +35,7 @@
                     all(['400' + C, '300' + S, '500' + S, 'italic 400' + S]);
                 });
             };
-            document.write('<link rel="stylesheet" href="src/newscreen/tokens.css?v=3">'
+            document.write('<link rel="stylesheet" href="src/newscreen/tokens.css?v=4">'
                 + '<link rel="stylesheet" href="' + window.NS_FONTS + '" media="print" onload="this.media=&quot;all&quot;; window.NS_PRELOAD()">');
             // Before the first screen: ink, and 1.5 s after the page started with nothing up, the loading line. Its rules are in the
             // <style> below, so it waits for the token sheet only, never for newscreen.css or the head's other sheets. It also waits
@@ -98,7 +98,7 @@
     <link rel="stylesheet" href="warp.css?v=10">
     <link rel="stylesheet" href="log.css?v=6">
     <link rel="stylesheet" href="theme.css?v=62">
-    <link rel="stylesheet" href="src/systems/minigames/minigames.css?v=8">
+    <link rel="stylesheet" href="src/systems/minigames/minigames.css?v=9">
     <!-- The new look (html.ns-on, set by the switch above): today's page never paints, not even while the scripts load. And the
          loading line and the boot failure (the switch makes them), here so that they wait for the token sheet only. -->
     <style>
@@ -252,13 +252,13 @@
     <script src="src/data/LootTables.js?v=56"></script>
     <script src="src/data/SectorConfig.js?v=63"></script>
     <script src="src/data/SettleCouncil.js?v=6"></script> <!-- the crew have their say before you settle (docs/SETTLING.md) -->
-    <script src="src/data/ExodusLogs.js?v=63"></script>
+    <script src="src/data/ExodusLogs.js?v=64"></script>
     <script src="src/data/StoryPlanets.js?v=3"></script>
     <script src="src/data/FailedColonyEncounters.js?v=61"></script>
     <script src="src/data/DerelictEncounters.js?v=67"></script>
     <script src="src/data/AnomalyEncounters.js?v=71"></script>
     <script src="src/data/LateGamePOIs.js?v=59"></script>
-    <script src="src/data/StructureEncounter.js?v=61"></script>
+    <script src="src/data/StructureEncounter.js?v=62"></script>
     <script src="src/data/ShipEvents.js?v=58"></script>
     <script src="src/data/SpaceStations.js?v=62"></script>
     <script src="src/data/AsteroidFields.js?v=59"></script>
@@ -266,7 +266,7 @@
     <script src="src/data/CrewEvents.js?v=64"></script>
     <script src="src/systems/FrameClock.js?v=1"></script>
     <script src="src/systems/PlainWords.js?v=1"></script>
-    <script src="src/systems/ChoiceGuard.js?v=5"></script> <!-- choices never under the cursor; pop-ups ignore clicks for 400 ms -->
+    <script src="src/systems/ChoiceGuard.js?v=6"></script> <!-- choices never under the cursor; pop-ups ignore clicks for 400 ms -->
     <script src="src/systems/BodyRenderer.js?v=39"></script>
     <!-- Dither art: the game's look (?art=classic switches it off for one load, for testing) -->
     <script src="src/systems/dither/DitherCore.js?v=39"></script>
@@ -279,7 +279,7 @@
     <script src="src/systems/DeckPanel.js?v=40"></script>
     <script src="src/systems/FabricatorPanel.js?v=38"></script>
     <script src="src/systems/DockingGame.js?v=4"></script>
-    <script src="src/systems/BoardingParty.js?v=48"></script>
+    <script src="src/systems/BoardingParty.js?v=49"></script>
     <script src="src/systems/SignalTune.js?v=41"></script>
     <script src="src/systems/AwayTeam.js?v=49"></script>
     <script src="src/systems/LanderScene.js?v=61"></script>
@@ -287,17 +287,17 @@
     <script src="src/systems/LanderCrew.js?v=5"></script>
     <script src="src/systems/LanderGame.js?v=61"></script>
     <script src="src/systems/NavVista.js?v=45"></script>
-    <script src="src/systems/ItemIcons.js?v=42"></script>
+    <script src="src/systems/ItemIcons.js?v=43"></script>
     <script src="src/systems/OrbitVista.js?v=4"></script>
-    <script src="src/systems/DiscDocument.js?v=52"></script>
-    <script src="src/systems/FoundPage.js?v=58"></script>
+    <script src="src/systems/DiscDocument.js?v=53"></script>
+    <script src="src/systems/FoundPage.js?v=59"></script>
     <script src="src/systems/StoryReel.js?v=55"></script>
     <script src="src/systems/TheThrow.js?v=52"></script>
     <script src="src/systems/SceneArt.js?v=6"></script>
-    <script src="src/systems/EncounterCard.js?v=80"></script>
+    <script src="src/systems/EncounterCard.js?v=81"></script>
     <script src="src/systems/EndScreens.js?v=60"></script>
     <script src="src/systems/RosterPanel.js?v=50"></script>
-    <script src="src/systems/WarpPlot.js?v=52"></script>
+    <script src="src/systems/WarpPlot.js?v=53"></script>
     <script src="src/systems/ProbeSystem.js?v=41"></script>
     <script src="src/systems/AudioSystem.js?v=39"></script>
     <script src="src/systems/EndingSystem.js?v=60"></script>
@@ -307,41 +307,41 @@
     <script src="src/views/OrbitView.js?v=59"></script>
     <script src="src/generators/PlanetGenerator.js?v=41"></script>
     <script src="src/views/NavView.js?v=63"></script>
-    <script src="src/bundle.js?v=135" onerror="window.NS_BOOT_FAIL && window.NS_BOOT_FAIL()"></script>
+    <script src="src/bundle.js?v=136" onerror="window.NS_BOOT_FAIL && window.NS_BOOT_FAIL()"></script>
     <script src="src/systems/MissionLog.js?v=41"></script>
     <script src="src/systems/Coach.js?v=61"></script>
     <!-- Minigames: the Sim Bay sketches, played over the game by MiniHost (the four games are added one by one) -->
     <script src="src/systems/minigames/MiniLab.js?v=5"></script>
     <script src="src/systems/minigames/MiniShip.js?v=2"></script>
     <script src="src/systems/Juice.js?v=1"></script>
-    <script src="src/systems/minigames/MiniHost.js?v=10"></script>
-    <script src="src/systems/minigames/Corridor.js?v=21"></script>
-    <script src="src/systems/minigames/Torch.js?v=12"></script>
+    <script src="src/systems/minigames/MiniHost.js?v=11"></script>
+    <script src="src/systems/minigames/Corridor.js?v=22"></script>
+    <script src="src/systems/minigames/Torch.js?v=13"></script>
     <script src="src/systems/minigames/TorchGround.js?v=3"></script> <!-- the torch on a planet's surface: the world's sky and soil, gravity, the hatch falling in -->
-    <script src="src/systems/minigames/TorchDoors.js?v=3"></script> <!-- the wreck doors: which one, their pictures, the three without the torch -->
-    <script src="src/systems/minigames/DiscDating.js?v=9"></script>
+    <script src="src/systems/minigames/TorchDoors.js?v=4"></script> <!-- the wreck doors: which one, their pictures, the three without the torch -->
+    <script src="src/systems/minigames/DiscDating.js?v=10"></script>
     <script src="src/systems/minigames/Breach.js?v=4"></script>
     <!-- The new screen's files load only with the switch on (docs/BUILD_A.md §3, docs/BUILD_B.md §10, in this order); off, not one request. -->
     <script>
         if (window.NEW_SCREEN) (function () {
             var files = [
-                'art/Paint.js?v=3', 'art/Sky.js?v=1', 'art/Sky2.js?v=2', 'art/Worlds.js?v=7',
-                'cards/FramePictures.js?v=6', 'cards/Frame.js?v=6', 'cards/TripCard.js?v=2',
+                'art/Paint.js?v=3', 'art/Sky.js?v=1', 'art/Sky2.js?v=2', 'art/Worlds.js?v=8',
+                'cards/FramePictures.js?v=7', 'cards/Frame.js?v=7', 'cards/TripCard.js?v=3',
                 'crew/CrewEngine.js?v=5', 'start/Dress.js?v=2',
                 'crew/Cora.js?v=1', 'crew/Jaxon.js?v=1', 'crew/Aris.js?v=1', 'crew/Vance.js?v=1', 'crew/Mira.js?v=1',
-                'ship/ShipArt.js?v=1', 'ship/ShipRooms.js?v=2', 'ship/ShipReactor.js?v=1', 'ship/ShipRoutine.js?v=4', 'ship/TowerArt.js?v=6',
-                'NewScreen.js?v=25', 'Route.js?v=7', 'Scan.js?v=4', 'WorldFinds.js?v=13', 'Orbit.js?v=31', 'Voice.js?v=17',
-                'travel/SectorLooks.js?v=6', 'travel/Field.js?v=4', 'travel/Pictures.js?v=13', 'travel/Note.js?v=2', 'travel/Travel.js?v=17',
-                'tower/TowerMarks.js?v=6', 'tower/TowerCard.js?v=2', 'tower/ShipKey.js?v=3', 'tower/Supper.js?v=9', 'tower/Tower.js?v=29', 'tower/Fault.js?v=2', 'Console.js?v=2',
-                'stop/BridgeArt.js?v=1', 'stop/Dive.js?v=2', 'stop/Glass.js?v=8', 'stop/TagArt.js?v=10', 'stop/Tags.js?v=13', 'stop/FindWords.js?v=3', 'stop/Words.js?v=28', 'stop/EarthArt.js?v=2', 'stop/CopyWords.js?v=4', 'stop/Copy.js?v=6', 'stop/RoomFx.js?v=3', 'stop/Plans.js?v=2', 'stop/Stop.js?v=31', 'throw/Gauge.js?v=3', 'throw/StallArt.js?v=1', 'throw/Stall.js?v=2', 'throw/SeaArt.js?v=3', 'throw/SeaFilm.js?v=4', 'throw/Throw.js?v=3',
-                'start/FilmSound.js?v=2', 'start/LaunchArt.js?v=4', 'start/LaunchFilm.js?v=3', 'start/Title.js?v=4', 'start/PodArt.js?v=2', 'start/PodWords.js?v=2', 'start/Pods.js?v=6', 'start/Wake.js?v=7',
-                'end/LightArt.js?v=2', 'end/CalmArt.js?v=1', 'end/EdenArt.js?v=1', 'end/CopyArt.js?v=3', 'end/ColonyArt.js?v=2', 'end/LossArt.js?v=1', 'end/EndWords.js?v=1', 'end/Ending.js?v=9',
-                'finds/FindArt.js?v=3', 'finds/Finds.js?v=6',
-                'dock/DockRelay.js?v=4', 'dock/DockFace.js?v=1', 'dock/DockExterior.js?v=4', 'dock/DockFlight.js?v=7', 'dock/BoardLook.js?v=2', 'land/LandWords.js?v=2', 'land/LandArt.js?v=2', 'land/LandArtAir.js?v=1', 'land/LandFlight.js?v=1', 'land/LandWorlds.js?v=1', 'land/LandGround.js?v=6', 'land/LandSite.js?v=2', 'land/LandGroundDraw.js?v=2', 'land/MeteorArt.js?v=1', 'land/MeteorLand.js?v=4', 'land/LandFallFlight.js?v=3', 'land/LandFallScene.js?v=2', 'land/LandFall.js?v=8'
+                'ship/ShipArt.js?v=1', 'ship/ShipRooms.js?v=2', 'ship/ShipReactor.js?v=1', 'ship/ShipRoutine.js?v=5', 'ship/TowerArt.js?v=7',
+                'NewScreen.js?v=26', 'Route.js?v=8', 'Scan.js?v=5', 'WorldFinds.js?v=14', 'Orbit.js?v=32', 'Voice.js?v=18',
+                'travel/SectorLooks.js?v=7', 'travel/Field.js?v=4', 'travel/Pictures.js?v=14', 'travel/Note.js?v=3', 'travel/Travel.js?v=18',
+                'tower/TowerMarks.js?v=6', 'tower/TowerCard.js?v=3', 'tower/ShipKey.js?v=4', 'tower/Supper.js?v=10', 'tower/Tower.js?v=30', 'tower/Fault.js?v=3', 'Console.js?v=3',
+                'stop/BridgeArt.js?v=1', 'stop/Dive.js?v=2', 'stop/Glass.js?v=9', 'stop/TagArt.js?v=11', 'stop/Tags.js?v=14', 'stop/FindWords.js?v=4', 'stop/Words.js?v=29', 'stop/EarthArt.js?v=2', 'stop/CopyWords.js?v=5', 'stop/Copy.js?v=7', 'stop/RoomFx.js?v=4', 'stop/Plans.js?v=3', 'stop/Stop.js?v=32', 'throw/Gauge.js?v=4', 'throw/StallArt.js?v=1', 'throw/Stall.js?v=3', 'throw/SeaArt.js?v=3', 'throw/SeaFilm.js?v=5', 'throw/Throw.js?v=4',
+                'start/FilmSound.js?v=2', 'start/LaunchArt.js?v=5', 'start/LaunchFilm.js?v=4', 'start/Title.js?v=5', 'start/PodArt.js?v=3', 'start/PodWords.js?v=3', 'start/Pods.js?v=7', 'start/Wake.js?v=8',
+                'end/LightArt.js?v=3', 'end/CalmArt.js?v=1', 'end/EdenArt.js?v=1', 'end/CopyArt.js?v=4', 'end/ColonyArt.js?v=3', 'end/LossArt.js?v=2', 'end/EndWords.js?v=2', 'end/Ending.js?v=10',
+                'finds/FindArt.js?v=4', 'finds/Finds.js?v=7',
+                'dock/DockRelay.js?v=5', 'dock/DockFace.js?v=1', 'dock/DockExterior.js?v=5', 'dock/DockFlight.js?v=8', 'dock/BoardLook.js?v=3', 'land/LandWords.js?v=2', 'land/LandArt.js?v=2', 'land/LandArtAir.js?v=1', 'land/LandFlight.js?v=1', 'land/LandWorlds.js?v=1', 'land/LandGround.js?v=6', 'land/LandSite.js?v=2', 'land/LandGroundDraw.js?v=2', 'land/MeteorArt.js?v=1', 'land/MeteorLand.js?v=4', 'land/LandFallFlight.js?v=3', 'land/LandFallScene.js?v=2', 'land/LandFall.js?v=9'
             ];
-            if (/[?&]look=1(&|$)/.test(location.search)) files.push('LookCheck.js?v=2');   // the look floors, checked on the live page (test only)
+            if (/[?&]look=1(&|$)/.test(location.search)) files.push('LookCheck.js?v=3');   // the look floors, checked on the live page (test only)
             var html = '<link rel="stylesheet" href="' + window.NS_FONTS + '">'           // tokens.css (<head>) and newscreen.css (top of <body>) are in
-                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=21">';
+                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=22">';
             for (var i = 0; i < files.length; i++) html += '<script src="src/newscreen/' + files[i] + '"><\/script>';
             document.write(html);
         })();
