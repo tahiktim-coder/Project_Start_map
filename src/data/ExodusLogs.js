@@ -5,9 +5,11 @@
 //              'disc' is not a page: the real disc, shown by its own card (App.showDiscFound) and DiscDocument
 //   lines      what is written
 //   after      one spoken line when the page is read, from whoever aboard would say something (skipped if they are dead)
+//   said       the new look only (look pass B12, C69): one crew line under the thing in place of its lines (the plate)
 //   letterhead, stamp   a printed page only: printed at its top, and stamped across it in red (the new look shows them on the paper)
 //   underlined          a printed page only: the line someone underlined by hand (its index in lines)
-//   card       the disc only: the find's card (context, the choice, and one line from whichever of the team is listed first)
+//   card       the disc only: the find's card (context, the choice, and one line from whichever of the team is listed first);
+//              the new look has no card: the disc opens from the locker with that line under it and the choice as its key (C69)
 
 const EXODUS_LOGS = [
     {
@@ -21,6 +23,7 @@ const EXODUS_LOGS = [
             'Someone made a plate for five people, and only ever had four names to put on it.',
         ],
         names: ['R. OSEI · ENGINEER', 'T. YUEN · DOCTOR', 'K. ADEYEMI · SECURITY', 'L. PARK · SCIENTIST', ''],
+        said: { speaker: 'Aris', text: 'Four names. And a blank panel, made blank on purpose.' },   // DRAFT (look pass): L-41, the new look's line in place of the three lines
     },
     {
         id: 'PAGE_VAULT', sector: 2, kind: 'paper', type: 'EXODUS_LOG', value: 0, isKept: true,

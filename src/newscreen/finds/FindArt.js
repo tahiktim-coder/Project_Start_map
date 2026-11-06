@@ -14,7 +14,7 @@
      plate(W, H, names)                          → { p, vals, plateBox }   the crew plate; vals keeps every metal pixel's tone
      plateGlint(img, base, vals, W, H, t)        the slow glint across the plate, written into img
      sketch(W, H, layout)                        → { data, part, press }   the disc in pencil on a logbook page
-     sketchFocus(base, W, H, layout, key)        → Uint8ClampedArray       the same page with one part pointed at
+     sketchFocus(base, W, H, layout, key)        → Uint8ClampedArray       the same page with one part ringed in pencil
      gold(D)                                     → { frame(img, t, focus) }  the gold disc, its shine turning at t
      REGIONS                                     the parts of the disc, in the old drawing's units (radius 140) from its centre
 */
@@ -29,7 +29,7 @@
     const LOGPAPER = ramp(INK, '#35332d', '#66635a', '#949081', '#b7b3a2', '#cac6b5', '#d7d4c4', '#e2dfd0', '#ebe9dc');
     const GRAPHITE = ramp('#b3ad9d', '#8f8a7d', '#6c695f', '#4c4a44', '#33322e');                     // pencil on paper: light to dark
     const CASE = ramp(INK, '#101517', '#1b2225', '#2a3337', '#3f4a4f', '#5c696e', '#8a989b');           // a log screen's housing
-    const GLASS = ramp(INK, '#040908', '#07120e', '#0b1a14', '#10251c', '#16301f');                   // dead glass, a little phosphor in it
+    const GLASS = ramp(INK, '#040a10', '#06101a', '#0a1824', '#0e2030', '#13283a');                   // dead glass, blue-black (look pass B12: space colours, no green)
     const PLATE = ramp(INK, '#141a1d', '#283034', '#424d52', '#66737a', '#94a2a6', '#c7d2d2', '#eef3f1');
     const WALL = ramp(INK, '#0d1418', '#152126', '#1f2f36', '#2e434c');
     const GOLD = ramp(INK, '#21160a', '#4a3312', '#7d5a1f', '#b3842f', '#dcae55', '#f6d98e', '#fff3cf');
@@ -51,15 +51,6 @@
     }
     /** Sets a pixel to a colour on `amount` of the pixels (the dither decides which): a faint printed line, a pale rule. */
     function cover(p, x, y, rgb, amount) { if (amount > threshold(x + 3, y + 5)) p.set(x, y, rgb); }
-    /** Darkens everything outside the part being pointed at, behind a short dithered edge: the eye goes to the part. */
-    function dimOutside(data, W, H, outside, amount) {
-        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-            const o = (y * W + x) * 4, d = outside(x, y);
-            if (d <= 0 || data[o + 3] === 0 || threshold(x + 2, y + 5) > Math.min(1, d / 6)) continue;
-            const k = 1 - amount;
-            data[o] = Math.round(data[o] * k); data[o + 1] = Math.round(data[o + 1] * k); data[o + 2] = Math.round(data[o + 2] * k * 1.06);
-        }
-    }
 
     // ── 1. a printed page ──
     /** The folded-over corner: the back of the paper, lit, with a dark free edge; the hinge catches the light. */
@@ -127,7 +118,7 @@
 
     // ── 2. a dead ship's log screen ──
     /** The housing round a screen: worn metal lit from the top left, a dark lip round the glass, four screws, vents; the glass
-        itself dark, a little phosphor still in it, darker at the corners, one hairline crack low on the left. */
+        itself blue-black, a little light still in it, darker at the corners, one hairline crack low on the left. */
     function bezel(W, H, g) {
         const p = painter(W, H, false), R = Math.max(5, Math.round(Math.min(W, H) * 0.045)), lip = Math.max(3, Math.round(W * 0.012));
         p.region(0, 0, W, H, (x, y) => {
@@ -161,7 +152,7 @@
     }
     function glassTone(gx, gy, g, x, y) {
         const u = gx / g.w, v0 = gy / g.h, d = Math.hypot((u - 0.5) * 1.15, (v0 - 0.5));
-        let v = 0.36 * (1 - d * 1.45);                                                              // phosphor haze, the corners dark
+        let v = 0.36 * (1 - d * 1.45);                                                              // a faint glow left in it, the corners dark
         const edge = Math.min(gx, gy, g.w - 1 - gx, g.h - 1 - gy); if (edge < 3) v -= 0.12 * (3 - edge);
         const band = u + v0 * 0.55; if (v0 < 0.5 && band > 0.1 && band < 0.2) v += 0.1 * (1 - Math.abs(band - 0.15) / 0.05);   // the glass catches the room
         return v + (hash(x, y, 9) - 0.5) * 0.04;
@@ -169,7 +160,7 @@
     function crack(p, g) {
         const rand = seeded(97), pts = [[g.x + 2, g.y + g.h - 2]];
         for (let k = 0; k < 9; k++) { const [x, y] = pts[pts.length - 1]; pts.push([x + 2 + rand() * 4, y - 1 - rand() * 3]); }
-        const draw = list => list.forEach(([x0, y0], i) => { if (i === 0) return; const [x1, y1] = list[i - 1]; p.line(x1, y1, x0, y0, (x, y) => { p.set(x, y, [70, 88, 82]); p.set(x, y + 1, [3, 6, 5]); }); });
+        const draw = list => list.forEach(([x0, y0], i) => { if (i === 0) return; const [x1, y1] = list[i - 1]; p.line(x1, y1, x0, y0, (x, y) => { p.set(x, y, [70, 84, 96]); p.set(x, y + 1, [3, 6, 10]); }); });
         draw(pts);
         const at = pts[4], branch = [at]; for (let k = 0; k < 4; k++) { const [x, y] = branch[branch.length - 1]; branch.push([x + 1 + rand() * 3, y + 1 + rand() * 2]); }
         draw(branch);
@@ -260,8 +251,9 @@
         plate's own metal, their top and left edges catching the light, the other edges and a shadow on the panel in the dark. */
     function castNames(put, cells, names) {
         const list = (names || []).slice(0, 5), widest = Math.max(1, ...list.map(n => (n ? castWidth(n) : 0)));
-        const room = cells[0].w - 2 * Math.round(cells[0].w * 0.05);
-        const cell = [4, 3, 2, 1].find(c => widest * c <= room && 7 * c <= cells[0].h - 6) || 1;
+        const room = cells[0].w - 2 * Math.round(cells[0].w * 0.05), tight = cells[0].w - 4;
+        const fits = (c, w) => widest * c <= w && 7 * c <= cells[0].h - 6;
+        const cell = [4, 3, 2].find(c => fits(c, room)) || (fits(2, tight) ? 2 : 1);                // the names at 2 or more where a panel can hold it (B12)
         list.forEach((name, i) => {
             if (!name) return;                                                                         // the fifth: made blank
             const c = cells[i], w = castWidth(name) * cell, tx = Math.round(c.x + (c.w - w) / 2), ty = Math.round(c.y + (c.h - 7 * cell) / 2);
@@ -368,21 +360,38 @@
         }
         return { data: p.data, part, press };
     }
-    /** The page with one part pointed at: the rest of the page in shadow, that part's pencil pressed harder. */
+    /** A ring drawn round a part by hand, in pencil: once round and a little over, not quite round, drifting outward as the
+        hand goes, lighter where the pencil lands and lifts; a second, fainter pass with gaps. Only on the paper. */
+    function pencilRing(data, W, H, cx, cy, r, seed) {
+        const rand = seeded(seed), a0 = -2.2 + rand() * 0.6, sweep = 6.2832 + 0.6 + rand() * 0.3, squash = 0.84 + rand() * 0.08, tilt = (rand() - 0.5) * 0.9;
+        const plot = (x, y, v) => {
+            x = Math.round(x); y = Math.round(y);
+            if (x < 0 || y < 0 || x >= W || y >= H) return;
+            const o = (y * W + x) * 4; if (!data[o + 3]) return;
+            const rgb = GRAPHITE.rgb[level(GRAPHITE, v, x, y)]; data[o] = rgb[0]; data[o + 1] = rgb[1]; data[o + 2] = rgb[2];
+        };
+        [[0, 0.84], [1, 0.5]].forEach(([pass, press]) => {
+            const r0 = r + pass * 1.6;
+            for (let a = a0 + pass * 0.4; a < a0 + sweep - pass * 0.6; a += 0.4 / r0) {
+                if (pass && hash(Math.round(a * 40), 3, seed) < 0.3) continue;                        // the light pass skips
+                const k = (a - a0) / sweep, rr = r0 * (1 + 0.12 * k) + (vnoise(a * 1.3, pass, seed) - 0.5) * 3.6;
+                const ex = Math.cos(a) * rr, ey = Math.sin(a) * rr * squash, ends = Math.min(1, k * 10, (1 - k) * 8);
+                plot(cx + ex * Math.cos(tilt) - ey * Math.sin(tilt), cy + ex * Math.sin(tilt) + ey * Math.cos(tilt), press * (0.55 + 0.45 * ends));
+            }
+        });
+    }
+    /** The page with one part pointed at (look pass B12): the paper keeps its colour; a pencil ring goes round the part and its
+        own marks are pressed harder. K.'s question (key 'margin') is pen on the page, not the drawing: the page stays as it is. */
     function sketchFocus(base, W, H, L, key) {
         const data = new Uint8ClampedArray(base.data);
-        if (!key) return data;
+        if (!key || key === 'margin') return data;
         const s = L.R / 140, PART = { disc: 1, map: 2, figures: 3 };
-        if (key === 'margin') dimOutside(data, W, H, (x, y) => y - L.headY, 0.34);
-        else {
-            const [rx, ry, rr] = REGIONS[key] || REGIONS.disc, cx = L.cx + rx * s, cy = L.cy + ry * s, r = rr * s + (key === 'disc' ? 2 : 4);
-            dimOutside(data, W, H, (x, y) => Math.hypot(x - cx, y - cy) - r, 0.34);
-            const k = PART[key];
-            for (let i = 0; i < W * H; i++) if (base.part[i] === k || (key === 'disc' && base.part[i])) {
-                const x = i % W, y = (i / W) | 0, rgb = GRAPHITE.rgb[level(GRAPHITE, Math.min(1, base.press[i] + 0.3), x, y)];
-                data[i * 4] = rgb[0]; data[i * 4 + 1] = rgb[1]; data[i * 4 + 2] = rgb[2];
-            }
+        const [rx, ry, rr] = REGIONS[key] || REGIONS.disc, cx = L.cx + rx * s, cy = L.cy + ry * s, k = PART[key];
+        for (let i = 0; i < W * H; i++) if (base.part[i] === k || (key === 'disc' && base.part[i])) {
+            const x = i % W, y = (i / W) | 0, rgb = GRAPHITE.rgb[level(GRAPHITE, Math.min(1, base.press[i] + 0.3), x, y)];
+            data[i * 4] = rgb[0]; data[i * 4 + 1] = rgb[1]; data[i * 4 + 2] = rgb[2];
         }
+        pencilRing(data, W, H, cx, cy, rr * s + (key === 'disc' ? 5 : 4), 500 + (k || 0));
         return data;
     }
 

@@ -2156,12 +2156,17 @@ class App {
     }
 
     /** The disc, found in the last ship that carried it: one card with one line from the team (A.U.R.A. over the radio when
-        none of them has a line), then the disc page as the real object. Resolves once the disc is put away. */
+        none of them has a line), then the disc page as the real object. Resolves once the disc is put away. The new look
+        has no card (C69, look pass B12): the disc opens straight from the locker, that line under it and the card's choice
+        (Bring it aboard) as its key. */
     showDiscFound(page, shipName) {
         const card = page.card || {}, said = card.said || [];
         const team = (this.currentEvaTeam || []).filter(m => m && m.status !== 'DEAD').map(m => m.name);
         const line = said.find(l => team.includes(l.speaker)) || said.find(l => l.speaker === 'A.U.R.A.');
         const showDisc = () => (window.DiscDocument ? window.DiscDocument.open(this, { real: true }) : Promise.resolve());
+        if (window.DiscDocument && window.NSFinds && window.NSFinds.isOn()) {
+            return window.DiscDocument.open(this, { real: true, kicker: `FOUND IN ${shipName}`, said: line, ...(card.take ? { close: card.take.text } : {}) });
+        }
         if (!window.EncounterCard) return showDisc();
         return new Promise(resolve => window.EncounterCard.open(this, {
             tone: 'story', zIndex: 2600, kicker: `FOUND IN ${shipName}`, title: card.title || page.name,

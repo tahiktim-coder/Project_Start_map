@@ -4,8 +4,8 @@
      a printed page (kind 'paper')  the page itself, turned a little, Earth's letterhead and a stamp, the lines typed on it
      a printout (kind 'list')       the same paper with a short list typed on it, no letterhead: the crew list on the frame's
                                     picture (cards/Frame.js, look pass B03)
-     a captain's log (kind 'log')   a dead ship's log screen in its housing, the lines typed out in phosphor with a cursor
-     the crew plate (kind 'plate')  the names cast into the metal, a slow glint; its three lines quietly under it
+     a captain's log (kind 'log')   a dead ship's log screen in its housing, the lines typed out in steel with a cursor
+     the crew plate (kind 'plate')  the names cast into the metal, a slow glint (the new look shows one crew line under it, C69)
      the disc drawing / the disc    the disc in pencil on a logbook page, or the gold disc itself; the notes are written on the
                                     page (cut fine beside the gold) with thin lines to the parts; pointing at a part lights it
    The pictures come from finds/FindArt.js. Every word is laid out from the start (hidden until its turn), so nothing moves.
@@ -17,6 +17,7 @@
      disc({ real, notes, lineMs })              → view    the disc drawing (DiscDocument.NOTES) or the disc (REAL_NOTES)
      said(app, speaker, textHtml)               → html    the face, the name in their colour, the line (EncounterCard's look)
      pace(view, overlay, lineMs, onAllIn)       → showAll   one line a turn, a click on the thing for the rest at once
+     settle(card)                               the card takes the focus; its key answers the pointer once it moves (B12)
    A view: { el, steps, mount(), reveal(i, done), finish(), destroy() }. el goes in the card; mount() once it is on the page;
    reveal(i) brings in line i and calls done() once it is all there; finish() shows everything at once.
 */
@@ -24,7 +25,7 @@
     'use strict';
     const ART = 2;                                              // CSS px per art pixel
     const TYPE_TICK_MS = 16, TYPE_SHARE = 0.72, TYPE_MS = [6, 24];   // a line types out inside about three quarters of its turn
-    const TICK_MS = 125, LED_MS = 200, RESIZE_MS = 140, PEN_MS = 420;
+    const TICK_MS = 125, LED_MS = 200, RESIZE_MS = 140, PEN_MS = 420, GLASS_SHARE = 0.765;   // a log's glass: ~0.765 of its housing's height
     const PAPER_LOOK = { PAGE_VAULT: { seed: 7, corner: 'br' }, PAGE_MEMO: { seed: 19, corner: 'bl', staple: true } };
     // where the notes sit on the logbook page (fractions of the page) and beside the gold disc
     const SKETCH = { cx: 0.47, cy: 0.585, r: 0.3, marginX: 0.045, headY: 0.17, rule: 0.058 };
@@ -52,15 +53,38 @@
         last = `${el.offsetWidth}x${el.offsetHeight}`;
         return () => { ro.disconnect(); clearTimeout(timer); };
     }
-    /** The words stay on the thing. When a small window cannot hold them at full size, the type steps down (to MIN_TYPE_PX at
-        the least), then the thing grows a little taller (grow(px over)); the picture follows through its own resize watch. */
-    const MIN_TYPE_PX = 13;
-    function fitWords(sizeEl, box, grow) {
+    /** The words stay on the thing. When a small window cannot hold them at full size, the type steps down (to floor px at
+        the least), then the thing grows a little taller (grow(px over)); the picture follows through its own resize watch.
+        Floors (look pass B12): a found page's typed lines 16 px, a log's 15 px; the frame's printout keeps its own 13. */
+    const MIN_TYPE_PX = 13, PAPER_MIN_PX = 16, LOG_MIN_PX = 15, RIM_CLEAR_PX = 24;
+    function fitWords(sizeEl, box, grow, floor = MIN_TYPE_PX) {
         sizeEl.style.fontSize = '';
         const over = () => box.scrollHeight - box.clientHeight;
         let px = parseFloat(getComputedStyle(sizeEl).fontSize) || 16;
-        while (over() > 1 && px > MIN_TYPE_PX) { px = Math.max(MIN_TYPE_PX, px - 0.5); sizeEl.style.fontSize = `${px}px`; }
+        while (over() > 1 && px > floor) { px = Math.max(floor, px - 0.5); sizeEl.style.fontSize = `${px}px`; }
         if (over() > 1) grow(over());
+    }
+    /** Where the pointer last was, so a real move can be told from a thing opening under a resting pointer (the browser
+        re-points what lies under it then). onRealMove(fn): fn(e) once, on the first pointermove away from where the pointer
+        was when it was called (on the first pointermove at all when no pointer has been seen yet). */
+    let pointerAt = null;
+    addEventListener('pointermove', e => { pointerAt = { x: e.clientX, y: e.clientY }; }, true);
+    function onRealMove(fn) {
+        const from = pointerAt;
+        const once = e => {
+            if (from && Math.abs(e.clientX - from.x) < 1 && Math.abs(e.clientY - from.y) < 1) return;
+            removeEventListener('pointermove', once, true); fn(e);
+        };
+        addEventListener('pointermove', once, true);
+    }
+    /** A find's card on open (look pass B12): the card itself takes the focus (tabindex -1), so a page opened by a click shows
+        no focus look on its key; and its key answers the pointer only once the pointer has really moved (.is-armed), so a
+        page opened under a resting cursor never opens with its key lit. */
+    function settle(card) {
+        if (!card) return;
+        card.setAttribute('tabindex', '-1');
+        card.focus({ preventScroll: true });
+        onRealMove(() => card.classList.add('is-armed'));
     }
     /** A loop that runs while its element is on the page (it may be built before it is attached: it waits for that). */
     function loop(el, ms, fn) {
@@ -214,11 +238,13 @@
             art.getContext('2d').putImageData(new ImageData(pic.data, fit.W, fit.H), 0, 0);
             if (penShown) drawPen(true);
         }
-        /** Every typed line on the paper, whatever the window: smaller type first, then a taller page. */
+        /** Every typed line on the paper, whatever the window: narrower margins first, then smaller type (never under 16 px on
+            a found page), then a taller page. */
         function fitPaper() {
             const face = el.querySelector('.find-face');
-            obj.style.height = '';
-            fitWords(obj, face, over => { obj.style.height = `${obj.offsetHeight + over + 6}px`; });
+            obj.style.height = ''; obj.style.fontSize = ''; face.classList.remove('is-tight');
+            if (!isList && face.scrollHeight - face.clientHeight > 1) face.classList.add('is-tight');
+            fitWords(obj, face, over => { obj.style.height = `${obj.offsetHeight + over + 6}px`; }, isList ? MIN_TYPE_PX : PAPER_MIN_PX);
         }
         return {
             el, steps: lines.length,
@@ -274,11 +300,15 @@
             A().led(art.getContext('2d'), g, W, H, performance.now());
             place(t.last(), false);
         }
-        /** Every line on the screen, whatever the window: smaller type first, then a taller housing (the glass is ~0.77 of it). */
+        /** The glass holds its words and two empty lines under them (look pass B12): the housing takes the height that gives
+            (the glass is ~0.765 of it), never more than its own box. A window too small for that: smaller type (15 px at the
+            least), then a taller housing. */
         function fitScreen() {
-            const screen = el.querySelector('.find-screen');
-            obj.style.height = ''; draw();
-            fitWords(screen, screen, over => { obj.style.height = `${obj.offsetHeight + Math.ceil(over / 0.765) + 6}px`; draw(); });
+            const screen = el.querySelector('.find-screen'), typed = el.querySelector('.find-typed');
+            obj.style.height = ''; screen.style.fontSize = ''; draw();
+            const cs = getComputedStyle(screen), lh = parseFloat(cs.lineHeight) || 24, need = typed.offsetTop + typed.offsetHeight + 2 * lh + (parseFloat(cs.paddingBottom) || 0);
+            if (need < screen.clientHeight - 1) { obj.style.height = `${Math.ceil(obj.offsetHeight - (screen.clientHeight - need) / GLASS_SHARE)}px`; draw(); }
+            fitWords(screen, screen, over => { obj.style.height = `${obj.offsetHeight + Math.ceil(over / GLASS_SHARE) + 6}px`; draw(); }, LOG_MIN_PX);
         }
         return {
             el, steps: lines.length,
@@ -295,7 +325,9 @@
     }
 
     // ── the crew plate ──
-    function plateView(page) {
+    /** The plate with its names cast in. With no lines (the new look's plate since look pass B12, C69: one crew line under it
+        in place of its three lines) it has one turn of its own, a beat to look at it before the line. */
+    function plateView(page, o) {
         const el = document.createElement('div'), lines = page.lines || [];
         el.className = 'find-stage';
         el.innerHTML = `
@@ -303,9 +335,9 @@
                 <canvas class="find-art" aria-hidden="true"></canvas>
                 <ul class="find-sr">${(page.names || []).map(n => `<li>${n ? esc(n) : '— blank —'}</li>`).join('')}</ul>
             </div>
-            <div class="find-quiet" aria-live="polite">${lines.map(l => `<p class="find-line">${esc(l)}</p>`).join('')}</div>`;
+            ${lines.length ? `<div class="find-quiet" aria-live="polite">${lines.map(l => `<p class="find-line">${esc(l)}</p>`).join('')}</div>` : ''}`;
         const obj = el.querySelector('.find-object'), art = el.querySelector('.find-art'), lineEls = [...el.querySelectorAll('.find-quiet .find-line')];
-        let pic = null, img = null, base = null, startedAt = performance.now(), stopGlint = () => {}, unwatch = () => {};
+        let pic = null, img = null, base = null, startedAt = performance.now(), stopGlint = () => {}, unwatch = () => {}, beat = null;
         const paint = () => { if (!pic) return; A().plateGlint(img, base, pic.vals, img.width, img.height, isReduced() ? A().GLINT_MS - 1 : performance.now() - startedAt); art.getContext('2d').putImageData(img, 0, 0); };
         function draw() {
             const w = obj.offsetWidth, h = obj.offsetHeight;
@@ -317,11 +349,14 @@
             paint();
         }
         return {
-            el, steps: lines.length,
+            el, steps: lines.length || 1,
             mount() { draw(); unwatch = onResize(obj, draw); if (!isReduced()) stopGlint = loop(obj, TICK_MS, paint); },
-            reveal(i, done) { if (lineEls[i]) lineEls[i].classList.add('is-in'); if (done) done(); },
-            finish() { lineEls.forEach(li => li.classList.add('is-in')); },
-            destroy() { stopGlint(); unwatch(); },
+            reveal(i, done) {
+                if (lineEls[i]) { lineEls[i].classList.add('is-in'); if (done) done(); return; }
+                beat = setTimeout(() => { beat = null; if (done) done(); }, o.lineMs);
+            },
+            finish() { clearTimeout(beat); lineEls.forEach(li => li.classList.add('is-in')); },
+            destroy() { clearTimeout(beat); stopGlint(); unwatch(); },
         };
     }
 
@@ -363,7 +398,13 @@
             });
             return { w, h, cx: w / 2, cy: h / 2, R: D / 2 - ART * 2, D };
         }
-        noteEls.forEach((b, i) => { const at = SKETCH_NOTES[notes[i].key]; if (b && at) Object.assign(b.style, { left: `${at[0] * w}px`, top: `${at[1] * h}px`, width: `${at[2] * w}px` }); });
+        const rimLeft = SKETCH.cx * w - SKETCH.r * h;                                             // a note left of the disc stays RIM_CLEAR_PX off its rim
+        noteEls.forEach((b, i) => {
+            const at = SKETCH_NOTES[notes[i].key]; if (!b || !at) return;
+            const left = at[0] * w, isBeside = notes[i].key !== 'margin' && left + at[2] * w / 2 < SKETCH.cx * w;
+            const width = isBeside ? Math.min(at[2] * w, rimLeft - RIM_CLEAR_PX - left) : at[2] * w;
+            Object.assign(b.style, { left: `${left}px`, top: `${at[1] * h}px`, width: `${width}px` });
+        });
         return { w, h, cx: SKETCH.cx * w, cy: SKETCH.cy * h, R: SKETCH.r * h };
     }
     /** A part's point on the disc (where its line ends), in CSS px of the object. */
@@ -386,16 +427,23 @@
             return `<g data-key="${n.key}" class="${cls}"><path d="${e.d}"/><circle cx="${e.ring[0].toFixed(1)}" cy="${e.ring[1].toFixed(1)}" r="3.5"/></g>`;
         }).join('');
     }
-    /** Pointing at a note or a part lights it (once its note is in); leaving the thing puts the light out. */
-    function bindPointing(obj, noteEls, spots, setFocus, focusNow) {
+    /** Pointing at a note or a part lights it (once its note is in); leaving the thing puts the light out. The pointer counts
+        only from its first real move after the thing opens (look pass B12): a disc opened under the click that brought it
+        never opens with a part lit and the other notes stepped back. */
+    function bindPointing(obj, noteEls, setFocus, focusNow) {
+        let isArmed = false;
+        onRealMove(() => { isArmed = true; });                                                  // runs first: window, capture
+        obj.addEventListener('pointermove', e => {
+            if (!isArmed) return;
+            const at = e.target && e.target.closest ? e.target.closest('.find-note, .find-spot') : null;
+            if (at && obj.contains(at)) setFocus(at.dataset.key);
+        });
         noteEls.forEach(b => {
             if (!b) return;
-            b.addEventListener('mouseenter', () => setFocus(b.dataset.key));
             b.addEventListener('focus', () => setFocus(b.dataset.key));
             b.addEventListener('click', () => setTimeout(() => setFocus(b.dataset.key), 0));      // after the click has brought every note in
             b.addEventListener('blur', () => { if (focusNow() === b.dataset.key && !obj.matches(':hover')) setFocus(null); });
         });
-        spots.forEach(sp => sp.addEventListener('mouseenter', () => setFocus(sp.dataset.key)));
         obj.addEventListener('mouseleave', () => setFocus(null));
     }
     function discView(o) {
@@ -450,7 +498,7 @@
             noteEls.forEach(b => b && b.setAttribute('aria-pressed', String(b.dataset.key === focus)));
             if (isReal) paintGold(); else paintSketch();
         }
-        bindPointing(obj, noteEls, spots, setFocus, () => focus);
+        bindPointing(obj, noteEls, setFocus, () => focus);
         const bringIn = i => {
             isIn[i] = true;
             if (noteEls[i]) noteEls[i].classList.add('is-in');
@@ -493,5 +541,5 @@
         return showAll;
     }
 
-    window.NSFinds = Object.freeze({ isOn, page, disc, said, pace });
+    window.NSFinds = Object.freeze({ isOn, page, disc, said, pace, settle });
 })();

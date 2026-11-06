@@ -5,7 +5,7 @@
    with its lines typed on the paper, the log screen typing them out, the plate with the names cast in; the crew's line comes
    under it once the last line is in. The old look draws the object on the left with its lines on the right. Either way one
    spoken line follows from whoever aboard would say something. open(app, page) shows it and resolves when it is put away;
-   the page stays in cargo (isKept) and can be read again from there. */
+   the page stays in cargo (isKept) and can be read again from the old look's cargo panel (the new look has no hold yet: C45). */
 
 (function () {
     'use strict';
@@ -18,6 +18,7 @@
     const BACKDROP_GUARD_MS = 1200;                             // a click beside the page puts it away only once it has been up this long
 
     const KICKER = { plate: 'A CAST PLATE · BESIDE THE AIRLOCK', paper: 'A PRINTED PAGE · EARTH LETTERHEAD', log: 'THE LAST ENTRY · CAPTAIN\'S LOG' };
+    const WHERE = { plate: 'BESIDE THE AIRLOCK' };              // the new look's kicker is the source only (look pass B12): the ship, and where in it
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     function seeded(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
 
@@ -77,10 +78,12 @@
         const F = window.NSFinds;
         return F && F.isOn() ? openThing(app, page, foundIn, F) : openCard(app, page, foundIn);
     }
-    /** The spoken line after the page, unless its speaker is dead (the dead do not talk; A.U.R.A. always can). */
-    function afterOf(page, state) {
-        const isDead = !!(page.after && state && state.isSilentSpeaker && page.after.speaker !== 'A.U.R.A.' && state.isSilentSpeaker(`${page.after.speaker}: `));
-        return page.after && !isDead ? page.after : null;
+    /** The spoken line after the page, unless its speaker is dead (the dead do not talk; A.U.R.A. always can). The new look
+        (isNew) takes the page's own `said` first: the plate's one crew line in place of its three lines (C69). */
+    function afterOf(page, state, isNew) {
+        const line = (isNew && page.said) || page.after;
+        const isDead = !!(line && state && state.isSilentSpeaker && line.speaker !== 'A.U.R.A.' && state.isSilentSpeaker(`${line.speaker}: `));
+        return line && !isDead ? line : null;
     }
     /** KEEP IT, or a click beside the page once it has been up a moment, puts it away. */
     function putAway(overlay, state, openedAt, onClose) {
@@ -141,19 +144,22 @@
         return putAway(overlay, state, openedAt);
     }
 
-    /** The new look: the thing itself, big, its words on it; the crew's line under it once the last line is in. */
+    /** The new look: the thing itself, big, its words on it; the crew's line under it once the last line is in. Over it only
+        where it was found, on one line: the thing names itself, so no title; and no promise of a hold to read it in again
+        (look pass B12). The plate shows its one crew line (said) in place of its three lines. */
     function openThing(app, page, foundIn, F) {
-        const state = app && app.state, shipName = foundIn || page.shipName || 'a dead ship', after = afterOf(page, state);
-        const view = F.page(page, { shipName, lineMs: LINE_MS });
+        const state = app && app.state, shipName = foundIn || page.shipName || 'a dead ship', after = afterOf(page, state, true);
+        const view = F.page(page.said ? Object.assign({}, page, { lines: [] }) : page, { shipName, lineMs: LINE_MS });
+        const kicker = [`FOUND IN ${shipName}`, WHERE[page.kind]].filter(Boolean).join(' · ');
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay disc-doc found-page find-view';
         overlay.style.zIndex = '4000';
         overlay.innerHTML = `
             <section class="modal-content deck-panel disc-doc-card found-page-card find-card is-${esc(page.kind)}" role="dialog" aria-label="${esc(page.name)}">
-                <header class="enc-head"><p class="enc-kicker">FOUND IN ${esc(shipName)} · ${KICKER[page.kind] || 'A PAGE'}</p><h3>${esc(page.logTitle)}</h3></header>
+                <header class="enc-head"><p class="enc-kicker">${esc(kicker)}</p></header>
                 <div class="find-slot"></div>
                 ${after ? `<div class="enc-line find-said" aria-live="polite" style="visibility:hidden">${F.said(app, after.speaker, esc(after.text))}</div>` : ''}
-                <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>KEEP IT</span><small>it stays in your cargo</small></button></div>
+                <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>KEEP IT</span></button></div>
             </section>`;
         overlay.querySelector('.find-slot').replaceWith(view.el);                              // every line in place from the start: the card never grows
         document.body.appendChild(overlay);
@@ -169,7 +175,7 @@
             if (state && state.addLog) state.addLog(`${after.speaker}: "${after.text}"`);
         };
         F.pace(view, overlay, LINE_MS, isAtOnce => { if (isAtOnce) say(); else setTimeout(say, SAID_MS); });   // a click on the words: the rest at once
-        overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
+        F.settle(overlay.querySelector('.found-page-card'));                                   // the card takes the focus: KEEP IT opens quiet
         return putAway(overlay, state, openedAt, () => view.destroy());
     }
 

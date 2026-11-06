@@ -2,8 +2,8 @@
    What it is: while the travel view is shown, a REAL log line that starts with "A.U.R.A.:", "Jaxon:", "Aris:", "Vance:" or
    "Mira:" becomes one voice line: the first name over the quote, beside that person in the tower (anchor 'person:<id>'),
    or beside our Lander outside (anchor 'ship') for A.U.R.A. and anyone out of frame. Under the words the picture darkens
-   with the dither grain (canvas#ns-shade), never over a world or our Lander. Every other log line stays in the log,
-   readable in orbit (docs/BUILD_A.md §6). One line at a time, a queue of three (the oldest dropped); hidden while a
+   with the dither grain (canvas#ns-shade), never over a world or our Lander. Every other log line stays in the log
+   (kept in the save; the new look has no log to read it in yet: C46, later). One line at a time, a queue of three (the oldest dropped); hidden while a
    hover note is up; nothing while a card, a page or a minigame is up (a line waits then, and only shown, unblocked time
    ages it; a logged line still waiting 15 s later, by the clock, is dropped: it was news before a minigame, a trip, a long
    card, and is old now). A line logged while the view was hidden, in the moment before it shows (the story world revealed as we
