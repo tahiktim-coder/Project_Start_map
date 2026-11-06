@@ -397,7 +397,8 @@ function discFindMd(page, where) {
         `Choice: **${clean(take.text)}** — ${clean(take.desc)}`, '',
         `Then the disc itself${tag('DiscDocument.js', 'REAL')}: ${clean(real.kicker)} · ${clean(real.title)}  `,
         ...(D.REAL_NOTES || []).map(n => `- **${n.label}** — ${clean(n.text)}${tag('DiscDocument.js', `REAL_NOTES.${n.key}`)}`),
-        `${lineOf('A.U.R.A.', real.aura)}  `, `Button: ${clean(real.close)} — ${clean(real.closeNote)}`, ''];
+        `${lineOf('A.U.R.A.', real.aura)}  `, `Button: ${clean(real.close)} — ${clean(real.closeNote)}`, '',
+        `_The new look (look pass B12, C69): no card. The disc itself opens straight from the locker, kicker FOUND IN [ship name], the team's line above under it in place of A.U.R.A.'s, and one key: **${clean(take.text)}**. No button note._`, ''];
 }
 function extrasMd(sector) {
     const b = [];
@@ -472,6 +473,7 @@ for (let sector = 1; sector <= 6; sector++) {
         page.lines.forEach(l => b.push(`${clean(l)}  `));
         if (page.names) b.push('', `Names on it: ${page.names.map(n => n || '(blank)').join(' · ')}`);
         if (page.after) b.push('', lineOf(page.after.speaker, page.after.text));
+        if (page.said) b.push('', '_The new look (look pass B12, C69): the lines above are not shown; this one line comes under it instead:_', `${lineOf(page.said.speaker, page.said.text)}${draftAt(read('src/data/ExodusLogs.js'), read('src/data/ExodusLogs.js').indexOf(`said: { speaker: '${page.said.speaker}'`))}${tag('ExodusLogs.js', `${page.id}.said`)}`);
         b.push('');
     });
     b.push(...extrasMd(sector), ...hazardMd(sector));

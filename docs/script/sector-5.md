@@ -125,6 +125,8 @@ Then the disc itself «DiscDocument.js · REAL»: THE DISC ITSELF · NOW IN OUR 
 **A.U.R.A.:** I have logged it as cargo, Commander. It changes nothing about our course.  
 Button: PUT IT AWAY — it stays in your cargo
 
+_The new look (look pass B12, C69): no card. The disc itself opens straight from the locker, kicker FOUND IN [ship name], the team's line above under it in place of A.U.R.A.'s, and one key: **Bring it aboard**. No button note._
+
 ## The sector's own trouble: REALITY_BREAKDOWN «SectorConfig.js · 5.hazard»
 _The throw was uneven here: distances and dates come back wrong_
 
