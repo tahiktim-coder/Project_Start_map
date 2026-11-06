@@ -116,25 +116,25 @@ _When she trusts you NEUTRAL or less: a 30% chance on entering orbit. The follow
 ### The air vent card «bundle.js · showAuraVentModal»
 _When she turns hostile. The third time is game over._
 
-- She will empty the whole ship. Everyone dies. «bundle.js · line 4357»
-- One of the crew will die before the air comes back. «bundle.js · line 4358»
-- One of the crew will be hurt before the air comes back. «bundle.js · line 4359»
-- Jaxon: "I can shut her out!" «bundle.js · line 4361»
-- **desc** — He cuts her off from the air system. A.U.R.A. goes back to neutral. «bundle.js · line 4361»
-- Plug in the Tech Fragment «bundle.js · line 4362»
-- **desc** — Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment. «bundle.js · line 4362»
-- Do nothing and wait «bundle.js · line 4363»
-- **kicker** — AIR ALERT — TIME NUMBER [n] «bundle.js · line 4367»
-- **kicker** — AIR ALERT «bundle.js · line 4367»
-- **title** — A.U.R.A. is letting the air out «bundle.js · line 4367»
-- **readout** — Quarters · air «bundle.js · line 4369» **DRAFT (look pass)**
-- **context** — The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself. «bundle.js · line 4370»
-- She is not giving warnings any more. «bundle.js · line 4371»
-- **title** — A.U.R.A. MUTINY «bundle.js · line 4391»
-- **message** — A.U.R.A. opened the vents on every deck. Her last log entry reads: "All decks vented, Commander. By my figures, the mission does better without a commander. I have logged my reasons." «bundle.js · line 4392»
-- A.U.R.A. atmospheric venting «bundle.js · line 4402»
-- ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time. «bundle.js · line 4404»
-- [name] suffered oxygen deprivation during the vent. Status: INJURED. «bundle.js · line 4413»
+- She will empty the whole ship. Everyone dies. «bundle.js · line 4358»
+- One of the crew will die before the air comes back. «bundle.js · line 4359»
+- One of the crew will be hurt before the air comes back. «bundle.js · line 4360»
+- Jaxon: "I can shut her out!" «bundle.js · line 4362»
+- **desc** — He cuts her off from the air system. A.U.R.A. goes back to neutral. «bundle.js · line 4362»
+- Plug in the Tech Fragment «bundle.js · line 4363»
+- **desc** — Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment. «bundle.js · line 4363»
+- Do nothing and wait «bundle.js · line 4364»
+- **kicker** — AIR ALERT — TIME NUMBER [n] «bundle.js · line 4368»
+- **kicker** — AIR ALERT «bundle.js · line 4368»
+- **title** — A.U.R.A. is letting the air out «bundle.js · line 4368»
+- **readout** — Quarters · air «bundle.js · line 4370» **DRAFT (look pass)**
+- **context** — The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself. «bundle.js · line 4371»
+- She is not giving warnings any more. «bundle.js · line 4372»
+- **title** — A.U.R.A. MUTINY «bundle.js · line 4392»
+- **message** — A.U.R.A. opened the vents on every deck. Her last log entry reads: "All decks vented, Commander. By my figures, the mission does better without a commander. I have logged my reasons." «bundle.js · line 4393»
+- A.U.R.A. atmospheric venting «bundle.js · line 4403»
+- ☠ DEATH: [name] died from prolonged oxygen deprivation. A.U.R.A. did not restore atmosphere in time. «bundle.js · line 4405»
+- [name] suffered oxygen deprivation during the vent. Status: INJURED. «bundle.js · line 4414»
 
 ### The data chip «Items.js · TECH_FRAGMENT»
 _A Tech Fragment used from the cargo hold._
@@ -170,10 +170,10 @@ _SHIP_DAMAGE, FIRST_LANDING, FEW_CREW, ETHICS_RESET: no code triggers these._
 ### The card around every crew moment «bundle.js · showCrewPersonalEvent»
 _The moments themselves are in each sector file._
 
-- **medbay** — Med bay «bundle.js · line 2691» **DRAFT (look pass)**
-- **kicker** — A NIGHT ON THE BRIDGE «bundle.js · line 2706»
-- **kicker** — A MOMENT WITH [name] «bundle.js · line 2706»
-- CREW: [result] «bundle.js · line 2713»
+- **medbay** — Med bay «bundle.js · line 2692» **DRAFT (look pass)**
+- **kicker** — A NIGHT ON THE BRIDGE «bundle.js · line 2707»
+- **kicker** — A MOMENT WITH [name] «bundle.js · line 2707»
+- CREW: [result] «bundle.js · line 2714»
 
 ## Every card (the new look)
 
@@ -197,25 +197,25 @@ _Stress as a feeling (C04), a gain that did not fit, a death with nothing else s
 ### Over a card's picture: readouts and chips
 _The readout in the picture's corner (three words or fewer), and chips a card sets itself._
 
-- **readout** — Bridge «bundle.js · line 2024» **DRAFT (look pass)**
-- Vance: "Five names on the paper. Not four." «bundle.js · line 2045» **DRAFT (look pass)**
-- **bridge** — Bridge «bundle.js · line 2691» **DRAFT (look pass)**
-- **engineering** — Engineering «bundle.js · line 2691» **DRAFT (look pass)**
-- **medbay** — Med bay «bundle.js · line 2691» **DRAFT (look pass)**
-- **hold** — Hold «bundle.js · line 2691» **DRAFT (look pass)**
-- **lab** — Lab «bundle.js · line 2691» **DRAFT (look pass)**
-- **hangar** — Hangar «bundle.js · line 2691» **DRAFT (look pass)**
-- [name] · wreck «bundle.js · line 3073» **DRAFT (look pass)**
-- Faint contact «bundle.js · line 3073» **DRAFT (look pass)**
-- Worlds ahead «bundle.js · line 3073» **DRAFT (look pass)**
-- **desc** — [desc] All crew +1 Stress. «bundle.js · line 3152» **DRAFT**
-- **chips** — Quarters dark «bundle.js · line 3153» **DRAFT (look pass)**
-- **chips** — Crew tense «bundle.js · line 3153» **DRAFT (look pass)**
-- **readout** — Energy [have] of [jump cost] «bundle.js · line 3163» **DRAFT (look pass)**
-- **readoutNow** — Energy [energy] of [jump cost] «bundle.js · line 3164» **DRAFT (look pass)**
-- **desc** — Stay in this sector. «bundle.js · line 3405» **DRAFT (look pass)**
-- **readout** — Sector [sector] «bundle.js · line 3412» **DRAFT (look pass)**
-- **readout** — The light «bundle.js · line 4069» **DRAFT (look pass)**
+- **readout** — Bridge «bundle.js · line 2025» **DRAFT (look pass)**
+- Vance: "Five names on the paper. Not four." «bundle.js · line 2046» **DRAFT (look pass)**
+- **bridge** — Bridge «bundle.js · line 2692» **DRAFT (look pass)**
+- **engineering** — Engineering «bundle.js · line 2692» **DRAFT (look pass)**
+- **medbay** — Med bay «bundle.js · line 2692» **DRAFT (look pass)**
+- **hold** — Hold «bundle.js · line 2692» **DRAFT (look pass)**
+- **lab** — Lab «bundle.js · line 2692» **DRAFT (look pass)**
+- **hangar** — Hangar «bundle.js · line 2692» **DRAFT (look pass)**
+- [name] · wreck «bundle.js · line 3074» **DRAFT (look pass)**
+- Faint contact «bundle.js · line 3074» **DRAFT (look pass)**
+- Worlds ahead «bundle.js · line 3074» **DRAFT (look pass)**
+- **desc** — [desc] All crew +1 Stress. «bundle.js · line 3153» **DRAFT**
+- **chips** — Quarters dark «bundle.js · line 3154» **DRAFT (look pass)**
+- **chips** — Crew tense «bundle.js · line 3154» **DRAFT (look pass)**
+- **readout** — Energy [have] of [jump cost] «bundle.js · line 3164» **DRAFT (look pass)**
+- **readoutNow** — Energy [energy] of [jump cost] «bundle.js · line 3165» **DRAFT (look pass)**
+- **desc** — Stay in this sector. «bundle.js · line 3406» **DRAFT (look pass)**
+- **readout** — Sector [sector] «bundle.js · line 3413» **DRAFT (look pass)**
+- **readout** — The light «bundle.js · line 4070» **DRAFT (look pass)**
 - **readout** — Earth? «Copy.js · line 471» **DRAFT (look pass)**
 
 ### A ship fault: no card (look pass B03) «Fault.js · WORDS»
@@ -233,41 +233,41 @@ _A readout counts the beacons heard (the void's words), then Mira's line (A.U.R.
 ### Stress «bundle.js · applyStressTraits»
 _When someone reaches stress 2; the first time is a tutorial._
 
-- [name] steadies their nerves. Command requires composure. «bundle.js · line 1057»
-- A.U.R.A.: "Crew stress is high, Commander. They rest on each sector jump, if the crew quarters work." «bundle.js · line 1067»
-- [name]: "We can't afford to waste salvage. Not here. Not now." «bundle.js · line 1073»
-- [name]: "I'm not taking the dangerous way. If you want it, send someone else." «bundle.js · line 1077» **DRAFT**
-- [name]: "I'm not sending anyone into that deathtrap." «bundle.js · line 1078»
-- [name]: "I won't leave anyone behind. While someone is hurt, I stay aboard." «bundle.js · line 1082» **DRAFT**
-- [name]: "I won't leave anyone behind. No EVA until everyone is stable." «bundle.js · line 1083»
-- [name]: "Safe option? Where's the data in safe?" «bundle.js · line 1087»
-- [name] has calmed down. Negative behavior subsiding. «bundle.js · line 1106»
+- [name] steadies their nerves. Command requires composure. «bundle.js · line 1058»
+- A.U.R.A.: "Crew stress is high, Commander. They rest on each sector jump, if the crew quarters work." «bundle.js · line 1068»
+- [name]: "We can't afford to waste salvage. Not here. Not now." «bundle.js · line 1074»
+- [name]: "I'm not taking the dangerous way. If you want it, send someone else." «bundle.js · line 1078» **DRAFT**
+- [name]: "I'm not sending anyone into that deathtrap." «bundle.js · line 1079»
+- [name]: "I won't leave anyone behind. While someone is hurt, I stay aboard." «bundle.js · line 1083» **DRAFT**
+- [name]: "I won't leave anyone behind. No EVA until everyone is stable." «bundle.js · line 1084»
+- [name]: "Safe option? Where's the data in safe?" «bundle.js · line 1088»
+- [name] has calmed down. Negative behavior subsiding. «bundle.js · line 1107»
 
 ### Breakdowns «bundle.js · triggerBreakdown»
 _When someone reaches stress 3. The commander breaking is game over._
 
-- [name] has a breakdown in confinement. No one hears the screaming. «bundle.js · line 1146»
-- **title** — COMMAND FAILURE «bundle.js · line 1162»
-- **message** — Commander [name] has suffered a complete psychological breakdown. Command chain shattered. The crew is lost without leadership. «bundle.js · line 1163»
-- ALERT: [name] has sabotaged ship systems in a paranoid episode! «bundle.js · line 1171»
-- Aris has shut down. She stares at the wall and does not answer. Nobody can treat the wounded now. «bundle.js · line 1179»
-- [name] has shut himself in the cargo hold. He won't take orders until the next jump. «bundle.js · line 1187»
-- Mira has become dangerously obsessed. She demands extended EVA time regardless of risk. «bundle.js · line 1192»
+- [name] has a breakdown in confinement. No one hears the screaming. «bundle.js · line 1147»
+- **title** — COMMAND FAILURE «bundle.js · line 1163»
+- **message** — Commander [name] has suffered a complete psychological breakdown. Command chain shattered. The crew is lost without leadership. «bundle.js · line 1164»
+- ALERT: [name] has sabotaged ship systems in a paranoid episode! «bundle.js · line 1172»
+- Aris has shut down. She stares at the wall and does not answer. Nobody can treat the wounded now. «bundle.js · line 1180»
+- [name] has shut himself in the cargo hold. He won't take orders until the next jump. «bundle.js · line 1188»
+- Mira has become dangerously obsessed. She demands extended EVA time regardless of risk. «bundle.js · line 1193»
 
 ### Bringing someone back «bundle.js · handleRevivalAction»
 _Using Pulsing Spores or an Ancient Neural Link from the cargo hold._
 
-- **title** — INVALID TARGET «bundle.js · line 6231»
-- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 6232»
-- CANCEL «bundle.js · line 6233»
-- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 6243»
-- Select subject for integration with [name]. «bundle.js · line 6245»
-- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 6246»
-- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 6278»
-- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 6279»
-- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 6282»
-- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 6283»
-- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 6290»
+- **title** — INVALID TARGET «bundle.js · line 6232»
+- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 6233»
+- CANCEL «bundle.js · line 6234»
+- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 6244»
+- Select subject for integration with [name]. «bundle.js · line 6246»
+- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 6247»
+- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 6279»
+- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 6280»
+- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 6283»
+- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 6284»
+- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 6291»
 
 ## Food, damage and data
 
@@ -286,11 +286,11 @@ _The crew eats one ration on each sector jump._
 ### Deck damage «bundle.js · damageDeck»
 _The first time is a tutorial._
 
-- HULL BREACH: [deck] has taken damage! Systems offline. «bundle.js · line 973»
-- A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage." «bundle.js · line 981»
+- HULL BREACH: [deck] has taken damage! Systems offline. «bundle.js · line 974»
+- A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage." «bundle.js · line 982»
 
 ### What a broken deck costs (the new look) «Orbit.js · DECK_COST»
-_Chips always on a red deck in the tower, and under "Live with it". The lab costs nothing there._
+_The game's rules for a broken deck, in words. The tower shows each deck's as one short chip (the rule chips below), only while the deck is pointed at or its repair plate is open. The lab costs nothing there._
 
 - **bridge** — warps cost more «Orbit.js · line 769» **DRAFT**
 - **bridge** — no far scans «Orbit.js · line 769» **DRAFT**
@@ -305,6 +305,99 @@ _A culture in the hold; someone shut down (catatonic) in the quarters._
 - the culture stops growing «Orbit.js · line 779» **DRAFT**
 - no recovery for [name] «Orbit.js · line 780» **DRAFT**
 
+## The ship in travel (the new look)
+
+### A broken deck: A.U.R.A., once (look pass B04) «Tower.js · RED_LINE»
+_The first time a deck breaks, in the ship: "The engine room is broken, Commander." / "The quarters are broken, Commander."_
+
+- [deck] [are | is] broken, Commander. «Tower.js · line 178» **DRAFT (look pass)**
+
+### The repair plate: its rule chips and what is said after (look pass B04) «ShipKey.js · RULE · FIXED · PATCHED · LIVE»
+_Click a red deck: Fix it, Patch it, Live with it. Each deck's rule chip shows under "Live with it" and while the deck is pointed at. Fix and Patch are said by Jaxon (A.U.R.A. when he cannot); Live with it by A.U.R.A._
+
+- **bridge** — warps ×1.5 «ShipKey.js · line 37» **DRAFT (look pass)**
+- **quarters** — no rest «ShipKey.js · line 37» **DRAFT (look pass)**
+- **hold** — hold ½ «ShipKey.js · line 37» **DRAFT (look pass)**
+- **engineering** — jumps ×2 «ShipKey.js · line 37» **DRAFT (look pass)**
+- **bridge** — Bridge is fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- **lab** — Lab's fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- **quarters** — Quarters are fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- **hold** — Hold's fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- **engineering** — Engine room's fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- That'll hold for a jump or two. «ShipKey.js · line 40» **DRAFT (look pass)**
+- **bridge** — Warps will cost more, Commander. «ShipKey.js · line 41» **DRAFT (look pass)**
+- **quarters** — Nobody will rest at supper, Commander. «ShipKey.js · line 41» **DRAFT (look pass)**
+- **hold** — The hold will take half, Commander. «ShipKey.js · line 41» **DRAFT (look pass)**
+- **engineering** — Jumps will cost double, Commander. «ShipKey.js · line 42» **DRAFT (look pass)**
+- [deck] [are | is] fixed, Commander. «ShipKey.js · line 43» **DRAFT (look pass)**
+
+### Supper at the galley table (look pass B04) «Supper.js · LINES · KEYS · TABLE · TAG_LAST»
+_After a jump, short of food: A.U.R.A., the one who offers, and the commander's reply on the plate. The table moment is a frame with "Not yet" first. A death there: A.U.R.A., then one person names them._
+
+- **aura** — Not enough for everyone tonight, Commander. «Supper.js · line 56»
+- **aura** — Not enough for everyone again, Commander. «Supper.js · line 56»
+- **more** — One more, Commander. «Supper.js · line 57» **DRAFT**
+- **offer · vance** — I'll skip it. «Supper.js · line 59»
+- **offer · vance** — I'll skip it again. I'm fine. «Supper.js · line 59»
+- **offer · jaxon** — I'll go without tonight. «Supper.js · line 60»
+- **offer · jaxon** — I'll go without again. I'm fine. «Supper.js · line 60»
+- **offer · aris** — Give mine to someone else. «Supper.js · line 61»
+- **offer · aris** — Give mine away again. I can manage. «Supper.js · line 61»
+- **offer · mira** — I'm not hungry. Really. «Supper.js · line 62»
+- **offer · mira** — I'm still not hungry. Really. «Supper.js · line 62»
+- **warn** — [name] can't go without again. It would kill [him]. «Supper.js · line 65»
+- **warnSelf** — I can't go without again, Commander. It would kill me. «Supper.js · line 66»
+- **warnAura** — [name] can't go without again, Commander. It would kill [him]. «Supper.js · line 67»
+- **went** — [names] went without tonight, Commander. «Supper.js · line 68» **DRAFT (look pass)**
+- **dead** — [name] is dead, Commander. «Supper.js · line 69» **DRAFT (look pass)**
+- **named** — [he] gave [his] share away. Every night. «Supper.js · line 70» **DRAFT (look pass)**
+- **act** — accept «Supper.js · line 73» **DRAFT (look pass)**
+- **label** — All right, [name] «Supper.js · line 73» **DRAFT (look pass)**
+- **chips** — [name] goes without «Supper.js · line 73» **DRAFT (look pass)**
+- **act** — share «Supper.js · line 74» **DRAFT**
+- **label** — Share it out «Supper.js · line 74» **DRAFT**
+- **chips** — everyone goes hungry «Supper.js · line 74» **DRAFT**
+- **notYet** — Not yet «Supper.js · line 76» **DRAFT**
+- **share** — Share it out «Supper.js · line 76» **DRAFT**
+- **go** — Go without «Supper.js · line 76» **DRAFT**
+- **dies** — [name] dies «Supper.js · line 76» **DRAFT**
+- went without twice «Supper.js · line 77» **DRAFT (look pass)**
+
+### The crew clicked in the tower «ShipRoutine.js · LINES»
+_One line each; a second click in the same sector says nothing._
+
+- **travel · cora · any** — Four crew, Commander. All accounted for. «ShipRoutine.js · line 208»
+- **travel · jaxon · work** — The drive's running a little hot. Nothing I can't fix. «ShipRoutine.js · line 209»
+- **travel · jaxon · meal** — Same stew as yesterday. I'm not complaining. «ShipRoutine.js · line 209»
+- **travel · jaxon · move** — Going back down. I want to check the coolant again. «ShipRoutine.js · line 209»
+- **travel · aris · work** — Everyone's due a check-up this week. You too, Commander. «ShipRoutine.js · line 210»
+- **travel · aris · meal** — Sit down for once. The ship can fly itself for ten minutes. «ShipRoutine.js · line 210»
+- **travel · aris · clean** — I'll do the dishes. Go and get some sleep. «ShipRoutine.js · line 211»
+- **travel · aris · chronos** — Nothing on the scanner. Just old ice. «ShipRoutine.js · line 211»
+- **travel · aris · any** — I'm on my way down to the med bay. «ShipRoutine.js · line 211»
+- **travel · mira · work** — A.U.R.A. found a star that isn't on any chart. I'm checking her numbers. «ShipRoutine.js · line 212»
+- **travel · mira · titan** — That's a ship's transponder. One of the eight, I bet. «ShipRoutine.js · line 212»
+- **travel · mira · meal** — Did you see the readings this morning? I couldn't sleep after that. «ShipRoutine.js · line 213»
+- **travel · mira · any** — Back to the lab. I left a scan running. «ShipRoutine.js · line 213»
+- **travel · vance · nav** — I'm checking her course against the old charts. «ShipRoutine.js · line 214»
+- **travel · vance · zeta** — A station out here. Somebody put it on this route on purpose. «ShipRoutine.js · line 214»
+- **travel · vance · meal** — I'll eat standing up. My back's bad today. «ShipRoutine.js · line 215»
+- **travel · vance · any** — Ask the computer how many crates we loaded. Then come and count them. «ShipRoutine.js · line 215»
+
+### The crew clicked, by their state (look pass B04) «ShipRoutine.js · BY_STATE»
+_Hurt, too weak from a missed supper, shut in their bunk; asleep (sedated): A.U.R.A. answers._
+
+- **hurt** — Not now, Commander. Give me a day. «ShipRoutine.js · line 224» **DRAFT (look pass)**
+- **weak** — I'm all right. Just tired. «ShipRoutine.js · line 225» **DRAFT (look pass)**
+- **confined** — You know where to find me. «ShipRoutine.js · line 226» **DRAFT (look pass)**
+- **asleep** — [name] is sedated, Commander. «ShipRoutine.js · line 227» **DRAFT (look pass)**
+
+### Rations low (look pass B04) «Tower.js · RATIONS_LINE»
+_A.U.R.A., once a run, the first time the rations run low._
+
+- We have [n] rations. That's [one jump | jumps], Commander. «Tower.js · line 651» **DRAFT (look pass)**
+- We have [n] rations. That's less than one jump, Commander. «Tower.js · line 651» **DRAFT (look pass)**
+
 ### What the data adds up to «bundle.js · addColonyKnowledge»
 _At 1, 3 and 5 data._
 
@@ -317,23 +410,23 @@ _At 1, 3 and 5 data._
 ### Warping to a planet «bundle.js · handleWarp»
 _The lines for the light are in sector-6.md._
 
-- A.U.R.A.: "That contact is too faint to plot a course to, Commander." «bundle.js · line 2211»
-- A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in." «bundle.js · line 2228»
-- Back into orbit. No energy needed. «bundle.js · line 2229»
-- A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector." «bundle.js · line 2233»
-- Warping to [planet name]... «bundle.js · line 2265»
-- A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander." «bundle.js · line 2272»
-- Autodoc: Crew injuries stabilized during transit. «bundle.js · line 2299»
-- The fuel scoop took [scoop] energy from the atmosphere. «bundle.js · line 2306»
-- [name]: Unsettled by hostile readings. «bundle.js · line 2316»
-- [name] has recovered from sedation. Cleared for duty. «bundle.js · line 2346»
-- [name] is still kept asleep. [n] more jumps until he wakes. «bundle.js · line 2348»
-- The door to your quarters opens. Nobody says anything. You take the chair back. «bundle.js · line 2356»
-- [name] is back at his post. Nobody brings it up. «bundle.js · line 2356»
-- Docking approach started. Station sensors detecting our arrival. «bundle.js · line 2365»
-- Entered debris field. Navigation systems active. «bundle.js · line 2367»
-- Orbit established. Systems Green. «bundle.js · line 2376»
-- ⚠ INCOMING TRANSMISSION: Old distress signal detected... «bundle.js · line 2390»
+- A.U.R.A.: "That contact is too faint to plot a course to, Commander." «bundle.js · line 2212»
+- A.U.R.A.: "We do not need the drive, Commander. The light is pulling us in." «bundle.js · line 2229»
+- Back into orbit. No energy needed. «bundle.js · line 2230»
+- A.U.R.A.: "The jump window is closing, Commander. There is no time for another stop in this sector." «bundle.js · line 2234»
+- Warping to [planet name]... «bundle.js · line 2266»
+- A.U.R.A.: "Orbit, Commander. The scanner is ready, and so is the lander." «bundle.js · line 2273»
+- Autodoc: Crew injuries stabilized during transit. «bundle.js · line 2300»
+- The fuel scoop took [scoop] energy from the atmosphere. «bundle.js · line 2307»
+- [name]: Unsettled by hostile readings. «bundle.js · line 2317»
+- [name] has recovered from sedation. Cleared for duty. «bundle.js · line 2347»
+- [name] is still kept asleep. [n] more jumps until he wakes. «bundle.js · line 2349»
+- The door to your quarters opens. Nobody says anything. You take the chair back. «bundle.js · line 2357»
+- [name] is back at his post. Nobody brings it up. «bundle.js · line 2357»
+- Docking approach started. Station sensors detecting our arrival. «bundle.js · line 2366»
+- Entered debris field. Navigation systems active. «bundle.js · line 2368»
+- Orbit established. Systems Green. «bundle.js · line 2377»
+- ⚠ INCOMING TRANSMISSION: Old distress signal detected... «bundle.js · line 2391»
 
 ### Jumping to the next sector «bundle.js · handleSectorJump»
 _The lines for the light are in sector-6.md._
@@ -342,15 +435,15 @@ _(no text)_
 
 ### Breaking orbit «bundle.js · init · req-break-orbit»
 
-- Breaking orbit. Systems disengaged. «bundle.js · line 1819»
+- Breaking orbit. Systems disengaged. «bundle.js · line 1820»
 
 ### After the burn «bundle.js · applyPlotResult»
 _After every warp and jump plot._
 
-- Bad burn — the shielded core soaked it up. No extra fuel lost. «bundle.js · line 2872»
-- A.U.R.A. plotted the jump. Safe. Unremarkable. «bundle.js · line 2876»
-- Clean burn: [delta] energy recovered. «bundle.js · line 2880»
-- Bad burn: [delta] extra energy lost. «bundle.js · line 2880»
+- Bad burn — the shielded core soaked it up. No extra fuel lost. «bundle.js · line 2873»
+- A.U.R.A. plotted the jump. Safe. Unremarkable. «bundle.js · line 2877»
+- Clean burn: [delta] energy recovered. «bundle.js · line 2881»
+- Bad burn: [delta] extra energy lost. «bundle.js · line 2881»
 
 ### Plotting the burn (the mini-game) «WarpPlot.js · WarpPlot»
 _Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to how it went._
@@ -474,16 +567,16 @@ _Every sector jump except the one into sector 3 (that one stalls: sector-3.md), 
 
 ### All hands lost, hull breach «bundle.js · checkLoseConditions»
 
-- **title** — ALL HANDS LOST «bundle.js · line 935»
-- **message** — EXODUS-9: ALL HANDS LOST. Vessel drifting. Beacon active. No response expected. «bundle.js · line 936»
-- **title** — HULL BREACH «bundle.js · line 951»
-- **message** — The hull gave way in the night. The void was merciful — it was quick. «bundle.js · line 952»
+- **title** — ALL HANDS LOST «bundle.js · line 936»
+- **message** — EXODUS-9: ALL HANDS LOST. Vessel drifting. Beacon active. No response expected. «bundle.js · line 937»
+- **title** — HULL BREACH «bundle.js · line 952»
+- **message** — The hull gave way in the night. The void was merciful — it was quick. «bundle.js · line 953»
 
 ### Stranded «bundle.js · checkStranded»
 _No energy and no way out._
 
-- **title** — STRANDED «bundle.js · line 6918»
-- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 6919»
+- **title** — STRANDED «bundle.js · line 6919»
+- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 6920»
 
 ### The game-over screen «EndScreens.js · gameOver»
 
