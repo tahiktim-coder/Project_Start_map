@@ -86,7 +86,7 @@
     const DECKS = MK.DECKS;
     const GAME_KEY = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', medbay: null, hold: 'cargo', engineering: 'engineering' };
     const KEY = () => window.NSShipKey || null;                            // the glass keys on the decks (tower/ShipKey.js)
-    const CUT_TS = 0.5;                                                    // the re-cut's whole scale (NewScreen.measure snaps G.ts to it)
+    const CUT_TS = 0.5, CUT_STEP_MS = 125;                                 // the re-cut's whole scale (NewScreen.measure snaps G.ts to it); made at the art's 8 fps
 
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
     const ease = k => 1 - Math.pow(1 - clamp(k, 0, 1), 3);
@@ -399,7 +399,7 @@
         if (!V.cv || !V.cv.isConnected) { V.cv = document.getElementById('ns-ship'); V.ctx = V.cv ? V.cv.getContext('2d') : null; }
         const cut = !!(V.fit && V.fit.cut), rows = V.fit ? V.fit.rows : ROWS;   // the re-cut reads the drawn tower back every frame: kept in memory
         if (!V.off || V.offCut !== cut || V.off.height !== rows) {
-            V.off = document.createElement('canvas'); V.off.width = OFF_W; V.off.height = rows; V.offCtx = V.off.getContext('2d', { willReadFrequently: cut }); V.offCut = cut;
+            V.off = document.createElement('canvas'); V.off.width = OFF_W; V.off.height = rows; V.offCtx = V.off.getContext('2d', { willReadFrequently: cut }); V.offCut = cut; V.cutAt = null;
             V.cutCv = cut ? Object.assign(document.createElement('canvas'), { width: OFF_W >> 1, height: rows >> 1 }) : null;
         }
         return V.cv;
@@ -480,8 +480,10 @@
         c.setTransform(1, 0, 0, 1, 0, 0);
         c.clearRect(0, 0, V.cv.width, V.cv.height);
         const k = slideK(t);
-        if (V.dark || k <= 0) { V.drawn = []; return; }
+        if (V.dark || k <= 0) { V.drawn = []; V.cutAt = null; return; }
         V.slideX = Math.round(-(1 - k) * (f.wDev + 12));
+        const live = k >= 1 && !V.stall && modeNow() === 'travel' && !(NS.blocked && NS.blocked());
+        if (f.cut && V.cutCv && V.cutAt != null && t >= V.cutAt && t - V.cutAt < CUT_STEP_MS && V.cutKey === cutKey()) { blitCut(c, f); placeStock(live); return; }   // between the art's steps: the last cut
         o.setTransform(1, 0, 0, 1, 0, 0);
         o.clearRect(0, 0, OFF_W, f.rows);
         o.imageSmoothingEnabled = false;
@@ -501,16 +503,24 @@
         const s0 = performance.now(), sh = V.tremor;                          // the tremor: smooth-scaled, so not rounded (the re-cut: whole px)
         if (f.cut && V.cutCv) {                                             // 1366 x 768, 1280 x 720: the re-cut at 1/2, never smoothed
             try { TW.cut(o, V.cutCv, { offX: -f.tLeft, camY: f.tTop }); } catch (err) { console.error('Tower: the re-cut failed', err); }
-            V.cutMs = V.cutMs == null ? performance.now() - s0 : V.cutMs * 0.9 + (performance.now() - s0) * 0.1;   // what it costs a frame (debug)
-            c.imageSmoothingEnabled = false;
-            c.drawImage(V.cutCv, Math.round(V.slideX + (sh ? sh.dx * f.ts : 0)), Math.round(f.tY0 + (sh ? sh.dy * f.ts : 0)));
+            V.cutMs = V.cutMs == null ? performance.now() - s0 : V.cutMs * 0.9 + (performance.now() - s0) * 0.1;   // what one cut costs (debug)
+            V.cutAt = t; V.cutKey = cutKey();
+            blitCut(c, f);
         } else {
             c.imageSmoothingEnabled = true;
             c.imageSmoothingQuality = V.quality;
             c.drawImage(V.off, 0, 0, OFF_W, f.rows, V.slideX + (sh ? sh.dx * f.ts : 0), f.tY0 + (sh ? sh.dy * f.ts : 0), OFF_W * f.ts, f.rows * f.ts);
             watchScale(performance.now() - s0);
         }
-        placeStock(k >= 1 && !V.stall && modeNow() === 'travel' && !(NS.blocked && NS.blocked()));
+        placeStock(live);
+    }
+    /** The re-cut is made at the art's 8 fps (CUT_STEP_MS); at once when who is pointed at, the real state (read every 500 ms
+        or on news) or the galley's light changes. */
+    function cutKey() { const S = window.NSSupper; return V.hotId + '|' + V.readAt + '|' + (S && typeof S.dim === 'function' ? S.dim() : 0); }
+    function blitCut(c, f) {
+        const sh = V.tremor;
+        c.imageSmoothingEnabled = false;
+        c.drawImage(V.cutCv, Math.round(V.slideX + (sh ? sh.dx * f.ts : 0)), Math.round(f.tY0 + (sh ? sh.dy * f.ts : 0)));
     }
     /** 'high' scaling where it is cheap (a GPU canvas); a machine where it costs over 3 ms a frame on average gets 'low'
         (bilinear: at these scales the two look nearly the same, checked at 1080p and 720p). */
@@ -552,7 +562,7 @@
         const h = hit(e), SUP = window.NSSupper, K = KEY();
         const who = h && (h.what === 'person' || h.what === 'bench') && IDS.includes(h.id) ? h.id : null;
         if (who && SUP && SUP.choosing()) {                                // supper, short of food: pointing shows them in the plate, a click picks them
-            V.hotId = null; pointRepair(null);
+            V.hotId = type === 'move' ? who : null; V.tagOff = true; pointRepair(null);   // the rim shows who; the plate names them (no tag)
             if (type === 'move') { V.hover = h; return pointSupper(who); }
             if (type === 'down') { pointSupper(null); return SUP.pick(who); }
             return false;
@@ -564,7 +574,7 @@
             return type === 'down';
         }
         if (type === 'move') {
-            V.hover = h; V.hotId = h && (h.what === 'person' || h.id === 'mira') ? (who || h.id) : null;
+            V.hover = h; V.tagOff = false; V.hotId = h && (h.what === 'person' || h.id === 'mira') ? (who || h.id) : null;
             pointRepair(h && h.what === 'deck' ? h.id : null, e);
             return !!h;
         }
@@ -596,7 +606,7 @@
     }
     function placeName(ok) {
         const v = NS.mods && NS.mods.voice, says = v && typeof v.speaking === 'function' ? v.speaking() : null;
-        const id = ok && V.hotId !== says ? V.hotId : null, a = id ? personAt(id) : null, layer = wordsLayer();   // their voice line names them: no second name
+        const id = ok && !V.tagOff && V.hotId !== says ? V.hotId : null, a = id ? personAt(id) : null, layer = wordsLayer();   // their voice line names them: no second name
         if (!a || !layer) { if (V.name) V.name.el.classList.remove('is-in'); return; }
         if (!V.name || !V.name.el.isConnected) {
             nameStyle();

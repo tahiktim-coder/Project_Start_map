@@ -208,22 +208,21 @@
     function cut(srcCtx, dst, o) {
         const W = dst.width, H = dst.height, sw = W * 2, sd = srcCtx.getImageData(0, 0, sw, H * 2).data, g = dst.getContext('2d');
         if (!cutImg || cutImg.width !== W || cutImg.height !== H) cutImg = g.createImageData(W, H);
-        const dd = cutImg.data, row = sw * 4;
-        const lum = i => (sd[i] * 2 + sd[i + 1] * 5 + sd[i + 2]) * sd[i + 3];
+        const su = new Uint32Array(sd.buffer, sd.byteOffset, sd.length >> 2), du = new Uint32Array(cutImg.data.buffer);   // one pixel a word
+        const far = (p, q) => Math.abs((p & 255) - (q & 255)) + Math.abs(((p >>> 8) & 255) - ((q >>> 8) & 255)) + Math.abs(((p >>> 16) & 255) - ((q >>> 16) & 255)) + Math.abs((p >>> 24) - (q >>> 24));
+        const lum = p => ((p & 255) * 2 + ((p >>> 8) & 255) * 5 + ((p >>> 16) & 255)) * (p >>> 24);
         for (let y = 0; y < H; y++) {
-            let a = y * 2 * row, di = y * W * 4;
-            for (let x = 0; x < W; x++, a += 8, di += 4) {
-                let pick = a, far = 0, q = -1;
-                for (let k = 0; k < 3; k++) {
-                    const j = k === 0 ? a + 4 : k === 1 ? a + row : a + row + 4;
-                    const d = Math.abs(sd[j] - sd[a]) + Math.abs(sd[j + 1] - sd[a + 1]) + Math.abs(sd[j + 2] - sd[a + 2]) + Math.abs(sd[j + 3] - sd[a + 3]);
-                    if (d > far) { far = d; q = j; }
+            let a = y * 2 * sw, di = y * W;
+            for (let x = 0; x < W; x++, a += 2, di++) {
+                const p0 = su[a], p1 = su[a + 1], p2 = su[a + sw], p3 = su[a + sw + 1];
+                if (p1 === p0 && p2 === p0 && p3 === p0) { du[di] = p0; continue; }   // a flat block: nothing stands out
+                const f1 = far(p1, p0), f2 = far(p2, p0), f3 = far(p3, p0), fq = Math.max(f1, f2, f3);
+                let pick = p0;
+                if (fq > CUT_STANDS_OUT) {                                 // the one that stands out from the block's mean is kept
+                    const q = fq === f1 ? p1 : fq === f2 ? p2 : p3, m = (lum(p0) + lum(p1) + lum(p2) + lum(p3)) / 4;
+                    if (Math.abs(lum(q) - m) > Math.abs(lum(p0) - m)) pick = q;
                 }
-                if (far > CUT_STANDS_OUT) {                                // the one that stands out from the block's mean is kept
-                    const m = (lum(a) + lum(a + 4) + lum(a + row) + lum(a + row + 4)) / 4;
-                    if (Math.abs(lum(q) - m) > Math.abs(lum(a) - m)) pick = q;
-                }
-                dd[di] = sd[pick]; dd[di + 1] = sd[pick + 1]; dd[di + 2] = sd[pick + 2]; dd[di + 3] = sd[pick + 3];
+                du[di] = pick;
             }
         }
         g.putImageData(cutImg, 0, 0);

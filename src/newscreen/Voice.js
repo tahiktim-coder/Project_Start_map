@@ -235,7 +235,7 @@
     /** Places just above and just below that box, for a crew line placed right of the tower. */
     function landerPlaces() {
         const b = landerBox(), G = NS.G, x = b ? Math.max(b.left, (G.hull || 0) * G.k / G.dpr + EDGE) : 0;   // never across the hull edge (the plume reaches back to it)
-        return b ? [{ x, y: b.top, side: 'above' }, { x, y: b.bottom, side: 'below' }] : [];
+        return b ? [{ x, y: Math.floor(b.top) - 2, side: 'above' }, { x, y: Math.ceil(b.bottom) + 2, side: 'below' }] : [];   // clear of the box after boxAt's rounding
     }
     const overlaps = (r, w, pad) => r.x < w.right + pad && r.x + r.w > w.left - pad && r.y < w.bottom + pad && r.y + r.h > w.top - pad;
     /** The tower's stock readouts on screen now (CSS rects): a line never covers a number. */
@@ -310,6 +310,7 @@
             c.pick = pick;
             c.sampledAt = { x: boxes[pick].x, y: boxes[pick].y };
             c.strength = 0.62 + 0.3 * Math.min(1, score[pick] * 3);
+            c.tried = boxes.map((b, i) => ({ x: b.x, y: b.y, w: b.w, h: b.h, score: Math.round(score[i] * 100) / 100 }));   // the places weighed (debug)
         }
         const b = boxes[c.pick];
         if (!c.pos || c.pos.x !== b.x || c.pos.y !== b.y) { c.pos = { x: b.x, y: b.y }; c.el.style.transform = `translate(${b.x}px, ${b.y}px)`; }
@@ -421,6 +422,7 @@
         },
         pointer: () => false,
         current: () => (cur ? { who: cur.who, line: cur.line } : null),
+        placed: () => (cur ? { pick: cur.pick, tried: cur.tried || [] } : null),   // debug: where the line on screen could have gone, and how busy each place was
         speaking: () => (cur && !noteUp && !NS.blocked() ? cur.id : null),
         say: sayNow,
         sayLine,
