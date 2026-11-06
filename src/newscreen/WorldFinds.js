@@ -54,7 +54,8 @@
      oddsOf(app, node, event, ids, opts?) → { hurt, death, deadly, oneIn }   the same way's odds, its death chance too
                                                   (something hunting there, Vance's cover): what its card will show.
                                                   opts.without: one of ids whose own part is left out (NSOrbit.helps)
-     noteLines(app, node, withSite) → ['Worth a trip: Old ruins (a clue) · The hum', 'People could live here']   travel's note
+     noteLines(app, node, withSite) → [{ icon, text, clue, live }]   travel's note, as tags: [{ icon: 'ruins', text: 'Old ruins',
+                                                  clue: 'a clue' }, …, { icon: 'live', text: 'People could live here', live: true }]
 */
 (function () {
     'use strict';
@@ -340,13 +341,14 @@
         if (typeof app.autoSave === 'function') app.autoSave();
         return true;
     }
-    /** Travel's note once a scan has read the world: the finds still open (a clue named), and whether people could live there. */
+    /** Travel's note once a scan has read the world, as tags (look pass: one a line, no lead-in; travel/Note.js draws them):
+        each find still open (its icon and name; a clue says so), then whether people could live there. */
     function noteLines(app, node, withSite) {
         const finds = list(app, node).filter(f => !f.done && (withSite !== false || f.id !== 'site'));
-        const said = finds.length ? 'Worth a trip: ' + finds.map(f => (f.hint ? `${f.label} (a clue)` : f.label)).join(' · ') : '';
+        const tags = finds.map(f => ({ icon: f.icon || 'pin', text: f.label, clue: f.hint ? 'a clue' : null }));
         let live = null;
         try { const fx = window.NSScan ? window.NSScan.facts(app, node) : null; live = fx && fx.live ? sentence(fx.live) : null; } catch (err) { live = null; }
-        return [said, live].filter(Boolean);
+        return live ? tags.concat({ icon: 'live', text: live, live: true }) : tags;
     }
 
     window.NSWorldFinds = Object.freeze({ kind, known, list, target, blind, aim, markDone, keepOld, clue, noteLines, riskOf: eventRisk, oddsOf: eventOdds, KINDS });

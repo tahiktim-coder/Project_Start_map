@@ -2,8 +2,8 @@
    What it is: the minute after the launch film, before the first course (the designer's fluid idea, kept short). Black,
    "Sixty-one years later" quietly, then our Lander's hold close up (start/PodArt.js), the ship still dark: five upright
    pods, faces behind frost. A.U.R.A. wakes Cora first, at her pod's panel, so the player sees how it is done (the reading,
-   the right valve, the frost melting off, the fluid draining, the eyes opening): "Good morning, Commander. Sixty-one
-   years." The hold's lights come on, the pod opens, Cora steps out. Then the player wakes Jaxon, Aris, Vance and Mira, in
+   the right valve, the frost melting off, the fluid draining, the eyes opening): "Good morning, Commander." (the card has
+   just said how long: C11). The hold's lights come on, the pod opens, Cora steps out. Then the player wakes Jaxon, Aris, Vance and Mira, in
    any order: a click on a pod and Cora walks over; its panel (start/PodWords.js) shows ONE reading at a time and three
    valves, WARM, FLUSH and WAKE. Three stages each, in an order that differs per person, so it is read, not memorised. The
    right valve clears the stage in the art. A wrong one: a short alarm (no sound), the stage still clears (A.U.R.A. follows
@@ -16,6 +16,9 @@
    crew say there (start/Wake.js). Never locked: "Let A.U.R.A. do it" is always there (she wakes the rest at once, no stress
    from her); on later new games "Skip the wake-up" (and Esc) too. Nothing is saved meanwhile: a reload lands on the
    title, as today. Reduced motion: no flicker, no flash, no vapour, gentle fades. No sound.
+   Look pass B11: the hold keeps a whole scale (2x at 1366), the window's rest filled with more of the dark decks
+   (NSPodArt.pad); every line, A.U.R.A.'s and the crew's, is said in one place, under the hold at its inner wall (C13, C17:
+   the name's tone says who), and a new line waits while the panel's reading types on.
    Loaded only when the new-screen switch is on, after start/PodArt.js and start/PodWords.js, before start/Wake.js.
 
    window.NSPods (frozen)
@@ -25,6 +28,7 @@
                            count if unsaid (a late skip), then OPENING_TALK's lines (key: 'orders', 'eight', 'jaxon8',
                            'vance8', 'beacon')
      playing() → bool
+     rows(text) → [text] | [part, ...]   a line too long for one row of the voice's measure, in parts at its sentence ends
      debug                 { state(), need() }   headless runs: what is where (CSS rects), and the valve the reading asks for
    NewScreen.mods.wake = { init, resize, update, render, pointer, key, discs }   (the shell's 'wake' mode)
    Anchors while it runs (CSS px): 'stop:aura' (over the dark med bay, by the intercom), 'stop:person:<id>' (over a head).
@@ -33,20 +37,19 @@
     'use strict';
     const NS = window.NewScreen, PA = window.NSPodArt, PW = window.NSPodWords, CE = window.CrewEngine;
     if (!window.NEW_SCREEN || !NS || !NS.on || !PA || !PW || !CE) return;
-    const { SW, SH, PODS, FLUID, INTERCOM } = PA;
+    const { SW, SH, PODS, FLUID } = PA;
     const INK = '#05070a', ALARM = '#e2574c', SEEN_KEY = 'se-wake-seen';
 
     // ── DRAFT lines (the designer rewrites them; docs/STYLE.md: one idea, 20 words at most; A.U.R.A. without contractions):
     //    A.U.R.A.'s few new words, and each person's first line as they step out (the second: a wrong valve made them groggy)
     const DRAFT = {
-        years: 'Sixty-one years.',                                                       // after OPENING_TALK's "Good morning, Commander."
-        teach: 'The others are still asleep, Commander.',                                // she has just shown how, on Cora's pod
-        aura: 'I will wake the others, Commander.',
+        teach: 'The others are still asleep, Commander.',                                // DRAFT: she has just shown how, on Cora's pod
+        aura: 'I will wake the others, Commander.',                                      // DRAFT
         first: {
-            jaxon: ["All that sleep and I'm still tired. Is there coffee?", "My head's pounding. I've had hangovers that were kinder."],
-            aris: ['Slowly, everyone. Sit down if you feel dizzy.', "I'm dizzy. That was the wrong fluid. Go gently with the others."],
-            vance: ['Sixty-one years, she says. I want to see the logs.', 'Wrong fluid. I felt it go in. Who set up these pods?'],
-            mira: ['We made it! A.U.R.A., what did we miss?', "Everything's spinning. A.U.R.A., is that normal?"],
+            jaxon: ["All that sleep and I'm still tired. Is there coffee?", "My head's pounding. Give me a minute."],   // DRAFT (look pass): L-01, the groggy line without the quip
+            aris: ['Slowly, everyone. Sit down if you feel dizzy.', "I'm dizzy. That was the wrong fluid. Go gently with the others."],   // DRAFT
+            vance: ['Sixty-one years, she says. I want to see the logs.', 'Wrong fluid. I felt it go in. Who set up these pods?'],   // DRAFT ("she says": since C11 A.U.R.A. no longer says the years; the card does)
+            mira: ['We made it! A.U.R.A., what did we miss?', "Everything's spinning. A.U.R.A., is that normal?"],   // DRAFT
         },
     };
     const CARD_TEXT = 'Sixty-one years later';
@@ -62,6 +65,7 @@
     const READ_DELAY = 260, AUTO_READ = 650, PULSE = 420, ALARM_MS = 900, ANIM = 900, FAST = { pulse: 300, anim: 650, gap: 280 };
     const OPEN = { delay: 350, door0: 250, door1: 800, out: 900, vapour: 650 }, FLICKER = [90, 200, 330, 480];
     const GAP_MS = 350, STAND_MS = 220, WALK = CE.ACTIONS.walk;
+    const SL = window.ShipArt.L, VOICE_AT = { x: SL.IL + PA.OFFX, y: PA.F + SL.SLAB + 8 };   // where every line is said: under the hold's floor slab, at its inner wall (frame px)
     const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
     const still = () => !!(mq && mq.matches);
     const clamp01 = v => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -197,7 +201,7 @@
         const said = k => T.said.has(k) || T.carried.has(k) || T.busy === k;
         const heard = id => P.find(p => p.id === id).out && !T.firsts.some(f => f.key === 'first:' + id && !said(f.key));   // out, and their own first line said
         const L = S.lines, list = [];
-        list.push({ key: 'hello', who: 'A.U.R.A.', text: L.greeting + ' ' + DRAFT.years, ready: () => S.sel === 0 || P[0].openAt != null });
+        list.push({ key: 'hello', who: 'A.U.R.A.', text: L.greeting, ready: () => S.sel === 0 || P[0].openAt != null });   // C11: no "Sixty-one years." (the card has just said it)
         if (S.aura.used) list.push({ key: 'aura', who: 'A.U.R.A.', text: DRAFT.aura, ready: () => true });
         list.push({ key: 'teach', who: 'A.U.R.A.', text: DRAFT.teach, ready: () => P[0].out && !S.aura.used && !S.touched });
         const setup = { orders: () => P[0].out && sleeping >= 1 && (said('teach') || T.skipped.has('teach') || S.touched), eight: () => said('orders') && crewOut >= 1 && sleeping >= 1,
@@ -221,19 +225,41 @@
     function stepTalk(t) {
         const T = S.talk;
         if (T.busy || t < T.nextAt || S.phase === 'out' || S.phase === 'card' || S.phase === 'in') return;
+        if (S.sel != null && !words.typedAll()) return;                    // C13: the panel's reading types on first; then the next line
         const b = nextBeat();
         if (!b) return;
         T.busy = b.key;
         say(b).then(() => { if (!S || S.talk !== T) return; T.said.add(b.key); T.busy = null; T.nextAt = now() + GAP_MS; if (b.key === 'count') go('end', now()); });
     }
-    /** One line, said beside the speaker, then logged as the old talk logs it (Voice skips a logged line it is saying). */
+    /** One line, said beside the speaker in its parts (rows()), each logged as the old talk logs a line (Voice skips a logged
+        line it is saying); the parts stop if the scene ends between them (a skip: the line is said whole in travel). */
     function say(b) {
-        const v = voice(), s = state(), id = b.who === 'A.U.R.A.' ? 'aura' : b.who.toLowerCase();
+        const T = S && S.talk;
+        return rows(b.text).reduce((at, text) => at.then(go => (go && S && S.talk === T ? sayPart(b.who, text) : false)), Promise.resolve(true));
+    }
+    function sayPart(who, text) {
+        const v = voice(), s = state(), id = who === 'A.U.R.A.' ? 'aura' : who.toLowerCase();
         let p = null;
-        try { p = v && typeof v.say === 'function' ? v.say({ id, who: b.who, text: b.text, keep: true }) : null; } catch (err) { console.error('NSPods: the voice failed', err); }
-        if (s && typeof s.addLog === 'function') s.addLog(`${b.who}: "${b.text}"`);
+        try { p = v && typeof v.say === 'function' ? v.say({ id, who, text, keep: true }) : null; } catch (err) { console.error('NSPods: the voice failed', err); }
+        if (s && typeof s.addLog === 'function') s.addLog(`${who}: "${text}"`);
         if (p && typeof p.then === 'function') return p.then(() => true, () => true);
-        return new Promise(r => setTimeout(r, readMs(b.text)));
+        return new Promise(r => setTimeout(() => r(true), readMs(text)));
+    }
+    /** A line that cannot sit on one row of the voice's measure is said in parts at its sentence ends, each part as many whole
+        sentences as fit one row, so a row never breaks inside a sentence that could have had one to itself (B11 review: "Find
+        a / planet"); one sentence too long for a row stays whole and wraps. The words are the line's own (the designer's).
+        Measured on the voice's own layer, in its face and size now. → [text] or [part, part, ...] (Wake.js says them too) */
+    function rows(text) {
+        const line = String(text || ''), parts = line.split(/(?<=[.!?])\s+/).filter(Boolean), layer = document.getElementById('ns-voice');
+        if (parts.length < 2 || !layer) return [line];
+        const box = document.createElement('div'), p = document.createElement('p');
+        box.className = 'ns-voice'; box.style.visibility = 'hidden'; p.className = 'ns-say'; p.style.whiteSpace = 'nowrap';
+        box.appendChild(p); layer.appendChild(box);
+        const fits = s => { p.textContent = s; return p.scrollWidth <= box.clientWidth; };   // the box stops at the measure; the row runs on
+        try {
+            if (fits(line)) return [line];
+            return parts.slice(1).reduce((out, s) => { const last = out[out.length - 1]; return fits(last + ' ' + s) ? out.slice(0, -1).concat([last + ' ' + s]) : out.concat([s]); }, [parts[0]]);
+        } catch (err) { console.error('NSPods: measuring a line failed', err); return [line]; } finally { box.remove(); }
     }
 
     // ═══ 4. the scene: card, dissolve in, Cora, the work, the end, dissolve out ═══
@@ -292,7 +318,8 @@
         st.id = 'ns-pods-style';
         st.textContent = `#ns-root[data-mode="wake"] #ns-world, #ns-root[data-mode="wake"] #ns-ship, #ns-root[data-mode="wake"] #ns-dive, #ns-root[data-mode="wake"] #ns-bridge,
 #ns-root[data-mode="wake"] #ns-world-words, #ns-root[data-mode="wake"] #ns-ship-words, #ns-root[data-mode="wake"] #ns-stop-words { visibility: hidden; }
-#ns-root:not([data-mode="wake"]) #ns-wake, #ns-root:not([data-mode="wake"]) #ns-wake-words { visibility: hidden; }`;
+#ns-root:not([data-mode="wake"]) #ns-wake, #ns-root:not([data-mode="wake"]) #ns-wake-words { visibility: hidden; }
+#ns-root[data-mode="wake"] .ns-voice:not(.tone-aura):not(.is-narr) .ns-who::before { content: ''; flex: none; box-sizing: border-box; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }`;   // one name style in the hold: the crew's lines get the ring A.U.R.A.'s have, as on the panel
         document.head.appendChild(st);
     }
     function init() {
@@ -312,8 +339,10 @@
         NS.bus.on('hidden', () => { if (S) abort(); });
         NS.bus.on('mode', p => { if (S && p && p.mode !== 'wake' && !S.leaving) abort(); });
     }
+    /** A whole number of device px per frame px (3x at 1080p, 2x at 1366 x 768 and 720p): the hold's pixels stay square and
+        still; what the window has beyond the frame shows more of the dark decks (render). */
     function geoNow() {
-        const G = NS.G, dpr = G.dpr || window.devicePixelRatio || 1, bk = G.bk > 0 ? G.bk : Math.max(1, Math.min(innerWidth * dpr / SW, innerHeight * dpr / SH));
+        const G = NS.G, dpr = G.dpr || window.devicePixelRatio || 1, bk = Math.max(1, Math.floor(Math.min(innerWidth * dpr / SW, innerHeight * dpr / SH) + 0.01));
         const CW = Math.max(SW, Math.ceil(innerWidth * dpr / bk)), CH = Math.max(SH, Math.ceil(innerHeight * dpr / bk));
         const ox = Math.floor((CW - SW) / 2), oy = Math.floor((CH - SH) / 2);
         return { bk, dpr, CW, CH, ox, oy, left: ox * bk / dpr, top: oy * bk / dpr };
@@ -382,21 +411,35 @@
         if (S.phase === 'out') j = 8 - Math.floor((t - S.phaseAt) / (DISSOLVE / 8));
         if (j < 8) { c.globalCompositeOperation = 'destination-in'; c.drawImage(PA.mask(Math.max(0, j - 1)), 0, 0); c.globalCompositeOperation = 'source-over'; if (j <= 0) { c.fillStyle = INK; c.fillRect(0, 0, SW, SH); } }
         cx.fillStyle = INK; cx.fillRect(0, 0, geo.CW, geo.CH);
+        if (S.phase !== 'card' && (geo.oy > 0 || geo.ox > 0)) drawPad(Math.max(0, j));
         cx.drawImage(art, geo.ox, geo.oy);
+    }
+    /** The rows of the dark decks above and below the frame, as far as the window reaches (past them: ink), lit as the room
+        is now, coming and going with the dissolve in the same eight steps. */
+    function drawPad(j) {
+        const T = PA.pad(S.roomLit), r = T.rows, top = Math.min(geo.oy, r), bot = Math.min(geo.CH - geo.oy - SH, r);
+        if (top <= 0 && bot <= 0) return;
+        cx.globalAlpha = Math.min(8, j) / 8;
+        if (top > 0) cx.drawImage(T.canvas, 0, r - top, SW, top, geo.ox, geo.oy - top, SW, top);
+        if (bot > 0) cx.drawImage(T.canvas, 0, r + SH, SW, bot, geo.ox, geo.oy + SH, SW, bot);
+        cx.globalAlpha = 1;
     }
     /** The hold, dark until Cora's pod opens; then the lamps come on: a stutter (reduced motion: a slow dissolve). */
     function drawRoom(c, t) {
         const dark = PA.room(false);
+        S.roomLit = false;
         if (S.litAt == null || t < S.litAt) { c.drawImage(dark, 0, 0); return; }
         const el = t - S.litAt, lit = PA.room(true);
         if (still()) {
             const j = Math.floor(el / 90);
+            S.roomLit = j >= 8;
             c.drawImage(dark, 0, 0);
             if (j >= 8) c.drawImage(lit, 0, 0);
             else { const tmp = scratch(); tmp.g.clearRect(0, 0, SW, SH); tmp.g.drawImage(lit, 0, 0); tmp.g.globalCompositeOperation = 'destination-in'; tmp.g.drawImage(PA.mask(j), 0, 0); tmp.g.globalCompositeOperation = 'source-over'; c.drawImage(tmp.c, 0, 0); }
             return;
         }
         const on = el >= FLICKER[3] || (el < FLICKER[0]) || (el >= FLICKER[1] && el < FLICKER[2]);
+        S.roomLit = on;
         c.drawImage(on ? lit : dark, 0, 0);
     }
     let tmpCanvas = null;
@@ -431,12 +474,9 @@
         const names = ['stop:aura'].concat(Object.keys(NAMES).map(id => 'stop:person:' + id));
         if (!on) { names.forEach(n => NS.anchors.delete(n)); return; }
         const pt = (x, y, side, align) => { const [X, Y] = css(x, y); return { x: X, y: Y, side, align }; };
-        NS.anchors.set('stop:aura', () => (geo ? [pt(16, 10, 'below'), pt(SW / 2, 10, 'below', 'center'), pt(INTERCOM.x + INTERCOM.w + 6, INTERCOM.y + 2, 'right')] : []));
-        Object.keys(NAMES).forEach(id => NS.anchors.set('stop:person:' + id, () => {
-            const d = S && S.drawn.find(q => q.id === id);
-            if (!d || !geo) return [];
-            return [pt(d.X, d.Y + 2, 'above', 'center'), pt(d.X + 22, d.Y + 30, 'right'), pt(d.X - 22, d.Y + 30, 'left'), pt(d.X, 10, 'below', 'center')];
-        }));
+        const spot = () => (geo ? [pt(VOICE_AT.x, VOICE_AT.y, 'below')] : []);           // one place for every line (C13, C17)
+        NS.anchors.set('stop:aura', spot);
+        Object.keys(NAMES).forEach(id => NS.anchors.set('stop:person:' + id, spot));
     }
 
     // ═══ 7. play, finish, abort ═══
@@ -518,5 +558,5 @@
     });
 
     NS.register('wake', { init, resize, update, render, pointer, key, discs });
-    window.NSPods = Object.freeze({ play, playing: () => !!(S && S.on), debug });
+    window.NSPods = Object.freeze({ play, playing: () => !!(S && S.on), rows, debug });
 })();

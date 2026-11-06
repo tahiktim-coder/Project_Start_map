@@ -45,7 +45,7 @@ _Not everything green is safe_
 It has no lines of its own; it only changes the rules of the sector.
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### THE LANDER «CrewEvents.js · JAXON_REPAIR»
 _Sectors 3, 4_

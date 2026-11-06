@@ -11,7 +11,9 @@
                              divider: 'giant' (1) | 'rogue' (2) | null (3-6: sky F carries it)
      farColours(n, R)      → [accent, ...] in space-side u, v (sectors 1 and 2) or null (sky F's own accents stay)
      accentRamps()         → the ramps the far colours use (sky F's ACC plus three of the slice's own)
-     titleOf(n)            → 'The Graveyard' (SECTOR_CONFIG name in title case; a plain fallback if it is missing)
+     titleOf(n)            → 'The Graveyard' (SECTOR_CONFIG name in title case; a plain fallback if it is missing); the new
+                             look's own name where it differs (sector 2: 'The Drift', C62)
+     renamed(n)            → that new-look name, or null where it is SECTOR_CONFIG's own (bundle.js: the sector's log header)
 */
 (function () {
     'use strict';
@@ -30,7 +32,13 @@
     };
     const FALLBACK_TITLES = { 1: 'The Graveyard', 2: 'The Dark Void', 3: 'The Signal', 4: 'The Colonies', 5: 'The Station', 6: 'The Light' };
 
+    // the new look's own names where they differ from SECTOR_CONFIG's (the old look keeps its own): sector 2's "The Dark Void"
+    // collided with the dark of the jump into sector 5 (C62, L-19)
+    const NEW_TITLES = {
+        2: 'The Drift',   // DRAFT (look pass)
+    };
     function titleOf(n) {
+        if (NEW_TITLES[n]) return NEW_TITLES[n];
         const cfg = typeof SECTOR_CONFIG !== 'undefined' ? SECTOR_CONFIG[n] : null;           // eslint-disable-line no-undef
         const raw = cfg && typeof cfg.name === 'string' ? cfg.name : null;
         if (!raw) return FALLBACK_TITLES[n] || '';
@@ -76,5 +84,5 @@
     };
     function farColours(n, R) { const make = FAR[n]; return make ? make(R || accentRamps()) : null; }
 
-    window.NSLooks = Object.freeze({ of, farColours, accentRamps, titleOf });
+    window.NSLooks = Object.freeze({ of, farColours, accentRamps, titleOf, renamed: n => NEW_TITLES[n] || null });
 })();

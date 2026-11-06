@@ -57,7 +57,7 @@
                                  device px); wDev is the tower's width on screen
      debug() → { fit, k, dark, E, decks, crew, people: [{ id, deck, x, act, say }], chips, restless: ids living the restless day }
    }
-   Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' (a rumble building to the flash) 'jump:flash'.
+   Listens: 'shown' 'hidden' 'hud' 'opening:done' 'jump:burn' (a rumble building to the flash) 'jump:words' 'jump:flash'.
    Uses, if present: window.Juice (the tremor; without it nothing shakes).
 
    window.NSStock (frozen): the ship's stock, read from the real game (never written)
@@ -74,9 +74,10 @@
                                  within a second); the reactor beats up to 30 % faster
      hit(deck)                   a deck name (DECKS): trauma += 0.5 and that deck's red light stutters for 360 ms. The
                                  tower calls it itself for a deck newly red, on the first frame it is in view
-   Anchors: 'person:<id>' for the five, 'tower:deck:<name>' for the six decks (CSS px, [] when not in view).
+   Anchors: 'person:<id>' for the five, 'tower:deck:<name>' for the six decks, 'tower:speaker' under A.U.R.A.'s speaker (CSS px, [] when not in view).
    Uses, if present: NewScreen.mode() (only 'travel' takes clicks), NewScreen.mods.voice.speaking() → 'aura' | id | null
-   (the computer's speaker glows while A.U.R.A. talks), NewScreen.flow.{ person(id), bench(), datable(), deckChoices(key),
+   (the computer's speaker glows while A.U.R.A. talks, and while NSConsole.lit(t) or pointed at: a click on it opens the ship's
+   console, Console.js, which crops the bridge deck from this picture: mod.crop), NewScreen.flow.{ person(id), bench(), datable(), deckChoices(key),
    deckChoose(key, i) } (key: the game's deck key, the hold is 'cargo'); NSOrbit.{ datable, deckChoices } as a fallback.
 */
 (function () {
@@ -101,6 +102,7 @@
     const ROWS = FRAME.BOT - FRAME.TOP, HULL_OUT = L.CX + L.HO + 9, OFF_W = HULL_OUT - FRAME.LEFT + 2, MAX_SHARE = 0.45;
     const BENCH = { deck: 1, x0: 350, x1: 582, y0: F - DESK - 34 };              // Mira's bench (the lab)
     const SLATE = { x: 440, y: A.deckTop(1) + F - DESK - 6 };                     // the star fix, waiting on the bench
+    const SPEAKER = { x0: 590, x1: 628, y0: F - 150, y1: F - 102, cx: 608, bot: F - 118 };   // A.U.R.A.'s speaker on the bridge (ShipRooms: grille 602-614 x F-134..F-118), room round it to point at
 
     // ── where people go when the real state moves them (tower art px; deck 2 is the galley and the bunks) ──
     const BUNK = { cora: 'bedCora', jaxon: 'bedJaxon', aris: 'bedAris', vance: 'bedVance', mira: 'bedMira' };
@@ -121,7 +123,7 @@
     const V = {
         cv: null, ctx: null, off: null, offCtx: null, jobs: [], inited: false, fit: null,
         people: [], drawn: [], slideX: 0,
-        slide: { closedUntil: 0, start: null }, dark: false,
+        slide: { closedUntil: 0, start: null }, dark: false, stockOut: false,
         beat: { phase: 0, n: 0, val: 0, onsets: [] },
         E: null, Eshown: 100, coreSet: null, flood: null,
         real: { crew: {}, decks: {}, engDown: false, datable: false }, readAt: -1e9, dirty: true,
@@ -419,7 +421,7 @@
         bus.on('hud', () => { V.dirty = true; });
         bus.on('opening:done', () => openTower(now()));
         bus.on('jump:burn', () => { V.flood = { kind: 'jump', t0: now() }; V.burnT0 = now(); closeKeys(); });
-        bus.on('jump:flash', () => { V.dark = true; V.burnT0 = null; });
+        bus.on('jump:flash', () => { V.dark = true; V.burnT0 = null; }); bus.on('jump:words', () => { V.stockOut = true; });   // jump:words (B05): no stock number over the flash
         IDS.forEach(id => NS.anchors.set('person:' + id, () => {
             const a = personAt(id);
             if (!a) return [];
@@ -427,6 +429,7 @@
             return [{ x: a.x, y, side: 'above', align: 'center' }, { x: a.x + 20, y: a.y + 30, side: 'right' }, { x: Math.max(20, (f.wDev + V.slideX) / f.dpr + 12), y: a.y, side: 'right' }];
         }));
         DECKS.forEach((name, i) => NS.anchors.set('tower:deck:' + name, () => deckAnchor(i)));
+        NS.anchors.set('tower:speaker', () => (V.stall ? [] : deckAnchor(0, SPEAKER.cx, SPEAKER.bot, 'below')));
         document.addEventListener('pointerdown', e => { const K = KEY(); if (K && K.repair.isOpen() && !(e.target.closest && e.target.closest('.nsk-repair'))) K.repair.close(); }, true);
         readReal(now());
     }
@@ -434,13 +437,13 @@
         const t = now();
         V.dirty = true;
         V.dark = false;
-        V.burnT0 = null;
+        V.burnT0 = null; V.stockOut = false;                                // the stock comes back once the tower is in again
         if (p.first) closeTower(t, OPEN_FALLBACK_MS);                       // a new sector: from black, the title; then the tower
     }
-    function deckAnchor(i) {
+    function deckAnchor(i, x = 460, y = 60, side = 'above') {
         if (!V.fit || slideK(now()) < 1 || V.dark) return [];
-        const [cx, cy] = toCss(460, A.deckTop(i) + 60);
-        return [{ x: cx, y: cy, side: 'above', align: 'center' }];
+        const [cx, cy] = toCss(x, A.deckTop(i) + y);
+        return [{ x: cx, y: cy, side, align: 'center' }];
     }
     function resize(g) {
         const cv = canvas();
@@ -474,7 +477,7 @@
         if (K) K.repair.tick(ok && V.real.decks[K.repair.deck()] === 'red');   // the repair plate stays docked, or goes
         placeName(ok);
         if (!V.stall) tellRed();
-        if (V.stall || modeNow() !== 'travel' || V.dark || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame; out with the power
+        if (V.stall || modeNow() !== 'travel' || V.dark || V.stockOut || slideK(t) < 1 || (NS.blocked && NS.blocked())) placeStock(false);   // never over a card or a minigame; out with the power
         stockTick();
     }
     function render(t) {
@@ -485,14 +488,16 @@
         const k = slideK(t);
         if (V.dark || k <= 0) { V.drawn = []; V.cutAt = null; return; }
         V.slideX = Math.round(-(1 - k) * (f.wDev + 12));
-        const live = k >= 1 && !V.stall && modeNow() === 'travel' && !(NS.blocked && NS.blocked());
-        if (f.cut && V.cutCv && V.cutAt != null && t >= V.cutAt && t - V.cutAt < CUT_STEP_MS && V.cutKey === cutKey()) { blitCut(c, f); placeStock(live); return; }   // between the art's steps: the last cut
+        const live = k >= 1 && !V.stall && !V.stockOut && modeNow() === 'travel' && !(NS.blocked && NS.blocked());
+        if (f.cut && V.cutCv && V.cutAt != null && t >= V.cutAt && t - V.cutAt < CUT_STEP_MS && V.cutKey === cutKey(t)) { blitCut(c, f); placeStock(live); return; }   // between the art's steps: the last cut
         o.setTransform(1, 0, 0, 1, 0, 0);
         o.clearRect(0, 0, OFF_W, f.rows);
         o.imageSmoothingEnabled = false;
         const sv = V.stall, lit = sv ? V.people.filter(p => p.lit) : [], others = (sv ? V.people.filter(p => !p.lit) : V.people).map(p => (p.id === V.hotId ? Object.assign({}, p, { hot: true }) : p));
         const fxOff = sv ? sv.dark.map(d => d >= 0.5) : null;
-        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: f.rows, people: braced(others, t), auraTalking: auraTalking() && !sv, fxOff, driveOff: !!(sv && sv.cold) });
+        const heard = speakerLit(t), aura = auraTalking() || heard;      // her speaker: talking, pointed at, the console up or a save's blink
+        TW.draw(o, { t, camY: f.tTop, offX: -f.tLeft, W: OFF_W, H: f.rows, people: braced(others, t), auraTalking: aura && !sv, fxOff, driveOff: !!(sv && sv.cold) });
+        if (heard && !sv) window.NSConsole.glow(o, SPEAKER.cx - f.tLeft, A.deckTop(0) + SPEAKER.bot - f.tTop);   // for the console: the grille lit and her ring (Console.js)
         if (!sv) lowArt(o, f);                                             // the bare galley cupboard (low rations), the galley's light at a death
         V.drawn = TW.drawn.slice();
         const sunY = (0.4 * f.devH - f.tY0) / f.ts;                       // level with the light (Field's light sits at 40 % of the height)
@@ -507,7 +512,7 @@
         if (f.cut && V.cutCv) {                                             // a fit from 0.5 to 0.7: the re-cut at 1/2, never smoothed
             try { TW.cut(o, V.cutCv, { offX: -f.tLeft, camY: f.tTop }); } catch (err) { console.error('Tower: the re-cut failed', err); }
             V.cutMs = V.cutMs == null ? performance.now() - s0 : V.cutMs * 0.9 + (performance.now() - s0) * 0.1;   // what one cut costs (debug)
-            V.cutAt = t; V.cutKey = cutKey();
+            V.cutAt = t; V.cutKey = cutKey(t);
             blitCut(c, f);
         } else {
             c.imageSmoothingEnabled = true;
@@ -519,7 +524,8 @@
     }
     /** The re-cut is made at the art's 8 fps (CUT_STEP_MS); at once when who is pointed at, the real state (read every 500 ms
         or on news) or the galley's light changes. */
-    function cutKey() { const S = window.NSSupper; return V.hotId + '|' + V.readAt + '|' + (S && typeof S.dim === 'function' ? S.dim() : 0); }
+    function cutKey(t) { const S = window.NSSupper; return V.hotId + '|' + V.readAt + '|' + (S && typeof S.dim === 'function' ? S.dim() : 0) + '|' + speakerLit(t); }
+    function speakerLit(t) { return (V.hover && V.hover.what === 'speaker') || !!(window.NSConsole && window.NSConsole.lit(t)); }   // her speaker lit (B06): pointed at, the console up, a save's blink
     function blitCut(c, f) {
         const sh = V.tremor, s = f.ts / CUT_TS, x = Math.round(V.slideX + (sh ? sh.dx * f.ts : 0)), y = Math.round(f.tY0 + (sh ? sh.dy * f.ts : 0));
         c.imageSmoothingEnabled = false;
@@ -549,6 +555,7 @@
         if (who) return who === 'mira' && V.real.datable ? { what: 'bench', id: 'mira' } : { what: 'person', id: who };
         const deck = Math.floor((wy - L.TOP0) / L.PITCH), local = wy - A.deckTop(deck);
         if (deck < 0 || deck >= L.N || wx < L.IL - 2 || wx > L.IR + 2 || local >= F) return null;
+        if (deck === 0 && window.NSConsole && wx >= SPEAKER.x0 && wx < SPEAKER.x1 && local >= SPEAKER.y0 && local < SPEAKER.y1) return { what: 'speaker', id: 'aura' };
         if (deck === BENCH.deck && V.real.datable && wx >= BENCH.x0 && wx < BENCH.x1 && local >= BENCH.y0) return { what: 'bench', id: 'bench' };
         const name = DECKS[deck];
         if (V.real.decks[name] === 'red' && GAME_KEY[name]) return { what: 'deck', id: name };
@@ -588,6 +595,7 @@
             flowCall('person', h.id, p ? p.say : null, { status: c.status || 'well', weak: !!c.weak });   // the line by their state (ShipRoutine.line)
         } else if (h.what === 'bench') flowCall('bench');
         else if (h.what === 'deck' && K) { K.repair.open(h.id, { x: e.clientX, y: e.clientY }); V.hotId = null; }
+        else if (h.what === 'speaker') window.NSConsole.open('speaker');   // her speaker: the ship's console (Console.js, look pass B06)
         return true;
     }
     /** Pointing at a red deck (not while its plate is open): its name and its one rule chip where the plate will open. */
@@ -770,6 +778,7 @@
         return { x, y };
     }
     function fit() { return V.fit ? Object.assign({}, V.fit) : null; }
+    function crop(ctx, x, y, w, h) { if (V.off && V.fit) ctx.drawImage(V.off, x - V.fit.tLeft, y - V.fit.tTop, w, h, 0, 0, w, h); }   // the last picture (tower px) at 0, 0: the console's bridge deck
     function debug() {
         return { fit: fit(), quality: V.quality, k: slideK(now()), dark: V.dark, E: V.E, decks: Object.assign({}, V.real.decks), datable: V.real.datable,
             crew: JSON.parse(JSON.stringify(V.real.crew)), people: V.people.map(p => ({ id: p.id, deck: p.deck, x: p.x, act: p.act, say: p.say })),
@@ -778,7 +787,7 @@
     }
     window.NSTower = Object.freeze({ jolt, speed, hit: hitDeck });
 
-    const mod = Object.freeze({ init, resize, update, render, pointer, occupied, beat, personAt, fit, debug });
+    const mod = Object.freeze({ init, resize, update, render, pointer, occupied, beat, personAt, fit, crop, debug });
     function attach() {
         NS = window.NewScreen;
         if (!NS) { console.error('Tower: NewScreen is missing; the tower is not registered'); return; }

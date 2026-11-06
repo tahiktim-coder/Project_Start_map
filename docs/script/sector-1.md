@@ -31,7 +31,7 @@ Objective lines (the tip above the log, one at a time, whichever fits what you a
 ### The marked beacon — the first wreck «bundle.js · findDiscDrawing»
 _The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), always a whole ship, so the team cuts its hatch first (10-away-team.md). It is named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_
 
-- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 3479»
+- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 3492»
 
 #### The drawing of the gold disc «DiscDocument.js · NOTES»
 _A card with the drawing. Point at each label to read its note._
@@ -53,7 +53,7 @@ In the cargo hold afterwards:
 - **DISC_DRAWING** — You unfold the page. «Items.js · line 106»
 
 ### Head count «bundle.js · showCountScene»
-_On the first return to the map in sector 1. Card kicker: THE BRIDGE / FOUND IN [ship name] / FOUND IN [ship name] / INSIDE THE STATION / ASTEROID FIELD / DISTRESS SIGNAL / A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_On the first return to the map in sector 1. Card kicker: THE BRIDGE / FOUND IN [ship name] / FOUND IN [ship name] / INSIDE THE STATION / ASTEROID FIELD / DISTRESS SIGNAL / A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 > The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself.
 
@@ -281,79 +281,82 @@ _The story planet before it is named: a faint dot labelled UNIDENTIFIED. Clickin
 ### The offer «bundle.js · offerDiscDating»
 _A card after the wreck. Mira asks; A.U.R.A. if Mira is dead._
 
-- **kicker** — THE DISC «bundle.js · line 3647»
-- **title** — Date this wreck «bundle.js · line 3647»
-- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 3648»
-- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 3650»
-- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 3651»
-- Date this wreck with the disc «bundle.js · line 3653»
-- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 3653»
-- **desc** — No cost. Shows when it died. «bundle.js · line 3653»
-- Not now «bundle.js · line 3654»
-- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 3654»
+- **kicker** — THE DISC «bundle.js · line 3660»
+- **title** — Date this wreck «bundle.js · line 3660»
+- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 3661»
+- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 3663»
+- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 3664»
+- Date this wreck with the disc «bundle.js · line 3666»
+- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 3666»
+- **desc** — No cost. Shows when it died. «bundle.js · line 3666»
+- Not now «bundle.js · line 3667»
+- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 3667»
 
 ### Dating it (the mini-game) «DiscDating.js · DiscDating»
 _The reactions by depth play the first time a wreck that deep is dated; after that A.U.R.A. says the age._
 
-- Fewer years «DiscDating.js · line 81»
-- More years «DiscDating.js · line 81»
-- EXODUS-[num]'s last star fix, Commander. It can tell us when the ship died. «DiscDating.js · line 85»
-- Move the point on the chart until the wreck's lines and marks fit the disc. «DiscDating.js · line 86»
-- Commander, move the point on the chart until the wreck's lines and marks fit the disc. «DiscDating.js · line 87»
-- [age] years, Commander. «DiscDating.js · line 88»
-- **locked** — [age] years. We were still asleep when they died. «DiscDating.js · line 92»
-- **intro** — Hull [num]. Only eight ships launched before us. «DiscDating.js · line 94»
-- **locked** — [age] years. That can't be right. A higher number should be newer. «DiscDating.js · line 95»
-- **intro** — Hull [num]. How many ships did they send? «DiscDating.js · line 97»
-- **locked** — [age] years ago there was no Exodus programme. «DiscDating.js · line 98»
-- **locked** — [age] years, Commander. The reading is correct. «DiscDating.js · line 99»
-- Every one of them was going where we're going. «DiscDating.js · line 101»
-- Our heading has not changed, Commander. «DiscDating.js · line 101»
-- **beacon · readout** — BEARING 012 «DiscDating.js · line 105»
-- **beacon · aura** — [name], Commander. A moon, bearing zero one two. «DiscDating.js · line 106»
-- **graves · readout** — BEARING 004 «DiscDating.js · line 107»
-- **graves · aura** — [name], Commander. Bearing zero zero four. There are graves. «DiscDating.js · line 108»
-- **light · readout** — BEARING 000 · NO RANGE «DiscDating.js · line 109»
-- **light · aura** — Bearing zero. I cannot give you a distance. «DiscDating.js · line 110»
-- **planets** — HELIOS-12 MINOR «DiscDating.js · line 116»
-- **planets** — KRYOS-7 IV «DiscDating.js · line 116»
-- **planets** — ZEPHYR-40 X «DiscDating.js · line 116»
-- **planets** — EREBUS-21 PRIME «DiscDating.js · line 117»
-- **planets** — NYX-14 IV «DiscDating.js · line 117»
-- **planets** — ATLAS-3 PRIME «DiscDating.js · line 118»
-- **planets** — NYX-52 IV «DiscDating.js · line 118»
-- **planets** — HYPERION-9 X «DiscDating.js · line 118»
-- **planets** — PHOEBE-33 IV «DiscDating.js · line 119»
-- **planets** — KRYOS-90 MINOR «DiscDating.js · line 120»
-- **planets** — ATLAS-71 X «DiscDating.js · line 120»
-- **planets** — CHRONOS-6 MINOR «DiscDating.js · line 121»
-- **planets** — TITAN-81 X «DiscDating.js · line 121»
-- a hundred «DiscDating.js · line 164»
-- and [n] «DiscDating.js · line 165»
-- DiscDating needs MiniPaint (src/systems/minigames/art/MiniPaint.js, loaded by MiniLab.js) «DiscDating.js · line 237»
-- Set course «DiscDating.js · line 604»
-- Back to the chart «DiscDating.js · line 604»
-- **label** — Not now «DiscDating.js · line 609»
-- LY DOWN THE HEADING «DiscDating.js · line 648»
-- YEARS DEAD «DiscDating.js · line 651»
-- WHERE EXODUS-[num] WAS GOING «DiscDating.js · line 761»
-- SECTOR [sector] «DiscDating.js · line 798»
-- COURSE SET «DiscDating.js · line 799»
-- **title** — Date it with the disc «DiscDating.js · line 875»
-- **kicker** — Star fix «DiscDating.js · line 876»
+- Fewer years «DiscDating.js · line 86»
+- More years «DiscDating.js · line 86»
+- EXODUS-[num]'s last star fix, Commander. It can tell us when the ship died. «DiscDating.js · line 90»
+- Move the point on the chart until the wreck's lines and marks fit the disc. «DiscDating.js · line 91»
+- Commander, move the point on the chart until the wreck's lines and marks fit the disc. «DiscDating.js · line 92»
+- [age] years, Commander. «DiscDating.js · line 93»
+- **locked** — [age] years. We were still asleep when they died. «DiscDating.js · line 97»
+- **intro** — Hull [num]. Only eight ships launched before us. «DiscDating.js · line 99»
+- **locked** — [age] years. That can't be right. A higher number should be newer. «DiscDating.js · line 100»
+- **intro** — Hull [num]. How many ships did they send? «DiscDating.js · line 102»
+- **locked** — [age] years ago there was no Exodus programme. «DiscDating.js · line 103»
+- **locked** — [age] years, Commander. The reading is correct. «DiscDating.js · line 104»
+- Every one of them was going where we're going. «DiscDating.js · line 106»
+- Our heading has not changed, Commander. «DiscDating.js · line 106»
+- **beacon · readout** — BEARING 012 «DiscDating.js · line 110»
+- **beacon · aura** — [name], Commander. A moon, bearing zero one two. «DiscDating.js · line 111»
+- **graves · readout** — BEARING 004 «DiscDating.js · line 112»
+- **graves · aura** — [name], Commander. Bearing zero zero four. There are graves. «DiscDating.js · line 113»
+- **light · readout** — BEARING 000 · NO RANGE «DiscDating.js · line 114»
+- **light · aura** — Bearing zero. I cannot give you a distance. «DiscDating.js · line 115»
+- **planets** — HELIOS-12 MINOR «DiscDating.js · line 121»
+- **planets** — KRYOS-7 IV «DiscDating.js · line 121»
+- **planets** — ZEPHYR-40 X «DiscDating.js · line 121»
+- **planets** — EREBUS-21 PRIME «DiscDating.js · line 122»
+- **planets** — NYX-14 IV «DiscDating.js · line 122»
+- **planets** — ATLAS-3 PRIME «DiscDating.js · line 123»
+- **planets** — NYX-52 IV «DiscDating.js · line 123»
+- **planets** — HYPERION-9 X «DiscDating.js · line 123»
+- **planets** — PHOEBE-33 IV «DiscDating.js · line 124»
+- **planets** — KRYOS-90 MINOR «DiscDating.js · line 125»
+- **planets** — ATLAS-71 X «DiscDating.js · line 125»
+- **planets** — CHRONOS-6 MINOR «DiscDating.js · line 126»
+- **planets** — TITAN-81 X «DiscDating.js · line 126»
+- a hundred «DiscDating.js · line 169»
+- and [n] «DiscDating.js · line 170»
+- DiscDating needs MiniPaint (src/systems/minigames/art/MiniPaint.js, loaded by MiniLab.js) «DiscDating.js · line 242»
+- Set course «DiscDating.js · line 612»
+- Back to the chart «DiscDating.js · line 612»
+- **label** — Not now «DiscDating.js · line 617»
+- LIGHT YEARS OUT «DiscDating.js · line 656»
+- LY DOWN THE HEADING «DiscDating.js · line 656»
+- YEARS DEAD «DiscDating.js · line 659»
+- LIGHT YEARS «DiscDating.js · line 687»
+- WHERE EXODUS-[hull] WAS GOING «DiscDating.js · line 781»
+- WHERE EXODUS-[num] WAS GOING «DiscDating.js · line 788»
+- SECTOR [sector] «DiscDating.js · line 831»
+- COURSE SET «DiscDating.js · line 832»
+- **title** — Date it with the disc «DiscDating.js · line 908»
+- **kicker** — Star fix «DiscDating.js · line 909»
 
 ### In the log afterwards «bundle.js · dateWreck»
 
-- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3675»
-- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3679»
+- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3688»
+- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3692»
 
-- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3707»
-- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3708»
+- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3720»
+- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3721»
 
 ### When nobody dated a wreck «bundle.js · revealLateStoryPlanet»
 _Back on the map with one stop left._
 
-- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3723»
+- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3736»
 
 ## The hole in the hull (the mini-game) «Breach.js · Breach»
 _Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time._
@@ -435,23 +438,23 @@ _Once per run, on a warp in sector 1 that costs energy, never the first. It take
 
 ### In the log afterwards «bundle.js · applyBreachResult»
 
-- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 2448»
-- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 2449»
-- [name] was caught in the breach and is injured. «bundle.js · line 2453»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air. The holed deck is sealed off. «bundle.js · line 2458»
+- Micrometeorite strike. The ship lost [air lost percent]% of its air before the hole was patched. «bundle.js · line 2459»
+- [name] was caught in the breach and is injured. «bundle.js · line 2463»
 
 ## The hull hit (the new look, instead of the mini-game) «bundle.js · HULL_HIT_LINES»
 _The same moment in the new look: one deck sealed (the hold, the engine room or the quarters), nobody hurt. A.U.R.A. first, then the one whose deck it is (else whoever is aboard)._
 
-- **sealed** — Micrometeorite strike, Commander. I have sealed off the [room]. «bundle.js · line 1467» **DRAFT**
-- **held** — Micrometeorite strike, Commander. The hull held. «bundle.js · line 1468» **DRAFT**
-- **cargo** — The hold's sealed. We can only carry half now. «bundle.js · line 1469» **DRAFT**
-- **engineering** — Engine room's sealed off. Jumps cost double until we fix it. «bundle.js · line 1470» **DRAFT**
-- **quarters** — Quarters are sealed. Nobody rests properly until it's fixed. «bundle.js · line 1471» **DRAFT**
+- **sealed** — Micrometeorite strike, Commander. I have sealed off the [room]. «bundle.js · line 1469» **DRAFT**
+- **held** — Micrometeorite strike, Commander. The hull held. «bundle.js · line 1470» **DRAFT**
+- **cargo** — The hold's sealed. We can only carry half now. «bundle.js · line 1471» **DRAFT**
+- **engineering** — Engine room's sealed off. Jumps cost double until we fix it. «bundle.js · line 1472» **DRAFT**
+- **quarters** — Quarters are sealed. Nobody rests properly until it's fixed. «bundle.js · line 1473» **DRAFT**
 
 ### In the log afterwards (the new look) «bundle.js · hullHit»
 
-- Micrometeorite strike. The hull held. «bundle.js · line 2471» **DRAFT (log only)**
-- Micrometeorite strike. A.U.R.A. sealed off the [deck]. «bundle.js · line 2476» **DRAFT (log only)**
+- Micrometeorite strike. The hull held. «bundle.js · line 2481» **DRAFT (log only)**
+- Micrometeorite strike. A.U.R.A. sealed off the [deck]. «bundle.js · line 2486» **DRAFT (log only)**
 
 ### How every found page is shown (all sectors) «FoundPage.js · FoundPage»
 _The card around each found page (sector 5's find is the disc itself: sector-5.md)._
@@ -479,7 +482,7 @@ On a warp inside this sector:
 - WARNING: Micrometeorite impact detected! [deck] sustained damage. «SectorConfig.js · 1.hazard.onWarp»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### JAXON'S PHOTO «CrewEvents.js · JAXON_PHOTO»
 _Sectors 1, 2_

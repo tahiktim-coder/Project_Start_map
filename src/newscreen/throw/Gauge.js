@@ -10,7 +10,12 @@
    the picture: a recessed track, the bright window in the drive's own blue, the rough margin in dull amber, a white needle.
    Every control is a glass tag (stop/TagArt.js: amber brackets, the ink shade, the helm's lit key plate; the words in the
    bridge's type): LOCK BURN (Space) as the lit key, LET A.U.R.A. PLOT IT beside it, the three burns over the gauge.
-   Reduced motion: manual plotting needs the sweep, so as in WarpPlot only A.U.R.A. plots; no shake, no draw-in.
+   LOOK PASS B13: no grade words. A lock shows in its burn's colour (the label, the brackets, the needle, the drive); after
+   the burns the hint goes, and one crew or A.U.R.A. line (WarpPlot's) says how it went over one energy chip in the frame's
+   chip row (MiniHost.chipsEl), as the dock's result does. The hint is one line (WarpPlot.rules.GAUGE_WORDS); every colour,
+   face and size is a token (tokens.css); in a narrow window the two keys stand as one centred row, never on each other.
+   Reduced motion: manual plotting needs the sweep, so only A.U.R.A. plots: her key is the only one, with her line in place
+   of the hint (C59); no shake, no draw-in.
    Loaded only when the new-screen switch is on (index.html), after stop/TagArt.js; needs MiniHost, MiniLab, WarpPlot.
 
    const result = await MiniHost.play('burn', opts)
@@ -34,10 +39,10 @@
     const ARM_MS = 170, STAGGER = 80, TYPE_MS = 26, TYPE_DELAY = 70, RING_STEPS = 4;
     const RESULT_AFTER_MS = 380, LINE_AFTER_MS = 260, READ_MS = 3200, AURA_READ_MS = 2900, DISSOLVE_MS = 320;
     const LUNGE = 4, SURGE = 46;                                                       // art px the ship lurches on a lock, surges on the flight
-    // the lock's colour by grade: the drive's own blue when clean, amber rough, red when missed (DOM, then the canvas ramp)
-    const TONE = { clean: { css: '#9fd8e6', ramp: 'ui', drive: RP.PLUME }, rough: { css: '#f0a050', ramp: 'warm', drive: RP.AMBER }, bad: { css: '#ff7a6a', ramp: '#e2574c', drive: RP.RED } };
-    const NAMES = { perfect: 'clean', clean: 'clean', rough: 'rough', bad: 'bad' };
-    const HINT = 'A long jump: three burns, each faster. Lock every one inside the bright window — all three clean gives the most fuel back.';   // WarpPlot's
+    const KEY_GAP = 12;                                                                // art px between the two keys when they stand as one row
+    // the lock's colour by grade: the drive's own blue when clean (its label steel, C23), amber rough, red when missed (DOM, then the canvas ramp)
+    const TONE = { clean: { css: 'var(--cool)', ramp: 'ui', drive: RP.PLUME }, rough: { css: 'var(--warm)', ramp: 'warm', drive: RP.AMBER }, bad: { css: 'var(--loss)', ramp: '#e2574c', drive: RP.RED } };
+    const WORDS = R.GAUGE_WORDS;                                                       // the hint and A.U.R.A.'s line under reduced motion (WarpPlot's)
     const isCalm = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     // ════════════════════════════════════ the still pictures, painted once and kept ════════════════════════════════════
@@ -73,34 +78,31 @@
     // ════════════════════════════════════ the DOM half of a glass tag ════════════════════════════════════
     // The bridge's tags (stop/Tags.js) in the gauge's own layer: the words in the bridge's type, their box a whole number of
     // art px so the brackets drawn in the picture sit exactly round them. The two controls are real buttons.
-    const PAD = Object.freeze({ key: [15, 4, 7, 4], act: [16, 3, 7, 3], pip: [6, 3, 6, 3], title: [6, 4, 8, 4] });
+    const PAD = Object.freeze({ key: [15, 4, 7, 4], act: [16, 3, 7, 3], pip: [6, 3, 6, 3] });
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     function style() {
         if (document.getElementById('gg-style')) return;
         const st = document.createElement('style');
         st.id = 'gg-style';
-        st.textContent = `.mini-host .gg-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none;
-    --gg-fs: calc(13px + 2px * var(--t, 1)); --gg-chip: calc(12px + 1px * var(--t, 1)); --gg-f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; --gg-f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace; }
+        st.textContent = `.mini-host .gg-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .mini-host .gg-tag { position: absolute; left: 0; top: 0; box-sizing: border-box; margin: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left;
-    white-space: nowrap; opacity: 0; pointer-events: none; text-shadow: 0 1px 0 #05070a; transition: opacity 180ms steps(3, end); }
+    white-space: nowrap; opacity: 0; pointer-events: none; text-shadow: var(--shadow); transition: opacity calc(3 * var(--step-ui)) steps(3, end); }
 .mini-host .gg-tag.on { opacity: 1; }
 .mini-host button.gg-tag.on:not([disabled]) { pointer-events: auto; cursor: pointer; }
 .mini-host button.gg-tag:focus { outline: none; }
 .mini-host .gg-in { display: inline-grid; gap: 3px; justify-items: start; }
-.mini-host .gg-l { font: 600 var(--gg-fs)/1 var(--gg-f-ui); letter-spacing: .16em; text-transform: uppercase; color: #f0a050; transition: color 120ms steps(2, end); }
+.mini-host .gg-l { font: 600 var(--fs-tag)/1 var(--f-ui); letter-spacing: .16em; text-transform: uppercase; color: var(--warm); transition: color calc(2 * var(--step-ui)) steps(2, end); }
 .mini-host .gg-l .gg-r { visibility: hidden; }
 .mini-host .gg-l .gg-k { display: inline-block; width: .5em; height: .9em; margin-right: -.5em; vertical-align: -.08em; background: currentColor; }
-.mini-host .gg-tag.is-hot .gg-l { color: #ffd8a0; }
-.mini-host .gg-tag.is-cool .gg-l { color: #a9b6bc; }
-.mini-host .gg-tag.is-cool.is-hot .gg-l { color: #e6ecee; }
-.mini-host .gg-tag.is-faint .gg-l { color: #5a6168; }
-.mini-host .gg-tag[disabled] .gg-l { color: #6b7a82; letter-spacing: .12em; }
-.mini-host .gg-tag.is-key .gg-in { grid-auto-flow: column; align-items: baseline; gap: 10px; }
-.mini-host .gg-cs { display: flex; gap: 2px 10px; font: 500 var(--gg-chip)/1.15 var(--gg-f-ui); letter-spacing: .03em; color: #8b8d90; }
+.mini-host .gg-tag.is-hot .gg-l { color: var(--warm-br); }
+.mini-host .gg-tag.is-cool .gg-l { color: var(--cool); }
+.mini-host .gg-tag.is-cool.is-hot .gg-l { color: var(--text); }
+.mini-host .gg-tag.is-faint .gg-l { color: var(--dim); }
+.mini-host .gg-tag.is-key .gg-in { grid-auto-flow: column; align-items: baseline; gap: var(--s3); }
+.mini-host .gg-cs { display: flex; gap: 2px 10px; font: 500 var(--fs-chip)/1.15 var(--f-ui); letter-spacing: .03em; color: var(--dim); }
 .mini-host .gg-c { display: inline-flex; align-items: center; gap: 5px; }
 .mini-host .gg-c i { flex: none; width: 10px; height: 10px; background: center / 100% 100% no-repeat; image-rendering: pixelated; }
-.mini-host .gg-c kbd { font: 400 calc(var(--gg-chip) - 1px)/1 var(--gg-f-num); letter-spacing: .06em; color: #c9a37a; }
-.mini-host .gg-c.is-gain { color: #ffc27a; } .mini-host .gg-c.is-loss { color: #ff7a6a; } .mini-host .gg-c.is-cool { color: #a9b6bc; }
+.mini-host .gg-c kbd { font: 400 var(--fs-chip)/1 var(--f-num); letter-spacing: .06em; color: var(--ui); }
 .mini-host .gg-tag.is-typing .gg-cs { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .mini-host .gg-tag, .mini-host .gg-l { transition: none; } }`;
         document.head.appendChild(st);
@@ -164,8 +166,7 @@
         const opts = Object.assign({ mode: 'sector' }, opts0 || {});
         style();
         const cv = ui.canvas, screen = cv.parentElement, still = isCalm(), burns = R.burnsOf(opts), base = R.baseDifficulty(opts);
-        const layer = document.createElement('div'); layer.className = 'gg-layer'; screen.appendChild(layer);
-        layer.style.setProperty('--t', String(clamp01((innerWidth - 1280) / 640)));
+        const layer = document.createElement('div'); layer.className = 'gg-layer'; screen.appendChild(layer);   // its sizes read --t from :root (NewScreen.js)
         const sky = backdrop(), angle = Math.atan2(LIGHT.y - SHIP.y, LIGHT.x - SHIP.x), ship = shipSprite(SHIP.len, angle);
         const shuttle = shipSprite(Math.max(6, Math.round(SHIP.len * 0.18)), angle);
         const streaks = P.pixelLayer(AW, AH), scratch = document.createElement('canvas'); scratch.width = AW; scratch.height = 80;
@@ -179,9 +180,9 @@
 
         // ── the tags ──
         const pips = Array.from({ length: burns }, () => makeTag(layer, 'pip', false));
-        const lockTag = makeTag(layer, 'key', true), auraTag = makeTag(layer, 'act', true), resultTag = makeTag(layer, 'title', false);
+        const lockTag = makeTag(layer, 'key', true), auraTag = makeTag(layer, 'act', true);
         pips.forEach((tg, i) => tg.set({ label: 'BURN ' + (i + 1) }));
-        if (still) { lockTag.set({ label: 'MANUAL PLOT NEEDS MOTION' }); lockTag.el.disabled = true; }
+        if (still) lockTag.el.disabled = true;                                           // reduced motion: no manual plot, and no key that says so (C59)
         else lockTag.set({ label: 'LOCK BURN', chips: [{ kbd: 'SPACE' }], aria: 'Lock burn (Space)' });
         auraTag.set({ label: 'LET A.U.R.A. PLOT IT' });
         auraTag.flag('is-cool', true);
@@ -195,9 +196,16 @@
         auraTag.el.addEventListener('click', () => fly('rough', true));
         const t0 = performance.now();
         pips.forEach((tg, i) => tg.show(true, t0 + (still ? 0 : i * STAGGER)));
-        lockTag.show(true, t0 + (still ? 0 : (burns + 1) * STAGGER));
+        if (!still) lockTag.show(true, t0 + (burns + 1) * STAGGER);
         auraTag.show(true, t0 + (still ? 0 : (burns + 2) * STAGGER));
-        ui.say('', HINT);
+        if (still) {                                                                     // her key, focused (and looking pointed at): Enter or Space flies it
+            ui.say('A.U.R.A.', WORDS.still);
+            later(0, () => {
+                try { auraTag.el.focus({ preventScroll: true }); } catch (err) { /* nothing to focus */ }
+                if (document.activeElement === auraTag.el) { auraTag.hot = true; auraTag.flag('is-hot', true); }   // a window without focus fires no focus event
+            });
+        }
+        else ui.say('', WORDS.hint);
         /** The burns over the gauge: the one to lock now bright, the ones to come faint, a locked one in its lock's colour. */
         function pipFlags(now) {
             const current = s.grade ? -1 : now - s.lastLockAt < R.LOCK_PAUSE_MS ? s.locks.length - 1 : s.locks.length;
@@ -210,11 +218,15 @@
             unit = u;
             const third = (GAUGE.x1 - GAUGE.x0) / burns;
             pips.forEach((tg, i) => { const [w] = tg.size(u); tg.place(Math.round(GAUGE.x0 + third * (i + 0.5) - w / 2), PIP_Y, u); });
-            const [kw, kh] = lockTag.size(u), [aw, ah] = auraTag.size(u);
-            lockTag.place(Math.round(AW / 2 - kw / 2), KEY_Y, u);
-            auraTag.place(GAUGE.x1 - aw, KEY_Y + Math.round((kh - ah) / 2), u);
-            const [rw, rh] = resultTag.size(u);
-            resultTag.place(Math.round(AW / 2 - rw / 2), Math.round(GAUGE.y + GAUGE.h / 2 - rh / 2) + 4, u);   // where the gauge was
+            const [aw, ah] = auraTag.size(u);
+            if (still) auraTag.place(Math.round(AW / 2 - aw / 2), KEY_Y, u);                // A.U.R.A.'s key alone, under the gauge's middle
+            else {
+                const [kw, kh] = lockTag.size(u);
+                let lx = Math.round(AW / 2 - kw / 2), ax = GAUGE.x1 - aw;
+                if (lx + kw + KEY_GAP > ax) { lx = Math.round(AW / 2 - (kw + KEY_GAP + aw) / 2); ax = lx + kw + KEY_GAP; }   // a narrow window: one centred row
+                lockTag.place(lx, KEY_Y, u);
+                auraTag.place(ax, KEY_Y + Math.round((kh - ah) / 2), u);
+            }
             gaugeBox = [GAUGE.x0 - 8, GAUGE.y - 12, GAUGE.x1 - GAUGE.x0 + 17, GAUGE.h + 22];
         }
 
@@ -225,8 +237,7 @@
             const result = R.lockGrade(s.pos, s.diff), index = s.locks.length;
             s.locks.push(result); s.lockAt.push(now);
             s.lastLockAt = now;
-            pips[index].set({ label: R.LOCK[result].word });
-            pips[index].el.querySelector('.gg-l').style.color = TONE[result].css;
+            pips[index].el.querySelector('.gg-l').style.color = TONE[result].css;          // no grade word: the burn keeps its name, in its lock's colour
             const sfx = window.AudioSystem;                                                  // WarpPlot's lock tone (silent when muted)
             if (sfx && typeof sfx.playTone === 'function') { const tone = { clean: [880, 'sine', 0.14], rough: [440, 'triangle', 0.14], bad: [150, 'sawtooth', 0.22] }[result]; try { sfx.playTone(...tone); } catch (err) { /* no audio */ } }
             if (s.locks.length === burns) { later(R.LOCK_PAUSE_MS, () => fly(R.finalGrade(s.locks), false)); return; }
@@ -244,23 +255,33 @@
             try { cv.focus({ preventScroll: true }); } catch (err) { /* nothing to focus */ }
             const sfx = window.AudioSystem, cue = grade === 'perfect' ? 'sfxDiscovery' : grade === 'bad' ? 'sfxWarn' : 'sfxWarp';
             if (sfx && typeof sfx[cue] === 'function') { try { sfx[cue](); } catch (err) { /* no audio */ } }
-            const info = R.GRADES[grade], label = isAuto ? 'A.U.R.A. PLOT' : info.label, effect = R.effectText(grade, opts.cost);
-            const delta = WP.energyDelta(grade, opts.cost || 0);
-            later(RESULT_AFTER_MS, () => {
-                resultTag.set({ label, chips: [{ icon: 'energy', text: effect, tone: delta > 0 ? 'gain' : delta < 0 ? 'loss' : 'cool' }] });
-                resultTag.flag('is-cool', isAuto || grade === 'rough');
-                resultTag.el.querySelector('.gg-l').style.color = isAuto ? '' : TONE[NAMES[grade]].css;
-                layout();
-                resultTag.show(true);
+            ui.clear();                                                                      // the hint goes with the burns
+            const line = R.pickLine(isAuto ? 'auto' : grade, opts.crew || []), aura = opts.relianceVoice;
+            later(RESULT_AFTER_MS + LINE_AFTER_MS, () => {                                   // how it went: one line, and one chip under it
+                if (line) ui.say(line.name, line.text);
+                showChip(chipOf(grade));
                 s.resultAt = performance.now();
             });
-            const line = R.pickLine(isAuto ? 'auto' : grade, opts.crew || []), aura = opts.relianceVoice;
-            if (line) later(RESULT_AFTER_MS + LINE_AFTER_MS, () => ui.say(line.name, line.text));
             const readLine = RESULT_AFTER_MS + LINE_AFTER_MS + READ_MS;
             if (aura && aura.text) {
-                later(readLine, () => ui.say(aura.name || 'A.U.R.A.', aura.text));
+                later(readLine, () => { showChip(null); ui.say(aura.name || 'A.U.R.A.', aura.text); });   // the next line takes the chip away
                 later(readLine + AURA_READ_MS, finish);
             } else later(readLine, finish);
+        }
+        /** The one chip after the burns: what the plot did to the jump's energy, as App.applyPlotResult charges it (bundle.js). */
+        function chipOf(grade) {
+            const st = window.app && window.app.state;
+            let delta = WP.energyDelta(grade, opts.cost || 0);
+            if (delta < 0 && st && (st.upgrades || []).includes('shield_core')) delta = 0;   // the shielded core soaks a bad burn
+            const text = delta > 0 ? `Energy +${delta}` : delta < 0 ? `Energy −${-delta}` : 'Energy ±0';
+            return { icon: 'energy', text, tone: delta > 0 ? 'gain' : delta < 0 ? 'loss' : '' };
+        }
+        /** The chip row under the line (minigames.css .mini-talk > .void-chips: the row kept free, so the line never moves); null clears it. */
+        function showChip(chip) {
+            const talk = cv.closest('.mini-frame') && cv.closest('.mini-frame').querySelector('.mini-talk');
+            if (!talk) return;
+            talk.querySelectorAll('.gg-chips').forEach(el => el.remove());
+            if (chip && MiniHost.chipsEl) talk.append(MiniHost.chipsEl([chip], 'void-chips gg-chips'));
         }
         function finish() {
             if (s.done) return;
@@ -280,7 +301,7 @@
             if (cv.clientWidth / AW !== unit) layout();
             try { MiniLab.inArt(ctx, g => draw(g, now)); } catch (err) { console.error('NSGauge: a frame failed', err); }
             pipFlags(now);
-            [...pips, lockTag, auraTag, resultTag].forEach(tg => tg.type(now, still));
+            [...pips, lockTag, auraTag].forEach(tg => tg.type(now, still));
             frameId = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(frame);
         }
         function draw(g, now) {
@@ -391,11 +412,6 @@
                 TA.shade(g, auraTag.x, auraTag.y, auraTag.w, auraTag.h, Math.min(1, k * 1.6));
                 TA.brackets(g, auraTag.x, auraTag.y, auraTag.w, auraTag.h, 'cool', k, auraTag.hot);
                 if (k > 0.4) TA.icon(g, 'ring', auraTag.x + 4, auraTag.y + Math.floor((auraTag.h - 9) / 2), 'cool', auraTag.hot ? 1 : 0);
-            }
-            if (resultTag.on) {
-                const k = arm(resultTag), tone = s.auto ? 'cool' : TONE[NAMES[s.grade]].ramp;
-                TA.shade(g, resultTag.x, resultTag.y, resultTag.w, resultTag.h, Math.min(1, k * 1.6));
-                TA.brackets(g, resultTag.x, resultTag.y, resultTag.w, resultTag.h, tone, k, true);
             }
         }
 

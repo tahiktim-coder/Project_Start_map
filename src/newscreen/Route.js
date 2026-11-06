@@ -24,6 +24,7 @@
             (Eden in the light's own band, beside it: no fork mate, never a world "ahead" for onlyStoryLeft)
      canGo(state, id) → { ok, say, kind }  kind: 'world' | 'ghost' | 'contact' | 'light' | 'passed' | 'cost' | 'none';
                                            say: the one line A.U.R.A. says when it is no (null when ok). Pure: says nothing.
+                                           'cost' also gives { cost, have }: the flight's energy and ours, whole (Travel shows them)
                                            A story world (App.isStoryStop) is never 'cost': short of energy, it is flown on the reserve
      arrive(state, id)                     we pulled in at id: it is 'visited', its fork mate 'gone', anything ahead in a
                                            nearer band 'passed'
@@ -33,7 +34,7 @@
      A fresh plan on a sector already played (a save from the default game, loaded with ?new=1 on) marks where we have
      been: the orbit we are parked at, a wreck boarded, a station searched; the rest follows as if we had flown there.
      find(state, id) → node | null         a node of the sector by id ('light' gives the structure in sector 6)
-     LINES                                 the refusal lines (docs/STYLE.md)
+     LINES                                 the refusal lines (docs/STYLE.md; the designer's rewrites, L-10, wait in CALLS.md)
 */
 (function () {
     'use strict';
@@ -157,7 +158,7 @@
         if (node.ghost) return { ok: true, say: null, kind: 'ghost' };
         const cost = typeof state.getWarpCost === 'function' ? state.getWarpCost(node) : 0;
         const isStory = !!(window.app && typeof window.app.isStoryStop === 'function' && window.app.isStoryStop(node));   // flown on the reserve if need be
-        if (cost > state.energy && !window.TEST_MODE && !isStory) return { ok: false, say: LINES.cost, kind: 'cost' };
+        if (cost > state.energy && !window.TEST_MODE && !isStory) return { ok: false, say: LINES.cost, kind: 'cost', cost: Math.ceil(cost), have: Math.max(0, Math.floor(state.energy)) };
         return { ok: true, say: null, kind: 'world' };
     }
 

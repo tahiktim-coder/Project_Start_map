@@ -16,6 +16,8 @@ window.TEST_MODE = IS_TEST_BUILD;
 const TRY_RUN = new URLSearchParams(location.search).get('try') || null;
 const SAVE_KEY = TRY_RUN ? 'silentExodus_try' : 'silentExodus_save';
 window.SAVE_KEY = SAVE_KEY;
+/** The new look's ship's console (src/newscreen/Console.js) saved and asked for the title: true for the one load right after. */
+const TITLE_ASKED = (() => { try { const v = sessionStorage.getItem('se-to-title') === '1'; sessionStorage.removeItem('se-to-title'); return v; } catch (err) { return false; } })();
 
 /**
  * Test-aware random function.
@@ -1530,8 +1532,8 @@ class App {
         // True while a warp or sector jump is playing out; blocks re-entrant travel requests
         this._isInTransit = false;
 
-        // Show start menu first (a try tab: straight into its moment)
-        if (TRY_RUN && isNewScreen()) { if (window.AudioSystem) window.AudioSystem.init(); this.init(false); }
+        // Show start menu first (a try tab: straight into its moment, unless the ship's console just saved and asked for the title)
+        if (TRY_RUN && isNewScreen() && !TITLE_ASKED) { if (window.AudioSystem) window.AudioSystem.init(); this.init(false); }
         else this.showStartMenu();
     }
 
@@ -1724,6 +1726,7 @@ class App {
             audioStatus.textContent = this.soundLabel();
             audioBtn.textContent = window.AudioSystem.muted ? 'TURN ON' : 'TURN OFF';
             this.syncSoundButton();
+            if (isNewScreen() && window.NSConsole) window.NSConsole.remember();             // the new look keeps it, as the ship's console does
         };
     }
 
@@ -1854,11 +1857,12 @@ class App {
         window.addEventListener('anomaly-teleport', (e) => this.handleAnomalyTeleport(e.detail));
 
         // Either load save or start new game (a try tab: a fresh run placed at its moment, never the real save)
-        if (TRY_RUN && isNewScreen()) this.startTry(TRY_RUN);
-        else if (loadSave && this.state.loadGame()) {
+        if (TRY_RUN && isNewScreen() && !loadSave) this.startTry(TRY_RUN);
+        else if (loadSave && this.state.loadGame()) {                                    // a try tab's Continue (its title comes from the ship's console) loads its own save
             this.state.addLog("=== SAVE LOADED ===");
             this.state.addLog(`Resuming mission in Sector ${this.state.currentSector}.`);
             this.resumeWhereSaved();
+            if (TRY_RUN && isNewScreen()) this.tryNote();
         } else {
             // New game
             this.state.init();
@@ -1885,6 +1889,10 @@ class App {
         } else s.sectorNodes = PlanetGenerator.generateSector(1);
         this.renderNav();
         s.emitUpdates();
+        this.tryNote();
+    }
+    /** The try tab's corner note (once). */
+    tryNote() {
         if (document.getElementById('try-note')) return;
         const note = document.createElement('p');
         note.id = 'try-note';
@@ -1896,7 +1904,9 @@ class App {
      * Auto-save the game (called after significant actions)
      */
     autoSave() {
-        if (this.state.saveGame() && !isNewScreen()) {                                       // the new screen: saved quietly, no green pill
+        const saved = this.state.saveGame();
+        if (saved && isNewScreen() && window.NewScreen.bus) window.NewScreen.bus.emit('saved', {});   // the new screen: no pill; A.U.R.A.'s speaker blinks (Console.js)
+        if (saved && !isNewScreen()) {
             // Subtle save indicator
             const indicator = document.createElement('div');
             indicator.style.cssText = `
@@ -2958,7 +2968,7 @@ class App {
         const s = this.state;
         const damaged = Object.fromEntries(Object.entries(s.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
         const seed = String((station && station.id) || 'station').split('').reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 19);
-        return { kind: 'dock', sector: s.currentSector, crew: s.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: s.energy, seed };
+        return { kind: 'dock', sector: s.currentSector, crew: s.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: s.energy, seed, name: (station && station.name) || null };   // name: the station's tag in the run (look pass B09)
     }
 
     /**
@@ -3282,8 +3292,8 @@ class App {
         // Auto-save after sector jump
         this.autoSave();
 
-        // Sector name from config
-        const sectorName = enterConfig ? enterConfig.name : '';
+        // Sector name from config (the new look's own where it renames one: NSLooks.renamed, C62; caps as the config's)
+        const renamed = isNewScreen() && window.NSLooks && typeof window.NSLooks.renamed === 'function' ? window.NSLooks.renamed(nextSector) : null, sectorName = renamed ? renamed.toUpperCase() : enterConfig ? enterConfig.name : '';
         this.state.addLog(`Sector ${nextSector}${sectorName ? ' — ' + sectorName : ''}`);   // MissionLog turns this into the new stop's header
 
         // Dispatch sector entered event for audio
@@ -3340,7 +3350,10 @@ class App {
             }, err => { console.error('The burn gauge failed; the jump goes on as A.U.R.A. plotted it', err); onComplete(); });
             return;
         }
-        plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
+        const isNewArrival = isNewScreen() && window.NSLooks;                         // the new look without the gauge: the sector's name and A.U.R.A. saying it, never a bare "—"
+        plotOptions.arrival = isNewArrival
+            ? { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: window.NSLooks.titleOf(nextSector), line: '', voices: [{ name: 'A.U.R.A.', face: null, text: 'The jump did not finish.' }] }
+            : { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
         window.WarpPlot.play(plotOptions).then(result => {
             this.applyPlotResult(result, jumpBase);
@@ -3404,7 +3417,7 @@ class App {
         if (window.NarrativeModal) {
             const plainName = name => String(name || '').toLowerCase().replace(/(^|\s)([a-z])/g, (m, a, b) => a + b.toUpperCase()).replace(/^The /, 'the ');
             const sectorHeader = isNewScreen()                                                 // the new screen: plain words, no code-like caps
-                ? `[whisper]Into ${plainName(SECTOR_NAMES[toSector] || 'the dark')}[/whisper]`
+                ? `[whisper]Into ${plainName((window.NSLooks && window.NSLooks.titleOf(toSector)) || SECTOR_NAMES[toSector] || 'the dark')}[/whisper]`   // the sky's own names (C62: sector 2 is The Drift)
                 : `[whisper]S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}[/whisper]`;
             const stay = isBeforeJump && canStay && isNewScreen();                 // nothing is paid yet: "Not yet" stays in this sector
             const choices = stay ? [{ text: 'Not yet', desc: 'Stay in this sector.', effect: () => '' }].concat(event.choices) : event.choices;   // DRAFT (look pass): C05
@@ -4062,7 +4075,10 @@ Then you're through.`,
         if (this._lightCardOpen) return;                                                 // a second click while it opens: one council
         this._lightCardOpen = true;
         const isFirst = !planet._lightCouncilHeard, disc = encounter.disc || {};
-        const reel = isFirst && window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('light') : Promise.resolve();
+        const isArrival = isNewScreen() && window.NSEnding && typeof window.NSEnding.arrive === 'function';   // the new look: the light arrival (end/Ending.js, C83), never the old reel
+        const firstSight = () => (isArrival ? window.NSEnding.arrive(this, 'light').catch(err => console.error('The light arrival failed; on to the crew', err))
+            : window.StoryReel ? window.StoryReel.play('light') : Promise.resolve());
+        const reel = isFirst && !window.TEST_MODE ? firstSight() : Promise.resolve();
         const ourDisc = () => (isFirst && this.state.hasDisc && window.DiscDocument ? window.DiscDocument.open(this, { real: true, ...disc.view }) : Promise.resolve());
         reel.then(ourDisc).then(() => {
             const council = window.buildLightCouncil(this.state, { isRepeat: !isFirst });
@@ -4130,6 +4146,25 @@ Then you're through.`,
             return true;
         }
         this.showEndingScreen(asScreen());
+        return true;
+    }
+
+    /**
+     * The new look's ordinary settling (call C72): the colony ending's scene (end/Ending.js, kind 'colony', words in
+     * end/EndWords.js), started as endJourney starts the others: once per run, the run over, the save dropped when the end card
+     * shows. false (nothing started) if the new look cannot play it; then the default game's colony screen shows instead.
+     * oldScreen: shows that screen if the scene fails to start.
+     */
+    endInColony(planet, outcome, oldScreen) {
+        if (this._journeyEnded || !window.NSEnding || !window.NSEndWords) return false;
+        let ending;
+        try { ending = window.NSEndWords.colony(this.state, planet, !!(outcome && outcome.success)); } catch (err) { console.error('The colony ending could not be built', err); return false; }
+        this._journeyEnded = true;
+        this.state.gameOver = true;                                                      // nothing else ends the run over its ending
+        window.NSEnding.play(this, ending, { from: 'colony' }).then(() => this.recordEnding(ending), err => {
+            console.error('The colony ending failed; the colony screen instead', err);
+            oldScreen();
+        });
         return true;
     }
 
@@ -6426,8 +6461,10 @@ Then you're through.`,
             rating = 'F'; ratingColor = '#d85a4e';
         }
 
+        const oldColonyScreen = () => window.EndScreens && window.EndScreens.colony(this, planet, outcome, { rating, survivors: survivors.length, avgStress, colonyKnowledge });
+        if (isNewScreen() && this.endInColony(planet, outcome, oldColonyScreen)) return;   // the new look: the colony ending (C72), never the old sheet
         if (window.EndScreens) { // shared card; the flight-recorder table below is only the fallback
-            window.EndScreens.colony(this, planet, outcome, { rating, survivors: survivors.length, avgStress, colonyKnowledge });
+            oldColonyScreen();
             return;
         }
 
@@ -6800,6 +6837,7 @@ Then you're through.`,
     showGameOver(detail) {
         // Delete save file - game is over
         this.state.deleteSave();
+        if (isNewScreen() && this.endInLoss(detail)) return;                            // the new look: the loss ending (C73, C71), never the old sheet
         if (window.EndScreens) { // shared card layout; the legacy red box below is the fallback
             window.EndScreens.gameOver(this, detail);
             return;
@@ -6865,6 +6903,20 @@ Then you're through.`,
 
         // Button handler
         overlay.querySelector('#btn-restart').onclick = () => location.reload();
+    }
+
+    /** The new look's game over, every kind of it (all hands, the hull, stranded, command failure, A.U.R.A.'s mutiny): the loss
+        ending's scene (end/Ending.js, kind 'loss', words in end/EndWords.js). false if the new look cannot play it; the old
+        game-over screen shows if the scene fails to start. */
+    endInLoss(detail) {
+        if (!window.NSEnding || !window.NSEndWords) return false;
+        let ending;
+        try { ending = window.NSEndWords.loss(this.state, detail || {}); } catch (err) { console.error('The loss ending could not be built', err); return false; }
+        window.NSEnding.play(this, ending, { from: 'loss' }).catch(err => {
+            console.error('The loss ending failed; the game-over screen instead', err);
+            if (window.EndScreens) window.EndScreens.gameOver(this, detail || {});
+        });
+        return true;
     }
 
 
@@ -6954,8 +7006,14 @@ Then you're through.`,
         mainView.innerHTML = '';
         if (isNewScreen()) {                                                               // the new screen: the bridge, not today's orbit view
             if (here && !here.exodusInvestigated && this.isRelayStop(here) && window.DockFlight.warm) window.DockFlight.warm();   // Last Port: the relay's cut and moon made ready at idle
-            if (window.NewScreen.stop(this)) return;
+            let isBridge = false;
+            try { isBridge = window.NewScreen.stop(this); } catch (err) { console.error('The bridge would not open', err); }
+            if (isBridge) return;
             window.NewScreen.hide();                                                       // no stop module: today's orbit view, as in checkpoint A
+            if (here && !this.state.gameOver && window.NSEnding && typeof window.NSEnding.recover === 'function') {   // which the new look hides (an empty sky): A.U.R.A. and "› Try again"
+                window.NSEnding.recover(this, () => this.renderOrbit());
+                return;
+            }
         }
         mainView.appendChild(this.orbitView.render());
     }

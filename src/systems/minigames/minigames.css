@@ -238,3 +238,112 @@ html.ns-on .mini-host .tone-vance { --tone: var(--tone-vance); }   /* the new lo
     .mini-host { animation: none; transition: none; }
     .mini-btn, .mini-btn::before { transition: none; }
 }
+
+/* ══ THE NEW LOOK (look pass B09, 2026-11-05; html.ns-on only: everything above is the old look, unchanged) ═════════════
+   One frame for every minigame (DESIGN.md 6.3 minihost-frame, call C49): the --mg-* copies read tokens.css; no header
+   anywhere (the picture sits at the same height in every minigame); the dither veil, never a blur; the words under the
+   picture keep one height (the line before, the name, two lines, and a chip row kept free under them) and sit on that
+   row (align-content: end), so chips coming never move the line; the keys one row; MiniHost.js picks one picture scale
+   per window for all of them and keeps the frame's top fixed. The voice on the
+   tokens' sizes and measure; narration in the real Plex Sans italic; readouts 14 px in --cool; the etched tag (a control
+   or a name on a dither plate, a 1 px leader to its thing); chips with words in Condensed and numbers in Mono. */
+html.ns-on .mini-host {
+    --mg-ink: var(--ink); --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--faint); --mg-steel: var(--ui);
+    --mg-amber: var(--warm); --mg-amber-br: var(--warm-br); --mg-red: var(--loss);
+    --mg-f-ui: var(--f-ui); --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: var(--ease);
+    --mg-talk: calc(1.3 * var(--fs-prev) + var(--fs-who) + 2 * 1.36 * var(--fs-voice) + 2 * 6px + 2px);   /* the line before, the name, two lines */
+    --mg-chips: calc(4px + 1.2 * var(--fs-chip));                                                           /* the chip row under them: its gap, a row (2x stays whole at 1366) */
+    --mg-keys: 48px;
+    --mg-plate: repeating-conic-gradient(color-mix(in srgb, var(--ink) 90%, transparent) 0 25%, color-mix(in srgb, var(--ink) 72%, transparent) 0 50%) 0 0 / 2px 2px;
+}
+html.ns-on .mini-host:not(.is-land) {
+    place-items: start center;                                         /* MiniHost.js sets the frame's top once (fitShared) */
+    background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 97.5%, transparent) 0 25%, color-mix(in srgb, var(--ink) 92%, transparent) 0 50%) 0 0 / 4px 4px;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    animation: mini-host-in calc(3 * var(--step-ui)) steps(3, end);
+    transition: opacity 300ms steps(3, end);
+}
+html.ns-on .mini-host .mini-head { display: none; }
+html.ns-on .mini-host .mini-talk { position: relative; min-height: calc(var(--mg-talk) + var(--mg-chips)); padding-bottom: var(--mg-chips); align-content: end; }
+html.ns-on .mini-host .mini-buttons { min-height: var(--mg-keys); align-items: center; }
+html.ns-on .mini-host .mini-line { max-width: min(100%, 92ch); font-size: var(--fs-voice); text-wrap: pretty; }
+html.ns-on .mini-host .mini-line.is-note { max-width: min(100%, 92ch); font: italic 400 var(--fs-voice)/1.36 var(--f-text); color: var(--narr); }
+html.ns-on .mini-host .mini-who { min-height: var(--fs-who); font-size: var(--fs-who); }
+html.ns-on .mini-host .mini-prev { min-height: calc(1.3 * var(--fs-prev)); font-size: var(--fs-prev); color: var(--dim); opacity: 1; }
+html.ns-on .mini-host .mini-prev b { font-size: var(--fs-who); color: var(--tone, var(--warm)); }
+html.ns-on .mini-host .mini-prev.is-narr { font-family: var(--f-text); font-style: italic; font-size: var(--fs-prev); }
+html.ns-on .mini-host .tone-cora { --tone: var(--tone-cora); }
+html.ns-on .mini-host .tone-jaxon { --tone: var(--tone-jaxon); }
+html.ns-on .mini-host .tone-aris { --tone: var(--tone-aris); }
+html.ns-on .mini-host .tone-mira { --tone: var(--tone-mira); }
+html.ns-on .mini-host .tone-aura { --tone: var(--tone-aura); }
+
+/* the keys: the mark in --dim (6:1), warm on the way on and when pointed or focused; a closed key in --dim, its mark faint */
+html.ns-on .mini-host .mini-btn { font-size: var(--fs-key); transition-timing-function: steps(2, end); }
+html.ns-on .mini-host .mini-btn::before { color: var(--dim); transition-timing-function: steps(2, end); }
+html.ns-on .mini-host .mini-btn.is-primary { border-color: color-mix(in srgb, var(--warm) 55%, transparent); background: color-mix(in srgb, var(--warm) 8%, transparent); }
+html.ns-on .mini-host .mini-btn.is-primary::before,
+html.ns-on .mini-host .mini-btn:hover:not([disabled])::before,
+html.ns-on .mini-host .mini-btn:focus-visible::before { color: var(--warm); }
+html.ns-on .mini-host .mini-btn.is-primary:hover:not([disabled]),
+html.ns-on .mini-host .mini-btn.is-primary:focus-visible { border-color: var(--warm); background: color-mix(in srgb, var(--warm) 16%, transparent); }
+html.ns-on .mini-host .mini-btn[disabled] { color: var(--dim); }
+html.ns-on .mini-host .mini-btn[disabled]::before { color: var(--faint); }
+/* a held key keeps its mark and its box fills while it is held (--fill 0..1, set by the minigame in steps) */
+html.ns-on .mini-host .mini-btn.is-hold::before, html.ns-on .mini-host .mini-btn.is-held::before { content: '\203A'; font-size: 15px; }
+html.ns-on .mini-host .mini-btn.is-held::before { color: var(--warm-br); }
+html.ns-on .mini-host .mini-btn.is-hold.is-primary,
+html.ns-on .mini-host .mini-btn.is-hold.is-primary:hover:not([disabled]),
+html.ns-on .mini-host .mini-btn.is-hold.is-primary:focus-visible {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--warm) 34%, transparent) calc(var(--fill, 0) * 100%), color-mix(in srgb, var(--warm) 8%, transparent) 0);
+}
+
+/* readouts over the picture: 14 px, --cool by default, on the halo */
+html.ns-on .mini-host .mini-note { font-size: var(--fs-floor); color: var(--cool); text-shadow: var(--shadow), var(--halo); }
+html.ns-on .mini-host .mini-note.is-m, html.ns-on .mini-host .mini-note.is-label.is-m { font-size: 16px; }
+html.ns-on .mini-host .mini-note.is-text { color: var(--text); }
+html.ns-on .mini-host .mini-note.is-ui { color: var(--ui); }
+html.ns-on .mini-host .mini-note.is-warm { color: var(--warm-br); }
+html.ns-on .mini-host .mini-note.is-danger { color: var(--loss); }
+/* a readout's label (BEACONS HEARD, A.U.R.A. FLYING, YEARS DEAD, SECTOR 4): words in Condensed 500 caps, its numbers and
+   hull tags in Mono (MiniHost wraps them in .mini-n), a value in --text beside a --dim word */
+html.ns-on .mini-host .mini-note.is-label { font: 500 var(--fs-floor)/1.2 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
+html.ns-on .mini-host .mini-note.is-label.is-ui { color: var(--ui); }
+html.ns-on .mini-host .mini-note.is-label.is-text { color: var(--text); }
+html.ns-on .mini-host .mini-note.is-label.is-warm { color: var(--warm-br); }
+html.ns-on .mini-host .mini-note.is-label .mini-n { font-family: var(--f-num); font-weight: 400; letter-spacing: 0; }
+html.ns-on .mini-host .mini-note.is-label.is-dim .mini-n { color: var(--text); }
+/* the etched tag: a control or a name on a dither plate, sentence case, stepping in and out */
+html.ns-on .mini-host .mini-note.is-tag {
+    padding: 4px 8px 5px;
+    font: 500 var(--fs-floor)/1.2 var(--f-ui);
+    letter-spacing: 0.04em;
+    color: var(--text);
+    background: var(--mg-plate);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cool) 22%, transparent);
+    text-shadow: var(--shadow);
+    animation: mini-tag-in calc(3 * var(--step-ui)) steps(3, end) both;
+}
+html.ns-on .mini-host .mini-note.is-tag.is-going { animation: mini-tag-out calc(3 * var(--step-ui)) steps(3, end) forwards; }
+@keyframes mini-tag-in { from { opacity: 0; } }
+@keyframes mini-tag-out { to { opacity: 0; } }
+html.ns-on .mini-host .mini-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+html.ns-on .mini-host .mini-leaders line { stroke: var(--cool); stroke-width: 1; vector-effect: non-scaling-stroke; shape-rendering: crispEdges; }
+
+/* chips under a line (the dark, the corridor's bill, the dock): words in Condensed, numbers in Mono; gains warm, losses
+   --loss; A.U.R.A.'s word (the dock's grade, C52b) in her tone, as speech */
+html.ns-on .mini-host .void-chips, html.ns-on .mini-host .mini-talk .dock-chips { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0; padding-top: 2px; }
+/* in the row kept free under the words (--mg-chips): chips coming or going never move the line above them */
+html.ns-on .mini-host .mini-talk > .void-chips, html.ns-on .mini-host .mini-talk > .dock-chips { position: absolute; left: 2px; right: 2px; top: calc(100% - var(--mg-chips) + 4px); padding-top: 0; }
+html.ns-on .mini-host .void-chips i, html.ns-on .mini-host .mini-talk .dock-chips i {
+    padding: 0; border: 0; border-radius: 0; font: 500 var(--fs-chip)/1.3 var(--f-ui); font-style: normal; letter-spacing: 0.02em; color: var(--ui); white-space: nowrap;
+}
+html.ns-on .mini-host .void-chips i .mini-n, html.ns-on .mini-host .mini-talk .dock-chips i .mini-n { font: 400 var(--fs-chip)/1.3 var(--f-num); letter-spacing: 0; }
+html.ns-on .mini-host .void-chips .is-gain, html.ns-on .mini-host .mini-talk .dock-chips .is-gain { color: var(--warm); }
+html.ns-on .mini-host .void-chips .is-loss, html.ns-on .mini-host .mini-talk .dock-chips .is-loss { color: var(--loss); }
+html.ns-on .mini-host .void-chips .is-aura, html.ns-on .mini-host .mini-talk .dock-chips .is-aura { font: 400 var(--fs-chip)/1.3 var(--f-text); letter-spacing: 0; color: var(--tone-aura); }
+
+@media (prefers-reduced-motion: reduce) {
+    html.ns-on .mini-host .mini-note.is-tag, html.ns-on .mini-host .mini-note.is-tag.is-going { animation: none; }
+}

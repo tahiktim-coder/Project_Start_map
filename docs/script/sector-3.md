@@ -16,8 +16,10 @@ Objective line: only where to look (the lines listed in sector 2), while the pag
 ### The burn that stalls «bundle.js · plotStalledBurn»
 _The jump is plotted (the burn mini-game, 09-ship-and-crew.md) and its card says only this._
 
-- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 3343»
-- **line** — The jump did not finish. «bundle.js · line 3343»
+- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 3355»
+- **A.U.R.A.:** The jump did not finish. «bundle.js · line 3355»
+- **kicker** — SECTOR [sector] OF [sector] «bundle.js · line 3356»
+- **line** — The jump did not finish. «bundle.js · line 3356»
 
 ### The jump that does not finish «TheThrow.js · BEATS»
 
@@ -83,7 +85,7 @@ On arrival:
 - Echo-[n] · Phantom-[n] · Mirage-[n] «SectorConfig.js · 3.hazard.onSectorEnter»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### THE LANDER «CrewEvents.js · JAXON_REPAIR»
 _Sectors 3, 4_

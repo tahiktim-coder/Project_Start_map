@@ -8,7 +8,8 @@
  *   BACK TO EDEN    it looks like home and is the trap. If the disc is aboard it stays on Eden: the trap has the map to Earth.
  * Settling on Eden earlier (through the settle council) is the same Eden ending (bundle.js _executeColony).
  * lightEndingFor(door, state) is everything an ending says: the end card's name and lines (the default game's old end screen shows
- * the same lines) and the lines the new look's scenes speak (src/newscreen/end/Ending.js).
+ * `card`'s; the new look's end card shows `endCard`'s, look pass L-42) and the lines the new look's scenes speak
+ * (src/newscreen/end/Ending.js).
  * EVERY LINE IN THIS FILE IS A DRAFT (docs/STYLE.md: plain, one idea, at most 20 words); the designer rewrites them.
  * The two count lines of the approach ("Five crew" and Vance's answer) are the designer's to decide: left as they were.
  */
@@ -83,6 +84,14 @@ const STRUCTURE_ENCOUNTER = {
                 disc: 'The disc went with {them}. Eden never got the map to Earth.',
                 noDisc: 'The disc was never found. It is still out there somewhere.',
             },
+            // the new look's end card (look pass, L-42): one narrator ({names}: the living, by name), plain, 40 words or fewer;
+            // the disc line only when the disc is aboard ({them}: "them", or the one name). The default game keeps `card`.
+            endCard: {
+                crew: '{names} went into the light together. Nobody was afraid.',   // DRAFT (look pass)
+                alone: '{names} went into the light alone, and was not afraid.',   // DRAFT (look pass)
+                lost: 'The crews from the old wrecks were there too.',   // DRAFT (look pass)
+                disc: 'The disc went with {them}. Eden never found out where Earth is.',   // DRAFT (look pass)
+            },
             // the approach (from prototypes/play-ideas/last-approach.js, which the designer loved): `at` is how far in
             flight: [
                 { at: 0.03, who: 'aura', say: 'Course set for the light, Commander.' },
@@ -117,6 +126,12 @@ const STRUCTURE_ENCOUNTER = {
                 disc: 'The disc stayed on Eden, and the map to Earth with it.',
                 noDisc: 'The disc was never found. It is still out there somewhere.',
             },
+            // the new look's end card (look pass, L-42): the crew line, Jaxon's letter and the disc line are `card`'s own; the
+            // disc line only when the disc is aboard. The default game keeps `card`.
+            endCard: {
+                alone: '{names} settled on Eden alone, and never went hungry again.',   // DRAFT (look pass)
+                sky: 'At night the light was the brightest star. Nobody talked about it.',   // DRAFT (look pass)
+            },
             turn: { who: 'aura', say: 'Eden is still there, Commander.' },   // turning back from the light (the mockup's line)
             closing: [                                                   // in the meadow, as they settle into the grass
                 { who: 'jaxon', say: "This is it, Commander. We're home." },
@@ -125,7 +140,7 @@ const STRUCTURE_ENCOUNTER = {
                 { who: 'vance', say: "We're staying, then. All right." },
                 { who: 'aura', say: 'We have landed, Commander. Mission complete.' },
             ],
-            discLine: 'Now they have the map to Earth.',                 // the last words, only with the disc aboard: never says who
+            discLine: 'Now Eden has the map to Earth.',   // DRAFT (look pass): L-43, with the canon's word (Eden is the trap that wants it); the last words, only with the disc aboard
         },
     },
 };
@@ -183,8 +198,9 @@ function buildLightCouncil(state, { isRepeat = false } = {}) {
 }
 
 /**
- * Everything one ending says, for this run: { ending, door, title, text, hasDisc, living, scene }.
- *   text     the end card's lines (also the paragraphs of the default game's old end screen)
+ * Everything one ending says, for this run: { ending, door, title, text, card, hasDisc, living, scene }.
+ *   text     the default game's old end screen's paragraphs
+ *   card     the new look's end card lines (endCardFor)
  *   living   who is alive, in the crew list's order ('cora', 'jaxon' ...): the scenes draw them all
  *   scene    what the new look's scene says, only by those who can speak (alive, not asleep or shut down):
  *            LIGHT { flight: [{ at, who, say }], hold, keepGoing, closing }   EDEN { turn, closing, discLine | null }
@@ -205,7 +221,16 @@ function lightEndingFor(door, state) {
     const scene = door === 'LIGHT'
         ? { flight: E.flight.filter(speaks).map(l => ({ ...l })), hold: { ...E.hold }, keepGoing: E.keepGoing, closing }
         : { turn: { ...E.turn }, closing, discLine: hasDisc ? E.discLine : null };
-    return { ending: E.id, door, title: E.title, text: [crewLine, middle, discLine], hasDisc, living, scene };
+    return { ending: E.id, door, title: E.title, text: [crewLine, middle, discLine], card: endCardFor(door, names, hasDisc, living), hasDisc, living, scene };
+}
+
+/** The new look's end card lines (look pass, L-42): one narrator, by name; no disc line unless the disc is aboard. */
+function endCardFor(door, names, hasDisc, living) {
+    const E = STRUCTURE_ENCOUNTER.endings[door], C = E.endCard, isAlone = names.length < 2, all = lightNames(names);
+    const first = (isAlone ? C.alone : C.crew || E.card.crew).replace('{names}', all);
+    const middle = door === 'LIGHT' ? C.lost : living.includes('jaxon') ? E.card.letter : C.sky;
+    const disc = door === 'LIGHT' ? C.disc.replace('{them}', isAlone ? all : 'them') : E.card.disc;
+    return hasDisc ? [first, middle, disc] : [first, middle];
 }
 
 if (typeof window !== 'undefined') {

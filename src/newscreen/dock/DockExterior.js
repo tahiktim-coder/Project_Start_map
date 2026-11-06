@@ -73,7 +73,7 @@
     const SC = [0, 1, 2, 3, 4, 5].map(k => Math.cos(PU + k * SPOKE.step)), SS = [0, 1, 2, 3, 4, 5].map(k => Math.sin(PU + k * SPOKE.step));
     const SKIN = { hatch: 0.16, grime: 0.22 };                            // the share of plates with a hatch; how dark the grime gets
     // the windows: rows round the tube; a few lit; the share that wake with the lights, in the segments that wake at all
-    const SEGS = 24, WIN = { step: 3.1, w: 0.72, h: 0.5, frame: 0.24, rows: [-0.3, 0.3, Math.PI - 0.3, Math.PI + 0.3], lit: 0.05, wake: 0.6, deadSeg: 0.35 };
+    const SEGS = 24, WIN = { step: 3.1, w: 0.72, h: 0.5, frame: 0.24, rows: [-0.3, 0.3, Math.PI - 0.3, Math.PI + 0.3], lit: 0.05, wake: 0.85, deadSeg: 0.2 };   // (look pass: wake 0.6 → 0.85, deadSeg 0.35 → 0.2, so twenty and more wake)
     // our Lander: its diameter and length (the travel view's proportions, 1 : 3.15), small against a ring 228 m across;
     // how far its nose sits down in the bay once home; and the dead hulls far behind the station [x, y in the picture
     // (shares of its size), length (art px), angle, from, to], wheeling with the sky (sprites every DEAD_STEP rad)
@@ -89,7 +89,10 @@
     // LAST PORT (relay only): a third camera, nearer than the wide, on the row of hulls by our port (the windows beat)
     const CAM_MID = { pos: [-31.5, -147.5, 63.5], at: [12, -95, 20], f: 520, roll: 0.42 };
     const RELAY_CHUNK = 96;                                                  // (and its bake looks at the clock every this many pixels, not every row)
-    const CLOSE_AT = 1.3, HOLD_CLOSE = 1.3;      // and a rough or hard dock goes back to the close HOLD_CLOSE s into the ring's lights, to hold on what it broke
+    const CLOSE_AT = 1.3, HOLD_CLOSE = 2.4;      // and a rough or hard dock goes back to the close HOLD_CLOSE s into the ring's lights (after the wave), to hold on what it broke
+    // the ring's lights and windows wake round from our port in art steps (WAVE_STEP s: the art's 8 fps), the far side by
+    // WAVE_S s (the look pass, B09: twenty and more of them lit, one after another, before Vance asks who turned them on)
+    const WAVE_S = 1.4, WAVE_STEP = 0.125;
     const LIGHT = [-0.75, 0.3, 0.42];                                       // in the station's frame: in the picture, from the upper left and a little in front
     const SHADE = { amb: 0.05, pow: 1.15, gain: 0.8, fade: 0.36, shine: 22, spec: 0.46 };                    // the dark side's floor; how the light falls off; the far side dimmer
     const T_HIT = 0.55, MAX_STEPS = 140, SHADOW_STEPS = 40;
@@ -981,7 +984,7 @@
                 for (let x = 0; x < AW; x++) { const sx = x - ox; if (sx < 0 || sx >= AW) continue; const c = col[srow + sx]; if (c) buf[row + x] = c; }
             }
             const shift = p => (p ? [p[0] + ox, p[1] + oy, p[2]] : null);
-            const tick = Math.floor(te * 8), wave = grade && !RX ? since - b.lights : -1, home = grade ? clamp01((since - b.lock) / 0.6) : 0;
+            const tick = Math.floor(te * 8), wave = grade && !RX && since > b.lights ? Math.floor((since - b.lights) / WAVE_STEP) * WAVE_STEP : -1, home = grade ? clamp01((since - b.lock) / 0.6) : 0;   // (the wave in art steps)
             if (home > 0) dimBay(buf, home, ox, oy);
             // our Lander: where it is (its nose sits down in the bay once home), its shadow across the steel
             const ps = pose({ ...f, grade }, since), axis = [TAN[0] * Math.sin(ps.tilt), TAN[1] * Math.sin(ps.tilt), Math.cos(ps.tilt)];
@@ -1000,18 +1003,18 @@
             if (portLit > 0) PORT_LAMPS.forEach((p, j) => { const s = shift(cam.project(p)); if (s && j !== deadLamp && (portLit >= 1 || tick % 6 !== j)) lamp(buf, s[0], s[1], portLit, false); });
             // windows waking as the lights reach them (cold, a few warm)
             if (wave > 0) for (let k = 0; k < wake.length; k++) {
-                const [i, du] = wake[k], ws = wave - 0.2 - du / Math.PI * 1.9;
+                const [i, du] = wake[k], ws = wave - 0.1 - du / Math.PI * WAVE_S;
                 if (grade === 'crash' && du < BROKE.crash * 0.8) continue;                     // the windows by the strike stay dark
                 if (ws < 0 || (ws < 0.12 && Math.floor(ws * 30) % 2)) continue;
-                const x = i % AW + ox, y = (i / AW | 0) + oy, isWarm = hash(i, 2, 5) < 0.14;
-                if (x >= 0 && x < AW && y >= 0 && y < AH) buf[y * AW + x] = (isWarm ? R.WARM : R.COLD).c32[level(isWarm ? R.WARM : R.COLD, (isWarm ? 0.5 : 0.42) + 0.3 * hash(i, 1, 3), x, y)];
+                const x = i % AW + ox, y = (i / AW | 0) + oy, isWarm = hash(i, 2, 5) < 0.24;   // (look pass: a step brighter, a few more warm)
+                if (x >= 0 && x < AW && y >= 0 && y < AH) buf[y * AW + x] = (isWarm ? R.WARM : R.COLD).c32[level(isWarm ? R.WARM : R.COLD, (isWarm ? 0.62 : 0.56) + 0.3 * hash(i, 1, 3), x, y)];
             }
             // the running lights, blinking as the face's did; then the ring's own, group by group round from us, each
             // pooling on the steel under it more than it shines itself (a few never come on, a few flicker)
             RUNNING.forEach(p => { const s = shift(cam.project(p)); if (s && seen(s[0] - ox, s[1] - oy, s[2]) && tick % 8 < 4) { glow(buf, s[0], s[1], 3.5, R.PANEL, 0.7); lightPx(buf, s[0], s[1], R.PANEL, 1); } });
             let lightsOn = 0;
             if (wave > 0) RING_LIGHTS.forEach(l => {
-                const ls = wave - (l.du / Math.PI) * 1.9 - l.j * 0.05;
+                const ls = wave - (l.du / Math.PI) * WAVE_S - l.j * 0.05;
                 if (ls < 0 || (ls < 0.1 && Math.floor(ls * 30) % 2) || l.j < 0.06) return;
                 if (l.j < 0.15 && hash(Math.floor(te * 9), l.du * 100, 5) < 0.3) return;
                 const hurt = grade === 'crash' ? l.du < BROKE.crash : grade === 'rough' && l.sd === side && l.du < BROKE.rough;   // the strike broke the nearest

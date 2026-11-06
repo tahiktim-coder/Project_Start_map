@@ -36,7 +36,7 @@
        click, canGo, refuse, go, arrive, light, contact, ghost   travel (BUILD_A §4)
        scanOffer(id) → { cost, ok, why } | null   the long-range scan offered in a world's note (Scan.js NSScan.offer)
        scan(id) → bool        run it (travel only);  facts(id) → { site, gives, danger, live, tier } | null   what our scans read
-       findNote(id, withSite) → ['Old ruins · The hum', 'People could live here'] | null   travel's note once scanned (WorldFinds.js)
+       findNote(id, withSite) → [{ icon, text, clue, live }] | null   travel's note once scanned, as tags (WorldFinds.js)
        finds(ids) → [find]    the finds on the world we orbit (WorldFinds.list; ids: the two at the hatch);  aim(id) → bool  choose one
        way(id, idx, ids?) → bool   choose that find's way on the glass (NSOrbit.way; ids: the two at the hatch, whose own
                               stress traits strike its rows)
@@ -58,7 +58,7 @@
        deckChoices(key) → [{ words, note }]   a red deck clicked: fix, patch, live with it
        deckCost(key) → [{ icon, text, tone }]   what a red deck costs while it stays broken (the tower's tag shows it)
        deckChoose(key, i) → bool
-     show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, playJump() → Promise
+     show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, idle() → bool (the console may open), playJump() → Promise
      holdVoice(reason, on, ms?)  no new voice line starts while any reason holds it (ms: from now; left out: until let go).
                              The arrival holds it from flow.arrive to the bridge shown + 600 ms (the dive is wordless: the
                              travel line on screen goes, the warp's mood strings are dropped); stop/Copy.js through the fall
@@ -96,7 +96,7 @@
     const FIRST_HINT = 'A.U.R.A.: "One of our ships is calling, Commander. Point at a world to fly there."';
     const ORDER = ['travel', 'tower', 'stop', 'wake', 'voice'];
     const OUTSIDE = new Set(['travel', 'dive-in', 'dive-out']);                          // travel and the tower are drawn only then
-    const BLOCKERS = '.modal-overlay:not(.ns-held), .story-reel, .mini-host, .warp-plot, .throw-veil, .end-screen, #start-menu, #narrative-modal.active, .ns-film';
+    const BLOCKERS = '.modal-overlay:not(.ns-held), .story-reel, .mini-host, .warp-plot, .throw-veil, .end-screen, #start-menu, #narrative-modal.active, .ns-film, .ns-console';
     const COVERS = '.ns-film, #start-menu, .story-reel, .end-screen';   // opaque over the whole screen: nothing under them is drawn (a stale frame would show when they go)
     const CREW_BY_TAG = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
 
@@ -305,8 +305,11 @@
         const m = mode === 'travel' ? mods.travel : mode === 'wake' ? mods.wake : mods.stop;
         let used = false;
         try { used = !!(m && m.key && m.key(e)); } catch (err) { console.error('NewScreen: key failed', err); }
+        if (!used && e.key === 'Escape' && !e.repeat && window.NSConsole) used = window.NSConsole.open('esc');   // the ship's console (Console.js), when idle()
         if (used) e.preventDefault();
     }
+    /** Travel or the bridge with nothing over them: no card, film, minigame or ending, not jumping, not leaving orbit (Console.js). */
+    function idle() { return shown && (mode === 'travel' || mode === 'stop') && !blocked() && !jumping && !leaving; }
 
     // ── game: the real state, read only ──
     const game = {
@@ -650,14 +653,80 @@
         },
     };
 
-    /** Sector 1, nothing visited yet: the Coach's first tip, said once in the travel view instead (the Coach is hidden there). */
+    /** Sector 1, nothing visited yet: the Coach's first tip, said once in the travel view instead (the Coach is hidden there).
+        Look pass B11 (C16): its two sentences one after the other, by our Lander; while they are said the calling world (it
+        wears the story's warm ring) carries a one-word glass chip, SIGNAL, on a dotted leader from its rim. A course set
+        stops it. */
     function firstHint() {
         const s = st(), v = mods.voice;
-        if (hintGiven || !shown || mode !== 'travel' || !s || s.currentSector !== 1 || !v || typeof v.sayLine !== 'function') return;
+        if (hintGiven || !shown || mode !== 'travel' || !s || s.currentSector !== 1 || !v || typeof v.say !== 'function') return;
         const p = window.NSRoute.plan(s), signal = (s.sectorNodes || []).find(n => n.isFirstSignal && !n.exodusInvestigated);
         if (p.at !== 0 || !signal) return;
         hintGiven = true;
-        try { v.sayLine(FIRST_HINT); } catch (err) { console.error('NewScreen: the first hint failed', err); }
+        const said = (/"(.+)"/.exec(FIRST_HINT) || [])[1] || '', beats = said.split(/(?<=[.!?])\s+/).filter(Boolean), chip = signalChip(signal.id);
+        beats.reduce((at, text) => at.then(() => (chip.live() ? v.say({ id: 'aura', who: 'A.U.R.A.', text, anchor: 'ship' }) : false)), Promise.resolve())
+            .catch(err => console.error('NewScreen: the first hint failed', err))
+            .then(() => chip.done());
+    }
+    const SIGNAL_WORD = 'Signal';                                                       // DRAFT (look pass): C16, the calling world's one-word chip (shown in capitals)
+    // B11 review: the chip is the glass key's own look (travel/Note.js's SCAN key, DESIGN.md §2): amber corner brackets on
+    // whole 2 px key pixels, a 9 x 9 pixel icon (stop/TagArt.js 'wave', the signal find's own), the word in Condensed 600 caps,
+    // all on the house dither; the dotted leader runs from the world's rim to the brackets.
+    const BRACKET = (c, at, w, h) => `linear-gradient(var(${c}) 0 0) ${at} / ${w} ${h}`;
+    const BRACKETS = ['left top', 'right top', 'left bottom', 'right bottom'].map(at => BRACKET('--tip', at, 'var(--kp)', 'var(--kp)'))
+        .concat(...['left top', 'right top', 'left bottom', 'right bottom'].map(at => [BRACKET('--bk', at, 'var(--arm)', 'var(--kp)'), BRACKET('--bk', at, 'var(--kp)', 'var(--arm)')]));
+    const SIGNAL_CSS = '#ns-root .ns-signal { --kp: 2px; position: absolute; left: 0; top: 0; display: flex; align-items: center; pointer-events: none; opacity: 0; transition: opacity 180ms steps(3, end); }'
+        + ' #ns-root .ns-signal.is-in { opacity: 1; } #ns-root .ns-signal.is-left { flex-direction: row-reverse; }'
+        + ' #ns-root .ns-signal .lead { width: var(--s4); border-top: 1px dotted var(--warm); }'
+        + ' #ns-root .ns-signal b { --bk: var(--warm); --tip: var(--warm-br); --arm: calc(var(--kp) * 4); display: flex; align-items: center; gap: calc(var(--kp) * 4);'
+        + ' padding: calc(var(--kp) * 3) calc(var(--kp) * 7) calc(var(--kp) * 3) calc(var(--kp) * 3); font: 600 var(--fs-tag)/calc(var(--kp) * 9) var(--f-ui); letter-spacing: 0.16em;'
+        + ' text-transform: uppercase; color: var(--warm); text-shadow: var(--shadow); background: ' + BRACKETS.join(', ') + ', var(--veil);'
+        + ' background-repeat: ' + BRACKETS.map(() => 'no-repeat').concat('repeat').join(', ') + '; }'
+        + ' #ns-root .ns-signal .icon { flex: none; width: calc(var(--kp) * 9); height: calc(var(--kp) * 9); background: center / 100% 100% no-repeat; image-rendering: pixelated; }'
+        + ' @media (prefers-reduced-motion: reduce) { #ns-root .ns-signal { transition: none; } }';
+    /** The signal find's 9 x 9 icon (stop/TagArt.js 'wave', warm) as a data URL, or null (no TagArt: the chip has the word alone). */
+    function signalIcon() {
+        const T = window.NSTagArt;
+        if (!T || typeof T.icon !== 'function') return null;
+        try { const c = document.createElement('canvas'); c.width = T.ICON; c.height = T.ICON; T.icon(c.getContext('2d'), 'wave', 0, 0, 'warm', 0); return c.toDataURL(); } catch (err) { console.error('NewScreen: the signal icon failed', err); return null; }
+    }
+    /** The SIGNAL chip by world `id`, placed each frame beside its rim (left of it when the right has no room), hidden while a
+        note or a frame is up; it steps out on done(), a course set, the view hidden or a change of mode. → { live(), done() } */
+    function signalChip(id) {
+        const words = document.getElementById('ns-words');
+        if (!words) return { live: () => true, done() {} };
+        if (!document.getElementById('ns-signal-css')) { const css = document.createElement('style'); css.id = 'ns-signal-css'; css.textContent = SIGNAL_CSS; document.head.appendChild(css); }
+        const el = document.createElement('div');
+        el.className = 'ns-signal'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<i class="lead"></i><b><i class="icon"></i></b>';
+        const icon = el.querySelector('.icon'), url = signalIcon();
+        if (url) icon.style.backgroundImage = `url(${url})`; else icon.hidden = true;
+        el.lastChild.append(SIGNAL_WORD);
+        words.appendChild(el);
+        const request = fn => (window.FrameClock ? window.FrameClock.request(fn) : requestAnimationFrame(fn));
+        let on = true, fid = null, pos = '';
+        const offs = ['flow:go', 'hidden', 'mode', 'jump:burn'].map(name => bus.on(name, () => done()));
+        function place() {
+            fid = null;
+            if (!on) return;
+            const a = debug.placeAt(id), t = mods.travel, note = !!(t && typeof t.noteUp === 'function' && t.noteUp()), see = !!(a && a.shown) && !note && !blocked();
+            if (see) {
+                const w = el.offsetWidth, h = el.offsetHeight, out = a.r * 1.45 + 4, right = a.x + out + w <= innerWidth - 16;   // out: clear of the warm ring at its widest pulse
+                const x = right ? a.x + out : a.x - out - w, at = `translate(${Math.round(x)}px, ${Math.round(a.y - h / 2)}px)`;
+                el.classList.toggle('is-left', !right);
+                if (at !== pos) { el.style.transform = at; pos = at; }
+            }
+            el.classList.toggle('is-in', see);
+            fid = request(place);
+        }
+        function done() {
+            if (!on) return;
+            on = false; offs.forEach(off => off());
+            if (fid != null) (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(fid);
+            el.classList.remove('is-in');
+            setTimeout(() => el.remove(), 400);
+        }
+        place();
+        return { live: () => on, done };
     }
     /** The wake-up talk is still going (start/Wake.js): it calls hint() itself when it ends. */
     const talking = () => { const w = window.NSWake; try { return !!(w && typeof w.pending === 'function' && w.pending()); } catch (err) { return false; } };
@@ -675,6 +744,6 @@
         on: ON, G, clock, bus, anchors, mods, game, flow, debug, register, sizeCanvas,
         get app() { return theApp(); },
         mode: () => mode,
-        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, playJump, wake, holdVoice,
+        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, idle, playJump, wake, holdVoice,
     });
 })();

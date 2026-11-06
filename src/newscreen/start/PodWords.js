@@ -4,8 +4,13 @@
    - The pod panel: it hangs over the pod being woken, a short thread down to the pod's top. In it, the sleeper's first name
      in their colour and three stage marks; a small screen (the stock display's recipe) with ONE reading ("Body 31°C: too
      cold", "Fluid in the lungs", "Heart 38: too slow"), typed on; under it three lit valve plates, each with its icon:
-     WARM (amber), FLUSH (blue), WAKE (green). A wrong valve: the brackets flash red (steady red with reduced motion) and
-     "groggy" shows by the name until the pod opens.
+     WARM (warm), FLUSH (blue), WAKE (--warm-br, C22). A wrong valve: the brackets flash red (steady red with reduced motion)
+     and the screen says so; the person's first line says they are groggy (no chip by the name, C12).
+   Look pass B11: every colour, face and size from tokens.css. The name on the panel and over a pod pointed at is the
+   speaker's name style (a ring, Condensed 500, .18em, in their tone); the reading is --text with no glow; the valve words
+   are the glass key's (Condensed 600 --fs-tag, 14 px at least) and a locked plate dims its art, never its word; the black
+   card ("Sixty-one years later") is the place title (Plex Sans 300 .2em, mixed case, C21) and comes and goes in the
+   film's 8 x 8 Bayer steps; "Skip the wake-up" is the film skip, on the window's corner.
    - "Let A.U.R.A. do it": a quiet grey tag under the hold's intercom (her voice in the hold), threaded to it; always there.
    - Pointing at a sleeping pod: brackets round it and the sleeper's name over it. Each crew pod is also a real button
      (keyboard, screen readers); the valves too (keys 1, 2, 3 as well, Pods.js).
@@ -25,7 +30,7 @@
    vm = { card: { text, a } | null, skip: bool, aura: { on }, hover: pod index | null, pods: [bool clickable] (5),
           tones: { id → '#hex' }, invite: bool (the clickable pods' brackets breathe: nothing opened yet),
           panel: null | { i, id, name, tone, reading: { text, verdict }, readAt, marks: [hex | null] x 3, next,
-                         groggy, lock, auto, down: key | null, alarm: ms into the alarm | null, pulse: { hex, k } | null, shownAt } }
+                         lock, auto, down: key | null, alarm: ms into the alarm | null, pulse: { hex, k } | null, shownAt } }
    The panel's box (.nsw-panel) and the A.U.R.A. tag carry the class 'sw': the voice keeps its lines off them (Voice.js).
 */
 (function () {
@@ -36,7 +41,7 @@
     const VALVES = Object.freeze([{ key: 'warm', word: 'Warm' }, { key: 'flush', word: 'Flush' }, { key: 'wake', word: 'Wake' }]);
     const PAD = { x: 5, top: 4, bottom: 5 }, HEAD_H = 9, SCR_GAP = 3, SCR_H = 15, VAL_GAP = 5, VAL_H = 17, PLATE_GAP = 4, ICON_X = 4, TEXT_X = 15;
     const THREAD = 12, EDGE = 6, TYPE_MS = 26, TYPE_DELAY = 140, ARM_MS = 170, AURA_AT = { x: 14, y: INTERCOM.y + INTERCOM.h + 8 };
-    const COOL = '#a9b6bc', ALARM = '#e2574c', INVITE = '#8a5a2c', GROGGY = 'groggy · +1 stress', WRONG = 'Wrong fluid';   // INVITE: a dim amber, under the bright one pointed at
+    const COOL = '#a9b6bc', ALARM = '#e2574c', INVITE = '#8a5a2c', WRONG = 'Wrong fluid';   // canvas colours (the brackets); INVITE: a dim amber, under the bright one pointed at
     const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
     const still = () => !!(mq && mq.matches);
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -46,37 +51,47 @@
         if (document.getElementById('ns-podwords-style')) return;
         const st = document.createElement('style');
         st.id = 'ns-podwords-style';
-        st.textContent = `#ns-wake-words { --fs-tag: calc(14px + 2px * var(--t, 1)); --fs-read: calc(14px + 2px * var(--t, 1)); --fs-valve: calc(12px + 2px * var(--t, 1)); }
-#ns-wake-words .nsw { position: absolute; left: 0; top: 0; box-sizing: border-box; margin: 0; white-space: nowrap; text-shadow: 0 1px 0 #05070a; opacity: 0; pointer-events: none; transition: opacity 180ms steps(3, end); }
+        st.textContent = `#ns-wake-words .nsw { position: absolute; left: 0; top: 0; box-sizing: border-box; margin: 0; white-space: nowrap; text-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity 180ms steps(3, end); }
 #ns-wake-words .nsw.on { opacity: 1; }
 #ns-wake-words :where(button.nsw) { padding: 0; background: none; border: 0; border-radius: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 #ns-wake-words button.nsw.on { pointer-events: auto; }
 #ns-wake-words button.nsw:focus-visible { outline: none; }
-#ns-wake-words .nsw-card { left: 50%; top: 50%; font: 300 calc(20px + 8px * var(--t, 1))/1 var(--f-text); letter-spacing: 0.34em; text-transform: uppercase; color: #c9cccd; transition: none; transform: translate(-50%, -50%); }
-#ns-wake-words .nsw-head { display: flex; align-items: baseline; gap: 0.7em; }
-#ns-wake-words .nsw-name { font: 600 var(--fs-tag)/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--who, #c9d1d6); }
-#ns-wake-words .nsw-groggy { font: 500 calc(var(--fs-tag) - 2px)/1 var(--f-ui); letter-spacing: 0.08em; color: #ff7a6a; }
-#ns-wake-words .nsw-groggy:empty { display: none; }
-#ns-wake-words .nsw-read { font: 400 var(--fs-read)/1 var(--f-num); letter-spacing: 0.02em; color: #cfeef2; text-shadow: 0 0 6px rgba(127, 224, 230, 0.35), 0 1px 0 #05070a; }
-#ns-wake-words .nsw-read i { font-style: normal; color: #ffc27a; text-shadow: 0 0 6px rgba(255, 194, 122, 0.35), 0 1px 0 #05070a; }
-#ns-wake-words .nsw-read em { font-style: normal; color: #ff7a6a; text-shadow: 0 0 7px rgba(255, 90, 70, 0.55), 0 1px 0 #05070a; }
+#ns-wake-words .nsw-card { left: 50%; top: 50%; font: 300 var(--fs-place)/1 var(--f-text); letter-spacing: 0.2em; color: var(--text); transition: none; transform: translate(-50%, -50%);
+    -webkit-mask-repeat: repeat; mask-repeat: repeat; }   /* the place title (C21); in and out through the Bayer mask, the film's dither */
+#ns-wake-words .nsw-head { display: flex; align-items: center; }
+#ns-wake-words .nsw-name, #ns-wake-words .nsw-who { display: inline-flex; align-items: center; gap: var(--s2); font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--who, var(--ui)); }
+#ns-wake-words .nsw-name::before, #ns-wake-words .nsw-who::before { content: ''; flex: none; box-sizing: border-box; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }   /* the speaker's ring */
+#ns-wake-words .nsw-read { font: 400 var(--fs-readout)/1 var(--f-num); letter-spacing: 0.02em; color: var(--text); text-shadow: var(--shadow); }
+#ns-wake-words .nsw-read i { font-style: normal; color: var(--warm-br); }
+#ns-wake-words .nsw-read em { font-style: normal; color: var(--loss); }
 #ns-wake-words .nsw-read .tg-k { display: inline-block; width: 0.55em; height: 0.95em; margin-right: -0.55em; vertical-align: -0.1em; background: currentColor; }
 #ns-wake-words .nsw-read .tg-r { visibility: hidden; }
-#ns-wake-words .nsw-valve { display: flex; align-items: center; font: 600 var(--fs-valve)/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fluid); }
-#ns-wake-words .nsw-valve:disabled { cursor: default; }
-#ns-wake-words .nsw-valve.is-hot { color: #fff6e8; }
-#ns-wake-words .nsw-valve.is-dim.on { opacity: 0.5; }
-#ns-wake-words .nsw-aura { font: 600 calc(13px + 1px * var(--t, 1))/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: ${COOL}; display: flex; align-items: center; }
-#ns-wake-words .nsw-aura.is-hot { color: #e6ecee; }
-#ns-wake-words .nsw-who { font: 600 calc(13px + 2px * var(--t, 1))/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--who, #c9d1d6); transform-origin: 50% 100%; }
+#ns-wake-words .nsw-valve { display: flex; align-items: center; font: 600 var(--fs-tag)/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fluid); }
+#ns-wake-words .nsw-valve:disabled { cursor: default; }   /* locked: its plate is drawn dim (PodArt), the word keeps its colour (4.5:1 or more) */
+#ns-wake-words .nsw-valve.is-hot { color: var(--text); }
+#ns-wake-words .nsw-aura { font: 600 var(--fs-tag)/1 var(--f-ui); letter-spacing: 0.16em; text-transform: uppercase; color: var(--cool); display: flex; align-items: center; }
+#ns-wake-words .nsw-aura.is-hot { color: var(--text); }
 #ns-wake-words .nsw-pod.on { opacity: 0; }
 #ns-wake-words .nsw-panel { padding: 0; }
 #ns-wake-words .nsw-probe { position: absolute; left: -9999px; top: 0; visibility: hidden; white-space: nowrap; pointer-events: none; }
 #ns-wake-words .nsw-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-#ns-wake-words .nsw-skip { left: auto; top: auto; right: 28px; bottom: 22px; padding: 6px 0; font: 500 calc(12px + 2px * var(--t, 1))/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: #8b8d90; transition: opacity 180ms steps(3, end), color 140ms ease; }
-#ns-wake-words .nsw-skip:hover, #ns-wake-words .nsw-skip:focus-visible { color: var(--warm, #f08c2e); }
+#ns-wake-words .nsw-skip { left: auto; top: auto; right: max(16px, 4vw); bottom: max(16px, 5vh); padding: var(--s2) 0; font: 500 var(--fs-skip)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); transition: opacity 180ms steps(3, end), color 120ms steps(2, end); }
+#ns-wake-words .nsw-skip:hover, #ns-wake-words .nsw-skip:focus-visible { color: var(--text); }   /* the film skip (the one corner hint) */
 @media (prefers-reduced-motion: reduce) { #ns-wake-words .nsw, #ns-wake-words .nsw-skip { transition: none; } }`;
         document.head.appendChild(st);
+    }
+
+    // the film's dither as a CSS mask: step n of 8 (n eighths of the pixels shown), each pixel s CSS px, cached
+    const masks = new Map();
+    function maskURL(n, u) {
+        const s = Math.max(1, Math.round(u)), key = n + ':' + s, P = window.NSPaint;
+        if (masks.has(key)) return masks.get(key);
+        const c = document.createElement('canvas'); c.width = c.height = 8 * s;
+        const g = c.getContext('2d'); g.fillStyle = '#000';
+        for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if (P && P.threshold(x, y) < n / 8) g.fillRect(x * s, y * s, s, s);
+        const url = c.toDataURL();
+        masks.set(key, url);
+        return url;
     }
 
     function create(ctx) {
@@ -121,8 +136,7 @@
             };
             D.head = document.createElement('div'); D.head.className = 'nsw-head';
             D.name = document.createElement('b'); D.name.className = 'nsw-name';
-            D.groggy = document.createElement('span'); D.groggy.className = 'nsw-groggy';
-            D.head.append(D.name, D.groggy); D.panel.appendChild(D.head);
+            D.head.append(D.name); D.panel.appendChild(D.head);
             D.panel.classList.add('sw'); D.aura.classList.add('sw');           // the voice keeps off them
             D.probe = document.createElement('span'); D.probe.setAttribute('aria-hidden', 'true'); layer.appendChild(D.probe);
             D.aura.addEventListener('pointerenter', () => { hot.aura = true; });
@@ -141,7 +155,7 @@
             const key = [u.toFixed(4), name, reading, window.NSTags ? window.NSTags.gen() : 0].join('|');
             if (measured && measured.key === key) return measured;
             const fp = px => Math.ceil((px + 0.6) / u - 0.02);
-            const out = { key, name: fp(width('nsw-name', name)), groggy: fp(width('nsw-groggy', GROGGY)), read: fp(width('nsw-read', reading)),
+            const out = { key, name: fp(width('nsw-name', name)), read: fp(width('nsw-read', reading)),
                 readH: width('nsw-read', 'Hg') && D.probe.offsetHeight, valve: Math.max(...VALVES.map(v => fp(width('nsw-valve', v.word)))), aura: fp(width('nsw-aura', D.aura.textContent)) };
             out.plate = TEXT_X + out.valve + 4;
             measured = out;
@@ -152,7 +166,7 @@
         function layoutPanel(o, u) {
             const reading = o.reading.text + (o.reading.verdict ? ': ' + o.reading.verdict : '');
             const m = measure(u, o.name, reading), plates = 3 * m.plate + 2 * PLATE_GAP;
-            const w = Math.max(plates, m.name + 6 + 14 + (o.groggy ? m.groggy + 4 : 0), m.read + 10) + PAD.x * 2;
+            const w = Math.max(plates, m.name + 6 + 14, m.read + 10) + PAD.x * 2;
             const h = PAD.top + HEAD_H + SCR_GAP + SCR_H + VAL_GAP + VAL_H + PAD.bottom;
             const pod = PODS[o.i], x = clamp(Math.round(pod.x - w / 2), EDGE, SW - w - EDGE), y = pod.top - THREAD - h;
             const sx = x + PAD.x, sy = y + PAD.top + HEAD_H + SCR_GAP, vy = sy + SCR_H + VAL_GAP, pw = Math.floor((w - PAD.x * 2 - 2 * PLATE_GAP) / 3);
@@ -164,8 +178,8 @@
             if (!D) return null;
             const u = ctx.unit(), L = { t, panel: null, aura: null, who: null, card: vm.card };
             // the card
-            if (vm.card && vm.card.a > 0) { if (D.card.textContent !== vm.card.text) D.card.textContent = vm.card.text; D.card.style.opacity = String(vm.card.a); show(D.card, true); }
-            else { D.card.style.opacity = ''; show(D.card, false); }
+            if (vm.card && vm.card.a > 0) { if (D.card.textContent !== vm.card.text) D.card.textContent = vm.card.text; dither(D.card, vm.card.a, u); show(D.card, true); }
+            else { dither(D.card, 1, u); show(D.card, false); }
             show(D.skip, !!vm.skip);
             // the panel
             const o = vm.panel;
@@ -174,8 +188,6 @@
                 P.o = o;
                 D.panel.style.setProperty('--who', o.tone);
                 if (D.name.textContent !== o.name) D.name.textContent = o.name;
-                const gro = o.groggy ? GROGGY : '';
-                if (D.groggy.textContent !== gro) D.groggy.textContent = gro;
                 const [px, py] = ctx.css(P.x, P.y), m = measure(u, o.name, P.reading);
                 place(D.panel, px, py); size(D.panel, P.w * u, P.h * u);
                 D.panel.style.padding = `${Math.round(PAD.top * u)}px 0 0 ${Math.round(PAD.x * u)}px`;
@@ -213,7 +225,7 @@
             if (hv != null) {
                 const p = PODS[hv], nm = p.id.charAt(0).toUpperCase() + p.id.slice(1);
                 if (D.who.textContent !== nm) D.who.textContent = nm;
-                D.who.style.setProperty('--who', vm.tones ? vm.tones[p.id] : '#c9d1d6');
+                D.who.style.setProperty('--who', vm.tones ? vm.tones[p.id] : 'var(--ui)');
                 const wpx = D.who.offsetWidth / u, [wx, wy] = ctx.css(p.x - wpx / 2, p.top - 11);
                 place(D.who, wx, wy); show(D.who, true);
                 L.who = { i: hv };
@@ -238,6 +250,16 @@
             D.read.innerHTML = `${esc(text.slice(0, n))}<span class="tg-k"></span><span class="tg-r">${esc(text.slice(n))}</span>`;
         }
         const typedAll = () => !!last && !!last.panel && typed.n >= typed.text.length;
+        /** The card in and out in the film's dither: a stepped 8 x 8 Bayer mask (a of 1, in eighths), each mask pixel one
+            frame pixel (u CSS px), as the hold dissolves; whole, no mask. */
+        function dither(e, a, u) {
+            const n = Math.max(0, Math.min(8, Math.round(a * 8))), key = n >= 8 ? '' : n + '@' + u;
+            if (e.dataset.dither === key) return;
+            e.dataset.dither = key;
+            const url = key ? maskURL(n, u) : '';
+            ['webkitMaskImage', 'maskImage'].forEach(p => { e.style[p] = url ? `url(${url})` : ''; });
+            ['webkitMaskSize', 'maskSize'].forEach(p => { e.style[p] = url ? `${8 * Math.max(1, Math.round(u))}px` : ''; });
+        }
         function announce(text) { if (D.said.textContent !== text) D.said.textContent = text; }
 
         // ── the pixel half: under the people (the pod pointed at), over them (the A.U.R.A. tag, the panel) ──

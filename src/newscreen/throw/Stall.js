@@ -11,6 +11,9 @@
    It draws nothing itself: travel/Travel.js and tower/Tower.js read view() each frame and draw the stall into the travel
    view and the tower (throw/StallArt.js paints the dark decks). Skippable after a moment: a click, Esc, Enter or Space
    (straight to the sea of ships). Reduced motion: no jolt or shake, no flicker, the lamps steady, our ship keeps its size.
+   Look pass B11: a crew line stays inside the tower, 24 px in from its walls (its own anchor, 'stall:person:<id>', from the
+   tower's 'person:<id>', and a measure no wider than the tower), on the voice's dither shade; the skip is the film skip
+   (the one corner hint of every film).
    Loaded only when the new-screen switch is on, after the travel view, the tower and StallArt.js.
 
    window.NSStall (frozen)
@@ -34,7 +37,7 @@
     const TURN_AT = 20000, TURN_GAP = 300;                                     // they turn to us one by one
     const COPIES_AT = [[19400, 1], [22200, 3], [25000, 6]];                   // the same world again, more each time the line comes back
     const SHIP_AT = [[22200, 1.55], [25000, 0.62]];                           // our ship too big, then too small
-    const FADE = [28200, 28900], SKIP_GUARD = 1200, SKIP_FADE = 380, HINT_MS = 4200, COPY_IN = 360;
+    const FADE = [28200, 28900], SKIP_GUARD = 1200, SKIP_FADE = 380, HINT_MS = 4200, COPY_IN = 360, EDGE_IN = 24;
     // what is said, and when (TheThrow's words and order). A speaker of '' is the narration.
     const LINES = [
         [3000, '', 'The jump did not finish.'],
@@ -67,13 +70,39 @@
     function css() {
         if (document.getElementById('ns-stall-css')) return;
         const st = document.createElement('style'); st.id = 'ns-stall-css';
-        st.textContent = `#ns-root .ns-stall-veil { position: absolute; inset: 0; background: #05070a; opacity: 0; pointer-events: none; }
+        st.textContent = `#ns-root .ns-stall-veil { position: absolute; inset: 0; background: var(--ink); opacity: 0; pointer-events: none; }
 #ns-root .ns-stall-catch { position: absolute; inset: 0; cursor: default; }
-#ns-root .ns-stall-skip { position: absolute; right: 30px; bottom: 24px; margin: 0; font: 400 max(12px, 0.8vw)/1 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--dim, #8b8d90); text-shadow: 0 1px 0 #05070a; opacity: 0; transition: opacity 400ms steps(4, end); pointer-events: none; }
-#ns-root .ns-stall-skip.is-in { opacity: 0.85; }
+#ns-root .ns-stall-skip { position: absolute; right: max(16px, 4vw); bottom: max(16px, 5vh); margin: 0; padding: var(--s2) 0; font: 500 var(--fs-skip)/1 var(--f-ui); letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--dim); text-shadow: var(--shadow); opacity: 0; transition: opacity 180ms steps(3, end); pointer-events: none; }
+#ns-root .ns-stall-skip.is-in { opacity: 1; }
+#ns-root.is-stalling .ns-voice:not(.is-narr):not(.tone-aura) { max-width: min(var(--measure), var(--ns-stall-w, 100vw)); }   /* a crew line no wider than the tower */
 @media (prefers-reduced-motion: reduce) { #ns-root .ns-stall-skip { transition: none; } }`;
         document.head.appendChild(st);
+        Object.keys(ROLE).forEach(id => NS.anchors.set('stall:person:' + id, () => inTower(id)));
+    }
+    /** The tower on screen (CSS px), or null. */
+    function towerBox() {
+        const t = NS.mods && NS.mods.tower, f = t && typeof t.fit === 'function' ? t.fit() : null;
+        return f && f.wDev ? { left: 0, right: f.wDev / (f.dpr || 1) } : null;
+    }
+    /** Where a crew line goes: over the speaker's head as the tower places it, its box kept EDGE_IN inside the tower's walls
+        (the line on screen is the one being placed: Voice.js has just laid it out). */
+    function inTower(id) {
+        const base = NS.anchors.get('person:' + id);
+        let list = [];
+        try { list = base ? base() || [] : []; } catch (err) { list = []; }
+        const a = list[0], box = towerBox();
+        if (!a || !box) return list;
+        const el = document.querySelector('#ns-voice .ns-voice'), w = el ? el.offsetWidth : 0;
+        const x = Math.max(box.left + EDGE_IN, Math.min(box.right - EDGE_IN - w, a.x - w / 2));
+        return [{ x: Math.round(x), y: a.y, side: a.side === 'above' ? 'above' : 'below' }];
+    }
+    /** The measure a crew line may take while the stall runs: the tower less its two margins. */
+    function fitWords(root, on) {
+        const box = on ? towerBox() : null;
+        root.classList.toggle('is-stalling', !!on);
+        if (box) root.style.setProperty('--ns-stall-w', Math.max(160, Math.floor(box.right - box.left - 2 * EDGE_IN)) + 'px');
+        else root.style.removeProperty('--ns-stall-w');
     }
     function veilAt(k) {
         if (!veil) return;
@@ -153,7 +182,7 @@
             const [, rawSpeaker, rawText] = LINES[i];
             const dead = isDead(rawSpeaker), speaker = dead ? '' : rawSpeaker, text = dead ? 'Nobody answers.' : rawText;
             if (speaker) {
-                say({ id: speaker.toLowerCase(), who: speaker, text });
+                say({ id: speaker.toLowerCase(), who: speaker, text, anchor: 'stall:person:' + speaker.toLowerCase() });
                 if (state && state.addLog) state.addLog(`${speaker}: "${text}"`);   // as TheThrow logged it (the voice skips a line it is saying)
             } else say({ narration: true, text });
         }
@@ -170,6 +199,7 @@
         R.cleanup = () => {
             removeEventListener('keydown', R.onKey, true);
             katch.remove(); hint.remove();
+            fitWords(root, false);
             if (R.frameId != null) (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(R.frameId);
             R.frameId = null;
         };
@@ -179,6 +209,7 @@
             if (run !== R || R.released) return;
             const dt = R.last == null ? 16 : Math.min(100, Math.max(0, now - R.last)); R.last = now;
             if (!(NS.blocked && NS.blocked())) R.e += dt;                        // a card over the view: the stall waits for it
+            fitWords(root, true);
             const e = R.e, job = R.warm.shift();
             if (job) { try { job(); } catch (err) { console.error('NSStall: a warm job failed', err); } }
             while (R.said < LINES.length && e >= LINES[R.said][0] && !R.fading) sayBeat(R.said++);
