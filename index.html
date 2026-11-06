@@ -341,7 +341,7 @@
             ];
             if (/[?&]look=1(&|$)/.test(location.search)) files.push('LookCheck.js?v=2');   // the look floors, checked on the live page (test only)
             var html = '<link rel="stylesheet" href="' + window.NS_FONTS + '">'           // tokens.css (<head>) and newscreen.css (top of <body>) are in
-                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=19">';
+                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=20">';
             for (var i = 0; i < files.length; i++) html += '<script src="src/newscreen/' + files[i] + '"><\/script>';
             document.write(html);
         })();
