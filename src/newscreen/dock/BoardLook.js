@@ -7,8 +7,14 @@
                        (the room's name is a tag on the room), door tags in Condensed 500 sentence case on a dither plate with
                        a Mono cost chip, 14 px floors at every width, no text below opacity 1, narration in the real italic
      door(d)           one room's tag over the walk picture: d = { name, conds[], jam, cost, isSafe, isHomeward, to, style,
-                       isLabel, isHere, isOff, far } (BoardingParty's words, shown here in sentence case)
-     chips(cost, why)  a take or record key's chips: the air cost in Mono, then each reason (HEAVY…) its own word chip
+                       isLabel, isHere, isOff, far, rule } (BoardingParty's words, shown here in sentence case; rule: the
+                       room's condition rule, said in the line while the door is pointed at)
+     key(k)            a walk key, the frame key (.mini-btn): k = { kind, words (html), cost, gain, closed[], rules[], cls,
+                       isOff }; under its words its number chips (the cost in Mono, a gain like '+20 energy' warm); a closed
+                       key shows only its reason (--loss when it would strand the boarder), its words --dim; its rules (a gain
+                       in words, the risk, the heavy load) show in the line while it is pointed at
+     point(overlay)    the walk's pointing: while a key or a door with rules is pointed at (or focused from the keyboard),
+                       its rules take the voice line's place (a swap, never a second line) → { clear(), focus(el) }
      station(name, silent)  the station's name tag in the corner of the picker's picture, how long it has been silent its chip
      sentence(s)       'POWER ROOM' → 'Power room' (case only: the words stay the designer's)
      num(html)         every number in a run of words in Mono (words Sans, numbers Mono)
@@ -77,12 +83,44 @@
 .bx .bx-line.is-note { font: italic 400 var(--fs-voice)/1.36 var(--f-text); color: var(--narr); }
 .bx .bx-haul li::before { font-size: var(--fs-floor); }
 .bx .bx-quiet { font: 400 15px/1.5 var(--f-text); }
-.bx .bx-btn .bx-tc { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 12px; }
-.bx .bx-btn kbd { font: 400 var(--fs-chip)/1 var(--f-num); color: var(--dim); }
-.bx .bx-btn em { font: 500 var(--fs-chip)/1 var(--f-ui); font-style: normal; letter-spacing: 0.02em; color: var(--dim); }
-.bx .bx-btn.is-stranding, .bx .bx-btn.is-stranding kbd, .bx .bx-btn.is-stranding em { opacity: 1; }
-.bx .bx-btn[disabled]::before { color: var(--dim); }                          /* a closed key's mark is a word mark too: --dim, never #5a6168 */
-.bx .bx-btn[disabled] kbd { color: var(--dim); }
+/* the readout: the air as its count and its pips (squares: the walk out warm, the spare steel, the spent an empty box), the
+   hands as slots (a free hand an empty box), each under one sentence-case word */
+.bx .bx-label { letter-spacing: 0.04em; }
+.bx .bx-pips { gap: 2px; }
+.bx .bx-pips i { width: 6px; height: 6px; background: var(--ui); opacity: 1; }
+.bx .bx-pips i.is-home { background: var(--warm); }
+.bx .bx-pips i.is-spent { background: none; box-shadow: inset 0 0 0 1px var(--faint); }
+.bx .bx-pips i.is-mark { box-shadow: none; }
+.bx .bx-air.is-low .bx-pips i.is-home { background: var(--loss); }
+.bx .bx-slots { align-items: center; gap: var(--s1) var(--s3); }
+.bx .bx-slots li::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: var(--s2); vertical-align: -1px; background: var(--ui); }
+.bx .bx-slots li.is-heavy::before { background: var(--warm); }
+.bx .bx-slots li.is-free { width: 10px; height: 10px; box-shadow: inset 0 0 0 1px var(--dim); }
+.bx .bx-slots li.is-free::before, .bx .bx-slots li.is-more::before { content: none; }
+/* the keys: the frame key (.mini-btn, minigames.css, read through its --mg-* names), its chips under its words */
+.bx { --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--faint); --mg-amber: var(--warm); --mg-amber-br: var(--warm-br);
+    --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: steps(2, end); }
+.bx .bx-buttons { align-items: start; gap: var(--s2) var(--s8); }
+.bx .mini-btn { font-size: var(--fs-key); }
+.bx .mini-btn::before { color: var(--dim); }
+.bx .mini-btn.is-take::before, .bx .mini-btn.is-primary::before, .bx .mini-btn:hover:not([disabled])::before, .bx .mini-btn:focus-visible::before { color: var(--warm); }
+.bx .mini-btn.is-primary { border-color: color-mix(in srgb, var(--warm) 55%, transparent); background: color-mix(in srgb, var(--warm) 8%, transparent); }
+.bx .mini-btn.is-primary:hover:not([disabled]), .bx .mini-btn.is-primary:focus-visible { border-color: var(--warm); background: color-mix(in srgb, var(--warm) 16%, transparent); }
+.bx .mini-btn[disabled] { color: var(--dim); }                              /* a closed key's words: --dim (never --faint) */
+.bx .mini-btn[disabled]::before { color: var(--faint); }
+.bx .mini-btn.bx-key[hidden] { display: none; }
+.bx .mini-btn.bx-key { display: inline-grid; grid-template-columns: auto auto; column-gap: var(--s2); row-gap: var(--s1); align-items: baseline; justify-items: start; }
+.bx .bx-key .bx-tc { grid-column: 2; display: flex; flex-wrap: wrap; gap: 0 var(--s3); }
+.bx .bx-key kbd { font: 400 var(--fs-chip)/1.2 var(--f-num); color: var(--dim); text-transform: lowercase; }
+.bx .bx-key b { font: 400 var(--fs-chip)/1.2 var(--f-text); color: var(--warm); }
+.bx .bx-key em { font: 400 var(--fs-chip)/1.2 var(--f-text); font-style: normal; color: var(--dim); }
+.bx .bx-key.is-stranding em { color: var(--loss); }                            /* a key that would strand the boarder: its words --dim, only its reason red */
+.bx .bx-key.is-urgent, .bx .bx-key.is-urgent kbd { color: var(--loss); }
+/* pointed at (or focused from the keyboard): the key's or the door's rules in the voice line's place */
+.bx .bx-talk.is-pointing .bx-voice { display: none; }
+.bx .bx-rule { display: flex; flex-wrap: wrap; gap: 0 var(--s4); margin: 0; font: 400 var(--fs-conseq)/1.45 var(--f-text); color: var(--text-2); }
+.bx .bx-rule[hidden] { display: none; }
+.bx .bx-rule i { font-style: normal; }
 @media (prefers-reduced-motion: reduce) { .bx .bx-tag { transition: none; } }`;
 
     /** BoardingParty's sheet, in tokens. Every swap must find its text: a swap that misses would leave a hand copy behind. */
@@ -104,16 +142,52 @@
         }
         const chip = d.isSafe ? `<kbd>${esc(d.cost)}</kbd>` : `<i class="is-far">${esc(sentence(d.far))}</i>`;
         const cls = `bx-door bx-tag${d.isSafe ? '' : ' is-stranding'}${d.isHomeward ? ' is-homeward' : ''}`;
-        return `<button type="button" class="${cls}" style="${d.style}" data-to="${d.to}"${d.isOff ? ' disabled' : ''}>${name}<span class="bx-tc">${conds}${chip}</span></button>`;
+        return `<button type="button" class="${cls}" style="${d.style}" data-to="${d.to}"${ruleAttr(d.rule ? [d.rule] : [])}${d.isOff ? ' disabled' : ''}>${name}<span class="bx-tc">${conds}${chip}</span></button>`;
     }
 
-    /** A take or record key's chips: the cost in Mono, then each reason its own word chip (its numbers Mono). */
-    const chips = (cost, why) => `<span class="bx-tc"><kbd>${esc(cost)}</kbd>${(why || []).map(w => `<em>${num(esc(sentence(w)))}</em>`).join('')}</span>`;
+    // ── the walk's keys and its pointing ──
+    const cased = s => (s === s.toUpperCase() ? sentence(s) : s.charAt(0).toUpperCase() + s.slice(1));   // a caps word in sentence case; a phrase gets its capital
+    const ruleAttr = rules => (rules.length ? ` data-rule="${esc(rules.map(cased).join('|'))}" aria-description="${esc(rules.map(cased).join('; '))}"` : '');
+
+    /** A walk key, the frame key: its words, its chips under them (numbers: the cost, a gain like '+20 energy'), and its rules
+        (a gain in words, the risk, the heavy load), shown in the line while it is pointed at. */
+    function key(k) {
+        const closed = k.closed || [], isNumGain = !!k.gain && /\d/.test(k.gain), rules = (k.gain && !isNumGain ? [k.gain] : []).concat(k.rules || []);
+        const chips = closed.length ? closed.map(w => `<em>${num(esc(cased(w)))}</em>`).join('')
+            : `${k.cost ? `<kbd>${esc(k.cost)}</kbd>` : ''}${isNumGain ? `<b>${num(esc(k.gain))}</b>` : ''}`;
+        return `<button type="button" class="mini-btn bx-key${k.cls || ''}" data-kind="${k.kind}"${closed.length ? '' : ruleAttr(rules)}${k.isOff ? ' disabled' : ''}>`
+            + `<span class="bx-kw">${k.words}</span>${chips ? `<span class="bx-tc">${chips}</span>` : ''}</button>`;
+    }
+
+    /** While a key or a door with rules is pointed at, or focused from the keyboard, its rules stand in the voice line's place. */
+    function point(overlay) {
+        const talk = overlay.querySelector('.bx-talk'), slot = document.createElement('p');
+        slot.className = 'bx-rule'; slot.hidden = true;
+        if (talk) talk.appendChild(slot);
+        let isQuiet = false;
+        const show = target => {
+            const k = target && target.closest ? target.closest('[data-rule]') : null;
+            const rules = k && overlay.contains(k) && !k.disabled ? k.dataset.rule.split('|').filter(Boolean) : [];
+            slot.innerHTML = rules.map(r => `<i>${num(esc(r))}</i>`).join('');
+            slot.hidden = !rules.length;
+            if (talk) talk.classList.toggle('is-pointing', rules.length > 0);
+        };
+        const byKeys = el => (el && el.matches && el.matches(':focus-visible') ? el : null);
+        overlay.addEventListener('pointerover', e => show(e.target));
+        overlay.addEventListener('pointerout', e => show((e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('[data-rule]')) || byKeys(document.activeElement)));
+        overlay.addEventListener('focusin', e => { if (!isQuiet) show(byKeys(e.target)); });
+        overlay.addEventListener('focusout', e => show(byKeys(e.relatedTarget)));
+        return {
+            clear: () => show(null),
+            /** A focus the walk moves itself (after a redraw): the new line stays in view until the player moves on. */
+            focus: el => { isQuiet = true; try { el.focus({ preventScroll: true }); } finally { isQuiet = false; } },
+        };
+    }
 
     /** The station's name tag in the picker picture's corner, how long it has been silent its chip. */
     const station = (name, silent) => `<span class="bx-tag bx-station"><span class="bx-tn">${esc(name)}</span><span class="bx-tc"><i>${num(esc(sentence(silent)))}</i></span></span>`;
 
     const tone = who => `var(--tone-${String(who || 'cora').replace(/[^a-z]/g, '')})`;
 
-    window.NSBoardLook = Object.freeze({ css, door, chips, station, sentence, num, tone });
+    window.NSBoardLook = Object.freeze({ css, door, key, point, station, sentence, num, tone });
 })();
