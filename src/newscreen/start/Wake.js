@@ -114,15 +114,26 @@
     }
 
     const logged = (who, text) => (who ? `${who}: "${text}"` : text);                        // narration is logged as the card's context was
-    /** One line: said by our Lander (C17), then logged (Voice skips a logged line it is already saying). Resolves when it has gone. */
+    /** A line too long for one row, in parts at its sentence ends, as the hold says it (NSPods.rows); else the line whole. */
+    function partsOf(text) {
+        const P = window.NSPods;
+        try { return P && typeof P.rows === 'function' ? P.rows(text) : [text]; } catch (err) { console.error('NSWake: splitting a line failed', err); return [text]; }
+    }
+    /** One line: said by our Lander (C17), part by part (partsOf), each part then logged (Voice skips a logged line it is
+        already saying). A cut lets the part on screen finish; the rest of the line is not said. Resolves when it has gone. */
     async function sayOne(app, who, text, room) {
         const v = NS.mods.voice;
         if (!v || typeof v.say !== 'function') { app.state.addLog(logged(who, text)); return; }
-        let spoken = null;
-        try { spoken = v.say(who ? { id: IDS[who] || 'aura', who, text, anchor: 'ship' } : { id: 'narr', narration: true, text, anchor: 'ship' }); } catch (err) { console.error('NSWake: the voice failed', err); }
-        app.state.addLog(logged(who, text));
         if (room) { style(); roomLit(room, true); }
-        try { await heard(v, spoken, text); } finally { roomLit(room, false); }
+        try {
+            for (const part of partsOf(text)) {
+                if (run && run.cut) return;
+                let spoken = null;
+                try { spoken = v.say(who ? { id: IDS[who] || 'aura', who, text: part, anchor: 'ship' } : { id: 'narr', narration: true, text: part, anchor: 'ship' }); } catch (err) { console.error('NSWake: the voice failed', err); }
+                app.state.addLog(logged(who, part));
+                await heard(v, spoken, part);
+            }
+        } finally { roomLit(room, false); }
     }
     async function heard(v, spoken, text) {
         if (spoken && typeof spoken.then === 'function') { await Promise.race([spoken, run ? run.cutP : Promise.resolve()]); return; }   // no poller: the cut settles it

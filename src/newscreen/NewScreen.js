@@ -625,11 +625,27 @@
             .then(() => chip.done());
     }
     const SIGNAL_WORD = 'Signal';                                                       // DRAFT (look pass): C16, the calling world's one-word chip (shown in capitals)
-    const SIGNAL_CSS = '#ns-root .ns-signal { position: absolute; left: 0; top: 0; display: flex; align-items: center; pointer-events: none; opacity: 0; transition: opacity 180ms steps(3, end); }'
+    // B11 review: the chip is the glass key's own look (travel/Note.js's SCAN key, DESIGN.md §2): amber corner brackets on
+    // whole 2 px key pixels, a 9 x 9 pixel icon (stop/TagArt.js 'wave', the signal find's own), the word in Condensed 600 caps,
+    // all on the house dither; the dotted leader runs from the world's rim to the brackets.
+    const BRACKET = (c, at, w, h) => `linear-gradient(var(${c}) 0 0) ${at} / ${w} ${h}`;
+    const BRACKETS = ['left top', 'right top', 'left bottom', 'right bottom'].map(at => BRACKET('--tip', at, 'var(--kp)', 'var(--kp)'))
+        .concat(...['left top', 'right top', 'left bottom', 'right bottom'].map(at => [BRACKET('--bk', at, 'var(--arm)', 'var(--kp)'), BRACKET('--bk', at, 'var(--kp)', 'var(--arm)')]));
+    const SIGNAL_CSS = '#ns-root .ns-signal { --kp: 2px; position: absolute; left: 0; top: 0; display: flex; align-items: center; pointer-events: none; opacity: 0; transition: opacity 180ms steps(3, end); }'
         + ' #ns-root .ns-signal.is-in { opacity: 1; } #ns-root .ns-signal.is-left { flex-direction: row-reverse; }'
-        + ' #ns-root .ns-signal i { width: var(--s4); border-top: 1px dotted var(--warm); }'
-        + ' #ns-root .ns-signal b { padding: var(--s1) var(--s2); font: 500 var(--fs-tag)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--warm); text-shadow: var(--shadow); background: var(--veil); }'
+        + ' #ns-root .ns-signal .lead { width: var(--s4); border-top: 1px dotted var(--warm); }'
+        + ' #ns-root .ns-signal b { --bk: var(--warm); --tip: var(--warm-br); --arm: calc(var(--kp) * 4); display: flex; align-items: center; gap: calc(var(--kp) * 4);'
+        + ' padding: calc(var(--kp) * 3) calc(var(--kp) * 7) calc(var(--kp) * 3) calc(var(--kp) * 3); font: 600 var(--fs-tag)/calc(var(--kp) * 9) var(--f-ui); letter-spacing: 0.16em;'
+        + ' text-transform: uppercase; color: var(--warm); text-shadow: var(--shadow); background: ' + BRACKETS.join(', ') + ', var(--veil);'
+        + ' background-repeat: ' + BRACKETS.map(() => 'no-repeat').concat('repeat').join(', ') + '; }'
+        + ' #ns-root .ns-signal .icon { flex: none; width: calc(var(--kp) * 9); height: calc(var(--kp) * 9); background: center / 100% 100% no-repeat; image-rendering: pixelated; }'
         + ' @media (prefers-reduced-motion: reduce) { #ns-root .ns-signal { transition: none; } }';
+    /** The signal find's 9 x 9 icon (stop/TagArt.js 'wave', warm) as a data URL, or null (no TagArt: the chip has the word alone). */
+    function signalIcon() {
+        const T = window.NSTagArt;
+        if (!T || typeof T.icon !== 'function') return null;
+        try { const c = document.createElement('canvas'); c.width = T.ICON; c.height = T.ICON; T.icon(c.getContext('2d'), 'wave', 0, 0, 'warm', 0); return c.toDataURL(); } catch (err) { console.error('NewScreen: the signal icon failed', err); return null; }
+    }
     /** The SIGNAL chip by world `id`, placed each frame beside its rim (left of it when the right has no room), hidden while a
         note or a frame is up; it steps out on done(), a course set, the view hidden or a change of mode. → { live(), done() } */
     function signalChip(id) {
@@ -637,7 +653,10 @@
         if (!words) return { live: () => true, done() {} };
         if (!document.getElementById('ns-signal-css')) { const css = document.createElement('style'); css.id = 'ns-signal-css'; css.textContent = SIGNAL_CSS; document.head.appendChild(css); }
         const el = document.createElement('div');
-        el.className = 'ns-signal'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<i></i><b></b>'; el.lastChild.textContent = SIGNAL_WORD;
+        el.className = 'ns-signal'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<i class="lead"></i><b><i class="icon"></i></b>';
+        const icon = el.querySelector('.icon'), url = signalIcon();
+        if (url) icon.style.backgroundImage = `url(${url})`; else icon.hidden = true;
+        el.lastChild.append(SIGNAL_WORD);
         words.appendChild(el);
         const request = fn => (window.FrameClock ? window.FrameClock.request(fn) : requestAnimationFrame(fn));
         let on = true, fid = null, pos = '';

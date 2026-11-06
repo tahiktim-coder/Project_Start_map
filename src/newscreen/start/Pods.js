@@ -28,6 +28,7 @@
                            count if unsaid (a late skip), then OPENING_TALK's lines (key: 'orders', 'eight', 'jaxon8',
                            'vance8', 'beacon')
      playing() → bool
+     rows(text) → [text] | [part, ...]   a line too long for one row of the voice's measure, in parts at its sentence ends
      debug                 { state(), need() }   headless runs: what is where (CSS rects), and the valve the reading asks for
    NewScreen.mods.wake = { init, resize, update, render, pointer, key, discs }   (the shell's 'wake' mode)
    Anchors while it runs (CSS px): 'stop:aura' (over the dark med bay, by the intercom), 'stop:person:<id>' (over a head).
@@ -230,14 +231,35 @@
         T.busy = b.key;
         say(b).then(() => { if (!S || S.talk !== T) return; T.said.add(b.key); T.busy = null; T.nextAt = now() + GAP_MS; if (b.key === 'count') go('end', now()); });
     }
-    /** One line, said beside the speaker, then logged as the old talk logs it (Voice skips a logged line it is saying). */
+    /** One line, said beside the speaker in its parts (rows()), each logged as the old talk logs a line (Voice skips a logged
+        line it is saying); the parts stop if the scene ends between them (a skip: the line is said whole in travel). */
     function say(b) {
-        const v = voice(), s = state(), id = b.who === 'A.U.R.A.' ? 'aura' : b.who.toLowerCase();
+        const T = S && S.talk;
+        return rows(b.text).reduce((at, text) => at.then(go => (go && S && S.talk === T ? sayPart(b.who, text) : false)), Promise.resolve(true));
+    }
+    function sayPart(who, text) {
+        const v = voice(), s = state(), id = who === 'A.U.R.A.' ? 'aura' : who.toLowerCase();
         let p = null;
-        try { p = v && typeof v.say === 'function' ? v.say({ id, who: b.who, text: b.text, keep: true }) : null; } catch (err) { console.error('NSPods: the voice failed', err); }
-        if (s && typeof s.addLog === 'function') s.addLog(`${b.who}: "${b.text}"`);
+        try { p = v && typeof v.say === 'function' ? v.say({ id, who, text, keep: true }) : null; } catch (err) { console.error('NSPods: the voice failed', err); }
+        if (s && typeof s.addLog === 'function') s.addLog(`${who}: "${text}"`);
         if (p && typeof p.then === 'function') return p.then(() => true, () => true);
-        return new Promise(r => setTimeout(r, readMs(b.text)));
+        return new Promise(r => setTimeout(() => r(true), readMs(text)));
+    }
+    /** A line that cannot sit on one row of the voice's measure is said in parts at its sentence ends, each part as many whole
+        sentences as fit one row, so a row never breaks inside a sentence that could have had one to itself (B11 review: "Find
+        a / planet"); one sentence too long for a row stays whole and wraps. The words are the line's own (the designer's).
+        Measured on the voice's own layer, in its face and size now. → [text] or [part, part, ...] (Wake.js says them too) */
+    function rows(text) {
+        const line = String(text || ''), parts = line.split(/(?<=[.!?])\s+/).filter(Boolean), layer = document.getElementById('ns-voice');
+        if (parts.length < 2 || !layer) return [line];
+        const box = document.createElement('div'), p = document.createElement('p');
+        box.className = 'ns-voice'; box.style.visibility = 'hidden'; p.className = 'ns-say'; p.style.whiteSpace = 'nowrap';
+        box.appendChild(p); layer.appendChild(box);
+        const fits = s => { p.textContent = s; return p.scrollWidth <= box.clientWidth; };   // the box stops at the measure; the row runs on
+        try {
+            if (fits(line)) return [line];
+            return parts.slice(1).reduce((out, s) => { const last = out[out.length - 1]; return fits(last + ' ' + s) ? out.slice(0, -1).concat([last + ' ' + s]) : out.concat([s]); }, [parts[0]]);
+        } catch (err) { console.error('NSPods: measuring a line failed', err); return [line]; } finally { box.remove(); }
     }
 
     // ═══ 4. the scene: card, dissolve in, Cora, the work, the end, dissolve out ═══
@@ -536,5 +558,5 @@
     });
 
     NS.register('wake', { init, resize, update, render, pointer, key, discs });
-    window.NSPods = Object.freeze({ play, playing: () => !!(S && S.on), debug });
+    window.NSPods = Object.freeze({ play, playing: () => !!(S && S.on), rows, debug });
 })();
