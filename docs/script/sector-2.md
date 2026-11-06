@@ -86,7 +86,7 @@ On a warp inside this sector:
 - [name]: "Nothing else is out here. It's starting to get to me." «SectorConfig.js · 2.hazard.onWarp»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### JAXON'S PHOTO «CrewEvents.js · JAXON_PHOTO»
 _Sectors 1, 2_

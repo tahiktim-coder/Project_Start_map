@@ -103,20 +103,20 @@ _Sector 6, a good world, after the truth:_
 ## Pressing SETTLE HERE «bundle.js · _executeColony»
 _A.U.R.A. refuses an unscanned world; otherwise the flight-recorder card comes up before the colony card._
 
-- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 6313»
-- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 6364»
-- AVG STRESS «bundle.js · line 6376»
-- COLONY RATING «bundle.js · line 6384»
-- [YES | NO] «bundle.js · line 6405»
-- Type: [type] | Sector [sector] «bundle.js · line 6423»
-- CREW MODIFICATIONS «bundle.js · line 6426»
-- Symbiotes: [symbiotes] «bundle.js · line 6428»
-- Cyborgs: [cyborgs] «bundle.js · line 6429»
-- Touched: [wrong place] «bundle.js · line 6430»
-- COLONY DESIGNATION «bundle.js · line 6438»
-- FINAL CREW ROSTER «bundle.js · line 6450»
-- EXODUS PROGRAM RECORD #[n] «bundle.js · line 6467»
-- REBOOT SIMULATION «bundle.js · line 6472»
+- A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first." «bundle.js · line 6338»
+- /// FLIGHT RECORDER: EXODUS-9 STATUS: [COLONY ESTABLISHED | MISSION FAILED] «bundle.js · line 6391»
+- AVG STRESS «bundle.js · line 6403»
+- COLONY RATING «bundle.js · line 6411»
+- [YES | NO] «bundle.js · line 6432»
+- Type: [type] | Sector [sector] «bundle.js · line 6450»
+- CREW MODIFICATIONS «bundle.js · line 6453»
+- Symbiotes: [symbiotes] «bundle.js · line 6455»
+- Cyborgs: [cyborgs] «bundle.js · line 6456»
+- Touched: [wrong place] «bundle.js · line 6457»
+- COLONY DESIGNATION «bundle.js · line 6465»
+- FINAL CREW ROSTER «bundle.js · line 6477»
+- EXODUS PROGRAM RECORD #[n] «bundle.js · line 6494»
+- REBOOT SIMULATION «bundle.js · line 6499»
 
 ## The second chance (from colony notes)
 
@@ -741,4 +741,17 @@ _The card these lines are printed on. The crew list under it says "a founder" or
 - UPGRADES BUILT «EndScreens.js · line 106»
 - [sector] of 6 «EndScreens.js · line 106»
 - BEGIN AGAIN a new crew, the same road «EndScreens.js · line 107»
+
+## The colony ending (the new look) «EndWords.js · colony»
+_In place of the lines and the card above: the world brakes in, the Lander lands; at dawn the first of them who can speak says the arrival line (A.U.R.A. hers when nobody can); a colony that fails: A.U.R.A.'s line at night. Then the end card: the world's name, then crew or alone, held, later ("› New game"); or landed, failed ("› Try again")._
+
+- **arrival · say** — We're down. This is home now. «EndWords.js · line 29» **DRAFT (look pass)**
+- **arrivalAura** — We have landed, Commander. This is home now. «EndWords.js · line 30» **DRAFT (look pass)**
+- **failure** — The colony is lost, Commander. I am sorry. «EndWords.js · line 31» **DRAFT (look pass)**
+- **crew** — {names} made a home on {world}. «EndWords.js · line 33» **DRAFT (look pass)**
+- **alone** — {names} made a home on {world}, alone. «EndWords.js · line 34» **DRAFT (look pass)**
+- **held** — The first winter was hard. The colony held. «EndWords.js · line 35» **DRAFT (look pass)**
+- **later** — Fifty years later, its lights are still on. «EndWords.js · line 36» **DRAFT (look pass)**
+- **landed** — {names} landed on {world}. «EndWords.js · line 37» **DRAFT (look pass)**
+- **failed** — The colony did not last its first year. «EndWords.js · line 38» **DRAFT (look pass)**
 

@@ -31,7 +31,7 @@ Objective lines (the tip above the log, one at a time, whichever fits what you a
 ### The marked beacon — the first wreck «bundle.js · findDiscDrawing»
 _The first wreck is an ordinary Exodus wreck from the pool (see [pools.md](pools.md)), always a whole ship, so the team cuts its hatch first (10-away-team.md). It is named like every wreck: EXODUS-[number] "[CALLSIGN]". Whatever you choose inside it, this is in its logbook:_
 
-- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 3432»
+- In the logbook of [ship name]: a folded page. A drawing of a gold disc. It is in your cargo now. «bundle.js · line 3435»
 
 #### The drawing of the gold disc «DiscDocument.js · NOTES»
 _A card with the drawing. Point at each label to read its note._
@@ -53,7 +53,7 @@ In the cargo hold afterwards:
 - **DISC_DRAWING** — You unfold the page. «Items.js · line 106»
 
 ### Head count «bundle.js · showCountScene»
-_On the first return to the map in sector 1. Card kicker: THE BRIDGE / FOUND IN [ship name] / INSIDE THE STATION / ASTEROID FIELD / DISTRESS SIGNAL / A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_On the first return to the map in sector 1. Card kicker: THE BRIDGE / FOUND IN [ship name] / INSIDE THE STATION / ASTEROID FIELD / DISTRESS SIGNAL / A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 > The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself.
 
@@ -275,16 +275,16 @@ _The story planet before it is named: a faint dot labelled UNIDENTIFIED. Clickin
 ### The offer «bundle.js · offerDiscDating»
 _A card after the wreck. Mira asks; A.U.R.A. if Mira is dead._
 
-- **kicker** — THE DISC «bundle.js · line 3600»
-- **title** — Date this wreck «bundle.js · line 3600»
-- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 3601»
-- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 3603»
-- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 3604»
-- Date this wreck with the disc «bundle.js · line 3606»
-- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 3606»
-- **desc** — No cost. Shows when it died. «bundle.js · line 3606»
-- Not now «bundle.js · line 3607»
-- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 3607»
+- **kicker** — THE DISC «bundle.js · line 3603»
+- **title** — Date this wreck «bundle.js · line 3603»
+- **context** — The team brought back the last star fix of [planet name]. It says where the ship was, and where it was going. «bundle.js · line 3604»
+- **Mira:** The disc has a pulsar map. Match this fix to it, and we'll know when they died. «bundle.js · line 3606»
+- **A.U.R.A.:** The disc's pulsar map can date this star fix, Commander. «bundle.js · line 3607»
+- Date this wreck with the disc «bundle.js · line 3609»
+- **desc** — No cost. Shows when it died, and where its crew was going. Their course is free to fly. «bundle.js · line 3609»
+- **desc** — No cost. Shows when it died. «bundle.js · line 3609»
+- Not now «bundle.js · line 3610»
+- **desc** — You can still do it from the command deck while we are in orbit. «bundle.js · line 3610»
 
 ### Dating it (the mini-game) «DiscDating.js · DiscDating»
 _The reactions by depth play the first time a wreck that deep is dated; after that A.U.R.A. says the age._
@@ -341,16 +341,16 @@ _The reactions by depth play the first time a wreck that deep is dated; after th
 
 ### In the log afterwards «bundle.js · dateWreck»
 
-- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3628»
-- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3632»
+- The disc dates [planet name]: dead for [age] years. «bundle.js · line 3631»
+- A.U.R.A.: "We have their last course, Commander. Flying it costs no energy." «bundle.js · line 3635»
 
-- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3660»
-- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3661»
+- [planet name] was flying to the light when it died. Its fix also shows [name], a day short of it. «bundle.js · line 3663»
+- [planet name] was flying to [name] when it died. It is on the map now. «bundle.js · line 3664»
 
 ### When nobody dated a wreck «bundle.js · revealLateStoryPlanet»
 _Back on the map with one stop left._
 
-- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3676»
+- A.U.R.A.: "The faint contact is clear now, Commander. It is [name], and one of our ships is there." «bundle.js · line 3679»
 
 ## The hole in the hull (the mini-game) «Breach.js · Breach»
 _Once per run, on a warp in sector 1 that costs energy, never the first. It takes the place of the micrometeorite hazard below that one time._
@@ -475,7 +475,7 @@ On a warp inside this sector:
 - WARNING: Micrometeorite impact detected! [deck] sustained damage. «SectorConfig.js · 1.hazard.onWarp»
 
 ## Crew moments that can happen here
-_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_Card kicker: A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 ### JAXON'S PHOTO «CrewEvents.js · JAXON_PHOTO»
 _Sectors 1, 2_

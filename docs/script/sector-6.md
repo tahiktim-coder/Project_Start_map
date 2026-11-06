@@ -103,25 +103,25 @@ _Only these lines of it play at the light._
 ### Scanning it «bundle.js · handleScanAction»
 _Only these lines of it play at the light._
 
-- Deep Scan started... «bundle.js · line 4391»
-- SCAN: Light, but no heat. «bundle.js · line 4392»
-- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 4393»
-- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 4394»
-- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 4400»
-- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 4402»
+- Deep Scan started... «bundle.js · line 4416»
+- SCAN: Light, but no heat. «bundle.js · line 4417»
+- SCAN: No mass and no surface that the instruments can find. «bundle.js · line 4418»
+- A.U.R.A.: "I cannot tell you what it is, Commander. It is not a star." «bundle.js · line 4419»
+- PROBE STATUS: lost. It went quiet near the light and did not come back. «bundle.js · line 4425»
+- PROBE STATUS: [probe integrity]%. Part of its memory came back blank. «bundle.js · line 4427»
 
 ### Sending a probe «bundle.js · handleProbeAction»
 _Only these lines of it play at the light._
 
-- No probe available. «bundle.js · line 4537»
-- Probe launched toward the light... «bundle.js · line 4541»
-- Signal lost at once. No data, and no wreckage. «bundle.js · line 4542»
-- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 4543»
+- No probe available. «bundle.js · line 4562»
+- Probe launched toward the light... «bundle.js · line 4566»
+- Signal lost at once. No data, and no wreckage. «bundle.js · line 4567»
+- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 4568»
 
 ### Sending the team «bundle.js · handleEvaAction»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 4741»
+- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 4766»
 
 ### Trying to leave «bundle.js · init · req-break-orbit»
 _Breaking orbit at the light._

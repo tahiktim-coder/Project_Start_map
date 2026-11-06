@@ -32,7 +32,7 @@ _Source on screen: EXODUS PROGRAMME · CREW BRIEFING FILM_
 *On yours, eight went first. You are the ninth.*  
 
 ## Good morning, Commander «bundle.js · showOpeningBriefing»
-_Card kicker: EXODUS-9 · 61 YEARS OUT FROM EARTH / THE BRIDGE / FOUND IN [ship name] / INSIDE THE STATION / ASTEROID FIELD / DISTRESS SIGNAL / A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
+_Card kicker: EXODUS-9 · 61 YEARS OUT FROM EARTH / THE BRIDGE / FOUND IN [ship name] / INSIDE THE STATION / ASTEROID FIELD / DISTRESS SIGNAL / A NIGHT ON THE BRIDGE / A MOMENT WITH [name] / SECTOR JUMP / SECTOR JUMP / SHIP ALERT / SECTOR [sector] OF [sector] / SECTOR [sector] OF [sector] / THE DISC / AIR ALERT — TIME NUMBER [n] / AIR ALERT / ON THE SURFACE / SETTLE / SHIP ALERT_
 
 > The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself.
 

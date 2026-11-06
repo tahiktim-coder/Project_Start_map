@@ -252,6 +252,9 @@ const HIDDEN_KEYS = /^(id|art|tone|color|icon|portraitId|reason)$/;   // values 
 const LINES = {}, lineText = (rel, line) => (LINES[rel] || (LINES[rel] = read(rel).split('\n')))[line - 1] || '';
 const draftOf = (rel, line) => line ? (/\/\/.*?\b(DRAFT(?: \([^)]*\))?)/.exec(lineText(rel, line)) || [])[1] : undefined;
 const draftMark = (rel, line) => { const d = draftOf(rel, line); return d ? ` **${d}**` : ''; };
+/** The DRAFT mark of a line printed from loaded data: found by its text in the source file. */
+const draftByText = (rel, text) => { const src = read(rel), at = src.indexOf(String(text)); return at < 0 ? '' : draftMark(rel, lineAt(src, at)); };
+const SE_FILE = 'src/data/StructureEncounter.js', END_WORDS = 'src/newscreen/end/EndWords.js';
 const ROLE_SPEAKER = { ENGINEER: 'Jaxon', MEDIC: 'Aris', SECURITY: 'Vance', SPECIALIST: 'Mira', AURA: 'A.U.R.A.', LEADER: 'Commander' };
 const STRUCTURAL = /^(choices|dialogue|beats|draw|style|text|speaker|detail)$/, LABEL_KEYS = /^(title|kicker|label|heading|close|button|name|word|text)$/;   // keys not worth printing; keys whose single word is still text
 /** Markdown bullets for every line of text in a piece of source, each tagged with the line it is on. loose: every string is
@@ -638,10 +641,15 @@ for (let sector = 1; sector <= 6; sector++) {
                 `${lineOf(who(e.hold.who), e.hold.say)} _(the ship slows; the commander chooses "${clean(e.keepGoing)}")_`, '');
             if (e.turn) b.push('_Turning back from the light (the new look; not when you settled on Eden itself):_', '', lineOf(who(e.turn.who), e.turn.say), '');
             b.push('_The closing line (the new look), said by the first of them who is alive:_', '', ...e.closing.map(l => lineOf(who(l.who), l.say) + '  '), '');
-            if (e.discLine) b.push(`_The last words, only with the disc aboard:_ ${lineOf(null, e.discLine)}`, '');
+            if (e.discLine) b.push(`_The last words, only with the disc aboard:_ ${lineOf(null, e.discLine)}${draftByText(SE_FILE, e.discLine)}`, '');
             b.push(`_The end card: **${clean(e.title)}**, then three lines:_`, '', ...Object.entries(e.card).map(([k, t]) => `- ${clean(t)} _(${k})_`), '');
+            if (e.endCard) b.push('_The end card in the new look: the same name, then these lines (and the lines above that they name), the disc line only with the disc aboard, then "› New game":_', '',
+                ...Object.entries(e.endCard).map(([k, t]) => `- ${clean(t)} _(${k})_${tag(FILE, `endings.${door}.endCard.${k}`)}${draftByText(SE_FILE, t)}`), '');
         });
     }
+    b.push(...textSection(2, "The copy of Earth's ending (the new look)", block('src/newscreen/stop/CopyWords.js', /^\s*const ENDING = /m, 'ENDING'),
+        'After "Go down" at the copy (stop/Copy.js): the two lines on the ground, said by the first of them who can speak; the two night lines; the end card (its name, then crew or alone, made, then jaxon, or air when Jaxon is dead; "› New game").'));
+    b.push('_The first sight of the light in the new look: the reel\'s two captions above, said by A.U.R.A. over the light (end/EndWords.js arrival)._', '');
     b.push(...textSection(2, 'The ending card (the default game)', block('src/systems/EndScreens.js', /function endingHtml/), 'The kicker shows the ending\'s code name (for example INTO_THE_LIGHT) as it is.'));
     b.push(...textSection(3, 'Who made it', block('src/systems/EndScreens.js', /function rosterHtml/), 'The crew list on the ending and colony cards.'));
     b.push(...textSection(3, 'In the log', bm('recordEnding'), 'Once per run, when the journey ends.'));
@@ -724,6 +732,8 @@ function councilMd() {
     }
     flush();
     b.push(...textSection(2, 'The colony card', block('src/systems/EndScreens.js', /function colony/), 'The card these lines are printed on. The crew list under it says "a founder" or "lost with the colony" (see 07-finale.md, Who made it).'));
+    b.push(...textSection(2, 'The colony ending (the new look)', block(END_WORDS, /^\s*colony: Object\.freeze\(\{/m, 'colony'),
+        'In place of the lines and the card above: the world brakes in, the Lander lands; at dawn the first of them who can speak says the arrival line (A.U.R.A. hers when nobody can); a colony that fails: A.U.R.A.\'s line at night. Then the end card: the world\'s name, then crew or alone, held, later ("› New game"); or landed, failed ("› Try again").'));
     write('08-settling.md', 'Settling a planet — every colony ending', b);
 }
 
@@ -802,6 +812,9 @@ function councilMd() {
         ...textSection(3, 'Sector names in the sky (the new look)', block('src/newscreen/travel/SectorLooks.js', /^\s*const NEW_TITLES = /m, 'NEW_TITLES'), "The sector title in travel and the sector's log header, where it differs from the sector's own name."),
         ...textSection(3, "The ship's console (the new look)", block('src/newscreen/Console.js', /^\s*const WORDS = /m, 'WORDS'), "A click on A.U.R.A.'s speaker in the top deck, or Esc: its keys (the picture's readout is her name). saved: under her speaker the first time the game saves. aria: read aloud only.", undefined, true));
     b.push('## Game over', '', ...textSection(3, 'All hands lost, hull breach', bm('checkLoseConditions'), ''), ...textSection(3, 'Stranded', bm('checkStranded'), 'No energy and no way out.'));
+    b.push(...textSection(3, 'Game over (the new look)', block(END_WORDS, /^\s*loss: Object\.freeze\(\{/m, 'loss'),
+        'In place of the screen below: the hold goes dark, the dead named on their pod plates, A.U.R.A.\'s one line (the mutiny: her last log entry, as its message quotes it), then the end card: its name and "› Try again".'),
+        ...textSection(3, 'A screen that will not start (the new look)', block(END_WORDS, /^\s*recover: /m, 'recover'), 'A.U.R.A., over the ink, with "› Try again".'));
     b.push(...textSection(3, 'The game-over screen', block('src/systems/EndScreens.js', /function gameOver/), ''), ...textSection(3, 'The dead, on that screen', block('src/systems/EndScreens.js', /function memorialHtml/), ''));
     b.push(...textSection(3, 'The numbers, on that screen', block('src/systems/EndScreens.js', /function statsHtml/), ''));
     write('09-ship-and-crew.md', 'The ship, the crew and A.U.R.A. — any sector', b);
