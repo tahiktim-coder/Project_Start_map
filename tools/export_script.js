@@ -472,6 +472,18 @@ const COACH_TIPS = block('src/systems/Coach.js', /function tipFor/, 'tipFor'), C
     const opening = methodSource('showOpeningBriefing');
     b.push('', `## Good morning, Commander${tag('bundle.js', 'showOpeningBriefing')}`, `_Card kicker: ${kickerOf(opening)}_`, '', `> ${clean((/context:\s*'((?:\\'|[^'])*)'/.exec(opening) || [])[1] || '').replace(/\\'/g, "'")}`, '', ...dialogueFrom(opening), '', 'Choice:', ...choicesFrom(opening));
     b.push('', 'Then in the log:', ...logsFrom(opening));
+    // the opening in the new look (look pass B11): the title, the launch film, the wake-up at the pods, the first hint
+    const NS_START = 'src/newscreen/start/', NS_SHELL = 'src/newscreen/NewScreen.js';
+    b.push('', '## The opening in the new look', '_Only with ?new=1: the title, the launch film, the wake-up at the sleeper pods, then the rest of the talk above in the travel view by our ship. There the rules are said one sentence at a time (each as its room lights in the ship), and the first hint in its two sentences._', '',
+        ...textSection(3, 'Title screen (the new look): the sound line', block(NS_START + 'Title.js', /^\s*const soundWords = /m, 'soundWords'), 'Shown as "Sound off · turn on" (or "Sound on · turn off"). The rest of the title is as above, its way on the framed key.', undefined, true),
+        ...textSection(3, 'The launch film: the straps', block(NS_START + 'LaunchArt.js', /^\s*const LINES = \[/m, 'LINES'), 'The news broadcast\'s three lower thirds, in order. The first has no kicker (C09, look pass: it was "Live · The launch yard"; the yard is named once).'),
+        ...textSection(3, 'The launch film: its graphics', block(NS_START + 'LaunchFilm.js', /^\s*function mount\(\) \{/m, 'mount'), 'LIVE top left, the programme bug top right with the clock under it in the last three seconds ("T minus" / "Lift-off"), the skip in the corner.'),
+        ...textSection(3, 'The wake-up: the black card', block(NS_START + 'Pods.js', /^\s*const CARD_TEXT = /m, 'CARD_TEXT'), undefined, undefined, true),
+        ...textSection(3, 'The wake-up: A.U.R.A. and the first lines', block(NS_START + 'Pods.js', /^\s*const DRAFT = \{/m, 'DRAFT'), 'Between pods A.U.R.A. also says the talk above. Each person says one first line as they step out: the second one if a wrong valve made them groggy.'),
+        ...textSection(3, 'The wake-up: the pod panel', block(NS_START + 'PodWords.js', /^\s*const VALVES = /m, 'VALVES'), 'The three valves; on a wrong valve the panel says "Wrong fluid".'),
+        ...textSection(3, 'The wake-up: the keys', block(NS_START + 'PodWords.js', /^\s*function init\(el0\) \{/m, 'init'), 'Let A.U.R.A. do it (always there), and the skip on a later new game.'),
+        ...textSection(3, 'The first hint', block(NS_SHELL, /^\s*const FIRST_HINT = /m, 'FIRST_HINT'), 'A.U.R.A., in its two sentences, when the talk is over.'),
+        ...textSection(3, 'Its chip', block(NS_SHELL, /^\s*const SIGNAL_WORD = /m, 'SIGNAL_WORD'), 'On the calling world while the hint is said, in capitals.', undefined, true));
     write('00-opening.md', 'The opening', b);
 }
 

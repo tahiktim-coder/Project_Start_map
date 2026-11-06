@@ -226,3 +226,78 @@ Then in the log:
 - A.U.R.A.: "I will not put the crew on a world we have not scanned, Commander. Run a deep scan first."
 - FABRICATION COMPLETE: [name] installed.
 - MALFUNCTION RESOLVED: [result]
+
+## The opening in the new look
+_Only with ?new=1: the title, the launch film, the wake-up at the sleeper pods, then the rest of the talk above in the travel view by our ship. There the rules are said one sentence at a time (each as its room lights in the ship), and the first hint in its two sentences._
+
+### Title screen (the new look): the sound line «Title.js · soundWords»
+_Shown as "Sound off · turn on" (or "Sound on · turn off"). The rest of the title is as above, its way on the framed key._
+
+- **status** — Sound on «Title.js · line 80» **DRAFT (look pass)**
+- **status** — Sound off «Title.js · line 80» **DRAFT (look pass)**
+- **button** — turn off «Title.js · line 80» **DRAFT (look pass)**
+- **button** — turn on «Title.js · line 80» **DRAFT (look pass)**
+
+### The launch film: the straps «LaunchArt.js · LINES»
+_The news broadcast's three lower thirds, in order. The first has no kicker (C09, look pass: it was "Live · The launch yard"; the yard is named once)._
+
+- **line** — Tonight the ninth Exodus ship leaves Earth. «LaunchArt.js · line 27»
+- **kicker** — The crew of Exodus-9 «LaunchArt.js · line 28»
+- **line** — They will sleep for sixty-one years. «LaunchArt.js · line 28»
+- **names** — Mira Chen · Jaxon Mercer · Cora Moon · Kael Vance · Aris Novak «LaunchArt.js · line 28»
+- **kicker** — Live · The launch yard «LaunchArt.js · line 29»
+- **line** — Exodus-9 is on its way. «LaunchArt.js · line 29»
+
+### The launch film: its graphics «LaunchFilm.js · mount»
+_LIVE top left, the programme bug top right with the clock under it in the last three seconds ("T minus" / "Lift-off"), the skip in the corner._
+
+- Exodus Programme «LaunchFilm.js · line 119» **DRAFT (look pass)**
+- Click to skip «LaunchFilm.js · line 122»
+
+### The wake-up: the black card «Pods.js · CARD_TEXT»
+
+- Sixty-one years later «Pods.js · line 54»
+
+### The wake-up: A.U.R.A. and the first lines «Pods.js · DRAFT»
+_Between pods A.U.R.A. also says the talk above. Each person says one first line as they step out: the second one if a wrong valve made them groggy._
+
+- **teach** — The others are still asleep, Commander. «Pods.js · line 45» **DRAFT**
+- **aura** — I will wake the others, Commander. «Pods.js · line 46» **DRAFT**
+- **first · jaxon** — All that sleep and I'm still tired. Is there coffee? «Pods.js · line 48» **DRAFT (look pass)**
+- **first · jaxon** — My head's pounding. Give me a minute. «Pods.js · line 48» **DRAFT (look pass)**
+- **first · aris** — Slowly, everyone. Sit down if you feel dizzy. «Pods.js · line 49» **DRAFT**
+- **first · aris** — I'm dizzy. That was the wrong fluid. Go gently with the others. «Pods.js · line 49» **DRAFT**
+- **first · vance** — Sixty-one years, she says. I want to see the logs. «Pods.js · line 50» **DRAFT ("she says": since C11 A.U.R.A. no longer says the years; the card does)**
+- **first · vance** — Wrong fluid. I felt it go in. Who set up these pods? «Pods.js · line 50» **DRAFT ("she says": since C11 A.U.R.A. no longer says the years; the card does)**
+- **first · mira** — We made it! A.U.R.A., what did we miss? «Pods.js · line 51» **DRAFT**
+- **first · mira** — Everything's spinning. A.U.R.A., is that normal? «Pods.js · line 51» **DRAFT**
+
+### The wake-up: the pod panel «PodWords.js · VALVES»
+_The three valves; on a wrong valve the panel says "Wrong fluid"._
+
+- **word** — Warm «PodWords.js · line 41»
+- **word** — Flush «PodWords.js · line 41»
+- **word** — Wake «PodWords.js · line 41»
+
+### The wake-up: the keys «PodWords.js · init»
+_Let A.U.R.A. do it (always there), and the skip on a later new game._
+
+- nsw-valve is-[key] «PodWords.js · line 117»
+- Open the [word] valve «PodWords.js · line 117»
+- Let A.U.R.A. do it «PodWords.js · line 125»
+- Let A.U.R.A. wake the rest of the crew «PodWords.js · line 125»
+- Wake [n] «PodWords.js · line 128»
+- Your own pod «PodWords.js · line 128»
+- Skip the wake-up «PodWords.js · line 135»
+- Skip the wake-up «PodWords.js · line 135»
+
+### The first hint «NewScreen.js · FIRST_HINT»
+_A.U.R.A., in its two sentences, when the talk is over._
+
+- A.U.R.A.: "One of our ships is calling, Commander. Point at a world to fly there." «NewScreen.js · line 84»
+
+### Its chip «NewScreen.js · SIGNAL_WORD»
+_On the calling world while the hint is said, in capitals._
+
+- Signal «NewScreen.js · line 627» **DRAFT (look pass)**
+
