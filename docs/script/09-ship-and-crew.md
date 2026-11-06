@@ -326,22 +326,24 @@ _Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to h
 - **auto** — **A.U.R.A.:** Course plotted, Commander. You can rest. «WarpPlot.js · line 37»
 - **auto** — **A.U.R.A.:** I will take it from here, Commander. «WarpPlot.js · line 37»
 - **first** — **Jaxon:** Next time, you try. Stop the marker inside the bright window. «WarpPlot.js · line 38»
-- **A.U.R.A.:** Next time, you fly it, Commander. «WarpPlot.js · line 81»
-- SECTOR JUMP «WarpPlot.js · line 92»
-- DOCKING APPROACH «WarpPlot.js · line 92»
-- PLOT COURSE «WarpPlot.js · line 92»
-- BURN [n] «WarpPlot.js · line 99»
-- A.U.R.A.: "I will fly the first one, Commander. Watch the marker and the bright window." «WarpPlot.js · line 101»
-- The port is still turning. Lock the burn as the window lines up: clean docks first time, a miss scrapes the hull and costs extra. «WarpPlot.js · line 103»
-- One burn. Lock it inside the bright window: clean gives fuel back, a miss costs extra. «WarpPlot.js · line 105»
-- A long jump: three burns, each faster. Lock every one inside the bright window — all three clean gives the most fuel back. «WarpPlot.js · line 106»
-- LOCK BURN SPACE «WarpPlot.js · line 108»
-- LET A.U.R.A. PLOT IT «WarpPlot.js · line 109»
-- MANUAL PLOT NEEDS MOTION «WarpPlot.js · line 190»
-- BURN [n] · [word] «WarpPlot.js · line 210»
-- A.U.R.A. PLOT «WarpPlot.js · line 229»
-- [delta] energy comes back «WarpPlot.js · line 287»
-- [delta] extra energy burned — hull shudders «WarpPlot.js · line 288»
+- **hint** — Three burns. Press Space when the needle is in the light. «WarpPlot.js · line 43» **DRAFT (look pass)**
+- **still** — I will plot this jump, Commander. «WarpPlot.js · line 44» **DRAFT (look pass)**
+- **A.U.R.A.:** Next time, you fly it, Commander. «WarpPlot.js · line 87»
+- SECTOR JUMP «WarpPlot.js · line 98»
+- DOCKING APPROACH «WarpPlot.js · line 98»
+- PLOT COURSE «WarpPlot.js · line 98»
+- BURN [n] «WarpPlot.js · line 105»
+- A.U.R.A.: "I will fly the first one, Commander. Watch the marker and the bright window." «WarpPlot.js · line 107»
+- The port is still turning. Lock the burn as the window lines up: clean docks first time, a miss scrapes the hull and costs extra. «WarpPlot.js · line 109»
+- One burn. Lock it inside the bright window: clean gives fuel back, a miss costs extra. «WarpPlot.js · line 111»
+- A long jump: three burns, each faster. Lock every one inside the bright window — all three clean gives the most fuel back. «WarpPlot.js · line 112»
+- LOCK BURN SPACE «WarpPlot.js · line 114»
+- LET A.U.R.A. PLOT IT «WarpPlot.js · line 115»
+- MANUAL PLOT NEEDS MOTION «WarpPlot.js · line 196»
+- BURN [n] · [word] «WarpPlot.js · line 216»
+- A.U.R.A. PLOT «WarpPlot.js · line 235»
+- [delta] energy comes back «WarpPlot.js · line 293»
+- [delta] extra energy burned — hull shudders «WarpPlot.js · line 294»
 
 ### Flying a sector jump (the mini-game) «Corridor.js · Corridor»
 _Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck. The dark on the new look's jump into sector 5 (After the flight) is in sector-5.md._

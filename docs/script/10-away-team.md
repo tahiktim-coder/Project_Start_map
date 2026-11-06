@@ -922,76 +922,82 @@ _Rooms, crew perks, results. The diary on the crew deck depends on the station's
 - **gain** — +[n] salvage «BoardingParty.js · line 108»
 - **name** — parts from the station core «BoardingParty.js · line 109»
 - **gain** — +[n] salvage «BoardingParty.js · line 109»
-- **rough** — Rough docking. Whoever goes starts with 2 less air. «BoardingParty.js · line 913»
-- **crash** — Hard docking. The hull is damaged, and whoever goes starts with 3 less air. «BoardingParty.js · line 913»
-- Hard docking. The hull held, but whoever goes starts with 3 less air. «BoardingParty.js · line 914» **DRAFT (2026-10-30)**
-- **DARK** — Dark. Her scanner sees fine. «BoardingParty.js · line 917»
-- **DARK** — Dark. Searching costs [dark extra] more air. «BoardingParty.js · line 917»
-- **VENTED** — Vented. Walking in costs [vent extra] more air, every time. «BoardingParty.js · line 918»
-- **UNSTABLE** — Unstable. [n]% chance of getting hurt if you search. «BoardingParty.js · line 919»
-- **SEALED** — Sealed. Cutting in costs [b] air, once. «BoardingParty.js · line 920»
-- [name] [dock] AIR [text] «BoardingParty.js · line 928»
-- BOARDING — SILENT FOR [age] YEARS «BoardingParty.js · line 931»
-- [Unknown station] «BoardingParty.js · line 931»
-- One person goes in on one tank of air. Every door and every search shows its cost first. The bar marks the air needed to walk back out. Heavy things make that walk cost more. [Your deep scan mapped every room. | Without a deep scan, you see a room only when you reach its door.] «BoardingParty.js · line 934»
-- WHO GOES IN? «BoardingParty.js · line 935»
-- Nobody is fit to go. «BoardingParty.js · line 936»
-- Stay aboard — skip the station «BoardingParty.js · line 937»
-- BOARDING — [name] IS INSIDE «BoardingParty.js · line 943»
-- Let A.U.R.A. guide «BoardingParty.js · line 947»
-- Carrying [heavy] heavy: +[heavy step cost] per room. «BoardingParty.js · line 955»
-- All [air] to spend. «BoardingParty.js · line 956»
-- Just enough to walk out. Go now.[load] «BoardingParty.js · line 956»
-- Walk out from here: [n] air.[load] [spare] to spend. «BoardingParty.js · line 956»
-- AIR [air] / [air max] [pips] [note] «BoardingParty.js · line 957»
-- CARRYING — [hands] HANDS «BoardingParty.js · line 965»
-- In a pocket: [pocket] «BoardingParty.js · line 965»
-- −[n] AIR «BoardingParty.js · line 969»
-- HANDS FULL «BoardingParty.js · line 971»
-- NOT ENOUGH AIR TO GET BACK «BoardingParty.js · line 971»
-- HEAVY: +[heavy step cost] AIR PER ROOM OUT «BoardingParty.js · line 971»
-- [n]% CHANCE OF GETTING HURT «BoardingParty.js · line 971»
-- Take [name] [n] «BoardingParty.js · line 972»
-- Record the name [n] «BoardingParty.js · line 974»
-- NOT ENOUGH AIR TO GET BACK «BoardingParty.js · line 974»
-- Hard docking at [name]. [The hull held. | The hull took damage.] «BoardingParty.js · line 1005» **DRAFT**
-- Rough docking at [name]. We scraped the ring. «BoardingParty.js · line 1005» **DRAFT**
-- You stay aboard. The station keeps its secrets. «BoardingParty.js · line 1022»
-- Here: [name] — [n]. «BoardingParty.js · line 1065»
-- Nothing left to take here. «BoardingParty.js · line 1065»
-- A name is scratched into the wall. «BoardingParty.js · line 1066»
-- Step back aboard «BoardingParty.js · line 1068»
-- Head back out −[n] AIR «BoardingParty.js · line 1069»
-- ROOM ? «BoardingParty.js · line 1093»
-- JAMMED DOOR «BoardingParty.js · line 1094»
-- [name][cond] [−[n] AIR | TOO FAR] «BoardingParty.js · line 1098»
-- Cut through the seal. «BoardingParty.js · line 1105»
-- The door was jammed. Forced it open. «BoardingParty.js · line 1106»
-- A spare air canister in a locker. +[pocket air] air. «BoardingParty.js · line 1108»
-- The logs are downloading to the ship. «BoardingParty.js · line 1109»
-- Taken: [name]. «BoardingParty.js · line 1113»
-- [found] The ceiling gives way. [name] is hurt. «BoardingParty.js · line 1114»
-- [found] The ceiling gives way. The armour takes it. «BoardingParty.js · line 1115»
-- Recorded: "[name]." «BoardingParty.js · line 1118»
-- A.U.R.A.: "I will guide them, Commander. Safe rooms only." «BoardingParty.js · line 1166»
-- BOARDING — [name] IS BACK ABOARD «BoardingParty.js · line 1190»
-- What came back «BoardingParty.js · line 1191»
-- Air left in the tank: [air]. «BoardingParty.js · line 1193»
-- Nothing. The station was picked clean. «BoardingParty.js · line 1195»
-- [name] is in the airlock. «BoardingParty.js · line 1214»
-- +[salvage] salvage «BoardingParty.js · line 1228»
-- +[energy] energy, from the cell «BoardingParty.js · line 1229»
-- A medkit, now in the cargo hold «BoardingParty.js · line 1232»
-- A piece of working tech, now in the cargo hold «BoardingParty.js · line 1233»
-- +[data] data, from the research notes «BoardingParty.js · line 1235»
-- [pods] sleeper pod, now in the hold. Someone is alive inside. «BoardingParty.js · line 1236»
-- Diary from [name]: [note] «BoardingParty.js · line 1237»
-- A diary. It is in the mission log. «BoardingParty.js · line 1237»
-- [name] adds a name to her list: [name]. «BoardingParty.js · line 1240»
-- A name from the wall of [name]: [name]. «BoardingParty.js · line 1240»
-- A name from the wall: [name] «BoardingParty.js · line 1242»
-- The station's logs «BoardingParty.js · line 1244»
-- The crew saw you go first. Everyone is a little calmer. «BoardingParty.js · line 1245»
-- [name] was hurt and needs rest. «BoardingParty.js · line 1248»
-- [name] returns from [name]: [nothing worth taking].[[name] is INJURED.] «BoardingParty.js · line 1250»
+- SILENT FOR [age] YEARS «BoardingParty.js · line 912»
+- A.U.R.A.: "One tank of air, Commander. Every door shows its cost." «BoardingParty.js · line 913» **DRAFT (look pass)**
+- A.U.R.A.: "I will guide them, Commander. Safe rooms only." «BoardingParty.js · line 915»
+- A.U.R.A.: "I will guide you, Commander. Safe rooms only." «BoardingParty.js · line 916» **DRAFT (look pass)**
+- **rough** — Rough docking. Whoever goes starts with 2 less air. «BoardingParty.js · line 924»
+- **crash** — Hard docking. The hull is damaged, and whoever goes starts with 3 less air. «BoardingParty.js · line 924»
+- Hard docking. The hull held, but whoever goes starts with 3 less air. «BoardingParty.js · line 925» **DRAFT (2026-10-30)**
+- **DARK** — Dark. Her scanner sees fine. «BoardingParty.js · line 928»
+- **DARK** — Dark. Searching costs [dark extra] more air. «BoardingParty.js · line 928»
+- **VENTED** — Vented. Walking in costs [vent extra] more air, every time. «BoardingParty.js · line 929»
+- **UNSTABLE** — Unstable. [n]% chance of getting hurt if you search. «BoardingParty.js · line 930»
+- **SEALED** — Sealed. Cutting in costs [b] air, once. «BoardingParty.js · line 931»
+- Unknown station «BoardingParty.js · line 936»
+- [name] [dock] AIR [text] «BoardingParty.js · line 940»
+- BOARDING — [silent for years] «BoardingParty.js · line 943»
+- One person goes in on one tank of air. Every door and every search shows its cost first. The bar marks the air needed to walk back out. Heavy things make that walk cost more. [Your deep scan mapped every room. | Without a deep scan, you see a room only when you reach its door.] «BoardingParty.js · line 946»
+- WHO GOES IN? «BoardingParty.js · line 947»
+- Nobody is fit to go. «BoardingParty.js · line 948»
+- Stay aboard — skip the station «BoardingParty.js · line 949»
+- BOARDING — [name] IS INSIDE «BoardingParty.js · line 955»
+- Let A.U.R.A. guide «BoardingParty.js · line 959»
+- Carrying [heavy] heavy: +[heavy step cost] per room. «BoardingParty.js · line 967»
+- All [air] to spend. «BoardingParty.js · line 968»
+- Just enough to walk out. Go now.[load] «BoardingParty.js · line 968»
+- Walk out from here: [n] air.[load] [spare] to spend. «BoardingParty.js · line 968»
+- AIR [air] / [air max] [pips] [note] «BoardingParty.js · line 969»
+- CARRYING — [hands] HANDS «BoardingParty.js · line 977»
+- In a pocket: [pocket] «BoardingParty.js · line 977»
+- −[n] AIR «BoardingParty.js · line 986»
+- HANDS FULL «BoardingParty.js · line 988»
+- NOT ENOUGH AIR TO GET BACK «BoardingParty.js · line 988»
+- HEAVY: +[heavy step cost] AIR PER ROOM OUT «BoardingParty.js · line 988»
+- [n]% CHANCE OF GETTING HURT «BoardingParty.js · line 988»
+- Take [name] «BoardingParty.js · line 989»
+- Record the name «BoardingParty.js · line 991»
+- NOT ENOUGH AIR TO GET BACK «BoardingParty.js · line 991»
+- Hard docking at [name]. [The hull held. | The hull took damage.] «BoardingParty.js · line 1022» **DRAFT**
+- Rough docking at [name]. We scraped the ring. «BoardingParty.js · line 1022» **DRAFT**
+- You stay aboard. The station keeps its secrets. «BoardingParty.js · line 1039»
+- class="bx-cond [is-[cond]]" «BoardingParty.js · line 1081»
+- Here: [name] — [n]. «BoardingParty.js · line 1083»
+- Nothing left to take here. «BoardingParty.js · line 1083»
+- A name is scratched into the wall. «BoardingParty.js · line 1084»
+- Step back aboard «BoardingParty.js · line 1087»
+- [Head back out | −[n] AIR] «BoardingParty.js · line 1088»
+- JAMMED DOOR «BoardingParty.js · line 1108»
+- TOO FAR «BoardingParty.js · line 1108»
+- ROOM ? «BoardingParty.js · line 1114»
+- **cost** — −[n] AIR «BoardingParty.js · line 1117»
+- [name][cond] [−[n] AIR] «BoardingParty.js · line 1123»
+- Cut through the seal. «BoardingParty.js · line 1130»
+- The door was jammed. Forced it open. «BoardingParty.js · line 1131»
+- A spare air canister in a locker. +[pocket air] air. «BoardingParty.js · line 1133»
+- The logs are downloading to the ship. «BoardingParty.js · line 1134»
+- Taken: [name]. «BoardingParty.js · line 1138»
+- [found] The ceiling gives way. [name] is hurt. «BoardingParty.js · line 1139»
+- [found] The ceiling gives way. The armour takes it. «BoardingParty.js · line 1140»
+- Recorded: "[name]." «BoardingParty.js · line 1143»
+- BOARDING — [name] IS BACK ABOARD «BoardingParty.js · line 1215»
+- What came back «BoardingParty.js · line 1216»
+- Air left in the tank: [air]. «BoardingParty.js · line 1218»
+- Nothing. The station was picked clean. «BoardingParty.js · line 1221»
+- [name] is in the airlock. «BoardingParty.js · line 1240»
+- +[salvage] salvage «BoardingParty.js · line 1255»
+- +[energy] energy, from the cell «BoardingParty.js · line 1256»
+- A medkit, now in the cargo hold «BoardingParty.js · line 1259»
+- A piece of working tech, now in the cargo hold «BoardingParty.js · line 1260»
+- +[data] data, from the research notes «BoardingParty.js · line 1262»
+- [pods] sleeper pod, now in the hold. Someone is alive inside. «BoardingParty.js · line 1263»
+- Diary from [name]: [note] «BoardingParty.js · line 1264»
+- A diary. It is in the mission log. «BoardingParty.js · line 1264»
+- [name] adds a name to her list: [name]. «BoardingParty.js · line 1267»
+- A name from the wall of [name]: [name]. «BoardingParty.js · line 1267»
+- A name from the wall: [name] «BoardingParty.js · line 1269»
+- The station's logs «BoardingParty.js · line 1271»
+- The crew saw you go first. Everyone is a little calmer. «BoardingParty.js · line 1272»
+- [name] was hurt and needs rest. «BoardingParty.js · line 1275»
+- [name] returns from [name]: [nothing worth taking].[[name] is INJURED.] «BoardingParty.js · line 1277»
 
