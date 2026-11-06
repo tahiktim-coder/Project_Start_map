@@ -286,9 +286,9 @@
 
         // ── the words budget: at most 40 on screen (the voice line counted, unless a note has stepped it back). The world's
         //    name, the labels, the key, the stock and GO DOWN's odds (its hurt chance, "hurt", a death chance: a trip that could
-        //    kill always says so before anyone goes) always; then, while they fit: the chosen find's ways, each row's name and
-        //    risk word only (when those do not fit, each way's name alone, GO DOWN's odds beside: look pass B08; A.U.R.A. says how
-        //    to choose a way, TELL.way, only where the names fit beside her line: wayRoom, explain()); the names at the
+        //    kill always says so before anyone goes) always, and the chosen find's ways by name (the stock stepping back for them;
+        //    over 40 even so, the way taken alone: aimedWays, look pass B08); then, while they fit: those ways' risk words (A.U.R.A.
+        //    says how to choose a way, TELL.way, only where the names fit beside her line: wayRoom, explain()); the names at the
         //    hatch (both or neither) and the team's chips (who goes on the trip whose odds show);
         //    another find's "a clue" (a third find shows only for it: WorldFinds.js); the chosen find's rows whole (its prizes);
         //    the kind line, whether people could live there, the other finds' chips, each action's chips. Decided afresh only
@@ -305,6 +305,17 @@
             const faultWords = [...document.querySelectorAll('#ns-card-words .ns-fault-chip.is-in')].reduce((n, el) => n + wordsIn(el.textContent), 0);   // a ship fault's chip (tower/Fault.js) is on screen too
             let budget = MAX_WORDS - voiceWords - faultWords;
             const take = n => { if (n <= 0) return true; if (budget - n >= 0) { budget -= n; return true; } return false; };
+            /** The aimed find's ways: their names always show, the stock stepping back for them, so a way can always be seen and
+                chosen, even while A.U.R.A. speaks (look pass B08 fix); when even that is over 40, the way taken alone (the stock
+                coming back if it then fits). Then, while they fit, the rows lean (the gamble). */
+            const aimedWays = (nameWords, leanWords, oneWords) => {
+                budget -= nameWords; leanStock();
+                let shown = 'names', cost = nameWords;
+                if (budget < 0 && oneWords) { budget += nameWords - oneWords; shown = 'one'; cost = oneWords; }
+                if (budget < 0) { budget += cost; shown = false; }
+                while (stockLean > 0 && budget >= stockKeys) { stockLean--; budget -= stockKeys; }
+                return shown === 'names' && take(leanWords - nameWords) ? 'lean' : shown;
+            };
             o.acts.forEach(a => { budget -= wordsIn(a.words); });
             o.finds.forEach(f => { budget -= wordsIn(f.label); });
             if (o.team) budget -= 2;
@@ -317,15 +328,20 @@
             const odds = o.team ? o.goChips.filter(c => c.odds) : [];
             budget -= chipWords(odds);                                                       // GO DOWN's odds: always shown
             let stockLean = 0;                                                               // over 40 with only what must show: the stock's words step back (1), then its numbers (2), while it lasts
-            while (o.stock && budget < 0 && stockLean < 2) { stockLean++; budget += window.NSStock.KEYS.length; }
+            const stockKeys = o.stock ? window.NSStock.KEYS.length : 0;
+            const leanStock = () => { while (stockKeys && budget < 0 && stockLean < 2) { stockLean++; budget += stockKeys; } };
+            leanStock();
             const dec = { act: {}, find: {}, keys: {}, aimed: aimedKey, voice: voiceKey, present, stockLean };
             (o.keys || []).forEach(a => { dec.keys[a.key] = take(chipWords([].concat(...(a.chips || []).map(c => (Array.isArray(c) ? c : [c]))))); });   // what a held key costs: first
-            if (keep) { budget -= rowWords(keep === 'rows' ? aimed.rows : keep === 'names' ? aimed.names : aimed.lean); dec.find[aimed.id] = keep; }
+            const one = aimed && aimed.names ? aimed.names.filter(r => r.idx === aimed.f.way) : [];   // the way taken, its name alone
+            const shownOf = k => (k === 'rows' ? aimed.rows : k === 'names' ? aimed.names : k === 'one' ? one : aimed.lean);
+            if (keep) { budget -= rowWords(shownOf(keep)); dec.find[aimed.id] = keep; leanStock(); }
             const leanWords = aimed && aimed.rows ? rowWords(aimed.lean) : 0, nameWords = aimed && aimed.names ? rowWords(aimed.names) : 0;
             const wayLine = String(((window.NSOrbit && window.NSOrbit.TELL) || {}).way || '').trim();
             dec.wayRoom = !!(aimed && aimed.rows) && budget + voiceWords - wordsIn('A.U.R.A.') - wordsIn(wayLine) >= nameWords;   // were she to say it now, the names would fit
-            if (keep) { /* kept as it was */ } else if (aimed && aimed.rows) dec.find[aimed.id] = take(leanWords) ? 'lean' : take(nameWords) ? 'names' : false;   // its ways, lean: the gamble first; else at least their names, so a way can be chosen (look pass B08)
+            if (keep) { /* kept as it was */ } else if (aimed && aimed.rows) dec.find[aimed.id] = aimedWays(nameWords, leanWords, rowWords(one));
             else if (aimed) dec.find[aimed.id] = take(chipWords(aimed.chips));
+            dec.stockLean = stockLean;
             dec.who = !!o.team && take(o.whoIds.reduce((n, id) => n + 1 + wordsIn(S.pick.why[id] || ''), 0));
             dec.go = !!o.team && take(chipWords(o.goChips.filter(c => !c.odds)));   // "one more" (the odds are counted above)
             o.finds.forEach(f => { if (f !== aimed && f.clue && !(f.id in dec.find) && take(wordsIn(f.clue.text))) dec.find[f.id] = 'clue'; });   // another find's clue
@@ -425,7 +441,7 @@
             // the finds first, in the order of their marks (top to bottom: no thread crosses another), each level with its mark
             // where it can be; the actions under them (or, with no finds, starting by the landing site as before)
             const column = finds.map(v => {
-                v.shownRows = v.rows ? (dec.find[v.id] === 'rows' ? v.rows : dec.find[v.id] === 'lean' ? v.lean : dec.find[v.id] === 'names' ? v.names : null) : null;   // the chosen find's ways, whole, lean or their names
+                v.shownRows = v.rows ? (dec.find[v.id] === 'rows' ? v.rows : dec.find[v.id] === 'lean' ? v.lean : dec.find[v.id] === 'names' ? v.names : dec.find[v.id] === 'one' ? v.names.filter(r => r.idx === v.f.way) : null) : null;   // the chosen find's ways, whole, lean, their names or the way taken alone
                 v.tag.set({ label: v.label, rows: v.shownRows, chips: !v.rows && dec.find[v.id] ? (dec.find[v.id] === 'clue' ? [v.clue] : v.chips) : null });
                 const [w, h] = v.tag.size(u); return { v, w, h, at: GL.spot(t, S.shownAt, v.f.at) };
             })
