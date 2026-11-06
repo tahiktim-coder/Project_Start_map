@@ -28,9 +28,9 @@
      note(id, text, o)    a small quiet readout over the picture (the few the player needs): o = { x, y (units), align:
                           'left' | 'right' | 'center', tone: 'dim' | 'text' | 'ui' | 'warm' | 'danger', size: 's' | 'm' }.
                           The same id updates it in place; text null removes it. The new look (html.ns-on) also takes
-                          label: true (a readout's label: Condensed caps), tag: true (the etched tag: a control or a name
-                          on a dither plate; it steps out when removed) and leader: { x, y } (units: a 1 px line from the
-                          note's nearest edge to that point, the thing it names).
+                          label: true (a readout's label: Condensed caps, its numbers Mono), tag: true (the etched tag:
+                          a control or a name on a dither plate; it steps out when removed) and leader: { x, y } (units: a
+                          1 px line from the note's nearest edge to that point, the thing it names).
      clearNotes()         remove every readout
      toPixel(e)           where a pointer event landed on the picture, in picture units: { x, y }
      toArt(e)             the same in art pixels
@@ -240,7 +240,8 @@
                 el.className = `mini-note is-${align} is-${tone}` + (o.size === 'm' ? ' is-m' : '') + (isNew() && o.label ? ' is-label' : '') + (isNew() && o.tag ? ' is-tag' : '');
                 el.style.left = `${((o.x == null ? 6 : o.x) / MiniLab.W) * 100}%`;
                 el.style.top = `${((o.y == null ? 6 : o.y) / MiniLab.H) * 100}%`;
-                if (el.textContent !== String(text)) el.textContent = String(text);
+                const isLabel = isNew() && !!o.label, fill = isLabel ? 'n' : 't';      // (new look) a label's numbers in Mono, its words Condensed
+                if (el.textContent !== String(text) || el.dataset.fill !== fill) { el.dataset.fill = fill; if (isLabel) fillNumbered(el, text); else el.textContent = String(text); }
                 if (isNew()) leaderOf(id, el, o.leader);
             },
             clearNotes() { notes.forEach((el, id) => dropNote(el, id)); notes.clear(); },
@@ -305,13 +306,19 @@
             const i = document.createElement('i');
             if (['gain', 'loss', 'aura'].includes(c.tone)) i.className = 'is-' + c.tone;
             if (c.icon) i.dataset.icon = c.icon;
-            String(c.text).split(/(EXODUS-\d+|(?<![\w-])[+\u2212-]?\d(?:[\d,.]*\d)?%?)/).forEach((part, k) => {   // a hull's tag whole; a sign only at a word's start
-                if (!part) return;
-                if (k % 2) { const n = document.createElement('span'); n.className = 'mini-n'; n.textContent = part; i.append(n); } else i.append(part);
-            });
+            fillNumbered(i, c.text);
             el.append(i);
         });
         return el;
+    }
+
+    /** (new look) text into el, its numbers and hull tags each in a .mini-n span (Mono), the words around them plain. */
+    function fillNumbered(el, text) {
+        el.replaceChildren();
+        String(text).split(/(EXODUS-\d+|(?<![\w-])[+\u2212-]?\d(?:[\d,.]*\d)?%?)/).forEach((part, k) => {   // a hull's tag whole; a sign only at a word's start
+            if (!part) return;
+            if (k % 2) { const n = document.createElement('span'); n.className = 'mini-n'; n.textContent = part; el.append(n); } else el.append(part);
+        });
     }
 
     function open(def, opts, resolve) {

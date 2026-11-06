@@ -301,14 +301,19 @@ html.ns-on .mini-host .mini-btn.is-hold.is-primary:focus-visible {
 
 /* readouts over the picture: 14 px, --cool by default, on the halo */
 html.ns-on .mini-host .mini-note { font-size: var(--fs-floor); color: var(--cool); text-shadow: var(--shadow), var(--halo); }
-html.ns-on .mini-host .mini-note.is-m { font-size: 16px; }
+html.ns-on .mini-host .mini-note.is-m, html.ns-on .mini-host .mini-note.is-label.is-m { font-size: 16px; }
 html.ns-on .mini-host .mini-note.is-text { color: var(--text); }
 html.ns-on .mini-host .mini-note.is-ui { color: var(--ui); }
 html.ns-on .mini-host .mini-note.is-warm { color: var(--warm-br); }
 html.ns-on .mini-host .mini-note.is-danger { color: var(--loss); }
-/* a readout's label (BEACONS HEARD, A.U.R.A. FLYING): Condensed 500 caps */
+/* a readout's label (BEACONS HEARD, A.U.R.A. FLYING, YEARS DEAD, SECTOR 4): words in Condensed 500 caps, its numbers and
+   hull tags in Mono (MiniHost wraps them in .mini-n), a value in --text beside a --dim word */
 html.ns-on .mini-host .mini-note.is-label { font: 500 var(--fs-floor)/1.2 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }
 html.ns-on .mini-host .mini-note.is-label.is-ui { color: var(--ui); }
+html.ns-on .mini-host .mini-note.is-label.is-text { color: var(--text); }
+html.ns-on .mini-host .mini-note.is-label.is-warm { color: var(--warm-br); }
+html.ns-on .mini-host .mini-note.is-label .mini-n { font-family: var(--f-num); font-weight: 400; letter-spacing: 0; }
+html.ns-on .mini-host .mini-note.is-label.is-dim .mini-n { color: var(--text); }
 /* the etched tag: a control or a name on a dither plate, sentence case, stepping in and out */
 html.ns-on .mini-host .mini-note.is-tag {
     padding: 4px 8px 5px;

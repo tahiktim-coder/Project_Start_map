@@ -67,7 +67,7 @@
     const FLASH = 0.8, LINE_GAP = 2.6, TO_MAP = 2.2, READY_AFTER = 1.2, WIPE = 0.75, ZOOM = 0.9, TREND = 1.3, REACH = 1.8, END_ZOOM = 1.5;
     const T_LINE = 0.8, LINE_DUR = 1.5, T_FOUND = 2.3, T_PORT = 2.9, T_AURA = 3.6, BEND = 0.9, FADE = 0.7;   // the map's beats (s)
     const IR = 34, PORT = [434, 218], TEXT_X = 392, GLOW_MAP = 62, GLOW_END = 30, BREATH = 4;
-    const CLEAR_PX = 12, NOTE_PX = 14, NAME_PX = 16, KICKER_SCALE = 2;   // (new look) css px between a note and a sprite; the notes' sizes; the scale the kicker needs
+    const CLEAR_PX = 12, NOTE_PX = 14, NAME_PX = 16, KICKER_SCALE = 2, HUD_RIGHT = 25;   // (new look) css px between a note and a sprite; the notes' sizes; the scale the kicker needs; the chart's values end this many units right of its axis
 
     // Fourteen pulsars: angle (degrees), line length, notch as a fraction of the length (round two's numbers, × 1.5).
     const PULSARS = [
@@ -653,10 +653,10 @@
             drawTrend(g, b, o, opts);
             if (c) { aline(g, c.x, top.y, c.x, o.y - 1, RP.UI.hex[2], 0.6); aline(g, o.x + 1, c.y, top.x, c.y, RP.UI.hex[2], 0.6); }
             aline(g, o.x, o.y, top.x, o.y, RP.HULL.hex[3]); aline(g, o.x, top.y, o.x, o.y, RP.HULL.hex[3]);
-            note('c-ly', NEW ? 'LIGHT YEARS OUT' : 'LY DOWN THE HEADING', { x: u(o.x), y: u(top.y) - (NEW ? 3 + lineU(NOTE_PX) : 13) });
+            note('c-ly', NEW ? 'LIGHT YEARS OUT' : 'LY DOWN THE HEADING', { x: u(o.x), y: u(top.y) - (NEW ? 3 + lineU(NOTE_PX) : 13), label: NEW });   // (new look: words in Condensed)
             note('c-lmax', String(Math.round(view.l)), { x: u(o.x) - 4, y: u(top.y) - 3, align: 'right' });
             if (!NEW) note('c-0', '0', { x: u(o.x) - 1, y: u(o.y) + 3 });   // (new look: US marks the origin)
-            note('c-yd', 'YEARS DEAD', { x: (u(o.x) + u(top.x)) / 2, y: u(o.y) + 3, align: 'center' });
+            note('c-yd', 'YEARS DEAD', { x: (u(o.x) + u(top.x)) / 2, y: u(o.y) + 3, align: 'center', label: NEW });
             note('c-ymax', String(Math.round(view.y)), { x: u(top.x), y: u(o.y) + 3, align: 'right' });
             adisc(g, o.x + 0.5, o.y + 0.5, 3.2, 1, C.ui); if (!NEW) note('c-us', 'US', { x: u(o.x) - 6, y: u(o.y) - 3, align: 'right', tone: 'ui' });   // us: alive, and where we started (new look: the steel dot alone, the words within 40)
             points.forEach((wk, i) => {
@@ -681,13 +681,13 @@
             });
             if (s.locked) note('h-dated', 'DATED', { x: W - 10, y: 8, align: 'right', tone: 'ui', size: 'm' });
         }
-        /** (new look) The wreck by its tag and the two values the point gives, no counters (C49b). */
+        /** (new look) The wreck by its tag and the point's two values, no counters (C49b); right-aligned, the values in one column. */
         function drawHudNew() {
             note('h-hull', 'EXODUS-' + wreck.hull, { x: 10, y: 8, tone: 'text', size: 'm' });   // (the sector is the map's, not the chart's)
             [['YEARS', s.v.y, 178], ['LIGHT YEARS', s.v.l, 178 + lineU(NOTE_PX) + 1]].forEach(([axis, v, y]) => {
-                note('h-' + axis, axis.padEnd(12, '\u00a0') + String(v).padStart(4, '\u00a0'), { x: PAD.x - 22, y, tone: s.locked ? 'ui' : 'text' });
+                note('h-' + axis, axis + ' ' + v, { x: PAD.x + HUD_RIGHT, y, align: 'right', tone: s.locked ? 'ui' : 'dim', label: true });
             });
-            if (s.locked) note('h-dated', 'DATED', { x: W - 10, y: 8, align: 'right', tone: 'ui', size: 'm' });
+            if (s.locked) note('h-dated', 'DATED', { x: W - 10, y: 8, align: 'right', tone: 'ui', size: 'm', label: true });
         }
         function renderDate(g) {
             const { lines, marks } = drawFix(g), count = lines + marks;
@@ -756,7 +756,7 @@
                 aline(g, x, y, x - sx * arm, y, col); aline(g, x, y, x, y - sy * arm, col);
             });
             const isNamed = NEW && m.t - T_FOUND >= 0.3;                // (new look) the panel names it now: one name on screen, not two
-            if (fb === 1 && !M.final && !isNamed) note('m-place', reward.name.toUpperCase(), { x: Dd.x, y: NEW ? Dd.y - Dd.r - 8 - gapU() - lineU(NOTE_PX) : Dd.y - Dd.r - 17, align: 'center', tone: hover ? 'warm' : 'text' });   // (new look: 12 px over its brackets)
+            if (fb === 1 && !M.final && !isNamed) note('m-place', reward.name.toUpperCase(), { x: Dd.x, y: NEW ? Dd.y - Dd.r - 8 - gapU() - lineU(NOTE_PX) : Dd.y - Dd.r - 17, align: 'center', tone: hover ? 'warm' : 'text', label: NEW });   // (new look: 12 px over its brackets)
         }
         function drawPorthole(g) {                          // a close look at the place, opening beside the words
             const gr = clamp((m.t - T_PORT) / 0.35, 0, 1), kind = M.dest.kind, ix = A(PORT[0]), iy = A(PORT[1]), ir = A(IR);
@@ -778,10 +778,10 @@
             const name = reward.name.toUpperCase();
             if (NEW) {                                       // (new look) lines a note's height apart; the kicker only at 2 px a unit or more
                 const kick = pxu() >= KICKER_SCALE, y0 = PORT[1] - (lineU(NOTE_PX) + lineU(NAME_PX) + lineU(NOTE_PX)) / 2 - (kick ? lineU(NOTE_PX) / 2 : 0);
-                if (kick) note('m-sub', 'WHERE EXODUS-' + wreck.hull + ' WAS GOING', { x, y: y0, align: 'right' });
+                if (kick) note('m-sub', 'WHERE EXODUS-' + wreck.hull + ' WAS GOING', { x, y: y0, align: 'right', label: true });   // (words Condensed, the tag Mono)
                 const yn = y0 + (kick ? lineU(NOTE_PX) : 0);
-                note('m-name', name.slice(0, Math.floor((f - 0.3) / 0.05)) || ' ', { x, y: yn, align: 'right', tone: 'text', size: 'm' });
-                if (m.t >= T_AURA) note('m-read', M.dest.readout, { x, y: yn + lineU(NAME_PX), align: 'right', tone: 'ui' });
+                note('m-name', name.slice(0, Math.floor((f - 0.3) / 0.05)) || ' ', { x, y: yn, align: 'right', tone: 'text', size: 'm', label: true });
+                if (m.t >= T_AURA) note('m-read', M.dest.readout, { x, y: yn + lineU(NAME_PX), align: 'right', tone: 'ui', label: true });
                 drawPorthole(g);
                 return;
             }
@@ -819,17 +819,17 @@
             if (NEW) {                                       // (new look) under the broken hull, 12 px clear of both halves
                 const wy = V.wreck.y + 11 + gapU();
                 note('m-wreck', 'EXODUS-' + wreck.hull, { x: V.wreck.x + 2, y: wy });
-                note('m-age', wreck.age + ' YEARS', { x: V.wreck.x + 2, y: wy + lineU(NOTE_PX) });
+                note('m-age', wreck.age + ' YEARS', { x: V.wreck.x + 2, y: wy + lineU(NOTE_PX), label: true });
             } else {
                 note('m-wreck', 'EXODUS-' + wreck.num, { x: V.wreck.x + 9, y: V.wreck.y - 2 });
                 note('m-age', wreck.age + ' YEARS', { x: V.wreck.x + 9, y: V.wreck.y + 4 });
             }
-            if (!NEW || m.t < T_FOUND) M.planets.forEach(([name, x, y, r], k) => note('m-planet' + k, name, { x, y: y + r + (NEW ? gapU() : 3), align: 'center' }));   // (new look: the other worlds' names step away once the place is found)
+            if (!NEW || m.t < T_FOUND) M.planets.forEach(([name, x, y, r], k) => note('m-planet' + k, name, { x, y: y + r + (NEW ? gapU() : 3), align: 'center', label: NEW }));   // (new look: the other worlds' names step away once the place is found)
             if (M.final) drawLight(g);
             drawWreckCourse(g, V); drawRoute(g, V); drawPlace(g); drawUs(g, V);
             drawPanel(g);
-            note('m-sector', 'SECTOR ' + wreck.sector, { x: 10, y: 8, size: 'm' });
-            if (m.set) note('m-set', 'COURSE SET', { x: W - 10, y: 8, align: 'right', tone: 'warm', size: 'm' });
+            note('m-sector', 'SECTOR ' + wreck.sector, { x: 10, y: 8, size: 'm', label: NEW });   // (new look: the word Condensed, the number Mono)
+            if (m.set) note('m-set', 'COURSE SET', { x: W - 10, y: 8, align: 'right', tone: 'warm', size: 'm', label: NEW });
         }
         function drawWipe(g, dt) {                          // the view re-plots behind a scan line
             wipe = { ...wipe, t: wipe.t + dt };
