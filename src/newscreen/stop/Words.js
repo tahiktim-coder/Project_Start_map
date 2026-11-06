@@ -291,7 +291,8 @@
             if (pointed && frozen && frozen.aimed === aimedKey && frozen.voice === voiceKey && frozen.present === present) return frozen;   // a click that chose another find or way, a line or a tag that came or went: decided once more
             const keep = pointed && frozen && aimed && aimed.rows && S.wayHover && S.wayHover.id === aimed.id ? frozen.find[aimed.id] : null;   // a line started while a way's row is pointed at: that row stays (EXTRA.md)
             const voiceWords = voice ? wordsIn(voice.who) + wordsIn(voice.line) : 0;
-            let budget = MAX_WORDS - voiceWords;
+            const faultWords = [...document.querySelectorAll('#ns-card-words .ns-fault-chip.is-in')].reduce((n, el) => n + wordsIn(el.textContent), 0);   // a ship fault's chip (tower/Fault.js) is on screen too
+            let budget = MAX_WORDS - voiceWords - faultWords;
             const take = n => { if (n <= 0) return true; if (budget - n >= 0) { budget -= n; return true; } return false; };
             o.acts.forEach(a => { budget -= wordsIn(a.words); });
             o.finds.forEach(f => { budget -= wordsIn(f.label); });
