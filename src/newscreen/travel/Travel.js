@@ -129,6 +129,7 @@
         if (!st || typeof st.addLog !== 'function' || !v || typeof v.say !== 'function' || !ns.isShown() || shownSector !== sectorNow() || naming.size || talking()) return;
         const sup = window.NSSupper;
         if (sup && typeof sup.busy === 'function' && sup.busy()) return;                    // supper after the jump first (tower/Supper.js)
+        if (typeof ns.mode === 'function' && ns.mode() !== 'travel') return;                // on the bridge: never a call from the world in the glass (look pass B07)
         try { if (typeof v.current === 'function' && v.current()) return; } catch (err) { return; }
         const id = F.ids().find(i => { const e = F.entry(i), k = e && storyKind(e.node); return k && STORY_LINES[k] && !e.node.nsSaid && placeAt(i).shown; });
         if (!id) return;

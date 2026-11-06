@@ -39,7 +39,10 @@
                                       is kept in the game's own saved record of A.U.R.A. (state.reliance.nsTold, saved as is)
      told(key) → bool
      forget(key)                      a once() line that resolved false (never seen: the dive cleared it) may be said again
-     hush()                           the line on screen goes and the waiting ones are dropped (a scene ends: the wake-up) }
+     hush()                           the line on screen goes and the waiting ones are dropped (a scene ends: the wake-up)
+     drop(test) → n                   the waiting lines test({ who, id, line }) is true for are dropped (NewScreen.js: the
+                                      arrival's mood strings; look pass B07) }
+   An anchor may carry within: [left, right] (CSS px): its line stays between them (the bridge's crew lines: on the glass).
    In the shell's 'wake' mode (start/Pods.js) the anchors are the bridge's names ('stop:person:<id>', 'stop:aura'), the
    round things to keep off are the wake module's discs(), and its panel's words (#ns-wake-words .sw) are kept off too.
 */
@@ -224,6 +227,7 @@
         else if (a.side === 'left') { x = a.x - w - 12; y = a.y - Math.min(hgt, 64) / 2; }
         else if (a.side === 'right') { x = a.x + 12; y = a.y - Math.min(hgt, 64) / 2; }
         else if (a.side === 'center') { x = a.x - w / 2; y = a.y - hgt / 2; }
+        if (a.within) x = Math.max(a.within[0], Math.min(a.within[1] - w, x));       // kept on the glass (Stop.js)
         return { x: Math.round(Math.max(EDGE, Math.min(innerWidth - w - EDGE, x))), y: Math.round(Math.max(EDGE, Math.min(innerHeight - hgt - EDGE, y))), w, h: hgt };
     }
     /** Round things on screen now, in art px: worlds, our Lander. Travel offers them if it can. */
@@ -403,6 +407,7 @@
         told,
         forget,
         hush() { end(); queue.forEach(settle); queue = []; },
+        drop(test) { const out = queue.filter(q => { try { return !!test(q); } catch (err) { return false; } }); out.forEach(settle); queue = queue.filter(q => !out.includes(q)); return out.length; },
     };
     NS.register('voice', mod);
 })();

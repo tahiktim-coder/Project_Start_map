@@ -6,8 +6,9 @@
    a colony, ruins, life...: an icon each), the lit key on Cora's console for "Leave orbit", and what the glass shows
    while a tag is pointed at (Scan sweeps the world's face, the team's way down, guide lines to a dock, a reticle on a
    field, the dive into a giant's clouds, chevrons at the window's edge). The words themselves are DOM (stop/Tags.js).
-   House style (docs/ART_STYLE.md): ramps from the ink, 8 x 8 Bayer dither, motion in 125 ms steps. Warm amber for what you
-   can do, cool grey for settling and for what the glass only tells. No randomness.
+   House style (docs/ART_STYLE.md): ramps from the ink, 8 x 8 Bayer dither, motion in 125 ms steps. Warm (--warm, C20: one
+   warm, the glass amber folded into it) for what you can do, cool steel (--cool) for settling, the finds and what the glass
+   only tells: the scan's sweep, the strange site, Fly closer's ring (C23). No randomness.
    Loaded only when the new-screen switch is on, after art/Paint.js and before stop/Stop.js.
 
    window.NSTagArt (frozen)
@@ -21,7 +22,8 @@
      pin(c, x, y, tone, o)            the mark on the target: o.pulse (t ms, or null), o.lift
      findMark(c, x, y, o)             a find's mark on the world: o.state 'open' | 'target' | 'done', o.hot, o.pulse, o.born
                                       (ms since it was found: one ring goes out), o.t, o.still
-     key(c, x, y, w, h, o)            the helm key plate: o.hot, o.next, o.t
+     key(c, x, y, w, h, o)            the helm key plate: o.hot, o.next, o.t; o.off (unlit, steel); o.fill 0..1 a held key's
+                                      dithered light; o.ticks (7): the hold's ticks under its word, lit as it fills
      panel(c, x, y, w, h, t)          the stock's small display set into the wall
      hatchLight(c, cx, floorY, k)     warm light rising out of the open hatch (k 0..1)
      preview(c, kind, o)              what the glass shows while a tag is pointed at; kind: 'scan' 'route' 'dock' 'reticle'
@@ -35,9 +37,11 @@
     const SW = 640, SH = 360, ICON = 9, CHIP = 5, STEP = 125;
 
     // ── colours: four steps, dim to bright ──
+    const token = (name, or) => { try { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || or; } catch (err) { return or; } };
+    const WARM = token('--warm', '#f08c2e'), WARM_BR = token('--warm-br', '#ffc27a'), COOL = token('--cool', '#a9b6bc');
     const RAMPS = {
-        warm: ['#8a5422', '#e8964a', '#f7c483', '#fff3dc'],
-        cool: ['#3a474e', '#6b7a82', '#a9b6bc', '#dde4e7'],
+        warm: ['#8a5422', WARM, WARM_BR, '#fff3dc'],
+        cool: ['#3a474e', '#6b7a82', COOL, '#dde4e7'],
         ui: ['#284650', '#3d6670', '#9fd8e6', '#e1f6fb'],
         ink: [INK, INK, INK, INK],
     };
@@ -207,7 +211,7 @@
         one ring goes out), t, still }. A small diamond with a lit point; the target inside corner brackets, its diamond
         blinking; a visited one a small grey cross. An ink rim keeps it clear on a lit face. */
     function findMark(c, x, y, o) {
-        const opt = o || {}, done = opt.state === 'done', target = opt.state === 'target', r = ramp(done ? 'cool' : 'warm'), lift = opt.hot ? 1 : 0;
+        const opt = o || {}, done = opt.state === 'done', target = opt.state === 'target', r = ramp(target ? 'warm' : 'cool'), lift = opt.hot ? 1 : 0;   // where GO DOWN goes is warm; a find is steel (C24)
         x = Math.round(x); y = Math.round(y);
         c.fillStyle = INK;
         for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) if (dx || dy) c.fillRect(x + dx, y + dy, 1, 1);
@@ -244,9 +248,11 @@
 
     // ── the helm key: a lit plate set in Cora's console ──
     const SPILL = 14;
-    /** o.tone 'cool': the settle key, steel and quiet; o.fill 0..1: how far a held key has filled (left to right, lit). */
+    /** o.tone 'cool': the settle key, steel and quiet; o.off: unlit steel (Leave orbit while the team is down); o.fill 0..1:
+        how far a held key has filled (left to right, a dithered light); o.ticks: that many ticks under its word, lit as it fills. */
     function key(c, x, y, w, h, o) {
-        const opt = o || {}, cool = opt.tone === 'cool', r = cool ? RAMPS.cool : RAMPS.warm, on = opt.next || opt.hot, beat = opt.next && !opt.still ? [0, 1, 2, 2, 1, 0, 0, 0][Math.floor((opt.t || 0) / STEP) % 8] : 0;
+        const opt = Object.assign({}, o || {}, (o || {}).off ? { hot: false, next: false, tone: 'cool' } : {});
+        const cool = opt.tone === 'cool', r = cool ? RAMPS.cool : RAMPS.warm, on = opt.next || opt.hot, beat = opt.next && !opt.still ? [0, 1, 2, 2, 1, 0, 0, 0][Math.floor((opt.t || 0) / STEP) % 8] : 0;
         x = Math.round(x); y = Math.round(y);
         if (opt.next) {                                                    // the next step: its light spills on the desk round it (added light, dithered)
             const W = w + SPILL * 2, H = h + SPILL * 2, px = phase(x - SPILL), py = phase(y - SPILL);
@@ -273,14 +279,24 @@
             if (state === 2) { g.fillStyle = at(r, 1); g.fillRect(1, 1, 1, h); g.fillRect(w, 1, 1, h); }
             g.fillStyle = at(r, state === 2 ? 3 : 1); g.fillRect(1, 1, 1, 1); g.fillRect(w, 1, 1, 1);
         }), x - 1, y - 1);
-        const fill = Math.max(0, Math.min(1, opt.fill || 0));
-        if (fill > 0) {                                                    // held: a light fills the key from the left (cold, or warm: Fight to escape), then the choice is made
-            const fw = Math.max(1, Math.round((w - 2) * fill)), fh = opt.fillH > 0 ? Math.max(1, Math.min(h - 2, opt.fillH - 1)) : h - 2;
+        const fill = Math.max(0, Math.min(1, opt.fill || 0)), fh = opt.fillH > 0 ? Math.max(1, Math.min(h - 2, opt.fillH - 1)) : h - 2;
+        if (fill > 0) {                                                    // held: a dithered light fills the key from the left (cold, or warm: Fight to escape), then the choice is made
+            const fw = Math.max(1, Math.round((w - 2) * fill));
             c.save(); c.globalCompositeOperation = 'lighter';
-            c.fillStyle = cool ? 'rgba(120, 150, 165, 0.5)' : 'rgba(200, 110, 40, 0.42)'; c.fillRect(x + 1, y + 1, fw, fh);
-            if (fh < h - 2) { c.fillStyle = cool ? 'rgba(120, 150, 165, 0.14)' : 'rgba(200, 110, 40, 0.12)'; c.fillRect(x + 1, y + 1 + fh, fw, h - 2 - fh); }   // under its chips the same light, low: they stay legible
-            c.fillStyle = at(r, 3); c.fillRect(x + 1, y + h - 2, fw, 1);   // its bright edge along the bottom
+            c.drawImage(sprite(`fill:${cool ? 'c' : 'w'}:${fw}x${h}:${fh}:${phase(x + 1)}:${phase(y + 1)}`, fw, h - 2, g => {
+                g.fillStyle = cool ? '#26343b' : '#4a2a10';
+                for (let yy = 0; yy < h - 2; yy++) for (let xx = 0; xx < fw; xx++) if (threshold(x + 1 + xx, y + 1 + yy) < (yy < fh ? 0.55 : 0.18)) g.fillRect(xx, yy, 1, 1);   // under its chips the same light, low: they stay legible
+            }), x + 1, y + 1);
             c.restore();
+            c.fillStyle = at(r, 3); c.fillRect(x + 1, y + fh, fw, 1);       // its bright edge under its word
+        }
+        const n = opt.ticks | 0;
+        if (n > 0) {                                                       // a held key: its ticks under its word (the hold, seen before it is pressed), lit as it fills
+            const ty = y + fh - 1;
+            for (let i = 0; i < n; i++) {
+                const k = (i + 1) / (n + 1), tx = x + 1 + Math.round((w - 2) * k);
+                c.fillStyle = at(r, fill >= k ? 3 : opt.hot ? 2 : 1); c.fillRect(tx, ty - 1, 1, 2);   // seen at rest, brighter while pointed at
+            }
         }
     }
 
@@ -318,9 +334,11 @@
     // ── what the glass shows while a tag is pointed at ──
     const tick = o => (o.still ? 0 : Math.floor((o.t || 0) / STEP));
     function dot(c, x, y, hex) { c.fillStyle = hex; c.fillRect(Math.round(x), Math.round(y), 1, 1); }
-    /** Scan: an arc of light sweeps the world's face, left to right, with two fading arcs behind it. */
+    /** Scan: an arc of steel light sweeps the world's face, left to right, with two fading arcs behind it (C23). o.ping: ms
+        since a click landed meanwhile (the scale's pin flashes once: the click was seen). */
     function sweep(c, o) {
-        const [cx, cy, rad] = o.disc, r = RAMPS.ui, k = tick(o), u = o.still ? 0.62 : (k % 14) / 13;
+        const [cx, cy, rad] = o.disc, r = RAMPS.cool, k = tick(o), u = o.still ? 0.62 : (k % 14) / 13;
+        if (o.ping != null && o.ping >= 0 && o.ping < STEP * 6) pin(c, cx - rad - 4, cy, 'cool', { pulse: o.ping, lift: 1 });
         [[0, 3], [-0.07, 1], [-0.14, 0]].forEach(([du, lv]) => {
             const th = (clamp01(u + du) * 2 - 1) * Math.PI / 2 * 0.94, ax = Math.sin(th) * rad;
             const n = Math.ceil(rad * 3.4);
@@ -377,9 +395,9 @@
             for (let d = 0; d < 6; d++) for (let s = 0; s < 2; s++) { dot(c, cx + d + s, y - 5 + d, r[lv]); dot(c, cx + d + s, y + 5 - d, r[lv]); }
         }
     }
-    /** Fly closer: a ring closing in on the site. */
+    /** Fly closer: a steel ring closing in on the site (C23; the glass clips it). */
     function target(c, o) {
-        const [x, y] = o.at, r = RAMPS.warm, k = o.still ? 2 : tick(o) % 6, rad = 10 - k;
+        const [x, y] = o.at, r = RAMPS.cool, k = o.still ? 2 : tick(o) % 6, rad = 10 - k;
         ringPts(x, y, rad).forEach(([px, py], i) => { if (i % 2 === 0) dot(c, px, py, r[k > 3 ? 2 : 1]); });
         dot(c, x, y, r[3]);
     }
@@ -397,7 +415,7 @@
     }
     /** The strange site's mark: a faint cold contact in space, a small ring that swells and fades in slow steps. */
     function mark(c, o) {
-        const [x, y] = o.at.map(Math.round), r = RAMPS.ui, s = o.still ? 3 : Math.floor((o.t || 0) / (STEP * 3)) % 8, swell = [0, 1, 2, 3, 3, 2, 1, 0][s];
+        const [x, y] = o.at.map(Math.round), r = RAMPS.cool, s = o.still ? 3 : Math.floor((o.t || 0) / (STEP * 3)) % 8, swell = [0, 1, 2, 3, 3, 2, 1, 0][s];
         ringPts(x, y, 2.4).forEach(([px, py]) => dot(c, px, py, r[Math.min(3, 1 + (swell > 1 ? 1 : 0))]));
         if (swell >= 2) ringPts(x, y, 4.2).forEach(([px, py], i) => { if (i % 2 === 0) dot(c, px, py, r[0]); });
         dot(c, x, y, r[swell > 1 ? 3 : 2]);

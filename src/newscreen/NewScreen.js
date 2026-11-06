@@ -13,7 +13,9 @@
                                bk, bW 640, bH 360, bLeft, bTop,  ts, tTop, tBot, tRows, tLeft, tY0 }
                              k: device px per art px (at least 540 art rows); hull: the art column where space starts.
                              bk: device px per bridge px, the largest that shows the whole 640 x 360 bridge (3 at 1080,
-                             2.4 at 864, 2.58 at 928; not a whole number: nearest-neighbour); bLeft, bTop: CSS px, centred.
+                             2.4 at 864, 2.58 at 928; not a whole number: nearest-neighbour), and the whole number under it
+                             when that is within 10 % (2 at 1366 x 768: even pixels, the hull round it; bkSnap true; look
+                             pass B07); bLeft, bTop: CSS px, centred.
                              Stop.js fills what is left beside it with the space outside our hull. The tower fit (BUILD_B §8): ts device px per tower px (rows tTop..tBot, the whole
                              tower: devH / 1336), columns from tLeft; tY0 device px from the top (the tower centred when
                              the 45 % width cap shrank it). hull = ceil((HULL_OUT − tLeft) × ts / k).
@@ -54,6 +56,9 @@
        deckCost(key) → [{ icon, text, tone }]   what a red deck costs while it stays broken (the tower's tag shows it)
        deckChoose(key, i) → bool
      show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, playJump() → Promise
+     holdVoice(reason, on, ms?)  no new voice line starts while any reason holds it (ms: from now; left out: until let go).
+                             The arrival holds it from flow.arrive to the bridge shown + 600 ms (the dive is wordless: the
+                             travel line on screen goes, the warp's mood strings are dropped); stop/Copy.js through the fall
      wake(on) → bool         the wake-up after the launch film (start/Pods.js): on, the 'wake' module has the screen (travel
                              and the tower are not drawn, cards wait, the travel view's first show waits); off, the travel
                              view opens as on a sector's first show (from black, its title, the tower sliding in)
@@ -74,6 +79,8 @@
     const BLOCKED_RENDER_EVERY = 12;                      // under a card or a minigame the picture is drawn only every 12th frame (it is covered)
     const HOLD_STOP_MS = 4000, HOLD_TRAVEL_MS = 1800, CLICK_GRACE_MS = 700;   // a card that turns up on its own waits until the picture has been seen
     const OPENING_MAX_MS = 8000;              // a first arrival's sector title: a card waits for 'opening:done', or this long at most (look pass B02)
+    const VOICE_AFTER_SHOWN_MS = 600, BRIDGE_SNAP = 0.9;   // the bridge's first words wait this long; a whole bridge scale within 10 %
+    const MOOD_RE = /^(Jaxon|Aris|Vance|Mira|Cora):\s+(?!["“'‘])(.+)$/;   // a crew status line, not speech ("Mira: Unsettled by hostile readings.")
     /** How long such a card waits on a world whose bridge we saw before (stop/Stop.js marks it _nsSeen as it closes): less,
         NEW_LOOK_ECONOMY.HOLD_SEEN_MS (bundle.js, read when used; without it the full hold) */
     function holdSeenMs() {
@@ -115,9 +122,14 @@
     const st = () => { const a = theApp(); return (a && a.state) || null; };
     const orbit = () => window.NSOrbit || null;
     const drawn = name => name !== 'travel' && name !== 'tower' || OUTSIDE.has(mode);
+    // ── the voice holds (look pass B07): while one holds, the voice module's clock stops, so no new line starts ──
+    const voiceHolds = new Map();                                                         // reason → clock ms it ends (Infinity: until let go)
+    function holdVoice(reason, on, ms) { if (on) voiceHolds.set(reason, ms == null ? Infinity : clock.t + ms); else voiceHolds.delete(reason); }
+    function voiceHeld() { let held = false; voiceHolds.forEach((until, k) => { if (clock.t < until) held = true; else voiceHolds.delete(k); }); return held; }
     const each = (fn, ...args) => ORDER.forEach(n => {
         const m = mods[n];
         if (fn === 'render' && !drawn(n)) return;
+        if (fn === 'update' && n === 'voice' && voiceHeld()) return;
         if (m && typeof m[fn] === 'function') { try { m[fn](...args); } catch (err) { console.error(`NewScreen: ${n}.${fn} failed`, err); } }
     });
 
@@ -154,7 +166,7 @@
         measure();
         new MutationObserver(onAdded).observe(document.body, { childList: true });
         bus.on('opening:done', () => { openingUntil = -1e9; });
-        bus.on('hidden', () => { openingUntil = -1e9; });
+        bus.on('hidden', () => { openingUntil = -1e9; voiceHolds.clear(); });
     }
 
     // ── a card that turns up on its own (a crew moment, a story card, the head count) waits, hidden, until the dive is over
@@ -207,7 +219,9 @@
         G.offX = G.hull - G.HULL_OUT - 1;                                                    // the tower art at 1:1 would end at the hull edge (older code)
         // the bridge (layout D): 640 x 360 bridge px, as large as the window shows it whole, centred (Stop fills the sides)
         G.bW = BRIDGE_W; G.bH = BRIDGE_H;
-        G.bk = Math.max(1, Math.min(devW / BRIDGE_W, devH / BRIDGE_H));
+        const bk = Math.max(1, Math.min(devW / BRIDGE_W, devH / BRIDGE_H)), whole = Math.floor(bk);
+        G.bkSnap = whole >= 1 && whole < bk && whole / bk >= BRIDGE_SNAP;
+        G.bk = G.bkSnap ? whole : bk;
         G.bLeft = Math.round((innerWidth - BRIDGE_W * G.bk / dpr) / 2); G.bTop = Math.round((innerHeight - BRIDGE_H * G.bk / dpr) / 2);
         G.toArt = (cx, cy) => [Math.floor(cx * dpr / G.k), Math.floor(cy * dpr / G.k)];
         G.toCss = (ax, ay) => [ax * G.k / dpr, ay * G.k / dpr];
@@ -347,8 +361,10 @@
             const s = st(), a = theApp(), node = window.NSRoute.find(s, id);
             if (!s || !a || !node) { bus.emit('flow:failed', { id }); return false; }
             const diving = !!mods.stop && mode === 'travel';
-            if (diving) { stopId = node.id; setMode('dive-in'); bus.emit('dive:start', { id: node.id }); }
+            if (diving) { stopId = node.id; setMode('dive-in'); bus.emit('dive:start', { id: node.id }); holdVoice('arrive', true); quiet(); }
+            const moods = diving ? moodsDuring() : null;
             a.handleWarp(node, { flown: true });
+            if (moods) moods.drop();
             if (s.currentSystem === node) {
                 window.NSRoute.arrive(s, node.id);
                 bus.emit('flow:arrived', { id: node.id });
@@ -441,9 +457,18 @@
     };
 
     // ── the modes: travel, the dive in, the bridge, the dive back out (BUILD_B §1) ──
+    /** The travel line on screen goes as we arrive (the dive is wordless). */
+    function quiet() { const v = mods.voice; if (v && typeof v.hush === 'function') { try { v.hush(); } catch (err) { console.error('NewScreen: the voice hush failed', err); } } }
+    /** The warp's crew status lines ("Mira: Unsettled by hostile readings.") stay in the log and are never said on the bridge. */
+    function moodsDuring() {
+        const said = new Set(), hear = e => { const m = MOOD_RE.exec(String((e && e.detail && e.detail.message) || '').trim()); if (m) said.add(m[2].trim()); };
+        addEventListener('log-updated', hear);
+        return { drop() { removeEventListener('log-updated', hear); const v = mods.voice; if (said.size && v && typeof v.drop === 'function') v.drop(q => said.has(String(q.line).trim())); } };
+    }
     function setMode(m) {
         if (m === mode) return;
         mode = m;
+        if (m === 'travel') voiceHolds.delete('arrive');
         if (root) root.dataset.mode = m;
         if (m !== 'travel' && root) root.classList.remove('is-pointing');
         bus.emit('mode', { mode: m });
@@ -466,6 +491,7 @@
         disarm();
         setMode('stop');
         stopShownAt = performance.now();
+        if (voiceHolds.has('arrive')) holdVoice('arrive', true, VOICE_AFTER_SHOWN_MS);      // the bridge seen a moment: then its first words
         const s = st();
         stopHoldMs = s && s.currentSystem && s.currentSystem._nsSeen ? holdSeenMs() : HOLD_STOP_MS;   // a new world: the picture first, longer
         stopId = (s && s.currentSystem && s.currentSystem.id) || (p && p.id) || stopId;
@@ -641,6 +667,6 @@
         on: ON, G, clock, bus, anchors, mods, game, flow, debug, register, sizeCanvas,
         get app() { return theApp(); },
         mode: () => mode,
-        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, playJump, wake,
+        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, playJump, wake, holdVoice,
     });
 })();

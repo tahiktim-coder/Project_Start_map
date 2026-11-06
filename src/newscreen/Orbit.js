@@ -94,7 +94,7 @@
     const PATCH_COST = 5, TRIP_QUIET_MS = 3500, TRIP_OVER_MS = 600, TRIP_LOST_MS = 20000, FIX_CHECK_MS = 500;
     const TREAT_WAIT_MS = 9000;                                                              // the trip's story waits at most this long for the treat line
     const BREACH_WAIT_MS = 5000;                                                             // a breach at a stop with no trip: the bridge is seen first
-    const HIT_WAIT_MS = 10000;                                                               // what waits for the hull hit's two lines (the trip's card, the dive out) waits at most this long
+    const HIT_WAIT_MS = 10000, UNANSWERED_MS = 1200;                                         // what waits for the hull hit's two lines waits at most this long; a call left: her line, then the dive
     const DECK_KEY = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', hold: 'cargo', cargo: 'cargo', engineering: 'engineering' };
     const DECK_WORD = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', cargo: 'hold', engineering: 'engine room' };
     const NOT_CRISES = new Set(['LUCKY_FIND']);                                              // a find is not a crisis
@@ -259,10 +259,11 @@
             add('accept', 'Go down', 'key', () => window.dispatchEvent(new CustomEvent('req-wrong-accept')), false, 'ends the journey', [chip('end', 'ends the journey', 'cool')]);
             return out;
         }
-        if (n.isStation && !n.stationInvestigated) add('dock', 'Dock', 'station', () => app.handleStationAction(), false, 'search the station', [FREE, chip('salvage', 'salvage')]);
+        const upTo = chip('salvage', `up to ${econ('CARD_SALVAGE_MAX', 20)} salvage`);       // DRAFT (look pass): the most a card's choice gives (B07)
+        if (n.isStation && !n.stationInvestigated) add('dock', 'Dock', 'station', () => app.handleStationAction(), false, 'search the station', [FREE, upTo]);
         const pump = depotGain(s);                                                           // docked: the fuel pump, once (not Last Port's relay: no station)
         if (n.isStation && n.stationInvestigated && !n.nsDepot && pump > 0 && s.salvage >= econ('DEPOT_SALVAGE', 25)) add('depot', 'Fuel depot', 'station', () => depot(app, n), false, `+${pump} energy`, [chip('salvage', `-${econ('DEPOT_SALVAGE', 25)} salvage`, 'high'), chip('energy', `+${pump} energy`, 'gain')]);   // DRAFT: its words
-        if (n.isAsteroidField && !n.asteroidMined) add('mine', 'Mine it', 'field', () => app.handleAsteroidAction(), false, 'for salvage', [FREE, chip('salvage', 'salvage')]);
+        if (n.isAsteroidField && !n.asteroidMined) add('mine', 'Mine it', 'field', () => app.handleAsteroidAction(), false, 'for salvage', [FREE, upTo]);
         const scoop = (s.upgrades || []).includes('fuel_scoop');                             // the scoop took its fill on arrival: no skim on top
         const gain = Math.min(SKIM_ENERGY, Math.max(0, Math.round(100 - s.energy)));
         if (n.type === 'GAS_GIANT' && !n.nsSkimmed && !scoop && s.energy < 100) add('skim', 'Refuel', 'giant', () => skim(app, n), false, `+${gain} energy`, [chip('energy', `+${gain} energy`, 'gain')]);   // full tanks: nothing to skim
@@ -444,7 +445,7 @@
                 crisis = ev.id;
                 breakPatched(s);
                 if (ev.id === 'POWER_SURGE' && aboardWell('ENGINEER')) { log(s, LINES.jaxonSurge); log(s, LINES.jaxonSays); }
-                else run = Promise.resolve(app.showShipMalfunctionModal(ev));
+                else { const away = new Set(members.map(m => m.name)), said = (ev.dialogue || []).filter(l => !away.has(l.speaker)); run = Promise.resolve(app.showShipMalfunctionModal(said.length ? Object.assign({}, ev, { dialogue: said }) : ev)); }   // its lines only from those aboard (B07)
             }
         }
         return run.then(() => {
@@ -736,9 +737,10 @@
         if (trip) return Promise.resolve({ ok: false, say: LINES.away });
         if (n.isStructure || n.type === 'STRUCTURE') return Promise.resolve({ ok: true, direct: true });   // it refuses itself
         if (n._isWrongPlace) return Promise.resolve({ ok: false });
-        if (call || n._nsCall) { dropCall(s); log(s, LINES.unanswered); }
-        if (!breachDue(s, n)) return Promise.resolve({ ok: true });
-        return playBreach(app, [], true).then(() => (trip ? { ok: false, say: LINES.away } : { ok: true }));   // the hull hit due here, nobody sent: it comes as we leave (asked again after its lines)
+        const left = !!(call || n._nsCall), v = left && NS() && NS().mods && NS().mods.voice;
+        if (left) { dropCall(s); log(s, LINES.unanswered); if (v && v.say) v.say({ id: 'aura', who: 'A.U.R.A.', text: LINES.unanswered }); }   // she says it on the bridge; the dive starts UNANSWERED_MS later (B07)
+        const said = left ? new Promise(go => setTimeout(go, UNANSWERED_MS)) : Promise.resolve();
+        return said.then(() => (!breachDue(s, n) ? { ok: true } : playBreach(app, [], true).then(() => (trip ? { ok: false, say: LINES.away } : { ok: true }))));   // the hull hit due here, nobody sent: it comes as we leave (asked again after its lines)
     }
 
     // ── the disc: Mira's star fix ──

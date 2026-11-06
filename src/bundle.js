@@ -4494,6 +4494,10 @@ Then you're through.`,
             deepScanConfig.hazard.onDeepScan(planet);
         }
 
+        // The new look: her story line here (the two below) is the one she says now, at once (look pass B07: one A.U.R.A. line a stop)
+        const storyHeard = [], hearStory = e => { const m = String((e && e.detail && e.detail.message) || ''); if (/^A\.U\.R\.A\.:/.test(m)) storyHeard.push(m); };
+        if (isNew) addEventListener('log-updated', hearStory);
+
         // Check if PREDATORY was just revealed
         if (planet.tags && planet.tags.includes('PREDATORY')) {
             this.state.addLog("⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior.");
@@ -4511,6 +4515,8 @@ Then you're through.`,
             this.state.addLog("⚡ OLD SIGNAL: a beacon on our own channel, still transmitting.");
             this.state.addLog('A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it."');
         }
+
+        if (isNew) removeEventListener('log-updated', hearStory);
 
         // ANCIENT RUINS: knowledge and reduced EVA risk
         if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) {
@@ -4563,7 +4569,9 @@ Then you're through.`,
         this.orbitView.updateCommandDeck(this.state.currentSystem);
         const newKind = isNew ? this.noteNewKind(planet) : null;           // the new look: the first scan of each kind of world is +1 data
         this.renderOrbit();
-        if (isNew && window.NSScan) window.NSScan.deep(this, planet, newKind);   // the new look: A.U.R.A. says what the scan read (last, so it is said first)
+        const storyLine = storyHeard[storyHeard.length - 1], voice = isNew && window.NewScreen && window.NewScreen.mods && window.NewScreen.mods.voice;
+        if (storyLine && voice && typeof voice.sayLine === 'function') voice.sayLine(storyLine);   // her story line wins: said now, in place of the scan's own line
+        else if (isNew && window.NSScan) window.NSScan.deep(this, planet, newKind);   // the new look: A.U.R.A. says what the scan read (last, so it is said first)
 
         // Check for distress signals after scan (small chance) - use queue; never in the last sector (docs/CANON.md §9)
         if (typeof rollDistressSignal !== 'undefined' && this.state.currentSector < FINAL_SECTOR) {
