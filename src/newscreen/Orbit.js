@@ -65,7 +65,7 @@
      fixIn(app, planet)            the wreck's star fix: dated now (Mira went) or after the next warp (she stayed)
      canDate(app, node), datable(state) → node | null
      breakPatched(state)           every patched deck breaks again (a crisis aboard, the sector jump)
-     deckChoices(state, deck) → [{ key: 'fix' | 'patch' | 'live', words, note }]   deck: the tower's name (hold = cargo); the
+     deckChoices(state, deck) → [{ key: 'fix' | 'patch' | 'live', words, note, cost? }]   deck: the game's (hold = cargo); the
                                    note under "Live with it" is what living with it costs (deckCost's words)
      deckCost(state, deck) → [{ icon: 'cost', text, tone: 'loss' }]   what a broken deck costs in the game's rules (DECK_COST,
                                    and DECK_COST_IF while something aboard needs it), a few words each; [] for a working deck
@@ -758,8 +758,8 @@
     function deckChoices(state, deck) {
         const o = deckOf(state, deck);
         if (!o || !o.d || o.d.status !== 'DAMAGED') return [];
-        const out = [{ key: 'fix', words: 'Fix it', note: `costs ${fixCost(state, o.key)} salvage` }];
-        if (!o.d._nsWorn) out.push({ key: 'patch', words: 'Patch it', note: 'a little salvage, for now' });
+        const out = [{ key: 'fix', words: 'Fix it', note: `costs ${fixCost(state, o.key)} salvage`, cost: fixCost(state, o.key) }];   // cost: the repair plate's chip (B04)
+        if (!o.d._nsWorn) out.push({ key: 'patch', words: 'Patch it', note: 'a little salvage, for now', cost: PATCH_COST });
         const costs = deckCost(state, deck).map(c => c.text);
         out.push({ key: 'live', words: 'Live with it', note: costs.length ? costs.join(' · ') : 'it stays broken' });
         return out;

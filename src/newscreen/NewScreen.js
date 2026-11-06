@@ -47,7 +47,8 @@
                               first: NSOrbit.beforeLeave) the bridge takes no clicks or keys, and act, aim and leave refuse
        trip() → { ids, aboard } | null   who is down now;  sign() → { kind, comes } | null   this stop's crisis sign
        scanDue() → bool       we orbit a world nobody has scanned from the bridge (Stop.js scans it as the bridge shows)
-       person(id, say?)       a person in the tower clicked: their line, said beside them (not logged: saves keep 20 lines)
+       person(id, say?, state?)   a person in the tower clicked: their line by their state ({ status, weak }: ShipRoutine.line),
+                              said beside them (not logged: saves keep 20 lines); once a sector per person and state (look pass B04)
        bench() → bool         Mira's bench clicked: date the wreck whose star fix is on it
        datable() → node | null    a wreck whose fix is on Mira's bench now
        deckChoices(key) → [{ words, note }]   a red deck clicked: fix, patch, live with it
@@ -70,6 +71,7 @@
     const ON = !!window.NEW_SCREEN;
     const SPACE_MIN = 0.55, TOWER_SHARE = 0.42, MIN_ART_ROWS = 540, RESIZE_MS = 150, MAX_DT = 100;
     const TOWER_MAX = 0.45, TOWER_PAD_TOP = 40, TOWER_PAD_TAIL = 48, TOWER_LEFT = 40, BRIDGE_W = 640, BRIDGE_H = 360;
+    const TOWER_CUT_BELOW = 0.7, TOWER_CUT = 0.5;                                  // under 0.7 the tower is re-cut at the whole scale 1/2 (Tower.js, look pass B04)
     const JUMP_FALLBACK_MS = 5000, REFUSE_GAP_MS = 4000, DIVE_WATCH_MS = 4500;
     const BLOCKED_RENDER_EVERY = 12;                      // under a card or a minigame the picture is drawn only every 12th frame (it is covered)
     const HOLD_STOP_MS = 4000, HOLD_TRAVEL_MS = 1800, CLICK_GRACE_MS = 700;   // a card that turns up on its own waits until the picture has been seen
@@ -200,7 +202,8 @@
         G.tTop = (L ? L.TOP0 : 454) - TOWER_PAD_TOP; G.tBot = (L ? L.TAIL0 : 1702) + TOWER_PAD_TAIL; G.tRows = G.tBot - G.tTop;
         G.tLeft = TOWER_LEFT;
         const towerW = G.HULL_OUT - G.tLeft;
-        G.ts = Math.min(devH / G.tRows, TOWER_MAX * devW / towerW);
+        const fitTs = Math.min(devH / G.tRows, TOWER_MAX * devW / towerW);
+        G.ts = fitTs < TOWER_CUT_BELOW && fitTs >= TOWER_CUT ? TOWER_CUT : fitTs;            // 1366 x 768, 1280 x 720: never smoothed
         G.tY0 = Math.round((devH - G.tRows * G.ts) / 2);
         G.hull = Math.ceil(towerW * G.ts / G.k);
         if (G.W - G.hull < SPACE_MIN * G.W) G.hull = Math.floor((1 - SPACE_MIN) * G.W);
@@ -325,6 +328,7 @@
     }
     const ask = (fn, ...args) => { const o = orbit(); if (!o || typeof o[fn] !== 'function') return null; try { return o[fn](...args); } catch (err) { console.error(`NewScreen: NSOrbit.${fn} failed`, err); return null; } };
     const askScan = (fn, ...args) => { const S = window.NSScan; if (!S || typeof S[fn] !== 'function') return null; try { return S[fn](...args); } catch (err) { console.error(`NewScreen: NSScan.${fn} failed`, err); return null; } };
+    const heard = new Map();                                                             // flow.person: what each one last said (sector:state)
     const flow = {
         canGo: id => window.NSRoute.canGo(st(), id),
         refuse(id) { const r = flow.canGo(id); if (!r.ok) speak(r.say); },
@@ -426,11 +430,12 @@
                 return true;
             }, err => { leaving = false; console.error('NewScreen: leaving orbit failed', err); return false; });   // never held for good
         },
-        person(id, say) {
-            const s = st(), R = window.ShipRoutine;
-            if (!s || !R || !id) return;
-            const l = R.line('travel', id, say || 'work'), v = mods.voice;
+        person(id, say, state) {
+            const s = st(), R = window.ShipRoutine, k = state ? state.status + (state.weak ? ':weak' : '') : 'well';
+            if (!s || !R || !id || heard.get(id) === s.currentSector + ':' + k) return;      // a second click in the same sector says nothing
+            const l = R.line('travel', id, say || 'work', state), v = mods.voice;
             if (!l || !l.text || !v || typeof v.say !== 'function') return;
+            heard.set(id, s.currentSector + ':' + k);
             try { v.say({ id, who: l.who, text: l.text }); } catch (err) { console.error('NewScreen: voice.say failed', err); }
         },
         datable: () => ask('datable', st()) || null,

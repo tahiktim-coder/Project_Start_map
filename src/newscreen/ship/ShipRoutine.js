@@ -15,7 +15,8 @@
      STATES                  [{ id: 'travel', name, cycle: 200000, pair, looks }]
      at(stateId, t, restless?) → [{ id, deck, x, y, act, facing, ms, z, say, screen?, awake? }]   everyone's pose at t (ms);
                              restless: the ids at stress 1 or more (their RESTLESS stops)
-     line(stateId, id, say) → { who, text }   what someone says (who: their first name, or 'A.U.R.A.' for Cora)
+     line(stateId, id, say, state?) → { who, text }   what someone says (who: their first name, or 'A.U.R.A.' for Cora and
+                             for anyone sedated); state { status, weak }: hurt, weak or confined have their own line (B04)
      build(stateId, restless?), stateOf(stateId), NAMES { id → first name }, REACT [[id, say, from s, to s]], RESTLESS_IDS
 */
 (function (root) {
@@ -217,8 +218,20 @@
     // a reaction someone says on their own, once a lap, while the world passes: [id, say key, from s, to s]
     const REACT = [['vance', 'zeta', 15.5, 21.5], ['mira', 'titan', 49.4, 56], ['aris', 'chronos', 110, 116.5]];
     const NAMES = { cora: 'Cora', jaxon: 'Jaxon', aris: 'Aris', vance: 'Vance', mira: 'Mira' };
-    function line(stateId, id, say) {
-        const set = (LINES[stateOf(stateId).id] || {})[id] || {};
+    // what someone says by their state (look pass B04, L-17): hurt in bed, too weak from a missed supper, shut in their bunk;
+    // asleep (sedated): A.U.R.A. answers for them. Cora's answer is always A.U.R.A.'s own (her 'any')
+    const BY_STATE = {
+        hurt: () => 'Not now, Commander. Give me a day.',                  // DRAFT (look pass): L-17, Jaxon's
+        weak: () => "I'm all right. Just tired.",                          // DRAFT (look pass): L-17, Aris's
+        confined: () => 'You know where to find me.',                      // DRAFT (look pass): L-17, Vance's
+        asleep: name => `${name} is sedated, Commander.`,                  // DRAFT (look pass): L-17, A.U.R.A.
+    };
+    /** state { status: 'well' | 'hurt' | 'asleep' | 'confined', weak } (NewScreen.game.crew): their line in that state. */
+    function line(stateId, id, say, state) {
+        const set = (LINES[stateOf(stateId).id] || {})[id] || {}, st = state || {};
+        const by = id === 'cora' ? null : st.status === 'asleep' ? 'asleep' : BY_STATE[st.status] ? st.status : st.weak ? 'weak' : null;
+        if (by === 'asleep') return { who: 'A.U.R.A.', text: BY_STATE.asleep(NAMES[id]) };
+        if (by) return { who: NAMES[id], text: BY_STATE[by](NAMES[id]) };
         const text = set[say] || set.any || set.work || Object.values(set)[0] || '';
         return { who: id === 'cora' ? 'A.U.R.A.' : NAMES[id], text };
     }

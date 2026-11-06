@@ -856,6 +856,7 @@ class GameState {
         delete c._nsWeak; delete c._nsHungerSick; delete c._nsMendAt;
         this.addLog(`${c.name} died of hunger.`);   // DRAFT
         window.dispatchEvent(new CustomEvent('crew-death', { detail: { crew: c } }));
+        if (window.NSSupper) return;                 // the death's beat at the table says it: A.U.R.A., then one person names them (tower/Supper.js, L-20)
         if (window.BarkSystem) window.BarkSystem.tryBark('CREW_DEATH', this, { crew: c });
         if (window.AuraSystem) window.AuraSystem.tryComment('CREW_DEATH', this, true);
     }
@@ -975,8 +976,8 @@ class GameState {
         // Visual feedback: screen shake on hull breach
         window.dispatchEvent(new CustomEvent('deck-damaged', { detail: { deckKey: key } }));
 
-        // Tutorial: first deck damage
-        if (!this._tutorialDeckSeen) {
+        // Tutorial: first deck damage (the new look: A.U.R.A.'s one line about the broken deck is said in the ship, tower/Tower.js tellRed)
+        if (!this._tutorialDeckSeen && !isNewScreen()) {
             this._tutorialDeckSeen = true;
             this.addLog('A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage."');
         }
