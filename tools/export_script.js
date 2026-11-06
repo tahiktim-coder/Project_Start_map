@@ -282,6 +282,19 @@ function frameSection() {
         ...textSection(3, 'The sector-3 arrival: no card (look pass B03)', block('src/newscreen/throw/Throw.js', /^\s*const LABEL = /m, 'LABEL'), 'A readout counts the beacons heard (the void\'s words), then Mira\'s line (A.U.R.A.\'s if she is dead), then the arrival line as narration, a sentence at a time.', undefined, true)];
 }
 
+/** The new look's ship in travel (look pass B04): a broken deck said once, the repair plate, supper at the galley table, the
+    crew clicked in the tower, the stock's first changes. */
+function shipSection() {
+    const KEY = 'src/newscreen/tower/ShipKey.js', SUP = 'src/newscreen/tower/Supper.js', TW = 'src/newscreen/tower/Tower.js', SR = 'src/newscreen/ship/ShipRoutine.js';
+    return ['## The ship in travel (the new look)', '',
+        ...textSection(3, 'A broken deck: A.U.R.A., once', block(TW, /^\s*const RED_LINE = /m, 'RED_LINE'), 'The first time a deck breaks, in the ship. The deck\'s words: The bridge, The lab, The quarters, The hold, The engine room.', undefined, true),
+        ...textSection(3, 'The repair plate: its rule chips and what is said after (look pass B04)', between(KEY, /const RULE = /, /\/\/ ── the icons/, 'RULE · FIXED · PATCHED · LIVE'), 'Click a red deck: Fix it, Patch it, Live with it. Each deck\'s rule chip shows under "Live with it" and while the deck is pointed at. Fix and Patch are said by Jaxon (A.U.R.A. when he cannot); Live with it by A.U.R.A.', undefined, true),
+        ...textSection(3, 'Supper at the galley table (look pass B04)', between(SUP, /const LINES = \{/, /const S = \{/, 'LINES · KEYS · TABLE · TAG_LAST'), 'After a jump, short of food: A.U.R.A., the one who offers, and the commander\'s reply on the plate. The table moment is a frame with "Not yet" first. A death there: the galley light goes down while the crew\'s and A.U.R.A.\'s CREW_DEATH lines are said (pools.md).', undefined, true),
+        ...textSection(3, 'The crew clicked in the tower', between(SR, /const LINES = \{/, /const REACT = /, 'LINES'), 'One line each; a second click in the same sector says nothing.', undefined, true),
+        ...textSection(3, 'The crew clicked, by their state (look pass B04)', between(SR, /const BY_STATE = \{/, /function line\(/, 'BY_STATE'), 'Hurt, too weak from a missed supper, shut in their bunk; asleep (sedated): A.U.R.A. answers.', undefined, true),
+        ...textSection(3, 'The stock: A.U.R.A., once each', block(TW, /^\s*const STOCK_TELL = /m, 'STOCK_TELL'), 'The first time each number beside its room changes.', undefined, true)];
+}
+
 // ── when things happen ──
 const SECTORS = G('SECTOR_CONFIG') || {};
 const CREW_EVENTS = G('CREW_PERSONAL_EVENTS') || [], CAMPFIRES = G('CAMPFIRE_EVENTS') || [], PAGES = G('EXODUS_LOGS') || [];
@@ -666,8 +679,9 @@ function councilMd() {
     b.push(...textSection(3, 'Breakdowns', bm('triggerBreakdown'), 'When someone reaches stress 3. The commander breaking is game over.'));   // Vance's gun scene was cut (2026-10-07): his breakdown is in triggerBreakdown
     b.push(...textSection(3, 'Bringing someone back', bm('handleRevivalAction'), 'Using Pulsing Spores or an Ancient Neural Link from the cargo hold.'));
     b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('eatOnJump'), 'The crew eats one ration on each sector jump.'), ...textSection(3, 'Deck damage', bm('damageDeck'), 'The first time is a tutorial.'));
-    b.push(...textSection(3, 'What a broken deck costs (the new look)', block('src/newscreen/Orbit.js', /^\s*const DECK_COST = /m, 'DECK_COST'), 'Chips always on a red deck in the tower, and under "Live with it". The lab costs nothing there.'));
+    b.push(...textSection(3, 'What a broken deck costs (the new look)', block('src/newscreen/Orbit.js', /^\s*const DECK_COST = /m, 'DECK_COST'), 'The game\'s rules for a broken deck, in words. The tower shows each deck\'s as one short chip (the rule chips below), only while the deck is pointed at or its repair plate is open. The lab costs nothing there.'));
     b.push(...textSection(3, 'And only while something aboard needs that deck', block('src/newscreen/Orbit.js', /^\s*const DECK_COST_IF = /m, 'DECK_COST_IF'), 'A culture in the hold; someone shut down (catatonic) in the quarters.'));
+    b.push(...shipSection());
     b.push(...textSection(3, 'What the data adds up to', bm('addColonyKnowledge'), 'At 1, 3 and 5 data.'));
     b.push('## Flying', '');
     [['handleWarp', 'Warping to a planet'], ['handleSectorJump', 'Jumping to the next sector']].forEach(([n, title]) => { const p = bm(n); b.push(...textSection(3, title, p, 'The lines for the light are in sector-6.md.', outside(...lightRanges(p)))); });

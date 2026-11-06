@@ -290,7 +290,7 @@ _The first time is a tutorial._
 - A.U.R.A.: "A deck is damaged, Commander. Repairs before the next jump, if you can spare the salvage." «bundle.js · line 981»
 
 ### What a broken deck costs (the new look) «Orbit.js · DECK_COST»
-_Chips always on a red deck in the tower, and under "Live with it". The lab costs nothing there._
+_The game's rules for a broken deck, in words. The tower shows each deck's as one short chip (the rule chips below), only while the deck is pointed at or its repair plate is open. The lab costs nothing there._
 
 - **bridge** — warps cost more «Orbit.js · line 771» **DRAFT**
 - **bridge** — no far scans «Orbit.js · line 771» **DRAFT**
@@ -304,6 +304,99 @@ _A culture in the hold; someone shut down (catatonic) in the quarters._
 
 - the culture stops growing «Orbit.js · line 781» **DRAFT**
 - no recovery for [name] «Orbit.js · line 782» **DRAFT**
+
+## The ship in travel (the new look)
+
+### A broken deck: A.U.R.A., once «Tower.js · RED_LINE»
+_The first time a deck breaks, in the ship. The deck's words: The bridge, The lab, The quarters, The hold, The engine room._
+
+- [deck] is broken, Commander. Click it in the ship to fix it. «Tower.js · line 181»
+
+### The repair plate: its rule chips and what is said after (look pass B04) «ShipKey.js · RULE · FIXED · PATCHED · LIVE»
+_Click a red deck: Fix it, Patch it, Live with it. Each deck's rule chip shows under "Live with it" and while the deck is pointed at. Fix and Patch are said by Jaxon (A.U.R.A. when he cannot); Live with it by A.U.R.A._
+
+- **bridge** — warps ×1.5 «ShipKey.js · line 37» **DRAFT (look pass)**
+- **quarters** — no rest «ShipKey.js · line 37» **DRAFT (look pass)**
+- **hold** — hold ½ «ShipKey.js · line 37» **DRAFT (look pass)**
+- **engineering** — jumps ×2 «ShipKey.js · line 37» **DRAFT (look pass)**
+- **bridge** — Bridge is fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- **lab** — Lab's fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- **quarters** — Quarters are fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- **hold** — Hold's fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- **engineering** — Engine room's fixed. «ShipKey.js · line 39» **DRAFT (look pass)**
+- That'll hold for a jump or two. «ShipKey.js · line 40» **DRAFT (look pass)**
+- **bridge** — Warps will cost more, Commander. «ShipKey.js · line 41» **DRAFT (look pass)**
+- **quarters** — Nobody will rest at supper, Commander. «ShipKey.js · line 41» **DRAFT (look pass)**
+- **hold** — The hold will take half, Commander. «ShipKey.js · line 41» **DRAFT (look pass)**
+- **engineering** — Jumps will cost double, Commander. «ShipKey.js · line 42» **DRAFT (look pass)**
+- [deck] [are | is] fixed, Commander. «ShipKey.js · line 43» **DRAFT (look pass)**
+
+### Supper at the galley table (look pass B04) «Supper.js · LINES · KEYS · TABLE · TAG_LAST»
+_After a jump, short of food: A.U.R.A., the one who offers, and the commander's reply on the plate. The table moment is a frame with "Not yet" first. A death there: the galley light goes down while the crew's and A.U.R.A.'s CREW_DEATH lines are said (pools.md)._
+
+- **aura** — Not enough for everyone tonight, Commander. «Supper.js · line 59»
+- **aura** — Not enough for everyone again, Commander. «Supper.js · line 59»
+- **more** — One more, Commander. «Supper.js · line 60» **DRAFT**
+- **offer · vance** — I'll skip it. «Supper.js · line 62»
+- **offer · vance** — I'll skip it again. I'm fine. «Supper.js · line 62»
+- **offer · jaxon** — I'll go without tonight. «Supper.js · line 63»
+- **offer · jaxon** — I'll go without again. I'm fine. «Supper.js · line 63»
+- **offer · aris** — Give mine to someone else. «Supper.js · line 64»
+- **offer · aris** — Give mine away again. I can manage. «Supper.js · line 64»
+- **offer · mira** — I'm not hungry. Really. «Supper.js · line 65»
+- **offer · mira** — I'm still not hungry. Really. «Supper.js · line 65»
+- **warn** — [name] can't go without again. It would kill [him]. «Supper.js · line 68»
+- **warnSelf** — I can't go without again, Commander. It would kill me. «Supper.js · line 69»
+- **warnAura** — [name] can't go without again, Commander. It would kill [him]. «Supper.js · line 70»
+- **went** — [names] went without tonight, Commander. «Supper.js · line 71» **DRAFT (look pass)**
+- **act** — accept «Supper.js · line 74» **DRAFT (look pass)**
+- **label** — All right, [name] «Supper.js · line 74» **DRAFT (look pass)**
+- **chips** — [name] goes without «Supper.js · line 74» **DRAFT (look pass)**
+- **act** — share «Supper.js · line 75» **DRAFT**
+- **label** — Share it out «Supper.js · line 75» **DRAFT**
+- **chips** — everyone goes hungry «Supper.js · line 75» **DRAFT**
+- **notYet** — Not yet «Supper.js · line 77» **DRAFT**
+- **share** — Share it out «Supper.js · line 77» **DRAFT**
+- **go** — Go without «Supper.js · line 77» **DRAFT**
+- **dies** — [name] dies «Supper.js · line 77» **DRAFT**
+- went without twice «Supper.js · line 78» **DRAFT (look pass)**
+
+### The crew clicked in the tower «ShipRoutine.js · LINES»
+_One line each; a second click in the same sector says nothing._
+
+- **travel · cora · any** — Four crew, Commander. All accounted for. «ShipRoutine.js · line 208»
+- **travel · jaxon · work** — The drive's running a little hot. Nothing I can't fix. «ShipRoutine.js · line 209»
+- **travel · jaxon · meal** — Same stew as yesterday. I'm not complaining. «ShipRoutine.js · line 209»
+- **travel · jaxon · move** — Going back down. I want to check the coolant again. «ShipRoutine.js · line 209»
+- **travel · aris · work** — Everyone's due a check-up this week. You too, Commander. «ShipRoutine.js · line 210»
+- **travel · aris · meal** — Sit down for once. The ship can fly itself for ten minutes. «ShipRoutine.js · line 210»
+- **travel · aris · clean** — I'll do the dishes. Go and get some sleep. «ShipRoutine.js · line 211»
+- **travel · aris · chronos** — Nothing on the scanner. Just old ice. «ShipRoutine.js · line 211»
+- **travel · aris · any** — I'm on my way down to the med bay. «ShipRoutine.js · line 211»
+- **travel · mira · work** — A.U.R.A. found a star that isn't on any chart. I'm checking her numbers. «ShipRoutine.js · line 212»
+- **travel · mira · titan** — That's a ship's transponder. One of the eight, I bet. «ShipRoutine.js · line 212»
+- **travel · mira · meal** — Did you see the readings this morning? I couldn't sleep after that. «ShipRoutine.js · line 213»
+- **travel · mira · any** — Back to the lab. I left a scan running. «ShipRoutine.js · line 213»
+- **travel · vance · nav** — I'm checking her course against the old charts. «ShipRoutine.js · line 214»
+- **travel · vance · zeta** — A station out here. Somebody put it on this route on purpose. «ShipRoutine.js · line 214»
+- **travel · vance · meal** — I'll eat standing up. My back's bad today. «ShipRoutine.js · line 215»
+- **travel · vance · any** — Ask the computer how many crates we loaded. Then come and count them. «ShipRoutine.js · line 215»
+
+### The crew clicked, by their state (look pass B04) «ShipRoutine.js · BY_STATE»
+_Hurt, too weak from a missed supper, shut in their bunk; asleep (sedated): A.U.R.A. answers._
+
+- **hurt** — Not now, Commander. Give me a day. «ShipRoutine.js · line 224» **DRAFT (look pass)**
+- **weak** — I'm all right. Just tired. «ShipRoutine.js · line 225» **DRAFT (look pass)**
+- **confined** — You know where to find me. «ShipRoutine.js · line 226» **DRAFT (look pass)**
+- **asleep** — [name] is sedated, Commander. «ShipRoutine.js · line 227» **DRAFT (look pass)**
+
+### The stock: A.U.R.A., once each «Tower.js · STOCK_TELL»
+_The first time each number beside its room changes._
+
+- **energy** — Energy runs the drive. Every flight costs some, Commander. «Tower.js · line 661»
+- **rations** — Rations feed the crew. We eat on every jump, Commander. «Tower.js · line 662»
+- **salvage** — Salvage fixes the ship. Mining and wrecks bring more, Commander. «Tower.js · line 663»
+- **data** — Data is what we learn on the way. It helps our colony survive, Commander. «Tower.js · line 664»
 
 ### What the data adds up to «bundle.js · addColonyKnowledge»
 _At 1, 3 and 5 data._
