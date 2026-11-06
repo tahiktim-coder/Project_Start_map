@@ -82,12 +82,15 @@
     const ENDING = Object.freeze({
         id: 'WRONG_PLACE_ACCEPTED', title: 'A copy of somewhere',
         ground: { by: ['jaxon', 'aris', 'mira', 'vance'], lines: ['Smell that?', 'It smells of nothing.'] },
-        night: ['Four figures walk the decks of the ship in orbit.', 'You count them from the ground every night. There are always four.'],   // kept from the old end screen
-        card: {
+        night: [
+            'Up in orbit, the ship keeps its lights on.',   // DRAFT (look pass): L-43
+            'Nobody is aboard.',   // DRAFT (look pass): L-43
+        ],
+        card: {                                                  // one narrator, by name (look pass, L-42)
             crew: '{names} stayed on a copy of Earth.',
-            alone: 'You stayed on a copy of Earth, alone.',
-            made: 'Something copied home, and got the grass wrong.',
-            jaxon: 'Jaxon names the place every morning. It never sticks.',
+            alone: '{names} stayed on a copy of Earth, alone.',   // DRAFT (look pass)
+            made: 'It looks like Earth, but nothing there grows or moves.',   // DRAFT (look pass)
+            jaxon: 'Jaxon still calls it home.',   // DRAFT (look pass)
             air: 'The air is clean, and it tastes of nothing.',
         },
     });
@@ -100,7 +103,7 @@
         const who = first(state, E.ground.by);
         return {
             ending: E.id, door: 'COPY', title: E.title, living,
-            text: [alone ? E.card.alone : E.card.crew.replace('{names}', list(names)), E.card.made, living.includes('jaxon') ? E.card.jaxon : E.card.air],
+            text: [(alone ? E.card.alone : E.card.crew).replace('{names}', list(names)), E.card.made, living.includes('jaxon') ? E.card.jaxon : E.card.air],
             scene: { ground: who ? E.ground.lines.map(say => ({ who, say })) : [], night: E.night.map(say => ({ who: null, say })) },
         };
     }

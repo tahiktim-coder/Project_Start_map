@@ -3299,7 +3299,10 @@ class App {
             }, err => { console.error('The burn gauge failed; the jump goes on as A.U.R.A. plotted it', err); onComplete(); });
             return;
         }
-        plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
+        const isNewArrival = isNewScreen() && window.NSLooks;                         // the new look without the gauge: the sector's name and A.U.R.A. saying it, never a bare "—"
+        plotOptions.arrival = isNewArrival
+            ? { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: window.NSLooks.titleOf(nextSector), line: '', voices: [{ name: 'A.U.R.A.', face: null, text: 'The jump did not finish.' }] }
+            : { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
         window.WarpPlot.play(plotOptions).then(result => {
             this.applyPlotResult(result, jumpBase);
@@ -4015,7 +4018,10 @@ Then you're through.`,
         if (this._lightCardOpen) return;                                                 // a second click while it opens: one council
         this._lightCardOpen = true;
         const isFirst = !planet._lightCouncilHeard, disc = encounter.disc || {};
-        const reel = isFirst && window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('light') : Promise.resolve();
+        const isArrival = isNewScreen() && window.NSEnding && typeof window.NSEnding.arrive === 'function';   // the new look: the light arrival (end/Ending.js, C83), never the old reel
+        const firstSight = () => (isArrival ? window.NSEnding.arrive(this, 'light').catch(err => console.error('The light arrival failed; on to the crew', err))
+            : window.StoryReel ? window.StoryReel.play('light') : Promise.resolve());
+        const reel = isFirst && !window.TEST_MODE ? firstSight() : Promise.resolve();
         const ourDisc = () => (isFirst && this.state.hasDisc && window.DiscDocument ? window.DiscDocument.open(this, { real: true, ...disc.view }) : Promise.resolve());
         reel.then(ourDisc).then(() => {
             const council = window.buildLightCouncil(this.state, { isRepeat: !isFirst });
@@ -4081,6 +4087,25 @@ Then you're through.`,
             return true;
         }
         this.showEndingScreen(asScreen());
+        return true;
+    }
+
+    /**
+     * The new look's ordinary settling (call C72): the colony ending's scene (end/Ending.js, kind 'colony', words in
+     * end/EndWords.js), started as endJourney starts the others: once per run, the run over, the save dropped when the end card
+     * shows. false (nothing started) if the new look cannot play it; then the default game's colony screen shows instead.
+     * oldScreen: shows that screen if the scene fails to start.
+     */
+    endInColony(planet, outcome, oldScreen) {
+        if (this._journeyEnded || !window.NSEnding || !window.NSEndWords) return false;
+        let ending;
+        try { ending = window.NSEndWords.colony(this.state, planet, !!(outcome && outcome.success)); } catch (err) { console.error('The colony ending could not be built', err); return false; }
+        this._journeyEnded = true;
+        this.state.gameOver = true;                                                      // nothing else ends the run over its ending
+        window.NSEnding.play(this, ending, { from: 'colony' }).then(() => this.recordEnding(ending), err => {
+            console.error('The colony ending failed; the colony screen instead', err);
+            oldScreen();
+        });
         return true;
     }
 
@@ -6351,8 +6376,10 @@ Then you're through.`,
             rating = 'F'; ratingColor = '#d85a4e';
         }
 
+        const oldColonyScreen = () => window.EndScreens && window.EndScreens.colony(this, planet, outcome, { rating, survivors: survivors.length, avgStress, colonyKnowledge });
+        if (isNewScreen() && this.endInColony(planet, outcome, oldColonyScreen)) return;   // the new look: the colony ending (C72), never the old sheet
         if (window.EndScreens) { // shared card; the flight-recorder table below is only the fallback
-            window.EndScreens.colony(this, planet, outcome, { rating, survivors: survivors.length, avgStress, colonyKnowledge });
+            oldColonyScreen();
             return;
         }
 
@@ -6725,6 +6752,7 @@ Then you're through.`,
     showGameOver(detail) {
         // Delete save file - game is over
         this.state.deleteSave();
+        if (isNewScreen() && this.endInLoss(detail)) return;                            // the new look: the loss ending (C73, C71), never the old sheet
         if (window.EndScreens) { // shared card layout; the legacy red box below is the fallback
             window.EndScreens.gameOver(this, detail);
             return;
@@ -6790,6 +6818,20 @@ Then you're through.`,
 
         // Button handler
         overlay.querySelector('#btn-restart').onclick = () => location.reload();
+    }
+
+    /** The new look's game over, every kind of it (all hands, the hull, stranded, command failure, A.U.R.A.'s mutiny): the loss
+        ending's scene (end/Ending.js, kind 'loss', words in end/EndWords.js). false if the new look cannot play it; the old
+        game-over screen shows if the scene fails to start. */
+    endInLoss(detail) {
+        if (!window.NSEnding || !window.NSEndWords) return false;
+        let ending;
+        try { ending = window.NSEndWords.loss(this.state, detail || {}); } catch (err) { console.error('The loss ending could not be built', err); return false; }
+        window.NSEnding.play(this, ending, { from: 'loss' }).catch(err => {
+            console.error('The loss ending failed; the game-over screen instead', err);
+            if (window.EndScreens) window.EndScreens.gameOver(this, detail || {});
+        });
+        return true;
     }
 
 
@@ -6879,8 +6921,14 @@ Then you're through.`,
         mainView.innerHTML = '';
         if (isNewScreen()) {                                                               // the new screen: the bridge, not today's orbit view
             if (here && !here.exodusInvestigated && this.isRelayStop(here) && window.DockFlight.warm) window.DockFlight.warm();   // Last Port: the relay's cut and moon made ready at idle
-            if (window.NewScreen.stop(this)) return;
+            let isBridge = false;
+            try { isBridge = window.NewScreen.stop(this); } catch (err) { console.error('The bridge would not open', err); }
+            if (isBridge) return;
             window.NewScreen.hide();                                                       // no stop module: today's orbit view, as in checkpoint A
+            if (here && !this.state.gameOver && window.NSEnding && typeof window.NSEnding.recover === 'function') {   // which the new look hides (an empty sky): A.U.R.A. and "› Try again"
+                window.NSEnding.recover(this, () => this.renderOrbit());
+                return;
+            }
         }
         mainView.appendChild(this.orbitView.render());
     }

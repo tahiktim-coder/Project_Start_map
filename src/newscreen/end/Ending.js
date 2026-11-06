@@ -1,103 +1,131 @@
-/* ═══ Silent Exodus · new screen (?new=1) · end/Ending.js: the two endings, played, and the end card ═════════════════
-   What it is: what happens after the commander chooses at the light (or settles on Eden), in the new look. A scene, not a
-   minigame: the player does not steer. One full-screen picture (.ns-film, so the travel view stops drawing under it):
+/* ═══ Silent Exodus · new screen (?new=1) · end/Ending.js: the endings, played, and the one end card ═════════════════════
+   What it is: every way a run ends in the new look, as a scene (the player does not steer). One full-screen picture
+   (.ns-film, so the travel view stops drawing under it):
      INTO THE LIGHT  the mockup's last approach (end/LightArt.js, prototypes/play-ideas/last-approach.js): the light grows
-                     until it fills the window, every alarm goes off, the crew plead to turn back while A.U.R.A. reads true.
-                     Near the end the ship slows and waits: the one held moment, "Keep going". Then white, then quiet, then
-                     the calm place (end/CalmArt.js) with whoever is alive, and one line.
+                     until it fills the window, every alarm goes off (the alarm word on its deck's hull plate), the crew plead
+                     to turn back while A.U.R.A. reads true. Near the end the ship slows and waits: the one held moment,
+                     "› Keep going". Then white, then quiet, then the calm place (end/CalmArt.js) with whoever is alive, one line.
      BACK TO EDEN    chosen at the light: the turn away (the light shrinks behind us, Eden slides into the window), then Eden's
-                     meadow (end/EdenArt.js), the crew settling into the grass, one line; the camera rises until the meadow is
-                     one cold point of light in the dark; with the disc aboard, one quiet last line. Settled on Eden itself:
-                     the meadow first.
-     THE COPY        "Go down" at the copy of Earth (stop/Copy.js): our Lander drops into the blue through clouds that do not move,
-                     a perfect day by a perfect sea where the grass is one blade copied, the crew step out, one line; then the
-                     view tilts up to the night: stars in rows, our ship a point of light; the last lines (end/CopyArt.js).
-   Then the end card over the last picture: the ending's name, three short lines, "New game". No stats, no scores.
-   The words come from StructureEncounter.js lightEndingFor(door, state) (bundle.js endJourney passes them), or for the copy from
-   stop/CopyWords.js ending(state) (bundle.js endOnTheCopy); all are DRAFTS.
-   Esc skips ahead (to the held moment while flying in; otherwise to the end card). No sound of its own.
-   Loaded only when the new-screen switch is on, after end/LightArt.js, end/CalmArt.js, end/EdenArt.js and end/CopyArt.js.
+                     meadow (end/EdenArt.js) in a short Bayer dissolve, the crew settling into the grass, one line; the camera
+                     rises until the meadow is one cold point of light in the dark; with the disc aboard, one quiet last line.
+                     Settled on Eden itself: the meadow first.
+     THE COPY        "Go down" at the copy of Earth (stop/Copy.js): our Lander drops through clouds that never tear, a perfect
+                     day by a perfect sea, the crew step out, one line; then the night: stars in rows, our ship a point of light.
+     THE COLONY      the ordinary settling (call C72; end/ColonyArt.js): the world braking in, our Lander's light dropping to it,
+                     the ground at dawn with one habitat lit warm, one crew line. Failure: the same ground at night, the
+                     habitat's windows going red in steps, A.U.R.A.'s last line.
+     THE LOSS        every game over (call C73, C71; end/LossArt.js): the hold goes dark deck by deck until A.U.R.A.'s ring is
+                     the last light; the dead are named on their pod plates; she says one plain line.
+   Then the end card (DESIGN.md section 3): the upper third, left on the voice column (Eden low, under the cold point); the
+   ending's name, three plain lines or fewer, "› New game" (a loss or a failed colony: "› Try again"), no stats, no scores,
+   40 words or fewer, a dither shade under it. No hover look until the pointer moves after it shows.
+   Also: the first sight of the light (arrive): the light growing full-bleed, A.U.R.A. saying what the old reel's captions
+   said, the film skip; it ends by itself and gives the screen back. And the fallback (recover): when a new-look screen will
+   not start, A.U.R.A.'s line and "› Try again" over the ink, never an empty sky.
+   The words: StructureEncounter.js lightEndingFor(door, state) (bundle.js endJourney), stop/CopyWords.js ending(state)
+   (bundle.js endOnTheCopy), end/EndWords.js colony / loss / arrival / recover (bundle.js endInColony, showGameOver,
+   showStructureModal, renderOrbit); all are DRAFTS but the ones EndWords.js names.
+   Esc, or the film skip in the corner after 3 s, skips ahead (to the held moment while flying in; otherwise to the end
+   card; the arrival ends). No sound of its own.
+   Loaded only when the new-screen switch is on, after end/LightArt.js, CalmArt.js, EdenArt.js, CopyArt.js, ColonyArt.js,
+   LossArt.js and EndWords.js.
 
    window.NSEnding (frozen)
-     play(app, ending, { from: 'light' | 'eden' | 'copy' }) → Promise   resolves once the end card is up (bundle.js drops the save then;
-                                                               "New game" reloads); rejects if the scene cannot start (bundle.js
-                                                               then shows the old end screen)
+     play(app, ending, { from }) → Promise    resolves once the end card is up (bundle.js drops the save then; the card's key
+                                              reloads); rejects if the scene cannot start (bundle.js then shows the old end
+                                              screen). ending.door: 'LIGHT' | 'EDEN' | 'COPY' | 'COLONY' | 'LOSS'
+     arrive(app, 'light') → Promise           the first sight of the light; resolves when it ends or is skipped
+     recover(app, retry)                      A.U.R.A.'s line and "› Try again" (retry() is called, the line goes)
      isPlaying() → bool
      debug: { state(), speed(k), keepGoing(), skip() }         for the headless runs (speed k runs the clock k times as fast)
 */
 (function () {
     'use strict';
     const P = window.NSPaint, LA = window.NSLightArt, CA = window.NSCalmArt, EA = window.NSEdenArt, CP = window.NSCopyArt;
+    const CO = window.NSColonyArt, LO = window.NSLossArt, EW = window.NSEndWords;
     if (!window.NEW_SCREEN || !P || !LA || !CA || !EA) return;
     const { INK, clamp01, threshold } = P;
     const ss = P.smooth;
 
-    const ART_ROWS = 360, MIN_ROWS = 280, FPS = 30, MAX_DT = 0.1, RESIZE_MS = 150, BUILD_GAP_MS = 40;
+    const ART_ROWS = 360, MIN_ROWS = 280, FPS = 30, MAX_DT = 0.1, RESIZE_MS = 150, BUILD_GAP_MS = 40, STEP_S = 0.125;
     // into the light (s): the approach runs to HOLD_AT, waits, and the last push takes it in
     const APPROACH_S = 34, HOLD_AT = 0.88, KEEP_AFTER_S = 1.4, PUSH_S = 3.2, WHITE_S = 3.4, QUIET_S = 1.8, DAWN_S = 2.8;
-    // back to Eden (s)
-    const TURN_S = 3.8, TURN_LINE_S = 0.9, TURN_HOLD_S = 3.4, LAND_S = 1.1, MEADOW_LINE_S = 3.9, MEADOW_S = 9.2, RISE_S = 1.6, SHRINK_S = 5.4, POINT_LINE_S = 1.0;
+    // back to Eden (s): LAND_S, the globe-to-meadow dissolve, in four Bayer steps
+    const TURN_S = 3.8, TURN_LINE_S = 0.9, TURN_HOLD_S = 3.4, LAND_S = 0.5, MEADOW_LINE_S = 3.9, MEADOW_S = 9.2, RISE_S = 1.6, SHRINK_S = 5.4, POINT_LINE_S = 1.0;
     // the copy (s): the descent, the landing's dissolve, the ground (its two lines), the tilt up, the night (its two lines)
-    const DESCENT_S = 6.4, COPY_LAND_S = 1.0, GROUND_S = 13.4, GROUND_LINE_S = 6.6, GROUND_GAP_S = 3.4, TILT_S = 3.6, NIGHT_LINE_S = 1.4, NIGHT_GAP_S = 4.4;
-    // both (s)
-    const IN_S = 0.9, LINE_AFTER_S = 0.9, CARD_AFTER_S = 3.8, CARD_DIM = 0.75, GUARD_MS = 900, KEEP_GUARD_MS = 400, CARD_FRAME_EVERY = 4, CARD_SETTLE_S = 3, VEIL_RATE = 4;
-    // the ship's alarms, in shares of the approach: the deck that turns emergency red and the word the ship flashes (the mockup's)
+    const DESCENT_S = 6.4, COPY_LAND_S = 0.5, GROUND_S = 13.4, GROUND_LINE_S = 6.6, GROUND_GAP_S = 3.4, TILT_S = 3.6, NIGHT_LINE_S = 1.4, NIGHT_GAP_S = 4.4;
+    // the colony (s): the brake, the drop, the landing's dissolve, the line on the ground; failure: the windows go red, then her line
+    const BRAKE_S = 3.4, DROP_S = 2.4, CO_LAND_S = 0.5, CO_LINE_S = 1.4, RED_AT_S = 0.8, RED_S = 1.2, FAIL_LINE_S = 2.6;
+    // the loss (s into the drain): each band, then the hold's lamps, then the pods one at a time; her line after
+    const LIT_S = 1.4, DRAIN = { below: 0, above: 0.7, hold: 1.4, pods: 2.6, podGap: 0.45, band: 0.5, holdS: 1, pod: 0.5 }, LOSS_LINE_S = 0.6;
+    // the first sight of the light (s): the light grows from ARRIVE_K0 to ARRIVE_K1 (LightArt's s), then steps out to the ink
+    const ARRIVE_S = 8.4, ARRIVE_OUT_S = 0.5, ARRIVE_K0 = 0.2, ARRIVE_K1 = 0.62;
+    // all of them
+    const IN_S = 0.9, LINE_AFTER_S = 0.9, CARD_AFTER_S = 3.8, CARD_DIM = 0.75, GUARD_MS = 900, KEEP_GUARD_MS = 400, CARD_FRAME_EVERY = 4, CARD_SETTLE_S = 3, VEIL_RATE = 4, SKIP_AFTER_S = 3;
+    // the ship's alarms, in shares of the approach: the deck that turns emergency red and the word on its hull plate (the mockup's)
     const ALARMS = [
         { at: 0.18, deck: 'engineering', label: 'HULL TEMPERATURE' }, { at: 0.3, deck: 'bridge' }, { at: 0.42, deck: 'lab' },
         { at: 0.5, deck: 'quarters', label: 'RADIATION' }, { at: 0.62, deck: 'cargo' }, { at: 0.74, deck: 'upgrades' },
     ];
     const ROLE = { cora: 'LEADER', jaxon: 'ENGINEER', aris: 'MEDIC', vance: 'SECURITY', mira: 'SPECIALIST' };
+    const KIND = { LIGHT: 'light', EDEN: 'eden', COPY: 'copy', COLONY: 'colony', LOSS: 'loss', ARRIVE: 'arrive' };
     const isCalmMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    /** n steps over dur seconds, t seconds in: 0, 1/n .. 1 (the house's stepped motion). */
+    const stepped = (t, dur, n) => (t <= 0 ? 0 : clamp01(Math.floor(t / (dur / n)) / n));
 
+    // the tokens are tokens.css's (html.ns-on); only the face cell's size is this file's own
     const CSS = `
-.ns-end { position: fixed; inset: 0; z-index: 5000; overflow: hidden; background: #05070a; cursor: default; user-select: none; -webkit-user-select: none;
-    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --t: 1; --face: 72px;
-    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; --f-text: 'IBM Plex Sans', system-ui, sans-serif; --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
-    --shadow: 0 1px 0 #05070a; --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-    color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }
+.ns-end { position: fixed; inset: 0; z-index: 5000; overflow: hidden; background: var(--ink); cursor: default; user-select: none; -webkit-user-select: none;
+    --face: calc(48px + 24px * var(--t)); color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }
 .ns-end p, .ns-end h2 { margin: 0; }
 .ns-end button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
 .nse-art { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
 .nse-voice { position: absolute; left: max(16px, 6vw); top: 8vh; display: grid; grid-template-columns: var(--face) minmax(0, 1fr); gap: 0 18px; align-items: start;
-    width: max-content; max-width: min(calc(600px + 200px * var(--t)), calc(100vw - 32px)); text-shadow: var(--shadow); pointer-events: none; opacity: 0; transition: opacity 180ms var(--ease); }
+    width: max-content; max-width: min(calc(600px + 200px * var(--t)), calc(100vw - 32px)); text-shadow: var(--shadow); pointer-events: none; opacity: 0; transition: opacity 180ms steps(3, end); }
 .nse-voice.is-in { opacity: 1; }
-.nse-voice.is-narr, .nse-voice.is-solo { grid-template-columns: minmax(0, 1fr); }
-.nse-face { display: block; width: var(--face); height: var(--face); background: var(--ink); }
-.nse-face[hidden], .nse-ring[hidden] { display: none; }
-.nse-text { display: grid; gap: 7px; padding-top: 2px; }
-.nse-who { display: flex; align-items: center; gap: 8px; font: 500 calc(14px + 1px * var(--t))/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--warm)); }
+.nse-cell { display: grid; place-items: center; width: var(--face); height: var(--face); }
+.nse-face { display: block; width: 100%; height: 100%; background: var(--ink); }
+.nse-aura { display: block; width: 46%; height: 46%; border: 2px solid var(--tone-aura); border-radius: 50%; }
+.nse-face[hidden], .nse-aura[hidden], .nse-ring[hidden], .nse-keep[hidden], .nse-card[hidden], .nse-skip[hidden] { display: none; }
+.nse-text { display: grid; gap: var(--s2); padding-top: 2px; }
+.nse-who { display: flex; align-items: center; gap: var(--s2); font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--warm)); }
 .nse-ring { flex: none; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }
 .nse-voice.is-narr .nse-who { display: none; }
-.nse-say { font: 400 calc(19px + 5px * var(--t))/1.36 var(--f-text); color: var(--text); text-wrap: pretty; }
-.nse-voice.is-narr .nse-say { font-style: italic; color: #d6d8d5; }
+.nse-say { font: 400 var(--fs-voice)/1.36 var(--f-text); color: var(--text); text-wrap: pretty; }
+.nse-voice.is-narr .nse-say { font-style: italic; color: var(--narr); }
 .nse-voice.tone-cora { --tone: var(--tone-cora); } .nse-voice.tone-jaxon { --tone: var(--tone-jaxon); } .nse-voice.tone-aris { --tone: var(--tone-aris); }
-.nse-voice.tone-vance { --tone: var(--tone-vance); } .nse-voice.tone-mira { --tone: var(--tone-mira); } .nse-voice.tone-aura { --tone: var(--ui); }
-.nse-keep { position: absolute; right: max(16px, 6vw); bottom: 9vh; text-shadow: var(--shadow); opacity: 0; transition: opacity 300ms var(--ease); }
-.nse-keep.is-in { opacity: 1; }
-.nse-keep[hidden], .nse-card[hidden] { display: none; }
-.nse-go { display: inline-flex; align-items: baseline; gap: 14px; padding: 8px 0; text-shadow: var(--shadow); }
-.nse-go .nse-verb { font: 400 calc(19px + 4px * var(--t))/1.25 var(--f-text); color: var(--text); transition: color 140ms var(--ease), transform 140ms var(--ease); }
-.nse-go .nse-key { font: 400 calc(14px + 1px * var(--t))/1 var(--f-num); color: var(--dim); transition: color 140ms var(--ease); }
-.nse-go:hover .nse-verb, .nse-go:focus-visible .nse-verb { color: var(--warm); transform: translateX(3px); }
-.nse-go:hover .nse-key, .nse-go:focus-visible .nse-key { color: var(--warm); }
-.nse-go:active .nse-verb { color: var(--warm-br); }
-.nse-go:focus-visible { outline: none; }
-.nse-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(600px, calc(100vw - 32px)); display: grid; gap: 12px;
-    text-shadow: var(--shadow); opacity: 0; transition: opacity 900ms var(--ease); outline: none; }
+.nse-voice.tone-vance { --tone: var(--tone-vance); } .nse-voice.tone-mira { --tone: var(--tone-mira); } .nse-voice.tone-aura { --tone: var(--tone-aura); }
+.nse-keep { margin-top: var(--s3); pointer-events: auto; }
+.ns-end .nse-go { display: inline-flex; align-items: baseline; gap: var(--s2); padding: var(--s2) 0; font: 400 var(--fs-key)/1.25 var(--f-text); color: var(--warm); text-shadow: var(--shadow); }
+.nse-go .nse-mark { font: 500 var(--fs-key)/1 var(--f-ui); }
+.ns-end.is-hover .nse-go:hover, .ns-end .nse-go:focus-visible, .ns-end .nse-go:active { color: var(--warm-br); outline: none; }
+.nse-card { position: absolute; left: max(16px, 6vw); top: 14vh; width: min(calc(560px + 60px * var(--t)), calc(100vw - 32px)); display: grid; gap: var(--s3);
+    text-shadow: var(--shadow); opacity: 0; transition: opacity 480ms steps(4, end); outline: none; }
 .nse-card.is-in { opacity: 1; }
-.nse-card.is-low { top: 64%; }                                     /* Eden: clear of the cold point, high in the dark */
-.nse-kicker { font: 500 13px/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--dim); }
-.nse-title { font: 600 calc(34px + 12px * var(--t))/1.05 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
-.nse-lines { display: grid; gap: 10px; margin: 8px 0 10px; }
-.nse-lines p { font: 400 calc(17px + 3px * var(--t))/1.5 var(--f-text); color: #d8dad8; text-wrap: pretty; }
+.nse-card.is-low { top: 62vh; }                                  /* Eden: under the cold point, low in the dark */
+.nse-title { font: 600 var(--fs-title)/1.05 var(--f-ui); letter-spacing: 0.02em; color: var(--text); }
+.nse-lines { display: grid; gap: var(--s2); margin: var(--s1) 0 var(--s2); }
+.nse-lines:empty { display: none; }
+.nse-lines p { font: 400 20px/1.45 var(--f-text); color: var(--text-2); text-wrap: pretty; }
+.nse-whole { white-space: nowrap; }
 .nse-card .nse-go { justify-self: start; }
-@media (prefers-reduced-motion: reduce) { .nse-voice, .nse-keep, .nse-card, .nse-go .nse-verb, .nse-go .nse-key { transition: none; } }
+.ns-end .nse-skip { position: absolute; right: max(16px, 4vw); bottom: max(16px, 5vh); padding: var(--s2) 0; font: 500 var(--fs-skip)/1 var(--f-ui); letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--dim); text-shadow: var(--shadow); opacity: 0; transition: opacity 180ms steps(3, end); }
+.nse-skip.is-in { opacity: 1; }
+.ns-end.is-hover .nse-skip:hover, .ns-end .nse-skip:focus-visible { color: var(--text); outline: none; }
+@media (prefers-reduced-motion: reduce) { .nse-voice, .nse-card, .nse-skip { transition: none; } }
 `;
     function injectCss() {
         if (document.getElementById('nse-css')) return;
         const s = document.createElement('style'); s.id = 'nse-css'; s.textContent = CSS; document.head.appendChild(s);
     }
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const KEY = (act, verb) => `<button type="button" class="nse-go" data-act="${act}"><span class="nse-mark" aria-hidden="true">›</span><span class="nse-verb">${esc(verb)}</span></button>`;
+    // the voice: the face cell first for every speaker (a portrait, A.U.R.A.'s ring, or empty for the narrator), so the line
+    // never moves sideways when the speaker changes
+    const VOICE = '<div class="nse-voice" aria-live="polite"><span class="nse-cell"><img class="nse-face" alt="" hidden><span class="nse-aura" hidden></span></span>'
+        + '<div class="nse-text"><p class="nse-who"><span class="nse-ring" hidden></span><span class="nse-name"></span></p><p class="nse-say"></p>'
+        + `<div class="nse-keep" hidden>${KEY('keep', '')}</div></div></div>`;
 
     // ── the Bayer steps: ink over the picture (the house fade, never a soft alpha) and a mask to dissolve one picture into another ──
     const steps = new Map();
@@ -135,15 +163,13 @@
         root.className = 'ns-film ns-end';
         root.setAttribute('role', 'dialog');
         root.setAttribute('aria-label', 'The end of the journey');
-        root.innerHTML = '<canvas class="nse-art" aria-hidden="true"></canvas>'
-            + '<div class="nse-voice" aria-live="polite"><img class="nse-face" alt="" hidden><div class="nse-text"><p class="nse-who"><span class="nse-ring" hidden></span><span class="nse-name"></span></p><p class="nse-say"></p></div></div>'
-            + '<div class="nse-keep" hidden><button type="button" class="nse-go" data-act="keep"><span class="nse-verb"></span><span class="nse-key" aria-hidden="true">↵</span></button></div>'
-            + '<section class="nse-card" hidden tabindex="-1"><p class="nse-kicker">The end</p><h2 class="nse-title"></h2><div class="nse-lines"></div>'
-            + '<button type="button" class="nse-go" data-act="new"><span class="nse-verb">New game</span></button></section>';
+        root.innerHTML = '<canvas class="nse-art" aria-hidden="true"></canvas>' + VOICE
+            + '<section class="nse-card" hidden tabindex="-1"><h2 class="nse-title"></h2><div class="nse-lines"></div>' + KEY('new', 'New game') + '</section>'
+            + `<button type="button" class="nse-skip" data-act="skip" hidden>${esc(EW ? EW.WORDS.keys.skip : 'Skip')} ›</button>`;
         document.body.appendChild(root);
         const q = s => root.querySelector(s);
-        return { root, canvas: q('.nse-art'), voice: q('.nse-voice'), face: q('.nse-face'), ring: q('.nse-ring'), name: q('.nse-name'), say: q('.nse-say'),
-            keep: q('.nse-keep'), keepVerb: q('.nse-keep .nse-verb'), card: q('.nse-card'), title: q('.nse-title'), lines: q('.nse-lines') };
+        return { root, canvas: q('.nse-art'), voice: q('.nse-voice'), face: q('.nse-face'), aura: q('.nse-aura'), ring: q('.nse-ring'), name: q('.nse-name'), say: q('.nse-say'),
+            keep: q('.nse-keep'), keepVerb: q('.nse-keep .nse-verb'), card: q('.nse-card'), title: q('.nse-title'), lines: q('.nse-lines'), cardVerb: q('.nse-card .nse-verb'), skip: q('.nse-skip') };
     }
 
     let run = null;                                                                 // the one playing
@@ -159,7 +185,6 @@
         R.aux = document.createElement('canvas'); R.aux.width = W; R.aux.height = H;
         R.aux2 = document.createElement('canvas'); R.aux2.width = W; R.aux2.height = H;
         R.aux2.getContext('2d').imageSmoothingEnabled = false;
-        R.ui.root.style.setProperty('--t', clamp01((innerWidth - 1280) / 640).toFixed(3));
         R.ui.root.style.setProperty('--face', Math.round(24 * k / dpr) + 'px');
         R.G = { k, W, H, dpr };
     }
@@ -168,38 +193,49 @@
 
     /** The pictures this run needs now (built while the screen is ink, white or quiet; the rest one per idle slot). */
     function buildFirst(R) {
-        const { W, H } = R.G;
-        if (R.kind === 'copy') { R.copy = CP.build(W, H, R.ending.living); return; }
-        if (R.kind === 'light') { R.light = LA.create(W, H); return; }
+        const { W, H } = R.G, E = R.ending, st = R.app.state || {};
+        if (R.kind === 'copy') { R.copy = CP.build(W, H, E.living); return; }
+        if (R.kind === 'light' || R.kind === 'arrive') { R.light = LA.create(W, H); return; }
+        if (R.kind === 'colony') { R.colony = CO.build(W, H, { node: E.planet, sector: st.currentSector || 1, ids: E.living, night: !E.success }); return; }
+        if (R.kind === 'loss') {
+            const names = {};
+            (E.dead || []).forEach(id => { const m = member(R, id); if (m) names[id] = m.name; });
+            R.loss = LO.build(W, H, { names });
+            return;
+        }
         if (R.from === 'light') { R.light = LA.create(W, H); LA.eden(R.light, edenNode(R)); }
-        R.eden = EA.build(W, H, R.ending.living, edenNode(R));
+        R.eden = EA.build(W, H, E.living, edenNode(R));
         EA.bakeNext(R.eden);                                                        // the largest Eden from orbit now: the rest while they settle
     }
     function rebuild(R) {
         measure(R);
+        if (R.broken) return;
         const { W, H } = R.G;
         if (R.light) { const hadEden = !!R.light.eden; R.light = LA.create(W, H); if (hadEden) LA.eden(R.light, edenNode(R)); }
         if (R.calm) R.calm = CA.build(W, H, R.ending.living);
         if (R.eden) { R.eden = EA.build(W, H, R.ending.living, edenNode(R)); EA.bakeNext(R.eden); }
         if (R.copy) R.copy = CP.build(W, H, R.ending.living);
+        if (R.colony || R.loss) buildFirst(R);
         if (R.frozen) R.frozen = null;
     }
 
     // ════════════════════════════════════════ the words ════════════════════════════════════════
-    /** One line at a time: the speaker's portrait (A.U.R.A.'s ring), the name in their tone, the line. hold: stays up. */
+    /** One line at a time: the face cell (a portrait, A.U.R.A.'s ring), the name in their tone, the line. hold: stays up. */
     function say(R, line, hold) {
         const ui = R.ui, isNarr = !line.who, isAura = line.who === 'aura', m = isNarr || isAura ? null : member(R, line.who);
         const hasFace = !!(m && m.portraitId);
-        ui.voice.className = 'nse-voice tone-' + (line.who || 'narr') + (isNarr ? ' is-narr' : '') + (hasFace ? '' : ' is-solo');
+        ui.voice.className = 'nse-voice tone-' + (line.who || 'narr') + (isNarr ? ' is-narr' : '');
         ui.name.textContent = isAura ? 'A.U.R.A.' : m ? m.name : '';
         ui.say.textContent = line.say;
-        ui.ring.hidden = !isAura;
+        ui.ring.hidden = isNarr;
+        ui.aura.hidden = !isAura;
         ui.face.hidden = !hasFace;
-        if (m && m.portraitId) ui.face.src = 'assets/crew/' + m.portraitId + '.png';
+        if (hasFace) ui.face.src = 'assets/crew/' + m.portraitId + '.png';
         void ui.voice.offsetWidth;
         ui.voice.classList.add('is-in');
-        const words = String(line.say).split(/\s+/).length;
-        R.voiceUntil = hold ? Infinity : R.clock + Math.min(6, Math.max(3.4, 1.8 + words * 0.3));
+        const words = String(line.say).split(/\s+/).length, reading = Math.min(6, Math.max(3.4, 1.8 + words * 0.3));
+        R.voiceUntil = hold ? Infinity : R.clock + reading;
+        R.talkUntil = isAura ? R.clock + reading : 0;
         R.line = line.say;
     }
     function hush(R) { R.ui.voice.classList.remove('is-in'); R.voiceUntil = 0; }
@@ -211,21 +247,29 @@
         ctx.drawImage(LA.veil(R.G.W, R.G.H), 0, 0);
         ctx.globalAlpha = 1;
     }
-    /** Boxes (art px) the picture darkens under, so the words read even on the light. */
+    /** Boxes (art px) the picture darkens under, so the words read even on the light: the voice, the skip, the card. */
     function wordBoxes(R) {
         const out = [], { k, dpr } = R.G, add = el => { const r = el.getBoundingClientRect(); if (r.width) out.push([Math.floor(r.left * dpr / k), Math.floor(r.top * dpr / k), Math.ceil(r.right * dpr / k), Math.ceil(r.bottom * dpr / k)]); };
         if (R.ui.voice.classList.contains('is-in')) add(R.ui.voice);
-        if (!R.ui.keep.hidden) add(R.ui.keep);
+        if (!R.ui.skip.hidden) add(R.ui.skip);
+        if (!R.ui.card.hidden) add(R.ui.card);
         return out;
     }
 
     // ════════════════════════════════════════ the clock ════════════════════════════════════════
     function go(R, phase) { R.phase = phase; R.t = 0; R.spoke = false; }
+    const UPDATE = { light: updateLight, eden: updateEden, copy: updateCopy, colony: updateColony, loss: updateLoss, arrive: updateArrive };
     function update(R, dt) {
         R.t += dt; R.clock += dt;
         if (R.voiceUntil && R.clock > R.voiceUntil) hush(R);
         R.veilK += ((R.ui.voice.classList.contains('is-in') ? 1 : 0) - R.veilK) * Math.min(1, dt * VEIL_RATE);
-        if (R.kind === 'light') updateLight(R, dt); else if (R.kind === 'copy') updateCopy(R, dt); else updateEden(R, dt);
+        UPDATE[R.kind](R, dt);
+        const canSkip = R.phase !== 'card' && R.phase !== 'out' && !(R.kind === 'light' && R.phase === 'hold');
+        const showSkip = canSkip && R.clock >= SKIP_AFTER_S;                        // the film skip, in the corner, after 3 s
+        if (showSkip === R.ui.skip.hidden) {
+            R.ui.skip.hidden = !showSkip;
+            if (showSkip) { void R.ui.skip.offsetWidth; R.ui.skip.classList.add('is-in'); } else R.ui.skip.classList.remove('is-in');
+        }
     }
     function updateLight(R, dt) {
         const sc = R.ending.scene, L = R.light;
@@ -236,7 +280,7 @@
             while (R.alarmAt < ALARMS.length && R.s >= ALARMS[R.alarmAt].at) {     // an alarm: a deck goes red, the ship jolts
                 const a = ALARMS[R.alarmAt++];
                 R.damaged = Object.assign({}, R.damaged, { [a.deck]: true });
-                if (a.label) R.label = a.label;
+                if (a.label) R.label = { text: a.label, deck: a.deck };
                 R.jolt = 1;
             }
             LA.tick(L, dt, 0.35 + 1.7 * R.s);
@@ -290,7 +334,7 @@
         }
     }
     /** The copy: down through the clouds, the ground and the crew's line, the tilt up, the night and its last lines, the card. */
-    function updateCopy(R, dt) {
+    function updateCopy(R) {
         const sc = R.ending.scene;
         if (R.phase === 'descent') { if (R.t >= DESCENT_S) { R.frozen = snapshot(R); go(R, 'land'); } return; }
         if (R.phase === 'land') { if (R.t >= COPY_LAND_S) { R.frozen = null; R.lineAt = 0; go(R, 'ground'); } return; }
@@ -307,55 +351,111 @@
             if (R.t >= NIGHT_LINE_S + Math.max(0, lines.length - 1) * NIGHT_GAP_S + CARD_AFTER_S) showCard(R);
         }
     }
+    /** The colony: the world brakes in, our Lander's light drops to it, the ground (dawn, or night when it failed), one line. */
+    function updateColony(R) {
+        const line = R.ending.scene.line;
+        if (R.phase === 'brake') { CO.bakeNext(R.colony); if (R.t >= BRAKE_S) go(R, 'drop'); return; }
+        if (R.phase === 'drop') { if (R.t >= DROP_S) { R.frozen = snapshot(R); go(R, 'land'); } return; }
+        if (R.phase === 'land') { if (R.t >= CO_LAND_S) { R.frozen = null; go(R, 'ground'); } return; }
+        if (R.phase !== 'ground') return;
+        const sayAt = R.ending.success ? CO_LINE_S : FAIL_LINE_S;
+        if (!R.ending.success) R.red = stepped(R.t - RED_AT_S, RED_S, 4);
+        if (!R.spoke && R.t >= sayAt) { R.spoke = true; if (line) say(R, line, true); }
+        if (R.t >= sayAt + CARD_AFTER_S) showCard(R);
+    }
+    /** The loss: the ship lit a moment, then dark band by band, the hold's lamps, each pod in turn; her line; the card. */
+    function lossDrainEnd() { return DRAIN.pods + 4 * DRAIN.podGap + DRAIN.pod; }
+    function updateLoss(R) {
+        const D = R.dark, line = R.ending.scene.line;
+        D.talking = R.talkUntil > R.clock;
+        if (R.phase === 'lit') { if (R.t >= LIT_S) go(R, 'drain'); return; }
+        if (R.phase !== 'drain') return;
+        const t = R.t, end = lossDrainEnd();
+        D.below = stepped(t - DRAIN.below, DRAIN.band, 4); D.above = stepped(t - DRAIN.above, DRAIN.band, 4); D.hold = stepped(t - DRAIN.hold, DRAIN.holdS, 8);
+        D.pods = [0, 1, 2, 3, 4].map(i => stepped(t - DRAIN.pods - i * DRAIN.podGap, DRAIN.pod, 4));
+        if (!R.spoke && t >= end + LOSS_LINE_S) { R.spoke = true; if (line) say(R, line, true); }
+        if (t >= end + LOSS_LINE_S + CARD_AFTER_S) showCard(R);
+    }
+    /** The first sight of the light: it grows, A.U.R.A. says what the reel's captions said, then it steps out to the ink. */
+    function updateArrive(R, dt) {
+        const lines = R.ending.scene.flight;
+        LA.tick(R.light, dt, 0.35 + 1.2 * R.s);
+        if (R.phase === 'fly') {
+            R.s = ARRIVE_K0 + (ARRIVE_K1 - ARRIVE_K0) * ss(0, 1, R.t / ARRIVE_S);
+            while (R.lineAt < lines.length && R.t >= lines[R.lineAt].at) { say(R, lines[R.lineAt], R.lineAt === lines.length - 1); R.lineAt++; }
+            if (R.t >= ARRIVE_S) { hush(R); go(R, 'out'); }
+            return;
+        }
+        if (R.phase === 'out' && R.t >= ARRIVE_OUT_S) { stop(R); R.resolve(); }
+    }
     function snapshot(R) {
         const c = document.createElement('canvas'); c.width = R.G.W; c.height = R.G.H;
         c.getContext('2d').drawImage(R.ui.canvas, 0, 0);
         return c;
     }
 
-    // ── the one held moment: "Keep going" ──
+    // ── the one held moment: "› Keep going", in the voice column under A.U.R.A.'s line ──
     function showKeep(R) {
         const ui = R.ui;
         ui.keepVerb.textContent = R.ending.scene.keepGoing || 'Keep going';
+        ui.root.classList.remove('is-hover');                                       // no hover look until the pointer moves
         ui.keep.hidden = false;
         if (window.ChoiceGuard) window.ChoiceGuard.hold(ui.keep, KEEP_GUARD_MS);
         R.keepAt = performance.now();
-        void ui.keep.offsetWidth; ui.keep.classList.add('is-in');
     }
     function keepGoing(R) {
         if (R.phase !== 'hold' || R.ui.keep.hidden || performance.now() - R.keepAt < KEEP_GUARD_MS) return false;
-        R.ui.keep.classList.remove('is-in'); R.ui.keep.hidden = true;
+        R.ui.keep.hidden = true;
         hush(R);
         R.damaged = {}; R.label = null;                                             // nobody speaks now; the alarms stop
         go(R, 'push');
         return true;
     }
-    /** Esc: flying in, straight to the held moment (the choice is still the player's); after it, to the end card. */
+    /** Esc or the film skip: flying in, straight to the held moment (the choice is still the player's); after it, to the end
+        card; the arrival ends. */
     function skip(R) {
         if (!R.ready || R.phase === 'card') return;                                 // nothing to skip before the pictures are built
+        if (R.kind === 'arrive') { if (R.phase === 'fly') { hush(R); go(R, 'out'); } return; }
         if (R.kind === 'light' && R.phase === 'fly') {
             R.s = HOLD_AT; while (R.lineAt < R.ending.scene.flight.length) R.lineAt++;
-            ALARMS.forEach(a => { R.damaged[a.deck] = true; if (a.label) R.label = a.label; });
+            ALARMS.forEach(a => { R.damaged[a.deck] = true; if (a.label) R.label = { text: a.label, deck: a.deck }; });
             go(R, 'hold'); say(R, R.ending.scene.hold, true);
             return;
         }
         if (R.kind === 'light' && R.phase === 'hold') return;                       // only "Keep going" leaves the held moment
         if (R.kind === 'copy') { R.frozen = null; go(R, 'night'); R.lineAt = 99; showCard(R); return; }
         if (R.kind === 'light') { if (!R.calm) R.calm = CA.build(R.G.W, R.G.H, R.ending.living); go(R, 'calm'); R.t = DAWN_S + LINE_AFTER_S; R.spoke = true; say(R, R.ending.scene.closing, true); showCard(R); return; }
+        if (R.kind === 'colony') {
+            R.frozen = null; go(R, 'ground'); R.t = 9; R.spoke = true;
+            if (!R.ending.success) R.red = 1;
+            if (R.ending.scene.line) say(R, R.ending.scene.line, true);
+            showCard(R);
+            return;
+        }
+        if (R.kind === 'loss') {
+            Object.assign(R.dark, { below: 1, above: 1, hold: 1, pods: [1, 1, 1, 1, 1] });
+            go(R, 'drain'); R.t = 99; R.spoke = true;
+            if (R.ending.scene.line) say(R, R.ending.scene.line, true);
+            showCard(R);
+            return;
+        }
         R.frozen = null; go(R, 'point'); R.spoke = true; showCard(R);
     }
 
-    // ── the end card: the last picture under ink in Bayer steps, the name, three lines, "New game" ──
+    // ── the end card: the last picture under ink in Bayer steps, the name, the lines, the key ──
     function showCard(R) {
         if (R.phase === 'card' || R.cardShown) return;
         R.cardShown = true;
         R.cardFrom = R.phase;
         go(R, 'card');
         hush(R);
-        const ui = R.ui;
+        const ui = R.ui, isAgain = R.kind === 'loss' || (R.kind === 'colony' && !R.ending.success);
         ui.title.textContent = R.ending.title;
-        ui.lines.innerHTML = (R.ending.text || []).map(t => `<p>${esc(t)}</p>`).join('');
+        ui.lines.innerHTML = (R.ending.card || R.ending.text || [])                  // card: the light's and Eden's new-look lines
+            .map(t => `<p>${esc(t).replace(/\S+-\S+/g, w => `<span class="nse-whole">${w}</span>`)}</p>`).join('');   // a world's name never breaks at its hyphen
+        ui.cardVerb.textContent = isAgain && EW ? EW.WORDS.keys.again : 'New game';
         ui.card.classList.toggle('is-low', R.kind === 'eden');
+        ui.root.classList.remove('is-hover');                                       // the click that got here is not a hover
         ui.card.hidden = false;
         if (window.ChoiceGuard) window.ChoiceGuard.hold(ui.card, GUARD_MS);
         void ui.card.offsetWidth; ui.card.classList.add('is-in');
@@ -368,58 +468,79 @@
     }
 
     // ════════════════════════════════════════ drawing ════════════════════════════════════════
-    function render(R, ms) {
-        const { W, H } = R.G, ctx = R.ctx, sc = R.ending.scene;
-        const phase = R.phase === 'card' ? R.cardFrom : R.phase, t = R.t;
+    function renderLight(R, ms, phase, t) {
+        const { W, H } = R.G, ctx = R.ctx;
         const flash = isCalmMotion() || Math.floor(R.clock * 2) % 2 === 0;
-        const shakeOf = s => (isCalmMotion() ? 0 : 1.4 * ss(0.4, 1, s) + 2.2 * R.jolt);
-        if (R.kind === 'light') {
-            if (phase === 'fly' || phase === 'hold' || phase === 'push' || phase === 'white') {
-                const isWhite = phase === 'white', k = isWhite ? clamp01(t / WHITE_S) : 0;
-                const sway = isCalmMotion() ? [0, 0] : [Math.sin(R.clock * 0.3) * 5 * (1 - R.s), Math.cos(R.clock * 0.23) * 3 * (1 - R.s)];
-                LA.draw(ctx, R.light, {
-                    phase: isWhite ? 'white' : 'fly', s: R.s, k, off: sway, shake: shakeOf(R.s), clock: R.clock, damaged: R.damaged, flash,
-                    label: R.label, edges: phase !== 'white' && Object.keys(R.damaged).length > 0, plume: 0.4 + 0.5 * Math.min(1, R.s),
-                    white: isWhite ? ss(0, 1, k) ** 1.4 * 1.05 : 0, words: wordBoxes(R),
-                }, ms);
-            } else if (phase === 'quiet') {
-                ctx.fillStyle = LA.WHITE; ctx.fillRect(0, 0, W, H);
-            } else if (R.calm) {
-                CA.draw(ctx, R.calm, ms);
-                const dawn = R.phase === 'calm' ? 1 - ss(0, 1, t / DAWN_S) : 0;
-                if (dawn > 0) LA.white(ctx, W, H, dawn * 1.05);                   // the white clears into the calm place
-                else if (R.phase !== 'card') drawVeil(R);
-            }
-        } else if (R.kind === 'copy') {
-            const A = R.copy;
-            if (phase === 'descent') CP.drawDescent(ctx, A, clamp01(t / DESCENT_S), ms);
-            else if (phase === 'land') { CP.drawGround(ctx, A, 0, ms, 0); if (R.frozen) dissolve(ctx, R.aux, R.frozen, W, H, 1 - clamp01(t / COPY_LAND_S)); }
-            else if (phase === 'ground') CP.drawGround(ctx, A, t, ms, 0);
-            else if (phase === 'tilt') {                                                // the view tilts up: the ground slides away, the night comes over it
-                const k = clamp01(t / TILT_S);
-                CP.drawNight(ctx, A, ms);
-                CP.drawGround(R.aux2.getContext('2d'), A, GROUND_S, ms, k);
-                dissolve(ctx, R.aux, R.aux2, W, H, 1 - ss(0.3, 1, k));
-            } else CP.drawNight(ctx, A, ms);
-            if (R.phase !== 'card') { if (phase === 'night') LA.shade(ctx, W, H, wordBoxes(R)); else drawVeil(R); }
-        } else if (phase === 'turn') {
+        const shake = isCalmMotion() ? 0 : 1.4 * ss(0.4, 1, R.s) + 2.2 * R.jolt;
+        if (phase === 'fly' || phase === 'hold' || phase === 'push' || phase === 'white' || phase === 'out') {
+            const isWhite = phase === 'white', k = isWhite ? clamp01(t / WHITE_S) : 0;
+            const sway = isCalmMotion() ? [0, 0] : [Math.sin(R.clock * 0.3) * 5 * (1 - R.s), Math.cos(R.clock * 0.23) * 3 * (1 - R.s)];
+            LA.draw(ctx, R.light, {
+                phase: isWhite ? 'white' : 'fly', s: R.s, k, off: sway, shake, clock: R.clock, damaged: R.damaged, flash,
+                label: R.label, edges: phase !== 'white' && Object.keys(R.damaged).length > 0, plume: 0.4 + 0.5 * Math.min(1, R.s),
+                white: isWhite ? ss(0, 1, k) ** 1.4 * 1.05 : 0, words: wordBoxes(R),
+            }, ms);
+            if (phase === 'out') dim(ctx, W, H, stepped(t, ARRIVE_OUT_S, 4));
+        } else if (phase === 'quiet') {
+            ctx.fillStyle = LA.WHITE; ctx.fillRect(0, 0, W, H);
+        } else if (R.calm) {
+            CA.draw(ctx, R.calm, ms);
+            const dawn = R.phase === 'calm' ? 1 - ss(0, 1, t / DAWN_S) : 0;
+            if (dawn > 0) LA.white(ctx, W, H, dawn * 1.05);                       // the white clears into the calm place
+            else if (R.phase !== 'card') drawVeil(R);
+        }
+    }
+    function renderCopy(R, ms, phase, t) {
+        const { W, H } = R.G, ctx = R.ctx, A = R.copy;
+        if (phase === 'descent') CP.drawDescent(ctx, A, clamp01(t / DESCENT_S), ms);
+        else if (phase === 'land') { CP.drawGround(ctx, A, 0, ms, 0); if (R.frozen) dissolve(ctx, R.aux, R.frozen, W, H, 1 - stepped(t, COPY_LAND_S, 4)); }
+        else if (phase === 'ground') CP.drawGround(ctx, A, t, ms, 0);
+        else if (phase === 'tilt') {                                                // the view tilts up: the ground slides away, the night comes over it
+            const k = clamp01(t / TILT_S);
+            CP.drawNight(ctx, A, ms);
+            CP.drawGround(R.aux2.getContext('2d'), A, GROUND_S, ms, k);
+            dissolve(ctx, R.aux, R.aux2, W, H, 1 - ss(0.3, 1, k));
+        } else CP.drawNight(ctx, A, ms);
+        if (R.phase !== 'card') { if (phase === 'night') LA.shade(ctx, W, H, wordBoxes(R)); else drawVeil(R); }
+    }
+    function renderEden(R, ms, phase, t) {
+        const { W, H } = R.G, ctx = R.ctx;
+        if (phase === 'turn') {
             LA.draw(ctx, R.light, { phase: 'turn', s: 0.62, k: clamp01(t / TURN_S), from: { s: 0.62, off: [0, 0] }, edenK: clamp01((t - 0.7) / (TURN_S - 0.7)),
                 off: [0, 0], shake: 0, clock: R.clock, damaged: {}, flash: false, plume: 0.55, white: 0, words: wordBoxes(R) }, ms);
         } else if (phase === 'land' || phase === 'meadow' || phase === 'rise') {
             const rise = phase === 'rise' ? clamp01(t / RISE_S) : 0, settled = phase === 'meadow' ? t : phase === 'land' ? 0 : 99;
-            if (rise > 0.6) {                                                       // the last of the rise dissolves into Eden from orbit
+            if (rise > 0.6) {                                                       // the last of the rise dissolves into Eden from orbit, in four steps
                 EA.drawGlobe(ctx, R.eden, 0, ms);
                 EA.drawMeadow(R.aux2.getContext('2d'), R.eden, settled, ms, rise);
-                dissolve(ctx, R.aux, R.aux2, W, H, 1 - ss(0.6, 1, rise));
+                dissolve(ctx, R.aux, R.aux2, W, H, 1 - stepped(t - 0.6 * RISE_S, 0.4 * RISE_S, 4));
             } else EA.drawMeadow(ctx, R.eden, settled, ms, rise);
-            if (phase === 'land' && R.frozen) dissolve(ctx, R.aux, R.frozen, W, H, 1 - clamp01(t / LAND_S));
+            if (phase === 'land' && R.frozen) dissolve(ctx, R.aux, R.frozen, W, H, 1 - stepped(t, LAND_S, 4));   // the globe to the meadow, four steps
             if (R.phase !== 'card') drawVeil(R);
         } else {
             EA.drawGlobe(ctx, R.eden, phase === 'shrink' ? clamp01(t / SHRINK_S) * EA.POINT_AT : 1, ms);
             if (R.phase !== 'card') LA.shade(ctx, W, H, wordBoxes(R));
         }
+    }
+    function renderColony(R, ms, phase, t) {
+        const { W, H } = R.G, ctx = R.ctx, A = R.colony;
+        if (phase === 'brake') CO.drawBrake(ctx, A, clamp01(t / BRAKE_S), ms);
+        else if (phase === 'drop') CO.drawDrop(ctx, A, stepped(t, DROP_S, Math.round(DROP_S / STEP_S)), ms);
+        else {
+            CO.drawGround(ctx, A, t, ms, R.red);
+            if (phase === 'land' && R.frozen) dissolve(ctx, R.aux, R.frozen, W, H, 1 - stepped(t, CO_LAND_S, 4));
+        }
+        if (R.phase !== 'card' && phase !== 'brake' && phase !== 'drop') { if (A.night) LA.shade(ctx, W, H, wordBoxes(R)); else drawVeil(R); }
+    }
+    const RENDER = { light: renderLight, arrive: renderLight, copy: renderCopy, eden: renderEden, colony: renderColony,
+        loss: (R, ms) => { LO.draw(R.ctx, R.loss, R.dark, ms); if (R.phase !== 'card') LA.shade(R.ctx, R.G.W, R.G.H, wordBoxes(R)); } };
+    function render(R, ms) {
+        const { W, H } = R.G, ctx = R.ctx;
+        RENDER[R.kind](R, ms, R.phase === 'card' ? R.cardFrom : R.phase, R.t);
         if (R.clock < IN_S) dim(ctx, W, H, 1 - R.clock / IN_S);                     // in from ink
-        if (R.phase === 'card' && R.kind !== 'eden') LA.darken(ctx, W, H, (R.kind === 'copy' ? 0.55 : CARD_DIM) * ss(0, 0.8, R.t));   // Eden's last picture is already the dark
+        if (R.phase !== 'card') return;
+        if (R.kind !== 'eden' && R.kind !== 'loss') LA.darken(ctx, W, H, (R.kind === 'copy' ? 0.55 : CARD_DIM) * ss(0, 0.8, R.t));   // Eden's and the loss's last pictures are already the dark
+        LA.shade(ctx, W, H, wordBoxes(R));                                          // the dither shade under the card: no star crosses its lines
     }
 
     // ════════════════════════════════════════ playing ════════════════════════════════════════
@@ -429,26 +550,30 @@
         R.frameId = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(frame);
         const dt = Math.min(MAX_DT, (now - (R.last || now)) / 1000);
         R.last = now; R.acc += dt;
-        if (R.acc < 1 / FPS - 0.002 || !R.ready) return;
+        if (R.acc < 1 / FPS - 0.002 || !R.ready || R.broken) return;
         const step = Math.min(MAX_DT, R.acc) * R.speed; R.acc = 0;
         const every = R.phase !== 'card' || R.t <= 1.2 ? 1 : R.t <= CARD_SETTLE_S ? CARD_FRAME_EVERY : FPS;   // the card: only faint motion, then about once a second
         if (every > 1 && (R.idle = (R.idle || 0) + 1) % every) { R.t += step; return; }
         try {
             update(R, step);
+            if (run !== R) return;                                                  // the arrival ended in that update
             const t0 = performance.now();
-            if (!R.broken) render(R, now);
+            render(R, now);
             R.frameMs = R.frameMs * 0.9 + (performance.now() - t0) * 0.1;
             R.errors = 0;
         } catch (err) {
             console.error('NSEnding: a frame failed', err);
             if (!R.started) { fail(R, err); return; }
-            if ((R.errors = (R.errors || 0) + 1) >= 3) {                            // the picture keeps failing: ink, and the card
-                R.broken = true;
-                R.ctx.fillStyle = INK; R.ctx.fillRect(0, 0, R.G.W, R.G.H);
-                if (!R.cardShown) { try { showCard(R); } catch (err2) { fail(R, err2); } }
-            }
+            if ((R.errors = (R.errors || 0) + 1) >= 3) breakDown(R, err);
         }
         R.started = true;
+    }
+    /** The picture cannot be drawn: ink, and the end card (an arrival just ends). */
+    function breakDown(R, err) {
+        if (R.kind === 'arrive') { fail(R, err); return; }
+        R.broken = true; R.ready = true;
+        R.ctx.fillStyle = INK; R.ctx.fillRect(0, 0, R.G.W, R.G.H);
+        if (!R.cardShown) { try { showCard(R); } catch (err2) { fail(R, err2); } }
     }
     function fail(R, err) {
         stop(R);
@@ -463,17 +588,16 @@
         if (run === R) run = null;
     }
 
-    function play(app, ending, opts = {}) {
+    function start(app, ending, kind, from) {
         if (run) return Promise.reject(new Error('NSEnding: an ending is already playing'));
-        if (!app || !ending || !ending.scene || !Array.isArray(ending.text)) return Promise.reject(new Error('NSEnding: no ending to play'));
-        if (ending.door === 'COPY' && !CP) return Promise.reject(new Error('NSEnding: the copy has no pictures (end/CopyArt.js)'));
         let ui;
         try { ui = mount(); } catch (err) { return Promise.reject(err); }
         const R = {
-            app, ending, ui, kind: ending.door === 'LIGHT' ? 'light' : ending.door === 'COPY' ? 'copy' : 'eden', from: opts.from === 'eden' ? 'eden' : opts.from === 'copy' ? 'copy' : 'light',
-            phase: null, t: 0, clock: 0, s: 0, lineAt: 0, alarmAt: 0, damaged: {}, label: null, jolt: 0, voiceUntil: 0, line: '',
-            spoke: false, keepAt: 0, cardShown: false, cardFrom: null, speed: 1, last: 0, acc: 0, frameMs: 0, ready: false, started: false, veilK: 0,
-            light: null, calm: null, eden: null, copy: null, frozen: null, frameId: null,
+            app, ending, ui, kind, from,
+            phase: null, t: 0, clock: 0, s: 0, lineAt: 0, alarmAt: 0, damaged: {}, label: null, jolt: 0, voiceUntil: 0, talkUntil: 0, line: '',
+            spoke: false, keepAt: 0, cardShown: false, cardFrom: null, speed: 1, last: 0, acc: 0, frameMs: 0, ready: false, started: false, broken: false, veilK: 0, red: 0,
+            dark: { below: 0, above: 0, hold: 0, pods: [0, 0, 0, 0, 0], talking: false },
+            light: null, calm: null, eden: null, copy: null, colony: null, loss: null, frozen: null, frameId: null,
         };
         const done = new Promise((resolve, reject) => { R.resolve = resolve; R.reject = reject; });
         run = R;
@@ -481,42 +605,91 @@
             if (run !== R) return;
             if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); skip(R); return; }
             if ((e.key === 'Enter' || e.key === ' ') && R.phase === 'hold' && !ui.keep.hidden) { e.preventDefault(); e.stopPropagation(); keepGoing(R); return; }
-            if (R.phase === 'card') return;                                         // the card: Tab and Enter reach "New game"
+            if (R.phase === 'card') return;                                         // the card: Tab and Enter reach its key
             e.stopPropagation();                                                    // the game under the scene hears nothing,
             if (e.key === 'Enter' || e.key === ' ' || e.key === 'Tab') e.preventDefault();   // and nothing under it is focused or pressed
         };
         let resizeTimer = 0;
         R.onResize = () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { if (run === R && R.ready) { try { rebuild(R); } catch (err) { console.error('NSEnding: resize failed', err); } } }, RESIZE_MS); };
+        ui.root.addEventListener('pointermove', () => ui.root.classList.add('is-hover'));   // the hover look only once the pointer moves
         ui.root.addEventListener('click', e => {
             const b = e.target.closest('button[data-act]');
             if (!b) return;
             if (b.dataset.act === 'keep') keepGoing(R);
             if (b.dataset.act === 'new') newGame();
+            if (b.dataset.act === 'skip') skip(R);
         });
         addEventListener('keydown', R.onKey, true);
         addEventListener('resize', R.onResize);
         try { measure(R); } catch (err) { stop(R); return Promise.reject(err); }
         R.ctx.fillStyle = INK; R.ctx.fillRect(0, 0, R.G.W, R.G.H);
+        const FIRST = { light: 'fly', arrive: 'fly', copy: 'descent', colony: 'brake', loss: 'lit' };
         setTimeout(() => {                                                          // the ink shows first; the pictures are built under it
             if (run !== R) return;
             try {
                 buildFirst(R);
-                go(R, R.kind === 'light' ? 'fly' : R.kind === 'copy' ? 'descent' : R.from === 'light' ? 'turn' : 'meadow');
+                go(R, FIRST[kind] || (from === 'light' ? 'turn' : 'meadow'));
                 R.ready = true;
-            } catch (err) { console.error('NSEnding: the scene could not be built', err); fail(R, err); }
+            } catch (err) { console.error('NSEnding: the scene could not be built', err); breakDown(R, err); }
         }, BUILD_GAP_MS);
         R.frameId = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(frame);
         return done;
     }
+    function play(app, ending, opts = {}) {
+        if (!app || !ending || !ending.scene || !Array.isArray(ending.text)) return Promise.reject(new Error('NSEnding: no ending to play'));
+        const kind = KIND[ending.door] || 'eden';
+        if (kind === 'copy' && !CP) return Promise.reject(new Error('NSEnding: the copy has no pictures (end/CopyArt.js)'));
+        if (kind === 'colony' && !CO) return Promise.reject(new Error('NSEnding: the colony has no pictures (end/ColonyArt.js)'));
+        if (kind === 'loss' && !LO) return Promise.reject(new Error('NSEnding: the loss has no picture (end/LossArt.js)'));
+        return start(app, ending, kind, opts.from === 'eden' ? 'eden' : opts.from === 'copy' ? 'copy' : 'light');
+    }
+    /** The first sight of the light, in place of the old reel (call C83): A.U.R.A. says what its captions said. */
+    function arrive(app, what) {
+        if (what !== 'light' || !app) return Promise.reject(new Error('NSEnding: nothing to arrive at'));
+        const flight = EW ? EW.arrival() : [];
+        return start(app, { door: 'ARRIVE', title: '', text: [], living: [], scene: { flight } }, 'arrive', 'light');
+    }
+
+    /** A new-look screen would not start: A.U.R.A.'s line and "› Try again" over the ink (never an empty sky). retry() is
+        asked again with the line gone; a retry that fails puts it back. */
+    function recover(app, retry) {
+        injectCss();
+        document.querySelectorAll('.nse-recover').forEach(n => n.remove());
+        const root = document.createElement('div');
+        root.className = 'ns-film ns-end nse-recover';
+        root.setAttribute('role', 'dialog');
+        root.setAttribute('aria-label', 'A.U.R.A.');
+        root.tabIndex = -1;
+        root.innerHTML = VOICE;
+        const q = s => root.querySelector(s), voice = q('.nse-voice');
+        voice.classList.add('tone-aura');
+        q('.nse-aura').hidden = false; q('.nse-ring').hidden = false;
+        q('.nse-name').textContent = 'A.U.R.A.';
+        q('.nse-say').textContent = EW ? EW.WORDS.recover : '';
+        q('.nse-keep').hidden = false;
+        const key = q('.nse-keep .nse-go');
+        key.dataset.act = 'again';
+        q('.nse-keep .nse-verb').textContent = EW ? EW.WORDS.keys.again : '';
+        root.addEventListener('pointermove', () => root.classList.add('is-hover'));
+        key.addEventListener('click', () => {
+            root.remove();
+            try { retry(); } catch (err) { console.error('NSEnding: the retry failed', err); recover(app, retry); }
+        });
+        document.body.appendChild(root);
+        void voice.offsetWidth; voice.classList.add('is-in');
+        try { root.focus({ preventScroll: true }); } catch (err) { /* nothing to focus */ }
+        return root;
+    }
 
     window.NSEnding = Object.freeze({
-        play,
+        play, arrive, recover,
         isPlaying: () => !!run,
         debug: Object.freeze({
             state: () => (run ? {
                 kind: run.kind, from: run.from, phase: run.phase, t: +run.t.toFixed(2), clock: +run.clock.toFixed(2), s: +run.s.toFixed(3), line: run.line,
-                voice: run.ui.voice.classList.contains('is-in'), keep: !run.ui.keep.hidden, card: !run.ui.card.hidden, alarms: Object.keys(run.damaged),
-                art: run.G ? [run.G.W, run.G.H, run.G.k] : null, frameMs: +run.frameMs.toFixed(1), ready: run.ready,
+                voice: run.ui.voice.classList.contains('is-in'), keep: !run.ui.keep.hidden, card: !run.ui.card.hidden, skip: !run.ui.skip.hidden, alarms: Object.keys(run.damaged),
+                art: run.G ? [run.G.W, run.G.H, run.G.k] : null, frameMs: +run.frameMs.toFixed(1), ready: run.ready, broken: run.broken, red: run.red,
+                dark: run.kind === 'loss' ? JSON.parse(JSON.stringify(run.dark)) : null,
                 globe: run.eden ? run.eden.frames.length + '/' + run.eden.radii.length : null,
             } : null),
             speed: k => { if (run) run.speed = Math.max(0.1, Math.min(20, Number(k) || 1)); },
