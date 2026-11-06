@@ -6,6 +6,7 @@
 const { VALUE, SAFE_TRIP_RISK } = require('./models');
 
 const SETTLE = /settle|end the journey|ends the game|stay here for good|go down for good/i;
+const WAIT = /^not yet$/i;                                                          // the new look's 'Not yet' on a card asked (the talk before the jump): the player who chose to go goes
 const ROLE_ORDER = ['SECURITY', 'ENGINEER', 'MEDIC', 'SPECIALIST'];              // Supper.js OFFER_ORDER: Vance, Jaxon, Aris, Mira
 const CREW_ID = { ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
 const tagsOf = c => (c && c.tags) || [];
@@ -47,7 +48,7 @@ function net(text) {
 function pickCard(cfg, state, style, rnd, descOf) {
     const choices = cfg.choices || [];
     const words = c => { try { return `${c.text || ''} ${descOf ? descOf(c, state) : c.desc || ''}`; } catch (err) { return String(c.text || ''); } };
-    const ok = choices.map((c, i) => ({ c, i })).filter(({ c }) => !c.disabled && !SETTLE.test(String(c.text || ''))
+    const ok = choices.map((c, i) => ({ c, i })).filter(({ c }) => !c.disabled && !SETTLE.test(String(c.text || '')) && !WAIT.test(String(c.text || '').trim())
         && !(typeof c.requires === 'function' && !safe(() => c.requires(state), false)));
     if (!ok.length) return choices.length ? 0 : -1;
     if (style.cards === 'random') return ok[Math.floor(rnd() * ok.length)].i;

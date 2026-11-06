@@ -29,7 +29,7 @@ function pickOnCard(rc, cfg) {
     R.cards[kind] = (R.cards[kind] || 0) + 1;
     let idx;
     if (kind === 'askJump') idx = Math.min(1, (cfg.choices || []).length - 1);          // "Go anyway" (askBeforeJump jumps on idx 1): the player clicked the jump on purpose
-    else if (kind === 'reserve') { idx = 0; R.counts.reserveJumps += 1; sec(rc).reserve += 1; }
+    else if (kind === 'reserve') { idx = Math.max(0, (cfg.choices || []).findIndex(c => /reserve/i.test(String(c.text || '')))); R.counts.reserveJumps += 1; sec(rc).reserve += 1; }   // the new look puts 'Not yet' first
     else if (kind === 'alert' || kind === 'escape' || kind === 'page') idx = 0;
     else idx = P.pickCard(cfg, state, style, rnd, EC.descOf);
     rc.add(M.SECONDS[CARD_SECONDS[kind] || 'site'] || 20, 'card:' + kind);
