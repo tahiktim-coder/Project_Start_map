@@ -256,21 +256,21 @@ _LIVE top left, the programme bug top right with the clock under it in the last 
 
 ### The wake-up: the black card «Pods.js · CARD_TEXT»
 
-- Sixty-one years later «Pods.js · line 54»
+- Sixty-one years later «Pods.js · line 55»
 
 ### The wake-up: A.U.R.A. and the first lines «Pods.js · DRAFT»
 _Between pods A.U.R.A. also says the talk above. Each person says one first line as they step out: the second one if a wrong valve made them groggy._
 
-- **teach** — The others are still asleep, Commander. «Pods.js · line 45» **DRAFT**
-- **aura** — I will wake the others, Commander. «Pods.js · line 46» **DRAFT**
-- **first · jaxon** — All that sleep and I'm still tired. Is there coffee? «Pods.js · line 48» **DRAFT (look pass)**
-- **first · jaxon** — My head's pounding. Give me a minute. «Pods.js · line 48» **DRAFT (look pass)**
-- **first · aris** — Slowly, everyone. Sit down if you feel dizzy. «Pods.js · line 49» **DRAFT**
-- **first · aris** — I'm dizzy. That was the wrong fluid. Go gently with the others. «Pods.js · line 49» **DRAFT**
-- **first · vance** — Sixty-one years, she says. I want to see the logs. «Pods.js · line 50» **DRAFT ("she says": since C11 A.U.R.A. no longer says the years; the card does)**
-- **first · vance** — Wrong fluid. I felt it go in. Who set up these pods? «Pods.js · line 50» **DRAFT ("she says": since C11 A.U.R.A. no longer says the years; the card does)**
-- **first · mira** — We made it! A.U.R.A., what did we miss? «Pods.js · line 51» **DRAFT**
-- **first · mira** — Everything's spinning. A.U.R.A., is that normal? «Pods.js · line 51» **DRAFT**
+- **teach** — The others are still asleep, Commander. «Pods.js · line 46» **DRAFT**
+- **aura** — I will wake the others, Commander. «Pods.js · line 47» **DRAFT**
+- **first · jaxon** — All that sleep and I'm still tired. Is there coffee? «Pods.js · line 49» **DRAFT (look pass)**
+- **first · jaxon** — My head's pounding. Give me a minute. «Pods.js · line 49» **DRAFT (look pass)**
+- **first · aris** — Slowly, everyone. Sit down if you feel dizzy. «Pods.js · line 50» **DRAFT**
+- **first · aris** — I'm dizzy. That was the wrong fluid. Go gently with the others. «Pods.js · line 50» **DRAFT**
+- **first · vance** — Sixty-one years, she says. I want to see the logs. «Pods.js · line 51» **DRAFT ("she says": since C11 A.U.R.A. no longer says the years; the card does)**
+- **first · vance** — Wrong fluid. I felt it go in. Who set up these pods? «Pods.js · line 51» **DRAFT ("she says": since C11 A.U.R.A. no longer says the years; the card does)**
+- **first · mira** — We made it! A.U.R.A., what did we miss? «Pods.js · line 52» **DRAFT**
+- **first · mira** — Everything's spinning. A.U.R.A., is that normal? «Pods.js · line 52» **DRAFT**
 
 ### The wake-up: the pod panel «PodWords.js · VALVES»
 _The three valves; on a wrong valve the panel says "Wrong fluid"._
