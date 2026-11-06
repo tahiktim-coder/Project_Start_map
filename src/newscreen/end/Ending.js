@@ -18,7 +18,8 @@
                      the last light; the dead are named on their pod plates; she says one plain line.
    Then the end card (DESIGN.md section 3): the upper third, left on the voice column (Eden low, under the cold point); the
    ending's name, three plain lines or fewer, "› New game" (a loss or a failed colony: "› Try again"), no stats, no scores,
-   40 words or fewer, a dither shade under it. No hover look until the pointer moves after it shows.
+   40 words or fewer, a dither shade under it. Every key here is the frame key (.mini-btn), the framed warm keycap. No hover
+   look until the pointer moves after it shows. The film skip's corner darkens under it like dusk on the pale pictures.
    Also: the first sight of the light (arrive): the light growing full-bleed, A.U.R.A. saying what the old reel's captions
    said, the film skip; it ends by itself and gives the screen back. And the fallback (recover): when a new-look screen will
    not start, A.U.R.A.'s line and "› Try again" over the ink, never an empty sky.
@@ -62,6 +63,9 @@
     const ARRIVE_S = 8.4, ARRIVE_OUT_S = 0.5, ARRIVE_K0 = 0.2, ARRIVE_K1 = 0.62;
     // all of them
     const IN_S = 0.9, LINE_AFTER_S = 0.9, CARD_AFTER_S = 3.8, CARD_DIM = 0.75, GUARD_MS = 900, KEEP_GUARD_MS = 400, CARD_FRAME_EVERY = 4, CARD_SETTLE_S = 3, VEIL_RATE = 4, SKIP_AFTER_S = 3;
+    // the skip's corner: it steps in with the skip (SKIP_FADE_S, three steps), ink to CORNER_A in CORNER_STEPS dithered steps, full
+    // out to CORNER_CORE of its reach; under the card it steps out while the card's dim steps in (CORNER_OUT_S)
+    const SKIP_FADE_S = 0.18, CORNER_A = 0.96, CORNER_STEPS = 8, CORNER_CORE = 0.5, CORNER_OUT_S = 0.8;
     // the ship's alarms, in shares of the approach: the deck that turns emergency red and the word on its hull plate (the mockup's)
     const ALARMS = [
         { at: 0.18, deck: 'engineering', label: 'HULL TEMPERATURE' }, { at: 0.3, deck: 'bridge' }, { at: 0.42, deck: 'lab' },
@@ -78,7 +82,7 @@
 .ns-end { position: fixed; inset: 0; z-index: 5000; overflow: hidden; background: var(--ink); cursor: default; user-select: none; -webkit-user-select: none;
     --face: calc(48px + 24px * var(--t)); color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }
 .ns-end p, .ns-end h2 { margin: 0; }
-.ns-end button { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
+.ns-end :where(button:not(.mini-btn)) { font: inherit; color: inherit; background: none; border: 0; padding: 0; margin: 0; cursor: pointer; }
 .nse-art { position: absolute; left: 0; top: 0; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
 .nse-voice { position: absolute; left: max(16px, 6vw); top: 8vh; display: grid; grid-template-columns: var(--face) minmax(0, 1fr); gap: 0 18px; align-items: start;
     width: max-content; max-width: min(calc(600px + 200px * var(--t)), calc(100vw - 32px)); text-shadow: var(--shadow); pointer-events: none; opacity: 0; transition: opacity 180ms steps(3, end); }
@@ -96,9 +100,17 @@
 .nse-voice.tone-cora { --tone: var(--tone-cora); } .nse-voice.tone-jaxon { --tone: var(--tone-jaxon); } .nse-voice.tone-aris { --tone: var(--tone-aris); }
 .nse-voice.tone-vance { --tone: var(--tone-vance); } .nse-voice.tone-mira { --tone: var(--tone-mira); } .nse-voice.tone-aura { --tone: var(--tone-aura); }
 .nse-keep { margin-top: var(--s3); pointer-events: auto; }
-.ns-end .nse-go { display: inline-flex; align-items: baseline; gap: var(--s2); padding: var(--s2) 0; font: 400 var(--fs-key)/1.25 var(--f-text); color: var(--warm); text-shadow: var(--shadow); }
-.nse-go .nse-mark { font: 500 var(--fs-key)/1 var(--f-ui); }
-.ns-end.is-hover .nse-go:hover, .ns-end .nse-go:focus-visible, .ns-end .nse-go:active { color: var(--warm-br); outline: none; }
+/* the keys are the frame key (.mini-btn, minigames.css), each the framed warm keycap (the only way on): pointed at, the word warms
+   and steps in and the frame fills; focused, it is underlined too; pressed, --warm-br. No hover look until the pointer moves.
+   The keycap is filled on the ink, as it is in the minigame frame, so it reads the same over any picture. */
+.ns-end { --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--faint); --mg-amber: var(--warm); --mg-amber-br: var(--warm-br);
+    --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: var(--ease); }
+.ns-end .mini-btn { font-size: var(--fs-key); transition-timing-function: steps(2, end); }
+.ns-end .mini-btn::before { color: var(--warm); transition-timing-function: steps(2, end); }
+.ns-end .mini-btn.is-primary { border-color: color-mix(in srgb, var(--warm) 55%, transparent); background: color-mix(in srgb, var(--warm) 8%, var(--ink)); }
+.ns-end.is-hover .mini-btn.is-primary:hover, .ns-end .mini-btn.is-primary:focus-visible { border-color: var(--warm); background: color-mix(in srgb, var(--warm) 16%, var(--ink)); }
+.ns-end:not(.is-hover) .mini-btn:hover:not(:focus-visible):not(:active) { color: var(--mg-words); transform: none; }
+.ns-end:not(.is-hover) .mini-btn.is-primary:hover:not(:focus-visible) { border-color: color-mix(in srgb, var(--warm) 55%, transparent); background: color-mix(in srgb, var(--warm) 8%, var(--ink)); }
 .nse-card { position: absolute; left: max(16px, 6vw); top: 14vh; width: min(calc(560px + 60px * var(--t)), calc(100vw - 32px)); display: grid; gap: var(--s3);
     text-shadow: var(--shadow); opacity: 0; transition: opacity 480ms steps(4, end); outline: none; }
 .nse-card.is-in { opacity: 1; }
@@ -120,7 +132,7 @@
         const s = document.createElement('style'); s.id = 'nse-css'; s.textContent = CSS; document.head.appendChild(s);
     }
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const KEY = (act, verb) => `<button type="button" class="nse-go" data-act="${act}"><span class="nse-mark" aria-hidden="true">›</span><span class="nse-verb">${esc(verb)}</span></button>`;
+    const KEY = (act, verb) => `<button type="button" class="mini-btn is-primary nse-go" data-act="${act}"><span class="nse-verb">${esc(verb)}</span></button>`;   // the › is .mini-btn's own mark
     // the voice: the face cell first for every speaker (a portrait, A.U.R.A.'s ring, or empty for the narrator), so the line
     // never moves sideways when the speaker changes
     const VOICE = '<div class="nse-voice" aria-live="polite"><span class="nse-cell"><img class="nse-face" alt="" hidden><span class="nse-aura" hidden></span></span>'
@@ -241,10 +253,40 @@
     function hush(R) { R.ui.voice.classList.remove('is-in'); R.voiceUntil = 0; }
     /** Over a day sky or the pale calm place: the corner darkens with the words, like dusk (no box), and lightens after. */
     function drawVeil(R) {
-        if (R.veilK < 0.02) return;
         const ctx = R.ctx;
-        ctx.globalAlpha = Math.min(1, R.veilK);
-        ctx.drawImage(LA.veil(R.G.W, R.G.H), 0, 0);
+        if (R.veilK >= 0.02) {
+            ctx.globalAlpha = Math.min(1, R.veilK);
+            ctx.drawImage(LA.veil(R.G.W, R.G.H), 0, 0);
+            ctx.globalAlpha = 1;
+        }
+        drawCorner(R, Math.ceil(R.skipK * 3) / 3);
+    }
+    /** The film skip sits low on the right: on a day sky, a meadow or a dawn the corner darkens under it the same way, like dusk
+        (no box), deep enough that its --dim reads 4.5:1 on any picture. Cached by size and by where the skip sits (art px). */
+    const corners = new Map();
+    function cornerVeil(W, H, box) {
+        const rx = Math.max(8, Math.ceil((W - box[0]) * Math.SQRT2 / CORNER_CORE)), ry = Math.max(8, Math.ceil((H - box[1]) * Math.SQRT2 / CORNER_CORE));
+        const cw = Math.min(W, rx), ch = Math.min(H, ry), key = W + 'x' + H + ':' + rx + 'x' + ry;
+        if (corners.has(key)) return corners.get(key);
+        const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+        const g = c.getContext('2d'), img = g.createImageData(cw, ch), d = img.data, ink = P.hexRgb(INK);
+        for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+            const gx = W - cw + x, gy = H - ch + y, s = CORNER_A * (1 - ss(CORNER_CORE, 1, Math.hypot((W - gx) / rx, (H - gy) / ry)));
+            const a = Math.min(1, Math.floor(s * CORNER_STEPS + threshold(gx, gy)) / CORNER_STEPS), i = (y * cw + x) * 4;
+            d[i] = ink[0]; d[i + 1] = ink[1]; d[i + 2] = ink[2]; d[i + 3] = Math.round(a * 255);
+        }
+        g.putImageData(img, 0, 0);
+        if (corners.size > 4) corners.clear();
+        corners.set(key, c);
+        return c;
+    }
+    function drawCorner(R, a) {
+        if (!R.ui.skip.hidden) { const r = R.ui.skip.getBoundingClientRect(), { k, dpr } = R.G; if (r.width) R.skipBox = [Math.floor(r.left * dpr / k), Math.floor(r.top * dpr / k)]; }
+        if (a <= 0 || !R.skipBox) return;
+        const ctx = R.ctx, c = cornerVeil(R.G.W, R.G.H, R.skipBox);
+        R.cornerUsed = true;
+        ctx.globalAlpha = Math.min(1, a);
+        ctx.drawImage(c, R.G.W - c.width, R.G.H - c.height);
         ctx.globalAlpha = 1;
     }
     /** Boxes (art px) the picture darkens under, so the words read even on the light: the voice, the skip, the card. */
@@ -264,8 +306,10 @@
         if (R.voiceUntil && R.clock > R.voiceUntil) hush(R);
         R.veilK += ((R.ui.voice.classList.contains('is-in') ? 1 : 0) - R.veilK) * Math.min(1, dt * VEIL_RATE);
         UPDATE[R.kind](R, dt);
-        const canSkip = R.phase !== 'card' && R.phase !== 'out' && !(R.kind === 'light' && R.phase === 'hold');
+        const isWhite = R.kind === 'light' && (R.phase === 'white' || R.phase === 'quiet' || (R.phase === 'calm' && R.t < DAWN_S));   // nothing on the white (Esc still skips)
+        const canSkip = R.phase !== 'card' && R.phase !== 'out' && !isWhite && !(R.kind === 'light' && R.phase === 'hold');
         const showSkip = canSkip && R.clock >= SKIP_AFTER_S;                        // the film skip, in the corner, after 3 s
+        R.skipK = clamp01(R.skipK + (showSkip ? dt : -dt) / SKIP_FADE_S);
         if (showSkip === R.ui.skip.hidden) {
             R.ui.skip.hidden = !showSkip;
             if (showSkip) { void R.ui.skip.offsetWidth; R.ui.skip.classList.add('is-in'); } else R.ui.skip.classList.remove('is-in');
@@ -530,7 +574,8 @@
             CO.drawGround(ctx, A, t, ms, R.red);
             if (phase === 'land' && R.frozen) dissolve(ctx, R.aux, R.frozen, W, H, 1 - stepped(t, CO_LAND_S, 4));
         }
-        if (R.phase !== 'card' && phase !== 'brake' && phase !== 'drop') { if (A.night) LA.shade(ctx, W, H, wordBoxes(R)); else drawVeil(R); }
+        if (R.phase === 'card') return;
+        if (A.night && phase !== 'brake' && phase !== 'drop') { LA.shade(ctx, W, H, wordBoxes(R)); drawCorner(R, Math.ceil(R.skipK * 3) / 3); } else drawVeil(R);
     }
     const RENDER = { light: renderLight, arrive: renderLight, copy: renderCopy, eden: renderEden, colony: renderColony,
         loss: (R, ms) => { LO.draw(R.ctx, R.loss, R.dark, ms); if (R.phase !== 'card') LA.shade(R.ctx, R.G.W, R.G.H, wordBoxes(R)); } };
@@ -539,6 +584,7 @@
         RENDER[R.kind](R, ms, R.phase === 'card' ? R.cardFrom : R.phase, R.t);
         if (R.clock < IN_S) dim(ctx, W, H, 1 - R.clock / IN_S);                     // in from ink
         if (R.phase !== 'card') return;
+        if (R.cornerUsed) drawCorner(R, 1 - stepped(R.t, CORNER_OUT_S, 4));      // the skip's corner steps out while the dim steps in
         if (R.kind !== 'eden' && R.kind !== 'loss') LA.darken(ctx, W, H, (R.kind === 'copy' ? 0.55 : CARD_DIM) * ss(0, 0.8, R.t));   // Eden's and the loss's last pictures are already the dark
         LA.shade(ctx, W, H, wordBoxes(R));                                          // the dither shade under the card: no star crosses its lines
     }
@@ -595,7 +641,7 @@
         const R = {
             app, ending, ui, kind, from,
             phase: null, t: 0, clock: 0, s: 0, lineAt: 0, alarmAt: 0, damaged: {}, label: null, jolt: 0, voiceUntil: 0, talkUntil: 0, line: '',
-            spoke: false, keepAt: 0, cardShown: false, cardFrom: null, speed: 1, last: 0, acc: 0, frameMs: 0, ready: false, started: false, broken: false, veilK: 0, red: 0,
+            spoke: false, keepAt: 0, cardShown: false, cardFrom: null, speed: 1, last: 0, acc: 0, frameMs: 0, ready: false, started: false, broken: false, veilK: 0, red: 0, skipK: 0, skipBox: null, cornerUsed: false,
             dark: { below: 0, above: 0, hold: 0, pods: [0, 0, 0, 0, 0], talking: false },
             light: null, calm: null, eden: null, copy: null, colony: null, loss: null, frozen: null, frameId: null,
         };
