@@ -395,8 +395,8 @@ _Hurt, too weak from a missed supper, shut in their bunk; asleep (sedated): A.U.
 ### Rations low (look pass B04) «Tower.js · RATIONS_LINE»
 _A.U.R.A., once a run, the first time the rations run low._
 
-- We have [n] rations. That's [one jump | jumps], Commander. «Tower.js · line 651» **DRAFT (look pass)**
-- We have [n] rations. That's less than one jump, Commander. «Tower.js · line 651» **DRAFT (look pass)**
+- We have [n] rations. That's [one jump | jumps], Commander. «Tower.js · line 661» **DRAFT (look pass)**
+- We have [n] rations. That's less than one jump, Commander. «Tower.js · line 661» **DRAFT (look pass)**
 
 ### What the data adds up to «bundle.js · addColonyKnowledge»
 _At 1, 3 and 5 data._
