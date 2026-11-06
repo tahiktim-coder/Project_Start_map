@@ -445,7 +445,7 @@
                 crisis = ev.id;
                 breakPatched(s);
                 if (ev.id === 'POWER_SURGE' && aboardWell('ENGINEER')) { log(s, LINES.jaxonSurge); log(s, LINES.jaxonSays); }
-                else { const away = new Set(members.map(m => m.name)), said = (ev.dialogue || []).filter(l => !away.has(l.speaker)); run = Promise.resolve(app.showShipMalfunctionModal(said.length ? Object.assign({}, ev, { dialogue: said }) : ev)); }   // its lines only from those aboard (B07)
+                else { const away = new Set(members.map(m => m.name)), said = [].concat((typeof ev.dialogue === 'function' ? ev.dialogue(s) : ev.dialogue) || []).filter(l => l && !away.has(l.speaker)); run = Promise.resolve(app.showShipMalfunctionModal(said.length ? Object.assign({}, ev, { dialogue: said }) : ev)); }   // its lines only from those aboard (B07)
             }
         }
         return run.then(() => {
