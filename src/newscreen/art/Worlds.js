@@ -501,13 +501,17 @@
             p.cover(x, y, RING, v * lit * o.dim * (0.85 + 0.3 * vnoise(rho * 30, 2, PR.salt)), 0.75);
         });
     }
-    /** A perfect circle of light (an ANOMALY): far too even to be dust. */
+    /** A perfect circle of light (an ANOMALY): far too even to be dust. o.halo { ramp, top }: its colours, and how high
+        over the centre (in radii) it may reach before it fades out in the dither (the bridge glass: clear of its lamps). */
+    const HALO_FADE = 0.12;                                                       // radii: the ring's fade under that top
+    const haloLeft = (h, up, r) => (h && h.top > 0 ? clamp01((h.top * r - up) / (HALO_FADE * r)) : 1);
     function halo(p, o) {
-        const { cx, cy, r } = o, R = r * 1.34;
+        const { cx, cy, r } = o, R = r * 1.34, hr = (o.halo && o.halo.ramp) || GLOW.halo;
         p.region(cx - R - 2, cy - R - 2, cx + R + 2, cy + R + 2, (x, y) => {
-            const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
-            if (Math.abs(d - R) < 0.6 && (d > r + 1)) p.solid(x, y, GLOW.halo, 0.46 * o.dim);
-            else if (Math.abs(d - R) < 1.4 && d > r + 1) p.cover(x, y, GLOW.halo, 0.2 * o.dim, 0.4);
+            const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy), k = haloLeft(o.halo, cy - y - 0.5, r);
+            if (k < 1 && threshold(x, y) >= k) return;
+            if (Math.abs(d - R) < 0.6 && (d > r + 1)) p.solid(x, y, hr, 0.46 * o.dim);
+            else if (Math.abs(d - R) < 1.4 && d > r + 1) p.cover(x, y, hr, 0.2 * o.dim, 0.4);
         });
     }
     function smallSphere(p, X, Y, rr, L, rmp, dim, salt) {
@@ -681,7 +685,7 @@
         const w = Math.max(2, Math.round(o.r / 22 * (type === 'TOXIC' ? 3.2 : LIVING[type] ? 1.7 : DUSTY[type] ? 1.9 : 1)));
         const O = { cx: o.cx, cy: o.cy, r: o.r, L, ramp: o.ramp || pal.ramp, dim: grey ? 0.62 : o.dim > 0 ? Math.min(1, o.dim) : 1, glowDim: grey ? 0.5 : 1, ambient: grey ? 0.006 : 0.012,
             rim: type === 'ROGUE' ? 0 : grey ? 0.2 : 0.12, rimRamp: LIVING[type] ? TEAL_RIM : null,
-            atmo: type === 'ROGUE' || type === 'MIRROR' || type === 'SHATTERED' ? null : { ramp: atmoRamp, w }, rims: [] };
+            atmo: type === 'ROGUE' || type === 'MIRROR' || type === 'SHATTERED' ? null : { ramp: atmoRamp, w }, rims: [], halo: o.halo || null };
         if (type === 'ROGUE') O.ambient = 0.03;
         if (type === 'ROGUE') O.L = P.norm3(L[0], L[1], L[2] - 0.9);                 // no sun of its own: barely lit, from behind
         const comp = PR.companion;
@@ -766,7 +770,7 @@
             const bx = X + Math.round(Math.cos(pr.moonA) * r * 1.04), by = Y + Math.round(Math.sin(pr.moonA) * r * 1.04);
             f.px(bx, by, RP.AMBER.hex[4]); if (r > 20) { f.px(bx - 1, by, RP.AMBER.hex[2]); f.px(bx + 1, by, RP.AMBER.hex[2]); f.px(bx, by - 1, RP.AMBER.hex[2]); }
         }
-        if (pr.companion === 'halo') { const a = (t / 5200) * TAU + pr.moonA, R = r * 1.34; f.px(X + Math.round(Math.cos(a) * R), Y + Math.round(Math.sin(a) * R), GLOW.halo.hex[5]); }
+        if (pr.companion === 'halo') { const a = (t / 5200) * TAU + pr.moonA, R = r * 1.34, up = -Math.sin(a) * R; if (haloLeft(opt.halo, up, r) >= 1) f.px(X + Math.round(Math.cos(a) * R), Y + Math.round(Math.sin(a) * R), ((opt.halo && opt.halo.ramp) || GLOW.halo).hex[5]); }
         if (pr.touch.odd && (tick % 7) < 2) {                                          // sector 3: the odd edge shimmers
             const a = Math.atan2(-L[1], -L[0]) + (hash(tick & 255, 4, pr.salt) - 0.5) * 1.4;
             f.px(X + Math.round(Math.cos(a) * (r - 0.5)), Y + Math.round(Math.sin(a) * (r - 0.5)), GLOW.odd.hex[4]);

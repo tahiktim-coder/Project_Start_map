@@ -73,6 +73,7 @@
     const DESK = [334, 429], KEY_Y = 290;                                 // Cora's console front (frame px): the helm key sits on it
     const KEY_TOP_TWO = 266;                                              // two held keys with their chips (the copy of Earth): the first one's top, so both fit the console
     const NOTE_MIN = 260;                                                 // CSS px: a person's note is never narrower (C56)
+    const NOTE_REACH = 24;                                                // frame px: a person's note never ends further than this from them
     const OFF_WHY = 'team away';                                          // DRAFT (look pass): Leave orbit's chip while the team is down
     const WHO_WRAP = 44;                                                  // frame px: the most a name over someone at the hatch may spread
     const WHO_GAP = 3;                                                    // frame px: kept between the two names at the hatch
@@ -88,6 +89,16 @@
     const still = () => !!(mq && mq.matches);
     const overlaps = (a, b, pad) => a[0] < b[0] + b[2] + pad && a[0] + a[2] + pad > b[0] && a[1] < b[1] + b[3] + pad && a[1] + a[3] + pad > b[1];
     function onDisc(b, dc, pad) { if (!dc) return false; const qx = clamp(dc[0], b[0], b[0] + b[2]), qy = clamp(dc[1], b[1], b[1] + b[3]); return Math.hypot(qx - dc[0], qy - dc[1]) < dc[2] + pad; }
+    /** A person's note: over their head on the glass, slid off the world away from its middle, never further than
+        NOTE_REACH from them (null: no such place). */
+    function noteBox(px, headY, wh, dc) {
+        const [w, h] = wh, y = Math.max(WIN.y0 + 4, headY - 6 - h), lo = WIN.x0 + 4, hi = WIN.x1 - 4 - w, step = dc && px < dc[0] ? -4 : 4;
+        const near = clamp(px, WIN.x0 + 4, WIN.x1 - 4);                  // someone off the glass: its nearest edge
+        let x = clamp(px - Math.round(w / 2), lo, hi);
+        while (onDisc([x, y, w, h], dc, 6) && x + step >= lo && x + step <= hi) x += step;
+        if (onDisc([x, y, w, h], dc, 6) || x > near + NOTE_REACH || x + w < near - NOTE_REACH) return null;
+        return [x, y, w, h];
+    }
     /** The two names at the hatch keep a small gap between them: each steps half the shortfall away from the other. */
     function spread(boxes) {
         if (boxes.length < 2) return boxes;
@@ -517,15 +528,17 @@
             // the copy of Earth: no marks over their heads (C04); A.U.R.A. says how the fall left them (stop/Copy.js)
             // the note over someone pointed at: at the hatch it takes the place of their name, under GO DOWN; always on the glass (C56)
             if (note) {
-                const atHatch = notedBox === true;
-                T.note.set({ name: note.html ? '' : note.name, line: note.line, html: note.html, loss: note.loss, tone: note.tone, wrap: Math.max(NOTE_MIN, Math.floor((atHatch ? HATCH_NOTE_WRAP : 118) * u)) + 'px' });
-                const [w, h] = T.note.size(u), p = ctx.poseOf(S.hover, t);
+                const atHatch = notedBox === true, wide = Math.max(NOTE_MIN, Math.floor((atHatch ? HATCH_NOTE_WRAP : 118) * u));
+                const sized = wrap => { T.note.set({ name: note.html ? '' : note.name, line: note.line, html: note.html, loss: note.loss, tone: note.tone, wrap: wrap + 'px' }); return T.note.size(u); };
+                const first = sized(wide), p = ctx.poseOf(S.hover, t);
                 notedBox = null;
                 if (p && !p.hidden) {
-                    let x = clamp(Math.round(p.x + ctx.OFFX - w / 2), WIN.x0 + 4, WIN.x1 - 4 - w);
-                    const y = Math.max(WIN.y0 + 4, headTop(S.hover) - 6 - h);
-                    while (onDisc([x, y, w, h], dc, 6) && x > WIN.x0 + 4) x -= 4;
-                    notedBox = [x, y, w, h];
+                    const px = Math.round(p.x + ctx.OFFX), headY = headTop(S.hover);
+                    let box = noteBox(px, headY, first, dc);
+                    if (!box && wide > NOTE_MIN) box = noteBox(px, headY, sized(NOTE_MIN), dc);   // beside the world: the narrowest note
+                    if (!box) { const [w, h] = T.note.size(u); box = [clamp(px - Math.round(w / 2), WIN.x0 + 4, WIN.x1 - 4 - w), Math.max(WIN.y0 + 4, headY - 6 - h), w, h]; }   // no room off the world near them: over them all the same, on its limb
+                    const [x, y, w, h] = box;
+                    notedBox = box;
                     L.items.push({ key: 'note:' + S.hover, tag: T.note, kind: 'note', x, y, w, h, tone: note.tone, brackets: true });
                 }
             }

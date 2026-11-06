@@ -47,6 +47,8 @@
     const LIGHT_CAP = { core: 10, halo: 56 };                             // the glass is small: the later sectors' light is held to this
     const LW = P.norm3(0.42, -0.36, 0.83);                                // lit from the front, toward the light
     const DOCK = [WIN.x0 + 70, WIN.y1 + 14];                              // the shuttle's clamp, under the window
+    const COOL = (() => { try { return getComputedStyle(document.documentElement).getPropertyValue('--cool').trim() || '#a9b6bc'; } catch (err) { return '#a9b6bc'; } })();
+    const HALO = Object.freeze({ ramp: P.ramp(INK, '#141a1d', '#3a474e', '#6b7a82', COOL, '#dde4e7'), top: (ORBIT.y - 52) / ORBIT.r });   // an anomaly's ring in --cool, faded out over the lamps (BridgeArt.js LAMPS hang to y 48)
     const CALL = [WIN.x0 + 28, WIN.y1 - 44];                              // a waiting call blinks here, low in the open sky (A.U.R.A. speaks high)
     // the real type → one of the five sphere recipes (as travel/Field.js), used only without NSWorlds
     const FAMILY = {
@@ -154,7 +156,7 @@
     function paintWorld(pl, sp, half, r, f) {
         const node = pl.node, type = node.type, pal = paletteOf(type), W = window.NSWorlds;
         if (W && typeof W.paint === 'function' && pl.kind !== 'wrong') {   // the Wrong Place is not a world type: our own dark sphere
-            try { W.paint(sp, { cx: half, cy: half, r, node, sector: pl.sector, L: LW, grey: false, ramp: pal.ramp, atmo: pal.atmo, dim: 0.7 + 0.3 * f }); return; }
+            try { W.paint(sp, { cx: half, cy: half, r, node, sector: pl.sector, L: LW, grey: false, ramp: pal.ramp, atmo: pal.atmo, dim: 0.7 + 0.3 * f, halo: HALO }); return; }
             catch (err) { console.error('NewScreen stop: NSWorlds.paint failed', err); }
         }
         const wrong = pl.kind === 'wrong', fam = wrong ? 'dark' : pal.surface, w = Math.max(2, Math.round(r / 22));
@@ -312,7 +314,7 @@
             const g = geom(t, shownAt), p = g.p && !g.p.none ? D.ready(g.p) : null;
             if (p) { if (p.fixed) c.drawImage(p.canvas, WIN.x0, WIN.y0); else c.drawImage(p.canvas, Math.round(g.x) - p.half, Math.round(g.y) - p.half); }
             const W = window.NSWorlds;
-            if (p && cur.kind === 'world' && W && typeof W.live === 'function') { try { W.live(f, cur.node, Math.round(g.x), Math.round(g.y), g.r, t, { L: LW, sector: cur.sector }); } catch (err) { /* the still world is enough */ } }
+            if (p && cur.kind === 'world' && W && typeof W.live === 'function') { try { W.live(f, cur.node, Math.round(g.x), Math.round(g.y), g.r, t, { L: LW, sector: cur.sector, halo: HALO }); } catch (err) { /* the still world is enough */ } }
             const [sx, sy] = siteOf(g).map(Math.round), ph = Math.floor((t % 1500) / 125);
             if (isWreck(cur.node) || cur.kind === 'wrong') {              // our own ship's beacon, still calling
                 if (ph < 2) { f.glow(sx, sy, 8, RP.RED, 0.95); f.px(sx - 1, sy - 1, RP.RED.hex[4], 3, 3); } else if (ph < 4) { f.glow(sx, sy, 5, RP.RED, 0.7); f.px(sx, sy, RP.RED.hex[4], 2, 2); } else f.px(sx, sy, RP.RED.hex[ph < 7 ? 3 : 2], 2, 2);
