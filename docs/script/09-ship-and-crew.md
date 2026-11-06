@@ -216,7 +216,7 @@ _The readout in the picture's corner (three words or fewer), and chips a card se
 - **desc** — Stay in this sector. «bundle.js · line 3405» **DRAFT (look pass)**
 - **readout** — Sector [sector] «bundle.js · line 3412» **DRAFT (look pass)**
 - **readout** — The light «bundle.js · line 4069» **DRAFT (look pass)**
-- **readout** — Earth? «Copy.js · line 471» **DRAFT (look pass)**
+- **readout** — Earth? «Copy.js · line 493» **DRAFT (look pass)**
 
 ### A ship fault: no card (look pass B03) «Fault.js · WORDS»
 _One voice line (A.U.R.A.'s in the fault, else the first crew line, their words) and one chip at the faulted deck. The chip is the result's first number; with none, one of these._
@@ -257,17 +257,17 @@ _When someone reaches stress 3. The commander breaking is game over._
 ### Bringing someone back «bundle.js · handleRevivalAction»
 _Using Pulsing Spores or an Ancient Neural Link from the cargo hold._
 
-- **title** — INVALID TARGET «bundle.js · line 6231»
-- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 6232»
-- CANCEL «bundle.js · line 6233»
-- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 6243»
-- Select subject for integration with [name]. «bundle.js · line 6245»
-- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 6246»
-- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 6278»
-- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 6279»
-- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 6282»
-- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 6283»
-- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 6290»
+- **title** — INVALID TARGET «bundle.js · line 6239»
+- **desc** — No necrotic tissue detected on board. Reanimation protocol requires a valid biological host (dead). «bundle.js · line 6240»
+- CANCEL «bundle.js · line 6241»
+- /// REANIMATION PROTOCOL /// [X] «bundle.js · line 6251»
+- Select subject for integration with [name]. «bundle.js · line 6253»
+- WARNING: PROCESS IS IRREVERSIBLE. Neural patterns will be rebuilt but altered. The entity returned may retain skills but lose self-identity. «bundle.js · line 6254»
+- BIOLOGICAL INTEGRATION COMPLETE: [name] has returned. «bundle.js · line 6286»
+- [name]: "I can hear them... the others who joined. They're still there, in the mycelium." «bundle.js · line 6287»
+- NEURAL OVERRIDE COMPLETE: [name] has returned. «bundle.js · line 6290»
+- [name]: "Efficiency. Purpose. The static is gone. Everything is... clear now." «bundle.js · line 6291»
+- Aris: "The readings are stable but... the neural patterns are different. They're [name], but also... something else." «bundle.js · line 6298»
 
 ## Food, damage and data
 
@@ -292,18 +292,18 @@ _The first time is a tutorial._
 ### What a broken deck costs (the new look) «Orbit.js · DECK_COST»
 _Chips always on a red deck in the tower, and under "Live with it". The lab costs nothing there._
 
-- **bridge** — warps cost more «Orbit.js · line 769» **DRAFT**
-- **bridge** — no far scans «Orbit.js · line 769» **DRAFT**
-- **quarters** — no rest at supper «Orbit.js · line 770» **DRAFT**
-- **cargo** — the hold takes half «Orbit.js · line 771» **DRAFT**
-- **engineering** — jumps cost double «Orbit.js · line 772» **DRAFT**
-- **engineering** — repairs cost more «Orbit.js · line 772» **DRAFT**
+- **bridge** — warps cost more «Orbit.js · line 771» **DRAFT**
+- **bridge** — no far scans «Orbit.js · line 771» **DRAFT**
+- **quarters** — no rest at supper «Orbit.js · line 772» **DRAFT**
+- **cargo** — the hold takes half «Orbit.js · line 773» **DRAFT**
+- **engineering** — jumps cost double «Orbit.js · line 774» **DRAFT**
+- **engineering** — repairs cost more «Orbit.js · line 774» **DRAFT**
 
 ### And only while something aboard needs that deck «Orbit.js · DECK_COST_IF»
 _A culture in the hold; someone shut down (catatonic) in the quarters._
 
-- the culture stops growing «Orbit.js · line 779» **DRAFT**
-- no recovery for [name] «Orbit.js · line 780» **DRAFT**
+- the culture stops growing «Orbit.js · line 781» **DRAFT**
+- no recovery for [name] «Orbit.js · line 782» **DRAFT**
 
 ### What the data adds up to «bundle.js · addColonyKnowledge»
 _At 1, 3 and 5 data._
@@ -482,8 +482,8 @@ _Every sector jump except the one into sector 3 (that one stalls: sector-3.md), 
 ### Stranded «bundle.js · checkStranded»
 _No energy and no way out._
 
-- **title** — STRANDED «bundle.js · line 6918»
-- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 6919»
+- **title** — STRANDED «bundle.js · line 6926»
+- **message** — The Exodus-9 drifts silently in the void. Energy reserves depleted. No planet within reach. The crew watches the stars grow dim. One by one, systems fail. Life support runs on emergency backup for eleven days. On the twelfth day, the ship goes quiet. The void claims another Exodus. «bundle.js · line 6927»
 
 ### The game-over screen «EndScreens.js · gameOver»
 

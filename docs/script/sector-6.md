@@ -113,15 +113,15 @@ _Only these lines of it play at the light._
 ### Sending a probe «bundle.js · handleProbeAction»
 _Only these lines of it play at the light._
 
-- No probe available. «bundle.js · line 4587»
-- Probe launched toward the light... «bundle.js · line 4591»
-- Signal lost at once. No data, and no wreckage. «bundle.js · line 4592»
-- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 4593»
+- No probe available. «bundle.js · line 4595»
+- Probe launched toward the light... «bundle.js · line 4599»
+- Signal lost at once. No data, and no wreckage. «bundle.js · line 4600»
+- A.U.R.A.: "The probe reached the light and stopped reporting, Commander. It was not destroyed. It was read." «bundle.js · line 4601»
 
 ### Sending the team «bundle.js · handleEvaAction»
 _Only these lines of it play at the light._
 
-- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 4791»
+- A.U.R.A.: "There is no ground to land on, Commander. There is only the light." «bundle.js · line 4799»
 
 ### Trying to leave «bundle.js · init · req-break-orbit»
 _Breaking orbit at the light._
