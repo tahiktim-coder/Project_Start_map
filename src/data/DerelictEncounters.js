@@ -10,6 +10,8 @@
  * The `type` keys are kept as they were; only the text changed.
  *
  * Writing rules for this file: docs/STYLE.md. Plain sentences, no nicknames, no riddles.
+ * The new look: an accident hurts one of the team that went down (siteAtRisk: ExodusDerelicts.js, GameState.tripTeam). Who a
+ * choice needs still reads anyone aboard (the player can't see the story before the team goes).
  */
 
 const DERELICT_TYPES = [
@@ -58,7 +60,7 @@ const DERELICT_ENCOUNTERS = [
                 effect: (state) => {
                     state.energy -= 10;
                     if (Math.random() < 0.2) {
-                        const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
+                        const team = siteAtRisk(state);
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
@@ -119,10 +121,10 @@ const DERELICT_ENCOUNTERS = [
             {
                 text: "Open the medical bay",
                 desc: "-5 Energy. Heals one injured crew member. If nobody is hurt: +1 Revival Item.",
-                descNow: (state) => state.crew.some(c => c.status === 'INJURED') ? "-5 Energy. Heals one injured crew member." : "-5 Energy. Nobody is hurt: +1 Revival Item.",
+                descNow: (state) => state.crew.some(c => state.treatable(c)) ? "-5 Energy. Heals one injured crew member." : "-5 Energy. Nobody is hurt: +1 Revival Item.",
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
-                    const injured = state.crew.find(c => c.status === 'INJURED');
+                    const injured = state.crew.find(c => state.treatable(c));   // the new look's hunger-sick: only food mends them
                     if (injured) {
                         injured.status = 'HEALTHY';
                         return `Medical supplies used on ${injured.name}. They're fit for duty again. -5 Energy.`;
@@ -311,7 +313,7 @@ const DERELICT_ENCOUNTERS = [
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     if (Math.random() < 0.3) {
-                        const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
+                        const team = siteAtRisk(state);
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';

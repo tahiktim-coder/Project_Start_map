@@ -1,8 +1,9 @@
 /* ═══ Silent Exodus · new screen (?new=1) · end/CopyArt.js: the trap's ending, its pictures ═══════════════════════════
    What it is: the pictures of going down to the copy of Earth (the Wrong Place's "Go down", stop/Copy.js). Everything here
    is a copy that is slightly wrong, shown and never said:
-     THE DESCENT  our Lander drops tail first into the blue; it passes through the clouds and they do not move or tear: they
-                  are painted on, and they are one cloud, the same size every time, stamped in rows like the grass.
+     THE DESCENT  our Lander drops tail first into the blue through the clouds: they never tear or change shape, because they
+                  are one cloud, painted once and shown at three sizes, in two layers drifting across (a far layer, small and
+                  slow, behind the Lander; a near one, larger and quicker, in front of it).
      THE GROUND   a perfect day by a perfect sea: the sun does not move, the sea's glints repeat like a floor tile, and the
                   grass is ONE blade copied over and over in rows (the pixel art's own copy-paste). The crew step out of the
                   Lander (the crew-hires people, as end/EdenArt.js draws them) and stand looking out.
@@ -43,9 +44,14 @@
     const DAYL = { horizon: 0.5, shore: 0.6, lawn: 0.645, sun: [0.8, 0.15], sunR: 0.034, feet: 0.93 };   // the sun up on the right: the words keep to the left
     const PLACES = ['mira', 'cora', 'jaxon', 'aris', 'vance'];                   // left to right, where they stop
     const BLADE = ['..3..', '..34.', '.23..', '.23..', '.12..', '1.2..', '.12..'];   // ONE blade of grass: every blade on this world
-    // the descent's clouds: ONE cloud (w: share of the width), stamped in rows from `top` (heights down the descent's sky, in
-    // screen heights) every stepY screens, stepX of its own widths apart
-    const CLOUDS = Object.freeze({ w: 0.15, top: 1.12, rows: 4, stepX: 1.55, stepY: 0.27 });
+    // the descent's clouds (look pass B10): ONE cloud at three sizes (shares of the width), in two layers. Each layer: how many,
+    // which sizes, where (top and depth: screen heights down the descent's sky), how fast it rises past us (par: share of the
+    // camera's fall) and drifts across (art px a second, moved in the art's 125 ms steps); placed by a fixed hash, never in rows
+    const CLOUDS = Object.freeze({
+        sizes: [0.08, 0.13, 0.21],
+        far: { n: 9, of: [0, 1], top: 0.45, depth: 1.25, par: 0.55, drift: 3, seed: 911 },
+        near: { n: 6, of: [1, 2], top: 0.95, depth: 2.1, par: 1.35, drift: -6, seed: 937 },
+    });
 
     // ════════════════════════════════════════ the day ════════════════════════════════════════
     function paintDay(W, H) {
@@ -114,8 +120,8 @@
     }
 
     function build(W, H, ids) {
-        const cloudW = Math.round(W * CLOUDS.w), cloudH = Math.round(cloudW * 0.32);
-        const art = { W, H, day: paintDay(W, H), descent: paintDescent(W, H), cloud: paintCloud(cloudW, cloudH), cloudW, cloudH, group: group(W, H, ids), night: null };
+        const clouds = CLOUDS.sizes.map(k => { const w = Math.max(8, Math.round(W * k)), h = Math.max(3, Math.round(w * 0.32)); return { w, h, canvas: paintCloud(w, h) }; });
+        const art = { W, H, day: paintDay(W, H), descent: paintDescent(W, H), clouds, group: group(W, H, ids), night: null };
         art.lander = { x: Math.round(W * 0.2), y: Math.round(H * DAYL.feet) - 2, len: Math.round(H * 0.5) };
         return art;
     }
@@ -126,21 +132,26 @@
         try { SHIP.lander(ctx, { x, y, len, angle: Math.PI / 2, legs: 'down', anchor: 1.1, light: 0.95, plume, t: ms }); } catch (err) { /* left out */ }
     }
 
-    /** k 0..1: the camera rides down with our Lander, out of the dark into the blue; the clouds pass up past it, unmoved:
-        ONE cloud, stamped over the sky in even rows like the grass (each row half a step along from the last), all the same
-        size, painted on. The middle of every other row is ours to go through: it stays whole, its edge as hard as before. */
+    /** One layer of clouds: each placed by a fixed hash, rising past us at the layer's share of the fall, drifting across in
+        125 ms steps and coming round again at the far edge. */
+    function cloudLayer(ctx, art, Lr, sy, tq) {
+        const { W, H } = art;
+        for (let i = 0; i < Lr.n; i++) {
+            const c = art.clouds[Lr.of[Math.floor(hash(i, 3, Lr.seed) * Lr.of.length) % Lr.of.length]], span = W + c.w;
+            const x = Math.round((((hash(i, 1, Lr.seed) * span + Lr.drift * tq / 1000) % span) + span) % span) - c.w;
+            const y = Math.round(H * (Lr.top + hash(i, 2, Lr.seed) * Lr.depth) - sy * Lr.par);
+            if (y <= H && y + c.h >= 0) ctx.drawImage(c.canvas, x, y);
+        }
+    }
+    /** k 0..1: the camera rides down with our Lander, out of the dark into the blue; the clouds rise past it: ONE cloud at three
+        sizes, the far layer behind the Lander, the near one over it (it passes through them; they never tear). */
     function drawDescent(ctx, art, k, ms) {
-        const { W, H } = art, sy = Math.round((H * 2) * ss(0, 1, k)), lx = Math.round(W * 0.5), ly = Math.round(H * 0.46);
+        const { W, H } = art, sy = Math.round((H * 2) * ss(0, 1, k)), lx = Math.round(W * 0.5), ly = Math.round(H * 0.46), tq = Math.floor(ms / 125) * 125;
         ctx.drawImage(art.descent, 0, -sy);
+        cloudLayer(ctx, art, CLOUDS.far, sy, tq);
         const sway = Math.round(Math.sin(ms / 900) * 1);
         lander(ctx, lx + sway, ly, Math.round(H * 0.2), 0.75, ms);
-        const cw = art.cloudW, ch = art.cloudH, gx = Math.round(cw * CLOUDS.stepX), gy = Math.round(H * CLOUDS.stepY), y0 = Math.round(H * CLOUDS.top) - sy;
-        for (let r = 0; r < CLOUDS.rows; r++) {
-            const y = y0 + r * gy;
-            if (y > H || y + ch < 0) continue;
-            const x0 = Math.round(W * 0.5 - cw / 2) + (r % 2 ? gx >> 1 : 0);
-            for (let x = x0 - gx * Math.ceil((x0 + cw) / gx); x < W; x += gx) ctx.drawImage(art.cloud, x, y);   // over the Lander: it passes through
-        }
+        cloudLayer(ctx, art, CLOUDS.near, sy, tq);
     }
 
     /** The sky over the day's own top edge (seen as the view tilts up): the day's blue and its sun glow carried on up, darker

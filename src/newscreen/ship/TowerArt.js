@@ -16,6 +16,12 @@
      hitPerson(ax, ay) → id | null   who is under the art point (the sprite's own pixels, 3 px margin)
      drawn                   [{ id, Sp, x, y, facing, act, say }] the people of the last draw
      warm() → [() => void]   small jobs that paint every deck and every sprite frame ahead of time (run one a frame)
+     cut(srcCtx, dst, o)     the re-cut (look pass B04): the drawn tower (srcCtx, its own art px) into dst (a canvas half its
+                             size) at the whole scale 1/2, never smoothed: each 2 x 2 block keeps its top-left pixel, so the
+                             8 x 8 dither stays an ordered 4 x 4 one, unless another pixel in it stands out (a lamp, a rail, a
+                             lit edge), which is kept instead; then each deck's stencil name is stamped again at its own 3 x 5
+                             size, in the colours the drawn deck has there (dark with it in the stall). o { offX, camY }
+   A person drawn with hot: true (pointed at) gets a 1-art-px light rim round the sprite (look pass B04).
 */
 (function () {
     'use strict';
@@ -47,13 +53,25 @@
         else { ctx.save(); ctx.translate(X + 1, 0); ctx.scale(-1, 1); ctx.drawImage(cv, -Sp.origin.x, Y); ctx.restore(); }
     }
     const blinking = (ms, seed) => ((ms + seed * 1700) % 4300) < 140;
-    const STILL = { idle: 1, sit: 1, console: 1, wall: 1, tend: 1, sleep: 1 };
+    const STILL = { idle: 1, sit: 1, console: 1, wall: 1, tend: 1, sleep: 1, awake: 1 };   // awake: lying awake (stress 1, ShipRoutine's restless day)
     function spriteOf(p, ll) {
         const ms = STILL[p.act] ? p.ms + SEED(p.id) * 977 : p.ms;
         return CE.sprite(p.id, p.act, CE.frameAt(p.act, ms), { blink: p.act !== 'sleep' && blinking(ms, SEED(p.id)), warm: ll.warm, rim: ll.rim * p.facing, screen: p.screen === undefined ? p.act === 'console' : p.screen });
     }
+    /** The 1-art-px light rim round a sprite (pointed at): every clear pixel that touches the sprite, in the glass's warm. */
+    const RIM = '#f7c483', rims = new WeakMap();                       // TagArt's warm ramp, its third step (art, not text)
+    function rimOf(cv) {
+        if (rims.has(cv)) return rims.get(cv);
+        const w = cv.width, h = cv.height, c = document.createElement('canvas'); c.width = w; c.height = h;
+        const a = alphaOf(cv), x2 = c.getContext('2d'), on = (x, y) => x >= 0 && y >= 0 && x < w && y < h && a[(y * w + x) * 4 + 3] > 0;
+        x2.fillStyle = RIM;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!on(x, y) && (on(x - 1, y) || on(x + 1, y) || on(x, y - 1) || on(x, y + 1))) x2.fillRect(x, y, 1, 1);
+        rims.set(cv, c);
+        return c;
+    }
     function drawPerson(p, tint) {
         const ll = lightFor(p), Sp = spriteOf(p, ll);
+        if (p.hot && !tint) blit(rimOf(Sp.canvas), Sp, p.x, p.y, p.facing);
         blit(tint ? tint(Sp.canvas, p) : ll.dim ? dimOf(Sp.canvas) : Sp.canvas, Sp, p.x, p.y, p.facing);
         drawn.push({ id: p.id, Sp, x: p.x, y: p.y, facing: p.facing, act: p.act, say: p.say });
     }
@@ -158,6 +176,8 @@
 
     // ── who is under the pointer: the sprite's own pixels, with a 3 px margin (ship-life) ──
     const alphas = new WeakMap();
+    /** A sprite's pixels, read once (the hit test and the rim share them). */
+    function alphaOf(cv) { let al = alphas.get(cv); if (!al) { al = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data; alphas.set(cv, al); } return al; }
     function hitPerson(ax, ay) {
         if (!O) return null;
         const wy = ay + Math.round(O.camY), wx = ax - O.offX;
@@ -165,8 +185,7 @@
             const d = drawn[i], Sp = d.Sp, top = Math.round(d.y) - Sp.origin.y;
             const cx = d.facing > 0 ? wx - (Math.round(d.x) - Sp.origin.x) : (Math.round(d.x) + Sp.origin.x) - wx, cy = wy - top;
             if (cx < -3 || cy < -3 || cx >= Sp.w + 3 || cy >= Sp.h + 3) continue;
-            let al = alphas.get(Sp.canvas);
-            if (!al) { al = Sp.canvas.getContext('2d').getImageData(0, 0, Sp.w, Sp.h).data; alphas.set(Sp.canvas, al); }
+            const al = alphaOf(Sp.canvas);
             for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < Sp.w && y < Sp.h && al[(y * Sp.w + x) * 4 + 3]) return d.id; }
         }
         return null;
@@ -181,5 +200,55 @@
         return jobs;
     }
 
-    window.TowerArt = Object.freeze({ draw, drawPeople, hitPerson, warm, get drawn() { return drawn; } });
+    // ── the re-cut: the drawn tower at the whole scale 1/2, never smoothed (1366 x 768, 1280 x 720) ──
+    const CUT_STANDS_OUT = 96;                                          // |dr| + |dg| + |db| + |da| from the top-left: a feature, not dither
+    const NAMES = ['1 BRIDGE', '2 LAB', '3 QUARTERS', '4 MED BAY', '5 HOLD', '6 ENGINEERING'];   // ShipArt's own deck stencils (ShipArt.js, the deck's wall)
+    const STENCIL = { x: L.LX + 22, y: 92 }, STENCIL_SHOWS = 120;         // where ShipArt stamps them (deck-local art px); letters this much lighter than the wall (luma x 8)
+    let cutImg = null;
+    function cut(srcCtx, dst, o) {
+        const W = dst.width, H = dst.height, sw = W * 2, sd = srcCtx.getImageData(0, 0, sw, H * 2).data, g = dst.getContext('2d');
+        if (!cutImg || cutImg.width !== W || cutImg.height !== H) cutImg = g.createImageData(W, H);
+        const su = new Uint32Array(sd.buffer, sd.byteOffset, sd.length >> 2), du = new Uint32Array(cutImg.data.buffer);   // one pixel a word
+        const far = (p, q) => Math.abs((p & 255) - (q & 255)) + Math.abs(((p >>> 8) & 255) - ((q >>> 8) & 255)) + Math.abs(((p >>> 16) & 255) - ((q >>> 16) & 255)) + Math.abs((p >>> 24) - (q >>> 24));
+        const lum = p => ((p & 255) * 2 + ((p >>> 8) & 255) * 5 + ((p >>> 16) & 255)) * (p >>> 24);
+        for (let y = 0; y < H; y++) {
+            let a = y * 2 * sw, di = y * W;
+            for (let x = 0; x < W; x++, a += 2, di++) {
+                const p0 = su[a], p1 = su[a + 1], p2 = su[a + sw], p3 = su[a + sw + 1];
+                if (p1 === p0 && p2 === p0 && p3 === p0) { du[di] = p0; continue; }   // a flat block: nothing stands out
+                const f1 = far(p1, p0), f2 = far(p2, p0), f3 = far(p3, p0), fq = Math.max(f1, f2, f3);
+                let pick = p0;
+                if (fq > CUT_STANDS_OUT) {                                 // the one that stands out from the block's mean is kept
+                    const q = fq === f1 ? p1 : fq === f2 ? p2 : p3, m = (lum(p0) + lum(p1) + lum(p2) + lum(p3)) / 4;
+                    if (Math.abs(lum(q) - m) > Math.abs(lum(p0) - m)) pick = q;
+                }
+                du[di] = pick;
+            }
+        }
+        g.putImageData(cutImg, 0, 0);
+        for (let i = 0; i < L.N; i++) stamp(g, sd, sw, i, o);
+    }
+    /** A deck's stencil at its own 3 x 5 size, where the drawn deck shows it (its letters lighter than the wall between them:
+        not where a bunk hides it, nor on a dark or red deck), in the colours the deck has there now. */
+    const glyphs = new Map();
+    function glyphPts(name) {
+        if (!glyphs.has(name)) { const pts = []; A.api.stencil({ oy: 0, tone: (x, y) => pts.push([x, y]) }, name, 0, 0, R.WALL, 0.62, -1); glyphs.set(name, pts); }
+        return glyphs.get(name);
+    }
+    function stamp(g, sd, sw, i, o) {
+        const name = NAMES[i], sx = STENCIL.x + o.offX, sy = A.deckTop(i) + STENCIL.y - Math.round(o.camY), w = name.length * 4;
+        if (sx < 2 || sy < 1 || (sy + 6) * sw * 4 > sd.length) return;
+        const px = (x, y) => (y * sw + x) * 4, lum = j => sd[j] * 2 + sd[j + 1] * 5 + sd[j + 2], pts = glyphPts(name), on = new Set(pts.map(([x, y]) => y * 1000 + x));
+        const ink = [], wall = [];
+        for (let y = 0; y < 5; y++) for (let x = 0; x < w - 1; x++) (on.has(y * 1000 + x) ? ink : wall).push(px(sx + x, sy + y));
+        const byLum = list => list.slice().sort((a, b) => lum(a) - lum(b)), I = byLum(ink), W2 = byLum(wall);
+        const mean = list => list.reduce((s, j) => s + lum(j), 0) / Math.max(1, list.length);
+        if (!I.length || !W2.length || mean(I) - mean(W2) < STENCIL_SHOWS) return;   // hidden, worn away, or dark: the cut keeps what it took
+        const X = sx >> 1, Y = sy >> 1, rgb = j => `rgb(${sd[j]},${sd[j + 1]},${sd[j + 2]})`;
+        g.fillStyle = rgb(W2[W2.length >> 1]); g.fillRect(X - 1, Y - 1, w + 1, 7);
+        g.fillStyle = rgb(I[Math.floor(I.length * 0.75)]);
+        A.api.stencil({ oy: 0, tone: (x, y) => g.fillRect(x, y, 1, 1) }, name, X, Y, R.WALL, 0.62, 0.08);
+    }
+
+    window.TowerArt = Object.freeze({ draw, drawPeople, hitPerson, warm, cut, get drawn() { return drawn; } });
 })();

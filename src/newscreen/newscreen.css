@@ -1,26 +1,18 @@
 /* ═══ Silent Exodus · new screen (?new=1) · newscreen.css ═══════════════════════════════════════════════════════════════
    What it is: the new screen's page (#ns-root and its layers, which show by mode: docs/BUILD_B.md §1), the rules that hide
-   today's map and orbit screens (docs/BUILD_A.md §1), and the slice's word tokens (IBM Plex, "Graphite"), scoped to
-   #ns-root so the rest of the game keeps its own look. Loaded only when the switch is on. body.ns-travel stays on in orbit
+   today's map and orbit screens (docs/BUILD_A.md §1), and the try note. Every colour, face and size comes from tokens.css
+   (the one token sheet, linked first in <head>); #ns-root keeps only the travel note's own two sizes, and takes --t from
+   :root (NewScreen.js writes the window's value there). Loaded only when the switch is on. body.ns-travel stays on in orbit
    too (the bridge is the orbit screen now); only a missing stop module falls back to today's orbit layout.
    Source: the <style> of prototypes/slice/index.html and the voice of prototypes/screens/game-screen/reading.css. */
 
 /* ── travelling: the view is the screen; today's header, panels, log, Coach and map are out of sight ── */
 body.ns-travel .app-container { visibility: hidden; }   /* before it, from the first paint: index.html <head> hides it under html.ns-on */
-body.ns-travel .coach { display: none !important; }
+html.ns-on .coach { display: none !important; }        /* old chrome: Coach.js does not even start under the switch */
 
 /* ── the view: under every card (1000+), reel (5000) and minigame (6000) ── */
 #ns-root {
-    --t: 1; --px: 2px;
-    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --faint: #5a6168; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --danger: #e0453a;
-    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
-    --f-text: 'IBM Plex Sans', system-ui, sans-serif;
-    --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
-    --fs-voice: calc(19px + 5px * var(--t)); --fs-who: calc(14px + 1px * var(--t)); --measure: calc(470px + 150px * var(--t));
-    --fs-note-name: calc(17px + 3px * var(--t)); --fs-note-line: calc(15px + 2px * var(--t));
-    --fs-title: calc(34px + 12px * var(--t)); --fs-hint: calc(14px + 1px * var(--t));
-    --shadow: 0 1px 0 #05070a;
-    --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+    --fs-note-name: calc(17px + 3px * var(--t)); --fs-note-line: calc(15px + 2px * var(--t));   /* the travel note (Travel.js) */
     position: fixed; inset: 0; z-index: 900; overflow: hidden; outline: none; touch-action: none;
     background: var(--ink); color: var(--text); font: 400 15px/1.4 var(--f-text);
     -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none;
@@ -47,12 +39,23 @@ body.ns-travel .coach { display: none !important; }
 #ns-root .ns-say { font: 400 var(--fs-voice)/1.36 var(--f-text); color: var(--text); text-wrap: balance; }
 /* a card that turned up on its own waits, unseen, until the picture has been looked at (NewScreen.holding) */
 html.ns-on .modal-overlay.ns-held { visibility: hidden !important; pointer-events: none !important; }
-#ns-root .ns-voice.is-narr .ns-say { font-style: italic; color: #c9cccd; }   /* narration: no speaker, the scene itself */
-#ns-root .tone-jaxon { --tone: #f08c2e; }
-#ns-root .tone-vance { --tone: #c4622a; }
-#ns-root .tone-aris { --tone: #ffc27a; }
-#ns-root .tone-mira { --tone: #e8836a; }
-#ns-root .tone-aura { --tone: var(--ui); }
+#ns-root .ns-voice.is-narr .ns-say { font-style: italic; color: var(--narr); }   /* narration: no speaker, the scene itself (Plex Sans Italic 400, loaded) */
+#ns-root .tone-jaxon { --tone: var(--tone-jaxon); }
+#ns-root .tone-vance { --tone: var(--tone-vance); }
+#ns-root .tone-aris { --tone: var(--tone-aris); }
+#ns-root .tone-mira { --tone: var(--tone-mira); }
+#ns-root .tone-cora { --tone: var(--tone-cora); }
+#ns-root .tone-aura { --tone: var(--tone-aura); }
+
+/* ── the try note (testers only, bundle.js startTry): travel only, above the view and under every card, toast and minigame ── */
+html.ns-on #try-note {
+    display: none; position: fixed; right: var(--s4); bottom: var(--s3); z-index: 950; margin: 0;
+    font: 400 var(--fs-floor)/1.2 var(--f-num); color: var(--dim); text-shadow: var(--shadow); pointer-events: none;
+}
+html.ns-on body:has(> #ns-root[data-mode="travel"]:not([hidden])) #try-note { display: block; }
+
+/* (before the first screen, the loading line and the boot failure: their rules are in index.html's <head> <style>, so they
+   wait for the token sheet only, never for this file) */
 
 @media (prefers-reduced-motion: reduce) {
     #ns-root .ns-voice { transition: none; }

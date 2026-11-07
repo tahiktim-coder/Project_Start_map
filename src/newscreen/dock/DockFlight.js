@@ -36,12 +36,29 @@
                 deck counts against maxBreaks too, and A.U.R.A.'s cost never takes more than energy
        seed     optional: the same ring and debris every time (the game seeds it from the station, as DockingGame does)
        spin     optional 'fast': the mining platform's 32°/s
+       relay    true: Last Port, the dark moon's relay (below; needs window.DockRelay, else an ordinary dock)
      → { grade: 'soft' | 'rough' | 'crash', auto, scrapes, damagedRooms, energyDelta, hullHeld }   (the shape BoardingParty expects, and more)
        damagedRooms  the decks the scrapes broke, then a hard dock's (the chips name them; App.applyDockResult breaks them)
        energyDelta   minus A.U.R.A.'s share of DOCK.energy (0 when the player flew it all)
        hullHeld      a hard dock that broke nothing (the game's allowance was full): A.U.R.A. says the hull held, not that
                      it is damaged (DOCK_LINES.held), and BoardingParty says so too
+       relay, torn, tornHull   (relay only) a hard dock tore one of the three dead hulls loose (its number); energyDelta
+                     is then DockRelay.energyDelta's (a soft dock flown all by hand gives a little)
    Every new line of words is marked DRAFT for the designer to rewrite (docs/STYLE.md).
+   THE LOOK PASS (B09, 2026-11-05): the station named on an etched tag with a leader to its lamp until its face is 40 art px
+   across; the controls on etched tags under the reticle (the steer tag on the start screen, the hold tag once the run
+   starts), so A.U.R.A. only says "Station ahead, Commander." (L-50); a dither plate behind our Lander in the corner when
+   the ring fills it; A.U.R.A. FLYING beside it; the ring's windows step on round from us over 1.5 s before Vance asks who
+   turned them on (DockExterior.js); chips word first with "damaged", the grade in A.U.R.A.'s tone (C52b); the relay's hull
+   names 14 px in --cool on a leader to their hatch.
+   LAST PORT (prototypes/ideas/last-port, approved 2026-10-31): with opts.relay too, the same flight docks at the dark
+   moon's relay in sector 5 instead, on the team's way to the disc's wreck (App.flyRelay): window.DockRelay (DockRelay.js:
+   its numbers, the moon, the lamp, the three hulls of our class on the ring and their names, its lines and chips) and
+   DockExterior.js's relay for the cut. Always the whole approach (never quick). The throttle held over the last seconds
+   of the run brings us to the ring nearer and faster (rushing in is the danger). After the touch: A.U.R.A.'s grade line
+   as the clamps lock (no air: nobody walks a station here), the windows and SENT in silence, Mira's line last, the chips
+   under it. Every change for it is marked LAST PORT and sits behind RELAY (relayOf(opts)): without it this file flies
+   Bring Her In exactly as before.
    ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────── */
 /* Corridor.js — Fly the corridor: every sector jump, flown (ported from prototypes/sim-bay/proto-corridor.js).
    The ship jumps, drops out in the next sector and flies down the heading for about a minute: quiet stretches of space,
@@ -255,29 +272,35 @@
         // sky wheels behind the station (turn rad/s, the way the ring turns: we turn with it); the clamps catching late or
         // on the second try, and their lock, are smaller shudders; the decks lit from inside (our Lander's 0 bridge .. 5
         // engine room). The close camera's sky is the same sky turned a little (skyClose, units), as a second camera sees it
-        cut: { keep: 4, replay: { max: 3, min: 1.2, from: 10 }, skyClose: [60, -34], bakeMs: 4, vance: 0.3, line: 1.8, shake: 0.5, turn: 0.2, again: 0.4, lock: 0.12, lit: [0, 2, 3, 4] },
+        cut: { keep: 4, replay: { max: 3, min: 1.2, from: 10 }, skyClose: [60, -34], bakeMs: 4, vance: 1.5, line: 3.2, shake: 0.5,   // (look pass: Vance once the ring's lights have stepped on, DockExterior WAVE_S)
+            turn: 0.2, again: 0.4, lock: 0.12, lit: [0, 2, 3, 4] },
     };
     const DOCK_DEG = 180 / Math.PI, DOCK_RAD = Math.PI / 180;
     // ── DRAFT lines (2026-10-22, the designer rewrites them; docs/STYLE.md). The grade line is the game's own (DockingGame.GRADES).
     const DOCK_LINES = {
         offer: n => `A station ahead, Commander. I can dock us for ${n} energy.`,       // DRAFT: before the drop-out, with the two buttons
         offerFree: 'A station ahead, Commander. I can dock us, if you prefer.',          // DRAFT (2026-10-30): the same with no energy left to charge
-        hold: 'Station ahead. Hold to close in. Let go to slow.',                         // DRAFT (the brief's own line): after the drop-out
-        roll: 'Roll with the ring, Commander. Keep the lit port in the corners.',      // DRAFT: when the ring face fills in
+        hold: 'Station ahead, Commander.',                                                // DRAFT (look pass): L-50, after the drop-out (the controls are on the tag)
+        roll: 'Roll with the ring, Commander. Keep the lit port inside the brackets.',   // DRAFT (look pass): L-50, when the ring face fills in
         fast: 'We are coming in too fast, Commander.',                                    // DRAFT: once, when we can no longer slow in time
         lights: 'Who turned the lights on?',                                              // DRAFT (Vance, the idea's own line): the port's lights come on by themselves
         // DRAFT: why a dock was rough or hard, said before the game's grade line (the limit gradeContact found furthest off)
         cause: { speed: 'We came in too fast.', port: 'We were not lined up with the port.', roll: 'We were not rolling with the ring.' },
         held: 'The hull held. Whoever goes in starts with 3 less air.',                   // DRAFT (2026-10-30): a hard dock that broke nothing, instead of the game's "The hull is damaged."
     };
-    // the result chips: the game's format ({ icon, text, tone }, src/newscreen/Orbit.js chip); DRAFT words
+    // the etched control tags (the look pass): how to steer on the start screen, how to close in once the run starts; and the
+    // station's name tag when the game gives no name
+    const DOCK_TAGS = { steer: 'Mouse or arrows to steer', hold: 'Hold to close in, let go to slow', station: 'Station' };   // DRAFT (look pass)
+    const TAG_FACE = 20, TAG_HOLD_FOR = 9, TAG_FOR = 6;   // the name tag until the face is 2 x this art px across; the hold tag's and the steer tag's longest stay (s)
+    // the result chips: the game's format ({ icon, text, tone }, src/newscreen/Orbit.js chip); DRAFT words; the grade is
+    // A.U.R.A.'s word, in her tone (tone 'aura', C52b)
     const dockChip = (icon, text, tone) => Object.freeze(tone ? { icon, text, tone } : { icon, text });
     const DOCK_GRADE_CHIPS = {
-        soft: [dockChip('dock', 'Soft dock'), dockChip('air', 'Air full', 'gain')],                 // DRAFT
-        rough: [dockChip('dock', 'Rough dock'), dockChip('air', 'Air −2', 'loss')],                 // DRAFT
-        crash: [dockChip('dock', 'Hard dock'), dockChip('air', 'Air −3', 'loss')],                  // DRAFT
+        soft: [dockChip('dock', 'Soft dock', 'aura'), dockChip('air', 'Air full', 'gain')],         // DRAFT
+        rough: [dockChip('dock', 'Rough dock', 'aura'), dockChip('air', 'Air −2', 'loss')],         // DRAFT
+        crash: [dockChip('dock', 'Hard dock', 'aura'), dockChip('air', 'Air −3', 'loss')],          // DRAFT
     };
-    const DOCK_DECK_WORD = { bridge: 'Bridge', lab: 'Lab', quarters: 'Quarters', cargo: 'Hold', engineering: 'Engine room' };   // DRAFT: '<deck> broken' (the game's deck words, Orbit.js DECK_WORD)
+    const DOCK_DECK_WORD = { bridge: 'Bridge', lab: 'Lab', quarters: 'Quarters', cargo: 'Hold', engineering: 'Engine room' };   // DRAFT: '<deck> damaged' (the game's deck words, Orbit.js DECK_WORD)
     const hash = (n, s) => { const h = Math.imul(Math.imul(n, 374761393) ^ s, 1274126177); return ((h ^ (h >>> 15)) & 1023) / 1023; };
     let throttleTaught = false;                                 // the hint shows until the player first opens the throttle
     // what A.U.R.A. has already reported on earlier jumps this session: the head count (said again only when it changes)
@@ -288,13 +311,29 @@
     let dockTold = { hold: false, roll: false, lights: false };
     let live = null;                                            // the open flight's debug state (Corridor.debug.state), or null
     // BRING HER IN: the exterior shot's station (DockExterior.js), baked once per picture size and kept for the next dock
-    let extKept = null;
+    // (LAST PORT: the relay's kept apart, so neither throws the other's bake away)
+    const extKept = { plain: null, relay: null };
+    // LAST PORT: the names over the glass: most at once (one on a glass under narrow css px wide), and how long the oldest
+    // shows before one waiting may take its turn (s)
+    const NAMES = { most: 2, narrow: 1100, hold: 3 };
     let skyForDock = false;                                     // the sky being painted is the dock's (no planetary ring in it)
-    const exteriorFor = (w, h) => {
+    /** LAST PORT: the relay's numbers and drawing (window.DockRelay) for a dock with opts.relay, else null. */
+    const relayOf = o => (o && o.kind === 'dock' && o.relay === true && window.DockRelay) || null;
+    const exteriorFor = (w, h, relay) => {
         const X = window.DockExterior;
         if (!X) return null;
-        if (!extKept || extKept.w !== w || extKept.h !== h) extKept = { w, h, wide: X.create(w, h, 'wide'), close: X.create(w, h, 'close') };
-        const { wide, close } = extKept;
+        const slot = relay ? 'relay' : 'plain';
+        let kept = extKept[slot];
+        if (!kept || kept.w !== w || kept.h !== h) kept = extKept[slot] = { w, h, wide: X.create(w, h, 'wide', relay && relay.exterior), close: X.create(w, h, 'close', relay && relay.exterior) };   // (LAST PORT: relay)
+        if (relay && !kept.mid) kept.mid = X.create(w, h, 'mid', relay.exterior);                   // LAST PORT: the row of hulls
+        const { wide, close, mid } = kept;
+        if (mid) {
+            let midUnused = false;                                                                 // the grade is known and it is not a hard dock: the mid is never shown
+            return { wide, close, mid, isDone: () => wide.isDone() && close.isDone() && (midUnused || mid.isDone()),
+                bake: ms => (!wide.isDone() ? wide : !close.isDone() ? close : mid).bake(ms),
+                finish: grade => { wide.bake(Infinity); close.bake(Infinity); if (grade === 'crash') mid.bake(Infinity); else midUnused = true; },   // (the mid is only a hard dock's: else the cut never pays for it)
+                reset: () => { wide.reset(); close.reset(); mid.reset(); } };
+        }
         return { wide, close, isDone: () => wide.isDone() && close.isDone(),
             bake: ms => (wide.isDone() ? close : wide).bake(ms),                          // the wide first, then the close
             finish: () => { wide.bake(Infinity); close.bake(Infinity); }, reset: () => { wide.reset(); close.reset(); } };
@@ -1120,8 +1159,8 @@
     }
     /** The mast: it crosses at DOCK.mast.at of the run, lying from just beside A.U.R.A.'s line out across the box (its
         near end 0.6 units past our side of her line, so she never touches it). */
-    function makeMast(r, path) {
-        const M = DOCK.mast, at = M.at * DOCK.dur, [px, py] = path(at), th = Math.atan2(-py, -px || 0.01) + (r() - 0.5) * 0.8;
+    function makeMast(r, path, K = DOCK) {
+        const M = K.mast, at = M.at * K.dur, [px, py] = path(at), th = Math.atan2(-py, -px || 0.01) + (r() - 0.5) * 0.8;
         const spin = (r() < 0.5 ? -1 : 1) * M.spin, gap = M.half + SHIP_R[0] + 0.6, side = (r() - 0.5) * 0.6;
         return { at, x: px + Math.cos(th) * gap - Math.sin(th) * side, y: py + Math.sin(th) * gap + Math.cos(th) * side, vx: 0, vy: 0, rad: M.half, aimed: false,
             a0: th - spin * at, spin, flip: 0, pts: null, mast: true, done: false, gone: false };
@@ -1130,25 +1169,26 @@
         are, as in the jump), a few small ones between, and its antenna mast swinging across; A.U.R.A.'s safe line is kept
         clear through all of it. No hulls cross us, no beacons, no lines of its own; a few of our own class's dead hulls
         drift near the station (parked: drawn with it, never in our way). sector: the sector we are in (its sky). */
-    function makeDockLeg(r, sector) {
-        const cfg = { ...SECTORS[sector], dur: DOCK.dur, aim: DOCK.aim, spread: DOCK.spread, aimAt: DOCK.aimAt, tight: 1, heard: 0 };
+    function makeDockLeg(r, sector, relay) {
+        const K = relay ? { ...DOCK, ...relay.dock } : DOCK;                                // LAST PORT: the relay's numbers
+        const cfg = { ...SECTORS[sector], dur: K.dur, aim: K.aim, spread: K.spread, aimAt: K.aimAt, tight: 1, heard: 0 };
         const path = safeLine([], r), frags = [];
         const add = (at, x, y, rad, aimed) => {
             const [px, py] = path(at), keep = SHIP_R[0] + rad + 0.2, dx = x - px, dy = y - py, d = Math.hypot(dx, dy);
             if (d < keep) { x = px + (d ? dx / d : 1) * keep; y = py + (d ? dy / d : 0) * keep; }
             frags.push({ at, x, y, vx: 0, vy: 0, rad, aimed, a0: r() * 6.28, spin: (r() - 0.5) * 3, flip: 0.4 + r() * 2, pts: plate(r), done: false, gone: false });
         };
-        DOCK.clusters.forEach(([share, n]) => {                                  // each cluster off to one side of her line, in the box
-            const at0 = share * DOCK.dur, [px] = path(at0), side = r() < 0.5 ? -1 : 1;
+        K.clusters.forEach(([share, n]) => {                                     // each cluster off to one side of her line, in the box
+            const at0 = share * K.dur, [px] = path(at0), side = r() < 0.5 ? -1 : 1;
             const cx = clamp(px + side * (1.6 + r() * 2.2), -BOX[0] + 1.2, BOX[0] - 1.2), cy = (r() * 2 - 1) * BOX[1] * 0.55;
             for (let k = 0; k < n; k++) {
-                const at = clamp(at0 + (r() - 0.5) * DOCK.clusterT, DEBRIS_FROM * DOCK.dur, 0.9 * DOCK.dur);
-                add(at, cx + (r() * 2 - 1) * DOCK.clusterR[0], cy + (r() * 2 - 1) * DOCK.clusterR[1], DOCK.big[0] + r() * DOCK.big[1], r() < DOCK.aim);
+                const at = clamp(at0 + (r() - 0.5) * K.clusterT, DEBRIS_FROM * K.dur, 0.9 * K.dur);
+                add(at, cx + (r() * 2 - 1) * K.clusterR[0], cy + (r() * 2 - 1) * K.clusterR[1], K.big[0] + r() * K.big[1], r() < K.aim);
             }
         });
-        for (let k = 0; k < DOCK.sprinkle; k++) add((0.15 + r() * 0.72) * DOCK.dur, (r() * 2 - 1) * 12, (r() * 2 - 1) * 8, 0.1 + r() * 0.15, false);
-        frags.push(makeMast(r, path));
-        const parked = DOCK.parked.map(([ox, oy, size, tilt]) => ({ ...makeHull({ broken: 0.6 }, r, 0, 0, 1, false), ox, oy, size, a0: tilt, spin: 0, parked: true }));
+        for (let k = 0; k < K.sprinkle; k++) add((0.15 + r() * 0.72) * K.dur, (r() * 2 - 1) * 12, (r() * 2 - 1) * 8, 0.1 + r() * 0.15, false);
+        if (K.mast) frags.push(makeMast(r, path, K));
+        const parked = K.parked.map(([ox, oy, size, tilt]) => ({ ...makeHull({ broken: 0.6 }, r, 0, 0, 1, false), ox, oy, size, a0: tilt, spin: 0, parked: true }));
         return { sector, cfg, path, hulls: [], parked, twin: null, frags: frags.sort((a, b) => a.at - b.at), from: 0, to: 0, seen: 0, lines: [] };
     }
 
@@ -1211,7 +1251,8 @@
     }
 
     function mount(ctx, ui, rawOpts) {
-        const opts = rawOpts || {}, dockSector = clamp(asInt(opts.sector) || DOCK.sector, FIRST_SECTOR, LAST_SECTOR);   // (the game: the sector we are in)
+        const opts = rawOpts || {}, RELAY = relayOf(opts);                              // LAST PORT: the dark moon's relay (or null)
+        const dockSector = clamp(asInt(opts.sector) || (RELAY ? RELAY.dock.sector : DOCK.sector), FIRST_SECTOR, LAST_SECTOR);   // (the game: the sector we are in)
         const { from, to } = opts.kind === 'dock' ? { from: dockSector, to: dockSector } : readSectors(opts), living = livingRoles(opts.crew), aboard = crewAboard(opts.crew);
         const perBreak = Math.max(1, asInt(opts.scrapesPerBreak) || (opts.kind === 'dock' ? DOCK.perBreak : 1));
         const maxBreaks = Number.isFinite(opts.maxBreaks) ? Math.max(0, Math.floor(opts.maxBreaks)) : Infinity;   // the game's allowance
@@ -1221,9 +1262,11 @@
         // BRING HER IN (opts.kind 'dock'): the flight ends at a station, and its last 80 m are flown under DockingGame's own
         // rules (DockingGame.internals: newState, step, autopilot, gradeContact, portAngle, relSpin). DOCK above.
         const isDock = opts.kind === 'dock', DG = isDock ? window.DockingGame.internals : null, FACE = isDock ? window.DockFace : null;
+        const stationName = typeof opts.name === 'string' && opts.name.trim() ? opts.name.trim() : DOCK_TAGS.station;   // (the look pass) the name tag
+        let moved = false, startedAt = -99, holdTagAt = -99;                   // (the look pass) the first move after the start; when the hold tag came
         // a routine dock (opts.quick, DOCK.quick): the station already near, the docking from nearer. energyLeft: what A.U.R.A.'s
         // dock may cost at most (the tank now; the game did not say: plenty)
-        const isQuick = isDock && opts.quick === true, nearAt = isQuick ? DOCK.quick.near : DOCK.near;
+        const isQuick = isDock && opts.quick === true && !RELAY, nearAt = isQuick ? DOCK.quick.near : DOCK.near;
         const energyLeft = Number.isFinite(energyNow) ? Math.max(0, energyNow) : Infinity;
         skyForDock = isDock;
         let dock = null, frameMs = {};                                        // the dock's state (newDock); the last frames' cost
@@ -1231,7 +1274,7 @@
         // the picture in art pixels (ui.art: 720 × 405 at density 1.5); the flight goes on thinking in 480 × 270 units
         const D = (ui.art && ui.art.d) || 1, AW = Math.round(W * D), AH = Math.round(H * D), FA = F * D;
         const img = ctx.createImageData(AW, AH), buf = new Uint32Array(img.data.buffer), depth = new Float32Array(AW * AH);
-        const EXT = isDock ? exteriorFor(AW, AH) : null;                     // the film cut, a few metres out (null: the old ending)
+        const EXT = isDock ? exteriorFor(AW, AH, RELAY) : null;                     // the film cut, a few metres out (null: the old ending)
         const FLASH = R.SUN.rgb[6], SUN_LUT = new Float32Array(1200);   // the flash's colour; the light's glow by distance, each frame
         const fogAt = (z, near, far) => clamp((z - near) / (far - near), 0, 1) ** 0.8;
         let rustShare = 0;                                                    // how many of a wreck's plates have gone to rust
@@ -1278,17 +1321,18 @@
         }
         function start(isAuto) {
             if (isDock) { setAuto(isAuto); addTrauma(TRAUMA.start); arrive(); return; }   // a dock: no jump, we are holding off the station already (no flash, no warp)
-            mode = 'jump'; phaseT = 0; sound.jump(); setAuto(isAuto); addTrauma(TRAUMA.start); pushKick(0);
+            mode = 'jump'; phaseT = 0; startedAt = clock; sound.jump(); setAuto(isAuto); addTrauma(TRAUMA.start); pushKick(0);
         }
         function arrive() {   // the flash clears on the new sector (a dock: no flash, the run starts from the start screen)
             if (!isDock) whiteAt = clock;
             seedSky(to);
-            leg = isDock ? makeDockLeg(g.r, to) : makeLeg(to, g.r, g.heard, living, avoid, withTwin); t = 0; mode = 'run';
+            leg = isDock ? makeDockLeg(g.r, to, RELAY) : makeLeg(to, g.r, g.heard, living, avoid, withTwin); t = 0; mode = 'run';
             if (isQuick) {                                                                     // a routine dock: the run's last stretch, past the debris
                 t = leg.quickFrom = leg.cfg.dur - DOCK.quick.u;
                 leg.frags.forEach(f => { if (f.at < t + 0.6) { f.done = true; f.gone = true; } });
             }
-            if (isDock && !auto && !dockTold.hold) queue.push({ who: 'A.U.R.A.', line: () => { dockTold = { ...dockTold, hold: true }; return DOCK_LINES.hold; } });   // what holding means here, once a session
+            if (RELAY && !auto) queue.push({ who: 'A.U.R.A.', line: () => { dockTold = { ...dockTold, hold: true }; holdTagAt = clock; return RELAY.lines.hold; } });   // LAST PORT: the relay's words, every time (they teach the rush)
+            else if (isDock && !auto && !dockTold.hold) queue.push({ who: 'A.U.R.A.', line: () => { dockTold = { ...dockTold, hold: true }; holdTagAt = clock; return DOCK_LINES.hold; } });   // what holding means here (on the hold tag), once a session
             if (!isDock) { addTrauma(TRAUMA.drop); pushKick(KICK.drop); }
         }
         /** Through: the ship cruises on into the light while A.U.R.A. reports, one line at a time. Only after her last line
@@ -1488,6 +1532,11 @@
             const opening = isDock && mode === 'dock' ? (auto ? dock.s.keys.in : ctl.throttle) : ctl.throttle && mode === 'run';
             if (opening) throttleTaught = true;
             let rate = 1;
+            if (RELAY && mode === 'run') {                                                     // LAST PORT: the throttle held lately, and how near that brings the station
+                relayRush += ((ctl.throttle && !auto ? 1 : 0) - relayRush) * Math.min(1, dt / RELAY.dock.rushT);
+                const want = RELAY.arrival(relayRush).dist;
+                relayNear = leg && leg.cfg.dur - t < RELAY.dock.nearLock ? Math.min(relayNear, want) : want;   // (near the end it never draws back)
+            }
             if (isDock && (mode === 'ready' || mode === 'jump' || mode === 'run')) {          // the ring turns while we come (a routine dock: we turn with it)
                 dock.s.ringAngle += dock.s.spin * dt;
                 if (isQuick) dock.s.roll += dock.s.rollRate * dt;
@@ -1515,6 +1564,7 @@
         function newDock() {
             const s = DG.newState(g.r);
             if (opts.spin === 'fast') s.spin = DOCK.fast * Math.sign(s.spin);                  // the mining platform's quirk
+            if (RELAY) { const [a, b] = RELAY.dock.spin; s.spin = (a + (Math.abs(s.spin) - 16) / 16 * (b - a)) * Math.sign(s.spin); }   // LAST PORT: an old relay, slower
             return { s, at: -1, r0: 0, grade: null, auraDocked: false, saidFast: false, broke: null, slide: 0, contactAt: -1, hitAt: 0, chipsAt: -1, rowAt: -1, tick: 0, view: null, track: [],
                 box: null, T: 0, auraT: 0, cost: 0, cause: null, lights: { want: false, k: 0, firstAt: -1, b: [0, 0, 0] } };
         }
@@ -1561,7 +1611,7 @@
         }
         /** Where the station is in the run (metres): far down the heading, closing fast, easing to a crawl at 80 m (a routine
             dock: from about 120 m on the start screen to DOCK.quick.near). */
-        const distAt = u => nearAt + DOCK.crawl * u + DOCK.cube * u * u * u;                  // u: course seconds left in the run
+        const distAt = u => (RELAY ? relayNear : nearAt) + DOCK.crawl * u + DOCK.cube * u * u * u;   // u: course seconds left in the run (LAST PORT: rushing brings it nearer)
         const runDist = () => distAt(Math.max(0, leg ? leg.cfg.dur - t : isQuick ? DOCK.quick.u : DOCK.dur));
         /** The face's radius in art pixels at `dist` metres. */
         const faceR = dist => DOCK.faceA / (dist + DOCK.faceB);
@@ -1578,13 +1628,14 @@
                 s.roll = -roll * DOCK_DEG; s.rollRate = 0;
             }
             s.dist = nearAt; s.speed = DOCK.crawl;
+            if (RELAY) { const a = RELAY.arrival(relayRush); s.dist = relayNear; s.speed = a.speed; dock.startSpeed = a.speed; dock.startDist = relayNear; dock.rush = relayRush; }   // LAST PORT: rushing in is the danger (nearer, faster)
             if (!auto && !dockTold.roll) queue.push({ who: 'A.U.R.A.', line: () => { dockTold = { ...dockTold, roll: true }; return DOCK_LINES.roll; } });   // once a session
         }
         /** One frame of the approach (or of its end). The game's step runs in its own slices (MAX_STEP), A.U.R.A. deciding each. */
         function dockStep(dt, ctl) {
             const s = dock.s;
             phaseT += dt;
-            if (dock.cut) dock.cut.roll += DOCK.cut.turn * Math.sign(s.spin || 1) * dt;          // the sky wheels slowly behind the station
+            if (dock.cut) dock.cut.roll += (RELAY ? RELAY.dock.cutTurn : DOCK.cut.turn) * Math.sign(s.spin || 1) * dt;   // the sky wheels slowly behind the station
             if (mode !== 'dock') { endStep(dt); updateLights(dt); return 1; }
             if (auto && (ctl.stick[0] || ctl.throttle)) setAuto(false);                       // touching the controls takes the ship back
             dock.T += dt; if (auto) dock.auraT += dt;                                          // her share of the flying (auraCost)
@@ -1598,6 +1649,7 @@
             if (!auto && !dock.saidFast && s.dist > DOCK.sayFrom && tooFast(s)) {              // once, first in the queue
                 dock.saidFast = true; queue = [{ who: 'A.U.R.A.', line: () => DOCK_LINES.fast, gap: 2.2 }, ...queue]; nextLine = clock;
             }
+            if (RELAY && !dock.saidHulls && s.dist < RELAY.dock.hullsSayAt && (relayTags.length || s.dist < RELAY.dock.hullsSayAt - 8)) { dock.saidHulls = true; if (!living || living.has(RELAY.who.hulls[1])) queue.push({ who: RELAY.who.hulls[0], line: () => RELAY.lines.hulls }); }   // LAST PORT
             let grade = null;
             for (let left = dt; left > 1e-6 && !grade; left -= DG.MAX_STEP) {
                 if (auto) DG.autopilot(s);
@@ -1617,7 +1669,7 @@
         /** The film cut, at the touch: the glass gives way to a camera outside (DockExterior.js), which shows the last
             seconds again from there (the track the player flew, from where it was a few metres out), then the touch. */
         function startCut(grade) {
-            EXT.finish();                                                                      // (long done: they bake a little every frame from the start screen)
+            EXT.finish(grade);                                                                 // (long done: they bake a little every frame from the start screen)
             EXT.reset();
             const s = dock.s, R = DOCK.cut.replay, tr = dock.track, end = clock;
             let i = 0;
@@ -1625,6 +1677,7 @@
             const t0 = tr.length ? tr[i].t : end, last = { t: end, dist: 0, lat: latOf(s), tilt: tiltOf(s), drive: smooth(th), brake: !!s.keys.brake, lined: dock.lights.k };
             const track = [...tr.slice(i), last].map(p => ({ ...p, t: p.t - t0 }));
             dock.cut = { at: clock, touch: end - t0, track, beats: EXT.wide.beats(grade), lat: last.lat, tilt: last.tilt, done: new Set(), roll, roll0: roll, said: false };
+            if (RELAY) dock.cut.roll = dock.cut.roll0 = RELAY.dock.cutRoll;                          // LAST PORT: the moon low on the right
         }
         /** The replayed track at te seconds into the cut: the samples either side, blended. */
         function trackAt(track, te) {
@@ -1654,7 +1707,11 @@
             dock.hitAt = clock;
             addTrauma(DOCK.trauma[gr]); if (!dock.cut) pushKick(DOCK.kick[gr]);
             if (gr !== 'soft') { jolt = DOCK.jolt[gr]; hitAt = clock; }                       // the red edges, and our ship rattles
-            if (gr !== 'crash') return;
+            if (RELAY && gr === 'crash') {                                                     // LAST PORT: one of the three is knocked loose (the nearest on the side we struck, as the cut shows it)
+                const X = RELAY.exterior, side = Math.sign((dock.cut ? dock.cut.lat : latOf(dock.s)) || 1) || 1;
+                dock.torn = true; dock.tornNum = X.nums[X.torn(side)];
+            }
+            if (gr !== 'crash' && !(RELAY && gr === 'rough')) return;                         // (LAST PORT: a rough dock breaks a deck too)
             const free = DECK_KEYS.filter(k => !g.damaged[k]);
             if (!free.length || g.hitRooms.length >= maxBreaks) return;
             dock.broke = free[Math.floor(g.r() * free.length)];
@@ -1681,8 +1738,9 @@
         function sayGrade() {
             mode = 'docked'; phaseT = 0;
             const why = dock.cause ? DOCK_LINES.cause[dock.cause] + ' ' : '';               // DRAFT: why, then the game's own words for the grade
-            ui.clear(); say('A.U.R.A.', why + (hullHeld() ? DOCK_LINES.held : window.DockingGame.GRADES[dock.grade].effect), 9);   // (a hard dock that broke nothing: the hull held)
-            dock.chipsAt = clock + (isQuick ? DOCK.quick.chipsAfter : DOCK.chipsAfter);
+            const said = RELAY ? RELAY.lines.grade[hullHeld() ? 'held' : dock.grade] : hullHeld() ? DOCK_LINES.held : window.DockingGame.GRADES[dock.grade].effect;   // (LAST PORT: no station walk, so no air)
+            ui.clear(); say('A.U.R.A.', why + said, 9);   // (a hard dock that broke nothing: the hull held)
+            dock.chipsAt = RELAY && dock.cut && dock.cut.beats.relay ? -1 : clock + (isQuick ? DOCK.quick.chipsAfter : DOCK.chipsAfter);   // (LAST PORT: the cut's beats bring them)
         }
         /** The film cut's beats, from the touch (DockExterior.js): the touch is the game's impact (the shake, a hard dock's
             broken deck); the clamps catching late or on the second try, and their lock, are smaller shudders; A.U.R.A.'s
@@ -1698,11 +1756,22 @@
                 else if (kind === 'late' || kind === 'second') addTrauma(DOCK.cut.again);
                 else if (kind === 'lock') addTrauma(DOCK.cut.lock);
             });
+            if (RELAY && c.beats.relay) { relayBeats(c, since); return; }                     // LAST PORT: A.U.R.A. at the lock, the windows, SENT, Mira, the chips
             if (!c.said && since >= c.beats.lights + DOCK.cut.vance) {                         // the ring's lights, once a session
                 c.said = true;
                 if (!dockTold.lights && (!living || living.has('SECURITY'))) { dockTold = { ...dockTold, lights: true }; say('Vance', DOCK_LINES.lights, 0); }
             }
             if (mode === 'contact' && since >= c.beats.lights + DOCK.cut.line) sayGrade();
+        }
+        /** LAST PORT, the cut's last beats (DockExterior.js beats().relay): A.U.R.A.'s grade line as the clamps lock; then
+            no words while the hulls' windows light and the screen says SENT; then Mira's line, the last words and the only
+            ones (A.U.R.A.'s goes); the chips come in silently under it, then the way on. */
+        function relayBeats(c, since) {
+            const b = c.beats.relay;
+            if (mode === 'contact' && since >= b.report) sayGrade();
+            if (!c.hush && since >= b.sent - 0.6) { c.hush = true; ui.clear(); }              // her line goes just before SENT, so the word has the frame to itself
+            if (!c.mira && since >= b.mira) { c.mira = true; if (!living || living.has(RELAY.who.mira[1])) { ui.clear(); say(RELAY.who.mira[0], RELAY.lines.mira, 0); } }   // (her words alone)
+            if (!c.chips && mode === 'docked' && since >= b.chips) { c.chips = true; showChips(); dock.rowAt = clock + DOCK.rowAfter; }
         }
         /** The camera while docking: centred, no lean; the bank is the roll itself, so the sky turns as we circle the hub. */
         function flyDock(dt) {
@@ -1718,16 +1787,20 @@
         }
         const dockRooms = () => [...g.hitRooms, ...(dock.broke ? [dock.broke] : [])];
         const hullHeld = () => dock.grade === 'crash' && !dockRooms().length;           // a hard dock, and no deck broke (the allowance was full)
-        const dockResult = () => ({ grade: dock.grade, auto: dock.auraDocked, scrapes: g.hits, damagedRooms: dockRooms(), energyDelta: -dock.cost, hullHeld: hullHeld() });
+        const relayOutcome = () => ({ grade: dock.grade, cost: dock.cost, helped: auraT + dock.auraT > 0, rooms: dockRooms(), torn: !!dock.torn, tornNum: dock.tornNum || null, auto: dock.auraDocked });   // LAST PORT
+        const dockResult = () => ({ grade: dock.grade, auto: dock.auraDocked, scrapes: g.hits, damagedRooms: dockRooms(), energyDelta: RELAY ? RELAY.energyDelta(relayOutcome()) : -dock.cost, hullHeld: hullHeld(),
+            ...(RELAY ? { relay: true, torn: !!dock.torn, tornHull: dock.tornNum || null } : {}) });   // (LAST PORT: a soft dock flown by hand gives; a hull torn loose)
         /** The chips, under A.U.R.A.'s line, in the game's .enc-chips look: the grade, the air, every deck broken, her cost. */
         function dockChips() {
-            const decks = dockRooms().map(k => dockChip('deck', (DOCK_DECK_WORD[k] || k) + ' broken', 'loss'));      // DRAFT
+            if (RELAY) return RELAY.chips(relayOutcome());                                    // LAST PORT: no air (no station walk), the hull torn loose, the energy
+            const decks = dockRooms().map(k => dockChip('deck', (DOCK_DECK_WORD[k] || k) + ' damaged', 'loss'));     // DRAFT (look pass): one damage word, as the dark's
             return [...DOCK_GRADE_CHIPS[dock.grade], ...decks, ...(dock.cost ? [dockChip('energy', 'Energy −' + dock.cost, 'loss')] : [])];   // DRAFT
         }
         function showChips() {
             const frame = ui.canvas.closest('.mini-frame'), talk = frame && frame.querySelector('.mini-talk');
             if (!talk) return;
-            const el = document.createElement('p');
+            if (MiniHost.chipsEl) { talk.append(MiniHost.chipsEl(dockChips(), 'enc-chips dock-chips')); return; }   // words in Condensed, numbers in Mono, the grade in her tone
+            const el = document.createElement('p');                                          // (a host without it: plain words)
             el.className = 'enc-chips dock-chips';
             dockChips().forEach(c => { const i = document.createElement('i'); if (c.tone) i.className = 'is-' + c.tone; i.dataset.icon = c.icon; i.textContent = c.text; el.append(i); });
             talk.append(el);
@@ -1739,7 +1812,8 @@
                 age: dock.at >= 0 ? clock - dock.at : -1, hitAge: dock.hitAt ? clock - dock.hitAt : -1, lights: dock.lights.k, lightsAt: dock.lights.firstAt >= 0 ? clock - dock.lights.firstAt : -1,
                 warn: mode === 'dock' && !auto && tooFast(s), cause: dock.cause, cost: dock.cost, auraShare: +((auraT + dock.auraT) / Math.max(1e-6, flownT())).toFixed(3),
                 sector: here, quick: isQuick, startDist: +distAt(isQuick ? DOCK.quick.u : DOCK.dur).toFixed(1), near: nearAt, told: { ...dockTold },
-                cut: dock.cut && EXT ? { ...(cutShot() === 'close' ? EXT.close : EXT.wide).debug(), shot: cutShot(), wasClose: dock.grade === 'soft', replay: +dock.cut.touch.toFixed(2), from: +(dock.cut.track[0] || { dist: 0 }).dist.toFixed(1), at: dock.cut.at, touch: dock.cut.touch, latAt: +dock.cut.lat.toFixed(2), tiltAt: +dock.cut.tilt.toFixed(2) } : null, extDone: EXT ? EXT.isDone() : null,
+                cut: dock.cut && EXT ? { ...(cutShot() === 'close' ? EXT.close : cutShot() === 'mid' && EXT.mid ? EXT.mid : EXT.wide).debug(), shot: cutShot(), wasClose: dock.grade === 'soft', replay: +dock.cut.touch.toFixed(2), from: +(dock.cut.track[0] || { dist: 0 }).dist.toFixed(1), at: dock.cut.at, touch: dock.cut.touch, latAt: +dock.cut.lat.toFixed(2), tiltAt: +dock.cut.tilt.toFixed(2) } : null, extDone: EXT ? EXT.isDone() : null,
+                relay: RELAY ? { ...RELAY.debug(), torn: !!dock.torn, tornNum: dock.tornNum || null, tags: relayTags.map(t => t.s), shownTags: [...relayShown.keys()].map(k => RELAY.hulls[k].num), startSpeed: dock.startSpeed || null, startDist: dock.startDist || null, rush: +(dock.rush != null ? dock.rush : relayRush).toFixed(2), saidHulls: !!dock.saidHulls } : null,
                 leverO, mastZ: leg && mode === 'run' ? (leg.frags.find(f => f.mast) ? zOf(leg.frags.find(f => f.mast).at) : null) : null };
         };
         const frameStats = () => {                                         // what a frame costs, per part of the flight (ms)
@@ -2120,12 +2194,23 @@
             const i = y * AW + x, p = buf[i], r = p & 255, g = (p >> 8) & 255, b = (p >> 16) & 255;
             buf[i] = (0xff000000 | ((b + (c[2] - b) * a) << 16) | ((g + (c[1] - g) * a) << 8) | (r + (c[0] - r) * a)) >>> 0;
         };
+        /** (the look pass) Once the ring's face reaches our Lander in the corner, a dither plate of ink behind it (the ship and its
+            drive's box, a few art px round), so the ship never sits on the bright ring. */
+        function insetPlate(ink) {
+            const G = dock && dock.geom;
+            if (!G || G.rd < DOCK.faceFrom + 4) return;
+            const x0 = Math.floor((shipL.x - 3) * D), x1 = Math.ceil((shipL.x + shipL.width + 3) * D), y0 = Math.floor((shipL.top - 4) * D), y1 = Math.min(AH, Math.ceil((shipL.top + shipL.height + 10) * D));
+            const hit = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].some(([x, y]) => Math.hypot(x - G.hx, y - G.hy) < G.rd);
+            if (!hit) return;
+            for (let y = Math.max(0, y0); y < y1; y++) for (let x = Math.max(0, x0); x < Math.min(AW, x1); x++) mixPx(x, y, ink, (x + y) & 1 ? 0.95 : 0.8, 4);
+        }
         function drawOverlays() {
             const ink = R.STAR.rgb[0], ix = shipL.cx * D, iy = (shipL.top + shipL.height * 0.55) * D, rx = shipL.D * 1.6 * D, ry = shipL.height * 0.62 * D;
             for (let y = Math.max(0, Math.floor(iy - ry)); y < Math.min(AH, iy + ry); y++) for (let x = Math.max(0, Math.floor(ix - rx)); x < Math.min(AW, ix + rx); x++) {
                 const q = ((x - ix) / rx) ** 2 + ((y - iy) / ry) ** 2;
                 if (q < 1) mixPx(x, y, ink, 0.85 * (1 - q) ** 0.6, 6);                 // the space behind our own ship goes quiet
             }
+            if (isDock) insetPlate(ink);                                               // (the look pass) the ring behind it: a dither plate
             const edge = jolt * 1.5 * (isReduced() ? 0.5 : 1);
             if (jolt > 0) for (let y = 0; y < AH; y++) for (let x = 0; x < AW; x++) {      // a scrape: the edges flash (half as strong with reduced motion)
                 const e = Math.min(x, y, AW - 1 - x, AH - 1 - y) / D;
@@ -2179,7 +2264,10 @@
             const G = dock.geom, tick = G.tick;
             if (G.rd >= DOCK.faceFrom) FACE.paint(buf, depth, AW, AH, G.hx, G.hy, G.rd, G.phi, tick, G.isLined, 1.5 + Math.max(0, G.dist) * 0.5);   // lined up: the bay's lamps on
             if (G.rd >= DOCK.faceFrom + 4 && dock.lights.k > 0) FACE.lights(buf, AW, AH, G.hx, G.hy, G.rd, G.phi, dock.lights.b);
-            if (G.rd < DOCK.lampTo) FACE.lamp(buf, AW, AH, G.hx + G.h * Math.sin(G.phi * DOCK_RAD), G.hy - G.h * Math.cos(G.phi * DOCK_RAD), DOCK.lampR + G.rd * 0.42, tick);
+            if (G.rd < DOCK.lampTo) {
+                const lp = RELAY ? RELAY.lamp(relayGrow(), clock) : null;                     // LAST PORT: a slow beacon, growing all the way
+                FACE.lamp(buf, AW, AH, G.hx + G.h * Math.sin(G.phi * DOCK_RAD), G.hy - G.h * Math.cos(G.phi * DOCK_RAD), (lp ? lp.rad : DOCK.lampR) + G.rd * 0.42, lp ? lp.tick : tick);
+            }
             dock.view = { mx: G.mx, my: G.my, hx: G.hx, hy: G.hy, rd: G.rd, phi: G.phi, isLined: G.isLined };
         }
         /** A straight line of art pixels in colour c, whatever is under it (the marks must show on the bright ring too). */
@@ -2304,9 +2392,18 @@
                 for (let k = 0; k < len; k++) lightPx(cx + side * (half + k * 0.6), y0 - k * 0.8, R.PLUME, 0.95 - k / len * 0.7);
             });
         }
-        function drawDockHud() {   // who flies; on the start screen how to steer
-            note('flying', auto && (mode === 'run' || mode === 'jump' || mode === 'dock') ? 'A.U.R.A. FLYING' : null, { x: W - 8, y: 8, align: 'right', tone: 'ui' });
-            note('how', mode === 'ready' ? 'USE THE MOUSE OR THE ARROWS' : null, { x: CX, y: 192, align: 'center', tone: 'dim', size: 'm' });
+        function drawDockHud() {   // who flies; the station's name; how to steer and to close in, on etched tags (the look pass)
+            if (RELAY) relayNotes(mode === 'run' || mode === 'dock' ? relayTags : []);              // LAST PORT: the three hulls' names
+            const insetR = shipL.x + shipL.width + 4, flying = mode === 'run' || mode === 'jump' || mode === 'dock';
+            note('flying', auto && flying ? 'A.U.R.A. FLYING' : null, { x: insetR, y: shipL.top + shipL.height - 14, tone: 'ui', label: true });
+            const G = dock.geom, lamp = G ? { x: (G.hx + G.h * Math.sin(G.phi * DOCK_RAD)) / D, y: (G.hy - G.h * Math.cos(G.phi * DOCK_RAD)) / D } : null;
+            const isNamed = !RELAY && !!lamp && G.rd < TAG_FACE && (mode === 'ready' || mode === 'jump' || mode === 'run');   // (LAST PORT: the moon and its lamp say where)
+            note('station', isNamed ? stationName : null, { x: Math.round(lamp ? lamp.x + 18 : 0), y: Math.round(lamp ? lamp.y - 30 : 0), tag: true, leader: lamp && { x: lamp.x, y: lamp.y } });
+            const box = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([kx, ky]) => proj(cam[0] + kx * SHIP_R[0], cam[1] + ky * SHIP_R[1], ZHIT));   // the reticle as drawn (a routine dock's turns with the ring)
+            const bracket = Math.round(Math.max(...box.map(p => p[1])) / D + 5), boxX = Math.round(box.reduce((a, p) => a + p[0], 0) / 4 / D);   // under its lowest corner, on its middle (units)
+            const isSteer = mode === 'ready' || (!moved && !auto && (mode === 'jump' || mode === 'run') && clock - startedAt < TAG_FOR && holdTagAt < 0);
+            const isHold = !isSteer && mode === 'run' && !auto && holdTagAt >= 0 && !throttleTaught && clock - holdTagAt < TAG_HOLD_FOR;
+            note('how', isSteer ? DOCK_TAGS.steer : isHold ? DOCK_TAGS.hold : null, { x: boxX, y: bracket, align: 'center', tag: true });
         }
 
         // ── words over the picture: a few quiet readouts in the game's own type, and the hull names that follow the wrecks ──
@@ -2317,6 +2414,74 @@
             if (shown.get(id) === key) return;
             shown.set(id, key);
             ui.note(id, text, o);
+        }
+        /** LAST PORT: the three hulls' names on the glass, as the jump names a wreck (EXODUS-17207, as the story card does), following them. A name
+            goes only where it is free (2026-10-31, the designer: they overlapped at 1366 wide and below): its box (its real
+            width in the notes' own font, measured once) on the glass, over sky only (the depth under it empty at five
+            points: no ring, no hull), clear of the port's marks, our ship in the corner, A.U.R.A.'s note and the names
+            already placed, and only where it reads as its own hull's (DockRelay.owner: the edge nearest it is that hull's, and
+            near). Of its places (DockRelay.js: beside its hull, above, below, the other side) the one it had last
+            frame first, so it does not hop; with none free it waits. At most NAMES.most at once (one on a glass under
+            NAMES.narrow css px): a name waiting lets the oldest go once that has shown NAMES.hold s, and a name that has
+            gone does not come back. (dockStyle fades each in as it first shows.) */
+        function relayNotes(tags) {
+            const pxu = pxPerUnit(), TH = 16 / pxu, v = dock && dock.view, most = pxu * W < NAMES.narrow ? 1 : NAMES.most;
+            const pad = (b, p) => [b[0] - p, b[1] - p, b[2] + p, b[3] + p], hits = (a, b) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+            const keep = [[shipL.cx - 22, shipL.top - 4, shipL.cx + 22, H]];                                              // our ship in the corner
+            if (v && tags.length) { const m = markPts(v.mx, v.my, v.rd).map(([x, y]) => [x / D, y / D]); keep.push(pad([Math.min(...m.map(p => p[0])), Math.min(...m.map(p => p[1])), Math.max(...m.map(p => p[0])), Math.max(...m.map(p => p[1]))], 6)); }
+            if (auto) keep.push([W - 8 - noteWidth('A.U.R.A. FLYING') / pxu - 4, 4, W, 8 + TH + 4]);                     // her note, top right
+            const isSky = b => [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]], [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2]].every(([x, y]) => {
+                const X = Math.round(x * D), Y = Math.round(y * D);
+                return X >= 0 && X < AW && Y >= 0 && Y < AH && depth[Y * AW + X] >= 1e9;
+            });
+            // who may show: those showing (while they are still offered), then the waiting ones by when they came, the oldest
+            // letting a waiting one in once it has had its time
+            const offered = tags.filter(tg => !relayGone.has(tg.k)), on = offered.filter(tg => relayShown.has(tg.k)), waiting = offered.filter(tg => !relayShown.has(tg.k)).sort((p, q) => p.since - q.since);
+            while (waiting.length && on.length >= most) {
+                const oldest = on.slice().sort((p, q) => relayFirst.get(p.k) - relayFirst.get(q.k))[0];
+                if (clock - relayFirst.get(oldest.k) < NAMES.hold) break;
+                relayGone.add(oldest.k); on.splice(on.indexOf(oldest), 1);
+            }
+            const list = on.concat(waiting.slice(0, Math.max(0, most - on.length))), placed = [], now = new Map();
+            for (const tg of list) {
+                const tw = (noteWidth(tg.s) + 4) / pxu, last = relayShown.get(tg.k), tries = last != null && last >= 0 ? [tg.at[last], ...tg.at] : tg.at;
+                const p = tries.find(q => {
+                    const cx = clamp(q[0], tw / 2 + 4, W - tw / 2 - 4), top = clamp(q[1] - TH / 2, TAG_TOP, TAG_BOTTOM), box = [cx - tw / 2 - 2, top - 2, cx + tw / 2 + 2, top + TH + 2];
+                    if (Math.abs(cx - q[0]) > tw / 2 || [...keep, ...placed].some(b => hits(b, box)) || !isSky(box) || RELAY.covers(D, box)) return false;   // off the glass, or on something
+                    if (RELAY.owner(D, box) !== tg.k) return false;                                          // nearer another hull than its own, or far from it
+                    placed.push(box); now.set(tg.k, { x: Math.round(cx), y: Math.round(top), s: tg.s, near: tg.near, at: tg.at.indexOf(q), port: tg.port });
+                    return true;
+                });
+                if (!p && relayShown.has(tg.k)) now.set(tg.k, null);                                // (no room this frame: it waits, keeping its turn)
+            }
+            relayShown.clear();
+            [0, 1, 2].forEach(k => {
+                const t = now.get(k);
+                if (now.has(k)) relayShown.set(k, t ? t.at : -1);
+                if (t && !relayFirst.has(k)) relayFirst.set(k, clock);
+                note('relay ' + k, t ? t.s : null, t ? { x: t.x, y: t.y, align: 'center', tone: 'dim', leader: t.port ? { x: t.port[0], y: t.port[1] } : null } : {});   // (the look pass: --cool, a leader to its hatch)
+            });
+        }
+        /** A note's width in css px: the notes' own font (MiniHost's .mini-note, 14 px Plex Mono in the new look, 0.02em apart), measured once
+            a string (never under 8.1 px a character, the font's own width, in case it has not loaded yet). */
+        function noteWidth(str) {
+            let w = noteWidths.get(str);
+            if (w != null) return w;
+            try {
+                if (!noteMeasure) {
+                    const host = ui.canvas.closest('.mini-host'), fam = (host && getComputedStyle(host).getPropertyValue('--mg-f-num').trim()) || 'ui-monospace, monospace';
+                    noteMeasure = document.createElement('canvas').getContext('2d'); noteMeasure.font = '400 14px ' + fam;
+                }
+                w = noteMeasure.measureText(str).width + str.length * 13 * 0.02;
+            } catch (err) { w = 0; }
+            w = Math.max(w, str.length * 8.4);
+            noteWidths.set(str, w);
+            return w;
+        }
+        /** Css px a picture unit, read from the page once a second (not every frame: no layout work in the loop). */
+        function pxPerUnit() {
+            if (clock - pxuAt > 1 || !pxuNow) { pxuNow = ui.canvas.getBoundingClientRect().width / W || 3; pxuAt = clock; }
+            return pxuNow;
         }
         function drawTags(tags) {
             const placed = [], named = new Set(), pxPerUnit = ui.canvas.getBoundingClientRect().width / W || 3, sunU = [view.sunX / D, view.sunY / D];
@@ -2358,27 +2523,29 @@
         /** Which camera the edit wants now (DockExterior.shotAt): 'wide' or 'close'. */
         function cutShot() {
             const c = dock.cut, te = clock - c.at;
-            return window.DockExterior.shotAt(dock.grade, te - c.touch, te < c.touch ? trackAt(c.track, te).dist : 0);
+            return window.DockExterior.shotAt(dock.grade, te - c.touch, te < c.touch ? trackAt(c.track, te).dist : 0, RELAY ? RELAY.exterior : undefined);
         }
         /** BRING HER IN, the film cut: the camera outside. The sector's sky, wheeling slowly (we turn with the ring), then the
             station, our Lander and what happens at the port (DockExterior.js), under a share of the shake. No glass: no marks,
             no ship in the corner, no dust streaming past. Our decks lit from inside, the broken ones dark. */
         function renderCut() {
             const c = dock.cut, k = DOCK.cut.shake * (isReduced() ? 0.5 : 1), shot = cutShot();
-            const X = shot === 'close' ? EXT.close : EXT.wide, sk = shot === 'close' ? DOCK.cut.skyClose : [0, 0];
+            const X = shot === 'close' ? EXT.close : shot === 'mid' && EXT.mid ? EXT.mid : EXT.wide, sk = shot === 'close' ? DOCK.cut.skyClose : [0, 0];   // (LAST PORT: mid)
             view.cr = Math.cos(c.roll); view.sr = Math.sin(c.roll); view.zm = 1; view.lx = sk[0]; view.ly = sk[1];
             view.ox = Math.round(shake.dx * k * D) / D; view.oy = Math.round(shake.dy * k * D) / D;
             [view.sunX, view.sunY] = sky(0, 0);
             dock.geom = null;                                                                  // no face: the sky runs edge to edge
             const S = skyOf(here);
             drawBackdrop(S, DOCK.lit); drawStars(S); drawLive(S);
+            if (RELAY) RELAY.sky(RA);                                                           // LAST PORT: the dark moon, low on the right
             const O = MiniShip.LANDER_ORDER, broke = dock.broke ? O.indexOf(dock.broke) : -1;
             const lit = DOCK.cut.lit.filter(j => !g.damaged[O[j]]), holes = O.map((k, j) => (g.damaged[k] && k !== dock.broke ? j : -1)).filter(j => j >= 0);
             const te = clock - c.at, p = te < c.touch ? trackAt(c.track, te) : null;           // until the touch, the track again
             X.draw(buf, { te, touch: c.touch, grade: dock.grade, s: p ? p.dist : 0, lat: p ? p.lat : c.lat, tilt: p ? p.tilt : c.tilt, drive: p ? p.drive : 0, brake: !!(p && p.brake),
-                lined: p ? p.lined : dock.lights.k, ox: view.ox * D, oy: view.oy * D, broke, holes, lit, turn: c.roll - c.roll0, calm: isReduced() });
+                lined: p ? p.lined : dock.lights.k, ox: view.ox * D, oy: view.oy * D, broke, holes, lit, turn: c.roll - c.roll0, calm: isReduced(), relay: RELAY ? RELAY.cutFrame(RA) : undefined });
             ctx.putImageData(img, 0, 0);
-            note('flying', null, {}); note('how', null, {});                                  // a film: no readouts over it
+            note('flying', null, {}); note('how', null, {}); note('station', null, {});      // a film: no readouts over it
+            if (RELAY) relayNotes([]);
         }
         function render(mul) {   // far to near: the sky, its stars and slow motion, the light, wrecks and debris, dust; then the instruments
             if (isDock && dock && dock.cut) { renderCut(); return; }
@@ -2388,7 +2555,8 @@
             drawBackdrop(S, amt);
             drawStars(S);
             drawLive(S);
-            if (isDock) { drawParked(amt); drawStation(); } else drawSun();
+            if (RELAY) RELAY.sky(RA);                                                           // LAST PORT: the dark moon
+            if (isDock) { drawParked(amt); drawStation(); if (RELAY) relayTags = RELAY.glass(RA, mode === 'run' || mode === 'dock' ? dock.geom : null); } else drawSun();
             const tags = mode === 'run' ? drawField(amt) : [];
             drawMotes(mul);
             if (mode === 'ready' || mode === 'run') drawBox();
@@ -2411,6 +2579,7 @@
                 leverO = leverO > CX ? Math.max(CX, leverO - step) : Math.min(CX, leverO + step);
             }
             pointer = p; aiming = true;
+            if (mode !== 'ready') moved = true;                                          // (the look pass) the steer tag goes
         };
         ui.canvas.onpointerleave = () => { if (!pressed) pointer = null; };
         ui.canvas.onpointerdown = e => {
@@ -2425,7 +2594,7 @@
         window.addEventListener('pointerup', release); window.addEventListener('pointercancel', release);
         MiniLab.onKey((k, e) => {
             const isRepeat = !!(e && e.repeat), isOnButton = !!(e && e.target && e.target.tagName === 'BUTTON');
-            if (STEER.includes(k)) { taps.set(k, clock + 0.12); return; }
+            if (STEER.includes(k)) { taps.set(k, clock + 0.12); moved = true; return; }
             if (THROTTLE.includes(k) && mode !== 'ready' && !isRepeat && !(k === ' ' && isOnButton)) held.add(k);
             const isGo = k === ' ' || k === 'Enter';
             if (!isGo || isOnButton || isRepeat) return;                                // a focused button handles its own
@@ -2441,48 +2610,77 @@
             next: mode !== 'run' ? null : leg.frags.reduce((m, f) => (!f.done && !f.gone && f.at > t ? Math.min(m, f.at - t) : m), 99),
             threats: mode !== 'run' ? [] : leg.frags.map((f, id) => (f.threat && !f.done && !f.gone ? { id, x: f.x + f.vx * (f.at - t), y: f.y + f.vy * (f.at - t), rad: f.rad, left: f.at - t } : null)).filter(Boolean),
         });
+        // LAST PORT: what DockRelay.js draws with (the flight's own buffers, ramps, grain and camera); the moon painted once
+        // (the run's share flown, for the moon and the lamp to grow by; the rows the face will cover; the flight's clock)
+        let relayRush = 0, relayNear = RELAY ? RELAY.dock.near[0] : 0, relayTags = [];             // the throttle held lately (0..1); where the run ends (m); the names DockRelay offers
+        const relayShown = new Map(), relayFirst = new Map(), relayGone = new Set();            // hull → which of its places its name took last frame; when it first showed; gone
+        const noteWidths = new Map();
+        let noteMeasure = null, pxuNow = 0, pxuAt = -9;
+        const relayGrow = () => (mode === 'run' && leg ? clamp(t / leg.cfg.dur, 0, 1) : mode === 'ready' || mode === 'jump' ? 0 : 1);
+        const RA = RELAY ? { buf, depth, AW, AH, D, FA, CX, CY, R, BAY8, level, lightPx, view, sky, faceB: DOCK.faceB, grow: relayGrow, faceSpan, now: () => clock } : null;
+        if (RELAY) { RELAY.prepare(D); const host = ui.canvas.closest('.mini-host'); if (host) host.classList.add('is-relay'); }   // (the names' fade: dockStyle)
         seedSky(from);
         if (isDock) dock = newDock();
         if (isQuick) { dock.s.roll = dock.s.ringAngle; dock.s.rollRate = dock.s.spin; roll = -dock.s.roll * DOCK_RAD; }   // a routine dock: A.U.R.A. has lined us up and matched the ring
-        const dockOffer = () => { const n = Math.min(DOCK.energy, energyLeft); return n > 0 ? DOCK_LINES.offer(n) : DOCK_LINES.offerFree; };   // what she can really take
+        const dockOffer = () => {                                                              // what she can really take (LAST PORT: the relay's words)
+            const n = Math.min(DOCK.energy, energyLeft), L = RELAY ? RELAY.lines : DOCK_LINES;
+            return n > 0 ? L.offer(n) : L.offerFree;
+        };
         say('A.U.R.A.', isDock ? dockOffer() : to === FIRST_SECTOR + 1 ? OFFER_FIRST(STAKES.AURA) : OFFER, 0);   // the first flown jump: once, what her way costs
         row([{ label: 'Fly it myself', primary: true, onClick: () => start(false) }, { label: isDock ? 'Let A.U.R.A. dock' : 'Let A.U.R.A. fly', onClick: () => start(true) }]);   // DRAFT label: 'Let A.U.R.A. dock'
         render(0.3);
         // the shots' station bakes a few rows a frame (the wide, then the close); a routine dock can touch sooner, so faster
-        const bakeMs = () => (isQuick ? DOCK.quick.bakeMs[mode === 'ready' ? 0 : 1] : DOCK.cut.bakeMs);
+        const bakeMs = () => (RELAY ? RELAY.dock.bakeMs[mode === 'ready' ? 0 : 1] : isQuick ? DOCK.quick.bakeMs[mode === 'ready' ? 0 : 1] : DOCK.cut.bakeMs);   // (LAST PORT: three cameras)
         MiniLab.loop(dt => {
             const t0 = performance.now();
             render(update(dt)); skyOf(to, PAINT_AHEAD_MS);
             if (EXT && !EXT.isDone()) EXT.bake(bakeMs());
             if (isDock) { const xs = frameMs[mode] || (frameMs[mode] = []); xs.push(performance.now() - t0); if (xs.length > 900) frameMs[mode] = xs.slice(-600); }   // what a frame costs (headless checks)
         }, 30);   // the next sector's sky, a little each frame
-        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); live = null; };
+        return () => { window.removeEventListener('pointerup', release); window.removeEventListener('pointercancel', release); queue = []; sound.stop(); live = null; if (RELAY) extKept.relay = null; };   // (LAST PORT: the relay is flown once a run: its three cameras' buffers, about 23 MB, let go)
     }
 
-    // BRING HER IN: the frame keeps one size from the first frame to the last (the sketch page's own rules, scoped to the
-    // dock's frame, MiniHost frameClass 'is-dock'): the hidden header takes no room; the words under the picture keep room
-    // for A.U.R.A.'s longest line (two lines) and the chips, and the buttons for the way on. MiniHost fits the picture to
-    // what is left before mount() runs, so the rules are in the page from the moment this file loads: the picture never
-    // moves when she speaks, and the way on always shows (1366 x 768 too). The chips: the game's card chips (cards.css
-    // .enc-chips), plain mono words in the frame's own colours, never ship.css's boxes.
+    // BRING HER IN: the frame keeps one size from the first frame to the last: the shared frame's rules (minigames.css, the
+    // look pass) hide the header, keep the words' and the keys' heights and draw the chips (words in Condensed, numbers in
+    // Mono, the grade in A.U.R.A.'s tone); here only their stepping in, one after another. LAST PORT ('is-relay', set by
+    // mount): a hull's name over the glass steps in as it first shows (the radio finding a hull), it does not pop.
     (function dockStyle() {
         if (document.getElementById('dock-flight-style')) return;
         const st = document.createElement('style'); st.id = 'dock-flight-style';
-        st.textContent = `.mini-host.is-dock .mini-head.is-hidden { display: none; }
-.mini-host.is-dock .mini-talk { min-height: 136px; }
-.mini-host.is-dock .mini-buttons { min-height: 46px; }
-.mini-host.is-dock .mini-talk .dock-chips { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 0; }
-.mini-host.is-dock .mini-talk .dock-chips i { padding: 0; border: 0; border-radius: 0; letter-spacing: 0; font: 400 14px/1.3 var(--mg-f-num); font-style: normal; color: var(--mg-steel); white-space: nowrap; animation: dock-chip-in 240ms ease-out both; }
-.mini-host.is-dock .mini-talk .dock-chips .is-gain { color: var(--mg-amber); }
-.mini-host.is-dock .mini-talk .dock-chips .is-loss { color: #ff5468; }
+        st.textContent = `.mini-host.is-dock .mini-talk .dock-chips i { animation: dock-chip-in calc(3 * var(--step-ui)) steps(3, end) both; }
 .mini-host.is-dock .mini-talk .dock-chips i:nth-child(2) { animation-delay: 90ms; } .mini-host.is-dock .mini-talk .dock-chips i:nth-child(3) { animation-delay: 180ms; }
 .mini-host.is-dock .mini-talk .dock-chips i:nth-child(4) { animation-delay: 270ms; } .mini-host.is-dock .mini-talk .dock-chips i:nth-child(5) { animation-delay: 360ms; }
-@keyframes dock-chip-in { from { opacity: 0; transform: translateY(3px); } }
-@media (prefers-reduced-motion: reduce) { .mini-host.is-dock .mini-talk .dock-chips i { animation: none; } }`;
+@keyframes dock-chip-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .mini-host.is-dock .mini-talk .dock-chips i { animation: none; } }
+.mini-host.is-relay .mini-notes .mini-note { animation: dock-note-in 500ms steps(4, end) both; }
+@keyframes dock-note-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mini-host.is-relay .mini-notes .mini-note { animation: none; } }`;
         document.head.appendChild(st);
     })();
 
-    window.DockFlight = Object.freeze({ debug: Object.freeze({ state: () => (live ? live() : null) }) });
+    // LAST PORT: the relay's film cut, its moon and its hulls made ready at idle before the dock opens (App.renderOrbit calls warm() when
+    // the relay's bridge opens): the three cameras' station (several seconds of work in all) and the moon (about 0.13 s), at
+    // most WARM_MS at a time in the browser's idle time, so the flight only has what is left to do (DockRelay.dock.bakeMs).
+    const WARM_MS = 8;
+    let warming = null;
+    function warm() {
+        const relay = relayOf({ kind: 'dock', relay: true });
+        if (!relay || (warming && !warming.done)) return;                                    // (one at a time; again if something is left)
+        const AW = Math.round(W * DENSITY), AH = Math.round(H * DENSITY), EXT = exteriorFor(AW, AH, relay);
+        warming = { done: false };
+        const later = window.requestIdleCallback ? fn => window.requestIdleCallback(fn, { timeout: 400 }) : fn => setTimeout(() => fn(null), 50);
+        const slice = deadline => {
+            const ms = deadline && deadline.timeRemaining ? Math.min(WARM_MS, Math.max(2, deadline.timeRemaining() - 1)) : WARM_MS / 2;
+            try {
+                if (!relay.paintMoon(DENSITY, ms)) { later(slice); return; }
+                if (!relay.paintHulls(ms)) { later(slice); return; }                             // (the three hulls' Landers, each length)
+                if (EXT && !EXT.isDone()) { EXT.bake(ms); later(slice); return; }
+            } catch (err) { console.error('DockFlight: the relay\'s warm-up failed', err); }
+            warming.done = true;
+        };
+        later(slice);
+    }
+    window.DockFlight = Object.freeze({ debug: Object.freeze({ state: () => (live ? live() : null) }), warm, warmed: () => !!(warming && warming.done) });
     MiniHost.register({
         id: 'dock-flight',
         title: 'Bring her in',                                  // DRAFT (the header is hidden, as the corridor's is)

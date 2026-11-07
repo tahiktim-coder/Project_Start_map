@@ -889,7 +889,7 @@
 @media (prefers-reduced-motion: reduce) { .bx .bx-btn, .bx .bx-btn::before, .bx .bx-door, .bx .bx-pick, .bx .bx-pick canvas { transition: none; } .bx .bx-frame, .bx .bx-air.is-low .bx-pips i.is-home { animation: none; } }`;
     function addStyle() {
         if (document.getElementById('boarding-bx-style')) return;
-        const el = document.createElement('style'); el.id = 'boarding-bx-style'; el.textContent = STYLE;
+        const el = document.createElement('style'); el.id = 'boarding-bx-style'; el.textContent = NL() ? NL().css(STYLE, TYPE) : STYLE;   // the new look: the same sheet in tokens (BoardLook.js)
         document.head.appendChild(el);
     }
 
@@ -900,10 +900,22 @@
         const room = Math.max(0.25, Math.min(roomW, roomH)), crisp = Math.floor(room * dpr + 0.01) / dpr, scale = crisp >= room * CRISP_MIN_FILL ? crisp : room;
         canvas.style.width = `${canvas.width * scale}px`; canvas.style.height = `${canvas.height * scale}px`;
         const host = canvas.closest('.bx');
-        if (host) host.classList.toggle('is-tight', scale < TIGHT_BELOW);                   // a small picture: smaller door labels, so they leave the rooms visible
+        if (host) host.classList.toggle('is-tight', !NL() && scale < TIGHT_BELOW);          // a small picture: smaller door labels, so they leave the rooms visible (the new look's stay at 14 px)
     }
 
     // ── screens ──
+    // THE NEW LOOK (look pass B13, html.ns-on with src/newscreen/dock/BoardLook.js loaded): the same screens and words, shown
+    // in the tokens: no header (the room's name is a tag on the room), no rules paragraph and no repeat of the dock line on
+    // the picker (A.U.R.A. teaches at the airlock in one line), door tags on plates with their cost chip, reasons as chips.
+    const NL = () => (document.documentElement.classList.contains('ns-on') && window.NSBoardLook) || null;
+    const shown = w => (NL() ? NL().sentence(w) : w);                                       // a caps label, in sentence case in the new look
+    const KEY = () => (NL() ? 'mini-btn bx-key' : 'bx-btn');                               // the new look's keys are the frame key (.mini-btn)
+    const silentFor = age => `SILENT FOR ${age} YEARS`;
+    const TEACH = 'A.U.R.A.: "One tank of air, Commander. Every door shows its cost."';     // DRAFT (look pass): L-54, the new look: said at the airlock once a session, in place of the picker's rules
+    const TEACH_AFTER_MS = 1500;
+    const GUIDE_THEM = 'A.U.R.A.: "I will guide them, Commander. Safe rooms only."';
+    const GUIDE_YOU = 'A.U.R.A.: "I will guide you, Commander. Safe rooms only."';          // DRAFT (look pass): L-54, the new look's when the Commander herself is inside
+    let isTaught = false;                                                                    // (new look) A.U.R.A. has taught the walk this session
     const sfx = (name, ...args) => { const audio = window.AudioSystem; if (audio && typeof audio[name] === 'function') audio[name](...args); }; // silent when muted
     const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     const roleOf = member => Object.keys(PERKS).find(tag => (member.tags || []).includes(tag));
@@ -922,19 +934,20 @@
     const AURA_QUOTE = /^A\.U\.R\.A\.: "(.*)"$/;                                             // a status line A.U.R.A. says: her name over her words
 
     function pickerHtml(app, station, age, dock) {
+        const N = NL(), name = station.name || 'Unknown station', silentForYears = silentFor(age);
         const cards = app.state.crew.filter(c => c.status === 'HEALTHY').map(member => {
             const role = roleOf(member), perk = PERKS[role] || { text: '' };
-            return `<button type="button" class="bx-pick" data-id="${esc(member.id)}" data-who="${esc(whoOf(member))}" style="--tone:${toneOf(member)}">`
+            return `<button type="button" class="bx-pick" data-id="${esc(member.id)}" data-who="${esc(whoOf(member))}" style="--tone:${N ? N.tone(whoOf(member)) : toneOf(member)}">`
                 + `<b>${esc(member.name)} <small>${airFor(role, dock)} AIR</small></b><span>${esc(perk.text)}</span></button>`;
         }).join('');
         return `<div class="bx-frame">
-            <header class="bx-head"><p class="bx-kicker">BOARDING — SILENT FOR ${age} YEARS</p><h2 class="bx-title">${esc(station.name || 'Unknown station')}</h2></header>
-            <div class="bx-screen"><canvas class="bx-canvas" width="${AW}" height="${PICK_H}" aria-hidden="true"></canvas></div>
-            ${dockLine(dock) ? `<p class="bx-dock is-${esc(dock.grade)}">${dockLine(dock)}</p>` : ''}
-            <p class="bx-hint">One person goes in on one tank of air. Every door and every search shows its cost first. The bar marks the air needed to walk back out. <b>Heavy things make that walk cost more.</b> ${station.scanned ? 'Your deep scan mapped every room.' : 'Without a deep scan, you see a room only when you reach its door.'}</p>
+            <header class="bx-head"><p class="bx-kicker">BOARDING — ${silentForYears}</p><h2 class="bx-title">${esc(name)}</h2></header>
+            <div class="bx-screen"><canvas class="bx-canvas" width="${AW}" height="${PICK_H}" aria-hidden="true"></canvas>${N ? N.station(name, silentForYears) : ''}</div>
+            ${!N && dockLine(dock) ? `<p class="bx-dock is-${esc(dock.grade)}">${dockLine(dock)}</p>` : ''}
+            ${N ? '' : `<p class="bx-hint">One person goes in on one tank of air. Every door and every search shows its cost first. The bar marks the air needed to walk back out. <b>Heavy things make that walk cost more.</b> ${station.scanned ? 'Your deep scan mapped every room.' : 'Without a deep scan, you see a room only when you reach its door.'}</p>`}
             <p class="bx-sub">WHO GOES IN?</p>
             <div class="bx-picks">${cards || '<p class="bx-hint">Nobody is fit to go.</p>'}</div>
-            <div class="bx-buttons"><button type="button" class="bx-btn is-quiet bx-cancel">Stay aboard — skip the station</button></div>
+            <div class="bx-buttons"><button type="button" class="${KEY()} is-quiet bx-cancel">Stay aboard — skip the station</button></div>
         </div>`;
     }
 
@@ -944,35 +957,47 @@
             <div class="bx-screen"><canvas class="bx-canvas" width="${AW}" height="${AH}" aria-label="The station"></canvas><div class="bx-doors"></div></div>
             <div class="bx-readout"><div class="bx-air"></div><div class="bx-hands"></div></div>
             <div class="bx-talk"><p class="bx-here"></p><div class="bx-voice" aria-live="polite"><p class="bx-who is-empty"><span class="bx-ring" aria-hidden="true"></span><span class="bx-name"></span></p><p class="bx-line is-note"></p></div></div>
-            <div class="bx-buttons"><span class="bx-actions"></span><button type="button" class="bx-btn is-quiet bx-guide">Let A.U.R.A. guide</button></div>
+            <div class="bx-buttons"><span class="bx-actions"></span><button type="button" class="${KEY()} is-quiet bx-guide">Let A.U.R.A. guide</button></div>
         </div>`;
     }
 
-    /** The air: one small tick per unit. Amber ticks are what the walk out costs from here; the brighter mark is where that ends. */
+    /** The air: one small tick per unit. Amber ticks are what the walk out costs from here; the brighter mark is where that ends.
+        The new look shows the count and the pips (the spare is the steel ones) and only the warning: the walk out is on Head back out's chip. */
+    const JUST_ENOUGH = 'Just enough to walk out.', GO_NOW = 'Go now.';
     function airHtml(b, home) {
-        const size = Math.max(b.airMax, b.air), spare = b.air - home.cost, heavy = heavyCount(b);
+        const N = NL(), size = Math.max(b.airMax, b.air), spare = b.air - home.cost, heavy = heavyCount(b);
         const pips = Array.from({ length: size }, (_, k) => `<i class="${k >= b.air ? 'is-spent' : k < home.cost ? 'is-home' : 'is-spare'}${k === home.cost - 1 ? ' is-mark' : ''}"></i>`).join('');
         const load = heavy ? ` Carrying ${heavy} heavy: +${heavy * HEAVY_STEP_COST} per room.` : '';
-        const note = b.pos === 0 ? `All ${b.air} to spend.` : spare <= 0 ? `Just enough to walk out. Go now.${load}` : `Walk out from here: ${home.cost} air.${load} <b>${spare} to spend.</b>`;
-        return `<span class="bx-label">AIR</span><strong>${b.air}<small> / ${b.airMax}</small></strong><span class="bx-pips" aria-hidden="true">${pips}</span><span class="bx-air-note">${note}</span>`;
+        const note = N ? (b.pos > 0 && spare <= 0 ? `${GO_NOW}${load}` : load.trim())
+            : b.pos === 0 ? `All ${b.air} to spend.` : spare <= 0 ? `${JUST_ENOUGH} ${GO_NOW}${load}` : `Walk out from here: ${home.cost} air.${load} <b>${spare} to spend.</b>`;
+        return `<span class="bx-label">${shown('AIR')}</span><strong>${b.air}${N ? '' : `<small> / ${b.airMax}</small>`}</strong><span class="bx-pips" aria-hidden="true">${pips}</span>${note ? `<span class="bx-air-note">${N ? N.num(note) : note}</span>` : ''}`;
     }
 
+    /** The hands: the new look draws each hand as a slot (an empty one is free), under the one word 'Carrying'. */
     function handsHtml(b) {
-        const slots = [];
-        b.haul.filter(f => f.hands > 0).forEach(f => { for (let k = 0; k < f.hands; k++) slots.push(k ? '<li class="is-more">+</li>' : `<li class="${f.heavy ? 'is-heavy' : ''}">${esc(f.name)}${f.heavy ? '<small>HEAVY</small>' : ''}</li>`); });
-        while (slots.length < HANDS) slots.push('<li class="is-free">free</li>');
+        const N = NL(), slots = [];
+        b.haul.filter(f => f.hands > 0).forEach(f => { for (let k = 0; k < f.hands; k++) slots.push(k ? '<li class="is-more">+</li>' : `<li class="${f.heavy ? 'is-heavy' : ''}">${esc(f.name)}${f.heavy ? '<small>' + shown('HEAVY') + '</small>' : ''}</li>`); });
+        while (slots.length < HANDS) slots.push(N ? '<li class="is-free" aria-label="free"></li>' : '<li class="is-free">free</li>');
         const pocket = b.haul.filter(f => f.hands === 0).map(f => f.name);
-        return `<span class="bx-label">CARRYING — ${HANDS} HANDS</span><ol class="bx-slots">${slots.join('')}</ol>${pocket.length ? `<span class="bx-pocket">In a pocket: ${esc(pocket.join(', '))}</span>` : ''}`;
+        return `<span class="bx-label">${N ? shown('CARRYING') : `CARRYING — ${HANDS} HANDS`}</span><ol class="bx-slots"${N ? ` aria-label="${shown(`${HANDS} HANDS`)}"` : ''}>${slots.join('')}</ol>${pocket.length ? `<span class="bx-pocket">In a pocket: ${esc(pocket.join(', '))}</span>` : ''}`;
     }
 
-    function actionLabel(o) {
-        const cost = `<kbd>−${o.cost} AIR</kbd>`;
+    /** A key's words, its air cost and why it is closed or what it adds (the old look's key). */
+    function keyLabel(words, cost, why) {
+        return `${words} <kbd>${cost}</kbd>${why.length ? `<em>${why.join(' · ')}</em>` : ''}`;
+    }
+    /** A take or record key's parts: its words, its cost, what it gains, why it is closed, and the rules that come with it. */
+    function actionParts(o) {
+        const cost = `−${o.cost} AIR`, noAir = 'NOT ENOUGH AIR TO GET BACK';
         if (o.kind === 'take') {
-            const why = o.isFull ? 'HANDS FULL' : !o.isSafe ? 'NOT ENOUGH AIR TO GET BACK' : [o.find.heavy && `HEAVY: +${HEAVY_STEP_COST} AIR PER ROOM OUT`, o.risk && `${Math.round(o.risk * 100)}% CHANCE OF GETTING HURT`].filter(Boolean).join(' · ');
-            return `Take ${esc(o.find.name)} ${cost}${why ? `<em>${why}</em>` : ''}`;
+            return { words: `Take ${esc(o.find.name)}`, cost, gain: o.find.gain, closed: o.isFull ? ['HANDS FULL'] : !o.isSafe ? [noAir] : [],
+                rules: [o.find.heavy && `HEAVY: +${HEAVY_STEP_COST} AIR PER ROOM OUT`, o.risk && `${Math.round(o.risk * 100)}% CHANCE OF GETTING HURT`].filter(Boolean) };
         }
-        if (o.kind === 'record') return `Record the name ${cost}${o.isSafe ? '' : '<em>NOT ENOUGH AIR TO GET BACK</em>'}`;
-        return '';
+        return { words: 'Record the name', cost, gain: '', closed: o.isSafe ? [] : [noAir], rules: [] };
+    }
+    function actionLabel(o) {
+        const p = actionParts(o);
+        return keyLabel(p.words, p.cost, p.closed.length ? p.closed : p.rules);
     }
 
     /** A small loop at 8 fps that draws until the canvas has been attached and then removed (or never attached in time). */
@@ -1046,7 +1071,9 @@
         let tick = 0, isBusy = false, isAuto = false, isOver = false, lastLowAir = -1;
 
         /** The voice line under the picture: what happened, as a quiet note, or A.U.R.A.'s words under her name. */
+        const pointer = NL() ? NL().point(overlay) : null;                                  // (new look) a pointed key's or door's rules, in the line's place
         const say = (text, isBad = false) => {
+            if (pointer) pointer.clear();                                                    // a new line is always seen
             const quote = AURA_QUOTE.exec(text), whoEl = el('.bx-who'), lineEl = el('.bx-line');
             el('.bx-name').textContent = quote ? 'A.U.R.A.' : '';
             whoEl.classList.toggle('is-empty', !quote);
@@ -1054,25 +1081,36 @@
             lineEl.className = `bx-line${quote ? '' : ' is-note'}${isBad ? ' is-bad' : ''}`;
         };
         function refresh() {
+            if (pointer) pointer.clear();
             const { list, home } = options(L, b), room = L.rooms[b.pos], info = ROOMS[room.type];
             const isLow = b.pos > 0 && b.air - home.cost <= 1;
             const was = document.activeElement, isRedrawn = !!was && was !== guideBtn && overlay.contains(was);   // a door or choice that had focus is drawn again
             el('.bx-room').textContent = info.name;
             el('.bx-air').innerHTML = airHtml(b, home);
             el('.bx-air').classList.toggle('is-low', isLow);
-            const find = room.find && !has(b.taken, b.pos) ? room.find : null;
-            el('.bx-here').innerHTML = `${room.cond ? `<span style="color:${COND_COLOR[room.cond]}">${esc(conditionRule(L, b, room.cond))}</span>` : ''}`
-                + `<span>${find ? `Here: <b>${esc(find.name)}</b> — ${esc(find.gain)}.` : room.type === 'AIRLOCK' ? esc(info.text) : 'Nothing left to take here.'}</span>`
-                + (L.nameRoom === b.pos && !b.isRecorded ? '<span>A name is scratched into the wall.</span>' : '');
-            const acts = list.filter(o => o.kind === 'take' || o.kind === 'record').map(o => `<button type="button" class="bx-btn${o.isSafe ? ' is-take' : ''}${!o.isSafe && !o.isFull ? ' is-stranding' : ''}" data-kind="${o.kind}"${o.isSafe && !isAuto ? '' : ' disabled'}>${actionLabel(o)}</button>`);
-            acts.push(b.pos === 0 ? `<button type="button" class="bx-btn" data-kind="leave"${isAuto ? ' disabled' : ''}>Step back aboard</button>`
-                : `<button type="button" class="bx-btn${isLow ? ' is-urgent' : ''}" data-kind="home"${isAuto ? ' disabled' : ''}>Head back out <kbd>−${home.cost} AIR</kbd></button>`);
+            const find = room.find && !has(b.taken, b.pos) ? room.find : null, N = NL();
+            const name = L.nameRoom === b.pos && !b.isRecorded ? '<span>A name is scratched into the wall.</span>' : '';
+            if (N) el('.bx-here').innerHTML = room.type === 'AIRLOCK' ? `<span>${esc(info.text)}</span>` : '';   // the find is on its take key, the name on the wall on its record key, a room's rule on its door
+            else {
+                const here = `${room.cond ? `<span style="color:${COND_COLOR[room.cond]}">${esc(conditionRule(L, b, room.cond))}</span>` : ''}`
+                    + `<span>${find ? `Here: <b>${esc(find.name)}</b> — ${esc(find.gain)}.` : room.type === 'AIRLOCK' ? esc(info.text) : 'Nothing left to take here.'}</span>` + name;
+                el('.bx-here').innerHTML = here;
+            }
+            const cls = o => `${o.isSafe ? ' is-take' : ''}${!o.isSafe && !o.isFull ? ' is-stranding' : ''}`, isOff = o => !(o.isSafe && !isAuto);
+            const dark = o => (o.kind === 'take' && room.cond === 'DARK' ? [conditionRule(L, b, 'DARK')] : []);
+            const acts = list.filter(o => o.kind === 'take' || o.kind === 'record').map(o => (N ? N.key({ ...actionParts(o), kind: o.kind, cls: cls(o), isOff: isOff(o), rules: actionParts(o).rules.concat(dark(o)) })
+                : `<button type="button" class="bx-btn${cls(o)}" data-kind="${o.kind}"${isOff(o) ? ' disabled' : ''}>${actionLabel(o)}</button>`));
+            const urgent = isLow ? ' is-urgent' : '', homeCost = `−${home.cost} AIR`;
+            acts.push(b.pos === 0 ? `<button type="button" class="${KEY()}" data-kind="leave"${isAuto ? ' disabled' : ''}>Step back aboard</button>`
+                : N ? N.key({ kind: 'home', words: 'Head back out', cost: homeCost, cls: urgent, isOff: isAuto })
+                    : `<button type="button" class="bx-btn${urgent}" data-kind="home"${isAuto ? ' disabled' : ''}>${keyLabel('Head back out', homeCost, [])}</button>`);
             el('.bx-actions').innerHTML = acts.join('');
             el('.bx-actions').querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => act(btn.dataset.kind)));
             el('.bx-hands').innerHTML = handsHtml(b);
             el('.bx-doors').innerHTML = doorsHtml(list);
             el('.bx-doors').querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => act('move', Number(btn.dataset.to))));
             guideBtn.disabled = isAuto || isOver;
+            if (N) guideBtn.hidden = isLow;                                                 // (new look) with no air to spare her plan is Head back out: one key for it
             if (isLow && lastLowAir !== b.air) { lastLowAir = b.air; sfx('sfxLowAir'); }
             if (isRedrawn) refocus(was);
         }
@@ -1081,21 +1119,29 @@
         function refocus(was) {
             const same = was.dataset.to != null ? `.bx-door[data-to="${was.dataset.to}"]` : `.bx-actions [data-kind="${was.dataset.kind}"]`;
             const next = overlay.querySelector(`${same}:not([disabled])`) || overlay.querySelector('.bx-door:not([disabled]):not(.is-label), .bx-actions button:not([disabled])');
-            if (next) next.focus({ preventScroll: true });
+            if (next) (pointer ? pointer.focus(next) : next.focus({ preventScroll: true }));   // (new look) a focus the walk moves never hides the new line
         }
 
         /** Quiet labels over every room the boarder can see; the rooms next door are buttons carrying their cost. */
         function doorsHtml(list) {
+            const N = NL(), JAM = 'JAMMED DOOR', FAR = 'TOO FAR';
             return L.rooms.map(r => {
-                if (r.id === b.pos || !has(b.seen, r.id)) return '';
+                const isHere = r.id === b.pos;                                               // (new look) the room's name is a tag on the room
+                if ((isHere && !N) || !has(b.seen, r.id)) return '';
+                const move = list.find(o => o.kind === 'move' && o.to === r.id);
+                if (N && !move && !isHere && has(b.visited, r.id)) return '';               // (new look) a room walked through keeps no tag: the picture shows it lit
                 const isNameUnder = has(b.known, r.id) && L.nameRoom === r.id && (NAME_AT[r.type] || NAME_AT.default)[1] < LABEL_BAND;   // never over the name on the wall
                 const box = roomBox(GRID, r), style = `left:${((box.x + box.w * (isNameUnder ? NAME_CLEAR : 0.5)) / AW) * 100}%;top:${((box.y + CEIL + 3) / AH) * 100}%`;
                 const name = has(b.known, r.id) ? ROOMS[r.type].name : 'ROOM ?', isJammed = L.jam === doorKey(b.pos, r.id) && !b.isForced;
-                const cond = (r.cond ? `<i style="color:${COND_COLOR[r.cond]}">${r.cond}</i>` : '') + (isJammed ? `<i style="color:${AMBER_T}">JAMMED DOOR</i>` : '');
-                const move = list.find(o => o.kind === 'move' && o.to === r.id);
+                if (N) {
+                    const rule = r.cond && !(r.cond === 'SEALED' && has(b.cut, r.id)) ? conditionRule(L, b, r.cond).replace(/^\w+\.\s+/, '') : '';   // in the line while the door is pointed at (its first sentence, the condition, is the tag's chip)
+                    return N.door({ name, conds: r.cond ? [r.cond] : [], jam: isJammed ? JAM : '', cost: move ? `−${move.cost} AIR` : '', far: FAR, isSafe: !!move && move.isSafe,
+                        isHomeward: !!move && move.isHomeward, to: r.id, style, isLabel: !move, isHere, isOff: !(move && move.isSafe && !isAuto && !isBusy), rule });
+                }
+                const cond = (r.cond ? `<i style="color:${COND_COLOR[r.cond]}">${r.cond}</i>` : '') + (isJammed ? `<i style="color:${AMBER_T}">${JAM}</i>` : '');
                 if (!move) return `<span class="bx-door is-label" style="${style}">${esc(name)}${cond}</span>`;
                 const cls = `bx-door${move.isSafe ? '' : ' is-stranding'}${move.isHomeward ? ' is-homeward' : ''}`;
-                return `<button type="button" class="${cls}" style="${style}" data-to="${r.id}"${move.isSafe && !isAuto && !isBusy ? '' : ' disabled'}>${esc(name)}${cond}<kbd>${move.isSafe ? `−${move.cost} AIR` : 'TOO FAR'}</kbd></button>`;
+                return `<button type="button" class="${cls}" style="${style}" data-to="${r.id}"${move.isSafe && !isAuto && !isBusy ? '' : ' disabled'}>${esc(name)}${cond}<kbd>${move.isSafe ? `−${move.cost} AIR` : FAR}</kbd></button>`;
             }).join('');
         }
 
@@ -1163,7 +1209,7 @@
         function guide() {
             if (isOver || isAuto) return;
             isAuto = true;
-            say('A.U.R.A.: "I will guide them, Commander. Safe rooms only."');
+            say(NL() && role === 'LEADER' ? GUIDE_YOU : GUIDE_THEM);
             refresh();
             const stepAura = () => {
                 if (isOver) return;
@@ -1190,11 +1236,12 @@
             el('.bx-kicker').textContent = `BOARDING — ${member.name} IS BACK ABOARD`;
             el('.bx-room').textContent = 'What came back';
             el('.bx-doors').innerHTML = '';
-            el('.bx-readout').innerHTML = `<p class="bx-quiet">Air left in the tank: ${b.air}.</p>`;
+            const left = `Air left in the tank: ${b.air}.`;
+            el('.bx-readout').innerHTML = `<p class="bx-quiet">${NL() ? NL().num(left) : left}</p>`;
             el('.bx-talk').innerHTML = `<div class="bx-voice" aria-live="polite"><p class="bx-who"><span class="bx-ring" aria-hidden="true"></span><span class="bx-name">A.U.R.A.</span></p>`
                 + `<ul class="bx-haul">${haul.lines.map(line => `<li>${esc(line)}</li>`).join('') || '<li>Nothing. The station was picked clean.</li>'}</ul>`
                 + `${haul.hurt ? `<p class="bx-line is-bad">${esc(haul.hurt)}</p>` : ''}</div>`;
-            el('.bx-buttons').innerHTML = '<button type="button" class="bx-btn is-primary bx-done">Continue</button>';
+            el('.bx-buttons').innerHTML = `<button type="button" class="${KEY()} is-primary bx-done">Continue</button>`;
             const done = el('.bx-done');
             done.addEventListener('click', () => { stopLoop(); close({ reachedCommand: b.reachedCommand, member }); }, { once: true });
             done.focus();
@@ -1212,9 +1259,10 @@
             draw(ctx, L, b, view, tick, scene);
         });
         say(`${member.name} is in the airlock.`);
+        if (NL() && !isTaught) setTimeout(() => { if (isOver || isAuto || b.visited !== 1) return; isTaught = true; say(TEACH); }, TEACH_AFTER_MS);   // once, before the first step
         refresh();
         const firstDoor = overlay.querySelector('.bx-door:not([disabled]):not(.is-label)');
-        if (firstDoor) firstDoor.focus();
+        if (firstDoor) (pointer ? pointer.focus(firstDoor) : firstDoor.focus());
     }
 
     /** Bring the haul aboard the same way the old walk did, so nothing else in the game has to change. Returns plain lines for the result card. */

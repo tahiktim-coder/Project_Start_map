@@ -6,6 +6,7 @@
 const { VALUE, SAFE_TRIP_RISK } = require('./models');
 
 const SETTLE = /settle|end the journey|ends the game|stay here for good|go down for good/i;
+const WAIT = /^not yet$/i;                                                          // the new look's 'Not yet' on a card asked (the talk before the jump): the player who chose to go goes
 const ROLE_ORDER = ['SECURITY', 'ENGINEER', 'MEDIC', 'SPECIALIST'];              // Supper.js OFFER_ORDER: Vance, Jaxon, Aris, Mira
 const CREW_ID = { ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
 const tagsOf = c => (c && c.tags) || [];
@@ -47,7 +48,7 @@ function net(text) {
 function pickCard(cfg, state, style, rnd, descOf) {
     const choices = cfg.choices || [];
     const words = c => { try { return `${c.text || ''} ${descOf ? descOf(c, state) : c.desc || ''}`; } catch (err) { return String(c.text || ''); } };
-    const ok = choices.map((c, i) => ({ c, i })).filter(({ c }) => !c.disabled && !SETTLE.test(String(c.text || ''))
+    const ok = choices.map((c, i) => ({ c, i })).filter(({ c }) => !c.disabled && !SETTLE.test(String(c.text || '')) && !WAIT.test(String(c.text || '').trim())
         && !(typeof c.requires === 'function' && !safe(() => c.requires(state), false)));
     if (!ok.length) return choices.length ? 0 : -1;
     if (style.cards === 'random') return ok[Math.floor(rnd() * ok.length)].i;
@@ -59,31 +60,50 @@ function pickCard(cfg, state, style, rnd, descOf) {
 function safe(f, d) { try { return f(); } catch (err) { return d; } }
 
 // ── the trip card's way ──
-/** evaRange: what a plain landing's find brings, as the game says ([lowest, highest] each): { energy, salvage, salvageHigh }
-    (play.js, from App.evaEnergyRange and App.evaSalvageRange). */
-function rewardValue(choice, evaRange) {
+/** What a way brings home in energy points. prize: the find's own, as the game drew it (App.tripPrize, App.findPrizes:
+    { salvage, energy, rations, data, cure } or null; the new look pays exactly that); left out (undefined), the old guess
+    from the reward's kind. A walk-away keeps its own cost. evaRange: what a plain landing's find brings, as the game says
+    ([lowest, highest] each): { energy, salvage, salvageHigh } (play.js, from App.evaEnergyRange and App.evaSalvageRange). */
+function rewardValue(choice, evaRange, prize) {
     const r = choice.reward || {}, mid = range => (range[0] + range[1]) / 2;
     if (r.type === 'RESOURCE' && r.val === 'NOTHING') return /Lose Fuel|Energy Cost/i.test(choice.text) ? -10 : /Morale Loss/i.test(choice.text) ? -3 : 0;
+    if (prize !== undefined) return prizeValue(prize);
     if (r.type === 'RESOURCE') return String(r.val).includes('METALS_HIGH') ? mid(evaRange.salvageHigh) * VALUE.salvage : String(r.val).includes('METALS') ? mid(evaRange.salvage) * VALUE.salvage : mid(evaRange.energy) * VALUE.energy;
     if (r.type === 'DATA') return (Number(r.val) || 1) * VALUE.data;
     if (r.type === 'ITEM') return VALUE.item;
     return 0;
 }
+/** A drawn prize in energy points (a cure: one injury healed). */
+const prizeValue = p => (p ? (p.salvage || 0) * VALUE.salvage + (p.energy || 0) * VALUE.energy + (p.rations || 0) * VALUE.rations + (p.data || 0) * VALUE.data + (p.cure ? VALUE.hurt : 0) : 0);
 /** A way's worth less its risk: odds are the game's own (TripOdds: { hurt, death } in %, as its card shows them). Without
-    odds, the old rule: a hit at total risk t kills 10 % of the time, one more point past 40 % risk. */
-function expected(choice, riskBase, evaRange, odds) {
-    if (odds) return rewardValue(choice, evaRange) - odds.hurt / 100 * VALUE.hurt - odds.death / 100 * VALUE.life;
+    odds, the old rule: a hit at total risk t kills 10 % of the time, one more point past 40 % risk. prize: as rewardValue's. */
+function expected(choice, riskBase, evaRange, odds, prize) {
+    if (odds) return rewardValue(choice, evaRange, prize) - odds.hurt / 100 * VALUE.hurt - odds.death / 100 * VALUE.life;
     const t = clamp(riskBase + (Number(choice.riskMod) || 0), 0, 100), deathShare = (10 + Math.max(0, t - 40)) / 100;
-    return rewardValue(choice, evaRange) - t / 100 * (VALUE.hurt + deathShare * VALUE.life);
+    return rewardValue(choice, evaRange, prize) - t / 100 * (VALUE.hurt + deathShare * VALUE.life);
 }
-const isSupply = c => { const r = c.reward || {}; return r.type === 'RESOURCE' && r.val !== 'NOTHING'; };
-/** The choice's index among `open` ({ c, i, odds } not struck by a trait; odds: App.wayOdds, as the card shows them). */
+/** A way that brings supplies: its drawn prize has salvage, energy or rations (the new look: an item's way does too); with no
+    prize given, a resource that is not nothing. */
+const isSupply = o => (o.prize !== undefined ? !!(o.prize && (o.prize.salvage || o.prize.energy || o.prize.rations))
+    : (o.c.reward || {}).type === 'RESOURCE' && (o.c.reward || {}).val !== 'NOTHING');
+/** The fuel depot at a docked station (step 8: NSOrbit's "Fuel depot", DEPOT_SALVAGE salvage for up to DEPOT_ENERGY energy):
+    whether this player takes it now. gain: the energy that fits; cost: its salvage; econ: NEW_LOOK_ECONOMY. */
+function wantsDepot(style, state, gain, cost, econ) {
+    const left = (state.salvage || 0) - cost;
+    if (left < 0 || gain <= 0) return false;
+    if (style.depot === 'always') return true;
+    if (style.depot === 'low') return (state.energy || 0) <= 60 && left >= 40;                 // a repair's worth kept back
+    if (style.depot === 'payoff') return gain >= econ.DEPOT_ENERGY * 0.75 && left >= 30;
+    return false;
+}
+/** The choice's index among `open` ({ c, i, odds, prize } not struck by a trait; odds: App.wayOdds, as the card shows them;
+    prize: App.tripPrize, what the way pays). */
 function pickWay(open, style, riskBase, evaRange, rnd) {
     const byRisk = open.slice().sort((a, b) => (a.c.riskMod || 0) - (b.c.riskMod || 0) || a.i - b.i);
     const careful = byRisk[0], bold = byRisk[byRisk.length - 1];
     if (style.way === 'bold') return bold.i;
-    if (style.way === 'boldForSupply') { const s = byRisk.filter(o => isSupply(o.c)); return (s.length ? s[s.length - 1] : careful).i; }
-    if (style.way === 'expected') return open.slice().sort((a, b) => expected(b.c, riskBase, evaRange, b.odds) - expected(a.c, riskBase, evaRange, a.odds) || a.i - b.i)[0].i;
+    if (style.way === 'boldForSupply') { const s = byRisk.filter(isSupply); return (s.length ? s[s.length - 1] : careful).i; }
+    if (style.way === 'expected') return open.slice().sort((a, b) => expected(b.c, riskBase, evaRange, b.odds, b.prize) - expected(a.c, riskBase, evaRange, a.odds, a.prize) || a.i - b.i)[0].i;
     return careful.i;
 }
 
@@ -145,8 +165,9 @@ function pickWorld(ahead, style, ctx) {
 /** Does this player send a team to this find? risk: the find's shown risk with the proposed pair (null: a site's own story).
     ctx.tripsHere: trips already made from this orbit; ctx.eventTrips: event finds visited here; ctx.wayOdds(find, event,
     way): the game's own odds for one way of that find with the proposed pair (NSWorldFinds.oddsOf: the fit, someone hurt
-    going, something hunting there, Vance's cover). The careful players make one trip a world (its site first), and a second
-    only for a clue; the optimizer up to two event finds; the others every find. */
+    going, something hunting there, Vance's cover); ctx.wayPrize(find, event, way): what that way pays (App.findPrizes).
+    The careful players make one trip a world (its site first), and a second only for a clue; the optimizer up to two event
+    finds; the others every find. */
 function wantsFind(find, style, ctx) {
     if (find.done) return false;
     if (style.trips === 'safe' && (ctx.tripsHere || 0) > 0 && !find.hint) return false;
@@ -159,7 +180,7 @@ function wantsFind(find, style, ctx) {
         const ev = ctx.eventOf(find.event);
         if (!ev) return false;
         const base = risk - Math.min(...ev.choices.map(c => Number(c.riskMod) || 0));   // only where the game gives no odds
-        return Math.max(...ev.choices.map((c, i) => expected(c, base, ctx.evaRange, ctx.wayOdds ? ctx.wayOdds(find, ev, i) : null))) > 0;
+        return Math.max(...ev.choices.map((c, i) => expected(c, base, ctx.evaRange, ctx.wayOdds ? ctx.wayOdds(find, ev, i) : null, ctx.wayPrize ? ctx.wayPrize(find, ev, i) : undefined))) > 0;
     }
     return true;
 }
@@ -237,4 +258,4 @@ function pickBoarder(state, style, rnd) {
     return well.slice().sort((a, b) => pref.findIndex(t => tagsOf(a).includes(t)) - pref.findIndex(t => tagsOf(b).includes(t)))[0];
 }
 
-module.exports = { pickCard, pickWay, pickWorld, wantsFind, pickTeam, supperPlan, deckPlan, pickBoarder, idOf, tagsOf, SETTLE, expected };
+module.exports = { pickCard, pickWay, pickWorld, wantsFind, pickTeam, supperPlan, deckPlan, pickBoarder, wantsDepot, idOf, tagsOf, SETTLE, expected, rewardValue, prizeValue, isSupply };

@@ -171,6 +171,26 @@ const BARK_DATA = {
     },
 
     // ═══════════════════════════════════════════════════════════════
+    // STRESS_ONE — The new look: the first time someone reaches stress 1, they say it (GameState.stressOneBarks, once a
+    // person a run; the speaker is that person). The ship shows it too: Jaxon and Aris lie awake, Vance and Mira pace.
+    // DRAFT lines (2026-11-02), plain speech (docs/STYLE.md)
+    // ═══════════════════════════════════════════════════════════════
+    STRESS_ONE: {
+        PESSIMIST: {
+            1: ["I can't sleep. I keep listening to the drive."]
+        },
+        HUMANIST: {
+            1: ["I can't sleep. I keep counting what's left in the med bay."]
+        },
+        SURVIVOR: {
+            1: ["I can't sit still. I've checked the hatches twice."]
+        },
+        CURIOUS: {
+            1: ["I can't sit still. I keep reading the same scan."]
+        }
+    },
+
+    // ═══════════════════════════════════════════════════════════════
     // CREW_DEATH — Someone dies (bypasses cooldown)
     // ═══════════════════════════════════════════════════════════════
     CREW_DEATH: {
@@ -469,20 +489,22 @@ class BarkSystem {
      * Main entry point — called from bundle.js handlers
      * @param {string} trigger - One of the BARK_DATA keys
      * @param {object} state - GameState reference
-     * @param {object} context - Optional extra data (planet, crew member, etc.)
+     * @param {object} context - Optional extra data (planet, crew member, etc.); context.speaker: that person says it, or nobody
+     *                           (awake: not sedated or shut down). context.crew (a death's or injury's victim) does not pick the speaker.
+     * @returns {boolean} whether a bark was said
      */
     tryBark(trigger, state, context = {}) {
-        if (!state || !state.crew) return;
+        if (!state || !state.crew) return false;
 
         // Check cooldown (CREW_DEATH bypasses)
         if (trigger !== 'CREW_DEATH') {
             const actionsSinceLast = (state.actionsTaken || 0) - this.lastBarkAction;
-            if (actionsSinceLast < this.cooldownActions) return;
+            if (actionsSinceLast < this.cooldownActions) return false;
         }
 
         // Check one-time triggers
         if (SPECIAL_BARKS[trigger]) {
-            if (this.firedSpecials[trigger]) return;
+            if (this.firedSpecials[trigger]) return false;
             this.firedSpecials[trigger] = true;
         }
 
@@ -492,15 +514,22 @@ class BarkSystem {
             !c.tags.includes('LEADER')
         );
 
-        if (eligible.length === 0) return;
+        if (eligible.length === 0) return false;
 
         // Get bark data for this trigger
         const triggerData = BARK_DATA[trigger];
-        if (!triggerData) return;
+        if (!triggerData) return false;
 
         // Pick a speaker — avoid repeating last speaker if possible
         let speaker = null;
         const shuffled = this._shuffle([...eligible]);
+        const own = context && context.speaker;                             // one person's own line (STRESS_ONE): them or nobody
+        if (own) {
+            const awake = !(own.tags || []).includes('SEDATED') && own.trait !== 'CATATONIC';
+            if (!eligible.includes(own) || !awake || !triggerData[own.personality]) return false;
+            shuffled.length = 0;
+            shuffled.push(own);
+        }
 
         for (const candidate of shuffled) {
             const personality = candidate.personality;
@@ -518,7 +547,7 @@ class BarkSystem {
             speaker = shuffled.find(c => triggerData[c.personality]);
         }
 
-        if (!speaker) return;
+        if (!speaker) return false;
 
         // Get stress tier (clamped to available tiers). Before sector 3 the wrecks are the eight from the briefing (CANON.md section 2),
         // so the story tiers that talk about higher numbers and older hulls stay quiet there.
@@ -527,7 +556,7 @@ class BarkSystem {
         const isPastTheEight = trigger === 'EXODUS_FOUND' && (state.currentSector || 1) >= 3;
         const stress = isBeforeTheNumbers ? 0 : Math.max(isPastTheEight ? 2 : 0, Math.min(speaker.stress || 0, 3));
         const personalityBarks = triggerData[speaker.personality];
-        if (!personalityBarks) return;
+        if (!personalityBarks) return false;
 
         // Find the closest available stress tier (fall back to lower)
         let barks = personalityBarks[stress];
@@ -539,7 +568,7 @@ class BarkSystem {
                 }
             }
         }
-        if (!barks || barks.length === 0) return;
+        if (!barks || barks.length === 0) return false;
 
         // Pick a random bark line
         const line = barks[Math.floor(Math.random() * barks.length)];
@@ -554,6 +583,7 @@ class BarkSystem {
                 state.addLog(`${speaker.name}: "${line}"`);
             }
         }, 150);
+        return true;
     }
 
     /**

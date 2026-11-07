@@ -77,7 +77,8 @@
     }
 
     /** opts (all optional): real (the disc itself, not the drawing), kicker, title, aura (the line under it), close and closeNote
-        (the button's words) — the finale shows our own disc, from the hold, with its own kicker and line. */
+        (the button's words) — the finale shows our own disc, from the hold, with its own kicker and line; said { speaker, text }
+        (the new look: the line under it in place of A.U.R.A.'s, the gold disc from the locker, C69). */
     /** Opens once a choice's outcome card (new look) has been read: the disc never lands on top of it. */
     function open(app, opts) {
         const EC = window.EncounterCard;
@@ -89,7 +90,7 @@
         const isReal = !!(opts && opts.real), notes = isReal ? REAL_NOTES : NOTES;
         const o = Object.assign({}, isReal ? REAL : DRAWING, opts || {});
         const F = window.NSFinds;
-        if (F && F.isOn()) return openThing(app, o, isReal, notes, F);
+        if (F && F.isOn()) return openThing(app, newLookOf(o, opts || {}), isReal, notes, F);
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay disc-doc';
         overlay.style.zIndex = '4000';
@@ -136,7 +137,16 @@
         });
     }
 
-    /** The new look: the drawing as a logbook page, or the gold disc itself, its notes on it; A.U.R.A. under it once they are in. */
+    /** The new look's words (look pass B12): the kicker is the source only (a caller's own kicker, or the first part of the
+        default's), no title (the thing names itself), and a button note only when the caller gives one (never "it stays in
+        your cargo": the new look has no hold to take it out of). said ({ speaker, text }), when given, is the line under it
+        in place of A.U.R.A.'s: the gold disc opened from the locker with the team's line (C69, App.showDiscFound). */
+    function newLookOf(o, opts) {
+        return Object.assign({}, o, { kicker: opts.kicker || String(o.kicker).split(' · ')[0], closeNote: opts.closeNote || '', said: opts.said || { speaker: 'A.U.R.A.', text: o.aura } });
+    }
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+    /** The new look: the drawing as a logbook page, or the gold disc itself, its notes on it; a line under it once they are in. */
     function openThing(app, o, isReal, notes, F) {
         const view = F.disc({ real: isReal, notes, lineMs: NOTE_MS });
         const overlay = document.createElement('div');
@@ -144,10 +154,10 @@
         overlay.style.zIndex = '4000';
         overlay.innerHTML = `
             <section class="modal-content deck-panel disc-doc-card find-card ${isReal ? 'is-gold' : 'is-sketch'}" role="dialog" aria-label="${isReal ? 'The disc' : 'Drawing of the disc'}">
-                <header class="enc-head"><p class="enc-kicker">${o.kicker}</p><h3>${o.title}</h3></header>
+                <header class="enc-head"><p class="enc-kicker">${esc(o.kicker)}</p></header>
                 <div class="find-slot"></div>
-                <div class="enc-line find-said" aria-live="polite" style="visibility:hidden">${F.said(app, 'A.U.R.A.', o.aura)}</div>
-                <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>${o.close}</span><small>${o.closeNote}</small></button></div>
+                <div class="enc-line find-said" aria-live="polite" style="visibility:hidden">${F.said(app, o.said.speaker, esc(o.said.text))}</div>
+                <div class="deck-panel-actions"><button class="deck-action disc-doc-close"><span>${esc(o.close)}</span>${o.closeNote ? `<small>${esc(o.closeNote)}</small>` : ''}</button></div>
             </section>`;
         overlay.querySelector('.find-slot').replaceWith(view.el);
         document.body.appendChild(overlay);
@@ -158,7 +168,7 @@
         const say = () => { if (overlay.isConnected) { saidEl.style.visibility = ''; saidEl.classList.add('is-in'); } };
         F.pace(view, overlay, NOTE_MS, isAtOnce => { if (isAtOnce) say(); else setTimeout(say, SAID_MS); });
         if (app && app.state) app.state._hasSeenDisc = true;
-        overlay.querySelector('.disc-doc-close').focus({ preventScroll: true });
+        F.settle(overlay.querySelector('.disc-doc-card'));                                     // the card takes the focus: its key opens quiet
         return new Promise(resolve => {
             const close = () => { view.destroy(); overlay.remove(); resolve(); };
             overlay.querySelector('.disc-doc-close').addEventListener('click', close);

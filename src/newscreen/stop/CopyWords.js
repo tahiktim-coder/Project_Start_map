@@ -9,7 +9,8 @@
 
    window.NSCopyWords (frozen)
      ARRIVAL, SCAN, FIGHT, escaped(lost), COUNCIL, council(state, isRepeat), ending(state), arrival(state, victim),
-     canSpeak(state, id), onBridge(state, id) (alive, not shut away: where the bridge shows them)
+     canSpeak(state, id), onBridge(state, id) (alive, not shut away: where the bridge shows them),
+     SHAKEN, shaken(state, node, victim, hurtSaid) → A.U.R.A.'s line once the talk is over, or null (look pass B07)
 */
 (function () {
     'use strict';
@@ -45,6 +46,14 @@
             { key: 'goDown', by: ['jaxon'], text: "I don't care what it is. Let's go down." },
         ],
     });
+    // A.U.R.A., once the talk at the window is over: how the fall left them, in place of the marks over their heads (C04, L-31)
+    const SHAKEN = Object.freeze({ all: 'Everyone is shaken, Commander.', hurt: '{name} is hurt.' });   // DRAFT (look pass)
+    /** Anyone the fall shook (stress up since node._stressBefore), and whoever it hurt unless their hurt line was said. */
+    function shaken(state, node, victim, hurtSaid) {
+        const before = (node && node._stressBefore) || {}, rose = ((state && state.crew) || []).some(m => m.status !== 'DEAD' && (m.stress || 0) > (before[m.name] || 0));
+        const v = victim ? member(state, victim) : null, hurt = !!v && v.status === 'INJURED' && !hurtSaid;
+        return rose || hurt ? [rose ? SHAKEN.all : '', hurt ? SHAKEN.hurt.replace('{name}', v.name) : ''].filter(Boolean).join(' ') : null;
+    }
     // A.U.R.A., once the scan has swept it (DRAFT)
     const SCAN = 'There is nothing under the ground, Commander. It is only the outside.';
     // while the engines strain (DRAFT)
@@ -69,7 +78,7 @@
         },
         closing: 'If we land, the journey ends there, Commander. Go down anyway?',
         again: 'The journey ends there if we land, Commander. Go down anyway?',
-        choices: [{ text: 'Not yet', desc: 'Stay at the window. Nothing is decided.' }, { text: 'Go down', desc: 'The journey ends on it.' }],
+        choices: [{ text: 'Not yet', desc: 'Stay at the window. Nothing is decided.' }, { text: 'Go down', desc: 'The journey ends here.' }],   // DRAFT (look pass): L-31
     });
     /** The council, ready for EncounterCard.open: { kicker, title, dialogue, choices }. isRepeat: only A.U.R.A. asks again. */
     function council(state, isRepeat) {
@@ -82,12 +91,15 @@
     const ENDING = Object.freeze({
         id: 'WRONG_PLACE_ACCEPTED', title: 'A copy of somewhere',
         ground: { by: ['jaxon', 'aris', 'mira', 'vance'], lines: ['Smell that?', 'It smells of nothing.'] },
-        night: ['Four figures walk the decks of the ship in orbit.', 'You count them from the ground every night. There are always four.'],   // kept from the old end screen
-        card: {
+        night: [
+            'Up in orbit, the ship keeps its lights on.',   // DRAFT (look pass): L-43
+            'Nobody is aboard.',   // DRAFT (look pass): L-43
+        ],
+        card: {                                                  // one narrator, by name (look pass, L-42)
             crew: '{names} stayed on a copy of Earth.',
-            alone: 'You stayed on a copy of Earth, alone.',
-            made: 'Something copied home, and got the grass wrong.',
-            jaxon: 'Jaxon names the place every morning. It never sticks.',
+            alone: '{names} stayed on a copy of Earth, alone.',   // DRAFT (look pass)
+            made: 'It looks like Earth, but nothing there grows or moves.',   // DRAFT (look pass)
+            jaxon: 'Jaxon still calls it home.',   // DRAFT (look pass)
             air: 'The air is clean, and it tastes of nothing.',
         },
     });
@@ -100,7 +112,7 @@
         const who = first(state, E.ground.by);
         return {
             ending: E.id, door: 'COPY', title: E.title, living,
-            text: [alone ? E.card.alone : E.card.crew.replace('{names}', list(names)), E.card.made, living.includes('jaxon') ? E.card.jaxon : E.card.air],
+            text: [(alone ? E.card.alone : E.card.crew).replace('{names}', list(names)), E.card.made, living.includes('jaxon') ? E.card.jaxon : E.card.air],
             scene: { ground: who ? E.ground.lines.map(say => ({ who, say })) : [], night: E.night.map(say => ({ who: null, say })) },
         };
     }
@@ -126,5 +138,5 @@
         return out;
     }
 
-    window.NSCopyWords = Object.freeze({ ARRIVAL, SCAN, FIGHT, COUNCIL, ENDING, escaped, council, ending, arrival, canSpeak, onBridge, member, first });
+    window.NSCopyWords = Object.freeze({ ARRIVAL, SCAN, FIGHT, COUNCIL, ENDING, SHAKEN, escaped, council, ending, arrival, shaken, canSpeak, onBridge, member, first });
 })();

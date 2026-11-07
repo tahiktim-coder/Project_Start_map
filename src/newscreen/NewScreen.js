@@ -10,13 +10,17 @@
    window.NewScreen (frozen)
      on                      the switch (window.NEW_SCREEN)
      G                       { dpr, k, W, H, offX, hull, HULL_OUT, toArt(cx, cy) → [ax, ay], toCss(ax, ay) → [cx, cy],
-                               bk, bW 640, bH 360, bLeft, bTop,  ts, tTop, tBot, tRows, tLeft, tY0 }
+                               bk, bW 640, bH 360, bLeft, bTop,  ts, tCut, tTop, tBot, tRows, tLeft, tY0 }
                              k: device px per art px (at least 540 art rows); hull: the art column where space starts.
                              bk: device px per bridge px, the largest that shows the whole 640 x 360 bridge (3 at 1080,
-                             2.4 at 864, 2.58 at 928; not a whole number: nearest-neighbour); bLeft, bTop: CSS px, centred.
+                             2.4 at 864, 2.58 at 928; not a whole number: nearest-neighbour), and the whole number under it
+                             when that is within 10 % (2 at 1366 x 768: even pixels, the hull round it; bkSnap true; look
+                             pass B07); bLeft, bTop: CSS px, centred.
                              Stop.js fills what is left beside it with the space outside our hull. The tower fit (BUILD_B §8): ts device px per tower px (rows tTop..tBot, the whole
                              tower: devH / 1336), columns from tLeft; tY0 device px from the top (the tower centred when
-                             the 45 % width cap shrank it). hull = ceil((HULL_OUT − tLeft) × ts / k).
+                             the 45 % width cap shrank it). hull = ceil((HULL_OUT − tLeft) × ts / k). tCut: a fit from
+                             0.5 to 0.7 is shown re-cut at 1/2, never smoothed (Tower.js): 1:1 where that costs the
+                             tower 15 % or less of its size (ts 0.5: 1366 x 768, 1280 x 720), else scaled up to the fit.
      clock.t                 ms; runs only while the view is shown
      app                     the real App (set by show / stop)
      mode() → 'travel' | 'dive-in' | 'stop' | 'dive-out' | 'wake'
@@ -32,8 +36,11 @@
        click, canGo, refuse, go, arrive, light, contact, ghost   travel (BUILD_A §4)
        scanOffer(id) → { cost, ok, why } | null   the long-range scan offered in a world's note (Scan.js NSScan.offer)
        scan(id) → bool        run it (travel only);  facts(id) → { site, gives, danger, live, tier } | null   what our scans read
-       findNote(id, withSite) → ['Old ruins · The hum', 'People could live here'] | null   travel's note once scanned (WorldFinds.js)
+       findNote(id, withSite) → [{ icon, text, clue, live }] | null   travel's note once scanned, as tags (WorldFinds.js)
        finds(ids) → [find]    the finds on the world we orbit (WorldFinds.list; ids: the two at the hatch);  aim(id) → bool  choose one
+       way(id, idx, ids?) → bool   choose that find's way on the glass (NSOrbit.way; ids: the two at the hatch, whose own
+                              stress traits strike its rows)
+       helps(ids, id) → bool | null   id makes the trip ids would take safer (NSOrbit.helps; null: a site's or Eden's own card)
        actions() → [{ key, words, near, team, run() }]          what this stop offers now (NSOrbit.actions)
        act(key, ids?) → bool  run one (ids: the two picked for 'team');  eligible() → ids fit to go
        weak() → ids too weak from a missed supper for this trip;  holdLoss(id, picked) → what the ship loses while id is down
@@ -44,13 +51,17 @@
                               first: NSOrbit.beforeLeave) the bridge takes no clicks or keys, and act, aim and leave refuse
        trip() → { ids, aboard } | null   who is down now;  sign() → { kind, comes } | null   this stop's crisis sign
        scanDue() → bool       we orbit a world nobody has scanned from the bridge (Stop.js scans it as the bridge shows)
-       person(id, say?)       a person in the tower clicked: their line, said beside them (not logged: saves keep 20 lines)
+       person(id, say?, state?)   a person in the tower clicked: their line by their state ({ status, weak }: ShipRoutine.line),
+                              said beside them (not logged: saves keep 20 lines); once a sector per person and state (look pass B04)
        bench() → bool         Mira's bench clicked: date the wreck whose star fix is on it
        datable() → node | null    a wreck whose fix is on Mira's bench now
        deckChoices(key) → [{ words, note }]   a red deck clicked: fix, patch, live with it
        deckCost(key) → [{ icon, text, tone }]   what a red deck costs while it stays broken (the tower's tag shows it)
        deckChoose(key, i) → bool
-     show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, playJump() → Promise
+     show(app), hide(), stop(app) → bool, hint(), isShown(), blocked() → bool, idle() → bool (the console may open), playJump() → Promise
+     holdVoice(reason, on, ms?)  no new voice line starts while any reason holds it (ms: from now; left out: until let go).
+                             The arrival holds it from flow.arrive to the bridge shown + 600 ms (the dive is wordless: the
+                             travel line on screen goes, the warp's mood strings are dropped); stop/Copy.js through the fall
      wake(on) → bool         the wake-up after the launch film (start/Pods.js): on, the 'wake' module has the screen (travel
                              and the tower are not drawn, cards wait, the travel view's first show waits); off, the travel
                              view opens as on a sector's first show (from black, its title, the tower sliding in)
@@ -67,9 +78,13 @@
     const ON = !!window.NEW_SCREEN;
     const SPACE_MIN = 0.55, TOWER_SHARE = 0.42, MIN_ART_ROWS = 540, RESIZE_MS = 150, MAX_DT = 100;
     const TOWER_MAX = 0.45, TOWER_PAD_TOP = 40, TOWER_PAD_TAIL = 48, TOWER_LEFT = 40, BRIDGE_W = 640, BRIDGE_H = 360;
+    const TOWER_CUT_BELOW = 0.7, TOWER_CUT = 0.5, TOWER_SNAP_LOSS = 0.15;           // under 0.7 the tower is re-cut at the whole scale 1/2 (Tower.js, look pass B04); shown 1:1 only where that shrinks it 15 % or less
     const JUMP_FALLBACK_MS = 5000, REFUSE_GAP_MS = 4000, DIVE_WATCH_MS = 4500;
     const BLOCKED_RENDER_EVERY = 12;                      // under a card or a minigame the picture is drawn only every 12th frame (it is covered)
     const HOLD_STOP_MS = 4000, HOLD_TRAVEL_MS = 1800, CLICK_GRACE_MS = 700;   // a card that turns up on its own waits until the picture has been seen
+    const OPENING_MAX_MS = 8000;              // a first arrival's sector title: a card waits for 'opening:done', or this long at most (look pass B02)
+    const VOICE_AFTER_SHOWN_MS = 600, BRIDGE_SNAP = 0.9;   // the bridge's first words wait this long; a whole bridge scale within 10 %
+    const MOOD_RE = /^(Jaxon|Aris|Vance|Mira|Cora):\s+(?!["“'‘])(.+)$/;   // a crew status line, not speech ("Mira: Unsettled by hostile readings.")
     /** How long such a card waits on a world whose bridge we saw before (stop/Stop.js marks it _nsSeen as it closes): less,
         NEW_LOOK_ECONOMY.HOLD_SEEN_MS (bundle.js, read when used; without it the full hold) */
     function holdSeenMs() {
@@ -81,7 +96,7 @@
     const FIRST_HINT = 'A.U.R.A.: "One of our ships is calling, Commander. Point at a world to fly there."';
     const ORDER = ['travel', 'tower', 'stop', 'wake', 'voice'];
     const OUTSIDE = new Set(['travel', 'dive-in', 'dive-out']);                          // travel and the tower are drawn only then
-    const BLOCKERS = '.modal-overlay:not(.ns-held), .story-reel, .mini-host, .warp-plot, .throw-veil, .end-screen, #start-menu, #narrative-modal.active, .ns-film';
+    const BLOCKERS = '.modal-overlay:not(.ns-held), .story-reel, .mini-host, .warp-plot, .throw-veil, .end-screen, #start-menu, #narrative-modal.active, .ns-film, .ns-console';
     const COVERS = '.ns-film, #start-menu, .story-reel, .end-screen';   // opaque over the whole screen: nothing under them is drawn (a stale frame would show when they go)
     const CREW_BY_TAG = { LEADER: 'cora', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' };
 
@@ -101,14 +116,24 @@
     let pendingShown = null, carryFirst = false, orbitFrom = null, seenIds = new Set();
     let inFrame = false, frameBlocked = false, frameN = 0, jumping = false, hintGiven = false;
     let mode = 'travel', stopId = null, watch = null, leaving = false;                   // leaving: flow.leave() waits on beforeLeave (the bridge holds)
-    let stopShownAt = -1e9, travelShownAt = -1e9, lastDown = -1e9, stopHoldMs = HOLD_STOP_MS;
+    let stopShownAt = -1e9, travelShownAt = -1e9, lastDown = -1e9, stopHoldMs = HOLD_STOP_MS, openingUntil = -1e9;
+    /** --t, 0..1: how far the window is from 1280 toward 1920 wide. Set on :root (tokens.css) on load and on every resize,
+        so the title, the films and the cards size on it before the view is ever shown; #ns-root keeps its own copy too. */
+    const windowT = () => Math.max(0, Math.min(1, (innerWidth - 1280) / 640));
+    function setRootT() { document.documentElement.style.setProperty('--t', String(windowT())); }
+    if (ON) { setRootT(); addEventListener('resize', setRootT); }
     const theApp = () => app || window.app || null;
     const st = () => { const a = theApp(); return (a && a.state) || null; };
     const orbit = () => window.NSOrbit || null;
     const drawn = name => name !== 'travel' && name !== 'tower' || OUTSIDE.has(mode);
+    // ── the voice holds (look pass B07): while one holds, the voice module's clock stops, so no new line starts ──
+    const voiceHolds = new Map();                                                         // reason → clock ms it ends (Infinity: until let go)
+    function holdVoice(reason, on, ms) { if (on) voiceHolds.set(reason, ms == null ? Infinity : clock.t + ms); else voiceHolds.delete(reason); }
+    function voiceHeld() { let held = false; voiceHolds.forEach((until, k) => { if (clock.t < until) held = true; else voiceHolds.delete(k); }); return held; }
     const each = (fn, ...args) => ORDER.forEach(n => {
         const m = mods[n];
         if (fn === 'render' && !drawn(n)) return;
+        if (fn === 'update' && n === 'voice' && voiceHeld()) return;
         if (m && typeof m[fn] === 'function') { try { m[fn](...args); } catch (err) { console.error(`NewScreen: ${n}.${fn} failed`, err); } }
     });
 
@@ -144,6 +169,8 @@
         each('init');
         measure();
         new MutationObserver(onAdded).observe(document.body, { childList: true });
+        bus.on('opening:done', () => { openingUntil = -1e9; });
+        bus.on('hidden', () => { openingUntil = -1e9; voiceHolds.clear(); });
     }
 
     // ── a card that turns up on its own (a crew moment, a story card, the head count) waits, hidden, until the dive is over
@@ -153,8 +180,15 @@
         if (mode === 'wake') return true;                                                    // the wake-up first: a card waits for the travel view
         if (!shown || now - lastDown < CLICK_GRACE_MS) return false;
         if (mode === 'dive-in' || mode === 'dive-out') return true;
+        if (now < openingUntil || document.querySelector('#ns-world-words .nst-title:not([hidden])')) return true;   // the sector title first, from the arrival to its fade's end: a card never covers it (look pass B02)
         if (mode === 'stop') return now - stopShownAt < stopHoldMs;
         return !!pendingShown || now - travelShownAt < HOLD_TRAVEL_MS;
+    }
+    /** The travel view is shown: a first arrival plays its sector title (travel/Travel.js) until it says 'opening:done'. */
+    function emitShown(p) {
+        travelShownAt = performance.now();
+        if (p && p.first) openingUntil = travelShownAt + OPENING_MAX_MS;
+        bus.emit('shown', p);
     }
     function onAdded(list) {
         if (!holding()) return;
@@ -182,20 +216,24 @@
         G.tTop = (L ? L.TOP0 : 454) - TOWER_PAD_TOP; G.tBot = (L ? L.TAIL0 : 1702) + TOWER_PAD_TAIL; G.tRows = G.tBot - G.tTop;
         G.tLeft = TOWER_LEFT;
         const towerW = G.HULL_OUT - G.tLeft;
-        G.ts = Math.min(devH / G.tRows, TOWER_MAX * devW / towerW);
+        const fitTs = Math.min(devH / G.tRows, TOWER_MAX * devW / towerW);
+        G.tCut = fitTs < TOWER_CUT_BELOW && fitTs >= TOWER_CUT;                               // never smoothed: 1280 x 720 to 1600 x 900
+        G.ts = G.tCut && fitTs * (1 - TOWER_SNAP_LOSS) <= TOWER_CUT ? TOWER_CUT : fitTs;      // 1:1 at 1366 x 768, 1280 x 720; 1440 x 900 keeps its size
         G.tY0 = Math.round((devH - G.tRows * G.ts) / 2);
         G.hull = Math.ceil(towerW * G.ts / G.k);
         if (G.W - G.hull < SPACE_MIN * G.W) G.hull = Math.floor((1 - SPACE_MIN) * G.W);
         G.offX = G.hull - G.HULL_OUT - 1;                                                    // the tower art at 1:1 would end at the hull edge (older code)
         // the bridge (layout D): 640 x 360 bridge px, as large as the window shows it whole, centred (Stop fills the sides)
         G.bW = BRIDGE_W; G.bH = BRIDGE_H;
-        G.bk = Math.max(1, Math.min(devW / BRIDGE_W, devH / BRIDGE_H));
+        const bk = Math.max(1, Math.min(devW / BRIDGE_W, devH / BRIDGE_H)), whole = Math.floor(bk);
+        G.bkSnap = whole >= 1 && whole < bk && whole / bk >= BRIDGE_SNAP;
+        G.bk = G.bkSnap ? whole : bk;
         G.bLeft = Math.round((innerWidth - BRIDGE_W * G.bk / dpr) / 2); G.bTop = Math.round((innerHeight - BRIDGE_H * G.bk / dpr) / 2);
         G.toArt = (cx, cy) => [Math.floor(cx * dpr / G.k), Math.floor(cy * dpr / G.k)];
         G.toCss = (ax, ay) => [ax * G.k / dpr, ay * G.k / dpr];
         G.stale = false;
         if (root) {
-            root.style.setProperty('--t', String(Math.max(0, Math.min(1, (innerWidth - 1280) / 640))));
+            root.style.setProperty('--t', String(windowT()));                                // the same value as :root's (setRootT)
             root.style.setProperty('--px', (G.k / dpr) + 'px');
             root.style.setProperty('--bpx', (G.bk / dpr) + 'px');
         }
@@ -222,7 +260,7 @@
         frameBlocked = !!document.querySelector(BLOCKERS);                                   // once a frame: every module asks
         inFrame = true;
         try {
-            if (pendingShown && !frameBlocked && mode === 'travel') { const p = pendingShown; pendingShown = null; carryFirst = false; travelShownAt = performance.now(); bus.emit('shown', p); }
+            if (pendingShown && !frameBlocked && mode === 'travel') { const p = pendingShown; pendingShown = null; carryFirst = false; emitShown(p); }
             checkWatch(dt);
             const o = orbit();
             if (o && typeof o.tick === 'function') { try { o.tick(dt, frameBlocked); } catch (err) { console.error('NewScreen: NSOrbit.tick failed', err); } }
@@ -267,8 +305,11 @@
         const m = mode === 'travel' ? mods.travel : mode === 'wake' ? mods.wake : mods.stop;
         let used = false;
         try { used = !!(m && m.key && m.key(e)); } catch (err) { console.error('NewScreen: key failed', err); }
+        if (!used && e.key === 'Escape' && !e.repeat && window.NSConsole) used = window.NSConsole.open('esc');   // the ship's console (Console.js), when idle()
         if (used) e.preventDefault();
     }
+    /** Travel or the bridge with nothing over them: no card, film, minigame or ending, not jumping, not leaving orbit (Console.js). */
+    function idle() { return shown && (mode === 'travel' || mode === 'stop') && !blocked() && !jumping && !leaving; }
 
     // ── game: the real state, read only ──
     const game = {
@@ -307,6 +348,7 @@
     }
     const ask = (fn, ...args) => { const o = orbit(); if (!o || typeof o[fn] !== 'function') return null; try { return o[fn](...args); } catch (err) { console.error(`NewScreen: NSOrbit.${fn} failed`, err); return null; } };
     const askScan = (fn, ...args) => { const S = window.NSScan; if (!S || typeof S[fn] !== 'function') return null; try { return S[fn](...args); } catch (err) { console.error(`NewScreen: NSScan.${fn} failed`, err); return null; } };
+    const heard = new Map();                                                             // flow.person: what each one last said (sector:state)
     const flow = {
         canGo: id => window.NSRoute.canGo(st(), id),
         refuse(id) { const r = flow.canGo(id); if (!r.ok) speak(r.say); },
@@ -329,8 +371,10 @@
             const s = st(), a = theApp(), node = window.NSRoute.find(s, id);
             if (!s || !a || !node) { bus.emit('flow:failed', { id }); return false; }
             const diving = !!mods.stop && mode === 'travel';
-            if (diving) { stopId = node.id; setMode('dive-in'); bus.emit('dive:start', { id: node.id }); }
+            if (diving) { stopId = node.id; setMode('dive-in'); bus.emit('dive:start', { id: node.id }); holdVoice('arrive', true); quiet(); }
+            const moods = diving ? moodsDuring() : null;
             a.handleWarp(node, { flown: true });
+            if (moods) moods.drop();
             if (s.currentSystem === node) {
                 window.NSRoute.arrive(s, node.id);
                 bus.emit('flow:arrived', { id: node.id });
@@ -372,6 +416,8 @@
             try { return F.list(theApp(), node, ids); } catch (err) { console.error('NewScreen: the finds failed', err); return []; }
         },
         aim(id) { const F = window.NSWorldFinds, s = st(), node = s && s.currentSystem; return !!(F && node && mode === 'stop' && !blocked() && !leaving && F.aim(theApp(), node, id)); },
+        way(id, idx, ids) { const s = st(), node = s && s.currentSystem; return !!(node && mode === 'stop' && !blocked() && !leaving && ask('way', theApp(), node, id, idx, ids)); },
+        helps(ids, id) { const h = ask('helps', theApp(), ids, id); return typeof h === 'boolean' ? h : null; },
         // ── the stop (BUILD_B §3, §4) ──
         actions: () => (mode === 'stop' ? ask('actions', theApp()) || [] : []),
         act(key, ids) {
@@ -406,11 +452,12 @@
                 return true;
             }, err => { leaving = false; console.error('NewScreen: leaving orbit failed', err); return false; });   // never held for good
         },
-        person(id, say) {
-            const s = st(), R = window.ShipRoutine;
-            if (!s || !R || !id) return;
-            const l = R.line('travel', id, say || 'work'), v = mods.voice;
+        person(id, say, state) {
+            const s = st(), R = window.ShipRoutine, k = state ? state.status + (state.weak ? ':weak' : '') : 'well';
+            if (!s || !R || !id || heard.get(id) === s.currentSector + ':' + k) return;      // a second click in the same sector says nothing
+            const l = R.line('travel', id, say || 'work', state), v = mods.voice;
             if (!l || !l.text || !v || typeof v.say !== 'function') return;
+            heard.set(id, s.currentSector + ':' + k);
             try { v.say({ id, who: l.who, text: l.text }); } catch (err) { console.error('NewScreen: voice.say failed', err); }
         },
         datable: () => ask('datable', st()) || null,
@@ -421,9 +468,18 @@
     };
 
     // ── the modes: travel, the dive in, the bridge, the dive back out (BUILD_B §1) ──
+    /** The travel line on screen goes as we arrive (the dive is wordless). */
+    function quiet() { const v = mods.voice; if (v && typeof v.hush === 'function') { try { v.hush(); } catch (err) { console.error('NewScreen: the voice hush failed', err); } } }
+    /** The warp's crew status lines ("Mira: Unsettled by hostile readings.") stay in the log and are never said on the bridge. */
+    function moodsDuring() {
+        const said = new Set(), hear = e => { const m = MOOD_RE.exec(String((e && e.detail && e.detail.message) || '').trim()); if (m) said.add(m[2].trim()); };
+        addEventListener('log-updated', hear);
+        return { drop() { removeEventListener('log-updated', hear); const v = mods.voice; if (said.size && v && typeof v.drop === 'function') v.drop(q => said.has(String(q.line).trim())); } };
+    }
     function setMode(m) {
         if (m === mode) return;
         mode = m;
+        if (m === 'travel') voiceHolds.delete('arrive');
         if (root) root.dataset.mode = m;
         if (m !== 'travel' && root) root.classList.remove('is-pointing');
         bus.emit('mode', { mode: m });
@@ -446,6 +502,7 @@
         disarm();
         setMode('stop');
         stopShownAt = performance.now();
+        if (voiceHolds.has('arrive')) holdVoice('arrive', true, VOICE_AFTER_SHOWN_MS);      // the bridge seen a moment: then its first words
         const s = st();
         stopHoldMs = s && s.currentSystem && s.currentSystem._nsSeen ? holdSeenMs() : HOLD_STOP_MS;   // a new world: the picture first, longer
         stopId = (s && s.currentSystem && s.currentSystem.id) || (p && p.id) || stopId;
@@ -557,7 +614,7 @@
         if (mode !== 'wake') return false;
         setMode('travel');
         const s = st(), p = { sector: s ? s.currentSector : 1, first: true, from: null };
-        if (shown && !blocked()) { pendingShown = null; carryFirst = false; travelShownAt = performance.now(); bus.emit('shown', p); }
+        if (shown && !blocked()) { pendingShown = null; carryFirst = false; emitShown(p); }
         else pendingShown = p;
         return true;
     }
@@ -579,7 +636,7 @@
             return {
                 shown, sector: s ? s.currentSector : null, energy: s ? s.energy : null, t: Math.round(clock.t), view: mode,
                 mode: !shown ? 'hidden' : blocked() ? 'blocked' : mode, at: s && s.currentSystem ? s.currentSystem.id : null,
-                G: { k: G.k, W: G.W, H: G.H, hull: G.hull, offX: G.offX, bk: G.bk, bLeft: G.bLeft, bTop: G.bTop, ts: G.ts, tTop: G.tTop, tY0: G.tY0 },
+                G: { k: G.k, W: G.W, H: G.H, hull: G.hull, offX: G.offX, bk: G.bk, bLeft: G.bLeft, bTop: G.bTop, ts: G.ts, tCut: G.tCut, tTop: G.tTop, tY0: G.tY0 },
                 plan: p ? { at: p.at, giant: p.giant, story: p.story, light: p.light.id, worlds: p.worlds.map(w => ({ id: w.id, name: w.node.name, type: w.node.type, band: w.band, slot: w.slot, status: w.status, mate: w.mate, hidden: !!w.node.storyHidden })) } : null,
                 actions: mode === 'stop' ? flow.actions().map(x => ({ key: x.key, words: x.words, near: x.near, team: !!x.team })) : [],
                 trip: flow.trip(), sign: flow.sign(), orbit: o && typeof o.debug === 'function' ? o.debug() : null,
@@ -596,14 +653,80 @@
         },
     };
 
-    /** Sector 1, nothing visited yet: the Coach's first tip, said once in the travel view instead (the Coach is hidden there). */
+    /** Sector 1, nothing visited yet: the Coach's first tip, said once in the travel view instead (the Coach is hidden there).
+        Look pass B11 (C16): its two sentences one after the other, by our Lander; while they are said the calling world (it
+        wears the story's warm ring) carries a one-word glass chip, SIGNAL, on a dotted leader from its rim. A course set
+        stops it. */
     function firstHint() {
         const s = st(), v = mods.voice;
-        if (hintGiven || !shown || mode !== 'travel' || !s || s.currentSector !== 1 || !v || typeof v.sayLine !== 'function') return;
+        if (hintGiven || !shown || mode !== 'travel' || !s || s.currentSector !== 1 || !v || typeof v.say !== 'function') return;
         const p = window.NSRoute.plan(s), signal = (s.sectorNodes || []).find(n => n.isFirstSignal && !n.exodusInvestigated);
         if (p.at !== 0 || !signal) return;
         hintGiven = true;
-        try { v.sayLine(FIRST_HINT); } catch (err) { console.error('NewScreen: the first hint failed', err); }
+        const said = (/"(.+)"/.exec(FIRST_HINT) || [])[1] || '', beats = said.split(/(?<=[.!?])\s+/).filter(Boolean), chip = signalChip(signal.id);
+        beats.reduce((at, text) => at.then(() => (chip.live() ? v.say({ id: 'aura', who: 'A.U.R.A.', text, anchor: 'ship' }) : false)), Promise.resolve())
+            .catch(err => console.error('NewScreen: the first hint failed', err))
+            .then(() => chip.done());
+    }
+    const SIGNAL_WORD = 'Signal';                                                       // DRAFT (look pass): C16, the calling world's one-word chip (shown in capitals)
+    // B11 review: the chip is the glass key's own look (travel/Note.js's SCAN key, DESIGN.md §2): amber corner brackets on
+    // whole 2 px key pixels, a 9 x 9 pixel icon (stop/TagArt.js 'wave', the signal find's own), the word in Condensed 600 caps,
+    // all on the house dither; the dotted leader runs from the world's rim to the brackets.
+    const BRACKET = (c, at, w, h) => `linear-gradient(var(${c}) 0 0) ${at} / ${w} ${h}`;
+    const BRACKETS = ['left top', 'right top', 'left bottom', 'right bottom'].map(at => BRACKET('--tip', at, 'var(--kp)', 'var(--kp)'))
+        .concat(...['left top', 'right top', 'left bottom', 'right bottom'].map(at => [BRACKET('--bk', at, 'var(--arm)', 'var(--kp)'), BRACKET('--bk', at, 'var(--kp)', 'var(--arm)')]));
+    const SIGNAL_CSS = '#ns-root .ns-signal { --kp: 2px; position: absolute; left: 0; top: 0; display: flex; align-items: center; pointer-events: none; opacity: 0; transition: opacity 180ms steps(3, end); }'
+        + ' #ns-root .ns-signal.is-in { opacity: 1; } #ns-root .ns-signal.is-left { flex-direction: row-reverse; }'
+        + ' #ns-root .ns-signal .lead { width: var(--s4); border-top: 1px dotted var(--warm); }'
+        + ' #ns-root .ns-signal b { --bk: var(--warm); --tip: var(--warm-br); --arm: calc(var(--kp) * 4); display: flex; align-items: center; gap: calc(var(--kp) * 4);'
+        + ' padding: calc(var(--kp) * 3) calc(var(--kp) * 7) calc(var(--kp) * 3) calc(var(--kp) * 3); font: 600 var(--fs-tag)/calc(var(--kp) * 9) var(--f-ui); letter-spacing: 0.16em;'
+        + ' text-transform: uppercase; color: var(--warm); text-shadow: var(--shadow); background: ' + BRACKETS.join(', ') + ', var(--veil);'
+        + ' background-repeat: ' + BRACKETS.map(() => 'no-repeat').concat('repeat').join(', ') + '; }'
+        + ' #ns-root .ns-signal .icon { flex: none; width: calc(var(--kp) * 9); height: calc(var(--kp) * 9); background: center / 100% 100% no-repeat; image-rendering: pixelated; }'
+        + ' @media (prefers-reduced-motion: reduce) { #ns-root .ns-signal { transition: none; } }';
+    /** The signal find's 9 x 9 icon (stop/TagArt.js 'wave', warm) as a data URL, or null (no TagArt: the chip has the word alone). */
+    function signalIcon() {
+        const T = window.NSTagArt;
+        if (!T || typeof T.icon !== 'function') return null;
+        try { const c = document.createElement('canvas'); c.width = T.ICON; c.height = T.ICON; T.icon(c.getContext('2d'), 'wave', 0, 0, 'warm', 0); return c.toDataURL(); } catch (err) { console.error('NewScreen: the signal icon failed', err); return null; }
+    }
+    /** The SIGNAL chip by world `id`, placed each frame beside its rim (left of it when the right has no room), hidden while a
+        note or a frame is up; it steps out on done(), a course set, the view hidden or a change of mode. → { live(), done() } */
+    function signalChip(id) {
+        const words = document.getElementById('ns-words');
+        if (!words) return { live: () => true, done() {} };
+        if (!document.getElementById('ns-signal-css')) { const css = document.createElement('style'); css.id = 'ns-signal-css'; css.textContent = SIGNAL_CSS; document.head.appendChild(css); }
+        const el = document.createElement('div');
+        el.className = 'ns-signal'; el.setAttribute('aria-hidden', 'true'); el.innerHTML = '<i class="lead"></i><b><i class="icon"></i></b>';
+        const icon = el.querySelector('.icon'), url = signalIcon();
+        if (url) icon.style.backgroundImage = `url(${url})`; else icon.hidden = true;
+        el.lastChild.append(SIGNAL_WORD);
+        words.appendChild(el);
+        const request = fn => (window.FrameClock ? window.FrameClock.request(fn) : requestAnimationFrame(fn));
+        let on = true, fid = null, pos = '';
+        const offs = ['flow:go', 'hidden', 'mode', 'jump:burn'].map(name => bus.on(name, () => done()));
+        function place() {
+            fid = null;
+            if (!on) return;
+            const a = debug.placeAt(id), t = mods.travel, note = !!(t && typeof t.noteUp === 'function' && t.noteUp()), see = !!(a && a.shown) && !note && !blocked();
+            if (see) {
+                const w = el.offsetWidth, h = el.offsetHeight, out = a.r * 1.45 + 4, right = a.x + out + w <= innerWidth - 16;   // out: clear of the warm ring at its widest pulse
+                const x = right ? a.x + out : a.x - out - w, at = `translate(${Math.round(x)}px, ${Math.round(a.y - h / 2)}px)`;
+                el.classList.toggle('is-left', !right);
+                if (at !== pos) { el.style.transform = at; pos = at; }
+            }
+            el.classList.toggle('is-in', see);
+            fid = request(place);
+        }
+        function done() {
+            if (!on) return;
+            on = false; offs.forEach(off => off());
+            if (fid != null) (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(fid);
+            el.classList.remove('is-in');
+            setTimeout(() => el.remove(), 400);
+        }
+        place();
+        return { live: () => on, done };
     }
     /** The wake-up talk is still going (start/Wake.js): it calls hint() itself when it ends. */
     const talking = () => { const w = window.NSWake; try { return !!(w && typeof w.pending === 'function' && w.pending()); } catch (err) { return false; } };
@@ -621,6 +744,6 @@
         on: ON, G, clock, bus, anchors, mods, game, flow, debug, register, sizeCanvas,
         get app() { return theApp(); },
         mode: () => mode,
-        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, playJump, wake,
+        show, hide, stop, hint: firstHint, isShown: () => shown, blocked, idle, playJump, wake, holdVoice,
     });
 })();

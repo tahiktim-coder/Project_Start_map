@@ -40,6 +40,7 @@ function mockState(sector) {
         addLog: m => logs.push(String(m)), emitUpdates() {}, noteStanding() {}, hasStanding() { return false; }, isDeckOperational() { return true; },
         consumeRation() {}, consumeEnergy() { return true; }, damageRandomDeck() { return 'lab'; }, hasActiveTrait() { return false; },
         getStopsLeft() { return 2; }, addColonyKnowledge() {}, gainData() {}, revealStoryWorld() { return null; }, isSilentSpeaker() { return false; }, repairDeck() {}, adjustStress() {},
+        treatable: c => !!c && c.status === 'INJURED',   // GameState.treatable (nobody here is sick from hunger)
     };
     return { state, logs };
 }
@@ -61,196 +62,26 @@ const lineOf = (speaker, text) => speaker ? `**${speaker}:** ${clean(text)}` : `
 const ctxOf = (ctx, arg) => clean(typeof ctx === 'function' ? ctx(arg) : ctx);
 const SAMPLE = { ship: '[ship name]', age: 120, station: '[station name]' };
 
-// ── reading text out of code ──
-// A small JS reader: it walks the source, keeps every string a player could see, notes the object key it sits under,
-// fills ${…} with [placeholders] (or [a | b] when the choice is between two pieces of text), and splits HTML into its visible pieces.
-const ESC = { n: ' ', t: ' ', r: '', b: '', '\n': '' }, PH = ['\ue000', '\ue001'];   // placeholders use two private characters while reading, [ ] when printed
-const unescapeAt = (src, i) => src[i + 1] === 'u' ? [String.fromCharCode(parseInt(src.substr(i + 2, 4), 16)), 6] : [src[i + 1] in ESC ? ESC[src[i + 1]] : src[i + 1], 2];
-function readQuoted(src, i) {
-    const q = src[i]; let s = ''; i++;
-    while (i < src.length && src[i] !== q) { if (src[i] === '\\') { const [c, n] = unescapeAt(src, i); s += c; i += n; } else s += src[i++]; }
-    return [s, i + 1];
-}
-function readTemplate(src, i) {                                                     // → [parts: { s, at } and { expr, at }, end]
-    const parts = []; let s = '', from = i + 1; i++;
-    while (i < src.length && src[i] !== '`') {
-        if (src[i] === '\\') { const [c, n] = unescapeAt(src, i); s += c; i += n; continue; }
-        if (src[i] === '$' && src[i + 1] === '{') { parts.push({ s, at: from }); s = ''; const end = skipExpr(src, i + 2); parts.push({ expr: src.slice(i + 2, end), at: i + 2 }); i = end + 1; from = i; continue; }
-        s += src[i++];
-    }
-    parts.push({ s, at: from });
-    return [parts, i + 1];
-}
-function skipExpr(src, i) {
-    for (let depth = 0; i < src.length; i++) {
-        const ch = src[i];
-        if (ch === "'" || ch === '"') i = readQuoted(src, i)[1] - 1;
-        else if (ch === '`') i = readTemplate(src, i)[1] - 1;
-        else if (ch === '{') depth++;
-        else if (ch === '}' && depth-- === 0) return i;
-    }
-    return i;
-}
-const PLACEHOLDERS = [[/wrongNames|deadNames|names\.join/, 'their names'], [/commander\./, "commander's surname"], [/\bsite\./, 'site'], [/shipDecks|deck|\.label\b/i, 'deck'], [/\.type\b/, 'type'],
-    [/ship/i, 'ship name'], [/planet|system/i, 'planet name'], [/sectorName/, 'sector name'], [/sector/i, 'sector'], [/\bname\b|Name\b/, 'name'], [/^\s*temp\s*$|temperature/, 'temperature'],
-    [/viability/, 'how good the world is'], [/Math\.|amount|cost|[cC]ount|dmg|damage|loss|gain|\d|length|[pP]op\b|Until|jumps/, 'n']];
-const IDLE_WORDS = new Set('map join filter find some includes toUpperCase toLowerCase toFixed toLocaleString toString floor round max min trim replace slice length this state window Math String esc c n i e x o t s d r p k v el'.split(' '));
-function placeholderFor(expr) {
-    const e = expr.replace(/(['"`])(?:\\.|(?!\1)[^\\])*\1/g, ''), hit = PLACEHOLDERS.find(([re]) => re.test(e));
-    if (hit) return hit[1];
-    const words = (e.match(/[A-Za-z_$][\w$]*/g) || []).filter(w => !IDLE_WORDS.has(w));
-    return words.length ? words[words.length - 1].replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').toLowerCase() : 'n';
-}
-const CODEY = /=>|\bfunction\b|var\(--|rgba?\(|#[0-9a-fA-F]{3,8}\b|\d(px|em|rem|vh|vw|ms|deg)\b|[{};]\s*$|^[\w-]+\s*:\s*\S+;|\b(document|window|this)\.[a-z]|\w\s*===?\s*\w|!==|&&|\|\||^[.#][\w-]|@keyframes|\.png\b|^use strict$|^\S*\.{3}\S*[a-z]\S*$|^\([a-z-]+:|\b(scale[XY]?|rotate|translate[XYZ]?|contrast|saturate|blur|brightness)\(|^[a-z-]+ [\d.]+m?s\b/;
-const NAMES = new Set(['Cora', 'Jaxon', 'Aris', 'Vance', 'Mira', 'A.U.R.A.']);   // the crew by first name only (docs/GAME_FLOW.md 2.0)
-function isText(s, loose) {
-    const plain = s.replace(/\ue000[^\ue001]*\ue001/g, '').trim();
-    if (!/[A-Za-z]{2}/.test(plain) || CODEY.test(s)) return false;
-    const tokens = s.split(' ');
-    if (tokens.length <= 4 && tokens.every(w => /^[a-z0-9_.#:/-]+$/.test(w)) && tokens.some(w => /[a-z0-9][-_][a-z0-9]|^[.#]|[/:]/.test(w)) && !/[.!?]$/.test(s)) return false; // class lists, ids, paths, event names
-    return loose || plain.split(/\s+/).length >= 2 || /[a-z][.!?…"”]$/.test(plain) || /^\[[^\]]+\]$/.test(plain)   // a lone [default word] counts
-        || (plain !== s.trim() && /(^|\s)[A-Za-z][A-Za-z'-]{2,}(:|\s|$)/.test(plain) && !/[\w-]|\w/.test(s));   // and so does "STATION: [result]"
-}
-const ENT = { '&nbsp;': ' ', '&middot;': '·', '&mdash;': '—', '&ndash;': '–', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&times;': '×', '&rarr;': '→', '&hellip;': '…' };
-const tidy = s => s.replace(/&[#\w]+;/g, m => ENT[m] || ' ').replace(/\[\/?(highlight|warning|whisper)\]/g, ' ').replace(/\s+/g, ' ').trim();
-const printed = s => s.replace(/\ue000/g, '[').replace(/\ue001/g, ']');
-/** A literal's visible runs of text, split at HTML tags; markup inside ${…} is read on its own and goes to `sink`. */
-function literalRuns(parts, sink) {
-    const runs = []; let cur = null, inTag = false, hadTag = false;
-    const add = (text, at) => { if (!cur) cur = { text: '', at }; cur.text += text; }, brk = () => { if (cur) runs.push(cur); cur = null; };
-    parts.forEach(p => {
-        if (p.expr != null) { if (inTag) return; const r = exprText(p.expr, p.at, sink); if (r == null) brk(); else add(r, p.at); return; }
-        for (let k = 0; k < p.s.length; k++) {
-            const ch = p.s[k];
-            if (inTag) { if (ch === '>') inTag = false; continue; }
-            if (ch === '<' && /[a-zA-Z/!]/.test(p.s[k + 1] || '')) {
-                const [, close, name] = /^<(\/?)([a-zA-Z]*)/.exec(p.s.slice(k)), isInline = /^(br|b|i|em|strong|span|u|small|kbd|code|abbr|a|mark|sup|sub|s)$/i.test(name);
-                inTag = hadTag = true;
-                if (!isInline) brk(); else if (!close) add(' ', p.at + k);                // inline tags stay inside the sentence
-                continue;
-            }
-            add(ch, p.at + k);
-        }
-    });
-    brk();
-    return runs.map(r => ({ ...r, text: tidy(r.text), markup: hadTag }));
-}
-function exprText(expr, at, sink) {
-    const inner = scanRaw(expr, at);
-    const words = inner.filter(t => isText(t.text, true) && !/^(undefined|function|object|string|number|boolean)$/.test(t.text)).map(t => t.text);
-    if (inner.some(t => t.markup) || words.length > 3) { sink.push(...inner); return null; }   // markup or a whole table: its words stand on their own
-    if (words.length) return `[${words.join(' | ')}]`;                             // real words: they count as text
-    const lits = inner.map(t => t.text);
-    if (lits.length && lits.every(l => l.length <= 1) && lits.some(l => /[a-z]/.test(l))) return '';   // a plural "s"
-    return PH[0] + placeholderFor(expr) + PH[1];
-}
-function concatTail(src, e) {                                                       // 'text ' + x + ' more' reads as one line
-    let text = '';
-    for (;;) {
-        const plus = /^\s*\+\s*/.exec(src.slice(e, e + 20)); if (!plus) break;
-        const j = e + plus[0].length;
-        if (src[j] === "'" || src[j] === '"') { const [s, end] = readQuoted(src, j); text += s; e = end; continue; }
-        const op = /^[\w$.]+(?:\[[^\]'"`]*\]|\((?:[^()'"`]|\([^()'"`]*\))*\)|\.[\w$]+)*/.exec(src.slice(j, j + 200));
-        if (!op || !op[0] || /^\d/.test(op[0])) break;
-        text += PH[0] + placeholderFor(op[0]) + PH[1]; e = j + op[0].length;
-    }
-    return [text, e];
-}
-const SILENT_CALLS = /^(setAttribute|querySelector|querySelectorAll|getElementById|closest|matches|addEventListener|removeEventListener|dispatchEvent|CustomEvent|Event|createElement|getItem|setItem|removeItem|toggle|contains|includes|startsWith|endsWith|indexOf|split|join|replace|test|tryBark|tryComment|toLocaleString|toLocaleDateString|adjustEthics|noteStanding|hasStanding)$/;   // their strings are never shown
-/** Every run of text in a stretch of source: { text, at, path (the keys it sits under), key, frame, markup }. */
-function scanRaw(src, base = 0) {
-    const out = [], frames = [{ open: '', other: 0 }];
-    let i = 0, prevSig = '', prevWord = '';
-    const top = () => frames[frames.length - 1], isKeyAt = e => /^\s*:(?!:)/.test(src.slice(e, e + 3)) && (prevSig === '{' || prevSig === ',' || prevSig === '');
-    const keyPath = () => frames.filter(f => f.fromKey).map(f => f.name);
-    while (i < src.length) {
-        const ch = src[i];
-        if (/\s/.test(ch)) { i++; continue; }
-        if (ch === '/' && src[i + 1] === '/') { const e = src.indexOf('\n', i); i = e < 0 ? src.length : e; continue; }
-        if (ch === '/' && src[i + 1] === '*') { const e = src.indexOf('*/', i + 2); i = e < 0 ? src.length : e + 2; continue; }
-        if (ch === '/' && (/[(,=:[!&|?{};+\-*%<>~^]/.test(prevSig) || prevSig === '' || /^(return|typeof|case)$/.test(prevWord))) {   // a regex
-            let inClass = false; i++;
-            while (i < src.length && src[i] !== '\n' && (src[i] !== '/' || inClass)) { if (src[i] === '\\') i++; else if (src[i] === '[') inClass = true; else if (src[i] === ']') inClass = false; i++; }
-            i++; while (/[a-z]/.test(src[i] || '')) i++;
-            prevSig = 'r'; prevWord = ''; continue;
-        }
-        if (ch === "'" || ch === '"' || ch === '`') {
-            let parts, end;
-            if (ch === '`') [parts, end] = readTemplate(src, i);
-            else { const [s, e] = readQuoted(src, i), [tail, e2] = concatTail(src, e); parts = [{ s: s + tail, at: i + 1 }]; end = e2; }
-            const isKey = ch !== '`' && isKeyAt(end);
-            if (isKey) top().key = parts[0].s;
-            else if (!(top().open === '(' && SILENT_CALLS.test(top().name || '')) && !/\.(className|cssText|id)\s*\+?=\s*$/.test(src.slice(Math.max(0, i - 40), i))) {
-                const sink = [], meta = { path: keyPath(), key: top().key, frame: top() };
-                literalRuns(parts, sink).forEach(r => out.push({ ...r, ...meta, at: base + r.at }));
-                out.push(...sink.map(t => ({ ...t, at: t.at + base })));
-            }
-            i = end; prevSig = isKey ? 'k' : 's'; prevWord = ''; continue;
-        }
-        if (/[A-Za-z_$0-9]/.test(ch)) {                                            // a word or a number; either can be a key
-            const w = /^[\w$.]+/.exec(src.slice(i, i + 80))[0], isKey = isKeyAt(i + w.length);
-            if (isKey) top().key = w; else top().other++;
-            i += w.length; prevSig = isKey ? 'k' : 'w'; prevWord = w; continue;
-        }
-        if ('{[('.includes(ch)) {
-            const before = src.slice(Math.max(0, i - 80), i), fromKey = /:\s*$/.test(before);
-            const named = fromKey ? top().key : ((/([A-Za-z_$][\w$]*)\s*=\s*$/.exec(before) || /([A-Za-z_$][\w$]*)\s*$/.exec(before) || [])[1] || null);
-            frames.push({ name: named, fromKey: fromKey && named != null, open: ch, other: 0, key: null });
-            i++; prevSig = ch; prevWord = ''; continue;
-        }
-        if ('}])'.includes(ch)) { if (frames.length > 1) frames.pop(); top().other++; i++; prevSig = ch; prevWord = ''; continue; }
-        if (ch === ',') top().key = null; else if (ch !== ';') top().other++;
-        prevSig = ch; prevWord = ''; i++;
-    }
-    return out.sort((a, b) => a.at - b.at);
-}
-const scanText = src => scanRaw(src).filter(t => !/^(id|art|tone|color|icon|portraitId|reason)$/.test(t.key || '')).map(t => t.text).filter(t => isText(t) && !NAMES.has(t)).map(printed);
+// ── reading text out of code: tools/script_reader.js ──
+const { placeholderFor, NAMES, isText, printed, scanRaw, scanText } = require('./script_reader.js');
 
-// ── pieces of source: a method, a declaration, or the lines between two markers ──
-function lineAt(text, index) { let n = 1; for (let k = text.indexOf('\n'); k >= 0 && k < index; k = text.indexOf('\n', k + 1)) n++; return n; }
-const methodRe = name => new RegExp(`^[ \\t]*(?:static |async )?(?:function )?${name}\\s*(?:=\\s*(?:function\\s*)?)?\\([^)]*\\)\\s*(?:=>\\s*)?\\{`, 'm');
-/** The declaration or block that starts on the line matching `re`, up to the bracket closing it at the same indent. */
-function block(rel, re, id) {
-    const text = read(rel), m = re.exec(text);
-    if (!m) { console.warn(`not found in ${rel}: ${re}`); return { rel, src: '', line: 1, id: id || String(re) }; }
-    const start = text.lastIndexOf('\n', m.index) + 1, indent = /^[ \t]*/.exec(text.slice(start))[0], firstEnd = text.indexOf('\n', start);
-    const first = text.slice(start, firstEnd).replace(/(['"`])(?:\\.|(?!\1)[^\\])*\1/g, '').replace(/\/\/.*$/, '');
-    const opens = (first.match(/[{[(]/g) || []).length - (first.match(/[}\])]/g) || []).length;
-    const closer = new RegExp(`\\n${indent}[}\\]]`, 'g'); closer.lastIndex = firstEnd;
-    const endAt = opens <= 0 ? firstEnd : ((closer.exec(text) || { index: text.length }).index + 1);
-    const end = opens <= 0 ? firstEnd : text.indexOf('\n', endAt) < 0 ? text.length : text.indexOf('\n', endAt);
-    return { rel, src: text.slice(start, end), line: lineAt(text, start), id: id || (/(\w+)\s*[=(:]/.exec(first.trim()) || [])[1] || 'block' };
-}
-const method = (rel, name) => block(rel, methodRe(name), name);
+// ── pieces of source: a method, a declaration, or the lines between two markers: tools/script_source.js ──
+const { lineAt, block, method, between, whole, fnPiece, span, inside, outside, lightRanges } = require('./script_source.js')(read);
 const bm = name => method('src/bundle.js', name);                                  // a method of the game (GameState or App)
-function between(rel, fromRe, toRe, id) {
-    const text = read(rel), m = fromRe.exec(text); if (!m) { console.warn(`not found in ${rel}: ${fromRe}`); return { rel, src: '', line: 1, id }; }
-    const start = text.lastIndexOf('\n', m.index) + 1, rest = text.slice(start), m2 = toRe ? toRe.exec(rest.slice(1)) : null;
-    const end = m2 ? start + 1 + rest.slice(1).lastIndexOf('\n', m2.index) + 1 : text.indexOf('\n', m.index);
-    return { rel, src: text.slice(start, end < start ? text.length : end), line: lineAt(text, start), id };
-}
-const whole = (rel, id) => ({ rel, src: read(rel), line: 1, id: id || path.basename(rel, '.js') });
-const fnPiece = (fn, rel, id) => ({ rel, src: typeof fn === 'function' ? `(${fn.toString()})` : '', line: null, id });
-const span = p => [p.line, p.line + p.src.split('\n').length - 1];
-const inside = (...ranges) => t => ranges.some(([a, b]) => t.line >= a && t.line <= b);
-const outside = (...ranges) => t => !inside(...ranges)(t);
-/** Lines of a method that only run at the light (sector 6): `if (…isStructure…) {…}` blocks, or one-line ifs. */
-function lightRanges(piece) {
-    const lines = piece.src.split('\n'), out = [];
-    lines.forEach((l, k) => {
-        if (!/isStructure|=== 'STRUCTURE'|>= FINAL_SECTOR/.test(l) || /!\(?[\w.]*isStructure|isLandable/.test(l)) return;
-        const indent = /^\s*/.exec(l)[0].length; let e = k;
-        if (/\{\s*(\/\/.*)?$/.test(l)) { e = k + 1; while (e < lines.length && !(/^\s*\}/.test(lines[e]) && /^\s*/.exec(lines[e])[0].length <= indent)) e++; }
-        out.push([piece.line + k, piece.line + e]);
-    });
-    return out;
-}
 
-const HIDDEN_KEYS = /^(id|art|tone|color|icon|portraitId|reason)$/;   // values the player never reads
+const HIDDEN_KEYS = /^(id|art|tone|color|icon|portraitId|reason|seenKey)$/;   // values the player never reads (seenKey: a card's id for repeats)
+/** A line whose source line carries a `// DRAFT…` comment is a suggestion, not the designer's line yet: it says so, with its note. */
+const LINES = {}, lineText = (rel, line) => (LINES[rel] || (LINES[rel] = read(rel).split('\n')))[line - 1] || '';
+const draftOf = (rel, line) => line ? (/\/\/.*?\b(DRAFT(?: \([^)]*\))?)/.exec(lineText(rel, line)) || [])[1] : undefined;
+const draftMark = (rel, line) => { const d = draftOf(rel, line); return d ? ` **${d}**` : ''; };
+/** The DRAFT mark of a line printed from loaded data: found by its text in the source file. */
+const draftByText = (rel, text) => { const src = read(rel), at = src.indexOf(String(text)); return at < 0 ? '' : draftMark(rel, lineAt(src, at)); };
+const SE_FILE = 'src/data/StructureEncounter.js', END_WORDS = 'src/newscreen/end/EndWords.js';
 const ROLE_SPEAKER = { ENGINEER: 'Jaxon', MEDIC: 'Aris', SECURITY: 'Vance', SPECIALIST: 'Mira', AURA: 'A.U.R.A.', LEADER: 'Commander' };
 const STRUCTURAL = /^(choices|dialogue|beats|draw|style|text|speaker|detail)$/, LABEL_KEYS = /^(title|kicker|label|heading|close|button|name|word|text)$/;   // keys not worth printing; keys whose single word is still text
-/** Markdown bullets for every line of text in a piece of source, each tagged with the line it is on. */
-function bulletsOf(piece, keep = () => true) {
+/** Markdown bullets for every line of text in a piece of source, each tagged with the line it is on. loose: every string is
+    text, a single word too (a table of short words, such as a minigame's keycaps). */
+function bulletsOf(piece, keep = () => true, loose = false) {
     const file = path.basename(piece.rel);
     const items = scanRaw(piece.src).map(t => ({ ...t, line: piece.line ? piece.line + lineAt(piece.src, t.at) - 1 : null })).filter(t => t.text && !HIDDEN_KEYS.test(t.key || '') && keep(t));
     const byFrame = new Map(); items.forEach(t => byFrame.set(t.frame, (byFrame.get(t.frame) || []).concat(t)));
@@ -258,7 +89,7 @@ function bulletsOf(piece, keep = () => true) {
     const isListy = f => { const texts = byFrame.get(f).map(t => t.text), allEnum = texts.every(t => /^[A-Z0-9_]+$/.test(t)), name = f.name || '';
         return f.open === '[' && f.other === 0 && (/name|sign/i.test(name) || (!allEnum && (isId(name) || /word|label|phrase|hazard/i.test(name)))); };
     const label = t => { const keys = [...t.path.filter(k => !STRUCTURAL.test(k)), t.key && !/^(text|speaker)$/.test(t.key) ? t.key : null].filter(Boolean); return keys.length ? `**${keys.join(' · ')}** — ` : ''; };
-    const at = t => tag(file, t.line ? `line ${t.line}` : piece.id), out = [];
+    const at = t => tag(file, t.line ? `line ${t.line}` : piece.id) + draftMark(piece.rel, t.line), out = [];
     for (let k = 0; k < items.length; k++) {
         const t = items[k], next = items[k + 1];
         if (/^(speaker|name)$/.test(t.key) && next && next.frame === t.frame && next.key === 'text') { out.push(`- ${lineOf(printed(t.text), printed(next.text))}${at(t)}`); k++; continue; }
@@ -269,14 +100,14 @@ function bulletsOf(piece, keep = () => true) {
         }
         const isPair = t.frame.open === '[' && byFrame.get(t.frame).length === 2 && ROLE_SPEAKER[t.text] && next && next.frame === t.frame;
         if (isPair) { out.push(`- ${label(t)}${lineOf(ROLE_SPEAKER[t.text], printed(next.text))}${at(t)}`); k++; continue; }   // ['ENGINEER', 'line']
-        if (!isText(t.text, listy || LABEL_KEYS.test(t.key || '')) || NAMES.has(t.text)) continue;
+        if (!isText(t.text, loose || listy || LABEL_KEYS.test(t.key || '')) || NAMES.has(t.text)) continue;
         out.push(`- ${label(t)}${printed(t.text)}${at(t)}`);
     }
     return out;
 }
 /** A heading, a line on when it plays, and the bullets. */
-function textSection(level, title, piece, where, keep) {
-    const bullets = bulletsOf(piece, keep);
+function textSection(level, title, piece, where, keep, loose) {
+    const bullets = bulletsOf(piece, keep, loose);
     return [`${'#'.repeat(level)} ${title}${tag(path.basename(piece.rel), piece.id)}`, ...(where ? [`_${where}_`] : []), '', ...(bullets.length ? bullets : ['_(no text)_']), ''];
 }
 
@@ -324,19 +155,24 @@ function methodSource(name) {
     const end = BUNDLE.indexOf('\n    }\n', start);
     return BUNDLE.slice(start, end < 0 ? undefined : end);
 }
+/** The DRAFT note on the source line a match sits on, as the other sweeps print it ('' when none). */
+const draftAt = (src, at) => { const end = src.indexOf('\n', at), d = /\/\/.*?\b(DRAFT(?: \([^)]*\))?)/.exec(src.slice(at, end < 0 ? undefined : end)); return d ? ` **${d[1]}**` : ''; };
 function dialogueFrom(src) {
     const re = /speaker:\s*'([^']+)',\s*text:\s*(?:'((?:\\.|[^'\\])*)'|`((?:\\.|[^`\\])*)`)/g, out = [];
-    let m; while ((m = re.exec(src))) out.push(lineOf(m[1], (m[2] != null ? m[2] : m[3]).replace("${names.join('. ')}", 'Jaxon Mercer. Aris Novak. Kael Vance. Mira Chen').replace(/\\'/g, "'")) + '  ');
+    let m; while ((m = re.exec(src))) out.push(lineOf(m[1], (m[2] != null ? m[2] : m[3]).replace("${names.join('. ')}", 'Jaxon Mercer. Aris Novak. Kael Vance. Mira Chen').replace(/\\'/g, "'")) + draftAt(src, m.index) + '  ');
     return out;
 }
 function choicesFrom(src) {
     const re = /\{\s*text:\s*'((?:\\.|[^'\\])*)',\s*desc:\s*'((?:\\.|[^'\\])*)'/g, out = [];
-    let m, i = 1; while ((m = re.exec(src))) out.push(`${i++}. **${m[1].replace(/\\'/g, "'")}** — ${m[2].replace(/\\'/g, "'")}`);
+    let m, i = 1; while ((m = re.exec(src))) out.push(`${i++}. **${m[1].replace(/\\'/g, "'")}** — ${m[2].replace(/\\'/g, "'")}${draftAt(src, m.index)}`);
     return out;
 }
 function logsFrom(src) {
     const re = /addLog\((['"`])((?:\\.|(?!\1)[^\\])*)\1\)/g, out = [];
-    let m; while ((m = re.exec(src))) out.push(`- ${clean(m[2].replace(/\\(["'])/g, '$1').replace(/\$\{([^}]*)\}/g, (_, e) => `[${placeholderFor(e)}]`))}`);
+    let m; while ((m = re.exec(src))) {
+        const eol = src.indexOf('\n', m.index), d = (/\/\/.*?\b(DRAFT(?: \([^)]*\))?)/.exec(src.slice(m.index, eol < 0 ? undefined : eol)) || [])[1];   // a line still waiting for the designer's words
+        out.push(`- ${clean(m[2].replace(/\\(["'])/g, '$1').replace(/\$\{([^}]*)\}/g, (_, e) => `[${placeholderFor(e)}]`))}` + (d ? ` **${d}**` : ''));
+    }
     return out;
 }
 const kickerOf = src => scanRaw(src).filter(t => t.key === 'kicker' && isText(t.text, true)).map(t => printed(t.text)).join(' / ');
@@ -356,6 +192,32 @@ function corridorLines(sector) {
     let m; while ((m = re.exec(row[1]))) out.push(lineOf(ROLE_SPEAKER[m[1]] || m[1], words(m[2])) + '  ');
     return out;
 }
+// After the flight (the new look's jump into sector 5, Corridor.js THE DARK): its lines, A.U.R.A.'s about the hours, the chips
+const VOID_BLOCKS = () => [...[/^\s*const VOID_LINES = /m, /^\s*const VOID_HOURS = /m, /^\s*const VOID_CHIPS = /m].map(re => block(CORRIDOR, re)),
+    between(CORRIDOR, /AFTER THE FLIGHT: the new look's jump into sector 5/, /^\}\)\(\);/m, 'corridor-void')];   // (and its registration: the same title)
+const templateWords = s => s.replace(/\$\{[^}]*=== 1 \? '' : 's'\}/g, '[s]').replace(/\$\{[^}]*\? '\+' : '−'\}/g, '[+ | −]').replace(/\$\{VOID_DECK[^}]*\}/g, '[deck]').replace(/\$\{[^}]*\}/g, '[number]');
+function darkSection() {
+    const src = read(CORRIDOR), lineNo = re => { const m = re.exec(src); return m ? lineAt(src, m.index) : null; };
+    const listM = /const VOID_LINES = (\[[\s\S]*?\n {4}\]);/.exec(src), list = listM ? vm.runInNewContext(listM[1]) : [];
+    const WHEN = { fast: 'if the Commander flies flat out', easy: 'if the Commander goes easy', hungry: 'once the dark has cost a few hours', long: 'if the Commander has been slow' };
+    const when = l => [l.in === 'drain' ? 'as the stars go out' : 'in the black', l.hit === 'unseen' ? 'after a hit by debris nobody saw' : l.hit === 'late' ? 'after a hit by debris our lights found too late' : '',
+        l.if ? WHEN[l.if] || l.if : '', l.unless ? `never after "${l.unless}"` : '', l.who.length > 1 ? 'the first alive says it' : ''].filter(Boolean).join('; ');
+    const out = [`### The dark (the new look: After the flight)${tag('Corridor.js', 'VOID_LINES')}`,
+        '_The new look only. Midway through this flight the stars go out one by one, then the sky, the light last; we fly a long black by our own lamps; then the light comes back first and every star at once. One line at a time, with silences; the dead say nothing; never the word "void" on screen. In the order they can come:_', ''];
+    list.forEach(l => {
+        out.push(`- _${l.id}: ${when(l)}_${tag('Corridor.js', `line ${lineNo(new RegExp(`\\{ id: '${l.id}'`))}`)}`);
+        const shared = l.who.filter(w => !w[2]), others = shared.slice(1).map(w => w[1]);           // the same words: the first alive says them
+        if (shared.length) out.push(`  - ${lineOf(shared[0][1] + (others.length ? ` (or ${others.join(', ')})` : ''), l.say)}`);
+        l.who.filter(w => w[2]).forEach(w => out.push(`  - ${lineOf(w[1], w[2])}`));
+        if (l.auto) out.push(`  - _while A.U.R.A. flies:_ ${lineOf(l.who[0][1], l.auto)}`);
+    });
+    const hours = /const VOID_HOURS = n => `([^`]*)`/.exec(src), chips = /const VOID_CHIPS = \{([\s\S]*?)\n {4}\};/.exec(src), log = /addLog\(`(The dark cost [^`]*)`\)/.exec(BUNDLE);
+    out.push('', `#### Once every star is back${tag('Corridor.js', 'VOID_HOURS')}`, '', `${lineOf('A.U.R.A.', templateWords(hours ? hours[1] : ''))}  `, '',
+        `#### Its chips${tag('Corridor.js', 'VOID_CHIPS')}`, "_Under her line about the hours, what the dark cost (rations; and stress after a long dark); under her last line at the end, what the flight cost._", '');
+    if (chips) { const re = /^\s*(\w+): [^\n`]*`([^`]*)`/gm; let m; while ((m = re.exec(chips[1]))) out.push(`- **${m[1]}** — ${templateWords(m[2])}`); }
+    if (log) out.push('', `In the log afterwards: *${clean(templateWords(log[1]))}*${tag('bundle.js', 'applyCorridorResult')}  `);
+    return [...out, ''];
+}
 function coachLines() {
     const src = read('src/systems/Coach.js'), obj = /const SECTOR_LINE = \{([\s\S]*?)\};/.exec(src), lines = {};
     if (obj) { const re = /(\d):\s*'((?:\\'|[^'])*)'/g; let m; while ((m = re.exec(obj[1]))) lines[m[1]] = m[2].replace(/\\'/g, "'"); }
@@ -369,6 +231,36 @@ function throwBeats() {
 const REELS = (sandbox.window.StoryReel && sandbox.window.StoryReel.REELS) || {};
 const reelCaptions = name => REELS[name] ? REELS[name].beats.map(b => `*${clean(b[1])}*  `) : [];
 const reelSource = name => REELS[name] && REELS[name].source ? `_Source on screen: ${REELS[name].source}_` : '';
+
+/** The new look's frame (look pass B02): its own keys, the words a card's numbers become, and every DRAFT readout or chip a
+    card puts over its picture (the cards' talk and choices are with their scenes). */
+function frameSection() {
+    const FRAME = 'src/newscreen/cards/Frame.js', EC = 'src/systems/EncounterCard.js';
+    const isId = t => /^(kind|deck|focus|shape|who)$/.test(t.key || '') || t.path.includes('picture');   // a picture's spec, not words
+    const drafted = (p, any) => t => !!draftOf(p.rel, t.line) && !isId(t) && (any || (t.key !== 'speaker' && (t.key !== 'text' || t.path.includes('chips'))));
+    const model = between(EC, /const FEEL = /, /function openFrame/, 'the frame model');
+    const over = ['showCountScene', 'showCrewPersonalEvent', 'leftBehindNewScreen', 'askBeforeJump', 'offerReserveJump', 'showCampfireEvent', 'showStructureModal', 'askBeforeSettling'].map(bm)
+        .concat([between('src/newscreen/stop/Copy.js', /seenKey: 'copy:council'/, null, 'the copy council')]);
+    const bullets = over.flatMap(p => bulletsOf(p, drafted(p), true));
+    return ['## Every card (the new look)', '', ...textSection(3, "The frame's own words", between(FRAME, /const PRESS_AGAIN = /, /\/\*\* --ink/, 'PRESS_AGAIN · KEY_WORDS'), 'The keys while the crew talk and after a pick; under a held key when motion is reduced.', undefined, true),
+        ...textSection(3, 'Numbers a card says in words', model, 'Stress as a feeling (C04), a gain that did not fit, a death with nothing else said.', drafted(model, true), true),
+        '### Over a card\'s picture: readouts and chips', '_The readout in the picture\'s corner (three words or fewer), and chips a card sets itself._', '', ...(bullets.length ? bullets : ['_(no text)_']), '',
+        ...textSection(3, 'A ship fault: no card (look pass B03)', block('src/newscreen/tower/Fault.js', /^\s*const WORDS = /m, 'WORDS'), 'One voice line (A.U.R.A.\'s in the fault, else the first crew line, their words) and one chip at the faulted deck. The chip is the result\'s first number; with none, one of these.', undefined, true),
+        ...textSection(3, 'The sector-3 arrival: no card (look pass B03)', block('src/newscreen/throw/Throw.js', /^\s*const LABEL = /m, 'LABEL'), 'A readout counts the beacons heard (the void\'s words), then Mira\'s line (A.U.R.A.\'s if she is dead), then the arrival line as narration, a sentence at a time.', undefined, true)];
+}
+
+/** The new look's ship in travel (look pass B04): a broken deck said once, the repair plate, supper at the galley table, the
+    crew clicked in the tower, the stock's first changes. */
+function shipSection() {
+    const KEY = 'src/newscreen/tower/ShipKey.js', SUP = 'src/newscreen/tower/Supper.js', TW = 'src/newscreen/tower/Tower.js', SR = 'src/newscreen/ship/ShipRoutine.js';
+    return ['## The ship in travel (the new look)', '',
+        ...textSection(3, 'A broken deck: A.U.R.A., once', block(TW, /^\s*const RED_LINE = /m, 'RED_LINE'), 'The first time a deck breaks, in the ship. The deck\'s words: The bridge, The lab, The quarters, The hold, The engine room.', undefined, true),
+        ...textSection(3, 'The repair plate: its rule chips and what is said after (look pass B04)', between(KEY, /const RULE = /, /\/\/ ── the icons/, 'RULE · FIXED · PATCHED · LIVE'), 'Click a red deck: Fix it, Patch it, Live with it. Each deck\'s rule chip shows under "Live with it" and while the deck is pointed at. Fix and Patch are said by Jaxon (A.U.R.A. when he cannot); Live with it by A.U.R.A.', undefined, true),
+        ...textSection(3, 'Supper at the galley table (look pass B04)', between(SUP, /const LINES = \{/, /const S = \{/, 'LINES · KEYS · TABLE · TAG_LAST'), 'After a jump, short of food: A.U.R.A., the one who offers, and the commander\'s reply on the plate. The table moment is a frame with "Not yet" first. A death there: the galley light goes down while the crew\'s and A.U.R.A.\'s CREW_DEATH lines are said (pools.md).', undefined, true),
+        ...textSection(3, 'The crew clicked in the tower', between(SR, /const LINES = \{/, /const REACT = /, 'LINES'), 'One line each; a second click in the same sector says nothing.', undefined, true),
+        ...textSection(3, 'The crew clicked, by their state (look pass B04)', between(SR, /const BY_STATE = \{/, /function line\(/, 'BY_STATE'), 'Hurt, too weak from a missed supper, shut in their bunk; asleep (sedated): A.U.R.A. answers.', undefined, true),
+        ...textSection(3, 'The stock: A.U.R.A., once each', block(TW, /^\s*const STOCK_TELL = /m, 'STOCK_TELL'), 'The first time each number beside its room changes.', undefined, true)];
+}
 
 // ── when things happen ──
 const SECTORS = G('SECTOR_CONFIG') || {};
@@ -422,20 +314,33 @@ const INTENT = {
 fs.mkdirSync(OUT, { recursive: true });
 const files = [];
 function write(name, title, body) { fs.writeFileSync(path.join(OUT, name), `# ${title}\n\n${body.join('\n')}\n`); files.push([name, title]); }
-const HOW = '_Generated by `node tools/export_script.js` from the game itself. Each line is tagged «file · id» or «file · line N» so edits can be copied back exactly. Words in [brackets] are filled in by the game; [a | b] means one of them is shown. Edit freely: mark changes, cut lines, add notes in [brackets]._';
+const HOW = '_Generated by `node tools/export_script.js` from the game itself. Each line is tagged «file · id» or «file · line N» so edits can be copied back exactly. Words in [brackets] are filled in by the game; [a | b] means one of them is shown. A line marked **DRAFT** is a stand-in still waiting for your words. Edit freely: mark changes, cut lines, add notes in [brackets]._';
 const LIGHT_METHODS = [['handleWarp', 'Warping to the light'], ['handleSectorJump', 'Trying to jump past it'], ['handleScanAction', 'Scanning it'], ['handleProbeAction', 'Sending a probe'], ['handleEvaAction', 'Sending the team']];
 const BREAK_ORBIT = between('src/bundle.js', /addEventListener\('req-break-orbit'/, /\n\s*\}\);/, 'init · req-break-orbit');
 const COACH_TIPS = block('src/systems/Coach.js', /function tipFor/, 'tipFor'), COACH_SECTOR_1 = span(block('src/systems/Coach.js', /if \(sector === 1\) \{/));
 
 // the opening
 {
-    const b = [HOW, '', '## Title screen', ''];
+    const b = [HOW, '', ...textSection(2, 'Before the title (the new look)', block('index.html', /^[ \t]*\(function \(\) \{$/m, 'switch script'),
+        'Only with ?new=1: the first line shows when nothing is up 1.5 s after the page starts; the other two when the game does not load.', t => draftOf('index.html', t.line), true), '## Title screen', ''];
     const tagline = /EXODUS PROGRAM \/\/ VESSEL 9[\s\S]*?SILENT EXODUS[\s\S]*?<div[^>]*>\s*([^<]+?)\s*<\/div>/.exec(BUNDLE);
     b.push(`*SILENT EXODUS — ${tagline ? tagline[1] : ''}*${tag('bundle.js', 'start menu')}`, '', 'Everything else on the title screen:', ...bulletsOf(bm('showStartMenu'), t => !/EIGHT WENT BEFORE YOU/.test(t.text)));
     b.push('', `## The briefing film${tag('StoryReel.js', 'program')}`, reelSource('program'), '', ...reelCaptions('program'));
     const opening = methodSource('showOpeningBriefing');
     b.push('', `## Good morning, Commander${tag('bundle.js', 'showOpeningBriefing')}`, `_Card kicker: ${kickerOf(opening)}_`, '', `> ${clean((/context:\s*'((?:\\'|[^'])*)'/.exec(opening) || [])[1] || '').replace(/\\'/g, "'")}`, '', ...dialogueFrom(opening), '', 'Choice:', ...choicesFrom(opening));
     b.push('', 'Then in the log:', ...logsFrom(opening));
+    // the opening in the new look (look pass B11): the title, the launch film, the wake-up at the pods, the first hint
+    const NS_START = 'src/newscreen/start/', NS_SHELL = 'src/newscreen/NewScreen.js';
+    b.push('', '## The opening in the new look', '_Only with ?new=1: the title, the launch film, the wake-up at the sleeper pods, then the rest of the talk above in the travel view by our ship. There the rules are said one sentence at a time (each as its room lights in the ship), and the first hint in its two sentences._', '',
+        ...textSection(3, 'Title screen (the new look): the sound line', block(NS_START + 'Title.js', /^\s*const soundWords = /m, 'soundWords'), 'Shown as "Sound off · turn on" (or "Sound on · turn off"). The rest of the title is as above, its way on the framed key.', undefined, true),
+        ...textSection(3, 'The launch film: the straps', block(NS_START + 'LaunchArt.js', /^\s*const LINES = \[/m, 'LINES'), 'The news broadcast\'s three lower thirds, in order. The first has no kicker (C09, look pass: it was "Live · The launch yard"; the yard is named once).'),
+        ...textSection(3, 'The launch film: its graphics', block(NS_START + 'LaunchFilm.js', /^\s*function mount\(\) \{/m, 'mount'), 'LIVE top left, the programme bug top right with the clock under it in the last three seconds ("T minus" / "Lift-off"), the skip in the corner.'),
+        ...textSection(3, 'The wake-up: the black card', block(NS_START + 'Pods.js', /^\s*const CARD_TEXT = /m, 'CARD_TEXT'), undefined, undefined, true),
+        ...textSection(3, 'The wake-up: A.U.R.A. and the first lines', block(NS_START + 'Pods.js', /^\s*const DRAFT = \{/m, 'DRAFT'), 'Between pods A.U.R.A. also says the talk above. Each person says one first line as they step out: the second one if a wrong valve made them groggy.'),
+        ...textSection(3, 'The wake-up: the pod panel', block(NS_START + 'PodWords.js', /^\s*const VALVES = /m, 'VALVES'), 'The three valves; on a wrong valve the panel says "Wrong fluid".'),
+        ...textSection(3, 'The wake-up: the keys', block(NS_START + 'PodWords.js', /^\s*function init\(el0\) \{/m, 'init'), 'Let A.U.R.A. do it (always there), and the skip on a later new game.'),
+        ...textSection(3, 'The first hint', block(NS_SHELL, /^\s*const FIRST_HINT = /m, 'FIRST_HINT'), 'A.U.R.A., in its two sentences, when the talk is over.'),
+        ...textSection(3, 'Its chip', block(NS_SHELL, /^\s*const SIGNAL_WORD = /m, 'SIGNAL_WORD'), 'On the calling world while the hint is said, in capitals.', undefined, true));
     write('00-opening.md', 'The opening', b);
 }
 
@@ -463,6 +368,17 @@ function storyPlanetMd(def) {
         `On the disc's map: ${PLACE_SHOWN[def.reward.kind]}${def.reward.label ? `, labelled ${def.reward.label.toUpperCase()}` : ''}. Then:  `,
         `${lineOf(FULL_NAME[line.who] || line.who, line.text)}  `, ''];
 }
+/** Last Port (the new look): on the way to the disc's wreck the ship docks at the old relay on the moon, flown (Bring Her In's
+    flight, DockRelay.js): its lines, its chips, the names on the glass and the word on the relay's screen. */
+function relayMd(def) {
+    const RELAY = 'src/newscreen/dock/DockRelay.js', nums = [17199, 17212, def.hull].map(n => 'EXODUS-' + n);
+    return [...textSection(3, 'Last Port: docking at the relay on the way in (the new look)', block(RELAY, /^\s*const lines = Object\.freeze\(/m, 'lines'),
+        `Going across to the wreck (the bridge's GO ACROSS), the ship docks at the old relay first, flown: Bring Her In's flight and words (10-away-team.md), with these instead. The grade line is the cause (if any) and then one of the four grade words. Then the team goes into the wreck through its airlock, which the relay still powers (10-away-team.md, the wreck doors), and the story card's picture is the relay.`),
+        `On the glass, one after another as the radio finds them: ${nums.join(' · ')}${tag('DockRelay.js', 'glass')}  `,
+        `On the relay's screen in the film cut: SENT${tag('DockRelay.js', 'exterior.sent')}`, '',
+        ...textSection(3, 'Its chips', method(RELAY, 'chips'), 'Under Mira\'s line. A hard dock tears one of the other two hulls loose ("EXODUS-17212 torn loose"); never the disc\'s.'),
+        '_In the log after a rough or hard dock: BoardingParty\'s own lines with the moon\'s name (10-away-team.md, Boarding a station); after a soft dock flown all by hand: "Good flying: 3 energy saved."_', ''];
+}
 /** Sector 5's find (ExodusLogs PAGE_DISC): the disc itself. Its card (App.showDiscFound), then the disc page as the real object. */
 function discFindMd(page, where) {
     const c = page.card || {}, take = c.take || {}, D = sandbox.window.DiscDocument || {}, real = D.REAL || {};
@@ -473,7 +389,8 @@ function discFindMd(page, where) {
         `Choice: **${clean(take.text)}** — ${clean(take.desc)}`, '',
         `Then the disc itself${tag('DiscDocument.js', 'REAL')}: ${clean(real.kicker)} · ${clean(real.title)}  `,
         ...(D.REAL_NOTES || []).map(n => `- **${n.label}** — ${clean(n.text)}${tag('DiscDocument.js', `REAL_NOTES.${n.key}`)}`),
-        `${lineOf('A.U.R.A.', real.aura)}  `, `Button: ${clean(real.close)} — ${clean(real.closeNote)}`, ''];
+        `${lineOf('A.U.R.A.', real.aura)}  `, `Button: ${clean(real.close)} — ${clean(real.closeNote)}`, '',
+        `_The new look (look pass B12, C69): no card. The disc itself opens straight from the locker, kicker FOUND IN [ship name], the team's line above under it in place of A.U.R.A.'s, and one key: **${clean(take.text)}**. No button note._`, ''];
 }
 function extrasMd(sector) {
     const b = [];
@@ -524,6 +441,9 @@ for (let sector = 1; sector <= 6; sector++) {
             b.push(`### The jump that does not finish${tag('TheThrow.js', 'BEATS')}`, '', ...throwBeats(), '', ...textSection(4, 'The card when it ends', method('src/systems/TheThrow.js', 'play'), 'Also the log lines. Mira says the line; A.U.R.A. says hers if Mira is dead.'));
             b.push(`Card line: *${clean(arrivalLines()[sector] || '')}*${tag('bundle.js', `SECTOR_ARRIVAL_LINES.${sector}`)}  `);
         } else b.push(`### Flying the jump${tag('Corridor.js', `LINES.${sector}`)}`, '_The jump is flown (the corridor mini-game, 09-ship-and-crew.md). On the way, each of these is said once; the dead say nothing:_', '', ...corridorLines(sector));
+        if (sector === 5) b.push('', ...darkSection());
+        if (sector === 2) b.push('', ...textSection(4, "A.U.R.A.'s offer before the flight, and the control tags", between(CORRIDOR, /^\s*const OFFER = /m, /^\s*\/\/ what the flight cost or saved/m, 'OFFER'), 'On the start screen of every flown jump; the first flown jump (into sector 2) says what her way costs. The new look says that one in two beats, and shows the controls on small tags over the picture (under the aim marks; by our ship for the throttle).'),
+            ...textSection(4, 'When a mini-game will not start', block(`${MINI}MiniHost.js`, /^\s*const WONT_START = /m, 'WONT_START'), 'The new look: the frame closes and A.U.R.A. says this in travel.'));
         if (sector === 2) b.push('', ...textSection(4, 'A.U.R.A. on who has been flying', bm('getRelianceVoice'), 'In the log after every jump from here on, once she has seen four or more burns and flights: one line if she flew most of them, the other if you did. She says nothing when this jump went against the pattern.'));
         const shot = sector === 3 ? null : `jump${sector}`;
         if (shot && reelCaptions(shot).length) b.push('', `Closing shot${tag('StoryReel.js', shot)}: ${reelCaptions(shot).join(' ')}  `, reelSource(shot));
@@ -539,6 +459,7 @@ for (let sector = 1; sector <= 6; sector++) {
     }
     const story = STORY_PLANETS.find(d => d.sector === sector);
     if (story) b.push(...storyPlanetMd(story));
+    if (story && story.page === 'PAGE_DISC') b.push(...relayMd(story));
     PAGES.filter(p => p.sector === sector).forEach(page => {
         const where = story && story.page === page.id ? `In the wreck on ${story.name}.` : 'In one wreck in this sector.';
         if (page.kind === 'disc') { b.push(...discFindMd(page, where)); return; }
@@ -546,6 +467,7 @@ for (let sector = 1; sector <= 6; sector++) {
         page.lines.forEach(l => b.push(`${clean(l)}  `));
         if (page.names) b.push('', `Names on it: ${page.names.map(n => n || '(blank)').join(' · ')}`);
         if (page.after) b.push('', lineOf(page.after.speaker, page.after.text));
+        if (page.said) b.push('', '_The new look (look pass B12, C69): the lines above are not shown; this one line comes under it instead:_', `${lineOf(page.said.speaker, page.said.text)}${draftAt(read('src/data/ExodusLogs.js'), read('src/data/ExodusLogs.js').indexOf(`said: { speaker: '${page.said.speaker}'`))}${tag('ExodusLogs.js', `${page.id}.said`)}`);
         b.push('');
     });
     b.push(...extrasMd(sector), ...hazardMd(sector));
@@ -590,10 +512,15 @@ for (let sector = 1; sector <= 6; sector++) {
                 `${lineOf(who(e.hold.who), e.hold.say)} _(the ship slows; the commander chooses "${clean(e.keepGoing)}")_`, '');
             if (e.turn) b.push('_Turning back from the light (the new look; not when you settled on Eden itself):_', '', lineOf(who(e.turn.who), e.turn.say), '');
             b.push('_The closing line (the new look), said by the first of them who is alive:_', '', ...e.closing.map(l => lineOf(who(l.who), l.say) + '  '), '');
-            if (e.discLine) b.push(`_The last words, only with the disc aboard:_ ${lineOf(null, e.discLine)}`, '');
+            if (e.discLine) b.push(`_The last words, only with the disc aboard:_ ${lineOf(null, e.discLine)}${draftByText(SE_FILE, e.discLine)}`, '');
             b.push(`_The end card: **${clean(e.title)}**, then three lines:_`, '', ...Object.entries(e.card).map(([k, t]) => `- ${clean(t)} _(${k})_`), '');
+            if (e.endCard) b.push('_The end card in the new look: the same name, then these lines (and the lines above that they name), the disc line only with the disc aboard, then "› New game":_', '',
+                ...Object.entries(e.endCard).map(([k, t]) => `- ${clean(t)} _(${k})_${tag(FILE, `endings.${door}.endCard.${k}`)}${draftByText(SE_FILE, t)}`), '');
         });
     }
+    b.push(...textSection(2, "The copy of Earth's ending (the new look)", block('src/newscreen/stop/CopyWords.js', /^\s*const ENDING = /m, 'ENDING'),
+        'After "Go down" at the copy (stop/Copy.js): the two lines on the ground, said by the first of them who can speak; the two night lines; the end card (its name, then crew or alone, made, then jaxon, or air when Jaxon is dead; "› New game").'));
+    b.push('_The first sight of the light in the new look: the reel\'s two captions above, said by A.U.R.A. over the light (end/EndWords.js arrival)._', '');
     b.push(...textSection(2, 'The ending card (the default game)', block('src/systems/EndScreens.js', /function endingHtml/), 'The kicker shows the ending\'s code name (for example INTO_THE_LIGHT) as it is.'));
     b.push(...textSection(3, 'Who made it', block('src/systems/EndScreens.js', /function rosterHtml/), 'The crew list on the ending and colony cards.'));
     b.push(...textSection(3, 'In the log', bm('recordEnding'), 'Once per run, when the journey ends.'));
@@ -676,6 +603,8 @@ function councilMd() {
     }
     flush();
     b.push(...textSection(2, 'The colony card', block('src/systems/EndScreens.js', /function colony/), 'The card these lines are printed on. The crew list under it says "a founder" or "lost with the colony" (see 07-finale.md, Who made it).'));
+    b.push(...textSection(2, 'The colony ending (the new look)', block(END_WORDS, /^\s*colony: Object\.freeze\(\{/m, 'colony'),
+        'In place of the lines and the card above: the world brakes in, the Lander lands; at dawn the first of them who can speak says the arrival line (A.U.R.A. hers when nobody can); a colony that fails: A.U.R.A.\'s line at night. Then the end card: the world\'s name, then crew or alone, held, later ("› New game"); or landed, failed ("› Try again").'));
     write('08-settling.md', 'Settling a planet — every colony ending', b);
 }
 
@@ -707,9 +636,9 @@ function councilMd() {
     const pois = G('LATE_GAME_POIS') || {};
     b.push(...poolHead('Late places'), ...wrap('handleLateGamePOI'));
     Object.values(pois).forEach(poi => b.push(sceneMd(poi, 'LateGamePOIs.js', { sector: 5 }), ''));
-    const events = G('EVENTS') || [];
-    b.push(...poolHead('Surface finds', events.length), '_What the team finds when there is no site. Two choices each: the safe one and the risky one. The card they are shown on, and how the trip ends, are in [10-away-team.md](10-away-team.md)._', '');
-    events.forEach(ev => b.push(`- **${clean(ev.title)}** — ${clean(ev.desc)}${tag('Events.js', ev.id)}  \n  1. ${clean((ev.choices[0] || {}).text)} · 2. ${clean((ev.choices[1] || {}).text)}`));
+    const events = G('EVENTS') || [], wayText = c => clean((c || {}).text) + (c && c.short ? ` (${clean(c.short)})` : '');   // (short: the way's name on the glass)
+    b.push(...poolHead('Surface finds', events.length), '_What the team finds when there is no site. Two choices each: the safe one and the risky one, each with the short name it has on the glass in the new look, in brackets. The card they are shown on, and how the trip ends, are in [10-away-team.md](10-away-team.md)._', '');
+    events.forEach(ev => b.push(`- **${clean(ev.title)}** — ${clean(ev.desc)}${tag('Events.js', ev.id)}  \n  1. ${wayText(ev.choices[0])} · 2. ${wayText(ev.choices[1])}`));
     const barks = G('BARK_DATA') || {};
     b.push('', '## Crew remarks in the log', '_Short lines the crew say when things happen. Grouped by moment, then by person (PESSIMIST = Jaxon, HUMANIST = Aris, SURVIVOR = Vance, CURIOUS = Mira), then by how stressed they are (0 calm → 3 breaking)._', '');
     Object.entries(barks).forEach(([trigger, byType]) => {
@@ -733,19 +662,32 @@ function councilMd() {
     b.push(...textSection(3, 'The data chip', block('src/data/Items.js', /^\s{4}TECH_FRAGMENT: \{/m, 'TECH_FRAGMENT'), 'A Tech Fragment used from the cargo hold.'));
     b.push(...textSection(3, 'Never shown: lines nothing calls', talk, `${UNUSED.join(', ')}: no code triggers these.`, isUnused));
     b.push('## The crew under strain', '', ...textSection(3, 'The card around every crew moment', bm('showCrewPersonalEvent'), 'The moments themselves are in each sector file.'));
+    b.push(...frameSection());
     b.push(...textSection(3, 'Stress', bm('applyStressTraits'), 'When someone reaches stress 2; the first time is a tutorial.'));
     b.push(...textSection(3, 'Breakdowns', bm('triggerBreakdown'), 'When someone reaches stress 3. The commander breaking is game over.'));   // Vance's gun scene was cut (2026-10-07): his breakdown is in triggerBreakdown
     b.push(...textSection(3, 'Bringing someone back', bm('handleRevivalAction'), 'Using Pulsing Spores or an Ancient Neural Link from the cargo hold.'));
     b.push('## Food, damage and data', '', ...textSection(3, 'Food', bm('eatOnJump'), 'The crew eats one ration on each sector jump.'), ...textSection(3, 'Deck damage', bm('damageDeck'), 'The first time is a tutorial.'));
-    b.push(...textSection(3, 'What a broken deck costs (the new look)', block('src/newscreen/Orbit.js', /^\s*const DECK_COST = /m, 'DECK_COST'), 'Chips always on a red deck in the tower, and under "Live with it". The lab costs nothing there.'));
+    b.push(...textSection(3, 'What a broken deck costs (the new look)', block('src/newscreen/Orbit.js', /^\s*const DECK_COST = /m, 'DECK_COST'), 'The game\'s rules for a broken deck, in words. The tower shows each deck\'s as one short chip (the rule chips below), only while the deck is pointed at or its repair plate is open. The lab costs nothing there.'));
     b.push(...textSection(3, 'And only while something aboard needs that deck', block('src/newscreen/Orbit.js', /^\s*const DECK_COST_IF = /m, 'DECK_COST_IF'), 'A culture in the hold; someone shut down (catatonic) in the quarters.'));
+    b.push(...shipSection());
     b.push(...textSection(3, 'What the data adds up to', bm('addColonyKnowledge'), 'At 1, 3 and 5 data.'));
     b.push('## Flying', '');
     [['handleWarp', 'Warping to a planet'], ['handleSectorJump', 'Jumping to the next sector']].forEach(([n, title]) => { const p = bm(n); b.push(...textSection(3, title, p, 'The lines for the light are in sector-6.md.', outside(...lightRanges(p)))); });
     b.push(...textSection(3, 'Breaking orbit', BREAK_ORBIT, '', outside(...lightRanges(BREAK_ORBIT))), ...textSection(3, 'After the burn', bm('applyPlotResult'), 'After every warp and jump plot.'));
     b.push(...textSection(3, 'Plotting the burn (the mini-game)', whole('src/systems/WarpPlot.js'), 'Before every warp, and the jump into sector 3: the crew and A.U.R.A. react to how it went.'));
-    b.push(...textSection(3, 'Flying a sector jump (the mini-game)', whole(CORRIDOR), 'Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck.', isSaid));
+    b.push(...textSection(3, 'Flying a sector jump (the mini-game)', whole(CORRIDOR), 'Every sector jump except the one into sector 3 (that one stalls: sector-3.md), so the sector 3 lines never play. Every second scrape breaks a deck. The dark on the new look\'s jump into sector 5 (After the flight) is in sector-5.md.', t => isSaid(t) && outside(...VOID_BLOCKS().map(span))(t)));
+    const TRAVEL = 'src/newscreen/travel/Travel.js';                                   // the new look: pointing at worlds in travel (look pass B05)
+    b.push(...textSection(3, 'Under a world the story waits on (the new look)', block(TRAVEL, /^\s*const STORY_TAGS = \{/m, 'STORY_TAGS'), 'In its note in travel, under its name.'),
+        ...textSection(3, 'One only the reserve can reach', block(TRAVEL, /^\s*const RESERVE_TAG = /m, 'RESERVE_TAG'), 'The same note, short of energy: the flight there runs on the reserve.'),
+        ...textSection(3, 'A course refused (the new look)', block('src/newscreen/Route.js', /^[ \t]*const LINES = /m, 'LINES'), "A.U.R.A., when a world can't be flown to; its ring blinks twice."),
+        ...textSection(3, 'The SCAN key, when it is off', block('src/newscreen/travel/Note.js', /^\s*const WHY = /m, 'WHY'), 'Its chip says why.'),
+        ...textSection(3, 'Energy short (the new look)', block('src/newscreen/travel/Note.js', /^\s*const ENERGY_OF = /m, 'ENERGY_OF'), 'A chip beside a world refused for energy (A.U.R.A. says the line above), and on a SCAN key off for energy.'),
+        ...textSection(3, 'Sector names in the sky (the new look)', block('src/newscreen/travel/SectorLooks.js', /^\s*const NEW_TITLES = /m, 'NEW_TITLES'), "The sector title in travel and the sector's log header, where it differs from the sector's own name."),
+        ...textSection(3, "The ship's console (the new look)", block('src/newscreen/Console.js', /^\s*const WORDS = /m, 'WORDS'), "A click on A.U.R.A.'s speaker in the top deck, or Esc: its keys (the picture's readout is her name). saved: under her speaker the first time the game saves. aria: read aloud only.", undefined, true));
     b.push('## Game over', '', ...textSection(3, 'All hands lost, hull breach', bm('checkLoseConditions'), ''), ...textSection(3, 'Stranded', bm('checkStranded'), 'No energy and no way out.'));
+    b.push(...textSection(3, 'Game over (the new look)', block(END_WORDS, /^\s*loss: Object\.freeze\(\{/m, 'loss'),
+        'In place of the screen below: the hold goes dark, the dead named on their pod plates, A.U.R.A.\'s one line (the mutiny: her last log entry, as its message quotes it), then the end card: its name and "› Try again".'),
+        ...textSection(3, 'A screen that will not start (the new look)', block(END_WORDS, /^\s*recover: /m, 'recover'), 'A.U.R.A., over the ink, with "› Try again".'));
     b.push(...textSection(3, 'The game-over screen', block('src/systems/EndScreens.js', /function gameOver/), ''), ...textSection(3, 'The dead, on that screen', block('src/systems/EndScreens.js', /function memorialHtml/), ''));
     b.push(...textSection(3, 'The numbers, on that screen', block('src/systems/EndScreens.js', /function statsHtml/), ''));
     write('09-ship-and-crew.md', 'The ship, the crew and A.U.R.A. — any sector', b);
@@ -773,13 +715,37 @@ function councilMd() {
     });
     b.push(...textSection(3, 'Who goes, and the radio', whole('src/systems/AwayTeam.js'), 'The crew picker, their chatter on the way down, and the return screen.'));
     b.push(...textSection(3, 'Landing (the mini-game)', whole('src/systems/LanderGame.js'), ''), ...textSection(3, 'How the landing went', bm('applyLanding'), ''));
+    const LAND = 'src/newscreen/land/LandWords.js';                                      // the new look: the meteor (LandFall.js)
+    b.push(...textSection(3, 'Landing, flown (the new look: the meteor)', block(LAND, /^\s*const LINES = /m, 'LINES'), "The whole fall on a new kind of world, a story world, our wreck, the bold way or odds that could kill; else the short one. The aim line and the keycaps are said once a run."),
+        ...textSection(3, 'Its keycaps', block(LAND, /^\s*const KEY_WORDS = /m, 'KEY_WORDS'), '', undefined, true));   // (loose: "steer" is one word)
     b.push(...textSection(3, 'Cutting into one of our wrecks (the mini-game)', whole(`${MINI}Torch.js`), "Before the wreck's card, unless it burned up or is a crater. The disc mode is not played yet.", isSaid), ...textSection(3, 'When the hatch is open', bm('cutIntoWreck'), ''));
-    b.push(...textSection(3, 'The choice card on the surface', bm('showEventModal'), 'The card around every surface find (pools.md, Surface finds).'), ...textSection(3, 'How the trip went', bm('resolveEvaOutcome'), 'Dangers and results by planet type, deaths, injuries and rewards.'));
+    b.push(...textSection(3, 'The choice card on the surface', bm('showEventModal'), 'The card around every surface find (pools.md, Surface finds).'), ...textSection(3, 'How the trip went', bm('resolveEvaOutcome'), 'Dangers and results by planet type, deaths, injuries and rewards.'),
+        ...textSection(3, 'What the trip brings home (the new look)', bm('payPrize'), 'The prize its find showed on the glass, paid at once: salvage, energy, rations, data, or medicine for the hurt aboard.'),
+        ...textSection(3, 'A find seen before: the short result card (the new look)', bm('tripResultWords'), 'The first time a find\'s event shows in a run, the choice card above plays. After that there are no buttons: the way chosen on the glass is taken, and a short card shows the landing site with the find\'s name on it, one line (the hit\'s own line from the trip above, or one below from the team) and these chips, then Continue. The first-time card ends the same way. A breakdown on that trip shows too: the first sentence of its line (Breakdowns, above), after that line. A trip that would walk away plays the choice card again, so its cost shows.'),
+        ...textSection(3, 'Its line when nobody was hit', block('src/bundle.js', /^const TRIP_BACK_LINES = /m, 'TRIP_BACK_LINES'), 'Said by one of the team who went down.'));
+    const SW = 'src/newscreen/stop/FindWords.js';                                     // the new look: the bridge's glass at a world with finds (look pass B07: its words tables)
+    const RISKY = (/\bRISKY_FROM:\s*(\d+)/.exec(BUNDLE) || [])[1] || '?';             // NEW_LOOK_ECONOMY.RISKY_FROM, as the game has it
+    const FLOOR = (/\bDEATH_FLOOR:\s*(\d+)/.exec(BUNDLE) || [])[1] || '?';            // NEW_LOOK_ECONOMY.DEATH_FLOOR: where a way can start to kill
+    const neverRisky = Number(RISKY) >= Number(FLOOR) ? ` A way can kill from ${FLOOR} % hurt, so today "risky" never shows.` : '';
+    b.push(...textSection(3, 'The ways on the glass (the new look)', block(SW, /^\s*const RISK_WORDS = /m, 'RISK_WORDS'), `Each way of the find the team goes to is a row: its short name (pools.md, Surface finds, in brackets), its prize, and its risk: the first word under ${RISKY} % hurt, the second from ${RISKY} %. Wherever the way can kill (from ${FLOOR} % hurt), the row shows GO DOWN's own red "death 1 in N" instead; the third word only if there is no number to say.${neverRisky} The hurt chance is on GO DOWN only.`),
+        ...textSection(3, 'A way a stress trait strikes', block(SW, /^\s*const STRUCK_LINE = /m, 'STRUCK_LINE'), 'In place of its prize and risk word; it takes no click.'),
+        ...textSection(3, 'Pointing at someone at the hatch or the window', block(SW, /^\s*const FIT_LINE = /m, 'FIT_LINE'), 'Whether they make this trip safer.'),
+        ...textSection(3, 'What each one really does for a trip', block(SW, /^\s*const GOOD = (Object\.freeze\()?\{/m, 'GOOD'), 'Under that line, at the hatch.'),
+        ...textSection(3, 'Too weak to go', block(SW, /^\s*const WEAK_LINE = /m, 'WEAK_LINE'), 'Pointing at someone who went without supper.'),
+        ...textSection(3, 'Leave orbit while the team is down (look pass B07)', block('src/newscreen/stop/Words.js', /^\s*const OFF_WHY = /m, 'OFF_WHY'), 'The key is unlit and takes no click; this is its chip.'),
+        ...textSection(3, 'Dock and Mine it: their chip (look pass B07)', block('src/newscreen/Orbit.js', /^\s*const upTo = /m, 'upTo'), 'Under the two actions, beside "free": the most a card\'s choice there gives (NEW_LOOK_ECONOMY.CARD_SALVAGE_MAX).'),
+        ...textSection(3, 'The copy of Earth: after the talk at the window (look pass B07)', block('src/newscreen/stop/CopyWords.js', /^\s*const SHAKEN = /m, 'SHAKEN'), 'A.U.R.A., in place of the red marks over their heads: the first if the fall raised anyone\'s stress, the second for whoever it hurt (unless Aris said it). A stress warning that came during the fall is said here instead.'),
+        ...textSection(3, 'The copy of Earth: before going down', block('src/newscreen/stop/CopyWords.js', /^\s*const COUNCIL = /m, 'COUNCIL'), 'The crew have their say ("Not yet" first).'),
+        ...textSection(3, "A.U.R.A.'s first-time lines on the bridge", block('src/newscreen/Orbit.js', /^\s*const TELL = /m, 'TELL'), 'Each said once a run, when what it explains first shows.'),
+        ...textSection(3, 'At a world: the log (the new look)', block('src/newscreen/Orbit.js', /^\s*const LINES = \{/m, 'LINES'), 'Who can go down, the team away, a distress call, small fixes aboard, Mira\'s ground scan, Aris staying with the hurt.'),
+        ...textSection(3, 'The fuel depot (the new look)', between('src/newscreen/Orbit.js', /add\('depot', 'Fuel depot'/, null, 'actions · depot'), 'At a docked station, once, with salvage to spare: its action word and chips.'),
+        ...textSection(3, 'Its result', block('src/newscreen/Orbit.js', /^\s*const DEPOT_DONE = /m, 'DEPOT_DONE'), 'A.U.R.A., once the pump runs.'));
     b.push(...textSection(3, 'Paradise found', bm('showEdenEvaModal'), 'A team trip to an EDEN world: sectors 3, 4 and 6 (sector 6 always has one).'));
     b.push('## Boarding a station', '', ...textSection(3, 'Docking (the mini-game)', whole('src/systems/DockingGame.js'), "The old look. Its grade line is the new look's too."));
     const DOCK = 'src/newscreen/dock/DockFlight.js';                                     // the new look: Bring Her In (the rest of the file is the corridor's)
     b.push(...textSection(3, 'Docking, flown (the new look: Bring Her In)', block(DOCK, /^\s*const DOCK_LINES = /m, 'DOCK_LINES'), "The hold and roll lines and Vance's are said once a session; the grade line is DockingGame's (above)."));
-    b.push(...textSection(3, 'Its chips', block(DOCK, /^\s*const DOCK_GRADE_CHIPS = /m, 'DOCK_GRADE_CHIPS'), "Under A.U.R.A.'s grade line, with every deck broken (Hold broken) and her cost (Energy −4)."), ...textSection(3, 'In the log afterwards', bm('applyDockResult'), ''));
+    b.push(...textSection(3, 'Its tags', block(DOCK, /^\s*const DOCK_TAGS = /m, 'DOCK_TAGS'), 'Small tags over the picture: the station\'s name (by its lamp, until it is near; this word when the game has no name), how to steer on the start screen, how to close in once the run starts.'));
+    b.push(...textSection(3, 'Its chips', block(DOCK, /^\s*const DOCK_GRADE_CHIPS = /m, 'DOCK_GRADE_CHIPS'), "Under A.U.R.A.'s grade line, with every deck broken (Hold damaged) and her cost (Energy −4)."), ...textSection(3, 'In the log afterwards', bm('applyDockResult'), ''));
     b.push(...textSection(3, 'Inside', whole('src/systems/BoardingParty.js'), 'Rooms, crew perks, results. The diary on the crew deck depends on the station\'s age: the first list is for sectors 1-3, then 4, 5 and 6.'));
     write('10-away-team.md', 'Orbit, scans and away teams — any sector', b);
 }

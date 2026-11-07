@@ -1,6 +1,6 @@
 /* ═══ Silent Exodus · new screen (?new=1) · WorldFinds.js: what kind a world is, and what a scan finds on it ════════════
    What it is: the new look's words for a world's kind (one plain line each, docs/STYLE.md, at most ten words: the travel note
-   and the first line under the name on the bridge's glass) and its finds: the places on it a team can go, 1 to 3, each with
+   and the first line under the name on the bridge's glass) and its finds: the places on it a team can go, 1 or 2, each with
    what it can give and its risk (designer playtest, 2026-10-17: "scan is useless", "planets look generic"). A find comes from
    what the world really has:
      'site'     its one site (App.siteOf): one of our ships, an empty colony, wreckage in orbit, an old beacon, a garden under
@@ -8,12 +8,21 @@
      'kind'     its own landing event (App.landingEventOf, kept on the world: Events.js KIND_EVENTS first); Eden: its valley
      'feature'  one feature as a second event (Events.js FEATURE_EVENTS): old ruins, an old signal (one of our beacons), life,
                 machines, the first the world has whose event is not its own event again
+   Two finds at most (2026-11-02, NEW_LOOK_ECONOMY.FINDS_MAX: shorter runs): a third, the feature, shows only when it
+   carries the clue (or an old save already went there).
    Finds show once a scan has read the world (the bridge's, or travel's far scan); unscanned, the team takes one blind trip as
    today (the site if there is one, else the world's own event). A trip marks its find done; another find is another trip.
-   The risk on a find is the chance someone is hurt on its careful way (TripOdds: App.tripRisk, which the trip card starts
-   from, the careful choice's own, the fit of the two going down, anyone hurt going): the card's careful choice shows the
-   same number, before how the landing went. A site's own story never adds the world's danger: its risk is 0, and its card
-   says the risk of each choice.
+   The risk on a find is the chance someone is hurt on the way the team takes (TripOdds: App.tripRisk, which the trip card
+   starts from, the way's own, the fit of the two going down, anyone hurt going): the card shows the same number for that
+   way, before how the landing went. A site's own story and Eden's valley never add the world's danger: their risk is null
+   (no number on the glass), and their own card says the risk of each choice.
+   Its ways (2026-11-01, the depth plan's step 6): an event find has a row per way, careful first, each with its short name
+   (Events.js `short`), its prize and its odds. The prize is drawn once, seeded by the world and the find, as the world is
+   read (App.findPrizes: node.nsPrize), and the trip pays exactly that (resolveEvaOutcome): supplies only, a bold way's
+   growing with its risk (NEW_LOOK_ECONOMY.BOLD_PRIZE). Where the careful way brings nothing (a walk-away), only the bold
+   row shows: going down is the gamble, and the card the first time offers walking away. The way the team takes is chosen
+   on the glass (NSOrbit.way: node.nsWay), else the first row no stress trait strikes; GO DOWN shows its odds, and a find
+   whose event was seen before this run takes it with no card (App.tripCardPlan).
    A clue: in sectors 2 to 6, while the sector's story world is still a faint contact, one side world carries a clue toward it
    on one of its finds (a survivor's note, a beacon's last course, a star fix); the trip there names the story world
    (App.revealStoryPlanet, as a dated wreck does), and A.U.R.A. says where the clue came from.
@@ -24,10 +33,16 @@
      known(node) → bool                            a scan has read it: its finds can show
      list(app, node, ids?) → [find]                its finds (site, kind, feature); [] while not known. ids: the two going down
                                                   (Mira aboard scans the ground: less risk). A find: { id, kind: 'site' | 'event'
-                                                  | 'eden', label, icon, gives: [{ icon, text }], risk, at: [u, v] (on the world,
-                                                  in its radii from the centre), done, target, hint ('note' | 'course' | 'fix'
-                                                  | 'date': our wreck the disc can date | null), event?, site?, art?, inSpace?
-                                                  (a site in orbit: the team crosses to it, nobody lands) }
+                                                  | 'eden', label, icon, gives: [{ icon, text }], risk (null: a site, Eden), at:
+                                                  [u, v] (on the world, in its radii from the centre), done, target, hint ('note'
+                                                  | 'course' | 'fix' | 'date': our wreck the disc can date | null), event?,
+                                                  site?, art?, inSpace? (a site in orbit: the team crosses to it, nobody lands),
+                                                  ways? (an event: [{ way: 'careful' | 'bold', idx: the card's index, short,
+                                                  prize: { salvage, energy, rations, data, cure } | null, gives: [{ icon, text:
+                                                  '+45 salvage' }], hurt, death, oneIn, deadly, struck: 'PARANOID' | 'RECKLESS'
+                                                  | null: a trait of one of ids, App.wayStrikes }]), way? (an event: the card's index the team takes: node.nsWay[id]
+                                                  (NSOrbit.way), else the first row no stress trait strikes, the careful one
+                                                  or the bold where only it shows); its risk is that way's hurt chance }
      target(app, node) → find | null               where GO DOWN takes the team: the one chosen, else a clue, else the first not done
      blind(app, node) → find | null                where a blind trip goes before a scan (the site, else its own event)
      aim(app, node, id) → bool                     choose where the team goes (kept on the world: node.nsTarget)
@@ -37,8 +52,10 @@
      riskOf(app, node, event, ids, opts?) → n      a plain landing's hurt chance with that event (TripOdds; opts.way: the
                                                   card's index, else the careful one; opts.find: the find, for the fit)
      oddsOf(app, node, event, ids, opts?) → { hurt, death, deadly, oneIn }   the same way's odds, its death chance too
-                                                  (something hunting there, Vance's cover): what its card will show
-     noteLines(app, node, withSite) → ['Worth a trip: Old ruins (a clue) · The hum', 'People could live here']   travel's note
+                                                  (something hunting there, Vance's cover): what its card will show.
+                                                  opts.without: one of ids whose own part is left out (NSOrbit.helps)
+     noteLines(app, node, withSite) → [{ icon, text, clue, live }]   travel's note, as tags: [{ icon: 'ruins', text: 'Old ruins',
+                                                  clue: 'a clue' }, …, { icon: 'live', text: 'People could live here', live: true }]
 */
 (function () {
     'use strict';
@@ -101,6 +118,14 @@
         fix: name => `A.U.R.A.: "The team brought back an old star fix. One of our ships is at ${name}, Commander."`,
     };
     const SITE_AT = [-0.6, 0.1], ORBIT_AT = [-1.22, 0.4], EDEN_AT = [-0.55, 0.12], MAX_GIVES = 2;
+    let findsWarned = false;
+    /** How many finds a world shows (NEW_LOOK_ECONOMY.FINDS_MAX, bundle.js), read when used; missing, it is logged and 2 used. */
+    function findsMax() {
+        const v = window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY.FINDS_MAX;
+        if (typeof v === 'number') return v;
+        if (!findsWarned) { findsWarned = true; console.error('NSWorldFinds: NEW_LOOK_ECONOMY.FINDS_MAX is missing; using 2'); }
+        return 2;
+    }
     /** Mira's ground scan from aboard (NSOrbit.whileDown sets the same): bundle.js NEW_LOOK_ECONOMY, read when used. */
     function miraScan() {
         const v = window.NEW_LOOK_ECONOMY && window.NEW_LOOK_ECONOMY.MIRA_ABOARD;
@@ -130,22 +155,39 @@
         return k ? { name: k[0], line: k[1], text: `${k[0]}. ${k[1]}` } : null;
     }
 
-    // ── what each find gives ──
+    // ── what each find gives: its ways' prizes (App.findPrizes), supplies only ──
     const chip = text => ({ icon: GIVE_ICON[text] || 'gives', text });
-    function eventGives(ev) {
+    const PRIZE_WORD = { salvage: 'salvage', energy: 'energy', rations: 'rations', data: 'data', cure: 'healing' };
+    const partsOf = (app, prize) => (app && typeof app.prizeParts === 'function' ? app.prizeParts(prize) : []);
+    /** One way's prize as chips, with its numbers ('+45 salvage', App.prizeParts): its row on the glass. */
+    function wayGives(app, prize) { return partsOf(app, prize).map(p => ({ icon: GIVE_ICON[PRIZE_WORD[p.kind]] || 'gives', text: p.text })); }
+    /** What a find gives, in words: what its rows bring, at most MAX_GIVES. */
+    function eventGives(app, rows) {
         const out = [];
-        (ev.choices || []).forEach(c => {
-            const r = c.reward || {};
-            const t = r.type === 'ITEM' ? 'an item' : r.type === 'DATA' ? 'data'
-                : r.type === 'RESOURCE' && r.val && r.val !== 'NOTHING' ? (String(r.val).includes('METALS') ? 'salvage' : 'energy') : null;   // resolveEvaOutcome's own rule
-            if (t && !out.includes(t)) out.push(t);
-        });
-        return out.sort((a, b) => (a === 'an item') - (b === 'an item')).slice(0, MAX_GIVES).map(chip);   // supplies first
+        rows.forEach(r => partsOf(app, r.prize).forEach(p => { const t = PRIZE_WORD[p.kind]; if (t && !out.includes(t)) out.push(t); }));
+        return out.slice(0, MAX_GIVES).map(chip);
     }
-    /** Mira scans the ground from aboard while she is well and not one of the two going down (NSOrbit.whileDown's rule). */
+    /** A find's ways as rows for the glass, careful first: { way, idx, short, prize, gives, hurt, death, oneIn, deadly, struck }.
+        odds: each choice's (eventOdds, by the card's index). The prize is the find's own, drawn once (App.findPrizes); struck:
+        a stress trait that strikes the way on the card with ids going down (App.wayStrikes: only a trait whose holder is one
+        of them; ids left out, the team down now). Where the careful way brings nothing (a walk-away), only the bold row is
+        given. */
+    function wayRows(app, node, id, ev, odds, ids) {
+        if (typeof app.wayOf !== 'function' || typeof app.findPrizes !== 'function') return [];
+        const prizes = app.findPrizes(node, id, ev) || {}, strikes = typeof app.wayStrikes === 'function' ? app.wayStrikes(ev, ids) : [];
+        const rows = (ev.choices || []).map((c, idx) => {
+            const way = app.wayOf(ev, idx), prize = prizes[way] || null, o = odds[idx] || {};
+            return { way, idx, short: c.short || c.text, prize, gives: wayGives(app, prize), hurt: typeof o.hurt === 'number' ? o.hurt : null,
+                death: o.death || 0, oneIn: o.oneIn || null, deadly: !!o.deadly, struck: strikes[idx] || null };
+        }).sort((a, b) => (a.way === 'bold') - (b.way === 'bold') || a.idx - b.idx);
+        const careful = rows.find(r => r.way === 'careful');
+        return careful && !careful.prize && rows.length > 1 ? rows.filter(r => r !== careful) : rows;
+    }
+    /** Mira scans the ground from aboard while she is well and not one of the two going down (NSOrbit.whileDown's rule); not
+        under stress (RECKLESS): then she isn't watching the ground. */
     function miraAboard(app, ids) {
         const s = app && app.state, m = s && (s.crew || []).find(c => (c.tags || []).includes('SPECIALIST'));
-        if (!m || m.status !== 'HEALTHY' || (m.tags || []).includes('CONFINED') || (m.tags || []).includes('SEDATED')) return false;
+        if (!m || m.status !== 'HEALTHY' || (m.tags || []).includes('CONFINED') || (m.tags || []).includes('SEDATED') || m.trait === 'RECKLESS') return false;
         return !(ids || []).includes('mira');
     }
     const ROLE_OF = { jaxon: 'ENGINEER', aris: 'MEDIC', vance: 'SECURITY', mira: 'SPECIALIST' };
@@ -157,21 +199,24 @@
     /** A plain landing's odds going in (before the landing), as the card will show them for that way: App.tripRisk, the way's
         own risk (opts.way: its index on the card; left out, the careful choice's), the team's fit for the find (NSOrbit.fitOf;
         opts.find, else the world's own event), anyone hurt going down (fewer than two were well: NSOrbit.pool), something
-        hunting there (App.isHunted) and Vance's cover (App.vanceCovers), through TripOdds: { hurt, death, deadly, oneIn }. */
+        hunting there (App.isHunted) and Vance's cover (App.vanceCovers), through TripOdds: { hurt, death, deadly, oneIn }.
+        opts.without: one of ids whose own part is left out (NSOrbit.helps): their fit, their going down hurt and, for Vance,
+        his cover; Mira left out scans from aboard again. */
     function eventOdds(app, node, ev, ids, opts) {
         if (!app || typeof app.tripRisk !== 'function' || !ev) return null;
-        const o = opts || {}, base = app.tripRisk(node, { mira: miraAboard(app, ids) ? miraScan() : 0 }).risk;
+        const o = opts || {}, goes = o.without ? (ids || []).filter(id => id !== o.without) : ids;
+        const base = app.tripRisk(node, { mira: miraAboard(app, goes) ? miraScan() : 0 }).risk;
         const mods = (ev.choices || []).map(c => Number(c.riskMod) || 0), least = mods.length ? Math.min(...mods) : 0;
         const wayMod = o.way != null && mods[o.way] != null ? mods[o.way] : least;
         const T = window.TripOdds, O = window.NSOrbit;
         if (!T) return { hurt: Math.max(0, Math.min(100, Math.round(base + wayMod))), death: 0, deadly: false, oneIn: null };
         const find = o.find || { id: 'kind', kind: 'event', feature: null, event: ev.id };
         let fit = 0;
-        try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(app, node, ids, find) : 0; } catch (err) { console.error('NSWorldFinds: the fit failed', err); }
+        try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(app, node, goes, find) : 0; } catch (err) { console.error('NSWorldFinds: the fit failed', err); }
         const team = teamOf(app, ids);
         const hunted = typeof app.isHunted === 'function' ? app.isHunted(node) : tagsOf(node).includes('PREDATORY');
-        const vance = typeof app.vanceCovers === 'function' ? app.vanceCovers(team) : false;
-        return T.odds({ base, wayMod, fit, hunted, vance, hurtGoes: team.some(c => c.status === 'INJURED') });
+        const vance = o.without !== 'vance' && typeof app.vanceCovers === 'function' ? app.vanceCovers(team) : false;
+        return T.odds({ base, wayMod, fit, hunted, vance, hurtGoes: teamOf(app, goes).some(c => c.status === 'INJURED') });
     }
     /** The hurt chance of eventOdds: a find's "risk N%". */
     function eventRisk(app, node, ev, ids, opts) { const o = eventOdds(app, node, ev, ids, opts); return o ? o.hurt : null; }
@@ -205,8 +250,8 @@
         if (ours && (node.hasPage || node.isFirstSignal)) gives = ['a page', 'salvage'];
         const s = app.state, hasDisc = !!(s && (s.hasDisc || (typeof ITEMS !== 'undefined' && ITEMS.DISC_DRAWING && (s.cargo || []).some(i => i.id === ITEMS.DISC_DRAWING.id))));
         const toDate = ours && !node.hasPage && !node.isFirstSignal && hasDisc && (s.sectorNodes || []).some(p => p.storyHidden);   // the disc dates it: where its crew went
-        return { id: 'site', kind: 'site', site: site.tag, label: d.label, icon: d.icon, gives: gives.map(chip), risk: 0, at: spot(node, 'site', site),
-            done: !!node[site.done], hint: toDate ? 'date' : null, inSpace: !!site.inSpace };   // inSpace: in orbit, the lander crosses to it (GO DOWN says "Go across")
+        return { id: 'site', kind: 'site', site: site.tag, label: d.label, icon: d.icon, gives: gives.map(chip), risk: null, at: spot(node, 'site', site),
+            done: !!node[site.done], hint: toDate ? 'date' : null, inSpace: !!site.inSpace, relay: !!site.relay };   // inSpace: in orbit, the lander crosses to it (GO DOWN says "Go across"); relay (LAST PORT): the whole ship docks there (Stop.js: no shuttle)
     }
     function featureOf(node, own) {
         const tags = tagsOf(node), m = node.metrics || {};
@@ -220,9 +265,15 @@
         return null;
     }
     function eventFind(app, node, id, ev, ids, feature) {
-        const f = feature ? FEATURE[feature] : null;
-        return { id, kind: 'event', event: ev.id, label: LABELS[ev.id] || sentence(ev.title), icon: f ? f.icon : 'pin', art: f ? f.art : null, gives: eventGives(ev),
-            risk: eventRisk(app, node, ev, ids, { find: { id, kind: 'event', event: ev.id, feature: feature || null } }), at: spot(node, id), done: false, hint: null, feature: feature || null };
+        const f = feature ? FEATURE[feature] : null, find = { id, kind: 'event', event: ev.id, feature: feature || null };
+        const odds = (ev.choices || []).map((c, idx) => eventOdds(app, node, ev, ids, { way: idx, find }));
+        const ways = wayRows(app, node, id, ev, odds, ids), chosen = node.nsWay ? node.nsWay[id] : null;
+        const row = ways.find(r => r.idx === chosen && !r.struck) || ways.find(r => !r.struck) || null;   // the way taken: chosen, else the first row no trait strikes
+        const mods = (ev.choices || []).map(c => Number(c.riskMod) || 0), least = mods.indexOf(Math.min(...mods)), careful = odds[least];
+        // every row struck (a walk-away find's one row, while Vance won't risk it): the careful way, which the card keeps open
+        return { id, kind: 'event', event: ev.id, label: LABELS[ev.id] || sentence(ev.title), icon: f ? f.icon : 'pin', art: f ? f.art : null, gives: eventGives(app, ways),
+            risk: row && typeof row.hurt === 'number' ? row.hurt : careful ? careful.hurt : null, ways, way: row ? row.idx : least >= 0 && mods.length ? least : null,
+            at: spot(node, id), done: false, hint: null, feature: feature || null };
     }
 
     /** Every find on a known world, in order, with what is done and which is the target. unread: the same before a scan (the
@@ -234,7 +285,7 @@
         const done = (node.nsDone || []).concat(legacy ? ['kind'] : []);
         if (site) out.push(site);
         if (node.type === 'EDEN' || node.isEden) {
-            out.push({ id: 'kind', kind: 'eden', label: 'Green valley', icon: 'life', gives: ['rations', 'rest'].map(chip), risk: 0, at: spot(node, 'eden'), done: false, hint: null });
+            out.push({ id: 'kind', kind: 'eden', label: 'Green valley', icon: 'life', gives: ['rations', 'rest'].map(chip), risk: null, at: spot(node, 'eden'), done: false, hint: null });
         } else if (node.type !== 'GAS_GIANT') {                                            // a gas giant has no ground: only a site in orbit
             const own = typeof app.landingEventOf === 'function' ? app.landingEventOf(node) : null;
             if (own) out.push(eventFind(app, node, 'kind', own, ids));
@@ -244,6 +295,8 @@
         out.forEach(f => { if (done.includes(f.id)) f.done = true; });
         const clue = clueWorld(app.state) === node ? (out.find(f => f.id === 'feature') || out.find(f => f.id === 'kind')) : null;
         if (clue && !clue.done) clue.hint = clue.feature ? FEATURE[clue.feature].clue : 'fix';
+        const most = findsMax();                                                            // two finds a world: one past that only with the clue
+        for (let i = out.length - 1; i >= most; i--) if (!out[i].hint && !out[i].done) out.splice(i, 1);   // (or where an old save went)
         const open = out.filter(f => !f.done), aimed = open.find(f => f.id === node.nsTarget) || open.find(f => f.hint) || open[0] || null;   // a clue first: its chips say so
         out.forEach(f => { f.target = f === aimed; });
         return out;
@@ -288,13 +341,14 @@
         if (typeof app.autoSave === 'function') app.autoSave();
         return true;
     }
-    /** Travel's note once a scan has read the world: the finds still open (a clue named), and whether people could live there. */
+    /** Travel's note once a scan has read the world, as tags (look pass: one a line, no lead-in; travel/Note.js draws them):
+        each find still open (its icon and name; a clue says so), then whether people could live there. */
     function noteLines(app, node, withSite) {
         const finds = list(app, node).filter(f => !f.done && (withSite !== false || f.id !== 'site'));
-        const said = finds.length ? 'Worth a trip: ' + finds.map(f => (f.hint ? `${f.label} (a clue)` : f.label)).join(' · ') : '';
+        const tags = finds.map(f => ({ icon: f.icon || 'pin', text: f.label, clue: f.hint ? 'a clue' : null }));
         let live = null;
         try { const fx = window.NSScan ? window.NSScan.facts(app, node) : null; live = fx && fx.live ? sentence(fx.live) : null; } catch (err) { live = null; }
-        return [said, live].filter(Boolean);
+        return live ? tags.concat({ icon: 'live', text: live, live: true }) : tags;
     }
 
     window.NSWorldFinds = Object.freeze({ kind, known, list, target, blind, aim, markDone, keepOld, clue, noteLines, riskOf: eventRisk, oddsOf: eventOdds, KINDS });

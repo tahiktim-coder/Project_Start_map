@@ -142,7 +142,9 @@ Each screen lists **purpose / you decide / you can click / replaces.**
 - **Clicked early,** she asks below the light, never under the cursor: "There are still worlds ahead, Commander. Jump
   anyway?" with Jump now / Not yet. Not yet is nearer the cursor.
 - **Then:** the ring spins up, the streaks stretch toward the light, white, and **the corridor** (as built). The
-  between-sector film plays inside it where one exists.
+  between-sector film plays inside it where one exists. (2026-10-31, After the flight: on the jump into sector 5 the
+  universe goes dark while we fly, the stars one by one and the light last; we fly a long black by our own lamps, and the
+  light comes back first, then every star at once. Corridor.js THE DARK, MiniHost 'corridor-void'; the new look only.)
 - **The meal:** shown on the first jump so the table exists, then only when food is short: "We have three rations,
   Commander. Not everyone eats tonight." You click the bowls you take away. Bowls are never counted aloud.
 - **Then:** the next sector fades in, already moving, the Lander outside for 3 seconds, then layout A again.

@@ -5,6 +5,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Silent Exodus</title>
+    <!-- The new look's switch (docs/BUILD_A.md §1): ?new=1 turns it on for this browser tab's session, ?new=0 turns it off.
+         Nothing is kept in localStorage or in the save; a new tab is the default game again. It runs first, before any style
+         sheet, so nothing here waits on them: html.ns-on is set before the first paint, the token sheet and the Plex faces are
+         the page's first requests, and the loading line counts its 1.5 s from the page's start. -->
+    <script>
+        (function () {
+            var q = new URLSearchParams(location.search), on = q.get('new') === '1';
+            try {
+                if (q.get('new') === '1') sessionStorage.setItem('se-new-screen', '1');
+                else if (q.get('new') === '0') sessionStorage.removeItem('se-new-screen');
+                on = sessionStorage.getItem('se-new-screen') === '1';
+            } catch (err) { /* storage blocked: only ?new=1 itself turns it on */ }
+            window.NEW_SCREEN = on;
+            if (on) document.documentElement.classList.add('ns-on');   // the cards' new look (src/newscreen/cards.css) is scoped under html.ns-on
+            if (!on) return;
+            // The one token sheet first of all (it declares only html.ns-on's custom properties, which win over style.css's :root
+            // ones wherever it sits), then the font sheet, which holds nothing up (media="print" until loaded). The new screen's
+            // block at the end of the body links the same font URL again, so its scripts still run with the faces declared.
+            // Every Plex face the token sheet names is fetched up front (NS_PRELOAD), not on first use: the title's first frame is Plex.
+            // The faces the first screens draw with go first (the loading line's Mono, the title's Condensed 500/600 and Sans 400),
+            // so on a slow line the loading line's face is in by about 1.5 s; the other four follow when those are in.
+            window.NS_FONTS = 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;1,400&family=Courier+Prime&display=swap';
+            window.NS_PRELOAD = function () {
+                if (!document.fonts || !document.fonts.load) return;
+                var C = " 1em 'IBM Plex Sans Condensed'", S = " 1em 'IBM Plex Sans'";
+                function all(fonts) { return Promise.all(fonts.map(function (f) { return document.fonts.load(f).catch(function () {}); })); }
+                all(["400 1em 'IBM Plex Mono'", '500' + C, '600' + C, '400' + S]).then(function () {
+                    all(['400' + C, '300' + S, '500' + S, 'italic 400' + S]);
+                });
+            };
+            document.write('<link rel="stylesheet" href="src/newscreen/tokens.css?v=4">'
+                + '<link rel="stylesheet" href="' + window.NS_FONTS + '" media="print" onload="this.media=&quot;all&quot;; window.NS_PRELOAD()">');
+            // Before the first screen: ink, and 1.5 s after the page started with nothing up, the loading line. Its rules are in the
+            // <style> below, so it waits for the token sheet only, never for newscreen.css or the head's other sheets. It also waits
+            // for the Plex Mono face that will draw it, so its first frame is Plex, not the fallback; past 3 s it shows without it.
+            var WAKE_MS = 1500, FACE_WAIT_MS = 1500, POLL_MS = 100, STUCK_MS = 3000, waking = null, poll = 0, mono = 'ask', seen = false;
+            function screenUp() {
+                var root = document.getElementById('ns-root');
+                return !!(document.querySelector('#start-menu, .ns-film, .modal-overlay, .mini-host, .end-screen, .story-reel, .ns-boot-fail') || (root && !root.hidden));
+            }
+            function tokensIn() { return getComputedStyle(document.documentElement).getPropertyValue('--f-num') !== ''; }
+            function monoIn() {                       // load() asks for the face that matches now (the last declared), so it is the one drawn
+                if (mono === 'ask' && document.fonts && document.fonts.load) {
+                    mono = 'wait';
+                    document.fonts.load("400 14px 'IBM Plex Mono'").then(function () { mono = 'in'; tick(); }, function () { mono = 'in'; tick(); });
+                }
+                return mono !== 'wait' || performance.now() > WAKE_MS + FACE_WAIT_MS;
+            }
+            function stopWaking() { clearInterval(poll); poll = 0; if (waking && waking.parentNode) waking.parentNode.removeChild(waking); }
+            function tick() {                         // from the page's start until the first screen is seen
+                if (screenUp()) { seen = true; stopWaking(); return; }
+                if (waking || performance.now() < WAKE_MS || !document.body || !tokensIn() || !monoIn()) return;
+                waking = document.createElement('p');
+                waking.className = 'ns-boot ns-waking';
+                waking.textContent = 'Waking the ship';                                       // DRAFT (look pass)
+                document.body.appendChild(waking);
+            }
+            poll = setInterval(tick, POLL_MS);
+            // The game did not come up: one line and the frame key that reloads. bundle.js calls it when it does not load (its
+            // script tag's onerror). If a script threw or did not load instead, no screen has ever been up 3 s after the page's
+            // load event (the title mounts on DOMContentLoaded, before it), so the line shows then; a screen seen once is enough,
+            // so a gap between two screens never shows it.
+            window.NS_BOOT_FAIL = function () {
+                if (document.querySelector('.ns-boot-fail')) return;
+                stopWaking();
+                var box = document.createElement('div'), line = document.createElement('p'), key = document.createElement('button');
+                box.className = 'ns-boot ns-boot-fail';
+                box.setAttribute('role', 'alert');
+                line.textContent = 'The game did not load. Reload the page.';             // DRAFT (look pass)
+                key.type = 'button';
+                key.className = 'mini-btn is-primary';
+                key.textContent = 'Reload';                                                // DRAFT (look pass)
+                key.addEventListener('click', function () { location.reload(); });
+                box.appendChild(line);
+                box.appendChild(key);
+                document.body.appendChild(box);
+                key.focus();
+            };
+            addEventListener('load', function () { setTimeout(function () { if (!seen && !screenUp()) window.NS_BOOT_FAIL(); }, STUCK_MS); });
+        })();
+    </script>
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,26 +97,34 @@
     <link rel="stylesheet" href="ship.css?v=10">
     <link rel="stylesheet" href="warp.css?v=10">
     <link rel="stylesheet" href="log.css?v=6">
-    <link rel="stylesheet" href="theme.css?v=61">
-    <link rel="stylesheet" href="src/systems/minigames/minigames.css?v=3">
-    <!-- The new screen (?new=1, html.ns-on is set first thing in <body>): today's page never paints, not even while the scripts load -->
-    <style>html.ns-on .app-container { visibility: hidden; } html.ns-on, html.ns-on body { background: #05070a; }</style>
+    <link rel="stylesheet" href="theme.css?v=62">
+    <link rel="stylesheet" href="src/systems/minigames/minigames.css?v=9">
+    <!-- The new look (html.ns-on, set by the switch above): today's page never paints, not even while the scripts load. And the
+         loading line and the boot failure (the switch makes them), here so that they wait for the token sheet only. -->
+    <style>
+        html.ns-on .app-container { visibility: hidden; } html.ns-on, html.ns-on body { background: #05070a; }
+        html.ns-on .ns-boot { position: fixed; left: clamp(32px, 8vw, 160px); z-index: 10000; margin: 0; text-shadow: var(--shadow); }   /* the title block's x (start/Title.js) */
+        html.ns-on .ns-waking { bottom: var(--s8); font: 400 var(--fs-floor)/1.2 var(--f-num); color: var(--dim); }
+        html.ns-on .ns-waking::after { content: ''; display: inline-block; width: 0.6em; height: 1.05em; margin-left: 0.3em; vertical-align: -0.2em; background: currentColor; animation: ns-caret 1060ms steps(1, end) infinite; }
+        @keyframes ns-caret { 50% { visibility: hidden; } }
+        html.ns-on .ns-boot-fail {
+            top: 50%; transform: translateY(-50%); display: grid; justify-items: start; gap: var(--s4);
+            --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--faint); --mg-amber: var(--warm); --mg-amber-br: var(--warm-br);
+            --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: var(--ease);   /* the frame key (.mini-btn, minigames.css) reads these */
+        }
+        html.ns-on .ns-boot-fail p { margin: 0; font: 400 18px/1.4 var(--f-text); color: var(--text); }
+        /* the Reload key gets its focus from a script, and whether :focus-visible matches that is up to the browser's heuristics:
+           :focus says it outright, so the key always looks pointed at */
+        html.ns-on .ns-boot-fail .mini-btn:focus:not(:active) { outline: none; color: var(--warm); transform: translateX(3px); border-color: var(--warm); background: color-mix(in srgb, var(--warm) 16%, transparent); text-decoration: underline 1px; text-underline-offset: 5px; }
+        html.ns-on .ns-boot-fail .mini-btn:focus::before { color: var(--warm); }
+        @media (prefers-reduced-motion: reduce) { html.ns-on .ns-waking::after { animation: none; } }
+    </style>
 </head>
 
 <body>
-    <!-- The new screen (docs/BUILD_A.md §1): ?new=1 turns it on for this browser tab's session, ?new=0 turns it off.
-         Nothing is kept in localStorage or in the save; a new tab is the default game again. -->
+    <!-- The new look's own sheet (the switch itself is in <head>): after today's sheets, so its rules win the ties -->
     <script>
-        (function () {
-            var q = new URLSearchParams(location.search), on = q.get('new') === '1';
-            try {
-                if (q.get('new') === '1') sessionStorage.setItem('se-new-screen', '1');
-                else if (q.get('new') === '0') sessionStorage.removeItem('se-new-screen');
-                on = sessionStorage.getItem('se-new-screen') === '1';
-            } catch (err) { /* storage blocked: only ?new=1 itself turns it on */ }
-            window.NEW_SCREEN = on;
-            if (on) document.documentElement.classList.add('ns-on');   // the cards' new look (src/newscreen/cards.css) is scoped under html.ns-on
-        })();
+        if (window.NEW_SCREEN) document.write('<link rel="stylesheet" href="src/newscreen/newscreen.css?v=6">');
     </script>
     <div class="app-container">
         <!-- background visuals (scanlines, vignette) -->
@@ -154,43 +243,43 @@
     <!-- Scripts -->
     <!-- Initialize global test mode flag (used by chance-based systems) -->
     <script>window.TEST_MODE = new URLSearchParams(location.search).get('test') === '1';</script>
-    <script src="src/data/Items.js?v=62"></script>
+    <script src="src/data/Items.js?v=63"></script>
     <script src="src/data/Upgrades.js?v=57"></script> <!-- New Upgrades -->
-    <script src="src/data/Events.js?v=59"></script>
-    <script src="src/data/TripOdds.js?v=2"></script> <!-- a team trip's odds and who suits which world (the new look; the run model reads it too) -->
-    <script src="src/data/CampfireEvents.js?v=63"></script>
-    <script src="src/data/ExodusDerelicts.js?v=66"></script>
+    <script src="src/data/Events.js?v=60"></script>
+    <script src="src/data/TripOdds.js?v=3"></script> <!-- a team trip's odds and who suits which world (the new look; the run model reads it too) -->
+    <script src="src/data/CampfireEvents.js?v=64"></script>
+    <script src="src/data/ExodusDerelicts.js?v=68"></script>
     <script src="src/data/LootTables.js?v=56"></script>
-    <script src="src/data/SectorConfig.js?v=62"></script>
+    <script src="src/data/SectorConfig.js?v=63"></script>
     <script src="src/data/SettleCouncil.js?v=6"></script> <!-- the crew have their say before you settle (docs/SETTLING.md) -->
-    <script src="src/data/ExodusLogs.js?v=61"></script>
+    <script src="src/data/ExodusLogs.js?v=64"></script>
     <script src="src/data/StoryPlanets.js?v=3"></script>
     <script src="src/data/FailedColonyEncounters.js?v=61"></script>
-    <script src="src/data/DerelictEncounters.js?v=64"></script>
-    <script src="src/data/AnomalyEncounters.js?v=70"></script>
-    <script src="src/data/LateGamePOIs.js?v=58"></script>
-    <script src="src/data/StructureEncounter.js?v=60"></script>
+    <script src="src/data/DerelictEncounters.js?v=67"></script>
+    <script src="src/data/AnomalyEncounters.js?v=71"></script>
+    <script src="src/data/LateGamePOIs.js?v=59"></script>
+    <script src="src/data/StructureEncounter.js?v=62"></script>
     <script src="src/data/ShipEvents.js?v=58"></script>
-    <script src="src/data/SpaceStations.js?v=61"></script>
+    <script src="src/data/SpaceStations.js?v=62"></script>
     <script src="src/data/AsteroidFields.js?v=59"></script>
     <script src="src/data/DistressSignals.js?v=63"></script>
     <script src="src/data/CrewEvents.js?v=64"></script>
     <script src="src/systems/FrameClock.js?v=1"></script>
     <script src="src/systems/PlainWords.js?v=1"></script>
-    <script src="src/systems/ChoiceGuard.js?v=4"></script> <!-- choices never under the cursor; pop-ups ignore clicks for 400 ms -->
+    <script src="src/systems/ChoiceGuard.js?v=6"></script> <!-- choices never under the cursor; pop-ups ignore clicks for 400 ms -->
     <script src="src/systems/BodyRenderer.js?v=39"></script>
     <!-- Dither art: the game's look (?art=classic switches it off for one load, for testing) -->
     <script src="src/systems/dither/DitherCore.js?v=39"></script>
     <script src="src/systems/dither/DitherRecipes.js?v=38"></script>
     <script src="src/systems/dither/StructureArt.js?v=45"></script>
     <script src="src/systems/dither/DitherBodies.js?v=38"></script>
-    <script src="src/systems/dither/DitherScene.js?v=38"></script>
+    <script src="src/systems/dither/DitherScene.js?v=39"></script>
     <script src="src/systems/StructureVista.js?v=4"></script>
     <script src="src/systems/ShipCutaway.js?v=39"></script>
     <script src="src/systems/DeckPanel.js?v=40"></script>
     <script src="src/systems/FabricatorPanel.js?v=38"></script>
     <script src="src/systems/DockingGame.js?v=4"></script>
-    <script src="src/systems/BoardingParty.js?v=46"></script>
+    <script src="src/systems/BoardingParty.js?v=49"></script>
     <script src="src/systems/SignalTune.js?v=41"></script>
     <script src="src/systems/AwayTeam.js?v=49"></script>
     <script src="src/systems/LanderScene.js?v=61"></script>
@@ -198,60 +287,61 @@
     <script src="src/systems/LanderCrew.js?v=5"></script>
     <script src="src/systems/LanderGame.js?v=61"></script>
     <script src="src/systems/NavVista.js?v=45"></script>
-    <script src="src/systems/ItemIcons.js?v=41"></script>
+    <script src="src/systems/ItemIcons.js?v=43"></script>
     <script src="src/systems/OrbitVista.js?v=4"></script>
-    <script src="src/systems/DiscDocument.js?v=50"></script>
-    <script src="src/systems/FoundPage.js?v=56"></script>
+    <script src="src/systems/DiscDocument.js?v=53"></script>
+    <script src="src/systems/FoundPage.js?v=59"></script>
     <script src="src/systems/StoryReel.js?v=55"></script>
     <script src="src/systems/TheThrow.js?v=52"></script>
-    <script src="src/systems/SceneArt.js?v=5"></script>
-    <script src="src/systems/EncounterCard.js?v=72"></script>
-    <script src="src/systems/EndScreens.js?v=59"></script>
+    <script src="src/systems/SceneArt.js?v=6"></script>
+    <script src="src/systems/EncounterCard.js?v=81"></script>
+    <script src="src/systems/EndScreens.js?v=60"></script>
     <script src="src/systems/RosterPanel.js?v=50"></script>
-    <script src="src/systems/WarpPlot.js?v=51"></script>
+    <script src="src/systems/WarpPlot.js?v=53"></script>
     <script src="src/systems/ProbeSystem.js?v=41"></script>
     <script src="src/systems/AudioSystem.js?v=39"></script>
     <script src="src/systems/EndingSystem.js?v=60"></script>
-    <script src="src/systems/BarkSystem.js?v=61"></script>
+    <script src="src/systems/BarkSystem.js?v=63"></script>
     <script src="src/systems/AuraSystem.js?v=54"></script>
     <script src="src/systems/NarrativeModal.js?v=39"></script>
     <script src="src/views/OrbitView.js?v=59"></script>
     <script src="src/generators/PlanetGenerator.js?v=41"></script>
     <script src="src/views/NavView.js?v=63"></script>
-    <script src="src/bundle.js?v=109"></script>
+    <script src="src/bundle.js?v=136" onerror="window.NS_BOOT_FAIL && window.NS_BOOT_FAIL()"></script>
     <script src="src/systems/MissionLog.js?v=41"></script>
-    <script src="src/systems/Coach.js?v=60"></script>
+    <script src="src/systems/Coach.js?v=61"></script>
     <!-- Minigames: the Sim Bay sketches, played over the game by MiniHost (the four games are added one by one) -->
-    <script src="src/systems/minigames/MiniLab.js?v=4"></script>
+    <script src="src/systems/minigames/MiniLab.js?v=5"></script>
     <script src="src/systems/minigames/MiniShip.js?v=2"></script>
     <script src="src/systems/Juice.js?v=1"></script>
-    <script src="src/systems/minigames/MiniHost.js?v=8"></script>
-    <script src="src/systems/minigames/Corridor.js?v=18"></script>
-    <script src="src/systems/minigames/Torch.js?v=11"></script>
+    <script src="src/systems/minigames/MiniHost.js?v=11"></script>
+    <script src="src/systems/minigames/Corridor.js?v=22"></script>
+    <script src="src/systems/minigames/Torch.js?v=13"></script>
     <script src="src/systems/minigames/TorchGround.js?v=3"></script> <!-- the torch on a planet's surface: the world's sky and soil, gravity, the hatch falling in -->
-    <script src="src/systems/minigames/TorchDoors.js?v=2"></script> <!-- the wreck doors: which one, their pictures, the three without the torch -->
-    <script src="src/systems/minigames/DiscDating.js?v=6"></script>
+    <script src="src/systems/minigames/TorchDoors.js?v=4"></script> <!-- the wreck doors: which one, their pictures, the three without the torch -->
+    <script src="src/systems/minigames/DiscDating.js?v=10"></script>
     <script src="src/systems/minigames/Breach.js?v=4"></script>
     <!-- The new screen's files load only with the switch on (docs/BUILD_A.md §3, docs/BUILD_B.md §10, in this order); off, not one request. -->
     <script>
         if (window.NEW_SCREEN) (function () {
             var files = [
-                'art/Paint.js?v=3', 'art/Sky.js?v=1', 'art/Sky2.js?v=2', 'art/Worlds.js?v=5',
-                'crew/CrewEngine.js?v=4', 'start/Dress.js?v=2',
+                'art/Paint.js?v=3', 'art/Sky.js?v=1', 'art/Sky2.js?v=2', 'art/Worlds.js?v=8',
+                'cards/FramePictures.js?v=7', 'cards/Frame.js?v=7', 'cards/TripCard.js?v=3',
+                'crew/CrewEngine.js?v=5', 'start/Dress.js?v=2',
                 'crew/Cora.js?v=1', 'crew/Jaxon.js?v=1', 'crew/Aris.js?v=1', 'crew/Vance.js?v=1', 'crew/Mira.js?v=1',
-                'ship/ShipArt.js?v=1', 'ship/ShipRooms.js?v=2', 'ship/ShipReactor.js?v=1', 'ship/ShipRoutine.js?v=1', 'ship/TowerArt.js?v=2',
-                'NewScreen.js?v=16', 'Route.js?v=5', 'Scan.js?v=2', 'WorldFinds.js?v=6', 'Orbit.js?v=22', 'Voice.js?v=14',
-                'travel/SectorLooks.js?v=4', 'travel/Field.js?v=4', 'travel/Pictures.js?v=10', 'travel/Travel.js?v=15',
-                'tower/TowerMarks.js?v=6', 'tower/Supper.js?v=6', 'tower/Tower.js?v=16',
-                'stop/BridgeArt.js?v=1', 'stop/Dive.js?v=2', 'stop/Glass.js?v=5', 'stop/TagArt.js?v=5', 'stop/Tags.js?v=6', 'stop/Words.js?v=14', 'stop/EarthArt.js?v=2', 'stop/CopyWords.js?v=2', 'stop/Copy.js?v=3', 'stop/Stop.js?v=21', 'throw/Gauge.js?v=2', 'throw/StallArt.js?v=1', 'throw/Stall.js?v=1', 'throw/SeaArt.js?v=3', 'throw/SeaFilm.js?v=3', 'throw/Throw.js?v=1',
-                'start/FilmSound.js?v=2', 'start/LaunchArt.js?v=3', 'start/LaunchFilm.js?v=2', 'start/Title.js?v=3', 'start/PodArt.js?v=1', 'start/PodWords.js?v=1', 'start/Pods.js?v=2', 'start/Wake.js?v=5',
-                'end/LightArt.js?v=1', 'end/CalmArt.js?v=1', 'end/EdenArt.js?v=1', 'end/CopyArt.js?v=2', 'end/Ending.js?v=2',
-                'finds/FindArt.js?v=1', 'finds/Finds.js?v=2',
-                'dock/DockFace.js?v=1', 'dock/DockExterior.js?v=1', 'dock/DockFlight.js?v=2'
+                'ship/ShipArt.js?v=1', 'ship/ShipRooms.js?v=2', 'ship/ShipReactor.js?v=1', 'ship/ShipRoutine.js?v=5', 'ship/TowerArt.js?v=7',
+                'NewScreen.js?v=26', 'Route.js?v=8', 'Scan.js?v=5', 'WorldFinds.js?v=14', 'Orbit.js?v=32', 'Voice.js?v=18',
+                'travel/SectorLooks.js?v=7', 'travel/Field.js?v=4', 'travel/Pictures.js?v=14', 'travel/Note.js?v=3', 'travel/Travel.js?v=18',
+                'tower/TowerMarks.js?v=6', 'tower/TowerCard.js?v=3', 'tower/ShipKey.js?v=4', 'tower/Supper.js?v=10', 'tower/Tower.js?v=30', 'tower/Fault.js?v=3', 'Console.js?v=3',
+                'stop/BridgeArt.js?v=1', 'stop/Dive.js?v=2', 'stop/Glass.js?v=9', 'stop/TagArt.js?v=11', 'stop/Tags.js?v=14', 'stop/FindWords.js?v=4', 'stop/Words.js?v=29', 'stop/EarthArt.js?v=2', 'stop/CopyWords.js?v=5', 'stop/Copy.js?v=7', 'stop/RoomFx.js?v=4', 'stop/Plans.js?v=3', 'stop/Stop.js?v=32', 'throw/Gauge.js?v=4', 'throw/StallArt.js?v=1', 'throw/Stall.js?v=3', 'throw/SeaArt.js?v=3', 'throw/SeaFilm.js?v=5', 'throw/Throw.js?v=4',
+                'start/FilmSound.js?v=2', 'start/LaunchArt.js?v=5', 'start/LaunchFilm.js?v=4', 'start/Title.js?v=5', 'start/PodArt.js?v=3', 'start/PodWords.js?v=3', 'start/Pods.js?v=7', 'start/Wake.js?v=8',
+                'end/LightArt.js?v=3', 'end/CalmArt.js?v=1', 'end/EdenArt.js?v=1', 'end/CopyArt.js?v=4', 'end/ColonyArt.js?v=3', 'end/LossArt.js?v=2', 'end/EndWords.js?v=2', 'end/Ending.js?v=10',
+                'finds/FindArt.js?v=4', 'finds/Finds.js?v=7',
+                'dock/DockRelay.js?v=5', 'dock/DockFace.js?v=1', 'dock/DockExterior.js?v=5', 'dock/DockFlight.js?v=8', 'dock/BoardLook.js?v=3', 'land/LandWords.js?v=2', 'land/LandArt.js?v=2', 'land/LandArtAir.js?v=1', 'land/LandFlight.js?v=1', 'land/LandWorlds.js?v=1', 'land/LandGround.js?v=6', 'land/LandSite.js?v=2', 'land/LandGroundDraw.js?v=2', 'land/MeteorArt.js?v=1', 'land/MeteorLand.js?v=4', 'land/LandFallFlight.js?v=3', 'land/LandFallScene.js?v=2', 'land/LandFall.js?v=9'
             ];
-            var html = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500&family=Courier+Prime&display=swap">'
-                + '<link rel="stylesheet" href="src/newscreen/newscreen.css?v=4">'
-                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=10">';
+            if (/[?&]look=1(&|$)/.test(location.search)) files.push('LookCheck.js?v=3');   // the look floors, checked on the live page (test only)
+            var html = '<link rel="stylesheet" href="' + window.NS_FONTS + '">'           // tokens.css (<head>) and newscreen.css (top of <body>) are in
+                + '<link rel="stylesheet" href="src/newscreen/cards.css?v=22">';
             for (var i = 0; i < files.length; i++) html += '<script src="src/newscreen/' + files[i] + '"><\/script>';
             document.write(html);
         })();

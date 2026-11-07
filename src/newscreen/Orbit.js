@@ -12,6 +12,7 @@
 
    window.NSOrbit (frozen)
      actions(app) → [{ key, words, near, team, run(), sub, chips }]   in the plan's order, only what applies here now
+                    (a docked station's "Fuel depot", once: DEPOT_SALVAGE salvage for DEPOT_ENERGY energy; depth step 8)
                     near: 'world' | 'station' | 'field' | 'giant' | 'site' | 'call' | 'mira' | 'aura' | 'under' | 'key'
                     ('key': a held key on Cora's console, the copy of Earth's two; their chips may be rows: [[chip], [chip]])
                     chips: [{ icon, text, tone? }] what it costs and gives, a word or three each (the bridge's glass tags)
@@ -34,13 +35,21 @@
                                    too only if the player adds them at the hatch)
      teamRisk(app, ids, way?) → 25 | null  the chosen find's hurt chance with ids down (TripOdds with App.tripRisk, the
                                    way's own risk, the fit and anyone hurt going; way: the card's index, left out the way
-                                   GO DOWN vouches for, the careful one, its mark's number, unless a stress trait may
-                                   strike it); before a scan, the blind trip's; null where a blind trip meets a site's own
-                                   story or Eden's card
-     teamOdds(app, ids, way?) → { hurt, death, deadly, oneIn } | null   the same find's odds (TripOdds), for the way GO DOWN
-                                   vouches for (App.sureWay) unless way is given: GO DOWN shows its hurt chance and, where it
-                                   can kill, its death chance
+                                   chosen on the glass, as teamOdds); before a scan, the blind trip's; null where the team goes to a site's own
+                                   story or Eden's card (their own card says the odds: no number on the glass)
+     teamOdds(app, ids, way?) → { hurt, death, deadly, oneIn } | null   the same find's odds (TripOdds), for the way chosen on
+                                   the glass (the find's way: way()) unless way is given; before a scan, the way GO DOWN
+                                   vouches for (App.sureWay): GO DOWN shows its hurt chance and, where it can kill, its death
+                                   chance. A find seen before has no card (App.tripCardPlan): this is the way that is taken
+     way(app, node, findId, idx, ids?) → bool   choose a find's way on the glass (stop/Words.js rows; ids: the team at the hatch): kept on the world
+                                   (node.nsWay[findId] = the card's index, saved with the map). Only a row the glass shows that
+                                   no stress trait strikes; unchosen, a find takes its careful way, or its bold one where only
+                                   that one shows (NSWorldFinds' find.way). GO DOWN, the meteor landing (App.isBoldWay) and a
+                                   repeat's result card follow it
      fitOf(app, node, ids, find?) → 3   the team's fit points for a find (TripOdds' fit; the tables are TripOdds.FIT)
+     helps(app, ids, id) → bool | null   id makes the trip ids would take safer: its odds against the same trip without what
+                                   id brings (NSWorldFinds.oddsOf's without); null where a site's or Eden's own card says the
+                                   odds. The note over someone pointed at says it (stop/Words.js: "Safer with me.")
      hasTeamAction(planet) → bool  this place has a team trip still to take: a find still open, or before a scan one blind
                                    trip (handleWarp defers the breach, the hull hit, to it)
      opened(app)                   the bridge is up: the crisis sign is decided (once per place) and said; a sign comes
@@ -48,6 +57,7 @@
      signed(app) → bool            a sign will be said here (bundle's reactToOrbit skips the crew's "all clear" bark then)
      beforeLeave(app) → Promise<{ ok, say?, direct? }>   the team away refuses; a hull hit still due comes first; a call is dropped
      whileDown(app, team) → Promise   the crisis aboard while the team is down (sector 1: the hull hit), then the skills aboard
+                                   (Mira under stress, RECKLESS, aboard scans no ground: A.U.R.A. says so)
      tripOver()                    the trip's story has ended (bundle's real end points): the shuttle comes home
      tick(dt, blocked)             the shell's frame: the trip's end, the hull hit at a stop with no trip, the late star fix
      trip() → { ids, aboard } | null
@@ -55,7 +65,7 @@
      fixIn(app, planet)            the wreck's star fix: dated now (Mira went) or after the next warp (she stayed)
      canDate(app, node), datable(state) → node | null
      breakPatched(state)           every patched deck breaks again (a crisis aboard, the sector jump)
-     deckChoices(state, deck) → [{ key: 'fix' | 'patch' | 'live', words, note }]   deck: the tower's name (hold = cargo); the
+     deckChoices(state, deck) → [{ key: 'fix' | 'patch' | 'live', words, note, cost? }]   deck: the game's (hold = cargo); the
                                    note under "Live with it" is what living with it costs (deckCost's words)
      deckCost(state, deck) → [{ icon: 'cost', text, tone: 'loss' }]   what a broken deck costs in the game's rules (DECK_COST,
                                    and DECK_COST_IF while something aboard needs it), a few words each; [] for a working deck
@@ -84,7 +94,7 @@
     const PATCH_COST = 5, TRIP_QUIET_MS = 3500, TRIP_OVER_MS = 600, TRIP_LOST_MS = 20000, FIX_CHECK_MS = 500;
     const TREAT_WAIT_MS = 9000;                                                              // the trip's story waits at most this long for the treat line
     const BREACH_WAIT_MS = 5000;                                                             // a breach at a stop with no trip: the bridge is seen first
-    const HIT_WAIT_MS = 10000;                                                               // what waits for the hull hit's two lines (the trip's card, the dive out) waits at most this long
+    const HIT_WAIT_MS = 10000, UNANSWERED_MS = 1200;                                         // what waits for the hull hit's two lines waits at most this long; a call left: her line, then the dive
     const DECK_KEY = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', hold: 'cargo', cargo: 'cargo', engineering: 'engineering' };
     const DECK_WORD = { bridge: 'bridge', lab: 'lab', quarters: 'quarters', cargo: 'hold', engineering: 'engine room' };
     const NOT_CRISES = new Set(['LUCKY_FIND']);                                              // a find is not a crisis
@@ -107,6 +117,7 @@
         vancePulled: names => `I got ${names} out in time. No lasting harm.`,             // said by the one who treats them (treat)
         arisTreated: names => `I've treated ${names}. Give it until the next stop.`,      // DRAFT: well at the next stop, as on a trip (treat)
         miraScanned: 'Mira: "I\'ve scanned the ground. Go round the soft part."',
+        miraReckless: aura("Mira isn't watching the ground."),                            // DRAFT: RECKLESS aboard: no ground scan (whileDown)
         arisTeam: names => `Aris: "I've treated ${names}. Give it until the next stop."`,   // DRAFT: well at the next stop (GameState.mendOnArrival)
         arisAboard: aura("Aris won't leave the med bay."),                                // DRAFT: BLEEDING_HEART, someone hurt: the others go without her
         fixOnBench: 'Mira: "The star fix is on my bench."',
@@ -117,6 +128,7 @@
     const TELL = Object.freeze({
         scan: 'I scan each world as we arrive. The marks show where the team can go.',   // DRAFT: said once, during the first sweep (Stop.js)
         find: 'Pick a mark, Commander. The team goes there.',
+        way: 'Pick how the team does it, Commander. Go down shows the odds.',   // DRAFT: once, when a find's two ways first show (stop/Words.js)
         team: '{team} are ready at the hatch. Click anyone to change who goes.',   // {team}: "Vance and Mira" (Stop.js fills it in)
         skim: 'Refuel scoops gas from the clouds. Free energy, once per giant.',
         date: 'Date the wreck to learn where its crew went. It costs nothing.',
@@ -128,7 +140,9 @@
         leave: 'Leave orbit takes us back out. Then pick the next world.',
         escape: 'Hold the key and we fight our way out, Commander. It will cost us.',     // DRAFT: the copy of Earth (stop/Copy.js)
         accept: 'Hold Go down and we land on it. The journey would end there.',           // DRAFT
+        depot: "The station's fuel pump still works. It needs parts, Commander.",          // DRAFT: the fuel depot (depth step 8)
     });
+    const DEPOT_DONE = got => aura(`The pump is running, Commander. +${got} energy.`);   // DRAFT: the fuel depot's result (depot)
 
     let trip = null, call = null, fixWait = 0, pendingBreach = null;
     const pairSaid = new Set(), arisSaid = new Set();
@@ -204,8 +218,12 @@
         if (n.hasEva) return false;
         return n.type !== 'GAS_GIANT' || !!teamSite(app, n);                                 // a giant has no ground, unless a site is in orbit
     }
-    /** Where GO DOWN takes the team (WorldFinds.target), or null: a blind trip (no scan yet). */
-    function targetFind(app, n) { const F = window.NSWorldFinds; try { return F && n && F.known(n) ? F.target(app, n) : null; } catch (err) { console.error('NSOrbit: the target failed', err); return null; } }
+    /** Where GO DOWN takes the team (WorldFinds.target), or null: a blind trip (no scan yet). ids: the team going (their own
+        stress traits strike its rows: App.wayStrikes), left out the team down now, else nobody. */
+    function targetFind(app, n, ids) {
+        const F = window.NSWorldFinds;
+        try { return F && n && F.known(n) ? (ids ? F.list(app, n, ids).find(f => f.target) || null : F.target(app, n)) : null; } catch (err) { console.error('NSOrbit: the target failed', err); return null; }
+    }
     /** Before a scan: the find a blind trip goes to (WorldFinds.blind), for its clue only. */
     function blindFind(app, n) { const F = window.NSWorldFinds; try { return F && n ? F.blind(app, n) : null; } catch (err) { console.error('NSOrbit: the blind find failed', err); return null; } }
     /** The trip lands as a plain landing (its event's card, where Mira's ground scan from aboard counts): no site's own story, not Eden's card. */
@@ -241,8 +259,11 @@
             add('accept', 'Go down', 'key', () => window.dispatchEvent(new CustomEvent('req-wrong-accept')), false, 'ends the journey', [chip('end', 'ends the journey', 'cool')]);
             return out;
         }
-        if (n.isStation && !n.stationInvestigated) add('dock', 'Dock', 'station', () => app.handleStationAction(), false, 'search the station', [FREE, chip('salvage', 'salvage')]);
-        if (n.isAsteroidField && !n.asteroidMined) add('mine', 'Mine it', 'field', () => app.handleAsteroidAction(), false, 'for salvage', [FREE, chip('salvage', 'salvage')]);
+        const upTo = chip('salvage', `up to ${econ('CARD_SALVAGE_MAX', 20)} salvage`);       // DRAFT (look pass): the most a card's choice gives (B07)
+        if (n.isStation && !n.stationInvestigated) add('dock', 'Dock', 'station', () => app.handleStationAction(), false, 'search the station', [FREE, upTo]);
+        const pump = depotGain(s);                                                           // docked: the fuel pump, once (not Last Port's relay: no station)
+        if (n.isStation && n.stationInvestigated && !n.nsDepot && pump > 0 && s.salvage >= econ('DEPOT_SALVAGE', 25)) add('depot', 'Fuel depot', 'station', () => depot(app, n), false, `+${pump} energy`, [chip('salvage', `-${econ('DEPOT_SALVAGE', 25)} salvage`, 'high'), chip('energy', `+${pump} energy`, 'gain')]);   // DRAFT: its words
+        if (n.isAsteroidField && !n.asteroidMined) add('mine', 'Mine it', 'field', () => app.handleAsteroidAction(), false, 'for salvage', [FREE, upTo]);
         const scoop = (s.upgrades || []).includes('fuel_scoop');                             // the scoop took its fill on arrival: no skim on top
         const gain = Math.min(SKIM_ENERGY, Math.max(0, Math.round(100 - s.energy)));
         if (n.type === 'GAS_GIANT' && !n.nsSkimmed && !scoop && s.energy < 100) add('skim', 'Refuel', 'giant', () => skim(app, n), false, `+${gain} energy`, [chip('energy', `+${gain} energy`, 'gain')]);   // full tanks: nothing to skim
@@ -275,6 +296,21 @@
         s.energy = Math.min(100, s.energy + SKIM_ENERGY);
         log(s, aura(`Hydrogen from the cloud tops, Commander. +${got} energy.`));
         emit('stop:skim', { id: n.id });
+        s.emitUpdates();
+        if (typeof app.autoSave === 'function') app.autoSave();
+    }
+    /** What the fuel pump would give now: NEW_LOOK_ECONOMY.DEPOT_ENERGY, or what still fits under 100 (0: full, no depot). */
+    function depotGain(s) { return Math.min(econ('DEPOT_ENERGY', 20), Math.max(0, Math.round(100 - ((s && s.energy) || 0)))); }
+    /** The fuel depot (depth step 8, a salvage sink): a dead station's pump still works once it has parts. Once a station, after
+        docking (stationInvestigated), with DEPOT_SALVAGE salvage aboard: that salvage for DEPOT_ENERGY energy (what fits).
+        Last Port's relay is a stop like a station but not one: no pump there. */
+    function depot(app, n) {
+        const s = app.state, cost = econ('DEPOT_SALVAGE', 25), got = depotGain(s);
+        if (!n || n.nsDepot || got <= 0 || s.salvage < cost) return;
+        n.nsDepot = true;                                                                    // saved with the map
+        s.salvage -= cost;
+        s.energy = Math.min(100, s.energy + got);
+        log(s, DEPOT_DONE(got));
         s.emitUpdates();
         if (typeof app.autoSave === 'function') app.autoSave();
     }
@@ -375,7 +411,7 @@
         const s = app.state, n = s.currentSystem, pool = evaCrew(app), size = teamSizes(app);
         const team = (ids || []).map(id => pool.find(c => idOf(c) === id)).filter(Boolean);
         if (!n || trip || !team.length || team.length !== (ids || []).length || team.length < size.fewest || team.length > size.most || team[0] === team[1]) { log(s, LINES.pick); return false; }
-        const aboard = s.crew.filter(c => alive(c) && !team.includes(c)).map(idOf), find = targetFind(app, n), before = n.nsTrips || 0;
+        const aboard = s.crew.filter(c => alive(c) && !team.includes(c)).map(idOf), find = targetFind(app, n, team.map(idOf)), before = n.nsTrips || 0;
         const blind = find ? null : blindFind(app, n);                                       // no scan yet: where the blind trip goes (its clue still counts)
         trip = { ids: team.map(idOf), aboard, node: n.id, find, blind, hurtBefore: new Set(s.crew.filter(c => c.status !== 'HEALTHY').map(idOf)), downDone: false, quiet: 0, lost: 0 };
         app._pickedEvaTeam = team;                                                           // handleEvaAction skips AwayTeam.pick
@@ -392,8 +428,9 @@
         s.crew.forEach(c => { delete c._nsWeak; });                                          // the next team trip has gone: whoever was too weak missed it
         return true;
     }
-    /** While the team is down (bundle: after the landing, before their story): the crisis aboard, then the skills aboard. */
-    function whileDown(app, team) {
+    /** While the team is down (bundle: after the landing, before their story): the crisis aboard, then the skills aboard.
+        o.relay (Last Port): the ship docked at the relay; nobody scanned any ground for them, so Mira says nothing of it. */
+    function whileDown(app, team, o) {
         const s = app.state, n = s.currentSystem, c = n && n._nsCrisis, members = team || [];
         const hurtBefore = new Set(s.crew.filter(m => m.status !== 'HEALTHY').map(idOf));
         const aboardWell = tag => { const m = byRole(s, tag); return m && !members.includes(m) && isWell(m) ? m : null; };
@@ -408,7 +445,7 @@
                 crisis = ev.id;
                 breakPatched(s);
                 if (ev.id === 'POWER_SURGE' && aboardWell('ENGINEER')) { log(s, LINES.jaxonSurge); log(s, LINES.jaxonSays); }
-                else run = Promise.resolve(app.showShipMalfunctionModal(ev));
+                else { const away = new Set(members.map(m => m.name)), said = [].concat((typeof ev.dialogue === 'function' ? ev.dialogue(s) : ev.dialogue) || []).filter(l => l && !away.has(l.speaker)); run = Promise.resolve(app.showShipMalfunctionModal(said.length ? Object.assign({}, ev, { dialogue: said }) : ev)); }   // its lines only from those aboard (B07)
             }
         }
         return run.then(() => {
@@ -417,7 +454,9 @@
             const vance = crisis === 'BREACH' ? aboardWell('SECURITY') : null, healer = hurtNow.length ? vance || aboardWell('MEDIC') : null;
             return healer ? treat(app, healer, hurtNow, (healer === vance ? LINES.vancePulled : LINES.arisTreated)(hurtNow.map(m => m.name).join(' and '))) : null;
         }).then(() => {
-            if (aboardWell('SPECIALIST')) { app._nsScanMod = econ('MIRA_ABOARD', -10); log(s, LINES.miraScanned); }
+            const mira = !(o && o.relay) ? aboardWell('SPECIALIST') : null;
+            if (mira && mira.trait === 'RECKLESS') log(s, LINES.miraReckless);              // under stress she isn't watching the ground (depth step 8)
+            else if (mira) { app._nsScanMod = econ('MIRA_ABOARD', -10); log(s, LINES.miraScanned); }
             s.emitUpdates();
         }).catch(err => console.error('NSOrbit: the crisis aboard failed', err)).then(() => { if (trip) trip.downDone = true; });
     }
@@ -461,7 +500,7 @@
         return {
             jaxon: kind === 'POWER_SURGE' ? 'nobody aboard can stop the power surge' : '',
             aris: kind === 'CRYO_LEAK' ? 'nobody aboard can treat the hurt' : '',
-            mira: plainTrip(app, n) ? 'nobody scans the ground for them' : '',
+            mira: plainTrip(app, n) && (byRole(s, 'SPECIALIST') || {}).trait !== 'RECKLESS' ? 'nobody scans the ground for them' : '',   // RECKLESS aboard scans nothing either way
         }[id] || '';
     }
 
@@ -543,23 +582,59 @@
         return { ids: best.ids.slice(), why };
     }
     /** The odds GO DOWN shows with ids going down (TripOdds: { hurt, death, deadly, oneIn }): the chosen find's (WorldFinds.js:
-        App.tripRisk, the way's own risk, the team's fit, someone hurt going, something hunting there, Vance's cover; its mark
-        shows the careful way's hurt chance); before a scan, the blind trip's plain landing the same way. way: the way's index
-        on its card; left out, the way GO DOWN vouches for (App.sureWay: the careful one, unless a stress trait may strike it).
-        null: a site's own story or Eden's card. */
+        App.tripRisk, the way's own risk, the team's fit, someone hurt going, something hunting there, Vance's cover), for the
+        way chosen on the glass (its find.way: node.nsWay, else its default; a find seen before resolves that way with no card);
+        before a scan, the blind trip's plain landing, for the way GO DOWN vouches for (App.sureWay: the careful one, unless a
+        stress trait may strike it). way: the way's index on its card, to ask about another. null: a site's own story or Eden's
+        card. */
     function teamOdds(app, ids, way) {
+        const t = tripFor(app, ids, way);
+        return t ? window.NSWorldFinds.oddsOf(app, t.n, t.ev, ids, { way: t.idx, find: t.find }) : null;
+    }
+    /** Whether id makes the trip GO DOWN shows safer (stop/Words.js: "Safer with me." / "No help down there."): its odds with
+        ids going down (id one of them) against the same trip with id's own part left out (NSWorldFinds.oddsOf's without:
+        their fit, under FIT_MAX with their partner's; their cover, if they are Vance; their going down hurt; and Mira left out
+        scans from aboard). Each side on the way its own team takes: a stress trait strikes a way only with its holder down
+        (App.wayStrikes), so leaving id out can open another way (Mira under stress down: the bold way; without her, the
+        careful one). Safer: a lower death chance, else a lower hurt chance at the same death chance. null: no odds to
+        compare (a site's or Eden's own card says them). */
+    function helps(app, ids, id) {
+        const t = (ids || []).includes(id) ? tripFor(app, ids) : null;
+        if (!t) return null;
+        const rest = tripFor(app, ids.filter(x => x !== id));
+        const restWay = rest && rest.ev === t.ev && rest.idx != null ? rest.idx : t.idx;
+        const F = window.NSWorldFinds;
+        const go = F.oddsOf(app, t.n, t.ev, ids, { way: t.idx, find: t.find }), not = F.oddsOf(app, t.n, t.ev, ids, { without: id, way: restWay, find: t.find });
+        if (!go || !not) return null;
+        return go.death < not.death || (go.death === not.death && go.hurt < not.hurt);
+    }
+    /** The trip teamOdds and helps ask about: { n: the world, ev: its event, find (null before a scan), idx: the way's index on
+        the card }, or null (a site's own story, Eden, nothing to land on). */
+    function tripFor(app, ids, way) {
         const s = app && app.state, n = s && s.currentSystem, F = window.NSWorldFinds;
         if (!n || !isPlanet(n) || !F || typeof F.oddsOf !== 'function' || typeof app.tripRisk !== 'function') return null;
         let ev = null, find = null;
         if (F.known(n)) {
             find = F.list(app, n, ids).find(x => x.target) || null;
-            if (!find || typeof find.risk !== 'number') return null;
-            if (find.kind !== 'event') return { hurt: find.risk, death: 0, deadly: false, oneIn: null };   // a site's or Eden's own card says its odds (its mark's number, as before)
+            if (!find || find.kind !== 'event' || typeof find.risk !== 'number') return null;   // a site's or Eden's own card says its odds (no number on the glass)
             ev = typeof EVENTS !== 'undefined' ? EVENTS.find(e => e.id === find.event) || null : null;
         } else if (!teamSite(app, n) && n.type !== 'EDEN') ev = typeof app.landingEventOf === 'function' ? app.landingEventOf(n) : null;
         if (!ev) return null;
-        const idx = way != null ? way : typeof app.sureWay === 'function' ? app.sureWay(ev) : null;
-        return F.oddsOf(app, n, ev, ids, { way: idx, find });
+        const idx = way != null ? way : find && Number.isInteger(find.way) ? find.way : typeof app.sureWay === 'function' ? app.sureWay(ev, ids || []) : null;
+        return { n, ev, find, idx };
+    }
+    /** A find's way chosen on the glass (stop/Words.js rows, through NewScreen.flow.way): kept on the world, node.nsWay[findId]
+        = the card's index (a new object each time; saved with the map). Only a row the glass shows for a find still open, and
+        not one a stress trait strikes (NSWorldFinds' row.struck: with ids at the hatch, their own traits). → bool */
+    function way(app, node, findId, idx, ids) {
+        const F = window.NSWorldFinds;
+        if (!app || !node || !F || !F.known(node) || !Number.isInteger(idx)) return false;
+        let find = null;
+        try { find = F.list(app, node, ids).find(f => f.id === findId && !f.done) || null; } catch (err) { console.error('NSOrbit: the find\'s way failed', err); return false; }
+        const row = find && (find.ways || []).find(r => r.idx === idx);
+        if (!row || row.struck) return false;
+        node.nsWay = Object.assign({}, node.nsWay, { [findId]: idx });
+        return true;
     }
     /** The hurt chance of teamOdds (GO DOWN's "risk N%"). */
     function teamRisk(app, ids, way) { const o = teamOdds(app, ids, way); return o ? o.hurt : null; }
@@ -662,9 +737,10 @@
         if (trip) return Promise.resolve({ ok: false, say: LINES.away });
         if (n.isStructure || n.type === 'STRUCTURE') return Promise.resolve({ ok: true, direct: true });   // it refuses itself
         if (n._isWrongPlace) return Promise.resolve({ ok: false });
-        if (call || n._nsCall) { dropCall(s); log(s, LINES.unanswered); }
-        if (!breachDue(s, n)) return Promise.resolve({ ok: true });
-        return playBreach(app, [], true).then(() => (trip ? { ok: false, say: LINES.away } : { ok: true }));   // the hull hit due here, nobody sent: it comes as we leave (asked again after its lines)
+        const left = !!(call || n._nsCall), v = left && NS() && NS().mods && NS().mods.voice;
+        if (left) { dropCall(s); log(s, LINES.unanswered); if (v && v.say) v.say({ id: 'aura', who: 'A.U.R.A.', text: LINES.unanswered }); }   // she says it on the bridge; the dive starts UNANSWERED_MS later (B07)
+        const said = left ? new Promise(go => setTimeout(go, UNANSWERED_MS)) : Promise.resolve();
+        return said.then(() => (!breachDue(s, n) ? { ok: true } : playBreach(app, [], true).then(() => (trip ? { ok: false, say: LINES.away } : { ok: true }))));   // the hull hit due here, nobody sent: it comes as we leave (asked again after its lines)
     }
 
     // ── the disc: Mira's star fix ──
@@ -684,8 +760,8 @@
     function deckChoices(state, deck) {
         const o = deckOf(state, deck);
         if (!o || !o.d || o.d.status !== 'DAMAGED') return [];
-        const out = [{ key: 'fix', words: 'Fix it', note: `costs ${fixCost(state, o.key)} salvage` }];
-        if (!o.d._nsWorn) out.push({ key: 'patch', words: 'Patch it', note: 'a little salvage, for now' });
+        const out = [{ key: 'fix', words: 'Fix it', note: `costs ${fixCost(state, o.key)} salvage`, cost: fixCost(state, o.key) }];   // cost: the repair plate's chip (B04)
+        if (!o.d._nsWorn) out.push({ key: 'patch', words: 'Patch it', note: 'a little salvage, for now', cost: PATCH_COST });
         const costs = deckCost(state, deck).map(c => c.text);
         out.push({ key: 'live', words: 'Live with it', note: costs.length ? costs.join(' · ') : 'it stays broken' });
         return out;
@@ -750,7 +826,7 @@
     }
 
     window.NSOrbit = Object.freeze({
-        actions, act, eligible, weak, holdLoss, lossOf, propose, teamRisk, teamOdds, fitOf, hasTeamAction, opened, signed, beforeLeave, whileDown, tripOver, tick, offerCall, fixIn, canDate, datable,
+        actions, act, eligible, weak, holdLoss, lossOf, propose, teamRisk, teamOdds, way, fitOf, helps, hasTeamAction, opened, signed, beforeLeave, whileDown, tripOver, tick, offerCall, fixIn, canDate, datable,
         breakPatched, deckChoices, deckCost, deckChoose, sign, scanDue, TELL, pool: app => evaCrew(app).slice(),
         trip: () => (trip ? { ids: trip.ids.slice(), aboard: trip.aboard.slice() } : null),
         debug: () => ({ trip: trip ? { ids: trip.ids, downDone: trip.downDone, over: !!trip.over, quiet: Math.round(trip.quiet) } : null, call: call ? call.title || true : null, breach: pendingBreach ? Math.round(pendingBreach.wait) : null, held: moments.held.map(e => e.id || e.title) }),

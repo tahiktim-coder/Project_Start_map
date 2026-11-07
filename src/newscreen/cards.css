@@ -1,21 +1,20 @@
 /* ═══ Silent Exodus · new screen (?new=1) · cards.css: the cards and pages in the new look ════════════════════════════
-   What it is: under the switch (html.ns-on, set by index.html's switch script), the encounter cards (EncounterCard.js:
-   distress calls, stations, mining, wrecks, crew moments, malfunctions, the head count, the settle council), the found
+   What it is: under the switch (html.ns-on, set by index.html's switch script), every event card is the frame (cards/
+   Frame.js, look pass B02; its rules are the last block of this file, on tokens.css), and the found
    pages (FoundPage.js) and the disc page (DiscDocument.js) take the slice's type and colours instead of the green
    dashboard: IBM Plex, ink #05070a, text #e4e4e0, dim #8b8d90, warm #f08c2e; a dark dithered backing over the scene in
    place of the bordered green panel, the glow and the blur; gains warm, losses a clear rose red (#ff5468, never mistaken for the warm). Every size to read is at
    least 14 px, chrome at least 12 px, every text colour at least 4.5:1 on the ink (docs/BUILD_B.md §7).
    CSS only: no markup, no script. The display and position of .enc-decide, .enc-choices and .enc-flow are never
    touched, so ChoiceGuard still places the choices away from the cursor and holds them for 400 ms.
-   Also the panels built on .deck-panel (the team-on-the-ground choice of every trip, .eva-panel, first of all; the deck,
-   crew and cargo panels when they show): ink, IBM Plex, the choices as words, the risk in steel, warm or red.
+   Also the panels built on .deck-panel (the deck, crew and cargo panels when they show): ink, IBM Plex, the choices as
+   words. A team trip's card is a frame (cards/TripCard.js, look pass B08), no longer a panel.
    Not here: the minigames, BoardingParty, StoryReel and the oldest .modal-content pop-ups, which keep today's look.
    Source: the tokens of prototypes/slice/index.html and the reading layer of prototypes/screens/game-screen/reading.css
    (verb-first choices with chips on the right, names in the crew's warm tones, A.U.R.A. in steel).
    Loaded only when the switch is on (index.html, after newscreen.css). */
 
 /* ── the tokens: the old variables the cards read are pointed at the new colours, on these overlays only ── */
-html.ns-on .modal-overlay:has(> .enc-card),
 html.ns-on .modal-overlay.disc-doc {
     --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --loss: #ff5468;
     --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
@@ -31,8 +30,7 @@ html.ns-on .modal-overlay.disc-doc {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ── the card: ink, no green border, no glow ── */
-html.ns-on .modal-overlay .enc-card,
+/* ── the page: ink, no green border, no glow ── */
 html.ns-on .modal-overlay .disc-doc-card {
     background: var(--ink) !important;
     border: 0 !important;
@@ -41,16 +39,7 @@ html.ns-on .modal-overlay .disc-doc-card {
     color: var(--text);
     scrollbar-color: rgba(201, 209, 214, 0.2) transparent;
 }
-html.ns-on .modal-overlay .enc-card { width: min(600px, calc(100vw - 32px)); max-width: 600px; }
-
-/* the accent of each card, in the new colours: a call for help red, A.U.R.A.'s and the station's warm, a crew moment steel */
-html.ns-on .enc-card[style*="#74d99a"],
-html.ns-on .enc-card[style*="#e08a3c"],
-html.ns-on .enc-card[style*="#d9a24a"] { --enc: var(--warm) !important; }
-html.ns-on .enc-card[style*="#d85a4e"] { --enc: var(--loss) !important; }
-html.ns-on .enc-card[style*="#c8c2b0"] { --enc: var(--ui) !important; }
-
-/* ── the head: a small line of caps, the title ── */
+/* ── the head of a page: a small line of caps, the title ── */
 html.ns-on .modal-overlay .enc-head { padding: 24px 28px 6px; }
 html.ns-on .modal-overlay .enc-kicker {
     gap: 4px 16px; margin: 0 0 8px;
@@ -60,15 +49,8 @@ html.ns-on .modal-overlay .enc-kicker span { color: var(--dim); letter-spacing: 
 html.ns-on .modal-overlay .enc-head h3 {
     font: 600 clamp(24px, 1.7vw, 30px)/1.15 var(--f-ui); letter-spacing: 0.02em; color: var(--text);
 }
-html.ns-on .modal-overlay .enc-signal { border-block: 0; opacity: 0.9; width: calc(100% - 56px); margin: 10px 28px 0; }
-html.ns-on .modal-overlay .enc-art { border-bottom: 0; }
 
-/* ── the talk: one line at a time, the speaker's first name over it ── */
-html.ns-on .modal-overlay .enc-stage { padding: 14px 28px 0; }
-html.ns-on .modal-overlay .enc-context { margin: 0 0 18px; font: 400 15px/1.6 var(--f-text); color: #b9bdc0; }
-html.ns-on .modal-overlay .enc-more { color: var(--ui); border-bottom-color: rgba(201, 209, 214, 0.4); }
-html.ns-on .modal-overlay .enc-more:hover,
-html.ns-on .modal-overlay .enc-more:focus-visible { color: var(--warm); border-bottom-color: var(--warm); outline: none; }
+/* ── a spoken line on a page or a trip's result: the face, the speaker's first name over the line ── */
 html.ns-on .modal-overlay .enc-face { border: 0; border-radius: 0; background: #0b0e12; }
 html.ns-on .modal-overlay .enc-face-aura { position: relative; font-size: 0; color: transparent; }
 html.ns-on .modal-overlay .enc-face-aura::before {
@@ -79,53 +61,36 @@ html.ns-on .modal-overlay .enc-line p { font: 400 clamp(17px, 1.15vw, 20px)/1.45
 html.ns-on .modal-overlay .enc-line b {
     margin-bottom: 6px; font: 500 14px/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text) !important;
 }
-/* the crew's warm tones, A.U.R.A. in steel (EncounterCard writes today's colour inline; each is matched here) */
-html.ns-on .modal-overlay .enc-line b[style*="#74d99a"] { color: var(--ui) !important; }
-html.ns-on .modal-overlay .enc-line b[style*="#f0a030"] { color: #f08c2e !important; }
-html.ns-on .modal-overlay .enc-line b[style*="#40c8ff"] { color: #ffc27a !important; }
-html.ns-on .modal-overlay .enc-line b[style*="#ff5050"] { color: #c4622a !important; }
-html.ns-on .modal-overlay .enc-line b[style*="#d070ff"] { color: #e8836a !important; }
+/* the gains and costs marked inside a line are words of the line, never a name's row (EncounterCard markRewards; the name is .enc-who) */
+html.ns-on .modal-overlay .enc-line b:is(.is-gain, .is-loss) { display: inline; margin: 0; font: 400 1em/1 var(--f-num); letter-spacing: 0; text-transform: none; }
+html.ns-on .modal-overlay .enc-line b.is-gain { color: var(--warm) !important; }
+html.ns-on .modal-overlay .enc-line b.is-loss { color: var(--loss) !important; }
+/* the crew's warm tones, A.U.R.A. in steel (EncounterCard writes today's colour inline; each is matched here; tokens.css) */
+html.ns-on .modal-overlay .enc-line b[style*="#74d99a"] { color: var(--tone-aura) !important; }
+html.ns-on .modal-overlay .enc-line b[style*="#f0a030"] { color: var(--tone-jaxon) !important; }
+html.ns-on .modal-overlay .enc-line b[style*="#40c8ff"] { color: var(--tone-aris) !important; }
+html.ns-on .modal-overlay .enc-line b[style*="#ff5050"] { color: var(--tone-vance) !important; }
+html.ns-on .modal-overlay .enc-line b[style*="#d070ff"] { color: var(--tone-mira) !important; }
 
-/* ── NEXT and skip: words, not buttons ── */
+/* ── a trip result's CONTINUE: a word, not a button (the frame's keys are .mini-btn, never these rules) ── */
 html.ns-on .modal-overlay .enc-flow { padding: 16px 28px 0; }
-html.ns-on .modal-overlay .enc-pips i { width: 6px; height: 6px; background: rgba(201, 209, 214, 0.18); }
-html.ns-on .modal-overlay .enc-pips i.is-on { background: var(--enc); }
-html.ns-on .modal-overlay .enc-skip { font: 400 13px/1 var(--f-num); color: var(--dim); }
-html.ns-on .modal-overlay .enc-skip:hover,
-html.ns-on .modal-overlay .enc-skip:focus-visible { color: var(--text); outline: none; }
-html.ns-on .modal-overlay .enc-next {
+html.ns-on .modal-overlay .enc-next:not(.mini-btn) {
     padding: 10px 4px 10px 12px; background: none; border: 0; border-radius: 0;
     font: 500 16px/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--text);
     transition: color 140ms ease, transform 140ms ease;
 }
-html.ns-on .modal-overlay .enc-next:hover,
-html.ns-on .modal-overlay .enc-next:focus-visible { background: none; color: var(--warm); transform: translateX(3px); outline: none; }
+html.ns-on .modal-overlay .enc-next:not(.mini-btn):hover,
+html.ns-on .modal-overlay .enc-next:not(.mini-btn):focus-visible { background: none; color: var(--warm); transform: translateX(3px); outline: none; }
 
-/* ── the choices: a verb first, what it costs and gives on the right; pointing at one turns it warm ── */
-html.ns-on .modal-overlay .enc-decide { margin-top: 18px; padding-top: 12px; border-top: 0; }
-html.ns-on .modal-overlay .enc-choices { gap: 2px; padding: 0 20px; }
-html.ns-on .modal-overlay .enc-choice {
-    gap: 6px 16px; padding: 10px 8px; background: none; border: 0; border-radius: 0;
-    font: 400 clamp(17px, 1.1vw, 19px)/1.3 var(--f-text); letter-spacing: 0; color: var(--text);
-    transition: color 140ms ease, transform 140ms ease, background 140ms ease;
-}
-html.ns-on .modal-overlay .enc-choice:hover:not([disabled]),
-html.ns-on .modal-overlay .enc-choice:focus-visible {
-    background: rgba(240, 140, 46, 0.07); border-color: transparent; color: var(--warm); transform: translateX(3px); outline: none;
-}
-html.ns-on .modal-overlay .enc-choice:active:not([disabled]) { color: var(--warm-br); transform: translateX(0); }
-html.ns-on .modal-overlay .enc-choice[disabled] { opacity: 1; color: var(--dim); border-style: none; }
+/* ── a trip result's chips (EncounterCard outcomeIn): plain Mono numbers, gains warm, costs red ── */
+html.ns-on .modal-overlay .enc-decide:not(.ef-choices) { margin-top: 18px; padding-top: 12px; border-top: 0; }
 html.ns-on .modal-overlay .enc-chips { gap: 4px 14px; }
 html.ns-on .modal-overlay .enc-chips i { padding: 0; border: 0; border-radius: 0; font: 400 14px/1.3 var(--f-num); color: var(--ui); }
 html.ns-on .modal-overlay .enc-chips .is-gain { color: var(--warm); border: 0; }
 html.ns-on .modal-overlay .enc-chips .is-loss { color: var(--loss); border: 0; }
-/* long tags wrap inside the card instead of pushing it sideways (the ending card scrolled sideways, its reasons cut off) */
-html.ns-on .modal-overlay .enc-choice > span:first-child { flex: 1 1 14em; min-width: 0; }
 html.ns-on .modal-overlay .enc-chips { flex: 0 1 auto; min-width: 0; max-width: 100%; }
 html.ns-on .modal-overlay .enc-chips i { white-space: normal; overflow-wrap: anywhere; }
-html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips { flex-basis: 100%; }                  /* why it is closed: its own quiet line under the words */
-html.ns-on .modal-overlay .enc-choice[disabled] .enc-chips i { font: 400 14px/1.4 var(--f-text); color: #c98a7c; }
-html.ns-on .modal-overlay .modal-content, html.ns-on .modal-overlay .enc-card { overflow-x: hidden; }
+html.ns-on .modal-overlay .modal-content { overflow-x: hidden; }
 /* ── what a choice did: it takes the choices' place, then CONTINUE (EncounterCard showOutcome) ── */
 html.ns-on .modal-overlay .enc-outcome { display: grid; gap: 12px; padding: 0 28px; }
 html.ns-on .modal-overlay .enc-outcome-pick { margin: 0 0 2px; font: 500 12px/1.4 var(--f-num); letter-spacing: .12em; text-transform: uppercase; color: var(--warm); }
@@ -133,17 +98,25 @@ html.ns-on .modal-overlay .enc-outcome-line { margin: 0; font: 400 clamp(16px, 1
 html.ns-on .modal-overlay .enc-outcome .is-gain { color: var(--warm); }
 html.ns-on .modal-overlay .enc-outcome .is-loss { color: var(--loss); }
 html.ns-on .modal-overlay .enc-outcome-flow { display: flex; justify-content: flex-end; margin-top: 18px; }
-/* the place the gap or the fold throws us to arrives behind a quiet veil (the old cyan and red flashes are gone) */
-html.ns-on .ns-fold-veil { position: fixed; inset: 0; z-index: 9000; pointer-events: none; background: #f2eee4; animation: ns-fold 1.6s ease-out forwards; }
-html.ns-on .ns-fold-veil.is-wrong { background: #1d050b; }
-@keyframes ns-fold { 0% { opacity: 0; } 25% { opacity: 1; } 100% { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { html.ns-on .ns-fold-veil { animation-duration: 10ms; } }
-/* the note on the choice you point at: under a hairline, quieter than the choices, and it names its choice */
-html.ns-on .modal-overlay .enc-detail { margin: 10px 28px 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.08); font: italic 400 14px/1.5 var(--f-text); color: #9a9fa3; }
-html.ns-on .modal-overlay .enc-detail:empty { border-top-color: transparent; }
-html.ns-on .modal-overlay .enc-detail-of { margin-right: 8px; font: 500 12px/1.5 var(--f-num); letter-spacing: .08em; text-transform: uppercase; color: var(--warm); }
-html.ns-on .modal-overlay .enc-detail .is-gain { color: var(--warm); }
-html.ns-on .modal-overlay .enc-detail .is-loss { color: var(--loss); }
+/* the gap throws us on (C82): a dithered bloom from the gap's seam, 6 steps of 150 ms. Sparse warm-br at the seam, a wider band
+   of warm-br and ink, nearly the whole width ink with a few warm points, then the dark itself, edge to edge (the new sector is
+   drawn under it at 450 ms, bundle.js handleAnomalyTeleport), and out through two thinning dithers: gone before the new
+   sector's first line. The bloom never covers the screen with a pattern: only the dark is edge to edge */
+html.ns-on .ns-fold-veil {
+    position: fixed; inset: 0; z-index: 9000; pointer-events: none;
+    background: conic-gradient(var(--warm-br) 0 25%, transparent 0) 0 0 / 4px 4px;
+    animation: ns-fold calc(15 * var(--step-ui)) steps(1, end) forwards;
+}
+@keyframes ns-fold {
+    0% { clip-path: inset(0 44% 0 44%); background: conic-gradient(var(--warm-br) 0 25%, transparent 0) 0 0 / 4px 4px; }
+    16.66% { clip-path: inset(0 27% 0 27%); background: repeating-conic-gradient(var(--warm-br) 0 25%, var(--ink) 0 50%) 0 0 / 4px 4px; }
+    33.33% { clip-path: inset(0 8% 0 8%); background: conic-gradient(var(--warm-br) 0 25%, var(--ink) 0) 0 0 / 8px 8px; }
+    50% { clip-path: inset(0 0 0 0); background: var(--ink); }
+    66.66% { clip-path: inset(0 0 0 0); background: repeating-conic-gradient(var(--ink) 0 25%, transparent 0 50%) 0 0 / 4px 4px; }
+    83.33% { clip-path: inset(0 0 0 0); background: conic-gradient(var(--ink) 0 25%, transparent 0) 0 0 / 4px 4px; }
+    100% { clip-path: inset(0 0 0 0); background: transparent; }
+}
+@media (prefers-reduced-motion: reduce) { html.ns-on .ns-fold-veil { background: var(--ink); animation: none; } }
 
 /* ── a found page and the disc: the object on the left, its words on the right ── */
 html.ns-on .modal-overlay .disc-doc-card .enc-kicker { color: var(--dim) !important; }
@@ -186,12 +159,14 @@ html.ns-on .modal-overlay.disc-doc.find-view { background: repeating-conic-gradi
 /* a window too small for the thing and its words: the view scrolls (top first), it never cuts the title or KEEP IT off */
 html.ns-on .modal-overlay.disc-doc.find-view { overflow-y: auto; align-items: safe center; }
 html.ns-on .modal-overlay .disc-doc-card.find-card {
-    --chrome: 272px; --room: calc(100vh - var(--chrome));
+    --chrome: 224px; --room: calc(100vh - var(--chrome));   /* the kicker, the spoken line and the key (no title since look pass B12) */
     width: var(--obj-w); max-width: none; max-height: none; overflow: visible !important; padding: 0;
     background: none !important; box-shadow: none !important; user-select: none; -webkit-user-select: none;
 }
 html.ns-on .modal-overlay .find-card .enc-head { padding: 0 0 14px; }
-html.ns-on .modal-overlay .find-card .enc-kicker { margin-bottom: 6px; letter-spacing: 0.2em; white-space: normal; }   /* wraps in a narrow window, never runs off */
+/* the kicker is the source only (look pass B12): Condensed 500 14 .22em --dim, one line at 1280; no title under it */
+html.ns-on .modal-overlay .find-card .enc-kicker { display: block; margin: 0; font-size: var(--fs-floor); letter-spacing: 0.22em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html.ns-on .modal-overlay .disc-doc-card.find-card:focus { outline: none; }   /* the card holds the focus on open (NSFinds.settle): nothing lights */
 html.ns-on .modal-overlay .find-card .enc-head h3 { margin: 0; }
 html.ns-on .modal-overlay .find-stage { position: relative; }
 html.ns-on .modal-overlay .find-object { position: relative; width: var(--obj-w); height: var(--obj-h); cursor: default; }
@@ -207,46 +182,50 @@ html.ns-on .modal-overlay .find-card .deck-panel-actions { margin-top: 10px; pad
 html.ns-on .modal-overlay .find-card .deck-action { padding: 10px 0; }
 html.ns-on .modal-overlay .find-card .deck-action:hover:not([disabled]),
 html.ns-on .modal-overlay .find-card .deck-action:focus-visible { background: none; }
+/* a find opened under a resting cursor: its key wakes only once the pointer has really moved (.is-armed, NSFinds.settle) */
+html.ns-on .modal-overlay .find-card:not(.is-armed) .deck-action:hover:not([disabled]):not(:focus-visible) { color: var(--text); transform: none; }
 
 /* a printed page: the paper turned a little, Earth's letterhead, a stamp, the lines typed on it in dark ink */
 html.ns-on .modal-overlay .find-card.is-paper { --obj-h: min(800px, var(--room)); --obj-w: max(calc(var(--obj-h) / 1.25), min(480px, calc(100vw - 64px))); }   /* a short window: a wider page, fewer lines */
-html.ns-on .modal-overlay .find-paper { transform: rotate(-1.5deg); font-size: clamp(15px, calc(var(--obj-w) * 0.0285), 19px); }
+html.ns-on .modal-overlay .find-paper { transform: rotate(-1.5deg); font-size: clamp(16px, calc(var(--obj-w) * 0.0285), 19px); }   /* typed lines 16 px or more (B12) */
 html.ns-on .modal-overlay .find-face { position: absolute; inset: 0; padding: 7.2% 8.2% 6%; color: #221e17; }
+html.ns-on .modal-overlay .find-face.is-tight { padding: 5% 5.6% 4.4%; }   /* a short window: the margins give before the type (B12) */
 html.ns-on .modal-overlay .find-letterhead {
     display: flex; align-items: center; gap: 0.75em; margin: 0 0 1.5em; padding-bottom: 0.75em;
-    border-bottom: 3px double rgba(37, 52, 90, 0.72); color: #25345a; font: 600 clamp(11px, calc(var(--obj-w) * 0.0235), 16px)/1 var(--f-ui); letter-spacing: 0.28em;
+    border-bottom: 3px double rgba(37, 52, 90, 0.72); color: #25345a; font: 600 clamp(13px, calc(var(--obj-w) * 0.0235), 16px)/1 var(--f-ui); letter-spacing: 0.28em;
 }
 html.ns-on .modal-overlay .find-emblem { flex: none; width: 50px; height: 50px; image-rendering: pixelated; image-rendering: crisp-edges; }
-html.ns-on .modal-overlay .find-paper .find-typed { font: 400 1em/1.52 'Courier Prime', 'Courier New', monospace; color: #221e17; text-shadow: 0 0 0.6px rgba(34, 30, 23, 0.55); }
+html.ns-on .modal-overlay .find-paper .find-typed { font: 400 1em/1.52 var(--f-paper); color: #221e17; text-shadow: 0 0 0.6px rgba(34, 30, 23, 0.55); }
 html.ns-on .modal-overlay .find-paper .find-line { margin: 0 0 0.85em; }
 html.ns-on .modal-overlay .find-pen { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 html.ns-on .modal-overlay .find-pen path { fill: none; stroke: #1d2656; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; opacity: 0.86; }
 html.ns-on .modal-overlay .find-stamp {
     position: absolute; right: 7%; top: 4.6%; margin: 0; padding: 0.34em 0.62em 0.28em 0.82em;
     border: 3px solid currentColor; outline: 1.5px solid currentColor; outline-offset: 3px;
-    color: #ad3328; font: 600 clamp(14px, calc(var(--obj-w) * 0.036), 23px)/1 var(--f-ui); letter-spacing: 0.2em; text-align: center;
-    transform: rotate(-8deg); opacity: 0.8; mix-blend-mode: multiply;
+    color: #93261c; font: 600 clamp(14px, calc(var(--obj-w) * 0.036), 23px)/1 var(--f-ui); letter-spacing: 0.2em; text-align: center;   /* B12: with no title, the stamp says it: 4.5:1 or more */
+    transform: rotate(-8deg); opacity: 0.9; mix-blend-mode: multiply;
     -webkit-mask-size: 256px 256px; mask-size: 256px 256px;
 }
-html.ns-on .modal-overlay .find-stamp.is-long { max-width: 9.5em; font-size: clamp(12px, calc(var(--obj-w) * 0.028), 18px); line-height: 1.12; transform: rotate(-6deg); top: 3.4%; right: 6%; }
+html.ns-on .modal-overlay .find-stamp.is-long { max-width: 9.5em; font-size: clamp(14px, calc(var(--obj-w) * 0.028), 18px); line-height: 1.12; transform: rotate(-6deg); top: 3.4%; right: 6%; }
 
-/* a captain's log: a dead ship's screen in its housing, the lines typed out in phosphor, a block cursor, scanlines, a flicker */
+/* a captain's log: a dead ship's screen in its housing, the lines typed out in steel on blue-black glass (look pass B12: space
+   colours, not green), a block cursor, scanlines, a roll and a flicker; the glass is as tall as its words and two lines (Finds.js) */
 html.ns-on .modal-overlay .find-card.is-log { --obj-w: min(900px, calc(100vw - 64px), calc(var(--room) / 0.66)); --obj-h: calc(var(--obj-w) * 0.66); }
 html.ns-on .modal-overlay .find-glass { position: absolute; overflow: hidden; border-radius: 10px; }
 html.ns-on .modal-overlay .find-screen {
     position: relative; height: 100%; padding: 1.25em 1.55em; overflow: hidden;
-    font: 400 clamp(15px, calc(var(--obj-w) * 0.0205), 19px)/1.52 var(--f-num); color: #8ae9ab;
-    text-shadow: 0 0 5px rgba(110, 231, 160, 0.5), 0 0 16px rgba(110, 231, 160, 0.16);
+    font: 400 clamp(15px, calc(var(--obj-w) * 0.0205), 19px)/1.52 var(--f-num); color: var(--ui);
+    text-shadow: 0 0 5px color-mix(in srgb, var(--cool) 42%, transparent), 0 0 16px color-mix(in srgb, var(--cool) 12%, transparent);
     animation: find-flicker 7.3s steps(1, end) infinite;
 }
 html.ns-on .modal-overlay .find-log-head {
     display: flex; justify-content: space-between; gap: 1.5em; margin: 0 0 1.05em; padding-bottom: 0.5em;
-    border-bottom: 1px dashed rgba(138, 233, 171, 0.32); color: #5cbf86; letter-spacing: 0.14em;
+    border-bottom: 1px dashed color-mix(in srgb, var(--dim) 40%, transparent); color: var(--dim); letter-spacing: 0.14em; text-shadow: none;
 }
 html.ns-on .modal-overlay .find-screen .find-line { margin: 0 0 0.85em; }
 html.ns-on .modal-overlay .find-cursor {
     position: absolute; left: 0; top: 0; width: 0.62em; height: 1.2em; margin-top: 0.12em;
-    background: #8ae9ab; box-shadow: 0 0 9px rgba(110, 231, 160, 0.6); animation: find-blink 1.06s steps(1, end) infinite;
+    background: var(--ui); box-shadow: 0 0 9px color-mix(in srgb, var(--cool) 50%, transparent); animation: find-blink 1.06s steps(1, end) infinite;
 }
 html.ns-on .modal-overlay .find-cursor.is-typing { animation: none; }
 html.ns-on .modal-overlay .find-glass::after {
@@ -255,42 +234,47 @@ html.ns-on .modal-overlay .find-glass::after {
 }
 html.ns-on .modal-overlay .find-glass::before {
     content: ''; position: absolute; left: 0; right: 0; top: 0; height: 28%; pointer-events: none; z-index: 1;
-    background: linear-gradient(to bottom, transparent, rgba(138, 233, 171, 0.05), transparent);
+    background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--ui) 5%, transparent), transparent);
     animation: find-roll 9s linear infinite;
 }
 @keyframes find-blink { 50% { opacity: 0; } }
 @keyframes find-flicker { 0% { opacity: 1; } 41% { opacity: 0.93; } 42% { opacity: 1; } 73% { opacity: 0.96; } 74% { opacity: 1; } 91% { opacity: 0.9; } 92% { opacity: 1; } }
 @keyframes find-roll { from { transform: translateY(-100%); } to { transform: translateY(460%); } }
 
-/* the crew plate: the names cast into it; its three lines quietly under it, one at a time */
-html.ns-on .modal-overlay .find-card.is-plate { --obj-w: min(840px, calc(100vw - 64px), calc((var(--room) - 92px) / 0.6)); --obj-h: calc(var(--obj-w) * 0.6); }
-html.ns-on .modal-overlay .find-quiet { display: grid; gap: 6px; margin-top: 16px; font: 400 clamp(16px, 1.05vw, 18px)/1.5 var(--f-text); color: #aeb3b6; }
-html.ns-on .modal-overlay .find-quiet .find-line { margin: 0; opacity: 0; transition: opacity 700ms ease; text-wrap: pretty; }
+/* the crew plate: the names cast into it; one crew line under it (look pass B12, C69); lines, when a page has them, quietly under it */
+html.ns-on .modal-overlay .find-card.is-plate { --obj-w: min(840px, calc(100vw - 64px), calc(var(--room) / 0.6)); --obj-h: calc(var(--obj-w) * 0.6); }
+html.ns-on .modal-overlay .find-quiet { display: grid; gap: 6px; margin-top: 16px; font: 400 clamp(16px, 1.05vw, 18px)/1.5 var(--f-text); color: var(--text-2); }
+html.ns-on .modal-overlay .find-quiet .find-line { margin: 0; opacity: 0; transition: opacity calc(4 * var(--step-ui)) steps(4, end); text-wrap: pretty; }
 html.ns-on .modal-overlay .find-quiet .find-line.is-in { opacity: 1; }
 
 /* the disc drawing: a logbook page, the disc in pencil, notes written beside the parts, K.'s question in pen in the margin */
 html.ns-on .modal-overlay .find-card.is-sketch { --obj-w: min(1080px, calc(100vw - 64px), calc(var(--room) / 0.64)); --obj-h: calc(var(--obj-w) * 0.64); }
 html.ns-on .modal-overlay .find-sketch { transform: rotate(0.7deg); }
 html.ns-on .modal-overlay .find-leaders { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-html.ns-on .modal-overlay .find-leaders g { opacity: 0; transition: opacity 600ms ease; }
+html.ns-on .modal-overlay .find-leaders g { opacity: 0; transition: opacity calc(4 * var(--step-ui)) steps(4, end); }   /* every appear in steps (B12) */
 html.ns-on .modal-overlay .find-leaders g.is-in { opacity: 1; }
 html.ns-on .modal-overlay .find-sketch .find-leaders path { fill: none; stroke: #5a564e; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; opacity: 0.9; }
 html.ns-on .modal-overlay .find-spot { position: absolute; border-radius: 50%; cursor: pointer; }
 html.ns-on .modal-overlay .find-note {
     position: absolute; display: block; margin: 0; padding: 0; background: none; border: 0; text-align: left; cursor: pointer;
-    color: #35322d; opacity: 0; transition: opacity 600ms ease, color 160ms ease;
+    color: #35322d; opacity: 0; transition: opacity calc(4 * var(--step-ui)) steps(4, end), color calc(2 * var(--step-ui)) steps(2, end);
 }
 html.ns-on .modal-overlay .find-note.is-in { opacity: 1; }
 html.ns-on .modal-overlay .find-note:focus-visible { outline: 1px dashed rgba(53, 50, 45, 0.5); outline-offset: 6px; }
-html.ns-on .modal-overlay .find-sketch .find-note b { display: block; margin-bottom: 0.32em; font: 600 clamp(13px, calc(var(--obj-w) * 0.0135), 15px)/1.2 var(--f-ui); letter-spacing: 0.16em; color: #4a463f; transition: color 160ms ease; }
+html.ns-on .modal-overlay .find-sketch .find-note b { display: block; margin-bottom: 0.32em; font: 600 clamp(14px, calc(var(--obj-w) * 0.0135), 15px)/1.2 var(--f-ui); letter-spacing: 0.16em; color: #4a463f; transition: color calc(2 * var(--step-ui)) steps(2, end); }
 html.ns-on .modal-overlay .find-sketch .find-note > span { display: block; font: 500 clamp(15px, calc(var(--obj-w) * 0.0168), 19px)/1.38 var(--f-ui); letter-spacing: 0.01em; }
 html.ns-on .modal-overlay .find-sketch .find-note b > span, html.ns-on .modal-overlay .find-sketch .find-note > span > span { display: inline-block; }
 html.ns-on .modal-overlay .find-note.is-pen { transform: rotate(-1.6deg); color: #22306c; }
 html.ns-on .modal-overlay .find-note.is-pen > span { font: 500 clamp(16px, calc(var(--obj-w) * 0.0168), 19px)/1.32 var(--f-ui); letter-spacing: 0.01em; }
-/* pointing at a part: it and its note stand out, the others step back */
-html.ns-on .modal-overlay .find-object[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]) { opacity: 0.38; }
+/* pointing at a part: it and its note stand out, the others step back (look pass B12: in colour, at 4.5:1 or more on their
+   ground, never in opacity; the paper keeps its colour and the part gets a pencil ring, FindArt.sketchFocus) */
+html.ns-on .modal-overlay .find-sketch[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]),
+html.ns-on .modal-overlay .find-sketch[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]) b { color: #514d45; }   /* pencil, 4.6:1 on the page where it is darkest */
+html.ns-on .modal-overlay .find-sketch[data-focus]:not([data-focus=""]) .find-note.is-pen.is-in:not([aria-pressed="true"]) { color: #3d477a; }   /* pen, 4.6:1 at the darkest */
+html.ns-on .modal-overlay .find-gold[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]) b { color: #a08a5e; }   /* 5.9:1 on the ink */
+html.ns-on .modal-overlay .find-gold[data-focus]:not([data-focus=""]) .find-note.is-in:not([aria-pressed="true"]) > span { color: var(--dim); }
 html.ns-on .modal-overlay .find-sketch .find-note[aria-pressed="true"] { color: #16140f; }
-html.ns-on .modal-overlay .find-sketch .find-note[aria-pressed="true"] b { color: #a3402c; }
+html.ns-on .modal-overlay .find-sketch .find-note[aria-pressed="true"] b { color: #85301f; }   /* the red head, about 5:1 on the page (4.6:1 at the darkest) */
 html.ns-on .modal-overlay .find-object[data-focus="disc"] .find-leaders g:not([data-key="disc"]),
 html.ns-on .modal-overlay .find-object[data-focus="map"] .find-leaders g:not([data-key="map"]),
 html.ns-on .modal-overlay .find-object[data-focus="figures"] .find-leaders g:not([data-key="figures"]),
@@ -302,8 +286,9 @@ html.ns-on .modal-overlay .find-card.is-gold .enc-head { text-align: center; }
 html.ns-on .modal-overlay .find-card.is-gold .enc-kicker { justify-content: center; }
 html.ns-on .modal-overlay .find-card.is-gold .find-said,
 html.ns-on .modal-overlay .find-card.is-gold .deck-panel-actions { width: min(100%, var(--disc)); margin-left: auto; margin-right: auto; }
-html.ns-on .modal-overlay .find-gold .find-note b { display: block; margin-bottom: 0.45em; font: 500 13px/1.2 var(--f-ui); letter-spacing: 0.26em; color: #e3c27e; transition: color 160ms ease; }
+html.ns-on .modal-overlay .find-gold .find-note b { display: block; margin-bottom: 0.45em; font: 500 var(--fs-floor)/1.2 var(--f-ui); letter-spacing: 0.26em; color: #e3c27e; transition: color calc(2 * var(--step-ui)) steps(2, end); }
 html.ns-on .modal-overlay .find-gold .find-note > span { display: block; font: 300 clamp(15px, 1vw, 18px)/1.5 var(--f-text); color: #d9d3c6; }
+@media (max-width: 1600px) { html.ns-on .modal-overlay .find-gold .find-note > span { font-weight: 400; } }   /* 16 px or less: no light weight (B12) */
 html.ns-on .modal-overlay .find-gold .find-note.is-left { text-align: right; }
 html.ns-on .modal-overlay .find-gold .find-note[aria-pressed="true"] b { color: #ffe6a0; }
 html.ns-on .modal-overlay .find-gold .find-note[aria-pressed="true"] > span { color: #f3eee2; }
@@ -316,8 +301,7 @@ html.ns-on .modal-overlay .find-gold .find-leaders circle { fill: none; stroke: 
     html.ns-on .modal-overlay .find-note, html.ns-on .modal-overlay .find-leaders g, html.ns-on .modal-overlay .find-quiet .find-line { transition: none; }
 }
 
-/* ── the panels on .deck-panel: the team on the ground (every trip's one decision), and the deck, crew and cargo panels ──
-   The markup and the handlers are bundle's (showEventModal); only the look changes. Risk: low steel, middling warm, high red. */
+/* ── the panels on .deck-panel: the deck, crew and cargo panels ── The markup and the handlers are bundle's; only the look changes. */
 html.ns-on .modal-overlay:has(> .deck-panel:not(.enc-card):not(.disc-doc-card)) {
     --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --ui: #c9d1d6; --warm: #f08c2e; --warm-br: #ffc27a; --loss: #ff5468;
     --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif;
@@ -336,7 +320,6 @@ html.ns-on .modal-overlay .deck-panel:not(.enc-card):not(.disc-doc-card) {
     box-shadow: 0 0 0 1px rgba(201, 209, 214, 0.07), 0 30px 80px rgba(0, 0, 0, 0.7) !important;
     color: var(--text); font-family: var(--f-text); padding-bottom: 22px;
 }
-html.ns-on .modal-overlay .eva-panel { width: min(600px, calc(100vw - 32px)); max-width: 600px; }
 html.ns-on .modal-overlay .deck-panel-head { padding: 24px 28px 10px; gap: 6px 16px; flex-wrap: wrap; }
 html.ns-on .modal-overlay .deck-panel-head h3 { font: 600 clamp(24px, 1.7vw, 30px)/1.15 var(--f-ui); letter-spacing: 0.02em; text-transform: none; color: var(--text); }
 html.ns-on .modal-overlay .deck-panel.is-damaged .deck-panel-head h3 { color: var(--text); }
@@ -350,12 +333,7 @@ html.ns-on .modal-overlay .deck-panel-crew { padding: 2px 28px 12px; display: fl
 html.ns-on .modal-overlay .deck-panel-crew li { gap: 10px; padding: 4px 0; font: 500 16px/1.2 var(--f-ui); letter-spacing: 0.04em; }
 html.ns-on .modal-overlay .deck-panel-face { width: 36px; height: 36px; border: 0; border-radius: 0; image-rendering: pixelated; background: #0b0e12; }
 html.ns-on .modal-overlay .deck-panel-name { color: var(--text); }
-html.ns-on .modal-overlay .eva-team .deck-panel-mood { display: none; }               /* "on the ground" twice over: the head already says it */
 html.ns-on .modal-overlay .deck-panel-mood { font: 400 13px/1.2 var(--f-num); letter-spacing: 0; color: var(--dim); }
-html.ns-on .modal-overlay .eva-found { padding: 6px 28px 16px; font: 400 clamp(17px, 1.15vw, 20px)/1.5 var(--f-text); color: var(--text); text-wrap: pretty; }
-html.ns-on .modal-overlay .eva-voice { padding: 0 28px 14px; font: 400 16px/1.45 var(--f-text); }
-html.ns-on .modal-overlay .eva-voice[style*="#ff5050"] { color: #c4622a !important; }
-html.ns-on .modal-overlay .eva-voice[style*="#d070ff"] { color: #e8836a !important; }
 html.ns-on .modal-overlay .deck-panel-facts { grid-template-columns: auto 1fr; gap: 6px 16px; padding: 0 28px 16px; font: 400 15px/1.55 var(--f-text); }
 html.ns-on .modal-overlay .deck-panel-facts dt { font: 500 13px/1.6 var(--f-ui); letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim); padding-top: 0; }
 html.ns-on .modal-overlay .deck-panel-facts dd { color: #b9bdc0; }
@@ -379,35 +357,234 @@ html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action:focus-vis
 html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action:active:not([disabled]) { color: var(--warm-br); transform: translateX(0); }
 html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action[disabled] { opacity: 1; color: var(--dim); }
 html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action-repair { color: var(--warm); }
-html.ns-on .modal-overlay .eva-choice { text-align: left; }
-html.ns-on .modal-overlay .eva-choice > span { align-items: flex-start; text-align: left; }
-html.ns-on .modal-overlay .eva-choice .eva-gets { font: 400 14px/1.3 var(--f-num); letter-spacing: 0; text-transform: none; color: var(--warm); }
-html.ns-on .modal-overlay .eva-choice small { min-width: 170px; gap: 6px; white-space: nowrap; }
-html.ns-on .modal-overlay .eva-risk { height: 2px; background: rgba(201, 209, 214, 0.14); }
 
 @media (max-height: 820px) {
     html.ns-on .modal-overlay .enc-head { padding: 16px 28px 4px; }
-    html.ns-on .modal-overlay .enc-context { margin-bottom: 12px; }
-    html.ns-on .modal-overlay .enc-decide { margin-top: 10px; padding-top: 8px; }
+    html.ns-on .modal-overlay .enc-decide:not(.ef-choices) { margin-top: 10px; padding-top: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
-    html.ns-on .modal-overlay .enc-choice, html.ns-on .modal-overlay .enc-next, html.ns-on .modal-overlay .disc-doc-note,
+    html.ns-on .modal-overlay .enc-next:not(.mini-btn), html.ns-on .modal-overlay .disc-doc-note,
     html.ns-on .modal-overlay .disc-doc-card .deck-action, html.ns-on .modal-overlay .deck-panel:not(.disc-doc-card) .deck-action { transition: none; }
 }
 
-/* ── something found lands in the hold (src/systems/ItemIcons.js toast): a small glass note low on the right, in the bridge
-      tags' language (the house dither for glass, two corner brackets), under any card; ItemIcons waits until no card is up ── */
-html.ns-on #item-toasts { right: max(16px, 2vw); bottom: max(16px, 4vh); z-index: 2400; gap: 10px; }
-html.ns-on .item-toast {
-    position: relative; gap: 14px; padding: 10px 22px 10px 12px; border: 0;
-    background: repeating-conic-gradient(rgba(5, 7, 10, 0.94) 0 25%, rgba(5, 7, 10, 0.62) 0 50%) 0 0 / 4px 4px;
-    box-shadow: none; text-shadow: 0 1px 0 #05070a; animation: ns-toast-in 360ms steps(4, end);
+/* ── FOUND (src/systems/ItemIcons.js, look pass B03, C25): a mini frame docked beside the tower's hold deck (is-docked; on the
+      bridge, low on the right), one find at a time with the count ("FOUND · 3"): the icon at 2x, FOUND in the who style, the
+      name in Sans 16, on the voice shade, a hairline. Under every card; at the end of its turn the icon steps into the hold ── */
+html.ns-on #item-toasts { right: var(--s4); bottom: max(16px, 4vh); z-index: 950; display: block; }
+html.ns-on .item-toast.is-found {
+    display: flex; align-items: center; gap: var(--s3); padding: var(--s2) var(--s4) var(--s2) var(--s2); border: 0;
+    background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 92%, transparent) 0 25%, color-mix(in srgb, var(--ink) 62%, transparent) 0 50%) 0 0 / 2px 2px; box-shadow: 0 0 0 1px rgba(201, 209, 214, 0.07); text-shadow: var(--shadow);
+    animation: ef-step calc(2 * var(--step-ui)) steps(2, end) both;
 }
-html.ns-on .item-toast::before, html.ns-on .item-toast::after { content: ''; position: absolute; width: 9px; height: 9px; border: 1px solid rgba(201, 209, 214, 0.55); pointer-events: none; }
-html.ns-on .item-toast::before { left: 0; top: 0; border-right: 0; border-bottom: 0; }
-html.ns-on .item-toast::after { right: 0; bottom: 0; border-left: 0; border-top: 0; }
-html.ns-on .item-toast p { font: 400 16px/1.3 'IBM Plex Sans', system-ui, sans-serif; color: #e4e4e0; }
-html.ns-on .item-toast b { margin-bottom: 3px; font: 600 12px/1.2 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; letter-spacing: 0.22em; color: #f08c2e; }
-html.ns-on .item-toast.is-leaving { opacity: 0; transform: none; transition: opacity 300ms steps(3, end); }
-@keyframes ns-toast-in { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { html.ns-on .item-toast { animation: none; } }
+html.ns-on .item-toast.is-found.is-docked { position: fixed; left: 0; top: 0; }
+html.ns-on .item-toast.is-found .item-icon { flex: none; width: 24px; height: 24px; image-rendering: pixelated; image-rendering: crisp-edges; }
+html.ns-on .item-toast.is-found .item-icon.is-into { animation: if-into calc(4 * var(--step-art)) steps(4, end) forwards; }
+html.ns-on .item-toast.is-found p { display: grid; gap: var(--s1); margin: 0; font: 400 16px/1.3 var(--f-text); color: var(--text); }
+html.ns-on .item-toast.is-found .if-label { display: block; margin: 0; font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--warm); }
+html.ns-on .item-toast.is-found .if-n { font: 400 var(--fs-who)/1 var(--f-num); letter-spacing: 0; }
+html.ns-on .item-toast.is-found.is-next p { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) both; }
+html.ns-on .item-toast.is-found.is-leaving { opacity: 1; transition: none; animation: ef-gone calc(3 * var(--step-ui)) steps(3, end) both; }
+@keyframes if-into { to { transform: translate(var(--dx, 0), var(--dy, 0)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { html.ns-on .item-toast.is-found, html.ns-on .item-toast.is-found * { animation: none !important; } }
+
+/* ── the no-card kinds (look pass B03, DESIGN 1.1): a ship fault's one chip at its deck's hull edge (tower/Fault.js; on the
+      bridge under A.U.R.A.'s line), and the sector-3 arrival's readout in the void's style (throw/Throw.js) ── */
+#ns-root .ns-fault-chip {
+    position: absolute; left: 0; top: 0; margin: 0; padding: 3px var(--s2) 2px; white-space: nowrap; pointer-events: none;
+    font: 400 var(--fs-chip)/1.3 var(--f-num); color: var(--ui); text-shadow: var(--shadow); background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 92%, transparent) 0 25%, color-mix(in srgb, var(--ink) 62%, transparent) 0 50%) 0 0 / 2px 2px; opacity: 0;
+}
+#ns-root .ns-fault-chip.is-word { font: 400 var(--fs-conseq)/1.3 var(--f-text); }
+#ns-root .ns-fault-chip.is-loss { color: var(--loss); }
+#ns-root .ns-fault-chip.is-gain { color: var(--warm); }
+#ns-root .ns-fault-chip.is-dim { color: var(--dim); }
+#ns-root .ns-fault-chip.is-in { opacity: 1; animation: ef-step calc(2 * var(--step-ui)) steps(2, end) both; }
+#ns-root .ns-fault-chip.is-out { opacity: 1; animation: ef-gone calc(3 * var(--step-ui)) steps(3, end) both; }
+#ns-root .ns-heard {
+    position: absolute; right: var(--s8); bottom: 14vh; display: grid; justify-items: end; gap: var(--s1); margin: 0; padding: var(--s2) var(--s3);
+    pointer-events: none; text-shadow: var(--shadow); background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 92%, transparent) 0 25%, color-mix(in srgb, var(--ink) 62%, transparent) 0 50%) 0 0 / 2px 2px; opacity: 0;
+}
+#ns-root .ns-heard span { font: 400 var(--fs-readout)/1 var(--f-num); letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }   /* the void's and the frame's readout: Mono caps */
+#ns-root .ns-heard b { font: 400 var(--fs-count)/1 var(--f-num); color: var(--text); }
+#ns-root .ns-heard.is-in { opacity: 1; animation: ef-step calc(3 * var(--step-ui)) steps(3, end) both; }
+#ns-root .ns-heard.is-out { opacity: 1; animation: ef-gone calc(3 * var(--step-ui)) steps(3, end) both; }
+@media (prefers-reduced-motion: reduce) { #ns-root .ns-fault-chip, #ns-root .ns-heard { animation: none !important; } }
+
+/* ═══ the frame (cards/Frame.js, look pass B02, DESIGN.md 1.1): every event card ══════════════════════════════════════════
+   One column over the house dither: the picture (480 x 160 at a whole scale, a hairline, one readout), the line before, who
+   and the line, then the keys: minigames.css .mini-btn (their own rules; only the --mg-* words they read are set here), each
+   with its chips and its consequence under it. Every colour, face, size and step is a tokens.css token. Kept class names:
+   .modal-overlay .enc-decide .enc-choice .enc-next .enc-skip (ship.css still styles those for the old look: the few of its
+   properties .mini-btn does not set are put back below). */
+
+/* on the bridge no tag and no console key shows round a frame (Stop.js leaves their canvas half out while a card is up) */
+html.ns-on body:has(.modal-overlay:not(.ns-held)) #ns-stop-words { visibility: hidden; }
+
+html.ns-on .modal-overlay.ef-veil {
+    display: flex; align-items: flex-start; justify-content: center; overflow-x: hidden; overflow-y: auto;
+    background: var(--veil) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    color: var(--text); font-family: var(--f-text); text-align: left; -webkit-font-smoothing: antialiased;
+}
+html.ns-on .ef-veil:not(.is-in) { opacity: 0; }
+html.ns-on .ef-veil.is-in { animation: ef-step calc(3 * var(--step-ui)) steps(3, end) both; }
+html.ns-on .ef-veil.is-out { animation: ef-gone calc(3 * var(--step-ui)) steps(3, end) calc(3 * var(--step-ui)) both; }
+html.ns-on .ef-veil.is-out .enc-frame { animation: ef-gone calc(3 * var(--step-ui)) steps(3, end) both; }
+@keyframes ef-step { from { opacity: 0; } }
+@keyframes ef-gone { to { opacity: 0; } }
+
+html.ns-on .enc-frame {
+    --mg-words: var(--text); --mg-quiet: var(--dim); --mg-faint: var(--dim); --mg-steel: var(--ui); --mg-amber: var(--warm); --mg-amber-br: var(--warm-br);
+    --mg-f-ui: var(--f-ui); --mg-f-text: var(--f-text); --mg-f-num: var(--f-num); --mg-shadow: var(--shadow); --mg-ease: var(--ease);
+    --pic-w: 960px; --pic-h: 320px; --pic-k: 2; --pic-crop: 0px;
+    --face: 64px;
+    position: relative; display: grid; gap: var(--s4); margin: 0 0 var(--s4); padding: 0;
+    width: max(var(--pic-w), min(var(--measure), calc(100vw - 2 * var(--s4))));
+    color: var(--text); isolation: isolate;
+}
+/* the frame's own ground: the words and keys never sit straight on the art behind the veil (the dock result's ground). A
+   near-ink plate from the picture out past the portrait, its rim one step of the house dither, under everything in the frame */
+html.ns-on .enc-frame::before {
+    content: ''; position: absolute; z-index: -1; pointer-events: none;
+    top: calc(-1 * var(--s4)); bottom: calc(-1 * var(--s4));
+    left: max(calc(-1 * (var(--face) + var(--s6) + var(--s4))), calc((100% - 100vw) / 2 + var(--s2)));
+    right: max(calc(-1 * (var(--face) + var(--s6) + var(--s4))), calc((100% - 100vw) / 2 + var(--s2)));
+    border: var(--s1) solid transparent;
+    background:
+        repeating-conic-gradient(color-mix(in srgb, var(--ink) 97%, transparent) 0 25%, color-mix(in srgb, var(--ink) 90%, transparent) 0 50%) 0 0 / 2px 2px padding-box,
+        repeating-conic-gradient(color-mix(in srgb, var(--ink) 94%, transparent) 0 25%, transparent 0 50%) 0 0 / 4px 4px border-box;
+}
+
+/* ── the picture: whole art pixels, a hairline, one readout in its corner ── */
+html.ns-on .enc-frame .ef-pic { position: relative; width: var(--pic-w); height: var(--pic-h); overflow: hidden; background: var(--ink); box-shadow: 0 0 0 1px rgba(201, 209, 214, 0.07); }
+html.ns-on .enc-frame .ef-pic canvas {
+    position: absolute; left: 0; top: calc(-1 * var(--pic-crop)); width: var(--pic-w); height: calc(var(--pic-k) * 160px);
+    image-rendering: pixelated; image-rendering: crisp-edges;
+}
+html.ns-on .ef-veil.is-in .ef-pic.is-alarm { animation: ef-alarm calc(4 * var(--step-art)) steps(1, end) calc(3 * var(--step-ui)) 2; }   /* a call, the air, the reserve: the hairline blinks twice */
+@keyframes ef-alarm { 0% { box-shadow: 0 0 0 1px var(--loss); } 50% { box-shadow: 0 0 0 1px rgba(201, 209, 214, 0.07); } }
+html.ns-on .enc-frame .ef-readout {
+    position: absolute; left: var(--s2); top: var(--s2); z-index: 1; margin: 0; padding: 3px 6px 2px;
+    font: 400 var(--fs-readout)/1.2 var(--f-num); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: var(--ui);
+    background: repeating-conic-gradient(color-mix(in srgb, var(--ink) 92%, transparent) 0 25%, color-mix(in srgb, var(--ink) 62%, transparent) 0 50%) 0 0 / 2px 2px; text-shadow: var(--shadow);
+}
+html.ns-on .enc-frame .ef-readout[hidden] { display: none; }
+/* the printout (look pass B03): a document shown as itself over the picture (Finds.js 'list', the head count's crew list), typed;
+   the outcome's line comes once it is all there */
+html.ns-on .enc-frame .ef-print { position: absolute; inset: 0; z-index: 0; display: grid; place-items: center; background: var(--veil); }
+html.ns-on .enc-frame .ef-print .find-art { top: 0; }   /* the paper's own canvas, not the picture's (its size is set inline, whole) */
+html.ns-on .enc-frame .ef-print .find-stage.is-list { --obj-w: calc(150px * var(--pic-k)); --obj-h: calc(var(--pic-h) - 2 * var(--s3)); }
+html.ns-on .enc-frame .find-paper.is-list { font-size: max(var(--fs-floor), calc(9px * var(--pic-k))); }
+html.ns-on .enc-frame .find-paper.is-list .find-line { margin: 0 0 0.3em; }
+html.ns-on .enc-frame .ef-out.is-after, html.ns-on .enc-frame .ef-go.is-after { visibility: hidden; }   /* Continue comes with the line */
+
+/* ── the words: the line before (dim), who (a ring, the name in their tone), the line; narration in the real italic ── */
+html.ns-on .enc-frame .ef-words { position: relative; display: grid; align-content: start; gap: var(--s2); }
+html.ns-on .enc-frame .ef-prev {
+    min-height: calc(var(--fs-prev) * 1.3); max-width: var(--measure); margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+    font: 400 var(--fs-prev)/1.3 var(--f-text); color: var(--dim); text-shadow: var(--shadow);
+}
+html.ns-on .enc-frame .ef-prev.is-narr { font-style: italic; }
+html.ns-on .enc-frame .ef-prev:empty, html.ns-on .enc-frame .ef-prev.is-gone { visibility: hidden; }
+html.ns-on .enc-frame .ef-prev b { margin-right: 0.6em; font: 500 var(--fs-who)/1 var(--f-ui); font-style: normal; letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--dim)); }
+html.ns-on .enc-frame .ef-say { position: relative; display: grid; align-content: start; gap: 6px; max-width: var(--measure); }
+html.ns-on .enc-frame .ef-say[hidden], html.ns-on .enc-frame .ef-out[hidden] { display: none; }
+html.ns-on .enc-frame .ef-out { display: grid; align-content: start; gap: var(--s3); }
+html.ns-on .enc-frame .ef-who {
+    display: flex; align-items: center; gap: var(--s2); min-height: var(--fs-who); margin: 0;
+    font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--text)); text-shadow: var(--shadow);
+}
+html.ns-on .enc-frame .ef-ring { flex: none; width: 0.82em; height: 0.82em; border: 1px solid currentColor; border-radius: 50%; }
+html.ns-on .enc-frame .ef-say.is-narr .ef-who { visibility: hidden; }
+html.ns-on .enc-frame .ef-line { margin: 0; font: 400 var(--fs-voice)/1.36 var(--f-text); color: var(--text); text-wrap: balance; text-shadow: var(--shadow); }
+html.ns-on .enc-frame .ef-say.is-narr .ef-line { font-style: italic; color: var(--narr); }
+/* the portrait (C02) beside the column, never inside it: the words keep the picture's left edge */
+html.ns-on .enc-frame .ef-face { position: absolute; top: 0; left: calc(-1 * (var(--face) + var(--s6))); width: var(--face); height: var(--face); object-fit: cover; image-rendering: pixelated; }
+html.ns-on .enc-frame .ef-face.is-dead { filter: grayscale(1) brightness(0.5); }
+html.ns-on .enc-frame .tone-jaxon { --tone: var(--tone-jaxon); }
+html.ns-on .enc-frame .tone-aris { --tone: var(--tone-aris); }
+html.ns-on .enc-frame .tone-vance { --tone: var(--tone-vance); }
+html.ns-on .enc-frame .tone-mira { --tone: var(--tone-mira); }
+html.ns-on .enc-frame .tone-cora { --tone: var(--tone-cora); }
+html.ns-on .enc-frame .tone-aura { --tone: var(--tone-aura); }
+html.ns-on .enc-frame .tone-none { --tone: var(--text); }
+
+/* ── chips: numbers in Mono, gains warm, costs and risk red, a capped gain dim; a feeling (C04) is a word, in Sans ── */
+html.ns-on .enc-frame .ef-chips { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--s3); margin: 0; font: 400 var(--fs-chip)/1.3 var(--f-num); text-shadow: var(--shadow); }
+html.ns-on .enc-frame .ef-chip { font-style: normal; color: var(--ui); white-space: nowrap; }
+html.ns-on .enc-frame .ef-chip.is-gain { color: var(--warm); }
+html.ns-on .enc-frame .ef-chip.is-loss { color: var(--loss); }
+html.ns-on .enc-frame .ef-chip.is-dim { color: var(--dim); }
+html.ns-on .enc-frame .ef-chip.is-word { font: 400 var(--fs-conseq)/1.3 var(--f-text); }
+
+/* ── a trip's going in (look pass B08, cards/TripCard.js): at most three word chips under the line, while it is read and decided ── */
+html.ns-on .enc-frame .ef-notes[hidden] { display: none; }
+html.ns-on .enc-frame .ef-notes .ef-chips { gap: 2px var(--s4); }
+
+/* ── the keys: choices at the left, the talk keys at the right end of the same row ── */
+html.ns-on .enc-frame .ef-keys { display: flex; align-items: flex-start; gap: var(--s4) var(--s8); }
+html.ns-on .enc-frame .ef-keys > [hidden] { display: none; }
+html.ns-on .enc-frame .enc-decide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: var(--s4) var(--s8); flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; animation: none; outline: none; }   /* three even columns: the keys keep one rhythm, chips stay under their own key */
+html.ns-on .enc-frame .ef-talk { display: flex; align-items: center; gap: var(--s6); margin-left: auto; }
+html.ns-on .enc-frame .ef-go { display: flex; }
+html.ns-on .enc-frame .ef-key { position: relative; display: grid; justify-items: start; align-content: start; gap: var(--s1); min-width: 0; }
+/* the way already chosen on the glass (B08): a 1 px warm tick at its left, the glass row's own mark; pointing never looks like it */
+html.ns-on .enc-frame .ef-key.is-lit::before { content: ''; position: absolute; left: calc(-1 * var(--s3)); top: var(--s2); width: 1px; height: calc(var(--fs-key) * 1.25); background: var(--warm); }
+html.ns-on .enc-frame .ef-key.is-lit.is-dim::before { background: var(--dim); }
+html.ns-on .enc-frame .mini-btn { font-size: var(--fs-key); transition: none; }
+html.ns-on .enc-frame .mini-btn::before { transition: none; }
+html.ns-on .enc-frame .mini-btn:focus-visible { text-decoration: none; }
+/* ship.css's old-look .enc-choice, put back to the key */
+html.ns-on .enc-frame .enc-choice { flex-wrap: nowrap; justify-content: flex-start; text-align: left; white-space: normal; }
+html.ns-on .enc-frame .enc-choice:not(.is-primary) { border-radius: 0; }
+html.ns-on .enc-frame .enc-choice:not(.is-primary):is(:hover, :focus, :focus-visible) { background: none; }
+html.ns-on .enc-frame .enc-choice[disabled] { opacity: 1; cursor: default; }
+/* focus looks exactly like pointing, and pointing at a key's chips is pointing at the key */
+html.ns-on .enc-frame .mini-btn:focus:not(:active):not([disabled]),
+html.ns-on .enc-frame .ef-key.is-pointed .mini-btn:not([disabled]) { color: var(--warm); transform: translateX(3px); outline: none; }
+html.ns-on .enc-frame .mini-btn:focus:not(:active):not([disabled])::before,
+html.ns-on .enc-frame .ef-key.is-pointed .mini-btn:not([disabled])::before { color: var(--warm); }
+html.ns-on .enc-frame .mini-btn.is-primary:focus:not(:active):not([disabled]),
+html.ns-on .enc-frame .ef-key.is-pointed .mini-btn.is-primary:not([disabled]) { border-color: var(--warm); background: color-mix(in srgb, var(--warm) 16%, transparent); }
+/* the consequence: words in Sans under the chips, shown for the key pointed at (one at a time; its room is always kept) */
+html.ns-on .enc-frame .ef-conseq {
+    display: flex; align-items: baseline; gap: var(--s2); max-width: 100%; margin: 0; visibility: hidden;
+    font: 400 var(--fs-conseq)/1.35 var(--f-text); color: var(--text-2); text-wrap: pretty; text-shadow: var(--shadow);
+}
+html.ns-on .enc-frame .ef-key.is-pointed .ef-conseq, html.ns-on .enc-frame .ef-key.is-locked .ef-conseq,
+html.ns-on .enc-frame .ef-conseq.is-loss, html.ns-on .enc-frame .ef-conseq.is-again { visibility: visible; }   /* a death or a loss for good is said before it is pointed at */
+html.ns-on .enc-frame .ef-conseq.is-loss { color: var(--loss); }
+html.ns-on .enc-frame .ef-conseq.is-end { color: var(--warm-br); }
+html.ns-on .enc-frame .ef-conseq.is-lock { color: var(--dim); }
+html.ns-on .enc-frame .ef-lock { flex: none; align-self: center; }
+html.ns-on .enc-frame .ef-n { font: 400 0.94em/1 var(--f-num); }
+html.ns-on .enc-frame .ef-n.is-gain { color: var(--warm); }
+html.ns-on .enc-frame .ef-n.is-loss { color: var(--loss); }
+html.ns-on .enc-frame .ef-n.is-ui { color: var(--ui); }
+/* a final key is held (C06): seven ticks before its word, so the hold shows before it is pressed (--dim, --warm when pointed);
+   they fill --warm-br from the first, at the press (Frame.js sets --fill 0..7); let go early, they drain and blink once.
+   Drawn, not a glyph: the house faces have no ○ ◔ ◑ ◕ ●. A pick: a --warm-br point (or all seven) while the others step to --dim */
+html.ns-on .enc-frame .mini-btn.is-hold::before {
+    content: ''; flex: none; align-self: center; width: 26px; height: 0.6em;
+    background: linear-gradient(90deg, var(--warm-br) calc(var(--fill, 0) * 4px), var(--dim) 0);
+    -webkit-mask: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 0 4px); mask: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 0 4px);
+}
+html.ns-on .enc-frame .mini-btn.is-hold:focus:not([disabled])::before,
+html.ns-on .enc-frame .ef-key.is-pointed .mini-btn.is-hold:not([disabled])::before { background: linear-gradient(90deg, var(--warm-br) calc(var(--fill, 0) * 4px), var(--warm) 0); }
+html.ns-on .enc-frame .ef-key.is-holding .mini-btn.is-hold:not([disabled])::before { background: linear-gradient(90deg, var(--warm-br) calc(var(--fill, 0) * 4px), var(--dim) 0); }   /* held: lit against dark, so the fill reads */
+html.ns-on .enc-frame .ef-key.is-nudge .mini-btn.is-hold::before { animation: ef-nudge calc(4 * var(--step-ui)) steps(1, end) 1; }
+@keyframes ef-nudge { 0%, 50% { background: var(--warm-br); } 25%, 75% { background: var(--dim); } }
+html.ns-on .enc-frame .ef-key.is-holding .mini-btn { color: var(--warm-br); }
+html.ns-on .enc-frame .ef-key.is-picked .mini-btn { color: var(--warm-br); transform: none; }
+html.ns-on .enc-frame .ef-key.is-picked .mini-btn.is-hold::before { --fill: 7; }
+html.ns-on .enc-frame .ef-key.is-picked .mini-btn:not(.is-hold)::before,
+html.ns-on .enc-frame .mini-btn.is-held:not(.is-hold)::before { content: ''; flex: none; align-self: center; width: 6px; height: 6px; background: var(--warm-br); }
+html.ns-on .enc-frame .ef-key.is-dim .mini-btn, html.ns-on .enc-frame .ef-key.is-dim .mini-btn::before, html.ns-on .enc-frame .ef-key.is-dim .ef-chip { color: var(--dim); }
+html.ns-on .enc-frame .ef-key.is-dim .mini-btn.is-hold::before { background: var(--dim); }
+
+/* ── motion: the words 2 steps once the picture is half in, the keys left to right 60 ms apart; a new line 2 steps ── */
+html.ns-on .ef-veil.is-in .ef-words { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) var(--words-at, 0ms) both; }
+html.ns-on .ef-veil.is-in .ef-talk,
+html.ns-on .ef-veil.is-in .enc-decide.is-open .ef-key { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) calc(var(--keys-at, 0ms) + var(--k, 0) * var(--step-ui)) both; }
+html.ns-on .enc-frame .ef-say.is-step, html.ns-on .enc-frame .ef-out.is-step, html.ns-on .enc-frame .ef-go.is-step { animation: ef-step calc(2 * var(--step-ui)) steps(2, end) both; }
+@media (prefers-reduced-motion: reduce) {
+    html.ns-on .ef-veil.is-in, html.ns-on .ef-veil.is-in *, html.ns-on .ef-veil.is-out, html.ns-on .ef-veil.is-out * { animation: none !important; }
+}

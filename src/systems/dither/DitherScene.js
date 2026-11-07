@@ -20,10 +20,14 @@
     const PORTRAIT_SELECTOR = 'img[src*="assets/crew/"]:not([data-dithered])';
 
     // ── backdrop: dark dithered nebula baked once, stars re-stamped on the twinkle tick ──
-    const backdrop = document.createElement('canvas');
-    backdrop.id = 'dither-backdrop';
-    backdrop.setAttribute('aria-hidden', 'true');
-    document.body.insertBefore(backdrop, document.body.firstChild);
+    // Old look only: under the new-screen switch (html.ns-on) the page is ink until the first screen, never this purple sky.
+    const hasBackdrop = !document.documentElement.classList.contains('ns-on');
+    const backdrop = hasBackdrop ? document.createElement('canvas') : null;
+    if (backdrop) {
+        backdrop.id = 'dither-backdrop';
+        backdrop.setAttribute('aria-hidden', 'true');
+        document.body.insertBefore(backdrop, document.body.firstChild);
+    }
     let scene = null;
 
     function bakeBackdrop() {
@@ -118,10 +122,11 @@
         queueMicrotask(hydrateAll); // before paint, so a re-rendered view never shows a blank canvas
     }).observe(document.body, { childList: true, subtree: true });
 
-    let resizeTimer = 0, tick = 0;
-    window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(bakeBackdrop, 150); });
-    Core.onTick(now => { if (scene && ++tick % BACKDROP_EVERY === 0) paintBackdrop(now); });
-
-    bakeBackdrop();
+    if (backdrop) {
+        let resizeTimer = 0, tick = 0;
+        window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(bakeBackdrop, 150); });
+        Core.onTick(now => { if (scene && ++tick % BACKDROP_EVERY === 0) paintBackdrop(now); });
+        bakeBackdrop();
+    }
     hydrateAll();
 })();

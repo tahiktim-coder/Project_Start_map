@@ -796,6 +796,108 @@
         },
     };
 
+    // ═══ THE RELAY — Last Port: the old relay over the dark moon, our ship clamped to its ring between three of our own. ═══
+    // The disc's moon (sector 5's story planet) fills the lower right, dark, lit only from behind: a thin rim of ice on its
+    // upper left limb. The relay's ring crosses in front of it, seen from a little above, its hub's lamp still blinking (Mira:
+    // "Its lamp is still on"). On the near side of the ring four of our class stand nose in, in a row as the cut leaves them
+    // (17,199, ours, 17,212, then the disc's ship, 17,207): ours straight and bright, theirs dim and crooked in their old
+    // clamps, every window lit now (our clamps woke them); the relay's small screen beside our collar glows cold. Detail
+    // 'torn0' / 'torn1' (a hard dock): that one's berth is empty and it falls away, small, across the moon.
+    const RELAY = { moon: [392, 238, 172], ring: [176, 95, 150, 26], band: [15, 6], wall: 5, hub: [176, 91, 20, 7], lampMs: 1666, lampOn: 640,
+        ports: [163, 143, 122, 101], ours: 1, len: 60, ht: 15, lean: [0.24, 0, -0.18, -0.3], windows: [0.32, 0.44, 0.56, 0.68], fall: [318, 120, -0.9] };
+    const COLD = ramp(INK, '#0e1a22', '#1e3646', '#3e6a82', '#8ec0d8');
+    function relayMoon(p) {
+        const [cx, cy, r] = RELAY.moon, L = [-0.76, -0.5];
+        p.region(cx - r - 4, cy - r - 4, W, H, (x, y) => {
+            const dx = x + 0.5 - cx, dy = y + 0.5 - cy, d = Math.hypot(dx, dy);
+            if (d > r + 1.5) return;
+            const nx = dx / r, ny = dy / r, toward = nx * L[0] + ny * L[1], edge = r - d;
+            const facet = hash(Math.floor(x / 5), Math.floor(y / 4), 31), crack = fbm(x / 22, y / 14, 37, 3);
+            if (edge < 0) { if (toward > 0.35) p.cover(x, y, COLD, 0.55, 0.5); return; }                 // a faint halo where the light grazes it
+            if (edge < 3.2 && toward > 0.1) { p.tone(x, y, MOON, 0.42 + 0.5 * toward * (facet > 0.4 ? 1 : 0.7) - edge * 0.06); return; }   // the lit rim: ice facets
+            p.tone(x, y, MOON, 0.035 + 0.05 * crack + (facet > 0.93 ? 0.05 : 0) + Math.max(0, toward) * 0.08 * Math.exp(-edge / 18));   // the night side
+        });
+    }
+    /** The ring: its top face (the band between the two ellipses), and on the near half its outer wall below it. */
+    function relayRing(p, half) {
+        const [cx, cy, rx, ry] = RELAY.ring, [bw, bh] = RELAY.band, irx = rx - bw, iry = ry - bh;
+        p.region(cx - rx - 2, cy - ry - 2, cx + rx + 2, cy + ry + RELAY.wall + 2, (x, y) => {
+            const dx = x + 0.5 - cx, dy = y + 0.5 - cy, isNear = dy > 0;
+            if ((half === 'far') === isNear) return;
+            const qo = (dx / rx) ** 2 + (dy / ry) ** 2, qi = (dx / irx) ** 2 + (dy / iry) ** 2, qw = (dx / rx) ** 2 + ((dy - RELAY.wall) / ry) ** 2;
+            const a = Math.atan2(dy / ry, dx / rx), plate = Math.abs(((a / (Math.PI * 2)) * 72) % 1) < 0.08;
+            if (qo < 1 && qi >= 1) {                                                         // the top face, lit from the left
+                const rim = qo > 0.93 || qi < 1.05;
+                p.tone(x, y, HULL, (rim ? 0.42 : 0.24) + (dx < 0 ? 0.08 : -0.04) + (plate ? -0.08 : 0) + (fbm(x / 6, y / 3, 41, 2) - 0.5) * 0.08);
+                return;
+            }
+            if (isNear && qo >= 1 && qw < 1) p.tone(x, y, HULL, 0.12 + (plate ? -0.05 : 0) + (dx < -rx * 0.3 ? 0.04 : 0));   // the outer wall, in shadow
+        });
+    }
+    function relayHub(p) {
+        const [cx, cy, rx, ry] = RELAY.hub, [rcx, rcy, Rx, Ry] = RELAY.ring;
+        [0.6, 2.2, 3.75, 5.3].forEach(a => p.line(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry, rcx + Math.cos(a) * (Rx - RELAY.band[0]), rcy + Math.sin(a) * (Ry - RELAY.band[1]), (x, y) => p.tone(x, y, HULL, 0.2)));   // spokes
+        p.region(cx - rx, cy - ry - 8, cx + rx + 1, cy + ry + 1, (x, y) => {
+            const dx = (x + 0.5 - cx) / rx, top = (dx * dx + ((y + 0.5 - cy + 8) / ry) ** 2) < 1, side = Math.abs(dx) < 1 && y >= cy - 8 && ((dx * dx + ((y + 0.5 - cy) / ry) ** 2) < 1 || y < cy);
+            if (top) p.tone(x, y, HULL, 0.36 + (dx < 0 ? 0.1 : 0));
+            else if (side) p.tone(x, y, HULL, 0.14 + (dx < -0.5 ? 0.08 : 0));
+        });
+        return [Math.round(cx), Math.round(cy - 8 - ry - 2)];
+    }
+    /** Where port k is on the ring's top face (its middle line). */
+    function relayPort(k) {
+        const [cx, cy, rx, ry] = RELAY.ring, a = RELAY.ports[k] * Math.PI / 180;
+        return [cx + Math.cos(a) * (rx - RELAY.band[0] / 2), cy + Math.sin(a) * (ry - RELAY.band[1] / 2)];
+    }
+    function relayCollar(p, x, y, isOpen) {
+        p.region(x - 8, y - 3, x + 9, y + 4, (a, b) => p.tone(a, b, HULL, b === Math.round(y - 3) ? 0.6 : 0.16));
+        if (isOpen) { [-1, 1].forEach(side => p.line(x + side * 7, y - 3, x + side * 12, y - 12, (a, b) => p.tone(a, b, HULL, 0.5))); p.region(x - 4, y - 2, x + 5, y + 2, (a, b) => p.tone(a, b, HULL, 0.03)); }
+    }
+    /** One of our class standing nose in at a port (x, y: its nose), leaning by lean rad: the game's own Lander (NSPaint.hull with
+        shapeL, as the cut draws it) when the new look's painter is loaded, else SceneArt's side-on hull. Returns its windows. */
+    function relayLander(p, x, y, len, lean, isOurs, seed) {
+        const N = window.NSPaint, ax = Math.sin(lean), ay = -Math.cos(lean), mx = x + ax * len / 2, my = y + ay * len / 2;
+        if (!N || !N.hull || !N.shapeL || !N.painter) {
+            const at = drawHull(p, { x, y, len, ht: len / 4, angle: -Math.PI / 2 + lean, anchor: 0, ramp: HULL, light: isOurs ? 0.95 : 0.6, rust: !isOurs, seed });
+            return RELAY.windows.map(u => at(u, 0.05).map(Math.round));
+        }
+        const half = Math.ceil(len / 2 + len / 3 + 4), q = N.painter(half * 2, half * 2, false), a = Math.atan2(-ay, -ax);   // (the angle from tail to nose, as the cut has it)
+        const at = N.hull(q, { x: half, y: half, len, ht: len / 3, angle: a, flip: true, seed, anchor: 0.5, light: isOurs ? 0.9 : 0.6, rust: !isOurs, mirror: Math.cos(a) - Math.sin(a) < 0 }, N.shapeL);
+        for (let j = 0; j < half * 2; j++) for (let i = 0; i < half * 2; i++) { const o = (j * half * 2 + i) * 4; if (q.data[o + 3]) p.set(mx - half + i, my - half + j, [q.data[o], q.data[o + 1], q.data[o + 2]]); }
+        return [0, 2, 3, 4].map(d => at(N.DECK_U(d) + 0.054, -0.32)).map(([wx, wy]) => [Math.round(mx - half + wx), Math.round(my - half + wy)]);   // the decks the cut lights
+    }
+    SCENES.RELAY = {
+        build(p, detail) {
+            const stars = space(p, 83, 440, 0.24), torn = /^torn[01]$/.test(detail || '') ? (detail === 'torn0' ? 0 : 2) : -1;   // (the berths left to right: 17,199, ours, 17,212, 17,207)
+            relayMoon(p);
+            relayRing(p, 'far'); const lamp = relayHub(p); relayRing(p, 'near');
+            const windows = [];
+            RELAY.ports.forEach((_, k) => {
+                const [x, y] = relayPort(k), isOurs = k === RELAY.ours;
+                relayCollar(p, x, y, k === torn);
+                if (k === torn) return;
+                windows.push(...relayLander(p, x, y - 2, RELAY.len, RELAY.lean[k], isOurs, isOurs ? 9 : 50 + k));
+                if (isOurs) p.region(x - 8, y - 3, x + 9, y - 1, (a, b) => p.tone(a, b, HULL, 0.66));   // our clamps, shut and catching the light
+            });
+            if (torn >= 0) {                                                                  // the one we tore loose, falling towards the moon
+                const [fx, fy, fa] = RELAY.fall;
+                drawHull(p, { x: fx, y: fy, len: 22, ht: 6, angle: fa, anchor: 0.5, ramp: HULL, light: 0.5, rust: true, seed: 60 });
+            }
+            const [ox] = relayPort(RELAY.ours), screen = [Math.round(ox) + 13, Math.round(RELAY.ring[1] + RELAY.ring[3]) + 1];   // the relay's screen, on the wall beside our collar
+            p.region(screen[0] - 1, screen[1] - 1, screen[0] + 7, screen[1] + 4, (x, y) => p.tone(x, y, HULL, 0.05));
+            p.region(screen[0], screen[1], screen[0] + 6, screen[1] + 3, (x, y) => p.tone(x, y, COLD, 0.3));
+            return { stars: keepVisible(p, stars), lamp, windows, screen };
+        },
+        frame(f, t, s) {
+            twinkle(f, s.stars, t);
+            s.windows.forEach(([x, y]) => f.px(x, y, AMBER.hex[3], 2, 1));                    // every window lit
+            const [sx, sy] = s.screen, k = 0.5 + 0.25 * Math.sin(t / 900);
+            f.tone(sx + 1, sy + 1, COLD, 0.5 + k * 0.4, 4, 1);                                 // the screen's word, too small to read from here
+            const [lx, ly] = s.lamp;
+            if (t % RELAY.lampMs < RELAY.lampOn) { f.glow(lx, ly, 6, AMBER, 0.9); f.px(lx - 1, ly - 1, AMBER.hex[4], 2, 2); } else f.px(lx, ly, AMBER.hex[2]);
+        },
+    };
+
     // ═══ THE COLONY RUINS — a half-collapsed dome gone wild, roofless walls, one window still lit. ═══
     const COLONY = { horizon: 92, sunX: 404, dome: [150, 132, 80, 74], rooms: [[436, 110, 32, 16], [322, 116, 40, 22], [262, 124, 46, 26], [370, 130, 56, 30]], lampRoom: 1 };
     function colonyDome(p) {

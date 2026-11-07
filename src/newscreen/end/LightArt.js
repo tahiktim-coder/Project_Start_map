@@ -12,7 +12,8 @@
      tick(scene, dt, speed)       the dust streams toward us (speed in depth units a second; 0 stands still)
      draw(ctx, scene, v, ms)      one frame. v: { phase 'fly' | 'white' | 'turn', s (0 a point .. 1 fills the window),
                                   k (how far through 'white' or 'turn', 0..1), off [x, y], shake (art px), clock (s),
-                                  damaged { deck: true }, flash (the alarms' on beat), label, edges (bool), plume,
+                                  damaged { deck: true }, flash (the alarms' on beat), label ({ text, deck }: the alarm word
+                                  on its deck's hull plate), edges (bool), plume,
                                   from { s, off } (where the turn began), edenK (Eden sliding in, 0..1), white (0..1),
                                   words [[x0, y0, x1, y1]] (art px boxes the picture darkens under) }
      eden(scene, node)            paints Eden for the turn, as the orbit shows it (node: the sector's Eden, or null)
@@ -240,10 +241,17 @@
         if (a >= 1) { cur.buf.fill(WHITE32); return; }
         for (let y = 0; y < cur.H; y++) for (let x = 0; x < cur.W; x++) mixPx(x, y, WHITE, a, WHITE_STEPS);
     }
-    /** The ship's alarm word beside the decks, blinking red. */
+    /** The ship's alarm word, stencilled in alarm red on a hull plate riveted to the alarming deck's side (the deck is too
+        narrow for it at this size), blinking with the alarms. label: { text, deck } (deck: MiniShip's room key), or a string. */
     function alarmWord(ctx, scene, label) {
+        const L = scene.shipL, text = typeof label === 'string' ? label : label.text, room = label.deck && L.room ? L.room(label.deck) : null;
+        const tw = P.pixelTextWidth(text), my = room ? Math.round((room.top + room.bottom) / 2) : scene.H - 24;
+        const x0 = Math.round(L.cx + (L.halfWidth ? L.halfWidth(my) : L.D / 2)) - 1, y0 = my - 4, w = tw + 7;
+        ctx.fillStyle = RP.HULL.hex[1]; ctx.fillRect(x0, y0, w, 9);                // the plate, its lit top edge, its rivet
+        ctx.fillStyle = RP.HULL.hex[2]; ctx.fillRect(x0, y0, w, 1); ctx.fillRect(x0, y0, 1, 9);
+        ctx.fillStyle = RP.HULL.hex[3]; ctx.fillRect(x0 + w - 2, y0 + 4, 1, 1);
         ctx.fillStyle = RP.RED.hex[3];
-        P.pixelText(label, Math.round(scene.shipL.cx + scene.shipL.D + 10), scene.H - 26, (x, y) => ctx.fillRect(x, y, 1, 1));
+        P.pixelText(text, x0 + 3, y0 + 2, (x, y) => ctx.fillRect(x, y, 1, 1));
     }
     function drawEden(ctx, scene, v, ms) {
         const E = scene.eden, k = ss(0, 1, clamp01(v.edenK || 0)), cx = Math.round(scene.W * 0.66 + (1 - k) * scene.W * 0.75), cy = Math.round(scene.H * 0.52);

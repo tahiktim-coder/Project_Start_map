@@ -30,6 +30,10 @@
    world's { type, temp, air, id }. TorchGround.js then gives the hatch the world's own sky and soil (the landing's colours),
    Jaxon standing on the soil with the torch on a pole, sparks and dust that fall, a puff of dust instead of the flash of ice
    (unless there is no air), and the hatch falling back into the wreck with a thud. Space stays the default and looks as before.
+   THE NEW LOOK (look pass B09, html.ns-on only; the old look is unchanged): no readouts over the art. The fuel is a pip gauge
+   on the torch's grip, the heat the plate's own glow, the seam the bright cut; only the first press has a 14 px tag at the
+   torch ("Press and hold on the dotted line"), gone once the hand has learnt it. The hull number's stencil keeps every
+   digit stroke (only the letters flake); the scorch marks off the seam vary in width, fray at the edge and fade.
 
    const result = await MiniHost.play('torch', opts)
    opts: { mode: 'hatch' | 'disc'  (default 'hatch')
@@ -77,6 +81,8 @@
         melt: [['PRESS AND HOLD', 'TO WARM THE FROST'], ['MELT IT OFF', 'ALL ROUND THE HATCH']],
     };
     let taught = { hatch: false, disc: false, melt: false };   // for this page: once the player has cut (or melted) a little, the hints stay away
+    const isNew = () => document.documentElement.classList.contains('ns-on');   // the new look (look pass B09)
+    const PIPS = 5, SCORCH_FADE = 9;                            // (new look) the fuel gauge's pips on the grip; how long (s) a scorch takes to fade back to half
 
     // ── HATCH: a rounded-rectangle seam, measured by its signed distance ──
     const HB = { cx: 322, cy: 132, hw: 42, hh: 51, r: 10 }, HATCH_BOX = [HB.cx - HB.hw - 1, HB.cy - HB.hh - 1, HB.cx + HB.hw + 1, HB.cy + HB.hh + 1];
@@ -486,8 +492,9 @@
         // run down from it; a little bigger than the RESCUE paint, never the old blocky letters
         const name = hullNumber(o.hull), tw = P.pixelTextWidth(name), cell = [3, 2].find(c => tw * c <= NAME_ROOM * d * 0.6) || 2;
         const nx0 = Math.round((NAME_AT.x + 0.5) * d), ny0 = Math.round((NAME_AT.y + 0.5) * d), painted = new Map();
+        const digitsFrom = isNew() ? nx0 + (P.pixelTextWidth(name.replace(/\d[\d,]*$/, '')) + 1) * cell : Infinity;   // (new look) the number's strokes never flake: it reads as it is said
         stencil(p, name, nx0, ny0, cell, 0, (ax, ay) => {
-            if (P.fbm(ax / 6, ay / 6, 51, 3) < 0.31 || P.hash(ax, ay, 52) < 0.06) return null;   // flaked off
+            if (ax < digitsFrom && (P.fbm(ax / 6, ay / 6, 51, 3) < 0.31 || P.hash(ax, ay, 52) < 0.06)) return null;   // flaked off
             painted.set(ax, Math.max(painted.get(ax) || 0, ay));
             const x = (ax + 0.5) / d - 0.5, y = (ay + 0.5) / d - 0.5, lamp = lampK * Math.max(0, 1 - Math.hypot(x - LAMP.aimX, (y - LAMP.aimY) * 1.15) / 235);
             return [RR.PAINT, 0.36 + 0.28 * lamp + (P.vnoise(ax / 3, ay / 3, 53) - 0.5) * 0.18];
@@ -661,7 +668,7 @@
         const KERF = [C.void, C.hurt[2], C.hurt[3], C.danger, C.warm, C.warmBright, C.star];   // a cut: white-hot while the flame is on it, then cooling to a dark slot
         const TEMPER = MiniLab.mix(C.warm, C.hull[2], 0.45), CUT_LINE = MiniLab.mix(C.lightHalo, C.void, 0.62), DIM_GOLD = MiniLab.mix(C.lightHalo, C.void, 0.55);
         const SCORCH = MiniLab.mix(C.warm, C.hull[1], 0.62), HOSE = [MiniLab.mix(C.warm, C.void, 0.82), MiniLab.mix(C.warm, C.void, 0.66), MiniLab.mix(C.warm, C.void, 0.45)];   // a cut's tempered edge; the suit's hose
-        const SAY = sayLines(setup), snd = makeSound();
+        const SAY = sayLines(setup), snd = makeSound(), NEW = isNew();   // NEW: the look pass's torch (no readouts; the gauge on the grip)
         const GROUND = setup.mode === 'hatch' && onGround(setup) ? window.TorchGround : null;   // on a planet: TorchGround.js; null in space
         const d = (ui.art && ui.art.d) || MiniLab.density || 1, { AW, AH } = sizeOf(d);
         const { hullBg, hole, lid, lidShadow, discBg } = paintScene(setup, d);
@@ -1162,10 +1169,17 @@
             const near = MiniLab.clamp(Math.round(fy), 0, H - 1) * W + MiniLab.clamp(Math.round(fx), 0, W - 1);
             return { depth, age: clock - last, near, fx, fy };
         }
+        /** (new look) A scorch on the thick plate: its width wanders along the mark (slow noise), its edge frays (a hash per two
+            art px) and it fades to half over SCORCH_FADE s, so no two scars look stamped. */
+        function scorchAt(m, dd, x, y) {
+            const P = window.MiniPaint, reach = 0.05 + 0.16 * P.vnoise(m.fx / 5, m.fy / 5, 61) + 0.07 * (P.hash(x >> 1, y >> 1, 62) - 0.5);
+            if (dd <= reach) return null;
+            return MiniLab.on(x, y, (0.22 + 0.55 * dd) * (0.5 + 0.5 * Math.exp(-m.age / SCORCH_FADE))) ? SCORCH : null;
+        }
         function markColor(m, x, y) {                            // the metal's heat, read at a glance (x, y: the art pixel, for the grain)
             const dd = m.depth;
             if (dd >= 1) return MiniLab.pick(KERF, Math.exp(-m.age / KERF_COOL), x, y);   // cut through: white while the flame is on it, then warm, red, a dark slot
-            if (s.part === 'hatch' && !NEAR_SEAM[m.near]) return dd > 0.12 && MiniLab.on(x, y, 0.2 + 0.5 * dd) ? SCORCH : null;   // thick plate: a faint scorch, no glow
+            if (s.part === 'hatch' && !NEAR_SEAM[m.near]) return NEW ? scorchAt(m, dd, x, y) : dd > 0.12 && MiniLab.on(x, y, 0.2 + 0.5 * dd) ? SCORCH : null;   // thick plate: a faint scorch, no glow
             const glow = dd * Math.exp(-m.age / HEAT_SHOW);
             if (glow > 0.08) return MiniLab.pick(HEATING, glow, x, y);   // heating: dull, red, orange; it fades if the flame moves on too soon
             if (dd <= 0.3) return null;
@@ -1281,6 +1295,7 @@
                 else if (k >= 11.4 && k < 28.4) { ramp = R.RUBBER; if (k > 13 && (k - 13) % 2.2 < 0.6) lum -= 0.3; }   // the ribbed grip
                 L.pick(ax, ay, ramp, MiniLab.clamp(lum, 0, 1));
             });
+            if (NEW && hoseTo === offBottom) fuelPips(L, at);   // (new look) yours: the fuel on the grip
             const [rlx, rly] = at(10.4, 1.4);                    // the ready light, on the valve block
             const rc = s.phase === 'cut' && paused() ? C.danger : s.firing ? C.uiBright : C.uiDim;
             L.set(A(rlx), A(rly), rc); L.set(A(rlx) + 1, A(rly), rc);
@@ -1304,6 +1319,15 @@
                     const q = Math.abs(o) / w, ax = (px + N.x * o + 0.5) * d, ay = (py + N.y * o + 0.5) * d;
                     if (MiniLab.on(Math.floor(ax), Math.floor(ay), (1 - q) * (0.35 + 0.6 * k / MELT_OFF))) L.set(ax, ay, q < 0.3 && k > MELT_OFF * 0.5 ? C.star : q < 0.6 ? C.uiBright : R.ICE.hex[4]);
                 }
+            }
+        }
+        /** (new look) The fuel as PIPS pips along the grip's lit side (each two art px long): lit warm for what is left, dark
+            for what is gone; the last one blinks red once the tank is nearly dry. at(k, o): a point on the tool. */
+        function fuelPips(L, at) {
+            const left = Math.ceil(s.fuel * PIPS - 1e-6), low = s.fuel > 0 && s.fuel < 1 / PIPS, blink = Math.floor(clock * 3) % 2;
+            for (let k = 0; k < PIPS; k++) {
+                const lit = k < left, c = lit ? (low ? (blink ? C.danger : C.hurt[3]) : C.warmBright) : C.void;
+                for (let e = 0; e < 2; e++) for (const o of [0.45, 1.15]) { const [px, py] = at(15.2 + k * 2.6 + e * 0.7 / d, o); L.set(A(px), A(py), c); }   // two art px each way
             }
         }
         const TU_DIR = { x: TU.x, y: TU.y }, offBottom = (hx, hy) => [hx + 30, H + 10];
@@ -1368,7 +1392,7 @@
         // ── the readouts: by the torch, one short line; and a few quiet ones in the corner (MiniHost notes, IBM Plex) ──
         const shown = new Map();
         function note(id, text, o) {                             // only touch the page when a readout changes
-            const key = text == null ? null : [text, o.x, o.y, o.tone, o.align, o.size].join('|');
+            const key = text == null ? null : [text, o.x, o.y, o.tone, o.align, o.size, o.tag].join('|');
             if (shown.get(id) === key) return;
             shown.set(id, key);
             if (ui.note) ui.note(id, text, o);
@@ -1377,6 +1401,7 @@
         const growing = () => clock - s.progT < READOUT_FOR;
         function tipLabel() {                                    // one short readout by the torch, or none: what is wrong, what to do, how far
             if (!canSteer()) return null;
+            if (NEW) return firstTag();                                // (new look) only the first press
             if (paused()) return s.onLine ? [['FUEL LINE'], 'danger'] : Math.floor(clock * 3) % 3 ? [['COOLING'], 'danger'] : null;
             if (s.melt) return taught.melt ? null : [HINTS.melt[s.meltedT > 1.5 ? 1 : 0], 'ui'];   // FROZEN: warm it first
             if (s.firing && s.strayT >= STRAY_AFTER) return [['OFF THE LINE'], 'text'];
@@ -1387,18 +1412,25 @@
             if (growing()) return [[s.part === 'hatch' ? seamPercent() + '%' : s.progText], 'ui'];
             return null;
         }
+        /** (new look) Before the first press, one tag at the torch: the first hint's words in one line, sentence case. */
+        function firstTag() {
+            if (s.melt ? taught.melt || s.meltedT > 0 : taught[s.part] || s.cut > s.free) return null;
+            const words = (s.melt ? HINTS.melt : HINTS[s.part])[0].join(' ').toLowerCase();
+            return [[words.charAt(0).toUpperCase() + words.slice(1)], 'text'];
+        }
         const TIP_PX = 16, TIP_LINE = 1.25, NOTE_PX = 13, NOTE_LINE = 1.3, CHAR_EM = 0.62;   // the note font (minigames.css): px, line height, a Plex Mono character
         function drawTipLabel() {                                // up and to the left of the tip: clear of the torch, and of the seam running through the tip
             const label = tipLabel(), upx = unitsPerPx();
             if (!label) { note('tip0', null, {}); note('tip1', null, {}); return; }
-            const [lines, tone] = label, lh = TIP_PX * TIP_LINE * upx, w = Math.max(...lines.map(l => l.length)) * TIP_PX * CHAR_EM * upx, h = lines.length * lh;
+            const [lines, tone] = label, lh = (NEW ? 24 : TIP_PX * TIP_LINE) * upx, w = Math.max(...lines.map(l => l.length)) * (NEW ? 7.4 : TIP_PX * CHAR_EM) * upx + (NEW ? 18 * upx : 0), h = lines.length * lh;   // (new look: one Condensed 14 tag on its plate)
             const gap = s.melt ? MELT_R + 2 : LABEL_GAP;         // FROZEN: clear of the warm flame's ring
             const x = s.tip.x + 0.5, y = s.tip.y + 0.5, left = x - gap - w >= 3, up = y - gap - h >= 3;
             const lx = left ? x - gap : Math.min(x + gap, W - 3 - w), ly = MiniLab.clamp(up ? y - gap - h : y + gap, 3, H - 3 - h);
-            [0, 1].forEach(k => note('tip' + k, lines[k] == null ? null : lines[k], { x: lx, y: ly + k * lh, align: left ? 'right' : 'left', tone, size: 'm' }));
+            [0, 1].forEach(k => note('tip' + k, lines[k] == null ? null : lines[k], { x: lx, y: ly + k * lh, align: left ? 'right' : 'left', tone, size: NEW ? 's' : 'm', tag: NEW }));
         }
         const seamPercent = () => Math.min(100, Math.floor((100 * (s.cut - s.free)) / (Math.max(1, SEAM.length - s.free) * TEAR)));   // the hatch tears free at TEAR: that is 100% (of the seam this door needs cut)
         function readout(rows, fromTop) {                        // [id, text or null, tone]: stacked in the corner, the empty ones left out
+            if (NEW) return;                                     // (new look) the art carries them: the pips, the glow, the cut
             const lh = NOTE_PX * NOTE_LINE * unitsPerPx(), live = rows.filter(r => r[1] != null);
             rows.filter(r => r[1] == null).forEach(r => note(r[0], null, {}));
             live.forEach(([id, text, tone], k) => note(id, text, { x: 8, y: fromTop ? 8 + k * lh : H - 8 - (live.length - k) * lh, tone }));

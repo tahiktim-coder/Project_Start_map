@@ -9,6 +9,15 @@
 // It exists only for testers: index.html?test=1 turns it on (and shows the TEST button). Players never see it.
 const IS_TEST_BUILD = new URLSearchParams(location.search).get('test') === '1';
 window.TEST_MODE = IS_TEST_BUILD;
+// A try tab, for the designer and testers: ?try=<kind> (the new look: App.startTry places a fresh run at that moment, no
+// title). Read from the address every load and never kept. Every save in a try tab goes to its own key, so the real save
+// is never read, written or erased there (SAVE_KEY: every place that names the save uses it; window.SAVE_KEY for the
+// end screens' files).
+const TRY_RUN = new URLSearchParams(location.search).get('try') || null;
+const SAVE_KEY = TRY_RUN ? 'silentExodus_try' : 'silentExodus_save';
+window.SAVE_KEY = SAVE_KEY;
+/** The new look's ship's console (src/newscreen/Console.js) saved and asked for the title: true for the one load right after. */
+const TITLE_ASKED = (() => { try { const v = sessionStorage.getItem('se-to-title') === '1'; sessionStorage.removeItem('se-to-title'); return v; } catch (err) { return false; } })();
 
 /**
  * Test-aware random function.
@@ -168,8 +177,12 @@ class GameState {
         this._breachDone = false;  // sector 1's hole in the hull (Breach) happens once per run
         this._paidWarps = 0;       // warps to a new place (free courses too), so the breach never comes on the first one
         this._docksFlown = 0;      // the new look: docks flown this run; the first plays the whole approach (App.flyDock)
+        this._nsTypesLanded = {};  // the new look: kind of world → { grade, auto } of its last full drop this run (App.isFullDrop, App.flyLanding)
+        this._nsDrops = 0;         // the new look: the meteor's landings flown this run (its first-landing help and its later tiers; LanderGame's not counted)
         this._wreckDoors = [];     // the doors of the wrecks boarded this run, in order (App.wreckDoorFor, TorchDoors.pick)
         this._kindsScanned = [];   // the new look: the kinds of world scanned this run (the first of each kind is +1 data, App.noteNewKind)
+        this._seenCards = [];      // the new look: the frames seen this run (EncounterCard openFrame: a repeat says only its last line)
+        this._nsEventsSeen = [];   // the new look: the landing events whose full card was shown this run (App.tripCardPlan: a repeat is a short result card)
 
         // --- Legacy aliases for systems that still reference old names ---
         // TODO: Remove these once all systems are updated
@@ -271,6 +284,8 @@ class GameState {
             _breachDone: !!this._breachDone,
             _paidWarps: this._paidWarps || 0,
             _docksFlown: this._docksFlown || 0,
+            _nsTypesLanded: this._nsTypesLanded || {},
+            _nsDrops: this._nsDrops || 0,
             _nsSupper: this._nsSupper || null,     // the new look: a supper still due after the jump (eaten after a reload too)
             _hungerChain: 1,                       // missed suppers counted by the hunger chain (loadGame: older counts never kill)
             aura: window.AuraSystem ? { ethicsScore: window.AuraSystem.ethicsScore, warningCount: window.AuraSystem.warningCount } : null,
@@ -307,6 +322,7 @@ class GameState {
             _boardedHulls: this._boardedHulls || [],
             _wreckDoors: this._wreckDoors || [],
             _kindsScanned: this._kindsScanned || [],
+            _nsEventsSeen: this._nsEventsSeen || [],
             _standing: this._standing || null,
             _countSceneSeen: !!this._countSceneSeen,
             _tutorialWarpSeen: !!this._tutorialWarpSeen,   // A.U.R.A.'s first-time lines are said once per run, not once per load
@@ -317,6 +333,7 @@ class GameState {
             _encounteredShipNames: this._encounteredShipNames || [],
             _encounteredExodus: this._encounteredExodus || [],
             _seenCampfires: this._seenCampfires || [],
+            _seenCards: this._seenCards || [],   // the new look: the frames seen ('kind:id', EncounterCard openFrame)
             _followedSignal: !!this._followedSignal,
             _lighthouseBonus: !!this._lighthouseBonus,
             _damagedCapacitors: this._damagedCapacitors || null,
@@ -326,7 +343,7 @@ class GameState {
         };
 
         try {
-            localStorage.setItem('silentExodus_save', JSON.stringify(saveData));
+            localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
             return true;
         } catch (e) {
             console.error('Failed to save game:', e);
@@ -339,7 +356,7 @@ class GameState {
      */
     loadGame() {
         try {
-            const saveStr = localStorage.getItem('silentExodus_save');
+            const saveStr = localStorage.getItem(SAVE_KEY);
             if (!saveStr) return false;
 
             const saveData = JSON.parse(saveStr);
@@ -370,6 +387,8 @@ class GameState {
             this._breachDone = !!saveData._breachDone;
             this._paidWarps = saveData._paidWarps || 0;
             this._docksFlown = saveData._docksFlown || 0;            // saves from before the flown docking have none
+            this._nsTypesLanded = landedTypesFrom(saveData._nsTypesLanded);   // saves from before the meteor have none ({}, 0)
+            this._nsDrops = Number.isFinite(saveData._nsDrops) && saveData._nsDrops >= 0 ? Math.floor(saveData._nsDrops) : 0;
             this._nsSupper = saveData._nsSupper || null;
             if (saveData.aura && window.AuraSystem) {
                 window.AuraSystem.ethicsScore = saveData.aura.ethicsScore || 0;
@@ -396,6 +415,7 @@ class GameState {
             this._boardedHulls = saveData._boardedHulls || [];
             this._wreckDoors = Array.isArray(saveData._wreckDoors) ? saveData._wreckDoors : this._boardedHulls.map(() => 'cut');   // older saves: every hatch was cut
             this._kindsScanned = Array.isArray(saveData._kindsScanned) ? saveData._kindsScanned : [];
+            this._nsEventsSeen = Array.isArray(saveData._nsEventsSeen) ? saveData._nsEventsSeen : [];   // older saves: every event's full card once more
             this._standing = saveData._standing || null;
             this._countSceneSeen = !!saveData._countSceneSeen;
             this._tutorialWarpSeen = !!saveData._tutorialWarpSeen;
@@ -406,6 +426,7 @@ class GameState {
             this._encounteredShipNames = saveData._encounteredShipNames || [];
             this._encounteredExodus = saveData._encounteredExodus || [];
             this._seenCampfires = saveData._seenCampfires || [];
+            this._seenCards = Array.isArray(saveData._seenCards) ? saveData._seenCards : [];
             this._followedSignal = !!saveData._followedSignal;
             this._lighthouseBonus = !!saveData._lighthouseBonus;
             this._damagedCapacitors = saveData._damagedCapacitors || null;
@@ -442,14 +463,14 @@ class GameState {
      * Check if a save exists
      */
     hasSave() {
-        return localStorage.getItem('silentExodus_save') !== null;
+        return localStorage.getItem(SAVE_KEY) !== null;
     }
 
     /**
      * Delete save
      */
     deleteSave() {
-        localStorage.removeItem('silentExodus_save');
+        localStorage.removeItem(SAVE_KEY);
     }
 
     /**
@@ -457,7 +478,7 @@ class GameState {
      */
     getSaveInfo() {
         try {
-            const saveStr = localStorage.getItem('silentExodus_save');
+            const saveStr = localStorage.getItem(SAVE_KEY);
             if (!saveStr) return null;
             const data = JSON.parse(saveStr);
             return {
@@ -471,7 +492,7 @@ class GameState {
     }
 
     /**
-     * What warping to this place costs right now, the one price the map shows (docs/ECONOMY.md): 4-6 energy by distance (5-8 in the new look),
+     * What warping to this place costs right now, the one price the map shows (docs/ECONOMY.md): 4-6 energy by distance (6-9 in the new look),
      * then bridge damage, burnt capacitors (this sector only) and charts found on the way. No energy comes back on arrival.
      * Free: the orbit the ship is parked at, the light, and a story planet whose course a dated wreck gave us.
      */
@@ -495,7 +516,7 @@ class GameState {
     /** A warp's price before damage and charts: the further across the map from where the ship is, the more it costs. */
     warpDistanceCost(planet) {
         const isNew = isNewScreen(), WARP_NEAR = isNew ? NEW_LOOK_ECONOMY.WARP_NEAR : 4, WARP_FAR = isNew ? NEW_LOOK_ECONOMY.WARP_FAR : 6;
-        const MAP_DISTANCE_PER_STEP = 30;   // every 30 (in map widths %) costs one more, up to WARP_FAR: 4, 5, 6 (the new look: 5 to 8)
+        const MAP_DISTANCE_PER_STEP = 30;   // every 30 (in map widths %) costs one more, up to WARP_FAR: 4, 5, 6 (the new look: 6 to 9)
         const map = typeof NavView !== 'undefined' ? NavView : null;
         const to = map && map.mapPlace(planet);
         if (!to) return WARP_NEAR + 1;
@@ -525,10 +546,20 @@ class GameState {
         if (this.logs.length > this.maxLogs) {
             this.logs.shift();
         }
+        if (this._heard) this._heard.push(message);                                  // GameState.heard is listening
 
         window.dispatchEvent(new CustomEvent('log-updated', {
             detail: { message }
         }));
+    }
+
+    /** Runs fn and returns the log lines it added, in order (logged as ever). The new look keeps what a breakdown says this
+        way (applyStressTraits: _nsBroke), so a trip's short result card can show it (App.tripResultWords). */
+    heard(fn) {
+        const outer = this._heard, said = [];
+        this._heard = said;
+        try { fn(); } finally { this._heard = outer || null; if (outer) outer.push(...said); }
+        return said;
     }
 
     /**
@@ -777,7 +808,7 @@ class GameState {
         this._nsSupper = null;
         this.crew.forEach(c => { delete c._nsWeak; if (c.status !== 'INJURED') delete c._nsHungerSick; });   // last supper's weakness is over
         const living = this.crew.filter(c => c.status !== 'DEAD');
-        living.forEach(c => { if (rests && !skips.includes(c) && c.stress > 0) c.stress--; });
+        living.forEach(c => { if (rests && !skips.includes(c) && c.stress > 0) c.stress = Math.max(0, c.stress - E.SUPPER_REST); });
         if (share) living.forEach(c => this.hungerStress(c));
         const names = list => list.map(c => c.name).join(' and ');
         if (!short) this.addLog(`The crew ate ${ate} rations at supper. ${this.rations} left.`);
@@ -798,8 +829,7 @@ class GameState {
 
     /** The new look: what going without supper does to each of them (serveSupper), by their count over the run: the first time
         too weak for the next team trip (_nsWeak, read by NSOrbit); the second sick in bed (INJURED, _nsHungerSick: only a
-        supper they eat makes them well, never Aris's "up by the next stop" or the autodoc; a card's, an item's or a station's
-        treatment still can); each time +1 stress, never past 2, and no rest.
+        supper they eat makes them well, nothing else: keepHungerSick); each time +1 stress, never past 2, and no rest.
         The third time (HUNGER_DEATH_AT) they die: listed in died, and serveSupper calls dieOfHunger once its other lines are
         told. Returns { weak, sick, died }. */
     goWithout(skips) {
@@ -841,11 +871,26 @@ class GameState {
             : `A.U.R.A.: "${c.name} is sick from hunger, Commander. ${He} stays in bed until ${he} eats."`;   // DRAFT
     }
 
-    /** The new look: the hunger-sick mark (_nsHungerSick) belongs to the sickness it caused. Once something else has made
-        them well (a card, an item, a station), it goes, so a later injury is a plain one: Aris's "up by the next stop" and a
-        shared-out supper treat it as such. emitUpdates calls it. */
-    dropStaleHunger() {
-        this.crew.forEach(c => { if (c._nsHungerSick && c.status !== 'INJURED') delete c._nsHungerSick; });
+    /** The new look: hunger sickness is mended only by eating at a later supper (2026-11-02, the designer's open call 3; mend()
+        at serveSupper drops the mark). Anything else that made them well (a card's treatment, an item, a station, Eden's
+        rest, the autodoc) leaves them sick in bed: back to INJURED here. Every treatment picks its patient with treatable(),
+        and Aris's "up by the next stop", the autodoc and a CURE prize pass them by, so this only catches what slips past.
+        The dead lose the mark. emitUpdates calls it. Returns who it put back to bed (the run model counts them). */
+    keepHungerSick() {
+        const back = [];
+        this.crew.forEach(c => {
+            if (!c._nsHungerSick) return;
+            if (c.status === 'DEAD') delete c._nsHungerSick;
+            else if (c.status !== 'INJURED') { c.status = 'INJURED'; back.push(c); }
+        });
+        return back;
+    }
+
+    /** Whether a treatment (a card's med bay, a station's aisle, an item, a blessing, Eden's rest) can make c well: hurt, and
+        in the new look not sick from hunger, which only a supper they eat mends (keepHungerSick). A treatment with nobody
+        treatable takes its "nobody is hurt" branch. */
+    treatable(c) {
+        return !!c && c.status === 'INJURED' && !(isNewScreen() && c._nsHungerSick);
     }
 
     /** The new look: the hurt are well again (supper, Aris's next stop). */
@@ -945,7 +990,8 @@ class GameState {
     /**
      * Repair a specific deck.
      */
-    /** What repairing a deck costs now: its price, -30% with Jaxon (Engineer) alive, +50% while engineering is down. */
+    /** What repairing a deck costs now: its price, -30% with Jaxon (Engineer) alive, +50% while engineering is down. The new
+        look: ×NEW_LOOK_ECONOMY.HOARDER_REPAIR (rounded up) while Jaxon is under stress (HOARDER: he keeps parts back). */
     repairCostOf(deckKey) {
         const deck = this.shipDecks[deckKey];
         if (!deck) return 0;
@@ -955,6 +1001,7 @@ class GameState {
         if (deckKey !== 'engineering' && this.shipDecks.engineering.status === 'DAMAGED') {
             cost = Math.floor(cost * 1.5);
         }
+        if (isNewScreen() && this.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD' && c.trait === 'HOARDER')) cost = Math.ceil(cost * NEW_LOOK_ECONOMY.HOARDER_REPAIR);
         return cost;
     }
 
@@ -1001,7 +1048,7 @@ class GameState {
      * Called after any stress change.
      */
     applyStressTraits() {
-        if (isNewScreen()) this.oneBreakdown();
+        if (isNewScreen()) { this.oneBreakdown(); this.stressOneBarks(); }
         this.crew.forEach(c => {
             if (c.status === 'DEAD') return;
 
@@ -1029,7 +1076,8 @@ class GameState {
                         break;
                     case 'SURVIVOR':   // Vance
                         c.trait = 'PARANOID';
-                        this.addLog(`${c.name}: "I'm not sending anyone into that deathtrap."`);
+                        if (isNewScreen()) this.addLog(`${c.name}: "I'm not taking the dangerous way. If you want it, send someone else."`);   // DRAFT: the new look strikes his way only with him down (App.teamTraits)
+                        else this.addLog(`${c.name}: "I'm not sending anyone into that deathtrap."`);
                         break;
                     case 'HUMANIST':   // Aris
                         c.trait = 'BLEEDING_HEART';
@@ -1051,7 +1099,8 @@ class GameState {
             // Stress 3: Breakdown events (fire once). The new look: one at most per event (oneBreakdown held the rest at 2)
             if (stress >= 3 && !c.breakdownFired) {
                 c.breakdownFired = true;
-                this.triggerBreakdown(c);
+                if (isNewScreen()) this._nsBroke = { crew: c, said: this.heard(() => this.triggerBreakdown(c)) };   // who broke and what it said (App.tripResultWords)
+                else this.triggerBreakdown(c);
             }
 
             // Remove trait if stress drops below 2
@@ -1060,6 +1109,19 @@ class GameState {
                 c.trait = null;
                 c.breakdownFired = false;
             }
+        });
+    }
+
+    /** The new look: the first time someone (not the commander) reaches stress 1 they say one line about it (BarkSystem's
+        STRESS_ONE; the ship shows it too: they lie awake or pace, tower/Tower.js). Once a person a run (_nsStressSaid, saved),
+        marked only once the bark is said: its cooldown spreads several out over the next actions. Someone already at 2 says
+        their trait's line instead (below), so they are only marked. */
+    stressOneBarks() {
+        const B = typeof window !== 'undefined' ? window.BarkSystem : null;
+        this.crew.forEach(c => {
+            if (c.status === 'DEAD' || c._nsStressSaid || (c.tags || []).includes('LEADER') || (c.stress || 0) < 1) return;
+            if ((c.stress || 0) >= 2) { c._nsStressSaid = true; return; }
+            if (B && typeof B.tryBark === 'function' && B.tryBark('STRESS_ONE', this, { speaker: c })) c._nsStressSaid = true;
         });
     }
 
@@ -1142,6 +1204,25 @@ class GameState {
         return this.crew.some(c => c.status !== 'DEAD' && c.trait === traitName);
     }
 
+    /** A stress trait that works through its holder (the new look, depth step 8): true while a living holder of it is one of
+        team (crew members): Vance's PARANOID and Mira's RECKLESS strike a way, and Mira's OBSESSED keeps the team out a day,
+        only when they are down with it. The default game: anyone living holds it (hasActiveTrait), as before. */
+    traitDown(traitName, team) {
+        if (!isNewScreen()) return this.hasActiveTrait(traitName);
+        return (team || []).some(c => c && c.status !== 'DEAD' && c.trait === traitName);
+    }
+
+    /** The new look: who is down on the team trip now (App.currentEvaTeam while NSOrbit has a trip out: a site's story, a
+        landing's card), else null. The site stories read it (data/ExodusDerelicts.js, data/DerelictEncounters.js): who a
+        choice needs, and who it can hurt, is the team that went, not anyone aboard. null in the default game. */
+    tripTeam() {
+        if (!isNewScreen() || typeof window === 'undefined') return null;
+        const app = window.app, O = window.NSOrbit;
+        let out = null;
+        try { out = app && O && typeof O.trip === 'function' && O.trip() ? app.currentEvaTeam || null : null; } catch (err) { console.error('GameState: the trip team failed', err); }
+        return out ? out.slice() : null;
+    }
+
     /** Items the hold takes right now: racks add a pallet, a broken cargo deck halves everything. */
     getCargoLimit() {
         const full = CARGO_LIMIT + (this.upgrades.includes('cargo_racks') ? CARGO_RACK_BONUS : 0);
@@ -1177,7 +1258,7 @@ class GameState {
     }
 
     emitUpdates() {
-        if (isNewScreen()) { this.openFoodPacks(); this.dropStaleHunger(); }
+        if (isNewScreen()) { this.openFoodPacks(); this.keepHungerSick(); }
         this.enforceCargoLimit();
         this.applyStressTraits();
         this.checkLoseConditions();
@@ -1206,8 +1287,9 @@ const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, 
 /**
  * The new look's economy (?new=1 only; tuned 2026-10-17 against docs/ECONOMY.md §1-2, retuned 2026-10-30 so losses bite:
  * smaller card gains and landing salvage, fewer crises aboard, and the reserve costs a cold night; then a trip's odds, shared
- * with the model through src/data/TripOdds.js: no death under 30 % hurt, the right crew make it safer, and every death chance
- * is shown on the card first; measured with the node run model, tools/runsim.js, which reads this same table). Every number
+ * with the model through src/data/TripOdds.js: no death under 15 % hurt, the right crew make it safer, and every death chance
+ * is shown on the card first; measured with the node run model, tools/runsim.js, which reads this same table; retuned again
+ * 2026-11-02 with the designer's four open calls, against the depth plan's D4 table, 2,000 runs per player). Every number
  * the new look spends or gives differently from the default game is here, with why. The default game keeps the numbers above
  * and its own card amounts.
  * The new screen's files read it as window.NEW_LOOK_ECONOMY. Two rules go with it, with no number: a story world (one of our
@@ -1216,20 +1298,29 @@ const RATIONS_PER_JUMP = 1;      // the crew eats on the jump and nowhere else, 
  */
 const NEW_LOOK_ECONOMY = Object.freeze({
     START_ENERGY: 100,       // a full tank (the cap stays 100)
-    WARP_NEAR: 5,            // a warp costs 5 to 8 by distance on the map (was 4 to 6): each extra world is a real price, so a
-    WARP_FAR: 8,             //   careful player cannot take every world the route offers; the dated story world stays free
+    WARP_NEAR: 6,            // a warp costs 6 to 9 by distance on the map (was 4 to 6, then 5 to 8): each extra world is a real
+    WARP_FAR: 9,             //   price, so a careful player cannot take every world the route offers, and a player with energy
+                             //   to spare spends it on worlds (2026-11-02); the dated story world stays free. 9 is the most the
+                             //   map allows (its farthest two places are about 97 apart: 6 + 97 / 30)
     JUMP: 6,                 // the sector jump, doubled with engineering down (was 8): every run pays five, so the story path
                              //   (a wreck and a jump a sector) costs a little less than before while each extra costs more
-    SKIM: 20,                // "Refuel" at a gas giant, once per giant (was 15): about three warps, so the giant can pay for a stop
+    SKIM: 25,                // "Refuel" at a gas giant, once per giant (was 15, then 20): about three warps, so the giant can pay for
+                             //   a stop. 25 since 2026-11-03: ship faults cost their full price again (no card cost cap), and at
+                             //   20 the careful player flew on the reserve in 54 % of runs and lost the ship in 5 % (25: 48 %, 4 %)
     EVA_ENERGY_MIN: 8,       // what a plain landing's energy find brings (was 30 to 49: one landing paid for six warps, so
     EVA_ENERGY_MAX: 12,      //   energy never got tight for anyone who landed on bare worlds)
-    EVA_METALS: Object.freeze([20, 39]),       // what a plain landing's salvage find brings (was 40 to 79: landings paid for
-    EVA_METALS_HIGH: Object.freeze([35, 64]),  //   every repair); the rich find (was 60 to 119). App.evaSalvageRange
-    CARD_ENERGY_MAX: 12,     // no single card choice gives more energy than this (was 20, and up to 70 before that); no more
-    CARD_RATIONS_MAX: 3,     //   rations than this (sealed rations count, opened) and no more salvage than this either (salvage was
-    CARD_SALVAGE_MAX: 40,    //   up to 120). Its chips say what it really gives (EncounterCard.capGains, EncounterCard.apply).
-                             //   Card costs are not capped: a 12 cap left the kind and pragmatic picks 62 energy apart in the
-                             //   run model (61 without it), so closing that gap waits on the designer
+    EVA_METALS: Object.freeze([15, 29]),       // what a plain landing's salvage find brings (was 40 to 79: landings paid for
+    EVA_METALS_HIGH: Object.freeze([35, 64]),  //   every repair; then 20 to 39); the rich find (was 60 to 119). App.evaSalvageRange
+    CARD_ENERGY_MAX: 5,      // no single card choice gives more energy than this (was 20, then 12; 70 before that); no more
+    CARD_RATIONS_MAX: 2,     //   rations than this (sealed rations count, opened; was 3) and no more salvage than this either
+    CARD_SALVAGE_MAX: 20,    //   (was 40, and up to 120). Its chips say what it really gives (EncounterCard.capGains, .apply).
+    CARD_COST_CAP: Object.freeze({ energy: 4, rations: 1 }),   // no single card choice costs more than this (2026-11-02, the
+                             //   designer's open call 2), so a kind pick is not paid for many times over: its chips and result
+                             //   line say what it really costs (EncounterCard.apply). Salvage costs are trades (a station's
+                             //   parts, a repair) and keep their price, and so do a cost paid later ("-5 Energy on every jump")
+                             //   and a ship fault (no card choice: showShipMalfunctionModal). It does not close the card gap:
+                             //   the kind and the pragmatic card picks still end far apart in the run model, because the gap is
+                             //   what the pragmatic picks gain, not what the kind ones cost (waiting on the designer)
     CRISIS_CHANCE: 0.35,    // how likely a sign aboard turns into a crisis while the team is down (was 0.5: about 1 trip in 3)
     MIRA_ABOARD: -5,         // Mira scanning the ground from aboard while the team is down: 5 % safer (was 10 %, so sending
                              //   her down is sometimes worth more). NSOrbit.whileDown and NSWorldFinds' marks read it
@@ -1243,8 +1334,16 @@ const NEW_LOOK_ECONOMY = Object.freeze({
                              //   warns at the table and the player chooses it over "Not yet" (tower/Supper.js); with nobody
                              //   else to go without, the food is shared out instead
     HUNGER_STRESS_HOLD: 2,   // going without, or a supper shared out: +1 stress, never past 2 (hunger never sets off a breakdown)
-    FOOD_PACK_RATIONS: 2,    // sealed rations found on a card are opened at once (the new look has no hold to open them from):
-                             //   "+2 Sealed Rations" is +4, a little under one supper, so a find helps but does not end the hunger
+    DANGER_STRESS_FROM: 4,   // arriving at a world this dangerous (its dangerLevel) unsettles one of the crew: +1 stress
+                             //   (App.handleWarp; the default game from 2, which fired on most arrivals from sector 3: 8 times a
+                             //   run in the run model, the most stress of all)
+    BACKGROUND_STRESS_HOLD: 2,   // background stress (that arrival, and sector 2's empty space: SectorConfig ISOLATION) never takes
+                             //   anyone past 2, as hunger and the cold night: a breakdown comes from something that happened
+    SUPPER_REST: 2,          // a rested supper takes this much stress off everyone who ate (was 1; GameState.serveSupper): a run
+                             //   with suppers in a working crew quarters recovers, so a breakdown is less sure. With 1, more broke,
+                             //   Mira's OBSESSED cost a ration on most of her trips, and the optimizer beat the careful player
+    FOOD_PACK_RATIONS: 1,    // sealed rations found on a card are opened at once (the new look has no hold to open them from):
+                             //   "+2 Sealed Rations" is +2 (was +4), so a find helps but the pragmatic picks do not end the hunger
     FAR_SCAN: 2,             // "Scan" in a world's note in travel (src/newscreen/Scan.js): what a world holds before we fly there.
                              //   Under half the cheapest warp, so scanning both worlds of a fork costs less than one more stop,
                              //   while scanning every world ahead adds up to one (the default game's map scan is free)
@@ -1259,23 +1358,103 @@ const NEW_LOOK_ECONOMY = Object.freeze({
                              //   world, so the picture is seen first): NewScreen.js
     // A team trip's odds (src/data/TripOdds.js, read by the game and the run model): how likely someone is hurt, and how likely
     // that kills. A trip can kill only where its card shows the death chance first ("1 in 14"), and a landing never raises it.
-    DEATH_FLOOR: 30,         // under 30 % hurt, a trip never kills (it did 10 % of all hits before, however small the risk)
-    DEATH_SHARE: 10,         // at 30 % or more: 10 % of hits kill, one more for each point of hurt past DEATH_PAST (as before)
-    DEATH_PAST: 40,          //   (the default game's HIGH_RISK_FLOOR)
+    DEATH_FLOOR: 15,         // under 15 % hurt, a trip never kills (2026-11-02, the designer's open call 1: was 30, so a careful
+                             //   player who goes at 25 % or less never lost anyone); every way that can kill shows "death 1 in N"
+                             //   on its row and on GO DOWN
+    DEATH_FULL_AT: 30,       // from DEATH_FLOOR up to here only a small part of the share kills: DEATH_NEAR_FLOOR of it at the
+    DEATH_NEAR_FLOOR: 0.3,   //   floor, climbing evenly to all of it here (15 % hurt: 1 in 278; 25 %: 1 in 65; 30 %: 1 in 42)
+    DEATH_SHARE: 8,          // at 30 % or more: 8 % of hits kill (was 10), one more for each point of hurt past DEATH_PAST
+    DEATH_PAST: 47,          //   (was 40, the default game's HIGH_RISK_FLOOR: a greedy player lost someone in 2 runs of 3)
     DEATH_SHARE_HUNTED: 25,  //   where something hunts (PREDATORY), 25 % of hits kill (was a hidden 40 % attack roll on top)
     VANCE_DEATH_SHARE: 0.5,  // Vance down and well with a partner takes the partner's hit, so only a hit on him can kill: half
     HURT_MAX: 75,            // a trip's hurt chance is never more than this (the card's bar and the death share stay readable)
     PREDATOR_RISK: 30,       // something hunts here: +30 % hurt, all of it shown (was +15 % shown and that hidden roll)
-    HURT_GOES_RISK: 10,      // fewer than two are well, so someone hurt goes down: +10 % hurt (no trip is ever locked)
+    HURT_GOES_RISK: 25,      // fewer than two are well, so someone hurt goes down: +25 % hurt (was 10; no trip is ever locked,
+                             //   but sending the hurt is a real gamble: GO DOWN's "hurt" chip and its odds say so)
     FIT_PER_POINT: 5,        // the right people for the find (NSOrbit's fit: Vance where something hunts, Aris in sick air ...):
-    FIT_MAX: 10,             //   5 % safer a point of fit, 10 % at most
+    FIT_MAX: 15,             //   5 % safer a point of fit, 15 % at most (was 10: a team of three points of fit counts in full)
     FIT_MIRA_ABOARD: 1,      // the crew's proposal (NSOrbit.propose): Mira's ground scan from aboard is worth a point of fit
     FIT_JAXON_LANDS: 0,      //   and Jaxon's step on A.U.R.A.'s landing this many while she lands us. 0 for now: her autopilot
                              //   lands soft on 99.9 % of worlds (tools/runsim/lander.js), so his step almost never changes a
                              //   landing; raise it if the browser check's 50 autopilot landings show rough or crashed ones
+    // What a find's way brings home (App.drawPrize): drawn once, seeded by the world and the find, when the world is read
+    // (node.nsPrize), so its row on the glass and the trip pay the same. Supplies only: the new look has no hold, so a way
+    // that brought back an item brings supplies instead, by the item's first tag (PRIZE_OF_TAG) and how risky the way is
+    // (its riskMod: T1 under 35, T2 35 to 45, T3 50 and up), so a bold prize grows with its risk. A way that gives salvage,
+    // energy or data keeps the plain landing's own (EVA_METALS, EVA_ENERGY_MIN ...).
+    BOLD_PRIZE: Object.freeze({
+        TIER_FROM: Object.freeze([35, 50]),     // the riskMod where T2 and T3 start (the careful way of THE WELCOME, 0, is T1)
+        SALVAGE: Object.freeze([Object.freeze([20, 34]), Object.freeze([30, 44]), Object.freeze([40, 59])]),   // TECH, GEO, WEAPON, ARTIFACT
+        ENERGY: Object.freeze([10, 15, 20]),     // ENERGY      (2026-11-02: each a tier lower than the plan's 35-54 / 45-69 / 60-89,
+        RATIONS: Object.freeze([1, 2, 3]),       // BIO, RATION  15 / 20 / 25 and +2 / +3 / +4: a greedy player ended full of all three)
+        LORE_DATA: 1,                            // LORE: +1 data, and salvage one tier lower (T1: a plain landing's EVA_METALS)
+        CURE_STRESS: 1,                          // CURE: the hurt aboard are well, and the most stressed takes this much off
+    }),
+    RISKY_FROM: 15,          // a way's row on the glass (stop/Words.js) says "low risk" under this hurt chance, "risky" from it,
+                             //   and, wherever it can kill (DEATH_FLOOR and up), GO DOWN's red "death 1 in N"; GO DOWN says the
+                             //   hurt chance. With DEATH_FLOOR at 15 too, every way from 15 can kill, so "risky" never shows
+                             //   (waiting on the designer: RISKY_FROM below the floor, or no middle word)
+    FINDS_MAX: 2,            // finds a world shows (NSWorldFinds.list; 2026-11-02, the designer's open call 4: shorter runs): its
+                             //   site and its own event, or its own event and a feature; a third only when it carries the clue
+    // Salvage sinks (depth step 8): a dead station's fuel pump, once a station after docking (NSOrbit's "Fuel depot"), turns
+    // salvage into energy; Jaxon under stress (HOARDER) makes every repair cost more (GameState.repairCostOf)
+    DEPOT_SALVAGE: 25,       // the pump's parts: offered only with this much salvage aboard
+    DEPOT_ENERGY: 15,        //   and what it pumps (was 20; energy still tops out at 100: the chip says what fits)
+    HOARDER_REPAIR: 1.25,    // HOARDER: repairs cost a quarter more while Jaxon keeps parts back (the default game's fabricator rule)
 });
 window.NEW_LOOK_ECONOMY = NEW_LOOK_ECONOMY;
+// The new look's short result card (App.tripResultWords), when nobody was hit: one of the team says it (A.U.R.A. if none is left)
+const TRIP_BACK_LINES = Object.freeze({
+    got: "Got it. We're coming back up.",   // DRAFT: the prize, or some of it, came home
+    back: "We're coming back up.",          // DRAFT: nothing came home (it did not fit)
+});
+// The new look: what a way that brought back an item gives instead, by the item's first tag (App.drawPrize; how much is
+// NEW_LOOK_ECONOMY.BOLD_PRIZE's). Any other tag gives salvage.
+const PRIZE_OF_TAG = Object.freeze({ TECH: 'salvage', GEO: 'salvage', WEAPON: 'salvage', ARTIFACT: 'salvage', ENERGY: 'energy', BIO: 'rations', RATION: 'rations', LORE: 'lore', CURE: 'cure' });
+/** A number from 0 to just under 1 for a key, the same every time for the same key (FNV-1a, then mixed): a prize drawn once
+    stays drawn (App.drawPrize). */
+function seededUnit(key) {
+    let h = 2166136261; const s = String(key);
+    for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+    h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909);   // spread every bit into the high ones
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
+// A try tab's moments (App.startTry, ?try=<kind>): each places a fresh run (the state just made by init()).
+const TRY_PLACES = {
+    /** Last Port: sector 5 as a careful run reaches it (the disc drawing aboard, the crew well, one dock flown), the disc's
+        moon named and its course free: click it on the map, then the bridge's mark in orbit, then "Go across". */
+    lastport(app, s) {
+        s.currentSector = 5;
+        s.sectorNodes = PlanetGenerator.generateSector(5);
+        app.plantSectorPage();
+        const moon = s.sectorNodes.find(p => p.isStoryPlanet && p.hasPage === 'PAGE_DISC');
+        if (moon) { moon.storyHidden = false; moon.courseKnown = true; }
+        if (typeof ITEMS !== 'undefined' && ITEMS.DISC_DRAWING) s.cargo.push({ ...ITEMS.DISC_DRAWING });
+        s.energy = 60; s.rations = 14; s._docksFlown = 1;
+        s.addLog(`Sector 5${typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[5] ? ' — ' + SECTOR_CONFIG[5].name : ''}`);
+    },
+    /** After the flight: sector 4 as a careful run reaches it (the crew well), its worlds still ahead: click the light ahead
+        (then "Go anyway" if asked) and the jump into sector 5 is flown through the dark, then the supper in sector 5. */
+    void(app, s) {
+        s.currentSector = DARK_JUMP_TO - 1;
+        s.sectorNodes = PlanetGenerator.generateSector(s.currentSector);
+        app.plantSectorPage();
+        s.energy = 60; s.rations = 14;
+        s.addLog(`Sector ${s.currentSector}${typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[s.currentSector] ? ' — ' + SECTOR_CONFIG[s.currentSector].name : ''}`);
+    },
+};
+// Last Port: the wreck stories that say the ship landed (SILENT SHIP, THE FENCE) cannot be the disc's ship, clamped to the relay
+// (2026-10-31 review: nor, until it has words for the relay, THE GROWTH: its 'Bring Aris down', 'stay with the lander' and
+// 'burned from orbit' while we are clamped beside it)
+const RELAY_UNFIT_STORIES = ['EXODUS_DEAD_CREW', 'EXODUS_PARTIAL', 'EXODUS_INFECTED'];
+// After the flight (Corridor.js THE DARK, MiniHost 'corridor-void'): the new look's jump into this sector goes dark round us
+// while we fly, once a run (sectors only go forward). What it costs (rations, stress) comes back in the flight's result.
+const DARK_JUMP_TO = 5;
+// The new look: a jump's talk that says "after this jump" is had before it, once the jump is chosen and before the flight
+// opens (App.talkBeforeJump), and is that jump's only talk (2026-11-01 check: NO WAY BACK came right after the dark)
+const NEW_LOOK_BEFORE_JUMP_TALKS = ['CF_LAST_CHANCE'];
+const NEW_LOOK_NO_ANOMALY = ['ANOMALY_HUNGER'];   // the Dark Patch (beacons in a starless patch, going out one by one): the dark's image, used once
 const SCRAPES_PER_BROKEN_DECK = 2; // flying the jump (Corridor): every second scrape breaks a deck (was 3). Measured over a run's
                                    // four flown jumps (2026-10-21): a careful pilot loses about 0.6 decks (a slower one, 1.5), a
                                    // ship that never moves all of them, one at full throttle the whole way about five. At 3: 0.2, 5, 3
@@ -1300,6 +1479,20 @@ const REEL_HULLS = [7, 2207];   // the hulls the jump films show drifting (Story
 const WRECK_CALLSIGNS = ['PIONEER', 'COVENANT', 'SOJOURN', 'REQUIEM', 'LAZARUS', 'ICARUS', 'MERIDIAN', 'ORPHEUS', 'HALCYON', 'VESPER', 'TANTALUS', 'EMBER'];
 const CREW_ID_BY_TAG = { LEADER: 'you', ENGINEER: 'jaxon', MEDIC: 'aris', SECURITY: 'vance', SPECIALIST: 'mira' }; // the minigames' names for the crew
 const crewIdOf = member => CREW_ID_BY_TAG[(member.tags || []).find(tag => CREW_ID_BY_TAG[tag])];
+// The new look: with Jaxon on the team, A.U.R.A.'s landing comes down a step softer (App.applyLanding, and the meteor's routine
+// drop when it carries her landing: App.flyLanding)
+const LANDING_LIFT = Object.freeze({ crash: 'rough', rough: 'soft' });
+/** A save's record of the kinds of world landed on (GameState _nsTypesLanded): only kinds with a known grade, auto a boolean;
+    an old save's none is {}. */
+function landedTypesFrom(raw) {
+    const out = {};
+    if (!raw || typeof raw !== 'object') return out;
+    Object.keys(raw).forEach(type => {
+        const v = raw[type];
+        if (typeof type === 'string' && v && ['soft', 'rough', 'crash'].includes(v.grade)) out[type] = { grade: v.grade, auto: !!v.auto };
+    });
+    return out;
+}
 /** The wake-up talk, one copy: today's "Good morning, Commander" card builds from it, and so does the new screen's talk
     (start/Wake.js). mapNote and rules[1] belong to the card only (the new screen has no map and no stop count). */
 const OPENING_TALK = Object.freeze({
@@ -1339,8 +1532,9 @@ class App {
         // True while a warp or sector jump is playing out; blocks re-entrant travel requests
         this._isInTransit = false;
 
-        // Show start menu first
-        this.showStartMenu();
+        // Show start menu first (a try tab: straight into its moment, unless the ship's console just saved and asked for the title)
+        if (TRY_RUN && isNewScreen() && !TITLE_ASKED) { if (window.AudioSystem) window.AudioSystem.init(); this.init(false); }
+        else this.showStartMenu();
     }
 
     showStartMenu() {
@@ -1532,6 +1726,7 @@ class App {
             audioStatus.textContent = this.soundLabel();
             audioBtn.textContent = window.AudioSystem.muted ? 'TURN ON' : 'TURN OFF';
             this.syncSoundButton();
+            if (isNewScreen() && window.NSConsole) window.NSConsole.remember();             // the new look keeps it, as the ship's console does
         };
     }
 
@@ -1661,11 +1856,13 @@ class App {
         // Anomaly teleportation handler (visual effect + view refresh)
         window.addEventListener('anomaly-teleport', (e) => this.handleAnomalyTeleport(e.detail));
 
-        // Either load save or start new game
-        if (loadSave && this.state.loadGame()) {
+        // Either load save or start new game (a try tab: a fresh run placed at its moment, never the real save)
+        if (TRY_RUN && isNewScreen() && !loadSave) this.startTry(TRY_RUN);
+        else if (loadSave && this.state.loadGame()) {                                    // a try tab's Continue (its title comes from the ship's console) loads its own save
             this.state.addLog("=== SAVE LOADED ===");
             this.state.addLog(`Resuming mission in Sector ${this.state.currentSector}.`);
             this.resumeWhereSaved();
+            if (TRY_RUN && isNewScreen()) this.tryNote();
         } else {
             // New game
             this.state.init();
@@ -1677,10 +1874,39 @@ class App {
     }
 
     /**
+     * A try tab (?try=<kind>, the new look): a fresh run placed at one moment, saved only under the try key (SAVE_KEY), with a
+     * small corner note. TRY_PLACES[kind] places it; an unknown kind is a fresh run from the start. Reload to try it again.
+     */
+    startTry(kind) {
+        const s = this.state, place = TRY_PLACES[kind];
+        s.init();
+        if (place) {
+            place(this, s);
+            s._tutorialWarpSeen = s._tutorialEvaSeen = s._tutorialDeckSeen = s._tutorialStressSeen = true;   // a placed moment is past the first-run lines, as a real run is by then
+            const tells = Object.keys((window.NSOrbit && window.NSOrbit.TELL) || {}).map(k => 'act:' + k).concat('act:farscan', ((window.NSStock && window.NSStock.KEYS) || []).map(k => 'stock:' + k), 'land:first');
+            s.reliance = Object.assign(s.reliance || { auto: 0, manual: 0 }, { nsTold: tells });   // and past A.U.R.A.'s once-a-run teaching (Voice.once; the meteor's keycaps: App.flyLanding)
+            s._nsDrops = Math.max(s._nsDrops || 0, 6);                                       // and past the meteor's first-landing help (its later tiers by landings flown)
+        } else s.sectorNodes = PlanetGenerator.generateSector(1);
+        this.renderNav();
+        s.emitUpdates();
+        this.tryNote();
+    }
+    /** The try tab's corner note (once). */
+    tryNote() {
+        if (document.getElementById('try-note')) return;
+        const note = document.createElement('p');
+        note.id = 'try-note';
+        note.textContent = 'Try run. Your save is safe.';                                  // DRAFT (2026-10-31)
+        document.body.appendChild(note);                                                  // its look: newscreen.css #try-note (travel only, under every card and minigame)
+    }
+
+    /**
      * Auto-save the game (called after significant actions)
      */
     autoSave() {
-        if (this.state.saveGame() && !isNewScreen()) {                                       // the new screen: saved quietly, no green pill
+        const saved = this.state.saveGame();
+        if (saved && isNewScreen() && window.NewScreen.bus) window.NewScreen.bus.emit('saved', {});   // the new screen: no pill; A.U.R.A.'s speaker blinks (Console.js)
+        if (saved && !isNewScreen()) {
             // Subtle save indicator
             const indicator = document.createElement('div');
             indicator.style.cssText = `
@@ -1801,8 +2027,12 @@ class App {
         const names = [['Jaxon', 'Jaxon Mercer'], ['Aris', 'Aris Novak'], ['Vance', 'Kael Vance'], ['Mira', 'Mira Chen']].filter(([first]) => alive(first)).map(([, full]) => full);
         const leader = this.state.crew.find(c => (c.tags || []).includes('LEADER'));
         names.push((leader && leader.realName) || 'Cora Moon');          // she names the commander too, not "you": five names, "four crew"
+        const printed = ['Cora Moon', 'Jaxon Mercer', 'Aris Novak', 'Kael Vance', 'Mira Chen'];   // the paper copy in the bridge locker: all five, as printed
+        const isNew = isNewScreen();
         window.EncounterCard.open(this, {
             tone: 'station', zIndex: 3400, kicker: 'THE BRIDGE', title: 'Head count',
+            picture: { kind: 'deck', deck: 'bridge', crew: 'all', screen: 'CREW 4' }, deck: 'bridge', seenKey: 'count:head', readout: 'Bridge',   // DRAFT (look pass): the readout (DESIGN 1.2); the bridge with five in it, its crew screen reading CREW 4 (C47)
+            outcomeDrop: isNew ? [/^The printed crew list/] : undefined,    // the new look shows the list itself (the printout), not a sentence about it
             context: isNewScreen() ? 'Vance is frowning at the crew screen.' : 'Back on the bridge, Vance is frowning at the crew screen.',   // the new screen opens it in travel, off the bridge
             dialogue: [
                 { speaker: 'Vance', text: 'There are five of us on this ship. She keeps saying four.' },
@@ -1814,7 +2044,7 @@ class App {
             choices: [
                 { text: 'Let it go', desc: 'Jaxon is probably right. It is only a number.' },
                 { text: 'Ask her why', desc: 'Vance wants an answer.' },
-                { text: 'Read the printed crew list', desc: 'There is a paper copy in the bridge locker.' },
+                { text: 'Read the printed crew list', desc: 'There is a paper copy in the bridge locker.', printout: isNew ? { lines: printed } : undefined },
             ],
             onPick: (idx) => {
                 if (idx === 0) { this.state.noteStanding('jaxon'); this.state.addLog('A.U.R.A.: "Thank you, Commander."'); }
@@ -1822,6 +2052,7 @@ class App {
                 if (idx === 2) {
                     this.state.noteStanding('aris');
                     this.state.addLog('The printed crew list has five names: Cora Moon, Jaxon Mercer, Aris Novak, Kael Vance, Mira Chen.');
+                    if (isNew && alive('Vance')) this.state.addLog('Vance: "Five names on the paper. Not four."');   // DRAFT (look pass): his line under the printed list (B03)
                 }
                 this.state.emitUpdates();
             }
@@ -1831,6 +2062,7 @@ class App {
     /**
      * The one place a team can go on this planet (a planet has at most one: see tidySites). kind order = which wins.
      * inSpace: reached by crossing in the lander, no landing. art: what the landing game draws beside the marked spot.
+     * relay (Last Port, the new look): the disc's moon, where the way to our wreck is a dock at the old relay (flyRelay).
      */
     siteOf(planet) {
         const SITES = [
@@ -1842,7 +2074,35 @@ class App {
             { tag: 'FAILED_COLONY', done: 'colonyInvestigated', label: 'THE COLONY RUINS', note: 'A SETTLEMENT, EMPTY', art: 'ruins', run: () => this.handleFailedColonyAction() },
             { tag: 'DERELICT', done: 'derelictInvestigated', label: 'THE WRECKAGE', note: 'A SHIP IN PIECES, IN ORBIT', inSpace: true, run: () => this.handleDerelictAction() },
         ];
-        return (planet && planet.tags && SITES.find(site => planet.tags.includes(site.tag))) || null;
+        const site = (planet && planet.tags && SITES.find(one => planet.tags.includes(one.tag))) || null;
+        return site && site.tag === 'EXODUS_WRECK' && this.isRelayStop(planet) ? { ...site, inSpace: true, relay: true } : site;
+    }
+
+    /** Last Port (the new look): the disc's moon (the story planet whose page is the disc) has an old relay in orbit with three
+        of our ships clamped to its ring, one of them the disc's; the team gets to it by docking there, flown (flyRelay). */
+    isRelayStop(planet) {
+        return !!(planet && planet.isStoryPlanet && planet.hasPage === 'PAGE_DISC' && this.hasRelay());
+    }
+
+    /** The new look with Last Port's files loaded: the disc's moon will be a relay stop (isRelayStop). */
+    hasRelay() {
+        return isNewScreen() && !!(window.DockRelay && window.MiniHost && window.MiniHost.has('dock-flight'));
+    }
+
+    /**
+     * Last Port (the new look): while the relay is still ahead, the last wreck story it can tell (a whole ship's, not one of
+     * RELAY_UNFIT_STORIES) that nobody has heard yet is kept for it, so the relay never tells a story again (2026-11-01 check:
+     * with four told before sector 5, 60 % of relays did). Returns the story ids no other wreck may take now: that one, or none.
+     */
+    relayStoryKept() {
+        const s = this.state, disc = (typeof STORY_PLANETS !== 'undefined' ? STORY_PLANETS : []).find(p => p.page === 'PAGE_DISC');
+        if (!disc || !this.hasRelay() || s.currentSector > disc.sector) return [];
+        const moon = s.currentSector === disc.sector ? (s.sectorNodes || []).find(p => this.isRelayStop(p)) : null;
+        if (moon && (moon.exodusInvestigated || (moon.wreckEncounter && !RELAY_UNFIT_STORIES.includes(moon.wreckEncounter)))) return [];   // boarded, or its story already picked
+        const told = s._encounteredExodus || [];
+        const untold = (typeof EXODUS_ENCOUNTERS !== 'undefined' ? EXODUS_ENCOUNTERS : [])
+            .filter(e => !e.noHatch && !RELAY_UNFIT_STORIES.includes(e.id) && !told.includes(e.id));
+        return untold.length === 1 ? [untold[0].id] : [];
     }
 
     /**
@@ -1906,15 +2166,21 @@ class App {
     }
 
     /** The disc, found in the last ship that carried it: one card with one line from the team (A.U.R.A. over the radio when
-        none of them has a line), then the disc page as the real object. Resolves once the disc is put away. */
+        none of them has a line), then the disc page as the real object. Resolves once the disc is put away. The new look
+        has no card (C69, look pass B12): the disc opens straight from the locker, that line under it and the card's choice
+        (Bring it aboard) as its key. */
     showDiscFound(page, shipName) {
         const card = page.card || {}, said = card.said || [];
         const team = (this.currentEvaTeam || []).filter(m => m && m.status !== 'DEAD').map(m => m.name);
         const line = said.find(l => team.includes(l.speaker)) || said.find(l => l.speaker === 'A.U.R.A.');
         const showDisc = () => (window.DiscDocument ? window.DiscDocument.open(this, { real: true }) : Promise.resolve());
+        if (window.DiscDocument && window.NSFinds && window.NSFinds.isOn()) {
+            return window.DiscDocument.open(this, { real: true, kicker: `FOUND IN ${shipName}`, said: line, ...(card.take ? { close: card.take.text } : {}) });
+        }
         if (!window.EncounterCard) return showDisc();
         return new Promise(resolve => window.EncounterCard.open(this, {
             tone: 'story', zIndex: 2600, kicker: `FOUND IN ${shipName}`, title: card.title || page.name,
+            picture: { kind: 'scene', art: 'EXODUS_WRECK' }, readout: shipName, seenKey: `disc:${page.id}`,
             context: card.context, dialogue: line ? [line] : [],
             choices: [card.take || { text: 'Bring it aboard', desc: '' }],
             onPick: () => showDisc().then(resolve),
@@ -2055,12 +2321,13 @@ class App {
                 this.state.addLog(`The fuel scoop took ${scoop} energy from the atmosphere.`);
             }
 
-            // Dangerous planet stress: dangerLevel 2+ → +1 stress to a random crew member
-            if ((planet.dangerLevel || 0) >= 2) {
+            // Dangerous planet stress: dangerLevel 2+ → +1 stress to a random crew member (the new look: from DANGER_STRESS_FROM,
+            // never past BACKGROUND_STRESS_HOLD)
+            if ((planet.dangerLevel || 0) >= (isNewScreen() ? NEW_LOOK_ECONOMY.DANGER_STRESS_FROM : 2)) {
                 const living = this.state.crew.filter(c => c.status !== 'DEAD');
                 if (living.length > 0) {
-                    const victim = living[Math.floor(Math.random() * living.length)];
-                    victim.stress = Math.min(3, (victim.stress || 0) + 1);
+                    const victim = living[Math.floor(Math.random() * living.length)], was = victim.stress || 0;
+                    victim.stress = isNewScreen() ? Math.max(was, Math.min(NEW_LOOK_ECONOMY.BACKGROUND_STRESS_HOLD, was + 1)) : Math.min(3, was + 1);
                     this.state.addLog(`${victim.name}: Unsettled by hostile readings.`);
                 }
             }
@@ -2256,6 +2523,7 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'INSIDE THE STATION', title: selected.title,
             facts: [['WHERE', stationName]],
+            picture: { kind: 'world', node: station }, readout: stationName, seenKey: `station:${selected.id}`,
             context: selected.context(stationName), dialogue: selected.dialogue, choices: selected.choices,
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(selected.choices[idx], this.state);   // the result says what really fitted
@@ -2348,6 +2616,7 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'rock', kicker: 'ASTEROID FIELD', title: selected.title,
             facts: [['WHERE', fieldName]],
+            picture: { kind: 'world', node: field }, readout: fieldName, seenKey: `asteroid:${selected.id}`,
             context: selected.context(fieldName), dialogue: selected.dialogue, choices: selected.choices,
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(selected.choices[idx], this.state);
@@ -2377,6 +2646,8 @@ class App {
         window.EncounterCard.open(this, {
             tone: 'distress', kicker: 'DISTRESS SIGNAL', title: encounter.title, hasSignal: true,
             facts: [['SENT', signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `${signalAge} years ago`]],
+            picture: { kind: 'world', node: this.state.currentSystem }, seenKey: `distress:${encounter.id}`,
+            readout: signalAge === 'UNKNOWN' ? 'Nobody can tell when' : `Sent ${signalAge} years ago`,   // DRAFT (look pass): the readout (DESIGN 1.2)
             context: encounter.context(signalAge), dialogue: encounter.dialogue, choices: encounter.choices,
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(encounter.choices[idx], this.state);
@@ -2431,18 +2702,26 @@ class App {
      */
     showCrewPersonalEvent(event) {
         if (!event || !event.targetCrew) return;
+        const CREW_DECK = { commander: 'bridge', jaxon: 'engineering', aris: 'medbay', vance: 'hold', mira: 'lab' };   // the new look: where each of them works
+        const DECK_READOUT = { bridge: 'Bridge', engineering: 'Engineering', medbay: 'Med bay', hold: 'Hold', lab: 'Lab', hangar: 'Hangar' };   // DRAFT (look pass): the readout (DESIGN 1.2)
+        // where the moment happens, as its first line says (look pass B03: the deck picture), else where they work
+        // (the ship has no hangar deck: the hold, the big bay, stands in for it, and the readout says what the line says)
+        const PLACES = [[/cargo bay|armory/i, 'hold'], [/hangar/i, 'hold', 'hangar'], [/med bay/i, 'medbay'], [/scanner console|the bridge|command chair/i, 'bridge'], [/sensor console|terminal|\blab\b/i, 'lab'], [/galley/i, 'quarters'], [/engine room|reactor/i, 'engineering']];
 
         const crew = event.targetCrew;
         const inState = v => (typeof v === 'function' ? v(this.state) : v);   // a scene may word itself from what the crew has seen
-        const colors = {
+        const place = PLACES.find(([re]) => re.test(String(inState(event.context) || '')));
+        const deck = place ? place[1] : CREW_DECK[event.crewId], who = event.crewId === 'commander' ? 'cora' : event.crewId;
+        const color = isNewScreen() ? undefined : ({                                  // the new look: the frame's tones (tokens.css), no colour table
             'jaxon': '#f0a030', 'aris': '#40c8ff', 'vance': '#ff5050',
             'mira': '#d070ff', 'commander': '#ffffff'
-        };
-        const color = colors[event.crewId] || '#ffffff';
+        })[event.crewId] || '#ffffff';
 
         window.EncounterCard.open(this, {
             tone: 'crew', color, kicker: (crew.tags || []).includes('LEADER') ? 'A NIGHT ON THE BRIDGE' : `A MOMENT WITH ${String(crew.name || '').toUpperCase()}`, title: event.title,
             context: inState(event.context), dialogue: inState(event.dialogue),
+            picture: { kind: 'deck', deck, who }, deck, seenKey: `crew:${event.id || event.title}`,
+            readout: DECK_READOUT[(place && place[2]) || deck] || '',
             choices: event.choices.map(c => ({ text: c.text, desc: this._getCrewChoiceHint(c), descNow: c.descNow })),
             onPick: (idx) => {
                 const result = window.EncounterCard.apply(event.choices[idx], this.state, crew);
@@ -2618,12 +2897,14 @@ class App {
     }
 
     /** The sector jump, flown (Corridor). Resolves once the flight is over and what it cost is applied; it never rejects.
-        twin: with the disc aboard, a copy of our ship flies beside us on the jump into the last sector (Corridor's SECTORS). */
+        twin: with the disc aboard, a copy of our ship flies beside us on the jump into the last sector (Corridor's SECTORS).
+        The new look's jump into DARK_JUMP_TO is After the flight ('corridor-void'): never in TEST_MODE, where nothing is flown. */
     flyCorridor() {
         const from = this.state.currentSector;
         const damaged = Object.fromEntries(Object.entries(this.state.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
         const opts = { fromSector: from, toSector: from + 1, crew: this.state.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: this.state.energy, avoidHulls: this.takenHulls(), twin: !!this.state.hasDisc };
-        return window.MiniHost.play('corridor', opts)
+        const isDark = isNewScreen() && from + 1 === DARK_JUMP_TO && !window.TEST_MODE && window.MiniHost.has('corridor-void');
+        return window.MiniHost.play(isDark ? 'corridor-void' : 'corridor', isDark ? { ...opts, void: true } : opts)
             .then(result => this.applyCorridorResult(result), err => console.error(err));
     }
 
@@ -2641,8 +2922,17 @@ class App {
     }
 
     applyCorridorResult(result) {
+        this._jumpWasDark = false;
         if (!result) return;
         this.noteReliance(!!result.auraFlew);
+        const dark = result.void;
+        if (dark && !window.TEST_MODE) {                                               // After the flight: what the dark cost, as its chips said
+            const rations = Number.isFinite(dark.rations) ? Math.max(0, Math.round(-dark.rations)) : 0;
+            this.state.rations = Math.max(0, this.state.rations - rations);
+            if (dark.stress > 0) this.state.crew.filter(c => c.status !== 'DEAD').forEach(c => this.state.hungerStress(c));   // +1, never past 2
+            this.state.addLog(`The dark cost ${rations} ration${rations === 1 ? '' : 's'}.`);   // DRAFT
+            this._jumpWasDark = true;
+        }
         const energyDelta = Number.isFinite(result.energyDelta) ? Math.round(result.energyDelta) : 0;
         if (energyDelta && !window.TEST_MODE) {                                        // tests spend no energy (consumeEnergy is off there too)
             this.state.energy = Math.max(0, Math.min(100, this.state.energy + energyDelta));
@@ -2667,18 +2957,50 @@ class App {
     flyDock(station) {
         if (!isNewScreen() || !window.MiniHost || !window.MiniHost.has('dock-flight')) return null;
         const s = this.state, full = !s._docksFlown || !!(station && station.isStoryPlanet);
-        const damaged = Object.fromEntries(Object.entries(s.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
-        const seed = String((station && station.id) || 'station').split('').reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 19);   // one ring per station, as DockingGame seeds it
-        const opts = { kind: 'dock', sector: s.currentSector, quick: !full, crew: s.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: s.energy, seed };
+        const opts = { ...this.dockFlightOpts(station), quick: !full };
         return window.MiniHost.play('dock-flight', opts)
             .then(result => this.applyDockResult(result), err => { console.error(err); return this.applyDockResult(null); });
+    }
+
+    /** What every flown dock is told (DockFlight.js): the sector, the crew, the decks already broken, the allowance, the tank,
+        and a seed from the station (one ring per station, as DockingGame seeds it). */
+    dockFlightOpts(station) {
+        const s = this.state;
+        const damaged = Object.fromEntries(Object.entries(s.shipDecks).map(([key, deck]) => [key, deck.status === 'DAMAGED']));
+        const seed = String((station && station.id) || 'station').split('').reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) >>> 0, 19);
+        return { kind: 'dock', sector: s.currentSector, crew: s.crew, damaged, scrapesPerBreak: SCRAPES_PER_BROKEN_DECK, maxBreaks: this.corridorBreakAllowance(), energy: s.energy, seed, name: (station && station.name) || null };   // name: the station's tag in the run (look pass B09)
+    }
+
+    /**
+     * Last Port (the new look): the team's way to the disc's wreck. The ship docks at the old relay on the moon, flown
+     * (DockFlight with opts.relay, DockRelay.js): always the whole approach, between three of our ships clamped to its ring,
+     * the disc's one of them. What it cost is applyDockResult's (the decks, A.U.R.A.'s share; a soft dock flown all by hand
+     * gives a little), with BoardingParty's own words for a rough or hard dock in the log. The two hulls beside the disc's are
+     * seen, so no later wreck takes their numbers. Resolves null (no landing: nobody is hurt coming down) and never
+     * rejects; a dock that fails to open is A.U.R.A.'s.
+     */
+    flyRelay(planet) {
+        const s = this.state, opts = { ...this.dockFlightOpts(planet), relay: true, quick: false };
+        return window.MiniHost.play('dock-flight', opts)
+            .then(result => result, err => { console.error(err); return null; })
+            .then(result => {
+                const dock = this.applyDockResult(result), name = planet.name || 'the relay';
+                if (dock.grade !== 'soft') s.addLog(dock.grade === 'crash' ? `Hard docking at ${name}. ${dock.hullHeld ? 'The hull held.' : 'The hull took damage.'}` : `Rough docking at ${name}. We scraped the ring.`);   // (BoardingParty's lines)
+                const seen = (window.DockRelay.hulls || []).map(h => h.num).filter(n => n !== planet.wreckHull).map(n => `EXODUS-${n}`);
+                s._encounteredShipNames = (s._encounteredShipNames || []).concat(seen.filter(n => !(s._encounteredShipNames || []).includes(n)));
+                if (result && result.tornHull) planet.relayTorn = result.tornHull;               // which of them a hard dock tore loose (the card's picture; no line says so yet)
+                s.emitUpdates();
+                return null;
+            })
+            .catch(err => { console.error(err); return null; });                              // never in the way of the team going in
     }
 
     /**
      * What the dock cost: the decks its chips named broken (scrapes on the way in, a hard dock's; never past the allowance),
      * A.U.R.A.'s share of the flying in energy (as the corridor's: not in tests), who docked counted toward who flies.
      * The air is BoardingParty's (DOCK_AIR_LOSS by grade). Returns { grade, auto, hullHeld } for it (hullHeld: a hard dock
-     * that broke nothing, so nobody says the hull is damaged); a dock that never ran is hers.
+     * that broke nothing, so nobody says the hull is damaged); a dock that never ran is hers. At the relay (flyRelay) a soft
+     * dock flown all by hand gives energy (the result's energyDelta, logged as the corridor's good flying is).
      */
     applyDockResult(result) {
         const s = this.state;
@@ -2689,6 +3011,9 @@ class App {
         if (energyDelta < 0 && !window.TEST_MODE) {
             s.energy = Math.max(0, Math.min(100, s.energy + energyDelta));
             s.addLog(`A.U.R.A. docked us: ${-energyDelta} more energy.`);                          // DRAFT (no sign: the dock's chip already said it)
+        } else if (energyDelta > 0 && result.relay && !window.TEST_MODE) {                        // Last Port: the relay's clamps topped us up
+            s.energy = Math.max(0, Math.min(100, s.energy + energyDelta));
+            s.addLog(`Good flying: ${energyDelta} energy saved.`);                                  // (the corridor's DRAFT line)
         }
         const rooms = (result.damagedRooms || []).slice(0, this.corridorBreakAllowance());
         rooms.forEach(key => s.damageDeck(key));
@@ -2760,7 +3085,8 @@ class App {
         const isStop = p => !p.storyHidden && !(p.isStructure || p.type === 'STRUCTURE') && state.getWarpCost(p) <= state.energy;
         if (!said.length && nodes.some(p => ahead(p) && isStop(p))) said.push({ who: 'Jaxon', text: "There are still worlds ahead we haven't seen. One of them could be the place to stop." });
         if (!said.length) return null;
-        return { speaker: this.ableSpeaker(said[0].who), text: said.map(s => s.text).join(' ') };
+        const left = course ? course.name : wrecks.length ? `${wrecks[0].name} · wreck` : contact ? 'Faint contact' : 'Worlds ahead';   // DRAFT (look pass): the frame's readout
+        return { speaker: this.ableSpeaker(said[0].who), text: said.map(s => s.text).join(' '), lines: said.map(x => ({ speaker: this.ableSpeaker(x.who), text: x.text })), left };
     }
 
     /** Who can say a line now: the one asked for if awake and free, else the next of the crew who is, else A.U.R.A. */
@@ -2776,36 +3102,56 @@ class App {
         if (reason && typeof reason === 'object') {
             window.EncounterCard.open(this, {
                 tone: 'station', kicker: 'SECTOR JUMP', title: 'Jump now?', zIndex: 2800,
-                dialogue: [{ speaker: reason.speaker, text: reason.text }],
+                dialogue: reason.lines || [{ speaker: reason.speaker, text: reason.text }],
+                shape: 'ask', final: [1], readout: reason.left || '', picture: { kind: 'view', blink: true }, seenKey: `jump:${reason.text}`,
                 choices: [
                     { text: 'Not yet', desc: 'Stay in this sector.' },
                     { text: 'Go anyway', desc: 'Whatever is left here is gone for good.' },
                 ],
-                onPick: idx => { if (idx === 1) this.jumpNow(this.sectorJumpCost()); },
+                onPick: idx => { if (idx === 1) { this.jumpNow(this.sectorJumpCost()); this.jumpIsTheOutcome(); } },
             });
             return;
         }
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'SECTOR JUMP', title: 'Jump now?', zIndex: 2800,
             dialogue: [{ speaker: 'A.U.R.A.', text: `${reason} Jump anyway?` }],
+            shape: 'ask', final: [1], picture: { kind: 'view', blink: true }, seenKey: `jump:${reason}`,
             choices: [
                 { text: 'Not yet', desc: 'Stay in this sector.' },
                 { text: 'Jump now', desc: 'Whatever is left here is gone for good.' },
             ],
-            onPick: idx => { if (idx === 1) this.jumpNow(this.sectorJumpCost()); },
+            onPick: idx => { if (idx === 1) { this.jumpNow(this.sectorJumpCost()); this.jumpIsTheOutcome(); } },
         });
+    }
+
+    /** The new look: a "Jump now?" card closes with no outcome step once its choice is made (the flight is what happens; its
+        "Starting Sector Jump..." stays in the log). Without it the card's outcome waited under the flight and came up after it. */
+    jumpIsTheOutcome() {
+        if (window.EncounterCard && typeof window.EncounterCard.noOutcome === 'function') window.EncounterCard.noOutcome();
     }
 
     /** The jump itself, once it is paid for and nobody is asking any more. */
     jumpNow(jumpCost) {
         if (this._isInTransit) return;
         if (this.state.energy < jumpCost && !window.TEST_MODE) { this.offerReserveJump(jumpCost); return; }
+        if (isNewScreen()) {                                                         // the new look: the talk before the jump comes before the bill
+            this.talkBeforeJump(true).then(had => { if (had !== 'stay') this.payAndJump(jumpCost, had === true); });
+            return;
+        }
+        this.payAndJump(jumpCost);
+    }
+
+    /** The jump paid, then flown. hadTalk (the new look): whether its talk was had already (talkBeforeJump); the talk's choice
+        may have spent some energy, so the jump takes what it costs, or what is left. */
+    payAndJump(jumpCost, hadTalk) {
+        if (this._isInTransit) return;
         if (this.state._driveReinforced) {
             this.state._driveReinforced = false;                                    // single use
             this.state.addLog(`Drive reinforcement active: Jump cost reduced by ${this.sectorJumpCost() - jumpCost} energy.`);
         }
-        this.state.consumeEnergy(jumpCost);
-        this.startSectorJump();
+        if (hadTalk == null) this.state.consumeEnergy(jumpCost);
+        else if (!window.TEST_MODE) { this.state.energy = Math.max(0, this.state.energy - jumpCost); this.state.emitUpdates(); }
+        this.startSectorJump(hadTalk == null ? undefined : { hadTalk });
     }
 
     /**
@@ -2815,19 +3161,26 @@ class App {
      */
     offerReserveJump(jumpCost) {
         if (!window.EncounterCard) { this.state.addLog('WARNING: Not enough Energy!'); return; }
-        const isNew = isNewScreen();
-        const choices = [
-            { text: 'Jump on the reserve', desc: 'Uses all the energy left. The crew quarters are damaged.' },
-            { text: 'Not yet', desc: 'Probes and wrecks can still bring energy back.' },
-        ];
-        if (isNew) choices[0] = Object.assign({}, choices[0], { desc: `${choices[0].desc} All crew +1 Stress.` });   // DRAFT chip: the cold night (coldNight)
+        const isNew = isNewScreen(), have = this.state.energy;
+        const reserve = { text: 'Jump on the reserve', desc: 'Uses all the energy left. The crew quarters are damaged.' };
+        const notYet = { text: 'Not yet', desc: 'Probes and wrecks can still bring energy back.' };
+        const choices = isNew ? [notYet, Object.assign({}, reserve, { desc: `${reserve.desc} All crew +1 Stress.`,   // DRAFT chip: the cold night (coldNight)
+            chips: [{ text: 'Quarters dark', tone: 'loss', word: true }, { text: 'Crew tense', tone: 'loss', word: true }] })]   // DRAFT (look pass): the reserve's chips (DESIGN 1.2)
+            : [reserve, notYet];
+        const RESERVE = isNew ? 1 : 0, reacts = this.ableSpeaker('Jaxon');            // the new look: "Not yet" first (C05)
+        const aura = { speaker: 'A.U.R.A.', text: 'I can run the drive on the reserve, Commander. The crew quarters will lose power.' };
+        const freeze = { speaker: 'Jaxon', text: `Then we freeze for a night. I've done worse.` };   // DRAFT (look pass): L-37 (said by whoever can: ableSpeaker)
         window.EncounterCard.open(this, {
             tone: 'alert', kicker: 'SHIP ALERT', title: 'Not enough energy to jump', zIndex: 2800,
             context: `The jump needs ${jumpCost} energy. We have ${this.state.energy}.`,
-            dialogue: [{ speaker: 'A.U.R.A.', text: 'I can run the drive on the reserve, Commander. The crew quarters will lose power.' }],
+            dialogue: isNew ? [aura, reacts !== 'A.U.R.A.' && Object.assign({}, freeze, { speaker: reacts })].filter(Boolean) : [aura],
+            shape: 'ask', alarm: true, final: [RESERVE], deck: 'quarters', picture: { kind: 'deck', deck: 'quarters' }, seenKey: 'jump:reserve',
+            readout: `Energy ${have} of ${jumpCost}`,                                   // DRAFT (look pass): the readout (DESIGN 1.2)
+            readoutNow: s => `Energy ${s.energy} of ${jumpCost}`,                     // DRAFT (look pass): the readout once the reserve is spent
+            outcomeDrop: [/^The drive ran on the reserve\./],                          // the outcome says the reserve once (A.U.R.A.'s cold night); the log keeps this line
             choices,
             onPick: idx => {
-                if (idx !== 0) return;
+                if (idx !== RESERVE) return;
                 this.state.energy = 0;
                 if (isNew) this.coldNight();
                 this.state.damageDeck('quarters', 'The drive ran on the reserve. The crew quarters have lost power.');
@@ -2865,7 +3218,7 @@ class App {
     }
 
     /** The sector jump, paid for: the flight, the crew, the campfire, then the new sector. */
-    startSectorJump() {
+    startSectorJump(opts) {
         this._isInTransit = true;
         this.state.addLog("Starting Sector Jump...");
         if (isNewScreen() && window.NSOrbit) window.NSOrbit.breakPatched(this.state);      // the new screen: a patched deck breaks again on the jump
@@ -2890,14 +3243,26 @@ class App {
         // The flight, then what the crew makes of it, then the campfire. Into sector 3 the burn stalls and the throw plays instead
         // (the new look: on the travel view itself, then the sea of ships, then the arrival: src/newscreen/throw/Throw.js).
         const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
+        let hadTalk = false;                                                         // the new look: a talk had before the jump is this jump's talk
         const fly = () => this.showWarpAnimation(() => {
             if (this.state.gameOver) return;                                         // the run ended in the flight: nothing more follows
             const afterFlight = isThrow ? (isNewScreen() && window.NSThrow ? window.NSThrow.play(this) : window.TheThrow.play(this))
-                : this.reactToSectorJump().then(() => new Promise(done => this.showCampfireEvent(done)));
+                : this.reactToSectorJump().then(() => (hadTalk ? null : new Promise(done => this.showCampfireEvent(done))));
             afterFlight.then(() => this.enterNextSector());
         }, isThrow);
-        if (isNewScreen() && !isThrow) window.NewScreen.playJump().then(fly);           // the new screen: the burn and the flash first
-        else fly();
+        if (isNewScreen() && !isThrow) {                                            // the new screen: a talk about this jump, then the burn and the flash first
+            const talk = opts && typeof opts.hadTalk === 'boolean' ? Promise.resolve(opts.hadTalk) : this.talkBeforeJump();
+            talk.then(had => { hadTalk = had === true; return window.NewScreen.playJump(); }).then(fly);
+        } else fly();
+    }
+
+    /** The new look: a talk that says "after this jump" (NEW_LOOK_BEFORE_JUMP_TALKS) is had once the jump is chosen, before the
+        flight opens, once a run. Resolves true once its outcome is read (the flight never opens under it); false, at once, when
+        there is none. */
+    talkBeforeJump(canStay = false) {
+        if (window.TEST_MODE) return Promise.resolve(false);
+        return new Promise(done => this.showCampfireEvent(had => done(had === 'stay' ? 'stay' : !!had), true, canStay))
+            .catch(err => { console.error('The talk before the jump failed; the jump goes on', err); return false; });
     }
 
     /** The header line for a sector, named as SECTOR_CONFIG names it: "/// SECTOR 3: THE SIGNAL". */
@@ -2927,8 +3292,8 @@ class App {
         // Auto-save after sector jump
         this.autoSave();
 
-        // Sector name from config
-        const sectorName = enterConfig ? enterConfig.name : '';
+        // Sector name from config (the new look's own where it renames one: NSLooks.renamed, C62; caps as the config's)
+        const renamed = isNewScreen() && window.NSLooks && typeof window.NSLooks.renamed === 'function' ? window.NSLooks.renamed(nextSector) : null, sectorName = renamed ? renamed.toUpperCase() : enterConfig ? enterConfig.name : '';
         this.state.addLog(`Sector ${nextSector}${sectorName ? ' — ' + sectorName : ''}`);   // MissionLog turns this into the new stop's header
 
         // Dispatch sector entered event for audio
@@ -2937,7 +3302,9 @@ class App {
         // Special barks for sector entries
         if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
             if (nextSector === 3) {
-                window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
+                const bark = () => window.BarkSystem.tryBark('SECTOR_3_ENTRY', this.state);
+                if (isNewScreen() && window.NSThrow && window.NSThrow.afterArrival) window.NSThrow.afterArrival(bark);   // the new look: after the arrival's lines
+                else bark();
             } else if (nextSector === FINAL_SECTOR) {
                 window.BarkSystem.tryBark('SECTOR_5_ENTRY', this.state); // key kept for saves; the lines are about the LAST sector
             }
@@ -2949,8 +3316,10 @@ class App {
      * and the drive may fault. Resolves once any fault card is dealt with.
      */
     reactToSectorJump() {
-        if (window.BarkSystem) window.BarkSystem.tryBark('SECTOR_JUMP', this.state);
-        if (window.AuraSystem) window.AuraSystem.tryComment('SECTOR_JUMP', this.state);
+        const wasDark = !!this._jumpWasDark;                                           // After the flight: the crew have just been through the dark
+        this._jumpWasDark = false;
+        if (window.BarkSystem && !wasDark) window.BarkSystem.tryBark('SECTOR_JUMP', this.state);
+        if (window.AuraSystem && !wasDark) window.AuraSystem.tryComment('SECTOR_JUMP', this.state);
         const malfunction = typeof rollShipMalfunction !== 'undefined' ? rollShipMalfunction(this.state, 'sector_jump') : null;
         return malfunction ? this.showShipMalfunctionModal(malfunction) : Promise.resolve();
     }
@@ -2981,7 +3350,10 @@ class App {
             }, err => { console.error('The burn gauge failed; the jump goes on as A.U.R.A. plotted it', err); onComplete(); });
             return;
         }
-        plotOptions.arrival = { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
+        const isNewArrival = isNewScreen() && window.NSLooks;                         // the new look without the gauge: the sector's name and A.U.R.A. saying it, never a bare "—"
+        plotOptions.arrival = isNewArrival
+            ? { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: window.NSLooks.titleOf(nextSector), line: '', voices: [{ name: 'A.U.R.A.', face: null, text: 'The jump did not finish.' }] }
+            : { kicker: `SECTOR ${nextSector} OF ${FINAL_SECTOR}`, title: '—', line: 'The jump did not finish.', voices: [] };
         if (relianceVoice) plotOptions.arrival.voices.push(relianceVoice);
         window.WarpPlot.play(plotOptions).then(result => {
             this.applyPlotResult(result, jumpBase);
@@ -2989,7 +3361,9 @@ class App {
         });
     }
 
-    showCampfireEvent(onComplete) {
+    /** The jump's talk, after the flight. isBeforeJump (the new look, talkBeforeJump): only a talk of NEW_LOOK_BEFORE_JUMP_TALKS
+        not had yet, and onComplete(true) waits until its outcome is read. After the flight the new look never has those talks. */
+    showCampfireEvent(onComplete, isBeforeJump = false, canStay = false) {
         // TEST_MODE: Skip campfire events entirely for faster testing
         if (window.TEST_MODE) {
             this.state.addLog("[TEST MODE] Skipping campfire event...");
@@ -3001,8 +3375,10 @@ class App {
         const fromSector = this.state.currentSector;
         const toSector = fromSector + 1;
 
+        const isNew = isNewScreen(), isBefore = e => isNew && NEW_LOOK_BEFORE_JUMP_TALKS.includes(e.id);
         const eligible = (typeof CAMPFIRE_EVENTS !== 'undefined' ? CAMPFIRE_EVENTS : []).filter(e => {
             if (fromSector < e.sectorRange[0] || fromSector > e.sectorRange[1]) return false;
+            if (isBefore(e) !== isBeforeJump) return false;                          // the new look: "after this jump" is said before it
             if (e.condition && !e.condition(this.state)) return false;
             return true;
         });
@@ -3017,7 +3393,11 @@ class App {
         // Weighted by priority (story talks are likelier, not guaranteed), and never the same talk twice in one run
         this.state._seenCampfires = this.state._seenCampfires || [];
         const fresh = eligible.filter(e => !this.state._seenCampfires.includes(e.id));
-        const candidates = fresh.length ? fresh : eligible;
+        const candidates = fresh.length || isBeforeJump ? fresh : eligible;                // a talk before the jump is had once
+        if (candidates.length === 0) {
+            onComplete();
+            return;
+        }
         const topPriority = Math.max(...candidates.map(e => e.priority || 1));               // a priority-3 talk is the act break: it always fires
         const pool = candidates.filter(e => (e.priority || 1) === topPriority);
         const event = pool[Math.floor(Math.random() * pool.length)];
@@ -3037,16 +3417,25 @@ class App {
         if (window.NarrativeModal) {
             const plainName = name => String(name || '').toLowerCase().replace(/(^|\s)([a-z])/g, (m, a, b) => a + b.toUpperCase()).replace(/^The /, 'the ');
             const sectorHeader = isNewScreen()                                                 // the new screen: plain words, no code-like caps
-                ? `[whisper]Into ${plainName(SECTOR_NAMES[toSector] || 'the dark')}[/whisper]`
+                ? `[whisper]Into ${plainName((window.NSLooks && window.NSLooks.titleOf(toSector)) || SECTOR_NAMES[toSector] || 'the dark')}[/whisper]`   // the sky's own names (C62: sector 2 is The Drift)
                 : `[whisper]S${fromSector}: ${SECTOR_NAMES[fromSector] || '???'} → S${toSector}: ${SECTOR_NAMES[toSector] || '???'}[/whisper]`;
+            const stay = isBeforeJump && canStay && isNewScreen();                 // nothing is paid yet: "Not yet" stays in this sector
+            const choices = stay ? [{ text: 'Not yet', desc: 'Stay in this sector.', effect: () => '' }].concat(event.choices) : event.choices;   // DRAFT (look pass): C05
             this.showNarrativeEncounter({
                 title: event.title,
                 speaker: 'NARRATOR',
                 context: `[highlight]${event.title}[/highlight]\n${sectorHeader}\n\n${event.context}`,
                 dialogue: event.dialogue,
-                choices: event.choices,
-                onChoiceMade: () => {
-                    onComplete();
+                choices,
+                readout: isBeforeJump ? `Sector ${toSector}` : SECTOR_NAMES[toSector] || '',   // DRAFT (look pass): the readout (DESIGN 1.2)
+                picture: isBeforeJump ? { kind: 'view', focus: 'light' } : { kind: 'deck', deck: 'galley', table: true }, deck: 'galley', seenKey: `campfire:${event.id}`,
+                shape: stay ? 'ask' : undefined, final: stay ? choices.map((c, i) => i).slice(1) : undefined, repeatLine: stay ? 0 : undefined,
+                onChoiceMade: (idx) => {
+                    if (stay && idx === 0) { this.state._seenCampfires = this.state._seenCampfires.filter(id => id !== event.id); onComplete('stay'); return; }   // asked again next time
+                    const EC = window.EncounterCard;
+                    if (!isBeforeJump) onComplete();
+                    else if (EC && typeof EC.whenFree === 'function') EC.whenFree(() => onComplete(true));   // the flight waits for the outcome
+                    else onComplete(true);
                 }
             });
             return;
@@ -3107,9 +3496,10 @@ class App {
         }, DISC_REVEAL_DELAY_MS));
     }
 
-    /** One of the Exodus wreck stories, weighted, avoiding ones already told while any are left. needsHatch: only whole ships. */
-    pickExodusEncounter(needsHatch) {
-        const allEncounters = ((typeof EXODUS_ENCOUNTERS !== 'undefined') ? EXODUS_ENCOUNTERS : []).filter(e => !(needsHatch && e.noHatch));
+    /** One of the Exodus wreck stories, weighted, avoiding ones already told while any are left. needsHatch: only whole ships.
+        skip: story ids that cannot be this wreck's. */
+    pickExodusEncounter(needsHatch, skip = []) {
+        const allEncounters = ((typeof EXODUS_ENCOUNTERS !== 'undefined') ? EXODUS_ENCOUNTERS : []).filter(e => !(needsHatch && e.noHatch) && !skip.includes(e.id));
         if (allEncounters.length === 0) return null;
         this.state._encounteredExodus = this.state._encounteredExodus || [];
         let encounters = allEncounters.filter(e => !this.state._encounteredExodus.includes(e.id));
@@ -3133,9 +3523,11 @@ class App {
      */
     wreckEncounterFor(planet) {
         const all = typeof EXODUS_ENCOUNTERS !== 'undefined' ? EXODUS_ENCOUNTERS : [];
-        const kept = planet.wreckEncounter && all.find(e => e.id === planet.wreckEncounter);
+        const isRelay = this.isRelayStop(planet);
+        const skip = isRelay ? RELAY_UNFIT_STORIES : [];                                     // Last Port: clamped to the relay, it never landed
+        const kept = planet.wreckEncounter && all.find(e => e.id === planet.wreckEncounter && !skip.includes(e.id));
         if (kept) return kept;
-        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal);
+        const picked = this.pickExodusEncounter(planet.isStoryPlanet || planet.isFirstSignal, isRelay ? skip : this.relayStoryKept());   // any other wreck leaves the relay a story
         if (picked) planet.wreckEncounter = picked.id;
         return picked;
     }
@@ -3165,8 +3557,9 @@ class App {
         planet.exodusInvestigated = true; // marked at once, so it cannot be clicked twice
 
         const cutIn = selected.noHatch ? Promise.resolve() : this.cutIntoWreck(shipName, planet, selected);   // a crater has no hatch to cut
+        const isRelay = this.isRelayStop(planet);                                    // Last Port: the wreck is clamped to the relay, not on the ground
         cutIn.then(() => this.showNarrativeEncounter({
-            art: `EXODUS_WRECK:${selected.id}`,                                      // the card's picture: the wreck as this story leaves it (SceneArt)
+            art: isRelay ? this.relayArt(planet) : `EXODUS_WRECK:${selected.id}`,   // the card's picture: the wreck as this story leaves it (SceneArt; the relay: its ring over the moon)
             title: selected.title,
             speaker: 'NARRATOR',
             context: `[highlight]${shipName}[/highlight]\n\n${selected.context(shipName)}`,
@@ -3179,6 +3572,13 @@ class App {
         }));
     }
 
+    /** Last Port's card picture (SceneArt RELAY): the relay's ring over the moon, our ship and three of ours in their ports; a
+        hull a hard dock tore loose is gone from its berth (its place in the row: DockRelay.exterior.nums). */
+    relayArt(planet) {
+        const nums = window.DockRelay ? window.DockRelay.exterior.nums : [], k = planet && planet.relayTorn ? nums.indexOf(planet.relayTorn) : -1;
+        return k === 0 || k === 1 ? 'RELAY:torn' + k : 'RELAY';
+    }
+
     /** Inside a wreck only the two who went down speak (and A.U.R.A. over the radio). The others were never there. */
     teamLines(lines) {
         const team = this.currentEvaTeam || [];
@@ -3189,13 +3589,14 @@ class App {
 
     /** The team gets into the wreck by the door it has (Torch: the hatch cut, frozen, a fuel line across it; or no torch: cut
         open long ago, a split in the hull, an airlock with power). Every wreck of ours lies on its planet's surface, so the torch
-        is played on the ground, under that world's own sky (TorchGround.js). Resolves once they are in; it never rejects. */
+        is played on the ground, under that world's own sky (TorchGround.js); but the disc's ship at the relay (Last Port) is
+        clamped to its ring in space, and its airlock still has the relay's power. Resolves once they are in; it never rejects. */
     cutIntoWreck(shipName, planet, story) {
         const [cutter, spotter] = this.torchCrew();
         if (!cutter || !window.MiniHost || !window.MiniHost.has('torch')) return Promise.resolve();
-        const door = this.wreckDoorFor(planet, story);
-        const world = planet ? { type: planet.type, temp: planet.metrics ? planet.metrics.temp : null, air: planet.atmosphere, id: planet.id } : null;
-        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name, place: 'ground', world };
+        const door = this.wreckDoorFor(planet, story), inSpace = this.isRelayStop(planet);
+        const world = planet && !inSpace ? { type: planet.type, temp: planet.metrics ? planet.metrics.temp : null, air: planet.atmosphere, id: planet.id } : null;
+        const opts = { mode: 'hatch', door, hull: shipName, sector: this.state.currentSector, cutter: cutter.name, spotter: spotter.name, place: inSpace ? 'space' : 'ground', world };
         return window.MiniHost.play('torch', opts).then(result => {
             if (result && result.opened) this.state.addLog(this.doorLogLine(result, shipName, cutter.name));
         }, err => console.error(err));
@@ -3207,7 +3608,8 @@ class App {
     wreckDoorFor(planet, story) {
         if (planet && planet.wreckDoor) return planet.wreckDoor;
         const history = this.state._wreckDoors || [], doors = window.TorchDoors, temp = planet && planet.metrics ? planet.metrics.temp : null;
-        const door = doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id, temp }) : 'cut';
+        const door = this.isRelayStop(planet) ? 'panel'                                    // Last Port: the relay still powers the airlock
+            : doors ? doors.pick(history, { hull: planet && planet.wreckHull, sector: this.state.currentSector, story: story && story.id, temp }) : 'cut';
         this.state._wreckDoors = history.concat(door);
         if (planet) planet.wreckDoor = door;
         return door;
@@ -3464,7 +3866,7 @@ class App {
 
         // Select by weight: only places this sector has reached (minSector), and never the same strange place twice in a run
         this.state._seenAnomalies = this.state._seenAnomalies || [];
-        const reached = encounters.filter(e => this.hasReachedSector(e));
+        const reached = encounters.filter(e => this.hasReachedSector(e) && !(isNewScreen() && NEW_LOOK_NO_ANOMALY.includes(e.id)));
         const allowed = reached.filter(e => !this.state._seenAnomalies.includes(e.id));
         const pool = allowed.length ? allowed : reached;
         const totalWeight = pool.reduce((sum, e) => sum + e.weight, 0);
@@ -3673,14 +4075,19 @@ Then you're through.`,
         if (this._lightCardOpen) return;                                                 // a second click while it opens: one council
         this._lightCardOpen = true;
         const isFirst = !planet._lightCouncilHeard, disc = encounter.disc || {};
-        const reel = isFirst && window.StoryReel && !window.TEST_MODE ? window.StoryReel.play('light') : Promise.resolve();
+        const isArrival = isNewScreen() && window.NSEnding && typeof window.NSEnding.arrive === 'function';   // the new look: the light arrival (end/Ending.js, C83), never the old reel
+        const firstSight = () => (isArrival ? window.NSEnding.arrive(this, 'light').catch(err => console.error('The light arrival failed; on to the crew', err))
+            : window.StoryReel ? window.StoryReel.play('light') : Promise.resolve());
+        const reel = isFirst && !window.TEST_MODE ? firstSight() : Promise.resolve();
         const ourDisc = () => (isFirst && this.state.hasDisc && window.DiscDocument ? window.DiscDocument.open(this, { real: true, ...disc.view }) : Promise.resolve());
         reel.then(ourDisc).then(() => {
             const council = window.buildLightCouncil(this.state, { isRepeat: !isFirst });
             planet._lightCouncilHeard = true;
             window.EncounterCard.open(this, {
                 color: '#ffd27a', kicker: council.kicker, title: council.title, zIndex: 3000, context: council.context,
-                dialogue: council.dialogue, choices: council.choices,
+                dialogue: council.dialogue, choices: council.choices.map((c, i) => (council.doors[i] ? Object.assign({}, c, { tone: 'end' }) : c)),
+                shape: 'ask', final: council.doors.map((d, i) => (d ? i : -1)).filter(i => i >= 0), seenKey: 'light:council',
+                picture: { kind: 'view', focus: 'light' }, readout: 'The light',             // DRAFT (look pass): the readout (DESIGN 1.2)
                 onPick: idx => {
                     this._lightCardOpen = false;
                     const door = council.doors[idx];
@@ -3739,6 +4146,25 @@ Then you're through.`,
             return true;
         }
         this.showEndingScreen(asScreen());
+        return true;
+    }
+
+    /**
+     * The new look's ordinary settling (call C72): the colony ending's scene (end/Ending.js, kind 'colony', words in
+     * end/EndWords.js), started as endJourney starts the others: once per run, the run over, the save dropped when the end card
+     * shows. false (nothing started) if the new look cannot play it; then the default game's colony screen shows instead.
+     * oldScreen: shows that screen if the scene fails to start.
+     */
+    endInColony(planet, outcome, oldScreen) {
+        if (this._journeyEnded || !window.NSEnding || !window.NSEndWords) return false;
+        let ending;
+        try { ending = window.NSEndWords.colony(this.state, planet, !!(outcome && outcome.success)); } catch (err) { console.error('The colony ending could not be built', err); return false; }
+        this._journeyEnded = true;
+        this.state.gameOver = true;                                                      // nothing else ends the run over its ending
+        window.NSEnding.play(this, ending, { from: 'colony' }).then(() => this.recordEnding(ending), err => {
+            console.error('The colony ending failed; the colony screen instead', err);
+            oldScreen();
+        });
         return true;
     }
 
@@ -3876,7 +4302,7 @@ Then you're through.`,
         // New game button
         const newGameBtn = modal.querySelector('#btn-new-game');
         newGameBtn.onclick = () => {
-            try { localStorage.removeItem('silentExodus_save'); } catch (e) { /* storage blocked: the reload still starts fresh */ }
+            try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* storage blocked: the reload still starts fresh */ }
             location.reload();                                                           // like the other end screens: nothing from this run survives
             return;
             modal.remove();
@@ -3939,6 +4365,8 @@ Then you're through.`,
 
         window.EncounterCard.open(this, {
             tone: config.tone || 'story', zIndex: 2600, art: config.art,
+            readout: config.readout != null ? config.readout : headline && !headline.includes(config.title) ? headline : (this.state.currentSystem && this.state.currentSystem.name) || '',
+            seenKey: config.seenKey || `story:${config.title}`, shape: config.shape, final: config.final, deck: config.deck, picture: config.picture, repeatLine: config.repeatLine,
             // a headline that repeats the title ("COLONY RUINS: <title>") gives its extra words to the kicker instead
             kicker: config.kicker || subline || (headline && headline.includes(config.title) ? headline.replace(config.title, '').replace(/[:\s—-]+$/, '') : ''),
             title: headline && !headline.includes(config.title) ? `${config.title} — ${headline}` : config.title,
@@ -3963,7 +4391,8 @@ Then you're through.`,
         const ventCount = this.state._auraVentCount;
 
         const jaxonAlive = this.state.crew.some(c => c.tags.includes('ENGINEER') && c.status !== 'DEAD');
-        const hasTechFragment = this.state.cargo.some(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
+        const FRAGMENT = isNewScreen() ? ['tech_frag', 'tech_fragment', 'TECH_FRAGMENT'] : ['tech_fragment', 'TECH_FRAGMENT'];   // the new look: the real item is 'tech_frag' (Items.js)
+        const hasTechFragment = this.state.cargo.some(i => FRAGMENT.includes(i.id));
 
         const cost = ventCount >= 3 ? 'She will empty the whole ship. Everyone dies.'
             : ventCount === 2 ? 'One of the crew will die before the air comes back.'
@@ -3971,11 +4400,13 @@ Then you're through.`,
         const options = [
             jaxonAlive && { key: 'jaxon', text: 'Jaxon: "I can shut her out!"', desc: 'He cuts her off from the air system. A.U.R.A. goes back to neutral.' },
             hasTechFragment && { key: 'tech', text: 'Plug in the Tech Fragment', desc: 'Strange code floods her. She becomes kinder (+3 ethics). Uses the fragment.' },
-            { key: 'accept', text: 'Do nothing and wait', desc: cost },
+            { key: 'accept', text: 'Do nothing and wait', desc: cost, tone: 'loss' },
         ].filter(Boolean);
 
         window.EncounterCard.open(this, {
             tone: 'distress', kicker: ventCount > 1 ? `AIR ALERT — TIME NUMBER ${ventCount}` : 'AIR ALERT', title: 'A.U.R.A. is letting the air out', zIndex: 3000,
+            shape: 'ask', alarm: true, final: [options.findIndex(o => o.key === 'accept')], deck: 'quarters', picture: { kind: 'deck', deck: 'quarters' }, seenKey: `vent:${ventCount}`,
+            readout: 'Quarters · air',                                                    // DRAFT (look pass): the readout (DESIGN 1.2)
             context: 'The air in the crew quarters is rushing out into space. A.U.R.A. opened the vents herself.'
                 + (ventCount >= 2 ? ' She is not giving warnings any more.' : ''),
             choices: options,
@@ -3986,7 +4417,7 @@ Then you're through.`,
                     this.state._auraVentCount = 0; // Reset escalation on override
                 } else if (action === 'tech' && typeof AuraSystem !== 'undefined') {
                     // Remove tech fragment from cargo
-                    const idx = this.state.cargo.findIndex(i => i.id === 'tech_fragment' || i.id === 'TECH_FRAGMENT');
+                    const idx = this.state.cargo.findIndex(i => FRAGMENT.includes(i.id));
                     if (idx !== -1) this.state.cargo.splice(idx, 1);
                     window.AuraSystem.applyTechFragment(this.state);
                     this.state._auraVentCount = 0; // Reset escalation on tech fix
@@ -4103,6 +4534,10 @@ Then you're through.`,
             deepScanConfig.hazard.onDeepScan(planet);
         }
 
+        // The new look: her story line here (the two below) is the one she says now, at once (look pass B07: one A.U.R.A. line a stop)
+        const scanFrom = typeof performance !== 'undefined' ? performance.now() : 0, storyHeard = [], hearStory = e => { const m = String((e && e.detail && e.detail.message) || ''); if (/^A\.U\.R\.A\.:/.test(m)) storyHeard.push(m); };
+        if (isNew) addEventListener('log-updated', hearStory);
+
         // Check if PREDATORY was just revealed
         if (planet.tags && planet.tags.includes('PREDATORY')) {
             this.state.addLog("⚠ WARNING: PREDATORY ecosystem detected! Surface organisms exhibit coordinated hunting behavior.");
@@ -4120,6 +4555,8 @@ Then you're through.`,
             this.state.addLog("⚡ OLD SIGNAL: a beacon on our own channel, still transmitting.");
             this.state.addLog('A.U.R.A.: "It is one of ours, Commander. An old distress beacon. Nobody is left to send it."');
         }
+
+        if (isNew) removeEventListener('log-updated', hearStory);
 
         // ANCIENT RUINS: knowledge and reduced EVA risk
         if (planet.tags && planet.tags.includes('ANCIENT_RUINS')) {
@@ -4172,13 +4609,17 @@ Then you're through.`,
         this.orbitView.updateCommandDeck(this.state.currentSystem);
         const newKind = isNew ? this.noteNewKind(planet) : null;           // the new look: the first scan of each kind of world is +1 data
         this.renderOrbit();
-        if (isNew && window.NSScan) window.NSScan.deep(this, planet, newKind);   // the new look: A.U.R.A. says what the scan read (last, so it is said first)
+        const storyLine = storyHeard[storyHeard.length - 1], voice = isNew && window.NewScreen && window.NewScreen.mods && window.NewScreen.mods.voice;
+        if (storyLine && voice && typeof voice.sayLine === 'function') voice.sayLine(storyLine);   // her story line wins: said now, in place of the scan's own line
+        else if (isNew && window.NSScan) window.NSScan.deep(this, planet, newKind);   // the new look: A.U.R.A. says what the scan read (last, so it is said first)
+        if (voice && typeof voice.drop === 'function') voice.drop(q => q.id === 'aura' && typeof q.done !== 'function' && q.at >= scanFrom);   // and only that one: the scan's result lines stay in the log (look pass B07)
 
         // Check for distress signals after scan (small chance) - use queue; never in the last sector (docs/CANON.md §9)
         if (typeof rollDistressSignal !== 'undefined' && this.state.currentSector < FINAL_SECTOR) {
             const distress = rollDistressSignal(this.state, 'scan');
             if (distress) {
                 setTimeout(() => {
+                    if (isNewScreen() && window.NSOrbit) { window.NSOrbit.offerCall(this, distress); return; }   // the new screen: it waits on the bridge, never over SETTLE HERE
                     this.state.addLog("⚠ INCOMING TRANSMISSION: Old distress signal detected...");
                     this.queueModal('distress', distress);
                 }, 1000);
@@ -4443,15 +4884,17 @@ Then you're through.`,
         const evaTeam = this._pickedEvaTeam || this.selectEvaTeam();
         this._pickedEvaTeam = null;
 
-        // A team trip costs no energy (docs/ECONOMY.md). OBSESSED (Mira at stress 3) keeps the team out a full day, which costs a ration.
-        const isObsessed = this.state.hasActiveTrait('OBSESSED');
+        // A team trip costs no energy (docs/ECONOMY.md). OBSESSED (Mira at stress 3) keeps the team out a full day, which costs a ration
+        // (the new look: only when she is down with them, GameState.traitDown)
+        const isObsessed = this.state.traitDown('OBSESSED', evaTeam);
         const siteHere = this.siteOf(planet);
         const siteNow = isNewScreen() && siteHere && siteHere.tag === 'ANOMALY' ? null : siteHere;   // the new screen: the ship flies to the strange site itself ("Fly closer")
         const site = find && find.kind !== 'site' ? null : siteNow;                  // the new look: another find chosen, the site waits for a trip of its own
         const isSiteTrip = !!(site && !planet[site.done]);
+        const isRelay = isSiteTrip && !!site.relay;                                  // Last Port: the ship docks at the relay, flown (flyRelay)
 
-        // Bark: crew reacts before EVA
-        if (typeof BarkSystem !== 'undefined' && window.BarkSystem) {
+        // Bark: crew reacts before EVA (Last Port: not at the relay; the lander and the ground are not in it)
+        if (typeof BarkSystem !== 'undefined' && window.BarkSystem && !isRelay) {
             window.BarkSystem.tryBark('BEFORE_EVA', this.state, { planet });
         }
 
@@ -4459,14 +4902,14 @@ Then you're through.`,
         if (evaTeam.length === 1) this.state.addLog(`EVA team deployed: ${evaTeam[0].name}.`);   // DRAFT: the new look, the one left who can go
         else this.state.addLog(`EVA team deployed: ${evaTeam[0].name} and ${evaTeam[1].name}.`);
 
-        // Tutorial: first EVA
-        if (!this.state._tutorialEvaSeen) {
+        // Tutorial: first EVA (Last Port: not at the relay, where the team only goes in once the ship has docked)
+        if (!this.state._tutorialEvaSeen && !isRelay) {
             this.state._tutorialEvaSeen = true;
             this.state.addLog('A.U.R.A.: "Team away, Commander. I have their vitals."');
         }
 
-        // A.U.R.A. commentary on EVA
-        if (typeof AuraSystem !== 'undefined' && window.AuraSystem) {
+        // A.U.R.A. commentary on EVA (Last Port: not at the relay, as above)
+        if (typeof AuraSystem !== 'undefined' && window.AuraSystem && !isRelay) {
             window.AuraSystem.tryComment('EVA_DEPLOY', this.state);
         }
 
@@ -4484,6 +4927,12 @@ Then you're through.`,
             c._tripsDown = (c._tripsDown || 0) + 1;
             if (planet.isEden || planet.type === 'EDEN') c._walkedEden = true;
         });
+        // The new look's landing (App.flyLanding): the whole meteor or its routine drop (App.isFullDrop), and the find it flies to (a
+        // blind trip: the site, else the world's own event). Read before markDone: the odds and the blind find read the chosen find
+        // (a blind trip asks the bold way of the blind find: App.isBoldWay answers it with the way GO DOWN vouched for)
+        let landFind = find;
+        if (!landFind && isNew && window.NSWorldFinds) { try { landFind = window.NSWorldFinds.blind(this, planet); } catch (err) { console.error('App: the blind find failed', err); } }
+        const isFull = isNew && !(isSiteTrip && site.inSpace) ? this.isFullDrop(planet, find || landFind, evaTeam, { wreck: isSiteTrip && site.tag === 'EXODUS_WRECK' }) : true;
         if (isNewScreen()) {                                                         // the new look: this find is visited (a blind trip: the site, else the world's own event)
             if (window.NSWorldFinds) window.NSWorldFinds.keepOld(this, planet);      //   (a save from before finds: its one trip stays counted)
             planet.nsTrips = (planet.nsTrips || 0) + 1;                              //   and the trip has really gone (NSOrbit.send reads it)
@@ -4491,14 +4940,15 @@ Then you're through.`,
         }
 
         // The player flies them down (or lets A.U.R.A. do it and watches); how it goes changes what follows
-        const isCrossing = isSiteTrip && site.inSpace;                               // a strange site or wreckage in orbit: the lander crosses, nobody lands
+        const isCrossing = isSiteTrip && site.inSpace && !isRelay;                   // a strange site or wreckage in orbit: the lander crosses, nobody lands
         if (isCrossing) this.state.addLog(`The lander crosses to ${site.label.toLowerCase()}.`);
         const wreck = isSiteTrip && site.tag === 'EXODUS_WRECK' ? this.wreckEncounterFor(planet) : null;   // the lander draws the wreck its story describes
         const siteArt = isSiteTrip ? site.art : (find && find.art) || null;          // a find of its own (old ruins, a beacon) is drawn by the mark too
-        const goDown = isCrossing ? Promise.resolve(null) : window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
-            : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null);
-        const landed = goDown.then(landing => this.applyLanding(landing, evaTeam));
-        const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam)) : landed;   // the new screen: the crisis aboard while they are down
+        const flown = isRelay || isCrossing ? null : this.flyLanding(planet, evaTeam, { find: landFind, site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet), full: isFull });   // the new look: the meteor (null: LanderGame)
+        const goDown = isRelay ? this.flyRelay(planet) : isCrossing ? Promise.resolve(null) : flown || (window.LanderGame ? window.LanderGame.play(this, planet, evaTeam, { site: siteArt, wreck: wreck && wreck.id, unmarked: this.unmarkedWhy(planet) })
+            : window.AwayTeam ? window.AwayTeam.descent(this, planet, evaTeam).then(() => null) : Promise.resolve(null));
+        const landed = goDown.then(landing => this.applyLanding(landing, evaTeam, planet));
+        const afterDescent = isNewScreen() && window.NSOrbit ? landed.then(() => window.NSOrbit.whileDown(this, evaTeam, { relay: isRelay })) : landed;   // the new screen: the crisis aboard while they are down
 
         if (isSiteTrip) {                                                           // the team goes where the scan pointed: the site's own story
             planet.hasEva = true;
@@ -4582,16 +5032,32 @@ Then you're through.`,
         someone hurt went down, whether Vance covers his partner, and the stress traits that strike ways as they stood when
         the team went down (GO DOWN's odds counted those: App.sureWay; one gained while they are down waits for the next trip,
         so the card never strikes the way GO DOWN vouched for). App.wayOdds and App.tripChoices read it; resolveEvaOutcome
-        drops it. */
+        drops it. findId: the find they went to (its prize: App.tripPrize); way: the card's index chosen for it on the glass as
+        they went (NSWorldFinds' find.way: node.nsWay, else its default; null on a blind trip: App.tripCardPlan); label: its
+        name on the glass (the result card's title). The traits are the team's own (App.teamTraits), and Mira under stress
+        (RECKLESS) aboard scans no ground (NSOrbit.whileDown says so). */
     tripContext(planet, team, find) {
         const s = this.state, O = window.NSOrbit, ids = team.map(crewIdOf);
         const mira = s.crew.find(c => (c.tags || []).includes('SPECIALIST'));
-        const miraAboard = !!mira && !team.includes(mira) && mira.status === 'HEALTHY' && !mira.tags.includes('CONFINED') && !mira.tags.includes('SEDATED');
+        const miraAboard = !!mira && !team.includes(mira) && mira.status === 'HEALTHY' && !mira.tags.includes('CONFINED') && !mira.tags.includes('SEDATED') && mira.trait !== 'RECKLESS';
         let fit = 0;
         try { fit = O && typeof O.fitOf === 'function' ? O.fitOf(this, planet, ids, find) : 0; } catch (err) { console.error('App: the team fit failed', err); }
-        return { shownBase: this.tripRisk(planet, { mira: miraAboard ? NEW_LOOK_ECONOMY.MIRA_ABOARD : 0 }).risk, fit,
+        const traits = this.teamTraits(team);
+        return { findId: (find && find.id) || 'kind', way: find && Number.isInteger(find.way) ? find.way : null, label: (find && find.label) || null,
+            shownBase: this.tripRisk(planet, { mira: miraAboard ? NEW_LOOK_ECONOMY.MIRA_ABOARD : 0 }).risk, fit,
             hunted: this.isHunted(planet), hurtGoes: team.some(m => m.status === 'INJURED'), vance: this.vanceCovers(team),
-            paranoid: s.hasActiveTrait('PARANOID'), reckless: s.hasActiveTrait('RECKLESS') };
+            paranoid: traits.paranoid, reckless: traits.reckless };
+    }
+
+    /** The stress traits that strike a trip's ways: { paranoid, reckless }. The new look (depth step 8) works them through the
+        person: Vance's PARANOID and Mira's RECKLESS count only while they are down on the team (GameState.traitDown). team: crew
+        members or their ids ('vance'); left out, the team down now (GameState.tripTeam), else nobody. The default game: whoever
+        holds them, as before. */
+    teamTraits(team) {
+        const s = this.state;
+        if (!isNewScreen()) return { paranoid: s.hasActiveTrait('PARANOID'), reckless: s.hasActiveTrait('RECKLESS') };
+        const list = (team == null ? s.tripTeam() || [] : team).map(m => (typeof m === 'string' ? s.crew.find(c => crewIdOf(c) === m) : m)).filter(Boolean);
+        return { paranoid: s.traitDown('PARANOID', list), reckless: s.traitDown('RECKLESS', list) };
     }
 
     /** Something hunts on this world (a plain landing there: TripOdds' hunted share). The scan reveals the tag. */
@@ -4627,14 +5093,16 @@ Then you're through.`,
     }
 
     /** The trip card's ways: [{ choice, idx, odds, struck: 'PARANOID' | 'RECKLESS' | null }] and whether a stress trait struck
-        any. Vance under stress (PARANOID) will not take a way at 30 or more; Mira under stress (RECKLESS) half the time will
-        not take the careful one. The new look never locks the card: when every way is struck, the careful way stays open;
-        and its traits are those of when the team went down (App.tripContext). odds: App.wayOdds (the new look), else null.
+        any. Vance under stress (PARANOID) will not take a way at 30 or more; Mira under stress (RECKLESS) will not take the
+        careful one (the default game: half the time). The new look never locks the card: when every way is struck, the
+        careful way stays open; and its traits are the team's, as they went down (App.tripContext: only a trait whose holder
+        went counts). odds: App.wayOdds (the new look), else null.
         vanceSays, miraSays: the card shows their line (not when the way kept open is the one they refused, and no other). */
     tripChoices(event, riskBase) {
-        const t = isNewScreen() && this._nsTrip ? this._nsTrip : null, has = trait => (t && t[trait] != null ? t[trait] : this.state.hasActiveTrait(trait.toUpperCase()));
+        const t = isNewScreen() && this._nsTrip ? this._nsTrip : null, now = t ? null : this.teamTraits();
+        const has = trait => (t && t[trait] != null ? !!t[trait] : !!(now || this.teamTraits())[trait]);
         const isParanoid = has('paranoid');
-        const recklessBlocksSafe = has('reckless') && Math.random() > 0.5;           // 50% chance to block safe option
+        const recklessBlocksSafe = has('reckless') && (isNewScreen() || Math.random() > 0.5);   // the new look: decided; the default game: 50% chance to block safe option
         const ways = event.choices.map((choice, idx) => ({
             choice, idx, odds: this.wayOdds(choice, riskBase),
             struck: isParanoid && choice.riskMod >= 30 ? 'PARANOID' : recklessBlocksSafe && choice.riskMod === 0 ? 'RECKLESS' : null,
@@ -4649,16 +5117,29 @@ Then you're through.`,
         return { ways, isParanoid, recklessBlocksSafe, allStruck, vanceSays: says(isParanoid, 'PARANOID'), miraSays: says(recklessBlocksSafe, 'RECKLESS') };
     }
 
-    /** The new look: the way GO DOWN vouches for, as an index on the event's card: the safest way the card is sure to leave
-        open (tripChoices always strikes PARANOID's ways at 30 or more, but RECKLESS's careful way only half the time, so that
-        one is not sure; when no way is sure, the careful way it keeps open). GO DOWN shows this way's odds (NSOrbit.teamOdds),
-        so a trip that may leave no safe way on its card says "could die" before anyone goes down. */
-    sureWay(event) {
-        const isParanoid = this.state.hasActiveTrait('PARANOID'), isReckless = this.state.hasActiveTrait('RECKLESS');
+    /** The new look: the way GO DOWN vouches for, as an index on the event's card: the safest way the card leaves open for
+        team (tripChoices strikes PARANOID's ways at 30 or more and RECKLESS's careful way, each only while its holder goes
+        down: App.teamTraits; team left out, the team down now; when no way is left, the careful way it keeps open). GO DOWN
+        shows this way's odds (NSOrbit.teamOdds), so a trip that leaves no safe way on its card says "death 1 in N" before
+        anyone goes down. */
+    sureWay(event, team) {
+        const { paranoid: isParanoid, reckless: isReckless } = this.teamTraits(team);
         const byRisk = ((event && event.choices) || []).map((choice, idx) => ({ choice, idx }))
             .sort((a, b) => (a.choice.riskMod || 0) - (b.choice.riskMod || 0) || a.idx - b.idx);
         const sure = byRisk.find(w => !(isParanoid && w.choice.riskMod >= 30) && !(isReckless && w.choice.riskMod === 0));
         return (sure || byRisk[0] || { idx: 0 }).idx;
+    }
+
+    /** The new look: the stress trait that strikes each way of an event's card with team going down, before they go (the
+        glass's rows, NSWorldFinds): Vance's PARANOID every way at 30 or more, Mira's RECKLESS the way at 0, each only while
+        its holder is one of team (App.teamTraits: crew members or ids; left out, the team down now, else nobody). Never every
+        way: the careful one stays open, as on the card. By the card's index: ['PARANOID' | 'RECKLESS' | null]. */
+    wayStrikes(event, team) {
+        const { paranoid: isParanoid, reckless: isReckless } = this.teamTraits(team);
+        const choices = (event && event.choices) || [];
+        const out = choices.map(c => (isParanoid && c.riskMod >= 30 ? 'PARANOID' : isReckless && c.riskMod === 0 ? 'RECKLESS' : null));
+        if (out.length && out.every(Boolean)) out[choices.findIndex((c, idx) => this.wayOf(event, idx) === 'careful')] = null;
+        return out;
     }
 
     /** Why A.U.R.A. marks no landing spot here (LanderGame's opts.unmarked): never in the default game; in the new look
@@ -4677,17 +5158,79 @@ Then you're through.`,
         return planet.nsLock === 'sharp' ? NEW_LOOK_ECONOMY.RISK_SHARP_LOCK : NEW_LOOK_ECONOMY.RISK_FAIR_LOCK;
     }
 
+    /** The new look: does this landing fly the whole meteor, or its ~10 s routine drop (depth plan, step 7)? The whole one: the
+        first landing on this kind of world this run (state._nsTypesLanded), a story world or Eden, one of our wrecks (o.wreck),
+        the find's bold way (App.isBoldWay: the way chosen on the glass, else its default; a blind trip, the way GO DOWN
+        vouched for), or odds where someone could die on the way taken (what GO DOWN showed: NSOrbit.teamOdds). Read before
+        markDone: the odds read the chosen find. find: the chosen find, or a blind trip's (NSWorldFinds.blind); team: crew
+        members or their ids (the meteor's warm-up asks with the two put forward). */
+    isFullDrop(planet, find, team, o = {}) {
+        if (!planet || !planet.type || !(this.state._nsTypesLanded || {})[planet.type]) return true;
+        if (planet.isStoryPlanet || planet.isEden || o.wreck) return true;
+        try { if (find && this.isBoldWay(planet, find.id)) return true; } catch (err) { console.error('App: the bold way failed', err); }
+        const O = window.NSOrbit;
+        let odds = null;
+        try { odds = O && typeof O.teamOdds === 'function' ? O.teamOdds(this, (team || []).map(m => (typeof m === 'string' ? m : crewIdOf(m)))) : null; } catch (err) { console.error('App: the drop odds failed', err); }
+        return !!(odds && odds.deadly);
+    }
+
+    /**
+     * The new look's landing (handleEvaAction asks first): THE METEOR, one fall from the release to the touchdown in one close
+     * camera (src/newscreen/land/LandFall.js, MiniHost 'land-fall'). o.full: the whole fall (App.isFullDrop); else the routine
+     * drop: you line it up and A.U.R.A. sets it down at the grade carried from the last full drop on this kind of world (her
+     * landing a step softer with Jaxon on the team). Resolves as LanderGame.play does ({ grade, auto, offMark, marked }, and raw,
+     * lifted, hurt, routine for App.applyLanding) and never rejects; a meteor that could not fly (its bakes not ready in time)
+     * is LanderGame's. null when this is not the new look or the world has no ground for it: the caller plays LanderGame.
+     * o: { find (the game's find, or the blind trip's), site, wreck, unmarked (as LanderGame gets them), full }.
+     */
+    flyLanding(planet, team, o = {}) {
+        const M = window.MiniHost, LFall = window.LandFall;
+        if (!isNewScreen() || !M || !M.has('land-fall') || !LFall || !LFall.canFly(planet)) return null;
+        const s = this.state, members = team || [], last = (s._nsTypesLanded || {})[planet.type], full = !!o.full || !last;
+        const jaxon = members.some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD');
+        const carried = full ? null : last.auto && jaxon && LANDING_LIFT[last.grade] ? { grade: LANDING_LIFT[last.grade], raw: last.grade, auto: true, lifted: true }
+            : { grade: last.grade, raw: last.grade, auto: !!last.auto, lifted: false };
+        const tally = s.reliance || (s.reliance = { auto: 0, manual: 0 });
+        if (!Array.isArray(tally.nsTold)) tally.nsTold = [];
+        const first = !tally.nsTold.includes('land:first');                          // the keycaps and the aim line: once a run (as Voice.once), told once the meteor has flown (below)
+        const find = o.find || null, trip = this._nsTrip || {}, SC = window.ShipCutaway;
+        const colorOf = m => { const c = SC && typeof SC.colorOf === 'function' ? SC.colorOf(m) : null; return Array.isArray(c) ? `rgb(${c.join(',')})` : null; };
+        const opts = {
+            planet, sector: s.currentSector, find, site: o.site || null, wreck: o.wreck || null, unmarked: o.unmarked || null,
+            team: members.map(m => ({ id: crewIdOf(m), status: m.status, color: colorOf(m) })),
+            aboard: s.crew.filter(c => c.status !== 'DEAD' && !members.includes(c)).map(crewIdOf).filter(Boolean),
+            full, carried, jaxon, drops: s._nsDrops || 0, first, energy: s.energy,
+            risk: find && typeof find.risk === 'number' ? find.risk : trip.shownBase,
+        };
+        const lander = () => (window.LanderGame ? window.LanderGame.play(this, planet, members, { site: o.site, wreck: o.wreck, unmarked: o.unmarked }) : null);
+        const flew = r => {                                                          // the meteor's own landing (not LanderGame's, not a skip): its teaching has been shown
+            if (first && r && !r.skipped && !tally.nsTold.includes('land:first')) tally.nsTold.push('land:first');
+            return r;
+        };
+        return M.play('land-fall', opts)
+            .then(r => (r && r.fallback ? lander() : flew(r)), err => { console.error(err); return lander(); })
+            .catch(err => { console.error(err); return null; });
+    }
+
     /** Consequences of the landing: a soft one makes the trip safer, a crash hurts someone before they step out. The new look:
-        with Jaxon on the team, A.U.R.A.'s landing is one step better (a crash is rough, a rough one soft): he flies with her. */
-    applyLanding(landing, evaTeam) {
+        with Jaxon on the team, A.U.R.A.'s landing is one step better (a crash is rough, a rough one soft): he flies with her.
+        The meteor (App.flyLanding) has shown his step already (landing.lifted), and names who a crash hurts (landing.hurt); a
+        full drop's grade is what a routine drop on that kind of world carries, and a routine drop is not counted as flown by
+        hand or by A.U.R.A. */
+    applyLanding(landing, evaTeam, planet) {
         this._landingRiskMod = 0;
         if (!landing || !window.LanderGame) return;
-        this.noteReliance(!!landing.auto);
+        const routine = isNewScreen() && !!landing.routine, raw = landing.raw || landing.grade;   // the meteor (App.flyLanding): a routine drop, the grade before Jaxon's step
+        if (!routine) this.noteReliance(!!landing.auto);                              // a routine drop is A.U.R.A.'s set-down, not a choice to fly or hand over
         if (isNewScreen()) {
-            this.state._nsLandAuto = !!landing.auto;                                  // NSOrbit.propose: Jaxon's step counts while A.U.R.A. lands
-            const lift = { crash: 'rough', rough: 'soft' }[landing.grade];
-            if (landing.auto && lift && (evaTeam || []).some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD')) {
-                landing = Object.assign({}, landing, { grade: lift });
+            const s = this.state;
+            if (this._nsTrip) this._nsTrip.site = landing.site || null;               // the trip card's picture (cards/TripCard.js): the place as they stood on it
+            s._nsLandAuto = !!landing.auto;                                           // NSOrbit.propose: Jaxon's step counts while A.U.R.A. lands
+            if (landing.routine !== undefined && !landing.skipped) s._nsDrops = (s._nsDrops || 0) + 1;   // the meteor's tiers (App.flyLanding): its own landings only (LanderGame's, or a skip, never spend its first-landing care)
+            if (!routine && planet && planet.type && window.LanderGame.GRADES[raw]) s._nsTypesLanded = Object.assign({}, s._nsTypesLanded, { [planet.type]: { grade: raw, auto: !!landing.auto } });   // a full drop (LanderGame's too): what a routine drop on this kind carries (App.isFullDrop)
+            const lift = LANDING_LIFT[landing.grade];
+            if (landing.lifted || (landing.auto && lift && (evaTeam || []).some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD'))) {
+                if (!landing.lifted) landing = Object.assign({}, landing, { grade: lift });   // (the meteor showed his step already: landing.lifted)
                 this.state.addLog('Jaxon: "I helped A.U.R.A. with the landing. We came down softer."');   // DRAFT
             }
         }
@@ -4696,7 +5239,8 @@ Then you're through.`,
         if (landing.offMark) this.state.addLog("Down safely, but well away from the marked spot. It is a long walk.");
         if (landing.grade === 'crash') {
             const fit = evaTeam.filter(m => m.status === 'HEALTHY');
-            const hurt = fit[Math.floor(Math.random() * fit.length)];
+            const named = landing.hurt ? fit.find(m => crewIdOf(m) === landing.hurt) : null;   // the meteor: the one its picture showed hurt
+            const hurt = named || fit[Math.floor(Math.random() * fit.length)];
             if (hurt) {
                 hurt.status = 'INJURED';
                 delete hurt._nsMendAt;                                               // the new look: a new injury, not one Aris already saw to
@@ -4719,6 +5263,120 @@ Then you're through.`,
         return isHigh ? [60, 119] : [40, 79];
     }
 
+    // ── the new look: a find's two ways and what each brings home (src/newscreen/WorldFinds.js rows, resolveEvaOutcome) ──
+    /** Which way a choice on a find's card is: 'careful', the way with the least risk (the first of equals), else 'bold';
+        null: no such choice. */
+    wayOf(event, idx) {
+        const choices = (event && event.choices) || [];
+        if (!choices[idx]) return null;
+        const mods = choices.map(c => Number(c.riskMod) || 0);
+        return mods.indexOf(Math.min(...mods)) === idx ? 'careful' : 'bold';
+    }
+
+    /** What one way of a find brings home, drawn from its own seed (the world, the find, the way: the same world always gives
+        the same), never from the dice. Supplies only (NEW_LOOK_ECONOMY.BOLD_PRIZE): a way that brought back an item gives
+        salvage, energy, rations or data instead, by the item's first tag (PRIZE_OF_TAG) and the way's risk tier; salvage,
+        energy and data keep a plain landing's own. { salvage, energy, rations, data, cure } (only what it gives), or null. */
+    drawPrize(node, findId, way, choice) {
+        const r = (choice && choice.reward) || {}, E = NEW_LOOK_ECONOMY, P = E.BOLD_PRIZE, seed = `${node && node.id}:${findId}:${way}`;
+        const pick = (range, what) => range[0] + Math.floor(seededUnit(`${seed}:${what}`) * (range[1] - range[0] + 1));
+        if (r.type === 'DATA') return { data: Number(r.val) || 1 };
+        if (r.type === 'RESOURCE') {
+            if (!r.val || r.val === 'NOTHING') return null;
+            return String(r.val).includes('METALS') ? { salvage: pick(this.evaSalvageRange(r.val === 'METALS_HIGH'), 'salvage') } : { energy: pick(this.evaEnergyRange(), 'energy') };
+        }
+        if (r.type !== 'ITEM') return null;
+        const mod = Number(choice.riskMod) || 0, tier = P.TIER_FROM.filter(from => mod >= from).length;   // 0, 1, 2: T1, T2, T3
+        const kind = PRIZE_OF_TAG[(r.tags || [])[0]] || 'salvage';
+        if (kind === 'energy') return { energy: P.ENERGY[tier] };
+        if (kind === 'rations') return { rations: P.RATIONS[tier] };
+        if (kind === 'lore') return { data: P.LORE_DATA, salvage: pick(tier ? P.SALVAGE[tier - 1] : E.EVA_METALS, 'salvage') };
+        if (kind === 'cure') return { cure: true };
+        return { salvage: pick(P.SALVAGE[tier], 'salvage') };
+    }
+
+    /** A find's prizes, { event, careful, bold } (App.drawPrize), drawn once and kept on the world (node.nsPrize[findId], saved
+        with the map): NSWorldFinds draws them as a scan reads the world, and its row, the trip card and the trip then say and
+        pay the same. Kept for another event (an old save), they are drawn again for this one. */
+    findPrizes(node, findId, event) {
+        if (!node || !findId || !event) return null;
+        const kept = node.nsPrize && node.nsPrize[findId];
+        if (kept && kept.event === event.id) return kept;
+        const drawn = { event: event.id, careful: null, bold: null };
+        (event.choices || []).forEach((choice, idx) => { const way = this.wayOf(event, idx); if (way) drawn[way] = this.drawPrize(node, findId, way, choice); });
+        node.nsPrize = Object.assign({}, node.nsPrize, { [findId]: drawn });
+        return drawn;
+    }
+
+    /** What the way the team took brings home (choice: the card's): its find's prize (App.findPrizes; the find is
+        App.tripContext's, else the one whose prize is for this event, else the world's own), or null: nothing. */
+    tripPrize(choice, planet) {
+        const ev = choice && planet && typeof EVENTS !== 'undefined' ? EVENTS.find(e => (e.choices || []).includes(choice)) : null;
+        if (!ev) return null;
+        const kept = planet.nsPrize || {};
+        const findId = (this._nsTrip && this._nsTrip.findId) || Object.keys(kept).find(id => kept[id] && kept[id].event === ev.id) || 'kind';
+        const prizes = this.findPrizes(planet, findId, ev);
+        return (prizes && prizes[this.wayOf(ev, ev.choices.indexOf(choice))]) || null;
+    }
+
+    /** A prize part by part: [{ kind, n, text }], '+45 salvage', '+3 rations' ... (a cure: 'healing'). The glass's chips
+        (NSWorldFinds) and the trip card say it with these. */
+    prizeParts(prize) {
+        if (!prize) return [];
+        const out = ['salvage', 'energy', 'rations', 'data'].filter(k => prize[k] > 0).map(k => ({ kind: k, n: prize[k], text: `+${prize[k]} ${k === 'rations' && prize[k] === 1 ? 'ration' : k}` }));   // DRAFT: the chips
+        if (prize.cure) out.push({ kind: 'cure', n: 0, text: 'healing' });           // DRAFT
+        return out;
+    }
+
+    /** The team is home with its prize (App.tripPrize), used at once, as sealed rations are (GameState.openFoodPacks): each
+        supply up to what the ship holds, the data learned; a cure makes the hurt aboard well (not whoever was hit on this trip,
+        nor the hunger-sick: only food mends that) and takes BOLD_PRIZE.CURE_STRESS off the most stressed. OBSESSED (Mira at
+        stress 3) brings half as much again of each supply, as in the default game. Returns what the log says. */
+    payPrize(prize, isObsessed, hitCrew) {
+        const s = this.state, said = [];
+        if (!prize) return 'Nothing brought back.';
+        const more = n => (isObsessed ? Math.floor(n * 1.5) : n);
+        if (isObsessed && (prize.salvage || prize.energy || prize.rations)) said.push("Mira's obsessive sampling yields extra.");
+        if (prize.salvage) {
+            const was = s.salvage, amount = more(prize.salvage);
+            s.salvage = Math.min(s.maxSalvage, was + amount);
+            said.push(`Recovered ${amount} Salvage.${s.salvage === s.maxSalvage && was < s.maxSalvage ? ' (Storage Cap Reached)' : ''}`);
+        }
+        if (prize.energy) {
+            const amount = more(prize.energy), got = Math.max(0, Math.min(amount, 100 - Math.round(s.energy)));   // energy tops out at 100: say what fitted
+            s.energy = Math.min(100, s.energy + amount);
+            said.push(got ? `Siphoned ${got} Energy.` : 'Energy was already full.');
+        }
+        if (prize.rations) {
+            const got = Math.max(0, Math.min(more(prize.rations), s.maxRations - s.rations));
+            s.rations += got;
+            said.push(got ? `+${got} ${got === 1 ? 'Ration' : 'Rations'}.` : 'The galley is already full.');   // DRAFT (both)
+        }
+        if (prize.data) { s.gainData(prize.data); said.push(`+${prize.data} Data.`); }
+        if (prize.cure) {
+            const hurt = s.crew.filter(c => c.status === 'INJURED' && c !== hitCrew && c.trait !== 'CATATONIC' && !c._nsHungerSick);
+            if (hurt.length) { s.mend(hurt); said.push(`${hurt.map(c => c.name).join(' and ')} ${hurt.length === 1 ? 'is' : 'are'} well again.`); }   // DRAFT
+            const most = s.crew.filter(c => c.status !== 'DEAD' && (c.stress || 0) > 0).sort((a, b) => b.stress - a.stress)[0];
+            if (most) most.stress = Math.max(0, most.stress - NEW_LOOK_ECONOMY.BOLD_PRIZE.CURE_STRESS);
+        }
+        return said.join(' ');
+    }
+
+    /** Whether the team takes a find's bold way: the way chosen for it (node.nsWay[findId], the card's index), else its
+        default (the careful way, or the bold one where only that one shows on the glass: NSWorldFinds' rows). Before a scan
+        (a blind trip: no rows on the glass), the way GO DOWN vouched for (App.sureWay), as App.tripCardPlan takes it. false
+        when unknown: no such find, a site or Eden, the default game. The meteor landing reads it. */
+    isBoldWay(node, findId) {
+        const F = window.NSWorldFinds;
+        if (!isNewScreen() || !node || !findId || !F) return false;
+        let find = null;
+        try { find = F.list(this, node, null, true).find(f => f.id === findId) || null; } catch (err) { console.error('App: the find\'s way failed', err); }
+        const ev = find && find.kind === 'event' && typeof EVENTS !== 'undefined' ? EVENTS.find(e => e.id === find.event) : null;
+        if (!ev) return false;
+        const way = F.known(node) ? find.way : this.sureWay(ev);
+        return way != null && this.wayOf(ev, way) === 'bold';
+    }
+
     /** How dangerous a plain landing is from the world itself, before how it is flown and who scans it: 5 % to 30 % by its
         danger level, then its signals, each a line on the trip's card. The new look's scan tags read the total (Scan.js). */
     planetRisk(planet) {
@@ -4734,11 +5392,83 @@ Then you're through.`,
         return { risk, mods };
     }
 
-    showEventModal(event, planet) {
-        const modal = document.createElement('div');
-        modal.className = 'modal-overlay';
-        modal.style.zIndex = '2000';
+    /** The new look: how a plain landing's card plays (showEventModal; the run model's trip card asks the same). The first time
+        an event shows this run: its full card, the way chosen on the glass lit; it is remembered (state._nsEventsSeen, saved).
+        After that: no buttons, the glass's way resolves straight into a short result card (App.showTripResult). The glass's
+        way is App.tripContext's (NSWorldFinds' find.way as the team went), else the way GO DOWN vouched for (App.sureWay: a
+        blind trip); a way the card strikes (App.tripChoices) gives way to the safest one it leaves open. A walk-away is never a
+        row on the glass (its find shows the bold row only), so where that is the way taken (a blind trip, or the one row
+        struck), the full card plays again: it says what walking away costs, and the player may still choose.
+        ways: tripChoices'. { repeat, way: the card's index } (way null: the default game, or a card with no trip behind it). */
+    tripCardPlan(event, ways) {
+        const s = this.state, t = this._nsTrip, list = ways || [];
+        if (!isNewScreen() || !t || !event || !event.id || !list.length) return { repeat: false, way: null };
+        const open = list.filter(w => !w.struck).sort((a, b) => (a.choice.riskMod || 0) - (b.choice.riskMod || 0) || a.idx - b.idx);
+        const glass = list[Number.isInteger(t.way) ? t.way : this.sureWay(event)];
+        const way = glass && !glass.struck ? glass.idx : open.length ? open[0].idx : 0;
+        const r = (list[way] && list[way].choice && list[way].choice.reward) || {}, walks = r.type === 'RESOURCE' && r.val === 'NOTHING';
+        const seen = s._nsEventsSeen || [];
+        if (seen.includes(event.id)) return { repeat: !walks, way };
+        s._nsEventsSeen = seen.concat(event.id);
+        return { repeat: false, way };
+    }
 
+    /** The new look, an event seen before this run (App.tripCardPlan): no buttons. The way chosen on the glass resolves at once
+        and a short result card says how it went (EncounterCard.outcomeIn): the find's name, the event's first sentence, the
+        way, what happened in a crew or A.U.R.A. voice, what came home as chips, CONTINUE: about 25 words. A breakdown on the
+        trip shows too (App.tripResultWords). way: tripChoices'. */
+    showTripResult(event, planet, way, riskBase) {
+        const choice = way.choice;
+        let was = null;
+        const run = () => {                                                          // what they had as they went, then the way (a breakdown it sets off: GameState._nsBroke)
+            was = { team: (this.currentEvaTeam || []).slice(), before: this.stockNow(), prize: this.tripPrize(choice, planet), down: this.decksDown() };
+            this.state._nsBroke = null;
+            this.resolveEvaOutcome(choice, riskBase, way.odds);
+        };
+        const C = window.NSTripCard;                                                  // look pass B08: the frame's report (cards/TripCard.js)
+        if (!C || !C.ready()) { run(); return; }
+        C.report(this, { event, planet, run, result: () => (was ? this.tripResultWords(was.team, was.before, was.prize, was.down) : null) });
+    }
+
+    /** The ship's stores now, to see what a trip brought home: { salvage, energy, rations, data }. */
+    stockNow() {
+        const s = this.state;
+        return { salvage: s.salvage || 0, energy: Math.round(s.energy || 0), rations: s.rations || 0, data: s._colonyKnowledge || 0 };
+    }
+
+    /** The decks out of order now (damaged), by key: a short result card names one the trip's breakdown broke. */
+    decksDown() {
+        const decks = this.state.shipDecks || {};
+        return Object.keys(decks).filter(k => decks[k].status !== 'OPERATIONAL');
+    }
+
+    /** What a short result card says after the trip (App.showTripResult): one line in a voice (the hit's own, App.tripHit;
+        else one of the team), and chips: what came home ("+47 salvage"), what did not fit ("energy full"), the stress a hit
+        costs everyone and a deck that went down. A breakdown the trip set off (GameState._nsBroke: one at most) says its first
+        sentence on a line of its own (also), and the event's sentence makes room for it (lean), so the card stays short and
+        nothing that happened is left off. before: App.stockNow as they went; prize: the way's (App.tripPrize); down:
+        App.decksDown as they went. { say: { speaker, text }, also: [line], lean, chips: [{ text, tone, word }] } (the frame's chips) */
+    tripResultWords(team, before, prize, down) {
+        const s = this.state, now = this.stockNow(), hit = this._nsLastHit, broke = s._nsBroke, KINDS = ['salvage', 'energy', 'rations', 'data'];
+        const nums = KINDS.filter(kind => now[kind] !== before[kind]).map(kind => { const n = now[kind] - before[kind]; return { text: `${n > 0 ? '+' : ''}${n} ${kind}`, tone: n < 0 ? 'loss' : 'gain' }; });   // DRAFT: the chips
+        if (!hit || !hit.died) KINDS.filter(kind => prize && prize[kind] > 0 && now[kind] === before[kind]).forEach(kind => nums.push({ text: `${kind.charAt(0).toUpperCase()}${kind.slice(1)} full`, tone: 'dim' }));   // DRAFT: nothing of it fitted (the frame's capped chip)
+        const chips = [];                                                                   // the frame's chips (look pass B08): the words first, then the numbers
+        if (hit && !hit.died && hit.crew) chips.push({ text: `${hit.crew.name} hurt`, tone: 'loss', word: true });   // DRAFT (look pass): who was hit
+        if (hit) chips.push({ text: 'Crew tense', tone: 'loss', word: true });                 // DRAFT (look pass): C04, a casualty shakes the whole crew (was a stress number)
+        const decks = s.shipDecks || {};
+        Object.keys(decks).filter(k => decks[k].status !== 'OPERATIONAL' && !(down || []).includes(k))
+            .forEach(k => chips.push({ text: `${String(decks[k].label || k)} damaged`, tone: 'loss', word: true }));   // DRAFT: a deck the breakdown broke
+        chips.push(...nums);
+        const said = broke && broke.said && broke.said.length ? String(broke.said[0]) : '';
+        const also = said ? [(said.match(/^[^.!?]+[.!?]+/) || [said])[0].trim()] : [];   // the breakdown's own line, its first sentence
+        s._nsBroke = null;
+        const voiced = hit && /^(A\.U\.R\.A\.|[A-Z][a-z]+): "(.*)"$/.exec(hit.line);
+        if (hit) return { say: voiced ? { speaker: voiced[1], text: voiced[2] } : { speaker: 'A.U.R.A.', text: hit.line }, also, lean: also.length > 0, chips };
+        const who = team.find(m => m.status !== 'DEAD'), got = chips.some(c => c.tone === 'gain');
+        return { say: { speaker: who ? who.name : 'A.U.R.A.', text: got ? TRIP_BACK_LINES.got : TRIP_BACK_LINES.back }, also, lean: also.length > 0, chips };
+    }
+
+    showEventModal(event, planet) {
         // === SIGNAL TYPE RISK MODIFIERS === the world's own, how the landing went (LanderGame), Mira's ground scan from aboard,
         // the bridge's scan: App.tripRisk, the same number the new look's mark on the world showed (held to 0..50)
         const goingIn = this.tripGoingIn(planet);
@@ -4747,6 +5477,15 @@ Then you're through.`,
 
         // Stress trait checks (App.tripChoices: the new look never locks the card) and each way's odds (App.wayOdds, the new look)
         const { ways, vanceSays, miraSays } = this.tripChoices(event, riskBase);
+
+        // The new look: an event seen before this run has no buttons, the way chosen on the glass resolves into a short result
+        // card; the first time, this full card, with that way lit (App.tripCardPlan). Sites, story finds and Eden have their own
+        const plan = this.tripCardPlan(event, ways);
+        if (plan.repeat) { this.showTripResult(event, planet, ways[plan.way], riskBase); return; }
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.style.zIndex = '2000';
 
         // Build signal modifier display string
         const PLAIN_SIGNAL = {
@@ -4767,11 +5506,35 @@ Then you're through.`,
         const energyWords = energyRoom <= 0 ? 'energy already full' : energyRoom < EVA_LO ? `+${energyRoom} energy` : energyRoom < EVA_HI ? `+${EVA_LO} to ${energyRoom} energy` : REWARD_WORDS.ENERGY;
         const rewardWords = (choice) => {
             const r = choice.reward || {};
+            if (isNewScreen() && !(r.type === 'RESOURCE' && r.val === 'NOTHING')) {           // the new look: the find's own prize (App.tripPrize), as its row on the glass
+                const parts = this.prizeParts(this.tripPrize(choice, planet)).map(p => (p.kind !== 'energy' ? p.text : energyRoom <= 0 ? 'energy already full' : `+${Math.min(p.n, energyRoom)} energy`));
+                return parts.length ? parts.join(' · ') : 'nothing';
+            }
             if (r.type === 'ITEM') return `an item${r.tags && r.tags.length ? ' · ' + String(r.tags[0]).toLowerCase() : ''}`;
             if (r.type === 'DATA') return `+${r.val || 1} data`;
             const isEnergy = r.type === 'RESOURCE' && r.val !== 'NOTHING' && !String(r.val || '').includes('METALS');   // resolveEvaOutcome's own rule
             return isEnergy ? energyWords : REWARD_WORDS[r.val] || 'nothing';
         };
+        const VANCE_SAYS = 'I am not risking anyone on something that dangerous.', MIRA_SAYS = 'The safe option gets us nothing. I am going in.';
+        const STRUCK_SAYS = { PARANOID: 'Vance refuses', RECKLESS: 'Mira overrides this' };   // a way a stress trait strikes, under its key
+        const C = window.NSTripCard;
+        if (isNewScreen() && C && C.ready()) {                                         // look pass B08: the frame (cards/TripCard.js), in place of the deck panel
+            const prize = choice => (choice.reward && choice.reward.type === 'RESOURCE' && choice.reward.val === 'NOTHING' ? []
+                : this.prizeParts(this.tripPrize(choice, planet)).map(p => (p.kind === 'cure' ? { text: p.text, tone: 'gain', word: true }
+                    : p.kind !== 'energy' ? { text: p.text, tone: 'gain' } : energyRoom <= 0 ? { text: 'Energy full', tone: 'dim' } : { text: `+${Math.min(p.n, energyRoom)} energy`, tone: 'gain' })));   // DRAFT (look pass): "Energy full", the frame's capped chip
+            let was = null;
+            C.decide(this, {
+                event, planet, ways, way: plan.way, mods: signalModifiers, plain: PLAIN_SIGNAL, vanceSays, miraSays, lines: { vance: VANCE_SAYS, mira: MIRA_SAYS, struck: STRUCK_SAYS }, prize,
+                run: idx => {
+                    const choice = event.choices[idx];
+                    was = { team: (this.currentEvaTeam || []).slice(), before: this.stockNow(), prize: this.tripPrize(choice, planet), down: this.decksDown() };
+                    this.state._nsBroke = null;
+                    this.resolveEvaOutcome(choice, riskBase, ways[idx].odds);
+                },
+                result: () => (was ? this.tripResultWords(was.team, was.before, was.prize, was.down) : null),
+            });
+            return;
+        }
         const evaChoice = (choice, idx) => {
             const way = ways[idx], odds = way.odds;                              // odds: the new look's (TripOdds), else null
             const totalRisk = odds ? odds.hurt : Math.max(0, Math.min(100, Math.round(riskBase + choice.riskMod)));
@@ -4780,8 +5543,9 @@ Then you're through.`,
             const recklessBlocked = way.struck === 'RECKLESS';                   // RECKLESS: Mira overrides the safe option
             const isDisabled = paranoidBlocked || recklessBlocked;
             const odd = `${totalRisk}% chance someone gets hurt${odds && odds.deadly ? `, a 1 in ${odds.oneIn} chance someone dies` : ''}`;   // DRAFT: the death chance (the new look)
-            const note = paranoidBlocked ? 'Vance refuses' : (recklessBlocked ? 'Mira overrides this' : odd);
-            return `<button class="deck-action choice-btn eva-choice" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
+            const note = paranoidBlocked ? STRUCK_SAYS.PARANOID : (recklessBlocked ? STRUCK_SAYS.RECKLESS : odd);
+            const isGlass = idx === plan.way && !isDisabled;                     // the new look: the way chosen on the glass, lit (the player may still switch)
+            return `<button class="deck-action choice-btn eva-choice${isGlass ? ' is-glass' : ''}" data-idx="${idx}" data-risk-color="${riskColor}" ${isDisabled ? 'disabled' : ''}>
                         <span>${choice.text}<em class="eva-gets">${rewardWords(choice)}</em></span>
                         <small style="color:${isDisabled ? 'var(--red)' : riskColor}">${note}<i class="eva-risk"><b style="width:${totalRisk}%; background:${riskColor}"></b></i></small>
                     </button>`;
@@ -4796,8 +5560,8 @@ Then you're through.`,
                 <ul class="deck-panel-crew eva-team">${(this.currentEvaTeam || []).map(m => `<li><img class="deck-panel-face" src="assets/crew/${m.portraitId}.png" alt=""><span class="deck-panel-name">${m.name}</span><span class="deck-panel-mood">ON THE GROUND</span></li>`).join('')}</ul>
                 <p class="eva-found">“${event.desc}”</p>
                 ${signalModDisplay ? `<dl class="deck-panel-facts"><dt>GOING IN</dt><dd>${signalModDisplay}</dd></dl>` : ''}
-                ${vanceSays ? '<p class="eva-voice" style="color:#ff5050">Vance: “I am not risking anyone on something that dangerous.”</p>' : ''}
-                ${miraSays ? '<p class="eva-voice" style="color:#d070ff">Mira: “The safe option gets us nothing. I am going in.”</p>' : ''}
+                ${vanceSays ? `<p class="eva-voice" style="color:#ff5050">Vance: “${VANCE_SAYS}”</p>` : ''}
+                ${miraSays ? `<p class="eva-voice" style="color:#d070ff">Mira: “${MIRA_SAYS}”</p>` : ''}
                 <h4>WHAT DO THEY DO?</h4>
                 <div class="deck-panel-actions">${event.choices.map(evaChoice).join('')}</div>
             </section>
@@ -4813,11 +5577,6 @@ Then you're through.`,
                 if (isPicked) return;
                 isPicked = true;
                 const choice = event.choices[btn.dataset.idx];
-                const EC = window.EncounterCard;
-                if (isNewScreen() && EC && typeof EC.outcomeIn === 'function') {             // the new look: what happened shows in the card, then CONTINUE
-                    EC.outcomeIn(this, modal.querySelector('.eva-panel'), choice.text, () => this.resolveEvaOutcome(choice, riskBase, ways[btn.dataset.idx].odds), () => modal.remove());
-                    return;
-                }
                 this.resolveEvaOutcome(choice, riskBase, ways[btn.dataset.idx].odds);
                 modal.remove();
             });
@@ -4860,10 +5619,12 @@ Then you're through.`,
 
     /** A plain landing's outcome: whether someone is hit, then what the way brings home. The new look rolls the way's own odds
         (wayOdds: App.wayOdds, the numbers its card showed; TripOdds): the hurt chance, then a death only at the shown odds,
-        and only on someone Vance does not cover (App.tripHit). The default game keeps its own rule. */
+        and only on someone Vance does not cover (App.tripHit); then it pays the prize the find's row showed, exactly
+        (App.tripPrize, App.payPrize: supplies only). The default game keeps its own rule. */
     resolveEvaOutcome(choice, baseRisk, wayOdds) {
         const planet = this.state.currentSystem;
         const odds = isNewScreen() ? wayOdds || this.wayOdds(choice, baseRisk) : null;
+        this._nsLastHit = null;                                                      // the new look: who was hit, for the short result card (App.tripResultWords)
         let totalRisk = odds ? odds.hurt : baseRisk + choice.riskMod;
         const roll = Math.random() * 100;
         let logMsg = "";
@@ -4908,7 +5669,7 @@ Then you're through.`,
 
         // 1. Hazard Check — only EVA team members (2 crew) can be hit
         const HIGH_RISK_FLOOR = 40, RETREAT_ENERGY_COST = 10;
-        let isTeamMemberLost = false;
+        let isTeamMemberLost = false, hitCrew = null;
         const evaTeam = this.currentEvaTeam || [];
         if ((roll < totalRisk || predatoryAttack) && evaTeam.length > 0) {
             // INJURY or DEATH — pick randomly from the 2-person EVA team
@@ -4921,6 +5682,7 @@ Then you're through.`,
 
             if (odds) {                                                              // the new look: TripOdds, Vance's cover, one line in a voice
                 const hit = this.tripHit(odds, evaTeam, targetCrew, planet, hazardDesc, severity);
+                this._nsLastHit = hit;
                 targetCrew = hit.crew;
                 isTeamMemberLost = hit.died;
                 this.state.addLog(hit.line);                                         // its own line: the card shows it with the speaker's face
@@ -4963,6 +5725,7 @@ Then you're through.`,
                 }
                 window.dispatchEvent(new CustomEvent('crew-injury', { detail: { crew: targetCrew } }));
             }
+            hitCrew = targetCrew;
             // Stress: EVA casualty witnessed — +1 stress to all living crew
             this.state.crew.forEach(c => {
                 if (c.status !== 'DEAD') {
@@ -5015,8 +5778,8 @@ Then you're through.`,
         }
 
         // 2. Reward
-        // OBSESSED bonus: +50% resources or double items
-        const isObsessed = this.state.hasActiveTrait('OBSESSED');
+        // OBSESSED bonus: +50% resources or double items (the new look: only with Mira on the team, GameState.traitDown)
+        const isObsessed = this.state.traitDown('OBSESSED', evaTeam);
 
         if (isTeamMemberLost) {
             logMsg += evaTeam.some(m => m.status !== 'DEAD') ? 'The survivor came back with empty hands.' : 'The lander came home with nothing.';   // DRAFT: one went alone
@@ -5025,6 +5788,8 @@ Then you're through.`,
             if (/Lose Fuel|Energy Cost/i.test(choice.text)) { this.state.energy = Math.max(0, this.state.energy - RETREAT_ENERGY_COST); logMsg += `Nothing brought back. -${RETREAT_ENERGY_COST} Energy.`; }
             else if (/Morale Loss/i.test(choice.text)) { evaTeam.forEach(m => { if (m.status !== 'DEAD') m.stress = Math.min(3, (m.stress || 0) + 1); }); logMsg += 'Nothing brought back. The team is shaken: +1 Stress.'; }
             else logMsg += 'Nothing brought back.';
+        } else if (isNewScreen()) {                                                   // the new look: the find's own prize, drawn when the world was read (its row said it)
+            logMsg += this.payPrize(this.tripPrize(choice, planet), isObsessed, hitCrew);
         } else if (choice.reward.type === 'RESOURCE') {
             const isMetals = choice.reward.val === 'METALS' || choice.reward.val === 'METALS_HIGH';
             const [lo, hi] = isMetals ? this.evaSalvageRange(choice.reward.val === 'METALS_HIGH') : this.evaEnergyRange();   // salvage, else energy
@@ -5094,6 +5859,7 @@ Then you're through.`,
 
         window.EncounterCard.open(this, {
             tone: 'station', kicker: 'ON THE SURFACE', title: planet.name,
+            picture: { kind: 'scene', art: 'GARDEN' }, readout: planet.name, seenKey: 'eden:surface',
             context: `${names} step${evaTeam.length === 1 ? 's' : ''} out into warm, sweet air, beside a clear stream. `   // DRAFT: "steps", one who went alone (the new look)
                 + 'Every tree is in fruit, all of it ripe at once, and not one leaf lies on the grass.',
             choices: options,
@@ -5101,17 +5867,19 @@ Then you're through.`,
                 const action = options[idx].key;
 
                 switch (action) {
-                    case 'rest':
-                        // Full recovery - stress and injuries
+                    case 'rest': {
+                        // Full recovery - stress and injuries (the new look: not hunger sickness, which only a supper they eat mends)
                         this.state.crew.forEach(c => {
                             if (c.status !== 'DEAD') {
                                 c.stress = 0;
-                                if (c.status === 'INJURED') c.status = 'HEALTHY';
+                                if (this.state.treatable(c)) c.status = 'HEALTHY';
                             }
                         });
                         this.state.addLog(`${names} found a quiet place by the stream. The whole crew rotated through in shifts.`);
                         this.state.addLog("For the first time in months, everyone truly rested. All stress cleared. All injuries healed.");
+                        this.state.crew.filter(c => c._nsHungerSick && c.status === 'INJURED').forEach(c => this.state.addLog(this.state.sickLine(c)));   // still in bed
                         break;
+                    }
                     case 'gather': {
                         const got = Math.min(10, Math.max(0, this.state.maxRations - this.state.rations));   // what fits: the chip says the same (EncounterCard.capGains)
                         this.state.rations += got;
@@ -5619,7 +6387,8 @@ Then you're through.`,
         planet._settleCouncilHeard = true;   // asked again about this world, only A.U.R.A.'s question repeats
         window.EncounterCard.open(this, {
             tone: 'station', kicker: council.kicker, title: council.title, zIndex: 2800,
-            dialogue: council.dialogue, choices: council.choices,
+            dialogue: council.dialogue, choices: council.choices.map((c, i) => (i === 1 ? Object.assign({}, c, { tone: 'end' }) : c)),
+            shape: 'ask', final: [1], readout: planet.name, picture: { kind: 'world', node: planet }, seenKey: `settle:${planet.id || planet.name}`,
             onPick: idx => {
                 if (idx !== 1) { if (onStay) onStay(); return; }
                 // Sectors 1-2 (SECTOR_CONFIG colonyWarning): settling this early goes against A.U.R.A.'s advice
@@ -5692,8 +6461,10 @@ Then you're through.`,
             rating = 'F'; ratingColor = '#d85a4e';
         }
 
+        const oldColonyScreen = () => window.EndScreens && window.EndScreens.colony(this, planet, outcome, { rating, survivors: survivors.length, avgStress, colonyKnowledge });
+        if (isNewScreen() && this.endInColony(planet, outcome, oldColonyScreen)) return;   // the new look: the colony ending (C72), never the old sheet
         if (window.EndScreens) { // shared card; the flight-recorder table below is only the fallback
-            window.EndScreens.colony(this, planet, outcome, { rating, survivors: survivors.length, avgStress, colonyKnowledge });
+            oldColonyScreen();
             return;
         }
 
@@ -5810,7 +6581,7 @@ Then you're through.`,
                 </div>
             </div>
 
-            <button onclick="localStorage.removeItem('silentExodus_save'); location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
+            <button onclick="localStorage.removeItem('${SAVE_KEY}'); location.reload()" style="margin-top: 20px; padding: 12px 30px; background: transparent; border: 2px solid ${color}; color: ${color}; font-size: 1em; cursor: pointer; font-family: inherit; transition: all 0.2s;">
                 REBOOT SIMULATION
             </button>
         `;
@@ -5977,10 +6748,10 @@ Then you're through.`,
             return;
         }
         if (isNewScreen()) {                       // the new look: the choice's outcome card first, then a quiet fold, then the new place
-            const FOLD_PEAK_MS = 400, FOLD_MS = 1600;
+            const FOLD_PEAK_MS = 450, FOLD_MS = 900;                               // cards.css .ns-fold-veil: 6 steps of 150 ms, the dark at 450
             const fold = () => {
                 const veil = document.createElement('div');
-                veil.className = 'ns-fold-veil' + (type === 'WRONG_PLACE' ? ' is-wrong' : '');
+                veil.className = 'ns-fold-veil';                                        // (the copy's fall never comes here: Copy.js plays it)
                 document.body.appendChild(veil);
                 setTimeout(() => { if (type === 'FOLD_SUCCESS') this.renderNav(); else { this.state.emitUpdates(); this.renderOrbit(); } }, FOLD_PEAK_MS);
                 setTimeout(() => veil.remove(), FOLD_MS);
@@ -6066,6 +6837,7 @@ Then you're through.`,
     showGameOver(detail) {
         // Delete save file - game is over
         this.state.deleteSave();
+        if (isNewScreen() && this.endInLoss(detail)) return;                            // the new look: the loss ending (C73, C71), never the old sheet
         if (window.EndScreens) { // shared card layout; the legacy red box below is the fallback
             window.EndScreens.gameOver(this, detail);
             return;
@@ -6131,6 +6903,20 @@ Then you're through.`,
 
         // Button handler
         overlay.querySelector('#btn-restart').onclick = () => location.reload();
+    }
+
+    /** The new look's game over, every kind of it (all hands, the hull, stranded, command failure, A.U.R.A.'s mutiny): the loss
+        ending's scene (end/Ending.js, kind 'loss', words in end/EndWords.js). false if the new look cannot play it; the old
+        game-over screen shows if the scene fails to start. */
+    endInLoss(detail) {
+        if (!window.NSEnding || !window.NSEndWords) return false;
+        let ending;
+        try { ending = window.NSEndWords.loss(this.state, detail || {}); } catch (err) { console.error('The loss ending could not be built', err); return false; }
+        window.NSEnding.play(this, ending, { from: 'loss' }).catch(err => {
+            console.error('The loss ending failed; the game-over screen instead', err);
+            if (window.EndScreens) window.EndScreens.gameOver(this, detail || {});
+        });
+        return true;
     }
 
 
@@ -6219,8 +7005,15 @@ Then you're through.`,
         const mainView = document.getElementById('main-view');
         mainView.innerHTML = '';
         if (isNewScreen()) {                                                               // the new screen: the bridge, not today's orbit view
-            if (window.NewScreen.stop(this)) return;
+            if (here && !here.exodusInvestigated && this.isRelayStop(here) && window.DockFlight.warm) window.DockFlight.warm();   // Last Port: the relay's cut and moon made ready at idle
+            let isBridge = false;
+            try { isBridge = window.NewScreen.stop(this); } catch (err) { console.error('The bridge would not open', err); }
+            if (isBridge) return;
             window.NewScreen.hide();                                                       // no stop module: today's orbit view, as in checkpoint A
+            if (here && !this.state.gameOver && window.NSEnding && typeof window.NSEnding.recover === 'function') {   // which the new look hides (an empty sky): A.U.R.A. and "› Try again"
+                window.NSEnding.recover(this, () => this.renderOrbit());
+                return;
+            }
         }
         mainView.appendChild(this.orbitView.render());
     }
@@ -6291,16 +7084,18 @@ Then you're through.`,
     // ═══════════════════════════════════════════════════════════════
     // SHIP MALFUNCTION MODAL
     // ═══════════════════════════════════════════════════════════════
-    /** A ship fault card. Resolves once it is dealt with. */
+    /** A ship fault card. Resolves once it is dealt with. The new look: no card (look pass B03, C01): one voice line, one chip
+        at the faulted deck, and the deck flashes (src/newscreen/tower/Fault.js). */
     showShipMalfunctionModal(event) {
+        if (isNewScreen() && window.NSFault) return window.NSFault.report(this, event);
         // dialogue can be an array or a function that returns one
         const dialogue = typeof event.dialogue === 'function' ? event.dialogue(this.state) : event.dialogue;
         return new Promise(resolve => window.EncounterCard.open(this, {
             tone: 'alert', kicker: 'SHIP ALERT', title: event.title, zIndex: 2800,
-            context: event.context, dialogue,
+            context: event.context, dialogue, seenKey: `fault:${event.id || event.title}`,
             choices: [{ text: isNewScreen() ? 'Deal with it' : 'DEAL WITH IT' }],
             onPick: () => {
-                const result = window.EncounterCard.apply(event, this.state);
+                const result = window.EncounterCard.apply({ ...event, fullCost: true }, this.state);   // a fault is no card choice: the new look's card cost cap leaves it be
                 if (result) this.state.addLog(`MALFUNCTION RESOLVED: ${result}`);
                 this.state.emitUpdates();
                 resolve();

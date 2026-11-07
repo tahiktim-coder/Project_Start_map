@@ -2,8 +2,10 @@
    What it is: while the travel view is shown, a REAL log line that starts with "A.U.R.A.:", "Jaxon:", "Aris:", "Vance:" or
    "Mira:" becomes one voice line: the first name over the quote, beside that person in the tower (anchor 'person:<id>'),
    or beside our Lander outside (anchor 'ship') for A.U.R.A. and anyone out of frame. Under the words the picture darkens
-   with the dither grain (canvas#ns-shade), never over a world or our Lander. Every other log line stays in the log,
-   readable in orbit (docs/BUILD_A.md §6). One line at a time, a queue of three (the oldest dropped); hidden while a
+   with the dither grain (canvas#ns-shade), never over a world or our Lander. In travel a line never crosses our Lander (a
+   box: the hull, the plume at its longest and 16 px), a stock number or a glass key plate; a crew line may also sit just
+   above or below the Lander (look pass B04). Every other log line stays in the log
+   (kept in the save; the new look has no log to read it in yet: C46, later). One line at a time, a queue of three (the oldest dropped); hidden while a
    hover note is up; nothing while a card, a page or a minigame is up (a line waits then, and only shown, unblocked time
    ages it; a logged line still waiting 15 s later, by the clock, is dropped: it was news before a minigame, a trip, a long
    card, and is old now). A line logged while the view was hidden, in the moment before it shows (the story world revealed as we
@@ -39,7 +41,10 @@
                                       is kept in the game's own saved record of A.U.R.A. (state.reliance.nsTold, saved as is)
      told(key) → bool
      forget(key)                      a once() line that resolved false (never seen: the dive cleared it) may be said again
-     hush()                           the line on screen goes and the waiting ones are dropped (a scene ends: the wake-up) }
+     hush()                           the line on screen goes and the waiting ones are dropped (a scene ends: the wake-up)
+     drop(test) → n                   the waiting lines test({ who, id, line }) is true for are dropped (NewScreen.js: the
+                                      arrival's mood strings; look pass B07) }
+   An anchor may carry within: [left, right] (CSS px): its line stays between them (the bridge's crew lines: on the glass).
    In the shell's 'wake' mode (start/Pods.js) the anchors are the bridge's names ('stop:person:<id>', 'stop:aura'), the
    round things to keep off are the wake module's discs(), and its panel's words (#ns-wake-words .sw) are kept off too.
 */
@@ -56,6 +61,7 @@
     const QUEUE_MAX = 3, STALE_MS = 9000, WALL_MS = 15000, HIDDEN_KEEP_MS = 2500, HIDDEN_MAX = 2, EDGE = 16, SHADE_PAD = 14, MOVE_RESAMPLE = 18, FALLBACK = { x: 0.72, y: 0.14 };
     const KEEP_MS = 3000, TEACH_EXTRA = 1;                                                    // a kept line's least time seen; room for one teaching line over the queue
     const FADE_MS = 700;                                                                      // a narration line fading out once a course is set
+    const LANDER_PAD = 16, LANDER_PLUME = 1.1;                                                // our Lander's box: 16 px round it; the plume at its longest, x its length
     const wordsIn = s => (String(s).trim().match(/\S+/g) || []).length;
     const readMs = line => Math.max(3200, wordsIn(line) * 300 + 1600);
 
@@ -213,10 +219,30 @@
             if (!f) continue;
             let list = null;
             try { list = f(); } catch (err) { list = null; }
-            if (list && list.length) return list.filter(Boolean);
+            if (list && list.length) return list.filter(Boolean).concat(onBridge() ? [] : landerPlaces());   // travel: above and below our Lander too (B04)
         }
         return [{ x: innerWidth * FALLBACK.x, y: innerHeight * FALLBACK.y, side: 'below', align: 'center' }];
     }
+    /** Our Lander in travel as a box in CSS px: the hull, its plume at its longest behind it, and LANDER_PAD round it (look
+        pass B04): no line ever crosses it. */
+    function landerBox() {
+        const t = NS.mods.travel, G = NS.G;
+        let lp = null;
+        try { lp = t && typeof t.landerPose === 'function' ? t.landerPose() : null; } catch (err) { lp = null; }
+        if (!lp || !lp.len || !G || !G.k) return null;
+        const f = G.k / G.dpr, c = Math.cos(lp.angle || 0), s = Math.sin(lp.angle || 0), half = lp.len / 2, wide = lp.len / 6.3 + 2, tail = half + lp.len * LANDER_PLUME;
+        const pts = [[half, wide], [half, -wide], [-tail, wide], [-tail, -wide]].map(([u, v]) => [(lp.x + c * u - s * v) * f, (lp.y + s * u + c * v) * f]);
+        const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+        return { left: Math.min(...xs) - LANDER_PAD, right: Math.max(...xs) + LANDER_PAD, top: Math.min(...ys) - LANDER_PAD, bottom: Math.max(...ys) + LANDER_PAD };
+    }
+    /** Places just above and just below that box, for a crew line placed right of the tower. */
+    function landerPlaces() {
+        const b = landerBox(), G = NS.G, x = b ? Math.max(b.left, (G.hull || 0) * G.k / G.dpr + EDGE) : 0;   // never across the hull edge (the plume reaches back to it)
+        return b ? [{ x, y: Math.floor(b.top) - 2, side: 'above' }, { x, y: Math.ceil(b.bottom) + 2, side: 'below' }] : [];   // clear of the box after boxAt's rounding
+    }
+    const overlaps = (r, w, pad) => r.x < w.right + pad && r.x + r.w > w.left - pad && r.y < w.bottom + pad && r.y + r.h > w.top - pad;
+    /** The tower's stock readouts on screen now (CSS rects): a line never covers a number. */
+    const stockRects = () => [...document.querySelectorAll('#ns-ship-words .nss.on')].map(el => el.getBoundingClientRect()).filter(r => r.width && r.height);
     function boxAt(a, w, hgt) {
         let x = a.x, y = a.y;
         if (a.side === 'above') { y = a.y - hgt; if (a.align === 'center') x = a.x - w / 2; }
@@ -224,6 +250,7 @@
         else if (a.side === 'left') { x = a.x - w - 12; y = a.y - Math.min(hgt, 64) / 2; }
         else if (a.side === 'right') { x = a.x + 12; y = a.y - Math.min(hgt, 64) / 2; }
         else if (a.side === 'center') { x = a.x - w / 2; y = a.y - hgt / 2; }
+        if (a.within) x = Math.max(a.within[0], Math.min(a.within[1] - w, x));       // kept on the glass (Stop.js)
         return { x: Math.round(Math.max(EDGE, Math.min(innerWidth - w - EDGE, x))), y: Math.round(Math.max(EDGE, Math.min(innerHeight - hgt - EDGE, y))), w, h: hgt };
     }
     /** Round things on screen now, in art px: worlds, our Lander. Travel offers them if it can. */
@@ -254,7 +281,7 @@
     /** The ship's own choices in travel (a red deck's, supper's "Accept"), CSS rects: a line keeps off them too. */
     function chipRects() {
         const layer = document.getElementById('ns-ship-words');
-        return layer ? [...layer.querySelectorAll('.nsk-chips')].map(el => el.getBoundingClientRect()).filter(r => r.width && r.height) : [];
+        return layer ? [...layer.querySelectorAll('.nsk-chips.is-in')].map(el => el.getBoundingClientRect()).filter(r => r.width && r.height) : [];
     }
     function busy(r, ds) {
         const G = NS.G, f = G.dpr / G.k;
@@ -267,7 +294,9 @@
         let v = hits / n;
         if (!onBridge() && r.x * f < G.hull - 2 && (r.x + r.w) * f > G.hull + 2) v += 1;   // never one line across the hull edge
         if (onBridge() && wordRects().some(w => r.x < w.right + 10 && r.x + r.w > w.left - 10 && r.y < w.bottom + 6 && r.y + r.h > w.top - 6)) v += 1;     // never over an action word
-        if (!onBridge() && chipRects().some(w => r.x < w.right + 10 && r.x + r.w > w.left - 10 && r.y < w.bottom + 6 && r.y + r.h > w.top - 6)) v += 1;   // nor over the ship's choices
+        if (!onBridge() && chipRects().some(w => r.x < w.right + 10 && r.x + r.w > w.left - 10 && r.y < w.bottom + 6 && r.y + r.h > w.top - 6)) v += 1;   // nor over the ship's keys
+        if (!onBridge()) { const lb = landerBox(); if (lb && overlaps(r, lb, 0)) v += 1; }                               // nor across our Lander (B04)
+        if (!onBridge() && stockRects().some(w => overlaps(r, w, 6))) v += 1;                                             // nor over a stock number (B04)
         if (r.x < 0 || r.y < 0 || r.x + r.w > innerWidth || r.y + r.h > innerHeight) v += 0.1;
         return v;
     }
@@ -285,6 +314,7 @@
             c.pick = pick;
             c.sampledAt = { x: boxes[pick].x, y: boxes[pick].y };
             c.strength = 0.62 + 0.3 * Math.min(1, score[pick] * 3);
+            c.tried = boxes.map((b, i) => ({ x: b.x, y: b.y, w: b.w, h: b.h, score: Math.round(score[i] * 100) / 100 }));   // the places weighed (debug)
         }
         const b = boxes[c.pick];
         if (!c.pos || c.pos.x !== b.x || c.pos.y !== b.y) { c.pos = { x: b.x, y: b.y }; c.el.style.transform = `translate(${b.x}px, ${b.y}px)`; }
@@ -396,6 +426,7 @@
         },
         pointer: () => false,
         current: () => (cur ? { who: cur.who, line: cur.line } : null),
+        placed: () => (cur ? { pick: cur.pick, tried: cur.tried || [] } : null),   // debug: where the line on screen could have gone, and how busy each place was
         speaking: () => (cur && !noteUp && !NS.blocked() ? cur.id : null),
         say: sayNow,
         sayLine,
@@ -403,6 +434,7 @@
         told,
         forget,
         hush() { end(); queue.forEach(settle); queue = []; },
+        drop(test) { const out = queue.filter(q => { try { return !!test(q); } catch (err) { return false; } }); out.forEach(settle); queue = queue.filter(q => !out.includes(q)); return out.length; },
     };
     NS.register('voice', mod);
 })();

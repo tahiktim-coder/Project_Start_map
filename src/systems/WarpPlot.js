@@ -37,6 +37,12 @@
         auto: [['AURA', 'Course plotted, Commander. You can rest.'], ['AURA', 'I will take it from here, Commander.']],
         first: [['ENGINEER', 'Next time, you try. Stop the marker inside the bright window.']],
     };
+    // The new look's gauge (src/newscreen/throw/Gauge.js) shows none of the grade words above: after the burns one line from
+    // LINES and one energy chip. These are its own words (look pass B13, L-53); the old look keeps the hint below.
+    const GAUGE_WORDS = Object.freeze({
+        hint: 'Three burns. Press Space when the needle is in the light.',   // DRAFT (look pass): L-53, the hint as narration
+        still: 'I will plot this jump, Commander.',                          // DRAFT (look pass): L-53, A.U.R.A. under reduced motion (no manual plot)
+    });
     const sfx = (name, ...args) => { const audio = window.AudioSystem; if (audio && typeof audio[name] === 'function') audio[name](...args); }; // silent when muted
     const LOCK_TONE = { clean: [880, 'sine', 0.14], rough: [440, 'triangle', 0.14], bad: [150, 'sawtooth', 0.22] };
     const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -291,7 +297,7 @@
 
     /** The rules, read by the new look's gauge (src/newscreen/throw/Gauge.js), so both looks play the same game. */
     const rules = Object.freeze({
-        STAGES, LOCK, GRADES, ROUGH_FACTOR, LOCK_PAUSE_MS, FLIGHT_MS, RESULT_HOLD_MS, FIRST_PLOT_WATCH_MS, FIRST_PLOT_HOLD_MS,
+        STAGES, LOCK, GRADES, GAUGE_WORDS, ROUGH_FACTOR, LOCK_PAUSE_MS, FLIGHT_MS, RESULT_HOLD_MS, FIRST_PLOT_WATCH_MS, FIRST_PLOT_HOLD_MS,
         baseDifficulty, stageDifficulty, lockGrade, finalGrade, burnsOf, pickLine, effectText,
     });
 

@@ -6,6 +6,9 @@
    on the house dither shade, never in capitals), its words unchanged. No sound of its own.
    A click, Esc, Enter or Space skips to the end (a short dither to ink). Reduced motion: the lamps steady, no white flash
    (a slow fade to ink), the lines fade in and out without moving.
+   Look pass B11: every value from tokens.css (--t is the page's own); the line sits on the voice's dither shade, which
+   comes and goes with it in the same six steps (more or fewer ink pixels, never a soft alpha); the skip is the film skip
+   (the one corner hint of every film, on the window's corner).
    Source: the player of prototypes/films/sea.html (clock, fit, skip) and start/LaunchFilm.js (the .ns-film frame).
    Loaded only when the new-screen switch is on, after throw/SeaArt.js.
 
@@ -35,17 +38,17 @@
     const isCalm = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     const CSS = `
-.ns-film.ns-sea { position: fixed; inset: 0; z-index: 5000; background: #05070a; overflow: hidden; cursor: default; user-select: none; -webkit-user-select: none;
-    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --u: 3px; --t: 1;
-    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; --f-text: 'IBM Plex Sans', system-ui, sans-serif;
-    color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }
+.ns-film.ns-sea { position: fixed; inset: 0; z-index: 5000; background: var(--ink); overflow: hidden; cursor: default; user-select: none; -webkit-user-select: none;
+    --u: 3px; color: var(--text); font: 400 var(--fs-prev)/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }
 .ns-sea p { margin: 0; }
 .ns-sea-frame { position: absolute; overflow: hidden; }
 .ns-sea-art { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
 .ns-sea-say { position: absolute; left: calc(var(--u) * 40); bottom: calc(var(--u) * 44); max-width: min(calc(var(--u) * 260), calc(100vw - 64px)); margin: 0;
-    font: italic 400 calc(19px + 5px * var(--t))/1.36 var(--f-text); color: #c9cccd; text-wrap: balance; text-shadow: 0 1px 0 #05070a; opacity: 0; pointer-events: none; }
-.ns-sea-skip { position: absolute; right: calc(var(--u) * 10); bottom: calc(var(--u) * 8); margin: 0; font: 400 max(12px, calc(var(--u) * 4))/1 var(--f-ui); letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--dim); opacity: 0; pointer-events: none; }
+    font: italic 400 var(--fs-voice)/1.36 var(--f-text); color: var(--narr); text-wrap: balance; text-shadow: var(--shadow); opacity: 0; pointer-events: none; }
+.ns-sea-skip { position: absolute; right: max(16px, 4vw); bottom: max(16px, 5vh); margin: 0; padding: var(--s2) 0; font: 500 var(--fs-skip)/1 var(--f-ui); letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--dim); text-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity 180ms steps(3, end); }
+.ns-sea-skip.is-in { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .ns-sea-skip { transition: none; } }
 `;
     function injectCss() {
         if (document.getElementById('ns-sea-css')) return;
@@ -74,21 +77,22 @@
         if (prepFrame != null) { (window.FrameClock ? window.FrameClock.cancel : cancelAnimationFrame)(prepFrame); prepFrame = null; }
     }
 
-    // ── the shade under the words: the house dither, soft at its edge (Voice.js's, simpler) ──
+    // ── the shade under the words: whole ink inside them (no star between two words), dithered out at its edge (Voice.js's, simpler); k: how much of it (in steps) ──
     const shades = new Map();
-    function shadeOf(w, h) {
-        const key = w + 'x' + h;
+    function shadeOf(w, h, k) {
+        const key = w + 'x' + h + ':' + k;
         if (shades.has(key)) return shades.get(key);
         const pad = 14, W2 = w + pad * 2, H2 = h + pad * 2, c = document.createElement('canvas'); c.width = W2; c.height = H2;
         const g = c.getContext('2d'), img = g.createImageData(W2, H2), ink = P.hexRgb(INK), hw = w / 2, hh = h / 2, round = Math.min(hw, hh);
         for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
             const qx = Math.abs(x + 0.5 - pad - hw) - (hw - round), qy = Math.abs(y + 0.5 - pad - hh) - (hh - round);
-            const sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - round + (P.fbm(x / 7, y / 4, 17, 2) - 0.5) * 12;
-            if (0.94 * (1 - smooth(-10, pad, sd)) > threshold(x, y)) { const o = (y * W2 + x) * 4; img.data[o] = ink[0]; img.data[o + 1] = ink[1]; img.data[o + 2] = ink[2]; img.data[o + 3] = 255; }
+            const qd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0), sd = qd - round + (P.fbm(x / 7, y / 4, 17, 2) - 0.5) * 12;
+            const a = qd <= round ? k : k * (1 - smooth(-10, pad, sd));                          // inside the words' own box: whole ink (in its step)
+            if (a > threshold(x, y)) { const o = (y * W2 + x) * 4; img.data[o] = ink[0]; img.data[o + 1] = ink[1]; img.data[o + 2] = ink[2]; img.data[o + 3] = 255; }
         }
         g.putImageData(img, 0, 0);
         const out = { canvas: c, pad };
-        if (shades.size > 30) shades.clear();
+        if (shades.size > 60) shades.clear();
         shades.set(key, out);
         return out;
     }
@@ -102,7 +106,7 @@
         root.setAttribute('role', 'dialog');
         root.setAttribute('aria-label', 'Film: the jump stalls among thousands of still ships. Click to skip.');   // DRAFT: for screen readers only, never on screen (as LaunchFilm's)
         root.innerHTML = '<div class="ns-sea-frame"><canvas class="ns-sea-art" aria-hidden="true"></canvas>'
-            + '<p class="ns-sea-say" aria-live="polite"></p><p class="ns-sea-skip">Click to skip</p></div>';
+            + '<p class="ns-sea-say" aria-live="polite"></p></div><p class="ns-sea-skip">Click to skip</p>';
         document.body.appendChild(root);
         const q = s => root.querySelector(s);
         return { root, frame: q('.ns-sea-frame'), canvas: q('canvas'), say: q('.ns-sea-say'), skip: q('.ns-sea-skip') };
@@ -131,15 +135,17 @@
             if (L !== shown) { shown = L; ui.say.textContent = L ? L[2] : ''; }
             const op = L ? Math.min(1, (T - L[0]) / LINE_FADE, (L[1] - T) / LINE_FADE) : 0;
             ui.say.style.opacity = String(Math.max(0, Math.round(op * 6) / 6));
-            ui.skip.style.opacity = T < SKIP_HINT_MS && playing && !ended && skipT == null && a.ready() ? '0.85' : '0';
+            ui.skip.classList.toggle('is-in', T < SKIP_HINT_MS && playing && !ended && skipT == null && a.ready());
             return L ? op : 0;
         }
-        function shadeUnder(op) {
+        /** The shade under a line of words (the line, or the skip on a lit wreck in the corner), op 0..1 of it. */
+        function shadeUnder(el, op) {
             if (op <= 0) return;
-            const r = ui.say.getBoundingClientRect(), f = ui.frame.getBoundingClientRect();
+            const r = el.getBoundingClientRect(), f = ui.frame.getBoundingClientRect();
             if (!r.width) return;
-            const x = Math.floor((r.left - f.left) / unit), y = Math.floor((r.top - f.top) / unit), w = Math.ceil(r.width / unit), h = Math.ceil(r.height / unit), s = shadeOf(w, h);
-            ctx.save(); ctx.globalAlpha = Math.min(1, op * 1.2); ctx.drawImage(s.canvas, x - s.pad, y - s.pad); ctx.restore();
+            const x = Math.floor((r.left - f.left) / unit), y = Math.floor((r.top - f.top) / unit), w = Math.ceil(r.width / unit), h = Math.ceil(r.height / unit);
+            const s = shadeOf(w, h, Math.min(6, Math.ceil(op * 6 * 1.2)) / 6);                // six steps of ink pixels, full a little before the words
+            ctx.drawImage(s.canvas, x - s.pad, y - s.pad);
         }
         function render(now) {
             ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH);
@@ -149,7 +155,8 @@
             try { a.draw(ctx, T, still, playing && !ended && skipT == null); } catch (err) { console.error('NSSea: a frame failed', err); }
             drawMs = drawMs * 0.9 + (performance.now() - t0) * 0.1;
             const op = words();
-            shadeUnder(op);
+            shadeUnder(ui.say, op);
+            if (ui.skip.classList.contains('is-in')) shadeUnder(ui.skip, 1);
             if (skipT != null) dim(clamp01((now - skipT) / SKIP_MS));
         }
         function fit() {
@@ -157,8 +164,7 @@
             const w = AW * k / dpr, h = AH * k / dpr;
             Object.assign(ui.frame.style, { width: w + 'px', height: h + 'px', left: Math.round((innerWidth - w) / 2) + 'px', top: Math.round((innerHeight - h) / 2) + 'px' });
             unit = k / dpr;
-            ui.root.style.setProperty('--u', unit + 'px');
-            ui.root.style.setProperty('--t', String(clamp01((innerWidth - 1280) / 640)));
+            ui.root.style.setProperty('--u', unit + 'px');                                  // --t is the page's (NewScreen.js sets it on :root)
         }
         function request() { frameId = (window.FrameClock ? window.FrameClock.request : requestAnimationFrame)(loop); }
         let fails = 0;

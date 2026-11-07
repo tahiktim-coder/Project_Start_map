@@ -24,7 +24,7 @@
     // ════════════════════════════════════ the lines (every word on screen) ════════════════════════════════════
     // Plain words, one idea each (docs/STYLE.md). [placeholder] = depends on what the public was told; kept neutral.
     const LINES = [
-        { t0: 1200, t1: 6400, kicker: 'Live · The launch yard', line: 'Tonight the ninth Exodus ship leaves Earth.' },
+        { t0: 1200, t1: 6400, kicker: '', line: 'Tonight the ninth Exodus ship leaves Earth.' },   // C09 (look pass): the yard is named once, so no kicker on the first strap (it was "Live · The launch yard")
         { t0: 13000, t1: 19400, kicker: 'The crew of Exodus-9', line: 'They will sleep for sixty-one years.', names: 'Mira Chen · Jaxon Mercer · Cora Moon · Kael Vance · Aris Novak' },   // in stage order, left to right. [placeholder] five names on air: if the count question takes Cora off the official list, the strap shows four
         { t0: 35400, t1: 39600, kicker: 'Live · The launch yard', line: 'Exodus-9 is on its way.' },
     ];

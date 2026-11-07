@@ -25,40 +25,52 @@
             and window.NSTower.{ jolt, speed } (the tower feels the go, the landing and the speed)
    Listens: 'shown' { sector, first, from } · 'hidden' · 'hud' · 'refresh' · 'jump:burn'
    The hover note goes on a click and stays away until the pointer really moves (a refusal is then seen at once); in a
-   flight what is under a still pointer is worked out again every frame. The jump's white-gold flash washes the whole
-   screen, the tower too (a div over both canvases, warm steps down to the corridor's dark).
+   flight what is under a still pointer is worked out again every frame. A refused click blinks the world's ring twice in
+   --dim (steps); refused for energy, the numbers show beside it a moment (Note.js refusal: '1 of 3 energy'), while
+   A.U.R.A. says her line. The jump's flash is a dithered bloom out of the light in four steps (Pictures bloom: warm-br,
+   warm, then ink), shown in a pixel layer over both canvases so it washes the tower too; the tower's stock words step out
+   just before it ('jump:words'; #ns-ship-words.is-jump-out until the next sector shows, so only that fade steps). The
+   sector title always sits in one place: on the voice line's x (the left edge under our Lander), in the lower third,
+   stepping in and out in four steps.
    The jump into sector 3 stalls here instead (throw/Stall.js, read through window.NSStall.view() each frame): the burn's
    stretch shrinks back, space stops streaming, the drive coughs out and time stands still (the sky, the stars, our ship);
    our ports go dark with the tower's decks and a red lamp burns on our hull; then the same world shows up again and again
    and our ship is too big, then too small. Nothing can be pointed at or clicked meanwhile.
    Under a world's name its note says what kind of world it is (WorldFinds.js kind: "A singing world. One low note comes off
    it."); our wrecks and the story world keep their own lines. The long-range scan (Scan.js through flow.scanOffer, scan,
-   findNote): a landable world ahead that no scan has read has "Scan" and its cost under its note's words; the note stays up
-   while the pointer crosses to it, a click on the word (not the world) scans it ("Scanning" a moment), and from then on the
-   note names its finds (the places a team can go there, a clue marked) and whether people could live there. A.U.R.A.
-   explains it once a run, the first time the word has been seen a moment (the voice's once(), kept through the note).
-   Emits:   'opening:done' (4.2 s after a sector's first show; at once on a show that is not the first) · 'jump:flash'
-            (2.65 s after the burn) · 'note' { up } (the hover note shows or goes: the voice waits)
+   findNote): a landable world ahead that no scan has read has the glass SCAN key and its cost under its note's words; the
+   note stays up while the pointer crosses to it, a click on the key (not the world) scans it ("Scanning" a moment), and
+   from then on the note names its finds (one tag a line: the places a team can go there, a clue marked) and whether people
+   could live there. A.U.R.A. explains it once a run, the first time the key has been seen a moment (the voice's once(),
+   kept through the note). The note's words and the key are travel/Note.js; the note keeps off our Lander too, and a
+   dotted leader (2 CSS px dots) runs from its first line to the world's rim.
+   Emits:   'opening:done' (4.2 s after a sector's first show; at once on a show that is not the first) · 'jump:words' (1.9 s
+            after the burn: the tower's stock words step out) · 'jump:flash' (2.65 s after the burn) · 'note' { up } (the
+            hover note shows or goes: the voice waits)
    Registers anchors (CSS px): 'ship', 'light', 'place:<node id>'.
 */
 (function () {
     'use strict';
-    const P = window.NSPaint, F = window.NSField, PIC = window.NSPictures, LOOKS = window.NSLooks;
-    if (!P || !F || !PIC || !LOOKS) { console.error('NewScreen travel: the art or the travel parts did not load'); return; }
+    const P = window.NSPaint, F = window.NSField, PIC = window.NSPictures, LOOKS = window.NSLooks, NOTE = window.NSNote;
+    if (!P || !F || !PIC || !LOOKS || !NOTE) { console.error('NewScreen travel: the art or the travel parts did not load'); return; }
     const { clamp01, smooth, lerp, hash } = P;
 
     const LOCK_MS = 1000, GROW = 1.19, OPEN = { dim: 1000, titleAt: 900, in: 500, hold: 2000, out: 600, done: 4200, end: 5000 };
     const SPEED = { rest: 52, flight: 150, held: 18, burn: 420 }, DRATE = { rest: 10, flight: 70 };
-    const JUMP = { white: 2250, flash: 2650, step: 100 }, REFRESH_MS = 400, QUIET_MOVE = 4;
-    const FLASH = [['#fff3dc', 1], ['#f7c483', 0.85], ['#e9a25e', 0.6], ['#9a5a26', 0.35]];   // the flash's warm steps (RP.SUN 6..3), over the tower too
+    // the burn's age (ms) when the bloom starts painting (one frame a step), the stock words step out (4 x 60 ms, gone well
+    // before the flash), the flash's first step and the corridor's dark; a flash step lasts `step`
+    const JUMP = { bake: 1000, words: 1900, white: 2250, flash: 2650, step: 100 }, REFRESH_MS = 400, QUIET_MOVE = 4;
+    const TITLE_V = 0.87, TITLE_STEPS = 4, BLINK_MS = 150, BLINKS = 2, LANDER_PAD_CSS = 16;   // the title's middle (of the height); a refusal's blink; the note's room round our Lander
+    const COST_CHIP_MS = 3200, COST_GAP_CSS = 10;                                     // a refusal's numbers: as long as her shortest line; CSS px off the ring
     const BUSY_LINE = 'A.U.R.A.: "We are already on our way, Commander. One thing at a time."';
     const ease = s => (s < 0.5 ? 4 * s * s * s : 1 - Math.pow(-2 * s + 2, 3) / 2);
     const $ = id => document.getElementById(id);
     const mk = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
     const NS = () => window.NewScreen;
 
-    let G = null, sc = 1, cv = null, ctx = null, wordsEl = null, note = null, title = null, flashEl = null, noteRect = null, A = null;
-    let scanEl = null, scanSeenAt = null;                                              // the note's "Scan" line while it can be clicked; since when it shows
+    let G = null, sc = 1, cv = null, ctx = null, wordsEl = null, note = null, title = null, flashEl = null, flashCtx = null, flashStep = -1, noteRect = null, A = null;
+    let scanEl = null, scanSeenAt = null, noteLead = null, titleShade = null, costEl = null;   // the note's SCAN key while it can be pressed; since when it shows; its leader (art px); a refusal's numbers
+    const tok = NOTE.color;                                                            // a colour token as the canvas needs it ('' when missing: not drawn)
     let SV = null, stallT = null, stallStopped = false, copyOf = null;                  // the jump that stalls (throw/Stall.js): its view this frame, when time stopped
     function stallView() { const S = window.NSStall; try { return S && typeof S.view === 'function' ? S.view() : null; } catch (err) { console.error('NewScreen travel: the stall view failed', err); return null; } }
     let W = F.blank(1), shownSector = 0, lastRefresh = -1e9, holdRefreshUntil = -1e9, rogueT0 = 0, openedSector = 0, noteWasUp = false;
@@ -96,8 +108,8 @@
     //    A.U.R.A. names it once when it is first in sight (the first signal is named by the shell's first hint) ──
     const STORY_TAGS = { signal: 'One of our ships. Send the team aboard', wreck: 'One of our ships. Send the team aboard', course: 'Their last course led here' };
     // a story world never refused for energy (App.isStoryStop): said before the click, with what the reserve costs the crew
-    // (App.coldNight). DRAFT: the second sentence
-    const RESERVE_TAG = 'We can only reach it on the reserve. The crew will have a cold night';
+    // (App.coldNight). The designer's rewrites (L-12, C31) wait in CALLS.md
+    const RESERVE_TAG = 'We can only reach it on the reserve. The crew will have a cold night';   // DRAFT: the second sentence
     /** Short of energy for this story world: the flight there runs on the reserve (bundle.js App.flyOnReserve). */
     function onReserve(nd) {
         const ns = NS(), st = ns && ns.app && ns.app.state;
@@ -129,6 +141,7 @@
         if (!st || typeof st.addLog !== 'function' || !v || typeof v.say !== 'function' || !ns.isShown() || shownSector !== sectorNow() || naming.size || talking()) return;
         const sup = window.NSSupper;
         if (sup && typeof sup.busy === 'function' && sup.busy()) return;                    // supper after the jump first (tower/Supper.js)
+        if (typeof ns.mode === 'function' && ns.mode() !== 'travel') return;                // on the bridge: never a call from the world in the glass (look pass B07)
         try { if (typeof v.current === 'function' && v.current()) return; } catch (err) { return; }
         const id = F.ids().find(i => { const e = F.entry(i), k = e && storyKind(e.node); return k && STORY_LINES[k] && !e.node.nsSaid && placeAt(i).shown; });
         if (!id) return;
@@ -286,10 +299,13 @@
         const lockId = W.lock ? (W.lock.id === F.light().node ? 'light' : W.lock.id) : null, hov = lockId || (W.flight ? null : W.hover);
         if (hov && hov !== 'light' && !(story.get(hov) || {}).hidden) sn.items.filter(i => i.id === hov && i.part !== 'arc' && !i.hiding && !i.passed).forEach(i => PIC.rims(f, i, lockId ? 2 : 1));
         if (hov === 'light') { const r = PIC.lightOf(W.sector, lightScale(t)), lx = Math.round(l.x), ly = Math.round(l.y); for (let d = Math.round(r.core + 2); d < r.core + 10 * sc; d++) { const v = 0.85 - (d - r.core) / (12 * sc); f.tone(lx - d, ly, P.RP.SUN, v); f.tone(lx, ly - d, P.RP.SUN, v); f.tone(lx, ly + d, P.RP.SUN, v); } }
+        drawRefusal(sn, t);
         if (SV) PIC.lander(f, tv, pose, plumeLevel(t), tb.on.map((on, i) => on && !(SV.dark[i] >= 0.5)), 0, { cold: SV.cold, lamp: SV.lamp, still: SV.still });
         else PIC.lander(f, t, pose, plumeLevel(t), tb.on, tb.b);
         if (front) PIC.stream('front', vp, sp, W.flow);
         PIC.shade(noteRect);
+        if (titleShade && title && !title.hidden) PIC.shade(titleShade);
+        if (noteRect && noteLead) PIC.leader(noteLead[0], noteLead[1], noteLead[2], noteLead[3]);
         if (W.jump) PIC.jump(A, t - W.jump.t0);
         if (W.opening) PIC.dimAll(1 - Math.floor(clamp01((t - W.opening.t0) / OPEN.dim) * 8) / 8);
     }
@@ -327,6 +343,31 @@
             PIC.item(f, Object.assign({}, it, { x: at[k][0], y: at[k][1], fade: 1 - c.k, cut: null, grey: 0, hiding: 0, passed: false }), tv, {}); f.reset();
         });
     }
+    /** A refused click (too far, passed, too faint): the world's ring blinks twice in --dim, in steps, 2 CSS px wide. */
+    function drawRefusal(sn, t) {
+        const rf = W.refused, k = rf ? Math.floor((t - rf.t0) / BLINK_MS) : 0, hex = tok('--dim'), it = rf && k < BLINKS * 2 && !(k % 2) && hex ? refusedItem(sn, rf) : null;
+        if (it) PIC.ring(Math.round(it.x), Math.round(it.y), it.ringR, hex, it.th);
+    }
+    /** The refused world on screen now, with its ring's radius and width (art px), or null (gone, hiding). */
+    function refusedItem(sn, rf) {
+        const it = sn && sn.items.find(i => i.id === rf.id && i.part !== 'arc');
+        if (!it || it.hiding > 0.3 || it.fade >= 1) return null;
+        const hidden = (story.get(rf.id) || {}).hidden, r = hidden ? Math.max(4, Math.round(3.6 * sc)) : it.r, th = Math.max(1, Math.round(2 * G.dpr / G.k));
+        return { x: it.x, y: it.y, ringR: r + 2 + th, th, outer: Math.max(r + 2 + th, it.r * ((F.entry(rf.id) || {}).reach || 1) + 3) };   // outer: its rings and moons too
+    }
+    /** A refusal for energy: the numbers beside the world's ring (Note.js), on the side with room, for COST_CHIP_MS; never
+        while a note is up, a card is over the view or a course is set. The refusal ends with it. */
+    function updateRefusal(t) {
+        const rf = W.refused, age = rf ? t - rf.t0 : Infinity;
+        if (rf && age >= Math.max(BLINK_MS * BLINKS * 2, rf.have != null ? COST_CHIP_MS : 0)) W = Object.assign({}, W, { refused: null });
+        const it = W.refused && W.refused.have != null && !noteRect && !blocked() && !W.flight && !W.lock ? refusedItem(W.last, W.refused) : null;
+        if (!it) { costEl.hidden = true; return; }
+        NOTE.refusal(costEl, W.refused.have, W.refused.cost);
+        costEl.hidden = false;
+        const k = G.k / G.dpr, w = costEl.offsetWidth / k, h = costEl.offsetHeight / k, gap = it.outer + COST_GAP_CSS / k;
+        const x = it.x + gap + w <= G.W - 6 ? it.x + gap : it.x - gap - w, [cx, cy] = G.toCss(Math.max(G.hull + 6, x), it.y - h / 2);
+        costEl.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
+    }
     /** The copies on screen now, as discs (the voice keeps its words off them). */
     function copyDiscs() {
         if (!SV || !SV.copies.length || !copySpots || !W.last) return [];
@@ -358,29 +399,21 @@
     }
     const OURS = /one of our ships/i;
 
-    // ── the long-range scan in a world's note (Scan.js through flow): "Scan" and its cost, "Scanning" a moment, then the tags ──
-    const SCAN_SHOW_MS = 700, SCAN_TELL_MS = 600, SCAN_PAD = 6;   // "Scanning" shows this long; the word is seen this long before A.U.R.A. explains it; CSS px of slack round it
-    const SCAN_WHY = { energy: 'not enough energy', bridge: 'the bridge is down' };
-    /** What the note says of world id's scans now: nothing, the offer ("Scan", its cost or why not), "Scanning", or the tags.
-        No offer while a course is set (one thing at a time); the tags only for a world still ahead. */
+    // ── the long-range scan in a world's note (Scan.js through flow): the SCAN key and its cost, "Scanning" a moment, then the
+    //    finds as tags (travel/Note.js draws them) ──
+    const SCAN_SHOW_MS = 700, SCAN_TELL_MS = 600, SCAN_PAD = 6;   // "Scanning" shows this long; the key is seen this long before A.U.R.A. explains it; CSS px of slack round it
+    /** What the note says of world id's scans now: nothing, the offer (the key, its cost or why not), "Scanning", or the finds.
+        No offer while a course is set (one thing at a time); the finds only for a world still ahead. */
     function scanState(id, w, t) {
         if (!w || !w.ahead || id === 'light') return { key: '' };
         if (W.scanning && W.scanning.id === id && t - W.scanning.t0 < SCAN_SHOW_MS) return { key: 'busy', kind: 'busy' };
         const lines = ask('findNote', id, !w.ours);                                        // what the scan found there (WorldFinds.js), once scanned
-        if (lines) return lines.length ? { key: 'f:' + lines.join('|'), kind: 'facts', lines } : { key: '' };
+        if (lines) return lines.length ? { key: 'f:' + lines.map(l => (l && l.text) || l).join('|'), kind: 'facts', lines } : { key: '' };
         if (W.flight || W.lock || W.held) return { key: '' };
         const o = ask('scanOffer', id);
         return o ? { key: `o:${o.ok}:${o.why}:${o.cost}`, kind: 'offer', offer: o } : { key: '' };
     }
-    function scanEls(s) {
-        if (s.kind === 'busy') { const p = mk('p', 'scan is-busy'); p.append(mk('b', null, 'Scanning')); return [p]; }
-        if (s.kind === 'facts') return s.lines.map(l => mk('p', 'fact', l));
-        if (s.kind !== 'offer') return [];
-        const p = mk('p', 'scan' + (s.offer.ok ? '' : ' is-off'));
-        p.append(mk('b', null, 'Scan'), mk('span', null, s.offer.ok ? `${s.offer.cost} energy` : SCAN_WHY[s.offer.why] || ''));
-        return [p];
-    }
-    /** The pointer (CSS px) is on the note's "Scan" line while it can be clicked. */
+    /** The pointer (CSS px) is on the note's SCAN key while it can be pressed. */
     function scanAt(e) {
         if (!scanEl || !note || note.hidden || !e || !scanEl.isConnected) return false;
         const r = scanEl.getBoundingClientRect();
@@ -396,16 +429,16 @@
         const g = placeAt(W.hover);
         return inBox(Math.min(noteRect.x, g.x - g.r), Math.min(noteRect.y, g.y - g.r), Math.max(noteRect.x + noteRect.w, g.x + g.r), Math.max(noteRect.y + noteRect.h, g.y + g.r));
     }
-    function hotScan(on) { if (scanEl) scanEl.classList.toggle('is-hot', !!on); }
-    /** A click on "Scan": flow.scan does the game's part (the energy, what is learned, A.U.R.A.'s line); the note says
-        "Scanning" a moment, then shows the tags. It stays where it is. */
+    function hotScan(on) { NOTE.hot(scanEl, on); }
+    /** A click on the SCAN key: flow.scan does the game's part (the energy, what is learned, A.U.R.A.'s line); the note says
+        "Scanning" a moment, then shows the finds. It stays where it is. */
     function scanClick(id, t) {
         if (!id || !ask('scan', id)) return;
         W = Object.assign({}, W, { scanning: { id, t0: t } });
     }
-    /** A.U.R.A. explains the long-range scan once a run (Scan.js TELL), the first time its word has been in a note a moment:
+    /** A.U.R.A. explains the long-range scan once a run (Scan.js TELL), the first time its key has been in a note a moment:
         kept, so it waits out the note and is said once the note goes. Dropped unseen (a dive clears the voice), it is
-        offered again the next time the word shows. */
+        offered again the next time the key shows. (Cutting it is the designer's call: L-13 in CALLS.md.) */
     function tellScan(t) {
         if (!scanEl || !note || note.hidden) { scanSeenAt = null; return; }
         if (scanSeenAt == null) scanSeenAt = t;
@@ -414,44 +447,53 @@
         v.once(KEY, S.TELL.far, () => ns.isShown() && (typeof ns.mode !== 'function' || ns.mode() === 'travel'), true)
             .then(seen => { if (!seen && typeof v.forget === 'function') { v.forget(KEY); scanSeenAt = null; } }, err => console.error('NewScreen travel: the scan line failed', err));
     }
+    /** Our Lander as a box the note keeps off (art px [x0, y0, x1, y1]): the hull, the plume behind it and 16 CSS px round. */
+    function landerBox(t) {
+        const p = poseAt(t), ht = p.len / 3.15, back = p.len * 1.15, m = LANDER_PAD_CSS * G.dpr / G.k, ca = Math.cos(p.angle), sa = Math.sin(p.angle);
+        const pts = [[-p.len / 2 - back, -ht / 2], [p.len / 2, -ht / 2], [p.len / 2, ht / 2], [-p.len / 2 - back, ht / 2]].map(([u, v]) => [p.x + u * ca - v * sa, p.y + u * sa + v * ca]);
+        const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
+        return [Math.min(...xs) - m, Math.min(...ys) - m, Math.max(...xs) + m, Math.max(...ys) + m];
+    }
     function updateNote(t) {
         const target = W.flight && (W.flight.light ? 'light' : W.flight.id), id = W.hover && W.hover !== target && !W.lock && !W.quiet ? W.hover : null, g = id ? placeAt(id) : null;
         const up = !!(id && g && g.shown);
         if (up !== noteWasUp) { noteWasUp = up; emit('note', { up }); }
-        if (!up) { note.hidden = true; noteRect = null; W.noteKey = ''; W.noteFor = null; W.noteAt = null; scanEl = null; return; }
-        const w = placeWords(id); if (!w) { note.hidden = true; noteRect = null; scanEl = null; return; }
+        if (!up) { note.hidden = true; noteRect = null; noteLead = null; W.noteKey = ''; W.noteFor = null; W.noteAt = null; scanEl = null; return; }
+        const w = placeWords(id); if (!w) { note.hidden = true; noteRect = null; noteLead = null; scanEl = null; return; }
         const s = scanState(id, w, t), key = [id, w.name, w.tag, s.key].join('|');
         if (key !== W.noteKey) {
-            const extra = scanEls(s);
-            note.replaceChildren(mk('p', 'name', w.name), mk('p', 'tag', w.tag), ...extra);
-            note.classList.toggle('is-story', !!w.story);
-            scanEl = s.kind === 'offer' && s.offer.ok ? extra[0] : null;
+            scanEl = NOTE.fill(note, w, s);
             if (W.noteFor !== id) { W.noteSide = null; W.noteAt = null; }                    // the same world's words changed (its scan): the note stays where it is
             W.noteKey = key; W.noteFor = id;
         }
         note.hidden = false;
         const l = F.light(), k = G.k / G.dpr, nw = note.offsetWidth / k, nh = note.offsetHeight / k, e = F.entry(id), giant = e && e.kind === 'giant';
-        const gap = g.r + (giant ? 10 : 8 * sc), ds = noteDiscs(W.last || F.scene(W, t));   // beside the world's edge, a giant's too: never words over a world
+        const gap = giant ? g.r + 10 : Math.max(g.r + 8 * sc, g.r * ((e && e.reach) || 1) + 3 + 3 * sc), ds = noteDiscs(W.last || F.scene(W, t));   // beside the world's edge (its rings and moons too, F.discsOf), a giant's too: never words over a world
         if (id !== 'light') ds.push([l.x, l.y, 26 * sc]);                                 // off the light's glare too
-        const box = side => side === 'right' ? [g.x + gap, g.y - nh / 2] : side === 'left' ? [g.x - gap - nw, g.y - nh / 2] : side === 'above' ? [g.x - nw / 2, g.y - gap - nh] : [g.x - nw / 2, g.y + gap];
+        const box = side => { const [s, q] = side.split('-'), o = q === 'l' || q === 'u' ? -1 : q ? 1 : 0, sy = g.y - nh / 2 + o * nh / 2, sx = g.x - nw / 2 + o * (nw / 2 - 4);   // a side, or one slid along the world (SIDES)
+            return s === 'right' ? [g.x + gap, sy] : s === 'left' ? [g.x - gap - nw, sy] : s === 'above' ? [sx, g.y - gap - nh] : [sx, g.y + gap]; };
         const onWorld = ([x, y]) => ds.some(([cx, cy, r]) => { const qx = Math.max(x, Math.min(cx, x + nw)), qy = Math.max(y, Math.min(cy, y + nh)); return Math.hypot(qx - cx, qy - cy) < r; });
         const inView = ([x, y]) => x >= G.hull + 6 && x + nw <= G.W - 6 && y >= 6 && y + nh <= G.H - 6;
-        const ok = b => inView(b) && !onWorld(b);
-        const ptr = W.pointer || [g.x, g.y], sides = ['right', 'left', 'above', 'below'].map(s => ({ s, b: box(s) })).filter(c => ok(c.b));
+        const lb = landerBox(t), onLander = ([x, y]) => x < lb[2] && x + nw > lb[0] && y < lb[3] && y + nh > lb[1];
+        const ok = b => inView(b) && !onWorld(b) && !onLander(b);
+        const ptr = W.pointer || [g.x, g.y], clear = list => list.map(s => ({ s, b: box(s) })).filter(c => ok(c.b)), four = clear(SIDES.slice(0, 4)), sides = four.length ? four : clear(SIDES.slice(4));
         sides.sort((a, b) => Math.hypot(b.b[0] + nw / 2 - ptr[0], b.b[1] + nh / 2 - ptr[1]) - Math.hypot(a.b[0] + nw / 2 - ptr[0], a.b[1] + nh / 2 - ptr[1]));   // away from the pointer
         const clampBox = b => [Math.max(G.hull + 6, Math.min(G.W - nw - 6, b[0])), Math.max(6, Math.min(G.H - nh - 6, b[1]))];
-        const SIDES = ['right', 'left', 'above', 'below'], kept = W.noteAt && W.noteFor === id && Math.hypot(W.noteAt.gx - g.x, W.noteAt.gy - g.y) <= 2 ? W.noteAt : null;
+        const kept = W.noteAt && W.noteFor === id && Math.hypot(W.noteAt.gx - g.x, W.noteAt.gy - g.y) <= 2 ? W.noteAt : null;
         // the note never runs from the pointer: kept where it is while the pointer is on it, and in open sky until the world moves
         let pick = kept && (W.onNote || !SIDES.includes(kept.s)) ? { s: kept.s, b: clampBox(SIDES.includes(kept.s) ? box(kept.s) : kept.b) }
             : sides.find(c => c.s === W.noteSide) || sides[0];
         if (!pick) pick = openSky(ptr, nw, nh, ok);                                     // a world filling the view (a giant up close): the nearest clear sky
         if (!pick) { const b = box(g.x > G.hull + (G.W - G.hull) / 2 ? 'left' : 'right'); pick = { s: 'x', b: clampBox(b) }; }
         W.noteSide = pick.s; W.noteAt = { s: pick.s, b: pick.b, gx: g.x, gy: g.y };
-        note.classList.toggle('is-left', pick.s === 'left');
+        note.classList.toggle('is-left', pick.s.startsWith('left'));
         const [cx, cy] = G.toCss(pick.b[0], pick.b[1]);
         note.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
         noteRect = { x: Math.round(pick.b[0]), y: Math.round(pick.b[1]), w: Math.ceil(nw), h: Math.ceil(nh), dense: onWorld(pick.b) };   // still over a world: a darker shade
+        noteLead = id === 'light' ? null : NOTE.leader(note, g, noteRect, G.dpr / G.k, tok(w.story ? '--warm' : '--cool'), Math.max(1, Math.round(2 * G.dpr / G.k)));   // 2 CSS px dots at every size
     }
+    // where a note may sit: the four sides of its world, then (none of them clear) each slid along it ('above-l' ends over its middle)
+    const SIDES = ['right', 'left', 'above', 'below', 'above-l', 'above-r', 'below-l', 'below-r', 'right-u', 'right-d', 'left-u', 'left-d'];
     /** Every round thing the words keep off: the worlds (F.discsOf) and a giant's ring, as a chain of small discs along it. */
     function noteDiscs(sn) {
         const ds = F.discsOf(sn), GI = P.GIANT, ct = Math.cos(GI.tilt), st = Math.sin(GI.tilt), mid = (GI.r0 + GI.r1) / 2;
@@ -464,56 +506,43 @@
         });
         return ds;
     }
-    /** The clear piece of sky nearest the pointer for a note nw x nh (art px), in rings around it; null when there is none. */
+    /** The clear piece of sky nearest the pointer for a note nw x nh (art px): a grid of 6 x sc steps round it, nearest first
+        (fine, so the note sits as close to its world as the room allows; B05 review); null when there is none. */
+    let SKY = null;
     function openSky(ptr, nw, nh, ok) {
-        let best = null, bestD = Infinity;
-        for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) {
-            const b = [ptr[0] + i * (nw / 2 + 6) - nw / 2, ptr[1] + j * (nh + 6) - nh / 2], d = Math.hypot(i * (nw / 2 + 6), j * (nh + 6));
-            if (d < bestD && ok(b)) { best = { s: 'sky', b }; bestD = d; }
-        }
-        return best;
+        if (!SKY) { SKY = []; for (let j = -40; j <= 40; j++) for (let i = -40; i <= 40; i++) SKY.push([i, j, Math.hypot(i, j)]); SKY.sort((a, b) => a[2] - b[2]); }
+        const step = 6 * sc, hit = SKY.find(([i, j]) => ok([ptr[0] + i * step - nw / 2, ptr[1] + j * step - nh / 2]));
+        return hit ? { s: 'sky', b: [ptr[0] + hit[0] * step - nw / 2, ptr[1] + hit[1] * step - nh / 2] } : null;
     }
-    /** The white-gold flash over the whole screen (the tower too), in warm steps, then the corridor's dark. */
+    /** The jump's flash: Pictures' dithered bloom out of the light, four steps of JUMP.step, in the pixel layer over both
+        canvases (the tower too), then the corridor's dark. Its frames are painted during the burn, one an idle frame. */
     function updateFlash(t) {
-        const s = W.jump ? t - W.jump.t0 : -1, i = s >= JUMP.white && s < JUMP.flash ? Math.min(FLASH.length - 1, Math.floor((s - JUMP.white) / JUMP.step)) : -1;
-        if (i < 0) { if (!flashEl.hidden) flashEl.hidden = true; return; }
-        flashEl.hidden = false; flashEl.style.background = FLASH[i][0]; flashEl.style.opacity = String(FLASH[i][1]);
+        const s = W.jump ? t - W.jump.t0 : -1;
+        if (s >= JUMP.bake && s < JUMP.white) PIC.bloom(-1);
+        const i = s >= JUMP.white && s < JUMP.flash ? Math.min(3, Math.floor((s - JUMP.white) / JUMP.step)) : -1;
+        if (i === flashStep) return;
+        flashStep = i;
+        if (i < 0 || !flashCtx) { flashEl.hidden = true; return; }
+        const fr = PIC.bloom(i);
+        flashCtx.clearRect(0, 0, flashEl.width, flashEl.height);
+        if (fr) flashCtx.drawImage(fr, 0, 0);
+        flashEl.hidden = false;
     }
+    /** Where the sector title sits, always (art px, its left and middle): on the voice line's x (Voice's 'ship' anchor, the
+        left edge under our Lander), in the lower third of the open space. */
+    function titleAt() { const L = F.lander(); return [Math.round(L.x - L.len / 2 - 6), Math.round(G.H * TITLE_V)]; }
     function showTitle(text, t, t0) {
         const s = t - t0, a = s < 0 ? 0 : s < OPEN.in ? s / OPEN.in : s < OPEN.in + OPEN.hold ? 1 : 1 - (s - OPEN.in - OPEN.hold) / OPEN.out;
-        if (a <= 0 || !text) { title.hidden = true; return; }
+        const op = Math.floor(clamp01(a) * TITLE_STEPS) / TITLE_STEPS;                    // in and out in four steps
+        if (op <= 0 || !text) { title.hidden = true; return; }
         if (title.textContent !== text) title.textContent = text;
-        title.hidden = false; title.style.opacity = String(Math.floor(clamp01(a) * 8) / 8);
-        // in empty sky: the first of a few places whose box keeps clear of every world and the light
-        const l = F.light(), k = G.k / G.dpr, hw = title.offsetWidth / k / 2 + 8, hh = title.offsetHeight / k / 2 + 8, ds = F.discsOf(W.last || F.scene(W, t)).concat([[l.x, l.y, 30 * sc]]);
-        const clear = ([x, y]) => !ds.some(([dx, dy, r]) => Math.hypot(Math.max(x - hw, Math.min(dx, x + hw)) - dx, Math.max(y - hh, Math.min(dy, y + hh)) - dy) < r);
-        const spW = G.W - G.hull, spots = [[0.5, 0.2], [0.6, 0.1], [0.45, 0.1], [0.62, 0.2], [0.5, 0.06], [0.5, 0.9]].map(([u, v]) => [G.hull + spW * u, G.H * v]);
-        const [cx, cy] = G.toCss(...(spots.find(clear) || spots[0]));
-        title.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px) translate(-50%, -50%)`;
+        title.hidden = false; title.style.opacity = String(op);
+        const at = titleAt(), [cx, cy] = G.toCss(...at), k = G.k / G.dpr, w = title.offsetWidth / k, h = title.offsetHeight / k;
+        title.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px) translateY(-50%)`;
+        const box = { x: at[0], y: Math.round(at[1] - h / 2), w: Math.ceil(w), h: Math.ceil(h) }, ds = F.discsOf(W.last || F.scene(W, t));
+        titleShade = ds.some(([x, y, r]) => Math.hypot(Math.max(box.x, Math.min(x, box.x + box.w)) - x, Math.max(box.y, Math.min(y, box.y + box.h)) - y) < r + 4) ? Object.assign(box, { dense: true }) : null;   // a world under it: the dither shade
     }
-    function injectStyle() {
-        if ($('ns-travel-style')) return;
-        const st = mk('style'); st.id = 'ns-travel-style';
-        st.textContent = `#ns-world-words .nst-note { position: absolute; left: 0; top: 0; display: grid; gap: 3px; max-width: 24em; pointer-events: none; }
-#ns-world-words .nst-note[hidden], #ns-world-words .nst-title[hidden] { display: none; }
-#ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name, 19px)/1.15 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.02em; color: var(--text, #e4e4e0); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
-#ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line, 16px)/1.35 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); text-wrap: balance; text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
-#ns-world-words .nst-note.is-left { text-align: right; justify-items: end; }
-#ns-world-words .nst-note.is-story .tag { color: var(--warm-br, #ffc27a); }
-#ns-world-words .nst-note .scan { margin: 3px 0 0; justify-self: start; display: flex; align-items: baseline; gap: 10px; text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
-#ns-world-words .nst-note.is-left .scan { justify-self: end; }
-#ns-world-words .nst-note .scan b { font: 500 var(--fs-note-line, 16px)/1.2 var(--f-ui, 'IBM Plex Sans Condensed', sans-serif); letter-spacing: 0.04em; color: var(--warm, #f08c2e); transition: color 140ms var(--ease, ease); }
-#ns-world-words .nst-note .scan span { font: 400 calc(var(--fs-note-line, 16px) - 1px)/1.2 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--dim, #8b8d90); }
-#ns-world-words .nst-note .scan.is-hot b { color: var(--warm-br, #ffc27a); }
-#ns-world-words .nst-note .scan.is-off b { color: var(--faint, #5a6168); }
-#ns-world-words .nst-note .scan.is-busy b { font-weight: 400; letter-spacing: 0.06em; color: var(--ui, #c9d1d6); }
-#ns-world-words .nst-note .fact { margin: 0; font: 400 calc(var(--fs-note-line, 16px) - 1px)/1.3 var(--f-text, 'IBM Plex Sans', sans-serif); color: var(--ui, #c9d1d6); text-shadow: 0 1px 0 #05070a, 0 0 6px rgba(5, 7, 10, 0.9), 0 0 2px #05070a; }
-#ns-world-words .nst-note .tag + .fact { margin-top: 3px; }
-#ns-world-words .nst-flash { position: absolute; inset: 0; pointer-events: none; }
-#ns-world-words .nst-flash[hidden] { display: none; }
-#ns-world-words .nst-title { position: absolute; left: 0; top: 0; margin: 0; font: 300 var(--fs-title, 44px)/1 var(--f-text, 'IBM Plex Sans', sans-serif); letter-spacing: 0.2em; color: var(--text, #e4e4e0); white-space: nowrap; text-shadow: var(--shadow, 0 1px 0 #05070a); pointer-events: none; }`;
-        document.head.appendChild(st);
-    }
+    function injectStyle() { NOTE.style(); }                                          // the note's, the key's and the title's CSS (travel/Note.js)
 
     // ═══ 5. pointing, the lock, flying ═══
     function interactive(t) {
@@ -554,7 +583,15 @@
         if (id === 'light') W = Object.assign({}, W, { flareT: t });
         const r = ask('click', id);
         if (ghost && (!r || !r.ok)) { W = Object.assign({}, W, { modes: Object.assign({}, W.modes, { [id]: { m: 'field' } }) }); holdRefreshUntil = -1e9; }
+        if (r && !r.ok && id !== 'light' && REFUSED.includes(r.kind)) refuseBlink(id, t);
         if (r && r.ok && r.fly) lockOn(r.id || id, t);
+    }
+    const REFUSED = ['contact', 'passed', 'cost'];
+    /** A refused world answers itself: its ring blinks twice in --dim (drawRefusal), as A.U.R.A. says why; refused for
+        energy, what the flight costs and what we have show beside it (updateRefusal: NSRoute.canGo's own numbers). */
+    function refuseBlink(id, t) {
+        const r = ask('canGo', id), cost = r && r.kind === 'cost' && Number.isFinite(r.cost) ? r : null;
+        W = Object.assign({}, W, { refused: { id, t0: t, cost: cost ? cost.cost : null, have: cost ? cost.have : null } });
     }
     /** A click that cannot change the course now (the light, a phantom, mid-flight): A.U.R.A. says so, once. */
     function busy() { const v = NS() && NS().mods && NS().mods.voice; if (v && typeof v.sayLine === 'function') { try { v.sayLine(BUSY_LINE); } catch (err) { console.error('NewScreen travel: the busy line failed', err); } } }
@@ -562,7 +599,7 @@
     function turnTo(id, t) {
         if (id === W.flight.id) return;
         const r = ask('canGo', id);
-        if (!r || !r.ok) { ask('refuse', id); return; }
+        if (!r || !r.ok) { ask('refuse', id); if (r && REFUSED.includes(r.kind)) refuseBlink(id, now()); return; }
         if (r.kind !== 'world') { busy(); return; }
         if (refused(ask('go', id))) return;
         W = F.planFlight(W, id, t, broken('engineering')); PIC.prebake(prebakeItems(W, t));
@@ -574,7 +611,7 @@
     function cancelLock() { if (W.lock) { relaxFrom(now()); W = Object.assign({}, W, { lock: null }); } }
     function fire(t) {
         const id = W.lock.id;
-        if (refused(ask('go', id))) { relaxFrom(t); W = Object.assign({}, W, { lock: null }); return; }   // flow.go speaks why not
+        if (refused(ask('go', id))) { relaxFrom(t); W = Object.assign({}, W, { lock: null }); if (id !== F.light().node) refuseBlink(id, t); return; }   // flow.go speaks why not
         W = Object.assign(F.planFlight(W, id, t, broken('engineering')), { flareT: t });
         onFired(t);
         PIC.prebake(prebakeItems(W, t));
@@ -632,7 +669,8 @@
         }
         PIC.preglow(n, Math.pow(GROW, F.ids().length) * 1.5);                          // every size the light can reach here, baked in idle frames
         if (!(p && p.first) && openedSector !== n) { openedSector = n; emit('opening:done', {}); }
-        W = Object.assign({}, W, { black: false, jump: null, lock: null, hover: null });
+        W = Object.assign({}, W, { black: false, jump: null, lock: null, hover: null, refused: null });
+        stockStep(false);
         const from = p && p.from;
         if (from && F.has(from)) {
             if (W.held !== from) W = Object.assign({}, W, { cam: F.arriveCam(from), held: from, flight: null, ease: null, modes: Object.assign({}, W.modes, { [from]: { m: 'field' } }) });
@@ -640,7 +678,9 @@
             PIC.prebake(prebakeItems(W, t));
         } else if (W.held) W = F.sync(Object.assign({}, W, { held: null, ease: { t0: t, dur: 2000, from: W.cam, to: F.stageCam(W.at, W.modes) } }), t);
     }
-    function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null, onNote: false, scanning: null }); FX.relax = null; FX.landT = null; if (note) note.hidden = true; noteRect = null; scanEl = null; scanSeenAt = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; PIC.setLive(false); }
+    function onHidden() { W = Object.assign({}, W, { lock: null, hover: null, pointer: null, quiet: null, onNote: false, scanning: null, refused: null }); FX.relax = null; FX.landT = null; if (note) note.hidden = true; noteRect = null; noteLead = null; scanEl = null; scanSeenAt = null; if (title) title.hidden = true; if (flashEl) flashEl.hidden = true; if (costEl) costEl.hidden = true; flashStep = -1; PIC.setLive(false); }
+    /** The stock's jump fade steps (Note.js: only while #ns-ship-words is .is-jump-out); off once the next sector shows. */
+    function stockStep(on) { const sw = $('ns-ship-words'); if (sw) sw.classList.toggle('is-jump-out', !!on); }
     function update(dt, t) {
         if (!G) return;
         SV = stallView();
@@ -669,11 +709,13 @@
             if (!W.openDone && t - W.opening.t0 >= OPEN.done) { W.openDone = true; openedSector = W.sector; emit('opening:done', {}); }
             if (t - W.opening.t0 > OPEN.end) W.opening = null;
         } else title.hidden = true;
+        if (W.jump && !W.jump.words && t - W.jump.t0 >= JUMP.words) { W.jump.words = true; stockStep(true); emit('jump:words', {}); }   // the tower's stock steps out before the flash
         if (W.jump && !W.jump.flashed && t - W.jump.t0 >= JUMP.flash) { W.jump.flashed = true; W.black = true; emit('jump:flash', {}); }
         if (W.hover && !interactive(t)) setHover(null);
         else if ((W.ease || W.flight) && W.pointer && interactive(t)) { const p = pointed(W.pointer[0], W.pointer[1], t); setHover(p.hit || (p.onNote ? W.hover : null)); }
         updateNote(t);
         tellScan(t);
+        updateRefusal(t);
         announce(t);
         updateFlash(t);
         if (dt > 0) PIC.bakeOne();
@@ -682,6 +724,7 @@
         G = g; sc = G.H / 360; FX.shake = null;                                       // the shake's reach is in art px: made again at this size
         ensureDom();
         cv.width = G.W; cv.height = G.H; cv.style.width = (G.W * G.k / G.dpr) + 'px'; cv.style.height = (G.H * G.k / G.dpr) + 'px';
+        flashEl.width = G.W; flashEl.height = G.H; flashEl.style.width = cv.style.width; flashEl.style.height = cv.style.height; flashStep = -1;
         F.setup(G); PIC.setup(G, ctx); A = null;
         if (W.held && W.held !== F.light().node && F.has(W.held)) W = Object.assign({}, W, { cam: F.arriveCam(W.held) });
         else if (!W.flight) W = Object.assign({}, W, { cam: F.stageCam(W.at, W.modes), ease: null });
@@ -694,7 +737,7 @@
         cv.style.imageRendering = 'pixelated';
         wordsEl = $('ns-world-words');
         if (!wordsEl) { wordsEl = mk('div', 'ns-layer'); wordsEl.id = 'ns-world-words'; const words = $('ns-words') || root || document.body; words.appendChild(wordsEl); }
-        if (!note || !wordsEl.contains(note)) { note = mk('div', 'nst-note'); note.hidden = true; title = mk('p', 'nst-title'); title.hidden = true; flashEl = mk('div', 'nst-flash'); flashEl.hidden = true; wordsEl.append(flashEl, note, title); }
+        if (!note || !wordsEl.contains(note)) { note = mk('div', 'nst-note'); note.hidden = true; title = mk('p', 'nst-title'); title.hidden = true; flashEl = mk('canvas', 'nst-flash'); flashEl.hidden = true; flashEl.setAttribute('aria-hidden', 'true'); flashEl.style.imageRendering = 'pixelated'; flashCtx = flashEl.getContext('2d'); costEl = mk('p', 'nst-cost'); costEl.hidden = true; wordsEl.append(flashEl, note, title, costEl); }
     }
     const css = (x, y, side, align) => { const [cx, cy] = G.toCss(x, y); return { x: cx, y: cy, side, align }; };
     function registerPlaces() {
@@ -740,6 +783,7 @@
     function debugState() {
         const mode = W.black ? 'corridor' : W.jump ? 'jump' : W.flight ? 'flight' : W.lock ? 'lock' : W.held ? 'held' : W.opening ? 'opening' : 'rest';
         return { sector: W.sector, mode, at: W.at, hover: W.hover, lock: W.lock ? W.lock.id : null, flight: W.flight ? W.flight.id : null, held: W.held, onNote: !!W.onNote, scanning: W.scanning ? W.scanning.id : null, noteSide: W.noteSide || null,
+            flash: flashStep, refused: W.refused ? { id: W.refused.id, age: Math.round(now() - W.refused.t0), have: W.refused.have, cost: W.refused.cost, chip: costEl && !costEl.hidden ? costEl.textContent : null } : null, title: G ? titleAt() : null, lead: noteLead ? noteLead.slice(0, 2) : null, note: noteRect,
             modes: Object.fromEntries(Object.entries(W.modes).map(([id, m]) => [id, m.m])), slots: Object.fromEntries(F.ids().map(id => [id, F.entry(id).slot + '/' + F.entry(id).band])), light: F.light().node,
             feel: { trauma: FX.shake ? FX.shake.level() : null, off: FX.off ? [Math.round(FX.off.dx), Math.round(FX.off.dy)] : null, push: pushAt(now()), plume: plumeLevel(now()) } };
     }

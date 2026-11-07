@@ -28,6 +28,9 @@
      skim(t)                           the stream for a few seconds
      draw(ctx, t, { shownAt, call })   the glass into the frame canvas (clipped to the window)
      disc(t, shownAt) → [x, y, r]      the world's disc, frame px (words keep off it)
+     paintStation(sp, cx, cy, s, node, dim?) → its window   the station as the glass paints it, into any painter (the frame's
+                                       'world' picture, cards/FramePictures.js, 480 x 160): the same seed, so the same station
+     paintField(sp, cx, cy, r, node, dim?)   the field of rocks as the glass paints it (five rocks round cx, cy, radius r)
 */
 (function () {
     'use strict';
@@ -44,6 +47,8 @@
     const LIGHT_CAP = { core: 10, halo: 56 };                             // the glass is small: the later sectors' light is held to this
     const LW = P.norm3(0.42, -0.36, 0.83);                                // lit from the front, toward the light
     const DOCK = [WIN.x0 + 70, WIN.y1 + 14];                              // the shuttle's clamp, under the window
+    const COOL = (() => { try { return getComputedStyle(document.documentElement).getPropertyValue('--cool').trim() || '#a9b6bc'; } catch (err) { return '#a9b6bc'; } })();
+    const HALO = Object.freeze({ ramp: P.ramp(INK, '#141a1d', '#3a474e', '#6b7a82', COOL, '#dde4e7'), top: (ORBIT.y - 52) / ORBIT.r });   // an anomaly's ring in --cool, faded out over the lamps (BridgeArt.js LAMPS hang to y 48)
     const CALL = [WIN.x0 + 28, WIN.y1 - 44];                              // a waiting call blinks here, low in the open sky (A.U.R.A. speaks high)
     // the real type → one of the five sphere recipes (as travel/Field.js), used only without NSWorlds
     const FAMILY = {
@@ -151,13 +156,22 @@
     function paintWorld(pl, sp, half, r, f) {
         const node = pl.node, type = node.type, pal = paletteOf(type), W = window.NSWorlds;
         if (W && typeof W.paint === 'function' && pl.kind !== 'wrong') {   // the Wrong Place is not a world type: our own dark sphere
-            try { W.paint(sp, { cx: half, cy: half, r, node, sector: pl.sector, L: LW, grey: false, ramp: pal.ramp, atmo: pal.atmo, dim: 0.7 + 0.3 * f }); return; }
+            try { W.paint(sp, { cx: half, cy: half, r, node, sector: pl.sector, L: LW, grey: false, ramp: pal.ramp, atmo: pal.atmo, dim: 0.7 + 0.3 * f, halo: HALO }); return; }
             catch (err) { console.error('NewScreen stop: NSWorlds.paint failed', err); }
         }
         const wrong = pl.kind === 'wrong', fam = wrong ? 'dark' : pal.surface, w = Math.max(2, Math.round(r / 22));
         P.sphere(sp, { cx: half, cy: half, r, ramp: wrong ? RP.DARK : pal.ramp, L: LW, dim: 0.7 + 0.3 * f, surface: P.surfaceFor(fam, pl.seed & 1023, LW), rim: wrong ? 0.3 : 0.12,
             rimRamp: wrong ? RP.RED : undefined, ambient: 0.012, gain: 0.84, atmo: { ramp: wrong ? RP.RED : pal.atmo, w } });
         if (node.isFirstSignal) { const k = r / 118, X = half - 0.6 * r, Y = half + 0.1 * r; sp.line(X + 3 * k, Y + k, X + 16 * k, Y - 2 * k, (x, y) => sp.solid(x, y, RP.STONE, 0.02)); }   // the furrow the wreck cut
+    }
+    /** The station and the field of rocks as the glass paints them, at any size, into any painter (look pass B03). */
+    function stationAt(sp, cx, cy, s, seed, dim) { return P.drawStation(sp, cx, cy, s, seed % 7 + 1, dim); }
+    function fieldAt(sp, cx, cy, r, seed, dim) {
+        for (let i = 0; i < 5; i++) {
+            const a = (i / 5) * Math.PI * 2 + hash(i, 3, seed & 255) * 1.2, d = (i === 0 ? 0 : 0.5 + 0.45 * hash(i, 5, seed & 255)) * r;
+            const rr = Math.max(2, Math.round(r * (i === 0 ? 0.34 : 0.12 + 0.14 * hash(i, 7, seed & 255))));
+            P.sphere(sp, { cx: cx + Math.cos(a) * d, cy: cy + Math.sin(a) * d * 0.7, r: rr, ramp: RP.STONE, L: LW, dim, surface: P.surfaceFor('rock', (seed + i) & 1023, LW), rim: 0.12, ambient: 0.01, gain: 0.84 });
+        }
     }
     function worldPic(j, place0) {
         const pl = place0 || cur, key = pl.id + ':' + pl.kind + ':' + j;
@@ -171,19 +185,11 @@
             p.disc = [cx + WIN.x0, cy + WIN.y0, R0]; p.fixed = true;
         } else if (pl.kind === 'station') {
             const s = 3.6 * f, half = Math.ceil(27 * s + 4);
-            p = D.pic(half * 2, half * 2, [g => { const sp = P.painter(half * 2, half * 2, false); p.win = P.drawStation(sp, half, half, s, seed % 7 + 1, 0.75 + 0.25 * f); g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0); }]);
+            p = D.pic(half * 2, half * 2, [g => { const sp = P.painter(half * 2, half * 2, false); p.win = stationAt(sp, half, half, s, seed, 0.75 + 0.25 * f); g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0); }]);
             p.half = half; p.r = 24 * s;
         } else if (pl.kind === 'field') {
             const r = Math.round(ORBIT.r * f * 0.9), half = Math.ceil(r * 1.25) + 4;
-            p = D.pic(half * 2, half * 2, [g => {
-                const sp = P.painter(half * 2, half * 2, false);
-                for (let i = 0; i < 5; i++) {
-                    const a = (i / 5) * Math.PI * 2 + hash(i, 3, seed & 255) * 1.2, d = (i === 0 ? 0 : 0.5 + 0.45 * hash(i, 5, seed & 255)) * r;
-                    const rr = Math.max(2, Math.round(r * (i === 0 ? 0.34 : 0.12 + 0.14 * hash(i, 7, seed & 255))));
-                    P.sphere(sp, { cx: half + Math.cos(a) * d, cy: half + Math.sin(a) * d * 0.7, r: rr, ramp: RP.STONE, L: LW, dim: 0.7 + 0.3 * f, surface: P.surfaceFor('rock', (seed + i) & 1023, LW), rim: 0.12, ambient: 0.01, gain: 0.84 });
-                }
-                g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0);
-            }]);
+            p = D.pic(half * 2, half * 2, [g => { const sp = P.painter(half * 2, half * 2, false); fieldAt(sp, half, half, r, seed, 0.7 + 0.3 * f); g.putImageData(new ImageData(sp.data, sp.W, sp.H), 0, 0); }]);
             p.half = half; p.r = r;
         } else if (pl.kind === 'light') {
             p = D.pic(1, 1, []); p.half = 0; p.r = 0; p.none = true;
@@ -308,7 +314,7 @@
             const g = geom(t, shownAt), p = g.p && !g.p.none ? D.ready(g.p) : null;
             if (p) { if (p.fixed) c.drawImage(p.canvas, WIN.x0, WIN.y0); else c.drawImage(p.canvas, Math.round(g.x) - p.half, Math.round(g.y) - p.half); }
             const W = window.NSWorlds;
-            if (p && cur.kind === 'world' && W && typeof W.live === 'function') { try { W.live(f, cur.node, Math.round(g.x), Math.round(g.y), g.r, t, { L: LW, sector: cur.sector }); } catch (err) { /* the still world is enough */ } }
+            if (p && cur.kind === 'world' && W && typeof W.live === 'function') { try { W.live(f, cur.node, Math.round(g.x), Math.round(g.y), g.r, t, { L: LW, sector: cur.sector, halo: HALO }); } catch (err) { /* the still world is enough */ } }
             const [sx, sy] = siteOf(g).map(Math.round), ph = Math.floor((t % 1500) / 125);
             if (isWreck(cur.node) || cur.kind === 'wrong') {              // our own ship's beacon, still calling
                 if (ph < 2) { f.glow(sx, sy, 8, RP.RED, 0.95); f.px(sx - 1, sy - 1, RP.RED.hex[4], 3, 3); } else if (ph < 4) { f.glow(sx, sy, 5, RP.RED, 0.7); f.px(sx, sy, RP.RED.hex[4], 2, 2); } else f.px(sx, sy, RP.RED.hex[ph < 7 ? 3 : 2], 2, 2);
@@ -328,5 +334,7 @@
         site: (t, shownAt) => site(t, shownAt), callAt: () => CALL.slice(), shuttleState: () => (sh ? Object.assign({}, sh) : null),
         spot: (t, shownAt, uv) => spotOf(geom(t, shownAt), uv), target: (t, shownAt) => targetOf(geom(t, shownAt)), aimed: () => (aimAt ? aimAt.slice() : null),
         skim: t => { skimAt = t; }, current: () => (cur ? { id: cur.id, kind: cur.kind } : null),
+        paintStation: (sp, cx, cy, s, node, dim = 1) => stationAt(sp, cx, cy, s, hashId(node && node.id), dim),
+        paintField: (sp, cx, cy, r, node, dim = 1) => fieldAt(sp, cx, cy, r, hashId(node && node.id), dim),
     });
 })();

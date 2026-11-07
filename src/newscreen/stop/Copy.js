@@ -8,8 +8,11 @@
    THE COPY: Earth turns a few seconds, clouds drifting, then stops dead, clouds and all (reduced motion: it never turns).
      The stars behind it stand in perfect rows. The crew react one line at a time beside the speaker (stop/CopyWords.js);
      whoever the fall threw against the wall lies on the floor with Aris kneeling by them (unless a breakdown has taken them
-     off the bridge), and over everyone the fall shook their state shows a moment (name, "+1 stress" / "hurt"). A line said
-     then goes above the speaker's mark (stop/Stop.js anchors). Then Scan, "Fight to escape" and "Go down" (NSOrbit.actions).
+     off the bridge). No marks over their heads (C04, look pass B07): once the talk is over A.U.R.A. says how the fall left
+     them (NSCopyWords.shaken), or the stress warning that came during the fall, held until then. Each line sits on the
+     glass over its speaker (stop/Stop.js anchors). Then Scan, "Fight to escape" and "Go down" (NSOrbit.actions).
+     No voice line starts through the fall (NewScreen.holdVoice): what was said before it is gone, and what comes during it
+     is dropped as the light returns.
      Scan: under the glass's sweep the skin shows what it is, a bare grey lattice with nothing inside, healing behind it.
      Fight to escape: held on Cora's console (3 s); the engines strain, the picture shakes, Earth slides off-centre; let go
      and it drifts back. Won: we swing away and see it side on: a flat painted disc, its back unfinished grey struts; the
@@ -94,9 +97,26 @@
         C.fall = { t0: t, opened: false, snapshot: snapshot(t), victim: idOfName(n._thrown), node: n.id };
         C.ret = null; C.talk = null; C.stopAt = null; C.stopped = false; C.reveal = null; C.fight = { k: 0, held: false, said: false, won: false };
         flags(n).seen = true;                                                                  // saved now: a reload comes back to the copy, never before the gap
-        hush();
+        hush(); hold(true); C.heldStress = null;
         save();
         return true;
+    }
+    /** No voice line starts through the fall (NewScreen.holdVoice). */
+    function hold(on) { if (typeof NS.holdVoice === 'function') NS.holdVoice('fall', on); }
+    /** A.U.R.A.'s stress warning ("Crew stress is high...", a stress check during the fall) waits until the talk is over. */
+    function onLog(e) {
+        if (!falling() && !talking()) return;
+        const m = /^A\.U\.R\.A\.:\s*"(Crew stress is high\b[^"]*)"\s*$/.exec(String((e && e.detail && e.detail.message) || '').trim());
+        if (!m) return;
+        C.heldStress = m[1];
+        const v = voice(); if (v && typeof v.drop === 'function') v.drop(q => q.line === m[1]);
+    }
+    /** The talk at the window is over: the warning held through it, else how the fall left them (C04, L-31). */
+    function afterTalk(k) {
+        const n = here(), s = state(), held = C.heldStress;
+        C.heldStress = null;
+        const text = held || (n ? WD.shaken(s, n, idOfName(n._thrown), k.lines.some(l => l.key === 'hurt')) : null);
+        if (text) say('aura', text, !held);                                                   // the held warning is in the log already
     }
     const falling = () => !!(C.fall && !C.ret);
     /** Who stands where on the bridge as the fall begins (they brace there). */
@@ -389,6 +409,7 @@
     function begin(R, victim) {
         C.ret = { R, victim };
         C.nodeId = C.fall ? C.fall.node : C.nodeId;
+        hold(false); hush();                                                                   // the light returns: what came during the fall is dropped
         const s = state(), alone = !WD.arrival(s, victim).some(l => l.key === 'hurt');
         C.stopAt = R + (alone ? R_.STOP_ALONE : R_.STOP);
         C.stopped = still() ? true : false;
@@ -403,7 +424,8 @@
     }
     function tickTalk(t) {
         const k = C.talk;
-        if (!k || k.i >= k.lines.length || NS.blocked() || NS.mode() !== 'stop') return;
+        if (!k || NS.blocked() || NS.mode() !== 'stop') return;
+        if (k.i >= k.lines.length) { if (!k.busy && !k.after && t >= k.next) { k.after = true; afterTalk(k); } return; }
         const l = k.lines[k.i];
         if (l.afterStop && !C.stopped) return;
         const due = l.at != null ? t >= l.at : !k.busy && t >= k.next && (!l.afterStop || t >= C.stopAt + R_.AFTER_STOP);
@@ -411,9 +433,9 @@
         k.i++; k.busy = true;
         say(l.who, l.text).then(() => { if (C.talk === k) { k.busy = false; k.next = NS.clock.t + R_.GAP; } });
     }
-    const talking = () => !!(C.talk && C.talk.i < C.talk.lines.length) || !!(C.ret && !C.stopped);
+    const talking = () => !!(C.talk && (C.talk.i < C.talk.lines.length || !C.talk.after)) || !!(C.ret && !C.stopped);
     function ready(n) { return !!n && (C.nodeId !== n.id || C.stopped) && !falling(); }
-    function reset() { C.fall = null; C.ret = null; C.talk = null; C.stopAt = null; C.stopped = false; C.reveal = null; C.nodeId = null; C.marksFrom = null; C.fight = { k: 0, held: false, said: false, won: false }; }
+    function reset() { hold(false); C.fall = null; C.ret = null; C.talk = null; C.stopAt = null; C.stopped = false; C.reveal = null; C.nodeId = null; C.marksFrom = null; C.fight = { k: 0, held: false, said: false, won: false }; }
 
     // ── the fight: held on Cora's console ──
     function holdFight(on) { if (!here() || C.reveal) { C.fight.held = false; return; } C.fight.held = !!on; }
@@ -466,7 +488,9 @@
         const fl = flags(n), cards = WD.council(a.state, !!fl.council);
         fl.council = true;
         window.EncounterCard.open(a, {
-            tone: 'station', kicker: cards.kicker, title: cards.title, zIndex: 2800, dialogue: cards.dialogue, choices: cards.choices,
+            tone: 'station', kicker: cards.kicker, title: cards.title, zIndex: 2800, dialogue: cards.dialogue,
+            choices: cards.choices.map((c, i) => (i === 1 ? Object.assign({}, c, { tone: 'end' }) : c)),
+            shape: 'ask', final: [1], picture: { kind: 'world', node: n }, seenKey: 'copy:council', readout: 'Earth?',   // DRAFT (look pass): the readout (DESIGN 1.2)
             onPick: idx => { if (idx === 1 && typeof a.endOnTheCopy === 'function') a.endOnTheCopy(); },   // "Not yet": back to the window, nothing spent
         });
     }
@@ -483,7 +507,7 @@
         return [top, [{ icon: 'risk', text: 'crew +1 stress', tone: 'high' }]].filter(r => r.length);
     }
 
-    function attach(c) { ctx = c; }
+    function attach(c) { ctx = c; addEventListener('log-updated', onLog); }
     const debug = () => ({ fall: C.fall ? { el: Math.round(NS.clock.t - C.fall.t0), opened: C.fall.opened, victim: C.fall.victim, snapshot: C.fall.snapshot.map(p => p.id) } : null,
         ret: C.ret ? { el: Math.round(NS.clock.t - C.ret.R) } : null, stopAt: C.stopAt, stopped: C.stopped, talk: C.talk ? { i: C.talk.i, of: C.talk.lines.length, busy: C.talk.busy } : null,
         fight: Object.assign({}, C.fight), reveal: C.reveal ? Math.round(NS.clock.t - C.reveal.t0) : null, node: C.nodeId, earth: E.ready() });

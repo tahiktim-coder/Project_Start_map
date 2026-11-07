@@ -15,6 +15,9 @@
      FLUID                                   { warm, flush, wake } → '#rrggbb', the three valves' colours
      prepare() → [() => void]                small jobs that paint the room ahead (run one a frame)
      room(lit) → canvas                      the hold, its neighbours in the dark, space beside the hull (painted once)
+     pad(lit) → { canvas, rows }             the same room painted taller: rows more of the dark decks above and below the
+                                             frame (frame row 0 is canvas row `rows`), for a window taller than a whole number
+                                             of frames (look pass B11: the hold keeps a whole scale, 2x at 1366)
      fx(c, t, o)                             the room's moving bits: LEDs, the cargo screen, the intercom (o.aura: she talks)
      pod(c, i, s, t)                         one pod's window. s = { id, warm 0..1, ice 0..1 (frost left), level 0..1 (fluid
                                              left), awake, door 0..1 (glass lifted), inside, alarm, frame }
@@ -42,7 +45,8 @@
         const x = POD_X[i] + OFFX;
         return Object.freeze({ id, x, top: F - 112, win: Object.freeze({ x: x - 11, y: F - 98, w: 23, h: 68 }) });
     }));
-    const FLUID = Object.freeze({ warm: '#e8964a', flush: '#4aa3dc', wake: '#4cc47a' });
+    const token = (name, or) => { try { return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || or; } catch (err) { return or; } };
+    const FLUID = Object.freeze({ warm: token('--warm', '#f08c2e'), flush: '#4aa3dc', wake: token('--warm-br', '#ffc27a') });   // C22: WAKE in --warm-br, not green; WARM the one warm (C20)
     const LOOK = { dark: { pods: 5, dark: true }, lit: { pods: 5 } };
     const DIM = { dark: 0.17, lit: 0.26 };                                    // the decks above and below, unlit: how much light is left
     const LAMPS = [250, 480].map(x => x + OFFX);                             // the hold's two lamps (ShipRooms), frame x
@@ -54,25 +58,35 @@
     const mk = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); return c; };
 
     // ── the room: the hold lit or dark, the med bay above and the engine room below under ink, stars beside the hull ──
-    const rooms = { dark: null, lit: null };
+    const PAD_ROWS = 120;                                                     // rows painted beyond the frame, above and below (the med bay reaches 122 up)
+    const rooms = { dark: null, lit: null }, tall = { dark: null, lit: null };
     let fxList = [];
     /** Rows y0..y1 with their lights off (the decks nobody is on yet): each pixel keeps k of its light, a little cooler. */
     function unlit(g, y0, y1, k) {
-        const h = Math.max(0, Math.min(SH, y1) - y0);
+        const h = Math.max(0, Math.min(g.canvas.height, y1) - y0);
         if (!h) return;
         const img = g.getImageData(0, y0, SW, h), d = img.data;
         for (let o = 0; o < d.length; o += 4) { d[o] = d[o] * k; d[o + 1] = d[o + 1] * k * 1.05; d[o + 2] = d[o + 2] * k * 1.18; }
         g.putImageData(img, 0, y0);
     }
+    /** The room painted PAD_ROWS taller above and below (the frame is rows PAD_ROWS .. PAD_ROWS + SH, as it always was), then
+        the frame cut out of it. The rows outside it get star tiles of their own, so the frame's pixels are untouched. */
     function paint(kind) {
-        const c = mk(SW, SH), g = c.getContext('2d');
-        g.fillStyle = INK; g.fillRect(0, 0, SW, SH);
-        [[0, 0], [1, 137]].forEach(([layer, ox]) => { const T = A.stars(layer); for (let x = -ox; x < SW; x += T.size) g.drawImage(T.canvas, x, -T.size / 3); });
-        [HOLD - 1, HOLD, HOLD + 1].forEach(i => { const D = A.deck(i, i === HOLD ? LOOK[kind] : {}); g.drawImage(D.canvas, OFFX, A.deckTop(i) - Y0); });
-        unlit(g, 0, TOP - 18, DIM[kind]);                                     // the med bay's room (its floor slab stays: the hold's ceiling)
-        unlit(g, TOP + L.PITCH, SH, DIM[kind]);                               // the engine room
+        const R0 = PAD_ROWS, H2 = SH + 2 * R0, c = mk(SW, H2), g = c.getContext('2d', { willReadFrequently: true });   // read back (unlit): kept in memory
+        g.fillStyle = INK; g.fillRect(0, 0, SW, H2);
+        [[0, 0], [1, 137]].forEach(([layer, ox]) => {
+            const T = A.stars(layer), y0 = R0 - T.size / 3;
+            for (let x = -ox; x < SW; x += T.size) g.drawImage(T.canvas, x, y0);
+            g.save(); g.beginPath(); g.rect(0, 0, SW, R0); g.rect(0, R0 + SH, SW, R0); g.clip();
+            for (let y = y0 - T.size; y < H2; y += T.size) if (y !== y0) for (let x = -ox; x < SW; x += T.size) g.drawImage(T.canvas, x, y);
+            g.restore();
+        });
+        [HOLD - 1, HOLD, HOLD + 1].forEach(i => { const D = A.deck(i, i === HOLD ? LOOK[kind] : {}); g.drawImage(D.canvas, OFFX, A.deckTop(i) - Y0 + R0); });
+        unlit(g, 0, R0 + TOP - 18, DIM[kind]);                                // the med bay's room (its floor slab stays: the hold's ceiling)
+        unlit(g, R0 + TOP + L.PITCH, H2, DIM[kind]);                          // the engine room
         if (kind === 'lit') fxList = A.deck(HOLD, LOOK.lit).fx.map(f => Object.assign({}, f, { x: f.x + OFFX, y: f.y - Y0 }));
-        rooms[kind] = c;
+        const frame = mk(SW, SH); frame.getContext('2d').drawImage(c, 0, -R0);
+        rooms[kind] = frame; tall[kind] = c;
     }
     function prepare() {
         return [() => A.deck(HOLD - 1, {}), () => A.deck(HOLD + 1, {}), () => A.deck(HOLD, LOOK.dark), () => A.deck(HOLD, LOOK.lit), () => paint('dark'), () => paint('lit')];
@@ -81,6 +95,11 @@
         const kind = lit ? 'lit' : 'dark';
         if (!rooms[kind]) paint(kind);
         return rooms[kind];
+    }
+    function pad(lit) {
+        const kind = lit ? 'lit' : 'dark';
+        if (!tall[kind]) paint(kind);
+        return { canvas: tall[kind], rows: PAD_ROWS };
     }
 
     // ── the room's moving bits (as stop/Stop.js drawFx): LEDs, the cargo terminal's screen, the intercom while she talks ──
@@ -282,5 +301,5 @@
         return masks[Math.max(0, Math.min(7, j))];
     }
 
-    window.NSPodArt = Object.freeze({ SW, SH, OFFX, TOP, F, PODS, FLUID, INTERCOM, prepare, room, fx, pod, person, valve, icon, pips, pulse, vapour, mask });
+    window.NSPodArt = Object.freeze({ SW, SH, OFFX, TOP, F, PODS, FLUID, INTERCOM, prepare, room, pad, fx, pod, person, valve, icon, pips, pulse, vapour, mask });
 })();

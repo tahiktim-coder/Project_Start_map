@@ -17,6 +17,18 @@
  */
 
 const THROW_LOG_SECTOR = 4;   // the flight recorder's captain's log (thrown back in time) only after the sector 3 page
+/** The new look (depth step 8): a site's accident hurts one of the team that went down (GameState.tripTeam), not anyone aboard.
+    Who a choice needs (its requires) still reads anyone aboard: the story is drawn only once the team has gone, so the player
+    could not plan for it, and those choices call the person down by name ("Bring Aris down to lead a suited team in", "Vance
+    opens the capacitor vault"). Outside a trip, and in the default game, tripTeam is null: anyone aboard, as before. */
+const siteTeamOf = state => (state && typeof state.tripTeam === 'function' ? state.tripTeam() : null) || state.crew;
+/** Who a choice's accident can hurt: the well of the team down, plus whoever the choice calls down (calledTag: their role, e.g.
+    'MEDIC'); the default game: anyone well aboard but the commander. DerelictEncounters.js uses it too (this file loads first). */
+const siteAtRisk = (state, calledTag) => {
+    const team = siteTeamOf(state);
+    const called = calledTag ? state.crew.filter(c => c.tags.includes(calledTag) && !team.some(t => t === c || t.name === c.name)) : [];
+    return team.concat(called).filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
+};
 const ONE_BATTERY_ENERGY = 25; // one sleeper pod's battery (THE SLEEPERS)
 /** What one pod battery gives now, in words: energy tops out at 100, so near full it is less than the battery holds. */
 const oneBatteryWords = (state) => {
@@ -292,7 +304,7 @@ const EXODUS_ENCOUNTERS = [
                         return "No doctor aboard. Nobody goes in without one.";
                     }
                     if (Math.random() < 0.15) {
-                        const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
+                        const team = siteAtRisk(state, 'MEDIC');                          // the new look: the team down, and Aris with them
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';
@@ -327,7 +339,7 @@ const EXODUS_ENCOUNTERS = [
                 effect: (state) => {
                     state.energy = Math.max(0, state.energy - 5);
                     if (Math.random() < 0.4) {
-                        const team = state.crew.filter(c => c.status === 'HEALTHY' && !c.tags.includes('LEADER'));
+                        const team = siteAtRisk(state);
                         if (team.length > 0) {
                             const victim = team[Math.floor(Math.random() * team.length)];
                             victim.status = 'INJURED';

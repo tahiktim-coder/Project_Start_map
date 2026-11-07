@@ -4,6 +4,7 @@ const deepEnough = () => ((window.app && window.app.state && window.app.state.cu
 // Choice text is what the team does. The risk and the reward are shown beside it by the EVA card.
 // A walk-away choice that costs something must keep "(energy cost)" or "(morale loss)" in its text:
 // resolveEvaOutcome in bundle.js reads those words to charge -10 Energy or +1 Stress.
+// short: the way's name on the new look's glass (src/newscreen/WorldFinds.js rows), at most four words. DRAFT, every one.
 const EVENTS = [
     {
         id: 'DERELICT',
@@ -11,8 +12,8 @@ const EVENTS = [
         title: "CRASHED SHIP",
         desc: "The signal is coming from a crashed ship. Its hull is cracked and could give way at any moment.",
         choices: [
-            { text: "Cut panels off the outside", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Go inside the hull", riskMod: 30, reward: { type: 'ITEM', tags: ['TECH'] } }
+            { text: "Cut panels off the outside", short: "Cut panels off", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Go inside the hull", short: "Go inside the hull", riskMod: 30, reward: { type: 'ITEM', tags: ['TECH'] } }   // DRAFT: short
         ]
     },
     {
@@ -21,8 +22,8 @@ const EVENTS = [
         title: "SOMETHING HUGE",
         desc: "The life signal is one enormous animal, and it's moving toward the team.",
         choices: [
-            { text: "Keep back and take readings", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Get close and take a tissue sample", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO'] } }
+            { text: "Keep back and take readings", short: "Take readings from afar", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },   // DRAFT: short
+            { text: "Get close and take a tissue sample", short: "Take a tissue sample", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO'] } }   // DRAFT: short
         ]
     },
     {
@@ -31,8 +32,8 @@ const EVENTS = [
         title: "RICH VEIN",
         desc: "There's a dense pocket of metal ore on the edge of a crumbling canyon.",
         choices: [
-            { text: "Dig at the surface", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Drill deep into the ridge", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }
+            { text: "Dig at the surface", short: "Dig at the surface", riskMod: 0, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Drill deep into the ridge", short: "Drill into the ridge", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }   // DRAFT: short
         ]
     },
     {
@@ -41,8 +42,8 @@ const EVENTS = [
         title: "SOLAR FLARE COMING",
         desc: "The star is about to flare. Radiation on the surface is rising fast.",
         choices: [
-            { text: "Collect power under the radiation shield", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Leave the collectors out in the open", riskMod: 40, reward: { type: 'ITEM', tags: ['ENERGY'] } }
+            { text: "Collect power under the radiation shield", short: "Collect under the shield", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },   // DRAFT: short
+            { text: "Leave the collectors out in the open", short: "Leave the collectors out", riskMod: 40, reward: { type: 'ITEM', tags: ['ENERGY'] } }   // DRAFT: short
         ]
     },
     {
@@ -51,8 +52,8 @@ const EVENTS = [
         title: "SILENT SHIP",
         desc: "A ship lies on the ground here, nose first. It isn't sending any ID code, and nobody aboard is alive.",   // the team is on the ground: no ship in orbit
         choices: [
-            { text: "Call it once, then leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Go aboard", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }
+            { text: "Call it once, then leave", short: "Call it, then leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Go aboard", short: "Go aboard", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -61,8 +62,8 @@ const EVENTS = [
         title: "RINGING TOWER",
         desc: "A huge crystal tower sticks up out of the ice. It gives off a low ringing sound.",
         choices: [
-            { text: "Scan it from a distance", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Cut out its core", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }
+            { text: "Scan it from a distance", short: "Scan it from afar", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },   // DRAFT: short
+            { text: "Cut out its core", short: "Cut out its core", riskMod: 25, reward: { type: 'ITEM', tags: ['GEO'] } }   // DRAFT: short
         ]
     },
     {
@@ -71,8 +72,8 @@ const EVENTS = [
         title: "SLOW CLOCKS",
         desc: "The gravity here is so strong it slows time. One hour on the surface is a whole day up on the ship.",
         choices: [
-            { text: "Call the team back now", riskMod: 0, reward: { type: 'DATA', val: 1 } },
-            { text: "Stay longer and collect samples", riskMod: 35, reward: { type: 'ITEM', tags: ['GEO', 'LORE'] } }
+            { text: "Call the team back now", short: "Call the team back", riskMod: 0, reward: { type: 'DATA', val: 1 } },   // DRAFT: short
+            { text: "Stay longer and collect samples", short: "Stay and collect samples", riskMod: 35, reward: { type: 'ITEM', tags: ['GEO', 'LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -81,8 +82,8 @@ const EVENTS = [
         title: "CITIES ON THE HORIZON",
         desc: "The team can see cities like Earth's on the horizon. The sensors say there's nothing there.",
         choices: [
-            { text: "Trust the sensors and stay put", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Walk out toward the cities", riskMod: 45, reward: { type: 'ITEM', tags: ['LORE'] } }
+            { text: "Trust the sensors and stay put", short: "Stay put", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Walk out toward the cities", short: "Walk to the cities", riskMod: 45, reward: { type: 'ITEM', tags: ['LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -91,8 +92,8 @@ const EVENTS = [
         title: "EARTHQUAKE",
         desc: "The ground under the landing site is splitting open.",
         choices: [
-            { text: "Take off right now (energy cost)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Hold steady and keep mining", riskMod: 50, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+            { text: "Take off right now (energy cost)", short: "Take off now", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Hold steady and keep mining", short: "Keep mining", riskMod: 50, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }   // DRAFT: short
         ]
     },
     {
@@ -101,8 +102,8 @@ const EVENTS = [
         title: "SINGING PLANTS",
         desc: "The plants are all making the same sound together, and it's drowning out our radios.",
         choices: [
-            { text: "Burn them back and harvest", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Play their sound back to them", riskMod: 40, reward: { type: 'ITEM', tags: ['BIO'] } }
+            { text: "Burn them back and harvest", short: "Burn them and harvest", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },   // DRAFT: short
+            { text: "Play their sound back to them", short: "Play their sound back", riskMod: 40, reward: { type: 'ITEM', tags: ['BIO'] } }   // DRAFT: short
         ]
     },
     {
@@ -111,8 +112,8 @@ const EVENTS = [
         title: "OLD SLEEP POD",
         desc: "There's a working sleep pod frozen into the ice. We can't tell whether the person inside is alive.",
         choices: [
-            { text: "Take the parts around the pod", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Thaw the pod and open it", riskMod: 60, reward: { type: 'ITEM', tags: ['LORE', 'TECH'] } }
+            { text: "Take the parts around the pod", short: "Take the parts", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Thaw the pod and open it", short: "Open the pod", riskMod: 60, reward: { type: 'ITEM', tags: ['LORE', 'TECH'] } }   // DRAFT: short
         ]
     },
     {
@@ -121,8 +122,8 @@ const EVENTS = [
         title: "ARMED TURRET",
         desc: "An old defence turret on the ridge has locked on to the team.",                                             // a landing event: on the ground, not in orbit
         choices: [
-            { text: "Dodge it and keep going", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Try to break into its controls", riskMod: 40, reward: { type: 'ITEM', tags: ['TECH'] } }
+            { text: "Dodge it and keep going", short: "Dodge it", riskMod: 20, reward: { type: 'RESOURCE', val: 'ENERGY' } },   // DRAFT: short
+            { text: "Try to break into its controls", short: "Break into its controls", riskMod: 40, reward: { type: 'ITEM', tags: ['TECH'] } }   // DRAFT: short
         ]
     },
     // --- NEW PLANET TYPE EVENTS ---
@@ -132,8 +133,8 @@ const EVENTS = [
         title: "THE TWILIGHT STRIP",
         desc: "Only a strip about 200 km wide is safe to walk on. One side burns and the other side freezes.",
         choices: [
-            { text: "Search along the twilight strip", riskMod: 15, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Cross into the frozen dark side", riskMod: 55, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
+            { text: "Search along the twilight strip", short: "Search the twilight strip", riskMod: 15, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Cross into the frozen dark side", short: "Cross into the dark", riskMod: 55, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -142,8 +143,8 @@ const EVENTS = [
         title: "INSIDE THE PLANET",
         desc: "The team found a way in. The planet is hollow, with a small sun in the middle and ruined buildings on the inside walls.",
         choices: [
-            { text: "Take photos from the entrance", riskMod: 5, reward: { type: 'DATA', val: 1 } },
-            { text: "Climb down inside", riskMod: 50, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
+            { text: "Take photos from the entrance", short: "Photograph the entrance", riskMod: 5, reward: { type: 'DATA', val: 1 } },   // DRAFT: short
+            { text: "Climb down inside", short: "Climb down inside", riskMod: 50, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }   // DRAFT: short
         ]
     },
     {
@@ -152,8 +153,8 @@ const EVENTS = [
         title: "THE WELCOME",
         desc: "The plants are growing paths for the team to walk on. Fruit appears at their feet, and it smells like home.",
         choices: [
-            { text: "Take the fruit, but stay careful", riskMod: 0, reward: { type: 'ITEM', tags: ['BIO'] } },
-            { text: "Send one of them deeper in alone", riskMod: 35, reward: { type: 'ITEM', tags: ['BIO', 'LORE'] } }
+            { text: "Take the fruit, but stay careful", short: "Take the fruit", riskMod: 0, reward: { type: 'ITEM', tags: ['BIO'] } },   // DRAFT: short
+            { text: "Send one of them deeper in alone", short: "Send one deeper in", riskMod: 35, reward: { type: 'ITEM', tags: ['BIO', 'LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -162,8 +163,8 @@ const EVENTS = [
         title: "THE REFLECTION",
         desc: "The team finds themselves: bodies in our suits, long dead, laid in a circle around the landing site. The sensors say nothing is there.",
         choices: [
-            { text: "Leave right now (morale loss)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Go and look at the bodies", riskMod: 40, reward: { type: 'ITEM', tags: ['ARTIFACT', 'TECH'] } }
+            { text: "Leave right now (morale loss)", short: "Leave right now", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Go and look at the bodies", short: "Look at the bodies", riskMod: 40, reward: { type: 'ITEM', tags: ['ARTIFACT', 'TECH'] } }   // DRAFT: short
         ]
     },
     {
@@ -172,8 +173,8 @@ const EVENTS = [
         title: "THE SCRAP HEAP",
         desc: "Hundreds of ships are crushed together into one huge heap, and the team is walking on their hulls. The salvage is incredible, but the pile could collapse.",
         choices: [
-            { text: "Strip the hulls on top", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } },
-            { text: "Cut down into the middle", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }
+            { text: "Strip the hulls on top", short: "Strip the top hulls", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } },   // DRAFT: short
+            { text: "Cut down into the middle", short: "Cut into the middle", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -182,8 +183,8 @@ const EVENTS = [
         title: "THE HUM",
         desc: "The planet gives off a hum that makes people happy. The team has stopped talking and is smiling. One of them has closed their eyes.",
         choices: [
-            { text: "Record the hum and leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Stay and listen longer", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }
+            { text: "Record the hum and leave", short: "Record it and leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'ENERGY' } },   // DRAFT: short
+            { text: "Stay and listen longer", short: "Stay and listen", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }   // DRAFT: short
         ]
     },
     {
@@ -192,8 +193,8 @@ const EVENTS = [
         title: "OLD FACTORY",
         desc: "A huge automatic factory is still running on standby power. Its security system is switched on.",
         choices: [
-            { text: "Search around the outside", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Break into the control room", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'WEAPON'] } }
+            { text: "Search around the outside", short: "Search the outside", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Break into the control room", short: "Raid the control room", riskMod: 60, reward: { type: 'ITEM', tags: ['TECH', 'WEAPON'] } }   // DRAFT: short
         ]
     },
     {
@@ -202,8 +203,8 @@ const EVENTS = [
         title: "SPORE STORM",
         desc: "The air is filling with glowing spores. They drift toward anything warm.",
         choices: [
-            { text: "Flush the lander's vents (energy cost)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Collect some spores", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO', 'CURE'] } }
+            { text: "Flush the lander's vents (energy cost)", short: "Flush the vents", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Collect some spores", short: "Collect some spores", riskMod: 50, reward: { type: 'ITEM', tags: ['BIO', 'CURE'] } }   // DRAFT: short
         ]
     },
     {
@@ -212,8 +213,8 @@ const EVENTS = [
         title: "NAMES IN THE STATIC",
         desc: "It's very quiet here. The team says they can hear their own names in the radio static.",
         choices: [
-            { text: "Bring them back to rest (morale loss)", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Record the static and study it", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }
+            { text: "Bring them back to rest (morale loss)", short: "Bring them back", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Record the static and study it", short: "Record the static", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -222,8 +223,8 @@ const EVENTS = [
         title: "SHAKING CRYSTALS",
         desc: "The crystals here vibrate hard enough to shatter glass, and maybe bone.",
         choices: [
-            { text: "Pad the lander's hull (energy cost)", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Record the sound up close", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }
+            { text: "Pad the lander's hull (energy cost)", short: "Pad the hull", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Record the sound up close", short: "Record it up close", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT'] } }   // DRAFT: short
         ]
     },
     // --- ADDITIONAL EVA EVENTS ---
@@ -233,8 +234,8 @@ const EVENTS = [
         title: "GLOWING MUSHROOMS",
         desc: "The ground is covered in glowing mushrooms. Their spores make people see things that aren't there.",
         choices: [
-            { text: "Go back to the lander", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Harvest some to study", riskMod: 25, reward: { type: 'ITEM', tags: ['BIO', 'RATION'] } }
+            { text: "Go back to the lander", short: "Back to the lander", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Harvest some to study", short: "Harvest some to study", riskMod: 25, reward: { type: 'ITEM', tags: ['BIO', 'RATION'] } }   // DRAFT: short
         ]
     },
     {
@@ -243,8 +244,8 @@ const EVENTS = [
         title: "HEAVY GRAVITY",
         desc: "Gravity here just tripled. Equipment is being crushed, and the team can barely stand.",
         choices: [
-            { text: "Pull the team out now", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Crawl to the target anyway", riskMod: 45, reward: { type: 'ITEM', tags: ['GEO', 'ARTIFACT'] } }
+            { text: "Pull the team out now", short: "Pull the team out", riskMod: 10, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Crawl to the target anyway", short: "Crawl to the target", riskMod: 45, reward: { type: 'ITEM', tags: ['GEO', 'ARTIFACT'] } }   // DRAFT: short
         ]
     },
     {
@@ -253,8 +254,8 @@ const EVENTS = [
         title: "DUST STORM",
         desc: "A huge dust storm is rolling in. The grit is wearing holes in the suits.",
         choices: [
-            { text: "Take shelter and wait", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Push on through the storm", riskMod: 40, reward: { type: 'ITEM', tags: ['GEO'] } }
+            { text: "Take shelter and wait", short: "Shelter and wait", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Push on through the storm", short: "Push through the storm", riskMod: 40, reward: { type: 'ITEM', tags: ['GEO'] } }   // DRAFT: short
         ]
     },
     {
@@ -263,8 +264,8 @@ const EVENTS = [
         title: "GRAVES BELOW THE WRECK",
         desc: "There are rows of graves here, and a wrecked ship in orbit above them. The dates on the graves are older than the wreck.",
         choices: [
-            { text: "Record the names and leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Dig one of them up", riskMod: 35, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }
+            { text: "Record the names and leave", short: "Record the names", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Dig one of them up", short: "Dig one up", riskMod: 35, reward: { type: 'ITEM', tags: ['LORE', 'ARTIFACT'] } }   // DRAFT: short
         ]
     },
     {
@@ -273,8 +274,8 @@ const EVENTS = [
         title: "ACID RAIN",
         desc: "It's raining acid. The outside of the lander is being eaten away as we stand here.",
         choices: [
-            { text: "Call off the trip", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Grab what we can, fast", riskMod: 35, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+            { text: "Call off the trip", short: "Call off the trip", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Grab what we can, fast", short: "Grab what we can", riskMod: 35, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }   // DRAFT: short
         ]
     },
     {
@@ -283,8 +284,8 @@ const EVENTS = [
         title: "MAGNETIC STORM",
         desc: "A magnetic storm is burning out our electronics. The radio and navigation are both down.",
         choices: [
-            { text: "Wait for it to pass", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Keep going without navigation", riskMod: 50, reward: { type: 'ITEM', tags: ['TECH'] } }
+            { text: "Wait for it to pass", short: "Wait it out", riskMod: 10, reward: { type: 'RESOURCE', val: 'ENERGY' } },   // DRAFT: short
+            { text: "Keep going without navigation", short: "Go on without navigation", riskMod: 50, reward: { type: 'ITEM', tags: ['TECH'] } }   // DRAFT: short
         ]
     },
     {
@@ -293,8 +294,8 @@ const EVENTS = [
         title: "CAVES",
         desc: "Scans show huge caves under the surface. Something is moving around down there in the dark.",
         choices: [
-            { text: "Stay on the surface", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Go deep into the caves", riskMod: 40, reward: { type: 'ITEM', tags: ['GEO', 'BIO'] } }
+            { text: "Stay on the surface", short: "Stay on the surface", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Go deep into the caves", short: "Go into the caves", riskMod: 40, reward: { type: 'ITEM', tags: ['GEO', 'BIO'] } }   // DRAFT: short
         ]
     },
     {
@@ -303,8 +304,8 @@ const EVENTS = [
         title: "UNDER THE ICE",
         desc: "Something is swimming under the frozen surface, circling the landing site.",
         choices: [
-            { text: "Stay away from the edge", riskMod: 5, reward: { type: 'RESOURCE', val: 'ENERGY' } },
-            { text: "Drop a camera through the ice", riskMod: 30, reward: { type: 'ITEM', tags: ['BIO', 'LORE'] } }
+            { text: "Stay away from the edge", short: "Keep from the edge", riskMod: 5, reward: { type: 'RESOURCE', val: 'ENERGY' } },   // DRAFT: short
+            { text: "Drop a camera through the ice", short: "Drop a camera in", riskMod: 30, reward: { type: 'ITEM', tags: ['BIO', 'LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -313,8 +314,8 @@ const EVENTS = [
         title: "MOVING METAL",
         desc: "The ground here is metal, and it's moving. It's building something around the lander.",
         choices: [
-            { text: "Leave before we're walled in", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Let it finish building", riskMod: 45, reward: { type: 'ITEM', tags: ['TECH', 'ARTIFACT'] } }
+            { text: "Leave before we're walled in", short: "Leave while we can", riskMod: 10, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Let it finish building", short: "Let it finish", riskMod: 45, reward: { type: 'ITEM', tags: ['TECH', 'ARTIFACT'] } }   // DRAFT: short
         ]
     },
     {
@@ -323,8 +324,8 @@ const EVENTS = [
         title: "THE SETTLEMENT",
         desc: "Human buildings, abandoned decades ago. The doors are still locked from the inside.",
         choices: [
-            { text: "Strip metal from the outside walls", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },
-            { text: "Break down a door", riskMod: 25, reward: { type: 'ITEM', tags: ['LORE', 'RATION'] } }
+            { text: "Strip metal from the outside walls", short: "Strip the outside walls", riskMod: 5, reward: { type: 'RESOURCE', val: 'METALS' } },   // DRAFT: short
+            { text: "Break down a door", short: "Break down a door", riskMod: 25, reward: { type: 'ITEM', tags: ['LORE', 'RATION'] } }   // DRAFT: short
         ]
     },
     {
@@ -333,8 +334,8 @@ const EVENTS = [
         title: "NO SIGNAL",
         desc: "The team has lost all radio contact with the ship. Something down here is blocking the signal.",
         choices: [
-            { text: "Head back to the lander right away", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Find what's blocking the signal", riskMod: 50, reward: { type: 'ITEM', tags: ['TECH', 'ARTIFACT'] } }
+            { text: "Head back to the lander right away", short: "Head back now", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Find what's blocking the signal", short: "Find what's blocking it", riskMod: 50, reward: { type: 'ITEM', tags: ['TECH', 'ARTIFACT'] } }   // DRAFT: short
         ]
     },
     {
@@ -343,8 +344,8 @@ const EVENTS = [
         title: "THE SPHERE",
         desc: "A perfect sphere, 10 metres across, made of something we can't identify. It's warm, and it hums.",
         choices: [
-            { text: "Photograph it and stay back", riskMod: 0, reward: { type: 'DATA', val: 1 } },
-            { text: "Touch it", riskMod: 45, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
+            { text: "Photograph it and stay back", short: "Photograph it", riskMod: 0, reward: { type: 'DATA', val: 1 } },   // DRAFT: short
+            { text: "Touch it", short: "Touch it", riskMod: 45, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -353,8 +354,8 @@ const EVENTS = [
         title: "POISON GAS",
         desc: "The ground is leaking poisonous gas. The suit filters won't last long.",
         choices: [
-            { text: "Pull back now", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Rush in and grab the ore", riskMod: 35, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+            { text: "Pull back now", short: "Pull back now", riskMod: 5, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Rush in and grab the ore", short: "Rush in for ore", riskMod: 35, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }   // DRAFT: short
         ]
     },
     {
@@ -363,8 +364,8 @@ const EVENTS = [
         title: "SOMEONE WAS HERE",
         desc: "There are human footprints in the dust, but no wreck and no bodies. The prints just stop.",
         choices: [
-            { text: "Log them and leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },
-            { text: "Follow the footprints", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }
+            { text: "Log them and leave", short: "Log them and leave", riskMod: 0, reward: { type: 'RESOURCE', val: 'NOTHING' } },   // DRAFT: short
+            { text: "Follow the footprints", short: "Follow the footprints", riskMod: 40, reward: { type: 'ITEM', tags: ['LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -373,8 +374,8 @@ const EVENTS = [
         title: "OLD RUINS",
         desc: "Walls and roofs, half buried in the dust. Nobody has lived here for a very long time.",
         choices: [
-            { text: "Map the walls and leave", riskMod: 5, reward: { type: 'DATA', val: 1 } },
-            { text: "Dig under the walls", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }
+            { text: "Map the walls and leave", short: "Map the walls", riskMod: 5, reward: { type: 'DATA', val: 1 } },   // DRAFT: short
+            { text: "Dig under the walls", short: "Dig under the walls", riskMod: 30, reward: { type: 'ITEM', tags: ['ARTIFACT', 'LORE'] } }   // DRAFT: short
         ]
     },
     {
@@ -383,8 +384,8 @@ const EVENTS = [
         title: "DISTRESS CALL",
         desc: "A weak distress call keeps repeating from a field of wreckage.",
         choices: [
-            { text: "Scan it from where we are", riskMod: 0, reward: { type: 'DATA', val: 1 } },
-            { text: "Search through the wreckage", riskMod: 20, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }
+            { text: "Scan it from where we are", short: "Scan from here", riskMod: 0, reward: { type: 'DATA', val: 1 } },   // DRAFT: short
+            { text: "Search through the wreckage", short: "Search the wreckage", riskMod: 20, reward: { type: 'RESOURCE', val: 'METALS_HIGH' } }   // DRAFT: short
         ]
     }
 ];

@@ -6,9 +6,10 @@
    usage:  node tools/runsim.js [--runs 2000] [--styles careful,greedy,reckless,aura,optimizer] [--seed 1]
                                 [--void] [--port] [--unlock] [--off flight,faults,obsessed,hazards,decks]
                                 [--out report.txt] [--log runs.jsonl] [--label today] [--from a.jsonl,b.jsonl]
-     --void   the dark leg stand-in at the start of sector 5 (careful, A.U.R.A.-heavy and the optimizer wait: one ration a
-              person; greedy and reckless push through: the hold breaks)
-     --port   Last Port stand-in: one more station to dock at in sector 5 (not approved; report it with and without)
+     --void   no longer changes anything: After the flight is in the game (2026-10-31: the dark on the jump into sector 5,
+              runsim/hands.js 'corridor-void', its bill by who flies); kept so older pass scripts still run
+     --port   no longer changes anything: Last Port is in the game (2026-10-31: the relay's dock on the story trip to the
+              disc's wreck, runsim/hands.js relayDock); kept so older pass scripts still run
      --unlock no longer changes anything: since depth step 4 the game itself never locks a trip card (App.tripChoices keeps
               the careful way open) nor a team trip (NSOrbit.pool); kept so older pass scripts still run
      --off    rules cardsim.js left out, turned off (tools/runsim/switches.js): only for the check against its tables
@@ -32,12 +33,16 @@ const NOTES = [
     'The flown jump: measured (dark-leg tune: careful +4.7 energy, 0.01 decks; careless +0.5, 1.35 decks; A.U.R.A. -4). Landings, the burn gauge and a player docking: assumptions (models.js). The breach is the game\'s own hull hit (App.hullHit: a deck, nobody hurt).',
     "A.U.R.A.'s landings: her own autopilot, run headless on each world's own ground (tools/runsim/lander.js), lands soft on 99.9 % of worlds. The browser check should log 50 to confirm.",
     'Never locked (depth step 4): a trip card whose every way a stress trait struck keeps its careful way open (counted as "locked trip card"), and with fewer than two well the hurt go down, or the one left goes alone.',
-    'A trip\'s odds are the game\'s own (src/data/TripOdds.js through App.wayOdds): no death under 30 % hurt, the fit of the two going down, Vance\'s cover, a death chance never above what the card showed.',
+    'A trip\'s odds are the game\'s own (src/data/TripOdds.js through App.wayOdds): no death under NEW_LOOK_ECONOMY.DEATH_FLOOR hurt (15 % since the open calls of 2026-11-02; a small share near it), the fit of the two going down, Vance\'s cover, a death chance never above what the card showed.',
+    'The open calls (2026-11-02) are the game\'s own rules here: a card choice costs no more than NEW_LOOK_ECONOMY.CARD_COST_CAP (a cost paid later and a ship fault keep their price); hunger sickness is mended only by eating at a supper, and every treatment passes the hunger-sick by (counted: "Hunger sickness mended only at supper", "No treatment on the hunger-sick"); a world shows two finds (FINDS_MAX), a third only with the clue.',
+    'A trip pays its find\'s own prize, drawn once from the world\'s seed (App.findPrizes, depth step 6): supplies only, a way that brought an item gives salvage, energy, rations or data by its tag and risk (NEW_LOOK_ECONOMY.BOLD_PRIZE). Greedy goes bold wherever that pays supplies; the optimizer weighs the prize against the odds.',
     'Docking: a player\'s grade is an assumption (good 70/25/5 soft/rough/crash, poor 30/40/30); a crash breaks a deck within the allowance and A.U.R.A.\'s dock costs 4 energy (the game\'s own App.applyDockResult, the new look\'s Bring Her In). A.U.R.A. docks with her own autopilot run headless (tools/runsim/docking.js): soft on every station tried. A dock\'s seconds are measured (models.js SECONDS.dock: the first of a run the whole approach, later ones routine).',
     'Not modelled: A.U.R.A.\'s ethics and her adversarial acts (vents, locked decks), premonitions, the far scan (2 energy), Eden\'s valley (players fly straight to the light), settling, the copy of Earth beyond "fight out", saves and reloads.',
     'Trips: careful and A.U.R.A.-heavy players make one trip a world (the site first, else a find showing 25 % or less; a clue always), the optimizer up to two finds worth it, greedy and reckless every find.',
     'Station walks use BoardingParty\'s own headless rules (A.U.R.A.\'s guide, except the optimizer, who walks its best plan).',
-    'Minutes are the seconds per routine in models.js SECONDS added up (assumptions until the browser runs time them); the routine cuts C1, C4, C5 and C6 are live, the result card for repeats (step 6) is not (models.js CUTS).',
+    'Minutes are the seconds per routine in models.js SECONDS added up (assumptions until the browser runs time them); the routine cuts C1, C4, C5 and C6 are live, and so is the result card for repeats (step 6, models.js CUTS).',
+    'Step 8: stress works through the person: Vance\'s and Mira\'s traits strike a way only with them down (Mira\'s careful way always, no coin), Mira under stress aboard scans no ground, OBSESSED only with her down, Aris under stress stays with the hurt, HOARDER repairs cost NEW_LOOK_ECONOMY.HOARDER_REPAIR, a site story\'s accident hurts one of the team that went (GameState.tripTeam; who a choice needs is anyone aboard, as before). The fuel depot at a docked station: careful when energy is 60 or less and 40 salvage is left after, greedy always, the optimizer when most of its energy fits; reckless and A.U.R.A.-heavy never.',
+    "Each player chooses its way on the glass before the team goes (the find's rows: NSOrbit.way), as it chooses on a card; GO DOWN shows that way's odds. The first time an event shows in a run its full card plays (the player may switch); after that the glass's way resolves into a short result card with no choice (App.tripCardPlan), so a death there is readable only through GO DOWN.",
 ];
 
 function args(argv) {
@@ -89,7 +94,7 @@ async function main() {
         for (const style of o.styles || STYLE_ORDER) {
             const runs = [];
             for (let i = 0; i < o.runs; i++) {
-                const r = await playRun(game, style, o.seed + i, { void: o.void, port: o.port, unlock: o.unlock, off: o.off });
+                const r = await playRun(game, style, o.seed + i, { void: o.void, unlock: o.unlock, off: o.off });
                 runs.push(r);
                 if (log) log.write(JSON.stringify(r) + '\n');
                 if ((i + 1) % 250 === 0) process.stderr.write(`  ${style}: ${i + 1}/${o.runs} (${Math.round((Date.now() - t0) / 1000)} s)\n`);
@@ -99,7 +104,7 @@ async function main() {
         if (log) await new Promise(resolve => log.end(resolve));
     }
     const meta = { label: o.label, when: new Date().toISOString().slice(0, 16).replace('T', ' '), runs: o.runs, seed: o.seed, secs: o.from ? `re-read from ${String(o.from).split(',').map(f => path.basename(f)).join(', ')}` : `${Math.round((Date.now() - t0) / 1000)} s`,
-        standIns: [o.void ? 'the dark leg' : null, o.port ? 'Last Port' : null, o.unlock ? 'never lock (--unlock)' : null].filter(Boolean).join(', ') || 'none',
+        standIns: [o.unlock ? 'never lock (--unlock)' : null].filter(Boolean).join(', ') || 'none',
         off: [...o.off].map(k => `${k}: ${SWITCHES[k]}`), stories: storiesBy, notes: NOTES };
     const out = report.text(results, meta);
     if (o.out) { fs.mkdirSync(path.dirname(path.resolve(o.out)), { recursive: true }); fs.writeFileSync(o.out, out); }

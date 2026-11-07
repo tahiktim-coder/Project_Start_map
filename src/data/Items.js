@@ -109,7 +109,7 @@ const ITEMS = {
         id: 'medkit', name: 'Field Medkit', type: 'CONSUMABLE', value: 25,
         desc: 'A sealed trauma kit. Heals one injured crew member.',
         onUse: (state) => {
-            const hurt = state.crew.find(c => c.status === 'INJURED');
+            const hurt = state.crew.find(c => state.treatable(c));   // the new look's hunger-sick: only food mends them
             if (!hurt) return "Nobody is hurt. The kit stays sealed.";
             hurt.status = 'HEALTHY';
             return `${hurt.name} is patched up and back on duty.`;
@@ -254,7 +254,7 @@ const ITEMS = {
         id: 'bio_sample_rare', name: 'Rare Bio-Sample', type: 'CONSUMABLE', value: 90,
         desc: 'A rare living sample that speeds up healing. Heals one injured crew member.',
         onUse: (state) => {
-            const injured = state.crew.filter(c => c.status === 'INJURED');
+            const injured = state.crew.filter(c => state.treatable(c));   // the new look's hunger-sick: only food mends them
             if (injured.length === 0) return "Nobody is injured right now.";
             const target = injured[0];
             target.status = 'HEALTHY';

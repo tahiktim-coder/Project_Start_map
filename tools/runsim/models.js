@@ -11,11 +11,13 @@ const { auraDocking } = require('./docking');
 // without. decks: what a broken deck gets. worlds: which worlds of the route are taken. trips: which finds get a trip.
 // strange: "Fly closer" at a strange site. pilot: who flies the landings, the jumps and the breach.
 const STYLES = Object.freeze({
-    careful: { label: 'Careful', cards: 'kind', way: 'careful', team: 'proposal', supper: 'rotate', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'good' },
-    greedy: { label: 'Greedy', cards: 'resources', way: 'boldForSupply', team: 'proposal', supper: 'accept', decks: 'cheap', worlds: 'all', trips: 'all', strange: true, pilot: 'good' },
-    reckless: { label: 'Reckless', cards: 'random', way: 'bold', team: 'random', supper: 'same', decks: 'never', worlds: 'random', trips: 'all', strange: true, pilot: 'poor' },
-    aura: { label: 'A.U.R.A.-heavy', cards: 'first', way: 'careful', team: 'proposal', supper: 'accept', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'aura' },
-    optimizer: { label: 'Optimizer', cards: 'net', way: 'expected', team: 'lowestRisk', supper: 'best', decks: 'cheapest', worlds: 'payoff', trips: 'payoff', strange: false, pilot: 'good' },
+    careful: { label: 'Careful', cards: 'kind', way: 'careful', team: 'proposal', supper: 'rotate', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'good', depot: 'low' },
+    greedy: { label: 'Greedy', cards: 'resources', way: 'boldForSupply', team: 'proposal', supper: 'accept', decks: 'cheap', worlds: 'all', trips: 'all', strange: true, pilot: 'good', depot: 'always' },
+    reckless: { label: 'Reckless', cards: 'random', way: 'bold', team: 'random', supper: 'same', decks: 'never', worlds: 'random', trips: 'all', strange: true, pilot: 'poor', depot: 'never' },
+    aura: { label: 'A.U.R.A.-heavy', cards: 'first', way: 'careful', team: 'proposal', supper: 'accept', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'aura', depot: 'never' },
+    optimizer: { label: 'Optimizer', cards: 'net', way: 'expected', team: 'lowestRisk', supper: 'best', decks: 'cheapest', worlds: 'payoff', trips: 'payoff', strange: false, pilot: 'good', depot: 'payoff' },
+    // depot (step 8, NSOrbit's "Fuel depot" at a docked station): 'low' when energy is low and a repair's salvage is left,
+    // 'always', 'never' (the plan's "extras: —"), 'payoff' when most of its energy fits and some salvage is left (policy.wantsDepot)
     // two more, only to check the model against cardsim.js's tables (tension/out/model-final2.txt): its careful/pragmatic (cardsim's
     // own worth(), policy.js cardsimWorth) and lean/kind; carefulPragmatic is also the plan's "pragmatic" in the card-gap guard
     carefulPragmatic: { label: 'Careful, pragm.', cards: 'cardsim', way: 'careful', team: 'proposal', supper: 'rotate', decks: 'fix', worlds: 'reserve', trips: 'safe', strange: false, pilot: 'good' },
@@ -39,6 +41,15 @@ function corridorResult(pilot, rnd) {
     const r = rnd(), scrapes = r < 0.9 ? 0 : r < 0.99 ? 1 : 2;
     const saved = Math.max(0, Math.min(7, Math.round(4.7 + gauss(rnd) * 1.2) - scrapes));
     return { scrapes, energyDelta: saved, auraFlew: false, damagedRooms: [], hulls: [] };
+}
+/** After the flight (the new look's jump into sector 5, Corridor.js THE DARK): how many hours the black lasts, by who flies,
+    measured 2026-10-31 through the real game in muted Chrome (pilot bots; scratchpad lpv/final.log): careful 26-27 s of black
+    (6 hours), flat out 17 s (4 hours), slow or A.U.R.A. 46 s (11 hours). Its bill is the flight's own rule (VOID.cost): a
+    ration a living person a day of it, at least one; all crew +1 stress from 9 hours. The result's void, as the flight gives it. */
+const DARK = Object.freeze({ hours: { good: 6, poor: 4, aura: 11 }, day: 24, stress: 9 });
+function darkResult(pilot, living) {
+    const hours = DARK.hours[pilot] || DARK.hours.good;
+    return { hours, rations: -Math.max(1, Math.ceil(living * hours / DARK.day)), stress: hours >= DARK.stress ? 1 : 0, blackSecs: 0, darkHits: 0 };
 }
 /** The landing (LanderGame). Player grades are assumptions (the plan's D1): good 60/35/5 soft/rough/crash, poor 15/45/40.
     A.U.R.A.'s: her own autopilot run headless on that world's own ground (tools/runsim/lander.js); 'rough' if that fails. */
@@ -90,23 +101,27 @@ const SECONDS = Object.freeze({
     teamPick: 5, landingFull: 22, landingAura: 16,   // the hatch; the drop flown by the player, or watched
     walkOut: 5.6,                                    // the walk-out after touchdown (C4: the game's NEW_LOOK_ECONOMY.WALK_OUT_MS)
     tripCard: 16, resultCard: 9, tripBack: 4,        // the trip's card; a repeat's result card (step 6); the shuttle home
+    wayPick: 2,                                      // a way chosen on the glass other than the one it marks (step 6: a click on its row)
     secondTrip: 6, secondTripCut: 2,                 // the hatch again for another find at the same stop (C5: nobody walks to it)
     wreck: 35, torch: 20, page: 20, dating: 25,      // our wrecks: the story card, the door, a found page, dating the disc
     site: 30, strange: 30, station: 45, stationCard: 20, mine: 20, skim: 4, call: 25, moment: 25, deckChoice: 5,   // station: the picker and the walk
+    depot: 4,                                        // the fuel depot (step 8): a click, like Refuel
     dock: { full: 59, quick: 21 },                   // the new look's flown dock (Bring Her In), Dock click to Continue: the first of a run
                                                      //   (or a story station's) the whole approach, the rest routine; measured 2026-10-30
                                                      //   (careful 59 / 59, A.U.R.A. 20, careful 21-22, careless 15)
                                                      //   (station was 75 with DockingGame's dock in it)
     leave: 3, jumpBurn: 6, corridor: { good: 49, poor: 30, aura: 45 }, jumpFault: 14, campfire: 40,   // corridor: measured flight times
+    dark: { good: 28, poor: 20, aura: 65 },          // After the flight: the dark jump's seconds over an ordinary flight (measured 2026-10-31)
     supper: 8, supperShort: 14, supperTable: 8, supperMore: 5,   // supper; short; the table moment (Aris, two chips); a second pick
     throwSequence: 95, burnGauge: 25, breach: 50, reserveCard: 8, askJump: 4,
 });
 // which of the plan's routine cuts are live: step 3's four are (C1 autoScan, C4 walkOut, C5 repeatTrip, C6 bridgeHold);
 // C4 and C6 take their seconds from the game's table (NEW_LOOK_ECONOMY.WALK_OUT_MS, HOLD_SEEN_MS: rc.ECON), never a copy;
-// step 6 turns on resultCard. The scan itself always runs as the game runs it (stop.js visit): only its seconds follow C1
-const CUTS = { autoScan: true, walkOut: true, repeatTrip: true, bridgeHold: true, resultCard: false };
+// step 6's resultCard is live too: an event seen before this run has no card, the way chosen on the glass resolves into a short
+// result card (App.tripCardPlan). The scan itself always runs as the game runs it (stop.js visit): only its seconds follow C1
+const CUTS = { autoScan: true, walkOut: true, repeatTrip: true, bridgeHold: true, resultCard: true };
 
 // A.U.R.A.'s whole dock in the new look (Bring Her In, src/newscreen/dock/DockFlight.js DOCK.energy): her share of the flying
 const DOCK_AURA_ENERGY = 4;
 
-module.exports = { STYLES, STYLE_ORDER, VALUE, SAFE_TRIP_RISK, corridorResult, landingResult, breachResult, burnResult, dockingGrade, SECONDS, CUTS, DOCK_AURA_ENERGY };
+module.exports = { STYLES, STYLE_ORDER, VALUE, SAFE_TRIP_RISK, corridorResult, darkResult, landingResult, breachResult, burnResult, dockingGrade, SECONDS, CUTS, DOCK_AURA_ENERGY };

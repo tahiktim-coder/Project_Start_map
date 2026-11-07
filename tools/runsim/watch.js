@@ -27,9 +27,9 @@ function watch(rc) {
     const realReserve = app.flyOnReserve;
     app.flyOnReserve = function () { R.counts.reserveWarps += 1; sec(rc).reserve += 1; return realReserve.call(this); };
     const realCampfire = app.showCampfireEvent;
-    app.showCampfireEvent = function (done) {                                       // its card is told apart from the others while it is up
-        cur.campfire = true;
-        return realCampfire.call(this, (...a) => { cur.campfire = false; return done(...a); });
+    app.showCampfireEvent = function (done, ...rest) {                              // its card is told apart from the others while it is up
+        cur.campfire = true;                                                        // (rest: the new look's talk before the jump, App.talkBeforeJump)
+        return realCampfire.call(this, (...a) => { cur.campfire = false; return done(...a); }, ...rest);
     };
 }
 
@@ -42,13 +42,31 @@ function catchErrors(game, R) {
     };
 }
 
-/** GameState.emitUpdates, wrapped: where energy, food and salvage came from and went, and each person's stress. */
+/** GameState.emitUpdates, wrapped: where energy, food and salvage came from and went, each person's stress, and who got
+    over hunger sickness where (open call 3: only a supper they eat mends it; anywhere else is counted as a rule error). */
 function watchStock(rc) {
     const { state, R, cur, lastStock, lastStress } = rc;
-    const realEmit = state.emitUpdates;
+    const realEmit = state.emitUpdates, sick = new Set();
+    const realKeep = state.keepHungerSick;                                          // a treatment that landed on the hunger-sick (and was
+    if (typeof realKeep === 'function') state.keepHungerSick = function () {        //   undone): every one picks with treatable(), so none should
+        const back = realKeep.call(this) || [];
+        back.forEach(() => {
+            R.counts.healsOnHungerSick += 1;
+            const at = (cur.lastCard && cur.lastCard.title) || cur.src || (cur.trip ? 'trip' : cur.phase);
+            R.healsOnHungerSick[at] = (R.healsOnHungerSick[at] || 0) + 1;
+        });
+        return back;
+    };
     state.emitUpdates = function () {
         realEmit.call(this);
         const src = cur.src || (cur.trip ? 'trip' : cur.phase);
+        this.crew.forEach(c => {
+            if (c._nsHungerSick && c.status === 'INJURED') { sick.add(c.name); return; }
+            if (!sick.has(c.name)) return;
+            sick.delete(c.name);
+            if (c.status === 'DEAD') return;
+            R.counts[src === 'supper' ? 'hungerSickMended' : 'hungerSickElsewhere'] += 1;
+        });
         ['energy', 'rations', 'salvage'].forEach(k => {
             const v = Math.round(Number(this[k]) || 0), d = v - lastStock[k];
             if (d) R.flow[k][src] = (R.flow[k][src] || 0) + d;
@@ -59,6 +77,7 @@ function watchStock(rc) {
             const v = c.stress || 0, d = v - (lastStress[c.name] || 0);
             if (d) { const book = d > 0 ? R.stress.up : R.stress.down; book[src] = (book[src] || 0) + Math.abs(d); }
             lastStress[c.name] = v;
+            if (v >= 1 && !(R.stress.peak[c.name] >= 1)) R.stress.first1.push({ who: c.name, sector: this.currentSector, at: v, src });   // the stress-1 line (GameState.stressOneBarks; at 2 the trait's own)
             R.stress.peak[c.name] = Math.max(R.stress.peak[c.name] || 0, v);
         });
     };

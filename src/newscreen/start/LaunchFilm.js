@@ -5,7 +5,11 @@
    crowd murmur and the launch's thump, rumble and roar (start/FilmSound.js). A click, Esc, Enter or Space skips it (a
    short dither to black); it resolves at the end either way. The game's music pauses for the film and comes back after.
    Source: the player of prototypes/films/launch.html (clock, overlay, dither fade, fit, skip, launchScore), its ids
-   prefixed ns-film-, no "Watch again", no URL reads. Its look is injected here once (IBM Plex, the slice's tokens).
+   prefixed ns-film-, no "Watch again", no URL reads. Its look is injected here once, every value from tokens.css.
+   Look pass B11: the broadcast says "launch yard" once (C09: the bug is "Exodus Programme" alone, the first strap has no
+   kicker); the clock hangs a fixed 8 --u under the bug, so they never overlap; the clock in Plex Mono 400; every word
+   14 px or more; the LIVE dot stays lit under reduced motion; the skip is the film skip (the one corner hint, on the
+   window's corner); a window that is not a whole number of film pixels gets the dock cut's 1 px hairline round the film.
    Loaded only when the new-screen switch is on. Needs NSPaint, NSLaunchArt; NSFilmSound if there is to be sound.
 
    window.NSLaunch (frozen)
@@ -22,31 +26,38 @@
     const { AW, AH, DUR, LINES, COUNT, LIVE_ENDS, FADE, CLIMB_AT } = A;
     const FADE_IN = 900, SKIP_MS = 360, SKIP_GUARD_MS = 400, BUILD_GAP_MS = 30, MAX_DT = 100, SKIP_HINT_MS = 4000;
     const SKIP_KEYS = ['Escape', 'Enter', ' '];
+    const mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    const still = () => !!(mq && mq.matches);
 
     const CSS = `
-.ns-film { position: fixed; inset: 0; z-index: 5000; background: #05070a; overflow: hidden; cursor: pointer; user-select: none; -webkit-user-select: none;
-    --ink: #05070a; --text: #e4e4e0; --dim: #8b8d90; --warm: #f08c2e; --live: #e0453a; --u: 3px;
-    --f-ui: 'IBM Plex Sans Condensed', 'Arial Narrow', sans-serif; --f-text: 'IBM Plex Sans', system-ui, sans-serif; --f-num: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
-    color: var(--text); font: 400 15px/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }
+.ns-film { position: fixed; inset: 0; z-index: 5000; background: var(--ink); overflow: hidden; cursor: pointer; user-select: none; -webkit-user-select: none;
+    --u: 3px; color: var(--text); font: 400 var(--fs-prev)/1.4 var(--f-text); -webkit-font-smoothing: antialiased; }
 .ns-film p { margin: 0; }
 .ns-film-frame { position: absolute; overflow: hidden; }
+.ns-film-frame.is-framed { box-shadow: 0 0 0 1px #1a2026; }   /* the window is not a whole number of film pixels: the dock cut's hairline, so it is a screen on purpose */
 .ns-film-art { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
 .ns-film .gfx { position: absolute; pointer-events: none; opacity: 0; will-change: opacity; }
 #ns-film-live { left: calc(var(--u) * 14); top: calc(var(--u) * 12); display: flex; align-items: center; gap: calc(var(--u) * 2.4);
-    font: 600 max(12px, calc(var(--u) * 5.2))/1 var(--f-ui); letter-spacing: 0.2em; color: var(--text); text-shadow: 0 1px 0 var(--ink); }
-#ns-film-live i { width: max(5px, calc(var(--u) * 2.6)); height: max(5px, calc(var(--u) * 2.6)); border-radius: 50%; background: var(--live); box-shadow: 0 0 calc(var(--u) * 3) rgba(224, 69, 58, 0.6); }
+    font: 600 max(var(--fs-floor), calc(var(--u) * 5.2))/1 var(--f-ui); letter-spacing: 0.2em; color: var(--text); text-shadow: var(--shadow); }
+#ns-film-live i { width: max(5px, calc(var(--u) * 2.6)); height: max(5px, calc(var(--u) * 2.6)); border-radius: 50%; background: var(--alarm); box-shadow: 0 0 calc(var(--u) * 3) color-mix(in srgb, var(--alarm) 60%, transparent); }
 #ns-film-live i.off { opacity: 0.25; }
-#ns-film-net { right: calc(var(--u) * 14); top: calc(var(--u) * 12); text-align: right; font: 500 max(12px, calc(var(--u) * 4.4))/1.25 var(--f-ui);
-    letter-spacing: 0.24em; text-transform: uppercase; color: rgba(228, 228, 224, 0.78); text-shadow: 0 1px 0 var(--ink); }
-#ns-film-clock { right: calc(var(--u) * 14); top: calc(var(--u) * 24); font: 500 max(18px, calc(var(--u) * 9))/1 var(--f-num); letter-spacing: 0.04em;
-    color: var(--text); text-shadow: 0 1px 0 var(--ink), 0 0 calc(var(--u) * 6) rgba(5, 7, 10, 0.8); }
-#ns-film-clock small { font: 500 max(12px, calc(var(--u) * 4.4))/1 var(--f-ui); letter-spacing: 0.22em; color: var(--dim); margin-right: calc(var(--u) * 2); vertical-align: middle; }
+/* top right: the programme's bug, and under it, a fixed gap down, the clock (they never overlap) */
+.ns-film-tr { position: absolute; right: calc(var(--u) * 14); top: calc(var(--u) * 12); display: grid; justify-items: end; gap: calc(var(--u) * 8); pointer-events: none; }
+.ns-film-tr .gfx { position: static; }
+#ns-film-net { text-align: right; font: 500 max(var(--fs-floor), calc(var(--u) * 4.4))/1.25 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--text-2); text-shadow: var(--shadow); }
+#ns-film-clock { font: 400 max(18px, calc(var(--u) * 9))/1 var(--f-num); letter-spacing: 0.04em; color: var(--text); text-shadow: var(--shadow), var(--halo); white-space: nowrap; }
+#ns-film-clock small { font: 500 max(var(--fs-floor), calc(var(--u) * 4.4))/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); margin-right: calc(var(--u) * 2); vertical-align: middle; }
 #ns-film-lt { left: calc(var(--u) * 14); bottom: calc(var(--u) * 16); max-width: max(420px, calc(var(--u) * 330)); padding: calc(var(--u) * 3.4) calc(var(--u) * 6) calc(var(--u) * 3.8);
-    background: linear-gradient(90deg, rgba(5, 7, 10, 0.9), rgba(5, 7, 10, 0.72)); border-left: max(2px, calc(var(--u) * 1.2)) solid var(--warm); }
-#ns-film-lt .kicker { margin: 0 0 calc(var(--u) * 1.4); font: 500 max(12px, calc(var(--u) * 4.2))/1 var(--f-ui); letter-spacing: 0.24em; text-transform: uppercase; color: var(--dim); }
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ink) 90%, transparent), color-mix(in srgb, var(--ink) 72%, transparent)); border-left: max(2px, calc(var(--u) * 1.2)) solid var(--warm); }
+#ns-film-lt .kicker { margin: 0 0 calc(var(--u) * 1.4); font: 500 max(var(--fs-floor), calc(var(--u) * 4.2))/1 var(--f-ui); letter-spacing: 0.22em; text-transform: uppercase; color: var(--dim); text-shadow: var(--shadow); }
+#ns-film-lt .kicker:empty { display: none; }
 #ns-film-lt .line { font: 400 max(17px, calc(var(--u) * 7.4))/1.25 var(--f-text); color: var(--text); }
-#ns-film-lt .names { margin: calc(var(--u) * 1.2) 0 0; font: 400 max(14px, calc(var(--u) * 5.6))/1.3 var(--f-text); color: rgba(228, 228, 224, 0.88); }
-#ns-film-skip { right: calc(var(--u) * 10); bottom: calc(var(--u) * 8); font: 400 max(12px, calc(var(--u) * 4))/1 var(--f-ui); letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+#ns-film-lt .names { margin: calc(var(--u) * 1.2) 0 0; font: 400 max(var(--fs-floor), calc(var(--u) * 5.6))/1.3 var(--f-text); color: var(--text-2); }
+/* the film skip: the one corner hint of every film (the launch, the stall, the sea of ships, the endings), on the window's corner */
+.ns-film-skip { position: absolute; right: max(16px, 4vw); bottom: max(16px, 5vh); margin: 0; padding: var(--s2) 0; font: 500 var(--fs-skip)/1 var(--f-ui); letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--dim); text-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity 180ms steps(3, end); }
+.ns-film-skip.is-in { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .ns-film-skip { transition: none; } }
 `;
     function injectCss() {
         if (document.getElementById('ns-film-css')) return;
@@ -105,10 +116,10 @@
         root.setAttribute('aria-label', 'Film: the launch of Exodus-9, as a live broadcast. Click to skip.');
         root.innerHTML = '<div class="ns-film-frame"><canvas class="ns-film-art" aria-hidden="true"></canvas>'
             + '<div class="gfx" id="ns-film-live"><i></i><span>LIVE</span></div>'
-            + '<div class="gfx" id="ns-film-net">Exodus Programme<br>Launch Yard</div>'
-            + '<div class="gfx" id="ns-film-clock"></div>'
-            + '<div class="gfx" id="ns-film-lt" aria-live="polite"><p class="kicker"></p><p class="line"></p><p class="names"></p></div>'
-            + '<div class="gfx" id="ns-film-skip">Click to skip</div></div>';
+            + '<div class="ns-film-tr"><div class="gfx" id="ns-film-net">Exodus Programme</div>'   // DRAFT (look pass): C09 says it once (the bug was "Exodus Programme / Launch Yard")
+            + '<div class="gfx" id="ns-film-clock"></div></div>'
+            + '<div class="gfx" id="ns-film-lt" aria-live="polite"><p class="kicker"></p><p class="line"></p><p class="names"></p></div></div>'
+            + '<p class="ns-film-skip" id="ns-film-skip">Click to skip</p>';
         document.body.appendChild(root);
         const q = s => root.querySelector(s);
         return { root, frame: q('.ns-film-frame'), canvas: q('canvas'), live: q('#ns-film-live'), liveDot: q('#ns-film-live i'), net: q('#ns-film-net'),
@@ -143,7 +154,7 @@
         function overlay() {
             const live = T < LIVE_ENDS && !ended && skipT == null, a = T < 600 ? 0 : 1;
             ui.live.style.opacity = ui.net.style.opacity = live ? a : 0;
-            ui.liveDot.classList.toggle('off', Math.floor(T / 900) % 2 === 1);
+            ui.liveDot.classList.toggle('off', !still() && Math.floor(T / 900) % 2 === 1);   // reduced motion: the dot stays lit
             const L = skipT == null ? LINES.find(l => T >= l.t0 && T < l.t1) : null;
             if (L !== shownLine) { shownLine = L; if (L) { ui.ltK.textContent = L.kicker; ui.ltL.textContent = L.line; ui.ltN.textContent = L.names || ''; ui.ltN.hidden = !L.names; } }
             ui.lt.style.opacity = L ? Math.min(1, (T - L.t0) / 350, (L.t1 - T) / 350) : 0;
@@ -152,7 +163,7 @@
                 ui.clock.innerHTML = '<small>' + (T < COUNT.zero ? 'T minus' : 'Lift-off') + '</small>00:' + String(left).padStart(2, '0');
                 ui.clock.style.opacity = 1;
             } else ui.clock.style.opacity = 0;
-            ui.skip.style.opacity = T < SKIP_HINT_MS && playing && !ended && skipT == null ? 0.85 : 0;
+            ui.skip.classList.toggle('is-in', T < SKIP_HINT_MS && playing && !ended && skipT == null);
         }
         function render(now) {
             const s = shotAt(T);
@@ -167,6 +178,7 @@
             const dpr = window.devicePixelRatio || 1, k = Math.max(1, Math.floor(Math.min(innerWidth * dpr / AW, innerHeight * dpr / AH)));
             const w = AW * k / dpr, h = AH * k / dpr;
             Object.assign(ui.frame.style, { width: w + 'px', height: h + 'px', left: Math.round((innerWidth - w) / 2) + 'px', top: Math.round((innerHeight - h) / 2) + 'px' });
+            ui.frame.classList.toggle('is-framed', innerWidth - w > 1 || innerHeight - h > 1);   // ink round it: the hairline frame
             ui.root.style.setProperty('--u', (k / dpr) + 'px');
         }
         function request() { frameId = window.FrameClock ? window.FrameClock.request(loop) : requestAnimationFrame(loop); }
