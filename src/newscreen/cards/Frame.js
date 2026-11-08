@@ -274,14 +274,16 @@
             }, STEP_UI) };
             point();
         }
-        function stopHold(isDone) {
+        function stopHold(isDone, asAgain) {
             const h = F.hold;
             if (!h) return;
             clearInterval(h.timer);
             F.hold = null;
-            if (!isDone) { setFill(h.i, 0); nudge(h.i); point(); }                // let go early: it drains in one step and blinks
+            if (isDone) return;
+            if (asAgain) { pressAgain(h.i); return; }                            // let go early (a click): a second press goes (playtest 2026-11-07: a click did nothing)
+            setFill(h.i, 0); nudge(h.i); point();                                // the pointer left it: it drains in one step and blinks
         }
-        /** Reduced motion: a final key asks to be pressed again (DESIGN 1.1). */
+        /** A final key let go early, or any press under reduced motion: it asks to be pressed again (DESIGN 1.1). */
         function pressAgain(i) {
             if (F.again && F.again.i === i && now() - F.again.t < AGAIN_MS) { F.again = null; pick(i); return; }
             keyEls[i].insertAdjacentHTML('beforeend', `<p class="ef-conseq is-again"><span>${PRESS_AGAIN}</span></p>`);
@@ -421,8 +423,8 @@
             const at = list.indexOf(document.activeElement);
             list[at < 0 ? (d > 0 ? 0 : list.length - 1) : (at + d + list.length) % list.length].focus({ preventScroll: true });
         }
-        function onKeyUp(e) { if (F.hold && F.hold.by === `key:${e.key}`) { e.preventDefault(); stopHold(false); } }
-        function onPointerUp() { if (F.hold && F.hold.by === 'pointer') stopHold(false); }
+        function onKeyUp(e) { if (F.hold && F.hold.by === `key:${e.key}`) { e.preventDefault(); stopHold(false, true); } }
+        function onPointerUp() { if (F.hold && F.hold.by === 'pointer') stopHold(false, true); }
         function onResize() { clearTimeout(F.resizeT); F.resizeT = setTimeout(() => { if (!F.finished) layout(); }, RESIZE_MS); }
 
         nextEl.addEventListener('click', () => { if (!guarded(F.shownAt)) advance(); });
