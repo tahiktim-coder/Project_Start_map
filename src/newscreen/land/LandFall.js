@@ -527,7 +527,7 @@
         });
     }
     /** Start the warm-up (a stop shown: NewScreen's 'stop:shown' calls it). */
-    function warm() { if (!warmT) warmTick(); }
+    function warm() { if (window.LandBurn) return; if (!warmT) warmTick(); }   // the burn (BurnFall.js) is the landing now: the meteor's place is no longer painted ahead at every stop
     /** Let it all go (the stop left: 'stop:hidden'). */
     function forget() { if (warmT) { clearTimeout(warmT); warmT = null; } warmKey = null; if (!live) freePlace(null); }
     if (window.NewScreen && window.NewScreen.on && window.NewScreen.bus) {

@@ -5184,8 +5184,11 @@ Then you're through.`,
      * o: { find (the game's find, or the blind trip's), site, wreck, unmarked (as LanderGame gets them), full }.
      */
     flyLanding(planet, team, o = {}) {
-        const M = window.MiniHost, LFall = window.LandFall;
-        if (!isNewScreen() || !M || !M.has('land-fall') || !LFall || !LFall.canFly(planet)) return null;
+        const M = window.MiniHost, LFall = window.LandFall, LBurn = window.LandBurn;
+        // the burn (src/newscreen/land/BurnFall.js, MiniHost 'land-burn': a rocket's soft landing, the same opts and result) is
+        // the landing when it loaded; the meteor is as it was behind it
+        const game = isNewScreen() && M && LBurn && M.has('land-burn') && LBurn.canFly(planet) ? 'land-burn' : 'land-fall';
+        if (!isNewScreen() || !M || !M.has(game) || (game === 'land-fall' && (!LFall || !LFall.canFly(planet)))) return null;
         const s = this.state, members = team || [], last = (s._nsTypesLanded || {})[planet.type], full = !!o.full || !last;
         const jaxon = members.some(m => (m.tags || []).includes('ENGINEER') && m.status !== 'DEAD');
         const carried = full ? null : last.auto && jaxon && LANDING_LIFT[last.grade] ? { grade: LANDING_LIFT[last.grade], raw: last.grade, auto: true, lifted: true }
@@ -5207,7 +5210,7 @@ Then you're through.`,
             if (first && r && !r.skipped && !tally.nsTold.includes('land:first')) tally.nsTold.push('land:first');
             return r;
         };
-        return M.play('land-fall', opts)
+        return M.play(game, opts)
             .then(r => (r && r.fallback ? lander() : flew(r)), err => { console.error(err); return lander(); })
             .catch(err => { console.error(err); return null; });
     }
