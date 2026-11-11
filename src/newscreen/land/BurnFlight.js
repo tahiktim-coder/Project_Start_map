@@ -32,13 +32,13 @@
         ALT0: 3900, ALT_SHORT: 1100,                     // where the long fall and the short drop begin (px over the site)
         V0: -230, V0_SHORT: -170,                        // the speed they begin at
         HS: 2600, VT0: 300,                              // the air thins with height; terminal speed at the ground in plain air (px/s)
-        NET: 27,                                         // all the engine has over the world's own pull (px/s²): under one g of braking. It barely wins
-        FUEL_OVER: 2.6,                                  // the tanks hold what A.U.R.A.'s own landing burns on this world, and this many seconds over
+        NET: 29,                                         // all the engine has over the world's own pull (px/s²): under one g of braking. It barely wins (27 until the first play in the game: "we almost hit")
+        FUEL_OVER: 3,                                  // the tanks hold what A.U.R.A.'s own landing burns on this world, and this many seconds over
         P0: 0.34, BUILD: 2.6,                            // at the catch it gives a third; it comes up to all it has over BUILD seconds
-        THR_MIN: 0.3, ENGAGE: 0.8, FOLLOW: 5, PAD: 10,   // the least a lit engine gives; lit early it idles there until she needs this share of NET; how fast it follows; the height she aims to be slow by
+        THR_MIN: 0.3, ENGAGE: 0.8, FOLLOW: 5, PAD: 22,   // the least a lit engine gives; lit early it idles there until she needs this share of NET; how fast it follows; the height she aims to be slow by (10 at first: she was only slow as she touched, so every landing looked like a near miss)
         IGN: 0.16, RELIGHT: 0.6,                         // the first catch takes a beat; a cold restart staggers for longer
         SPOOL_DOWN: 0.14, COOL: 1.6, WARM: 1.5, HOT: 0.5,   // let go: the flame dies fast, the power it had built drains slower; for about a second it is still hot and catches at once
-        CUE_AHEAD: 1.5, AURA_AHEAD: 0.3,                 // "Burn now" comes this long before the last good moment; A.U.R.A. herself lights almost on it
+        CUE_AHEAD: 1.9, AURA_AHEAD: 0.3,                 // "Burn now" comes this long before the last good moment (1.5 at first: a hand that took a second to answer landed on the edge of soft); A.U.R.A. herself lights almost on it
         K_IN: 3.4, K_AERO: 2, K_INST: 1.7, K_DAMP: 1.7, K_SLIDE: 70,   // tilt: our hand, the air righting her, the burn tipping her
         SOFT: 42, ROUGH: 96,                             // touchdown speeds (px/s): under SOFT is soft, over ROUGH is a crash
         SINK: 20, SINK_OF: Object.freeze({ soft: 20, rough: 62, crash: 128 }),   // the slow sink she holds over the last metres; what A.U.R.A. sets down at for a carried grade
