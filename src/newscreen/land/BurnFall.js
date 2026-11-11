@@ -155,7 +155,7 @@
         if (flies || c === 'Enter') e.preventDefault();
         if (e.repeat) return;                                                    // a fresh press only: a key held from the bridge never counts
         if ((c === 'Enter' || c === 'NumpadEnter' || c === 'Space' || c === 'Escape') && canGoOn()) { end(result); return; }
-        if (flies) { held.add(c); takeStick(); }
+        if (flies && phase === 'fall') { held.add(c); takeStick(); }               // (a press while the place is still being painted is nothing)
         if (c === 'KeyH') { if (RUN && !RUN.full && S && S.aura) takeStick(); else auraFlies(); }
     }
     const onKeyUp = e => held.delete(e.code);
@@ -165,10 +165,9 @@
         if (e.button > 0) return;
         e.preventDefault();
         if (canGoOn()) { end(result); return; }
-        if (phase !== 'fall') return;
+        if (phase !== 'fall' || !S || S.aura || S.t < 0.4) return;                // while she flies, the stick is taken by a key or her own key, never by a stray click
         try { root.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
         pointer = { ax: artX(e) };
-        takeStick();
     }
     function onPointerMove(e) { if (pointer) pointer.ax = artX(e); }
     const clearPointer = () => { pointer = null; };
@@ -179,7 +178,8 @@
     function begin() {
         S = BF.newFlight(B.W, RUN.full ? 'full' : 'short');
         S.aura = !RUN.full;                                                      // a routine drop: she sets it down unless we take the stick
-        phase = 'fall'; acc = 0; said = {};
+        S.markTo = B.ground.light.x;                                             // on the mark: from the level stretch to the light beside it
+        phase = 'fall'; acc = 0; said = {}; held.clear(); pointer = null;
         V.cam.x = S.x * 0.85;
         hideWords();
         readEl.hidden = false; keysEl.hidden = !(RUN.first && RUN.full); showAura(); hud(true);

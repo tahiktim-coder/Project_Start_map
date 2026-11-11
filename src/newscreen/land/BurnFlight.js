@@ -34,7 +34,8 @@
         SINK: 20, SINK_OF: Object.freeze({ soft: 20, rough: 62, crash: 128 }),   // the sink A.U.R.A. holds over the last metres; what she sets down at for a carried grade
         LEGS_AT: 430, STEP: 1 / 120,
         D: 5, FOOT_X: 29.5, LEG_L: 12,                   // art px per shuttle unit; her feet's half span; the bell over the feet
-        ON_MARK: 70, NEAR: 210,                          // px from the light: on it, a short walk, a long walk
+        ON_MARK: 70, NEAR: 210,                          // px from the level stretch and the light beside it: on it, a short walk, a long walk
+        EDGE_X: 560,                                     // how far to either side she can go (the painted land runs to 760)
         H0: 100, HA: 40,                                 // the land is drawn nearer than it is while we are high (gapf)
         LAG: 0.24,                                       // seconds of fall the engine's catch costs (the cue and A.U.R.A. lead by it)
     });
@@ -46,7 +47,7 @@
     /** A world as the flight reads it. gravity: the planet's (1 = ours); atm: LandingFlight.ATM's weight of air (0 none ..
         1.6); storm: a storm world; ground: LanderGame's ground kind; seed; risk: the find's (a risky find's level stretch is short). */
     function rulesFor(o) {
-        const atm = clamp(Number.isFinite(o.atm) ? o.atm : 0.4, 0, 1.6), storm = !!o.storm, seed = (o.seed >>> 0) || 7;
+        const storm = !!o.storm, atm = Math.max(storm ? 1 : 0, clamp(Number.isFinite(o.atm) ? o.atm : 0.4, 0, 1.6)), seed = (o.seed >>> 0) || 7;   // a storm always has air: its cloud and its rain go together
         const side = hash1(3, seed) < 0.5 ? -1 : 1, thick = storm || atm >= 1.2;
         const g = +(34 * Math.pow(clamp(Number.isFinite(o.gravity) ? o.gravity : 1, 0.55, 1.5), 0.55)).toFixed(2);
         return Object.freeze({
@@ -68,15 +69,14 @@
     function newFlight(W, mode) {
         const short = mode === 'short';
         return { W, mode: short ? 'short' : 'full', x: short ? W.start * 0.45 : W.start, y: short ? K.ALT_SHORT : K.ALT0, vx: 0, vy: short ? K.V0_SHORT : K.V0, th: 0, om: 0,
-            fuel: W.fuel, t: 0, burning: false, thr: 0, lit: false, ign: 0, kick: 0, fold: 0, thump: 0, q: 0, landed: null, ab: false, rise: 0, maxTh: 0, burnT: 0 };
+            fuel: W.fuel, t: 0, burning: false, thr: 0, lit: false, ign: 0, kick: 0, fold: 0, thump: 0, q: 0, landed: null, ab: false, rise: 0, maxTh: 0, burnT: 0, markTo: 0 };   // markTo: where the find's light stands beside the level stretch (the minigame sets it)
     }
     /** How far she still falls if the engine burned from now until the sink is slow (the air's drag and her tilt counted). */
     function stopDist(S) {
-        const W = S.W, g = W.g, c = Math.max(0.2, Math.cos(S.th));
+        const W = S.W, g = W.g, c = Math.max(0.7, Math.cos(S.th));               // tipped far over, she is stood up to burn: the engine can always stop her (never Infinity)
         let y = S.y, v = S.vy, d = 0;
         for (let i = 0; i < 600 && v < -K.SINK; i++) {
             const vt = K.VT0 / Math.sqrt(airAt(W, y)), a = -g + K.AT * c + g * (v / vt) * (v / vt);
-            if (a <= 0.5) return Infinity;
             v += a / 30; y += v / 30; d -= v / 30;
         }
         return d;
@@ -108,13 +108,15 @@
         // her tilt: our hand, the air righting her while she falls, the burn tipping her, the gusts
         const gust = W.gust * ((noise1(S.t * 1.7, W.seed) - 0.5) * 2 + (noise1(S.t * 4.3, W.seed + 11) - 0.5));
         const al = K.K_IN * clamp(inp.lean || 0, -1, 1) * (0.55 + 0.85 * thr) - K.K_AERO * q * S.th * (1 - 0.75 * thr) + K.K_INST * thr * S.th + gust * (0.22 + thr) * Math.min(1, rho * 1.6 + 0.25) - K.K_DAMP * S.om;
-        S.om += al * dt; S.th += S.om * dt;
+        const over = Math.abs(S.th) - 0.5;                                        // falling free, her own jets hold her from lying over (the thin air high up would not)
+        S.om += (al - (over > 0 ? 9 * over * Math.sign(S.th) * (1 - thr) : 0)) * dt; S.th += S.om * dt;
         if (Math.abs(S.th) > 1.25) { S.th = clamp(S.th, -1.25, 1.25); S.om = 0; }
         S.maxTh = Math.max(S.maxTh, Math.abs(S.th));
         const wind = W.wind + W.swing * Math.sin(S.t * 0.7);
         const ax = K.AT * Math.sin(S.th) * thr + K.K_SLIDE * q * S.th * (1 - thr) + (wind - S.vx) * rho * 0.3;
         const ay = -W.g + K.AT * Math.cos(S.th) * thr + (S.vy < 0 ? 1 : -1) * W.g * (S.vy / vt) * (S.vy / vt);
-        S.vx += ax * dt; S.vy += ay * dt; S.x += S.vx * dt; S.y += S.vy * dt;
+        const out = Math.abs(S.x) - K.EDGE_X;                                     // the land we painted ends: the air turns her back before it does
+        S.vx += (ax - (out > 0 ? (0.9 * out + 1.2 * S.vx * Math.sign(S.x)) * Math.sign(S.x) : 0)) * dt; S.vy += ay * dt; S.x = clamp(S.x + S.vx * dt, -K.EDGE_X - 110, K.EDGE_X + 110); S.y += S.vy * dt;
         S.rise = S.lit && S.vy > 25 ? S.rise + dt : 0;
         if (S.y - at(S.x) < K.LEGS_AT) S.fold = Math.min(1, S.fold + dt / 0.7);
         // the feet: left and right, each on its own ground
@@ -122,7 +124,8 @@
         if (S.y + K.FOOT_X * s <= gL || S.y - K.FOOT_X * s <= gR) {
             const vImp = Math.max(0, -S.vy), slope = Math.abs(gL - gR), tilt = Math.abs(S.th);
             const grade = vImp >= K.ROUGH || tilt > 0.6 ? 'crash' : vImp >= K.SOFT || tilt > 0.3 || Math.abs(S.vx) > 50 || slope > 10 ? 'rough' : 'soft';
-            const off = Math.abs(S.x), where = off <= K.ON_MARK ? 'spot' : off <= K.NEAR ? 'walk' : 'long';
+            const lo = Math.min(0, S.markTo || 0), hi = Math.max(0, S.markTo || 0), off = S.x < lo ? lo - S.x : S.x > hi ? S.x - hi : 0;   // from the level stretch to the light beside it
+            const where = off <= K.ON_MARK ? 'spot' : off <= K.NEAR ? 'walk' : 'long';
             S.landed = { grade, where, vImp, tilt, vx: S.vx, slope, off, at: S.t, fuel: S.fuel, restTh: Math.atan((gL - gR) / (2 * K.FOOT_X)) + (grade === 'crash' ? (S.th >= 0 ? 0.5 : -0.5) : 0), restY: (gL + gR) / 2 };
             S.burning = false; S.lit = false; S.thr = 0; S.ign = 0; S.kick = 0; S.vx = 0; S.vy = 0; S.om = 0; S.fold = 1;
             S.thump = grade === 'crash' ? 1.6 : grade === 'rough' ? 1 : 0.5;
