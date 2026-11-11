@@ -6,8 +6,10 @@
    The contract is App.flyLanding's, as the meteor's: opts { planet, sector, find, team, full, carried, first, drops,
    unmarked, risk, ... }; it resolves { grade: 'soft' | 'rough' | 'crash', raw, auto, lifted, offMark, marked, hurt, routine }
    and never rejects; { fallback: true } hands the landing to LanderGame.
-   A full drop (App.isFullDrop) is the long fall, flown by hand: hold to burn, left and right keep her straight; H or
-   "Let A.U.R.A. land" hands her the rest. A routine drop is the short one: A.U.R.A. sets it down at the grade carried from
+   A full drop (App.isFullDrop) is the long fall, flown by hand: when A.U.R.A. calls it, HOLD the burn to the ground (the
+   engine barely wins: it gives what she needs, up to all it has; it is never tapped), left and right keep her straight;
+   H or "Let A.U.R.A. land" hands her the rest. One number is shown: the burn left. After the touchdown nothing is said
+   for K.QUIET seconds; then the team steps out and the result is spoken. A routine drop is the short one: A.U.R.A. sets it down at the grade carried from
    the last full drop on that kind of world, as before; a fresh press of a flying key takes the stick, and then the
    landing is what was flown.
    Every line in SAY and KEY_WORDS is a stand-in (DRAFT): the designer writes the lines. The result's lines are the
@@ -23,8 +25,8 @@
     const K = BF.K, FW = BS.FW, FH = BS.FH, WHO = WD.WHO, NAME = WD.NAME;
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v), clamp01 = v => clamp(v, 0, 1);
     const FLY = ['Space', 'KeyW', 'ArrowUp'], LEFT = ['ArrowLeft', 'KeyA'], RIGHT = ['ArrowRight', 'KeyD'];
-    const BOOT_SAY_S = 1.1, BOOT_MAX_S = 9, SKIP_AFTER_S = 0.6, LINE_AT_S = 0.9, CRASH_LINE_AT_S = 1.1, HOLD_S = 2.7, FRAME_BUDGET_MS = 10, ERR_FRAMES = 5, LINE_S = 3.2;
-    const WALK = { from: 0.5, gap: 0.45, speed: 18, stand: 10, apart: 9 };   // the team steps out: seconds, px/s, px from the light
+    const BOOT_SAY_S = 1.1, BOOT_MAX_S = 9, SKIP_AFTER_S = 1.2, LINE_AT_S = K.QUIET, CRASH_LINE_AT_S = K.QUIET, HOLD_S = 2.7, FRAME_BUDGET_MS = 10, ERR_FRAMES = 5, LINE_S = 3.2;
+    const WALK = { from: K.QUIET - 0.3, gap: 0.45, speed: 18, stand: 10, apart: 9 };   // the team steps out as the quiet ends: seconds, px/s, px from the light
 
     // ── DRAFT lines (one idea, plain, 20 words at most; A.U.R.A. without contractions) and the keys' words ──
     const SAY = {
@@ -33,26 +35,26 @@
         burn: { who: 'aura', say: 'Burn now, Commander.' },                                  // DRAFT: the moment to hold
         late: { who: 'aura', say: 'We are too fast, Commander. Burn.' },                     // DRAFT: a second after it, still not burning
         tip: who => ({ who, say: "She's tipping. Straighten her." }),                       // DRAFT: tipped far over in the burn
-        climb: who => ({ who, say: "We're climbing. Ease off." }),                          // DRAFT: the burn is lifting us
+        early: { who: 'aura', say: 'Too early, Commander. Save the burn.' },                 // DRAFT: lit so early the tanks will not last
+        all: who => ({ who, say: "That's all she has. Hold it." }),                         // DRAFT: the engine is at its limit
         low: { who: 'aura', say: 'Three seconds of burn left.' },                            // DRAFT
         dry: { who: 'aura', say: 'The tanks are dry, Commander.' },                          // DRAFT
         aura: { who: 'aura', say: 'I have her, Commander.' },                                // DRAFT: she takes the stick
         routine: { who: 'aura', say: 'A short drop, Commander. I have her.' },               // DRAFT: a routine drop begins
         yours: { who: 'aura', say: 'She is yours, Commander.' },                             // DRAFT: we take the stick on a routine drop
     };
-    const KEY_WORDS = { hold: 'or the mouse: hold to burn', steer: 'keep her straight', fly: 'Fly her yourself', height: 'Height', fall: 'Fall', burn: 'Burn' };   // DRAFT (all but the aura key: LandWords.js KEY_WORDS.aura)
+    const KEY_WORDS = { hold: 'or the mouse: hold to burn', steer: 'keep her straight', fly: 'Fly her yourself', burn: 'Burn' };   // DRAFT (all but the aura key: LandWords.js KEY_WORDS.aura)
 
     const STAGE_HTML = '<div class="land-frame" id="burn-frame"><canvas class="land-art" id="burn-art" width="640" height="360" aria-hidden="true"></canvas>'
         + '<div class="land-words">'
         + '<div class="voice" id="burn-say" aria-live="polite"><div class="film-line"><img class="face" id="burn-face" alt="" hidden><div class="text">'
         + '<p class="who"><span class="ring" id="burn-ring" hidden></span><span id="burn-who"></span></p><p class="say" id="burn-line"></p></div></div></div>'
-        + '<dl class="burn-read" id="burn-read" hidden><div id="burn-row-h"><dt id="burn-dt-h"></dt><dd><b id="burn-h"></b><i>m</i></dd></div>'
-        + '<div id="burn-row-v"><dt id="burn-dt-v"></dt><dd><b id="burn-v"></b><i>m/s</i></dd></div><div id="burn-row-f" class="is-big"><dt id="burn-dt-f"></dt><dd><b id="burn-f"></b><i>s</i></dd></div></dl>'
+        + '<dl class="burn-read" id="burn-read" hidden><div id="burn-row-f" class="is-big"><dt id="burn-dt-f"></dt><dd><b id="burn-f"></b><i>s</i></dd></div></dl>'
         + '<div class="land-keys" id="burn-keys" hidden><span class="key-pair"><kbd>Space</kbd><span class="key-word" id="burn-key-hold"></span></span>'
         + '<span class="key-pair"><kbd>&larr;</kbd><kbd>&rarr;</kbd><span class="key-word" id="burn-key-steer"></span></span></div>'
         + '<button type="button" class="land-aura mini-btn" id="burn-aura" tabindex="-1" hidden><span id="burn-aura-word"></span></button>'
         + '</div></div>';
-    // the readouts are the ship's own (three numbers, the bridge's style: the token sheet's faces and colours); the rest is the meteor's landStyle
+    // the readout is the ship's own (one number, the burn left, in the bridge's style: the token sheet's faces and colours); the rest is the meteor's landStyle
     (function burnStyle() {
         if (document.getElementById('land-burn-style')) return;
         const st = document.createElement('style'); st.id = 'land-burn-style';
@@ -64,7 +66,7 @@
             '.land-stage .burn-read dt { font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--dim); }',
             '.land-stage .burn-read dd { margin: 0; text-align: right; white-space: nowrap; font: 400 var(--fs-key)/1.1 var(--f-num); color: var(--text); font-variant-numeric: tabular-nums; }',
             '.land-stage .burn-read dd b { font-weight: 400; }',                 // Mono's one loaded weight: no faux bold
-            '.land-stage .burn-read dd i { display: inline-block; width: 2.5em; margin-left: 0.35em; text-align: left; font: 400 var(--fs-chip)/1 var(--f-num); font-style: normal; color: var(--dim); }',
+            '.land-stage .burn-read dd i { display: inline-block; width: 1.2em; margin-left: 0.35em; text-align: left; font: 400 var(--fs-chip)/1 var(--f-num); font-style: normal; color: var(--dim); }',
             '.land-stage .burn-read .is-big dd b { font-size: 1.5em; color: var(--ui); }',
             '.land-stage .burn-read div[data-tone="warn"] dd b { color: var(--warm-br); }',
             '.land-stage .burn-read div[data-tone="bad"] dd b { color: var(--loss); }',
@@ -116,12 +118,7 @@
         const now = performance.now();
         if (!force && now - hudAt < 66) return;
         hudAt = now;
-        const h = Math.max(0, S.y - B.ground.at(S.x)), fall = Math.max(0, -S.vy);
-        $('h').textContent = Math.round(h * K.M_PER_PX).toLocaleString('en-US');
-        $('v').textContent = Math.round(fall * K.M_PER_PX).toLocaleString('en-US');
         $('f').textContent = S.fuel.toFixed(1);
-        const safe = Math.sqrt(2 * Math.max(4, K.AT - S.W.g) * 0.75 * h) + 46;
-        $('row-v').dataset.tone = fall > safe * 1.3 ? 'bad' : fall > safe ? 'warn' : '';
         $('row-f').dataset.tone = S.fuel <= 0 ? 'bad' : S.fuel <= 3 ? 'warn' : '';
     }
     function showAura() {                                                        // her key: "Let A.U.R.A. land" on a full drop; "Fly her yourself" while she flies a routine one
@@ -136,7 +133,7 @@
         if (S.aura) return BF.auraInput(S, B.ground.at, RUN.full ? 0 : K.SINK_OF[(RUN.carried && RUN.carried.grade) || 'soft']);
         const l = LEFT.some(c => held.has(c)), r = RIGHT.some(c => held.has(c));
         let lean = l !== r ? (l ? -1 : 1) : 0;
-        if (!lean && pointer) { const u = (pointer.ax - V.shipX) / 110; lean = Math.abs(u) < 0.22 ? 0 : clamp(u, -1, 1); }
+        if (!lean && pointer) { const u = (pointer.ax - V.shipX) / 80; lean = Math.abs(u) < 0.22 ? 0 : clamp(u, -1, 1); }
         return { burn: FLY.some(c => held.has(c)) || !!pointer, lean };
     }
     function auraFlies() {
@@ -146,7 +143,7 @@
     }
     function takeStick() {                                                       // a routine drop: a fresh press takes it from her
         if (phase !== 'fall' || !S || S.landed || !S.aura || RUN.full) return;
-        S.aura = false; RUN.took = true;
+        S.aura = false; S.sink = K.SINK; RUN.took = true;                        // what we fly is ours: her carried set-down speed is let go
         speak(SAY.yours); showAura();
     }
     function canGoOn() { return phase === 'down' && clock - downAt >= SKIP_AFTER_S; }
@@ -188,15 +185,16 @@
         else if (RUN.first) speak(B.W.deck ? SAY.fall : SAY.fallClear);
     }
     function talk() {
-        const h = S.y - B.ground.at(S.x), f = said, who = RUN.picked[0] || 'aura', other = RUN.picked[1] || who;
-        if (!f.seen && S.mode === 'full' && S.W.deck && S.y < S.W.deck[1] - 40) { f.seen = 1; if (RUN.drops < 3) speak(WD.LINES.light(who)); }
-        if (!S.burnT && !S.aura) {
-            if (!f.burn && BF.cueNow(S, h)) { f.burn = S.t; speak(SAY.burn); keysEl.classList.add('is-cue'); }
-            else if (f.burn && !f.late && S.t > f.burn + 1 && BF.lateNow(S, h)) { f.late = 1; speak(SAY.late); }
-        } else keysEl.classList.remove('is-cue');
+        const f = said, at = B.ground.at, who = RUN.picked[0] || 'aura', other = RUN.picked[1] || who;
+        if (!S.aura && !S.lit) {                                                 // the call, by a look ahead with the very engine she has (BurnFlight.arrive)
+            if (!f.burn && BF.cueNow(S, at)) { f.burn = S.t; speak(SAY.burn); }
+            else if (f.burn && S.t > f.burn + 0.9 && BF.lateNow(S, at) && (!f.late || S.t > f.late + 3.5)) { f.late = S.t; speak(SAY.late); }
+        }
+        keysEl.classList.toggle('is-cue', !!f.burn && !S.lit && !S.aura);
         if (S.aura) return;
-        if (S.burning && Math.abs(S.th) > 0.45 && !f.tip) { f.tip = 1; speak(SAY.tip(who)); }
-        if (S.rise > 0.7 && !f.climb) { f.climb = 1; speak(SAY.climb(other)); }
+        if (S.lit && !f.burn && S.burnT > 0.5 && S.burnT < 4 && (!f.early || S.t > f.early + 4)) { const a = BF.arrive(S, at, 0); if (a.dry && a.v > K.SOFT) { f.early = S.t; speak(SAY.early); } }
+        if (!f.all && S.fullT > 1.2) { f.all = 1; speak(SAY.all(other)); }
+        if (S.lit && Math.abs(S.th) > 0.45 && (!f.tip || S.t > f.tip + 4)) { f.tip = S.t; speak(SAY.tip(who)); }
         if (!f.low && S.fuel <= 3 && S.fuel > 0 && S.burnT > 0) { f.low = 1; speak(SAY.low); }
         if (!f.dry && S.fuel <= 0) { f.dry = 1; speak(SAY.dry); }
     }
@@ -296,7 +294,7 @@
         host.appendChild(root);
         frameEl = $('frame'); art = $('art'); ctx = art.getContext('2d'); say = $('say'); keysEl = $('keys'); auraEl = $('aura'); readEl = $('read');
         $('key-hold').textContent = KEY_WORDS.hold; $('key-steer').textContent = KEY_WORDS.steer;
-        $('dt-h').textContent = KEY_WORDS.height; $('dt-v').textContent = KEY_WORDS.fall; $('dt-f').textContent = KEY_WORDS.burn;
+        $('dt-f').textContent = KEY_WORDS.burn;
         const team = (Array.isArray(o.team) ? o.team : []).filter(m => m && m.id), well = team.filter(m => m.status === 'HEALTHY');
         const carried = o.full === false && o.carried && ['soft', 'rough', 'crash'].includes(o.carried.grade) ? Object.assign({}, o.carried) : null;
         RUN = { picked: team.map(m => m.id), first: !!o.first, full: o.full !== false, carried, unmarked: o.unmarked || null, drops: Number.isFinite(o.drops) ? o.drops : 0, took: false, opts: o,
@@ -351,7 +349,7 @@
             if (!node || !LW.canFly(node)) return;
             if (!warmTag || warmTag.id !== node.id) {
                 const world = LW.worldOf(node, s.currentSector), find = LW.findOf(world, null, {});
-                const W = BF.rulesFor({ gravity: world.gravity, atm: world.atm, storm: world.type === 'STORM_WORLD', ground: LG.internals.GROUND_OF[world.type], seed: world.seed, risk: 0 });
+                const W = BF.rulesFor({ gravity: world.gravity, atm: world.atm, storm: world.type === 'STORM_WORLD', ground: LG.internals.GROUND_OF[world.type], seed: world.seed, risk: 0, quick: true });
                 BS.keep([world.id]);
                 warmTag = { id: node.id, tag: BS.warm(world, W, BS.lookOf(world, find)) };
             }
@@ -364,7 +362,7 @@
     }
 
     const state = () => (live ? { phase, clock: +clock.toFixed(2), full: RUN.full, took: RUN.took, line: say && say.classList.contains('is-in') ? lastLine : null, keys: keysEl ? !keysEl.hidden : false, aura: !!(S && S.aura),
-        t: S ? +S.t.toFixed(2) : 0, h: S ? Math.round(S.y - B.ground.at(S.x)) : null, vy: S ? Math.round(S.vy) : null, th: S ? +S.th.toFixed(2) : null, fuel: S ? +S.fuel.toFixed(1) : null, lit: !!(S && S.lit),
+        t: S ? +S.t.toFixed(2) : 0, h: S ? Math.round(S.y - B.ground.at(S.x)) : null, vy: S ? Math.round(S.vy) : null, th: S ? +S.th.toFixed(2) : null, fuel: S ? +S.fuel.toFixed(1) : null, lit: !!(S && S.lit), thr: S ? +S.thr.toFixed(2) : null, cue: !!said.burn, wfuel: S ? S.W.fuel : null, deck: S ? S.W.deck : null,
         landed: S && S.landed ? { grade: S.landed.grade, where: S.landed.where, vImp: Math.round(S.landed.vImp), off: Math.round(S.landed.off) } : null, result: result ? Object.assign({}, result, { lineObj: undefined }) : null, walkers: walkers.filter(w => w.out).length } : null);
     window.LandBurn = Object.freeze({
         canFly: LW.canFly,
