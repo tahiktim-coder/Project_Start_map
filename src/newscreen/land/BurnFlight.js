@@ -16,7 +16,7 @@
      auraInput(S, at, sink) → inp  A.U.R.A.'s hands (sink: the speed she sets down at; a routine drop's carried grade)
      stopDist(S) → px              how far she still falls if the engine burned from now
      cueNow(S, h), lateNow(S, h)   is it time to say "burn"; is it nearly too late
-     gapf(d) → px                  how far below us something d px down is drawn (true for the last H0 px, nearer above)
+     gapf(d) → px                  how far below us something d px down is drawn (nearer than true, the more the higher)
      airAt(W, y) → 0..1.2          the air's weight at a height
 */
 (function () {
@@ -29,17 +29,17 @@
         HS: 2600, VT0: 300,                              // the air thins with height; terminal speed at the ground in plain air (px/s)
         AT: 74, FUEL: 11,                                // the engine's push (px/s²) and the seconds of burn aboard
         IGN: 0.16, SPOOL_UP: 0.22, SPOOL_DOWN: 0.14, HOT: 0.25,   // a beat before it catches, then it comes up; let go and it dies away; still hot it catches at once
-        K_IN: 3.4, K_AERO: 5.5, K_INST: 1.9, K_DAMP: 1.7, K_SLIDE: 70,   // tilt: our hand, the air righting her, the burn tipping her
+        K_IN: 3.4, K_AERO: 2, K_INST: 1.9, K_DAMP: 1.7, K_SLIDE: 70,   // tilt: our hand, the air righting her, the burn tipping her
         SOFT: 42, ROUGH: 96,                             // touchdown speeds (px/s): under SOFT is soft, over ROUGH is a crash
         SINK: 20, SINK_OF: Object.freeze({ soft: 20, rough: 62, crash: 128 }),   // the sink A.U.R.A. holds over the last metres; what she sets down at for a carried grade
         LEGS_AT: 430, STEP: 1 / 120,
-        D: 5, FOOT_X: 29.5, LEG_L: 12,                   // art px per shuttle unit; her feet's half span; the bell over the feet
+        D: 3.4, FOOT_X: 20, LEG_L: 8.2,                 // art px per shuttle unit; her feet's half span; the bell over the feet
         ON_MARK: 70, NEAR: 210,                          // px from the level stretch and the light beside it: on it, a short walk, a long walk
         EDGE_X: 560,                                     // how far to either side she can go (the painted land runs to 760)
-        H0: 100, HA: 40,                                 // the land is drawn nearer than it is while we are high (gapf)
+        HA: 90,                                          // the land is drawn nearer than it is, the higher we are (gapf)
         LAG: 0.24,                                       // seconds of fall the engine's catch costs (the cue and A.U.R.A. lead by it)
     });
-    const gapf = d => (d <= K.H0 ? d : K.H0 + K.HA * Math.log(1 + (d - K.H0) / K.HA));
+    const gapf = d => (d <= 0 ? d : K.HA * Math.log(1 + d / K.HA));           // round 3 ("ground appears too fast"): no true-scale stretch at the end, so the land comes up at a steady pace, never a rush
     // a smooth seeded noise for the gusts (no picture kit here)
     const hash1 = (i, s) => { let h = Math.imul(i ^ (s * 374761393), 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
     const noise1 = (t, s) => { const i = Math.floor(t), f = t - i, u = f * f * (3 - 2 * f); return lerp(hash1(i, s), hash1(i + 1, s), u); };
@@ -107,7 +107,7 @@
         S.burning = S.lit; S.q = q;
         // her tilt: our hand, the air righting her while she falls, the burn tipping her, the gusts
         const gust = W.gust * ((noise1(S.t * 1.7, W.seed) - 0.5) * 2 + (noise1(S.t * 4.3, W.seed + 11) - 0.5));
-        const al = K.K_IN * clamp(inp.lean || 0, -1, 1) * (0.55 + 0.85 * thr) - K.K_AERO * q * S.th * (1 - 0.75 * thr) + K.K_INST * thr * S.th + gust * (0.22 + thr) * Math.min(1, rho * 1.6 + 0.25) - K.K_DAMP * S.om;
+        const al = K.K_IN * clamp(inp.lean || 0, -1, 1) * (0.55 + 0.85 * thr) - K.K_AERO * q * S.th * (1 - 0.75 * thr) + K.K_INST * thr * S.th + gust * (0.9 + 0.3 * thr) * Math.min(1, rho * 1.6 + 0.25) - K.K_DAMP * S.om;
         const over = Math.abs(S.th) - 0.5;                                        // falling free, her own jets hold her from lying over (the thin air high up would not)
         S.om += (al - (over > 0 ? 9 * over * Math.sign(S.th) * (1 - thr) : 0)) * dt; S.th += S.om * dt;
         if (Math.abs(S.th) > 1.25) { S.th = clamp(S.th, -1.25, 1.25); S.om = 0; }

@@ -24,7 +24,7 @@
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v), clamp01 = v => clamp(v, 0, 1);
     const FLY = ['Space', 'KeyW', 'ArrowUp'], LEFT = ['ArrowLeft', 'KeyA'], RIGHT = ['ArrowRight', 'KeyD'];
     const BOOT_SAY_S = 1.1, BOOT_MAX_S = 9, SKIP_AFTER_S = 0.6, LINE_AT_S = 0.9, CRASH_LINE_AT_S = 1.1, HOLD_S = 2.7, FRAME_BUDGET_MS = 10, ERR_FRAMES = 5, LINE_S = 3.2;
-    const WALK = { from: 0.5, gap: 0.45, speed: 24, stand: 14, apart: 13 };   // the team steps out: seconds, px/s, px from the light
+    const WALK = { from: 0.5, gap: 0.45, speed: 18, stand: 10, apart: 9 };   // the team steps out: seconds, px/s, px from the light
 
     // ── DRAFT lines (one idea, plain, 20 words at most; A.U.R.A. without contractions) and the keys' words ──
     const SAY = {
@@ -164,6 +164,7 @@
     function onPointerDown(e) {
         if (e.button > 0) return;
         e.preventDefault();
+        try { window.focus(); root.focus({ preventScroll: true }); } catch (err) { /* the keys follow the click where the browser lets them */ }
         if (canGoOn()) { end(result); return; }
         if (phase !== 'fall' || !S || S.aura || S.t < 0.4) return;                // while she flies, the stick is taken by a key or her own key, never by a stray click
         try { root.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
@@ -213,7 +214,7 @@
         walkers = [];
         if (L.grade !== 'crash') {                                               // the team steps out toward the light, one at a time
             const lightX = B.ground.light.x, dir = lightX >= S.x ? 1 : -1;
-            RUN.picked.forEach((id, i) => walkers.push({ id, x: S.x + dir * 12, goal: lightX - dir * (WALK.stand + i * WALK.apart), dir, from: WALK.from + i * WALK.gap, t: 0, walking: false, out: false }));
+            RUN.picked.forEach((id, i) => walkers.push({ id, x: S.x + dir * 8, goal: lightX - dir * (WALK.stand + i * WALK.apart), dir, from: WALK.from + i * WALK.gap, t: 0, walking: false, out: false }));
         }
         const ids = RUN.picked, hurt = result.hurt, well = ids.find(id => id !== hurt);
         result.lineObj = L.grade === 'crash' ? (hurt ? (well ? WD.LINES.hurt(well, hurt) : WD.LINES.hurtAlone(hurt)) : WD.LINES.result('rough', 'spot', auraLanded, false)) : WD.LINES.result(result.grade, where, auraLanded, false);

@@ -146,7 +146,7 @@
             dust: [], embers: [], wasLit: false, layer: P.pixelLayer(FW + EDGE * 2, FH + EDGE * 2), fr: null, shipX: FW / 2 };
     }
     function camera(V, S, dt) {
-        const look = lerp(196, 148, clamp01(-S.vy / 380));                           // falling fast, she sits high: more of what is below
+        const look = lerp(170, 108, clamp01(-S.vy / 380));                           // falling fast, she sits high: more of what is below
         V.cam.fy += (Math.max(look, GROUND_Y - gapf(S.y)) - V.cam.fy) * Math.min(1, dt * 5);
         V.cam.x += (S.x * 0.85 - V.cam.x) * Math.min(1, dt * 3);
     }
@@ -245,14 +245,14 @@
         V.shipX = sx;
         let groundLit = 0, gHit = null;
         // the flame: a sputter while it catches, long and wide at the catch, then steady; it dies away when we let go
-        const flame = thr > 0.03 ? (68 + flick * 12) * (0.22 + 0.78 * thr) * (1 + 0.45 * kick) : sputter && flick > 0.35 ? 7 + flick * 13 : 0;
+        const flame = thr > 0.03 ? (122 + flick * 16) * (0.2 + 0.8 * thr) * (1 + 0.4 * kick) : sputter && flick > 0.35 ? 7 + flick * 13 : 0;
         if (flame > 0) {
             const wide = thr > 0.03 ? (0.5 + 0.5 * thr) * (1 + 0.3 * kick) : 0.4, hot = thr > 0.03 ? 0.62 + 0.38 * thr : 0.7;
             let reach = flame;                                                       // the flame stops at the ground
             if (under) for (let s2 = 6; s2 < flame + 40; s2 += 3) { const px = bx + dxA * s2, py = by + dyA * s2, wx = S.x + (px - sx); if (py >= gr(G.at(wx))) { reach = Math.min(flame, s2); gHit = { x: wx, y: G.at(wx), near: clamp01(1 - s2 / (flame + 40)) * thr }; break; } }
             for (let s2 = 0; s2 < reach; s2++) {
-                const k = s2 / flame, w = Math.max(0.6, ((1 - k) * 7.2 + 1.6) * wide + (vnoise(s2 / 5 - t * 26, t * 11, 3) - 0.5) * 3.2 * k);
-                for (let a = -Math.ceil(w); a <= Math.ceil(w); a++) { const e = Math.abs(a) / w; if (e <= 1) layer.tone(bx + dxA * s2 + dyA * a + EDGE, by + dyA * s2 - dxA * a + EDGE, RP.PLUME, (1.08 - k * 0.9) * (1 - e * e * 0.7) * hot); }
+                const k = s2 / flame, w = Math.max(0.6, (Math.pow(1 - k, 0.8) * 5.4 + 1.3) * wide + (vnoise(s2 / 7 - t * 26, t * 11, 3) - 0.5) * 3.4 * k);
+                for (let a = -Math.ceil(w); a <= Math.ceil(w); a++) { const e = Math.abs(a) / w; if (e <= 1) layer.tone(bx + dxA * s2 + dyA * a + EDGE, by + dyA * s2 - dxA * a + EDGE, RP.PLUME, (1.1 - k * 0.82) * (1 - e * e * 0.7) * hot); }
             }
             if (gHit && thr > 0.2) {
                 groundLit = gHit.near;
@@ -286,7 +286,7 @@
         ctx.drawImage(spr.canvas, Math.round(bx) - spr.ox, Math.round(by - SH.BELL * D) - spr.oy);
         if (!broken) { ctx.fillStyle = RP.AMBER.hex[3]; ctx.fillRect(Math.round(bx + spr.win[0]) - 1, Math.round(by - SH.BELL * D + spr.win[1]), 2, 2); }
         const MC = window.MiniCrew;
-        if (MC && Array.isArray(o.team)) o.team.forEach(m => { try { MC.small(ctx, m.id, scrX(m.x), gr(G.at(m.x)) + 1, { h: 24, pose: m.walking ? 'walk' : 'stand', t: m.t, facing: m.dir, suit: true, light: 1 }); } catch (err) { if (!V.crewErr) { V.crewErr = true; console.error('BurnScene: the team could not be drawn', err); } } });
+        if (MC && Array.isArray(o.team)) o.team.forEach(m => { try { MC.small(ctx, m.id, scrX(m.x), gr(G.at(m.x)) + 1, { h: 16, pose: m.walking ? 'walk' : 'stand', t: m.t, facing: m.dir, suit: true, light: 1 }); } catch (err) { if (!V.crewErr) { V.crewErr = true; console.error('BurnScene: the team could not be drawn', err); } } });
         // the dust she raises, the cloud that whips past in front
         for (let i = V.dust.length - 1; i >= 0; i--) {
             const d = V.dust[i]; d.life += dt;
