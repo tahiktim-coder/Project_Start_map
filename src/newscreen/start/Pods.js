@@ -202,7 +202,7 @@
         const heard = id => P.find(p => p.id === id).out && !T.firsts.some(f => f.key === 'first:' + id && !said(f.key));   // out, and their own first line said
         const L = S.lines, list = [];
         list.push({ key: 'hello', who: 'A.U.R.A.', text: L.greeting, ready: () => S.sel === 0 || P[0].openAt != null });   // C11: no "Sixty-one years." (the card has just said it)
-        if (S.aura.used) list.push({ key: 'aura', who: 'A.U.R.A.', text: DRAFT.aura, ready: () => true });
+        if (S.aura.used) list.push({ key: 'aura', who: 'A.U.R.A.', text: DRAFT.aura, ready: () => P.slice(1).some(p => !p.out) });   // only while someone is still in a pod (playtest 2026-11-07: said after all were up and talking)
         list.push({ key: 'teach', who: 'A.U.R.A.', text: DRAFT.teach, ready: () => P[0].out && !S.aura.used && !S.touched });
         const setup = { orders: () => P[0].out && sleeping >= 1 && (said('teach') || T.skipped.has('teach') || S.touched), eight: () => said('orders') && crewOut >= 1 && sleeping >= 1,
             jaxon8: () => said('eight') && heard('jaxon'), vance8: () => said('eight') && heard('vance') && sleeping >= 2, beacon: () => said('vance8') };
@@ -215,6 +215,8 @@
         const T = S.talk, open = b => !T.said.has(b.key) && !T.carried.has(b.key) && !T.skipped.has(b.key);
         if (S.touched && !T.said.has('teach') && T.busy !== 'teach') T.skipped.add('teach');   // the player found it out alone: no lesson
         const list = beats().filter(b => open(b) && alive(b.who));
+        const wake = list.find(b => b.key === 'aura' && b.ready());
+        if (wake) return wake;                                              // the player just asked: A.U.R.A. answers before anyone else talks
         const answer = list.find(b => ANSWERS.includes(b.key) && b.ready());
         if (answer) return answer;
         const first = T.firsts.find(open);

@@ -66,6 +66,9 @@
     const EASE = 12, RESCALE = 6, FRESH = 0.3, HOLD_DELAY = 0.35, HOLD_EVERY = 0.06, HOLD_FAST_AFTER = 1.1;
     const FLASH = 0.8, LINE_GAP = 2.6, TO_MAP = 2.2, READY_AFTER = 1.2, WIPE = 0.75, ZOOM = 0.9, TREND = 1.3, REACH = 1.8, END_ZOOM = 1.5;
     const T_LINE = 0.8, LINE_DUR = 1.5, T_FOUND = 2.3, T_PORT = 2.9, T_AURA = 3.6, BEND = 0.9, FADE = 0.7;   // the map's beats (s)
+    const READ_PER_WORD = 0.3, READ_BASE = 1.6, READ_MIN = 3.2, CAN_SET_MIN = 1.6;   // Voice.js's own reading time (newscreen/Voice.js readMs), in seconds
+    /** How long a line [who, text] stays the newest before the next one comes (s) (playtest 2026-11-07: too quick to read). */
+    const readSec = line => Math.max(READ_MIN, String(line && line[1] || '').split(/\s+/).filter(Boolean).length * READ_PER_WORD + READ_BASE);
     const IR = 34, PORT = [434, 218], TEXT_X = 392, GLOW_MAP = 62, GLOW_END = 30, BREATH = 4;
     const CLEAR_PX = 12, NOTE_PX = 14, NAME_PX = 16, KICKER_SCALE = 2, HUD_RIGHT = 25;   // (new look) css px between a note and a sprite; the notes' sizes; the scale the kicker needs; the chart's values end this many units right of its axis
 
@@ -551,17 +554,20 @@
             const isAnswer = last && Math.round(last.age) === wreck.age && Math.round(last.ly) === wreck.ly;
             const from = last && !isAnswer ? { y: Math.round(Math.min(last.age, range.y)), l: Math.round(Math.min(last.ly, range.l)) } : { y: 0, l: 0 };   // from the last fix, or from us
             s = { v: from, d: from, locked: false, moved: false, dragging: false, flash: 0, born: clock, rates: shuffle(RATES), swings: shuffle(SWINGS).map(k => (rnd() < 0.5 ? -k : k)) };
-            talk.intro.forEach((line, j) => (j ? sayLater(LINE_GAP * j, line) : ui.say(line[0], line[1])));
+            const at = startsOf(talk.intro, 0);
+            talk.intro.forEach((line, j) => (j ? sayLater(at[j], line) : ui.say(line[0], line[1])));
             showButtons();
         }
         const startWipe = () => { const snap = makeCanvas(); snap.getContext('2d').drawImage(ctx.canvas, 0, 0); wipe = { snap, t: 0 }; };
+        /** When each line of a talk starts (s), each after the one before has been read. */
+        function startsOf(lines, first) { return lines.reduce((out, line, j) => out.concat(j ? out[j - 1] + readSec(lines[j - 1]) : first), []); }
         function lock() {
-            const lastLine = 0.4 + (talk.locked.length - 1) * LINE_GAP;
+            const at = startsOf(talk.locked, 0.4), lastLine = at.length ? at[at.length - 1] : 0.4, lastRead = talk.locked.length ? readSec(talk.locked[talk.locked.length - 1]) : 0;
             gen++; queue = []; held = null;                 // an intro line still waiting would now be out of place
             s = { ...s, locked: true, dragging: false, flash: FLASH, d: { ...s.v } };
             points = plotted.concat(wreck); SOUND.lock(); showButtons();
-            talk.locked.forEach((line, j) => sayLater(0.4 + j * LINE_GAP, line));
-            if (reward) later(lastLine + TO_MAP, openMap);
+            talk.locked.forEach((line, j) => sayLater(at[j], line));
+            if (reward) later(lastLine + Math.max(TO_MAP, lastRead), openMap);
             else later(lastLine + READY_AFTER, () => { canContinue = true; showButtons(); });
         }
         function openMap() {
@@ -569,11 +575,13 @@
             mode = 'map'; m = { t: 0, set: false, setAt: 0, canSet: false, ready: false };
             showButtons();
             later(T_FOUND, SOUND.found);
+            const auraRead = readSec(['A.U.R.A.', M.dest.aura(reward.name)]);
+            const keyAfter = Math.max(CAN_SET_MIN, auraRead - (BEND + 0.3));   // the crew's line follows a click by BEND + 0.3 s: her line has its whole reading time either way
             later(T_AURA, () => {
                 ui.say('A.U.R.A.', M.dest.aura(reward.name));
-                if (!M.final) { m = { ...m, canSet: true }; showButtons(); }
+                if (!M.final) later(keyAfter, () => { if (mode === 'map' && !m.set) { m = { ...m, canSet: true }; showButtons(); } });   // her line is read before the key comes
             });
-            if (M.final) { sayLater(T_AURA + LINE_GAP, reward.line); later(T_AURA + LINE_GAP + 1.2, setReady); }
+            if (M.final) { sayLater(T_AURA + auraRead, reward.line); later(T_AURA + auraRead + 1.2, setReady); }
         }
         function setCourse() {
             m = { ...m, set: true, setAt: m.t, canSet: false };
@@ -585,7 +593,7 @@
             skyEnd(); startWipe(); mode = 'end'; endT = 0; canContinue = false;
             showButtons();
             later(ZOOM + TREND, SOUND.light); sayLater(t, END[0]);
-            later(t + LINE_GAP, () => { ui.say(END[1][0], END[1][1]); canContinue = true; showButtons(); });
+            later(t + readSec(END[0]), () => { ui.say(END[1][0], END[1][1]); canContinue = true; showButtons(); });
         }
         function advance() {
             if (wipe) return;                               // let the view finish moving

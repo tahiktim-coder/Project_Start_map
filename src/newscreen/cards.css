@@ -523,6 +523,11 @@ html.ns-on .enc-frame .ef-notes .ef-chips { gap: 2px var(--s4); }
 html.ns-on .enc-frame .ef-keys { display: flex; align-items: flex-start; gap: var(--s4) var(--s8); }
 html.ns-on .enc-frame .ef-keys > [hidden] { display: none; }
 html.ns-on .enc-frame .enc-decide { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: var(--s4) var(--s8); flex: 1 1 auto; min-width: 0; margin: 0; padding: 0; border: 0; animation: none; outline: none; }   /* three even columns: the keys keep one rhythm, chips stay under their own key */
+/* "Not yet" and three ways on (the talk before the jump into sector 5): "Not yet" keeps only its own width and the three held keys
+   share the rest of the one row, so the last key no longer drops to a second row and off a short window (playtest 2026-11-07) */
+@media (min-width: 1040px) {
+    html.ns-on .enc-frame .enc-decide:has(> .ef-key:nth-child(4):last-child):has(> .ef-key:first-child > .is-primary) { grid-template-columns: max-content repeat(3, minmax(0, 1fr)); column-gap: var(--s6); }
+}
 html.ns-on .enc-frame .ef-talk { display: flex; align-items: center; gap: var(--s6); margin-left: auto; }
 html.ns-on .enc-frame .ef-go { display: flex; }
 html.ns-on .enc-frame .ef-key { position: relative; display: grid; justify-items: start; align-content: start; gap: var(--s1); min-width: 0; }
