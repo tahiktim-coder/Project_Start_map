@@ -75,16 +75,17 @@
         let B = null, pOff = null, pOn = null, bD = null, shades = null, our = null, ot = null, lay = null, img = null, u32 = null, streakLayer = null;
         const inkPat = new Map();
 
-        // ── the work, in three jobs after the film's own (SeaFilm.js runs them while the ship stands still) ──
-        function frames() {
+        // ── the work, in small jobs after the film's own (SeaFilm.js runs them one at a time while the ship stands still) ──
+        const frameAt = still => { const o = mk(AW, AH); art.draw(o.g, T0, still, false); return o.g.getImageData(0, 0, AW, AH).data; };
+        function frameOff() {                                                    // the film's first whole frame, our lamp off; and its sky alone
             B = art.A.BG;
-            const frameAt = still => { const o = mk(AW, AH); art.draw(o.g, T0, still, false); return o.g.getImageData(0, 0, AW, AH).data; };
-            pOff = frameAt(false); pOn = frameAt(true);                           // the film's first whole frame, our lamp off, and steady (no beacon ticking)
+            pOff = frameAt(false);
             const base = mk(AW, AH);
             base.g.drawImage(B.canvas, 0, 0);
             P.twinkle(P.framer(base.g, AW, AH), B.stars, Math.floor(T0 / TICK) * TICK);
             bD = base.g.getImageData(0, 0, AW, AH).data;
         }
+        function frameOn() { pOn = frameAt(true); }                              // the same frame, our lamp steady and no beacon ticking
         function hulls() {                                                       // our own hull as SeaArt.js bakes it (ourSprite), at each light
             const len = quantLen(F / D0 * LEN_K), ang = quantDeg(HEAD_ANG) * Math.PI / 180, ht = len / 3.15, half = Math.ceil(len / 2 + ht + 3);
             let at = null;
@@ -137,7 +138,7 @@
             X.isDone = true;
         }
         const job = fn => () => { if (X.isDone) return; try { fn(); } catch (err) { console.error('NSSeaEntrance: its pictures failed; the film plays without it', err); X.isOk = false; X.isDone = true; } };
-        art.jobs.push(job(frames), job(hulls), job(pieces), job(check));
+        art.jobs.push(job(frameOff), job(frameOn), job(hulls), job(pieces), job(check));
 
         // ── the pieces, drawn ──
         function dimInk(ctx, a) {                                                 // ink over the whole picture, in the house dither (SeaArt.js dim)
