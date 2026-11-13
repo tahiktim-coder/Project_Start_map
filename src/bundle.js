@@ -1420,6 +1420,14 @@ function seededUnit(key) {
     return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 const FINAL_SECTOR = 6; // THE LIGHT — holds the light at the end of the heading; SECTOR_CONFIG defines nothing beyond it
+/** A sector as a careful run reaches it (the crew well), its worlds still ahead and the light ahead there to click. */
+const tryAtSector = (app, s, sector) => {
+    s.currentSector = sector;
+    s.sectorNodes = PlanetGenerator.generateSector(sector);
+    app.plantSectorPage();
+    s.energy = 60; s.rations = 14;
+    s.addLog(`Sector ${sector}${typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[sector] ? ' — ' + SECTOR_CONFIG[sector].name : ''}`);
+};
 // A try tab's moments (App.startTry, ?try=<kind>): each places a fresh run (the state just made by init()).
 const TRY_PLACES = {
     /** Last Port: sector 5 as a careful run reaches it (the disc drawing aboard, the crew well, one dock flown), the disc's
@@ -1434,15 +1442,12 @@ const TRY_PLACES = {
         s.energy = 60; s.rations = 14; s._docksFlown = 1;
         s.addLog(`Sector 5${typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[5] ? ' — ' + SECTOR_CONFIG[5].name : ''}`);
     },
-    /** After the flight: sector 4 as a careful run reaches it (the crew well), its worlds still ahead: click the light ahead
-        (then "Go anyway" if asked) and the jump into sector 5 is flown through the dark, then the supper in sector 5. */
-    void(app, s) {
-        s.currentSector = DARK_JUMP_TO - 1;
-        s.sectorNodes = PlanetGenerator.generateSector(s.currentSector);
-        app.plantSectorPage();
-        s.energy = 60; s.rations = 14;
-        s.addLog(`Sector ${s.currentSector}${typeof SECTOR_CONFIG !== 'undefined' && SECTOR_CONFIG[s.currentSector] ? ' — ' + SECTOR_CONFIG[s.currentSector].name : ''}`);
-    },
+    /** After the flight: sector 4, its worlds still ahead (tryAtSector): click the light ahead (then "Go anyway" if asked)
+        and the jump into sector 5 is flown through the dark, then the supper in sector 5. */
+    void(app, s) { tryAtSector(app, s, DARK_JUMP_TO - 1); },
+    /** The sea of ships: sector 2, its worlds still ahead (tryAtSector): click the light ahead (then "Go anyway" if asked)
+        and the jump into sector 3 stalls (src/newscreen/throw/): the crew turn to us, the three tries, the sea of ships. */
+    sea(app, s) { tryAtSector(app, s, THROW_JUMP_TO - 1); },
 };
 // Last Port: the wreck stories that say the ship landed (SILENT SHIP, THE FENCE) cannot be the disc's ship, clamped to the relay
 // (2026-10-31 review: nor, until it has words for the relay, THE GROWTH: its 'Bring Aris down', 'stay with the lander' and
@@ -1451,6 +1456,9 @@ const RELAY_UNFIT_STORIES = ['EXODUS_DEAD_CREW', 'EXODUS_PARTIAL', 'EXODUS_INFEC
 // After the flight (Corridor.js THE DARK, MiniHost 'corridor-void'): the new look's jump into this sector goes dark round us
 // while we fly, once a run (sectors only go forward). What it costs (rations, stress) comes back in the flight's result.
 const DARK_JUMP_TO = 5;
+// The throw (App.startSectorJump; the new look: src/newscreen/throw/Throw.js): the burn into this sector stalls, and the sea
+// of ships plays instead of the flight. The try tab ?try=sea starts one sector before it.
+const THROW_JUMP_TO = 3;
 // The new look: a jump's talk that says "after this jump" is had before it, once the jump is chosen and before the flight
 // opens (App.talkBeforeJump), and is that jump's only talk (2026-11-01 check: NO WAY BACK came right after the dark)
 const NEW_LOOK_BEFORE_JUMP_TALKS = ['CF_LAST_CHANCE'];
@@ -3242,7 +3250,7 @@ class App {
 
         // The flight, then what the crew makes of it, then the campfire. Into sector 3 the burn stalls and the throw plays instead
         // (the new look: on the travel view itself, then the sea of ships, then the arrival: src/newscreen/throw/Throw.js).
-        const isThrow = this.state.currentSector + 1 === 3 && window.TheThrow && !window.TEST_MODE;
+        const isThrow = this.state.currentSector + 1 === THROW_JUMP_TO && window.TheThrow && !window.TEST_MODE;
         let hadTalk = false;                                                         // the new look: a talk had before the jump is this jump's talk
         const fly = () => this.showWarpAnimation(() => {
             if (this.state.gameOver) return;                                         // the run ended in the flight: nothing more follows
