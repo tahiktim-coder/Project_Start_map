@@ -34,8 +34,7 @@
    stepping in and out in four steps.
    The jump into sector 3 stalls here instead (throw/Stall.js, read through window.NSStall.view() each frame): the burn's
    stretch shrinks back, space stops streaming, the drive coughs out and time stands still (the sky, the stars, our ship);
-   our ports go dark with the tower's decks and a red lamp burns on our hull; then the same world shows up again and again
-   and our ship is too big, then too small. Nothing can be pointed at or clicked meanwhile.
+   our ports go dark with the tower's decks and a red lamp burns on our hull. Nothing can be pointed at or clicked meanwhile.
    Under a world's name its note says what kind of world it is (WorldFinds.js kind: "A singing world. One low note comes off
    it."); our wrecks and the story world keep their own lines. The long-range scan (Scan.js through flow.scanOffer, scan,
    findNote): a landable world ahead that no scan has read has the glass SCAN key and its cost under its note's words; the
@@ -71,7 +70,7 @@
     let G = null, sc = 1, cv = null, ctx = null, wordsEl = null, note = null, title = null, flashEl = null, flashCtx = null, flashStep = -1, noteRect = null, A = null;
     let scanEl = null, scanSeenAt = null, noteLead = null, titleShade = null, costEl = null;   // the note's SCAN key while it can be pressed; since when it shows; its leader (art px); a refusal's numbers
     const tok = NOTE.color;                                                            // a colour token as the canvas needs it ('' when missing: not drawn)
-    let SV = null, stallT = null, stallStopped = false, copyOf = null;                  // the jump that stalls (throw/Stall.js): its view this frame, when time stopped
+    let SV = null, stallT = null, stallStopped = false;                                 // the jump that stalls (throw/Stall.js): its view this frame, when time stopped
     function stallView() { const S = window.NSStall; try { return S && typeof S.view === 'function' ? S.view() : null; } catch (err) { console.error('NewScreen travel: the stall view failed', err); return null; } }
     let W = F.blank(1), shownSector = 0, lastRefresh = -1e9, holdRefreshUntil = -1e9, rogueT0 = 0, openedSector = 0, noteWasUp = false;
     const story = new Map();                                                          // node id → { hidden, resolvedAt }
@@ -273,8 +272,7 @@
     function drawScene(t) {
         ctx.imageSmoothingEnabled = false;
         const tv = SV && stallT != null ? stallT : t;                                // the stall: time stands still (the sky, the stars, our ship)
-        const f = P.framer(ctx, G.W, G.H), pose0 = poseAt(tv), tb = towerBits(t);
-        const pose = SV && SV.shipScale !== 1 ? Object.assign({}, pose0, { len: Math.round(pose0.len * SV.shipScale) }) : pose0;
+        const f = P.framer(ctx, G.W, G.H), pose = poseAt(tv), tb = towerBits(t);
         if (!W.black && shownSector !== sectorNow()) { PIC.dimAll(1); return; }       // before a sector's first show (under the briefing): black
         if (W.black) {                                                                // the corridor: dark, not empty, our Lander still with us
             PIC.dark(); PIC.stream('front', [F.light().x, F.light().y], 30, W.flow);
@@ -295,7 +293,6 @@
             const s = story.get(it.id), e = F.entry(it.id);
             PIC.item(f, it, tv, { hidden: !!(s && s.hidden), resolvedAt: s ? s.resolvedAt : null, mark: !SV && !!(e && storyKind(e.node)) }); f.reset();
         });
-        if (SV && SV.copies.length) drawCopies(f, sn, tv);
         const lockId = W.lock ? (W.lock.id === F.light().node ? 'light' : W.lock.id) : null, hov = lockId || (W.flight ? null : W.hover);
         if (hov && hov !== 'light' && !(story.get(hov) || {}).hidden) sn.items.filter(i => i.id === hov && i.part !== 'arc' && !i.hiding && !i.passed).forEach(i => PIC.rims(f, i, lockId ? 2 : 1));
         if (hov === 'light') { const r = PIC.lightOf(W.sector, lightScale(t)), lx = Math.round(l.x), ly = Math.round(l.y); for (let d = Math.round(r.core + 2); d < r.core + 10 * sc; d++) { const v = 0.85 - (d - r.core) / (12 * sc); f.tone(lx - d, ly, P.RP.SUN, v); f.tone(lx, ly - d, P.RP.SUN, v); f.tone(lx, ly + d, P.RP.SUN, v); } }
@@ -310,39 +307,6 @@
         if (W.opening) PIC.dimAll(1 - Math.floor(clamp01((t - W.opening.t0) / OPEN.dim) * 8) / 8);
     }
 
-    /** The stall's picture going wrong: the biggest world in view, again and again, dithered in where nothing was (in open
-        sky: never over a world, the light or our ship, nor over another copy). */
-    let copySpots = null;
-    function copyPlaces(sn, it) {
-        if (copySpots && copySpots.id === it.id && copySpots.W === G.W) return copySpots.list;
-        const spW = G.W - G.hull, l = F.light(), Ld = F.lander(), r = it.r, list = [];
-        const ds = F.discsOf(sn).concat([[l.x, l.y, 46 * sc], [Ld.x, Ld.y, Ld.len * 1.2]]);
-        for (let k = 0; k < 600 && list.length < 6; k++) {
-            const x = G.hull + spW * (0.1 + 0.82 * ((k * 0.618034 + 0.27) % 1)), y = G.H * (0.1 + 0.8 * ((k * 0.754877 + 0.61) % 1));
-            if (x - r < G.hull + 10 * sc || x + r > G.W - 8 * sc || y - r < 8 * sc || y + r > G.H - 8 * sc) continue;
-            if (ds.some(([cx, cy, cr]) => Math.hypot(x - cx, y - cy) < cr + r + 9 * sc)) continue;
-            list.push([Math.round(x), Math.round(y)]); ds.push([x, y, r]);
-        }
-        copySpots = { id: it.id, W: G.W, list };
-        return list;
-    }
-    function copyOfNow(sn) {
-        const usable = i => i.part !== 'arc' && !(i.hiding > 0.2) && !(i.fade > 0) && !i.passed && F.entry(i.id) && F.entry(i.id).kind === 'world';
-        if (!copyOf || !sn.items.some(i => i.id === copyOf && usable(i))) {
-            const pick = sn.items.filter(usable).sort((a, b) => b.r - a.r)[0];
-            copyOf = pick ? pick.id : null;
-        }
-        return copyOf && sn.items.find(i => i.id === copyOf && i.part !== 'arc');
-    }
-    function drawCopies(f, sn, tv) {
-        const it = copyOfNow(sn);
-        if (!it) return;
-        const at = copyPlaces(sn, it);
-        SV.copies.forEach((c, k) => {
-            if (!(c.k > 0) || !at[k]) return;
-            PIC.item(f, Object.assign({}, it, { x: at[k][0], y: at[k][1], fade: 1 - c.k, cut: null, grey: 0, hiding: 0, passed: false }), tv, {}); f.reset();
-        });
-    }
     /** A refused click (too far, passed, too faint): the world's ring blinks twice in --dim, in steps, 2 CSS px wide. */
     function drawRefusal(sn, t) {
         const rf = W.refused, k = rf ? Math.floor((t - rf.t0) / BLINK_MS) : 0, hex = tok('--dim'), it = rf && k < BLINKS * 2 && !(k % 2) && hex ? refusedItem(sn, rf) : null;
@@ -367,12 +331,6 @@
         const k = G.k / G.dpr, w = costEl.offsetWidth / k, h = costEl.offsetHeight / k, gap = it.outer + COST_GAP_CSS / k;
         const x = it.x + gap + w <= G.W - 6 ? it.x + gap : it.x - gap - w, [cx, cy] = G.toCss(Math.max(G.hull + 6, x), it.y - h / 2);
         costEl.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cy)}px)`;
-    }
-    /** The copies on screen now, as discs (the voice keeps its words off them). */
-    function copyDiscs() {
-        if (!SV || !SV.copies.length || !copySpots || !W.last) return [];
-        const it = W.last.items.find(i => i.id === copySpots.id && i.part !== 'arc');
-        return it ? SV.copies.map((c, k) => (c.k > 0 && copySpots.list[k] ? [copySpots.list[k][0], copySpots.list[k][1], it.r] : null)).filter(Boolean) : [];
     }
 
     // ═══ 4. words: the note when pointing (a name and one line), the sector title ═══
@@ -685,7 +643,7 @@
         if (!G) return;
         SV = stallView();
         if (SV) { if (SV.frozen && stallT == null) stallT = t; }
-        else if (stallT != null || stallStopped || copyOf) { stallT = null; stallStopped = false; copyOf = null; copySpots = null; }
+        else if (stallT != null || stallStopped) { stallT = null; stallStopped = false; }
         PIC.setLive(true);
         refresh(t, false);
         const s = speedNow(t);
@@ -779,7 +737,7 @@
     }
     function placeCss(id) { const g = placeAt(id); if (!G) return g; const [x, y] = G.toCss(g.x, g.y); return { x, y, r: g.r * G.k / G.dpr, shown: g.shown }; }
     function landerPose() { if (!G) return { x: 0, y: 0, len: 0, angle: 0 }; const p = poseAt(now()); return { x: p.x, y: p.y, len: p.len, angle: p.angle }; }
-    function discs() { if (!G || W.black) return []; return F.discsOf(W.last || F.scene(W, now())).concat(copyDiscs()); }
+    function discs() { if (!G || W.black) return []; return F.discsOf(W.last || F.scene(W, now())); }
     function debugState() {
         const mode = W.black ? 'corridor' : W.jump ? 'jump' : W.flight ? 'flight' : W.lock ? 'lock' : W.held ? 'held' : W.opening ? 'opening' : 'rest';
         return { sector: W.sector, mode, at: W.at, hover: W.hover, lock: W.lock ? W.lock.id : null, flight: W.flight ? W.flight.id : null, held: W.held, onNote: !!W.onNote, scanning: W.scanning ? W.scanning.id : null, noteSide: W.noteSide || null,

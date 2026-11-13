@@ -69,7 +69,7 @@
         st.textContent = `#ns-world-words .nst-note { --kp: 2px; position: absolute; left: 0; top: 0; display: grid; justify-items: start; gap: 3px; max-width: 24em; pointer-events: none; }
 #ns-world-words .nst-note[hidden], #ns-world-words .nst-title[hidden], #ns-world-words .nst-flash[hidden], #ns-world-words .nst-cost[hidden] { display: none; }
 #ns-world-words .nst-note.is-left { justify-items: end; text-align: right; }
-#ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name)/1.15 var(--f-ui); letter-spacing: 0.02em; color: var(--text); text-shadow: var(--shadow), var(--halo); }
+#ns-world-words .nst-note .name { margin: 0; font: 500 var(--fs-note-name)/1.15 var(--f-ui); letter-spacing: 0.02em; color: var(--text); white-space: nowrap; text-shadow: var(--shadow), var(--halo); }   /* a world's name stays on one row: "Pallas-17 Major" broke at its hyphen (playtest 2026-11-07) */
 #ns-world-words .nst-note .tag { margin: 0; font: 400 var(--fs-note-line)/1.35 var(--f-text); color: var(--dim); text-wrap: balance; text-shadow: var(--shadow), var(--halo); }
 #ns-world-words .nst-note.is-story .tag { color: var(--warm-br); }
 #ns-world-words .nst-key { --bk: var(--warm); --tip: var(--warm-br); --arm: calc(var(--kp) * 4); display: flex; align-items: center; gap: calc(var(--kp) * 4);

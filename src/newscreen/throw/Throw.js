@@ -2,9 +2,10 @@
    What it is: the new look's TheThrow (docs/CANON.md §7). bundle.js startSectorJump plays it under the switch once the burn
    gauge (throw/Gauge.js) has closed, and enters sector 3 when it resolves; the old look keeps src/systems/TheThrow.js.
      1. the stall, on the travel view itself (throw/Stall.js): the stars stop, the ship goes dark deck by deck, the crew in
-        one room turn to look at us, "Nobody answers." again and again; then ink
-     2. the sea of ships (throw/SeaFilm.js): our dark Lander among wrecks of our own class, the camera pulling back until we
-        are one red dot in a sea of thousands; the drive relights, white
+        one room turn to look at us, "Nobody answers."; then ink
+     2. the film (throw/SeaFilm.js): the crew try the drive three times, and its light shows the wrecks round us
+        (throw/SeaEntrance.js); then the sea of ships: our dark Lander among wrecks of our own class, the camera pulling
+        back until we are one red dot in a sea of thousands; the drive relights, white
      3. the arrival, with no card (look pass B03, DESIGN 1.1, C01): the travel view of sector 3 opens from black as on any
         first show (the stall's veil stays until then, Stall.release), its sky title says "The Signal" once; then a readout
         in the void's style counts the beacons heard (BEACONS HEARD, Corridor.js's own count for sector 3), Mira says her
