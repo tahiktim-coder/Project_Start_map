@@ -1,25 +1,35 @@
 /* ═══ Silent Exodus · new screen (?new=1) · land/BurnScene.js: THE BURN, the pictures ═════════════════════════════════
    Part of the new look's landing (BurnFlight.js has the rules and the plan; BurnFall.js is the minigame). Ported from the
-   sketch prototypes/landing-burn/burn.js, sketch 5 (approved 2026-11-11: "Yes, build it"). One continuous side view,
-   640 x 360 art px, no cut and no arrow, and ONE camera distance from the top of the fall to the touchdown (K.Z art px per
-   px of the world: a push-in during the approach hid the ground coming, four sketches running). Space above, the cloud sea
-   far below with the find's light under it, the deck we fall through, then night: under the cloud the picture is dark,
-   the engine's catch flashes the place into view and the flame, many shuttles long, is the light the land is seen by.
-   The land sits at the foot of the picture from the burn on and she comes down onto it (BurnFlight.gapf: one smooth curve).
+   sketch prototypes/landing-burn/burn.js, sketch 9 (approved 2026-11-13: "Yes, build it"). One continuous side view,
+   640 x 360 art px, no cut and no arrow, ONE camera distance from the top of the fall to the touchdown (K.Z art px per px
+   of the world: a push-in during the approach hid the ground coming, four sketches running), and ONE TRUE SCALE: everything
+   in the picture moves at her true speed (sketch 5 drew the ground nearer than it was while she was high; the ground then
+   crept while the air rushed past, and the designer saw the lie: "I see ground and still see those white dots flying up").
+   The price: the ground itself is in the picture only for the last 700 m. What tells the height before that: a ladder of
+   numbered gates standing in the world above the mark, drawn by A.U.R.A.; a blue gate stands where she will say "Burn now";
+   the gates ahead turn amber, then red, when all the engine has would no longer land her softly.
+   Top to bottom: the entry (a bow of fire under her tail, fire wrapping the hull, her own skin glowing from the tail up, as
+   a film shows a hull coming in too fast), the cloud sea far below with the find's light under it, the deck we fall
+   through, then night: under the cloud the picture is dark, the engine's catch flashes the place into view and the flame,
+   many shuttles long, is the light the land is seen by. While the ground is far the camera holds her and the world goes up
+   past her; once the ground has come up to its resting line it stays there and she goes down the picture onto it.
    At the touchdown a ring of dust races out both ways; then quiet, a lamp, the team stepping out.
    Everything is the game's own recipe: NSPaint (ramps, the 8 x 8 Bayer dither, noise, the hull), the world's colours are
    the bridge glass's (NSWorlds.palette), the find's light is LandingArt.drawLight (the light you saw from the bridge),
    our shuttle is LandingArt.shuttleSprite, the team are MiniCrew.small in their suits. Each picture is painted in strips
    by LandingArt's idle queue (stripBake), a few milliseconds at a time, kept per world and per place.
-   NO SOUND: nothing here makes any (the meteor it stands in for has none either).
+   No sound here: the landing's sound is BurnFall.js's score, and it only reads the flight.
 
    window.BurnScene (frozen)
      FW, FH                        the frame
      lookOf(world, find) → look    the world's ground and cloud ramps, the find's kind and its light
      prepare(world, find, W, look) → B   the pictures for this place, queued (B.tag); ready(B) when all are painted
      keep(ids)                     let go of every world's pictures but these
-     view() → V                    one landing's moving things (the camera, the air's streaks, the dust)
-     camera(V, S, dt)              the camera follows her down, at one distance
+     view(mode) → V                one landing's moving things (the camera, the air's streaks, the dust), and what A.U.R.A.
+                                   draws with the gates, which the minigame sets: V.cueY (where the call will come, world px;
+                                   null: none), V.cueDone (it stands still now), V.warn (0, 1 amber, 2 red)
+     camera(V, S, dt)              the camera: it holds her while the ground is far, then holds the ground
+     groundSeen(V) → bool          the ground has come into the picture
      burst(V, S)                   the dust thrown out at the touchdown
      draw(ctx, S, B, V, now, dt, o)   one frame (o.team: the people stepping out; o.shake 0..1)
 */
@@ -30,10 +40,14 @@
     const { RP, lerp, clamp01, smooth, fbm, vnoise, seeded, threshold } = P, K = BF.K, gapf = BF.gapf, SH = A.SH;
     const clamp = (v, a, b) => (v < a ? a : v > b ? b : v), mod = (v, n) => ((v % n) + n) % n;
     const FW = 640, FH = 360, GROUND_Y = 314, EDGE = 8;
+    const LOOK_HI = 86, KNEE = 36;                                                  // where her feet sit in the picture while the ground is still far below (art px from the top); how softly the camera lets go of her and takes the ground
     const Z = K.Z, D = K.D * Z, LEG_L = K.LEG_L * Z, SHIP_LEN = SH.LEN * D;         // the one camera distance: she is about 27 px tall, top to bottom
-    const CLOUD_H = 220, AIR = RP.HAZE.hex[2], CREW_H = Math.round(16 * Z);
+    const CLOUD_H = 220, BAND_H = 280, CREW_H = Math.round(16 * Z);
     const MARK_OF = { wreck: 'wreck', colony: 'colony', signal: 'signal', life: 'life', machines: 'machines', ruins: 'flare', graves: 'flare', plain: 'flare' };
     const LIGHT_RAMP = (window.MeteorLand && window.MeteorLand.LIGHT_RAMP) || { wreck: RP.RED, flare: RP.RED, colony: RP.AMBER, signal: RP.AMBER, life: RP.ICE, machines: RP.AMBER };
+    /** 3 x 5 figures for the height gates. */
+    const FIG = ['111101101101111', '010110010010111', '111001111100111', '111001111001111', '101101111001001', '111100111001111', '111100111101111', '111001001001001', '111101111101111', '111101111001111'];
+    const HOT_HEX = [RP.RED.hex[2], RP.RED.hex[3], RP.SUN.hex[4], RP.SUN.hex[6]];   // a heated hull: dull red, red, orange, near white
 
     /** The world's own colours (the bridge glass's), the find's kind and the light it shows by. */
     function lookOf(world, find) {
@@ -57,7 +71,7 @@
         const n = rad * 2 + 1, p = P.painter(n, n, false);
         p.region(0, 0, n, n, (x, y) => { const d = Math.hypot(x - rad, y - rad) / rad; if (d < 1) p.tone(x, y, ramp, (pk / 10) * Math.pow(1 - d, 1.5)); });
         const c = p.canvas();
-        if (glows.size > 160) glows.delete(glows.keys().next().value);
+        if (glows.size > 200) glows.delete(glows.keys().next().value);
         glows.set(key, c);
         return c;
     }
@@ -74,7 +88,7 @@
         holes.set(rad, c);
         return c;
     }
-    const HOLE_MIN = 40, HOLE_MAX = 280, HOLE_STEP = 20, CATCH_R = Math.round((80 + 40 * Z) / 8) * 8;   // CATCH_R: the catch's bloom, as light() rounds it
+    const HOLE_MIN = 40, HOLE_MAX = 340, HOLE_STEP = 20, CATCH_R = Math.round((80 + 40 * Z) / 8) * 8;   // HOLE_MAX: the overdrive's flame is longer than all she has; CATCH_R: the catch's bloom, as light() rounds it
     /** The shuttle, dimmer: in the dark she is a shape, lit only by her own flame (a copy, kept with the sprite). */
     function dimmed(canvas, lum) {
         if (lum >= 1) return canvas;
@@ -88,6 +102,26 @@
             m.set(lum, d);
         }
         return d;
+    }
+    /** Her hull, heated: the same picture with its own pixels turned dull red, then red, then orange, then near white, from
+        the tail up (how a film shows a hull coming in too fast: the metal itself glows). src: her sprite's canvas; oy: its
+        origin row; skin: 0 cold .. 1 all she can take. A smooth tint: a dithered one left red crumbs on her legs as she cooled. */
+    const hotCv = document.createElement('canvas'), hotG = hotCv.getContext('2d');
+    function hotHull(src, oy, skin) {
+        const w = src.width, h = src.height;
+        if (hotCv.width < w || hotCv.height < h) { hotCv.width = Math.max(hotCv.width, w); hotCv.height = Math.max(hotCv.height, h); }
+        hotG.setTransform(1, 0, 0, 1, 0, 0); hotG.globalAlpha = 1; hotG.globalCompositeOperation = 'source-over'; hotG.clearRect(0, 0, hotCv.width, hotCv.height);
+        hotG.drawImage(src, 0, 0);
+        hotG.globalCompositeOperation = 'source-atop';                                // only where there is hull
+        const bell = oy + SH.BELL * D;
+        for (let r = 0; r < h; r++) {
+            const T = skin * 1.5 - clamp01((bell - r) / SHIP_LEN) * 0.8;              // hottest at the tail (it meets the air first), cooler toward the nose
+            if (T <= 0.02) continue;
+            const v = [T * 2.2, (T - 0.3) * 2.6, (T - 0.58) * 2.6, (T - 0.86) * 3], a = [0.9, 0.92, 0.85, 0.72];   // never quite flat: her own shading shows through the heat
+            for (let i = 0; i < 4; i++) if (v[i] > 0.02) { hotG.globalAlpha = clamp01(v[i]) * a[i]; hotG.fillStyle = HOT_HEX[i]; hotG.fillRect(0, r, w, 1); }
+        }
+        hotG.globalAlpha = 1; hotG.globalCompositeOperation = 'source-over';
+        return hotCv;
     }
     const shade = document.createElement('canvas'); shade.width = FW + EDGE * 2; shade.height = FH + EDGE * 2;
     const sg = shade.getContext('2d');
@@ -121,12 +155,14 @@
             if (a > 0.02) p.cover(x, ly, look.cloud, look.cloudLit * (0.5 + 0.7 * clamp01(0.5 + (n(x, y + 7) - n(x, y)) * 5)), a);   // lit from above
         }), tag, true, 8);
     }
-    function farBake(look, seed, i, tag) {
-        const spec = [{ p: 0.06, rest: 214, amp: 16, v: 0.2, f: 190 }, { p: 0.2, rest: 242, amp: 26, v: 0.27, f: 120 }, { p: 0.5, rest: 270, amp: 30, v: 0.33, f: 80 }][i];   // dimmer the farther; a step lighter than they look, for the night lies over them
-        const width = FW + Math.ceil(2 * 380 * spec.p) + EDGE * 3, PAD = 46, H = Math.ceil((FH - spec.rest + PAD + EDGE * 2) / 8) * 8;
+    /** The far land: ONE low range, dim, with no bright crest, fixed to the ground (three ridge layers arriving one after
+        another read as "layers" to the designer, and the ground as one more of them). Its crest stands a little over the level stretch. */
+    function farBake(look, seed, tag) {
+        const spec = { p: 0.06, rest: 292, amp: 16, v: 0.2, f: 210 };
+        const width = FW + Math.ceil(2 * 620 * spec.p) + EDGE * 3, PAD = 46, H = Math.ceil((FH - spec.rest + PAD + EDGE * 2) / 8) * 8;
         const tops = new Float32Array(width);
-        for (let x = 0; x < width; x++) tops[x] = PAD - (fbm(x / spec.f, 3 + i * 5, seed + i * 13, 4) - 0.4) * 2 * spec.amp;
-        const pic = A.stripBake(width, H, (p, y0) => { for (let x = 0; x < width; x++) for (let ly = Math.max(0, Math.floor(tops[x]) - y0); ly < p.H; ly++) { const y = y0 + ly, d = y - tops[x]; p.solid(x, ly, look.ground, spec.v + (d < 1.5 ? 0.07 : 0) + (fbm(x / 14, y / 9, seed + 40 + i, 2) - 0.5) * 0.1 - Math.min(0.08, d * 0.002)); } }, tag, true, 8);
+        for (let x = 0; x < width; x++) tops[x] = PAD - (fbm(x / spec.f, 3, seed, 3) - 0.4) * 2 * spec.amp;
+        const pic = A.stripBake(width, H, (p, y0) => { for (let x = 0; x < width; x++) for (let ly = Math.max(0, Math.floor(tops[x]) - y0); ly < p.H; ly++) { const y = y0 + ly, d = y - tops[x]; p.solid(x, ly, look.ground, spec.v + (fbm(x / 26, y / 16, seed + 40, 2) - 0.5) * 0.05 - Math.min(0.06, d * 0.002)); } }, tag, true, 8);
         return { pic, p: spec.p, rest: spec.rest, pad: PAD };
     }
     /** What a world looks like on the way down: its sky, its cloud, its far land (the same for every find on it). */
@@ -141,9 +177,10 @@
                 stars.forEach(s => { if (s[1] >= y0 && s[1] < y0 + p.H) p.set(s[0], s[1] - y0, RP.STAR.rgb[s[2]]); });
             }, tag, true, 8),
             cloud: air ? cloudBake(look, seed + 3, W.thin ? 0.62 : 1, tag) : null, wisp: air ? cloudBake(look, seed + 71, 0.42, tag) : null,
-            far: [0, 1, 2].map(i => farBake(look, seed, i, tag)),
-            band: A.stripBake(FW + EDGE * 2, 88, (p, y0) => p.region(0, 0, p.W, p.H, (x, ly) => { const y = y0 + ly; p.tone(x, ly, look.ground, (air ? 0.46 : 0.2) * Math.pow(y / 88, 2.2) + (fbm(x / 60, y / 20, seed + 80, 2) - 0.5) * 0.07 * (y / 88)); }), tag, true, 8),
-            hazeTiles: tiles(look.cloud.hex[clamp(Math.round(look.cloudLit * 0.85 * (look.cloud.hex.length - 1)), 1, look.cloud.hex.length - 1)]), airTiles: tiles(AIR), haze: null, air2: null };
+            far: [farBake(look, seed, tag)],
+            // the dust the far land stands in: a tall band with no edge, thickest at the horizon. It rises into the picture about two seconds before the ground does
+            band: A.stripBake(FW + EDGE * 2, BAND_H, (p, y0) => p.region(0, 0, p.W, p.H, (x, ly) => { const y = y0 + ly; p.tone(x, ly, look.ground, (air ? 0.34 : 0.16) * Math.pow(y / BAND_H, 1.7) + (fbm(x / 60, y / 20, seed + 80, 2) - 0.5) * 0.07 * (y / BAND_H)); }), tag, true, 8),
+            hazeTiles: tiles(look.cloud.hex[clamp(Math.round(look.cloudLit * 0.85 * (look.cloud.hex.length - 1)), 1, look.cloud.hex.length - 1)]), haze: null };
         // the night's holes and the bloom of the engine's catch, made with this world's pictures, so the catch itself paints nothing new (or on the frame that first needs one)
         for (let r = HOLE_MIN; r <= HOLE_MAX; r += HOLE_STEP) if (!holes.has(r)) A.later(() => holeSprite(r), tag, true);
         for (let pk = 9; pk >= 2; pk--) A.later(() => glowSprite(RP.PLUME, CATCH_R, pk / 10), tag, true);
@@ -161,9 +198,11 @@
             hts[i] = clamp(((fbm(x / 150, 4.2, seed, 4) - 0.42) * 2.2 * W.rough + (fbm(x / 23, 8.8, seed + 5, 2) - 0.5) * 9 + (vnoise(x / 6, 2.2, seed) - 0.5) * 1.6) * k, -14, UP - 8);
         }
         const at = x => { const f = clamp(x - X0, 0, TW - 1.001), i = Math.floor(f); return lerp(hts[i], hts[i + 1], f - i); };
-        const AW = Math.ceil(TW * Z), TOP = Math.ceil(UP * Z), H = Math.ceil((TOP + 96 * Z) / 8) * 8, cap = 0.62;   // art px: the base line is TOP rows down; it reaches the foot of the picture
+        const AW = Math.ceil(TW * Z), TOP = Math.ceil(UP * Z), H = Math.ceil((TOP + 96 * Z) / 8) * 8, cap = 0.86;   // art px: the base line is TOP rows down; it reaches the foot of the picture
         const G = { key, tag, at, X0, top: TOP, H, light: { x: 44, up: 3 },
-            pic: A.stripBake(AW, H, (p, y0) => { for (let i = 0; i < AW; i++) { const x = X0 + i / Z, surf = at(x) * Z; for (let ly = Math.max(0, Math.floor(TOP - surf) - y0); ly < p.H; ly++) { const r = y0 + ly, depth = surf - (TOP - r); p.solid(i, ly, look.ground, clamp(0.34 + (fbm(x / 26, r / Z / 14, seed + 9, 3) - 0.5) * 0.34 - depth * 0.01 + (depth < 1.5 ? 0.16 : depth < 3 ? 0.06 : 0), 0.08, cap)); } } }, tag, true, 8) };
+            marks: [-0.97, -0.4, 0.4, 0.97].map(k => Math.round(k * W.pad)),          // A.U.R.A.'s markers on the level stretch: this is the floor
+            // a dark body under the brightest line in the land: the crust says "this is the ground", and it is unlike the far range
+            pic: A.stripBake(AW, H, (p, y0) => { for (let i = 0; i < AW; i++) { const x = X0 + i / Z, surf = at(x) * Z; for (let ly = Math.max(0, Math.floor(TOP - surf) - y0); ly < p.H; ly++) { const r = y0 + ly, depth = surf - (TOP - r); p.solid(i, ly, look.ground, clamp(0.3 + (fbm(x / 26, r / Z / 14, seed + 9, 3) - 0.5) * 0.3 - depth * 0.012 + (depth < 2 ? 0.42 : depth < 4 ? 0.16 : 0) + (Math.abs(x) < 70 && depth < 6 ? 0.08 : 0), 0.08, cap)); } } }, tag, true, 8) };
         // the find's own things, set on the ground once it is painted (what is under the ground's line stays buried)
         A.later(() => {
             const sx0 = 36, sw = Math.ceil(150 * Z), sh = Math.ceil(64 * Z), foot = Math.round(14 * Z), p = P.painter(sw, sh, false);   // a small picture beside the level stretch
@@ -196,15 +235,24 @@
     }
 
     // ═══ 2. one landing's moving things ═══
-    function view() {
-        return { cam: { x: 0, fy: 150 }, streaks: Array.from({ length: 110 }, () => ({ x: Math.random() * FW, y: Math.random() * FH, k: 0.85 + Math.random() * 0.9, b: Math.random() })),
-            dust: [], embers: [], wasLit: false, layer: P.pixelLayer(FW + EDGE * 2, FH + EDGE * 2), fr: null, shipX: FW / 2 };
+    function view(mode) {
+        const fy = mode === 'short' ? 150 : 205;                                    // the long fall opens with her low in the picture: the entry, the whole sky over her
+        return { cam: { x: 0, fy, look: fy }, streaks: Array.from({ length: 110 }, () => ({ x: Math.random() * FW, y: Math.random() * FH, k: 0.85 + Math.random() * 0.9, b: Math.random() })),
+            dust: [], embers: [], wasLit: false, layer: P.pixelLayer(FW + EDGE * 2, FH + EDGE * 2), fr: null, shipX: FW / 2,
+            gim: 0, skin: 0, air: 0, gY0: null, t0: null,                             // the engine's swing with our hand; her skin's heat as drawn; how fast the world goes up the picture (world px/s), and what it is measured from
+            cueY: null, cueDone: false, warn: 0 };                                    // A.U.R.A.'s own marks (the minigame sets them)
     }
     function camera(V, S, dt) {
-        const look = lerp(160, 92, clamp01(Math.max(-S.vy / 380, S.thr * 0.9)));       // falling fast or burning, she sits high: room below for the flame and the land
-        V.cam.fy += (Math.max(look, GROUND_Y - gapf(S.y)) - V.cam.fy) * Math.min(1, dt * 4);
-        V.cam.x += (S.x * 0.85 - V.cam.x) * Math.min(1, dt * 3);
+        const ent = S.mode === 'full' ? BF.entryAt(S.y) : 0, cam = V.cam;
+        const look = lerp(lerp(160, LOOK_HI, clamp01(Math.max(-S.vy / 380, S.thr * 0.9))), 205, ent);   // falling fast or burning, she sits high: room below for the flame and the land
+        cam.look += (look - cam.look) * Math.min(1, dt * 4);
+        // while the ground is far she keeps her place and the world goes up past her at her true speed. Once the ground has come
+        // up to its resting line it stays there, and she goes down the picture onto it at her true speed. One scale, no push-in.
+        const rest = GROUND_Y - gapf(S.y), far = cam.look - rest;
+        cam.fy = 0.5 * (cam.look + rest + Math.sqrt(far * far + KNEE * KNEE));
+        cam.x += (S.x * 0.85 - cam.x) * Math.min(1, dt * 3);
     }
+    const groundSeen = V => V.gY0 != null && V.gY0 < FH + 40;
     function puff(V, x, y, vx, vy, spark, max) { if (V.dust.length < 560) V.dust.push({ x, y, vx, vy, life: 0, max: max || 0.5 + Math.random() * 0.8, b: Math.random(), spark: !!spark }); }
     /** The touchdown: dust (and, in a crash, sparks) thrown out both ways along the ground; draw() adds the ring that races out with it. */
     function burst(V, S) {
@@ -219,16 +267,23 @@
     function draw(ctx, S, B, V, now, dt, o) {
         o = o || {};
         const W = S.W, Wp = B.world, G = B.ground, look = B.look, t = now / 1000, cam = V.cam, deck = W.deck, k0 = o.shake == null ? 1 : o.shake, L = S.landed;
-        if (!Wp.haze) { Wp.haze = Wp.hazeTiles.map(c => ctx.createPattern(c, 'repeat')); Wp.air2 = Wp.airTiles.map(c => ctx.createPattern(c, 'repeat')); }
+        if (!Wp.haze) Wp.haze = Wp.hazeTiles.map(c => ctx.createPattern(c, 'repeat'));
         if (!V.fr) V.fr = P.framer(ctx, FW, FH);
         const tile = (tex, off, y) => { const x0 = -Math.round(mod(off, FW)); ctx.drawImage(tex, x0, y); ctx.drawImage(tex, x0 + FW, y); if (x0 > -EDGE) ctx.drawImage(tex, x0 - FW, y); };
         const light = (ramp, x, y, rad, peak) => { const r8 = Math.max(8, Math.round(rad / 8) * 8), c = glowSprite(ramp, r8, peak); if (c) ctx.drawImage(c, Math.round(x) - r8, Math.round(y) - r8); };
-        const rho = BF.airAt(W, S.y), q = L ? 0 : S.q || 0, thr = L ? 0 : S.thr, kick = L ? 0 : S.kick, flick = Math.random();
+        const rho = BF.airAt(W, S.y), q = L ? 0 : S.q || 0, thr = L ? 0 : S.thr, thr1 = Math.min(1, thr), kick = L ? 0 : S.kick, flick = Math.random();
         const sputter = !L && !S.lit && S.ign > 0;                                    // held, and not yet caught
         const strain = thr > 0.94 ? 1 : 0;                                            // all she has
-        const amp = ((2.4 + 0.9 * q + 1.1 * strain) * thr + 2 * q * (1 - thr) + S.thump * 5 + kick * 6 + (sputter ? 0.9 : 0)) * k0;
+        const fastV = L ? 0 : S.fast || 0, hotV = L ? 0 : Math.min(1.8, S.hot || 0), tipV = Math.min(1, Math.abs(S.th) / K.TIP_AT), over = !L && S.odOn ? 1 : 0;   // the entry: how hard it hits her, her hull's heat, how far side-on she is; the overdrive
+        const amp = ((2.4 + 0.9 * q + 1.1 * strain + 1.6 * over) * thr + 2 * q * (1 - thr1) + (1.2 + 2.4 * hotV) * fastV + S.thump * 5 + kick * 6 + (sputter ? 0.9 : 0)) * k0;
         const shx = Math.round((Math.random() - 0.5) * 2 * amp), shy = Math.round((Math.random() - 0.5) * 2 * amp + Math.sin(t * 41) * 1.3 * thr * k0);
-        const fy = cam.fy, gY = fy + gapf(S.y);                                       // her feet; the ground's own level
+        const fy = cam.fy, gY = fy + gapf(S.y);                                       // her feet; the ground's own level, true to scale (far below the picture while she is high)
+        // how far the world went up the picture since the last frame (world px), and how fast that is: measured in FLIGHT seconds
+        // (the flight runs in fixed steps; measured in frame time it read nothing on some frames and a third too fast on others)
+        const flown = V.t0 == null ? 0 : S.t - V.t0, moved = V.gY0 == null ? 0 : (V.gY0 - gY) / Z;
+        if (flown > 0) V.air += (clamp(moved / flown, 0, 700) - V.air) * 0.35;
+        V.gY0 = gY; V.t0 = S.t;
+        const air = V.air;                                                            // her fall while the camera holds her, nothing once it holds the ground
         const up = Y => fy + (S.y - Y), gr = Y => gY - Y * Z, scrX = X => FW / 2 + (X - cam.x) * Z, sx = scrX(S.x);
         const full = S.mode === 'full' && !!deck, dTop = deck ? deck[0] : 1e9, dBot = deck ? deck[1] : 1e9;
         const under = S.y < dBot + 140;
@@ -241,21 +296,24 @@
         const jx = L ? 0 : Math.round((Math.random() - 0.5) * (shaking ? 2 : q > 0.7 ? 1.4 : 0) * k0);
         const jy = L ? 0 : Math.round((Math.random() - 0.5) * (thr > 0.03 ? 2 : 0) * k0 - kick * 4 * k0);
         const bx = sx + LEG_L * sn + jx, by = fy - LEG_L * c + jy;                    // the bell: where she turns, where the flame leaves
-        const dxA = -sn, dyA = c;                                                    // down her axis, on the screen
+        V.gim += ((L ? 0 : S.lean || 0) * 0.16 - V.gim) * Math.min(1, dt * 10);        // the engine swings with our hand: the flame leans the way it pushes her tail
+        const fa = S.th - V.gim, dxA = -Math.sin(fa), dyA = Math.cos(fa);             // down the flame's line, on the screen
         V.shipX = sx;
         // the flame: a sputter while it catches, then as long as the engine is giving (many shuttles long at full); it stops at the ground
         const flame = thr > 0.03 ? SHIP_LEN * (1.2 + 5.4 * thr) * (0.95 + 0.1 * flick) * (1 + 0.3 * kick) : sputter && flick > 0.35 ? (7 + flick * 13) * Z : 0;
         let reach = flame, gHit = null;
-        if (flame > 0 && under) for (let s2 = 6; s2 < flame; s2 += 3) { const px = bx + dxA * s2, py = by + dyA * s2, wx = S.x + (px - sx) / Z; if (py >= gr(G.at(wx))) { reach = s2; gHit = { x: wx, y: G.at(wx), near: clamp01(1 - s2 / flame) * thr }; break; } }
+        if (flame > 0 && under) for (let s2 = 6; s2 < flame; s2 += 3) { const px = bx + dxA * s2, py = by + dyA * s2, wx = S.x + (px - sx) / Z; if (py >= gr(G.at(wx))) { reach = s2; gHit = { x: wx, y: G.at(wx), near: clamp01(1 - s2 / flame) * thr1 }; break; } }
 
         ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'source-over'; ctx.imageSmoothingEnabled = false;
         ctx.fillStyle = P.INK; ctx.fillRect(0, 0, FW, FH);
         ctx.setTransform(1, 0, 0, 1, shx, shy);
         ctx.drawImage(Wp.sky.canvas, -EDGE, -EDGE - Math.round((Wp.sky.canvas.height - FH - EDGE * 2) * (1 - clamp01(S.y / K.ALT0))));
 
-        // from high up: the cloud sea far below, the find's light under it
+        // from high up: the cloud sea far below, the find's light under it. In the entry it lies at the foot of the picture and
+        // hardly moves; then it comes up to meet her
         if (full && S.y > dBot) {
-            const seaY = Math.round(330 - (K.ALT0 - S.y) * (168 / (K.ALT0 - dTop)));
+            const hi = Math.max(K.ALT0, dTop + 150);
+            const seaY = S.y > hi ? 330 + Math.round(26 * (S.y - hi) / Math.max(1, K.ALT_ENTRY - hi)) : Math.round(330 - (hi - S.y) * (168 / (hi - dTop)));
             if (seaY < FH + 60) {
                 tile(Wp.cloud.canvas, cam.x * 0.14 + 80, seaY - 70);
                 tile(Wp.cloud.canvas, cam.x * 0.2 + 311, seaY - 16);
@@ -265,13 +323,14 @@
                 ctx.globalCompositeOperation = 'source-over';
             }
         }
-        // under the cloud: the land at the foot of the picture, creeping up; then she comes down onto it (the far ridges slower than the ground itself)
-        let horizon = -EDGE;
+        // under the cloud: the land, far below the picture until the last 700 m. Its dust glow rises first (no edge, it only
+        // thickens), then the far range and the ground come up together: one land, arriving once, at her true speed
+        let horizon = FH + EDGE;
         if (under) {
-            const sink = gY - GROUND_Y, tops = Wp.far.map((F, i) => Math.round(F.rest + sink * [0.55, 0.75, 0.9][i]));
-            horizon = tops[0] - 82;
-            ctx.drawImage(Wp.band.canvas, -EDGE, horizon);
-            Wp.far.forEach((F, i) => { if (tops[i] - F.pad < FH + EDGE) ctx.drawImage(F.pic.canvas, Math.round(-(F.pic.canvas.width - FW) / 2 - cam.x * F.p), tops[i] - F.pad); });
+            const sink = gY - GROUND_Y, F = Wp.far[0], top = Math.round(F.rest + sink);
+            horizon = top - 82;
+            if (top + 6 - BAND_H < FH + EDGE) ctx.drawImage(Wp.band.canvas, -EDGE, top + 6 - BAND_H);
+            if (top - F.pad < FH + EDGE) ctx.drawImage(F.pic.canvas, Math.round(-(F.pic.canvas.width - FW) / 2 - cam.x * F.p), top - F.pad);
             if (deck && S.y < dBot) {                                                 // the cloud we came through, now a ceiling
                 const cy = Math.max(Math.round(up(dBot)) - CLOUD_H, -152);
                 if (cy + CLOUD_H > -EDGE) { if (cy > -152) { ctx.fillStyle = Wp.haze[Wp.thin ? 4 : 6]; ctx.fillRect(-EDGE, -EDGE, FW + EDGE * 2, cy + 70 + EDGE); } tile(Wp.cloud.canvas, cam.x * 0.1 + 40, cy); }
@@ -281,8 +340,6 @@
                 ctx.drawImage(G.pic.canvas, Math.round(scrX(G.X0)), groundTop);
                 if (groundTop + G.H < FH + EDGE) { ctx.fillStyle = P.INK; ctx.fillRect(-EDGE, groundTop + G.H, FW + EDGE * 2, FH); }
             }
-            const far = Wp.air ? clamp01((S.y - 160) / 1700) : 0;                     // the air between us and the land: thicker with depth, clearing as we come down
-            for (let k = 1, n = Math.round(far * 4); k <= n; k++) { ctx.fillStyle = Wp.air2[k]; ctx.fillRect(-EDGE, tops[0] - 34 + (k - 1) * 16, FW + EDGE * 2, FH); }
         }
         // the cloud deck as we go through it
         const hd = full ? smooth(dTop + 90, dTop - 110, S.y) * smooth(dBot - 130, dBot + 70, S.y) : 0;
@@ -295,7 +352,7 @@
         // the night: everything so far is dark, but for where her flame reaches (the catch flashes the whole place into view);
         // with no cloud the stars above the land are left alone
         const heat = thr < 0.05 && !L && Wp.air ? clamp01((q - 0.55) / 0.5) : 0;
-        if (night > 0.02) {
+        if (night > 0.02 && (deck || horizon + 24 < FH + EDGE)) {
             const list = [];
             if (!L && glow > 0.03) {
                 list.push([bx + dxA * flame * 0.3, by + dyA * flame * 0.3, flame * 0.8 + 60 + 50 * Z, glow * 1.05]);
@@ -304,31 +361,83 @@
             }
             if (!L && heat > 0.05) list.push([bx, by, 30 + 30 * Z, heat * 0.45]);
             if (L) { if (after > 0.03) list.push([sx, fy, 200, Math.min(1, after * 1.3)]); if (lamp > 0.02) list.push([sx, fy - 26, 180, 0.85 * lamp]); }
-            nightOver(ctx, night * (0.64 - 0.46 * glow - 0.18 * kick - 0.1 * lamp), list, deck ? -EDGE : horizon + 24);
+            nightOver(ctx, night * (0.64 - 0.46 * Math.min(1, glow) - 0.18 * kick - 0.1 * lamp), list, deck ? -EDGE : horizon + 24);
         }
-        // the find's light shines through the dark, the one the bridge showed; while the place is still below the picture, its glow at the picture's foot
+        // the find's light shines through the dark, the one the bridge showed; while the place is still below the picture, its
+        // glow at the picture's foot, swelling as the ground comes. And A.U.R.A.'s white markers on the level stretch, lit in
+        // turn toward the middle (they go out with her gates, just after the touchdown)
+        const guided = !(L && since > 0.4);
         if (under) {
             const lp = G.light, y0 = Math.round(gr(G.at(lp.x) + lp.up)), below = y0 > FH - 8, lx = clamp(Math.round(scrX(lp.x)), 12, FW - 12);
+            if (below) {
+                const nearK = clamp01(1 - (y0 - FH) / 2600), r = Math.max(8, Math.round((10 + 28 * nearK * nearK) / 2) * 2), g2 = glowSprite(look.lightRamp, r, 0.26 + 0.3 * nearK);
+                if (g2) { ctx.globalCompositeOperation = 'lighten'; ctx.drawImage(g2, lx - r, FH - 8 - r); ctx.globalCompositeOperation = 'source-over'; }
+            }
             V.fr.reset();
             try { A.drawLight(V.fr, look.mark, lx, below ? FH - 8 : y0, now, below ? { cloud: 0.55 } : { scale: 2, cloud: 0.45 * clamp01((S.y - 300) / 2400) }); } catch (err) { if (!V.lightErr) { V.lightErr = true; console.error('BurnScene: the find light failed', err); } }
             ctx.globalCompositeOperation = 'source-over';
+            if (guided && gr(G.at(0)) < FH + 6) {
+                ctx.globalCompositeOperation = 'lighten';
+                G.marks.forEach(mx => {
+                    const px = Math.round(scrX(mx)), py = Math.round(gr(G.at(mx))) - 2, on = mod(t * 1.6 + Math.abs(mx) / 80, 1) < 0.55;
+                    light(RP.STAR, px, py, 8, on ? 0.75 : 0.42);
+                    ctx.fillStyle = RP.STAR.hex[on ? 4 : 3]; ctx.fillRect(px, py, 2, 2);
+                });
+                ctx.globalCompositeOperation = 'source-over';
+            }
         }
 
-        // the air going past (dimmer in the dark), the rain, the flame (many pixels: one buffer)
+        // the air going past (dimmer in the dark), the rain, the entry's fire, the flame (many pixels: one buffer)
         const layer = V.layer;
         layer.clear();
-        const fallV = Math.max(0, -S.vy), streakOn = L ? 0 : clamp01(rho * 2.2 + hd) * clamp01((fallV - 50) / 140) * (Wp.air ? 1 : 0.35), streakDim = 1 - 0.42 * night;
+        // the air goes past at the world's own speed: when the ground stops in the picture, so does the air
+        const streakOn = L ? 0 : clamp01(rho * 2.2 + hd) * clamp01((air - 50) / 140) * (Wp.air ? 1 : 0.35), streakDim = 1 - 0.42 * night;
         V.streaks.forEach(s => {
-            s.y -= fallV * s.k * 0.9 * dt; s.x -= S.vx * 0.5 * dt;
-            if (s.y < -40) { s.y = FH + Math.random() * 30; s.x = Math.random() * FW; }
+            s.y -= moved * Z * (0.55 + 0.55 * s.k); s.x -= S.vx * 0.5 * dt;           // by what the ground moved in the picture, the nearer air up to half as much again: never against it
+            if (s.y < -40) { s.y = FH + Math.random() * 30; s.x = Math.random() * FW; } else if (s.y > FH + 40) { s.y = -Math.random() * 30; s.x = Math.random() * FW; }
             if (s.x < 0) s.x += FW; else if (s.x >= FW) s.x -= FW;
             if (streakOn <= 0.05 || s.b > streakOn + 0.15) return;
-            const len = clamp(fallV * 0.07 * s.k, 2, 38);
+            const len = clamp(air * 0.07 * s.k, 2, 38);
             for (let i = 0; i < len; i++) layer.tone(s.x + EDGE, s.y + i + EDGE, RP.STAR, (0.28 + 0.34 * s.b) * (1 - i / len) * (0.6 + 0.6 * streakOn) * streakDim);
         });
         if (W.rain && S.y < dBot) for (let i = 0; i < 46; i++) {
             const rx = mod(i * 97.3 - t * 150 - S.vx * 0.2, FW + 40) - 20, ry = mod(i * 53.7 + t * (520 - S.vy * 0.5), FH + 40) - 20;
             for (let k = 0; k < 7; k++) layer.tone(rx - k * 0.45 + EDGE, ry + k + EDGE, RP.ICE, 0.52 - k * 0.045);
+        }
+        // the entry, as films show a hull coming in too fast: a thin bright bow of fire stands off under her tail, the fire wraps
+        // her (bright at its rims, shut behind her nose into a short torn tail), bits of her fly off, and her own skin glows
+        // from the tail up (the skin is drawn with the hull, below; it stays hot for a few seconds after the fire has gone)
+        const skinTo = L ? 0 : clamp01(0.3 * fastV + 0.8 * hotV);
+        V.skin += (skinTo - V.skin) * Math.min(1, dt * (skinTo > V.skin ? 2.6 : 0.4));
+        if (fastV > 0.04) {
+            const heatK = clamp01(0.55 + 0.45 * hotV), so = 3 + 3 * fastV, hw = (11 + 3 * fastV) * (1 + 0.3 * tipV), bend = 5 + 3 * fastV, cxB = bx + sn * 3, nB = Math.ceil(hw * 1.3);
+            for (let a = -nB; a <= nB; a++) {                                           // the bow: brightest in the middle, bent back at its ends
+                const u = a / hw, yb = by + so - u * u * bend, fade = clamp01(1.7 - Math.abs(u) * 1.2);
+                layer.tone(cxB + a + EDGE, yb + 2 + EDGE, RP.SUN, 0.45 * fade * heatK);
+                layer.tone(cxB + a + EDGE, yb + 1 + EDGE, RP.SUN, 0.9 * fade * heatK);
+                layer.tone(cxB + a + EDGE, yb + EDGE, RP.SUN, (1.25 + 0.1 * flick) * fade * heatK);
+                for (let r = 1; r < 14 && yb - r > by - 2 - u * u * 2; r++)             // the air caught between the bow and her tail
+                    if (threshold(Math.round(cxB + a), Math.round(yb - r)) < 0.95 - 0.05 * r) layer.tone(cxB + a + EDGE, yb - r + EDGE, RP.SUN, (0.95 - 0.06 * r) * fade * heatK);
+            }
+            // the fire wraps her: wide at the bow, standing a little off her sides (it follows her when she tips), shut behind her nose, then a short torn tail
+            const len = 44 + 80 * fastV, y1 = by + so - bend, wide = (7.5 + 1.5 * fastV) * (1 + 0.5 * tipV);
+            for (let s2 = 0; s2 < len; s2++) {
+                const k = s2 / len, Y = Math.round(y1 - s2), base = lerp(lerp(hw, wide, smooth(0, SHIP_LEN * 0.5, s2)), 1.8, smooth(SHIP_LEN * 0.9, SHIP_LEN * 2.6, s2));
+                const mid = bx + sn * Math.min(s2, SHIP_LEN) * 0.85 + (vnoise(s2 / 31 - t * 2.3, 4.4, 8) - 0.5) * 12 * k * k;
+                for (let side = -1; side <= 1; side += 2) {
+                    const lick = 0.7 + 0.7 * vnoise(s2 / 5 - t * 26, side * 3.3, 3), w = base * (0.75 + 0.4 * lick), rim = (1 - k * 0.85) * lick * heatK * 1.3;   // it licks out and back along her
+                    for (let a = 0; a <= Math.ceil(w); a++) {
+                        const e = a / w, X = Math.round(mid + side * a);
+                        if (e <= 1 && threshold(X, Y) < rim * (0.42 + 0.58 * e * e)) layer.tone(X + EDGE, Y + EDGE, RP.SUN, (1.12 - 0.6 * k) * (0.6 + 0.4 * e) * (0.85 + 0.3 * flick));   // brightest at its rims: the hull shows inside it
+                    }
+                }
+            }
+            if (dt > 0 && V.embers.length < 90 && Math.random() < fastV * (1.4 + 2 * tipV)) { const side = Math.random() < 0.5 ? -1 : 1; V.embers.push({ x: cxB + side * hw * (0.5 + 0.6 * Math.random()), y: by + so - 3 - Math.random() * SHIP_LEN * 0.6, vx: side * (8 + Math.random() * 46), vy: -(170 + Math.random() * 300), life: 0, max: 0.22 + Math.random() * 0.5, sun: true }); }   // bits of her, torn off and gone
+        }
+        // the side jets at her nose: our hand, seen (a jet to one side swings her nose to the other)
+        if (!L && Math.abs(S.lean || 0) > 0.1) {
+            const sgn = S.lean > 0 ? 1 : -1, nx = bx + sn * SHIP_LEN * 0.86, ny = by - c * SHIP_LEN * 0.86;
+            for (let k = 0; k < 8; k++) { const j = (Math.random() - 0.5) * k * 0.6; layer.tone(nx - sgn * c * (2 + k) + sn * j + EDGE, ny - sgn * sn * (2 + k) - c * j + EDGE, RP.STAR, 1 - k * 0.11); }
         }
         let groundLit = 0;
         if (flame > 0) {                                                             // a hard bright core, and a wider, softer burst around it that opens out behind her
@@ -359,33 +468,65 @@
             const e = V.embers[i]; e.life += dt;
             if (e.life > e.max) { V.embers.splice(i, 1); continue; }
             e.x += e.vx * dt; e.y += e.vy * dt;
-            const k = 1 - e.life / e.max;
-            layer.tone(e.x + EDGE, e.y + EDGE, RP.PLUME, 0.95 * k); layer.tone(e.x + EDGE, e.y - 1 + EDGE, RP.PLUME, 0.6 * k);
+            const k = 1 - e.life / e.max, er = e.sun ? RP.SUN : RP.PLUME;
+            layer.tone(e.x + EDGE, e.y + EDGE, er, 0.95 * k); layer.tone(e.x + EDGE, e.y - 1 + EDGE, er, 0.6 * k);
         }
         layer.draw(ctx, -EDGE, -EDGE);
-        // the light she makes, as light: the air's heat on the way down, the flame's all along it, one hard bloom at the catch
+        // the light she makes, as light: the air's heat on the way down, the bow's own close under her, her skin's, the flame's all along it, one hard bloom at the catch
         ctx.globalCompositeOperation = 'lighten';
         if (heat > 0.05) light(RP.SUN, bx + dxA * 6 * Z, by + dyA * 6 * Z, 24 * Z + 4, heat * 0.62);
+        if (fastV > 0.04) light(RP.SUN, bx + sn * 3, by + 2 + 3 * fastV, 14 + 14 * fastV, clamp01(0.3 + 0.3 * hotV));   // (no cloud of fire behind her: the heat is on the hull)
+        if (V.skin > 0.12) light(RP.SUN, bx + sn * SHIP_LEN * 0.35, by - c * SHIP_LEN * 0.35, 24, clamp01(V.skin * 0.5));
         if (thr > 0.03) {
             light(RP.PLUME, bx + dxA * 10 * Z, by + dyA * 10 * Z, 36 + 30 * Z, clamp01((0.5 + 0.1 * flick) * thr + 0.1));
             light(RP.PLUME, bx + dxA * reach * 0.4, by + dyA * reach * 0.4, Math.min(120, 24 + reach * 0.36), clamp01(0.32 * thr + 0.08));
             light(RP.PLUME, bx + dxA * reach * 0.8, by + dyA * reach * 0.8, Math.min(96, 20 + reach * 0.28), clamp01(0.22 * thr + 0.05));
-            if (gHit) light(RP.PLUME, scrX(gHit.x), gr(gHit.y) - 2, 56, (0.34 + 0.4 * groundLit) * thr);
+            if (gHit) light(RP.PLUME, scrX(gHit.x), gr(gHit.y) - 2, 56, clamp01((0.34 + 0.4 * groundLit) * thr));
         }
         if (kick > 0.2) light(RP.PLUME, bx + dxA * 10 * Z, by + dyA * 10 * Z, CATCH_R, clamp01(kick * 0.9));
         else if (sputter && flame > 0) light(RP.PLUME, bx + dxA * 6 * Z, by + dyA * 6 * Z, 16, 0.4);
         if (L && after > 0.08) light(RP.PLUME, sx, fy - 2, 48, after * 0.5);
         ctx.globalCompositeOperation = 'source-over';
-        // our shuttle: lit by her own flame, a dim shape without it; the team stepping out in their suits, toward the light
+        // the way down, drawn by A.U.R.A.: a numbered gate above the mark every 500 m, and every 100 m through the last
+        // kilometre. They stand in the world: they pass at her true speed, the lowest number in the picture says how far the
+        // ground still is, and the last gate stands just over it. The ones she has passed go out
+        if (guided) {
+            const gx0 = Math.round(scrX(0)), base = G.at(0), MP = K.M_PER_PX;
+            const mLo = Math.max(50, Math.ceil(((gY - FH - 8) / Z - base) * MP / 50) * 50), mHi = ((gY + 8) / Z - base) * MP;
+            const hue = V.warn === 2 ? RP.RED.hex[3] : V.warn === 1 ? RP.AMBER.hex[3] : null;   // too fast for all she has: the gates ahead say so
+            for (let m = mLo; m <= mHi; m += 50) {
+                const c100 = m % 100 === 0, gate = m === 50 || m % 500 === 0 || (c100 && m <= 1000);
+                if (!gate && !c100) continue;
+                const y = Math.round(gr(base + m / MP)), above = fy - SHIP_LEN - y;      // above > 0: she has passed it
+                if (above > 46) continue;                                               // passed and gone: only what is still to come stays lit
+                if (!gate) { ctx.fillStyle = RP.STAR.hex[2]; ctx.fillRect(gx0 - 17, y, 5, 1); ctx.fillRect(gx0 + 12, y, 5, 1); continue; }   // between the high gates a small tick every 100 m: how fast they pass is her speed
+                const near = m <= 200, wide = 24;
+                ctx.fillStyle = above > 0 ? RP.STAR.hex[2] : hue || RP.STAR.hex[near ? 4 : 3];
+                ctx.fillRect(gx0 - wide, y, wide - 11, near ? 2 : 1); ctx.fillRect(gx0 + 12, y, wide - 11, near ? 2 : 1);   // two bars with room between for her and her flame
+                let x = gx0 + wide + 6;
+                for (const ch of String(m)) { const g = FIG[+ch]; for (let i = 0; i < 15; i++) if (g[i] === '1') ctx.fillRect(x + (i % 3) * 2, y - 4 + Math.floor(i / 3) * 2, 2, 2); x += 8; }
+            }
+            // the blue gate: where "Burn now" will come if she falls on as she is. Wider than the height gates, with end posts, the engine's own blue
+            if (!L && V.cueY != null && (!S.everLit || V.cueDone)) {
+                const y = Math.round(gr(V.cueY)), above = fy - SHIP_LEN - y;
+                if (above <= 46 && y < FH + 8) {
+                    ctx.fillStyle = RP.PLUME.hex[above > 0 ? 3 : mod(t * 3, 1) < 0.6 ? 5 : 4];
+                    ctx.fillRect(gx0 - 41, y - 1, 30, 3); ctx.fillRect(gx0 + 12, y - 1, 30, 3);
+                    ctx.fillRect(gx0 - 41, y - 5, 2, 11); ctx.fillRect(gx0 + 40, y - 5, 2, 11);
+                }
+            }
+        }
+        // our shuttle: lit by her own flame or her own heat, a dim shape without them; the team stepping out in their suits, toward the light
         const broken = !!(L && L.grade === 'crash');
-        const lum = (L ? lamp > 0.3 || after > 0.2 : thr > 0.22 || kick > 0.3) ? 1 : L ? 0.8 : night > 0.5 ? 0.6 : 0.8;
+        const lum = (L ? lamp > 0.3 || after > 0.2 : thr > 0.22 || kick > 0.3 || fastV > 0.2 || V.skin > 0.25) ? 1 : L ? 0.8 : night > 0.5 ? 0.7 : 0.8;
         const spr = A.shuttleSprite(D, 1, { lean, fold: S.fold < 0.25 ? 0 : S.fold < 0.75 ? 0.5 : 1, broken });
-        ctx.drawImage(dimmed(spr.canvas, lum), Math.round(bx) - spr.ox, Math.round(by - SH.BELL * D) - spr.oy);
+        const body = dimmed(spr.canvas, lum), sw = spr.canvas.width, sh = spr.canvas.height;
+        ctx.drawImage(V.skin > 0.06 ? hotHull(body, spr.oy, V.skin) : body, 0, 0, sw, sh, Math.round(bx) - spr.ox, Math.round(by - SH.BELL * D) - spr.oy, sw, sh);
         if (!broken) { ctx.fillStyle = RP.AMBER.hex[3]; ctx.fillRect(Math.round(bx + spr.win[0]) - 1, Math.round(by - SH.BELL * D + spr.win[1]), 2, 1); }
         const MC = window.MiniCrew;
         if (MC && Array.isArray(o.team)) o.team.forEach(m => { try { MC.small(ctx, m.id, scrX(m.x), gr(G.at(m.x)) + 1, { h: CREW_H, pose: m.walking ? 'walk' : 'stand', t: m.t, facing: m.dir, suit: true, light: 0.6 + 0.4 * lamp }); } catch (err) { if (!V.crewErr) { V.crewErr = true; console.error('BurnScene: the team could not be drawn', err); } } });
         // the dust she raises: lit while there is a flame to light it
-        const dustLit = Math.max(0.42 + 0.3 * lamp, glow), gn = look.ground.hex.length - 1;
+        const dustLit = Math.max(0.42 + 0.3 * lamp, Math.min(1, glow)), gn = look.ground.hex.length - 1;
         for (let i = V.dust.length - 1; i >= 0; i--) {
             const d = V.dust[i]; d.life += dt;
             if (d.life > d.max) { V.dust.splice(i, 1); continue; }
@@ -419,5 +560,5 @@
 
     /** The world's own pictures alone, queued (the bridge's warm-up: the place is not known yet). → their tag */
     const warm = (world, W, look) => worldPics(world, W, look).tag;
-    window.BurnScene = Object.freeze({ FW, FH, lookOf, prepare, ready, warm, keep, view, camera, burst, draw });
+    window.BurnScene = Object.freeze({ FW, FH, lookOf, prepare, ready, warm, keep, view, camera, groundSeen, burst, draw });
 })();
