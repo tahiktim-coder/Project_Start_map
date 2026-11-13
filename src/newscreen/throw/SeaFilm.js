@@ -1,26 +1,31 @@
 /* ═══ Silent Exodus · new screen (?new=1) · throw/SeaFilm.js: the sea of ships, played ═════════════════════════════════
    What it is: the second half of the jump into sector 3 (throw/Throw.js plays it after the stall): a full-screen film
-   (.ns-film, so the travel view stops drawing under it) of throw/SeaArt.js's pictures, about 32 s. Our dark Lander among
-   wrecks of our own class; the camera pulls back until our ship is one red dot in a sea of thousands; the drive relights,
-   white. TheThrow's narration for this part is said one line at a time, in the travel view's type (the narration's italic,
-   on the house dither shade, never in capitals), its words unchanged. No sound of its own.
+   (.ns-film, so the travel view stops drawing under it), about 42 s. First the way in (throw/SeaEntrance.js, 11 s): the
+   crew try the drive three times, and its light shows the wrecks round us; its last frame is throw/SeaArt.js's first
+   whole one, so the sea of ships runs on from it with no cut (about 31 s): our dark Lander among wrecks of our own class;
+   the camera pulls back until our ship is one red dot in a sea of thousands; the drive relights, white. If the way in
+   cannot play, the sea of ships plays from its own first frame, in from ink, as it did before. TheThrow's narration for
+   the sea is said one line at a time, in the travel view's type (the narration's italic, on the house dither shade,
+   never in capitals), its words unchanged; a line one of the crew says in the way in has the speaker's name over it, as
+   the voice has it, and a dead speaker's line is "Nobody answers." (TheThrow's rule). No sound of its own.
    A click, Esc, Enter or Space skips to the end (a short dither to ink). Reduced motion: the lamps steady, no white flash
    (a slow fade to ink), the lines fade in and out without moving.
    Look pass B11: every value from tokens.css (--t is the page's own); the line sits on the voice's dither shade, which
    comes and goes with it in the same six steps (more or fewer ink pixels, never a soft alpha); the skip is the film skip
    (the one corner hint of every film, on the window's corner).
    Source: the player of prototypes/films/sea.html (clock, fit, skip) and start/LaunchFilm.js (the .ns-film frame).
-   Loaded only when the new-screen switch is on, after throw/SeaArt.js.
+   Loaded only when the new-screen switch is on, after throw/SeaArt.js and throw/SeaEntrance.js.
 
    window.NSSea (frozen)
      prepare(delayMs)        work out the film's pictures ahead, one job a frame, from delayMs on (the stall calls it)
      play(app) → Promise     mounts the film (z-index 5000), resolves when it ends or is skipped (at once if the art is missing)
      isPlaying() → bool
-     debug: { state() → { t, line, playing, ended, built }, setTime(ms) (pauses there), resume(), skip() }
+     debug: { state() → { t, way, line, who, playing, ended, built, gap }, setTime(ms) (the sea of ships at ms, paused),
+              setWay(ms) (the way in at ms, paused), resume(), skip() }
 */
 (function () {
     'use strict';
-    const P = window.NSPaint, SA = window.NSSeaArt;
+    const P = window.NSPaint, SA = window.NSSeaArt, SE = window.NSSeaEntrance || null;
     if (!window.NEW_SCREEN || !P || !SA) return;
     const { INK, clamp01, smooth, threshold } = P;
     const { AW, AH, DUR } = SA;
@@ -35,6 +40,8 @@
         [21200, 26000, 'At the far end, a light the size of a pinhead.'],
         [28900, 30450, 'The burn finishes.'],                                              // gone before the white
     ];
+    const FILM_LINES = LINES.map(([from, to, text]) => [from, to, '', text]);              // as the way in's: [from, to, speaker ('' is the narration), words]
+    const NOBODY = 'Nobody answers.';                                                      // a dead speaker's line (TheThrow's rule, as throw/Stall.js)
     const isCalm = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     const CSS = `
@@ -44,7 +51,10 @@
 .ns-sea-frame { position: absolute; overflow: hidden; }
 .ns-sea-art { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
 .ns-sea-say { position: absolute; left: calc(var(--u) * 40); bottom: calc(var(--u) * 44); max-width: min(calc(var(--u) * 260), calc(100vw - 64px)); margin: 0;
-    font: italic 400 var(--fs-voice)/1.36 var(--f-text); color: var(--narr); text-wrap: balance; text-shadow: var(--shadow); opacity: 0; pointer-events: none; }
+    display: grid; gap: 6px; text-shadow: var(--shadow); opacity: 0; pointer-events: none; }
+.ns-sea-who { font: 500 var(--fs-who)/1 var(--f-ui); letter-spacing: 0.18em; text-transform: uppercase; color: var(--tone, var(--warm)); }   /* a speaker's name, as the voice has it (newscreen.css .ns-who) */
+.ns-sea-words { font: italic 400 var(--fs-voice)/1.36 var(--f-text); color: var(--narr); text-wrap: balance; }
+.ns-sea-say.is-said .ns-sea-words { font-style: normal; color: var(--text); }           /* said by one of the crew: upright, as a voice line */
 .ns-sea-skip { position: absolute; right: max(16px, 4vw); bottom: max(16px, 5vh); margin: 0; padding: var(--s2) 0; font: 500 var(--fs-skip)/1 var(--f-ui); letter-spacing: 0.18em;
     text-transform: uppercase; color: var(--dim); text-shadow: var(--shadow); opacity: 0; pointer-events: none; transition: opacity 180ms steps(3, end); }
 .ns-sea-skip.is-in { opacity: 1; }
@@ -56,8 +66,13 @@
     }
 
     // ── the pictures, worked out ahead ──
-    let art = null, prepTimer = 0, prepFrame = null, prepN = 0;
-    function ensureArt() { if (!art) art = SA.create(); return art; }
+    let art = null, ent = null, prepTimer = 0, prepFrame = null, prepN = 0;
+    function ensureArt() {
+        if (art) return art;
+        art = SA.create();
+        try { ent = SE ? SE.create(art) : null; } catch (err) { console.error('NSSea: the way in could not be set up; the film plays without it', err); ent = null; }   // its work joins art.jobs
+        return art;
+    }
     function runJob() { const a = ensureArt(), job = a.jobs.shift(); if (job) { try { job(); } catch (err) { console.error('NSSea: a picture job failed', err); } } return a.jobs.length > 0; }
     function prepare(delayMs) {
         ensureArt();
@@ -106,24 +121,35 @@
         root.setAttribute('role', 'dialog');
         root.setAttribute('aria-label', 'Film: the jump stalls among thousands of still ships. Click to skip.');   // DRAFT: for screen readers only, never on screen (as LaunchFilm's)
         root.innerHTML = '<div class="ns-sea-frame"><canvas class="ns-sea-art" aria-hidden="true"></canvas>'
-            + '<p class="ns-sea-say" aria-live="polite"></p></div><p class="ns-sea-skip">Click to skip</p>';
+            + '<div class="ns-sea-say" aria-live="polite"><p class="ns-sea-who" hidden></p><p class="ns-sea-words"></p></div></div><p class="ns-sea-skip">Click to skip</p>';
         document.body.appendChild(root);
         const q = s => root.querySelector(s);
-        return { root, frame: q('.ns-sea-frame'), canvas: q('canvas'), say: q('.ns-sea-say'), skip: q('.ns-sea-skip') };
+        return { root, frame: q('.ns-sea-frame'), canvas: q('canvas'), say: q('.ns-sea-say'), who: q('.ns-sea-who'), words: q('.ns-sea-words'), skip: q('.ns-sea-skip') };
     }
 
-    function play() {
+    function play(app) {
         if (film) return film.done;
         let ui = null;
         try { ui = mount(); } catch (err) { console.error('NSSea: the film could not start', err); return Promise.resolve(); }
         stopPrep();
-        const a = ensureArt(), still = isCalm(), ctx = ui.canvas.getContext('2d', { alpha: false });
+        const a = ensureArt(), way = ent, still = isCalm(), ctx = ui.canvas.getContext('2d', { alpha: false });
+        const state = app && app.state, isDead = who => !!(who && state && typeof state.isSilentSpeaker === 'function' && state.isSilentSpeaker(`${who}: `));
         ui.canvas.width = AW; ui.canvas.height = AH; ctx.imageSmoothingEnabled = false;
         ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH);
         let T = 0, playing = true, ended = false, last = null, frameId = null, skipT = null, finish = null, shown = null, unit = 3, drawMs = 0;
+        let begun = false, inWay = false, noWay = false, wayMs = 0, wayLen = 0, wayLines = [], played = 0;   // the way in (throw/SeaEntrance.js), while it plays
         const startedAt = performance.now(), dimPat = new Map();
         const done = new Promise(resolve => { finish = resolve; });
+        const isSet = () => a.ready() && (!way || way.settled() || !a.jobs.length);     // the film's pictures and the way in's are worked out (or the way in never will be)
 
+        /** Once the pictures are there: the way in first, if it can play; else the film from its own first frame, in from ink, as before. */
+        function begin() {
+            begun = true;
+            if (!way || !way.ok()) return;
+            wayLen = way.dur(still);
+            wayLines = way.lines(still).map(([from, to, who, text]) => (isDead(who) ? [from, to, '', NOBODY] : [from, to, who, text]));
+            inWay = !noWay;
+        }
         function dim(k) {
             const n = Math.round(clamp01(k) * 8); if (!n) return;
             if (n >= 8) { ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH); return; }
@@ -131,11 +157,18 @@
             ctx.fillStyle = dimPat.get(n); ctx.fillRect(0, 0, AW, AH);
         }
         function words() {
-            const L = skipT == null && !ended ? LINES.find(l => T >= l[0] && T < l[1]) : null;
-            if (L !== shown) { shown = L; ui.say.textContent = L ? L[2] : ''; }
-            const op = L ? Math.min(1, (T - L[0]) / LINE_FADE, (L[1] - T) / LINE_FADE) : 0;
+            const at = inWay ? wayMs : T, L = skipT == null && !ended ? (inWay ? wayLines : FILM_LINES).find(l => at >= l[0] && at < l[1]) : null;
+            if (L !== shown) {
+                shown = L;
+                const who = L ? L[2] : '';
+                ui.who.textContent = who; ui.who.hidden = !who;                           // one of the crew: the name over the words, in the speaker's colour
+                ui.words.textContent = L ? L[3] : '';
+                ui.say.classList.toggle('is-said', !!who);
+                if (who) ui.say.style.setProperty('--tone', `var(--tone-${who.toLowerCase()})`); else ui.say.style.removeProperty('--tone');
+            }
+            const op = L ? Math.min(1, (at - L[0]) / LINE_FADE, (L[1] - at) / LINE_FADE) : 0;
             ui.say.style.opacity = String(Math.max(0, Math.round(op * 6) / 6));
-            ui.skip.classList.toggle('is-in', T < SKIP_HINT_MS && playing && !ended && skipT == null && a.ready());
+            ui.skip.classList.toggle('is-in', played < SKIP_HINT_MS && playing && !ended && skipT == null && begun);
             return L ? op : 0;
         }
         /** The shade under a line of words (the line, or the skip on a lit wreck in the corner), op 0..1 of it. */
@@ -149,10 +182,15 @@
         }
         function render(now) {
             ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH);
-            if (!a.ready()) { while (runJob() && !a.ready()) { /* the rest of the picture, under the ink */ } }
+            if (!isSet()) { while (runJob() && !isSet()) { /* the rest of the pictures, under the ink */ } }
             else if (a.jobs.length) runJob();                                               // the rest of the nearest wrecks, a little each frame
+            if (!begun && isSet()) begin();
             const t0 = performance.now();
-            try { a.draw(ctx, T, still, playing && !ended && skipT == null); } catch (err) { console.error('NSSea: a frame failed', err); }
+            if (inWay) {
+                try { way.draw(ctx, wayMs, still); }
+                catch (err) { console.error('NSSea: the way in failed; the film plays from its own start', err); inWay = false; T = 0; ctx.fillStyle = INK; ctx.fillRect(0, 0, AW, AH); }
+            }
+            if (!inWay) { try { a.draw(ctx, T, still, playing && !ended && skipT == null); } catch (err) { console.error('NSSea: a frame failed', err); } }
             drawMs = drawMs * 0.9 + (performance.now() - t0) * 0.1;
             const op = words();
             shadeUnder(ui.say, op);
@@ -172,7 +210,11 @@
             frameId = null;
             if (!film || film.ui !== ui) return;
             const dt = last == null ? 16 : Math.min(MAX_DT, Math.max(0, now - last)); last = now;
-            if (playing && !ended && skipT == null && a.ready()) { T += dt; if (T >= DUR) { T = DUR; ended = true; } }
+            if (playing && !ended && skipT == null && begun) {
+                played += dt;
+                if (inWay) { wayMs += dt; if (wayMs >= wayLen) { inWay = false; T = SE.T0 + (wayMs - wayLen); } }   // the way in ends on the film's first whole frame: the film runs on from it
+                else { T += dt; if (T >= DUR) { T = DUR; ended = true; } }
+            }
             try { render(now); fails = 0; } catch (err) { console.error('NSSea: the film failed', err); if (++fails >= MAX_FAILS) ended = true; }   // failing frame after frame: the jump goes on
             if (!a.ready() && !a.jobs.length) ended = true;                                // nothing left to build and still not ready: it cannot play
             if (ended || (skipT != null && now - skipT >= SKIP_MS)) { close(); return; }
@@ -190,12 +232,13 @@
             removeEventListener('resize', fit);
             removeEventListener('keydown', onKey, true);
             ui.root.remove();
-            film = null; art = null;                                                     // the next run works its pictures out again
+            film = null; art = null; ent = null;                                         // the next run works its pictures out again
             finish();
         }
         film = { ui, done, debug: {
-            state: () => ({ t: Math.round(T), line: shown ? shown[2] : null, playing, ended, built: a.ready(), drawMs: +drawMs.toFixed(1) }),
-            setTime(ms) { playing = false; T = clamp01(ms / DUR) * DUR; },
+            state: () => ({ t: Math.round(T), way: inWay ? Math.round(wayMs) : null, line: shown ? shown[3] : null, who: shown ? shown[2] : null, playing, ended, built: isSet(), drawMs: +drawMs.toFixed(1), gap: way ? way.gap() : null }),
+            setTime(ms) { playing = false; noWay = true; inWay = false; T = clamp01(ms / DUR) * DUR; },
+            setWay(ms) { if (!begun || !wayLen) return; playing = false; inWay = true; wayMs = Math.max(0, Math.min(wayLen, ms)); },
             resume() { playing = true; },
             skip() { skipT = performance.now() - SKIP_GUARD_MS; },
         } };
@@ -213,6 +256,7 @@
         debug: Object.freeze({
             state: () => (film ? film.debug.state() : null),
             setTime: ms => { if (film) film.debug.setTime(ms); },
+            setWay: ms => { if (film) film.debug.setWay(ms); },
             resume: () => { if (film) film.debug.resume(); },
             skip: () => { if (film) film.debug.skip(); },
         }),

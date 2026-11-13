@@ -4,13 +4,15 @@
    the stars shrink back to points and stop, the drive coughs and goes out, the ship jolts to a halt. Our tower goes dark
    deck by deck from the reactor up, one red lamp left on each, and the reactor stops pulsing. In the dark the whole crew is
    suddenly standing in one room, the bridge, their backs to us; Mira asks for A.U.R.A.; nobody answers, and one by one they
-   turn and look at us. "Nobody answers." comes again and again, and the picture goes wrong with it: the same world, over
-   and over, and our ship too big, then too small. Then black, and the sea of ships (throw/SeaFilm.js) takes over.
+   turn and look at us. "Nobody answers." Then black, and the film (throw/SeaFilm.js) takes over: the crew try the drive
+   three times (throw/SeaEntrance.js), and its light shows the sea of ships.
+   (Until 2026-11-13 the picture went wrong here first: the same world again and again, our ship too big, then too small.
+   The designer found that a weak way into the film, and "three tries" took its place.)
    The lines are TheThrow's, said one at a time by the travel view's voice (Voice.js) beside whoever says them (narration
    beside our Lander); a dead speaker's line is "Nobody answers." (TheThrow's rule); the crew's lines go to the log as before.
    It draws nothing itself: travel/Travel.js and tower/Tower.js read view() each frame and draw the stall into the travel
    view and the tower (throw/StallArt.js paints the dark decks). Skippable after a moment: a click, Esc, Enter or Space
-   (straight to the sea of ships). Reduced motion: no jolt or shake, no flicker, the lamps steady, our ship keeps its size.
+   (straight to the film). Reduced motion: no jolt or shake, no flicker, the lamps steady.
    Look pass B11: a crew line stays inside the tower, 24 px in from its walls (its own anchor, 'stall:person:<id>', from the
    tower's 'person:<id>', and a measure no wider than the tower), on the voice's dither shade; the skip is the film skip
    (the one corner hint of every film).
@@ -20,7 +22,7 @@
      play(app) → Promise<'done' | 'skipped'>   the stall; resolves once the screen is ink (its veil up; it stays up until the
                                                next sector's first show, or release(true))
      view() → null | { e, speed, stretch, plume, cold, frozen, boost, dark[6], red[6], reactorCold, gather, turned{id},
-                       copies[{ u, v, k }], shipScale, lamp, burn, stop, still }   what Travel and the tower draw now
+                       lamp, burn, stop, still }   what Travel and the tower draw now
      release(lift)           the throw is over: view() is null again; lift: take the veil down now (else at the next first show)
      debug: { state(), skip(), setTime(ms) }
 */
@@ -34,10 +36,8 @@
     const DARK_AT = [8700, 8100, 7500, 6900, 6300, 3400];                    // per deck (0 bridge … 5 engineering): from the reactor up
     const RED_AFTER = 520, DARK_MS = 380, LAMP_AT = 9300;                     // a dead room's red lamp comes on after it; our hull's lamp
     const BLACKOUT = [14650, 15300], GATHER_AT = 14950;                       // every red lamp out a moment; in it, the crew are together
-    const TURN_AT = 20000, TURN_GAP = 300;                                     // they turn to us one by one
-    const COPIES_AT = [[19400, 1], [22200, 3], [25000, 6]];                   // the same world again, more each time the line comes back
-    const SHIP_AT = [[22200, 1.55], [25000, 0.62]];                           // our ship too big, then too small
-    const FADE = [28200, 28900], SKIP_GUARD = 1200, SKIP_FADE = 380, HINT_MS = 4200, COPY_IN = 360, EDGE_IN = 24;
+    const TURN_AT = 20000, TURN_GAP = 300;                                     // they turn to us one by one (the last at 21200)
+    const FADE = [23000, 23700], SKIP_GUARD = 1200, SKIP_FADE = 380, HINT_MS = 4200, EDGE_IN = 24;   // ink, once all of them have looked at us a while
     // what is said, and when (TheThrow's words and order). A speaker of '' is the narration.
     const LINES = [
         [3000, '', 'The jump did not finish.'],
@@ -46,11 +46,7 @@
         [12000, '', 'Nobody answers.'],
         [16400, 'Mira', 'A.U.R.A.? Are you there?'],
         [19400, '', 'Nobody answers.'],
-        [22200, '', 'Nobody answers. Nobody answers.'],
-        [25000, '', 'Nobody answers. Nobody answers. Nobody answers.'],
     ];
-    // where the same world shows up again (shares of the space side: clear of our ship, the light and the voice by our ship)
-    const COPY_SPOTS = [[0.62, 0.72], [0.38, 0.16], [0.84, 0.86], [0.17, 0.86], [0.70, 0.12], [0.50, 0.50]];
     // the gathered crew on the bridge (tower px), as a group, not a lineup: who stands where, and which way they turn
     const GATHER = { mira: { x: 298, facing: 1 }, aris: { x: 340, facing: 1 }, cora: { x: 384, facing: 1 }, jaxon: { x: 428, facing: -1 }, vance: { x: 472, facing: -1 } };   // under the bridge's red lamp (StallArt.LAMP_X[0])
     const TURN_ORDER = ['mira', 'vance', 'aris', 'jaxon', 'cora'];
@@ -136,15 +132,11 @@
         });
         const turned = {};
         TURN_ORDER.forEach((id, k) => { turned[id] = e >= TURN_AT + k * TURN_GAP; });
-        const copies = [];
-        COPIES_AT.forEach(([at, n]) => { if (e >= at) for (let k = copies.length; k < n; k++) copies.push({ u: COPY_SPOTS[k][0], v: COPY_SPOTS[k][1], k: still ? ease((e - at) / 900) : clamp01((e - at - k * 120) / COPY_IN) }); });
-        let shipScale = 1;
-        if (!still) SHIP_AT.forEach(([at, s]) => { if (e >= at) shipScale = s; });
         return {
             e, still, burn, stop: e >= STOP_AT,
             speed: e < BURN_END ? 420 : e < STOP_AT ? 420 * (1 - ease((e - BURN_END) / (STOP_AT - BURN_END))) : 0,
             stretch: burn, plume, cold: e >= COUGH[1], frozen: e >= STOP_AT, boost: 1 + 0.5 * burn,
-            dark, red, reactorCold: e >= DARK_AT[5], gather, turned, copies, shipScale,
+            dark, red, reactorCold: e >= DARK_AT[5], gather, turned,
             lamp: e >= LAMP_AT ? e - LAMP_AT : null,
         };
     }
